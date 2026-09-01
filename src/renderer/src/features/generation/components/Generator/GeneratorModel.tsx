@@ -71,7 +71,10 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
     <div>
       {offered && <ModelDownloadDialog model={offered} onClose={() => setOffered(null)} />}
 
-      <FormField label={t('generation.model')} htmlFor={field}>
+      {/* No `htmlFor`: the picker is a DISCLOSURE, and a label forwards its click — the panel
+          opened on the forwarded one and closed on the original, which lands outside it. The
+          button names itself by the model it shows. */}
+      <FormField label={t('generation.model')}>
         <ModelPicker
           id={field}
           models={models}

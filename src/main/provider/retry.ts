@@ -12,6 +12,11 @@ export type RetryOptions = {
   backoffBaseMs?: number
   /** What a retry can fix here. Defaults to the Scenario SDK's own reading of a failure. */
   retryable?: (error: unknown) => boolean
+  /**
+   * A `Retry-After`, in milliseconds; `null` where the service said nothing. Honoured rather
+   * than averaged with the backoff — a service naming a delay knows when its window reopens.
+   */
+  delayFor?: (error: unknown) => number | null
 }
 
 /** Doubles per attempt, from this. */
@@ -23,6 +28,9 @@ export const DEFAULT_BACKOFF_BASE_MS = 1000
  * slot in the concurrency bound for all of it, blocking the queue behind it.
  */
 const BACKOFF_CEILING_MS = 30_000
+
+/** A job holds its concurrency slot while it waits: past this the studio comes back early. */
+const ASKED_CEILING_MS = 60_000
 
 /** How far a wait may be pulled either side of its nominal length. */
 const JITTER = 0.2
@@ -49,6 +57,7 @@ export function createRetry({
   sleep,
   backoffBaseMs = DEFAULT_BACKOFF_BASE_MS,
   retryable = isRetryable,
+  delayFor,
 }: RetryOptions): Retry {
   return async action => {
     for (let attempt = 0; ; attempt++) {
@@ -56,7 +65,11 @@ export function createRetry({
         return await action()
       } catch (error) {
         if (attempt >= maxRetries() || !retryable(error)) throw error
-        await sleep(backoffDelay(backoffBaseMs, attempt))
+
+        const asked = delayFor?.(error) ?? null
+        await sleep(
+          asked === null ? backoffDelay(backoffBaseMs, attempt) : Math.min(asked, ASKED_CEILING_MS),
+        )
       }
     }
   }

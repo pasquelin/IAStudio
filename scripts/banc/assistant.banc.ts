@@ -25,11 +25,12 @@ const PROVIDER = process.env['EVAL_PROVIDER'] ?? 'deepseek'
 
 /**
  * 🛑 A door this bench can speak to, which Scenario is not: its chat crosses an account and a
- * secret rather than a bare HTTP key, and `ask` has no arm for it. Named rather than left to fail
- * on a 400 nobody can read.
+ * secret rather than a bare HTTP key, and `ask` has no arm for it. A cloud with NO door at all is
+ * the other one — it generates and answers no conversation. Named rather than left to fail on a
+ * 400 nobody can read.
  */
 const cloud = CLOUD_PROVIDERS.find(one => one.id === PROVIDER)
-const chat = cloud && cloud.chat.kind !== 'scenario' ? cloud.chat : null
+const chat = cloud?.chat !== undefined && cloud.chat.kind !== 'scenario' ? cloud.chat : null
 const MODEL = process.env['EVAL_MODEL'] ?? defaultChatModel(PROVIDER) ?? ''
 
 type Measured = {

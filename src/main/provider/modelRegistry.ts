@@ -136,6 +136,20 @@ export type RegistryOptions = {
   localModels: () => readonly LocalModel[]
   /** Whether a local model's weights are on this disk. Read per call: an install lands mid-panel. */
   isInstalled: (modelId: string) => boolean
+  /**
+   * A cloud's whole catalogue as DATA rather than through a listing, each entry carrying its own
+   * `runsOn` — so nothing here is told which cloud answered. Empty while no key is held: a
+   * picker offering models an account cannot run ends in a refusal nobody can read.
+   */
+  publishedModels?: () => readonly ModelDescriptor[]
+  /**
+   * The same catalogue whether or not a key is held, for `describe` alone.
+   *
+   * 🛑 A model id is STORED — a preference, a panel that was open. Read through the list above,
+   * an id whose key has since been removed fell through to the API, which has never heard of it:
+   * the same `404 Model … not found` the local branch below exists to prevent.
+   */
+  publishedModelOf?: (modelId: string) => ModelDescriptor | null
   /** Names the knobs of a local model's form. The main process holds the language as a service. */
   translate: (key: string) => string
   ttlMs?: number
@@ -391,6 +405,21 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
 }
 
 /**
+ * Whether a model the studio holds ITSELF answers a typed search.
+ *
+ * 🛑 Never applied to a catalogue hit: the endpoint answers by semantic likeness, so narrowing
+ * its results by the letters typed would throw away most of what it found. The models held here
+ * have no such index — unfiltered, one cloud's fifty-four entries filled the whole page and the
+ * model actually searched for never appeared.
+ */
+function named(summary: ModelSummary, search: string | undefined): boolean {
+  const wanted = search?.trim().toLocaleLowerCase()
+  if (!wanted) return true
+
+  return `${summary.name} ${summary.id}`.toLocaleLowerCase().includes(wanted)
+}
+
+/**
  * The one tag the listing is narrowed by server-side, ahead of `matches`.
  *
  * A chosen tag comes first — it is what the user asked for. Failing that, the three families
@@ -425,6 +454,8 @@ export function createModelRegistry({
   watch,
   localModels,
   isInstalled,
+  publishedModels,
+  publishedModelOf,
   translate,
   ttlMs = DEFAULT_TTL_MS,
   now = Date.now,
@@ -481,11 +512,13 @@ export function createModelRegistry({
     if (query.cursor !== undefined) return page
 
     const since = query.since ? cutoff(query.since, now()) : null
-    const locals = localSummaries(query.family).filter(summary => matches(summary, query, since))
-    const seen = new Set(locals.map(summary => summary.id))
-    const remotes = page.items.filter(item => item.runsOn !== LOCAL_RUNTIME && !seen.has(item.id))
+    const held = offlineSummaries(query).filter(summary => matches(summary, query, since))
+    const seen = new Set(held.map(summary => summary.id))
+    // By the runtime each summary CARRIES, never by asking the catalogues: read as a lookup, the
+    // published one was rebuilt and re-translated once per item of the page.
+    const remotes = page.items.filter(item => !seen.has(item.id) && item.runsOn === SCENARIO_CLOUD)
     const limit = query.limit ?? DEFAULT_LIMIT
-    return { items: [...locals, ...remotes].slice(0, limit), cursor: page.cursor }
+    return { items: [...held, ...remotes].slice(0, limit), cursor: page.cursor }
   }
 
   // The form a model on this machine offers, derived from its MODALITY — see `localFields.ts`.
@@ -547,6 +580,15 @@ export function createModelRegistry({
 
   const localSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] =>
     localModels().flatMap(model => localSummaryOf(model, isInstalled(model.id), asFamily) ?? [])
+
+  const published = (): readonly ModelDescriptor[] => publishedModels?.() ?? []
+
+  /** Never paginated: a handful of entries in memory, where a cursor would be machinery. */
+  const offlineSummaries = (query: ModelQuery): readonly ModelSummary[] =>
+    [
+      ...localSummaries(query.family),
+      ...published().filter(model => query.family === undefined || model.family === query.family),
+    ].filter(summary => named(summary, query.search))
 
   /** The one place a model's schema is fetched, cached per model for the registry's own TTL. */
   const described = async (modelId: string): Promise<ModelDescriptor> => {
@@ -656,7 +698,7 @@ export function createModelRegistry({
       // manifests held in memory, so a cursor into it would be machinery for a list that cannot
       // fill one screen. It comes first because it is the side that costs nothing to run.
       if (query.cursor === undefined) {
-        for (const summary of localSummaries(query.family)) {
+        for (const summary of offlineSummaries(query)) {
           if (!matches(summary, query, since)) continue
 
           seen.add(summary.id)
@@ -664,10 +706,12 @@ export function createModelRegistry({
         }
       }
 
-      // Nothing remote is walked for this machine alone, nor for a family no catalogue publishes:
-      // the pages could only be discarded, and each of them is a round trip on a quota.
+      // Nothing remote is walked for this machine alone, for another cloud's own models, nor for
+      // a family no catalogue publishes: the pages could only be discarded, and each of them is a
+      // round trip on a quota.
+      const elsewhere = query.runsOn !== undefined && query.runsOn !== SCENARIO_CLOUD
       let cursor: Cursor | null =
-        query.runsOn === LOCAL_RUNTIME || !servedByCatalogue(query.family)
+        elsewhere || !servedByCatalogue(query.family)
           ? null
           : (deserialize(query.cursor) ?? startOf(query))
       let walked = 0
@@ -733,7 +777,10 @@ export function createModelRegistry({
     },
 
     describe: async modelId =>
-      describedAsCloudItself(modelId) ?? describedLocally(modelId) ?? (await described(modelId)),
+      describedAsCloudItself(modelId) ??
+      describedLocally(modelId) ??
+      publishedModelOf?.(modelId) ??
+      (await described(modelId)),
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]

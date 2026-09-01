@@ -67,7 +67,17 @@ function waitForJob(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 async function cancelJob(input: Record<string, unknown>): Promise<ActionOutcome> {
   const jobId = textOf(input, 'jobId') ?? ''
-  if (!jobOf(jobId)) return refused('notFound', noJob(jobId))
+  const job = jobOf(jobId)
+  if (!job) return refused('notFound', noJob(jobId))
+
+  // 🛑 Refused rather than answered « done »: some services do not stop a task they have
+  // started, and `ok` here would have a caller believe it stopped a spend that runs to its end
+  // and is billed. Queued is another matter — nothing has reached the service yet.
+  if (job.cancellable === false && job.status !== 'queued')
+    return refused(
+      'declined',
+      'the service running this generation does not stop one it has started: it will run to its end and be billed',
+    )
 
   await useJobs.getState().cancel(jobId)
   return { ok: true }

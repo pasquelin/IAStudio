@@ -97,7 +97,7 @@ export function AccountSelect() {
               {group.accounts.map(account => {
                 // `null` is "never read", which is not "this cloud publishes none" — asserting
                 // the second before the first answer lands is a lie on every row.
-                const credit = balances && describeCredit(balances[account.id], i18n.language)
+                const credit = balances && describeCredit(balances[account.id], i18n.language, t)
 
                 return (
                   <MenuRow

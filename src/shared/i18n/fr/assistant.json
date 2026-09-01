@@ -27,7 +27,7 @@
       },
       "generatorSubmit": {
         "title": "Lancer la génération préparée",
-        "description": "Envoie le formulaire tel qu’il est affiché. Consomme des unités créatives, dont l’estimation est annoncée d’abord."
+        "description": "Envoie le formulaire tel qu’il est affiché. Dépense sur le compte qui sert ce modèle, et l’estimation est annoncée d’abord quand il y en a une."
       },
       "jobsList": {
         "title": "Lister les tâches",
@@ -1521,11 +1521,11 @@
     "confirm": {
       "credits": "Cette action va dépenser {{cost}}.",
       "value": "{{label}} : {{value}}",
-      "unknownCost": "Cette action va dépenser des unités créatives. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
-      "files": "Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa bibliothèque. Elle ne coûte aucune unité créative.",
-      "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne coûte aucune unité créative.",
-      "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne coûte aucune unité créative, et rien ici ne la rattrape.",
-      "studio": "Cette action change l’état du studio, et aucun ⌘Z ne revient dessus. Elle ne coûte aucune unité créative.",
+      "unknownCost": "Cette action va dépenser sur votre compte. Le studio n’a pas pu en estimer le montant, et n’en invente pas.",
+      "files": "Cette action va modifier ce que porte votre projet — des fichiers, ou les assets de sa bibliothèque. Elle ne dépense rien.",
+      "asset": "Cette action va téléverser une image, qui restera dans votre bibliothèque. Elle ne dépense rien.",
+      "remote": "Cette action va publier vers un serveur, hors de cette machine. Elle ne dépense rien, et rien ici ne la rattrape.",
+      "studio": "Cette action change l’état du studio, et aucun ⌘Z ne revient dessus. Elle ne dépense rien.",
       "yes": "Autoriser",
       "pickFolder": "Choisir…",
       "pickFolderHint": "Ouvre le sélecteur du système, et l’action utilisera le dossier choisi là",

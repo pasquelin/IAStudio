@@ -31,6 +31,8 @@ import { GIT_CHANGES, GIT_FAILURE_KEYS, GIT_REF_KINDS, GIT_STAGES } from '../dom
 import { ASSISTANT_MODELS } from '../domain/assistant'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { CLOUD_IDS } from '../domain/aiCloud'
+import { localFieldKeys } from '../domain/localFields'
+import { tripoFieldKeys } from '../domain/tripo'
 import { COMPATIBILITIES } from '../domain/aiMemory'
 import { STANDALONE_ROLES } from '../domain/aiRole'
 import { breakableSpots } from './typography'
@@ -1371,6 +1373,14 @@ const DYNAMIC_KEYS: readonly string[] = [
   // A cloud is named by its REGISTRY entry, so the second one to arrive needs no code change —
   // and no line here either. Without its two keys it would offer itself as `aiClouds.x`.
   ...CLOUD_IDS.flatMap(id => [`aiClouds.${id}`, `aiClouds.${id}Hint`]),
+  /**
+   * Every label of a form the studio DERIVES rather than fetches — the knobs of a local model,
+   * and those of the cloud whose catalogue is data. Both are read through `translate(<variable>)`
+   * in the main process, out of reach of the renderer's guard, so a knob without its line reaches
+   * the panel as `tripoFields.pbr`.
+   */
+  ...localFieldKeys(),
+  ...tripoFieldKeys(),
 ]
 
 /**

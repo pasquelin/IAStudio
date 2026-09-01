@@ -28,6 +28,8 @@ import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { connectPreparation } from '@/stores/preparation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from '@/stores/settings'
+import { useAccounts } from '@/stores/accounts'
+import { TRIPO_CLOUD } from '@shared/domain/tripo'
 import { chooseModels } from '@/stores/models-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
@@ -446,6 +448,54 @@ describe('the generator without a project', () => {
   })
 })
 
+/**
+ * 🛑 A SECOND cloud serving the family answers for it too, and the Scenario flag alone does not.
+ * Read on that flag, a Tripo key was refused the 3D and Image forms while the picker listed its
+ * fifty models right beside them — measured in the app on 2026-08-31.
+ */
+describe('the generator on a second cloud', () => {
+  beforeEach(() => {
+    installCanvas(DOCUMENT)
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useProject.setState({ project: PROJECT, known: true })
+    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+    useLayouts.setState({ activeWorkspace: 'image' })
+    useGeneration.setState({ forcedCapability: aiRoleId('image', 'txt2img') })
+    // Read, and holding nothing of this machine: the guard is only reached past both.
+    useAiModels.setState({
+      overview: {
+        roles: [],
+        machine: { physicalBytes: 1, availableBytes: 1, diskFreeBytes: 1, gpu: null, vram: null },
+        projectPath: PROJECT.path,
+        installing: null,
+        loading: null,
+        loadFailure: null,
+        installFailure: null,
+        ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
+        engine: { known: false, missing: [], progress: null, failed: false },
+      },
+    })
+    useAccounts.setState({ accounts: [], accountsLoaded: true })
+  })
+
+  it('asks for a key when no held cloud serves the family', () => {
+    renderPanel()
+
+    expect(screen.getAllByText(/identifiants/i).length).toBeGreaterThan(0)
+  })
+
+  it('draws the form when another held cloud serves it', () => {
+    useAccounts.setState({
+      accounts: [{ id: 'account-tripo', name: 'Studio', providerId: TRIPO_CLOUD, active: true }],
+      accountsLoaded: true,
+    })
+
+    renderPanel()
+
+    expect(screen.queryByText(/identifiants/i)).toBeNull()
+  })
+})
+
 describe('the generator on this machine', () => {
   beforeEach(() => {
     installCanvas(DOCUMENT)
@@ -513,6 +563,19 @@ describe('the generator on this machine', () => {
 
     expect(await screen.findByText('SSD-1B')).toBeInTheDocument()
     expect(screen.queryByText(/identifiants/i)).toBeNull()
+  })
+
+  /**
+   * 🛑 Seen on screen: clicking the word « Modèle » made the picker flicker and never stay open.
+   * A `<label>` FORWARDS its click — the panel opened on the forwarded one, and the original,
+   * landing outside it, closed it again. A disclosure takes no label of its own.
+   */
+  it('leaves the model picker shut when its name is clicked', async () => {
+    renderPanel()
+
+    await userEvent.click(await screen.findByText('Modèle'))
+
+    expect(screen.queryByPlaceholderText(/Chercher un modèle/i)).toBeNull()
   })
 
   /**

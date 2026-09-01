@@ -47,7 +47,10 @@ describe('the registry, published as tools', () => {
   it('says on the tool itself what running it engages', () => {
     const submit = mcpTools().find(tool => tool.name === 'generator_submit')
 
-    expect(submit?.description).toContain('spends creative units')
+    // Never a UNIT: what a run costs is the unit of whichever cloud serves it, and one of them
+    // sells credits rather than creative units.
+    expect(submit?.description).toContain('Refuses with a consent token first')
+    expect(submit?.description).not.toContain('creative units')
   })
 
   /**

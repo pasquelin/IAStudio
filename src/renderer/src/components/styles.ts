@@ -413,6 +413,21 @@ export const ROW_ACTION_SPACER = 'size-(--sc-control) shrink-0'
 export const COLOR_READOUT = 'text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase'
 
 /**
+ * What a form field explains about itself, under its control.
+ *
+ * 🛑 Its own voice, and that is the whole point: written as `text-muted` like the NAME above it,
+ * measured at the same colour and the same weight one pixel apart, a description read as a second
+ * label — `SettingLine` separates the two on both axes, and this is the dock's way of saying it.
+ */
+export const FIELD_HELP = 'text-muted text-tiny'
+
+/**
+ * The NAME of a form field, which is not muted: it is what the field IS, where the help under it
+ * is an aside. The settings say it with weight and full colour; a dock says it the same way.
+ */
+export const FIELD_NAME = 'text-text text-xs font-medium'
+
+/**
  * One width for a whole section, shared with `PropertyRow` so both families of line start on one
  * column. A SHARE of the row, capped and NOT floored: a fixed width truncated in a wide panel, and
  * a floor of eighty overflowed a side zone dragged to its 140px minimum by 21px, measured.

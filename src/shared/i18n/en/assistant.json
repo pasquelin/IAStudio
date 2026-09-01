@@ -27,7 +27,7 @@
       },
       "generatorSubmit": {
         "title": "Start the prepared generation",
-        "description": "Sends the form as it stands. Spends creative units, whose estimate is stated first."
+        "description": "Sends the form as it stands. Spends on the account serving that model, and the estimate is stated first where there is one."
       },
       "jobsList": {
         "title": "List the jobs",
@@ -1521,11 +1521,11 @@
     "confirm": {
       "credits": "This action will spend {{cost}}.",
       "value": "{{label}}: {{value}}",
-      "unknownCost": "This action will spend creative units. The studio could not estimate how many, and does not invent a figure.",
-      "files": "This action will change what your project holds — files, or the assets in its library. It costs no creative units.",
-      "asset": "This action will upload an image, which then stays in your library. It costs no creative units.",
-      "remote": "This action will publish to a server, off this machine. It costs no creative units, and nothing here takes it back.",
-      "studio": "This changes the studio’s own state, and no ⌘Z comes back from it. It spends no creative units.",
+      "unknownCost": "This action will spend on your account. The studio could not estimate how much, and does not invent a figure.",
+      "files": "This action will change what your project holds — files, or the assets in its library. It spends nothing.",
+      "asset": "This action will upload an image, which then stays in your library. It spends nothing.",
+      "remote": "This action will publish to a server, off this machine. It spends nothing, and nothing here takes it back.",
+      "studio": "This changes the studio’s own state, and no ⌘Z comes back from it. It spends nothing.",
       "yes": "Allow",
       "pickFolder": "Choose…",
       "pickFolderHint": "Opens the system picker, and the action will use the folder chosen there",

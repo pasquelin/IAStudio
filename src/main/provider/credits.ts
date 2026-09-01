@@ -1,5 +1,12 @@
 import { SCENARIO_CLOUD, type CloudProviderId } from '@shared/domain/aiCloud'
-import type { CreditBalance, CreditBalances, Money } from '@shared/domain/credits'
+import { TRIPO_CLOUD } from '@shared/domain/tripo'
+import { createTripoApi } from './tripoApi'
+import {
+  CREDIT_UNIT,
+  type CreditBalance,
+  type CreditBalances,
+  type Money,
+} from '@shared/domain/credits'
 import { isRecord } from '@shared/guards'
 import { orElse } from '@shared/promises'
 import { log } from '@main/log'
@@ -106,6 +113,22 @@ type BalanceRead = (get: CreditsFetch, key: string) => Promise<readonly Money[] 
 const READ: Partial<Record<CloudProviderId, BalanceRead>> = {
   deepseek: async (get, key) =>
     deepseekLeft(await readJson(get, 'https://api.deepseek.com/user/balance', key)),
+
+  /**
+   * In CREDITS: their answer names no currency. Through the runner's own client, so the envelope
+   * is checked in ONE place — a refusal carrying a `data.balance` would otherwise be drawn as a
+   * balance. 🛑 NOT MEASURED whether `balance` already excludes `frozen`.
+   */
+  [TRIPO_CLOUD]: async (get, key) => {
+    const { balance } = await createTripoApi({
+      key: () => key,
+      // The timeout this reader gives every call: a pending host would otherwise never fill the
+      // cache, and every opening of the menu would ask again.
+      fetch: (input, init) => get(input, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) }),
+    }).balance()
+
+    return [{ amount: balance, currency: CREDIT_UNIT }]
+  },
 
   // Both at once, and it takes both: `/credits` asks for a management key while `/key` answers an
   // inference one but quotes a figure only where the key was given a limit.

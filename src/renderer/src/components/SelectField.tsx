@@ -126,7 +126,9 @@ export function SelectField<V extends string>({
             // border, wider corner, and it read as the one control of the generation panel that
             // had strayed in from a toolbar.
             layout === 'stacked'
-            ? FIELD
+            ? // `pr-6` as the bar reserves it: the chevron is drawn ON the field's own padding,
+              // so without this the value ran under it and the glyph sat against the border.
+              cn(FIELD, 'appearance-none pr-6')
             : NATIVE_SELECT,
         'min-w-0 flex-1',
         // The unset entry reads quieter than a value, which is how a filter bar shows at a

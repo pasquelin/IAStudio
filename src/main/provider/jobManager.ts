@@ -30,6 +30,8 @@ export type RemoteJob = {
   assetIds: readonly string[]
   /** On a submission, and on a poll too — which is where a resumed job finds its own. */
   cost?: number
+  /** What the figure above is quoted in. Absent means Scenario's creative units — see `Job`. */
+  costUnit?: string
   /** A local runner names why it failed. Absent on the cloud, which has no code of its own. */
   error?: JobFailure
   /**
@@ -41,13 +43,17 @@ export type RemoteJob = {
 
 export type JobRunner = {
   submit: (target: JobTarget, body: Record<string, unknown>) => Promise<RemoteJob>
-  poll: (jobId: string) => Promise<RemoteJob>
-  cancel: (jobId: string) => Promise<void>
+  /**
+   * The target rides along, and a runner needing neither may take one argument: a job picked up
+   * from a previous session reaches a runner that has never heard of its id.
+   */
+  poll: (jobId: string, target: JobTarget) => Promise<RemoteJob>
+  cancel: (jobId: string, target: JobTarget) => Promise<void>
   /**
    * The manager has the outcome and will never poll this one again — whatever the runner kept to
    * answer with may go. Optional: a runner that keeps nothing has nothing to release.
    */
-  forget?: (jobId: string) => void
+  forget?: (jobId: string, target: JobTarget) => void
 }
 
 /**
@@ -124,6 +130,17 @@ export type JobManagerDeps = {
   localConcurrency?: () => number
   /** Whether the target is a model this machine holds. Absent, every job uses `concurrency`. */
   isLocalTarget?: (targetId: string) => boolean
+  /**
+   * Whether the service behind a target stops a task it has started. Absent, every one does —
+   * which is what the studio assumed before a cloud that does not.
+   */
+  cancellableTarget?: (targetId: string) => boolean
+  /**
+   * A per-category ceiling beside the global bound — `null` for a target counted only against
+   * `concurrency()`. One cloud allows ONE picture at a time while ten of its 3D slots sit idle,
+   * which a single number for a whole cloud cannot say.
+   */
+  lane?: (targetId: string) => { name: string; limit: number } | null
   maxRetries: () => number
   /**
    * The pictures a body names, turned into what the TARGET's runtime takes: an id the API
@@ -146,6 +163,10 @@ export type JobManagerDeps = {
   sleep: (ms: number) => Promise<void>
   pollIntervalMs?: number
   backoffBaseMs?: number
+  /** What a retry can fix. Defaults to the Scenario SDK's reading, which is blind to the rest. */
+  retryable?: (error: unknown) => boolean
+  /** How long a service asked to be left alone for. See `RetryOptions.delayFor`. */
+  retryDelayFor?: (error: unknown) => number | null
 }
 
 export type JobManager = {
@@ -245,11 +266,20 @@ const STATUS: Record<string, JobStatus> = {
   'warming-up': 'running',
   'in-progress': 'running',
   finalizing: 'running',
+  running: 'running',
   success: 'succeeded',
   succeeded: 'succeeded',
   failure: 'failed',
   failed: 'failed',
   canceled: 'cancelled',
+  /**
+   * 🛑 The three a second cloud spells and Scenario does not — plus its own spelling of
+   * cancelled, with two `l`s. Unmapped, each is read as RUNNING and polls for ever while holding
+   * its slot: one banned picture would block a lane whose ceiling is one for the whole session.
+   */
+  cancelled: 'cancelled',
+  banned: 'failed',
+  expired: 'failed',
 }
 
 export function jobStatusOf(remoteStatus: string): JobStatus {
@@ -336,6 +366,8 @@ export function createJobManager({
   concurrency,
   localConcurrency,
   isLocalTarget,
+  cancellableTarget,
+  lane,
   maxRetries,
   resolveAssetInputs,
   onProgress,
@@ -346,11 +378,15 @@ export function createJobManager({
   sleep,
   pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
   backoffBaseMs = DEFAULT_BACKOFF_BASE_MS,
+  retryable,
+  retryDelayFor,
 }: JobManagerDeps): JobManager {
   const entries = new Map<string, Entry>()
   const queue: string[] = []
   let running = 0
   let localRunning = 0
+  /** How many are running per category, for the clouds that count their own that way. */
+  const laneRunning = new Map<string, number>()
 
   /**
    * How long to wait before asking again, given how many jobs are being followed at once.
@@ -362,6 +398,8 @@ export function createJobManager({
    */
   const pollDelay = (): number =>
     Math.max(pollIntervalMs, Math.ceil((running * 60_000) / POLL_REQUESTS_PER_MINUTE))
+
+  const targetOf = (entry: Entry): JobTarget => ({ id: entry.job.targetId })
 
   const emit = (entry: Entry): void => {
     // Nothing is drawing it, and a window told about a job it will never list would merge
@@ -376,6 +414,7 @@ export function createJobManager({
     if (entry.job.assetIds.length > 0) progress.assetIds = entry.job.assetIds
     if (entry.job.error !== undefined) progress.error = entry.job.error
     if (entry.job.cost !== undefined) progress.cost = entry.job.cost
+    if (entry.job.costUnit !== undefined) progress.costUnit = entry.job.costUnit
     onProgress(progress)
   }
 
@@ -495,7 +534,7 @@ export function createJobManager({
     // 🛑 HERE and not on the poll that answered: `follow` leaves without settling when the
     // project changed under it, and the resume that follows polls the SAME job again — a runner
     // that had let go of its answer would settle it succeeded with nothing.
-    if (entry.remoteId !== null) entry.account?.runner.forget?.(entry.remoteId)
+    if (entry.remoteId !== null) entry.account?.runner.forget?.(entry.remoteId, targetOf(entry))
     // Released with the body, and for the same reason: the SDK client behind it holds an HTTP
     // agent and its sockets, and a finished job would keep a switched-away account's alive for
     // the rest of the session. `execute` holds its own reference, and `cancel` returns before
@@ -521,7 +560,7 @@ export function createJobManager({
    */
   const abandon = async (entry: Entry, bound: JobAccount, remoteId: string): Promise<void> => {
     try {
-      await bound.runner.cancel(remoteId)
+      await bound.runner.cancel(remoteId, targetOf(entry))
       entry.done = true
     } catch {
       // Nothing to add: a refused cancellation is the case the note above describes, and the
@@ -531,7 +570,13 @@ export function createJobManager({
     settle(entry, 'cancelled')
   }
 
-  const withRetry = createRetry({ maxRetries, sleep, backoffBaseMs })
+  const withRetry = createRetry({
+    maxRetries,
+    sleep,
+    backoffBaseMs,
+    ...(retryable ? { retryable } : {}),
+    ...(retryDelayFor ? { delayFor: retryDelayFor } : {}),
+  })
 
   const advance = (entry: Entry, remote: RemoteJob): JobStatus => {
     const status = jobStatusOf(remote.status)
@@ -539,7 +584,10 @@ export function createJobManager({
 
     // Before the early return: a resumed job's cost only ever arrives by poll, outcome included.
     const priced = remote.cost !== undefined && remote.cost !== entry.job.cost
-    if (priced) entry.job.cost = remote.cost
+    if (priced) {
+      entry.job.cost = remote.cost
+      if (remote.costUnit !== undefined) entry.job.costUnit = remote.costUnit
+    }
 
     // An outcome is announced by `settle` alone, and only once it is actually complete: a
     // success emitted here would reach the jobs bar before the asset exists on disk.
@@ -573,14 +621,14 @@ export function createJobManager({
     // under this id, and collecting by ours files nothing while the job still succeeds.
     entry.job.remoteId = remoteId
 
-    let remote = submitted ?? (await withRetry(() => bound.runner.poll(remoteId)))
+    let remote = submitted ?? (await withRetry(() => bound.runner.poll(remoteId, targetOf(entry))))
     let status = advance(entry, remote)
 
     while (!isFinished(status)) {
       await sleep(pollDelay())
       if (entry.cancelled) return await abandon(entry, bound, remoteId)
 
-      remote = await withRetry(() => bound.runner.poll(remoteId))
+      remote = await withRetry(() => bound.runner.poll(remoteId, targetOf(entry)))
       status = advance(entry, remote)
     }
 
@@ -659,7 +707,7 @@ export function createJobManager({
     try {
       if (remoteId !== null) return await follow(entry, bound, remoteId)
 
-      const target: JobTarget = { id: entry.job.targetId }
+      const target = targetOf(entry)
       // Here rather than at the IPC boundary, because sending a picture up is a file transfer of
       // any size: done before the job exists, it holds the channel open with nothing queued on
       // screen and outside this loop's concurrency bound. Retried like the submission beside it —
@@ -668,6 +716,7 @@ export function createJobManager({
       const submitted = await withRetry(() => bound.runner.submit(target, body))
       entry.remoteId = submitted.jobId
       if (submitted.cost !== undefined) entry.job.cost = submitted.cost
+      if (submitted.costUnit !== undefined) entry.job.costUnit = submitted.costUnit
 
       // The body is read once and can hold an encoded source image; a finished job has no
       // reason to keep it alive for the rest of the session.
@@ -711,10 +760,19 @@ export function createJobManager({
 
   const onThisMachine = isLocalTarget ?? (() => false)
 
-  const canStart = (entry: Entry): boolean =>
-    onThisMachine(entry.job.targetId)
+  const laneOf = (targetId: string): { name: string; limit: number } | null =>
+    lane?.(targetId) ?? null
+
+  const canStart = (entry: Entry): boolean => {
+    // BOTH bounds, never one instead of the other: a category slot says nothing about how many
+    // requests the studio as a whole is willing to have in flight.
+    const own = laneOf(entry.job.targetId)
+    if (own && (laneRunning.get(own.name) ?? 0) >= own.limit) return false
+
+    return onThisMachine(entry.job.targetId)
       ? localRunning < (localConcurrency?.() ?? 1)
       : running - localRunning < concurrency()
+  }
 
   const pump = (): void => {
     while (true) {
@@ -736,11 +794,14 @@ export function createJobManager({
       }
 
       const local = onThisMachine(entry.job.targetId)
+      const own = laneOf(entry.job.targetId)
       running++
       if (local) localRunning++
+      if (own) laneRunning.set(own.name, (laneRunning.get(own.name) ?? 0) + 1)
       void execute(entry).finally(() => {
         running--
         if (local) localRunning--
+        if (own) laneRunning.set(own.name, Math.max(0, (laneRunning.get(own.name) ?? 1) - 1))
         pump()
       })
     }
@@ -763,6 +824,7 @@ export function createJobManager({
       progress: 0,
       createdAt: now(),
       assetIds: [],
+      ...(cancellableTarget?.(target.id) === false ? { cancellable: false } : {}),
     }
 
     const active = accounts.active()
@@ -830,7 +892,7 @@ export function createJobManager({
     const runner = entry.account?.runner
     if (entry.remoteId && runner) {
       try {
-        await runner.cancel(entry.remoteId)
+        await runner.cancel(entry.remoteId, targetOf(entry))
         entry.done = true
         remember()
       } catch {
@@ -874,6 +936,10 @@ export function createJobManager({
           progress: 0,
           createdAt: remembered.createdAt,
           assetIds: [],
+          // 🛑 Read again rather than remembered: the note carries no such word, and a resumed
+          // job that came back cancellable would report a running spend as stopped — which is
+          // the one thing this flag exists to prevent.
+          ...(cancellableTarget?.(remembered.targetId) === false ? { cancellable: false } : {}),
         }
 
         const entry: Entry = {

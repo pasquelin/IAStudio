@@ -2,6 +2,9 @@ import type Scenario from '@scenario-labs/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { outputsOf, runnerOf } from './runner'
 
+/** The SDK follows a job by its own id; the target rides along for the ROUTER's sake alone. */
+const TARGET = { id: 'model_flux' }
+
 const REMOTE = { jobId: 'job_remote', status: 'queued', progress: 0, assetIds: [] }
 
 const triggerAction = vi.fn(() => Promise.resolve({}))
@@ -88,7 +91,7 @@ describe('the runner that binds the job manager to the SDK', () => {
       () => Promise.resolve({ job: { ...REMOTE, billing: { cuCost: 7 } } }),
     )
 
-    await expect(runnerOf(priced).poll('job_remote')).resolves.toMatchObject({ cost: 7 })
+    await expect(runnerOf(priced).poll('job_remote', TARGET)).resolves.toMatchObject({ cost: 7 })
   })
 
   /**
@@ -131,9 +134,9 @@ describe('the runner that binds the job manager to the SDK', () => {
   it('polls and cancels through the jobs endpoint, whatever ran', async () => {
     const runner = runnerOf(client(() => Promise.resolve({ job: REMOTE })))
 
-    await expect(runner.poll('job_remote')).resolves.toMatchObject({ jobId: 'job_remote' })
+    await expect(runner.poll('job_remote', TARGET)).resolves.toMatchObject({ jobId: 'job_remote' })
 
-    await runner.cancel('job_remote')
+    await runner.cancel('job_remote', TARGET)
     expect(triggerAction).toHaveBeenCalledWith('job_remote', { action: 'cancel' })
   })
 })

@@ -140,6 +140,17 @@ describe('status mapping', () => {
     expect(jobStatusOf('failed')).toBe('failed')
   })
 
+  /**
+   * 🛑 A second cloud spells three outcomes Scenario never does. Unmapped, each folds onto
+   * `running` and polls for ever holding its slot — and one lane's ceiling is ONE, so a single
+   * banned picture would block every picture of the session.
+   */
+  it('folds the outcomes a second cloud spells its own way', () => {
+    expect(jobStatusOf('cancelled')).toBe('cancelled')
+    expect(jobStatusOf('banned')).toBe('failed')
+    expect(jobStatusOf('expired')).toBe('failed')
+  })
+
   // Declaring an outcome nobody understood is worse than polling one cycle too many.
   it('keeps polling on a status it has never seen', () => {
     expect(jobStatusOf('reticulating-splines')).toBe('running')
@@ -407,6 +418,72 @@ describe('job manager', () => {
     await settled()
   })
 
+  /**
+   * A cloud whose ceilings are per CATEGORY — Tripo counts one picture at a time against ten
+   * meshes. A single number for the whole cloud would refuse the mesh or take a certain 429 on
+   * the second picture.
+   */
+  it('holds a category at its own ceiling while another category runs freely', async () => {
+    const started: string[] = []
+    const release: Record<string, () => void> = {}
+
+    const { manager } = harness({
+      concurrency: () => 5,
+      lane: id => (id.startsWith('tripo:') ? { name: id.split(':')[1] ?? '', limit: 1 } : null),
+      runner: {
+        submit: target =>
+          new Promise(resolve => {
+            started.push(target.id)
+            release[target.id] = () => resolve(remote('success'))
+          }),
+      },
+    })
+
+    manager.submit({ id: 'tripo:image:one' }, 'One', {})
+    manager.submit({ id: 'tripo:image:two' }, 'Two', {})
+    manager.submit({ id: 'tripo:mesh:three' }, 'Three', {})
+    await settled()
+
+    expect(started).toEqual(['tripo:image:one', 'tripo:mesh:three'])
+
+    release['tripo:image:one']?.()
+    await settled()
+    expect(started).toContain('tripo:image:two')
+
+    release['tripo:image:two']?.()
+    release['tripo:mesh:three']?.()
+    await settled()
+  })
+
+  /**
+   * A service that does not stop what it started — the row draws what the manager decided, and
+   * names no cloud of its own.
+   */
+  it('marks a job the service will not stop as uncancellable, and every other one as nothing', () => {
+    const { manager } = harness({
+      cancellableTarget: targetId => targetId !== 'tripo:one',
+    })
+
+    expect(manager.submit({ id: 'tripo:one' }, 'One', {}).cancellable).toBe(false)
+    expect(manager.submit({ id: 'model_flux' }, 'Flux', {}).cancellable).toBeUndefined()
+  })
+
+  /**
+   * 🛑 A resumed job carries no such word in its note. Left unread, a generation of a service
+   * that does not stop one came back cancellable after a relaunch — and reporting it stopped is
+   * exactly what the flag prevents.
+   */
+  it('reads again, on a resumed job, whether its service stops what it started', () => {
+    const { manager } = harness({
+      cancellableTarget: targetId => targetId !== 'model_veo',
+      runner: { poll: () => new Promise<RemoteJob>(() => {}) },
+    })
+
+    manager.resume([RUNNING])
+
+    expect(manager.list()[0]?.cancellable).toBe(false)
+  })
+
   it('never runs two jobs on this machine at once', async () => {
     let active = 0
     let peak = 0
@@ -536,7 +613,7 @@ describe('job manager', () => {
     manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
-    expect(forget).toHaveBeenCalledWith('job_remote')
+    expect(forget).toHaveBeenCalledWith('job_remote', { id: 'model_flux' })
   })
 
   /** The step aside settles nothing, so what the runner kept has to outlive it — see the resume. */
@@ -611,7 +688,7 @@ describe('job manager', () => {
     await settled()
     await manager.cancel(job.id)
 
-    expect(cancel).toHaveBeenCalledWith('job_remote')
+    expect(cancel).toHaveBeenCalledWith('job_remote', { id: 'model_flux' })
   })
 
   it('succeeds only once the assets are indexed', async () => {
@@ -827,7 +904,7 @@ describe('the account a job runs on', () => {
     switchAccount()
     await manager.cancel(job.id)
 
-    expect(studio.runner.cancel).toHaveBeenCalledWith('job_remote')
+    expect(studio.runner.cancel).toHaveBeenCalledWith('job_remote', { id: 'model_veo' })
     expect(other.runner.cancel).not.toHaveBeenCalled()
   })
 
@@ -1316,7 +1393,7 @@ describe('a job that outlives the session', () => {
 
     await manager.cancel(RUNNING.id)
 
-    expect(cancel).toHaveBeenCalledWith('job_remote')
+    expect(cancel).toHaveBeenCalledWith('job_remote', { id: 'model_veo' })
     expect(manager.list()[0]?.status).toBe('cancelled')
     // Taken by the API, so nothing is owed and the note goes with it.
     expect(remembered()).toEqual([])

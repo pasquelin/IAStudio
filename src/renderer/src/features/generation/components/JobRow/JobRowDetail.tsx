@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { CREDIT_UNIT } from '@shared/domain/credits'
 import type { Job } from '@shared/domain/job'
 import { failureMessageKey } from '@/services/failureMessage'
 import { formatUnits } from '@/helpers/format'
@@ -17,11 +18,13 @@ export function JobRowDetail({ job }: { job: Job }) {
 
   if (job.cost === undefined) return null
 
-  // Through `formatUnits` like every other figure in Compute Units: it groups the thousands
-  // AND keeps the decimals of a cheap call, which rounding would report as free.
+  // 🛑 The UNIT comes off the job: a credit is not a creative unit, and a row labelling one as
+  // the other would have two counters read as one.
+  const units = formatUnits(job.cost, i18n.language)
+
   return (
     <span className="text-muted text-tiny">
-      {t('units.creative', { units: formatUnits(job.cost, i18n.language) })}
+      {t(job.costUnit === CREDIT_UNIT ? 'accounts.credits.unit' : 'units.creative', { units })}
     </span>
   )
 }

@@ -1,5 +1,6 @@
 import { CATALOGUE_FAMILIES, CODE_FAMILY, type ModelFamily } from './model'
 import { ASSISTANT_ROLE, partsOfRole, type AiRoleId } from './aiRole'
+import { TRIPO_CATALOGUE, TRIPO_CLOUD } from './tripo'
 
 /**
  * The clouds a role can be served by — a LIST, never a name in a branch.
@@ -23,10 +24,19 @@ export type CloudProvider = {
   readonly id: CloudProviderId
   /** The generation families it publishes. Its capabilities are the studio's own per family. */
   readonly families: readonly ModelFamily[]
+  /**
+   * The employments it actually serves, for a cloud that does not serve its whole family.
+   *
+   * Absent means every capability of every family it declares — which is true of Scenario, whose
+   * catalogue publishes models for all of them. Tripo does not: it generates a picture and edits
+   * one, and offering it under `image/inpaint` would open a picker with nothing in it.
+   */
+  readonly capabilities?: readonly string[]
   /** The standalone roles it serves. A role absent from every entry is local or nothing. */
   readonly standalone: readonly AiRoleId[]
   readonly auth: CloudAuth
-  readonly chat: CloudChat
+  /** Absent for a cloud that does not converse at all — Tripo generates and says nothing. */
+  readonly chat?: CloudChat
 }
 
 /** The one cloud the studio was built on: a stored key written before clouds were a list is one. */
@@ -84,12 +94,28 @@ export const CLOUD_PROVIDERS: readonly CloudProvider[] = [
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'openai/gpt-4o-mini',
   }),
+  /**
+   * The second cloud that GENERATES. No `chat` and no `standalone`: it answers no conversation,
+   * so the assistant is never offered it and `defaultChatModel` reads it as a cloud with no door.
+   *
+   * Two families, and neither is Material: their "texture" paints a mesh that already exists, so
+   * it belongs to 3D. Nothing of theirs answers skybox, video or audio.
+   */
+  {
+    id: TRIPO_CLOUD,
+    families: ['3d', 'image'],
+    // Read off the catalogue rather than listed: an endpoint added there serves its employment
+    // here, and a list written twice would be the half nobody updates.
+    capabilities: [...new Set(TRIPO_CATALOGUE.map(entry => entry.capability))],
+    standalone: [],
+    auth: 'key',
+  },
 ]
 
 export const CLOUD_IDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.map(one => one.id)
 
 /**
- * The clouds that hold a LIBRARY of assets, rather than only a key a chat talks through.
+ * The clouds that PUBLISH models generating assets, rather than only a key a chat talks through.
  *
  * 🛑 `families.length > 0` is not the test since the chat clouds gained `code`: it would have put
  * eight browsers of nothing beside the one that lists something.
@@ -98,11 +124,23 @@ export const ASSET_CLOUDS: readonly CloudProviderId[] = CLOUD_PROVIDERS.filter(c
   cloud.families.some(family => CATALOGUE_FAMILIES.includes(family)),
 ).map(cloud => cloud.id)
 
+/**
+ * The clouds holding a LIBRARY of assets the studio can browse, push to and pull from.
+ *
+ * DECLARED, never derived: generating assets and keeping a library of them are two different
+ * properties, and until Tripo arrived one list served both. Tripo generates and holds nothing to
+ * browse — deriving this from the families would have put an empty asset browser beside a full
+ * one, and had every local asset badge as foreign the moment its key became active.
+ */
+export const LIBRARY_CLOUDS: readonly CloudProviderId[] = [SCENARIO_CLOUD]
+
 /** Whether a cloud publishes what this role asks for, read off its declaration. */
 function serves(cloud: CloudProvider, role: AiRoleId): boolean {
   const parts = partsOfRole(role)
+  if (parts === null) return cloud.standalone.includes(role)
+  if (!cloud.families.includes(parts.family)) return false
 
-  return parts === null ? cloud.standalone.includes(role) : cloud.families.includes(parts.family)
+  return cloud.capabilities?.includes(parts.capability) ?? true
 }
 
 /** The clouds that could serve a role at all, before any account is held. */

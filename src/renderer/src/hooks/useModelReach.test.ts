@@ -37,6 +37,18 @@ describe('why a model is out of reach', () => {
     expect(reachOf(null, model({ runsOn: 'scenario' })).fetchable).toBe(false)
   })
 
+  /**
+   * 🛑 Seen on screen: every Tripo row read « Pas de moteur » — the badge for weights no engine
+   * can open — because its descriptor answered `installed: false` where a cloud model leaves the
+   * question absent. A cloud model is not a local one waiting for a download.
+   */
+  it('says nothing of an engine about a model that downloads nothing', () => {
+    const reach = reachOf(null, model({ runsOn: 'tripo' }))
+
+    expect(reach.refusal).toBeUndefined()
+    expect(reach.fetchable).toBe(false)
+  })
+
   it('offers no download for a card listed before any engine can open it', () => {
     const reach = reachOf(null, model({ installed: false, downloadable: false }))
 

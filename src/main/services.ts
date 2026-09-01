@@ -87,7 +87,7 @@ import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
-import { chatModelOf, CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
+import { chatModelOf, CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { spacesWithNoModel, SPACE_ROLES } from './ai/spacesWithNoModel'
@@ -120,7 +120,7 @@ import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
 import { ownModelFrom } from './ai/ownModel'
 import { createCodeJobRunner, isRetryableCloudChat } from './ai/codeJobRunner'
 import { createRoutedJobRunner } from './ai/routedJobRunner'
-import { createRetry } from './provider/retry'
+import { createRetry, isRetryable } from './provider/retry'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
 import {
   createDownloadHost,
@@ -213,10 +213,19 @@ import { costEstimatorOf, type CostEstimator } from './provider/cost'
 import { createUsageReader, type UsageReader } from './provider/usage'
 import { createJobStore } from './provider/jobStore'
 import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
+import type { ModelDescriptor } from '@shared/domain/model'
+import {
+  isTripoModelId,
+  tripoDescriptorOf,
+  TRIPO_CATALOGUE,
+  TRIPO_CLOUD,
+} from '@shared/domain/tripo'
 import { createCredentialsWatch } from './provider/credentialsWatch'
 import { createModelRegistry, type ModelRegistry } from './provider/modelRegistry'
 import { createPlanReader, teamsOf, type PlanReader } from './provider/plan'
 import { createCreditsReader, type CreditsReader } from './provider/credits'
+import { createTripoApi, isRetryableTripo, tripoRetryAfterMs } from './provider/tripoApi'
+import { createTripoRunner, tripoLaneOf } from './provider/tripoRunner'
 import { createAssistQueue } from './provider/assistQueue'
 import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
 import { promptAssistApiOf } from './provider/promptAssistApi'
@@ -667,9 +676,48 @@ export function createServices(settings: SettingsStore): Services {
     return merged.all
   }
 
+  const holdsTripo = (): boolean => settings.readCredentialsFor(TRIPO_CLOUD) !== null
+
+  /**
+   * Where a generation hands its file over, made once. Both producers write here — the engine on
+   * this machine, and the download of a cloud whose result URLs expire.
+   */
+  let generationFolderMade: Promise<string> | null = null
+
+  const generationFolder = async (): Promise<string> => {
+    const folder = join(app.getPath('temp'), 'ia-studio-generations')
+    generationFolderMade ??= ensureFolder(folder).then(() => folder)
+    return await generationFolderMade
+  }
+
+  /**
+   * Tripo's whole catalogue, described from DATA — their API publishes no listing. Built once
+   * per language: 50 entries and 303 knobs, counted 2026-08-31, and the registry asks on every
+   * search.
+   */
+  let tripoCatalogue: { language: Language; models: ModelDescriptor[] } | null = null
+
+  const describedTripo = (): readonly ModelDescriptor[] => {
+    const spoken = language()
+    if (tripoCatalogue?.language === spoken) return tripoCatalogue.models
+
+    const said = (key: string): string => textAt(TRANSLATIONS[spoken], key)
+    const models = TRIPO_CATALOGUE.map(entry => tripoDescriptorOf(entry, said))
+
+    tripoCatalogue = { language: spoken, models }
+    return models
+  }
+
+  /** What the picker is OFFERED, which is nothing while no key answers for it. */
+  const tripoModels = (): readonly ModelDescriptor[] => (holdsTripo() ? describedTripo() : [])
+
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
     watch: credentials.watch,
+    publishedModels: tripoModels,
+    // Whether or not a key is held: a stored id must be answered from here rather than asked of
+    // a catalogue that has never heard of it.
+    publishedModelOf: modelId => describedTripo().find(model => model.id === modelId) ?? null,
     // The two catalogues merge in `catalogue.ts` and nowhere else: one panel, one set of filters,
     // and a model that says where it runs — ADR-21 as amended.
     localModels: mergedCatalogue,
@@ -699,7 +747,11 @@ export function createServices(settings: SettingsStore): Services {
   // at once and must leave the active account exactly as it found it. Through the same transport
   // all the same, so each key spends from its own window rather than around it.
   const usage = createUsageReader({
-    accounts: () => settings.keyedAccounts(),
+    // Scenario's own keys, and only those: this reader speaks the Scenario SDK, so another
+    // cloud's key would spend a round trip to be told 401 and land in the report as a failure
+    // under an account that never had usage to report.
+    accounts: () =>
+      settings.keyedAccounts().filter(one => (one.providerId ?? SCENARIO_CLOUD) === SCENARIO_CLOUD),
     clientFor: credentials => clientFor(credentials, transport),
     queue: createAssistQueue({
       concurrency: () => USAGE_CONCURRENCY,
@@ -1349,6 +1401,8 @@ export function createServices(settings: SettingsStore): Services {
   for (const cloud of CLOUD_PROVIDERS) {
     // Captured so the narrowing survives into the closures below, which a property access does not.
     const chat = cloud.chat
+    // A cloud that answers no conversation gets no brain — it generates, and nothing else.
+    if (chat === undefined) continue
     if (chat.kind === 'scenario') {
       clouds[cloud.id] = { brain: () => providerBrain }
     } else {
@@ -1720,10 +1774,12 @@ export function createServices(settings: SettingsStore): Services {
   // `maxRetries: 0`, because a held request is answered with a synthetic 429 the SDK honours:
   // retried twice, one courtesy estimate would take three slots of the window precisely when
   // there are none left, and hold the transport for half a minute for a figure nobody waits on.
+  // 🛑 Tripo is unpriced, and not by oversight: they publish no dry run, and quoting credits
+  // under the `UC` label would put two counters under one word. The cost arrives with the job.
   const estimateCost = costEstimatorOf(
     (target, body) =>
       client.require().generate.runModel(target.id, { body, dryRun: true }, { maxRetries: 0 }),
-    isLocalTarget,
+    targetId => isLocalTarget(targetId) || isTripoModelId(targetId),
   )
 
   const promptContext = createPromptContext({
@@ -1844,8 +1900,7 @@ export function createServices(settings: SettingsStore): Services {
 
         // The main process owns where it lands, and the engine only fills it — which is what makes
         // the file ours to file and ours to delete.
-        const folder = join(app.getPath('temp'), 'ia-studio-generations')
-        await ensureFolder(folder)
+        const folder = await generationFolder()
 
         return await generate({
           model: model.id,
@@ -1882,7 +1937,7 @@ export function createServices(settings: SettingsStore): Services {
    * — every branch of it turns on a remote asset id there is none of.
    */
   const collectLocal = createLocalCollector({
-    producedBy: jobId => localJobs.producedBy(jobId),
+    producedBy: jobId => localJobs.producedBy(jobId) ?? tripoJobs.producedBy(jobId),
     discard: path => rm(path, { force: true }),
     backend: assets,
     newId: newAssetId,
@@ -1912,10 +1967,35 @@ export function createServices(settings: SettingsStore): Services {
     log: (level, message) => log[level]('ai', message),
   })
 
+  /**
+   * Held OUTSIDE `accountOn`, like the chat runner: its key is Tripo's own. Results come down on
+   * the poll that saw them succeed — their URLs are signed five minutes — and are filed by the
+   * LOCAL collector, there being no library to fetch them back from.
+   */
+  // 🛑 ONE client, not one per call: it remembers whether their grouped read is served, and a
+  // fresh one every poll threw that away — a wasted round trip every two seconds for the session.
+  const tripoApi = createTripoApi({
+    key: () => settings.readCredentialsFor(TRIPO_CLOUD)?.key ?? null,
+  })
+
+  const tripoJobs = createTripoRunner({
+    api: () => (holdsTripo() ? tripoApi : null),
+    download,
+    readFile: path => readFile(path),
+    writeFile: (path, bytes) => writeFile(path, bytes),
+    // The main process owns where it lands and the service only fills it — which is what makes
+    // the file ours to file and ours to delete, exactly as a local generation's is.
+    destinationFor: async (taskId, extension) =>
+      join(await generationFolder(), `${taskId}${extension}`),
+    gather: ms => delay(ms),
+    log: (level, message) => log[level]('provider', message),
+  })
+
   const accountOn = (scenario: Scenario | null): JobAccount => ({
     runner: createRoutedJobRunner({
       local: localJobs,
       code: codeJobs,
+      tripo: () => (holdsTripo() ? tripoJobs : null),
       cloud: () => (scenario ? runnerOf(scenario) : null),
       isLocalTarget,
     }),
@@ -1924,7 +2004,8 @@ export function createServices(settings: SettingsStore): Services {
     collect: createRoutedCollector({
       local: collectLocal,
       cloud: () => (scenario ? collectorOf(scenario) : null),
-      owns: jobId => localJobs.owns(jobId),
+      // Tripo files through the LOCAL collector: what it produced is already a file on this disk.
+      owns: jobId => localJobs.owns(jobId) || tripoJobs.owns(jobId),
       wroteText: jobId => codeJobs.owns(jobId),
     }),
   })
@@ -1953,7 +2034,11 @@ export function createServices(settings: SettingsStore): Services {
       // to the account that paid for it, whichever one the user has switched to since.
       of: accountId => {
         const credentials = settings.credentialsOf(accountId)
-        return credentials ? accountOn(clientFor(credentials, transport)) : null
+        if (credentials) return accountOn(clientFor(credentials, transport))
+
+        // 🛑 `LOCAL_ACCOUNT_ID` is "no Scenario key was held", not an account gone: a job of
+        // another cloud is written down under it, and `null` would abandon a paid generation.
+        return accountId === LOCAL_ACCOUNT_ID ? accountOn(null) : null
       },
     },
     projectPath: () => project.current()?.path ?? null,
@@ -1961,8 +2046,13 @@ export function createServices(settings: SettingsStore): Services {
     projectNameOf: path => projectName(path),
     // Routed on WHERE the target runs: a local model needs its picture off the disk, and
     // uploading it to an account would be a transfer nobody asked for.
+    // Routed on WHERE the target runs. Anything but Scenario takes the LOCAL resolver: pushing
+    // a picture to a Scenario library for a generation billed elsewhere is a transfer nobody
+    // asked for — the Tripo runner sends it to Tripo itself.
     resolveAssetInputs: (body, target) =>
-      isLocalTarget(target.id) ? localAssetInputs.resolveBody(body) : assetInputs.resolveBody(body),
+      isLocalTarget(target.id) || isTripoModelId(target.id)
+        ? localAssetInputs.resolveBody(body)
+        : assetInputs.resolveBody(body),
     persist: (unfinished, handled) => {
       // 🛑 A local job is never written down: its whole state lived in the memory of the process
       // that ran it, so a launch that resumed one would poll a runner that has never heard of it.
@@ -1979,7 +2069,17 @@ export function createServices(settings: SettingsStore): Services {
     concurrency: () => settings.read().generation.concurrentJobs,
     localConcurrency: () => 1,
     isLocalTarget,
+    // Their reference publishes no cancellation, so a job reported as stopped would go on being
+    // billed. Said HERE, where the runners live: the row only draws what it is told.
+    cancellableTarget: targetId => !isTripoModelId(targetId),
+    // Tripo counts its own concurrency per CATEGORY — one picture at a time against ten meshes —
+    // so its ceilings are respected before the request rather than discovered by a 429.
+    lane: tripoLaneOf,
     maxRetries: () => settings.read().generation.maxRetries,
+    // Two clouds word a refusal two ways, and the SDK's reader answers `false` for everything
+    // Tripo says — so their rate limit would have failed a job that one wait would have saved.
+    retryable: error => isRetryable(error) || isRetryableTripo(error),
+    retryDelayFor: tripoRetryAfterMs,
     onProgress: progress => broadcast(EVENTS.jobProgress, progress),
     onListChanged: list => broadcast(EVENTS.jobsChanged, list),
     record: report => journal.record(report),

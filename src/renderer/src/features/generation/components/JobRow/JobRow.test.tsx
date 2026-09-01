@@ -39,3 +39,47 @@ describe('what a finished job says it cost', () => {
     expect(screen.queryByText(/UC/)).toBeNull()
   })
 })
+
+/**
+ * A service that publishes no cancellation: a button reporting a running generation as stopped
+ * would have somebody believe they stopped a spend that continues. The row is TOLD — it reads
+ * `job.cancellable`, and knows no cloud by name.
+ */
+describe('a generation nothing can stop', () => {
+  it('refuses through the button, and says why', () => {
+    render(<JobRow job={job({ cancellable: false, status: 'running' })} />)
+
+    expect(screen.getByRole('button')).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  // Nothing has been spent while it waits in the studio's own queue: that one still stops here.
+  it('still cancels one that has not reached the service yet', () => {
+    render(<JobRow job={job({ cancellable: false, status: 'queued' })} />)
+
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('leaves a job that carries no such word alone', () => {
+    render(<JobRow job={job({ status: 'running' })} />)
+
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-disabled')
+  })
+})
+
+/**
+ * Decision 5: two clouds, two counters, and nothing added across them. A Tripo credit is not a
+ * creative unit and no rate anywhere converts one into the other.
+ */
+describe('the unit a cost is quoted in', () => {
+  it('says credits for a cloud that sells credits', () => {
+    render(<JobRow job={job({ cost: 20, costUnit: 'credits' })} />)
+
+    expect(screen.getByText('20 crédits')).toBeDefined()
+  })
+
+  it('keeps creative units for a job that carries no unit — every one written before', () => {
+    render(<JobRow job={job({ cost: 20 })} />)
+
+    expect(screen.getByText('20 UC')).toBeDefined()
+  })
+})

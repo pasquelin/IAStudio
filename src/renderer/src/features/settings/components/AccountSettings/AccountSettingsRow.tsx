@@ -30,7 +30,7 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
   const [failure, setFailure] = useState<AccountSaveFailure | null>(null)
 
   const keyWorks = (account.providerId ?? SCENARIO_CLOUD) !== SCENARIO_CLOUD || authenticated
-  const credit = describeCredit(balances?.[account.id], i18n.language)
+  const credit = describeCredit(balances?.[account.id], i18n.language, t)
 
   const stopEditing = (): void => {
     setDraft(null)

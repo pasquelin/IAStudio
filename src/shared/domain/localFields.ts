@@ -60,9 +60,11 @@ export function outputExtensionOf(modality: ProducingModality): string {
  * One knob, before a language is chosen. `labelKey` rather than `label`: a descriptor field is
  * screen text, and `no-hardcoded-text.test.ts` is right to refuse one written here.
  */
-export type LocalFieldTemplate = Omit<FieldDescriptor, 'label' | 'help'> & {
+export type LocalFieldTemplate = Omit<FieldDescriptor, 'label' | 'help' | 'options'> & {
   labelKey: string
   helpKey?: string
+  /** A closed list, named by key too — a `FieldOption.label` is screen text like any other. */
+  optionKeys?: readonly { readonly value: string; readonly labelKey: string }[]
 }
 
 /** The key every modality names its prompt by — read rather than spelled a second time. */
@@ -378,17 +380,39 @@ export function localFieldsOf(
   overrides: LocalFieldOverrides,
   translate: (key: string) => string,
 ): FieldDescriptor[] {
-  return TEMPLATES[modality].map(({ labelKey, helpKey, ...field }) => ({
+  return fieldsFrom(TEMPLATES[modality], translate, overrides)
+}
+
+/**
+ * A form, in the reader's language. The ONE place a template becomes a descriptor: a second
+ * mapping would let a new `FieldDescriptor` member reach half the forms and nothing would redden.
+ */
+export function fieldsFrom(
+  templates: readonly LocalFieldTemplate[],
+  translate: (key: string) => string,
+  overrides: LocalFieldOverrides = {},
+): FieldDescriptor[] {
+  return templates.map(({ labelKey, helpKey, optionKeys, ...field }) => ({
     ...field,
     ...overrides[field.key],
     label: translate(labelKey),
     ...(helpKey ? { help: translate(helpKey) } : {}),
+    ...(optionKeys
+      ? { options: optionKeys.map(one => ({ value: one.value, label: translate(one.labelKey) })) }
+      : {}),
   }))
+}
+
+/** Every key a set of templates names, so a bundle guard reads them rather than a copy. */
+export function fieldKeysOf(templates: readonly LocalFieldTemplate[]): readonly string[] {
+  return templates.flatMap(field => [
+    field.labelKey,
+    ...(field.helpKey ? [field.helpKey] : []),
+    ...(field.optionKeys ?? []).map(one => one.labelKey),
+  ])
 }
 
 /** The keys a bundle has to name, so a guard reads them off the templates rather than a copy. */
 export function localFieldKeys(): readonly string[] {
-  return Object.values(TEMPLATES)
-    .flat()
-    .flatMap(field => (field.helpKey ? [field.labelKey, field.helpKey] : [field.labelKey]))
+  return fieldKeysOf(Object.values(TEMPLATES).flat())
 }

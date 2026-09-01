@@ -106,3 +106,62 @@ describe('createRetry', () => {
     expect(action).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('a service that names its own delay', () => {
+  it('waits exactly as long as it was asked to, rather than doubling', async () => {
+    const waits: number[] = []
+    const retry = createRetry({
+      maxRetries: () => 2,
+      sleep: ms => {
+        waits.push(ms)
+        return Promise.resolve()
+      },
+      retryable: () => true,
+      delayFor: () => 3000,
+    })
+
+    await retry(async () => {
+      if (waits.length < 1) throw new Error('too many tasks')
+      return 'done'
+    })
+
+    expect(waits).toEqual([3000])
+  })
+
+  /** A job holds its slot in the concurrency bound while it waits — an hour would block the queue. */
+  it('comes back early rather than hold the queue for as long as it was asked', async () => {
+    const waits: number[] = []
+    const retry = createRetry({
+      maxRetries: () => 1,
+      sleep: ms => {
+        waits.push(ms)
+        return Promise.resolve()
+      },
+      retryable: () => true,
+      delayFor: () => 3_600_000,
+    })
+
+    await retry(async () => (waits.length < 1 ? Promise.reject(new Error('wait')) : 'done'))
+
+    expect(waits).toEqual([60_000])
+  })
+
+  it('falls back to the doubling where the service said nothing', async () => {
+    const waits: number[] = []
+    const retry = createRetry({
+      maxRetries: () => 1,
+      backoffBaseMs: 1000,
+      sleep: ms => {
+        waits.push(ms)
+        return Promise.resolve()
+      },
+      retryable: () => true,
+      delayFor: () => null,
+    })
+
+    await retry(async () => (waits.length < 1 ? Promise.reject(new Error('nope')) : 'done'))
+
+    expect(waits[0]).toBeGreaterThan(0)
+    expect(waits[0]).toBeLessThanOrEqual(1200)
+  })
+})

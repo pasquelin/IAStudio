@@ -24,12 +24,28 @@ export type Job = {
   /** A code, never a message: the renderer translates it — see `domain/failure.ts`. */
   error?: JobFailure
   /**
-   * What it cost, in creative units.
+   * What it cost, in the unit `costUnit` names.
    *
    * Read from `creativeUnitsCost` beside a submission, and from `billing.cuCost` on the job
    * itself — which is where a job resumed from a previous session can still find it.
    */
   cost?: number
+  /**
+   * The unit the figure above is quoted in. ABSENT means Scenario's creative units, which every
+   * job carried before a second cloud arrived — and nothing on disk has to be rewritten for it.
+   *
+   * 🛑 Two clouds, two counters, and nothing is ever added across them: a Tripo credit is not a
+   * creative unit and no rate anywhere converts one into the other.
+   */
+  costUnit?: string
+  /**
+   * Whether the service running it takes a cancellation at all. Absent means yes, which every
+   * job carried before a second cloud arrived.
+   *
+   * 🛑 A property of the SERVICE, decided where the runners live: read off the target by the
+   * window instead, a row would carry a rule of the main process and name a cloud to apply it.
+   */
+  cancellable?: boolean
   /**
    * The id the runner issued. Ours (`id`) is minted before submit; a local runner files what it
    * produced under this one (`local_…`). Absent until submit has answered.
@@ -72,6 +88,7 @@ export type JobProgress = Pick<Job, 'id' | 'status' | 'progress'> & {
   assetIds?: string[]
   error?: JobFailure
   cost?: number
+  costUnit?: string
 }
 
 /** All of them, in the order a job goes through. The jobs panel names each one from a bundle. */
