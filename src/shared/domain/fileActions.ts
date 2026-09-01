@@ -315,7 +315,10 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     name: 'project.rename',
     titleKey: 'assistant.actions.projectRename.title',
     descriptionKey: 'assistant.actions.projectRename.description',
-    commitment: 'files',
+    // 🛑 `studio` and not `files`, though it renames: it MOVES the project folder, which is the
+    // reach `project.trash` is held at. At `files`, the box armed to tidy rushes away carried a
+    // whole project off with no card shown.
+    commitment: 'studio',
     // The name a project carries is a named state too, and the same input asks for what stands.
     repeatable: false,
     reach: 'mcp',

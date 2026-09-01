@@ -1,6 +1,7 @@
 import type { Studio } from './studio'
 import type { Scenario } from './run'
 import { ENVIRONMENT_PRESETS, matchesPreset } from '@/engines/scene/environmentPresets'
+import { EXPORT_FORMATS } from '@shared/domain/scene'
 import * as read from './oracle'
 import {
   cameraScene,
@@ -89,7 +90,19 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '41.5 exports the open scene into the documents folder',
     said: ['Exporte la scène ouverte dans mon dossier documents.'],
     setup: scene('Export Test'),
-    passed: run => read.files(run).some(one => one.startsWith('Modelling/Scenes/Export Test.')),
+    /**
+     * 🛑 Anywhere but the scenes folder: `Modelling/Scenes/Export Test.gltf` is what a SAVE
+     * writes, and an oracle reading that scores a save as an export. Every format of
+     * `EXPORT_FORMATS`, since the sentence names none.
+     */
+    passed: run =>
+      read
+        .files(run)
+        .some(
+          one =>
+            !one.startsWith('Modelling/Scenes/') &&
+            EXPORT_FORMATS.some(format => one.endsWith(`Export Test.${format}`)),
+        ),
   },
   {
     name: '41.6 makes a project called Démo Assistant',

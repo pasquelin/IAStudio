@@ -11,6 +11,8 @@ import {
 } from '@shared/domain/document'
 import { documentFileName } from '@shared/domain/documentName'
 import { extensionOf, stemOf } from '@shared/domain/fileName'
+import { DEFAULT_LANGUAGE } from '@shared/i18n'
+import { initI18n } from '@/i18n'
 import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
 import { nameOf, parentOf, pathIn, type FileKind } from '@shared/domain/folder'
 import type { Job } from '@shared/domain/job'
@@ -147,10 +149,18 @@ function freePath(disk: MemoryFolder, into: string, stem: string, extension: str
   }
 }
 
+/**
+ * 🛑 The studio's own translations, which a headless run had none of: `i18next.t` answered
+ * `undefined`, and `landingChoice` handed that to `safeFileName` — nine of ninety-five scenarios
+ * died in `generator.submit` on « reading 'normalize' », measured 2026-09-01.
+ */
+const speakFrench = (): Promise<void> => initI18n(DEFAULT_LANGUAGE)
+
 export async function createStudio(
   seed: readonly { path: string; kind: FileKind }[],
   think?: Think,
 ): Promise<Studio> {
+  await speakFrench()
   const folder = createMemoryFolder(seed)
   // What the seeded documents really hold. A path alone reads back as a document with no content.
   await Promise.all(DOCUMENT_SOURCES.map(one => folder.write(one.path, one.source)))
