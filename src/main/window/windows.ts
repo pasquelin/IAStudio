@@ -475,7 +475,11 @@ export function openCharacterWindow(assetId: string): BrowserWindow {
     minWidth: 720,
     minHeight: 520,
     show: false,
-    backgroundColor: MIRROR_BACKGROUND,
+    backgroundColor: chromeColor(),
+    // Framed like the studio and unlike the mirror or the game: this is a place one EDITS, and a
+    // native bar over the studio's own chrome read as another application's window.
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 12, y: 12 },
     title: TRANSLATIONS[windowLanguage()].character.window.title,
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,

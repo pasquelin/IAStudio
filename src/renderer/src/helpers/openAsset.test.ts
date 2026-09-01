@@ -145,6 +145,24 @@ describe('opening an asset', () => {
     expect(openedCount()).toBe(before)
   })
 
+  // MEASURED on a real project: a catalogued row is named `tripo-character`, and only the path
+  // behind it carries `.glb`. Reading the name alone left the double-click doing nothing at all.
+  it('opens the window for a row whose extension lives on its path alone', async () => {
+    const opens: string[] = []
+    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
+
+    await openAsset(
+      asset({
+        id: 'mesh-4',
+        type: 'mesh',
+        name: 'tripo-character',
+        path: 'Modelling/Models/tripo-character.glb',
+      }),
+    )
+
+    expect(opens).toEqual(['mesh-4'])
+  })
+
   // The file behind it is what the window reads, and a row the cloud holds has none.
   it('opens nothing for a character this disk does not hold', async () => {
     const opens: string[] = []

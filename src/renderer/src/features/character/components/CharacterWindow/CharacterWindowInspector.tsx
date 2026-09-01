@@ -3,7 +3,6 @@ import { HUMANOID_ROLES, isHumanoidRole, type HumanoidRole } from '@shared/domai
 import { Button } from '@/components/Button'
 import { InlineRename } from '@/components/InlineRename'
 import { Panel } from '@/components/Panel'
-import { PanelHeader } from '@/components/PanelHeader'
 import { PropertyRow } from '@/components/PropertyRow'
 import { PropertySection } from '@/components/PropertySection'
 import { QuietNote } from '@/components/QuietNote'
@@ -25,7 +24,6 @@ import { useCharacterView } from '@/stores/characterView'
 
 export type CharacterWindowInspectorProps = {
   assetId: string
-  name: string
   /** The workshop scene this window drives, which is where a motion is tried out. */
   documentId: string
   nodeId: string
@@ -41,7 +39,6 @@ export type CharacterWindowInspectorProps = {
  */
 export function CharacterWindowInspector({
   assetId,
-  name,
   bounds,
   documentId,
   nodeId,
@@ -56,7 +53,6 @@ export function CharacterWindowInspector({
 
   return (
     <Panel className="w-[320px] shrink-0">
-      <PanelHeader title={name} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PropertySection title={t('character.skeleton')} scId="character.skeleton">
           {!rig && (

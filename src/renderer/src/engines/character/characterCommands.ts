@@ -2,6 +2,7 @@ import type { Command } from '../core/history'
 import type { CharacterSocket, MotionRef } from '@shared/domain/character'
 import { socketsFaultOf } from '@shared/domain/character'
 import type { HumanoidRole } from '@shared/domain/humanoid'
+import type { Transform } from '@shared/domain/transform'
 import {
   childBone,
   IK_HANDLE,
@@ -9,6 +10,7 @@ import {
   rigRenamed,
   rigWithBones,
   rigWithoutBone,
+  rigWithRest,
   rigWithRole,
   type IkChain,
   type Rig,
@@ -87,6 +89,15 @@ export function setCharacterBoneRole(
   role: HumanoidRole | null,
 ): Command<CharacterState> {
   return editBones('bone.role', bones => rigWithRole(bones, name, role))
+}
+
+/**
+ * A joint put where it belongs — the gesture that turns a fit read off a bounding box into a
+ * skeleton that follows the mesh. Rotation and scale come with it: the gizmo writes a whole
+ * transform, and a rest pose is all three.
+ */
+export function setCharacterBoneRest(name: string, rest: Transform): Command<CharacterState> {
+  return editBones('bone.rest', bones => rigWithRest(bones, name, rest))
 }
 
 /** The thirty joints inside the hands a fit stops at the wrists. */

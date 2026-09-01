@@ -10,6 +10,7 @@ import {
   removeCharacterIkChain,
   removeCharacterSocket,
   renameCharacterBone,
+  setCharacterBoneRest,
   setCharacterBoneRole,
   setCharacterRig,
   unlinkCharacterMotion,
@@ -58,6 +59,23 @@ describe('editing a character', () => {
 
     expect(after.rig?.bones.find(one => one.name === 'Hips')?.role).toBeUndefined()
     expect(after.rig?.bones.find(one => one.name === 'LeftFoot')?.role).toBe('Hips')
+  })
+
+  // What makes a fit read off a bounding box usable at all: it lands a joint near where it
+  // belongs, and this is the only gesture that puts it where it actually is.
+  it('rests a joint where the gizmo left it, and puts it back on undo', () => {
+    const moved = { ...IDENTITY_TRANSFORM, position: { x: 0.4, y: 1.2, z: 0 } }
+    const command = setCharacterBoneRest('LeftFoot', moved)
+    const after = command.apply(RIGGED)
+
+    expect(after.rig?.bones.find(one => one.name === 'LeftFoot')?.rest).toEqual(moved)
+    expect(command.revert(after)).toEqual(RIGGED)
+  })
+
+  it('moves nothing for a name the rig has not got, a gizmo outliving a rename', () => {
+    const moved = { ...IDENTITY_TRANSFORM, position: { x: 9, y: 9, z: 9 } }
+
+    expect(setCharacterBoneRest('Tail', moved).apply(RIGGED).rig?.bones).toEqual(RIG.bones)
   })
 
   it('names a child after its parent, so a document reads the same in either language', () => {

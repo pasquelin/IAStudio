@@ -2072,6 +2072,9 @@ export class SceneRenderer {
     joints.points.visible = helper.visible
     this.joints.set(nodeId, joints)
     this.viewport.scene.add(joints.points)
+    // A skeleton bound after the pick — every reload of a model does this — would otherwise draw
+    // its joints at rest while a panel names one of them.
+    this.paintPickedJoint()
   }
 
   private unbindSkeleton(nodeId: string): void {
@@ -4084,8 +4087,15 @@ export class SceneRenderer {
   /** Aims the gizmo at a bone, or lets go of the one it held. */
   setPickedBone(picked: { nodeId: string; bone: string } | null): void {
     this.pickedBone = picked
+    this.paintPickedJoint()
     this.attachGizmo()
     this.redraw()
+  }
+
+  /** The one mark saying which bone a panel is editing — nothing else in the viewport says it. */
+  private paintPickedJoint(): void {
+    for (const [nodeId, joints] of this.joints)
+      joints.pick(this.pickedBone?.nodeId === nodeId ? this.pickedBone.bone : null)
   }
 
   /**

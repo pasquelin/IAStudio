@@ -26,7 +26,6 @@ const show = (): void => {
     withQueries(
       <CharacterWindowInspector
         assetId={ASSET}
-        name="Chevalier"
         bounds={BOUNDS}
         documentId="character:asset-hero"
         nodeId="node-1"

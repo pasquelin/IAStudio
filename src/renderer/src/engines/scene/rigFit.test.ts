@@ -6,20 +6,23 @@ import { rigFit, rigFitFaultOf, rigHandBones, type Bounds } from './rigFit'
 /** A metre-eighty character standing on the ground, centred on the origin. */
 const STANDING: Bounds = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
 
-/** Where a role ended up in world space, by walking its parents back up. */
-function worldY(bounds: Bounds, role: string): number {
+/** Where a role ended up on one axis in world space, by walking its parents back up. */
+function worldOn(bounds: Bounds, role: string, axis: 'x' | 'y' | 'z'): number {
   const bones = rigFit(bounds).bones
-  let y = 0
+  let total = 0
   let name: string | null = role
 
   while (name) {
     const bone = bones.find(candidate => candidate.name === name)
     if (!bone) throw new Error(`no bone named ${name}`)
-    y += bone.rest.position.y
+    total += bone.rest.position[axis]
     name = bone.parent
   }
-  return y
+  return total
 }
+
+const worldY = (bounds: Bounds, role: string): number => worldOn(bounds, role, 'y')
+const worldX = (bounds: Bounds, role: string): number => worldOn(bounds, role, 'x')
 
 describe('what a mesh can be fitted with', () => {
   it('fits a standing figure', () => {
@@ -87,6 +90,28 @@ describe('the rig a fit produces', () => {
   it('stacks the arm down the body: shoulder above elbow above hand', () => {
     expect(worldY(STANDING, 'LeftShoulder')).toBeGreaterThan(worldY(STANDING, 'LeftLowerArm'))
     expect(worldY(STANDING, 'LeftLowerArm')).toBeGreaterThan(worldY(STANDING, 'LeftHand'))
+  })
+
+  // MEASURED on screen: every T-posed character — the commonest bind pose there is — got a
+  // skeleton whose arms hung down its side while its own arms were straight out, so no joint of
+  // an arm was anywhere near the mesh it was meant to drive.
+  it('holds the arms OUT for a mesh whose box says they are, at the shoulder line', () => {
+    const tPose: Bounds = { min: { x: -0.9, y: 0, z: -0.2 }, max: { x: 0.9, y: 1.8, z: 0.2 } }
+    const shoulder = worldY(tPose, 'LeftShoulder')
+
+    expect(worldY(tPose, 'LeftHand')).toBeCloseTo(shoulder, 6)
+    expect(worldX(tPose, 'LeftHand')).toBeGreaterThan(worldX(tPose, 'LeftLowerArm'))
+    expect(worldX(tPose, 'LeftLowerArm')).toBeGreaterThan(worldX(tPose, 'LeftUpperArm'))
+  })
+
+  // The wider horizontal axis is the one the shoulders run along, and it is measured: assuming X
+  // laid the whole skeleton ACROSS a model authored facing +X, read on screen as a quarter turn.
+  it('runs the shoulders along the axis the mesh is widest on, not along X', () => {
+    const facingX: Bounds = { min: { x: -0.2, y: 0, z: -0.9 }, max: { x: 0.2, y: 1.8, z: 0.9 } }
+    const bones = rigFit(facingX).bones
+    const shoulder = bones.find(bone => bone.name === 'LeftShoulder')?.rest.position
+
+    expect(Math.abs(shoulder?.z ?? 0)).toBeGreaterThan(Math.abs(shoulder?.x ?? 0))
   })
 
   it('stacks the leg down to the floor: hip above knee above foot', () => {

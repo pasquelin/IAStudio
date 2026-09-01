@@ -2,11 +2,14 @@
   "character": {
     "window": {
       "title": "Squelette et animation",
+      "titleOf": "Squelette et animation — {{name}}",
+      "unsaved": "Modifications non enregistrées",
       "waiting": "En attente du personnage…",
       "missing": "Ce personnage n’est plus dans le projet.",
       "unreadable": "Ce fichier n’a pas pu être lu."
     },
     "skeleton": "Squelette",
+    "tools": "Outils du squelette",
     "motions": "Mouvements",
     "band": "Mouvement en cours",
     "restPose": "Pose de repos",

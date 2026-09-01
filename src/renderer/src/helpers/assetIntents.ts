@@ -255,12 +255,16 @@ export function intentsFor(type: AssetType): readonly AssetIntent[] {
  * `.glb` alone, and that is the arbitration: it is the container the studio writes a skeleton
  * back into. An `.fbx` still opens as a scene, and a row the cloud holds opens as nothing —
  * `assetUrl` answers 404 for one, and the window would sit on a file it cannot read.
+ *
+ * The extension is read off the PATH: a catalogued row is named `tripo-character`, and the
+ * extension lives on the file behind it — reading the name alone answered `false` for every
+ * character a project actually holds.
  */
 export function opensAsCharacter(asset: Asset): boolean {
   return (
     asset.type === 'mesh' &&
     asset.location === 'local' &&
-    extensionOf(asset.name).toLowerCase() === '.glb'
+    extensionOf(asset.path ?? asset.name).toLowerCase() === '.glb'
   )
 }
 

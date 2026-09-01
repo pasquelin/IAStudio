@@ -2,11 +2,14 @@
   "character": {
     "window": {
       "title": "Skeleton and animation",
+      "titleOf": "Skeleton and animation — {{name}}",
+      "unsaved": "Unsaved changes",
       "waiting": "Waiting for the character…",
       "missing": "This character is no longer in the project.",
       "unreadable": "This file could not be read."
     },
     "skeleton": "Skeleton",
+    "tools": "Skeleton tools",
     "motions": "Motions",
     "band": "Motion being edited",
     "restPose": "Rest pose",

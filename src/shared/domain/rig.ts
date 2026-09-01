@@ -156,6 +156,21 @@ export function rigWithRole(
 }
 
 /**
+ * One bone put back where it rests, in its parent's space.
+ *
+ * The whole of what makes an approximate fit usable: proportions read off a bounding box land a
+ * joint near where it belongs, and the hand that corrects it writes here. A name the rig has not
+ * got changes nothing rather than adding a bone — the gizmo can outlive a rename.
+ */
+export function rigWithRest(
+  bones: readonly RigBone[],
+  name: string,
+  rest: Transform,
+): readonly RigBone[] {
+  return bones.map(bone => (bone.name === name ? { ...bone, rest } : bone))
+}
+
+/**
  * The suffix a handle's name carries. A chain reaches for a BONE — three's solver knows nothing
  * else — so the one thing that tells a handle from a joint is how it is called.
  */
