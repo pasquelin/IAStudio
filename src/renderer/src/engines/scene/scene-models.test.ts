@@ -2,7 +2,7 @@ import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D, Texture } from 'thre
 import { describe, expect, it, vi } from 'vitest'
 import { nodeIdOf, SceneRenderer, type SceneRendererOptions } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
-import type { SkinWeights } from './skinWeights'
+import type { SkinWeights } from '../character/skinWeights'
 import type { SceneState } from './sceneState'
 import type { Rig } from '@shared/domain/rig'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
@@ -367,13 +367,15 @@ function pendingSkin() {
   }
 }
 
-const rigged = (id: string, assetId: string): SceneState => ({
+const holding = (id: string, assetId: string): SceneState => ({
   ...EMPTY_SCENE,
-  nodes: [{ ...modelNodeFixture(id, assetId), model: { assetId, rig: RIG } }],
+  nodes: [{ ...modelNodeFixture(id, assetId), model: { assetId } }],
 })
 
+// A scene no longer puts a skeleton on anything — the skeleton window does, through the very same
+// door. What this holds is that a binding still stops when the model it was weighing goes away.
 describe('binding a rig that is taken back', () => {
-  it('still stops the skinning of a model whose file changed while the first was out', async () => {
+  it('stops the skinning of a model released while the weights were out', async () => {
     const skin = pendingSkin()
     const renderer = new SceneRenderer({
       onSelect: vi.fn(),
@@ -382,16 +384,16 @@ describe('binding a rig that is taken back', () => {
       skin: skin.port,
     })
 
-    renderer.apply(rigged('a', 'asset-1'))
-    await vi.waitFor(() => expect(skin.signals).toHaveLength(1))
-    // Another file on the same node: released and rebuilt, so a second binding starts while the
-    // first is still out and its `finally` has yet to run.
-    renderer.apply(rigged('a', 'asset-2'))
-    await vi.waitFor(() => expect(skin.signals).toHaveLength(2))
+    renderer.apply(holding('a', 'asset-1'))
+    // The model lands a tick after the apply that asked for it; only then is there a mesh to weigh.
+    await vi.waitFor(async () => {
+      void renderer.skinModel('a', RIG)
+      expect(skin.signals).toHaveLength(1)
+    })
 
     renderer.apply(EMPTY_SCENE)
 
-    expect(skin.signals[1]?.aborted).toBe(true)
+    expect(skin.signals[0]?.aborted).toBe(true)
     renderer.dispose()
   })
 })

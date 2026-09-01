@@ -155,6 +155,17 @@ export function rigWithRole(
   })
 }
 
+/**
+ * The suffix a handle's name carries. A chain reaches for a BONE — three's solver knows nothing
+ * else — so the one thing that tells a handle from a joint is how it is called.
+ */
+export const IK_HANDLE = '.handle'
+
+/** 🛑 A handle is not part of the body: nothing of the mesh may ever be weighed against one. */
+export function isIkHandle(name: string): boolean {
+  return name.endsWith(IK_HANDLE)
+}
+
 export function isRig(value: unknown): value is Rig {
   if (!isRecord(value) || !Array.isArray(value.bones)) return false
   if (!isRigOrigin(value.origin)) return false

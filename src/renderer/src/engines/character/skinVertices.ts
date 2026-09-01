@@ -9,12 +9,15 @@
  * whole forearm's influence at the elbow, and the skin folds there instead of bending.
  */
 import { clamp } from '@shared/numeric'
-import { INFLUENCES, type SkinRequest } from './skinMessage'
+import { INFLUENCES, SKIN_REGIONS, type SkinRequest } from './skinMessage'
 
 export type SkinBinding = { skinIndex: Uint16Array; skinWeight: Float32Array }
 
 /** Index of the `trunk` region in `SKIN_REGIONS`, which is the one that agrees with every other. */
 const TRUNK = 0
+
+/** Index of `handle` in `SKIN_REGIONS` — read from the list, never counted by hand. */
+const HANDLE = SKIN_REGIONS.indexOf('handle')
 
 /** Keeps a vertex sitting exactly on a bone from weighing infinity. */
 const EPSILON = 1e-6
@@ -155,6 +158,10 @@ const CHOSEN_DISTANCES = new Float64Array(INFLUENCES)
  * is the trunk, and a trunk that agreed with everything let the hand bone straight back in.
  */
 function mayDrive(vertexRegion: number, boneRegion: number): boolean {
+  // A handle is nobody's region, and nobody's trunk: six chains would otherwise take six
+  // handfuls of vertices away from the limbs they belong to.
+  if (boneRegion === HANDLE) return false
+
   return boneRegion === vertexRegion || boneRegion === TRUNK
 }
 

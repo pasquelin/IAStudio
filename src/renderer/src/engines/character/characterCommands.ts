@@ -4,6 +4,7 @@ import { socketsFaultOf } from '@shared/domain/character'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import {
   childBone,
+  IK_HANDLE,
   rigFaultOf,
   rigRenamed,
   rigWithBones,
@@ -14,7 +15,7 @@ import {
   type RigBone,
 } from '@shared/domain/rig'
 import { rigHandBones } from '../scene/rigFit'
-import { ikLinksOf } from '../scene/ik'
+import { ikLinksOf } from './ik'
 import type { CharacterState } from './characterState'
 
 /**
@@ -27,9 +28,7 @@ import type { CharacterState } from './characterState'
  */
 
 /** The suffix an IK handle's name carries, so nothing else is mistaken for one. */
-export const IK_HANDLE = '.handle'
-
-/**
+export /**
  * One whole-state edit, undone by putting back what it replaced.
  *
  * The state is small and flat — one character — so keeping the previous one costs nothing where

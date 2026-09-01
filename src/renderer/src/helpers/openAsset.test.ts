@@ -127,12 +127,32 @@ describe('opening an asset', () => {
     expect(editPixelsOf(null)).toBeNull()
   })
 
-  it('opens a mesh in a scene', async () => {
-    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.glb' }))
+  // A container the studio writes a skeleton back into: it opens on the FILE, and every other
+  // mesh still lands in a scene.
+  it('opens a mesh in a scene, and a `.glb` in the skeleton window instead', async () => {
+    const opens: string[] = []
+    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
 
+    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.fbx' }))
     const nodes = sceneOf(useScenes.getState(), opened().id).nodes
     expect(nodes.filter(node => node.type === 'model')).toHaveLength(1)
     expect(useLayouts.getState().activeWorkspace).toBe('3d')
+
+    const before = openedCount()
+    await openAsset(asset({ id: 'mesh-2', type: 'mesh', name: 'knight.glb' }))
+
+    expect(opens).toEqual(['mesh-2'])
+    expect(openedCount()).toBe(before)
+  })
+
+  // The file behind it is what the window reads, and a row the cloud holds has none.
+  it('opens nothing for a character this disk does not hold', async () => {
+    const opens: string[] = []
+    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
+
+    await openAsset(asset({ id: 'mesh-3', type: 'mesh', name: 'knight.glb', location: 'cloud' }))
+
+    expect(opens).toEqual([])
   })
 
   it('opens a sky in the skybox space, not in the image one it also decodes for', async () => {
@@ -329,7 +349,7 @@ describe('opening an asset', () => {
   it('lets the tab load before writing into it', async () => {
     installFakeBridge({ documents: { read: () => Promise.resolve(null) } })
 
-    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.glb' }))
+    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.fbx' }))
 
     // A new scene is born lit, and a document read from disk brings its own nodes. Writing
     // before either happened left the tab holding nothing but the asset.

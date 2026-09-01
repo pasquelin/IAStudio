@@ -8,7 +8,8 @@ import {
   setAnimationKey,
   setTimelineSettings,
 } from '@/engines/scene/animationCommands'
-import { animationRows, CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
+import { animationRows } from '@/engines/scene/animationRows'
+import { CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/timeline/bandRows'
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'

@@ -1,18 +1,5 @@
 import { commandId, composed, type Command } from '../core/history'
 import {
-  rigFaultOf,
-  rigRenamed,
-  rigWithBones,
-  rigWithoutBone,
-  rigWithRole,
-  type IkChain,
-  type Rig,
-  type RigBone,
-} from '@shared/domain/rig'
-import type { HumanoidRole } from '@shared/domain/humanoid'
-import { rigHandBones } from './rigFit'
-import { ikLinksOf } from './ik'
-import {
   clipLane,
   isVector3,
   MAIN_LANE_ID,
@@ -537,68 +524,6 @@ export function setModelLanes(id: string, lanes: readonly ClipLane[]): Command<S
   })
 }
 
-/** The skeleton put on a model, or none. Undo comes for free, which is why a rig is a document's. */
-export function setModelRig(id: string, rig: Rig | null): Command<SceneState> {
-  return editModel(id, 'rig', model => {
-    const rest = { ...model }
-    delete rest.rig
-    return rig ? { ...rest, rig } : rest
-  })
-}
-
-/**
- * One edit of a model's skeleton, refused whole when the result would not hold.
- *
- * A change answering `null` writes nothing at all rather than a rig the document reader would
- * drop on the next open — a cycle, a name taken twice, one role on two bones. The weights follow
- * on their own: the engine re-binds whenever `model.rig` changes, so nothing recomputes here.
- */
-function editRigBones(
-  id: string,
-  edited: string,
-  change: (bones: readonly RigBone[]) => readonly RigBone[] | null,
-): Command<SceneState> {
-  return editModel(id, edited, model => {
-    if (!model.rig) return model
-
-    const bones = change(model.rig.bones)
-    if (!bones || rigFaultOf(bones) !== null) return model
-
-    return { ...model, rig: { ...model.rig, bones } }
-  })
-}
-
-/** A bone hung under one the rig already holds. Refused if the parent, the name or the role clash. */
-export function addRigBone(id: string, bone: RigBone): Command<SceneState> {
-  return editRigBones(id, 'rigBone', bones => rigWithBones(bones, [bone]))
-}
-
-/** A bone taken out, its children hung where it hung — an elbow leaves, the hand stays. */
-export function removeRigBone(id: string, name: string): Command<SceneState> {
-  return editRigBones(id, 'rigBone', bones => rigWithoutBone(bones, name))
-}
-
-export function renameRigBone(id: string, from: string, to: string): Command<SceneState> {
-  return editRigBones(id, 'rigBone', bones => rigRenamed(bones, from, to))
-}
-
-/** Which joint of the standard a bone IS. `null` says it fills none. */
-export function setRigBoneRole(
-  id: string,
-  name: string,
-  role: HumanoidRole | null,
-): Command<SceneState> {
-  return editRigBones(id, 'rigRole', bones => rigWithRole(bones, name, role))
-}
-
-/** The thirty finger bones, at rest, on whatever hands the rig holds. */
-export function addRigHands(id: string): Command<SceneState> {
-  return editRigBones(id, 'rigBone', bones => {
-    const hands = rigHandBones(bones)
-    return hands && rigWithBones(bones, hands)
-  })
-}
-
 /**
  * One block more on a model's band, at the end of its first lane.
  *
@@ -624,59 +549,6 @@ export function removeModelClip(id: string, clipId: string): Command<SceneState>
       clips: lane.clips.filter(clip => clip.id !== clipId),
     })),
   }))
-}
-
-/** What a handle bone is called, after the joint that reaches for it. */
-const IK_HANDLE = '.handle'
-
-/**
- * A handle a joint reaches for: one bone added ON the joint, and the chain that follows it.
- *
- * Both in one command, so undoing gives back a rig with neither — a handle left behind by an
- * undone chain would be a bone nothing drives and nothing explains.
- */
-export function addIkChain(id: string, effector: string): Command<SceneState> {
-  return editModel(id, 'rigIk', model => {
-    const rig = model.rig
-    const joint = rig?.bones.find(bone => bone.name === effector)
-    if (!rig || !joint) return model
-
-    const handle: RigBone = {
-      name: `${effector}${IK_HANDLE}`,
-      parent: joint.parent,
-      rest: joint.rest,
-    }
-    const bones = rigWithBones(rig.bones, [handle])
-    if (!bones) return model
-
-    const chain: IkChain = {
-      id: newId(),
-      effector,
-      target: handle.name,
-      links: ikLinksOf(rig.bones, effector),
-    }
-    if (chain.links.length === 0) return model
-
-    return { ...model, rig: { ...rig, bones, ik: [...(rig.ik ?? []), chain] } }
-  })
-}
-
-/** The chain and the handle it reached for, both. */
-export function removeIkChain(id: string, chainId: string): Command<SceneState> {
-  return editModel(id, 'rigIk', model => {
-    const rig = model.rig
-    const dropped = rig?.ik?.find(chain => chain.id === chainId)
-    if (!rig || !dropped) return model
-
-    return {
-      ...model,
-      rig: {
-        ...rig,
-        bones: rigWithoutBone(rig.bones, dropped.target),
-        ik: rig.ik?.filter(chain => chain.id !== chainId),
-      },
-    }
-  })
 }
 
 /** What covers a model — a picture, the materials it wears, or `null` for its file's own. */

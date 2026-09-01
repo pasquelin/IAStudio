@@ -355,6 +355,7 @@
     "pixelArtGrid": "Show the grid",
     "pixelArtPreview": "Artwork, one pixel per cell",
     "pixelArtPreviewTooWide": "Too many cells to show one pixel each",
-    "pixelSize": "Pixel size"
+    "pixelSize": "Pixel size",
+    "editSkeleton": "Edit the skeleton…"
   }
 }

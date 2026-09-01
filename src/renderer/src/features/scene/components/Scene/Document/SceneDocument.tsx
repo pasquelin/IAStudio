@@ -260,8 +260,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         projectPath && useSkeletonProfiles.getState().rememberSkeletonProfile(projectPath, profile),
       onClipFit: (nodeId, clipKey, fit) =>
         useModelFiles.getState().reportClipFit(documentId, nodeId, clipKey, fit),
-      onRigProgress: (nodeId, progress) =>
-        useModelFiles.getState().reportRigProgress(documentId, nodeId, progress),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
       onPathPoint: (nodeId, index, point) =>

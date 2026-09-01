@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { EDGE_BAR_WIDTH, RULER_HEIGHT, type Viewport } from '../timeline/timelineGeometry'
-import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
-import { keyId, keyParts, paintAnimation } from './animationPainter'
+import { animationTrack, cameraShot, timelineWith } from '../scene/animation-fixtures'
+import { keyId, keyParts, paintAnimation } from '../timeline/bandPainter'
 import { refreshPalette } from '../core/palette'
 import type { Point } from '../core/geometry'
-import { CHANNEL_HEIGHT, SUBJECT_HEIGHT, animationRows, type ClipBlock } from './animationRows'
+import { animationRows } from '../scene/animationRows'
+import { type ClipBlock } from './bandRows'
+import { CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '../timeline/bandRows'
 
 /** One pixel per 10 ms, so a second is a hundred pixels across. */
 const viewport: Viewport = { scale: 100 / SECOND, offset: 0, scrollTop: 0 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { EmptyState } from '@/components/EmptyState'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
+import type { Bounds } from '@/engines/scene/rigFit'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 import { wornModelDress } from '@/features/material/modelDress'
 import { createCharacterStage } from '@/character/characterStage'
@@ -31,7 +32,8 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const dirty = useCharacters(state => isCharacterDirty(state, assetId))
   // Empty while the file carries its own skin, which is every character rigged elsewhere. What
   // fills it is fitting a skeleton HERE — the weights are the engine's, and it alone has them.
-  const [skins] = useState<CharacterSkinning>([])
+  const [skins, setSkins] = useState<CharacterSkinning>([])
+  const [bounds, setBounds] = useState<Bounds | null>(null)
 
   // The window's own keys. Its OWN scope and not the scene's: ⌘Z here must not reach the scene a
   // studio window is showing beside it.
@@ -65,6 +67,11 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
       wornDress: wornModelDress,
       environmentDress: environmentDressOf,
       onCharacter: (_nodeId, rig, extras) => stage.read(rig, extras),
+      // What the mesh MEASURES, which is what a fit proportions itself off — and the only thing
+      // that says whether one can be laid at all.
+      onRig: (_nodeId, state) => setBounds(state.bounds),
+      // Kept for ⌘S: only the engine ever weighs a mesh against a rig.
+      onSkinning: (_nodeId, weighed) => setSkins(weighed),
       // A bone is not a node: it has no id in any document, and it is picked apart from anything
       // a scene would select — which is why the engine reports it on its own channel.
       onSelectBone: bone => useCharacterView.getState().pickBone(bone?.bone ?? null),
@@ -103,7 +110,11 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             </div>
           )}
         </div>
-        <CharacterWindowInspector assetId={assetId} name={dirty ? `${name} •` : name} />
+        <CharacterWindowInspector
+          assetId={assetId}
+          name={dirty ? `${name} •` : name}
+          bounds={bounds}
+        />
       </div>
     </div>
   )

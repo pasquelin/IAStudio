@@ -4,6 +4,20 @@ import { isTransform, type Transform } from './transform'
 import { STUDIO_METADATA_KEY } from './studioMetadata'
 
 /**
+ * What a character IS, as far as rigging goes.
+ *
+ * `auto` and `human` are the two the local rigger will lay a skeleton on — it fits a humanoid and
+ * says so. The other two exist because a service can rig them, and because saying « animal » is
+ * what makes the studio's own refusal readable.
+ */
+export type CharacterKind = 'auto' | 'human' | 'animal' | 'other'
+
+export const CHARACTER_KINDS: readonly CharacterKind[] = ['auto', 'human', 'animal', 'other']
+
+/** The kinds this studio lays a skeleton on itself. A quadruped is a service's business. */
+export const HUMANOID_KINDS: readonly CharacterKind[] = ['auto', 'human']
+
+/**
  * A named point hung on a bone: a grip, a scabbard, a muzzle.
  *
  * It belongs to the CHARACTER and travels in its file — a scene says what is hung in one, never

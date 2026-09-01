@@ -1,7 +1,7 @@
 import { Euler, Matrix4, Quaternion, Vector3, type Object3D, type SkinnedMesh } from 'three'
 import type { Rig, RigBone, RigFault, RigOrigin } from '@shared/domain/rig'
 import { rigFaultOf } from '@shared/domain/rig'
-import { characterExtrasOf } from '@shared/domain/character'
+import { characterExtrasOf, type CharacterExtras } from '@shared/domain/character'
 import type { Transform } from '@shared/domain/transform'
 import { skeletonBonesOf } from './rigState'
 
@@ -50,13 +50,28 @@ export function rigBonesOf(root: Object3D): RigBone[] {
  * hip » is what makes a foreign skeleton animatable, and glTF has nowhere else to keep it.
  */
 export function rigFromObject(root: Object3D, origin: RigOrigin = 'imported'): Rig | null {
-  const corrected = characterExtrasOf(root.userData)?.roles ?? {}
+  const corrected = characterExtrasIn(root)?.roles ?? {}
   const bones = rigBonesOf(root).map(bone => {
     const role = corrected[bone.name]
     return role ? { ...bone, role } : bone
   })
 
   return bones.length > 0 && rigFaultOf(bones) === null ? { bones, origin } : null
+}
+
+/**
+ * What the studio wrote into this file, wherever the loader hung it.
+ *
+ * 🛑 Searched rather than read off the root: `GLTFLoader` puts a scene's `extras` on the scene it
+ * makes, and an engine holding that scene inside a placement of its own would find nothing there.
+ */
+export function characterExtrasIn(root: Object3D): CharacterExtras | null {
+  let found: CharacterExtras | null = null
+  root.traverse(object => {
+    found ??= characterExtrasOf(object.userData)
+  })
+
+  return found
 }
 
 /**

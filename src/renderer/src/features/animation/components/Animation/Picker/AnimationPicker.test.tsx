@@ -47,7 +47,7 @@ function show(laid: { clipId: string; source: ClipSource } | null = null) {
 beforeEach(() => {
   installFakeBridge({ animations: { list: () => Promise.resolve(bundled) } })
   useAssets.setState({ items: [] })
-  useModelFiles.setState({ clips: {}, rigs: {}, rigProgress: {}, lengths: {}, fits: {} })
+  useModelFiles.setState({ clips: {}, rigs: {}, lengths: {}, fits: {} })
   useScenes.setState({
     states: { [DOCUMENT]: { ...EMPTY_SCENE, nodes: [modelNodeFixture('a')] } },
     histories: {},

@@ -188,19 +188,20 @@ import {
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
 import CsgWorker from '../csg/csg.worker?worker'
-import SkinWorker from './skinWeights.worker?worker'
+import SkinWorker from '../character/skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
 import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
-import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
-import { createIkBinding, ikSpecsOf, type IkBinding } from './ik'
+import { applyRig, positionsIn, skinnableMeshesOf } from '../character/rigBuild'
+import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
-import { createSkinWeights, type SkinWeights } from './skinWeights'
-import type { SkinBinding } from './skinVertices'
+import { createSkinWeights, type SkinWeights } from '../character/skinWeights'
+import type { SkinBinding } from '../character/skinVertices'
 import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
-import { characterExtrasOf, type CharacterExtras } from '@shared/domain/character'
-import { rigFromObject } from './rigRead'
+import type { CharacterExtras } from '@shared/domain/character'
+import { characterExtrasIn, rigFromObject } from './rigRead'
+import type { GlbSkinAttributes } from './glbSkin'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
@@ -264,6 +265,12 @@ export type SceneRendererOptions = {
    * beside it. For the window that edits a character: only the engine ever decodes the file.
    */
   onCharacter?: (nodeId: string, rig: Rig | null, extras: CharacterExtras | null) => void
+  /**
+   * The weights this side just worked out, for whoever writes the file back. Only the engine
+   * ever holds both a mesh and a rig, and asking for them again at ⌘S would pay for a million
+   * vertices a second time.
+   */
+  onSkinning?: (nodeId: string, skins: readonly GlbSkinAttributes[]) => void
   /**
    * What a skeleton of that signature means, worked out from a document's own rig. Kept by the
    * project rather than here: this port dies with the viewport, and the mapping outlives it.
@@ -1949,12 +1956,16 @@ export class SceneRenderer {
   }
 
   /**
-   * Weights every mesh of a model against the rig its document holds, then binds them.
+   * Weights every mesh of a model against a rig, then binds them — what « make animatable » does.
    *
-   * Off the UI thread and reporting as it goes: half a million vertices against fifty-two bones
-   * is twenty-six million distances, and the window has to stay answerable throughout.
+   * Public because the skeleton window is what asks for it now: a scene reads the skin its files
+   * already carry, and only an editor puts a new one on. Off the UI thread and reporting as it
+   * goes — half a million vertices against fifty-two bones is twenty-six million distances.
    */
-  private async skinModel(nodeId: string, holder: Object3D, rig: Rig): Promise<void> {
+  async skinModel(nodeId: string, rig: Rig): Promise<void> {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return
+
     // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
     // the holder again after the awaits, when it may hold others.
     const meshes = skinnableMeshesOf(holder)
@@ -1982,6 +1993,17 @@ export class SceneRenderer {
 
       applyRig(holder, rig, bound)
       this.bindIk(nodeId, holder, rig)
+      // Handed over rather than recomputed at save time: only this side ever weighs a mesh, and
+      // the order is `skinnableMeshesOf`'s — the same order a `.glb` spells its primitives in.
+      this.options.onSkinning?.(
+        nodeId,
+        bound.map((one, index) => ({
+          mesh: index,
+          primitive: 0,
+          joints: one.binding.skinIndex,
+          weights: one.binding.skinWeight,
+        })),
+      )
       // The bones exist only now: the helper was bound before them, when the holder carried none,
       // and without this a locally rigged character has a skeleton nothing can show or pick.
       this.bindSkeleton(nodeId, holder, true)
@@ -3094,10 +3116,6 @@ export class SceneRenderer {
     // light synced before the set it lights would measure half a level. `apply` does it once
     // the last node is in place.
 
-    // Before anything is retargeted onto it: the document is where a bone's role was PUT RIGHT,
-    // and the port would otherwise go on reading roles off names that lied.
-    if (node.type === 'model' && node.model.rig) this.learnRig(node.model.rig)
-
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
@@ -3496,9 +3514,6 @@ export class SceneRenderer {
       // from mesh and rig, like a BVH — so they are worked out again on every load. The skeleton
       // is reported before that finishes: a rig that takes a minute to bind still has bones the
       // inspector can name at once.
-      const held = applied.type === 'model' ? applied.model.rig : undefined
-      if (held) void this.skinModel(node.id, holder, held)
-
       // Read once and used twice: whether this model has bones at all is the same question the
       // helper asks, and answering it in two places is how the two came to disagree. The COUNT
       // and not the named ones — an export that stripped joint names still has a rig to draw.
@@ -3507,7 +3522,12 @@ export class SceneRenderer {
       this.options.onRig?.(node.id, rig)
       // Read off the very object that just landed: the skeleton window edits the FILE, and
       // decoding it a second time to read its bones would pay for a million triangles twice.
-      this.options.onCharacter?.(node.id, rigFromObject(holder), characterExtrasOf(holder.userData))
+      const carried = rigFromObject(holder)
+      const extras = characterExtrasIn(holder)
+      this.options.onCharacter?.(node.id, carried, extras)
+      // 🛑 Before anything is retargeted onto it: the FILE is where a bone's role was put right,
+      // and a motion laid on a skeleton nobody has read plays on the wrong joints.
+      if (carried) this.learnRig(carried, extras?.roles)
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
       // on one of them would drive nothing at all until the next edit.
       this.applyPoses()
@@ -3542,8 +3562,8 @@ export class SceneRenderer {
   }
 
   /** Told once per skeleton, not per model: it is filed by what its bones ARE. */
-  private learnRig(rig: Rig): void {
-    const roles: Record<string, HumanoidRole> = {}
+  private learnRig(rig: Rig, corrected?: Readonly<Record<string, HumanoidRole>>): void {
+    const roles: Record<string, HumanoidRole> = { ...corrected }
     for (const bone of rig.bones) if (bone.role) roles[bone.name] = bone.role
     if (Object.keys(roles).length === 0) return
 
@@ -4601,12 +4621,12 @@ function helperVisibilityMoved(held: ViewportOptions, next: ViewportOptions): bo
 /**
  * Whether a model has to be built again rather than patched.
  *
- * A rig counts as much as an asset: putting one on replaces every mesh by a skinned one and hangs
- * bones under the holder, which is a different object graph and not an edit of this one.
+ * A FILE that changed is not read here: it is not an edit of a document and cannot be seen in a
+ * comparison of two states. `reloadAsset` is the door for that, and it is impérative on purpose.
  */
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {
   if (node.type !== 'model') return true
-  return previous.model.assetId !== node.model.assetId || previous.model.rig !== node.model.rig
+  return previous.model.assetId !== node.model.assetId
 }
 
 function disposeMaterial(mesh: Mesh): void {

@@ -16,7 +16,7 @@ import { paintRuler, readRulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timelineGeometry'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Size } from '../core/geometry'
-import type { AnimationRow, ClipBlock, ShotBar } from './animationRows'
+import type { AnimationRow, ClipBlock, ShotBar } from './bandRows'
 
 /** Half the diagonal of a key, in pixels. A diamond reads at this size and crowds beyond it. */
 const KEY_REACH = 4

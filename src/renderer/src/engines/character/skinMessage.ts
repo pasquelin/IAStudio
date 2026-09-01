@@ -9,7 +9,15 @@
  * Which part of a body a bone drives. A limb bone weights only vertices of its own limb, which is
  * what keeps a hip vertex off the hand bone when the arm hangs beside it.
  */
-export type SkinRegion = 'trunk' | 'head' | 'armLeft' | 'armRight' | 'legLeft' | 'legRight'
+export type SkinRegion =
+  | 'trunk'
+  | 'head'
+  | 'armLeft'
+  | 'armRight'
+  | 'legLeft'
+  | 'legRight'
+  /** 🛑 A handle one pulls, and no part of the body: `mayDrive` allows it for nothing. */
+  | 'handle'
 
 /** The order is the wire format: a region crosses as its index in this list. */
 export const SKIN_REGIONS: readonly SkinRegion[] = [
@@ -19,6 +27,7 @@ export const SKIN_REGIONS: readonly SkinRegion[] = [
   'armRight',
   'legLeft',
   'legRight',
+  'handle',
 ]
 
 /** How many bones may drive one vertex. Four, because that is what a `SkinnedMesh` reads. */

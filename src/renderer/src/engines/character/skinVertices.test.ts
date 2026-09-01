@@ -34,6 +34,22 @@ const bind = (...args: Parameters<typeof request>) => {
   return binding
 }
 
+describe('a handle one pulls', () => {
+  // 🛑 Six chains would otherwise take six handfuls of vertices away from the limbs they belong
+  // to: a handle rests ON its joint, so it is always the nearest bone there is.
+  it('takes no weight at all, whatever it is standing on', () => {
+    const binding = bind(
+      [[0, 0, 0]],
+      [
+        { head: [0, 0, 0], tail: [0, 1, 0], region: 'handle' },
+        { head: [0, 0, 0], tail: [0, 1, 0], region: 'trunk' },
+      ],
+    )
+
+    expect(influences(binding).map(one => one.bone)).toEqual([1])
+  })
+})
+
 describe('weighting a vertex', () => {
   it('gives the whole of it to a bone the vertex sits on', () => {
     const binding = bind([[0, 0, 0]], [{ head: [0, 0, 0], tail: [0, 1, 0], region: 'trunk' }])

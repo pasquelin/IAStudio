@@ -17,11 +17,17 @@ import {
   renameCharacterBone,
   setCharacterBoneRole,
 } from '@/engines/character/characterCommands'
-import { rigHandBones } from '@/engines/scene/rigFit'
+import { rigHandBones, type Bounds } from '@/engines/scene/rigFit'
+import { CharacterWindowFit } from './CharacterWindowFit'
 import { characterOf, useCharacters } from '@/stores/character'
 import { useCharacterView } from '@/stores/characterView'
 
-export type CharacterWindowInspectorProps = { assetId: string; name: string }
+export type CharacterWindowInspectorProps = {
+  assetId: string
+  name: string
+  /** What the engine measured of the mesh, for the rigger that proportions itself off it. */
+  bounds: Bounds | null
+}
 
 /**
  * What this character is made of — its bones, their roles, what reaches for what.
@@ -29,7 +35,7 @@ export type CharacterWindowInspectorProps = { assetId: string; name: string }
  * Nothing of a scene: no transform, no shadow, no environment. That separation is the whole
  * reason this window exists.
  */
-export function CharacterWindowInspector({ assetId, name }: CharacterWindowInspectorProps) {
+export function CharacterWindowInspector({ assetId, name, bounds }: CharacterWindowInspectorProps) {
   const { t } = useTranslation()
   const character = useCharacters(state => characterOf(state, assetId))
   const picked = useCharacterView(state => state.pickedBone)
@@ -43,7 +49,12 @@ export function CharacterWindowInspector({ assetId, name }: CharacterWindowInspe
       <PanelHeader title={name} />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PropertySection title={t('character.skeleton')} scId="character.skeleton">
-          {!rig && <QuietNote>{t('inspector.rigStatus_staticMesh')}</QuietNote>}
+          {!rig && (
+            <>
+              <QuietNote>{t('inspector.rigStatus_staticMesh')}</QuietNote>
+              <CharacterWindowFit assetId={assetId} bounds={bounds} />
+            </>
+          )}
           {rig && <QuietNote>{t('inspector.rigReady')}</QuietNote>}
 
           {rig && picked && (

@@ -8,11 +8,11 @@ import { Bone, BoxGeometry, Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { describe, expect, it } from 'vitest'
 import { HUMANOID_BODY_ROLES } from '@shared/domain/humanoid'
 import type { Rig } from '@shared/domain/rig'
-import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
+import { applyRig, positionsIn, skinnableMeshesOf } from '../character/rigBuild'
 import { rigFit, type Bounds } from './rigFit'
 import { rigBonesOf, rigFromObject, rigReadFaultOf } from './rigRead'
-import { skinVertices } from './skinVertices'
-import { wireOf } from './skinWeights'
+import { skinVertices } from '../character/skinVertices'
+import { wireOf } from '../character/skinWeights'
 
 const BOUNDS: Bounds = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
 

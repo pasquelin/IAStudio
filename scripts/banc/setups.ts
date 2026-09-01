@@ -1,5 +1,6 @@
 import type { RecentProject } from '@shared/domain/project'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { seedCharacter, useCharacters } from '@/stores/character'
 import { useJobs } from '@/stores/jobs'
 import { useSettings } from '@/stores/settings'
 import { useTasks } from '@/stores/tasks'
@@ -87,6 +88,9 @@ export const modelScene = async (studio: Studio): Promise<void> => {
     name: 'Knight',
   })
   measured(studio, named(studio, 'Knight'))
+  // 🛑 The skeleton window, opened on the same file: `rig.*` acts on a CHARACTER now, and with
+  // none open the whole of section 50 would be scored on a refusal.
+  seedCharacter(assetOf(studio, 'knight in plate armour, character.glb'), null, {})
 }
 
 /**
@@ -100,10 +104,9 @@ export const modelSceneWithMaterial = async (studio: Studio): Promise<void> => {
 
 /** The bones the model in front carries, for a decor that has to name the one it just added. */
 export const bonesOf = (studio: Studio): readonly string[] => {
-  const node = sceneOf(useScenes.getState(), frontId(studio)).nodes.find(
-    one => one.type === 'model',
-  )
-  return node?.type === 'model' ? (node.model.rig?.bones.map(one => one.name) ?? []) : []
+  void studio
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.rig?.bones.map(one => one.name) ?? []
 }
 
 /**

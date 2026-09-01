@@ -11,11 +11,11 @@ import { HUMANOID_BODY_ROLES } from '@shared/domain/humanoid'
 import { glbChunksOf } from '@shared/domain/glbContainer'
 import type { Rig } from '@shared/domain/rig'
 import { glbSkinFaultOf, glbWithSkin, type GlbSkinPatch } from './glbSkin'
-import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
+import { applyRig, positionsIn, skinnableMeshesOf } from '../character/rigBuild'
 import { rigFit, type Bounds } from './rigFit'
 import { rigFromObject } from './rigRead'
-import { skinVertices } from './skinVertices'
-import { wireOf } from './skinWeights'
+import { skinVertices } from '../character/skinVertices'
+import { wireOf } from '../character/skinWeights'
 
 const BOUNDS: Bounds = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
 

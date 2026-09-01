@@ -4,7 +4,7 @@ import { isRecord } from '@shared/guards'
 import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
 import type { CharacterExtras } from '@shared/domain/character'
 import type { RigBone } from '@shared/domain/rig'
-import { bonesOfRig } from './rigBuild'
+import { bonesOfRig } from '../character/rigBuild'
 
 /** One primitive of the file, and the two attributes that make it skinned. */
 export type GlbSkinAttributes = {

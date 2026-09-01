@@ -134,7 +134,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/core/canvas2d.test.ts',
   'src/renderer/src/engines/core/offScreenHost.test.ts',
   'src/renderer/src/engines/core/palette.test.ts',
-  'src/renderer/src/engines/scene/animationPainter.test.ts',
+  'src/renderer/src/engines/timeline/bandPainter.test.ts',
   // Draws the round mark of a joint on a canvas, exactly as `paneMaterials` draws its matcap.
   'src/renderer/src/engines/scene/boneJoints.test.ts',
   'src/renderer/src/engines/scene/bvhBuilder.test.ts',

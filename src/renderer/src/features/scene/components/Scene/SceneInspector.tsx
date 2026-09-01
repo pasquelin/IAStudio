@@ -230,7 +230,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
       {model && (
         <>
-          <RigSection documentId={documentId} node={model} edit={edit} />
+          <RigSection documentId={documentId} node={model} />
           <AnimationSection documentId={documentId} node={model} edit={edit} />
           {/* On the anchor alone, unlike a material: how many slots a model has depends on what
               its own file carries, so spreading a dress over a selection would name slots meshes

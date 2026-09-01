@@ -4,7 +4,7 @@
  * `workerPort` holds the worker and the register; what is here is the wire — a request that
  * answers many times, and a caller that can take one back, neither of which `bvhBuilder` carries.
  */
-import type { Rig, RigBone } from '@shared/domain/rig'
+import { isIkHandle, type Rig, type RigBone } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import type { Vector3 } from '@shared/domain/transform'
 import { SKIN_REGIONS, type SkinRegion, type SkinRequest, type SkinResponse } from './skinMessage'
@@ -95,7 +95,7 @@ export function wireOf(positions: Float32Array, rig: Rig): Omit<SkinRequest, 'id
     const tail = world.get(rig.bones.find(child => child.parent === bone.name)?.name ?? '') ?? head
 
     segments.set([head.x, head.y, head.z, tail.x, tail.y, tail.z], index * 6)
-    regions[index] = SKIN_REGIONS.indexOf(regionOf(bone.role))
+    regions[index] = SKIN_REGIONS.indexOf(isIkHandle(bone.name) ? 'handle' : regionOf(bone.role))
   })
 
   return { position: positions, segments, regions }

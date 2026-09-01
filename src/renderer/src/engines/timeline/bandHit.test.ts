@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { RULER_HEIGHT, type Viewport } from '../timeline/timelineGeometry'
-import { animationTrack, cameraShot, timelineWith } from './animation-fixtures'
-import { animationCursorAt, hitAnimation, type HitContext } from './animationHit'
-import { CHANNEL_HEIGHT, SUBJECT_HEIGHT, animationRows, type ClipBlock } from './animationRows'
+import { animationTrack, cameraShot, timelineWith } from '../scene/animation-fixtures'
+import { animationCursorAt, hitAnimation, type HitContext } from '../timeline/bandHit'
+import { animationRows } from '../scene/animationRows'
+import { type ClipBlock } from './bandRows'
+import { CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '../timeline/bandRows'
 
 /** One pixel per 10 ms, so a second is a hundred pixels across. */
 const viewport: Viewport = { scale: 100 / SECOND, offset: 0, scrollTop: 0 }

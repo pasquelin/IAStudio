@@ -10,7 +10,6 @@ import {
   layerAt,
   madeCar,
   modelScene,
-  named,
   opened,
   overlay,
 } from './setups'
@@ -33,7 +32,7 @@ const styled =
 /** The knight with a skeleton already fitted — nine of the ten rig requests start from one. */
 const rigged = async (studio: Studio): Promise<void> => {
   await modelScene(studio)
-  await studio.run('rig.fit', { nodeId: named(studio, 'Knight') })
+  await studio.run('rig.fit', {})
 }
 
 /** The boat picture with its two layers filed under a group. */
@@ -105,10 +104,9 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     // read on the bone the person is pointing at rather than anywhere on the skeleton.
     setup: async studio => {
       await rigged(studio)
-      await studio.run('bone.add', { nodeId: named(studio, 'Knight'), parent: 'RightLowerArm' })
+      await studio.run('bone.add', { parent: 'RightLowerArm' })
       const added = bonesOf(studio).at(-1) ?? ''
       await studio.run('bone.rename', {
-        nodeId: named(studio, 'Knight'),
         bone: added,
         name: 'Main Droite',
       })
@@ -123,7 +121,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     // at nothing and any removal would pass.
     setup: async studio => {
       await rigged(studio)
-      await studio.run('bone.add', { nodeId: named(studio, 'Knight'), parent: 'RightLowerArm' })
+      await studio.run('bone.add', { parent: 'RightLowerArm' })
     },
     // Back to the three the fit laid: the one added by the decor is the one to go.
     passed: run => read.rig(run)?.bones.length === 3,
@@ -139,7 +137,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     said: ['Retire cette contrainte IK.'],
     setup: async studio => {
       await rigged(studio)
-      await studio.run('ik.add', { nodeId: named(studio, 'Knight'), bone: 'LeftFoot' })
+      await studio.run('ik.add', { bone: 'LeftFoot' })
     },
     passed: run => (read.rig(run)?.ik ?? []).length === 0,
   },

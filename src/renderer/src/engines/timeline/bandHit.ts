@@ -15,9 +15,9 @@ import {
   type ClipEdge,
   type Viewport,
 } from '../timeline/timelineGeometry'
-import { keysOf, reachOf } from './animationPainter'
+import { keysOf, reachOf } from '../timeline/bandPainter'
 import type { Point } from '../core/geometry'
-import type { AnimationRow, LaneRow } from './animationRows'
+import type { AnimationRow, LaneRow } from './bandRows'
 
 /** Which block of a lane a press took hold of, and where the two ends of a lane row agree. */
 type BlockAt = { rowId: string; nodeId: string; laneId: string; clipId: string }

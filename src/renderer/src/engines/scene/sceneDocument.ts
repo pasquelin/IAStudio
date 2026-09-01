@@ -29,7 +29,6 @@ import {
 import { CSG_OPERATIONS, type CsgPart } from '@shared/domain/csg'
 import { readWorld } from './sceneWorld'
 import { BODY_PARTS } from '@shared/domain/humanoid'
-import { isRig } from '@shared/domain/rig'
 import {
   DEFAULT_DURATION,
   DEFAULT_FPS,
@@ -153,6 +152,13 @@ function revived(node: SceneNode): SceneNode {
   // gained since the file was written arrives with a value instead of `undefined`. `measures`
   // is what lets such a file through in the first place; this is the other half of the same
   // rule, and one without the other would revive a sprite whose opacity is nothing at all.
+  // 🛑 The skeleton left the document for the model's own file. Purged rather than carried: a
+  // scene reopened and saved would otherwise write a rig back that nothing on either side reads.
+  if (filled.type === 'model' && 'rig' in filled.model) {
+    const model = { ...filled.model }
+    delete (model as { rig?: unknown }).rig
+    return { ...filled, model }
+  }
   if (filled.type === 'mesh') {
     return { ...filled, material: revivedMaterial(filled.material) }
   }
@@ -315,7 +321,6 @@ function isSceneNode(value: unknown): value is SceneNode {
       isOptionalAnimation(value.model.animation) &&
       isOptionalClips(value.model.clips) &&
       isOptionalLanes(value.model.lanes) &&
-      isOptionalRig(value.model.rig) &&
       isOptionalTextureOverrides(value.model.textures) &&
       isOptionalDress(value.model.dress) &&
       // A document id, never resolved here: the material may have been deleted, and a scene that
@@ -431,11 +436,6 @@ function isClipSource(value: unknown): boolean {
   if (value.kind === 'embedded' || value.kind === 'bundled') return true
 
   return value.kind === 'asset' && typeof value.assetId === 'string' && value.assetId !== ''
-}
-
-/** The invariants live with the type: one parent per bone, no cycle, no role twice. */
-function isOptionalRig(value: unknown): boolean {
-  return value == null || isRig(value)
 }
 
 /**
