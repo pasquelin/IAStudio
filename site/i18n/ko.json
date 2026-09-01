@@ -26,7 +26,8 @@
     "docs": "문서",
     "build": "개발 버전",
     "download": "내려받기",
-    "languageLabel": "언어"
+    "languageLabel": "언어",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "데스크톱 애플리케이션 · 독립 프로젝트",

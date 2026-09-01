@@ -26,7 +26,8 @@
     "docs": "Docs",
     "build": "Versão de desenvolvimento",
     "download": "Baixar",
-    "languageLabel": "Idioma"
+    "languageLabel": "Idioma",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "Aplicação de desktop · projeto independente",

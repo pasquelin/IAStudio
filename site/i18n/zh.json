@@ -26,7 +26,8 @@
     "docs": "文档",
     "build": "开发版本",
     "download": "下载",
-    "languageLabel": "语言"
+    "languageLabel": "语言",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "桌面应用 · 独立项目",

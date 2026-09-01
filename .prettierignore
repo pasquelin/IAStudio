@@ -9,4 +9,5 @@
 site/build.mjs
 scripts/make-llms.mjs
 scripts/check-licences.mjs
+scripts/check-site.mjs
 scripts/serve.mjs

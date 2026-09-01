@@ -26,7 +26,8 @@
     "docs": "ドキュメント",
     "build": "開発版",
     "download": "ダウンロード",
-    "languageLabel": "言語"
+    "languageLabel": "言語",
+    "source": "GitHub"
   },
   "hero": {
     "eyebrow": "デスクトップアプリ · 個人プロジェクト",
