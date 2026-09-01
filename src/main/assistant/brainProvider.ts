@@ -5,7 +5,7 @@ import type { AssistantThought } from '@shared/domain/assistant'
 import type { AssistantBrain, NotReady, TurnWatch } from './brainPort'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import { answeredTurn, notesFor, turnsWith, TurnStopped, type BrainAttempt } from './brainTurn'
-import { briefingFor, instructionFor, type Briefing } from './instruction'
+import { briefingFor, instructionFor, PREAMBLE_COST, type Briefing } from './instruction'
 import { INSTRUCTION_FALLBACK, type ProviderLimits } from './providerLimits'
 
 /**
@@ -36,10 +36,11 @@ export const UTTERANCE_ROOM = 1_500
  * longer a budget: the catalogue is 4 225 characters of names, and the briefing grows only by the
  * manuals a chain opens. Held to 8 500, three of them fitted and the rest were cut in silence.
  */
-const briefingRoom = (bounds: ProviderLimits): number => bounds.instructionMax - UTTERANCE_ROOM
+const briefingRoom = (bounds: ProviderLimits): number =>
+  bounds.instructionMax - UTTERANCE_ROOM - PREAMBLE_COST
 
 /** The same against the fallback, for a door that has not read its schema yet. */
-export const BRIEFING_ROOM = INSTRUCTION_FALLBACK - UTTERANCE_ROOM
+export const BRIEFING_ROOM = INSTRUCTION_FALLBACK - UTTERANCE_ROOM - PREAMBLE_COST
 
 export type BrainDeps = {
   /**

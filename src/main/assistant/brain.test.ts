@@ -4,8 +4,8 @@ import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Job } from '@shared/domain/job'
 import { createAssetText } from './assetText'
 import { BRIEFING_ROOM, createProviderBrain, UTTERANCE_ROOM } from './brainProvider'
-import type { ProviderLimits } from './providerLimits'
-import { recentHistory, studioBriefing } from './instruction'
+import { INSTRUCTION_FALLBACK, type ProviderLimits } from './providerLimits'
+import { instructionFor, recentHistory, studioBriefing } from './instruction'
 import { STATE_MAX } from './studioState'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 import { answeredTurn } from './brainTurn'
@@ -224,6 +224,17 @@ describe('what the model is told', () => {
       'x'.repeat(CONTEXT_COMPOSED_MAX),
       'z'.repeat(STATE_MAX),
     )
+
+    expect(sent).toContain('y'.repeat(UTTERANCE_ROOM))
+  })
+
+  /**
+   * 🛑 The three above only hold while the CUT happens to stop short: a briefing filling its room
+   * to the last character left the sentence 20 short, the preamble that joins them being paid out
+   * of it. This one takes the worst case straight rather than waiting on a lucky manual boundary.
+   */
+  it('leaves that room to a briefing that fills its own to the last character', () => {
+    const sent = instructionFor('b'.repeat(BRIEFING_ROOM), 'y'.repeat(3_000), INSTRUCTION_FALLBACK)
 
     expect(sent).toContain('y'.repeat(UTTERANCE_ROOM))
   })

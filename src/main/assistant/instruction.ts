@@ -196,6 +196,14 @@ const WIDE_RULES = [
   // holding one, « quel modèle 3D ? » to a project holding two.
   '  - Rule 3 is for what the person ALONE knows. ONE thing of that kind in front of you is the',
   '    one meant, and a question about what a read would have told you is a turn spent for nothing.',
+  /**
+   * 🛑 The other side of the rule above, and it only bites where a gesture DESTROYS: « supprime le
+   * bateau » names a file, an asset, a layer, a document and an instance at once, and the rule
+   * above — one of that kind — reads it as one of them and removes it. Measured 2026-09-01.
+   */
+  '  - ONE of a kind is the one meant, but a name that fits SEVERAL KINDS at once — a file, a',
+  '    layer, an object, a document — is not one thing. Before REMOVING on such a name, ask which,',
+  '    with the kinds as the choices. Before reading or moving, pick the one in front.',
   '  - "one metre more", "half", "25% more" are RELATIVE. Read the value that stands, do the',
   '    arithmetic, write the result: every field is an absolute value, never a difference.',
   /**
@@ -717,3 +725,9 @@ export function instructionFor(briefing: string, utterance: string, ceiling: num
 // 🛑 A function and not a `const`, however single its use: `no-hardcoded-text.test.ts` reads a
 // sentence BOUND to a name as a line bound for a screen, and this one is bound for a model.
 const preambleOf = (briefing: string): string => `${briefing}\n\nThe person says:\n\n`
+
+/**
+ * 🛑 What joining the two costs, which the sentence used to pay: a briefing filling its room to
+ * the last character left the person 20 short of `UTTERANCE_ROOM`. Read off the preamble.
+ */
+export const PREAMBLE_COST = preambleOf('').length
