@@ -8,7 +8,7 @@ import { TIP_LEFT } from '@/helpers/tooltip'
 import { useModelText } from '@/hooks/useModelText'
 import { AssetDropField } from '../AssetDropField'
 import { fieldHandle } from '../scHandle'
-import { FIELD, FIELD_FILL } from '../styles'
+import { CHECKBOX, FIELD, FIELD_FILL } from '../styles'
 import { ToolButton } from '../ToolButton'
 
 export type DynamicFormControlProps = {
@@ -94,7 +94,9 @@ export function DynamicFormControl({
           id={id}
           data-sc={handle}
           type="checkbox"
-          className="size-4 self-start"
+          // 🛑 `CHECKBOX` like every other box of the studio: composed by hand here, it wore the
+          // BROWSER's accent — measured `auto` against the token's `#346ef2` — and no pointer.
+          className={cn(CHECKBOX, 'size-4 shrink-0')}
           {...registration}
         />
       )

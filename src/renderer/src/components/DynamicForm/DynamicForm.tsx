@@ -16,7 +16,7 @@ import {
 } from '@/helpers/dynamicForm'
 import { buildSchema } from '@/helpers/dynamicFormSchema'
 import { cn } from '@/helpers/cn'
-import { PANEL_GROUP_LABEL } from '../styles'
+import { FIELD_HELP, PANEL_GROUP_LABEL } from '../styles'
 import { useModelText } from '@/hooks/useModelText'
 import { Button } from '../Button'
 import { FormField } from '../FormField'
@@ -150,7 +150,7 @@ export function DynamicForm({
   }
 
   const fieldsetOf = ([group, groupedFields]: (typeof plain)[number]) => (
-    <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
+    <fieldset key={group} className="m-0 flex flex-col gap-4 border-0 p-0">
       {group && group !== ADVANCED_GROUP && (
         <legend className={cn(PANEL_GROUP_LABEL, 'p-0')}>{say(group)}</legend>
       )}
@@ -163,17 +163,20 @@ export function DynamicForm({
           label={say(field.label)}
           htmlFor={`${formId}${field.key}`}
           required={field.required}
+          // A checkbox is the one control whose name belongs on its own line, after the box.
+          beside={field.kind === 'boolean'}
+          control={
+            <DynamicFormControl
+              id={`${formId}${field.key}`}
+              field={field}
+              registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
+              initial={initial[field.key]}
+              onRoll={() => setValue(field.key, randomSeed())}
+              accessory={accessory?.(field)}
+            />
+          }
         >
-          <DynamicFormControl
-            id={`${formId}${field.key}`}
-            field={field}
-            registration={register(field.key, { valueAsNumber: isNumeric(field.kind) })}
-            initial={initial[field.key]}
-            onRoll={() => setValue(field.key, randomSeed())}
-            accessory={accessory?.(field)}
-          />
-
-          {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}
+          {field.help && <span className={FIELD_HELP}>{say(field.help)}</span>}
           {formState.errors[field.key] && (
             <span role="alert" className="text-danger text-tiny">
               {t('errors.invalidValue')}

@@ -24,9 +24,10 @@ import { join } from 'node:path'
  *
  * Raised to 84 on 2026-08-31, against 94 read: `component-prefixes.test.ts` then
  * `mock-paths.test.ts` each took the gap past ten, which is the suite asking for this line rather
- * than anyone remembering to write it.
+ * than anyone remembering to write it. Raised again to 85 the same day, against 95, when
+ * `no-bare-checkbox.test.ts` took it past ten once more.
  */
-export const LEAST_GUARDS = 84
+export const LEAST_GUARDS = 85
 
 /**
  * How far the floor may sit below the real count before it stops meaning anything.
