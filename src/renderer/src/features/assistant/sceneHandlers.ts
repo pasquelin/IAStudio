@@ -11,12 +11,14 @@ import {
   VIEW_DIRECTIONS,
   type MaterialDescriptor,
   type PathDescriptor,
+  DEFAULT_WORLD,
   type SceneWorld,
   type SpriteDescriptor,
   type TextDescriptor,
   type TextureSlot,
   type Vector3,
 } from '@shared/domain/scene'
+import { movedParts, type Transform } from '@shared/domain/transform'
 import { CSG_OPERATIONS } from '@shared/domain/csg'
 import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/sceneCapture'
 import { SECOND } from '@shared/domain/time'
@@ -273,6 +275,42 @@ function texturesFrom(
   return slots
 }
 
+/**
+ * A material with every `null` left out — absent reads as the DEFAULT, which for a colour is the
+ * studio's own and for a map is none.
+ *
+ * 🛑 Here and nowhere else: a geometry, a light and a camera declare no nullable field, so the
+ * same call on them only traded the compiler's grip for nothing. A standard material writes seven
+ * map slots and a colour, all `null` on a fresh mesh — 145 of its 200 characters, in the one
+ * member of `scene.state` the answer could not afford to lose. Measured 2026-09-01, a mesh cost
+ * 348 characters and six of them 1 694.
+ */
+function withoutNulls(held: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(held).filter(([, value]) => value !== null))
+}
+
+/** A node's `transform`, or nothing at all when it has not left where a fresh one stands. */
+function moved(transform: Transform): { transform: Partial<Transform> } | null {
+  const parts = movedParts(transform)
+  return Object.keys(parts).length === 0 ? null : { transform: parts }
+}
+
+/**
+ * The world, with every member a fresh scene already has left out — absent reads as the default.
+ *
+ * 🛑 355 characters of them stood between the ids and `nodes`, which `resultLine` then dropped
+ * whole: none of the world's members carries an id, and every one of `nodes` does. A scene
+ * untouched apart from its backdrop answers thirty characters here instead of three hundred.
+ */
+function worldApart(world: SceneWorld): Partial<SceneWorld> {
+  const apart: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(world)) {
+    const standing = DEFAULT_WORLD[key as keyof SceneWorld]
+    if (JSON.stringify(value) !== JSON.stringify(standing)) apart[key] = value
+  }
+  return apart
+}
+
 function readState(): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_SCENE)
@@ -309,7 +347,7 @@ function readState(): ActionOutcome {
       },
       // The whole world and not its environment alone: the fog, the backdrop, the ground and the
       // grading are document values, and a client that can write them has to be able to read them.
-      world: open.state.world,
+      world: worldApart(open.state.world),
       // The INSTANTS of the keys, never their values: what a key holds is a delta nothing here
       // writes, and a ten-second take at every frame is a megabyte of it across the boundary.
       tracks: open.state.animation.tracks.map(track => ({
@@ -322,16 +360,28 @@ function readState(): ActionOutcome {
         target: track.target,
         keys: track.keys.map(key => key.time),
       })),
-      // The flat list the state itself holds — the tree is derived from `parentId`, and handing
-      // one over would be a second shape of the same thing for a client to walk.
+      /**
+       * The flat list the state itself holds — the tree is derived from `parentId`, and handing
+       * one over would be a second shape of the same thing for a client to walk.
+       *
+       * 🛑 A value AT ITS DEFAULT is left out, and absent reads as that default: no parent, drawn,
+       * standing at the origin unturned and unscaled. `resultLine` cuts by whole members and this
+       * is the last one, so a scene of three objects came back `(cut short: nodes)` — the model
+       * could not name ONE object of the scene it was editing, measured 2026-09-01. An identity
+       * transform alone cost 118 characters a node.
+       */
       nodes: open.state.nodes.map(node => ({
         id: node.id,
         name: node.name,
         type: node.type,
-        parentId: node.parentId,
-        visible: node.visible,
-        transform: node.transform,
-        ...(node.type === 'mesh' ? { geometry: node.geometry, material: node.material } : {}),
+        ...(node.parentId === null ? {} : { parentId: node.parentId }),
+        ...(node.visible ? {} : { visible: false }),
+        // By PARTS: a node merely moved carried its unturned rotation and its unscaled scale for
+        // 78 characters, in the one member the answer could not afford to lose.
+        ...(moved(node.transform) ?? {}),
+        ...(node.type === 'mesh'
+          ? { geometry: node.geometry, material: withoutNulls(node.material) }
+          : {}),
         ...(node.type === 'light' ? { light: node.light } : {}),
         ...(node.type === 'model' ? { model: node.model } : {}),
         ...(node.type === 'camera' ? { camera: node.camera } : {}),
@@ -340,7 +390,9 @@ function readState(): ActionOutcome {
         ...(node.type === 'path' ? { path: node.path } : {}),
         // The recipe and the material: without them a solid reads as a bare `type` and a client
         // cannot tell a pierced wall from a welded one, nor know there is anything to separate.
-        ...(node.type === 'carved' ? { carved: node.carved, material: node.material } : {}),
+        ...(node.type === 'carved'
+          ? { carved: node.carved, material: withoutNulls(node.material) }
+          : {}),
       })),
     },
   }

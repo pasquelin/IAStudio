@@ -319,7 +319,7 @@
       },
       "sequenceState": {
         "title": "Read the edit being worked on",
-        "description": "Answers the edit in front — its settings, its length, the playhead and what is selected — then every track with its clips, their bounds, their entry into the source, their speed, their fades and their level."
+        "description": "Answers the edit in front — its settings, its length, the playhead and what is selected — then every track with its clips, their bounds, their entry into the source, their speed, their fades and their level. A field STANDING AT ITS DEFAULT is left out, and absent means that default: a row is heard and unlocked, a clip runs at speed 1 from its start, with no fade and at the level it was recorded."
       },
       "sequenceSeek": {
         "title": "Place the playhead",
@@ -595,7 +595,7 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the whole setting of the scene."
+        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no field named parent is no parent, no transform is standing at the origin unturned and unscaled, no colour is the studio’s own."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",

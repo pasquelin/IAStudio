@@ -56,6 +56,29 @@ beforeEach(() => {
 })
 
 describe('reading the scene in front', () => {
+  /**
+   * 🛑 What a node STANDS AT is left out, and absent reads as that default — the rule the action's
+   * own description states. An identity transform alone cost 118 characters a node, in the member
+   * `resultLine` was dropping whole: a three-object scene answered `(cut short: nodes)`, and the
+   * model could not name one object of what it was editing.
+   */
+  it('leaves out what a node stands at, and keeps what has moved', async () => {
+    await runAction('node.add', { kind: 'box', name: 'Caisse' })
+    const [placed] = sceneOf(useScenes.getState(), DOCUMENT).nodes
+    await runAction('node.transform', { nodeId: placed?.id, positionX: 2 })
+
+    const outcome = await runAction('scene.state', {})
+    const [node] = outcome.ok ? (outcome.data as { nodes: Record<string, unknown>[] }).nodes : []
+
+    expect(node).not.toHaveProperty('parentId')
+    expect(node).not.toHaveProperty('visible')
+    // The part that MOVED and it alone: an unturned rotation and an unscaled scale stay out.
+    expect(node?.transform).toEqual({ position: { x: 2, y: 0, z: 0 } })
+    // A colour and seven map slots, all `null` on a fresh mesh — 145 characters of "no texture".
+    expect(node?.material).not.toHaveProperty('color')
+    expect(node?.material).toMatchObject({ kind: 'standard' })
+  })
+
   it('answers the flat list of nodes, with what each one carries', async () => {
     await runAction('node.add', { kind: 'box', name: 'Caisse' })
 
@@ -594,17 +617,25 @@ describe('how the scene is looked at', () => {
 
 /** The half of the document that belongs to no node — lit, backed, floored and graded. */
 describe('the world of the scene', () => {
-  it('reads back every part of it, and not the environment alone', async () => {
+  /**
+   * 🛑 What CHANGED, never the whole of it: a member still as a fresh scene has it is left out and
+   * absent reads as that default. Written whole, the world spent 355 characters carrying no id at
+   * all, and `resultLine` then dropped `nodes` — where every id of the scene is published.
+   */
+  it('reads back every part of it that has moved, and leaves the rest out', async () => {
     await runAction('world.setFog', { kind: 'exp2', density: 0.05 })
     await runAction('world.setToneMapping', { toneMapping: 'aces', exposure: 1.4 })
+    await runAction('world.setGroundPlane', { visible: true })
 
     const outcome = await runAction('scene.state', {})
-    const read = outcome.ok ? (outcome.data as { world: SceneWorld }).world : null
+    const read = outcome.ok ? (outcome.data as { world: Partial<SceneWorld> }).world : null
 
     expect(read?.fog).toEqual({ kind: 'exp2', color: expect.any(String), density: 0.05 })
     expect(read?.toneMapping).toBe('aces')
     expect(read?.exposure).toBe(1.4)
     expect(read?.ground).toEqual(scene().world.ground)
+    // Untouched, so left out — the environment a fresh scene already lights itself with.
+    expect(read?.environment).toBeUndefined()
   })
 
   it('lights the scene by a named sky, and puts it back out', async () => {

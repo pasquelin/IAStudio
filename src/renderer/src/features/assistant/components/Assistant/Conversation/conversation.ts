@@ -36,12 +36,12 @@ export type AssistantStep = {
  * briefing out of every door. Cut to a size, and what was cut is SAID: a model reading a silently
  * truncated list plans against a project half of which it cannot see.
  *
- * 🛑 `[M]` Raised to 3 000 and put back: `scene.state` runs 1 740 to 3 006 characters on the bench
- * decors, so it looked like the cut that blinded a model. Measured 2026-08-31 over 120 runs of
- * sections 6, 7, 22 and 61 — 79 passed at 600, 79 at 3 000. It buys 10.7% fewer tokens sent and
- * costs turns of history nothing measured, so it is not a trade to make blind. Reordering
- * `scene.state` does not fix it either, and `sceneHandlers.ts` says why: no order makes `world`
- * and `nodes` both fit, so it only chooses which of them is lost.
+ * 🛑 `[M]` Raised twice and put back twice. 3 000 on 2026-08-31, over 120 runs of sections 6, 7,
+ * 22 and 61: 79 passed at 600, 79 at 3 000. Then 1 600 on 2026-09-01, once `scene.state` had been
+ * halved and the argument looked new — 63 runs of sections 6 and 7 answered 50 passed at 600
+ * against 47 at 1 600. It is the ANSWER that has to be made smaller, never this: `sceneHandlers.ts`
+ * and `sequenceHandlers.ts` leave out what stands at its default, and that is what a model gets
+ * more of. Reordering does not help either, and `sceneHandlers.ts` says why.
  */
 export const RESULT_MAX = 600
 
