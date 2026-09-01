@@ -336,6 +336,24 @@ function meshEntries(line: TripoLine): TripoEntry[] {
 }
 
 /**
+ * Their whole animation catalogue, measured 2026-08-31 by a body the service refused, which
+ * enumerates it. The `preset:` prefix stays out of the key — `:` is what i18next splits a ns on.
+ */
+const RETARGET_PRESETS: readonly string[] = [
+  'walk',
+  'run',
+  'idle',
+  'jump',
+  'climb',
+  'dive',
+  'fall',
+  'hurt',
+  'shoot',
+  'slash',
+  'turn',
+]
+
+/**
  * What is done TO a model that already exists — their post-process and mesh endpoints, plus the
  * two that rig and the one that retargets. None takes a `model`: the line is the one that made
  * the input, which travels as a task id.
@@ -528,10 +546,15 @@ const PROCESSING: readonly TripoEntry[] = [
       input('mesh', 'tripoFields.sourceRig'),
       {
         key: 'animation',
-        kind: 'text',
+        kind: 'choice',
         labelKey: 'tripoFields.animation',
         helpKey: 'tripoFields.animationHelp',
         required: true,
+        default: 'preset:walk',
+        optionKeys: RETARGET_PRESETS.map(preset => ({
+          value: `preset:${preset}`,
+          labelKey: `tripoFields.animation_${preset}`,
+        })),
       },
     ],
   },

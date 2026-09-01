@@ -105,6 +105,34 @@ describe('the Tripo catalogue', () => {
   })
 
   /**
+   * 🛑 Free text made the person guess `preset:walk`, and a wrong word is refused with nothing
+   * but a documentation URL. The eleven names are measured; the prefix stays out of the key,
+   * `:` being what i18next splits a namespace on.
+   */
+  it('offers retargeting the movements the service knows, rather than a word to guess', () => {
+    const animation = entryOf('animations/retarget').fields.find(one => one.key === 'animation')
+
+    expect(animation?.kind).toBe('choice')
+    expect(animation?.default).toBe('preset:walk')
+    expect(animation?.optionKeys?.map(one => one.value)).toEqual([
+      'preset:walk',
+      'preset:run',
+      'preset:idle',
+      'preset:jump',
+      'preset:climb',
+      'preset:dive',
+      'preset:fall',
+      'preset:hurt',
+      'preset:shoot',
+      'preset:slash',
+      'preset:turn',
+    ])
+    expect(animation?.optionKeys?.map(one => one.labelKey)).not.toContain(
+      'tripoFields.animation_preset:walk',
+    )
+  })
+
+  /**
    * 🛑 Read by a person, never by the API: `banana_pro · image-to-multiview` put two of the
    * service's own slugs in the picker. The word after the dot stays — THREE picture endpoints
    * serve `img2img`, so the model alone would list the same name three times.
