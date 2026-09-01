@@ -239,7 +239,7 @@
       },
       "canvasState": {
         "title": "Lire l’image en cours d’édition",
-        "description": "Rend le cadre de l’image devant — sa taille et sa résolution — et toute sa pile de calques mise à plat, chacun avec son identifiant, sa nature, son opacité, son mode de fusion et sa transformation."
+        "description": "Répond l’image en avant — sa taille, sa résolution, ses repères, et chaque calque de la pile à plat : identifiant, nom, sorte, et ce que chacun porte. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : un calque est visible, opaque, déverrouillé, en fondu normal, non rogné et non transformé."
       },
       "canvasResize": {
         "title": "Redimensionner l’image",
@@ -255,7 +255,7 @@
       },
       "layerSetMaskOptions": {
         "title": "Régler le masque d’un calque",
-        "description": "Dit si un masque cache ce qu’il couvre et s’il suit le calque quand il se déplace, ou le retire tout à fait. Un calque qui n’en porte aucun est refusé — creuser un masque appartient au moteur, par la commande qui le fait depuis la sélection."
+        "description": "Dit si un MASQUE — une forme creusée dans une sélection, qu’un calque porte — cache ce qu’il couvre et s’il suit le calque, ou le retire tout à fait. Cacher le calque LUI-MÊME, c’est layer.setOpacityBlendAndVisibility. Un calque qui n’en porte aucun est refusé : creuser un masque appartient au moteur, par la commande qui en fait un depuis la sélection."
       },
       "guideAdd": {
         "title": "Poser un repère",
@@ -287,7 +287,7 @@
       },
       "layerSetOpacityBlendAndVisibility": {
         "title": "Régler la composition d’un calque",
-        "description": "Change l’opacité d’un calque, son opacité de fond, son mode de fusion, sa visibilité ou son masquage. Chaque champ est facultatif, et ce qui n’est pas donné reste exactement tel quel."
+        "description": "Change l’opacité d’un calque, son opacité de fond, son mode de fusion, sa visibilité ou son écrêtage. Chaque champ est facultatif, et ce qui n’est pas donné reste exactement tel quel. C’EST ELLE qui cache un calque et le remontre — « masque ce calque » met la visibilité à faux, et n’a rien à voir avec un masque."
       },
       "layerTransform": {
         "title": "Placer un calque",

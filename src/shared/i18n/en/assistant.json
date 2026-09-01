@@ -239,7 +239,7 @@
       },
       "canvasState": {
         "title": "Read the image being edited",
-        "description": "Returns the frame of the image in front — its size and resolution — and its whole layer stack flattened, each layer with its id, kind, opacity, blend mode and transform."
+        "description": "Answers the image in front — its size, its resolution, its guides, and every layer of the stack flattened: id, name, kind, and what each carries. A field STANDING AT ITS DEFAULT is left out, and absent means that default: a layer is drawn, whole, unlocked, blended normally, uncut and untransformed."
       },
       "canvasResize": {
         "title": "Resize the image",
@@ -255,7 +255,7 @@
       },
       "layerSetMaskOptions": {
         "title": "Set a layer’s mask",
-        "description": "Says whether a mask hides what it covers and whether it travels with the layer, or takes it off altogether. A layer wearing none is refused — carving a mask belongs to the engine, through the command that makes one from the selection."
+        "description": "Says whether a MASK — a shape carved out of a selection, which a layer wears — hides what it covers and whether it travels with the layer, or takes it off altogether. Hiding the layer ITSELF is layer.setOpacityBlendAndVisibility. A layer wearing no mask is refused: carving one belongs to the engine, through the command that makes one from the selection."
       },
       "guideAdd": {
         "title": "Lay a guide",
@@ -287,7 +287,7 @@
       },
       "layerSetOpacityBlendAndVisibility": {
         "title": "Set how a layer is composited",
-        "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was."
+        "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was. THIS is what hides a layer and shows it again — « masque ce calque » sets visible to false, and has nothing to do with a mask."
       },
       "layerTransform": {
         "title": "Place a layer",

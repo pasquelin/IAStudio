@@ -79,6 +79,32 @@ describe('what the registry offers a layer', () => {
   })
 })
 
+describe('what a layer stands at', () => {
+  /**
+   * 🛑 Left out and read as the default: a layer is drawn, whole, unlocked, blended normally,
+   * uncut and untransformed. Written whole, one cost 290 characters — a stack of four came back
+   * cut before the layer a sentence named.
+   */
+  it('leaves out what a fresh layer already holds', async () => {
+    const outcome = await runAction('canvas.state', {})
+    const [layer] = outcome.ok
+      ? ((outcome.data as { layers: Record<string, unknown>[] }).layers ?? [])
+      : []
+
+    expect(layer).toHaveProperty('id')
+    for (const key of [
+      'visible',
+      'opacity',
+      'fillOpacity',
+      'locked',
+      'blend',
+      'clipped',
+      'transform',
+    ])
+      expect(layer).not.toHaveProperty(key)
+  })
+})
+
 describe('reading the image in front', () => {
   it('answers the frame and the whole stack, groups walked into', async () => {
     const outcome = await runAction('canvas.state', {})
