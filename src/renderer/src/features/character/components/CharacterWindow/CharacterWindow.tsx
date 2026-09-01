@@ -29,7 +29,13 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
-import { CHARACTER_LOCK_LENGTHS, CHARACTER_LOCK_TOOL, CHARACTER_TOOLS } from './characterTools'
+import {
+  CHARACTER_EDIT_REST,
+  CHARACTER_LOCK_LENGTHS,
+  CHARACTER_LOCK_TOOL,
+  CHARACTER_REST_TOOL,
+  CHARACTER_TOOLS,
+} from './characterTools'
 import { CharacterWindowInspector } from './CharacterWindowInspector'
 
 export type CharacterWindowProps = { assetId: string }
@@ -68,6 +74,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const picked = useCharacterView(state => state.pickedBone)
   const mode = useCharacterView(state => state.mode)
   const lockedLengths = useCharacterView(state => state.lockedLengths)
+  const editingRest = useCharacterView(state => state.editingRest)
 
   // Its OWN scope and not the scene's: ⌘Z here must not reach the scene a studio window is
   // showing beside it. Two doors to one handler: the keys the window sees, and the rows the menu
@@ -88,6 +95,19 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   useEffect(() => {
     engineRef.current?.setMode(mode)
   }, [mode])
+
+  // 🛑 The rest is put back BEFORE the engine measures the skins against it: a bone left where a
+  // pose placed it would be bound there, and that pose would become the character's own shape.
+  useEffect(() => {
+    const engine = engineRef.current
+    if (!engine || !nodeId) return
+
+    if (editingRest)
+      for (const bone of characterOf(useCharacters.getState(), assetId).rig?.bones ?? [])
+        engine.poseBone(nodeId, bone.name, bone.rest)
+
+    engine.setRestEditing(editingRest)
+  }, [editingRest, assetId, nodeId])
 
   // 🛑 What puts a gizmo on a joint, and paints it as the chosen one. Without it the engine hears
   // its own pick back from nobody: a bone could be named by the panel and still not be held.
@@ -122,7 +142,11 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
           // 🛑 The padlock bites on the gizmo too, not just on the fields: a hold the viewport
           // walked through would be a padlock that only draws itself.
           const kept = boneRestHeld(assetId, move.bone, move.transform)
-          useCharacters.getState().runCommand(assetId, setCharacterBoneRest(move.bone, kept))
+          // The two gestures of this window: editing writes the skeleton of the FILE, posing
+          // leaves it untouched and lets the mesh follow — see `CHARACTER_REST_TOOL`.
+          if (useCharacterView.getState().editingRest)
+            useCharacters.getState().runCommand(assetId, setCharacterBoneRest(move.bone, kept))
+          else engineRef.current?.poseBone(move.id, move.bone, kept)
         }
       },
       // The workshop is the character and a floor: the furniture of a scene has nothing to say
@@ -156,10 +180,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     // edited by placing its joints, where a scene poses one by turning them.
     renderer.setSkeletons(true)
     renderer.setPoseMode(true)
-    // 🛑 This window EDITS a rest pose; it never strikes one. Without it a joint dragged onto the
-    // elbow it belongs in took the whole arm with it, the character stretched, and the leg bones
-    // ran out under its feet — measured on screen.
-    renderer.setRestEditing(true)
+    renderer.setRestEditing(useCharacterView.getState().editingRest)
     renderer.setMode(useCharacterView.getState().mode)
 
     const stage = createCharacterStage({ renderer, assetId })
@@ -189,12 +210,20 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             <Toolbar
               className={PANE_TOOLBAR}
               label={t('character.tools')}
-              tools={[...CHARACTER_TOOLS, { ...CHARACTER_LOCK_TOOL, pressed: lockedLengths }]}
+              tools={[
+                ...CHARACTER_TOOLS,
+                { ...CHARACTER_LOCK_TOOL, pressed: lockedLengths },
+                { ...CHARACTER_REST_TOOL, pressed: editingRest },
+              ]}
               activeTool={mode}
               onTool={id => {
                 const view = useCharacterView.getState()
                 if (id === CHARACTER_LOCK_LENGTHS) {
                   view.lockCharacterLengths(!view.lockedLengths)
+                  return
+                }
+                if (id === CHARACTER_EDIT_REST) {
+                  view.editCharacterRest(!view.editingRest)
                   return
                 }
 

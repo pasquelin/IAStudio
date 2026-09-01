@@ -4150,6 +4150,18 @@ export class SceneRenderer {
     this.redraw()
   }
 
+  /**
+   * Puts one bone where a hand asked, leaving the REST it was given alone: the mesh follows,
+   * since its skin was measured against that rest. What POSING is, as opposed to editing.
+   */
+  poseBone(nodeId: string, bone: string, transform: Transform): void {
+    const object = this.objects.get(nodeId)?.getObjectByName(bone)
+    if (!object) return
+
+    applyTransform(object, transform)
+    this.redraw()
+  }
+
   /** The one mark saying which bone a panel is editing — nothing else in the viewport says it. */
   private paintPickedJoint(): void {
     for (const [nodeId, joints] of this.joints)

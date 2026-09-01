@@ -246,6 +246,20 @@ describe('SceneRenderer and the bones a rig carries', () => {
     engine.dispose()
   })
 
+  // What POSING is, as opposed to editing the rest: the bone moves and its skin follows, so
+  // nothing of the file's own skeleton is touched.
+  it('poses one bone where a hand asked', async () => {
+    const loaded = riggedModel([walk()])
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+
+    engine.poseBone('a', 'b1', { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0.5, z: 0 } })
+
+    expect(loaded.getObjectByName('b1')?.position.y).toBeCloseTo(0.5, 5)
+    engine.dispose()
+  })
+
   it('takes the bones away with the node they belonged to', async () => {
     const loaded = rigged()
     const engine = withModel(loaded)

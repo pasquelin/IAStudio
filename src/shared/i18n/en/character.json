@@ -11,6 +11,8 @@
     "tools": "Skeleton tools",
     "lockLengths": "Hold bone lengths",
     "lockLengthsHint": "A joint dragged keeps its distance to its parent: the bone turns instead of stretching",
+    "editRest": "Edit the rest pose",
+    "editRestHint": "The gizmo puts the joint back inside the body without deforming the mesh. Released, it poses: the mesh follows",
     "motions": "Motions",
     "band": "Motion being edited",
     "restPose": "Rest pose",

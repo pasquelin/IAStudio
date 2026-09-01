@@ -30,6 +30,12 @@ type CharacterViewState = {
    */
   lockedLengths: boolean
   lockCharacterLengths: (locked: boolean) => void
+  /**
+   * Whether the gizmo edits the skeleton's REST rather than striking a pose. Off by default:
+   * the window is opened to make a character move, and the mesh follows a bone that is posed.
+   */
+  editingRest: boolean
+  editCharacterRest: (editing: boolean) => void
 }
 
 export const useCharacterView = create<CharacterViewState>()(set => ({
@@ -39,6 +45,8 @@ export const useCharacterView = create<CharacterViewState>()(set => ({
   setCharacterMode: mode => set({ mode }),
   lockedLengths: true,
   lockCharacterLengths: lockedLengths => set({ lockedLengths }),
+  editingRest: false,
+  editCharacterRest: editingRest => set({ editingRest }),
   heldAxes: [],
   holdCharacterAxis: (axis, held) =>
     set(state => ({

@@ -2,14 +2,20 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
+import type { Rig } from '@shared/domain/rig'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
 import { clearCharacters } from '@/stores/character-fixtures'
 import { useCharacterView } from '@/stores/characterView'
 import { CharacterWindow } from './CharacterWindow'
 
 /** Every engine built, so a case can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
+
+/** Every bone the engine was asked to POSE, which is the gesture that writes nothing. */
+const posed = vi.hoisted((): string[] => [])
 
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
@@ -26,6 +32,9 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setMode = vi.fn()
     setPickedBone = vi.fn()
     setRestEditing = vi.fn()
+    poseBone = (_nodeId: string, bone: string) => {
+      posed.push(bone)
+    }
     skinModel = vi.fn()
     frameContents = vi.fn()
   },
@@ -37,9 +46,25 @@ const SAMPLE = {
   points: new Float32Array(),
 }
 
+const raised = (y: number): Transform => ({
+  ...IDENTITY_TRANSFORM,
+  position: { x: 0, y, z: 0 },
+})
+
+/** One bone, so a case can read back what a gesture wrote into the skeleton of the file. */
+const RIG: Rig = {
+  origin: 'local',
+  bones: [{ name: 'Spine', parent: null, rest: IDENTITY_TRANSFORM }],
+}
+
+const restOfSpine = (): Transform | undefined =>
+  characterOf(useCharacters.getState(), ASSET).rig?.bones[0]?.rest
+
 beforeEach(() => {
   built.length = 0
+  posed.length = 0
   clearCharacters()
+  useCharacterView.setState({ editingRest: false })
   installFakeBridge()
 })
 
@@ -54,8 +79,8 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
 
   const bar = screen.getByRole('toolbar')
 
-  // Three verbs and the one toggle that qualifies them all.
-  expect(within(bar).getAllByRole('button')).toHaveLength(4)
+  // Three verbs and the two toggles that qualify them all.
+  expect(within(bar).getAllByRole('button')).toHaveLength(5)
   // A joint is a point and a length: there is nothing about one to enlarge.
   expect(within(bar).queryByRole('button', { name: /échelle/i })).toBeNull()
   // The armed verb, which is the one the gizmo obeys — the lock beside it is pressed too.
@@ -80,6 +105,31 @@ it('holds the bone lengths from the first frame, and lets go of them on the bar'
   await userEvent.click(lock)
 
   expect(useCharacterView.getState().lockedLengths).toBe(false)
+})
+
+/**
+ * The two gestures of this window, and the bar is the only thing that tells them apart: a bone
+ * moved POSES the character — the mesh follows — until the bar says the rest is being edited.
+ * Written on both, a joint pulled into the elbow it belongs in took the whole arm with it.
+ */
+it('poses the bone the gizmo moved, and writes the skeleton only once the bar asks', async () => {
+  seedCharacter(ASSET, RIG, {})
+  render(<CharacterWindow assetId={ASSET} />)
+  const move = { id: 'node-1', bone: 'Spine', transform: raised(0.2) }
+
+  act(() => built[0]?.onTransform?.([move]))
+
+  expect(posed).toEqual(['Spine'])
+  expect(restOfSpine()?.position.y).toBe(0)
+
+  await userEvent.click(within(screen.getByRole('toolbar')).getByRole('button', { name: /repos/i }))
+  // Emptied on purpose: turning the toggle on puts every bone back on its rest through the very
+  // same door, and what this half is about is what the NEXT gesture does.
+  posed.length = 0
+  act(() => built[0]?.onTransform?.([move]))
+
+  expect(posed).toEqual([])
+  expect(restOfSpine()?.position.y).toBeCloseTo(0.2, 5)
 })
 
 // The sentence is about the FILE landing, and a mesh with no skeleton is a character plainly on

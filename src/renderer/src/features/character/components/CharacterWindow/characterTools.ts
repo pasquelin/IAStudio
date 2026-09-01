@@ -1,4 +1,10 @@
-import { mdiArrowAll, mdiAxisArrow, mdiCursorDefaultOutline, mdiRulerSquare } from '@mdi/js'
+import {
+  mdiArrowAll,
+  mdiAxisArrow,
+  mdiBone,
+  mdiCursorDefaultOutline,
+  mdiRulerSquare,
+} from '@mdi/js'
 import type { TransformMode } from '@/engines/scene/gizmoTarget'
 import type { ToolbarItem } from '@/components/Toolbar/tools'
 
@@ -56,4 +62,20 @@ export const CHARACTER_LOCK_TOOL: ToolbarItem = {
   descriptionKey: 'character.lockLengthsHint',
   icon: mdiRulerSquare,
   separatorBefore: true,
+}
+
+/**
+ * The other toggle: whether a joint dragged is being PUT where it belongs, or POSED.
+ *
+ * Off is posing, and that is the arbitration: the mesh follows a bone the hand moves, which is
+ * what one opens this window to do. Editing the rest is the correction of a fit, and there the
+ * mesh must stay still — a joint pulled into the elbow it belongs in took the whole arm with it.
+ */
+export const CHARACTER_EDIT_REST = 'editRest'
+
+export const CHARACTER_REST_TOOL: ToolbarItem = {
+  id: CHARACTER_EDIT_REST,
+  labelKey: 'character.editRest',
+  descriptionKey: 'character.editRestHint',
+  icon: mdiBone,
 }
