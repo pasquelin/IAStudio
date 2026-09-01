@@ -89,6 +89,12 @@ export type ExportOptions = {
    * and `clone` carries them over, so they are collected from the copies directly.
    */
   clipsFor?: (copies: readonly Object3D[]) => AnimationClip[]
+  /**
+   * Where a node stands in the DOCUMENT, read by the id its object carries. A node rebuilt after
+   * an undo hangs last under its parent, so without this a file lists it out of order — a noisy
+   * diff for whoever versions their scenes. What it does not rank keeps its place.
+   */
+  rankOf?: (id: string) => number | undefined
 }
 
 /** The clips the copied models brought with them, gathered wherever they hang in the subtree. */
@@ -102,7 +108,7 @@ function clipsIn(roots: readonly Object3D[]): AnimationClip[] {
 export async function exportObjects(
   objects: readonly Object3D[],
   format: ExportFormat,
-  { nameOf, decoder, clipsFor }: ExportOptions = {},
+  { nameOf, decoder, clipsFor, rankOf }: ExportOptions = {},
 ): Promise<Uint8Array> {
   // Said rather than written: both exporters default to `onlyVisible`, so a hidden node used to
   // produce a valid, empty file — and nothing on screen distinguished that from a success.
@@ -114,6 +120,7 @@ export async function exportObjects(
 
   try {
     const roots = objects.map(object => placedCopy(object))
+    if (rankOf) for (const root of roots) root.traverse(child => orderChildren(child, rankOf))
     // BEFORE the rename, which is what lets a caller find a node by the id it still wears. The
     // baked clips name their objects by uuid, so renaming afterwards cannot unbind them.
     const animations = [...clipsIn(roots), ...(clipsFor?.(roots) ?? [])]
@@ -217,6 +224,23 @@ function aimAtTarget(object: Object3D, copy: Object3D): void {
   copy.target = new Object3D()
   copy.target.position.set(0, 0, -1)
   copy.add(copy.target)
+}
+
+/** The ranked children back in document order, in the slots they held; the rest stay put. */
+function orderChildren(parent: Object3D, rankOf: (id: string) => number | undefined): void {
+  const slots: number[] = []
+  const ranked: { child: Object3D; rank: number }[] = []
+  for (const [at, child] of parent.children.entries()) {
+    const rank = rankOf(child.name)
+    if (rank === undefined) continue
+    slots.push(at)
+    ranked.push({ child, rank })
+  }
+  ranked.sort((one, other) => one.rank - other.rank)
+  for (const [at, slot] of slots.entries()) {
+    const entry = ranked[at]
+    if (entry) parent.children[slot] = entry.child
+  }
 }
 
 /**

@@ -781,6 +781,8 @@ export class SceneRenderer {
   private space: TransformSpace = 'world'
   /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
   private selectedIds: readonly string[] = []
+  /** The nodes as the document orders them — what an export lists them by, see `exportTo`. */
+  private documentOrder: readonly SceneNode[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
   /** What a camera body and a bulb's cap are FILLED with, read off the palette beside `meshColor`. */
@@ -975,6 +977,7 @@ export class SceneRenderer {
     this.timeline = state.animation
     this.animations.setTimeline(state.animation)
     this.sweepCompositions(state)
+    this.documentOrder = state.nodes
 
     // The identity test sits HERE rather than only inside `syncNode`: on a pass where nothing
     // changed it is the whole of the work, and a call per node cost 4,6 ms on 50 000.
@@ -1636,7 +1639,13 @@ export class SceneRenderer {
    */
   exportTo(format: ExportFormat, scope: 'scene' | 'selection'): Promise<Uint8Array> {
     const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
-    const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
+    // In DOCUMENT order, not in the order the objects were built: a node rebuilt after an undo
+    // is the newest object of the map, and a file that listed it last diffed on every undo.
+    const rank = new Map(this.documentOrder.map((node, at) => [node.id, at]))
+    const rankOf = (id: string): number | undefined => rank.get(id)
+    const roots = [...wanted]
+      .filter(id => !this.hasExportedAncestor(id, wanted))
+      .sort((one, other) => (rankOf(one) ?? Infinity) - (rankOf(other) ?? Infinity))
 
     // The copies are taken synchronously inside `exportObjects`, so putting the document's own
     // visibility back for the length of this call is enough — an isolation running while somebody
@@ -1650,6 +1659,7 @@ export class SceneRenderer {
           // the names the document gave them.
           nameOf: id => this.applied.get(id)?.name,
           clipsFor: copies => this.bakedClips(copies),
+          rankOf,
         },
       ),
     )
