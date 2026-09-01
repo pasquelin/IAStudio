@@ -194,6 +194,7 @@ import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from '
 import { applyRig, positionsIn, skinnableMeshesOf } from '../character/rigBuild'
 import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
+import { createBoneShapes, type BoneShapes } from './boneShapes'
 import { createSkinWeights, type SkinWeights } from '../character/skinWeights'
 import type { SkinBinding } from '../character/skinVertices'
 import type { Rig } from '@shared/domain/rig'
@@ -844,6 +845,8 @@ export class SceneRenderer {
   private readonly iks = new Map<string, IkBinding>()
   /** The joints of each drawn skeleton, refreshed with the pose. Beside the helper they double. */
   private readonly joints = new Map<string, BoneJoints>()
+  /** The bones themselves, drawn as solids: a line says nothing about which way a bone faces. */
+  private readonly boneSolids = new Map<string, BoneShapes>()
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
   /** Set by `prepareOffscreen`: what stops the backdrop being painted over a montage. */
@@ -1925,6 +1928,7 @@ export class SceneRenderer {
   private refreshSkeletons(): void {
     for (const helper of this.skeletons.values()) helper.visible = this.skeletonsVisible()
     for (const joints of this.joints.values()) joints.points.visible = this.skeletonsVisible()
+    for (const solids of this.boneSolids.values()) solids.mesh.visible = this.skeletonsVisible()
     this.redraw()
   }
 
@@ -2075,12 +2079,26 @@ export class SceneRenderer {
     joints.points.visible = helper.visible
     this.joints.set(nodeId, joints)
     this.viewport.scene.add(joints.points)
+
+    // The bones as solids, beside the joints that mark where two of them meet: a segment tells
+    // nothing about a bone's facing, so a rotation had no landmark at all.
+    const solids = createBoneShapes(helper.bones)
+    solids.mesh.visible = helper.visible
+    this.boneSolids.set(nodeId, solids)
+    this.viewport.scene.add(solids.mesh)
     // A skeleton bound after the pick — every reload of a model does this — would otherwise draw
     // its joints at rest while a panel names one of them.
     this.paintPickedJoint()
   }
 
   private unbindSkeleton(nodeId: string): void {
+    const solids = this.boneSolids.get(nodeId)
+    if (solids) {
+      solids.mesh.removeFromParent()
+      solids.dispose()
+      this.boneSolids.delete(nodeId)
+    }
+
     const joints = this.joints.get(nodeId)
     if (joints) {
       joints.points.removeFromParent()
@@ -2317,6 +2335,7 @@ export class SceneRenderer {
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
     for (const joints of this.joints.values()) hide(joints.points)
+    for (const solids of this.boneSolids.values()) hide(solids.mesh)
     for (const frustum of this.frustums.values()) hide(frustum)
     // A body and a bulb are workshop furniture too: they stand where the thing they draw stands,
     // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
@@ -4099,6 +4118,8 @@ export class SceneRenderer {
   private paintPickedJoint(): void {
     for (const [nodeId, joints] of this.joints)
       joints.pick(this.pickedBone?.nodeId === nodeId ? this.pickedBone.bone : null)
+    for (const [nodeId, solids] of this.boneSolids)
+      solids.pick(this.pickedBone?.nodeId === nodeId ? this.pickedBone.bone : null)
   }
 
   /**
@@ -4559,6 +4580,9 @@ export class SceneRenderer {
     // gizmo on the handle: whatever moved, the chain reaches for where the target stands NOW.
     for (const chain of this.iks.values()) chain.update()
     // After the chains, never before: the joints have to show where the bones ENDED UP.
+    for (const solids of this.boneSolids.values()) {
+      if (solids.mesh.visible) solids.refresh()
+    }
     for (const joints of this.joints.values()) {
       if (joints.points.visible) joints.refresh()
     }
