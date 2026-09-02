@@ -4073,7 +4073,7 @@ export class SceneRenderer {
 
     const reach = this.measureShadowReach()
     for (const light of framed) fitShadowCamera(light, reach)
-    this.shadowThrow = throwsOf(framed, this.heldShadowBounds())
+    this.shadowThrow = throwsOf(framed, this.heldShadowBounds(), reach)
   }
 
   /**
@@ -5182,7 +5182,7 @@ function groupsFor(
  * off each light's own target. An empty set answers the origin, and the floor comes from the box
  * the shadow cameras were just fitted to.
  */
-function throwsOf(lights: readonly Object3D[], bounds: Box3): ShadowThrow | null {
+function throwsOf(lights: readonly Object3D[], bounds: Box3, reach: number): ShadowThrow | null {
   const along: { x: number; y: number; z: number }[] = []
   for (const light of lights) {
     const target = Reflect.get(light, 'target')
@@ -5193,5 +5193,5 @@ function throwsOf(lights: readonly Object3D[], bounds: Box3): ShadowThrow | null
     along.push({ x: direction.x, y: direction.y, z: direction.z })
   }
   if (along.length === 0) return null
-  return { along, floor: bounds.isEmpty() ? 0 : bounds.min.y }
+  return { along, floor: bounds.isEmpty() ? 0 : bounds.min.y, reach }
 }

@@ -292,6 +292,14 @@ export function createCellGroups(
   ): void => {
     if (members.ids.length === 0 && !mobiles.has(key)) return
     let lot = mobiles.get(key)
+    // 🛑 The paint of the pass, not the one the lot was born with. A cell is rebuilt whenever its
+    // members change, so it can never hold a stale material; a lot is KEPT across rebuilds, and
+    // the body its material came from can be deleted under it — `disposeMaterial` then destroys
+    // what everyone else on the lot is still drawn with.
+    if (lot && lot.paint !== paint) {
+      lot.paint = paint
+      lot.mesh.material = paint
+    }
     for (const [at, id] of members.ids.entries()) {
       const source = members.meshes[at]
       if (!source) continue
@@ -320,11 +328,28 @@ export function createCellGroups(
         const id = lot.ids[slot]
         if (id === undefined || seen.get(id) === key) continue
         takeOut(lot.mesh, lot.ids, slot)
-        promoted.delete(id)
-        // Only when nothing else claimed it: a body elsewhere keeps the entry its new home wrote.
-        if (placed.get(id)?.instance === lot.mesh) placed.delete(id)
+        // 🛑 Only when nothing else claimed it. A body that changed group is on ANOTHER lot as of
+        // this pass, and it is still a mover: forgetting that put it back in a static cell, which
+        // every change of content then rebuilt for it.
+        if (placed.get(id)?.instance === lot.mesh) {
+          placed.delete(id)
+          promoted.delete(id)
+        }
       }
+      // 🛑 Emptied is not gone. Left here the lot stays hung from the host, listed by `drawn()` —
+      // so walked by every dress of every pane — and its instance buffer stays on the GPU until
+      // the document closes. One edit of a material on a mover leaked one.
+      if (lot.ids.length === 0) release(key, lot)
     }
+  }
+
+  /** Gives an emptied lot back: out of the scene, off the GPU, and out of every index. */
+  const release = (key: string, lot: Mobile): void => {
+    lot.mesh.removeFromParent()
+    lot.mesh.dispose()
+    lotOf.delete(lot.mesh)
+    mobiles.delete(key)
+    listStale = true
   }
 
   /**
@@ -639,7 +664,7 @@ function sweptBy(box: Box3, cast: ShadowThrow | null | undefined): Box3 {
   for (const along of cast.along) {
     // A light at or above the horizon throws nothing that lands.
     if (along.y >= 0) continue
-    const far = drop / -along.y
+    const far = Math.min(drop / -along.y, cast.reach)
     LANDED.copy(box).translate(CORNER.set(along.x * far, -drop, along.z * far))
     SWEPT.union(LANDED)
   }

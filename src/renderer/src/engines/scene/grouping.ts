@@ -126,12 +126,25 @@ export type InstancedGroups = {
  */
 export type ShadowThrow = {
   /**
-   * Where a shadow travels, one normalised direction per CASTING light — a set lit from two sides
-   * throws two ways, and reading only the first hides a caster whose other shadow is on screen.
+   * Where a shadow travels, one normalised direction per light with an ORTHOGRAPHIC shadow camera
+   * — the directionals. A set lit from two sides throws two ways, and reading only the first hides
+   * a caster whose other shadow is on screen.
+   *
+   * 🛑 The blind spot, written rather than hidden: a SPOT projects through a perspective shadow
+   * camera, so it contributes nothing here. A set lit by spots alone answers no direction at all,
+   * and a caster just out of frame takes its shadow off the ground with it — the very defect this
+   * type exists to prevent. Shadows are the lot after this one.
    */
   along: readonly { x: number; y: number; z: number }[]
   /** The lowest thing a shadow can land on. */
   floor: number
+  /**
+   * How far a shadow can travel before the map that draws it runs out — `fitShadowCamera` bounds
+   * every shadow camera to this. Without it a sun near the horizon divides by a vanishing slope
+   * and sweeps a box to infinity: every cell passes the test, and the partition quietly stops
+   * partitioning, with statistics that read perfectly normal.
+   */
+  reach: number
 }
 
 /** What a spatial strategy can say of the last frame it followed. */
@@ -404,10 +417,17 @@ export function writeMoved(
 /**
  * How far what this shape draws reaches from where it stands, once placed. Measured on first use:
  * only a drawn mesh has had three measure it.
+ *
+ * The centre COUNTS: every caller lays the reach around the node's placement, and a shape modelled
+ * beside its own origin — an imported part whose pivot is off the mesh — would be measured short,
+ * which rejects a body that is on screen. The norm below already leaves ×1.73 of slack on an
+ * untransformed shape, so no primitive of the studio was ever short; this stops that being luck.
  */
 export function worldReach(geometry: BufferGeometry, placement: Matrix4): number {
   if (!geometry.boundingSphere) geometry.computeBoundingSphere()
-  return (geometry.boundingSphere?.radius ?? 0) * stretchOf(placement)
+  const sphere = geometry.boundingSphere
+  if (!sphere) return 0
+  return (sphere.center.length() + sphere.radius) * stretchOf(placement)
 }
 
 /**

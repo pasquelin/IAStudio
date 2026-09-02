@@ -1,4 +1,4 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SphereGeometry } from 'three'
+import { BoxGeometry, Matrix4, Mesh, MeshStandardMaterial, Object3D, SphereGeometry } from 'three'
 import { describe, expect, it } from 'vitest'
 import { heldOutOfDraw, unhang, worldReach } from './grouping'
 import { walked } from './scene-fixtures'
@@ -150,5 +150,30 @@ describe('how far a placed shape reaches', () => {
     // measures the three columns and answers 2.236. A bound read off it culls what is on screen.
     expect(turned.matrixWorld.getMaxScaleOnAxis()).toBeCloseTo(2.236, 3)
     expect(worldReach(new SphereGeometry(1), turned.matrixWorld)).toBeGreaterThanOrEqual(3)
+  })
+
+  it('never reads under a shape whose mass sits OFF its own origin', () => {
+    // A tube, a rail, a door leaf modelled beside its pivot: the sphere is centred where the mass
+    // is, not where the node stands. Every caller lays the reach around the node's PLACEMENT.
+    const aside = new BoxGeometry(1, 1, 1).translate(0, 5, 0)
+    aside.computeBoundingSphere()
+    const radius = aside.boundingSphere?.radius ?? 0
+
+    // 🛑 Read off the radius alone, the box is five units too short and the body is REJECTED
+    // while it is on screen — the one direction of error the whole partition exists to avoid.
+    expect(radius).toBeLessThan(5)
+    expect(worldReach(aside, new Matrix4())).toBeGreaterThanOrEqual(5 + radius)
+  })
+
+  it('costs a centred shape nothing, which is nearly every primitive of the studio', () => {
+    const centred = new BoxGeometry(2, 2, 2)
+    centred.computeBoundingSphere()
+
+    // The norm is the Frobenius one, so an untransformed shape already reads ×√3 — the slack that
+    // covered every decentred primitive measured, the tube included. Nothing here widens that.
+    expect(worldReach(centred, new Matrix4())).toBeCloseTo(
+      (centred.boundingSphere?.radius ?? 0) * Math.sqrt(3),
+      6,
+    )
   })
 })

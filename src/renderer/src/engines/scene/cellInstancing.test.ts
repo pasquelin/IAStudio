@@ -329,7 +329,7 @@ describe('the box a bucket really occupies', () => {
 
 describe('the shadow a rejected bucket would have thrown', () => {
   /** Un soleil bas en +z : les ombres partent vers -z, donc vers l'axe où la caméra regarde. */
-  const LOW_SUN = { along: [{ x: 0, y: -0.316, z: -0.948 }], floor: -100 }
+  const LOW_SUN = { along: [{ x: 0, y: -0.316, z: -0.948 }], floor: -100, reach: 10_000 }
 
   /** Un second soleil, opposé : son ombre part vers +z, donc à l'écart de ce que la caméra voit. */
   const AWAY = { x: 0, y: -0.316, z: 0.948 }
@@ -351,7 +351,7 @@ describe('the shadow a rejected bucket would have thrown', () => {
   it('hides it again under a sun overhead, whose shadow falls under the body', () => {
     const { scene, groups } = aheadAndAside()
 
-    groups.follow?.(looking(0, 500), { along: [{ x: 0, y: -1, z: 0 }], floor: -1 })
+    groups.follow?.(looking(0, 500), { along: [{ x: 0, y: -1, z: 0 }], floor: -1, reach: 10_000 })
 
     expect(drawnIn(scene)).toHaveLength(1)
   })
@@ -361,15 +361,35 @@ describe('the shadow a rejected bucket would have thrown', () => {
 
     // 🛑 The one that throws INTO the view is second. A set lit from two sides has no order the
     // document decides: whichever light `this.objects` yields first would win.
-    groups.follow?.(looking(0, 500), { along: [AWAY, LOW_SUN.along[0]!], floor: -100 })
+    groups.follow?.(looking(0, 500), {
+      along: [AWAY, LOW_SUN.along[0]!],
+      floor: -100,
+      reach: 10_000,
+    })
 
     expect(drawnIn(scene)).toHaveLength(2)
+  })
+
+  it('stops the sweep where the shadow MAP does, so a sun at the horizon still culls', () => {
+    const { scene, groups } = aheadAndAside()
+
+    // 🛑 `far = drop / -along.y`. A sun a hair above setting divides by a vanishing slope: the
+    // box sweeps to infinity, every cell passes, and the partition quietly stops partitioning —
+    // no error, no log, and statistics that read perfectly normal. `fitShadowCamera` bounds every
+    // shadow camera to `reach`, so past it nothing is drawn anyway.
+    groups.follow?.(looking(0, 500), { along: [{ x: 0, y: -1e-6, z: -1 }], floor: -100, reach: 10 })
+
+    expect(drawnIn(scene)).toHaveLength(1)
   })
 
   it('hides it when NO light throws its shadow into the view', () => {
     const { scene, groups } = aheadAndAside()
 
-    groups.follow?.(looking(0, 500), { along: [AWAY, { x: 0, y: -1, z: 0 }], floor: -1 })
+    groups.follow?.(looking(0, 500), {
+      along: [AWAY, { x: 0, y: -1, z: 0 }],
+      floor: -1,
+      reach: 10_000,
+    })
 
     expect(drawnIn(scene)).toHaveLength(1)
   })
@@ -567,6 +587,54 @@ describe('a body that DECLARES it moves', () => {
     expect(held.reduce((sum, lot) => sum + lot.count, 0)).toBe(1)
   })
 
+  it('takes the paint of the PASS, not the one the lot was born with', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    const said = nodes.map(node => (node.id === 'n2' ? { ...node, components: [MOVES] } : node))
+    const groups = createCellGroups(scene)
+    groups.rebuild(said, id => objects.get(id))
+    const born = scene.children.find(child => child instanceof InstancedMesh)?.material
+
+    // The body the paint came from is deleted; the studio disposes that material. The lot is
+    // KEPT across the rebuild, so it would go on drawing with what no longer exists.
+    const repainted = new MeshStandardMaterial()
+    for (const mesh of objects.values()) mesh.material = repainted
+    groups.rebuild(said, id => objects.get(id))
+
+    expect(born).not.toBe(repainted)
+    expect(scene.children.find(child => child instanceof InstancedMesh)?.material).toBe(repainted)
+  })
+
+  it('takes the emptied lot out of the scene, rather than leaving it drawn for nobody', () => {
+    const scene = host()
+    const one = bodies(inOneCell(WORTH_INSTANCING + 1, 0), new BoxGeometry(1, 1, 1), 0, 'a')
+    const two = bodies(inOneCell(WORTH_INSTANCING - 1, 40), new BoxGeometry(2, 2, 2), 0, 'b')
+    const objects = new Map([...one.objects, ...two.objects])
+    const nodes = [
+      ...one.nodes.map(node => (node.id === 'a2' ? { ...node, components: [MOVES] } : node)),
+      ...two.nodes.map(node => ({ ...node, geometry: OTHER_SHAPE })),
+    ]
+    const groups = createCellGroups(scene)
+    groups.rebuild(nodes, id => objects.get(id))
+    const emptied = scene.children.filter(child => child instanceof InstancedMesh)
+    expect(emptied).toHaveLength(1)
+
+    // The only mover of its group changes shape, so it answers to ANOTHER lot from now on.
+    const moved = objects.get('a2')
+    if (!moved) throw new Error('no body to reshape')
+    moved.geometry = two.objects.get('b0')?.geometry ?? moved.geometry
+    groups.rebuild(
+      nodes.map(node => (node.id === 'a2' ? { ...node, geometry: OTHER_SHAPE } : node)),
+      id => objects.get(id),
+    )
+
+    // 🛑 Emptied is not gone: the lot stayed hung from the host, listed by `drawn()` — so walked
+    // by every dress of every pane, every frame — with its instance buffer still on the GPU. One
+    // edit of a material on a mover leaked one, and only closing the document gave it back.
+    for (const lot of emptied) expect(scene.children).not.toContain(lot)
+    expect(groups.drawn()).not.toContain(emptied[0])
+  })
+
   it('goes back to the grid once it stops declaring it', () => {
     const { scene, groups, nodes, objects } = declared()
 
@@ -575,7 +643,7 @@ describe('a body that DECLARES it moves', () => {
       id => objects.get(id),
     )
 
-    expect(moverLot(scene)?.count).toBe(0)
+    expect(moverLot(scene)).toBeUndefined()
     const cell = groups.drawn().find(mesh => mesh instanceof InstancedMesh && mesh.count > 1)
     expect(cell instanceof InstancedMesh && cell.count).toBe(WORTH_INSTANCING)
   })
@@ -685,7 +753,8 @@ describe('a body that moves without declaring it', () => {
       id => objects.get(id),
     )
 
-    expect(moverLot(scene)?.count).toBe(0)
+    // Emptied AND given back: a lot nobody is on leaves the scene and the GPU with it.
+    expect(moverLot(scene)).toBeUndefined()
   })
 })
 
