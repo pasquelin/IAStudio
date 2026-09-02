@@ -30,6 +30,31 @@ export function skinnableMeshesOf(root: Object3D): Mesh[] {
 }
 
 /**
+ * 🛑 The meshes to weigh again against a rig that CHANGED SHAPE — the skinned ones included.
+ *
+ * `skinnableMeshesOf` answers « can a rig be laid on this at all », and a mesh already skinned is
+ * rightly none of its business. Asked here, it answered nothing for every character already
+ * rigged: adding hands took the store from 22 bones to 52 and the model kept its 22, in silence.
+ */
+export function reskinnableMeshesOf(root: Object3D): Mesh[] {
+  const meshes: Mesh[] = []
+  root.traverse(object => {
+    if (object instanceof Mesh) meshes.push(object)
+  })
+  return meshes
+}
+
+/**
+ * Takes the bones a previous rig hung on this model off it, so one of another shape is laid on a
+ * bare model rather than beside the skeleton it replaces — where `wearsRig` would then count both.
+ */
+export function unrig(holder: Object3D): void {
+  for (const root of [...holder.children]) {
+    if (root instanceof Bone) root.removeFromParent()
+  }
+}
+
+/**
  * The vertex positions of a mesh, in the space its holder measures in.
  *
  * Both halves have to agree or the rig lands beside the body: the bones are fitted to the
@@ -109,6 +134,10 @@ export function applyRig(
     // so writing skin attributes onto it would hand every other node built from the same file
     // this model's weights — and the last rig posed would silently drive all of them.
     const geometry = mesh.geometry.clone()
+    // Only a clone of OURS is freed: the first rig replaces the mesh the cache lends, whose
+    // geometry other nodes of the same file share. A re-rig replaces our own, and leaving it
+    // behind would leak the whole of it on every joint added.
+    if (mesh instanceof SkinnedMesh) mesh.geometry.dispose()
     geometry.setAttribute('skinIndex', new Uint16BufferAttribute(binding.skinIndex, INFLUENCES))
     geometry.setAttribute('skinWeight', new BufferAttribute(binding.skinWeight, INFLUENCES))
 

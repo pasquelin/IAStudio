@@ -2,11 +2,18 @@ import { mdiClose, mdiPencilOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MotionRef } from '@shared/domain/character'
-import type { ClipSource } from '@shared/domain/scene'
-import { INLINE_LINK } from '@/components/styles'
+import {
+  assetClip,
+  bundledClip,
+  embeddedClip,
+  type ClipRef,
+  type ClipSource,
+} from '@shared/domain/scene'
 import { hasMotion, reopenCharacterMotion } from '@/character/characterMotion'
 import { reportFailure } from '@/services/diagnostics'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { removeModelClip } from '@/engines/scene/commands'
+import { laySceneClip, sceneOf, useScenes } from '@/stores/scenes'
+import { Button } from '@/components/Button'
 import { QuietNote } from '@/components/QuietNote'
 import { ToolButton } from '@/components/ToolButton'
 import { linkCharacterMotion, unlinkCharacterMotion } from '@/engines/character/characterCommands'
@@ -46,16 +53,45 @@ export function CharacterMotionList({
   const openMotion = useAnimationViews(state => animationViewOf(state, documentId).openMotion)
   const [open, setOpen] = useState(false)
   const [opener, setOpener] = useState<HTMLElement | null>(null)
+  // The block being TRIED, laid on the real band: the picker shows its preview and its bone
+  // mapping against it, and neither has anything to say until one is laid.
+  const [laid, setLaid] = useState<{ clipId: string; source: ClipSource; label: string } | null>(
+    null,
+  )
 
-  const keep = (source: ClipSource, label: string): void => {
-    if (source.kind !== 'asset') return
+  /**
+   * 🛑 Choosing LAYS the real block rather than filing anything: the character plays it at once,
+   * through the real retargeting, which is the only way to tell whether it fits before keeping
+   * it. Nothing reaches the file until `keep`.
+   */
+  const tryOut = (source: ClipSource, label: string): void => {
+    takeBack()
+    const clip = clipOf(newId(), source, label)
+    laySceneClip(documentId, nodeId, clip)
+    setLaid({ clipId: clip.id, source, label })
+  }
 
-    useCharacters
-      .getState()
-      .runCommand(
-        assetId,
-        linkCharacterMotion({ id: newId(), name: label, assetId: source.assetId }),
-      )
+  /** The block off the band again — the button, a press outside, and `Escape` all end here. */
+  const takeBack = (): void => {
+    if (laid) useScenes.getState().runCommand(documentId, removeModelClip(nodeId, laid.clipId))
+    setLaid(null)
+  }
+
+  /**
+   * Kept: the block stays on the band, and a motion of the PROJECT is taught to this character
+   * besides. A clip the model's own file carries is already its own — there is no file to link.
+   */
+  const keep = (): void => {
+    if (laid?.source.kind === 'asset') {
+      useCharacters
+        .getState()
+        .runCommand(
+          assetId,
+          linkCharacterMotion({ id: newId(), name: laid.label, assetId: laid.source.assetId }),
+        )
+    }
+    setLaid(null)
+    setOpen(false)
   }
 
   const reopen = async (motion: MotionRef): Promise<void> => {
@@ -104,34 +140,43 @@ export function CharacterMotionList({
       {/* Only once the band holds a key: a file claiming a motion it does not have is worse
           than no file. What it writes is a motion of the PROJECT, playable by any character. */}
       {played && onSave && (
-        <button type="button" className={INLINE_LINK} onClick={() => void onSave(false)}>
+        <Button onClick={() => void onSave(false)}>
           {openMotion ? t('character.motionUpdate') : t('character.motionSave')}
-        </button>
+        </Button>
       )}
 
       {/* 🛑 The only way back off a reopened motion: without it the bench stays aimed at that
           file, and the NEXT movement posed here overwrites it rather than being filed. */}
       {played && onSave && openMotion && (
-        <button type="button" className={INLINE_LINK} onClick={() => void onSave(true)}>
-          {t('character.motionSaveNew')}
-        </button>
+        <Button onClick={() => void onSave(true)}>{t('character.motionSaveNew')}</Button>
       )}
 
-      <button ref={setOpener} type="button" className={INLINE_LINK} onClick={() => setOpen(!open)}>
+      <Button ref={setOpener} onClick={() => setOpen(!open)}>
         {t('character.motionAdd')}
-      </button>
+      </Button>
 
       {open && (
         <CharacterMotionPicker
           documentId={documentId}
           nodeId={nodeId}
           anchor={opener}
-          laid={null}
-          onChoose={keep}
-          onKeep={() => setOpen(false)}
-          onCancel={() => setOpen(false)}
+          laid={laid}
+          onChoose={tryOut}
+          onKeep={keep}
+          onCancel={() => {
+            takeBack()
+            setOpen(false)
+          }}
         />
       )}
     </>
   )
+}
+
+/** The block one of the three sources makes — the shapes `shared/domain/scene` already spells. */
+function clipOf(id: string, source: ClipSource, label: string): ClipRef {
+  if (source.kind === 'asset') return assetClip(id, source.assetId, label)
+  if (source.kind === 'bundled') return bundledClip(id, source.name)
+
+  return embeddedClip(id, source.name)
 }

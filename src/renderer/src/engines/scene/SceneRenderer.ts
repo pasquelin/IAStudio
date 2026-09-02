@@ -199,9 +199,10 @@ import { createRetarget, type Retarget, type RetargetFit } from './retarget'
 import {
   applyRig,
   positionsIn,
+  reskinnableMeshesOf,
   restInverses,
   restRig,
-  skinnableMeshesOf,
+  unrig,
   wearsRig,
 } from '../character/rigBuild'
 import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
@@ -2054,8 +2055,9 @@ export class SceneRenderer {
     }
 
     // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
-    // the holder again after the awaits, when it may hold others.
-    const meshes = skinnableMeshesOf(holder)
+    // the holder again after the awaits, when it may hold others. The SKINNED ones too — a rig
+    // that changed shape is weighed again, and refusing them left « add hands » doing nothing.
+    const meshes = reskinnableMeshesOf(holder)
     if (meshes.length === 0) return
 
     this.stopSkinning(nodeId)
@@ -2078,6 +2080,9 @@ export class SceneRenderer {
       // The model may have been released while the weights were out.
       if (this.objects.get(nodeId) !== holder) return
 
+      // The skeleton this one replaces, off first: left on, `wearsRig` would count both sets and
+      // every later rest edit would be measured against bones nothing drives.
+      unrig(holder)
       applyRig(holder, rig, bound)
       this.bindIk(nodeId, holder, rig)
       // Handed over rather than recomputed at save time: only this side ever weighs a mesh, and
