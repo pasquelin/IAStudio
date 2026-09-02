@@ -9,6 +9,7 @@ import {
   type Intersection,
   Light,
   LineBasicMaterial,
+  type Material,
   Matrix3,
   Mesh,
   MeshStandardMaterial,
@@ -202,6 +203,7 @@ import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
+import { createCellGroups } from './cellInstancing'
 import './bvhPatches'
 import { unhang, type InstancedGroups } from './grouping'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
@@ -223,6 +225,15 @@ import {
 export type { TransformMode, TransformSpace } from './gizmoTarget'
 
 export type GroupingStrategy = 'instanced' | 'batched'
+
+/**
+ * Whether the world is cut into cells the camera turns off, or drawn whole.
+ *
+ * `off` — the default — is the studio as it has always drawn. `grid` files every body under a
+ * cell of 256 and draws only the cells its view can reach: measured on a level of 500 000, 20 462
+ * instances against 223 488 and 2.26 ms of GPU against 2.86. See `cellInstancing`.
+ */
+export type PartitionMode = 'off' | 'grid'
 
 export type SceneRendererOptions = {
   /**
@@ -333,6 +344,11 @@ export type SceneRendererOptions = {
    * per-instance cull and sort run once per pass, 10.4 ms against 3.1 a frame on 10 000 bodies.
    */
   grouping?: GroupingStrategy
+  /**
+   * Whether the level is cut into cells only the ones a view reaches are drawn from. `off` by
+   * default: the whole world is grouped as it always was.
+   */
+  partition?: PartitionMode
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for a file read for its animation alone — which may be an FBX. See `GltfSource`. */
@@ -867,7 +883,7 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
-    this.instances = (options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups)(
+    this.instances = groupsFor(options)(
       this.viewport.scene,
       mesh =>
         // What the document dresses it in, never what a view left on it: an instance born during
@@ -1889,8 +1905,12 @@ export class SceneRenderer {
       this.gizmo.getHelper().visible = index === this.viewport.activePane
     }
 
+    // Before the dressing, and both answers kept: a cell that just came into the zone is a body
+    // the shadow maps were drawn without.
+    const zoned = this.instances.follow?.(camera) ?? false
+
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
-    return dressForPane(
+    const dressed = dressForPane(
       // The instances too: a display mode replaces a mesh's material, and one left out of this
       // walk goes on drawing shaded while everything around it wears the stand-in. Walked
       // LAZILY: `dressForPane` declines the work when the dress already holds, and an array
@@ -1903,6 +1923,7 @@ export class SceneRenderer {
       camera,
       studio => this.environment?.borrowStudio(studio),
     )
+    return dressed || zoned
   }
 
   /**
@@ -2402,6 +2423,11 @@ export class SceneRenderer {
     // film and a capture never go through, since they render the scene directly. Left alone, the
     // whole film comes out lit by the room instead of by the document's own sky.
     this.environment?.borrowStudio(false)
+
+    // For the same reason, and it is the whole of what a zone has to be told: these paths render
+    // from a camera of their own, so every cell is drawn for them. `dressPane` narrows it again
+    // before the next pane, which is why the restore below has nothing to put back.
+    this.instances.follow?.(null)
 
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
@@ -4750,4 +4776,15 @@ function disposeMaterial(mesh: Mesh): void {
   const { material } = mesh
   if (Array.isArray(material)) for (const entry of material) entry.dispose()
   else material.dispose()
+}
+
+/**
+ * Which of the three strategies draws the repeated shapes. The partition answers first: it holds
+ * a zone the other two have no notion of, so asking for both is asking for the cells.
+ */
+function groupsFor(
+  options: SceneRendererOptions,
+): (host: Object3D, ownMaterialOf: (mesh: Mesh) => Material | Material[]) => InstancedGroups {
+  if (options.partition === 'grid') return createCellGroups
+  return options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups
 }

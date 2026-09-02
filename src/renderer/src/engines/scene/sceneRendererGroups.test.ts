@@ -1,7 +1,7 @@
 import { BatchedMesh, Box3, Group, InstancedMesh, Matrix4, Vector3, type Object3D } from 'three'
 import { byCodeUnit } from '@shared/text'
 import { describe, expect, it } from 'vitest'
-import { SceneRenderer, type GroupingStrategy } from './SceneRenderer'
+import { SceneRenderer, type GroupingStrategy, type PartitionMode } from './SceneRenderer'
 import { directionalLight, gltfNodesOf, groupNodeFixture, meshNode, walked } from './scene-fixtures'
 import { WORTH_INSTANCING } from './grouping'
 import type { GeometryDescriptor } from '@shared/domain/geometry'
@@ -16,6 +16,15 @@ import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './s
  */
 
 const STRATEGIES: GroupingStrategy[] = ['instanced', 'batched']
+
+/** How the engine can be told to draw repeated shapes — the third is the flag, off by default. */
+const DRAWINGS: [string, Drawing][] = [
+  ['instanced', { grouping: 'instanced' }],
+  ['batched', { grouping: 'batched' }],
+  ['partitioned', { partition: 'grid' }],
+]
+
+type Drawing = { grouping?: GroupingStrategy; partition?: PartitionMode }
 
 const GROUP_SIZES = [4, 12, 20, 45, 60]
 
@@ -50,10 +59,13 @@ const sceneOf = (nodes: SceneNode[]): SceneState => ({
 const graphOf = (renderer: SceneRenderer): Object3D =>
   (renderer as unknown as { viewport: { scene: Object3D } }).viewport.scene
 
-/** Where the group put the body of one slot, along x. */
+/**
+ * Where the group put the body of one slot, along x. Walked rather than read off the host's own
+ * children: a partitioned engine hangs its meshes under one group per cell.
+ */
 const placedAt = (renderer: SceneRenderer, slot: number): number => {
   const held = new Matrix4()
-  for (const child of graphOf(renderer).children) {
+  for (const child of walked(graphOf(renderer))) {
     if (child instanceof InstancedMesh) child.getMatrixAt(slot, held)
     else if (child instanceof BatchedMesh) child.getMatrixAt(slot, held)
     else continue
@@ -62,11 +74,11 @@ const placedAt = (renderer: SceneRenderer, slot: number): number => {
   throw new Error('nothing was grouped')
 }
 
-const rendererOf = (grouping: GroupingStrategy = 'batched'): SceneRenderer =>
+const rendererOf = (drawing: Drawing = { grouping: 'batched' }): SceneRenderer =>
   new SceneRenderer({
     onSelect: () => {},
     onTransform: () => {},
-    grouping,
+    ...drawing,
     loadModel: async () => new Group(),
   })
 
@@ -88,9 +100,9 @@ describe('editing a body a lot draws', () => {
 
   it('exports the same file as the instanced path, since the sources are what is exported', async () => {
     const nodes = bodies()
-    const batched = rendererOf('batched')
+    const batched = rendererOf({ grouping: 'batched' })
     batched.apply(sceneOf(nodes))
-    const instanced = rendererOf('instanced')
+    const instanced = rendererOf({ grouping: 'instanced' })
     instanced.apply(sceneOf(nodes))
 
     expect(await fileOf(batched)).toEqual(await fileOf(instanced))
@@ -137,6 +149,11 @@ describe('editing a body a lot draws', () => {
   })
 })
 
+/**
+ * The partition is out of this one, and only this one: it files a body under the CELL it stands
+ * in, so a placement typed far away changes which mesh holds slot 3 — `placedAt` names a slot,
+ * and would read another body's. What it does with a move is measured in `cellInstancing.test`.
+ */
 describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
   /** Bodies laid along x, of one shape and one paint, so they all land in a single group. */
   const inARow = (count: number): SceneNode[] =>
@@ -156,7 +173,7 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
    */
   it('stands where its node does, in a scene no light refreshes', () => {
     const nodes = inARow(WORTH_INSTANCING)
-    const renderer = rendererOf(grouping)
+    const renderer = rendererOf({ grouping })
     renderer.apply({ ...EMPTY_SCENE, nodes })
 
     expect(placedAt(renderer, 3)).toBe(15)
@@ -176,7 +193,7 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
       },
       ...inARow(WORTH_INSTANCING).map(node => ({ ...node, parentId: 'crate' })),
     ]
-    const renderer = rendererOf(grouping)
+    const renderer = rendererOf({ grouping })
     renderer.apply({ ...EMPTY_SCENE, nodes })
 
     const moved = nodes.map(node =>
@@ -191,7 +208,7 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
 
   it('follows a placement typed rather than dragged', () => {
     const nodes = inARow(WORTH_INSTANCING)
-    const renderer = rendererOf(grouping)
+    const renderer = rendererOf({ grouping })
     renderer.apply({ ...EMPTY_SCENE, nodes })
 
     const moved = nodes.map((node, at) =>
@@ -205,100 +222,103 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
   })
 })
 
-describe.each(STRATEGIES)('the sources a %s group draws for, from outside the engine', grouping => {
-  /** One group's worth of copies, all hanging from a crate — the shape a decor really has. */
-  const inACrate = (): SceneNode[] => [
-    groupNodeFixture('crate'),
-    ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
-      ...meshNode(`c${at}`, 'crate'),
-      transform: {
-        position: { x: at * 5, y: 0, z: 0 },
-        rotation: { x: 0, y: 0, z: 0 },
-        scale: { x: 1, y: 1, z: 1 },
-      },
-    })),
-  ]
+describe.each(DRAWINGS)(
+  'the sources a %s group draws for, from outside the engine',
+  (_name, drawing) => {
+    /** One group's worth of copies, all hanging from a crate — the shape a decor really has. */
+    const inACrate = (): SceneNode[] => [
+      groupNodeFixture('crate'),
+      ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
+        ...meshNode(`c${at}`, 'crate'),
+        transform: {
+          position: { x: at * 5, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+      })),
+    ]
 
-  it('are no longer walked by a frame, which is what they cost', () => {
-    const nodes = inACrate()
-    const renderer = rendererOf(grouping)
-    renderer.apply({ ...EMPTY_SCENE, nodes })
+    it('are no longer walked by a frame, which is what they cost', () => {
+      const nodes = inACrate()
+      const renderer = rendererOf(drawing)
+      renderer.apply({ ...EMPTY_SCENE, nodes })
 
-    const met = walked(graphOf(renderer)).map(object => object.name)
-    for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
-    expect(met).toContain('crate')
-  })
+      const met = walked(graphOf(renderer)).map(object => object.name)
+      for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
+      expect(met).toContain('crate')
+    })
 
-  it('are still written to the file, under the node they hang from', async () => {
-    const nodes = inACrate()
-    const renderer = rendererOf(grouping)
-    renderer.apply({ ...EMPTY_SCENE, nodes })
+    it('are still written to the file, under the node they hang from', async () => {
+      const nodes = inACrate()
+      const renderer = rendererOf(drawing)
+      renderer.apply({ ...EMPTY_SCENE, nodes })
 
-    const names = await namesOf(renderer)
-    for (const node of nodes) expect(names).toContain(node.id)
-  })
+      const names = await namesOf(renderer)
+      for (const node of nodes) expect(names).toContain(node.id)
+    })
 
-  it('are back out of the walk once the file is written', async () => {
-    const nodes = inACrate()
-    const renderer = rendererOf(grouping)
-    renderer.apply({ ...EMPTY_SCENE, nodes })
-    await namesOf(renderer)
+    it('are back out of the walk once the file is written', async () => {
+      const nodes = inACrate()
+      const renderer = rendererOf(drawing)
+      renderer.apply({ ...EMPTY_SCENE, nodes })
+      await namesOf(renderer)
 
-    const met = walked(graphOf(renderer)).map(object => object.name)
-    for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
-  })
+      const met = walked(graphOf(renderer)).map(object => object.name)
+      for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
+    })
 
-  // `both` and not `wireframe`: `showsEdges` draws the overlay for that one and, without quads,
-  // leaves `wireframe` to the material's own flag — so the sources carry nothing to draw.
-  it('stay in the walk while the edges are on, since they are what carries them', () => {
-    const nodes = inACrate()
-    const renderer = rendererOf(grouping)
-    renderer.apply({ ...EMPTY_SCENE, nodes })
+    // `both` and not `wireframe`: `showsEdges` draws the overlay for that one and, without quads,
+    // leaves `wireframe` to the material's own flag — so the sources carry nothing to draw.
+    it('stay in the walk while the edges are on, since they are what carries them', () => {
+      const nodes = inACrate()
+      const renderer = rendererOf(drawing)
+      renderer.apply({ ...EMPTY_SCENE, nodes })
 
-    renderer.setDisplayModes(['both'])
+      renderer.setDisplayModes(['both'])
 
-    const met = walked(graphOf(renderer)).map(object => object.name)
-    for (const node of nodes.slice(1)) expect(met).toContain(node.id)
-  })
+      const met = walked(graphOf(renderer)).map(object => object.name)
+      for (const node of nodes.slice(1)) expect(met).toContain(node.id)
+    })
 
-  it('leave it again once the edges go', () => {
-    const nodes = inACrate()
-    const renderer = rendererOf(grouping)
-    renderer.apply({ ...EMPTY_SCENE, nodes })
+    it('leave it again once the edges go', () => {
+      const nodes = inACrate()
+      const renderer = rendererOf(drawing)
+      renderer.apply({ ...EMPTY_SCENE, nodes })
 
-    renderer.setDisplayModes(['both'])
-    renderer.setDisplayModes(['shaded'])
+      renderer.setDisplayModes(['both'])
+      renderer.setDisplayModes(['shaded'])
 
-    const met = walked(graphOf(renderer)).map(object => object.name)
-    for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
-  })
+      const met = walked(graphOf(renderer)).map(object => object.name)
+      for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
+    })
 
-  it('do not come back to it once their node is gone', () => {
-    const nodes = inACrate()
-    const renderer = rendererOf(grouping)
-    renderer.apply({ ...EMPTY_SCENE, nodes })
+    it('do not come back to it once their node is gone', () => {
+      const nodes = inACrate()
+      const renderer = rendererOf(drawing)
+      renderer.apply({ ...EMPTY_SCENE, nodes })
 
-    renderer.apply({ ...EMPTY_SCENE, nodes: nodes.filter(node => node.id !== 'c0') })
-    renderer.setDisplayModes(['both'])
+      renderer.apply({ ...EMPTY_SCENE, nodes: nodes.filter(node => node.id !== 'c0') })
+      renderer.setDisplayModes(['both'])
 
-    expect(walked(graphOf(renderer)).map(object => object.name)).not.toContain('c0')
-  })
+      expect(walked(graphOf(renderer)).map(object => object.name)).not.toContain('c0')
+    })
 
-  it('stand where a crate that MOVED puts them, which no walk refreshes any more', () => {
-    const nodes = inACrate()
-    const renderer = rendererOf(grouping)
-    renderer.apply({ ...EMPTY_SCENE, nodes })
+    it('stand where a crate that MOVED puts them, which no walk refreshes any more', () => {
+      const nodes = inACrate()
+      const renderer = rendererOf(drawing)
+      renderer.apply({ ...EMPTY_SCENE, nodes })
 
-    const moved = nodes.map(node =>
-      node.id === 'crate'
-        ? { ...node, transform: { ...node.transform, position: { x: 100, y: 0, z: 0 } } }
-        : node,
-    )
-    renderer.apply({ ...EMPTY_SCENE, nodes: moved })
+      const moved = nodes.map(node =>
+        node.id === 'crate'
+          ? { ...node, transform: { ...node.transform, position: { x: 100, y: 0, z: 0 } } }
+          : node,
+      )
+      renderer.apply({ ...EMPTY_SCENE, nodes: moved })
 
-    expect(placedAt(renderer, 3)).toBe(115)
-  })
-})
+      expect(placedAt(renderer, 3)).toBe(115)
+    })
+  },
+)
 
 /** A shape of its own, so the bodies hanging from the bodies form a group of their own. */
 const KNOB_SHAPE: GeometryDescriptor = {
@@ -312,7 +332,7 @@ const KNOB_SHAPE: GeometryDescriptor = {
  * What reads the tree DOWNWARD from a node, which a body held out of the walk is no longer part
  * of. Every one of these came back EMPTY between the holding and its correction.
  */
-describe.each(STRATEGIES)('a crate whose bodies a %s group draws', grouping => {
+describe.each(DRAWINGS)('a crate whose bodies a %s group draws', (_name, drawing) => {
   const inACrate = (): SceneNode[] => [
     groupNodeFixture('crate'),
     ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
@@ -332,7 +352,7 @@ describe.each(STRATEGIES)('a crate whose bodies a %s group draws', grouping => {
   }
 
   const settled = (): SceneRenderer => {
-    const renderer = rendererOf(grouping)
+    const renderer = rendererOf(drawing)
     renderer.apply({ ...EMPTY_SCENE, nodes: inACrate() })
     return renderer
   }
@@ -387,7 +407,7 @@ describe.each(STRATEGIES)('a crate whose bodies a %s group draws', grouping => {
         geometry: KNOB_SHAPE,
       })),
     ]
-    const renderer = rendererOf(grouping)
+    const renderer = rendererOf(drawing)
     renderer.apply({ ...EMPTY_SCENE, nodes })
     renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes] })
     renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes] })
@@ -413,7 +433,7 @@ describe.each(STRATEGIES)('a crate whose bodies a %s group draws', grouping => {
         geometry: KNOB_SHAPE,
       })),
     ]
-    const renderer = rendererOf(grouping)
+    const renderer = rendererOf(drawing)
     renderer.apply({ ...EMPTY_SCENE, nodes })
 
     const knob = (renderer as unknown as { objects: Map<string, Object3D> }).objects.get('k3')

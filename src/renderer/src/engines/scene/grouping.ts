@@ -2,6 +2,7 @@ import {
   Mesh,
   Vector3,
   type BufferGeometry,
+  type Camera,
   type Intersection,
   type Material,
   type Matrix4,
@@ -87,6 +88,15 @@ export type InstancedGroups = {
    * them. A group COPIES those matrices, so this runs between `updateMatrixWorld` and a rebuild.
    */
   refreshSources: () => void
+  /**
+   * Where the camera now stands, before the pane it is about to draw — the one call of this
+   * contract a FRAME makes, and the only one a strategy may leave out.
+   *
+   * A strategy that holds a zone answers whether what it draws moved, so the caller knows the
+   * shadow maps have to be drawn again. Nothing else implements it: the groups of a whole level
+   * are the same wherever one looks from.
+   */
+  follow?: (camera: Camera | null) => boolean
   /** The engine is going away, and so are the meshes it built. */
   dispose: () => void
 }
@@ -219,7 +229,7 @@ export function unhang(object: Object3D): void {
 export const DRAWN_TRIANGLES = 'drawnTriangles'
 
 /** The meshes of one group and the nodes they stand for, index for index. */
-export type Grouped = { ids: string[]; meshes: Mesh[]; material: Material }
+export type Grouped = { key: string; ids: string[]; meshes: Mesh[]; material: Material }
 
 /**
  * What both strategies share of a rebuild: which meshes are drawn at all, what a group is keyed
@@ -263,7 +273,7 @@ export function sweep(
     if (held) {
       held.ids.push(node.id)
       held.meshes.push(mesh)
-    } else groups.set(key, { ids: [node.id], meshes: [mesh], material })
+    } else groups.set(key, { key, ids: [node.id], meshes: [mesh], material })
   }
 
   const worth: Grouped[] = []
