@@ -25,8 +25,11 @@ const SAID = /pixel[\s-]?art(?![a-z])/i
 
 export const saysPixelArt = (text: string): boolean => SAID.test(text)
 
-/** A grid clause the studio wrote before, which a resize has since made a lie. */
-const OTHER_GRID = /,?\s*\d+x\d+ sprite/gi
+/**
+ * The clause the studio itself appends, comma and all. 🛑 Anchored on that comma: read as bare
+ * digits it ate the person's own words — « a 64x64 sprite of a knight » came back « a of a knight ».
+ */
+const OWN_CLAUSE = /, \d+x\d+ sprite/gi
 
 /**
  * The written prompt with the grid said after it. 🛑 What settles idempotence is the GRID, not
@@ -40,11 +43,13 @@ export function withPixelArtPrompt(written: string, columns: number, rows: numbe
   const subject = written.trim()
   if (subject.length === 0) return written
 
-  const grid = `${columns}x${rows}`
-  if (subject.includes(grid)) return written
+  // The CLAUSE and not the digits: « a 32x32 chessboard » names a grid it does not draw on, and
+  // on the digits alone it went out with no pixel-art words at all.
+  const clause = `, ${columns}x${rows} sprite`
+  if (subject.includes(clause)) return written
 
   // Replaced and never stacked: a regeneration of a document resized since would otherwise carry
   // two grids, and the reader cannot tell which one the studio means.
-  const said = subject.replace(OTHER_GRID, '')
-  return saysPixelArt(said) ? `${said}, ${grid} sprite` : `${said}, ${pixelArtWords(columns, rows)}`
+  const said = subject.replace(OWN_CLAUSE, '')
+  return saysPixelArt(said) ? `${said}${clause}` : `${said}, ${pixelArtWords(columns, rows)}`
 }
