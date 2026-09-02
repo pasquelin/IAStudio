@@ -267,6 +267,8 @@
     "renderNeedsCamera": "Ajoutez une caméra à la scène pour pouvoir la rendre",
     "bone": "Os",
     "wholeModel": "Le modèle entier",
+    "loop": "Lecture en boucle",
+    "loopHint": "La tête repart au début au lieu de s’arrêter à la fin",
     "autoKey": "Enregistrement automatique",
     "autoKeyHint": "Bouger un objet pose une clé au lieu de déplacer sa pose de repos",
     "keySubject": "Poser une clé sur {{name}}",

@@ -1,4 +1,4 @@
-import { mdiRecordCircleOutline } from '@mdi/js'
+import { mdiRecordCircleOutline, mdiRepeat } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
@@ -49,6 +49,7 @@ export function AnimationActions({ documentId, filmable = true }: AnimationActio
   const playing = useSceneViews(state => sceneViewOf(state, documentId).playing)
   const head = useSceneFrameHead(documentId, timeline.fps)
   const autoKey = useAnimationViews(state => animationViewOf(state, documentId).autoKey)
+  const looping = useAnimationViews(state => animationViewOf(state, documentId).looping)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
   const bones = useModelFiles(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
@@ -89,6 +90,15 @@ export function AnimationActions({ documentId, filmable = true }: AnimationActio
           }
           views.setPlaying(documentId, !view.playing)
         }}
+      />
+      <ToolButton
+        icon={mdiRepeat}
+        label={t('animation.loop')}
+        description={t('animation.loopHint')}
+        tooltip={TIP_BOTTOM}
+        variant="header"
+        active={looping}
+        onClick={() => useAnimationViews.getState().setLooping(documentId, !looping)}
       />
       <ToolButton
         icon={mdiRecordCircleOutline}

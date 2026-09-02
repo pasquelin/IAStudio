@@ -54,6 +54,9 @@ export function CharacterWindowFit({ assetId, sample }: CharacterWindowFitProps)
         }))}
         onChange={setKind}
         scId="character.kind"
+        // No line of this group ends on a button, so the column `PropertyLine` keeps for one is
+        // dead space: the select takes it, rather than stopping short of the button under it.
+        actions={false}
       />
 
       <SelectField
@@ -69,6 +72,7 @@ export function CharacterWindowFit({ assetId, sample }: CharacterWindowFitProps)
         ]}
         onChange={() => undefined}
         scId="character.service"
+        actions={false}
       />
 
       {/* Said BEFORE any click, never discovered as a 403 nor after minutes of upload: on this

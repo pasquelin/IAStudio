@@ -26,6 +26,8 @@ export type AnimationView = {
   pickedBlock: string | null
   /** Whether moving an object writes a key rather than its rest pose. */
   autoKey: boolean
+  /** Whether the head starts over at the end rather than stopping there. */
+  looping: boolean
   /**
    * The motion FILE this band is editing, or `null` for one nothing has filed yet. Here rather
    * than in the document for `autoKey`'s reason, and keyed the same way: two workbenches open at
@@ -47,6 +49,7 @@ const DEFAULT_ANIMATION_VIEW: AnimationView = {
   selected: [],
   pickedBlock: null,
   autoKey: false,
+  looping: false,
   openMotion: null,
   order: [],
 }
@@ -58,6 +61,7 @@ export type AnimationViewState = {
   setSelected: (documentId: string, selected: readonly string[]) => void
   setPickedBlock: (documentId: string, pickedBlock: string | null) => void
   setAutoKey: (documentId: string, autoKey: boolean) => void
+  setLooping: (documentId: string, looping: boolean) => void
   openMotion: (documentId: string, openMotion: string | null) => void
   /**
    * Moves one line in the sheet's own arrangement, and answers how many places it ACTUALLY
@@ -107,6 +111,9 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
 
   setAutoKey: (documentId, autoKey) =>
     set(state => write(state, documentId, view => ({ ...view, autoKey }))),
+
+  setLooping: (documentId, looping) =>
+    set(state => write(state, documentId, view => ({ ...view, looping }))),
 
   openMotion: (documentId, openMotion) =>
     set(state => write(state, documentId, view => ({ ...view, openMotion }))),

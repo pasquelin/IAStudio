@@ -38,6 +38,7 @@ import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationActions } from '@/features/animation/components/Animation/Actions/AnimationActions'
 import { AnimationPanel } from '@/features/animation/components/Animation/AnimationPanel'
+import { SceneClock } from '@/features/scene/components/Scene/SceneClock'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
 import { CHARACTER_EDIT_REST, CHARACTER_STATE_TOOLS, CHARACTER_TOOLS } from './characterTools'
 import { CharacterWindowInspector } from './CharacterWindowInspector'
@@ -64,6 +65,9 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
 
   const hostRef = useRef<HTMLDivElement>(null)
   const engineRef = useRef<SceneRenderer | null>(null)
+  // Beside the ref, and not instead of it: a ref never re-renders, and the clock is a component
+  // that has to learn the engine exists — `SceneDocument` holds its own the same way.
+  const [live, setLive] = useState<SceneRenderer | null>(null)
   const character = useCharacters(state => characterOf(state, assetId))
   const name = useAssets(state => assetsById(state).get(assetId)?.name ?? assetId)
   const dirty = useCharacters(state => isCharacterDirty(state, assetId))
@@ -76,6 +80,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const [sample, setSample] = useState<MeshSample | null>(null)
   // The node of the workshop scene, which is what the surfaces of the studio address a model by.
   const nodeId = useScenes(state => sceneOf(state, workshopIdOf(assetId)).nodes[0]?.id)
+  const duration = useScenes(state => sceneOf(state, workshopIdOf(assetId)).animation.duration)
   const picked = useCharacterView(state => state.pickedBone)
   const mode = useCharacterView(state => state.mode)
   const heldAxes = useCharacterView(state => state.heldAxes)
@@ -219,6 +224,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     })
     renderer.mount(element)
     engineRef.current = renderer
+    setLive(renderer)
     renderer.configure({
       ...DEFAULT_SETTINGS.three,
       showGrid: true,
@@ -240,6 +246,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
 
     return () => {
       engineRef.current = null
+      setLive(null)
       stage.close()
       renderer.dispose()
       void leaveProject(leaving)
@@ -314,6 +321,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
               <AnimationPanel documentId={workshopIdOf(assetId)} />
             </div>
           </Panel>
+
+          {/* 🛑 What makes Play do anything at all: the head is React's, run forward by this and
+              pushed into the engine by it. Without it the button armed a flag nobody read. */}
+          <SceneClock documentId={workshopIdOf(assetId)} duration={duration} renderer={live} />
         </div>
       </div>
 

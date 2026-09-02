@@ -51,6 +51,9 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     }
     skinModel = vi.fn()
     frameContents = vi.fn()
+    // What the clock pushes into the engine: the head, and what a block is being watched on.
+    setPlayhead = vi.fn()
+    setPreview = vi.fn()
     exportTo = (_format: string, _scope: string, extras?: Record<string, unknown>) => {
       carried.push(extras ?? null)
       return Promise.resolve(new Uint8Array([1, 2]))
@@ -243,7 +246,7 @@ it('files the motion with its band inside, and saves onto that same file afterwa
       animation: keyed,
     })
   })
-  await userEvent.click(screen.getByText('Enregistrer le mouvement'))
+  await userEvent.click(screen.getByRole('button', { name: 'Enregistrer le mouvement' }))
 
   // The sheet PURGED of what the workshop does not hold: the file would otherwise carry the id
   // of an object the scene has lost, and gather one more at every save.
@@ -254,7 +257,7 @@ it('files the motion with its band inside, and saves onto that same file afterwa
     glb: new Uint8Array([1, 2]),
   })
 
-  await userEvent.click(screen.getByText('Mettre à jour le mouvement'))
+  await userEvent.click(screen.getByRole('button', { name: 'Mettre à jour le mouvement' }))
 
   expect(saveAnimation.mock.calls[1]?.[0]).toEqual({
     name: 'Nouveau mouvement',
