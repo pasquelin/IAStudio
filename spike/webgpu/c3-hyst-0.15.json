@@ -1,0 +1,90 @@
+{
+  "at": "2026-09-02T10:54:30.115Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "level": "product",
+      "budget": 5000,
+      "hysteresis": 0.15,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.082,
+      "restCalls": 671,
+      "restTriangles": 3037016,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.454,
+      "travelLodPeakMs": 1.7,
+      "travelClassifyMeanMs": 0.387,
+      "travelApplyMeanMs": 0.066,
+      "travelChanged": 535138,
+      "travelGpuMs": 2.684,
+      "travelCalls": 439,
+      "travelTriangles": 1979260,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.025,
+      "teleportLodPeakMs": 0.6,
+      "teleportClassifyMeanMs": 0.017,
+      "teleportApplyMeanMs": 0.008,
+      "teleportChanged": 25729,
+      "teleportGpuMs": 1.338,
+      "teleportCalls": 443,
+      "teleportTriangles": 1992976,
+      "teleportConvergedFrames": 10
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2002,
+      "phase": "product — budget 5000 — convergence initiale",
+      "workingSetKb": 486880
+    },
+    {
+      "at": 4004,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 489104
+    },
+    {
+      "at": 6006,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 489264
+    },
+    {
+      "at": 8009,
+      "phase": "product — budget 5000 — déplacement",
+      "workingSetKb": 490800
+    },
+    {
+      "at": 10010,
+      "phase": "product — budget 5000 — déplacement",
+      "workingSetKb": 490896
+    },
+    {
+      "at": 12012,
+      "phase": "product — budget 5000 — téléportation",
+      "workingSetKb": 489024
+    },
+    {
+      "at": 14015,
+      "phase": "product — budget 5000 — téléportation",
+      "workingSetKb": 489088
+    },
+    {
+      "at": 16016,
+      "phase": "product — budget 5000 — téléportation",
+      "workingSetKb": 489136
+    },
+    {
+      "at": 18021,
+      "phase": "fin",
+      "workingSetKb": 489696
+    }
+  ]
+}

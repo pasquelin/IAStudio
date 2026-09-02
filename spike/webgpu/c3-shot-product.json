@@ -1,0 +1,24 @@
+{
+  "at": "2026-09-02T10:57:58.147Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "level": "product",
+      "bodies": 50000,
+      "share": 0.0678485946420729,
+      "meanGap": 15.876168822937652,
+      "peakGap": 223
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2010,
+      "phase": "fin",
+      "workingSetKb": 521088
+    }
+  ]
+}

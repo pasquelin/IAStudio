@@ -1,0 +1,238 @@
+{
+  "at": "2026-09-02T10:46:42.561Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "level": "product",
+      "budget": "aucun",
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 6.104,
+      "restCalls": 294,
+      "restTriangles": 30985936,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0,
+      "travelLodPeakMs": 0,
+      "travelClassifyMeanMs": 0,
+      "travelApplyMeanMs": 0,
+      "travelChanged": 0,
+      "travelGpuMs": 7.224,
+      "travelCalls": 218,
+      "travelTriangles": 22516816,
+      "travelConvergedFrames": 1,
+      "teleportLodMeanMs": 0,
+      "teleportLodPeakMs": 0,
+      "teleportClassifyMeanMs": 0,
+      "teleportApplyMeanMs": 0,
+      "teleportChanged": 0,
+      "teleportGpuMs": 5.247,
+      "teleportCalls": 226,
+      "teleportTriangles": 23415376,
+      "teleportConvergedFrames": 1
+    },
+    {
+      "level": "product",
+      "budget": "tout",
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.535,
+      "restCalls": 671,
+      "restTriangles": 3037016,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 1.115,
+      "travelLodPeakMs": 12.1,
+      "travelClassifyMeanMs": 0.981,
+      "travelApplyMeanMs": 0.134,
+      "travelChanged": 1284316,
+      "travelGpuMs": 3.917,
+      "travelCalls": 433,
+      "travelTriangles": 1975748,
+      "travelConvergedFrames": 1,
+      "teleportLodMeanMs": 0.033,
+      "teleportLodPeakMs": 6.6,
+      "teleportClassifyMeanMs": 0.024,
+      "teleportApplyMeanMs": 0.009,
+      "teleportChanged": 25729,
+      "teleportGpuMs": 1.412,
+      "teleportCalls": 443,
+      "teleportTriangles": 1992976,
+      "teleportConvergedFrames": 1
+    },
+    {
+      "level": "product",
+      "budget": 5000,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.463,
+      "restCalls": 671,
+      "restTriangles": 3037016,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.481,
+      "travelLodPeakMs": 0.8,
+      "travelClassifyMeanMs": 0.412,
+      "travelApplyMeanMs": 0.069,
+      "travelChanged": 535138,
+      "travelGpuMs": 3.551,
+      "travelCalls": 439,
+      "travelTriangles": 1979260,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.038,
+      "teleportLodPeakMs": 0.9,
+      "teleportClassifyMeanMs": 0.027,
+      "teleportApplyMeanMs": 0.012,
+      "teleportChanged": 25729,
+      "teleportGpuMs": 1.533,
+      "teleportCalls": 443,
+      "teleportTriangles": 1992976,
+      "teleportConvergedFrames": 10
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "product — budget -1 — convergence initiale",
+      "workingSetKb": 467024
+    },
+    {
+      "at": 4006,
+      "phase": "product — budget -1 — repos",
+      "workingSetKb": 470128
+    },
+    {
+      "at": 6009,
+      "phase": "product — budget -1 — repos",
+      "workingSetKb": 471552
+    },
+    {
+      "at": 8010,
+      "phase": "product — budget -1 — déplacement",
+      "workingSetKb": 472560
+    },
+    {
+      "at": 10012,
+      "phase": "product — budget -1 — déplacement",
+      "workingSetKb": 472800
+    },
+    {
+      "at": 12014,
+      "phase": "product — budget -1 — déplacement",
+      "workingSetKb": 473056
+    },
+    {
+      "at": 14015,
+      "phase": "product — budget -1 — téléportation",
+      "workingSetKb": 473232
+    },
+    {
+      "at": 16018,
+      "phase": "product — budget -1 — téléportation",
+      "workingSetKb": 473392
+    },
+    {
+      "at": 18020,
+      "phase": "product — budget 0 — convergence initiale",
+      "workingSetKb": 680880
+    },
+    {
+      "at": 20023,
+      "phase": "product — budget 0 — repos",
+      "workingSetKb": 681456
+    },
+    {
+      "at": 22024,
+      "phase": "product — budget 0 — repos",
+      "workingSetKb": 681520
+    },
+    {
+      "at": 24027,
+      "phase": "product — budget 0 — repos",
+      "workingSetKb": 681664
+    },
+    {
+      "at": 26030,
+      "phase": "product — budget 0 — déplacement",
+      "workingSetKb": 675520
+    },
+    {
+      "at": 28032,
+      "phase": "product — budget 0 — déplacement",
+      "workingSetKb": 675584
+    },
+    {
+      "at": 30035,
+      "phase": "product — budget 0 — téléportation",
+      "workingSetKb": 573568
+    },
+    {
+      "at": 32038,
+      "phase": "product — budget 0 — téléportation",
+      "workingSetKb": 573568
+    },
+    {
+      "at": 34089,
+      "phase": "product — budget 0 — téléportation",
+      "workingSetKb": 572416
+    },
+    {
+      "at": 36091,
+      "phase": "product — budget 5000 — convergence initiale",
+      "workingSetKb": 747584
+    },
+    {
+      "at": 38093,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 747648
+    },
+    {
+      "at": 40095,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 747744
+    },
+    {
+      "at": 42098,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 747872
+    },
+    {
+      "at": 44101,
+      "phase": "product — budget 5000 — déplacement",
+      "workingSetKb": 735264
+    },
+    {
+      "at": 46103,
+      "phase": "product — budget 5000 — déplacement",
+      "workingSetKb": 735264
+    },
+    {
+      "at": 48106,
+      "phase": "product — budget 5000 — téléportation",
+      "workingSetKb": 735312
+    },
+    {
+      "at": 50108,
+      "phase": "product — budget 5000 — téléportation",
+      "workingSetKb": 735360
+    },
+    {
+      "at": 52110,
+      "phase": "fin",
+      "workingSetKb": 735600
+    }
+  ]
+}

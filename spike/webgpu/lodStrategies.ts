@@ -23,7 +23,7 @@ import type { ShapeLevel } from './engineScenes'
  */
 
 /** Un niveau de moins qu'`InstancedMesh` n'en dessine à la fois : la géométrie, et rien d'autre. */
-type Ladder = { levels: BufferGeometry[]; radius: number }
+export type Ladder = { levels: BufferGeometry[]; radius: number }
 
 export type LodStrategy = 'none' | 'regionDistance' | 'regionScreen' | 'instanceScreen' | 'instanceSplit'
 
@@ -84,7 +84,7 @@ const CYLINDER_STEPS: Record<ShapeLevel, number[]> = {
 const trianglesOf = (geometry: BufferGeometry): number =>
   (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3
 
-function laddersFor(level: ShapeLevel): Map<number, Ladder> {
+export function laddersFor(level: ShapeLevel): Map<number, Ladder> {
   const spheres = (SPHERE_STEPS[level] ?? SPHERE_STEPS.full).map(
     ([width, height]) => new SphereGeometry(0.6, width, height),
   )
@@ -122,11 +122,11 @@ const HELD = new Matrix4()
  * `height / (2 · tan(fov/2))` est la moitié de la hauteur visible à une unité : la taille écran
  * est ce qui décide, pas la distance, parce qu'un gros objet loin reste gros.
  */
-const screenRadius = (radius: number, distance: number, camera: PerspectiveCamera, height: number) =>
+export const screenRadius = (radius: number, distance: number, camera: PerspectiveCamera, height: number) =>
   distance <= 0 ? Infinity : (radius * height) / (2 * distance * Math.tan((camera.fov * Math.PI) / 360))
 
 /** Les seuils en PIXELS de rayon projeté, du plus fin au plus grossier. */
-const SCREEN_STEPS = [90, 34, 12]
+export const SCREEN_STEPS = [90, 34, 12]
 
 /** Les mêmes en unités de scène, pour la stratégie qui ne regarde que la distance. */
 const DISTANCE_STEPS = [28, 55, 90]

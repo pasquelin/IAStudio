@@ -1,0 +1,782 @@
+{
+  "at": "2026-09-02T11:01:10.655Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "level": "product",
+      "budget": "aucun",
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 6.454,
+      "restCalls": 294,
+      "restTriangles": 30985936,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0,
+      "travelLodPeakMs": 0,
+      "travelClassifyMeanMs": 0,
+      "travelApplyMeanMs": 0,
+      "travelChanged": 0,
+      "travelGpuMs": 5.357,
+      "travelCalls": 177,
+      "travelTriangles": 18333644,
+      "travelConvergedFrames": 1,
+      "teleportLodMeanMs": 0,
+      "teleportLodPeakMs": 0,
+      "teleportClassifyMeanMs": 0,
+      "teleportApplyMeanMs": 0,
+      "teleportChanged": 0,
+      "teleportGpuMs": 4.988,
+      "teleportCalls": 226,
+      "teleportTriangles": 23415376,
+      "teleportConvergedFrames": 1
+    },
+    {
+      "level": "product",
+      "budget": "tout",
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.721,
+      "restCalls": 671,
+      "restTriangles": 3436088,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 2.358,
+      "travelLodPeakMs": 11.2,
+      "travelClassifyMeanMs": 2.125,
+      "travelApplyMeanMs": 0.233,
+      "travelChanged": 42282,
+      "travelGpuMs": 2.48,
+      "travelCalls": 177,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 1,
+      "teleportLodMeanMs": 0.04,
+      "teleportLodPeakMs": 8,
+      "teleportClassifyMeanMs": 0.029,
+      "teleportApplyMeanMs": 0.011,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.552,
+      "teleportCalls": 443,
+      "teleportTriangles": 2392024,
+      "teleportConvergedFrames": 1
+    },
+    {
+      "level": "product",
+      "budget": 10000,
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.4,
+      "restCalls": 671,
+      "restTriangles": 3436088,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.921,
+      "travelLodPeakMs": 1.9,
+      "travelClassifyMeanMs": 0.822,
+      "travelApplyMeanMs": 0.099,
+      "travelChanged": 41511,
+      "travelGpuMs": 2.552,
+      "travelCalls": 177,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.039,
+      "teleportLodPeakMs": 1.8,
+      "teleportClassifyMeanMs": 0.029,
+      "teleportApplyMeanMs": 0.011,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.521,
+      "teleportCalls": 443,
+      "teleportTriangles": 2392024,
+      "teleportConvergedFrames": 5
+    },
+    {
+      "level": "product",
+      "budget": 5000,
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.414,
+      "restCalls": 671,
+      "restTriangles": 3436088,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.379,
+      "travelLodPeakMs": 0.9,
+      "travelClassifyMeanMs": 0.329,
+      "travelApplyMeanMs": 0.05,
+      "travelChanged": 40345,
+      "travelGpuMs": 2.297,
+      "travelCalls": 177,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.028,
+      "teleportLodPeakMs": 0.7,
+      "teleportClassifyMeanMs": 0.021,
+      "teleportApplyMeanMs": 0.007,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.354,
+      "teleportCalls": 443,
+      "teleportTriangles": 2392024,
+      "teleportConvergedFrames": 10
+    },
+    {
+      "level": "product",
+      "budget": 2000,
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.334,
+      "restCalls": 671,
+      "restTriangles": 3436088,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.167,
+      "travelLodPeakMs": 0.5,
+      "travelClassifyMeanMs": 0.131,
+      "travelApplyMeanMs": 0.035,
+      "travelChanged": 35518,
+      "travelGpuMs": 2.269,
+      "travelCalls": 177,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.027,
+      "teleportLodPeakMs": 0.3,
+      "teleportClassifyMeanMs": 0.019,
+      "teleportApplyMeanMs": 0.009,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.277,
+      "teleportCalls": 443,
+      "teleportTriangles": 2392024,
+      "teleportConvergedFrames": 25
+    },
+    {
+      "level": "full",
+      "budget": "aucun",
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 5.189,
+      "restCalls": 169,
+      "restTriangles": 14266896,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0,
+      "travelLodPeakMs": 0,
+      "travelClassifyMeanMs": 0,
+      "travelApplyMeanMs": 0,
+      "travelChanged": 0,
+      "travelGpuMs": 4.131,
+      "travelCalls": 89,
+      "travelTriangles": 7133484,
+      "travelConvergedFrames": 1,
+      "teleportLodMeanMs": 0,
+      "teleportLodPeakMs": 0,
+      "teleportClassifyMeanMs": 0,
+      "teleportApplyMeanMs": 0,
+      "teleportChanged": 0,
+      "teleportGpuMs": 2.973,
+      "teleportCalls": 137,
+      "teleportTriangles": 11321008,
+      "teleportConvergedFrames": 1
+    },
+    {
+      "level": "full",
+      "budget": "tout",
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 1.913,
+      "restCalls": 501,
+      "restTriangles": 2995672,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 1.864,
+      "travelLodPeakMs": 5.5,
+      "travelClassifyMeanMs": 1.676,
+      "travelApplyMeanMs": 0.188,
+      "travelChanged": 42282,
+      "travelGpuMs": 2.661,
+      "travelCalls": 89,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 1,
+      "teleportLodMeanMs": 0.023,
+      "teleportLodPeakMs": 4.5,
+      "teleportClassifyMeanMs": 0.016,
+      "teleportApplyMeanMs": 0.006,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.547,
+      "teleportCalls": 325,
+      "teleportTriangles": 2337020,
+      "teleportConvergedFrames": 1
+    },
+    {
+      "level": "full",
+      "budget": 10000,
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.313,
+      "restCalls": 501,
+      "restTriangles": 2995672,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.719,
+      "travelLodPeakMs": 1.1,
+      "travelClassifyMeanMs": 0.64,
+      "travelApplyMeanMs": 0.079,
+      "travelChanged": 41517,
+      "travelGpuMs": 2.954,
+      "travelCalls": 89,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.024,
+      "teleportLodPeakMs": 1,
+      "teleportClassifyMeanMs": 0.016,
+      "teleportApplyMeanMs": 0.008,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.345,
+      "teleportCalls": 325,
+      "teleportTriangles": 2337020,
+      "teleportConvergedFrames": 5
+    },
+    {
+      "level": "full",
+      "budget": 5000,
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.34,
+      "restCalls": 501,
+      "restTriangles": 2995672,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.376,
+      "travelLodPeakMs": 0.7,
+      "travelClassifyMeanMs": 0.328,
+      "travelApplyMeanMs": 0.048,
+      "travelChanged": 40333,
+      "travelGpuMs": 2.832,
+      "travelCalls": 89,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.023,
+      "teleportLodPeakMs": 0.6,
+      "teleportClassifyMeanMs": 0.017,
+      "teleportApplyMeanMs": 0.006,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.208,
+      "teleportCalls": 325,
+      "teleportTriangles": 2337020,
+      "teleportConvergedFrames": 10
+    },
+    {
+      "level": "full",
+      "budget": 2000,
+      "hysteresis": 0.15,
+      "speed": 1,
+      "bodies": 50000,
+      "restLodMeanMs": 0,
+      "restLodPeakMs": 0,
+      "restClassifyMeanMs": 0,
+      "restApplyMeanMs": 0,
+      "restChanged": 0,
+      "restGpuMs": 2.028,
+      "restCalls": 501,
+      "restTriangles": 2995672,
+      "restConvergedFrames": 1,
+      "travelLodMeanMs": 0.169,
+      "travelLodPeakMs": 0.4,
+      "travelClassifyMeanMs": 0.135,
+      "travelApplyMeanMs": 0.033,
+      "travelChanged": 35516,
+      "travelGpuMs": 2.408,
+      "travelCalls": 89,
+      "travelTriangles": 1200072,
+      "travelConvergedFrames": 300,
+      "teleportLodMeanMs": 0.025,
+      "teleportLodPeakMs": 0.3,
+      "teleportClassifyMeanMs": 0.018,
+      "teleportApplyMeanMs": 0.007,
+      "teleportChanged": 9062,
+      "teleportGpuMs": 1.473,
+      "teleportCalls": 325,
+      "teleportTriangles": 2337020,
+      "teleportConvergedFrames": 25
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "product — budget -1 — convergence initiale",
+      "workingSetKb": 467760
+    },
+    {
+      "at": 4005,
+      "phase": "product — budget -1 — repos",
+      "workingSetKb": 468016
+    },
+    {
+      "at": 6008,
+      "phase": "product — budget -1 — repos",
+      "workingSetKb": 471248
+    },
+    {
+      "at": 8010,
+      "phase": "product — budget -1 — déplacement",
+      "workingSetKb": 472304
+    },
+    {
+      "at": 10012,
+      "phase": "product — budget -1 — déplacement",
+      "workingSetKb": 472528
+    },
+    {
+      "at": 12014,
+      "phase": "product — budget -1 — déplacement",
+      "workingSetKb": 472784
+    },
+    {
+      "at": 14016,
+      "phase": "product — budget -1 — téléportation",
+      "workingSetKb": 473008
+    },
+    {
+      "at": 16018,
+      "phase": "product — budget -1 — téléportation",
+      "workingSetKb": 473136
+    },
+    {
+      "at": 18020,
+      "phase": "product — budget 0 — convergence initiale",
+      "workingSetKb": 572976
+    },
+    {
+      "at": 20023,
+      "phase": "product — budget 0 — repos",
+      "workingSetKb": 573552
+    },
+    {
+      "at": 22026,
+      "phase": "product — budget 0 — repos",
+      "workingSetKb": 573552
+    },
+    {
+      "at": 24028,
+      "phase": "product — budget 0 — repos",
+      "workingSetKb": 573664
+    },
+    {
+      "at": 26030,
+      "phase": "product — budget 0 — déplacement",
+      "workingSetKb": 570432
+    },
+    {
+      "at": 28034,
+      "phase": "product — budget 0 — déplacement",
+      "workingSetKb": 570432
+    },
+    {
+      "at": 30036,
+      "phase": "product — budget 0 — téléportation",
+      "workingSetKb": 509232
+    },
+    {
+      "at": 32037,
+      "phase": "product — budget 0 — téléportation",
+      "workingSetKb": 509264
+    },
+    {
+      "at": 34041,
+      "phase": "product — budget 0 — téléportation",
+      "workingSetKb": 508672
+    },
+    {
+      "at": 36043,
+      "phase": "product — budget 10000 — convergence initiale",
+      "workingSetKb": 751920
+    },
+    {
+      "at": 38046,
+      "phase": "product — budget 10000 — repos",
+      "workingSetKb": 752032
+    },
+    {
+      "at": 40049,
+      "phase": "product — budget 10000 — repos",
+      "workingSetKb": 752160
+    },
+    {
+      "at": 42051,
+      "phase": "product — budget 10000 — déplacement",
+      "workingSetKb": 740160
+    },
+    {
+      "at": 44053,
+      "phase": "product — budget 10000 — déplacement",
+      "workingSetKb": 740256
+    },
+    {
+      "at": 46056,
+      "phase": "product — budget 10000 — déplacement",
+      "workingSetKb": 740288
+    },
+    {
+      "at": 48058,
+      "phase": "product — budget 10000 — téléportation",
+      "workingSetKb": 740352
+    },
+    {
+      "at": 50060,
+      "phase": "product — budget 10000 — téléportation",
+      "workingSetKb": 740432
+    },
+    {
+      "at": 52061,
+      "phase": "product — budget 5000 — convergence initiale",
+      "workingSetKb": 756256
+    },
+    {
+      "at": 54064,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 756640
+    },
+    {
+      "at": 56065,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 756640
+    },
+    {
+      "at": 58068,
+      "phase": "product — budget 5000 — repos",
+      "workingSetKb": 755328
+    },
+    {
+      "at": 60070,
+      "phase": "product — budget 5000 — déplacement",
+      "workingSetKb": 743360
+    },
+    {
+      "at": 62072,
+      "phase": "product — budget 5000 — déplacement",
+      "workingSetKb": 743360
+    },
+    {
+      "at": 64075,
+      "phase": "product — budget 5000 — téléportation",
+      "workingSetKb": 743360
+    },
+    {
+      "at": 66078,
+      "phase": "product — budget 5000 — téléportation",
+      "workingSetKb": 743360
+    },
+    {
+      "at": 68378,
+      "phase": "product — budget 2000 — construction",
+      "workingSetKb": 748688
+    },
+    {
+      "at": 70380,
+      "phase": "product — budget 2000 — convergence initiale",
+      "workingSetKb": 751776
+    },
+    {
+      "at": 72383,
+      "phase": "product — budget 2000 — repos",
+      "workingSetKb": 751792
+    },
+    {
+      "at": 74384,
+      "phase": "product — budget 2000 — repos",
+      "workingSetKb": 751792
+    },
+    {
+      "at": 76387,
+      "phase": "product — budget 2000 — déplacement",
+      "workingSetKb": 741456
+    },
+    {
+      "at": 78390,
+      "phase": "product — budget 2000 — déplacement",
+      "workingSetKb": 741456
+    },
+    {
+      "at": 80392,
+      "phase": "product — budget 2000 — téléportation",
+      "workingSetKb": 741456
+    },
+    {
+      "at": 82395,
+      "phase": "product — budget 2000 — téléportation",
+      "workingSetKb": 741472
+    },
+    {
+      "at": 84396,
+      "phase": "product — budget 2000 — téléportation",
+      "workingSetKb": 458768
+    },
+    {
+      "at": 86399,
+      "phase": "full — budget -1 — convergence initiale",
+      "workingSetKb": 526832
+    },
+    {
+      "at": 88401,
+      "phase": "full — budget -1 — repos",
+      "workingSetKb": 527248
+    },
+    {
+      "at": 90403,
+      "phase": "full — budget -1 — repos",
+      "workingSetKb": 527248
+    },
+    {
+      "at": 92406,
+      "phase": "full — budget -1 — repos",
+      "workingSetKb": 527248
+    },
+    {
+      "at": 94408,
+      "phase": "full — budget -1 — déplacement",
+      "workingSetKb": 527248
+    },
+    {
+      "at": 96410,
+      "phase": "full — budget -1 — déplacement",
+      "workingSetKb": 527248
+    },
+    {
+      "at": 98413,
+      "phase": "full — budget -1 — téléportation",
+      "workingSetKb": 527296
+    },
+    {
+      "at": 100414,
+      "phase": "full — budget -1 — téléportation",
+      "workingSetKb": 526544
+    },
+    {
+      "at": 102783,
+      "phase": "full — budget 0 — construction",
+      "workingSetKb": 667568
+    },
+    {
+      "at": 104785,
+      "phase": "full — budget 0 — convergence initiale",
+      "workingSetKb": 686432
+    },
+    {
+      "at": 106788,
+      "phase": "full — budget 0 — repos",
+      "workingSetKb": 686432
+    },
+    {
+      "at": 108789,
+      "phase": "full — budget 0 — repos",
+      "workingSetKb": 686432
+    },
+    {
+      "at": 110792,
+      "phase": "full — budget 0 — déplacement",
+      "workingSetKb": 675488
+    },
+    {
+      "at": 112794,
+      "phase": "full — budget 0 — déplacement",
+      "workingSetKb": 675600
+    },
+    {
+      "at": 114796,
+      "phase": "full — budget 0 — téléportation",
+      "workingSetKb": 676656
+    },
+    {
+      "at": 116800,
+      "phase": "full — budget 0 — téléportation",
+      "workingSetKb": 676656
+    },
+    {
+      "at": 118803,
+      "phase": "full — budget 0 — téléportation",
+      "workingSetKb": 676656
+    },
+    {
+      "at": 120805,
+      "phase": "full — budget 10000 — convergence initiale",
+      "workingSetKb": 732752
+    },
+    {
+      "at": 122808,
+      "phase": "full — budget 10000 — repos",
+      "workingSetKb": 732816
+    },
+    {
+      "at": 124811,
+      "phase": "full — budget 10000 — repos",
+      "workingSetKb": 732816
+    },
+    {
+      "at": 126814,
+      "phase": "full — budget 10000 — repos",
+      "workingSetKb": 732816
+    },
+    {
+      "at": 128818,
+      "phase": "full — budget 10000 — déplacement",
+      "workingSetKb": 611440
+    },
+    {
+      "at": 130822,
+      "phase": "full — budget 10000 — déplacement",
+      "workingSetKb": 611440
+    },
+    {
+      "at": 132826,
+      "phase": "full — budget 10000 — téléportation",
+      "workingSetKb": 611440
+    },
+    {
+      "at": 134827,
+      "phase": "full — budget 10000 — téléportation",
+      "workingSetKb": 611440
+    },
+    {
+      "at": 136829,
+      "phase": "full — budget 10000 — téléportation",
+      "workingSetKb": 611152
+    },
+    {
+      "at": 138832,
+      "phase": "full — budget 5000 — convergence initiale",
+      "workingSetKb": 622368
+    },
+    {
+      "at": 140834,
+      "phase": "full — budget 5000 — repos",
+      "workingSetKb": 622384
+    },
+    {
+      "at": 142836,
+      "phase": "full — budget 5000 — repos",
+      "workingSetKb": 622384
+    },
+    {
+      "at": 144839,
+      "phase": "full — budget 5000 — déplacement",
+      "workingSetKb": 622384
+    },
+    {
+      "at": 146840,
+      "phase": "full — budget 5000 — déplacement",
+      "workingSetKb": 541104
+    },
+    {
+      "at": 148842,
+      "phase": "full — budget 5000 — déplacement",
+      "workingSetKb": 541312
+    },
+    {
+      "at": 150844,
+      "phase": "full — budget 5000 — téléportation",
+      "workingSetKb": 541872
+    },
+    {
+      "at": 152846,
+      "phase": "full — budget 5000 — téléportation",
+      "workingSetKb": 542112
+    },
+    {
+      "at": 155067,
+      "phase": "full — budget 2000 — construction",
+      "workingSetKb": 577536
+    },
+    {
+      "at": 157070,
+      "phase": "full — budget 2000 — convergence initiale",
+      "workingSetKb": 574224
+    },
+    {
+      "at": 159072,
+      "phase": "full — budget 2000 — repos",
+      "workingSetKb": 574272
+    },
+    {
+      "at": 161074,
+      "phase": "full — budget 2000 — repos",
+      "workingSetKb": 574304
+    },
+    {
+      "at": 163076,
+      "phase": "full — budget 2000 — déplacement",
+      "workingSetKb": 538576
+    },
+    {
+      "at": 165079,
+      "phase": "full — budget 2000 — déplacement",
+      "workingSetKb": 540816
+    },
+    {
+      "at": 167081,
+      "phase": "full — budget 2000 — téléportation",
+      "workingSetKb": 480336
+    },
+    {
+      "at": 169083,
+      "phase": "full — budget 2000 — téléportation",
+      "workingSetKb": 480528
+    },
+    {
+      "at": 171100,
+      "phase": "full — budget 2000 — téléportation",
+      "workingSetKb": 481152
+    },
+    {
+      "at": 173102,
+      "phase": "fin",
+      "workingSetKb": 481120
+    }
+  ]
+}
