@@ -1,0 +1,107 @@
+{
+  "at": "2026-09-02T15:27:30.611Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "mode": "off",
+      "count": 500,
+      "far": 500,
+      "nodes": 505,
+      "applyMs": 12.355,
+      "submitMeanMs": 0.339,
+      "submitMedianMs": 0.36,
+      "submitPeakMs": 0.4,
+      "followMeanMs": 0.001,
+      "gpuMs": 0.443,
+      "calls": 54,
+      "instances": 514,
+      "triangles": 176908,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "addMedianMs": 0.785,
+      "dropMedianMs": 0.76
+    },
+    {
+      "mode": "grid",
+      "count": 500,
+      "far": 500,
+      "nodes": 505,
+      "applyMs": 8.36,
+      "submitMeanMs": 0.423,
+      "submitMedianMs": 0.445,
+      "submitPeakMs": 0.475,
+      "followMeanMs": 0.014,
+      "gpuMs": 1.118,
+      "calls": 80,
+      "instances": 268,
+      "triangles": 81020,
+      "cellsHeld": 5,
+      "cellsDrawn": 5,
+      "addMedianMs": 0.605,
+      "dropMedianMs": 0.6
+    },
+    {
+      "mode": "pixels",
+      "count": 500,
+      "far": 500,
+      "share": 0,
+      "meanGap": 0
+    },
+    {
+      "mode": "off",
+      "count": 5000,
+      "far": 500,
+      "nodes": 5017,
+      "applyMs": 57.585,
+      "submitMeanMs": 0.309,
+      "submitMedianMs": 0.325,
+      "submitPeakMs": 0.36,
+      "followMeanMs": 0,
+      "gpuMs": 1.119,
+      "calls": 51,
+      "instances": 5030,
+      "triangles": 1780168,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "addMedianMs": 7.075,
+      "dropMedianMs": 6.9
+    },
+    {
+      "mode": "grid",
+      "count": 5000,
+      "far": 500,
+      "nodes": 5017,
+      "applyMs": 49.94,
+      "submitMeanMs": 0.325,
+      "submitMedianMs": 0.305,
+      "submitPeakMs": 0.45,
+      "followMeanMs": 0.01,
+      "gpuMs": 1.663,
+      "calls": 86,
+      "instances": 3118,
+      "triangles": 999972,
+      "cellsHeld": 5,
+      "cellsDrawn": 5,
+      "addMedianMs": 5.25,
+      "dropMedianMs": 5.245
+    },
+    {
+      "mode": "pixels",
+      "count": 5000,
+      "far": 500,
+      "share": 0,
+      "meanGap": 0
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2001,
+      "phase": "fin",
+      "workingSetKb": 294400
+    }
+  ]
+}
