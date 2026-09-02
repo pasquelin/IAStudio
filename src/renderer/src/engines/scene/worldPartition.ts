@@ -8,6 +8,8 @@
  * 500 000, against the 19 regions of the triangle budget, which covered the whole level.
  */
 
+import { clamp } from '@shared/numeric'
+
 /** The grain of a cell. Fixed and SPATIAL, so a lot can never spread past one cell. */
 export const CELL_SIZE = 256
 
@@ -55,7 +57,8 @@ const HALF_SPAN = 32_768
 const AXIS = HALF_SPAN * 2
 
 export const cellKey = (cx: number, cz: number): CellKey =>
-  (clamped(cx) + HALF_SPAN) * AXIS + (clamped(cz) + HALF_SPAN)
+  (clamp(cx, -HALF_SPAN, HALF_SPAN - 1) + HALF_SPAN) * AXIS +
+  (clamp(cz, -HALF_SPAN, HALF_SPAN - 1) + HALF_SPAN)
 
 /** Read apart, so a query that visits forty-five cells allocates no pair for any of them. */
 const cellX = (key: CellKey): number => Math.floor(key / AXIS) - HALF_SPAN
@@ -65,8 +68,6 @@ export const cellCoords = (key: CellKey): { cx: number; cz: number } => ({
   cx: cellX(key),
   cz: cellZ(key),
 })
-
-const clamped = (cell: number): number => Math.max(-HALF_SPAN, Math.min(HALF_SPAN - 1, cell))
 
 /**
  * The index, anchored on the world origin rather than on the bodies it is given.
@@ -129,8 +130,9 @@ export function buildPartition(cellSize = CELL_SIZE, macroSize = MACRO_SIZE): Wo
           if (!touches(mx * macroSpan, mz * macroSpan, macroSpan, x, z, radius)) continue
           for (const key of inside) {
             seen.nodesVisited += 1
-            const lowX = cellX(key) * cellSize
-            if (touches(lowX, cellZ(key) * cellSize, cellSize, x, z, radius)) into.push(key)
+            if (touches(cellX(key) * cellSize, cellZ(key) * cellSize, cellSize, x, z, radius)) {
+              into.push(key)
+            }
           }
         }
       }
@@ -157,7 +159,7 @@ function touches(
   z: number,
   radius: number,
 ): boolean {
-  const nearX = Math.max(lowX, Math.min(x, lowX + span))
-  const nearZ = Math.max(lowZ, Math.min(z, lowZ + span))
+  const nearX = clamp(x, lowX, lowX + span)
+  const nearZ = clamp(z, lowZ, lowZ + span)
   return (nearX - x) ** 2 + (nearZ - z) ** 2 <= radius * radius
 }

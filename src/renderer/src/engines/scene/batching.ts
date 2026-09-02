@@ -14,6 +14,7 @@ import {
   heldOutOfDraw,
   spellingOf,
   sweep,
+  trianglesOf,
   widen,
   type InstancedGroups,
 } from './grouping'
@@ -201,8 +202,4 @@ function layoutOf(geometry: BufferGeometry): string {
   const layout = `${geometry.index ? 'i' : 'v'}${spelled.join(',')}`
   layouts.set(geometry, { attributes, layout })
   return layout
-}
-
-function trianglesOf(geometry: BufferGeometry): number {
-  return (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3
 }

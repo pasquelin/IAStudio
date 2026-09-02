@@ -450,3 +450,8 @@ export function isDrawn(mesh: Object3D, host: Object3D): boolean {
   }
   return true
 }
+
+/** How many triangles a shape draws — an indexed geometry counts its index, the rest its points. */
+export function trianglesOf(geometry: BufferGeometry): number {
+  return (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3
+}

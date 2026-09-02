@@ -25,6 +25,8 @@ import {
   type InstancedGroups,
   type Placed,
 } from './grouping'
+import { sameOrder } from '@shared/collections'
+import { toRadians } from '@shared/domain/angles'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { buildPartition, type CellKey, type WorldPartition } from './worldPartition'
 
@@ -98,13 +100,11 @@ export function createCellGroups(
 
   const settle = (name: string, members: Members, worn: Grouped, shape: BufferGeometry): void => {
     const held = buckets.get(name)
-    // The cell is untouched: its bodies are the same ones in the same order, so the mesh it was
-    // drawn by is reused and only the matrices that really moved reach the GPU.
     // The cell is untouched — the same bodies, whatever their order. A swap-remove reorders a
     // bucket for O(1), so the fast path is element-wise and the set is only built when it fails.
     if (held && held.ids.length === members.ids.length) {
       const moved = sameOrder(held.ids, members.ids)
-        ? rewrite(held.mesh, members.meshes)
+        ? rewrite(held.mesh, members.meshes.length, slot => members.meshes[slot])
         : sameSet(held.ids, members.ids)
           ? rewriteBy(held, members)
           : null
@@ -198,7 +198,7 @@ export function createCellGroups(
    * material ON the meshes, and a lot born wearing the stand-in has nothing `paneMemory` can give
    * back — it stays painted through the return to a shaded view.
    */
-  const widen = (
+  const growLot = (
     key: string,
     like: InstancedMesh | Mesh,
     held: Mobile | undefined,
@@ -255,14 +255,19 @@ export function createCellGroups(
     const held = mobiles.get(bucket.key)
     const lot =
       !held || held.ids.length >= held.mesh.instanceMatrix.count
-        ? widen(bucket.key, at.instance, held, held?.paint ?? bucket.paint)
+        ? growLot(bucket.key, at.instance, held, held?.paint ?? bucket.paint)
         : held
+    pushOnto(lot, id, source.matrixWorld)
+    lot.mesh.instanceMatrix.needsUpdate = true
+  }
+
+  /** Takes a body onto the end of a lot, at a slot that is now its own. */
+  const pushOnto = (lot: Mobile, id: string, placement: Matrix4): void => {
     const slot = lot.ids.length
     lot.ids.push(id)
     lot.mesh.count = lot.ids.length
-    lot.mesh.setMatrixAt(slot, source.matrixWorld)
+    lot.mesh.setMatrixAt(slot, placement)
     lot.mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
-    lot.mesh.instanceMatrix.needsUpdate = true
     placed.set(id, { instance: lot.mesh, slot })
   }
 
@@ -297,25 +302,17 @@ export function createCellGroups(
         continue
       }
       if (!lot || lot.ids.length >= lot.mesh.instanceMatrix.count)
-        lot = widen(key, like, lot, paint)
-      const slot = lot.ids.length
-      lot.ids.push(id)
-      lot.mesh.count = lot.ids.length
-      lot.mesh.setMatrixAt(slot, source.matrixWorld)
-      lot.mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
-      placed.set(id, { instance: lot.mesh, slot })
+        lot = growLot(key, like, lot, paint)
+      pushOnto(lot, id, source.matrixWorld)
     }
     if (lot) lot.mesh.instanceMatrix.needsUpdate = true
   }
 
   /**
-   * What a lot holds and this rebuild did not put there: gone from the document, back on the
-   * grid, or moved to ANOTHER group — a body whose paint changed answers to a different lot, and
-   * a check that only asked « was it seen at all » left it drawn twice, in two materials, for good.
-   *
-   * Found in the LOT rather than through `placed`, which `settle` has already pointed at the cell
-   * that took the body back. Walked backwards: a swap moves the last body into the hole, and that
-   * one is behind us.
+   * What a lot holds and this rebuild did not put there — gone, back on the grid, or moved to
+   * another group. Asked PER LOT: a body whose paint changed answers to a different one, and
+   * « was it seen at all » left it drawn twice. Walked backwards, since a swap fills the hole
+   * from behind.
    */
   const shed = (seen: ReadonlyMap<string, string>): void => {
     for (const [key, lot] of mobiles) {
@@ -456,7 +453,8 @@ export function createCellGroups(
       for (const key of near) wanted.add(key)
       let moved = false
       for (const key of near) {
-        const held = standing.has(key) ? null : cells.get(key)
+        if (standing.has(key)) continue
+        const held = cells.get(key)
         if (!held) continue
         host.add(held.group)
         standing.add(key)
@@ -622,7 +620,7 @@ const LANDED = new Box3()
  * The box grown by where its own shadow can fall — hiding a caster hides its shadow with it.
  *
  * The union of the box and the box dropped onto the floor along the light: the swept volume is
- * their hull, which that union contains. A sun at the horizon throws nothing that lands.
+ * their hull, which that union contains.
  */
 function sweptBy(box: Box3, cast: ShadowThrow | null | undefined): Box3 {
   if (!cast || box.isEmpty()) return box
@@ -660,48 +658,20 @@ function sameSet(held: readonly string[], now: readonly string[]): boolean {
 }
 
 /**
- * Writes the matrices of a bucket whose bodies were REORDERED — a mover taken out of it by a
- * swap. Each slot keeps the body it held, so nothing has to be rebuilt for a change of order.
+ * Writes the matrices of a bucket nothing structural changed in, and marks it only if one moved.
+ * A node carried under another parent moves without leaving its cell, so the matrices cannot be
+ * trusted; comparing costs the read that writing costs anyway, and saves a whole cell's upload.
  */
-function rewriteBy(bucket: Bucket, members: Members): boolean {
-  const byId = new Map<string, Mesh>()
-  for (const [at, id] of members.ids.entries()) {
-    const mesh = members.meshes[at]
-    if (mesh) byId.set(id, mesh)
-  }
-  const held = bucket.mesh.instanceMatrix.array
-  let moved = false
-  for (const [slot, id] of bucket.ids.entries()) {
-    const source = byId.get(id)
-    if (!source || samePlace(held, slot * 16, source.matrixWorld.elements)) continue
-    bucket.mesh.setMatrixAt(slot, source.matrixWorld)
-    moved = true
-  }
-  if (!moved) return false
-  bucket.mesh.instanceMatrix.needsUpdate = true
-  bucket.mesh.computeBoundingSphere()
-  return true
-}
-
-/** Whether a cell holds the same bodies it held, in the same slots. */
-function sameOrder(held: readonly string[], now: readonly string[]): boolean {
-  if (held.length !== now.length) return false
-  for (const [at, id] of now.entries()) if (held[at] !== id) return false
-  return true
-}
-
-/**
- * Writes the matrices of a cell nothing structural changed in, and marks it only if one moved.
- *
- * A rebuild runs on every change of CONTENT, and a node carried under another parent moves
- * without leaving its cell — so the matrices cannot simply be trusted. Comparing them costs the
- * read that writing them costs anyway, and what it saves is the upload of a whole cell.
- */
-function rewrite(instance: InstancedMesh, meshes: readonly Mesh[]): boolean {
+function rewrite(
+  instance: InstancedMesh,
+  count: number,
+  sourceAt: (slot: number) => Mesh | undefined,
+): boolean {
   const held = instance.instanceMatrix.array
   let moved = false
-  for (const [slot, source] of meshes.entries()) {
-    if (samePlace(held, slot * 16, source.matrixWorld.elements)) continue
+  for (let slot = 0; slot < count; slot += 1) {
+    const source = sourceAt(slot)
+    if (!source || samePlace(held, slot * 16, source.matrixWorld.elements)) continue
     instance.setMatrixAt(slot, source.matrixWorld)
     moved = true
   }
@@ -709,6 +679,19 @@ function rewrite(instance: InstancedMesh, meshes: readonly Mesh[]): boolean {
   instance.instanceMatrix.needsUpdate = true
   instance.computeBoundingSphere()
   return true
+}
+
+/**
+ * The same, for a bucket whose bodies were REORDERED — a mover taken out of it by a swap. Each
+ * slot keeps the body it held, so nothing has to be rebuilt for a change of order.
+ */
+function rewriteBy(bucket: Bucket, members: Members): boolean {
+  const byId = new Map<string, Mesh>()
+  for (const [at, id] of members.ids.entries()) {
+    const mesh = members.meshes[at]
+    if (mesh) byId.set(id, mesh)
+  }
+  return rewrite(bucket.mesh, bucket.ids.length, slot => byId.get(bucket.ids[slot] ?? ''))
 }
 
 /** `fround` because the buffer holds singles: a double compared raw is never equal to its copy. */
@@ -725,7 +708,7 @@ function samePlace(held: ArrayLike<number>, base: number, stands: readonly numbe
  */
 function seenFrom(camera: Camera): number {
   if (camera instanceof PerspectiveCamera) {
-    const high = camera.far * Math.tan((camera.fov * Math.PI) / 360)
+    const high = camera.far * Math.tan(toRadians(camera.fov / 2))
     return Math.hypot(camera.far, high, high * camera.aspect)
   }
   if (camera instanceof OrthographicCamera) {

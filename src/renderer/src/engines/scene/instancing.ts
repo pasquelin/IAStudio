@@ -3,6 +3,7 @@ import { TRIANGLES_PER_REGION, regionsByGrid, type SpatialRegions } from './inst
 import {
   heldOutOfDraw,
   shapeAndPaint,
+  trianglesOf,
   sweep,
   writeMoved,
   type Grouped,
@@ -135,10 +136,6 @@ function splitOf({ meshes }: Grouped, geometry: BufferGeometry): SpatialRegions 
     at[slot * 3 + 2] = stands[14] ?? 0
   }
   return regionsByGrid({ at, count: meshes.length }, cells)
-}
-
-function trianglesOf(geometry: BufferGeometry): number {
-  return (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3
 }
 
 /**
