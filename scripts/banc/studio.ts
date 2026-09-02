@@ -80,16 +80,49 @@ import { createMemoryShell, type MemoryShell } from './memoryShell'
 import { createMemoryFolder, type MemoryFolder } from './memoryFolder'
 import { projectName, withRecentProject } from '@shared/domain/project'
 
-type ScopeRunner = (documentId: string, command: CommandId) => boolean
+type ScopeRunner = (command: CommandId, to: string | null) => CommandAnswer
+
+/** A runner of a DOCUMENT scope: the command lands on the document it names, or the one in front. */
+const onDocument =
+  (
+    scope: CommandScope,
+    run: (documentId: string, command: CommandId) => CommandAnswer,
+  ): ScopeRunner =>
+  (command, to) => {
+    const documentId = addressedBy(scope, to)
+    return documentId !== null && run(documentId, command)
+  }
+
+/**
+ * 🛑 TOTAL, so a scope added to `CommandScope` does not compile until it says who answers it —
+ * a `Map` left the bench refusing `wrongSurface` in silence, the very hole this table fills.
+ */
+type ScopeRunners = Record<CommandScope, ScopeRunner | null>
+
+/**
+ * The project folder belongs to no document, and the window holds one panel of it at all times:
+ * landing at the root, and settling as the panel's own runner does.
+ */
+const EXPLORER: ScopeRunner = command =>
+  runExplorerCommand(command, {
+    into: FOLDER_ROOT,
+    folderName: i18next.t('explorer.newFolderName'),
+  })
 
 /** The scopes a headless run can answer, each by the function its own tab calls. */
-const SCOPE_RUNNERS = new Map<CommandScope, ScopeRunner>([
-  ['scene', runSceneCommand],
-  ['gui', runGuiDocumentCommand],
-  ['skybox', runSkyboxCommand],
-  ['material', runMaterialCommand],
-  ['audio', runAudioCommand],
-])
+const SCOPE_RUNNERS: ScopeRunners = {
+  scene: onDocument('scene', runSceneCommand),
+  gui: onDocument('gui', runGuiDocumentCommand),
+  skybox: onDocument('skybox', runSkyboxCommand),
+  material: onDocument('material', runMaterialCommand),
+  audio: onDocument('audio', runAudioCommand),
+  canvas: onDocument('canvas', runCanvasCommand),
+  sequence: onDocument('sequence', runSequenceCommand),
+  explorer: EXPLORER,
+  // The application's own, which `routeCommand` runs before any surface is asked.
+  global: null,
+  spaces: null,
+}
 
 /** The document the studio shows — what a command with no address lands on. */
 function frontDocument(): DocumentDescriptor | null {

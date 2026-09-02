@@ -49,17 +49,18 @@ import {
   carriesMaterial,
   hasChildren,
   nodeById,
+  rootsOf,
   rotationShows,
   subtreesOf,
-  withAxisLock,
-  withoutLockedAxes,
   type AxisLock,
   type CarvedNode,
-  type SceneNodeBase,
-  type SceneNodeType,
   type NodeMove,
   type SceneNode,
+  type SceneNodeBase,
+  type SceneNodeType,
   type SceneState,
+  withAxisLock,
+  withoutLockedAxes,
 } from './sceneState'
 
 /**
@@ -751,11 +752,10 @@ function lifted(state: SceneState, id: string, parentId: string | null, at: numb
  * The group lands where the selection already lived when they share a parent, and at the scene
  * when they do not: grouping two children of a group must not lift them out of it.
  */
-export function groupNodes(nodes: readonly SceneNode[]): Command<SceneState> {
-  const selected = new Set(nodes.map(node => node.id))
-  const roots = nodes.filter(node => node.parentId === null || !selected.has(node.parentId))
+export function groupNodes(nodes: readonly SceneNode[], id = newId()): Command<SceneState> {
+  const roots = rootsOf(nodes)
   const shared = roots.every(node => node.parentId === roots[0]?.parentId)
-  const group = { ...groupNode(), parentId: shared ? (roots[0]?.parentId ?? null) : null }
+  const group = { ...groupNode(), id, parentId: shared ? (roots[0]?.parentId ?? null) : null }
 
   return multi(commandId('group', [group.id]), [
     addNode(group),

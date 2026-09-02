@@ -63,7 +63,8 @@ function runCommand(input: Record<string, unknown>): ActionOutcome {
       `"${descriptor.id}" raises a dialog of the operating system, which nothing here can fill or read back — use the action that takes a path instead: file.open, project.open, document.open or document.export, depending on what was meant`,
     )
 
-  return ROUTED[routeCommand(descriptor.id)]
+  const routed = routeCommand(descriptor.id)
+  return typeof routed === 'string' ? ROUTED[routed] : { ok: true, data: routed }
 }
 
 async function submitPrepared(input: Record<string, unknown>): Promise<ActionOutcome> {

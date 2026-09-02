@@ -22,6 +22,9 @@ import { panelsStore } from '@/stores/panels'
  */
 export type CommandRouting = 'ran' | 'noSurface' | 'nothingToDo' | 'noBridge'
 
+/** `ran`, with what the surface CREATED when the command made something — see `CommandAnswer`. */
+export type RoutedCommand = CommandRouting | Record<string, unknown>
+
 /** Runs it through the bridge, or says the window has none — a mirror, a test with no preload. */
 function through(run: (bridge: StudioBridge) => void): CommandRouting {
   const bridge = getBridge()
@@ -114,7 +117,7 @@ function runHere(command: CommandId): CommandRouting | null {
  * and a menu row does not: `publishCommand` is memoryless, so a command sent while nothing of
  * that scope is mounted vanishes in silence.
  */
-export function routeCommand(command: CommandId): CommandRouting {
+export function routeCommand(command: CommandId): RoutedCommand {
   const here = runHere(command)
   if (here) return here
 
@@ -125,5 +128,6 @@ export function routeCommand(command: CommandId): CommandRouting {
 
   // A surface that took it and had nothing to do is not a studio showing the wrong thing — the
   // very distinction `nothingToDo` was written for, and which nothing used to reach.
-  return publishCommand(command) ? 'ran' : 'nothingToDo'
+  const answer = publishCommand(command)
+  return answer === false ? 'nothingToDo' : answer === true ? 'ran' : answer
 }
