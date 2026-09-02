@@ -821,6 +821,10 @@ export type LogScope =
   | 'scene.animation'
   /** A boolean cut that would not evaluate. The node goes on drawing its uncut brush. */
   | 'scene.carved'
+  /** A second player module refused: which one plays would go back to being document order. */
+  | 'scene.player'
+  /** A gesture that would leave a player module standing without its body or its eye. */
+  | 'scene.playerParts'
   | 'scene.export'
   /** A composition read back from a file another project wrote, or written out to one. */
   | 'scene.post'
@@ -914,6 +918,8 @@ export type LogScope =
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.carved',
+  'scene.player',
+  'scene.playerParts',
   'scene.model',
   'scene.bvh',
   'scene.texture',

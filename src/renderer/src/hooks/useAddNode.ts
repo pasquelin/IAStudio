@@ -1,7 +1,9 @@
 import { useCallback } from 'react'
 import { addNodes } from '@/engines/scene/commands'
 import { createNodesOf } from '@/engines/scene/nodeFactory'
-import { selectIn, useScenes } from '@/stores/scenes'
+import { bringsSecondPlayer } from '@/engines/scene/playerModule'
+import { reportFailure } from '@/services/diagnostics'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 
 /** The one way a node enters a scene: the toolbar, a panel's add menu and the native menu. */
 export function addNodeTo(documentId: string, kind: string): void {
@@ -9,6 +11,11 @@ export function addNodeTo(documentId: string, kind: string): void {
   const nodes = createNodesOf(kind)
   const root = nodes[0]
   if (!root) return
+
+  if (bringsSecondPlayer(sceneOf(useScenes.getState(), documentId).nodes, nodes)) {
+    reportFailure('scene.player', root.name, new Error('this scene already holds a player module'))
+    return
+  }
 
   useScenes.getState().runCommand(documentId, addNodes(nodes))
   // `addNodes` picks everything it put down, which is right for a duplicate and wrong here: an

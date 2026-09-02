@@ -8,6 +8,7 @@ import { addNodeTo } from './useAddNode'
 const DOCUMENT = 'doc-1'
 
 const picked = () => sceneOf(useScenes.getState(), DOCUMENT).selectedIds
+const nodesIn = () => sceneOf(useScenes.getState(), DOCUMENT).nodes
 
 describe('what an Add leaves picked', () => {
   beforeEach(() => {
@@ -30,5 +31,28 @@ describe('what an Add leaves picked', () => {
     const scene = sceneOf(useScenes.getState(), DOCUMENT)
     expect(picked()).toHaveLength(1)
     expect(scene.nodes.find(node => node.id === picked()[0])?.name).toBe('Player_Module')
+  })
+})
+
+/**
+ * Who the player is was decided at runtime and shown nowhere. A second module puts that choice
+ * back, one level up — `playerPartsOf` would take whichever comes first in document order.
+ */
+describe('a scene that already holds a player module', () => {
+  beforeEach(() => {
+    installScene(DOCUMENT, EMPTY_SCENE)
+    addNodeTo(DOCUMENT, PLAYER_KIND)
+  })
+
+  it('refuses a second one rather than letting the order decide', () => {
+    addNodeTo(DOCUMENT, PLAYER_KIND)
+
+    expect(nodesIn().filter(node => node.name === 'Player_Module')).toHaveLength(1)
+  })
+
+  it('still takes anything else', () => {
+    addNodeTo(DOCUMENT, 'box')
+
+    expect(nodesIn().some(node => node.type === 'mesh' && node.name === 'Box')).toBe(true)
   })
 })

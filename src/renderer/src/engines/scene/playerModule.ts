@@ -1,5 +1,6 @@
 import { withComponent, type Component } from '@shared/domain/component'
 import type { ObjectKind } from '@shared/domain/scene'
+import { cachedOn } from '../core/cachedOn'
 import { subtreesOf, type SceneNode } from './sceneState'
 
 /** What the Add menu, the native menu and the toolbar all name the module by. */
@@ -25,13 +26,25 @@ export type PlayerParts = {
 
 type FoundParts = PlayerParts & { inside: readonly SceneNode[] }
 
+const partsByNodes = new WeakMap<readonly SceneNode[], readonly FoundParts[]>()
+
+/**
+ * Every module's parts, built ONCE per list — the same bargain as `byIdOf`, and for the same
+ * gesture: a drag filters each of its ids through `leavesPlayerModule`, and `subtreesOf` rebuilds
+ * a whole-scene index per call. A scene with no module answers an empty list without walking one.
+ */
+function allPartsOf(nodes: readonly SceneNode[]): readonly FoundParts[] {
+  return cachedOn(partsByNodes, nodes, () =>
+    nodes.filter(isPlayerModule).map(module => partsIn(nodes, module)),
+  )
+}
+
 /**
  * What the scene's module names. 🛑 The FIRST module in document order, which is a choice nothing
- * shows — refusing a second one is what makes that honest, and it is not written yet.
+ * shows — refusing a second one is what makes that honest.
  */
 export function playerPartsOf(nodes: readonly SceneNode[]): PlayerParts | null {
-  const module = nodes.find(isPlayerModule)
-  return module ? partsIn(nodes, module) : null
+  return allPartsOf(nodes)[0] ?? null
 }
 
 function partsIn(nodes: readonly SceneNode[], module: SceneNode): FoundParts {
@@ -64,11 +77,10 @@ function partsIn(nodes: readonly SceneNode[], module: SceneNode): FoundParts {
  * scene no longer holds, or one belonging to ANOTHER module is filled in from the tree.
  */
 export function withBoundPlayerArm(nodes: readonly SceneNode[]): readonly SceneNode[] {
-  const modules = nodes.filter(isPlayerModule)
-  if (modules.length === 0) return nodes
+  const found = allPartsOf(nodes)
+  if (found.length === 0) return nodes
 
   const holder = new Map<string, string>()
-  const found = modules.map(module => partsIn(nodes, module))
   for (const parts of found) {
     for (const node of parts.inside) holder.set(node.id, parts.module.id)
   }
@@ -102,4 +114,54 @@ export function withBoundPlayerArm(nodes: readonly SceneNode[]): readonly SceneN
     const arm = bound.get(node.id)
     return arm ? { ...node, components: withComponent(node.components ?? [], arm) } : node
   })
+}
+
+/**
+ * Whether taking these away would leave a module standing WITHOUT one of its parts. Taking the
+ * module itself carries everything under it — a whole module going rather than a torn one.
+ *
+ * 🛑 The SUBTREE, not the ids named: `removeNode` takes one node and orphans what hung from it,
+ * so a node standing between the module and a part costs exactly as much as the part.
+ *
+ * Blind spot, written rather than hidden: a `composed` command refuses only when EVERY part does
+ * and its `apply` re-reads nothing, so this is bypassed inside one. Unreachable today, and
+ * measured: the three parts are two groups and a camera, and `isCarvable` takes neither.
+ */
+export function tearsPlayerApart(nodes: readonly SceneNode[], ids: readonly string[]): boolean {
+  const found = allPartsOf(nodes)
+  if (found.length === 0) return false
+
+  const doomed = new Set(subtreesOf(nodes, ids).map(node => node.id))
+  return found.some(({ module, body, arm, eye }) => {
+    if (doomed.has(module.id)) return false
+
+    return [body, arm, eye].some(part => part !== undefined && doomed.has(part.id))
+  })
+}
+
+/**
+ * Whether hanging this node there would take a required part OUT of its module. Rearranging
+ * inside one is the author's business; only leaving it is what nothing else would catch.
+ */
+export function leavesPlayerModule(
+  nodes: readonly SceneNode[],
+  id: string,
+  parentId: string | null,
+): boolean {
+  return allPartsOf(nodes).some(({ inside, body, arm, eye }) => {
+    if (![body, arm, eye].some(part => part?.id === id)) return false
+
+    return parentId === null || !inside.some(node => node.id === parentId)
+  })
+}
+
+/**
+ * Whether putting these in would leave the scene with TWO modules — an add, a paste, a ⌘D.
+ * Refused rather than arbitrated: which one plays would go back to being document order.
+ */
+export function bringsSecondPlayer(
+  nodes: readonly SceneNode[],
+  incoming: readonly SceneNode[],
+): boolean {
+  return allPartsOf(nodes).length > 0 && incoming.some(isPlayerModule)
 }

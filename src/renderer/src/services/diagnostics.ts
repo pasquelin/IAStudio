@@ -19,6 +19,10 @@ import { getBridge } from './bridge'
  */
 const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'scene.export',
+  // A refusal repeated is a person pressing again because the first press did nothing: silenced
+  // from the second, a module that will not go in looks like a studio that ignores the toolbar.
+  'scene.player',
+  'scene.playerParts',
   // A menu row pressed again after a failure, like its export neighbours: silenced from the
   // second press, a capture that writes nothing looks exactly like one that worked.
   'scene.capture',

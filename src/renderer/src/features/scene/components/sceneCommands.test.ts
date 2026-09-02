@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import { cameraNodeFixture, meshNode, pathNodeFixture } from '@/engines/scene/scene-fixtures'
+import { playerModuleNodes } from '@/engines/scene/nodeFactory'
 import { bezierPathOf, type GeometryDescriptor } from '@shared/domain/scene'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useAnimationViews } from '@/stores/animationView'
 import { clearScenes, installScene, sceneNodeNow } from '@/stores/scene-fixtures'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { useSceneViews } from '@/stores/sceneViews'
 import { runSceneCommand } from './sceneCommands'
 
@@ -254,5 +256,59 @@ describe('deleting the control point a rail or a band holds', () => {
 
     expect(runOf('band')).toEqual([0, 20])
     expect(sceneNodeNow(DOCUMENT, 'band')).not.toBeNull()
+  })
+})
+
+describe('the gestures a player module refuses', () => {
+  const nodesNow = () => sceneOf(useScenes.getState(), DOCUMENT).nodes
+  const idOf = (name: string) => nodesNow().find(node => node.name === name)?.id ?? ''
+
+  const pick = (name: string) => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [...playerModuleNodes()] })
+    selectIn(DOCUMENT, [idOf(name)])
+  }
+
+  beforeEach(() => clearScenes())
+
+  it('keeps its camera through a Delete that named it', () => {
+    pick('Camera')
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(nodesNow().some(node => node.name === 'Camera')).toBe(true)
+  })
+
+  /** A cut that cannot remove must not look copied either — hence the check before the write. */
+  it('keeps its body through a Cut that named it, and copies nothing', () => {
+    pick('Capsule')
+
+    runSceneCommand(DOCUMENT, 'scene.cut')
+
+    expect(nodesNow().some(node => node.name === 'Capsule')).toBe(true)
+    expect(useSceneClipboard.getState().nodes).toEqual([])
+  })
+
+  it('lets go of what it does not require', () => {
+    pick('Mesh')
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(nodesNow().some(node => node.name === 'Mesh')).toBe(false)
+  })
+
+  it('goes away whole when the module itself is named', () => {
+    pick('Player_Module')
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(nodesNow()).toEqual([])
+  })
+
+  it('refuses to be duplicated into a second one', () => {
+    pick('Player_Module')
+
+    runSceneCommand(DOCUMENT, 'scene.duplicate')
+
+    expect(nodesNow().filter(node => node.name === 'Player_Module')).toHaveLength(1)
   })
 })

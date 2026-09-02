@@ -13,6 +13,8 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.model': 'document',
   'scene.bvh': 'document',
   'scene.carved': 'document',
+  'scene.player': 'document',
+  'scene.playerParts': 'document',
   'scene.texture': 'document',
   'scene.animation': 'document',
   'scene.export': 'document',

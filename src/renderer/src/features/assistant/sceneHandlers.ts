@@ -31,6 +31,7 @@ import { captureSceneView } from '@/helpers/captureSceneView'
 import { canNegate } from '@/engines/csg/carve'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
+  canMoveNode,
   addNodes,
   attachNode,
   carveNodes,
@@ -89,10 +90,10 @@ import { newId } from '@/helpers/ids'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import type { Command } from '@/engines/core/history'
 import { createNodesOf, modelNode } from '@/engines/scene/nodeFactory'
+import { bringsSecondPlayer, tearsPlayerApart } from '@/engines/scene/playerModule'
 import {
   canCastShadow,
   canReceiveShadow,
-  canReparent,
   nodeById,
   type SceneNode,
   type SceneState,
@@ -611,6 +612,14 @@ function add(input: Record<string, unknown>): ActionOutcome {
       `no node kind "${textOf(input, 'kind') ?? ''}" can be built — the "kind" field of this action lists the ones that can`,
     )
 
+  const open = mounted()
+  if (!open) return refused('wrongSurface', NO_SCENE)
+  if (bringsSecondPlayer(open.state.nodes, built))
+    return refused(
+      'badInput',
+      'this scene already holds a player module, and a scene may hold only one — "node.remove" it first, or edit the one it has',
+    )
+
   // 🛑 The name and the place are the ROOT's: written onto each, a module would stack its body,
   // its arm and its camera at one point under one name.
   return place([
@@ -685,10 +694,10 @@ function reparent(input: Record<string, unknown>): ActionOutcome {
   // sits, which is what dropping a row ONTO another does on screen.
   const index = numberOf(input, 'index')
 
-  // A move that would close the tree on itself is refused by handing the state back untouched,
-  // which without this reads as done.
+  // A move that would close the tree on itself, or take a player module apart, is refused by
+  // handing the state back untouched, which without this reads as done.
   return editNode(input, node =>
-    !canReparent(open.state.nodes, node.id, parentId)
+    !canMoveNode(open.state.nodes, node.id, parentId)
       ? null
       : index === null
         ? reparentNode(node.id, parentId)
@@ -864,7 +873,12 @@ export const SCENE_HANDLERS: ActionHandlers = {
     return withAsset(assetId, () => place([modelNode(assetId, textOf(input, 'name') ?? assetId)]))
   },
 
-  'node.remove': input => editNode(input, node => removeNode(node.id)),
+  // 🛑 Refused HERE and not left to the command: `editNode` reads a `null` as a refusal, and
+  // `removeNode` always answers a command — a module's eye would come back « removed ».
+  'node.remove': input =>
+    editNode(input, node =>
+      tearsPlayerApart(mounted()?.state.nodes ?? [], [node.id]) ? null : removeNode(node.id),
+    ),
 
   /**
    * Marks shapes as tools for the next fold, or takes the mark off. The same command the toolbar

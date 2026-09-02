@@ -95,6 +95,8 @@
       "scene.model": "Un modèle 3D n’a pas pu être chargé",
       "scene.bvh": "Un modèle 3D n’a pas pu être préparé pour la sélection",
       "scene.carved": "Une forme n’a pas pu être percée",
+      "scene.player": "Un second module joueur n’a pas pu être ajouté : une scène n’en porte qu’un",
+      "scene.playerParts": "Cet objet n’a pas pu être retiré : un module joueur garde son corps et sa caméra",
       "scene.texture": "Une image n’a pas pu être chargée",
       "scene.animation": "Une animation n’a pas pu être posée sur le personnage",
       "scene.export": "L’export de la scène a échoué",

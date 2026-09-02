@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { copiesOf } from './commands'
 import { playerModuleNodes } from './nodeFactory'
 import { cameraNode, groupNode } from './nodeFactory'
-import { playerPartsOf, withBoundPlayerArm } from './playerModule'
+import {
+  leavesPlayerModule,
+  playerPartsOf,
+  tearsPlayerApart,
+  withBoundPlayerArm,
+} from './playerModule'
 import type { SceneNode } from './sceneState'
 
 const armOf = (nodes: readonly SceneNode[], moduleId: string) =>
@@ -85,5 +90,83 @@ describe('what a module points its arm at', () => {
     const nodes = playerModuleNodes().slice(1)
 
     expect(withBoundPlayerArm(nodes)).toBe(nodes)
+  })
+})
+
+/**
+ * The studio had no notion of a node that must CONTAIN something. Without one, `reparent` and
+ * Delete take a module apart in silence and the camera falls back on the sweep — the very
+ * arbitration the module exists to replace.
+ */
+describe('what a module refuses to lose', () => {
+  const scene = () => [...playerModuleNodes()]
+  const idOf = (nodes: readonly SceneNode[], name: string) =>
+    nodes.find(node => node.name === name)?.id ?? ''
+
+  it('is torn by a delete that takes its eye and leaves it standing', () => {
+    const nodes = scene()
+
+    expect(tearsPlayerApart(nodes, [idOf(nodes, 'Camera')])).toBe(true)
+  })
+
+  /** Deleting the module takes everything under it: a whole module going, not a torn one. */
+  it('is not torn by a delete that takes the module itself', () => {
+    const nodes = scene()
+    expect(tearsPlayerApart(nodes, [idOf(nodes, 'Player_Module')])).toBe(false)
+  })
+
+  it('is not torn by a delete of what it does not require', () => {
+    const nodes = scene()
+
+    expect(tearsPlayerApart(nodes, [idOf(nodes, 'Mesh')])).toBe(false)
+  })
+
+  it('is torn by a drag that hangs its body outside the module', () => {
+    const nodes = scene()
+
+    expect(leavesPlayerModule(nodes, idOf(nodes, 'Capsule'), null)).toBe(true)
+  })
+
+  /** Rearranging INSIDE the module is the author's business: only leaving it is refused. */
+  it('is not torn by a drag that keeps the body under the module', () => {
+    const nodes = scene()
+
+    expect(leavesPlayerModule(nodes, idOf(nodes, 'Capsule'), idOf(nodes, 'SpringArm'))).toBe(false)
+  })
+
+  it('says nothing about a node the module does not require', () => {
+    const nodes = scene()
+
+    expect(leavesPlayerModule(nodes, idOf(nodes, 'Mesh'), null)).toBe(false)
+  })
+})
+
+/**
+ * 🛑 `removeNode` takes ONE node and orphans what hung from it — `flattenTree` then drops the
+ * orphan. A node BETWEEN the module and a required part is therefore as costly as the part.
+ */
+describe('a node standing between the module and what it requires', () => {
+  const withHolder = () => {
+    const built = playerModuleNodes()
+    const arm = built.find(node => node.name === 'SpringArm')
+    const holder = { ...groupNode(undefined, 'Rig'), parentId: arm?.id ?? null }
+    return [
+      ...built.map(node => (node.type === 'camera' ? { ...node, parentId: holder.id } : node)),
+      holder,
+    ]
+  }
+
+  it('is refused, since taking it away takes the eye out of the module', () => {
+    const nodes = withHolder()
+    const holder = nodes.find(node => node.name === 'Rig')
+
+    expect(tearsPlayerApart(nodes, [holder?.id ?? ''])).toBe(true)
+  })
+
+  it('still lets go of a node nothing required hangs under', () => {
+    const nodes = withHolder()
+    const mesh = nodes.find(node => node.name === 'Mesh')
+
+    expect(tearsPlayerApart(nodes, [mesh?.id ?? ''])).toBe(false)
   })
 })
