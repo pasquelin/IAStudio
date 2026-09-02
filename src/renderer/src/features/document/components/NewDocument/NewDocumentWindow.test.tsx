@@ -201,6 +201,38 @@ describe('NewDocumentWindow', () => {
     )
   })
 
+  /**
+   * Nothing else in the form answers Enter, and after clicking a template tile or a folder the
+   * focus sits on a button — where Enter used to re-press it instead of making the document.
+   */
+  it('creates on Enter from anywhere in the form, not from the name field alone', async () => {
+    open(ASK)
+    render(<NewDocumentWindow />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cinéma' }))
+    await userEvent.keyboard('{Enter}')
+
+    expect(answer).toHaveBeenCalledWith(
+      made({ kind: 'scene', title: 'Scène 1', folder: 'documents', template: 'cinematic' }),
+    )
+  })
+
+  /** A plain button answers Enter with its own click, and these three keep it. */
+  it('leaves Enter to the buttons that have their own answer to it', async () => {
+    open(ASK)
+    render(<NewDocumentWindow />)
+
+    ;(await screen.findByRole('button', { name: 'Annuler' })).focus()
+    await userEvent.keyboard('{Enter}')
+    expect(answer).toHaveBeenCalledWith(null)
+
+    answer.mockClear()
+    screen.getByRole('button', { name: 'Nouveau dossier' }).focus()
+    await userEvent.keyboard('{Enter}')
+    // The field opened instead: nothing was answered, and a document was certainly not made.
+    expect(answer).not.toHaveBeenCalled()
+  })
+
   describe('with no project open', () => {
     const NO_PROJECT: NewDocumentAsk = {
       ...ASK,

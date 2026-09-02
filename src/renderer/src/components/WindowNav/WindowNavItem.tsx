@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
-import { windowControl } from '../windowStyles'
+import { windowChoice } from '../windowStyles'
 
 export type WindowNavItemProps = {
   /** The one the pane is showing. Said as `aria-current`, which is what a column answers to. */
@@ -38,7 +38,7 @@ export type WindowNavItemProps = {
 /**
  * One entry of that list. The shape was written three times — settings sections, usage sections,
  * manual chapters — each with the same `li`, the same button, and the same two classes over
- * `windowControl`. What genuinely differed was the spacing, which stays with the caller.
+ * `windowChoice`. What genuinely differed was the spacing, which stays with the caller.
  *
  * The hint opens rightwards and no prop says otherwise, unlike the chips of these same windows:
  * a chip sits wherever its row was put, whereas this list IS the column, always against the left
@@ -65,7 +65,7 @@ export function WindowNavItem({
         style={
           depth === undefined ? undefined : { paddingLeft: `calc(var(--sc-indent) * ${depth + 1})` }
         }
-        className={cn(windowControl(active), 'w-full text-left', className)}
+        className={cn(windowChoice(active), 'w-full text-left', className)}
       >
         {children}
       </button>

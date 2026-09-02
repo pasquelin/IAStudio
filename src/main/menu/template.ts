@@ -792,11 +792,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         { type: 'separator' },
         {
           label: t.menu.saveDocument,
+          enabled: abilities.includes('document.save'),
           ...keyOf('document.save'),
           click: () => actions.runCommand('document.save'),
         },
         {
           label: t.menu.saveDocumentAs,
+          enabled: abilities.includes('document.saveAs'),
           ...keyOf('document.saveAs'),
           click: () => actions.runCommand('document.saveAs'),
         },

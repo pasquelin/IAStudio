@@ -201,6 +201,12 @@ export type MenuCheck = CommandId | `scene.display:${DisplayMode}`
  * rather than after the state behind it: the template reads this beside the item it enables.
  */
 export type MenuAbility =
+  /**
+   * The two Save rows. They share one condition — a document in front — and stay two abilities so
+   * that the day one of them refuses on its own, the row it greys is already named.
+   */
+  | 'document.save'
+  | 'document.saveAs'
   | 'scene.exportSelection'
   // Both refuse in silence from the menu, and both are correctly greyed in the Layers panel —
   // the native row was the one path that said nothing: a mask needs a selection to cut from,

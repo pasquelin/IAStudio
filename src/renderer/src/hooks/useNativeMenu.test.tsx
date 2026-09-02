@@ -397,23 +397,26 @@ describe('what the native menu is told', () => {
       useScenes.getState().replace('doc-1', { ...scene, selectedIds: ids })
     }
 
+    /** The two Save rows travel with any document in front, this decor holding one. */
+    const SAVING: MenuAbility[] = ['document.save', 'document.saveAs']
+
     it('offers nothing to export where nothing is picked', () => {
       renderHook(() => useNativeMenu())
-      expect(lastPublished().abilities).toEqual([])
+      expect(lastPublished().abilities).toEqual(SAVING)
     })
 
     /** The scene is the source, so a pick nothing pointed the studio at counts all the same. */
     it('offers the selection export on a pick the studio was never pointed at', () => {
       renderHook(() => useNativeMenu())
       pick(['node-1'])
-      expect(lastPublished().abilities).toEqual(['scene.exportSelection'])
+      expect(lastPublished().abilities).toEqual([...SAVING, 'scene.exportSelection'])
     })
 
     it('takes it back when the selection empties', () => {
       renderHook(() => useNativeMenu())
       pick(['node-1'])
       pick([])
-      expect(lastPublished().abilities).toEqual([])
+      expect(lastPublished().abilities).toEqual(SAVING)
     })
 
     /** A timeline drag writes the scene on every pointer move, and moves nothing that is picked. */
