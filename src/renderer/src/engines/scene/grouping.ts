@@ -265,7 +265,14 @@ export function unhang(object: Object3D): void {
 export const DRAWN_TRIANGLES = 'drawnTriangles'
 
 /** The meshes of one group and the nodes they stand for, index for index. */
-export type Grouped = { key: string; ids: string[]; meshes: Mesh[]; material: Material }
+export type Grouped = {
+  key: string
+  ids: string[]
+  meshes: Mesh[]
+  /** The nodes themselves: what a body DECLARES is on them, and nowhere else. */
+  nodes: SceneNode[]
+  material: Material
+}
 
 /**
  * What both strategies share of a rebuild: which meshes are drawn at all, what a group is keyed
@@ -309,7 +316,8 @@ export function sweep(
     if (held) {
       held.ids.push(node.id)
       held.meshes.push(mesh)
-    } else groups.set(key, { key, ids: [node.id], meshes: [mesh], material })
+      held.nodes.push(node)
+    } else groups.set(key, { key, ids: [node.id], meshes: [mesh], nodes: [node], material })
   }
 
   const worth: Grouped[] = []

@@ -25,6 +25,7 @@ import {
   type InstancedGroups,
   type Placed,
 } from './grouping'
+import { movesOnItsOwn } from '@shared/domain/component'
 import { buildPartition, type CellKey, type WorldPartition } from './worldPartition'
 
 /**
@@ -161,8 +162,13 @@ export function createCellGroups(
   const bucketOf = new WeakMap<InstancedMesh, Bucket>()
   /** One lot per group for the bodies that move, outside every cell — see `Mobile`. */
   const mobiles = new Map<string, Mobile>()
-  /** The bodies that have left the grid. A body that moved once will move again. */
-  const moving = new Set<string>()
+  /**
+   * The bodies the FALLBACK put on a lot: one that moved without ever declaring it would.
+   *
+   * Declaration is the normal path — `movesOnItsOwn` reads what the document says — and this is
+   * what catches the rest. Sticky, because a body that moved once will move again.
+   */
+  const promoted = new Set<string>()
 
   /**
    * Takes a body out of the lot it sits in WITHOUT rebuilding that lot: the last instance is
@@ -185,7 +191,7 @@ export function createCellGroups(
   }
 
   /** A lot of `held` slots for one group, replacing the one it outgrew. */
-  const widen = (key: string, like: InstancedMesh, held: Mobile | undefined): Mobile => {
+  const widen = (key: string, like: InstancedMesh | Mesh, held: Mobile | undefined): Mobile => {
     const room = Math.max(32, (held?.ids.length ?? 0) * 2)
     const mesh = new InstancedMesh(like.geometry, like.material, room)
     mesh.matrixAutoUpdate = false
@@ -209,6 +215,7 @@ export function createCellGroups(
     host.add(mesh)
     const lot: Mobile = { mesh, ids }
     mobiles.set(key, lot)
+    lotOf.set(mesh, lot)
     listStale = true
     return lot
   }
@@ -227,7 +234,7 @@ export function createCellGroups(
     if (!bucket) return
 
     takeOut(at.instance, bucket.ids, at.slot)
-    moving.add(id)
+    promoted.add(id)
 
     const held = mobiles.get(bucket.key)
     const lot =
@@ -243,16 +250,59 @@ export function createCellGroups(
     placed.set(id, { instance: lot.mesh, slot })
   }
 
-  /** A mover the document no longer holds: out of its lot by the same swap, and forgotten. */
-  const demote = (id: string): void => {
+  /** Which lot a mesh IS, so neither a move nor a despawn has to walk them all to find out. */
+  const lotOf = new WeakMap<InstancedMesh, Mobile>()
+
+  /** Whether a body is already drawn by a lot of movers rather than by a cell. */
+  const onLot = (id: string): boolean => {
     const at = placed.get(id)
-    moving.delete(id)
-    if (!at) return
+    return at !== undefined && lotOf.has(at.instance)
+  }
+
+  /**
+   * Puts the movers of one group on its lot, keeping the slot of everyone already there.
+   *
+   * The declared path: nothing is promoted, nothing is taken out of a cell — these bodies were
+   * never put in one. A slot is kept for life, so only the matrices move.
+   */
+  const settleMobile = (key: string, members: Members, like: InstancedMesh | Mesh): void => {
+    if (members.ids.length === 0 && !mobiles.has(key)) return
+    let lot = mobiles.get(key)
+    for (const [at, id] of members.ids.entries()) {
+      const source = members.meshes[at]
+      if (!source) continue
+      const held = placed.get(id)
+      if (lot && held && held.instance === lot.mesh) {
+        lot.mesh.setMatrixAt(held.slot, source.matrixWorld)
+        lot.mesh.instanceMatrix.addUpdateRange(held.slot * 16, 16)
+        continue
+      }
+      if (!lot || lot.ids.length >= lot.mesh.instanceMatrix.count) lot = widen(key, like, lot)
+      const slot = lot.ids.length
+      lot.ids.push(id)
+      lot.mesh.count = lot.ids.length
+      lot.mesh.setMatrixAt(slot, source.matrixWorld)
+      lot.mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
+      placed.set(id, { instance: lot.mesh, slot })
+    }
+    if (lot) lot.mesh.instanceMatrix.needsUpdate = true
+  }
+
+  /**
+   * The bodies a lot holds that this rebuild did not meet: gone from the document, or no longer
+   * declaring that they move. Found in the LOT rather than through `placed`, which `settle` has
+   * already pointed at the cell that just took the body back.
+   */
+  const shed = (seen: ReadonlySet<string>): void => {
     for (const lot of mobiles.values()) {
-      if (lot.mesh !== at.instance) continue
-      takeOut(lot.mesh, lot.ids, at.slot)
-      placed.delete(id)
-      return
+      for (const id of lot.ids.filter(held => !seen.has(held))) {
+        const slot = lot.ids.indexOf(id)
+        if (slot < 0) continue
+        takeOut(lot.mesh, lot.ids, slot)
+        promoted.delete(id)
+        // Only when nothing else claimed it: a body back on the grid keeps the entry `settle` wrote.
+        if (placed.get(id)?.instance === lot.mesh) placed.delete(id)
+      }
     }
   }
 
@@ -306,7 +356,7 @@ export function createCellGroups(
       lot.mesh.dispose()
     }
     mobiles.clear()
-    moving.clear()
+    promoted.clear()
     listStale = true
   }
 
@@ -318,23 +368,32 @@ export function createCellGroups(
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
         const first = worn.meshes[0]
         if (!first) continue
-        for (const [name, members] of splitByCell(worn, index, first.geometry, moving, seen)) {
+        const movers: Members = { cell: null, ids: [], meshes: [] }
+        for (const [name, members] of splitByCell(
+          worn,
+          index,
+          first.geometry,
+          seen,
+          movers,
+          promoted,
+        )) {
           settle(name, members, worn, first.geometry)
           settled.add(name)
         }
+        settleMobile(worn.key, movers, first)
         instanced += worn.meshes.length
       }
       // What nothing settled on holds bodies that left, were hidden, or changed group.
       for (const [name, bucket] of buckets) if (!settled.has(name)) drop(name, bucket)
       // A mover the sweep no longer met is gone from the document — the despawn half of a spawn.
-      for (const id of [...moving]) if (!seen.has(id)) demote(id)
+      shed(seen)
       return instanced
     },
 
     // A body that moves leaves the grid for the lot of movers, and never comes back to it.
     moved: (ids, objectOf) => {
       // Promoted BEFORE the write, so the matrix lands in the lot the body now belongs to.
-      for (const id of ids) if (!moving.has(id)) promote(id, objectOf)
+      for (const id of ids) if (!onLot(id)) promote(id, objectOf)
       const touched = writeMoved(placed, ids, objectOf)
       // Grown, never recut, exactly as the sphere is: a box that shrank under a moving body
       // would hide geometry that is on screen. A mover has neither box nor cell, so this is a
@@ -480,17 +539,20 @@ function splitByCell(
   worn: Grouped,
   index: WorldPartition,
   shape: BufferGeometry,
-  moving: ReadonlySet<string>,
   seen: Set<string>,
+  movers: Members,
+  promoted: ReadonlySet<string>,
 ): Map<string, Members> {
   const held = new Map<string, Members>()
   for (const [at, mesh] of worn.meshes.entries()) {
     const id = worn.ids[at]
     if (id === undefined) continue
-    // A mover keeps its slot on its own lot: putting it back in a cell would rebuild that cell
-    // on every change of content, which is what the layer exists to stop.
-    if (moving.has(id)) {
+    // 🛑 DECLARED, not deduced: what the document says a body does is read off the node, once per
+    // rebuild. Putting a mover back in a cell would rebuild that cell on every change of content.
+    if (promoted.has(id) || movesOnItsOwn(worn.nodes[at]?.components)) {
       seen.add(id)
+      movers.ids.push(id)
+      movers.meshes.push(mesh)
       continue
     }
     // The translation read straight off the world matrix, never `decompose`: a non-uniform scale

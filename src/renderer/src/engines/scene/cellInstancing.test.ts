@@ -13,6 +13,7 @@ import { meshNode, walked } from './scene-fixtures'
 import { isDrawn, WORTH_INSTANCING } from './grouping'
 import { createCellGroups } from './cellInstancing'
 import { CELL_SIZE } from './worldPartition'
+import type { Component } from '@shared/domain/component'
 import type { SceneNode } from './sceneState'
 
 /** Bodies of one shape, laid out by the caller — which is the whole of what a cell is decided by. */
@@ -66,6 +67,9 @@ function aheadAndAside(): {
 /** `count` bodies inside one cell, around `x`. */
 const inOneCell = (count: number, x: number): number[] =>
   Array.from({ length: count }, (_unused, at) => x + at)
+
+/** What a body says of itself when a system drives it — the declared path. */
+const MOVES: Component = { type: 'Movement' }
 
 const host = (): Object3D => new Object3D()
 
@@ -424,7 +428,71 @@ describe('a rebuild after a change of content', () => {
   })
 })
 
-describe('a body that moves', () => {
+describe('a body that DECLARES it moves', () => {
+  const declared = (): {
+    scene: Object3D
+    groups: ReturnType<typeof createCellGroups>
+    nodes: SceneNode[]
+    objects: Map<string, Mesh>
+  } => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    const said = nodes.map(node => (node.id === 'n2' ? { ...node, components: [MOVES] } : node))
+    const groups = createCellGroups(scene)
+    groups.rebuild(said, id => objects.get(id))
+    return { scene, groups, nodes: said, objects }
+  }
+
+  const moverLot = (scene: Object3D): InstancedMesh | undefined =>
+    scene.children.find(child => child instanceof InstancedMesh)
+
+  it('is never put in a cell in the first place', () => {
+    const { scene, groups } = declared()
+
+    // 🛑 Déclaré, pas déduit : le document dit ce qu'un corps fait, et le premier mouvement n'a
+    // plus rien à promouvoir. Une cellule n'est donc jamais défaite pour lui.
+    expect(moverLot(scene)?.count).toBe(1)
+    const cell = groups.drawn()[0]
+    expect(cell instanceof InstancedMesh && cell.count).toBe(WORTH_INSTANCING - 1)
+  })
+
+  it('costs nothing to move, since there is nothing left to promote', () => {
+    const { scene, groups, objects } = declared()
+    const cell = groups.drawn()[0]
+    const mesh = objects.get('n2')
+    if (!mesh) throw new Error('no body to move')
+    mesh.position.set(0, 5, 0)
+    mesh.updateMatrixWorld(true)
+
+    groups.moved(['n2'], id => objects.get(id))
+
+    expect(groups.drawn()).toContain(cell)
+    expect(moverLot(scene)?.instanceMatrix.array[13]).toBe(5)
+  })
+
+  it('keeps its slot across a change of content', () => {
+    const { scene, groups, nodes, objects } = declared()
+
+    groups.rebuild(nodes, id => objects.get(id))
+
+    expect(moverLot(scene)?.count).toBe(1)
+  })
+
+  it('goes back to the grid once it stops declaring it', () => {
+    const { scene, groups, nodes, objects } = declared()
+
+    groups.rebuild(
+      nodes.map(node => ({ ...node, components: [] })),
+      id => objects.get(id),
+    )
+
+    expect(moverLot(scene)?.count).toBe(0)
+    const cell = groups.drawn().find(mesh => mesh instanceof InstancedMesh && mesh.count > 1)
+    expect(cell instanceof InstancedMesh && cell.count).toBe(WORTH_INSTANCING)
+  })
+})
+
+describe('a body that moves without declaring it', () => {
   const moving = (): {
     scene: Object3D
     groups: ReturnType<typeof createCellGroups>
