@@ -123,6 +123,11 @@ export function applyRig(
     parent.add(skinned)
     skinned.bind(skeleton)
   }
+
+  // 🛑 Bound, THEN measured: `bind` reads the mesh's own `matrixWorld`, and a mesh created and
+  // parented a line earlier still carries the identity. The skeleton then stood outside the
+  // body — measured on screen. The skeleton window used to hide it by re-measuring on mount.
+  restInverses(holder)
 }
 
 /**

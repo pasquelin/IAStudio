@@ -99,6 +99,25 @@ describe('putting a rig on a model', () => {
     expect(skinned?.skeleton.bones.map(bone => bone.name)).toEqual(['Hips', 'Spine', 'Head'])
   })
 
+  /**
+   * 🛑 `bind` reads the mesh's own `matrixWorld`, and a mesh created and parented a line earlier
+   * still carries the identity: the character then stood beside its skeleton. Measured on screen
+   * the day the skeleton window stopped re-measuring on mount, which had been hiding it.
+   */
+  it('leaves the skin measured against the rest it was just given', () => {
+    const mesh = plainMesh()
+    const holder = modelWith(mesh)
+    holder.position.set(3, 0, 0)
+
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
+
+    const skinned = skinnedIn(holder)
+    const hips = skinned?.skeleton.bones[0]
+    // The inverse of a bone standing at the rest undoes exactly where that bone stands.
+    expect(skinned?.skeleton.boneInverses[0]?.elements[12]).toBeCloseTo(-3, 5)
+    expect(hips?.matrixWorld.elements[12]).toBeCloseTo(3, 5)
+  })
+
   it('hangs the bones on the model, so they move with it', () => {
     const mesh = plainMesh()
     const holder = modelWith(mesh)

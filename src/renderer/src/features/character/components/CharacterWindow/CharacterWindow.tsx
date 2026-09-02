@@ -28,6 +28,8 @@ import { characterOf, isCharacterDirty, useCharacters } from '@/stores/character
 import { useCharacterView } from '@/stores/characterView'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { nodeById } from '@/engines/scene/sceneState'
+import { renameNode } from '@/engines/scene/commands'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationPanel } from '@/features/animation/components/Animation/AnimationPanel'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
@@ -129,6 +131,17 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
 
     engine.setRestEditing(editingRest)
   }, [editingRest, assetId, nodeId])
+
+  // The band names its subject after the node, and a workshop is laid before the catalogue has
+  // answered: without this its one row reads `asset_d826b135-…` rather than the character.
+  useEffect(() => {
+    if (!nodeId || name === assetId) return
+
+    const scene = sceneOf(useScenes.getState(), workshopIdOf(assetId))
+    if (nodeById(scene, nodeId)?.name === name) return
+
+    useScenes.getState().runCommand(workshopIdOf(assetId), renameNode(nodeId, name))
+  }, [assetId, name, nodeId])
 
   // 🛑 What puts a gizmo on a joint, and paints it as the chosen one. Without it the engine hears
   // its own pick back from nobody: a bone could be named by the panel and still not be held.
@@ -276,7 +289,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             it is exactly the two this window needs — scrubbing, and keying. */}
         <section
           aria-label={t('character.band')}
-          className="bg-monitor mt-(--sc-gutter) h-64 shrink-0 overflow-hidden rounded-(--radius-sc-lg)"
+          className="bg-panel mt-(--sc-gutter) h-64 shrink-0 overflow-hidden rounded-(--radius-sc-lg)"
         >
           <AnimationPanel documentId={workshopIdOf(assetId)} />
         </section>
