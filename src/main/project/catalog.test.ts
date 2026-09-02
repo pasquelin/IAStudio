@@ -64,6 +64,15 @@ describe('catalog', () => {
     expect(catalog.find('asset_mesh')?.type).toBe('mesh')
   })
 
+  it('holds an OpenEXR heightmap as an image', () => {
+    catalog.add(asset({ id: 'asset_height', name: 'height', path: 'World/height.exr' }))
+
+    expect(catalog.find('asset_height')).toMatchObject({
+      type: 'image',
+      path: 'World/height.exr',
+    })
+  })
+
   it('leaves it absent on an asset nothing wrote one for', () => {
     catalog.add(asset())
 

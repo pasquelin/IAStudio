@@ -8,6 +8,8 @@ import {
   sceneHoldsMore,
   type GltfDocumentOptions,
 } from './gltfDocument'
+import { loadHeightmap } from './heightmap'
+import { openExrFloatY } from './openExr-fixtures'
 import { cameraNodeFixture, lightNodeFixture, meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
@@ -121,6 +123,30 @@ describe('gltfDocumentOf', () => {
 })
 
 describe('sceneFromGltf', () => {
+  it('carries a relief heightmap reference, and does not refuse the file', async () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      world: {
+        ...EMPTY_SCENE.world,
+        layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }],
+      },
+    }
+    const document = write(state)
+
+    expect(sceneHoldsMore(document)).toEqual([])
+    const back = sceneFromGltf(document)
+    expect(back.world.layers).toEqual(state.world.layers)
+
+    const values = Float32Array.from({ length: 16 }, (_, at) => at + 0.25)
+    const bytes = openExrFloatY(4, 4, values)
+    const body = new ArrayBuffer(bytes.byteLength)
+    new Uint8Array(body).set(bytes)
+    const assetId = back.world.layers[0]?.heightmap.assetId ?? ''
+    const samples = await loadHeightmap(assetId, async () => body)
+    expect(samples.width).toBe(4)
+    expect(samples.values).toHaveLength(16)
+  })
+
   it('gives back the scene that was written, node for node', () => {
     const state: SceneState = {
       ...EMPTY_SCENE,

@@ -20,6 +20,14 @@ export type FileRole = 'source' | 'edit'
 
 export type FileNature = { domain: FileDomain; role: FileRole }
 
+/** A source file's domain, and whether the studio can show or hold it. */
+export type SourceNature = {
+  domain: AssetType | 'other'
+  openable: boolean
+  /** Held as an asset even when a double-click is not ours — a heightmap `.exr`. */
+  catalogable: boolean
+}
+
 /**
  * What a file IS, by its name alone.
  *
@@ -112,8 +120,8 @@ export function natureOf(fileName: string): FileNature {
  * Which of those the studio can actually SHOW, rather than merely name.
  *
  * Narrower than the domains above on purpose: `.heic`, `.tif`, `.exr` and `.hdr` are pictures
- * nothing here decodes, and `.glb` is the only mesh a loader here reads. Opening one of the
- * others would post an empty tab where handing it to the system still shows the file.
+ * nothing here opens as a tab, and `.glb` is the only mesh a loader here reads. Opening one of
+ * the others would post an empty tab where handing it to the system still shows the file.
  */
 const OPENABLE_EXTENSIONS: readonly string[] = [
   '.png',
@@ -163,19 +171,19 @@ export function opensInStudio(fileName: string): boolean {
  * another application is a picture to adopt, and `natureOf` calls it an edit.
  *
  * `openable` is narrower than a domain on purpose: `.heic` and `.gltf` carry one and nothing here
- * draws them, so adopting one would post a tab over a file the studio cannot show.
+ * draws them in a tab. `catalogable` is the adopt door: an `.exr` is held even so.
  *
  * Narrower than `FileDomain` in its return, and the compiler is what holds it: bytes adopted into
  * the catalogue take an asset TYPE, and `material` is a document rather than one.
  */
-export function sourceNatureOf(fileName: string): {
-  domain: AssetType | 'other'
-  openable: boolean
-} {
+export function sourceNatureOf(fileName: string): SourceNature {
   const extension = documentExtensionOf(fileName).toLowerCase()
+  const domain = DOMAIN_BY_EXTENSION[extension] ?? 'other'
+  const openable = OPENABLE_EXTENSIONS.includes(extension)
   return {
-    domain: DOMAIN_BY_EXTENSION[extension] ?? 'other',
-    openable: OPENABLE_EXTENSIONS.includes(extension),
+    domain,
+    openable,
+    catalogable: openable || extension === '.exr',
   }
 }
 

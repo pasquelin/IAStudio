@@ -387,6 +387,20 @@ describe('sceneFromPayload', () => {
     expect(reread(dressed).world).toEqual(dressed.world)
   })
 
+  it('carries a relief heightmap reference through a round trip', () => {
+    const held: SceneState = {
+      ...EMPTY_SCENE,
+      world: {
+        ...EMPTY_SCENE.world,
+        layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }],
+      },
+    }
+
+    expect(reread(held).world.layers).toEqual([
+      { kind: 'relief', heightmap: { assetId: 'asset_height' } },
+    ])
+  })
+
   // Saving a grouped scene and reopening it dropped every group, leaving their children hanging
   // from a parent nothing answered to — invisible in the outliner, and kept in the file.
   it('carries a group and what hangs from it through a round trip', () => {

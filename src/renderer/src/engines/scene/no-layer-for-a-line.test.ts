@@ -28,6 +28,7 @@ const OTHER_SENSES: Record<string, string> = {
   cellInstancing: 'three.js `Layers`: the same one again, once a cell of the world draws it',
   grouping: 'three.js `Layers`: the constant itself, which both strategies share',
   SceneRenderer: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
+  sceneWorld: 'World relief: a heightmap the scene holds, not a timeline line',
 }
 
 const stemOf = (path: string): string => (path.split('/').pop() ?? '').split('.')[0] ?? ''
