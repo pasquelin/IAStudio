@@ -21,6 +21,7 @@ import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { saveCharacter, type CharacterSkinning } from '@/character/characterSave'
 import { motionExtras, saveCharacterMotion } from '@/character/characterMotion'
 import { useConnections } from '@/hooks/useConnections'
+import { useLatest } from '@/hooks/useLatest'
 import { reportFailure } from '@/services/diagnostics'
 import { useMenuScope } from '@/hooks/useMenuScope'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -69,6 +70,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   // Empty while the file carries its own skin, which is every character rigged elsewhere. What
   // fills it is fitting a skeleton HERE — the weights are the engine's, and it alone has them.
   const [skins, setSkins] = useState<CharacterSkinning>([])
+  const latestSkins = useLatest(skins)
   // What the mesh measures AND what it is made of: a fit reads the first for proportions and
   // the second to pull each joint inside the body.
   const [sample, setSample] = useState<MeshSample | null>(null)
@@ -87,8 +89,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     if (command === 'character.undo') store.undo(assetId)
     if (command === 'character.redo') store.redo(assetId)
     // Awaited by nobody, and nothing to extract: the journal is the only place the failure goes.
+    // The weights through a ref: a save held back behind another reads them as it starts, and
+    // what this closure captured is what the engine had weighed one render ago.
     if (command === 'document.save')
-      void saveCharacter(assetId, skins).catch(error =>
+      void saveCharacter(assetId, () => latestSkins.current).catch(error =>
         reportFailure('document.save', assetId, error),
       )
   }

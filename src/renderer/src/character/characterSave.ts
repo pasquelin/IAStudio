@@ -3,6 +3,7 @@ import type { GlbSkinPatch } from '@/engines/scene/glbSkin'
 import type { CharacterState } from '@/engines/character/characterState'
 import { createGlbWriter, type GlbWriter } from '@/engines/scene/glbWriter'
 import type { StudioBridge } from '@shared/ipc'
+import { orElse } from '@shared/promises'
 import { assetBytes } from '@/helpers/assetFetch'
 import { getBridge } from '@/services/bridge'
 import { characterOf, characterStore } from '@/stores/character'
@@ -17,38 +18,53 @@ export type CharacterSkinning = GlbSkinPatch['skins']
  * 🛑 The container is patched rather than re-exported — see `glbSkin`. Off the UI thread, because
  * a character of a million triangles is tens of megabytes of container to rebuild.
  */
-export async function saveCharacter(assetId: string, skins: CharacterSkinning): Promise<boolean> {
+export async function saveCharacter(
+  assetId: string,
+  /** Read when the write STARTS: one held back reweighs against the skeleton then on screen. */
+  skins: () => CharacterSkinning,
+): Promise<boolean> {
   const bridge = getBridge()
   if (!bridge) return false
 
-  // 🛑 One save at a time, but never a save SKIPPED: a second ⌘S while one is in flight used to
-  // be answered with the first one's promise, so it wrote nothing and still said `true` — asked
-  // again precisely because the first showed nothing. It waits its turn instead.
-  const done = afterward(writing.get(assetId), () => write(bridge, assetId, skins))
+  const running = writing.get(assetId)
+  if (!running) return hold(assetId, write(bridge, assetId, skins))
+
+  // 🛑 One save at a time, but never one SKIPPED: answered with the first one's promise, a
+  // second ⌘S wrote nothing and still said `true`. It waits its turn — and a third joins that
+  // one slot, a write with another behind it being superseded before it lands.
+  const waiting = queued.get(assetId)
+  if (waiting) return waiting
+
+  const next = behind(running, assetId, () => write(bridge, assetId, skins))
+  queued.set(assetId, next)
+  return next
+}
+
+const writing = new Map<string, Promise<boolean>>()
+const queued = new Map<string, Promise<boolean>>()
+
+/** The one write in flight for this character, cleared only by itself. */
+async function hold(assetId: string, done: Promise<boolean>): Promise<boolean> {
   writing.set(assetId, done)
 
   try {
     return await done
   } finally {
-    // Only if nothing queued behind it, or the next ⌘S would run beside this one after all.
     if (writing.get(assetId) === done) writing.delete(assetId)
   }
 }
 
-const writing = new Map<string, Promise<boolean>>()
-
-/** Held back until the write already in flight has landed — never beside it. */
-async function afterward(
-  running: Promise<boolean> | undefined,
+/** Held back until the write in flight has landed, whichever way it landed — never beside it. */
+async function behind(
+  running: Promise<boolean>,
+  assetId: string,
   next: () => Promise<boolean>,
 ): Promise<boolean> {
-  try {
-    await running
-  } catch {
-    // The write before this one reported its own failure; this one still owes its own answer.
-  }
+  await orElse(running, false)
+  // Let go of the slot as this one STARTS: the ⌘S after it queues behind this write, not with it.
+  queued.delete(assetId)
 
-  return next()
+  return hold(assetId, next())
 }
 
 /** The port, kept: its worker drags all of three.js, and a ⌘S paid for that parse every time. */
@@ -57,24 +73,24 @@ let writer: GlbWriter | null = null
 async function write(
   bridge: StudioBridge,
   assetId: string,
-  skins: CharacterSkinning,
+  skins: () => CharacterSkinning,
 ): Promise<boolean> {
-  // Read as the write STARTS and not when ⌘S was pressed: one held back behind another would
-  // otherwise write the skeleton as it stood before the wait, over the one now on screen.
+  // 🛑 Bones and weights read TOGETHER, as the write starts: a write held back behind another
+  // wrote the skeleton of now with the weights of before, and `JOINTS_0` indexes those bones.
   const current = characterStore.use.getState()
   const state = characterOf(current, assetId)
   if (!state.rig) return false
 
-  // 🛑 The mark BEFORE the write, handed back after it — `documentStore.markSaved` spells the
-  // rule and `documentIo` follows it: rebuilding tens of megabytes takes seconds, and a joint
-  // dragged during them is in no file. Read afterwards, it was counted as saved all the same.
+  // The mark BEFORE the write, handed back after it — `documentStore.markSaved` spells the rule
+  // and `documentIo` follows it: rebuilding tens of megabytes takes seconds, and a joint dragged
+  // during them is in no file.
   const mark = characterStore.markOf(current, assetId)
   const file = await assetBytes(assetId)
   writer ??= createGlbWriter(() => new GlbWriteWorker())
 
   const written = await writer.write(file, {
     bones: state.rig.bones,
-    skins,
+    skins: skins(),
     extras: extrasOf(state),
   })
   if (!written) return false
