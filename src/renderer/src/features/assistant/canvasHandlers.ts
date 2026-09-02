@@ -1,8 +1,9 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { aimedAt, type Target } from '@shared/domain/target'
 import { packedColour } from '@shared/domain/color'
-import { toRadians } from '@shared/domain/angles'
+import { toDegrees, toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { PIXEL_SHAPES, type PixelShape } from '@shared/domain/pixelShape'
 import { embeddedFontOf, FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
@@ -31,6 +32,8 @@ import {
   localShape,
   SHAPE_INK,
 } from '@/engines/canvas/shapeGeometry'
+import { cellRect, cellsOfLine, cellsOfRect, gridOf } from '@/engines/canvas/pixelGrid'
+import { canvasHost } from '@/features/image/canvasHosts'
 import type { Point, Size } from '@/engines/core/geometry'
 import {
   addGuide,
@@ -46,6 +49,7 @@ import {
   removeLayer,
   renameLayer,
   resizeCanvas,
+  setPixelCell,
   resizeImage,
   rotateImage,
   setLayerAdjustment,
@@ -67,7 +71,7 @@ import { turnPort } from '@/features/image/turnPort'
 import { canvasOf, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { activeImageId, useDocuments } from '@/stores/documents'
 import type { ActionHandlers } from './actionHandler'
-import { boolOf, composedNumber, numberOf, oneOf, textOf, textsOf } from './actionInputs'
+import { boolOf, composedNumber, namedOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The layer stack, driven by value.
@@ -134,15 +138,21 @@ function editLayer(
   build: (layer: Layer, state: CanvasState) => Commands,
   /** What a caller does when the layer IS there and the builder still declines. */
   nothing: string,
+  /** What the call answers, read off the layer AFTER the commands — see `namedOf`. */
+  answer?: (layer: Layer) => unknown,
 ): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_IMAGE)
 
   const named = textOf(input, 'layerId')
   const layer = layerAimed(open.state, named)
-  return layer
-    ? run(open.documentId, build(layer, open.state), nothing)
-    : refused('notFound', noLayer(named))
+  if (!layer) return refused('notFound', noLayer(named))
+
+  const outcome = run(open.documentId, build(layer, open.state), nothing)
+  if (!outcome.ok || !answer) return outcome
+
+  const after = layerById(canvasOf(useCanvases.getState(), open.documentId), layer.id)
+  return after ? { ok: true, data: answer(after) } : outcome
 }
 
 /** What a caller does about a layer nobody answers to — spelled once for the two sites. */
@@ -172,6 +182,7 @@ function readState(): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_IMAGE)
 
+  const grid = gridOf(open.state)
   return {
     ok: true,
     data: {
@@ -179,6 +190,9 @@ function readState(): ActionOutcome {
       width: open.state.width,
       height: open.state.height,
       dpi: open.state.dpi,
+      // Derived rather than stored, and the only thing a client needs in order to place a cell:
+      // asked to work it out from a size and a cell, a model gets it wrong one time in three.
+      ...(grid === null ? {} : { pixelArt: grid }),
       activeLayerId: open.state.activeLayerId,
       guides: open.state.guides,
       // Flattened: a client that had to walk a tree to find a layer id would walk it wrong the
@@ -320,6 +334,7 @@ function style(input: Record<string, unknown>): ActionOutcome {
       ...(input.clipped === undefined ? [] : [setLayerClipped(id, boolOf(input, 'clipped'))]),
     ],
     'this call named nothing to set: opacity, fillOpacity, blend, visible or clipped',
+    layer => namedOf(input, layer),
   )
 }
 
@@ -350,6 +365,11 @@ function transform(input: Record<string, unknown>): ActionOutcome {
       }),
     ],
     'nothing to move: this layer takes x, y, scaleX, scaleY or rotation',
+    // Degrees back, as they came in.
+    layer => ({
+      ...namedOf(input, layer.transform),
+      ...(degrees === null ? {} : { rotation: toDegrees(layer.transform.rotation) }),
+    }),
   )
 }
 
@@ -520,18 +540,30 @@ function group(input: Record<string, unknown>): ActionOutcome {
 
   // Top level only, which is all `groupLayers` gathers: an id that names nothing, or one that sits
   // INSIDE a group, would otherwise be dropped in silence and the group answered for regardless.
+  // By id OR by NAME, as every other layer gesture: a name read out of `canvas.state` was answered
+  // « not at the top of the stack », which blames the stack for a lookup that never happened.
   const top = new Set(open.state.layers.map(layer => layer.id))
-  const outside = layerIds.filter(id => !top.has(id))
+  const aimed = layerIds.map(given => layerAimed(open.state, given))
+  const outside = layerIds.filter((_, at) => {
+    const layer = aimed[at]
+    return layer === undefined || !top.has(layer.id)
+  })
   if (outside.length > 0)
     return refused(
       'notFound',
-      `only layers at the top of the stack can be grouped, and ${outside.join(', ')} is not one — canvas.state answers "layers" with their ids`,
+      `only layers at the top of the stack can be grouped, and ${outside.join(', ')} is not one — canvas.state answers "layers" with their ids and names`,
     )
 
   const groupId = newId()
   const outcome = run(
     open.documentId,
-    [groupLayers(layerIds, groupId, name)],
+    [
+      groupLayers(
+        aimed.flatMap(layer => (layer ? [layer.id] : [])),
+        groupId,
+        name,
+      ),
+    ],
     'those layers built no group',
   )
   return outcome.ok ? { ok: true, data: { layerId: groupId } } : outcome
@@ -663,9 +695,145 @@ function editGuide(
       )
 }
 
+/**
+ * The document's grid, set in CELLS. Without a count only the mode changes; with one the document
+ * is resized to `columns × cell` so the artwork measures what was asked for.
+ *
+ * 🛑 A resize drops the pixel history: a patch names its rectangle in its own surface's
+ * coordinates, and `resurface` cannot carry those. Said in the action's description too.
+ */
+function setPixelArt(input: Record<string, unknown>): ActionOutcome {
+  const enabled = boolOf(input, 'enabled')
+  const cell = numberOf(input, 'cell') ?? 1
+  const columns = numberOf(input, 'columns')
+  const rows = numberOf(input, 'rows')
+
+  // 🛑 Both counts or neither: one alone was DROPPED and answered `ok`, so a model asking for
+  // « 32 columns » got the document's own size back and then placed cells on a grid of 512.
+  if ((columns === null) !== (rows === null))
+    return refused('badInput', 'a grid wants "columns" AND "rows", in cells — or neither of them')
+
+  return edit(() => {
+    const sized =
+      enabled && columns !== null && rows !== null
+        ? [resizeCanvas(columns * cell, rows * cell, { x: 0, y: 0 })]
+        : []
+    return [...sized, setPixelCell(enabled ? cell : null)]
+    // No sentence for « nothing happened »: the builder always hands `setPixelCell` back, so
+    // `run` never reaches its empty-list refusal from here.
+  }, '')
+}
+
+/** What each shape wants, said so a caller can repair its own call. */
+const PIXEL_INPUT: Record<PixelShape, string> = {
+  points: '"cells" wants at least one cell, each written "x,y" — for example ["3,4", "3,5"]',
+  line: 'a line wants "x", "y", "toX" and "toY", in cells',
+  rectangle: 'a rectangle wants "x", "y", "toX" and "toY", in cells — "filled" fills it',
+  fill: 'a fill takes the whole layer, or the box named by "x", "y", "toX" and "toY"',
+}
+
+/** A cell as « x,y ». 🛑 Both halves WANTED and non-empty: `Number('')` is zero, and "3" then
+ * "3," both landed on row nought — counting the commas was not enough. */
+const CELL_WRITTEN = /^\s*(-?\d+)\s*,\s*(-?\d+)\s*$/
+
+function cellsAsked(input: Record<string, unknown>): Point[] | null {
+  const cells = textsOf(input, 'cells').flatMap(one => {
+    const said = CELL_WRITTEN.exec(one)
+    return said ? [{ x: Number(said[1]), y: Number(said[2]) }] : []
+  })
+  return cells.length === textsOf(input, 'cells').length ? cells : null
+}
+
+/** Which cells a shape covers, in grid coordinates. `null` when the input cannot name them. */
+function shapeCells(
+  shape: PixelShape,
+  input: Record<string, unknown>,
+  columns: number,
+  rows: number,
+): readonly Point[] | null {
+  if (shape === 'points') return cellsAsked(input)
+
+  const from = { x: numberOf(input, 'x'), y: numberOf(input, 'y') }
+  if (shape === 'fill' && from.x === null)
+    return cellsOfRect({ x: 0, y: 0 }, { x: columns - 1, y: rows - 1 }, true)
+  if (from.x === null || from.y === null) return null
+
+  const to = { x: numberOf(input, 'toX'), y: numberOf(input, 'toY') }
+  if (to.x === null || to.y === null) return null
+
+  if (shape === 'line') return cellsOfLine({ x: from.x, y: from.y }, { x: to.x, y: to.y })
+
+  // 🛑 A FILLED box is clipped to the grid before it is walked, never after: every cell it drops
+  // was going to be dropped anyway, and « fill 0 to 99 999 » then costs the document rather than
+  // 264 ms of the UI thread. An OUTLINE cannot be clipped — the border would move onto the edge
+  // of the grid, drawing four sides nobody asked for.
+  const filled = shape === 'fill' || boolOf(input, 'filled')
+  const within = (value: number, last: number): number => Math.min(Math.max(value, 0), last)
+  return filled
+    ? cellsOfRect(
+        { x: within(from.x, columns - 1), y: within(from.y, rows - 1) },
+        { x: within(to.x, columns - 1), y: within(to.y, rows - 1) },
+        true,
+      )
+    : cellsOfRect({ x: from.x, y: from.y }, { x: to.x, y: to.y }, false)
+}
+
+function drawPixels(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface', NO_IMAGE)
+
+  const grid = gridOf(open.state)
+  if (grid === null)
+    return refused(
+      'badInput',
+      'this image is not on a pixel grid — canvas.setPixelArt puts it on one',
+    )
+  const { cell, columns, rows } = grid
+
+  const shape = oneOf(input, 'shape', PIXEL_SHAPES)
+  if (!shape) return refused('badInput', `"shape" must be one of: ${PIXEL_SHAPES.join(', ')}`)
+
+  const erase = boolOf(input, 'erase')
+  const written = textOf(input, 'color')
+  if (erase === (written !== null))
+    return refused('badInput', 'name a "color" or ask to "erase", one of the two and not both')
+  const color = erase ? null : packedColour(written ?? '')
+  if (!erase && color === null)
+    return refused('badInput', `"${written ?? ''}" is not a colour — write one as "#rrggbb"`)
+
+  const asked = shapeCells(shape, input, columns, rows)
+  if (asked === null || asked.length === 0) return refused('badInput', PIXEL_INPUT[shape])
+
+  // Outside the grid is DROPPED, never folded back: a cell at 40 on a grid of 32 is a mistake,
+  // and painting it at 8 would answer a request nobody made.
+  const inside = asked.filter(at => at.x >= 0 && at.y >= 0 && at.x < columns && at.y < rows)
+  if (inside.length === 0)
+    return refused('badInput', `no cell of that lands on a grid of ${columns} by ${rows}`)
+
+  // By id OR by name, as `editLayer` twenty lines up: `canvas.state` answers both, and a model
+  // that copied the NAME out of it was told the layer did not exist.
+  const named = textOf(input, 'layerId')
+  const layer = layerAimed(open.state, named)
+  if (named !== null && !layer) return refused('notFound', noLayer(named))
+
+  const painted = canvasHost(open.documentId)?.paintCells(
+    layer?.id ?? null,
+    inside.map(at => cellRect(at, cell)),
+    color,
+  )
+  return painted
+    ? { ok: true }
+    : refused(
+        'notFound',
+        'nothing was painted: no such layer, or it is a group, or its pixels are padlocked, or it is a caption or a shape, or the cells fall outside the selection',
+      )
+}
+
 export const CANVAS_HANDLERS: ActionHandlers = {
   'canvas.state': readState,
   'canvas.resize': resize,
+  'canvas.setPixelArt': setPixelArt,
+  'canvas.drawPixels': drawPixels,
   'canvas.crop': crop,
   'canvas.flipOrRotate': input => {
     const turn = TURNS[textOf(input, 'turn') ?? '']

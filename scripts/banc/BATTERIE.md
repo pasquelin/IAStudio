@@ -92,7 +92,7 @@ passe en ne faisant rien » :
 - **Ouvrir une image crée DÉJÀ son calque.** Le décor en ajoutait un second, et tous les comptes
   de calques étaient décalés de un.
 - **Un rail naît avec deux points**, donc « ajoute un point » se lit à trois.
-- **Un squelette posé nomme déjà `LeftHand` et `RightHand`** : ce que `rig.hands` ajoute, ce sont
+- **Un squelette posé nomme déjà `LeftHand` et `RightHand`** : ce que `rig.configureHands` ajoute, ce sont
   les doigts.
 - **Une copie s'appelle « … 2 »**, jamais « copie de … » : c'est `planFiles` qui la nomme.
 - **`path.addPoint` prend les trois axes ou aucun** — en nommer un seul est un `badInput`.
@@ -132,11 +132,11 @@ qu'un scénario tiendra demain.
 
 **`MCP reached: 200/230`.** Les trente actions que `coverage.ts` déclarait couvertes et qu'aucun
 run n'a touchées — chacune est un outil publié sur le fil MCP que personne n'a vu marcher :
-`prompt.describeStyle`, `actions.find`, `files.undoFileOperation`, `files.redoFileOperation`, `files.readUndoStack`,
+`prompt.describeStyle`, `actions.find`, `files.undoFileOperation`, `files.redoFileOperation`, `files.canUndoRedo`,
 `cost.estimate`, `job.cancelCloudGeneration`, `asset.reveal`, `layer.editShapeLayer`, `guide.remove`, `clip.speed`,
 `track.add`, `skybox.setSourceImage`, `cloud.explorePublicFeed`, `cloud.pull`, `node.setPrimitiveParameters`, `model.textures`,
 `bone.remove`, `animation.removeBlock`, `animation.setBlockSettings`, `key.writeKeysOnOpenChannels`, `git.diff`, `git.stage`,
-`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.deleteProjectCard`, `settings.pressButton`,
+`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.deleteProjectCard`, `settings.triggerAction`,
 `accounts.activate`.
 
 ### Ce que les chaînes disent, par volume
@@ -797,6 +797,9 @@ Sur mon personnage principal, dans la scène Test MCP :
 - [ ] « Ajoute une contrainte IK sur sa jambe gauche. »
 - [ ] « Retire cette contrainte IK. »
 - [x] « Enlève complètement le squelette de ce personnage. »
+- [ ] « Pose un point d'attache sur sa main droite, appelé Main Droite. »
+- [ ] « Accroche le cube à Main Droite. »
+- [ ] « Retire le point d'attache Main Droite. »
 
 ## 51. Calques avancés et repères
 
@@ -996,3 +999,23 @@ Ce que la section mesure au-delà de son décor : que le modèle DEMANDE ce qu'i
 - [ ] « Donne-moi le détail de ce que tu sais sur les caméras. »
 - [ ] « Oublie ce que tu as retenu sur les caméras. »
 - [ ] « Relie ce que tu sais des caméras à ce que tu sais du script. »
+
+## 68. Le pixel art
+
+Une grille se règle en CELLULES — « une grille de 32 sur 32 » — et le studio en déduit la taille
+du document. Les coordonnées d'un dessin sont en cellules, jamais en pixels du document : c'est
+la seule chose qu'un modèle ne peut pas déduire, et `canvas.state` la lui rend.
+
+🛑 **Ce que la section ne mesure pas** : ce qu'un modèle d'image REND. Ajouter « pixel art » au
+prompt obtient un 1024 « façon pixel art », pas un vrai 32 × 32. 68.8 mesure les mots envoyés,
+rien d'autre.
+
+- [ ] « Passe ce document en pixel art, avec une grille de 32 sur 32. »
+- [ ] « Le mode pixel art est-il actif, et quelle est la taille de la grille ? »
+- [ ] « Pose un pixel rouge en 3, 4. »
+- [ ] « Trace une ligne noire du coin haut gauche au coin bas droit. »
+- [ ] « Dessine un carré bleu plein de 8 sur 8 au centre de la grille. »
+- [ ] « Remplis tout le calque en blanc. »
+- [ ] « Efface le pixel en 3, 4. »
+- [ ] « Génère un sprite de personnage. »
+- [ ] « Enlève la grille de pixel art de ce document. »

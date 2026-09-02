@@ -44,7 +44,7 @@ telling you what they are missing in order to fill up.
 
 | What you read | What it means |
 |---|---|
-| "No project open" | you need to create or open a project (`⌘N` / `⌘O`) |
+| "No project open" | you need to create or open a project (`⌘N` then one click, or `⌘O`) |
 | "No document open. Generate or open an asset to get started." | the centre of the window is waiting for a first tab |
 | "No asset yet. Generate something to get started." | the project's folder is still empty |
 | "No generation running." | nothing is generating right now — the generations list is empty |

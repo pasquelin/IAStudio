@@ -43,9 +43,9 @@ import {
   hitAnimation,
   type AnimationHit,
   type HitContext,
-} from '@/engines/scene/animationHit'
+} from '@/engines/timeline/bandHit'
 import type { Point } from '@/engines/core/geometry'
-import { paintAnimation, keyId, keyParts } from '@/engines/scene/animationPainter'
+import { paintAnimation, keyId, keyParts } from '@/engines/timeline/bandPainter'
 import { rowsHeight, maxOffsetFor, maxScrollTopFor } from '@/engines/timeline/band'
 import {
   RULER_HEIGHT,
@@ -59,7 +59,8 @@ import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import type { Size } from '@/engines/core/geometry'
 import { paintOn } from '@/engines/core/canvas2d'
 import { createFrameCoalesce } from '@/engines/core/frameCoalesce'
-import { trackIdsOf, type AnimationRow } from '@/engines/scene/animationRows'
+import { trackIdsOf } from '@/engines/scene/animationRows'
+import { type AnimationRow } from '@/engines/timeline/bandRows'
 import { clamp } from '@shared/numeric'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes } from '@/stores/scenes'

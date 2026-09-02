@@ -1,3 +1,4 @@
+import type { CharacterSocket } from '@shared/domain/character'
 import { create } from 'zustand'
 import { withoutKey } from '@/helpers/objects'
 import type { RetargetFit } from '@/engines/scene/retarget'
@@ -25,15 +26,15 @@ type ModelFilesState = {
     lengths?: Readonly<Record<string, number>>,
   ) => void
   reportRig: (documentId: string, nodeId: string, rig: RigState) => void
+  /**
+   * The attachment points each character carries, by node. They live in the `.glb`, so only the
+   * engine that loaded it ever sees them — and the inspector has to offer them by name.
+   */
+  sockets: Record<string, Record<string, readonly CharacterSocket[]>>
+  reportSockets: (documentId: string, nodeId: string, sockets: readonly CharacterSocket[]) => void
   /** How many MATERIALS each model's file carries — its slots. The count lives in the GLB. */
   materials: Record<string, Record<string, number>>
   reportMaterials: (documentId: string, nodeId: string, count: number) => void
-  /**
-   * How far along binding a model's skeleton is, 0 to 1. Absent means "not binding" — which a
-   * number cannot say, and a model at 0 has to read differently from one nobody asked about.
-   */
-  rigProgress: Record<string, Record<string, number>>
-  reportRigProgress: (documentId: string, nodeId: string, progress: number) => void
   /**
    * How well each foreign clip fits the character playing it, by `clipKeyOf`.
    *
@@ -57,7 +58,6 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
   clips: {},
   rigs: {},
   materials: {},
-  rigProgress: {},
   lengths: {},
   fits: {},
   report: (documentId, nodeId, clips, lengths) =>
@@ -79,6 +79,15 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       },
     })),
 
+  sockets: {},
+  reportSockets: (documentId, nodeId, sockets) =>
+    set(state => ({
+      sockets: {
+        ...state.sockets,
+        [documentId]: { ...state.sockets[documentId], [nodeId]: sockets },
+      },
+    })),
+
   reportMaterials: (documentId, nodeId, count) =>
     set(state => ({
       materials: {
@@ -86,16 +95,6 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
         [documentId]: { ...state.materials[documentId], [nodeId]: count },
       },
     })),
-
-  reportRigProgress: (documentId, nodeId, progress) =>
-    set(state => {
-      const forDocument = { ...state.rigProgress[documentId] }
-      // Taken out at the end rather than left at 1: what says "binding" is the field being there.
-      if (progress >= 1) delete forDocument[nodeId]
-      else forDocument[nodeId] = progress
-
-      return { rigProgress: { ...state.rigProgress, [documentId]: forDocument } }
-    }),
 
   reportClipFit: (documentId, nodeId, clipKey, fit) =>
     set(state => {
@@ -115,7 +114,6 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
     set(state => ({
       clips: withoutKey(state.clips, documentId),
       rigs: withoutKey(state.rigs, documentId),
-      rigProgress: withoutKey(state.rigProgress, documentId),
       lengths: withoutKey(state.lengths, documentId),
       fits: withoutKey(state.fits, documentId),
       materials: withoutKey(state.materials, documentId),
@@ -146,15 +144,6 @@ export function clipLengthOf(
   clip: string,
 ): number | null {
   return state.lengths[documentId]?.[nodeId]?.[clip] ?? null
-}
-
-/** How far along a node's bind is, or `null` when nothing is being bound for it. */
-export function rigProgressOfNode(
-  state: ModelFilesState,
-  documentId: string,
-  nodeId: string,
-): number | null {
-  return state.rigProgress[documentId]?.[nodeId] ?? null
 }
 
 /** What a node's model is, or nothing at all while its file has not landed. */

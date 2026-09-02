@@ -2,7 +2,7 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 import { APP_NAME } from '@shared/constants'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
-import { COMMAND_REGISTRY } from '@shared/domain/command'
+import { COMMAND_REGISTRY, scopeOfWorkspace } from '@shared/domain/command'
 import {
   DISPLAY_MODES,
   EXPORT_FORMATS,
@@ -14,6 +14,7 @@ import { CAPTURE_QUALITIES } from '@shared/domain/sceneCapture'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import type { DocumentKind } from '@shared/domain/document'
+import type { RecentDocument } from '@shared/domain/project'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
@@ -24,6 +25,8 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   toggleFullScreen: () => {},
   openTool: () => {},
   runCommand: () => {},
+  newDocument: () => {},
+  openRecent: () => {},
   addNode: () => {},
   viewFrom: () => {},
   setDisplay: () => {},
@@ -34,15 +37,23 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   ...overrides,
 })
 
-const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
+/** The scope derived from the space and the kind, as the studio window derives it before announcing. */
+const options = ({
+  kind = null,
+  workspace = '3d',
+  ...given
+}: Partial<MenuOptions> & { kind?: DocumentKind | null } = {}): MenuOptions => ({
   language: 'fr',
-  workspace: '3d',
-  kind: 'scene',
+  workspace,
+  scope: scopeOfWorkspace(workspace, kind),
   tools: ['meshes', 'lights', 'explorer', 'generator', 'inspector', 'assets'],
   checked: [],
   abilities: [],
   isMac: true,
   isDevelopment: true,
+  openProject: '/projects/One',
+  recentProjects: [],
+  recentDocuments: [],
   overrides: {},
   actions: actions(),
   ...given,
@@ -338,6 +349,17 @@ describe('the Edit menu', () => {
     })
   })
 
+  // The skeleton window: no space, no document, a history all the same.
+  it('binds undo to a history the window reports without any space', () => {
+    const entries = submenuOf(
+      menuTemplate(options({ workspace: null, scope: 'character' })),
+      'Édition',
+    )
+
+    expect(entries[0]?.id).toBe('character.undo')
+    expect(entries[1]?.id).toBe('character.redo')
+  })
+
   /**
    * What the menu does when the focused window names no surface at all — the settings window,
    * the splash: the platform keeps the key rather than a command answering for a history the
@@ -545,12 +567,179 @@ describe('menuTemplate', () => {
   })
 })
 
+describe('File ▸ New file', () => {
+  const newFileItems = (given: Partial<MenuOptions> = {}) =>
+    submenuOf(submenuOf(menuTemplate(options(given)), 'Fichier'), 'Nouveau fichier')
+
+  /**
+   * Every kind, from every space. `gui` is the one this row exists for: it was reachable from
+   * nowhere at all, the New button reading only the head of its space's kinds.
+   */
+  it('offers every kind of document, in the order of the rail', () => {
+    expect(newFileItems().map(item => item.label)).toEqual([
+      'Image',
+      'Vidéo',
+      'Scène',
+      'Interface',
+      'Script',
+      'Audio',
+      'Matière',
+      'Ciel',
+    ])
+  })
+
+  it('asks the window for the kind of the row that was picked', () => {
+    const asked: DocumentKind[] = []
+    const items = submenuOf(
+      submenuOf(
+        menuTemplate(
+          options({ actions: actions({ newDocument: ({ kind }) => asked.push(kind) }) }),
+        ),
+        'Fichier',
+      ),
+      'Nouveau fichier',
+    )
+
+    items
+      .find(item => item.label === 'Interface')
+      ?.click?.(null as never, undefined as never, null as never)
+
+    expect(asked).toEqual(['gui'])
+  })
+
+  /**
+   * A document is a file in a project folder: with none open the row would fail after the click
+   * rather than before it. Greyed and not dropped — a menu that changes length is a menu one has
+   * to read again.
+   */
+  it('greys every kind with no project open, and keeps them all', () => {
+    const items = newFileItems({ openProject: null })
+
+    expect(items).toHaveLength(8)
+    expect(items.every(item => item.enabled === false)).toBe(true)
+  })
+})
+
+/**
+ * Both refuse in silence over a screen with no document — `routeCommand` answers `noSurface` and
+ * nothing on the menu said so, which is what an enabled row promises it will not do.
+ */
+describe('the two Save rows', () => {
+  const saveRows = (given: Partial<MenuOptions> = {}) =>
+    submenuOf(menuTemplate(options(given)), 'Fichier').filter(item =>
+      ['Enregistrer', 'Enregistrer sous…'].includes(item.label ?? ''),
+    )
+
+  it('answer with a document in front', () => {
+    const rows = saveRows({ abilities: ['document.save', 'document.saveAs'] })
+
+    expect(rows.map(row => row.enabled)).toEqual([true, true])
+  })
+
+  it('are greyed with none', () => {
+    expect(saveRows().map(row => row.enabled)).toEqual([false, false])
+  })
+})
+
+describe('File ▸ Open recent', () => {
+  const PROJECTS = [
+    { path: '/projects/One', openedAt: '2026-09-01T10:00:00.000Z', createdAt: '2026-08-01' },
+    { path: '/projects/Two', openedAt: '2026-09-02T10:00:00.000Z', createdAt: '2026-08-02' },
+  ]
+
+  const DOCUMENTS: RecentDocument[] = [
+    {
+      project: '/projects/One',
+      path: 'Modelling/Scenes/Niveau.gltf',
+      kind: 'scene',
+      openedAt: '2026-09-02T11:00:00.000Z',
+    },
+    {
+      project: '/projects/Two',
+      path: 'Images/Planche.ora',
+      kind: 'image',
+      openedAt: '2026-09-02T10:00:00.000Z',
+    },
+  ]
+
+  const recentItems = (given: Partial<MenuOptions> = {}) =>
+    submenuOf(submenuOf(menuTemplate(options(given)), 'Fichier'), 'Ouvrir récent')
+
+  it('lists the projects newest first, then the documents last opened first', () => {
+    const items = recentItems({ recentProjects: PROJECTS, recentDocuments: DOCUMENTS })
+
+    expect(items.map(item => item.label ?? item.type)).toEqual([
+      'Two',
+      'One',
+      'separator',
+      'Niveau',
+      'Planche — Two',
+    ])
+  })
+
+  /** A row that performs a project SWITCH has to say so before it is clicked. */
+  it('names the project only where it is not the one in front', () => {
+    const items = recentItems({
+      openProject: '/projects/Two',
+      recentProjects: [],
+      recentDocuments: DOCUMENTS,
+    })
+
+    expect(items.map(item => item.label)).toEqual(['Niveau — One', 'Planche'])
+  })
+
+  it('asks for the project alone on a project row, and for both on a document', () => {
+    const asked: unknown[] = []
+    const items = submenuOf(
+      submenuOf(
+        menuTemplate(
+          options({
+            recentProjects: PROJECTS,
+            recentDocuments: DOCUMENTS,
+            actions: actions({ openRecent: request => asked.push(request) }),
+          }),
+        ),
+        'Fichier',
+      ),
+      'Ouvrir récent',
+    )
+
+    const fire = (label: string) =>
+      items
+        .find(item => item.label === label)
+        ?.click?.(null as never, undefined as never, null as never)
+
+    fire('Two')
+    fire('Planche — Two')
+
+    expect(asked).toEqual([
+      { project: '/projects/Two' },
+      { project: '/projects/Two', path: 'Images/Planche.ora' },
+    ])
+  })
+
+  /** An empty submenu is a row that looks broken — a first launch has nothing to list. */
+  it('is not there at all with nothing to list', () => {
+    const file = submenuOf(menuTemplate(options()), 'Fichier')
+
+    expect(file.find(item => item.label === 'Ouvrir récent')).toBeUndefined()
+  })
+})
+
 describe('the accelerators the menu advertises', () => {
   const fileItems = (given: Partial<MenuOptions> = {}) =>
     submenuOf(menuTemplate(options(given)), 'Fichier')
 
   it('reads them off the command registry rather than spelling them out', () => {
     const item = fileItems().find(entry => entry.label === 'Nouveau projet…')
+
+    // ⌥⌘N since 2026-09-02: ⌘N makes a FILE here as it does everywhere else, and ⇧⌘N is the
+    // Explorer's New folder.
+    expect(item?.accelerator).toBe('Alt+CmdOrCtrl+N')
+  })
+
+  it('gives ⌘N to the window that makes a file, as every other application does', () => {
+    const item = fileItems().find(entry => entry.label === 'Nouveau…')
 
     expect(item?.accelerator).toBe('CmdOrCtrl+N')
   })

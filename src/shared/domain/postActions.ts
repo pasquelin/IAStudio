@@ -181,9 +181,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
    * shows; the delta against the stack is arithmetic nobody outside should have to do.
    */
   action({
-    name: 'post.key',
-    titleKey: 'assistant.actions.postKey.title',
-    descriptionKey: 'assistant.actions.postKey.description',
+    name: 'post.addKeyframe',
+    titleKey: 'assistant.actions.postAddKeyframe.title',
+    descriptionKey: 'assistant.actions.postAddKeyframe.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -195,9 +195,9 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'post.unkey',
-    titleKey: 'assistant.actions.postUnkey.title',
-    descriptionKey: 'assistant.actions.postUnkey.description',
+    name: 'post.removeKeyframe',
+    titleKey: 'assistant.actions.postRemoveKeyframe.title',
+    descriptionKey: 'assistant.actions.postRemoveKeyframe.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

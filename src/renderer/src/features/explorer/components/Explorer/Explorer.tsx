@@ -16,7 +16,7 @@ import {
   type DocumentDescriptor,
 } from '@shared/domain/document'
 import { stemOf } from '@shared/domain/fileName'
-import { touchesDocuments, type FileHistory, type FileOutcome } from '@shared/domain/fileOp'
+import type { FileHistory, FileOutcome } from '@shared/domain/fileOp'
 import { canMoveInto, FOLDER_ROOT, isPrivatePath, nameOf, parentOf } from '@shared/domain/folder'
 import { natureOf } from '@shared/domain/fileRole'
 import { FOLDER_ROLES, WORKSPACE_BY_ROLE, type FolderRole } from '@shared/domain/folderRole'
@@ -47,6 +47,7 @@ import { useFolderSearch } from '@/hooks/useFolderSearch'
 import { useFolderTree, type FolderNode } from '@/hooks/useFolderTree'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
+import type { CommandAnswer } from '@/services/commandBus'
 import { reportFailure } from '@/services/diagnostics'
 import { currentOverrides } from '@/stores/bindings'
 import { useDocuments } from '@/stores/documents'
@@ -58,6 +59,7 @@ import { useProject } from '@/stores/project'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/features/shell/components/NoProject'
 import { runAssetAction } from './assetActions'
+import { runExplorerCommand, settleFileOutcome } from './explorerCommands'
 import { ImportProgress } from '../ImportProgress/ImportProgress'
 import { openEntryMenu, openRootMenu } from './entryMenu'
 import { DomainRow } from '../DomainRow'
@@ -313,7 +315,8 @@ export function Explorer() {
     (outcome: FileOutcome): void => {
       reload()
       void readHistory().then(setHistory)
-      if (touchesDocuments(outcome.done)) void useDocuments.getState().relist()
+      // Batches from another window and dropped assets never went through `runExplorerCommand`.
+      settleFileOutcome(outcome)
     },
     [reload, readHistory],
   )
@@ -367,48 +370,19 @@ export function Explorer() {
      * the whole project. Passed outright by the menu raised on the blank, whose click clears the
      * selection — a callback built before that clearing would aim at the row picked a moment ago.
      */
-    (command: CommandId, into: string = landing): void => {
-      const bridge = getBridge()?.project
-      if (!bridge) return
-
-      const paths = selectedFilePaths(useSelection.getState())
-      const held = useFileClipboard.getState()
-      const answer = (outcome: Promise<FileOutcome>): void => void outcome.then(settled)
-
-      if (command === 'explorer.cut' || command === 'explorer.copy') {
-        // Nothing crosses the boundary yet: what is held is a selection of the project folder,
-        // and it means something only once a folder is named to put it in.
-        if (paths.length > 0) held.hold(paths, command === 'explorer.cut')
-        return
-      }
-      if (command === 'explorer.paste') {
-        if (held.paths.length === 0) return
-        answer(bridge.pasteFiles(held.paths, into, held.cut))
-        // A cut is spent by the paste that carried it out; a copy stays, so pasting into three
-        // folders in a row is three copies rather than one and two silences.
-        if (held.cut) held.clear()
-        return
-      }
-      if (command === 'explorer.newFolder') {
-        return void bridge.newFolder(into, folderName).then(outcome => {
+    (command: CommandId, into: string = landing): CommandAnswer =>
+      runExplorerCommand(command, {
+        into,
+        folderName,
+        settle: outcome => {
           settled(outcome)
           // The field opens on the folder that was just made, so the name it is born with is a
           // placeholder rather than something to go and correct. Set before the row exists: the
           // tree is reading its folders again, and the row draws the field when it arrives.
-          const created = outcome.done[0]?.to
+          const created = command === 'explorer.newFolder' ? outcome.done[0]?.to : undefined
           if (created) setRenaming({ nodeId: created, asset: null })
-        })
-      }
-      // The stack takes neither a selection nor a clipboard: it acts on what the main process
-      // remembers, which is also what lets a batch made in another window be taken back here.
-      if (command === 'explorer.undo') return answer(bridge.undoFile())
-      if (command === 'explorer.redo') return answer(bridge.redoFile())
-
-      if (paths.length === 0) return
-
-      if (command === 'explorer.duplicate') return answer(bridge.duplicateFiles(paths))
-      if (command === 'explorer.trash') return answer(bridge.trashFiles(paths))
-    },
+        },
+      }),
     [settled, landing, folderName],
   )
 

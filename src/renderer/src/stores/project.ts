@@ -5,6 +5,7 @@ import {
   projectPickerFolder,
   movedProjectKey,
   movedRecentProject,
+  withoutProjectDocuments,
   withoutRecentProject,
   type Project,
 } from '@shared/domain/project'
@@ -217,6 +218,9 @@ async function pickedProject(
 function shelfWithout(storage: Settings['storage'], path: string): Partial<Settings['storage']> {
   return {
     recentProjects: withoutRecentProject(storage.recentProjects, path),
+    // Its documents go with it: each row would otherwise reopen the project that was just
+    // dropped, which is the one thing forgetting it has to stop.
+    recentDocuments: withoutProjectDocuments(storage.recentDocuments, path),
     ...(storage.lastProject === path ? { lastProject: undefined } : {}),
   }
 }

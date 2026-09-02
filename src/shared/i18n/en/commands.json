@@ -1,5 +1,6 @@
 {
   "commands": {
+    "appNew": { "title": "New…", "help": "Opens the window that makes a project or a document, from any screen" },
     "projectNew": {
       "title": "New project",
       "help": "Creates an empty project and opens it. A project is the folder holding everything you make: the images, the videos, the sounds, and how they are arranged."
@@ -272,6 +273,10 @@
       "title": "Guides",
       "help": "Shows or hides the guides laid on the image. Hiding them does not remove them."
     },
+    "canvasGrid": {
+      "title": "Pixel grid",
+      "help": "Shows or hides the grid of the artwork’s own pixels. Only on a document set to pixel art."
+    },
     "canvasClearGuides": {
       "title": "Clear guides",
       "help": "Removes every guide from the image. Undoable, like any other edit."
@@ -448,6 +453,10 @@
     "scenePoseMode": {
       "title": "Pose mode",
       "help": "Switches between picking objects and picking the bones of a rig."
+    },
+    "characterNavigate": {
+      "title": "Navigate",
+      "help": "Move around the workshop as in a game: the mouse holds the view, W A S D travel, E and Q rise and fall. The wheel sets the speed. Escape gives the mouse back."
     },
     "sceneNavigate": {
       "title": "Navigate",

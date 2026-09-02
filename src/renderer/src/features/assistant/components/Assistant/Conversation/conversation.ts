@@ -8,6 +8,7 @@ import {
 } from '@shared/domain/assistant'
 import { isRecord } from '@shared/guards'
 import { stableKey } from '@shared/hash'
+import { byCodeUnit } from '@shared/text'
 import { englishText } from '@shared/i18n'
 
 /**
@@ -191,7 +192,21 @@ export type AssistantTurn = {
    * finished, and a person told nothing would take a half-done job for a finished one.
    */
   ending?: 'halted' | 'stopped'
+  /**
+   * The opening answer neither called nor asked, and was sent back once — see `chainOn`. Read
+   * by the next round as the reason it is being asked again.
+   */
+  nudged?: boolean
 }
+
+/**
+ * 🛑 What a sent-back opening answer is told. A first answer with no call and no question was,
+ * measured 2026-09-02, mostly a recital of the state block: « il y a déjà une lumière
+ * directionnelle », three runs out of three, `scene.state` never called.
+ */
+export const NUDGE =
+  'You neither called nor asked: what the studio holds is READ, never recalled. Call the read ' +
+  'that answers, or "ask". If there is truly nothing to call, answer again.'
 
 /**
  * The conversation as the model reads it: one block per turn, oldest first.
@@ -285,6 +300,8 @@ function blockOf(turn: AssistantTurn): string {
   // question was cut while its answer stayed, and the round read an answer to nothing.
   for (const asked of turn.asks) lines.push(`You asked: ${asked.question} — ${cameBack(asked)}`)
 
+  if (turn.nudged) lines.push(NUDGE)
+
   // Said rather than left out: a turn that shows as nothing at all would have the model repeat
   // the sentence it already failed on, instead of trying it another way.
   if (turn.lost) lines.push('You did not manage to answer that one.')
@@ -299,10 +316,22 @@ function blockOf(turn: AssistantTurn): string {
  *
  * An absolute call repeated writes the same value; a RELATIVE one adds again. Measured on the
  * bench pass of 2026-08-26: « 20 degrés de plus » was sent twice and turned the cube by 40.
+ *
+ * 🛑 The NUMBERS are left out of the key, and that is the whole of it: a model that second-guesses
+ * its own arithmetic sends the same change again under another figure, and the two land one on
+ * top of the other. Measured 2026-09-02 — « 50 cm à droite » went out as `positionX: 0.5` then as
+ * `positionX: 2.5`, leaving the sphere three metres out, and « 20 degrés de plus » was sent twice
+ * as 0.3490658503988659 then 0.34906585, which the whole-input key read as two different calls.
  */
 export function repeatKeyOf(action: ActionName, input: Record<string, unknown>): string | null {
-  return input.relative === true ? `${action} ${JSON.stringify(input)}` : null
+  if (input.relative !== true) return null
+
+  const named = Object.fromEntries(Object.entries(input).filter(([, one]) => !isNumber(one)))
+  const moved = Object.keys(input).filter(one => isNumber(input[one]))
+  return `${action} ${stableKey(named)} ${[...moved].sort(byCodeUnit).join(',')}`
 }
+
+const isNumber = (value: unknown): boolean => typeof value === 'number'
 
 /**
  * Whether this TURN already ran that very relative call, and got it done.

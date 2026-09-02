@@ -1,5 +1,4 @@
 import type { CommandId } from '@shared/domain/command'
-import { clamp } from '@shared/numeric'
 import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -35,8 +34,6 @@ import { createFrameCoalesce } from '@/engines/core/frameCoalesce'
 import {
   clipById,
   clipEnd,
-  clipUnderPlayhead,
-  sequenceDuration,
   snapToFrame,
   type Clip,
   type SequenceState,
@@ -67,6 +64,8 @@ import {
 } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
 import { exportSequence } from './sequenceExport'
+import { runSequenceCommand, shownSequence } from './sequenceCommands'
+import type { CommandAnswer } from '@/services/commandBus'
 import type { VideoToolId } from '../videoTools'
 
 export type TimelineCanvasProps = {
@@ -82,16 +81,6 @@ export type TimelineCanvasProps = {
    * make consistent would be the only one with a dead keyboard.
    */
   history?: boolean
-}
-
-/**
- * A montage with the head one can actually see. `clockHead ?? playhead` is what every surface of
- * the strip draws, so it has to be what every gesture ACTS on — the split, the blade's own menu.
- */
-function shownSequence(documentId: string, sequence: SequenceState): SequenceState {
-  const head = playbackHeadOf(usePlayback.getState(), documentId)
-
-  return head === undefined ? sequence : { ...sequence, playhead: head }
 }
 
 export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
@@ -207,37 +196,24 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   // and the whole window scrolls behind the timeline instead.
   useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
 
-  const seek = useCallback(
-    (time: number): void => {
-      const store = useSequences.getState()
-      const state = sequenceOf(store, documentId)
-      const playhead = clamp(time, 0, sequenceDuration(state))
-      // The strip follows on its own, from wherever the playhead lands — see the effect above.
-      store.replace(documentId, { ...state, playhead })
-    },
-    [documentId],
-  )
-
   const run = useCallback(
-    (command: CommandId): void => {
-      const store = useSequences.getState()
-      // The head as it is SEEN: while a transport runs the montage stops carrying it, and a cut
-      // reading the document's own would fall where the head stood before Play was pressed.
-      const state = shownSequence(documentId, sequenceOf(store, documentId))
+    (command: CommandId): CommandAnswer | void => {
+      // Left alone where the host owns the history — see `history`. Not the same as being
+      // absent: the key is still swallowed by this scope, and it is the host that answers it.
+      if (!history && (command === 'sequence.undo' || command === 'sequence.redo')) return
+
+      // What reads nothing but the stores is shared with a headless run — see
+      // `runSequenceCommand`. What is left below knows the strip's width, or writes a file.
+      const shared = runSequenceCommand(documentId, command)
+      if (shared !== false) return shared
+
+      const state = shownSequence(documentId, sequenceOf(useSequences.getState(), documentId))
       const current = latest.current.viewport
       const middle = size.current.width / 2
 
       switch (command) {
         // `sequence.playPause` is deliberately absent: the programme monitor listens on the
         // same scope and drives the same transport, and both handling it played then paused.
-        case 'sequence.split': {
-          const target = clipUnderPlayhead(state)
-          if (target) store.runCommand(documentId, splitClip(target.id, state.playhead))
-          return
-        }
-        case 'sequence.delete':
-          if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
-          return
         // Both exports name their file after the tab: one writes a film of the montage, the
         // other the montage itself.
         // The film of the montage, which reported and stopped long before this — and had nowhere
@@ -262,35 +238,17 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
         case 'sequence.exportStems':
           void exportStems(documentId)
           return
-        case 'sequence.unlink': {
-          // Asked here rather than left to the command: every command run lands on the undo
-          // stack, so a ⌘L on a clip that is tied to nothing would mark the document modified
-          // and leave a ⌘Z that visibly does nothing.
-          const linked = state.selectedId ? clipById(state, state.selectedId) : null
-          if (linked?.linkId) store.runCommand(documentId, unlinkClip(linked.id))
-          return
-        }
         case 'sequence.zoomIn':
           return setViewport(zoomAt(current, ZOOM_STEP, middle))
         case 'sequence.zoomOut':
           return setViewport(zoomAt(current, 1 / ZOOM_STEP, middle))
         case 'sequence.fit':
           return setViewport(fitToWidth(state, size.current.width))
-        case 'sequence.start':
-          return seek(0)
-        case 'sequence.end':
-          return seek(sequenceDuration(state))
-        // Left alone where the host owns the history — see `history`. Not the same as being
-        // absent: the key is still swallowed by this scope, and it is the host that answers it.
-        case 'sequence.undo':
-          return history ? store.undo(documentId) : undefined
-        case 'sequence.redo':
-          return history ? store.redo(documentId) : undefined
         default:
           return
       }
     },
-    [documentId, history, seek, setViewport],
+    [documentId, history, setViewport],
   )
 
   // The strip is only mounted for the document in front, so it always listens while it is there.

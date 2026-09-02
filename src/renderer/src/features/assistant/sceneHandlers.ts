@@ -32,28 +32,29 @@ import { canNegate } from '@/engines/csg/carve'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
   addNode,
+  attachNode,
   carveNodes,
+  dressModel,
   invertCarve,
   multi,
   removeNode,
   renameNode,
   reorderNodes,
   reparentNode,
+  separateNode,
   setCamera,
   setGeometry,
   setLight,
   setMaterialOn,
-  dressModel,
-  wearMaterialAt,
   setNodeVisible,
-  setPath,
   setNodesNegative,
+  setPath,
   setSelection,
   setShadowOn,
   setSpriteOn,
   setTextOn,
   setWorld,
-  separateNode,
+  wearMaterialAt,
 } from '@/engines/scene/commands'
 import { carriesMaterial } from '@/engines/scene/sceneState'
 import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
@@ -74,7 +75,7 @@ import {
   withPointAtEnd,
   withoutPoint,
 } from '@/engines/scene/cameraPath'
-import { poseAt } from '@/engines/scene/animationEval'
+import { lensAt, poseAt } from '@/engines/scene/animationEval'
 import { newShotAt, shotsWithCameraMoved } from '@/engines/scene/cameraShots'
 import {
   CAMERA_SPECS,
@@ -99,14 +100,17 @@ import {
 import { activeSceneId, documentNamedOfKind, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
+import { useCharacters } from '@/stores/character'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { nodeAimed } from './nodeAimed'
 import { environmentFromInput } from './environmentInput'
 import {
   boolOf,
+  composedNamedOf,
   composedNumber,
   maybeBoolOf,
+  namedOf,
   numberOf,
   oneOf,
   recordOf,
@@ -150,6 +154,8 @@ function edit(build: () => Command<SceneState>): ActionOutcome {
 function editNode(
   input: Record<string, unknown>,
   build: (node: SceneNode, documentId: string) => Command<SceneState> | null,
+  /** What the call answers, read off the node AFTER the command — see `movedOf`. */
+  answer?: (node: SceneNode, documentId: string) => unknown,
 ): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_SCENE)
@@ -165,7 +171,32 @@ function editNode(
   if (!command) return refused('badInput', `"${node.name}" has nothing to change here`)
 
   useScenes.getState().runCommand(open.documentId, command)
-  return { ok: true }
+  if (!answer) return { ok: true }
+
+  // Read again rather than computed here: a command may land a KEY rather than a transform, and
+  // what the viewport shows is what the caller has to be told.
+  const after = nodeById(sceneOf(useScenes.getState(), open.documentId), node.id)
+  return after ? { ok: true, data: answer(after, open.documentId) } : { ok: true }
+}
+
+/** The three vectors, as the fields of a call name them. */
+const VECTORS: readonly (keyof Transform)[] = ['position', 'rotation', 'scale']
+const AXES = ['X', 'Y', 'Z']
+
+/**
+ * 🛑 What a move ANSWERS, and the reason every write answers something: told a bare `ok`, a model
+ * re-sent « 50 cm à droite » as 0.5 then as 2.5, three metres off (2026-09-02). The vectors it
+ * TOUCHED only — the whole transform is three times the room `RESULT_MAX` leaves.
+ */
+function movedOf(
+  input: Record<string, unknown>,
+  node: SceneNode,
+  documentId: string,
+): Partial<Transform> {
+  const keying = sceneKeyingAt(documentId)
+  const pose = poseAt(node.transform, keying.state.animation, node.id, keying.at)
+
+  return composedNamedOf(input, pose, VECTORS, AXES)
 }
 
 /** The nodes a `nodeIds` list names, by id or by name — what the two folding handlers aim at. */
@@ -781,6 +812,17 @@ function worldGround(input: Record<string, unknown>): ActionOutcome {
   }, 'this call named nothing to write on the ground: visible, color, size, opacity or receiveShadow')
 }
 
+/**
+ * A point by NAME, as a person says it, resolved to the id the file writes. Passed through when
+ * no character is open: a client that read the file knows the id, and this must not lose it.
+ */
+function socketIdOf(named: string | null | undefined): string | null {
+  if (!named) return null
+
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.sockets.find(one => one.name === named || one.id === named)?.id ?? named
+}
+
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
 
@@ -897,6 +939,11 @@ export const SCENE_HANDLERS: ActionHandlers = {
     return { ok: true, data: { nodeIds: given } }
   },
 
+  // An empty socket takes it back off, as the field says: the node then hangs from the
+  // character itself, which is where it stood before a point was named.
+  'node.attach': input =>
+    editNode(input, node => attachNode(node.id, socketIdOf(textOf(input, 'socket')))),
+
   'node.rename': input =>
     editNode(input, node => renameNode(node.id, textOf(input, 'name') ?? node.name)),
 
@@ -909,54 +956,62 @@ export const SCENE_HANDLERS: ActionHandlers = {
    * values would write a neutral rotation over the key standing there. Radians, as the state.
    */
   'node.transform': input =>
-    editNode(input, (node, documentId) => {
-      const keying = sceneKeyingAt(documentId)
-      const played = poseAt(node.transform, keying.state.animation, node.id, keying.at)
-      const by = boolOf(input, 'relative')
+    editNode(
+      input,
+      (node, documentId) => {
+        const keying = sceneKeyingAt(documentId)
+        const played = poseAt(node.transform, keying.state.animation, node.id, keying.at)
+        const by = boolOf(input, 'relative')
 
-      return movesToCommand(
-        keying.state,
-        [
-          {
-            id: node.id,
-            transform: {
-              position: vectorOf(input, 'position', played.position, by),
-              rotation: vectorOf(input, 'rotation', played.rotation, by),
-              scale: vectorOf(input, 'scale', played.scale, by),
+        return movesToCommand(
+          keying.state,
+          [
+            {
+              id: node.id,
+              transform: {
+                position: vectorOf(input, 'position', played.position, by),
+                rotation: vectorOf(input, 'rotation', played.rotation, by),
+                scale: vectorOf(input, 'scale', played.scale, by),
+              },
             },
-          },
-        ],
-        keying.at,
-        keying.recording,
-      )
-    }),
+          ],
+          keying.at,
+          keying.recording,
+        )
+      },
+      (node, documentId) => movedOf(input, node, documentId),
+    ),
 
   'node.setMeshMaterial': input =>
-    editNode(input, node => {
-      if (!carriesMaterial(node)) return null
-      // Neither a text's outline nor a cut result is a primitive, so their UVs never go through
-      // the tiling — the field the inspector drops for both is refused here rather than filed
-      // and ignored.
-      if (node.type !== 'mesh' && input.tilesPerMetre !== undefined) return null
+    editNode(
+      input,
+      node => {
+        if (!carriesMaterial(node)) return null
+        // Neither a text's outline nor a cut result is a primitive, so their UVs never go through
+        // the tiling — the field the inspector drops for both is refused here rather than filed
+        // and ignored.
+        if (node.type !== 'mesh' && input.tilesPerMetre !== undefined) return null
 
-      const textures = texturesFrom(input)
-      if (!textures) return null
+        const textures = texturesFrom(input)
+        if (!textures) return null
 
-      const roughness = numberOf(input, 'roughness')
-      const metalness = numberOf(input, 'metalness')
-      const tilesPerMetre = numberOf(input, 'tilesPerMetre')
-      const changes: Partial<MaterialDescriptor> = {
-        ...(input.color === undefined
-          ? {}
-          : { color: readColor(input, 'color', node.material.color ?? '') }),
-        ...(roughness === null ? {} : { roughness }),
-        ...(metalness === null ? {} : { metalness }),
-        ...(tilesPerMetre === null ? {} : { tilesPerMetre }),
-        ...textures,
-      }
+        const roughness = numberOf(input, 'roughness')
+        const metalness = numberOf(input, 'metalness')
+        const tilesPerMetre = numberOf(input, 'tilesPerMetre')
+        const changes: Partial<MaterialDescriptor> = {
+          ...(input.color === undefined
+            ? {}
+            : { color: readColor(input, 'color', node.material.color ?? '') }),
+          ...(roughness === null ? {} : { roughness }),
+          ...(metalness === null ? {} : { metalness }),
+          ...(tilesPerMetre === null ? {} : { tilesPerMetre }),
+          ...textures,
+        }
 
-      return Object.keys(changes).length === 0 ? null : setMaterialOn([node], changes)
-    }),
+        return Object.keys(changes).length === 0 ? null : setMaterialOn([node], changes)
+      },
+      node => (carriesMaterial(node) ? namedOf(input, node.material) : {}),
+    ),
 
   'node.setPrimitiveParameters': input =>
     editNode(input, node => {
@@ -1077,7 +1132,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'path.removePoint': input =>
     editPath(input, path => withoutPoint(path, numberOf(input, 'index') ?? -1)),
 
-  'model.wearMaterial': input =>
+  'model.setMaterialDocument': input =>
     editNode(input, node => {
       if (node.type !== 'model') return null
 
@@ -1097,7 +1152,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
     }),
 
   /** The picture must EXIST, or the model holds a reference nothing resolves — see `world.environment`. */
-  'model.wearImage': input => {
+  'model.setBaseColorImage': input => {
     const assetId = textOf(input, 'assetId')
     const write = (): ActionOutcome =>
       editNode(input, node =>
@@ -1115,34 +1170,44 @@ export const SCENE_HANDLERS: ActionHandlers = {
    * measured against, and a new one there moves the rest pose under every other key.
    */
   'node.setCameraLens': input =>
-    editNode(input, (node, documentId) => {
-      if (node.type !== 'camera') return null
+    editNode(
+      input,
+      (node, documentId) => {
+        if (node.type !== 'camera') return null
 
-      const written = numbersFor(input, node.camera, CAMERA_SPECS)
-      if (!written || Object.keys(written).length === 0) return null
+        const written = numbersFor(input, node.camera, CAMERA_SPECS)
+        if (!written || Object.keys(written).length === 0) return null
 
-      // The two distances are never keyed, so they travel as a plain descriptor — and the lens
-      // handed to `lensToCommand` keeps the fov it ALREADY holds: that value is what its key is
-      // measured against, and a new one there would move the rest pose under every other key.
-      const camera = { ...node.camera, ...written, fov: node.camera.fov }
-      const fov = numberOf(input, 'fov')
-      if (fov === null) return setCamera(node.id, camera)
+        // The two distances are never keyed, so they travel as a plain descriptor — and the lens
+        // handed to `lensToCommand` keeps the fov it ALREADY holds: that value is what its key is
+        // measured against, and a new one there would move the rest pose under every other key.
+        const camera = { ...node.camera, ...written, fov: node.camera.fov }
+        const fov = numberOf(input, 'fov')
+        if (fov === null) return setCamera(node.id, camera)
 
-      const keying = sceneKeyingAt(documentId)
-      return multi(`camera:${node.id}`, [
-        // Written first and then again by the lens where nothing records it: the keyed branch
-        // writes no descriptor at all, and the two distances would be lost with it.
-        setCamera(node.id, camera),
-        lensToCommand(
-          keying.state.animation,
-          [{ ...node, camera }],
-          'fov',
-          fov,
-          keying.at,
-          keying.recording,
-        ),
-      ])
-    }),
+        const keying = sceneKeyingAt(documentId)
+        return multi(`camera:${node.id}`, [
+          // Written first and then again by the lens where nothing records it: the keyed branch
+          // writes no descriptor at all, and the two distances would be lost with it.
+          setCamera(node.id, camera),
+          lensToCommand(
+            keying.state.animation,
+            [{ ...node, camera }],
+            'fov',
+            fov,
+            keying.at,
+            keying.recording,
+          ),
+        ])
+      },
+      // The lens as the viewport READS it: a recorded fov lands as a key, and the descriptor keeps
+      // the rest value the key is measured against.
+      (node, documentId) => {
+        if (node.type !== 'camera') return {}
+        const keying = sceneKeyingAt(documentId)
+        return namedOf(input, lensAt(node.camera, keying.state.animation, node.id, keying.at))
+      },
+    ),
 
   // Seconds here, microseconds in the timeline: a client counting a shot in `Us` would be one
   // unit away from a film six orders of magnitude too long, with nothing on screen to say so.
@@ -1234,41 +1299,54 @@ export const SCENE_HANDLERS: ActionHandlers = {
   // A field the shape has no room for is refused rather than filed: `withField` writes by
   // computed key without checking, and a light given a `penumbra` it never had is a document
   // that no longer describes anything.
-  'node.setLightSettings': input =>
-    editNode(input, node => {
-      if (node.type !== 'light') return null
+  'node.setLightSettings': input => {
+    const aimsTarget = TARGET_AXES.some(axis => input[axis] !== undefined)
 
-      const specs: Specs = LIGHT_SPECS[node.light.kind]
-      const by = boolOf(input, 'relative')
-      let light = node.light
+    return editNode(
+      input,
+      node => {
+        if (node.type !== 'light') return null
 
-      for (const name of namedFields(input)) {
-        if (TARGET_AXES.includes(name)) {
-          if (!('target' in node.light)) return null
-          continue
+        const specs: Specs = LIGHT_SPECS[node.light.kind]
+        const by = boolOf(input, 'relative')
+        let light = node.light
+
+        for (const name of namedFields(input)) {
+          if (TARGET_AXES.includes(name)) {
+            if (!('target' in node.light)) return null
+            continue
+          }
+          if (!(name in node.light)) return null
+
+          const value = numberOf(input, name)
+          if (value === null) {
+            // A colour: the fallback is unreachable, `validatesInput` having agreed it is a hex.
+            light = withField(light, name, readColor(input, name, ''))
+            continue
+          }
+
+          const held = light[name as keyof typeof light]
+          const wanted =
+            typeof held === 'number' ? composedNumber(held, value, by, 'multiply') : value
+          if (!withinSpec(specs[name], wanted)) return null
+          light = withField(light, name, wanted)
         }
-        if (!(name in node.light)) return null
 
-        const value = numberOf(input, name)
-        if (value === null) {
-          // A colour: the fallback is unreachable, `validatesInput` having agreed it is a hex.
-          light = withField(light, name, readColor(input, name, ''))
-          continue
+        if ('target' in node.light && aimsTarget) {
+          light = withField(light, 'target', vectorOf(input, 'target', node.light.target, by))
         }
 
-        const held = light[name as keyof typeof light]
-        const wanted =
-          typeof held === 'number' ? composedNumber(held, value, by, 'multiply') : value
-        if (!withinSpec(specs[name], wanted)) return null
-        light = withField(light, name, wanted)
-      }
-
-      if ('target' in node.light && TARGET_AXES.some(axis => input[axis] !== undefined)) {
-        light = withField(light, 'target', vectorOf(input, 'target', node.light.target, by))
-      }
-
-      return light === node.light ? null : setLight(node.id, light)
-    }),
+        return light === node.light ? null : setLight(node.id, light)
+      },
+      node =>
+        node.type !== 'light'
+          ? {}
+          : {
+              ...namedOf(input, node.light),
+              ...('target' in node.light && aimsTarget ? { target: node.light.target } : {}),
+            },
+    )
+  },
 
   /**
    * The main pane, as the menu and the bar's own flyout both do: a quad layout gives each of its
@@ -1315,7 +1393,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       : editWorld(() => presetPatch(preset), `the preset "${preset}" writes nothing on this world`)
   },
 
-  'view.display': input => {
+  'view.setDisplayMode': input => {
     const open = mounted()
     const mode = oneOf(input, 'mode', DISPLAY_MODES)
     if (!open) return refused('wrongSurface', NO_SCENE)

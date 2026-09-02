@@ -15,6 +15,7 @@ import { createTextureExtraction } from '@main/assets/textureExtraction'
 import { invoke, openWindow, resetHandlers } from '@main/ipc/testHarness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
+import { DEFAULT_SETTINGS, type PartialSettings } from '@shared/domain/settings'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
 import { NoProjectError, ProjectOpenError, type FolderVerdict } from './store'
 import type { ProjectOpenFailure } from '@shared/domain/project'
@@ -107,6 +108,12 @@ function base(catalog: AsyncCatalog) {
       settled: vi.fn(async () => undefined),
       close: vi.fn(),
     } as unknown as ProjectHandlerDeps['project'],
+    // Only the storage branch is read here, and only the shelf of it — the rest of the settings
+    // has nothing to do with what these channels answer.
+    settings: {
+      read: () => DEFAULT_SETTINGS,
+      write: vi.fn((partial: PartialSettings) => ({ ...DEFAULT_SETTINGS, ...partial })),
+    } as unknown as ProjectHandlerDeps['settings'],
     record: vi.fn(),
     assets: {} as ProjectHandlerDeps['assets'],
     newAssetId: () => 'asset-new',
@@ -167,6 +174,70 @@ describe('project handlers', () => {
     vi.clearAllMocks()
     catalog = memoryCatalog()
     onTestFinished(catalog.close)
+  })
+
+  /**
+   * The shelf File ▸ Open recent draws. Written here and not in the window: the open project is
+   * this process's to know, and a window pairing the two would get it wrong by exactly the
+   * project switch that had just happened.
+   */
+  describe('noting a document that was opened', () => {
+    it('files it under the project this process holds open', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.documentOpened, 'Modelling/Scenes/Niveau.gltf', 'scene')
+
+      expect(injected.settings.write).toHaveBeenCalledWith({
+        storage: {
+          recentDocuments: [
+            expect.objectContaining({
+              project: PROJECT,
+              path: 'Modelling/Scenes/Niveau.gltf',
+              kind: 'scene',
+            }),
+          ],
+        },
+      })
+    })
+
+    /**
+     * Clicking the document already in front happens all day and moves nothing — writing there is
+     * a disk write plus a broadcast to every window.
+     */
+    it('writes nothing when it is already the one at the top', async () => {
+      const injected = deps(catalog)
+      injected.settings.read = () => ({
+        ...DEFAULT_SETTINGS,
+        storage: {
+          ...DEFAULT_SETTINGS.storage,
+          recentDocuments: [
+            {
+              project: PROJECT,
+              path: 'Modelling/Scenes/Niveau.gltf',
+              kind: 'scene',
+              openedAt: '2026-09-01T10:00:00.000Z',
+            },
+          ],
+        },
+      })
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.documentOpened, 'Modelling/Scenes/Niveau.gltf', 'scene')
+
+      expect(injected.settings.write).not.toHaveBeenCalled()
+    })
+
+    /** Nothing to note rather than an error: a window with no project has opened no document. */
+    it('writes nothing with no project open', async () => {
+      const injected = deps(catalog)
+      injected.project.current = () => null
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.documentOpened, 'Modelling/Scenes/Niveau.gltf', 'scene')
+
+      expect(injected.settings.write).not.toHaveBeenCalled()
+    })
   })
 
   // Same silence as opening, reached by the explorer's own "create a project" button: nothing
@@ -1244,6 +1315,81 @@ describe('project handlers', () => {
 
       await expect(invoke(CHANNELS.assetsExtractTextures, 'asset-2')).rejects.toThrow()
       await expect(invoke(CHANNELS.assetsExtractTextures, 'asset-gone')).rejects.toThrow()
+    })
+  })
+
+  describe('a motion the band posed', () => {
+    const backend = () => ({
+      importFromUrl: vi.fn(),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'animation' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'animation' })),
+      replaceBytes: vi.fn(async () => asset({ id: 'asset-walk', type: 'animation' })),
+    })
+
+    /** A binary glTF holding nothing but an empty scene — the shape, which is all this door reads. */
+    const glb = (): Uint8Array => glbFile({ scenes: [{}] })
+
+    it('files a motion of its own under a new identifier', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSaveAnimation, {
+        name: 'Marche',
+        derivedFrom: 'asset-1',
+        glb: glb(),
+      })
+
+      expect(assets.importFromBytes).toHaveBeenCalledWith(
+        {
+          id: 'asset-new',
+          name: 'Marche',
+          type: 'animation',
+          extension: '.glb',
+          derivedFrom: 'asset-1',
+        },
+        glb(),
+      )
+    })
+
+    /**
+     * A motion reopened on the workbench and corrected lands on the file it came from. Without
+     * this every pass files a copy beside the last, and none of them is the motion any more.
+     */
+    it('rewrites the motion it was told to replace', async () => {
+      await catalog.add(asset({ id: 'asset-walk', name: 'Marche', type: 'animation' }))
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSaveAnimation, {
+        name: 'Marche',
+        replaces: 'asset-walk',
+        glb: glb(),
+      })
+
+      expect(assets.replaceBytes).toHaveBeenCalledWith('asset-walk', glb(), '.glb')
+      expect(assets.importFromBytes).not.toHaveBeenCalled()
+    })
+
+    // Checked against the CATALOGUE, as the character's own save is: an id naming a model would
+    // rewrite that model with a motion, and the character would be gone.
+    it('refuses to overwrite anything that is not a motion', async () => {
+      await catalog.add(asset({ id: 'asset-hero', name: 'Héros', type: 'mesh' }))
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveAnimation, {
+          name: 'Marche',
+          replaces: 'asset-hero',
+          glb: glb(),
+        }),
+      ).rejects.toThrow()
+      await expect(
+        invoke(CHANNELS.assetsSaveAnimation, {
+          name: 'Marche',
+          replaces: 'asset-gone',
+          glb: glb(),
+        }),
+      ).rejects.toThrow()
     })
   })
 

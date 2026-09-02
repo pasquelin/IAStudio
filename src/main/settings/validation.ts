@@ -26,7 +26,8 @@ import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
 import { DICTATION_MODES } from '@shared/domain/dictation'
 import { isSignature } from '@shared/domain/shortcut'
 import { HOME_SECTION_IDS } from '@shared/domain/home'
-import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
+import { RECENT_DOCUMENTS_MAX, RECENT_PROJECTS_MAX } from '@shared/domain/project'
+import { isDocumentKind, type DocumentKind } from '@shared/domain/document'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import {
   DISPLAY_UNITS,
@@ -89,6 +90,14 @@ const recentProject = z.object({
   createdAt: z.string().min(1).optional(),
 })
 
+const recentDocument = z.object({
+  project: z.string().min(1),
+  path: z.string().min(1),
+  // Through the domain's own guard rather than a re-listed enum: one list of the kinds.
+  kind: z.custom<DocumentKind>(isDocumentKind),
+  openedAt: z.string().min(1),
+})
+
 const storage = z.object({
   backend: z.enum(['local', 'cloud']).optional(),
   projectsFolder: z.string().min(1).optional(),
@@ -96,6 +105,9 @@ const storage = z.object({
   // Bounded here as well as where it is written: the list is session state a hand-edited file
   // could grow without limit, and the home draws every entry it is given.
   recentProjects: z.array(recentProject).max(RECENT_PROJECTS_MAX).optional(),
+  // Same bound and same reason as above. A kind this build has never heard of drops the ENTRY
+  // rather than the branch: an unknown glyph is worse than a row that is not offered.
+  recentDocuments: z.array(recentDocument).max(RECENT_DOCUMENTS_MAX).optional(),
   // Declared here or dropped in silence: a zod object STRIPS what it does not name, and this
   // branch is reparsed on every settings write — which the project store does on every document
   // saved. The links would survive exactly until the next one.
@@ -173,6 +185,8 @@ const handles = boundsOf('three.gizmoSize')
 const three = z.object({
   showGrid: z.boolean().optional(),
   gridSize: z.number().int().min(grid.min).max(grid.max).optional(),
+  orbitAroundSelection: z.boolean().optional(),
+  orbitUnderCursor: z.boolean().optional(),
   flySpeed: z.number().min(fly.min).max(fly.max).optional(),
   boostFactor: z.number().min(boost.min).max(boost.max).optional(),
   fieldOfView: z.number().min(lens.min).max(lens.max).optional(),

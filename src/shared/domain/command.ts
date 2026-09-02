@@ -24,6 +24,11 @@ export type CommandScope =
    */
   | 'explorer'
   | 'scene'
+  /**
+   * The skeleton window. Its own scope and not `scene`'s, because it edits a FILE rather than a
+   * document: ⌘Z there must not reach the scene a studio window is showing beside it.
+   */
+  | 'character'
   | 'sequence'
   | 'canvas'
   | 'skybox'
@@ -32,6 +37,7 @@ export type CommandScope =
   | 'gui'
 
 export type CommandId =
+  | 'app.new'
   | 'project.new'
   | 'project.open'
   | 'document.save'
@@ -111,6 +117,7 @@ export type CommandId =
   | 'canvas.zoomActual'
   | 'canvas.rulers'
   | 'canvas.guides'
+  | 'canvas.grid'
   | 'canvas.clearGuides'
   | 'canvas.selectAll'
   | 'canvas.deselect'
@@ -163,6 +170,9 @@ export type CommandId =
   | 'material.redo'
   | 'gui.undo'
   | 'gui.redo'
+  | 'character.undo'
+  | 'character.redo'
+  | 'character.navigate'
 
 /**
  * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
@@ -191,6 +201,12 @@ export type MenuCheck = CommandId | `scene.display:${DisplayMode}`
  * rather than after the state behind it: the template reads this beside the item it enables.
  */
 export type MenuAbility =
+  /**
+   * The two Save rows. They share one condition — a document in front — and stay two abilities so
+   * that the day one of them refuses on its own, the row it greys is already named.
+   */
+  | 'document.save'
+  | 'document.saveAs'
   | 'scene.exportSelection'
   // Both refuse in silence from the menu, and both are correctly greyed in the Layers panel —
   // the native row was the one path that said nothing: a mask needs a selection to cut from,
@@ -218,9 +234,10 @@ export type CommandDescriptor = {
    */
   defaultBinding: Signature | null
   /**
-   * 🛑 It raises a system dialogue, so `command.runStudioCommand` refuses it: the assistant cannot fill a
-   * native modal, cannot read what was chosen in it, and re-ran the command on its next round —
-   * a second Finder over the first. The action taking a path is what does this deliberately.
+   * 🛑 It raises a dialogue only a PERSON can fill — a native picker, or a window of the studio's
+   * own that asks a question. `command.runStudioCommand` refuses it: the assistant cannot fill
+   * one, cannot read what was chosen in it, and re-ran the command on its next round — a second
+   * Finder over the first. The action taking a path is what does this deliberately.
    */
   raisesDialog?: true
   /**
@@ -242,13 +259,29 @@ function command(descriptor: CommandDescriptor): CommandDescriptor {
 }
 
 export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
+  /**
+   * ⌘N makes a FILE, as it does in every other application — a project moved off it on 2026-09-02.
+   *
+   * `raisesDialog` like the two pickers: the window it opens asks a person what to make and what
+   * to call it, and a model that fired this would leave one standing on someone's screen and run
+   * it again next round. `workspace.open { createDocument }` is what an outside client uses.
+   */
+  command({
+    id: 'app.new',
+    scope: 'global',
+    raisesDialog: true,
+    titleKey: 'commands.appNew.title',
+    helpKey: 'commands.appNew.help',
+    defaultBinding: 'Meta+KeyN',
+  }),
   command({
     id: 'project.new',
     scope: 'global',
     raisesDialog: true,
     titleKey: 'commands.projectNew.title',
     helpKey: 'commands.projectNew.help',
-    defaultBinding: 'Meta+KeyN',
+    // ⌥⌘N and not ⇧⌘N: the Explorer's New folder holds that one, as every Finder-shaped app does.
+    defaultBinding: 'Alt+Meta+KeyN',
   }),
   command({
     id: 'project.open',
@@ -919,6 +952,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Meta+Semicolon',
   }),
   command({
+    id: 'canvas.grid',
+    scope: 'canvas',
+    titleKey: 'commands.canvasGrid.title',
+    helpKey: 'commands.canvasGrid.help',
+    defaultBinding: 'Meta+Quote',
+  }),
+  command({
     id: 'canvas.clearGuides',
     scope: 'canvas',
     titleKey: 'commands.canvasClearGuides.title',
@@ -1219,6 +1259,31 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+  // The skeleton window keeps a history like every editor here, and it is the only one whose
+  // subject is a file: without this pair ⌘Z fills the stack and nothing can ever pop it.
+  command({
+    id: 'character.undo',
+    scope: 'character',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'character.redo',
+    scope: 'character',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+  // 🛑 The same key as `scene.navigate`, and DECLARED rather than shared: a scope holds its own
+  // commands, and this window had two — so every key of the studio's viewport was dead here.
+  command({
+    id: 'character.navigate',
+    scope: 'character',
+    titleKey: 'commands.characterNavigate.title',
+    helpKey: 'commands.characterNavigate.help',
+    defaultBinding: 'Backquote',
+  }),
   // The take editor was one of two surfaces whose history had no key and no menu row: its two
   // buttons were the whole of it, so the bar could not be relieved of them without this pair.
   command({
@@ -1276,6 +1341,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'spaces',
   'explorer',
   'scene',
+  'character',
   'sequence',
   'canvas',
   'skybox',

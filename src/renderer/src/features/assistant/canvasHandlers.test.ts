@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import { EMBEDDED_FONTS } from '@shared/domain/font'
@@ -13,6 +13,8 @@ import {
   type CanvasState,
 } from '@/engines/canvas/canvasState'
 import { MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
+import { holdCanvas } from '@/features/image/canvasHosts'
+import { canvasHostStub } from '@/stores/canvas-fixtures'
 import { installIn } from '@/stores/document-fixtures'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
@@ -102,6 +104,196 @@ describe('what a layer stands at', () => {
       'transform',
     ])
       expect(layer).not.toHaveProperty(key)
+  })
+})
+
+describe('the pixel-art grid, driven by value', () => {
+  let drop = (): void => {}
+  afterEach(() => {
+    drop()
+    drop = (): void => {}
+  })
+
+  const onGrid = (cell: number): void =>
+    installIn(
+      canvasStore,
+      DOCUMENT,
+      {
+        ...DEFAULT_CANVAS,
+        width: 512,
+        height: 512,
+        pixelCell: cell,
+        layers: [pixelLayer('l', 'L')],
+      },
+      'image',
+    )
+
+  // Set in CELLS, which is how a person says it — the handler turns them into the document's size.
+  it('sizes the document from a count of cells', async () => {
+    expect(
+      await runAction('canvas.setPixelArt', { enabled: true, columns: 32, rows: 32, cell: 2 }),
+    ).toMatchObject({ ok: true })
+
+    expect([canvas().width, canvas().height, canvas().pixelCell]).toEqual([64, 64, 2])
+  })
+
+  it('reads the grid back in cells, and says nothing of it when there is none', async () => {
+    onGrid(16)
+    const held = await runAction('canvas.state', {})
+    expect(held).toMatchObject({
+      ok: true,
+      data: { pixelArt: { cell: 16, columns: 32, rows: 32 } },
+    })
+
+    await runAction('canvas.setPixelArt', { enabled: false })
+    const gone = await runAction('canvas.state', {})
+    expect(gone.ok && 'pixelArt' in (gone.data as object)).toBe(false)
+  })
+
+  it('refuses to draw on an image that is not on a grid', async () => {
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['1,1'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  // One of the two and never both: a call that named a colour AND asked to erase means neither.
+  it('refuses a colour and an erasure together, and refuses neither', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', {
+        shape: 'points',
+        cells: ['1,1'],
+        color: '#ff0000',
+        erase: true,
+      }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('canvas.drawPixels', { shape: 'points', cells: ['1,1'] })).toMatchObject(
+      {
+        ok: false,
+        refusal: 'badInput',
+      },
+    )
+  })
+
+  /**
+   * Outside the grid is DROPPED, never folded back: a cell at 40 on a grid of 32 is a mistake,
+   * and painting it at 8 would answer a request nobody made.
+   */
+  it('refuses when every cell asked for falls outside the grid', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['99,99'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  // 🛑 One count alone was DROPPED and answered `ok`: the model then placed its cells on a grid
+  // of the document's own size, believing it had asked for 32.
+  it('refuses one count of a grid without the other', async () => {
+    expect(await runAction('canvas.setPixelArt', { enabled: true, columns: 32 })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  /**
+   * By id OR by NAME, as every other layer gesture of this file: `canvas.state` answers both, and
+   * a name copied out of it came back « no such layer ».
+   */
+  it('finds the layer a call names, and says so when nothing answers to it', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', {
+        shape: 'points',
+        cells: ['1,1'],
+        color: '#ff0000',
+        layerId: 'Nowhere',
+      }),
+    ).toMatchObject({ ok: false, refusal: 'notFound' })
+  })
+
+  // The three shapes the points case does not reach: a rectangle hollow or filled, a line between
+  // two corners, and a fill falling back on the whole layer when no box is named.
+  it('lays each shape on the cells it covers', async () => {
+    onGrid(16)
+    const laid: number[] = []
+    drop = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({
+        paintCells: (_layer, rects) => {
+          laid.push(rects.length)
+          return true
+        },
+      }),
+    )
+
+    const red = { color: '#ff0000' }
+    await runAction('canvas.drawPixels', { shape: 'rectangle', x: 0, y: 0, toX: 3, toY: 3, ...red })
+    await runAction('canvas.drawPixels', {
+      shape: 'rectangle',
+      x: 0,
+      y: 0,
+      toX: 3,
+      toY: 3,
+      filled: true,
+      ...red,
+    })
+    await runAction('canvas.drawPixels', { shape: 'line', x: 0, y: 0, toX: 5, toY: 5, ...red })
+    await runAction('canvas.drawPixels', { shape: 'fill', ...red })
+
+    expect(laid).toEqual([12, 16, 6, 32 * 32])
+  })
+
+  /**
+   * 🛑 A box far larger than the grid is CLIPPED before it is walked, never after: every cell it
+   * drops was going to be dropped anyway, and « fill 0 to 99 999 » cost 264 ms of the UI thread.
+   */
+  it('fills the part of an oversized box that lands on the grid', async () => {
+    onGrid(16)
+    const laid: number[] = []
+    drop = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({
+        paintCells: (_layer, rects) => {
+          laid.push(rects.length)
+          return true
+        },
+      }),
+    )
+
+    await runAction('canvas.drawPixels', {
+      shape: 'rectangle',
+      x: 0,
+      y: 0,
+      toX: 99_999,
+      toY: 99_999,
+      filled: true,
+      color: '#ff0000',
+    })
+
+    expect(laid).toEqual([32 * 32])
+  })
+
+  // 🛑 `Number('')` is zero, so a bare "3" used to land on row nought without a word said.
+  it('refuses a cell that does not name both of its coordinates', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['3'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['3,'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  // No engine is mounted under a headless run, so the port answers nothing and the refusal names
+  // what a caller can act on rather than reporting a success that painted nothing.
+  it('says so when nothing was painted', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['1,1'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'notFound' })
   })
 })
 
@@ -301,6 +493,18 @@ describe('building a stack', () => {
   })
 
   /**
+   * 🛑 By NAME as well as by id, as every other layer gesture: a name copied out of `canvas.state`
+   * was answered « not at the top of the stack », which blames the stack for a lookup never made.
+   */
+  it('groups the layers a call names, not only the ones it numbers', async () => {
+    expect(
+      await runAction('layer.group', { layerIds: ['Fond', 'Sujet'], name: 'Décor' }),
+    ).toMatchObject({ ok: true })
+
+    expect(canvas().layers.map(one => one.kind)).toEqual(['group'])
+  })
+
+  /**
    * `groupLayers` gathers TOP-LEVEL layers only and hands the state back when it finds none, so
    * an id that names nothing — or one already inside a group — was answered with the id of a
    * group no layer carries.
@@ -363,6 +567,27 @@ describe('styling and placing a layer', () => {
     await runAction('layer.transform', { layerId: 'layer-a', x: 40, rotation: 90 })
 
     expect(canvas().layers[0]?.transform).toMatchObject({ x: 40, rotation: Math.PI / 2, scaleX: 1 })
+  })
+
+  it('answers the dials it set, and only those', async () => {
+    expect(
+      await runAction('layer.setOpacityBlendAndVisibility', {
+        layerId: 'layer-a',
+        opacity: 0.5,
+        blend: 'multiply',
+      }),
+    ).toEqual({ ok: true, data: { opacity: 0.5, blend: 'multiply' } })
+  })
+
+  it('answers where the layer landed, the rotation in degrees as it came in', async () => {
+    expect(
+      await runAction('layer.transform', {
+        layerId: 'layer-a',
+        x: 10,
+        rotation: 90,
+        relative: true,
+      }),
+    ).toEqual({ ok: true, data: { x: 10, rotation: 90 } })
   })
 
   it('writes a text layer’s words, and refuses one that holds pixels', async () => {

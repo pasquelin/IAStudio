@@ -210,6 +210,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       // as one that worked, which would have a test believe the disk had agreed.
       rename: () => Promise.reject(new Error('no rename stubbed')),
       remove: () => Promise.resolve(),
+      opened: () => Promise.resolve(),
       // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
       confirmClose: () => Promise.resolve<CloseChoice>('cancel'),
       // Yes, where its neighbours answer no: this is the one dialogue whose default WRITES, and
@@ -231,6 +232,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       saveAudio: () => Promise.reject(new Error('no project')),
       savePicture: () => Promise.reject(new Error('no project')),
       saveLayered: () => Promise.reject(new Error('no project')),
+      saveMesh: () => Promise.reject(new Error('no project')),
+      saveAnimation: () => Promise.reject(new Error('no project')),
       // `null`, not a rejection: « this asset is not a container » is the ordinary answer, and
       // every caller of it falls back to opening a flat picture.
       readLayered: () => Promise.resolve(null),
@@ -370,6 +373,11 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       open: () => Promise.resolve(),
       ...overrides.mirror,
     },
+    characterWindow: {
+      open: () => Promise.resolve(),
+      onClosed: () => () => {},
+      ...overrides.characterWindow,
+    },
     gameWindow: {
       open: () => Promise.resolve(),
       close: () => Promise.resolve(),
@@ -412,6 +420,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       popup: () => Promise.resolve(null),
       onOpenTool: noSubscription,
       onCommand: noSubscription,
+      onDocumentNew: noSubscription,
+      onOpenRecent: noSubscription,
       onSceneAdd: noSubscription,
       onSceneView: noSubscription,
       onSceneDisplay: noSubscription,

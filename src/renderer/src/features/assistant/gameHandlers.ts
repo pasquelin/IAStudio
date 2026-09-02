@@ -17,7 +17,7 @@ import { nodeAimed } from './nodeAimed'
  * families would double it, and nobody opens a file that size to add a component.
  *
  * 🛑 Every way of missing is told apart — the surface, the object, the type, the field, the
- * value. One refusal for all of them sent a model repairing what was not broken: a `component.set`
+ * value. One refusal for all of them sent a model repairing what was not broken: a `component.setProperties`
  * on an object with no such component answered « already as asked », and attaching it was the one
  * thing that would have helped.
  */
@@ -79,7 +79,7 @@ export const GAME_HANDLERS: ActionHandlers = {
     return runOn(aimed, detachComponent(aimed.node.id, aimed.type), `carries no ${aimed.type}`)
   },
 
-  'component.set': input => {
+  'component.setProperties': input => {
     const aimed = aim(input)
     if (missed(aimed)) return aimed
 

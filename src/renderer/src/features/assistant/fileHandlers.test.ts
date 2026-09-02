@@ -452,7 +452,7 @@ describe('the file undo stack, which lives in the main process', () => {
     const fileHistory = vi.fn(async () => history)
     withProject({ project: { fileHistory } })
 
-    expect(await runAction('files.readUndoStack', {})).toEqual({ ok: true, data: history })
+    expect(await runAction('files.canUndoRedo', {})).toEqual({ ok: true, data: history })
     expect(relist).not.toHaveBeenCalled()
   })
 
@@ -472,7 +472,7 @@ describe('the file undo stack, which lives in the main process', () => {
       ok: false,
       refusal: 'noProject',
     })
-    expect(await runAction('files.readUndoStack', {})).toMatchObject({
+    expect(await runAction('files.canUndoRedo', {})).toMatchObject({
       ok: false,
       refusal: 'noProject',
     })

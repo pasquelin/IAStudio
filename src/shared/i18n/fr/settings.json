@@ -159,6 +159,7 @@
       "spaces": "Dans la barre des espaces",
       "explorer": "Dans l’explorateur",
       "scene": "Dans la vue 3D",
+      "character": "Dans le squelette",
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",
       "skybox": "Dans le ciel",
@@ -176,6 +177,14 @@
     "gridSize": {
       "title": "Taille de la grille",
       "help": "Jusqu’où le quadrillage s’étend, en mètres, et donc combien de carreaux il compte — un carreau vaut toujours un mètre. Agrandissez-le pour une scène vaste, réduisez-le pour un petit objet posé près de la caméra."
+    },
+    "orbitAroundSelection": {
+      "title": "Tourner autour de la sélection",
+      "help": "Quand vous faites pivoter la vue 3D, elle tourne autour de ce qui est sélectionné plutôt qu’autour d’un point flottant devant vous. C’est ce qui évite de perdre son objet dès qu’on s’en approche. Sans rien de sélectionné, ou si la sélection est hors de l’écran, la vue tourne autour du dernier point regardé."
+    },
+    "orbitUnderCursor": {
+      "title": "Tourner sous le curseur",
+      "help": "La vue tourne autour de ce que le pointeur survole au moment où vous commencez à pivoter, plutôt qu’autour d’un point fixé plus tôt. Très pratique pour travailler de près sans jamais recadrer ; déroutant si vous venez d’Unity ou d’Unreal, qui n’ont pas cette option."
     },
     "flySpeed": {
       "title": "Vitesse de déplacement",

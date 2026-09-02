@@ -1,16 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { clipLane, embeddedClip, wornMaterials } from '@shared/domain/scene'
-import type { Rig, RigBone } from '@shared/domain/rig'
-import { rigFit } from './rigFit'
 import { emptyHistory, run, undo, type Command } from '../core/history'
 import {
   addNode,
   addNodes,
   carveNodes,
   separateNode,
-  addIkChain,
-  addRigBone,
-  addRigHands,
   batch,
   copiesOf,
   groupNodes,
@@ -20,13 +15,11 @@ import {
   reparentNode,
   reorderNodes,
   multi,
-  removeIkChain,
   removeNode,
   removeNodes,
-  removeRigBone,
   rootedIn,
+  attachNode,
   renameNode,
-  renameRigBone,
   setCameraOn,
   setGeometry,
   setGeometryOn,
@@ -35,11 +28,9 @@ import {
   setMeshMaterial,
   setMaterialOn,
   setModelLanes,
-  setModelRig,
   dressModel,
   wearMaterialAt,
   setNodeVisible,
-  setRigBoneRole,
   setWorld,
   setSelection,
   setShadowOn,
@@ -53,7 +44,6 @@ import {
   meshNode as mesh,
   modelNodeFixture,
   spriteNodeFixture,
-  STANDING_BOUNDS,
 } from './scene-fixtures'
 
 const sprite = (id: string) => spriteNodeFixture(id, 'pic-1')
@@ -140,6 +130,30 @@ describe('renameNode', () => {
     const renamed = command.apply(start)
     expect(renamed.nodes[0]?.name).toBe('Cube')
     expect(command.revert(renamed).nodes[0]?.name).toBe('a')
+  })
+})
+
+/**
+ * A socket REFINES the parent, it does not replace it: the node still hangs from the character,
+ * and this says which of its points to follow.
+ */
+describe('attachNode', () => {
+  it('hangs a node on a socket, and takes it off again', () => {
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
+
+    const hung = attachNode('a', 'socket-hand').apply(start)
+
+    expect(nodeById(hung, 'a')?.attach).toEqual({ socket: 'socket-hand' })
+    expect(nodeById(attachNode('a', null).apply(hung), 'a')?.attach).toBeUndefined()
+  })
+
+  it('leaves the parent alone: what a socket says is WHERE on it, never on what', () => {
+    const child = { ...mesh('b'), parentId: 'a' }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), child], selectedIds: [] }
+
+    const hung = attachNode('b', 'socket-hand').apply(start)
+
+    expect(nodeById(hung, 'b')?.parentId).toBe('a')
   })
 })
 
@@ -1126,146 +1140,6 @@ describe('dressModel', () => {
 
     const node = nodeById(stopped, 'm')
     expect(node?.type === 'model' && 'lanes' in node.model).toBe(false)
-  })
-
-  it('puts a skeleton on a model, and takes it back off', () => {
-    const rig: Rig = {
-      origin: 'local',
-      bones: [{ name: 'Hips', parent: null, rest: IDENTITY_TRANSFORM }],
-    }
-    const rigged = setModelRig('m', rig).apply(withModel())
-
-    const node = nodeById(rigged, 'm')
-    expect(node?.type === 'model' && node.model.rig).toEqual(rig)
-
-    const bare = nodeById(setModelRig('m', null).apply(rigged), 'm')
-    expect(bare?.type === 'model' && 'rig' in bare.model).toBe(false)
-  })
-})
-
-describe('editing a skeleton bone by bone', () => {
-  const withModel = (): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture('m')] })
-
-  const bone = (name: string, parent: string | null, role?: RigBone['role']): RigBone => ({
-    name,
-    parent,
-    rest: IDENTITY_TRANSFORM,
-    ...(role ? { role } : {}),
-  })
-
-  const ARM: Rig = {
-    origin: 'local',
-    bones: [bone('Hips', null, 'Hips'), bone('Elbow', 'Hips'), bone('Wrist', 'Elbow')],
-  }
-
-  const rigged = (): SceneState => setModelRig('m', ARM).apply(withModel())
-
-  const bonesOf = (state: SceneState): readonly RigBone[] => {
-    const node = nodeById(state, 'm')
-    if (node?.type !== 'model' || !node.model.rig) throw new Error('the fixture rigs one model')
-    return node.model.rig.bones
-  }
-
-  it('hangs a bone where it was asked to', () => {
-    const next = addRigBone('m', bone('Thumb', 'Wrist')).apply(rigged())
-
-    expect(bonesOf(next).at(-1)).toMatchObject({ name: 'Thumb', parent: 'Wrist' })
-  })
-
-  // Refused whole rather than written half: a rig the reader drops would take the model with it
-  // on the next open, and nothing before then would say so.
-  it('writes nothing at all when the edit would break the rig', () => {
-    const next = addRigBone('m', bone('Thumb', 'Nowhere')).apply(rigged())
-
-    expect(bonesOf(next)).toEqual(ARM.bones)
-  })
-
-  it('gives a removed bone’s children its own parent', () => {
-    const next = removeRigBone('m', 'Elbow').apply(rigged())
-
-    expect(bonesOf(next).map(one => one.name)).toEqual(['Hips', 'Wrist'])
-    expect(bonesOf(next)[1]?.parent).toBe('Hips')
-  })
-
-  it('carries the children over a rename', () => {
-    const next = renameRigBone('m', 'Elbow', 'LeftLowerArm').apply(rigged())
-
-    expect(bonesOf(next).map(one => one.parent)).toEqual([null, 'Hips', 'LeftLowerArm'])
-  })
-
-  it('assigns a role, and takes it back off', () => {
-    const named = setRigBoneRole('m', 'Wrist', 'LeftHand').apply(rigged())
-    expect(bonesOf(named)[2]?.role).toBe('LeftHand')
-
-    expect(bonesOf(setRigBoneRole('m', 'Wrist', null).apply(named))[2]?.role).toBeUndefined()
-  })
-
-  // The weights are not recomputed here: the engine re-binds whenever `model.rig` changes, and
-  // an edit that wrote the same array back would leave a model wearing the previous skinning.
-  it('hands the engine a rig it can tell apart from the one before', () => {
-    const next = setRigBoneRole('m', 'Wrist', 'LeftHand').apply(rigged())
-    const node = nodeById(next, 'm')
-
-    expect(node?.type === 'model' && node.model.rig).not.toBe(ARM)
-  })
-
-  it('gives the rig back exactly as it was on an undo', () => {
-    const command = removeRigBone('m', 'Elbow')
-    const before = rigged()
-
-    expect(bonesOf(command.revert(command.apply(before)))).toEqual(ARM.bones)
-  })
-
-  it('lays the thirty finger bones on the hands a rig holds', () => {
-    const withHands = addRigHands('m').apply(
-      setModelRig('m', rigFit(STANDING_BOUNDS)).apply(withModel()),
-    )
-
-    expect(bonesOf(withHands)).toHaveLength(22 + 30)
-  })
-
-  it('lays no finger on a rig that names no hand', () => {
-    expect(bonesOf(addRigHands('m').apply(rigged()))).toEqual(ARM.bones)
-  })
-
-  const ikOf = (state: SceneState) => {
-    const node = nodeById(state, 'm')
-    return node?.type === 'model' ? node.model.rig?.ik : undefined
-  }
-
-  // The handle is a BONE of the same rig, and that is three's rule rather than a shortcut:
-  // `CCDIKSolver` addresses `Skeleton.bones` by index and knows no scene object.
-  it('adds the handle and the chain that reaches for it in one move', () => {
-    const next = addIkChain('m', 'Wrist').apply(rigged())
-
-    expect(bonesOf(next).map(one => one.name)).toContain('Wrist.handle')
-    expect(ikOf(next)?.[0]).toMatchObject({ effector: 'Wrist', target: 'Wrist.handle' })
-  })
-
-  it('lets the two bones above the joint turn, and no more', () => {
-    expect(ikOf(addIkChain('m', 'Wrist').apply(rigged()))?.[0]?.links).toEqual(['Elbow', 'Hips'])
-  })
-
-  it('rests the handle exactly where the joint stands, so nothing jumps on the first frame', () => {
-    const next = addIkChain('m', 'Wrist').apply(rigged())
-
-    expect(bonesOf(next).find(one => one.name === 'Wrist.handle')?.rest).toEqual(IDENTITY_TRANSFORM)
-  })
-
-  // Undone as one: a handle left behind by an undone chain is a bone nothing drives and nothing
-  // explains.
-  it('takes the handle away with the chain', () => {
-    const added = addIkChain('m', 'Wrist').apply(rigged())
-    const chain = ikOf(added)?.[0]
-    if (!chain) throw new Error('the chain was just added')
-
-    const next = removeIkChain('m', chain.id).apply(added)
-    expect(bonesOf(next).map(one => one.name)).not.toContain('Wrist.handle')
-    expect(ikOf(next)).toEqual([])
-  })
-
-  it('reaches for nothing from a root, which has no bone above it to turn', () => {
-    expect(ikOf(addIkChain('m', 'Hips').apply(rigged()))).toBeUndefined()
   })
 })
 

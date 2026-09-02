@@ -19,14 +19,14 @@ import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
 import type { GameManifest, GameScriptFile, GameState } from './domain/game'
-import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
+import type { NewDocumentAnswer, NewDocumentAsk } from './domain/newDocument'
 import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
 import type { FolderRole, RoleFolders } from './domain/folderRole'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloudAsset'
-import type { CommandId, MenuAbility, MenuCheck } from './domain/command'
+import type { CommandId, CommandScope, MenuAbility, MenuCheck } from './domain/command'
 import type { ContextMenuItem } from './domain/contextMenu'
 import type {
   ActionOutcome,
@@ -224,6 +224,7 @@ export type Channels = {
   documentWrite: 'document:write'
   documentRename: 'document:rename'
   documentRemove: 'document:remove'
+  documentOpened: 'document:opened'
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
   documentConfirmOverwrite: 'document:confirm-overwrite'
@@ -237,6 +238,10 @@ export type Channels = {
   assetsSaveAudio: 'assets:save-audio'
   assetsSavePicture: 'assets:save-picture'
   assetsSaveLayered: 'assets:save-layered'
+  /** Writes a character's own `.glb` back, its skeleton in it. See `SaveMeshRequest`. */
+  assetsSaveMesh: 'assets:save-mesh'
+  /** Files a motion in the project's `animations` folder, as a file of its own. */
+  assetsSaveAnimation: 'assets:save-animation'
   assetsReadLayered: 'assets:read-layered'
   assetsSaveTexture: 'assets:save-texture'
   texturesInstallBundled: 'textures:install-bundled'
@@ -332,6 +337,8 @@ export type Channels = {
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
 
+  /** Opens the skeleton window on one character, or turns the open one towards it. */
+  characterWindowOpen: 'character:open-window'
   /** Opens the game window, or reveals the one already open. See `GAME_ROUTE`. */
   gameWindowOpen: 'game:open-window'
   /** Closes it. What a Stop pressed in the studio does — the window is the main process's. */
@@ -473,6 +480,7 @@ export const CHANNELS: Channels = {
   documentWrite: 'document:write',
   documentRename: 'document:rename',
   documentRemove: 'document:remove',
+  documentOpened: 'document:opened',
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
   documentConfirmOverwrite: 'document:confirm-overwrite',
@@ -486,6 +494,8 @@ export const CHANNELS: Channels = {
   assetsSaveAudio: 'assets:save-audio',
   assetsSavePicture: 'assets:save-picture',
   assetsSaveLayered: 'assets:save-layered',
+  assetsSaveMesh: 'assets:save-mesh',
+  assetsSaveAnimation: 'assets:save-animation',
   assetsReadLayered: 'assets:read-layered',
   assetsSaveTexture: 'assets:save-texture',
   texturesInstallBundled: 'textures:install-bundled',
@@ -579,6 +589,7 @@ export const CHANNELS: Channels = {
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
   mirrorOpen: 'mirror:open',
+  characterWindowOpen: 'character:open-window',
   gameWindowOpen: 'game:open-window',
   gameWindowClose: 'game:close-window',
   helpOpen: 'help:open',
@@ -624,6 +635,29 @@ export type SavePictureRequest = SaveRequestBase & {
   /** PNG payload, base64 and never a data URL — the prefix is part of the picture otherwise. */
   png: string
 }
+
+/**
+ * A character's own file on its way back to disk, its skeleton written into it.
+ *
+ * 🛑 `replaces` is REQUIRED where its neighbours make it optional: ⌘S rewrites the very `.glb`
+ * the window opened, in place. An optional one would be the door a copy appears beside it by —
+ * and « the open format must BE the document, never an export next to it ».
+ */
+export type SaveMeshRequest = {
+  replaces: string
+  /** The whole container, patched by the renderer that read it. */
+  glb: Uint8Array
+}
+
+/**
+ * A motion on its way into the project's `animations` folder — see
+ * `StudioBridge['assets']['saveAnimation']`.
+ *
+ * A NEW asset unless `replaces` names one: a motion is a file of its own, playable by every
+ * character whose bones carry the same names. `replaces` is the file a workbench REOPENED and
+ * corrected — without it every pass files a copy beside the last, and none of them is the motion.
+ */
+export type SaveAnimationRequest = SaveRequestBase & { glb: Uint8Array }
 
 /**
  * A layered picture on its way to disk as OpenRaster — see `StudioBridge['assets']['saveLayered']`.
@@ -1007,6 +1041,8 @@ export const EVENTS = {
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
   windowLanguage: 'evt:window-language',
+  documentNew: 'evt:document-new',
+  openRecent: 'evt:open-recent',
   sceneAdd: 'evt:scene-add',
   sceneView: 'evt:scene-view',
   sceneDisplay: 'evt:scene-display',
@@ -1018,6 +1054,7 @@ export const EVENTS = {
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   gameWindowClosed: 'evt:game-window-closed',
+  characterWindowClosed: 'evt:character-window-closed',
   activity: 'evt:activity',
 }
 
@@ -1028,6 +1065,20 @@ export type ToolRequest = {
   zone: ToolZone
   tool: ToolId
 }
+
+/**
+ * Which kind File ▸ New asks the window in front to make. An EVENT rather than a `CommandId`,
+ * exactly as `SceneAddRequest` is: eight rows carrying no shortcut of their own would be eight
+ * dead entries in the shortcut settings.
+ */
+export type NewDocumentRequest = { kind: DocumentKind }
+
+/**
+ * One row of File ▸ Open recent: a project folder, and the document inside it when the row names
+ * one. The two in one shape rather than two events — the gesture is the same, and a document of
+ * another project IS a project switch followed by an opening.
+ */
+export type RecentOpenRequest = { project: string; path?: string }
 
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind | ObjectKind }
@@ -1640,6 +1691,14 @@ export type StudioBridge = {
     rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>
     remove: (id: string, kind: DocumentKind) => Promise<void>
     /**
+     * Notes that this document was just put in front, for the shelf File ▸ Open recent draws.
+     *
+     * The window says WHICH document and nothing else: the project holding it is the main
+     * process's to know — it owns the open project — and a window composing the pair would be a
+     * second answer, late by exactly the switch that had just happened.
+     */
+    opened: (path: string, kind: DocumentKind) => Promise<void>
+    /**
      * What to do with a modified document being closed. Native rather than drawn in the window:
      * this is the OS convention every desktop application answers with, and the wording lives
      * beside the menu's — the renderer asks the question, it does not phrase it.
@@ -1724,6 +1783,17 @@ export type StudioBridge = {
      * open format buys, and the reason `formatCapability` exists to tell the two cases apart.
      */
     saveLayered: (request: SaveLayeredRequest) => Promise<Asset>
+    /**
+     * Writes a character's own file back, skeleton and all — what ⌘S means in the skeleton
+     * window. It OVERWRITES, for `saveLayered`'s reason: the container holds everything, so
+     * writing it over the file it was read from loses nothing.
+     */
+    saveMesh: (request: SaveMeshRequest) => Promise<Asset>
+    /**
+     * Files a motion in the project's `animations` folder — a new asset, or the one `replaces`
+     * names: what makes a motion reusable is being a file no character owns.
+     */
+    saveAnimation: (request: SaveAnimationRequest) => Promise<Asset>
     /**
      * Reads a layered picture back, or `null` for an asset that is not one.
      *
@@ -2149,16 +2219,17 @@ export type StudioBridge = {
      * that space offered the image tools over a screen that edits no image.
      */
     setWorkspace: (
-      surface: ToolSurface,
+      /** `null` for a window with no docks at all — the skeleton window has no panels to offer. */
+      surface: ToolSurface | null,
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
       abilities: readonly MenuAbility[],
       /**
-       * What the tab in front IS, `null` where none is. Carried beside the surface because one
-       * space now opens two kinds: the Undo row of a 3D space showing an interface must pop the
-       * interface's history, not the scene's.
+       * Whose history Undo pops, `null` where nothing is undoable. The scope rather than the kind
+       * of the tab in front: a window that shows no document at all — the skeleton window — still
+       * holds a history, and the menu would otherwise reserve ⌘Z for the platform's own.
        */
-      kind: DocumentKind | null,
+      scope: CommandScope | null,
     ) => Promise<void>
   }
   /**
@@ -2170,6 +2241,18 @@ export type StudioBridge = {
    */
   mirror: {
     open: () => Promise<void>
+  }
+  /**
+   * The skeleton window. Same line as `gameWindow`: what it EDITS travels between the windows on
+   * a channel they both share, and the only thing this side owns is opening one.
+   */
+  characterWindow: {
+    open: (assetId: string) => Promise<void>
+    /**
+     * It went away — closed by its own traffic lights, or by anything the studio did not ask
+     * for. 🛑 A renderer being torn down has no turn left in which to say so.
+     */
+    onClosed: (callback: () => void) => Unsubscribe
   }
   /**
    * The game window. Same line as `mirror`: what it PLAYS it reads for itself off a channel both
@@ -2210,10 +2293,10 @@ export type StudioBridge = {
    * nothing was made, and the close button is the plainest way to say it.
    */
   newDocument: {
-    ask: (ask: NewDocumentAsk) => Promise<NamedDocumentPlace | null>
+    ask: (ask: NewDocumentAsk) => Promise<NewDocumentAnswer | null>
     /** What the open window was asked, or `null` when nothing is pending. */
     request: () => Promise<NewDocumentAsk | null>
-    answer: (place: NamedDocumentPlace | null) => Promise<void>
+    answer: (answer: NewDocumentAnswer | null) => Promise<void>
   }
   menu: {
     /**
@@ -2228,6 +2311,8 @@ export type StudioBridge = {
     popup: (items: readonly ContextMenuItem[]) => Promise<string | null>
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
     onCommand: (callback: (command: CommandId) => void) => Unsubscribe
+    onDocumentNew: (callback: (request: NewDocumentRequest) => void) => Unsubscribe
+    onOpenRecent: (callback: (request: RecentOpenRequest) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
     onSceneView: (callback: (request: SceneViewRequest) => void) => Unsubscribe
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe

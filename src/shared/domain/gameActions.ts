@@ -49,9 +49,9 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
      * a schema naming them all would describe none of them — and a `raw` parameter is one no
      * client can build from. The handler converts it by the kind the DESCRIPTOR declares.
      */
-    name: 'component.set',
-    titleKey: 'assistant.actions.componentSet.title',
-    descriptionKey: 'assistant.actions.componentSet.description',
+    name: 'component.setProperties',
+    titleKey: 'assistant.actions.componentSetProperties.title',
+    descriptionKey: 'assistant.actions.componentSetProperties.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -270,7 +270,7 @@ const timelineListField: ActionField = {
  * What a timeline CUES, put there from outside the window.
  *
  * 🛑 ONE action for the four lists rather than four: what changes between them is the shape of
- * the row, and `component.set` already settled that question here — the value travels as TEXT
+ * the row, and `component.setProperties` already settled that question here — the value travels as TEXT
  * and the handler reads it by what the list declares. Four narrow actions would be four schemas
  * a model has to tell apart before it can ask for anything.
  */

@@ -4,6 +4,9 @@
     "castShadow": "Casts a shadow",
     "receiveShadow": "Catches shadows",
     "shadows": "Shadows",
+    "attach": "Attachment",
+    "attachSocket": "Attachment point",
+    "attachNone": "None — follows the character",
     "noSelection": "Select an object to see its properties.",
     "transform": "Transform",
     "geometry": "Geometry",
@@ -245,6 +248,7 @@
     "rigNotHumanoid": "The studio only lays a humanoid skeleton — hips, spine, two arms and two legs.",
     "rigCreate": "Create the skeleton",
     "boneName": "Name",
+    "boneNameHint": "Double-click to rename this joint",
     "rigBinding": "Preparing the character",
     "rigReady": "This model has been given a skeleton.",
     "removeRig": "Remove the skeleton",
@@ -259,10 +263,12 @@
     "animationSource_library": "Library",
     "animationSource_import": "Import",
     "animationSource_ai": "AI",
+    "animationLibrary": "Motions at hand",
     "animationLibraryEmpty": "No animation in this project yet.",
     "animationImportHint": "Accepted formats: {{formats}}. The file stays where it is.",
     "animationImportPick": "Choose a file…",
     "animationImportRefused": "That file carries no motion.",
+    "animationAi": "Motion services",
     "animationAiNone": "No motion service in the catalogue.",
     "animationAiLocked": "{{plan}} subscription is not enough",
     "animationAiSoon": "Not wired up yet",
@@ -352,6 +358,10 @@
     "artResolution": "Resolution (cells)",
     "artColumns": "Columns",
     "artRows": "Rows",
-    "pixelSize": "Pixel size"
+    "pixelArtGrid": "Show the grid",
+    "pixelArtPreview": "Artwork, one pixel per cell",
+    "pixelArtPreviewTooWide": "Too many cells to show one pixel each",
+    "pixelSize": "Pixel size",
+    "editSkeleton": "Edit the skeleton…"
   }
 }

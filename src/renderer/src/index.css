@@ -168,6 +168,16 @@
   --color-marquee-dark: #000000;
 
   /*
+   * The pixel-art grid, and it does not swap with the theme for the marching ants' reason: it is
+   * drawn over the document. A mid grey at two alphas rather than the ants' two passes — three
+   * hundred lines stroked twice per frame, redrawn on every pixel of a pan, is the 16 ms budget.
+   * At 55 % a mid grey shifts white and black alike by about a quarter, which is what lets ONE
+   * value read over any picture; the finer level sits under it, at half.
+   */
+  --color-grid-cell: #8080808c;
+  --color-grid-pixel: #80808047;
+
+  /*
    * The 3D viewport is neither a panel surface nor the chassis: it is a working space, and it
    * sits LIGHTER than both. A scene judged against near-black reads darker than it is, and the
    * grid it stands on disappears into the background.
@@ -518,6 +528,10 @@
    */
   --color-marquee-light: #ffffff;
   --color-marquee-dark: #000000;
+
+  /* Restated identically, for the marching ants' reason: ruled over the same document. */
+  --color-grid-cell: #8080808c;
+  --color-grid-pixel: #80808047;
   /*
    * Lighter than its dark counterpart: on a light document the same black would read as a hole
    * rather than as a dimmed part of the picture.
@@ -536,6 +550,9 @@
   /* Overwritten inline by `useAppearance`; the value here is what an unstyled root falls to. */
   --sc-font-scale: 1;
   --sc-control: 28px;
+  /* The bar over every window, centring its text on the native traffic lights. Not redeclared
+     under compact: the lights do not move with it. `main/window/theme.test.ts` holds both numbers. */
+  --sc-title-bar: 40px;
   /* A control that sits INSIDE a list row rather than on a bar: the visibility eye, a layer's
      padlock. `--sc-control` is the gauge of a BAR, and two of them at the end of a 28px line took
      68px of it — more than a fifth of a side panel, on the very rows whose name is what one reads.
@@ -709,6 +726,39 @@ html,
 body,
 #root {
   height: 100%;
+}
+
+/*
+ * The panel chassis reads its own gauges and colours from these, so `@pasquelin/panels` is
+ * dressed by the studio's tokens rather than by the neutral palette it ships — the same rule
+ * React Flow follows below, and the one no component escapes.
+ *
+ * Every value is a REFERENCE, never a copy: the density switch rewrites the `--sc-*` half under
+ * `[data-density='compact']`, and a copied number would stop following it. The chassis has no
+ * second declaration as a result.
+ *
+ * `--pnl-surface` has no counterpart here and takes the panel's own colour: it exists for a tab
+ * strip, which the studio draws with Dockview rather than with the chassis.
+ */
+.pnl-root {
+  --pnl-rail: var(--sc-rail);
+  --pnl-rail-button: var(--sc-rail-button);
+  --pnl-gutter: var(--sc-gutter);
+  --pnl-header: var(--sc-header);
+  --pnl-tab: var(--sc-tab);
+  --pnl-radius: var(--radius-sc-lg);
+  --pnl-radius-sm: var(--radius-sc-md);
+  --pnl-font-size: var(--text-body);
+
+  --pnl-chassis: var(--color-chassis);
+  --pnl-panel: var(--color-panel);
+  --pnl-surface: var(--color-panel);
+  --pnl-elevated: var(--color-elevated);
+  --pnl-border: var(--color-border);
+  --pnl-text: var(--color-text);
+  --pnl-muted: var(--color-muted);
+  --pnl-accent: var(--color-accent);
+  --pnl-accent-text: var(--color-accent-content);
 }
 
 /*

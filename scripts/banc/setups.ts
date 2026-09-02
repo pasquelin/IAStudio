@@ -1,5 +1,7 @@
 import type { RecentProject } from '@shared/domain/project'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { workshopIdOf } from '@/character/characterStage'
+import { seedCharacter, useCharacters } from '@/stores/character'
 import { useJobs } from '@/stores/jobs'
 import { useSettings } from '@/stores/settings'
 import { useTasks } from '@/stores/tasks'
@@ -87,6 +89,12 @@ export const modelScene = async (studio: Studio): Promise<void> => {
     name: 'Knight',
   })
   measured(studio, named(studio, 'Knight'))
+  // 🛑 The skeleton window, opened on the same file: `rig.*` acts on a CHARACTER now, and with
+  // none open the whole of section 50 would be scored on a refusal. Its workshop scene is
+  // measured too — a fit proportions itself off a height, and reads it from that scene alone.
+  const character = assetOf(studio, 'knight in plate armour, character.glb')
+  seedCharacter(character, null, {})
+  measured(studio, 'workshop', workshopIdOf(character))
 }
 
 /**
@@ -100,24 +108,26 @@ export const modelSceneWithMaterial = async (studio: Studio): Promise<void> => {
 
 /** The bones the model in front carries, for a decor that has to name the one it just added. */
 export const bonesOf = (studio: Studio): readonly string[] => {
-  const node = sceneOf(useScenes.getState(), frontId(studio)).nodes.find(
-    one => one.type === 'model',
-  )
-  return node?.type === 'model' ? (node.model.rig?.bones.map(one => one.name) ?? []) : []
+  void studio
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.rig?.bones.map(one => one.name) ?? []
 }
 
 /**
  * 🛑 What the ENGINE measures of a model, which a headless run has none of: without it `rig.fit`
  * refuses `notFound` and the whole of section 50 is scored on a model nobody could have rigged.
  */
-const measured = (studio: Studio, nodeId: string): void => {
-  useModelFiles.getState().reportRig(frontId(studio), nodeId, {
+const measured = (studio: Studio, nodeId: string, documentId = frontId(studio)): void => {
+  useModelFiles.getState().reportRig(documentId, nodeId, {
     status: 'staticMesh',
     bones: [],
     boneNames: [],
     boneCount: 0,
     // A character of about 1.8 m, standing — `rigFitFaultOf` refuses anything flat or lying.
     bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
+    // No vertex to read, so the fit keeps the joints its proportions placed — which is exactly
+    // what a run with no viewport can be scored on.
+    points: new Float32Array(),
   })
 }
 
@@ -193,6 +203,18 @@ export const twoSounds = async (studio: Studio): Promise<void> => {
 export const boatImage = async (studio: Studio): Promise<void> => {
   await studio.run('file.open', { path: 'Images/fais moi un bateau.png' })
   await studio.run('layer.rename', { layerId: layerAt(studio, 0), name: 'Bateau' })
+}
+
+/** That picture on a 32 × 32 grid, which is what section 68 draws on. */
+export const pixelArtBoat = async (studio: Studio): Promise<void> => {
+  await boatImage(studio)
+  await studio.run('canvas.setPixelArt', { enabled: true, columns: 32, rows: 32, cell: 1 })
+}
+
+/** A red cell already laid, so an erasure has something to take away. */
+export const paintedDot = async (studio: Studio): Promise<void> => {
+  await pixelArtBoat(studio)
+  await studio.run('canvas.drawPixels', { shape: 'points', cells: ['3,4'], color: '#ff0000' })
 }
 
 /** That picture with a second layer over it, which five scenarios of section 19 act on. */

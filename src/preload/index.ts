@@ -25,6 +25,8 @@ import {
   type AssistantActionRequest,
   type LogEntry,
   type McpState,
+  type NewDocumentRequest,
+  type RecentOpenRequest,
   type SceneAddRequest,
   type SceneDisplayRequest,
   type SceneViewRequest,
@@ -191,6 +193,7 @@ const bridge: StudioBridge = {
   },
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),
+    opened: (path, kind) => ipcRenderer.invoke(CHANNELS.documentOpened, path, kind),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
     write: (id, kind, file, force, folder) =>
       ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file, force, folder),
@@ -212,6 +215,8 @@ const bridge: StudioBridge = {
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
     savePicture: request => ipcRenderer.invoke(CHANNELS.assetsSavePicture, request),
     saveLayered: request => ipcRenderer.invoke(CHANNELS.assetsSaveLayered, request),
+    saveMesh: request => ipcRenderer.invoke(CHANNELS.assetsSaveMesh, request),
+    saveAnimation: request => ipcRenderer.invoke(CHANNELS.assetsSaveAnimation, request),
     readLayered: assetId => ipcRenderer.invoke(CHANNELS.assetsReadLayered, assetId),
     saveTexture: request => ipcRenderer.invoke(CHANNELS.assetsSaveTexture, request),
     installBundledTextures: () => ipcRenderer.invoke(CHANNELS.texturesInstallBundled),
@@ -328,6 +333,10 @@ const bridge: StudioBridge = {
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
   },
+  characterWindow: {
+    open: assetId => ipcRenderer.invoke(CHANNELS.characterWindowOpen, assetId),
+    onClosed: callback => subscribe<void>(EVENTS.characterWindowClosed, callback),
+  },
   gameWindow: {
     open: () => ipcRenderer.invoke(CHANNELS.gameWindowOpen),
     close: () => ipcRenderer.invoke(CHANNELS.gameWindowClose),
@@ -357,6 +366,8 @@ const bridge: StudioBridge = {
     popup: items => ipcRenderer.invoke(CHANNELS.menuPopup, items),
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
     onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
+    onDocumentNew: callback => subscribe<NewDocumentRequest>(EVENTS.documentNew, callback),
+    onOpenRecent: callback => subscribe<RecentOpenRequest>(EVENTS.openRecent, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
     onSceneView: callback => subscribe<SceneViewRequest>(EVENTS.sceneView, callback),
     onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),

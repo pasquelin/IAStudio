@@ -123,6 +123,9 @@
       "gui": "Interface"
     },
     "new": "Nouveau document",
+    "newKinds": "Types de documents",
+    "noProjectBody": "Un document est un fichier dans un projet. Ouvrez-en un, ou créez-en un, pour commencer.",
+    "recentProjects": "Projets récents",
     "newByKind": {
       "image": "Nouvelle image",
       "scene": "Nouvelle scène",

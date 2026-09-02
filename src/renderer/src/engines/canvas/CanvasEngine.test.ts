@@ -82,6 +82,8 @@ const gpu: {
   containers: Placed[]
   /** The id of every texture a render was aimed at: which surface a stroke actually wrote to. */
   painted: number[]
+  /** Every square the stamp drew, in order — what a stroke on a grid is made of. */
+  stamps: Rect[]
   /** What the engine asked the asset loader for, so the parser it forces can be asserted. */
   loaded: { src: string; parser?: string }[]
   /** Set by the one test that needs a load to fail: an asset whose file is gone. */
@@ -110,6 +112,7 @@ const gpu: {
   sprites: [],
   containers: [],
   painted: [],
+  stamps: [],
   loaded: [],
   refuseLoad: false,
   unloaded: [],
@@ -247,7 +250,8 @@ vi.mock('pixi.js', () => {
     circle(): this {
       return this
     }
-    rect(): this {
+    rect(x: number, y: number, width: number, height: number): this {
+      gpu.stamps.push({ x, y, width, height })
       return this
     }
     fill(): this {
@@ -636,6 +640,7 @@ beforeEach(() => {
   gpu.sprites = []
   gpu.containers = []
   gpu.painted = []
+  gpu.stamps = []
   gpu.loaded = []
   gpu.extracted = []
   gpu.sampled = []
@@ -1473,6 +1478,17 @@ describe('the stencil holder and the stamp it borrows', () => {
     if (!stamp) throw new Error('a dab always draws through the paint space')
     return stamp
   }
+
+  /**
+   * The softener is hung by `setTool`, which a rebuilt engine can run BEFORE its first state —
+   * and nothing feathers on a grid. Without the first state counting as a change, every square
+   * came out blurred and the tiles were recorded a fringe too wide, silently.
+   */
+  it('hangs no softener when the first state it is handed is already on a grid', async () => {
+    const { host } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 8 }, 'brush')
+
+    expect(stampAfterAPlainDab(host).filters).toEqual([])
+  })
 
   it('keeps the stamp alive when a selection is dropped between two strokes', async () => {
     const { engine, host } = await mounted()
@@ -2915,6 +2931,141 @@ function release(x = 400, y = 400): void {
   window.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y }))
 }
 
+describe('painting cells by call', () => {
+  const CELL = { x: 0, y: 0, width: 1, height: 1 }
+  const two: readonly Rect[] = [CELL, { x: 4, y: 4, width: 1, height: 1 }]
+
+  // The invariant a client depends on: ⌘Z must not cost one press per cell.
+  it('lays a whole set of cells as ONE history entry', async () => {
+    const { engine, patches } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 1 })
+
+    expect(engine.paintCells(null, two, 0xff0000)).toBe(true)
+    expect(patches).toHaveLength(1)
+  })
+
+  // The one branch of the call a client can see from outside: a null colour takes pixels away.
+  it('erases the cells rather than painting them when no colour is named', async () => {
+    const { engine } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 1 })
+    gpu.painted = []
+
+    expect(engine.paintCells(null, two, null)).toBe(true)
+    expect(gpu.painted).not.toHaveLength(0)
+  })
+
+  /**
+   * A refusal leaves the history alone: an entry that changes nothing is a ⌘Z the user watches
+   * do something invisible. The layer is named by ID and is NOT the armed one, which is the
+   * whole reason the call resolves its own target.
+   */
+  it('refuses an absent layer and a padlocked one, and pushes nothing for either', async () => {
+    const locked: CanvasState = {
+      ...DEFAULT_CANVAS,
+      layers: [
+        pixelLayer('armed', 'Armed'),
+        { ...pixelLayer('l', 'L'), locked: { ...UNLOCKED, pixels: true } },
+      ],
+      activeLayerId: 'armed',
+    }
+    const { engine, patches } = await mounted(locked)
+
+    expect(engine.paintCells('nobody', [CELL], 0)).toBe(false)
+    expect(engine.paintCells('l', [CELL], 0)).toBe(false)
+    expect(patches).toHaveLength(0)
+  })
+
+  /**
+   * 🛑 `patches.begin` throws away whatever is open: a call landing between two `pointermove`
+   * would take the trait's tiles with it, and the trait would end with no entry at all.
+   */
+  it('refuses while a stroke is in flight', async () => {
+    const { engine, host } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 1 }, 'pencil')
+
+    press(host, 200, 200)
+    expect(engine.paintCells(null, two, 0xff0000)).toBe(false)
+    release(200, 200)
+  })
+})
+
+describe('the gestures of a pixel grid', () => {
+  // Aligned whatever the magnetism says: on a grid the alignment is the mode, not a preference.
+  it('lands a moved layer on a cell boundary, ahead of the magnetism', async () => {
+    const stack: CanvasState = {
+      ...DEFAULT_CANVAS,
+      pixelCell: 16,
+      layers: [{ ...pixelLayer('t', 'T'), transform: { ...IDENTITY, x: 0, y: 0 } }],
+      activeLayerId: 't',
+    }
+    const { engine, host, layers } = await mounted(stack, 'move')
+    engine.setView({ ...DEFAULT_VIEW, rulers: false, guides: false, snap: true })
+
+    press(host, 200, 200)
+    drag(host, 237, 205)
+    release(237, 205)
+
+    // The hand moved by (37, 5); the layer lands on the nearest boundary of a 16 px cell.
+    expect(layers).toContain('translate:t:32:0')
+  })
+
+  /**
+   * A marquee off the grid selects a fraction of a cell, which no dab can ever fill. Both ends
+   * grow OUTWARD: rounding each to its nearest boundary makes a drag of the same length select a
+   * cell or nothing at all, depending where inside a cell the hand happened to start.
+   */
+  it('carves a marquee outward, onto whole cells', async () => {
+    const { engine, host, selections } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 16 })
+    engine.setTool('select')
+    engine.setView({ ...DEFAULT_VIEW, rulers: false, guides: false, snap: false })
+
+    press(host, 205, 205)
+    drag(host, 253, 261)
+    release(253, 261)
+    await nextFrame()
+
+    expect(selections.at(-1)).toEqual({
+      kind: 'rect',
+      rect: { x: 192, y: 192, width: 64, height: 80 },
+    })
+  })
+
+  it('takes the cell a drag never left, rather than nothing at all', async () => {
+    const { engine, host, selections } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 16 })
+    engine.setTool('select')
+
+    press(host, 220, 220)
+    drag(host, 228, 228)
+    release(228, 228)
+    await nextFrame()
+
+    expect(selections.at(-1)).toEqual({
+      kind: 'rect',
+      rect: { x: 208, y: 208, width: 32, height: 32 },
+    })
+  })
+})
+
+describe('a stroke on a pixel grid', () => {
+  // The press stamps the first cell, each move the cells of the line after it — merged into one
+  // rectangle per row, so no fragment of a half-opaque stroke is drawn onto itself.
+  it('stamps the cells of the line, one run per row', async () => {
+    const { engine, host } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 8 }, 'pencil')
+    engine.setBrush({ ...DEFAULT_BRUSH, size: 1 })
+    // A surface is born filled edge to edge, by the same `rect` — not a stamp.
+    gpu.stamps = []
+
+    press(host, 204, 204)
+    drag(host, 244, 228)
+    release()
+
+    // Bresenham from (25,25) to (30,28): 25 · 26,27 · 28,29 · 30 — one run per row.
+    expect(gpu.stamps).toEqual([
+      { x: 200, y: 200, width: 8, height: 8 },
+      { x: 208, y: 208, width: 16, height: 8 },
+      { x: 224, y: 216, width: 16, height: 8 },
+      { x: 240, y: 224, width: 8, height: 8 },
+    ])
+  })
+})
+
 describe('the crop tool', () => {
   /** A frame is placed by the drag and applied by ⏎: the release is not what commits it. */
   it('places a frame on release without cropping anything yet', async () => {
@@ -4132,7 +4283,7 @@ describe('the brush ring', () => {
  * The stakes are not that the fallback looks wrong. `token()` answers an empty string for a name
  * `index.css` no longer declares, and `readColors` falls back on exactly that answer — so a
  * renamed or removed token turns this table into the real source of the overlay's colours, on
- * every canvas, with the whole suite green. Two of these nine tokens were repainted on 12 August
+ * every canvas, with the whole suite green. Two of these eleven tokens were repainted on 12 August
  * alone.
  *
  * Pinned against the DARK declarations only, and that is a decision rather than an oversight: a

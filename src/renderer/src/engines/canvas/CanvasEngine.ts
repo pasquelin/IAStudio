@@ -51,6 +51,7 @@ import {
   dragSelection,
   extendLasso,
   isEmptySelection,
+  selectionBounds,
   selectionOutline,
   type CanvasSelection,
   type SelectionShape,
@@ -76,6 +77,7 @@ import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
 import {
   CanvasOverlay,
   RULER_SIZE,
+  type BrushMark,
   type OverlayColors,
   type OverlayScene,
   type PendingShape,
@@ -101,15 +103,17 @@ import {
   type ShapeGeometry,
 } from './shapeGeometry'
 import type { Point, Size } from '../core/geometry'
-import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
+import { blurRadius, brushSettingsOf, DEFAULT_BRUSH, type BrushSettings } from './brush'
 import type { CanvasTool } from './canvasTool'
-import { brushRect, grownBy } from './tiles'
+import { brushRect, grownBy, overlaps, rowBoxes } from './tiles'
+import { cellAt, cellBox, cellRuns, cellsOfLine, onCellBoundary, stampRect } from './pixelGrid'
 import {
   containIn,
   DEFAULT_VIEW,
   fitTo,
   onDevicePixels,
   sameViewport,
+  wheelStep,
   toDocument,
   zoomCanvasAt,
   type CanvasView,
@@ -394,7 +398,9 @@ type Gesture =
    * The drag's two points, in document units. `to` is held rather than derived on release: it is
    * the point AFTER shift has been applied, and the layer must store the square that was drawn.
    */
-  | { kind: 'shape'; from: Point; to: Point }
+  // `origin` is where the hand PRESSED, kept raw: the box grows away from the far end, so
+  // which way it grows changes the moment a drag crosses back over its own anchor.
+  | { kind: 'shape'; origin: Point; from: Point; to: Point }
   /** Sizing a caption's box by its diagonal. A drag of nothing at all is a click, which opens one. */
   | { kind: 'text'; from: Point; to: Point }
   /** Pulling one grip of a caption's box. `box` and `origin` are what it stood at when taken. */
@@ -463,6 +469,8 @@ export const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
   accent: '--color-accent',
   marqueeLight: '--color-marquee-light',
   marqueeDark: '--color-marquee-dark',
+  gridCell: '--color-grid-cell',
+  gridPixel: '--color-grid-pixel',
   scrim: '--color-scrim',
 }
 
@@ -482,6 +490,8 @@ export const FALLBACK_COLORS: OverlayColors = {
   accent: '#346ef2',
   marqueeLight: '#ffffff',
   marqueeDark: '#000000',
+  gridCell: '#8080808c',
+  gridPixel: '#80808047',
   scrim: '#00000099',
 }
 
@@ -504,6 +514,8 @@ function readColors(element: HTMLElement): OverlayColors {
     accent: read('accent'),
     marqueeLight: read('marqueeLight'),
     marqueeDark: read('marqueeDark'),
+    gridCell: read('gridCell'),
+    gridPixel: read('gridPixel'),
     scrim: read('scrim'),
   }
 }
@@ -577,6 +589,8 @@ export class CanvasEngine {
   private readonly loaded = new Set<string>()
   /** The viewport the world was last moved to — see `applyViewport`. `null` until the first one. */
   private applied: Viewport | null = null
+  /** Wheel travel not yet worth a stop — see `wheelStop`. */
+  private wheelDebt = 0
   /**
    * Where the picture actually landed inside each layer's surface — what `containIn` worked out
    * when it was drawn, kept so the handles can grip the photo rather than the document.
@@ -791,8 +805,15 @@ export class CanvasEngine {
 
     // Dragging a guide rewrites the state sixty times a second and touches no pixel: walking the
     // tree and re-rendering the stage for it would be a full GPU frame per pointer move.
-    // Grid on or off only: a change of cell size touches no surface.
-    const regridded = previous !== null && onPixelGrid(previous) !== onPixelGrid(state)
+    // Grid on or off only: a change of cell size touches no surface. A FIRST state counts as a
+    // change too: a softener hung by `setTool` before it would stay hung on the grid.
+    const regridded = onPixelGrid(previous) !== onPixelGrid(state)
+    // Nothing feathers on a grid, and the softener is tuned from the state as much as the tool.
+    // The wheel's travel goes with it: the two ladders do not measure the same thing.
+    if (regridded) {
+      this.tuneSoftener()
+      this.wheelDebt = 0
+    }
     if (previous && previous.layers === state.layers && !resized) {
       if (!regridded) return
       // The one change that reaches the GPU without a layer moving: the sampling, and the
@@ -1433,9 +1454,7 @@ export class CanvasEngine {
    * How far the edge of a dab is spread, in document pixels — zero for every tool that does not
    * feather.
    *
-   * **Which ones those are is `BRUSH_SETTINGS_BY_TOOL`, asked rather than restated.** The bar
-   * hides the hardness slider from the same table, so the two cannot drift into a control that
-   * moves nothing.
+   * Asked of `brushSettingsOf`, which the bar reads too, so slider and softener cannot drift.
    *
    * The pencil is hard by definition, and that is the whole of what tells it from the brush. The
    * eraser is hard for a reason of Pixi's: a filtered container is drawn into a texture of its
@@ -1446,7 +1465,12 @@ export class CanvasEngine {
    * the eraser silently stops erasing.
    */
   private softness(): number {
-    return readsBrushSetting(this.tool, 'hardness') ? blurRadius(this.brush) : 0
+    const feathers = brushSettingsOf(this.tool, this.pixelCell()).includes('hardness')
+    return feathers ? blurRadius(this.brush) : 0
+  }
+
+  private pixelCell(): number | null {
+    return this.state?.pixelCell ?? null
   }
 
   /**
@@ -1478,6 +1502,23 @@ export class CanvasEngine {
     // fringe. Written after `strength`, whose setter recomputes padding from scratch.
     this.softener.padding = Math.ceil(spread * 2)
     this.stamp.filters = [this.softener]
+  }
+
+  /**
+   * The two corners of a dragged box, on whole cells while the document is on a grid. `cropRect`
+   * clamps to the document afterwards, so an edge of a document the cell does not divide lands
+   * on the document's own edge rather than on a boundary.
+   */
+  private gridBox(from: Point, to: Point): { from: Point; to: Point } {
+    const cell = this.pixelCell()
+    return cell === null ? { from, to } : cellBox(from, to, cell)
+  }
+
+  /** What the next dab covers, which on a grid is a square and not the disc the size names. */
+  private brushMark(at: Point): BrushMark {
+    const cell = this.pixelCell()
+    if (cell === null) return { radius: this.brush.size / 2 }
+    return { stamp: stampRect(toDocument(this.shownViewport(), at), cell, this.brush.size) }
   }
 
   /** Whether the armed tool stamps a disc, and so whether the ring stands for anything. */
@@ -1912,7 +1953,8 @@ export class CanvasEngine {
     if (!this.state || this.hostSize.width === 0) return
     this.framed = true
     const document = { width: this.state.width, height: this.state.height }
-    this.moveTo(fitTo(document, this.hostSize, this.view.rulers ? RULER_SIZE : 0))
+    const inset = this.view.rulers ? RULER_SIZE : 0
+    this.moveTo(fitTo(document, this.hostSize, inset, onPixelGrid(this.state)))
   }
 
   dispose(): void {
@@ -2034,6 +2076,9 @@ export class CanvasEngine {
       document: { width: this.state.width, height: this.state.height },
       showRulers: this.view.rulers,
       showGuides: this.view.guides,
+      showGrid: this.view.grid,
+      pixelCell: this.state.pixelCell,
+      resolution: this.app?.renderer.resolution ?? window.devicePixelRatio,
       guides: this.state.guides,
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
@@ -2053,7 +2098,8 @@ export class CanvasEngine {
         overflowing: this.overflowing.has(this.state.activeLayerId ?? ''),
         selection: this.selection,
         // Not while the tool is refusing: a ring is a promise that a dab lands there.
-        brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
+        brushMark:
+          this.pointer && this.ringed() && !this.refuses() ? this.brushMark(this.pointer) : null,
       },
     }
   }
@@ -2382,6 +2428,13 @@ export class CanvasEngine {
    */
   private snappedMove(origin: Point, from: Point, to: Point): Point {
     const raw = { x: origin.x + to.x - from.x, y: origin.y + to.y - from.y }
+    // 🛑 Before the guides, and whatever the magnetism says: a layer moved half a pixel makes the
+    // sprite's transform resample the whole artwork, and that is invisible until it cannot be
+    // undone. The grid is the mode, not a preference — so a layer that arrived off it is pulled
+    // ON, absolute rather than by its delta, at the price of moving before the hand does.
+    const cell = this.pixelCell()
+    if (cell !== null) return onCellBoundary(raw, cell)
+
     const state = this.state
     if (!this.view.snap || !state) return raw
 
@@ -2569,6 +2622,8 @@ export class CanvasEngine {
       }
 
       // The box comes from the drag, or from a click, which has none: settled on release.
+      // Left off the grid on purpose: a caption is words, not cells, and its box is a layout —
+      // what a grid owes it is that its PLACEMENT lands on one, which `snappedMove` does.
       this.gesture = { kind: 'text', from: point, to: point }
       return
     }
@@ -2576,7 +2631,7 @@ export class CanvasEngine {
     if (this.tool === 'shape') {
       // No paint target and no undo tiles: a shape lands as a layer of its own, so the armed
       // layer is neither written to nor required to exist.
-      this.gesture = { kind: 'shape', from: point, to: point }
+      this.gesture = { kind: 'shape', origin: point, from: point, to: point }
       return
     }
 
@@ -2718,6 +2773,64 @@ export class CanvasEngine {
     return WRITING_TOOLS.has(this.tool) && this.paintTarget() === null
   }
 
+  /**
+   * The same target, resolved by ID and synchronously — what a call needs. Arming a layer and
+   * painting on it in one turn cannot wait for the state to come back down through React.
+   *
+   * Through `paintTarget`, so every refusal is asked of the one function that knows them all;
+   * and always at the PIXELS, since which surface the bar happens to aim at is a state of the
+   * hand, and a call that names a layer must not dig its mask instead.
+   */
+  private paintTargetOf(layerId: string | null): BrushTarget | null {
+    const state = this.state
+    if (layerId === null || !state) return this.paintTarget()
+
+    const painting = this.painting
+    this.state = { ...state, activeLayerId: layerId }
+    this.painting = 'pixels'
+    try {
+      return this.paintTarget()
+    } finally {
+      // The same OBJECT, not an equal one: `refuses` caches on its identity.
+      this.state = state
+      this.painting = painting
+    }
+  }
+
+  /**
+   * Cells painted in one pass and ONE history entry, whatever their number. A null colour erases
+   * them. `null` for a layer that refuses the paint — see `paintTargetOf`.
+   */
+  paintCells(layerId: string | null, rects: readonly Rect[], color: number | null): boolean {
+    // 🛑 A stroke is in flight, and `patches.begin` throws away whatever is open: the trait would
+    // lose its tiles, end with no history entry at all, and leave its pixels on the surface.
+    if (this.gesture.kind === 'paint' || rects.length === 0) return false
+
+    const target = this.paintTargetOf(layerId)
+    if (!target) return false
+    // A marquee cuts the pass, so cells wholly outside it change nothing — and an entry that
+    // changes nothing is a ⌘Z the user watches do something invisible. Its BOX only: a rect
+    // inside the box of an ellipse but outside the ellipse still poses one.
+    const marquee = selectionBounds(this.selection)
+    if (marquee && !rects.some(rect => overlaps(rect, marquee))) return false
+
+    this.beginPixels(target)
+    const sheet = new Graphics()
+    for (const rect of rects) sheet.rect(rect.x, rect.y, rect.width, rect.height)
+    this.ink(sheet, color, 1)
+    // One box PER ROW, not one over the whole set: `unionOf` on a diagonal line is the document,
+    // and `PixelPatches` photographs every tile it is handed — enough to evict the entries of
+    // older strokes out of the history.
+    this.commit(
+      target,
+      rowBoxes(rects).map(box => grownBy(mapRect(target.toSurface, box), 1)),
+      sheet,
+    )
+    sheet.destroy()
+    this.endPixels()
+    return true
+  }
+
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
   private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
@@ -2838,12 +2951,13 @@ export class CanvasEngine {
         return
       }
       case 'select': {
+        const carved = this.gridBox(gesture.from, point)
         // A lasso follows the hand; the other two are a box between where it started and where
         // it is now, so only the lasso needs what came before.
         this.publishSelection(
           this.selectionShape === 'lasso'
             ? extendLasso(this.selection, point)
-            : dragSelection(this.selectionShape, gesture.from, point, event.shiftKey),
+            : dragSelection(this.selectionShape, carved.from, carved.to, event.shiftKey),
         )
         return
       }
@@ -2875,7 +2989,8 @@ export class CanvasEngine {
       }
       case 'crop': {
         // Clamped here rather than at the commit, so the frame drawn is the frame applied.
-        this.setCropping(cropRect(gesture.from, point, this.documentSize(), event.shiftKey))
+        const framed = this.gridBox(gesture.from, point)
+        this.setCropping(cropRect(framed.from, framed.to, this.documentSize(), event.shiftKey))
         this.overlay.invalidate()
         return
       }
@@ -2883,7 +2998,9 @@ export class CanvasEngine {
         // Against the frame the drag started on, never the current one: every move is absolute,
         // or a grip nudged twice would compound its own displacement.
         const size = this.documentSize()
-        const next = resizeCrop(gesture.origin, gesture.handle, point, size, event.shiftKey)
+        const cell = this.pixelCell()
+        const pulled = cell === null ? point : onCellBoundary(point, cell)
+        const next = resizeCrop(gesture.origin, gesture.handle, pulled, size, event.shiftKey)
         // A collapsed adjustment keeps the last good frame rather than dropping it: the hand is
         // still down, and a frame that vanished mid-drag could not be pulled back open.
         if (next) this.setCropping(next)
@@ -2893,7 +3010,9 @@ export class CanvasEngine {
       case 'shape': {
         // Previewed in the overlay, not in the layer: a layer per pointer move would be a
         // hundred entries in the history for one gesture.
-        gesture.to = constrainedTo(this.shapeKind, gesture.from, point, event.shiftKey)
+        const drawn = this.gridBox(gesture.origin, point)
+        gesture.from = drawn.from
+        gesture.to = constrainedTo(this.shapeKind, drawn.from, drawn.to, event.shiftKey)
         this.pending = shapeGeometry(this.shapeKind, gesture.from, gesture.to, {
           sides: this.shapeSides,
           constrain: false,
@@ -3080,15 +3199,25 @@ export class CanvasEngine {
    */
   private readonly onWheel = (event: WheelEvent): void => {
     event.preventDefault()
-    // Once per wheel event rather than once per gesture: a zoom has no pointer down to refresh
-    // the rectangle, and a panel moved without resizing would anchor the zoom next to the cursor.
-    this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
     const viewport = this.view.viewport
 
     if (event.ctrlKey || event.metaKey) {
+      // Once per wheel event rather than once per gesture: a zoom has no pointer down to refresh
+      // the rectangle, and a panel moved without resizing would anchor it next to the cursor.
+      this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
+      const host = this.toHost(event)
+
+      if (onPixelGrid(this.state)) {
+        const stepped = wheelStep(viewport.scale, this.wheelDebt, event.deltaY)
+        this.wheelDebt = stepped.debt
+        if (stepped.scale !== viewport.scale) {
+          this.moveTo(zoomCanvasAt(viewport, stepped.scale, host))
+        }
+        return
+      }
+
       // Exponential, so a notch feels the same at 5% and at 800%.
-      const scale = viewport.scale * Math.exp(-event.deltaY / 250)
-      this.moveTo(zoomCanvasAt(viewport, scale, this.toHost(event)))
+      this.moveTo(zoomCanvasAt(viewport, viewport.scale * Math.exp(-event.deltaY / 250), host))
       return
     }
 
@@ -3099,7 +3228,7 @@ export class CanvasEngine {
    * Paints a surface edge to edge. `clip` is the bucket's way back into the pixels, and its
    * presence is what makes the fill stop at the selection; a surface being born never does — a
    * mask born white inside a marquee and transparent outside would hide its layer everywhere
-   * else the moment it appeared.
+   * else the moment it appeared. A pixel grid changes nothing here: edge to edge is aligned.
    */
   private fill(surface: LayerSurface, color: number, clip?: Affine): void {
     const renderer = this.app?.renderer
@@ -3133,6 +3262,16 @@ export class CanvasEngine {
    * points leaves a dotted line. One dab every quarter-radius closes it.
    */
   private stroke(target: BrushTarget, from: Point, to: Point): void {
+    const cell = this.pixelCell()
+    if (cell !== null) {
+      // Bresenham, the first cell left out: `from` was stamped by the move before this one, and
+      // a second pass over it would compose a half-opaque stroke onto itself. A segment the line
+      // refuses still stamps where the hand IS, or the next one's first cell is a hole.
+      const cells = cellsOfLine(cellAt(from, cell), cellAt(to, cell))
+      this.stampCells(target, cells.length === 0 ? [cellAt(to, cell)] : cells.slice(1))
+      return
+    }
+
     const distance = Math.hypot(to.x - from.x, to.y - from.y)
     const step = Math.max(1, this.brush.size / 4)
     const count = Math.ceil(distance / step)
@@ -3156,33 +3295,78 @@ export class CanvasEngine {
    * each other, so a half-opaque stroke darkened at every joint.
    */
   private dab(target: BrushTarget, points: readonly Point[]): void {
+    if (points.length === 0) return
+    const cell = this.pixelCell()
+    if (cell !== null) {
+      return this.stampCells(
+        target,
+        points.map(point => cellAt(point, cell)),
+      )
+    }
+
+    const radius = this.brush.size / 2
+    this.paint(target, [brushRect(points, radius)], () => {
+      for (const point of points) this.stamp.circle(point.x, point.y, radius)
+    })
+  }
+
+  /** The cells of ONE line, as one rectangle per row — see `cellRuns`. */
+  private stampCells(target: BrushTarget, cells: readonly Point[]): void {
+    const cell = this.pixelCell()
+    if (cell === null || cells.length === 0) return
+
+    const runs = cellRuns(cells, cell, this.brush.size)
+    // One pixel of slack, as `brushRect` keeps: a layer placed on a fraction maps a run's edge
+    // onto a fragment the antialiasing paints, in a tile an undo would otherwise leave behind.
+    this.paint(
+      target,
+      runs.map(run => grownBy(run, 1)),
+      () => {
+        for (const run of runs) this.stamp.rect(run.x, run.y, run.width, run.height)
+      },
+    )
+  }
+
+  /** What a disc and a run share: the tiles they cost, the one pass, the blend. */
+  private paint(target: BrushTarget, covered: readonly Rect[], trace: () => void): void {
+    this.stamp.clear()
+    trace()
+    this.ink(this.stamp, this.tool === 'eraser' ? null : this.brush.color, this.brush.opacity)
+    // The fringe is added AFTER the mapping, and it has to be: a filter is applied once the
+    // container's transform has run, so its padding counts SURFACE pixels while the brush's
+    // radius counts document ones. Added before, a layer scaled 2× recorded half its stroke.
+    this.commit(
+      target,
+      covered.map(box => grownBy(mapRect(target.toSurface, box), this.fringe())),
+      this.stamp,
+    )
+  }
+
+  /** The colour a sheet lays down, and `null` for the pass that takes colour away. */
+  private ink(sheet: Graphics, color: number | null, alpha: number): void {
+    sheet.fill({ color: color ?? 0xffffff, alpha })
+    // Erasing is the same pass in `erase` blend: on a transparent layer, painting white would
+    // just paint white.
+    sheet.blendMode = color === null ? 'erase' : 'normal'
+  }
+
+  /**
+   * The tiles an undo will put back, then ONE pass onto the surface. `covered` is already in
+   * SURFACE space, which is where a filter's padding is counted and where antialiasing spills.
+   */
+  private commit(target: BrushTarget, covered: readonly Rect[], sheet: Graphics): void {
     const renderer = this.app?.renderer
-    if (!renderer || points.length === 0) return
+    if (!renderer) return
 
     // Before a single pixel is written: what the tiles hold now is what an undo will put back.
-    // Mapped onto the surface, like the dabs themselves — tiles index the texture, and a stroke
-    // on a turned layer covers a different set of them than its document-space box suggests.
-    //
-    // The fringe is added AFTER the mapping, and it has to be: a filter is applied once the
-    // container's transform has run, so its padding is a count of surface pixels while the
-    // brush's radius is a count of document ones. Added before, a layer scaled 2× recorded half
-    // the box its stroke actually covered, and an undo left the fringe behind.
-    this.patches?.touch(
-      grownBy(mapRect(target.toSurface, brushRect(points, this.brush.size / 2)), this.fringe()),
-    )
-
-    const erasing = this.tool === 'eraser'
-    this.stamp.clear()
-    for (const point of points) this.stamp.circle(point.x, point.y, this.brush.size / 2)
-    this.stamp.fill({ color: erasing ? 0xffffff : this.brush.color, alpha: this.brush.opacity })
-    // Erasing is the same stroke in `erase` blend: on a transparent layer, painting white
-    // would just paint white.
-    this.stamp.blendMode = erasing ? 'erase' : 'normal'
+    // Mapped onto the surface by the caller — tiles index the texture, and a stroke on a turned
+    // layer covers a different set of them than its document-space box suggests.
+    for (const box of covered) this.patches?.touch(box)
 
     // `clear: false`, or every dab would wipe the stroke that came before it. And `target`,
     // not the `renderTexture` option, which v8 deprecated.
     renderer.render({
-      container: this.inSurfaceSpace(target.toSurface, this.clipped(this.stamp)),
+      container: this.inSurfaceSpace(target.toSurface, this.clipped(sheet)),
       target: target.surface.texture,
       clear: false,
     })
@@ -3338,8 +3522,11 @@ export class CanvasEngine {
     const line = drawn.kind === 'line' || drawn.kind === 'arrow'
     const width = strokeWidth(this.brush.size)
     const local = localShape(this.shapeKind, from, to, this.shapeSides, line ? width : 0)
+    const cell = this.pixelCell()
 
-    this.options.onShape(local.at, {
+    // A ring places its vertices by `cos`/`sin`, so the box the outline gives back is fractional
+    // even between two corners on the grid — and a layer placed on a fraction resamples.
+    this.options.onShape(cell === null ? local.at : onCellBoundary(local.at, cell), {
       shape: this.shapeKind,
       from: local.from,
       to: local.to,
@@ -3361,6 +3548,7 @@ export class CanvasEngine {
     const toSurface = invert(this.surfaceMatrix(layer, false, surface))
     if (!toSurface) return
 
+    // Floored already, so a pixel grid changes nothing here: a texel is what a cell is made of.
     const local = applyTo(toSurface, point)
     const x = Math.floor(local.x)
     const y = Math.floor(local.y)

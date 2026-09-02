@@ -274,6 +274,8 @@ describe('the translation bundles', () => {
       // The name of a genre, and it is the same two words in French. Translating it would
       // invent a term nobody who draws sprites uses.
       'inspector.pixelArt',
+      // The same genre, said on the row of a model that draws it.
+      'generation.suitsPixelArt',
     ])
 
     const copied = [...BUNDLES.fr]
@@ -970,6 +972,11 @@ describe('the translation bundles', () => {
         'the action, and a state — nothing reads the KEY `shell.explorer.open`, measured 18/08, ' +
         'so what shows it is unknown rather than settled. Grepping `explorer.open` finds five ' +
         'sites and none of them is it: they are the `LogScope` of the same name',
+    },
+    new: {
+      reads: ['nouveau', 'nouveaux'],
+      separates:
+        'making one thing — a project, a document — and the files git has never seen, which is a plural',
     },
     pause: {
       reads: ['mettre en pause', 'pause'],

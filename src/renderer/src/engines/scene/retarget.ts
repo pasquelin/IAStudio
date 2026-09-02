@@ -9,7 +9,9 @@
 import {
   AnimationClip,
   Bone,
+  Matrix4,
   NumberKeyframeTrack,
+  Quaternion,
   QuaternionKeyframeTrack,
   Skeleton,
   SkinnedMesh,
@@ -49,6 +51,13 @@ export type Retarget = {
     watch?: { onProgress?: (progress: number) => void; signal?: AbortSignal },
   ) => Promise<AnimationClip[] | null>
   /**
+   * How well a motion fits this character, read through the very corrections a transfer uses.
+   *
+   * On the port and not called free-standing: the recorded roles live here, and a verdict read
+   * without them announced a joint « staying at rest » that the transfer went on to drive.
+   */
+  fitOf: (target: Object3D, source: Object3D) => RetargetFit
+  /**
    * What a skeleton of that signature means, from now on and for every model carrying it.
    *
    * Recognised by SIGNATURE and not by model: a mapping put right on one character is the same
@@ -67,47 +76,6 @@ export function createRetarget(spawn: () => Worker): Retarget {
   )
   const profiles = new Map<string, SkeletonProfile>()
 
-  const send = (request: RetargetRequest, watch: Watch): Promise<readonly WireClip[] | null> =>
-    new Promise((resolve, reject) => {
-      const running = port.running()
-
-      // Posted before it is recorded, so a payload the structured clone cannot carry throws with
-      // no slot left behind — `bvhInflight` says why this order is safe.
-      running.postMessage(request, clipBuffers(request.clips))
-
-      // Dropped whichever way the request ends, a worker dying included.
-      const stop = new AbortController()
-      const give = (clips: readonly WireClip[] | null): void => {
-        stop.abort()
-        resolve(clips)
-      }
-      const fail = (error: Error): void => {
-        stop.abort()
-        reject(error)
-      }
-      port.record(request.id, { resolve: give, reject: fail, onProgress: watch?.onProgress })
-
-      // `{ signal }` rather than a bare listener: a caller keeping ONE controller for its whole
-      // life would otherwise leave one listener per request behind it, each holding a `resolve`.
-      watch?.signal?.addEventListener(
-        'abort',
-        () => {
-          if (!port.forget(request.id)) return
-          running.postMessage({ id: request.id, cancel: true })
-          give(null)
-        },
-        { signal: stop.signal },
-      )
-
-      // An `abort` already fired has already been delivered, so the listener above would never
-      // run: without this the worker does the whole job and answers clips for a dead caller.
-      if (watch?.signal?.aborted) {
-        port.forget(request.id)
-        running.postMessage({ id: request.id, cancel: true })
-        give(null)
-      }
-    })
-
   return {
     adapt: async (target, source, clips, watch) => {
       if (port.isGone()) return null
@@ -117,14 +85,22 @@ export function createRetarget(spawn: () => Worker): Retarget {
       // Nothing to replay: the clips already speak this skeleton's language, exactly.
       if (sameSkeleton(targetBones, sourceBones)) return [...clips]
 
-      const request: RetargetRequest = {
-        id: port.claim(),
-        ...retargetPlanOf(targetBones, sourceBones, clips.map(wireClipOf), undefined, profiles),
-      }
-      const adapted = await send(request, watch)
+      const plan = retargetPlanOf(
+        targetBones,
+        sourceBones,
+        clips.map(wireClipOf),
+        undefined,
+        profiles,
+      )
+      const adapted = await port.send(id => {
+        const request: RetargetRequest = { id, ...plan }
+        return { message: request, transfer: clipBuffers(request.clips) }
+      }, watch)
 
       return adapted && adapted.map(clipFromWire)
     },
+
+    fitOf: (target, source) => retargetFitOf(target, source, profiles),
 
     remember: profile => void profiles.set(profile.signature, profile),
 
@@ -134,8 +110,6 @@ export function createRetarget(spawn: () => Worker): Retarget {
     },
   }
 }
-
-type Watch = { onProgress?: (progress: number) => void; signal?: AbortSignal } | undefined
 
 /**
  * What to ask the worker for: which target bone reads which source bone, and where the hips are.
@@ -194,9 +168,13 @@ export function bodyFitOf(fit: RetargetFit): Omit<RetargetFit, 'matched'> {
   }
 }
 
-export function retargetFitOf(target: Object3D, source: Object3D): RetargetFit {
-  const targetRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(target)))))
-  const sourceRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(source)))))
+export function retargetFitOf(
+  target: Object3D,
+  source: Object3D,
+  known?: ReadonlyMap<string, SkeletonProfile>,
+): RetargetFit {
+  const targetRoles = new Set(Object.values(rolesOf(wireBonesOf(target), known)))
+  const sourceRoles = new Set(Object.values(rolesOf(wireBonesOf(source), known)))
 
   return {
     matched: [...targetRoles].filter(role => sourceRoles.has(role)),
@@ -268,6 +246,53 @@ function boneFilling(
 ): Object3D | undefined {
   const name = Object.keys(roles).find(bone => roles[bone] === role)
   return name === undefined ? undefined : root.getObjectByName(name)
+}
+
+/**
+ * 🛑 three copies the source bone's WORLD orientation onto the target one and stops there, so two
+ * skeletons whose rests differ fold in two — measured 2026-09-01 on a fitted rig whose 22 rests
+ * are all the identity, playing a Mixamo motion. `restSource⁻¹ · restTarget` makes it a delta.
+ *
+ * Both skeletons are read AT REST, so they are the worker's own — never a placed scene node,
+ * whose holder would fold its own rotation into every offset.
+ */
+export function restOffsetsOf(
+  target: Object3D,
+  source: Object3D,
+  names: Readonly<Record<string, string>>,
+): Record<string, Matrix4> {
+  const turns = worldTurnsOf(target)
+  const from = worldTurnsOf(source)
+
+  const offsets: Record<string, Matrix4> = {}
+  for (const [bone, other] of Object.entries(names)) {
+    const turn = turns.get(bone)
+    const rest = from.get(other)
+    if (!turn || !rest) continue
+
+    // Cloned: `invert` and `multiply` write in place, and two target bones may name one source
+    // bone — the second would then read a rest the first had destroyed.
+    offsets[bone] = new Matrix4().makeRotationFromQuaternion(rest.clone().invert().multiply(turn))
+  }
+
+  return offsets
+}
+
+/**
+ * Every named object's world ROTATION, in one walk — `getObjectByName` walks the whole tree per
+ * call, and this is asked once per bone of a 52-bone rig. The scale is dropped on purpose: a rig
+ * scaled by its holder would otherwise fold that scale into the delta.
+ */
+function worldTurnsOf(root: Object3D): Map<string, Quaternion> {
+  root.updateWorldMatrix(false, true)
+
+  const turns = new Map<string, Quaternion>()
+  root.traverse(object => {
+    if (object.name && !turns.has(object.name))
+      turns.set(object.name, object.getWorldQuaternion(new Quaternion()))
+  })
+
+  return turns
 }
 
 /**

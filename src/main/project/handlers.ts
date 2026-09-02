@@ -2,7 +2,14 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { projectName } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
-import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@shared/domain/asset'
+import { glbChunksOf } from '@shared/domain/glbContainer'
+import {
+  PICTURES,
+  withoutSourcePath,
+  type Asset,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import type { TextureExtraction } from '@main/assets/textureExtraction'
@@ -33,6 +40,8 @@ import {
 import type { DocumentFiles } from './documents'
 import { askLeaveWithJobs, askTrashFiles, askUseOccupiedFolder } from './projectDialogs'
 import type { ProjectContextStore } from './context'
+import type { SettingsStore } from '@main/settings/store'
+import { withRecentDocument } from '@shared/domain/project'
 import { holdsAProject, openFailureKey, orWhenGone, type ProjectStore } from './store'
 import {
   parseAssetQuery,
@@ -51,7 +60,9 @@ import {
   parseProjectPath,
   parseProjectTitle,
   parseSaveAudio,
+  parseSaveAnimation,
   parseSaveLayered,
+  parseSaveMesh,
   parseSavePicture,
   parseGame,
   parseSaveTexture,
@@ -67,8 +78,13 @@ const PNG_EXTENSION = '.png'
 /** What `saveLayered` writes: OpenRaster, the open container for a stack. */
 const ORA_EXTENSION = '.ora'
 
+/** What a character and a motion are both written as — binary glTF, the container both are. */
+const GLB_EXTENSION = '.glb'
+
 export type ProjectHandlerDeps = {
   project: ProjectStore
+  /** Where the shelf of recent documents lives — the same branch the recent projects do. */
+  settings: SettingsStore
   /** The journal's own `record`, injected as every other consumer of it takes it. */
   record: (entry: ActivityReport) => void
   /** Where an edited take is written back. Injected, like everything that touches the disk. */
@@ -122,6 +138,7 @@ export type ProjectHandlerDeps = {
 
 export function registerProjectHandlers({
   project,
+  settings,
   record,
   assets,
   extractTextures,
@@ -579,6 +596,49 @@ export function registerProjectHandlers({
     return landPicture(request, bytes, ORA_EXTENSION, probe)
   })
 
+  /**
+   * A `.glb` written over the asset it came from, for `landPicture`'s reason and one harder: the
+   * CATALOGUE says what a row IS, and an id naming a take would write a `.glb` under `audio/<id>`
+   * and take the recording with it.
+   */
+  const replaceGlb = async (assetId: string, glb: Uint8Array, type: AssetType): Promise<Asset> => {
+    const replaced = await project.catalog().find(assetId)
+    if (replaced?.type !== type) throw new Error(`asset ${assetId} is not a ${type} to overwrite`)
+
+    return withoutSourcePath(await assets.replaceBytes(assetId, glb, GLB_EXTENSION))
+  }
+
+  handle(CHANNELS.assetsSaveMesh, async (_event, value) => {
+    const request = parseSaveMesh(value)
+    // On the BYTES, like every writer here: a container that is not one would open as nothing,
+    // and the character it replaced would be gone with nothing said.
+    if (!glbChunksOf(request.glb)) throw new Error('expected a binary glTF payload')
+
+    return replaceGlb(request.replaces, request.glb, 'mesh')
+  })
+
+  handle(CHANNELS.assetsSaveAnimation, async (_event, value) => {
+    const request = parseSaveAnimation(value)
+    if (!glbChunksOf(request.glb)) throw new Error('expected a binary glTF payload')
+
+    if (request.replaces) return replaceGlb(request.replaces, request.glb, 'animation')
+
+    // `animation` and not `mesh`, and that one word is what files it: `roleForAsset` reads the
+    // type and lands it in the project's own `animations` folder.
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          type: 'animation',
+          extension: GLB_EXTENSION,
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        request.glb,
+      ),
+    )
+  })
+
   handle(CHANNELS.assetsReadLayered, async (_event, value) => {
     const asset = await project.catalog().find(parseAssetId(value))
     // `ownFileOf`, like every reader here: a linked file is the user's own, and the container is
@@ -648,6 +708,40 @@ export function registerProjectHandlers({
 
   // The second of the two — see `assetsSearch` above for why these answer empty.
   handle(CHANNELS.documentList, () => orWhenGone(() => documents.list(), []))
+
+  /**
+   * The shelf File ▸ Open recent draws, written HERE and not in the window: the open project is
+   * this process's to know, and a window pairing a document with a project it replicates would
+   * get it wrong by exactly the switch that had just happened.
+   *
+   * A document opened with no project is not an error, it is nothing to note.
+   */
+  handle(CHANNELS.documentOpened, (_event, path, kind) => {
+    const open = project.current()
+    if (!open) return Promise.resolve()
+
+    const inside = parseFolderPath(path)
+    const stored = settings.read().storage
+    // Already at the top: a document clicked twice, or come back to from its tab. Writing there
+    // is a disk write and a broadcast to every window, on a gesture that happens all day and
+    // moves nothing.
+    const [first] = stored.recentDocuments
+    if (first?.project === open.path && first.path === inside) return Promise.resolve()
+
+    settings.write({
+      storage: {
+        recentDocuments: withRecentDocument(stored.recentDocuments, {
+          project: open.path,
+          path: inside,
+          kind: parseDocumentKind(kind),
+          // Read here rather than injected: nothing asserts on the stamp, and the shelf orders by
+          // it only against its own writes.
+          openedAt: new Date().toISOString(),
+        }),
+      },
+    })
+    return Promise.resolve()
+  })
 
   handle(CHANNELS.documentRead, (_event, id, kind) =>
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),

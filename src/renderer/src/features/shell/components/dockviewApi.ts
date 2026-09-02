@@ -3,6 +3,7 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import type { DockviewApi } from 'dockview-react'
 import { frontDocumentIn, useDocuments } from '@/stores/documents'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
+import { noteOpenedDocument } from '../recentDocuments'
 
 // In its own file rather than beside `DocumentArea`: a space reaching for `setDocumentTitle`
 // would otherwise import the module that imports every space.
@@ -65,6 +66,9 @@ function showPanel(api: DockviewApi, document: DocumentDescriptor): void {
  */
 export function openDocument(document: DocumentDescriptor): void {
   useDocuments.getState().adopt(document)
+  // Every deliberate opening passes here and a layout restore does not, which is exactly the
+  // line the shelf of recent documents has to be written on.
+  void noteOpenedDocument(document)
 
   if (!homeIsVisible() && current) showPanel(current, document)
   else pendingFocus = document.id

@@ -228,6 +228,14 @@ describe('shortcutLabel', () => {
   })
 })
 
+/**
+ * What Electron takes as the KEY half of an accelerator: a character, a named key, or a function
+ * key. A `KeyboardEvent.code` like `Digit0` or `BracketLeft` is none of the three, and Electron
+ * refuses the whole binding rather than the key.
+ */
+const ELECTRON_KEY =
+  /^(.|F\d{1,2}|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|Plus|Capslock|Numlock|PrintScreen)$/
+
 describe('acceleratorOf', () => {
   // The one place a signature and an Electron accelerator meet. The menu wrote these by hand,
   // which is how it kept advertising a key a remapped command no longer answered to.
@@ -238,6 +246,24 @@ describe('acceleratorOf', () => {
   it('names the punctuation keys Electron will not take as codes', () => {
     expect(acceleratorOf('Meta+Comma')).toBe('CmdOrCtrl+,')
     expect(acceleratorOf('Meta+Equal')).toBe('CmdOrCtrl+=')
+    expect(acceleratorOf('Meta+Semicolon')).toBe('CmdOrCtrl+;')
+    expect(acceleratorOf('Meta+Digit0')).toBe('CmdOrCtrl+0')
+    expect(acceleratorOf('Alt+Meta+ArrowLeft')).toBe('Alt+CmdOrCtrl+Left')
+  })
+
+  /**
+   * 🛑 The table was extended one key at a time, and each time the NEXT one waited for somebody to
+   * notice: seven bindings spelled a `KeyboardEvent.code` Electron cannot register — ⌘0 and ⌘1 for
+   * the zoom among them. The menu drew the key correctly and registered nothing.
+   */
+  it('spells every binding of the registry in words Electron takes', () => {
+    const unspeakable = COMMAND_REGISTRY.flatMap(command => {
+      const accelerator = acceleratorOf(command.defaultBinding ?? null)
+      const key = accelerator?.split('+').at(-1) ?? ''
+      return accelerator && !ELECTRON_KEY.test(key) ? [`${command.id} — ${accelerator}`] : []
+    })
+
+    expect(unspeakable).toEqual([])
   })
 
   it('keeps modifier order and passes named keys through', () => {

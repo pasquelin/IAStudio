@@ -31,7 +31,7 @@ beforeEach(() => {
 })
 
 /** What the bus heard while one command was routed. */
-function published(command: CommandId): { verdict: string; heard: CommandId[] } {
+function published(command: CommandId): { verdict: unknown; heard: CommandId[] } {
   const heard: CommandId[] = []
   const stop = subscribeToCommands(id => heard.push(id) > 0)
   const verdict = routeCommand(command)
@@ -44,6 +44,15 @@ describe('a command that belongs to a surface', () => {
     const disarm = armCommandScope('explorer')
 
     expect(published('explorer.undo')).toEqual({ verdict: 'ran', heard: ['explorer.undo'] })
+    disarm()
+  })
+
+  it('hands back what the surface made, in place of a bare « ran »', () => {
+    const disarm = armCommandScope('scene')
+    const stop = subscribeToCommands(() => ({ nodeIds: ['copy-1'] }))
+
+    expect(routeCommand('scene.duplicate')).toEqual({ nodeIds: ['copy-1'] })
+    stop()
     disarm()
   })
 

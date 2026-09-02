@@ -251,6 +251,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onClips: (nodeId, clips, lengths) =>
         useModelFiles.getState().report(documentId, nodeId, clips, lengths),
       onRig: (nodeId, rig) => useModelFiles.getState().reportRig(documentId, nodeId, rig),
+      // The attachment points of the file, which only the engine that loaded it ever sees: a
+      // node hangs on one by name, and the inspector has to offer them.
+      onCharacter: (nodeId, _rig, extras) =>
+        useModelFiles.getState().reportSockets(documentId, nodeId, extras?.sockets ?? []),
       onMaterials: (nodeId, count) =>
         useModelFiles.getState().reportMaterials(documentId, nodeId, count),
       // The project's, not the document's: the same character opens in the next document of this
@@ -260,8 +264,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         projectPath && useSkeletonProfiles.getState().rememberSkeletonProfile(projectPath, profile),
       onClipFit: (nodeId, clipKey, fit) =>
         useModelFiles.getState().reportClipFit(documentId, nodeId, clipKey, fit),
-      onRigProgress: (nodeId, progress) =>
-        useModelFiles.getState().reportRigProgress(documentId, nodeId, progress),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
       onPathPoint: (nodeId, index, point) =>
@@ -441,7 +443,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     (command: CommandId) => {
       // What acts on the selection is shared with the node menu, which arrives by the same ids —
       // see `runSceneCommand`. What is left below is what only this viewport can answer for.
-      if (runSceneCommand(documentId, command)) return
+      const shared = runSceneCommand(documentId, command)
+      if (shared !== false) return shared
 
       switch (command) {
         // Each of these LEAVES navigation. `useShortcuts` only swallows the motion keys, so `V`,

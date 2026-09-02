@@ -206,6 +206,18 @@ describe('running a command', () => {
     stop()
   })
 
+  it('answers what the surface made, so a client need not run the command twice for an id', async () => {
+    const stop = subscribeToCommands(() => ({ nodeIds: ['copy-1'] }))
+    const disarm = armCommandScope('scene')
+
+    expect(await runAction('command.runStudioCommand', { command: 'scene.duplicate' })).toEqual({
+      ok: true,
+      data: { nodeIds: ['copy-1'] },
+    })
+    disarm()
+    stop()
+  })
+
   /**
    * The defect this whole check exists for: the bus is memoryless and the subscriber filters by
    * scope, so a command for a surface nothing has mounted vanishes without a word. Reported as

@@ -10,7 +10,7 @@ import type { ApiFailure } from './failure'
 import type { LandingTarget } from './landingTarget'
 import type { LocalModel } from './localModel'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
-import type { RecentProject } from './project'
+import type { RecentDocument, RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } from './scene'
 
@@ -127,6 +127,8 @@ export type Settings = {
     lastProject?: string
     /** Session state like `lastProject`, and replicated with it — see `domain/project.ts`. */
     recentProjects: RecentProject[]
+    /** The documents File ▸ Open recent lists, across every project — see `RecentDocument`. */
+    recentDocuments: RecentDocument[]
     /**
      * Which account each project works under, by folder — see `planProjectAccount`.
      *
@@ -174,6 +176,14 @@ export type Settings = {
     showGrid: boolean
     /** Extent of the ground grid, in metres. */
     gridSize: number
+    /**
+     * Whether the view turns around what is SELECTED — Blender's *Orbit Around Selection* and
+     * Unreal's *Orbit camera around selection*, on here where both ship it off. It is the most
+     * contested default of Blender, and every other suite turns around the selection by default.
+     */
+    orbitAroundSelection: boolean
+    /** Whether each orbit re-reads the depth under the pointer — Blender's *Auto Depth*. */
+    orbitUnderCursor: boolean
     /** Metres per second while flying the viewport camera. */
     flySpeed: number
     /** What holding the boost key multiplies the fly speed by. */
@@ -367,6 +377,8 @@ export const DEFAULT_SETTINGS: Settings = {
   three: {
     showGrid: true,
     gridSize: 20,
+    orbitAroundSelection: true,
+    orbitUnderCursor: false,
     flySpeed: 4,
     boostFactor: 3,
     fieldOfView: 60,
@@ -392,7 +404,7 @@ export const DEFAULT_SETTINGS: Settings = {
     stats: true,
     units: 'm',
   },
-  storage: { backend: 'local', recentProjects: [], projectAccounts: {} },
+  storage: { backend: 'local', recentProjects: [], recentDocuments: [], projectAccounts: {} },
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},

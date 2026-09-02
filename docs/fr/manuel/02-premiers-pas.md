@@ -121,7 +121,8 @@ cela ne touche ni vos projets ni ce que vous écrivez dedans.
 
 ## Étape 5 — Créer votre premier projet
 
-`⌘N` / `Ctrl+N`, ou menu **Fichier ▸ Nouveau projet…**
+`⌥⌘N` / `Alt+Ctrl+N`, ou menu **Fichier ▸ Nouveau projet…** — ou `⌘N`, qui ouvre la fenêtre
+proposant un projet comme un document
 
 Le studio vous demande **un dossier**, et ce dossier *devient* le projet — il ne fabrique rien
 au-dessus ni en dessous. Créez-le au besoin depuis le sélecteur (bouton **Nouveau dossier**) et

@@ -27,6 +27,7 @@ import { toDb } from '@/engines/audio/audioData'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { usePostPresets } from '@/stores/postPresets'
 import { useSettings } from '@/stores/settings'
+import { useCharacters } from '@/stores/character'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -171,10 +172,21 @@ export const montage = (run: Run) => {
 export const animationView = (run: Run) =>
   firstOf(run, '3d', id => animationViewOf(useAnimationViews.getState(), id))
 
-/** The skeleton of the model in the open scene — a rig lives on its node's `model`, nowhere else. */
-export const rig = (run: Run) => {
-  const model = nodes(run).find(one => one.type === 'model')
-  return model?.type === 'model' ? (model.model.rig ?? null) : null
+/**
+ * The skeleton of the character the window holds.
+ *
+ * 🛑 Not a node's: a rig belongs to a FILE now, and the studio keeps no document for one — the
+ * skeleton window is where it is read and edited.
+ */
+export const rig = (_run: Run) => {
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.rig ?? null
+}
+
+/** The attachment points that character carries — they live in its file, never in the scene. */
+export const sockets = (_run: Run) => {
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.sockets ?? []
 }
 
 /**
@@ -199,6 +211,23 @@ export const modelCoveredBy = (run: Run, name: string): string | null => {
 /** The open picture itself — its size and its guides, which no layer carries. */
 export const canvas = (run: Run) =>
   firstOf(run, 'image', id => canvasOf(useCanvases.getState(), id))
+
+/** How many cells a call laid down — see `canvasSurface`, which records them as the port does. */
+export const paintedCells = (run: Run): number => run.studio.painted().size
+
+/** What a cell holds: a packed colour, `null` where it was erased, `undefined` if untouched. */
+export const painted = (run: Run, x: number, y: number): number | null | undefined =>
+  run.studio.painted().get(`${x},${y}`)
+
+/** Whether a generation of that family was sent a prompt CARRYING a word. */
+export const promptSent = (run: Run, family: ModelFamily, word: string): boolean =>
+  jobs(run).some(
+    one =>
+      run.studio.familyOf(one.targetId) === family &&
+      Object.values(run.studio.sentBodies()[one.id] ?? {}).some(
+        value => typeof value === 'string' && value.includes(word),
+      ),
+  )
 
 /**
  * What the document in front DESIGNATES, and of what kind — « sélectionne le calque » is not

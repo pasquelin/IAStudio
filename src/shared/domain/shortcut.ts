@@ -281,6 +281,7 @@ const KEY_GLYPHS: Record<string, string> = {
   Equal: '=',
   Minus: '−',
   Semicolon: ';',
+  Quote: "'",
   Comma: ',',
   Period: '.',
   Slash: '/',
@@ -369,10 +370,23 @@ const ACCELERATOR_MODIFIERS: Record<string, string> = {
   Meta: 'CmdOrCtrl',
 }
 
-/** Keys Electron names differently from `event.code`. Anything else passes through. */
+/**
+ * Keys Electron names differently from `event.code`. Anything else passes through — which is why
+ * `acceleratorsAreRegistrable` sweeps the whole registry: seven bindings passed through as codes
+ * Electron cannot register, ⌘0 and ⌘1 among them, and only the menu was mute about it.
+ */
 const ACCELERATOR_KEYS: Record<string, string> = {
   Comma: ',',
   Period: '.',
+  Semicolon: ';',
+  Quote: "'",
+  Backquote: '`',
+  BracketLeft: '[',
+  BracketRight: ']',
+  ArrowUp: 'Up',
+  ArrowDown: 'Down',
+  ArrowLeft: 'Left',
+  ArrowRight: 'Right',
   Equal: '=',
   Minus: '-',
   Slash: '/',
@@ -393,6 +407,8 @@ export function acceleratorOf(signature: Signature | null): string | undefined {
   const code = parts.at(-1) ?? ''
   const modifiers = parts.slice(0, -1).map(part => ACCELERATOR_MODIFIERS[part] ?? part)
 
-  const key = ACCELERATOR_KEYS[code] ?? (code.startsWith('Key') ? code.slice(3) : code)
+  const key =
+    ACCELERATOR_KEYS[code] ??
+    (code.startsWith('Key') || code.startsWith('Digit') ? code.replace(/^Key|^Digit/, '') : code)
   return [...modifiers, key].join('+')
 }

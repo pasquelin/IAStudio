@@ -1,6 +1,7 @@
 import { commandDescriptor, type CommandId } from '@shared/domain/command'
 import type { StudioBridge } from '@shared/ipc'
 import { saveDocument, saveDocumentAs } from '@/features/shell/documentIo'
+import { openNewDocument } from '@/features/shell/newDocument'
 import { importOtioz } from '@/features/shell/otioImport'
 import { revealChat } from '@/features/assistant/components/Assistant/Toast/revealChat'
 import { applyWorkspaceMove } from '@/helpers/applyWorkspaceMove'
@@ -9,9 +10,9 @@ import { commandScopeIsArmed, publishCommand } from '@/services/commandBus'
 import { reportFailure } from '@/services/diagnostics'
 import { useDictation } from '@/stores/dictation'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
-import { useTools } from '@/stores/tools'
+import { panelsStore } from '@/stores/panels'
 
 /**
  * Where a command goes, and whether anything took it — one router for the three doors that fire
@@ -21,6 +22,9 @@ import { useTools } from '@/stores/tools'
  * already at the end of the bar is not a studio showing the wrong thing.
  */
 export type CommandRouting = 'ran' | 'noSurface' | 'nothingToDo' | 'noBridge'
+
+/** `ran`, with what the surface CREATED when the command made something — see `CommandAnswer`. */
+export type RoutedCommand = CommandRouting | Record<string, unknown>
 
 /** Runs it through the bridge, or says the window has none — a mirror, a test with no preload. */
 function through(run: (bridge: StudioBridge) => void): CommandRouting {
@@ -56,7 +60,12 @@ function toggleDictation(): CommandRouting {
 function runHere(command: CommandId): CommandRouting | null {
   switch (command) {
     case 'layout.reset':
-      useTools.getState().reset()
+      panelsStore.getState().reset()
+      return 'ran'
+    // The one door for both, and the surface only orders what it offers: a project is makeable
+    // from anywhere, and so is every kind of document.
+    case 'app.new':
+      void openNewDocument(toolSurface())
       return 'ran'
     case 'project.new':
       void useProject.getState().createPicked()
@@ -114,7 +123,7 @@ function runHere(command: CommandId): CommandRouting | null {
  * and a menu row does not: `publishCommand` is memoryless, so a command sent while nothing of
  * that scope is mounted vanishes in silence.
  */
-export function routeCommand(command: CommandId): CommandRouting {
+export function routeCommand(command: CommandId): RoutedCommand {
   const here = runHere(command)
   if (here) return here
 
@@ -125,5 +134,6 @@ export function routeCommand(command: CommandId): CommandRouting {
 
   // A surface that took it and had nothing to do is not a studio showing the wrong thing — the
   // very distinction `nothingToDo` was written for, and which nothing used to reach.
-  return publishCommand(command) ? 'ran' : 'nothingToDo'
+  const answer = publishCommand(command)
+  return answer === false ? 'nothingToDo' : answer === true ? 'ran' : answer
 }

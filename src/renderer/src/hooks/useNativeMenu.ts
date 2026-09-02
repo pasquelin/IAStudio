@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
-import type { MenuAbility, MenuCheck } from '@shared/domain/command'
+import { scopeOfWorkspace, type MenuAbility, type MenuCheck } from '@shared/domain/command'
 import { revealTool } from '@/helpers/revealPanel'
 import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
 import { routeCommand } from '@/services/commandRouter'
 import { addNodeTo } from '@/hooks/useAddNode'
+import { createDocumentOfKind } from '@/features/shell/newDocument'
+import { openRecent } from '@/features/shell/openRecent'
 import { canMaskFromSelection, canMergeDown } from '@/engines/canvas/canvasState'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
@@ -110,18 +112,25 @@ function publishMenuContext(): void {
   const tools = availableToolIds(surface)
   const scene = sceneMenuState()
   const canvas = canvasAbilities()
-  const abilities = [...scene.abilities, ...canvas]
-
   const front = useDocuments.getState()
-  const kind = (front.activeId ? front.documents[front.activeId] : undefined)?.kind ?? null
+  // Both refused in silence over a screen with no document — `routeCommand` answers `noSurface`
+  // and nothing on the menu said so, which is what an enabled row promises it will not do.
+  const saving: MenuAbility[] = front.activeId ? ['document.save', 'document.saveAs'] : []
+  const abilities = [...saving, ...scene.abilities, ...canvas]
+  // The scope and not the kind, since the menu asks whose history ⌘Z pops: the 3D space opens
+  // both scenes and interfaces, and the two do not answer the same.
+  const scope = scopeOfWorkspace(
+    surface,
+    (front.activeId ? front.documents[front.activeId] : undefined)?.kind,
+  )
 
-  const signature = JSON.stringify([surface, tools, scene.checked, abilities, kind])
+  const signature = JSON.stringify([surface, tools, scene.checked, abilities, scope])
   if (signature === published) return
   published = signature
   publishedScene = sceneSignature(scene)
   publishedCanvas = canvas.join('|')
 
-  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, abilities, kind)
+  void getBridge()?.window.setWorkspace(surface, tools, scene.checked, abilities, scope)
 }
 
 /** The listener of the two image stores — a layer drag writes one on every pointer move. */
@@ -213,6 +222,12 @@ export function useNativeMenu(): void {
     // The verdict is dropped on purpose: a menu row that reaches nothing is a row already greyed
     // out, and there is nobody to answer. An MCP client is the caller that needs it.
     const stopCommand = bridge.menu.onCommand(command => void routeCommand(command))
+    // One row of File ▸ New. The same door the plus button opens, with the kind already named:
+    // the name and the folder are still asked, so a template is still offered where there is one.
+    const stopDocumentNew = bridge.menu.onDocumentNew(({ kind }) => void createDocumentOfKind(kind))
+
+    const stopOpenRecent = bridge.menu.onOpenRecent(request => void openRecent(request))
+
     // The same path the toolbar and the panels take: two ways of adding a node would drift.
     const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => {
       // Of the right kind: the menu is app-wide, and a node written under an image document
@@ -236,6 +251,8 @@ export function useNativeMenu(): void {
     return () => {
       stopTool()
       stopCommand()
+      stopDocumentNew()
+      stopOpenRecent()
       stopSceneAdd()
       stopSceneView()
       stopSceneDisplay()

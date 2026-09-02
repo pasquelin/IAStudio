@@ -4,6 +4,9 @@
     "castShadow": "Projette une ombre",
     "receiveShadow": "Reçoit les ombres",
     "shadows": "Ombres",
+    "attach": "Attache",
+    "attachSocket": "Point d’attache",
+    "attachNone": "Aucun — suit le personnage",
     "noSelection": "Sélectionnez un objet pour voir ses propriétés.",
     "transform": "Transformation",
     "geometry": "Géométrie",
@@ -245,6 +248,7 @@
     "rigNotHumanoid": "Le studio ne sait poser qu’un squelette humanoïde — hanches, colonne, deux bras et deux jambes.",
     "rigCreate": "Créer le squelette",
     "boneName": "Nom",
+    "boneNameHint": "Double-cliquez pour renommer cette articulation",
     "rigBinding": "Préparation du personnage",
     "rigReady": "Ce modèle a reçu un squelette.",
     "removeRig": "Retirer le squelette",
@@ -259,10 +263,12 @@
     "animationSource_library": "Bibliothèque",
     "animationSource_import": "Import",
     "animationSource_ai": "IA",
+    "animationLibrary": "Mouvements disponibles",
     "animationLibraryEmpty": "Aucune animation dans ce projet pour l’instant.",
     "animationImportHint": "Formats acceptés — {{formats}}. Le fichier reste où il est.",
     "animationImportPick": "Choisir un fichier…",
     "animationImportRefused": "Ce fichier ne porte pas de mouvement.",
+    "animationAi": "Services de mouvement",
     "animationAiNone": "Aucun service de mouvement dans le catalogue.",
     "animationAiLocked": "Abonnement {{plan}} insuffisant",
     "animationAiSoon": "Pas encore branché",
@@ -352,6 +358,10 @@
     "artResolution": "Résolution (cellules)",
     "artColumns": "Colonnes",
     "artRows": "Lignes",
-    "pixelSize": "Taille du pixel"
+    "pixelArtGrid": "Afficher la grille",
+    "pixelArtPreview": "L’œuvre, un pixel par cellule",
+    "pixelArtPreviewTooWide": "Trop de cellules pour en montrer une par pixel",
+    "pixelSize": "Taille du pixel",
+    "editSkeleton": "Modifier le squelette…"
   }
 }

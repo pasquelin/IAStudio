@@ -127,12 +127,50 @@ describe('opening an asset', () => {
     expect(editPixelsOf(null)).toBeNull()
   })
 
-  it('opens a mesh in a scene', async () => {
-    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.glb' }))
+  // A container the studio writes a skeleton back into: it opens on the FILE, and every other
+  // mesh still lands in a scene.
+  it('opens a mesh in a scene, and a `.glb` in the skeleton window instead', async () => {
+    const opens: string[] = []
+    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
 
+    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.fbx' }))
     const nodes = sceneOf(useScenes.getState(), opened().id).nodes
     expect(nodes.filter(node => node.type === 'model')).toHaveLength(1)
     expect(useLayouts.getState().activeWorkspace).toBe('3d')
+
+    const before = openedCount()
+    await openAsset(asset({ id: 'mesh-2', type: 'mesh', name: 'knight.glb' }))
+
+    expect(opens).toEqual(['mesh-2'])
+    expect(openedCount()).toBe(before)
+  })
+
+  // MEASURED on a real project: a catalogued row is named `tripo-character`, and only the path
+  // behind it carries `.glb`. Reading the name alone left the double-click doing nothing at all.
+  it('opens the window for a row whose extension lives on its path alone', async () => {
+    const opens: string[] = []
+    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
+
+    await openAsset(
+      asset({
+        id: 'mesh-4',
+        type: 'mesh',
+        name: 'tripo-character',
+        path: 'Modelling/Models/tripo-character.glb',
+      }),
+    )
+
+    expect(opens).toEqual(['mesh-4'])
+  })
+
+  // The file behind it is what the window reads, and a row the cloud holds has none.
+  it('opens nothing for a character this disk does not hold', async () => {
+    const opens: string[] = []
+    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
+
+    await openAsset(asset({ id: 'mesh-3', type: 'mesh', name: 'knight.glb', location: 'cloud' }))
+
+    expect(opens).toEqual([])
   })
 
   it('opens a sky in the skybox space, not in the image one it also decodes for', async () => {
@@ -329,7 +367,7 @@ describe('opening an asset', () => {
   it('lets the tab load before writing into it', async () => {
     installFakeBridge({ documents: { read: () => Promise.resolve(null) } })
 
-    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.glb' }))
+    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.fbx' }))
 
     // A new scene is born lit, and a document read from disk brings its own nodes. Writing
     // before either happened left the tab holding nothing but the asset.

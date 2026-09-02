@@ -85,7 +85,7 @@ export const SETTINGS_HANDLERS: ActionHandlers = {
       : { ok: true, data: result.accounts }
   },
 
-  'settings.pressButton': input => {
+  'settings.triggerAction': input => {
     const id = oneOf(input, 'action', SETTING_ACTION_IDS)
     return id
       ? withBridge(bridge => bridge.settings.runAction(id))

@@ -2,13 +2,19 @@ import { mdiRhombus } from '@mdi/js'
 import { useMemo, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
+import { PanelHeader } from '@pasquelin/panels'
 import { putOnAnimationSheet } from '@/engines/scene/animationCommands'
 import { sceneNodeDrag } from '@/features/scene/components/dragged'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
-import { animationRows, type ClipBlock, type SheetLane } from '@/engines/scene/animationRows'
+import { animationRows, type SheetLane } from '@/engines/scene/animationRows'
+import { type ClipBlock } from '@/engines/timeline/bandRows'
 import { clipSpanOf } from '@/engines/scene/clipBlend'
-import { clipLabel } from '@/helpers/clipLabel'
+import { clipRefLabel } from '@/helpers/clipLabel'
 import { useHeadInsideBand } from '@/hooks/useHeadInsideBand'
+import {
+  playedBlockOf,
+  TimelineClipSettings,
+} from '../../../timeline/components/Timeline/TimelineClipSettings'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animationView'
 import { useModelFiles } from '@/stores/modelFiles'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -30,6 +36,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
+  const pickedBlock = useAnimationViews(state => animationViewOf(state, documentId).pickedBlock)
   const order = useAnimationViews(state => animationViewOf(state, documentId).order)
 
   useHeadInsideBand(documentId, timeline.duration)
@@ -76,9 +83,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
           blocks.push({
             clipId: ref.id,
-            // Renamed only for a clip the model's OWN file spells — an asset or a bundle was
-            // named by the studio or by the user, and `animation_0.glb` is a name they chose.
-            name: ref.source.kind === 'embedded' ? clipLabel(ref.label, t) : ref.label,
+            name: clipRefLabel(ref, t),
             start: ref.start,
             // The same arithmetic the mixer plays by, and it has to be: a bar drawn wider than
             // what is heard is a bar whose end shows a pose nothing holds.
@@ -103,6 +108,9 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
       sceneName: t('animation.sceneSubject'),
     })
   }, [timeline, nodes, expanded, lengths, order, t])
+
+  // The block whose settings stand beside the band, and what names them: one answer, read twice.
+  const settled = playedBlockOf(nodes, pickedBlock)
 
   /**
    * The PANEL takes the drop, never the canvas: an empty band draws no canvas at all — the empty
@@ -136,6 +144,22 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
           <div className="min-w-0 flex-1">
             <AnimationCanvas documentId={documentId} rows={rows} />
           </div>
+          {/* Beside the block one is looking at, and only then: mounted whatever was picked, it
+              was 224 px of bordered nothing on every band holding no block — the skeleton
+              window's own band holds none at all. */}
+          {settled && (
+            <aside
+              aria-label={t('animation.blockSettings')}
+              className="border-edge w-56 shrink-0 overflow-y-auto border-l"
+            >
+              {/* Named, and named after the BLOCK: unlabelled it was a column of controls with
+                  nothing saying what they settled — « c'est quoi à droite de la timeline ». */}
+              <PanelHeader title={clipRefLabel(settled.played, t)} />
+              <div className="px-2 py-1">
+                <TimelineClipSettings documentId={documentId} />
+              </div>
+            </aside>
+          )}
         </div>
       )}
     </div>

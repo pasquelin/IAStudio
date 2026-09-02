@@ -8,7 +8,7 @@ import {
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { IS_MAC } from '@/helpers/platform'
 import { isTyping } from '@/helpers/typing'
-import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
+import { armCommandScope, subscribeToCommands, type CommandAnswer } from '@/services/commandBus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
 import { useLatest } from './useLatest'
 
@@ -30,7 +30,7 @@ export type ShortcutsOptions = {
    */
   documentId?: string
   /** `false` says the surface had nothing to do with it — an undo on an empty stack. */
-  onCommand: (command: CommandId) => boolean | void
+  onCommand: (command: CommandId) => CommandAnswer | void
   /** Fires when the held set actually changes — never on a frame tick. */
   onMotionChange?: (held: Set<MotionId>) => void
   /**
@@ -86,7 +86,7 @@ export function useShortcuts({
 
         // `void` from a surface means it acted: only one that says `false` outright is reported
         // as having done nothing.
-        return handlers.current.onCommand(command) !== false
+        return handlers.current.onCommand(command) ?? true
       }),
     [scope, listens, documentId, handlers],
   )

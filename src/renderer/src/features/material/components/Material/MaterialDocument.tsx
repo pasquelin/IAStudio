@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
+import { runMaterialCommand } from './materialCommands'
 import { type MaterialExportTarget } from '@shared/domain/materialExport'
 import { activation } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
@@ -71,11 +72,7 @@ export function MaterialDocument({ documentId }: { documentId: string }) {
   // Channels and styles both push onto `useMaterials`, and until now nothing could pop it: no
   // scope, no key, no menu row — while the manual already promised ⌘Z on an applied style.
   const onCommand = useCallback(
-    (command: CommandId) => {
-      const store = useMaterials.getState()
-      if (command === 'material.undo') return store.undo(documentId)
-      if (command === 'material.redo') return store.redo(documentId)
-    },
+    (command: CommandId): boolean => runMaterialCommand(documentId, command),
     [documentId],
   )
 

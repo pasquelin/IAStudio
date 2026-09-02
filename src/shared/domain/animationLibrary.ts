@@ -31,7 +31,3 @@ export const ANIMATION_HOST = 'animation'
 export function bundledAnimationUrl(name: string): string {
   return hostedUrl(ANIMATION_HOST, name)
 }
-
-export function bundledThumbnailUrl(name: string): string {
-  return hostedUrl(ANIMATION_HOST, `${name}/${ANIMATION_THUMBNAIL}`)
-}

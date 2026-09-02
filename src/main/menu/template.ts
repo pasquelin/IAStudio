@@ -2,6 +2,14 @@
 // import of Electron, and this module could no longer be tested under plain Node.
 import type { MenuItemConstructorOptions } from 'electron'
 import { APP_NAME } from '@shared/constants'
+import { CREATABLES } from '@shared/domain/creatable'
+import { pathBaseNameOf, stemOf } from '@shared/domain/fileName'
+import {
+  projectName,
+  projectsByCreation,
+  type RecentDocument,
+  type RecentProject,
+} from '@shared/domain/project'
 import {
   DISPLAY_MODES,
   LIGHT_ENTRIES,
@@ -21,18 +29,19 @@ import {
   bindingOf,
   commandDescriptor,
   commandIn,
-  scopeOfWorkspace,
   type BindingOverrides,
   type CommandId,
+  type CommandScope,
   type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
-import type { DocumentKind } from '@shared/domain/document'
 import { acceleratorOf, typesText } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
+  NewDocumentRequest,
+  RecentOpenRequest,
   SceneAddRequest,
   SceneCaptureCommand,
   SceneDisplayRequest,
@@ -61,6 +70,8 @@ export type MenuActions = {
   toggleFullScreen: () => void
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void
+  newDocument: (request: NewDocumentRequest) => void
+  openRecent: (request: RecentOpenRequest) => void
   addNode: (request: SceneAddRequest) => void
   viewFrom: (request: SceneViewRequest) => void
   setDisplay: (request: SceneDisplayRequest) => void
@@ -83,8 +94,8 @@ export type MenuOptions = {
    * drops, which is the whole point of naming the surface rather than the workspace.
    */
   workspace: ToolSurface | null
-  /** The kind of the tab in front, which is what says whose history Undo pops. */
-  kind: DocumentKind | null
+  /** Whose history Undo pops, `null` where nothing is undoable — see `setWorkspace` in `shared/ipc.ts`. */
+  scope: CommandScope | null
   /**
    * The panels the focused window can currently open, as it reported them. Not derived from the
    * registry here: whether the generator exists depends on a model being chosen, which only the
@@ -100,6 +111,23 @@ export type MenuOptions = {
   checked: readonly MenuCheck[]
   /** The rows the focused window reported as answerable — a row absent from here is drawn greyed. */
   abilities: readonly MenuAbility[]
+  /**
+   * The folder of the open project, `null` where none is. Read from the main process rather than
+   * reported by the window: the main process OWNS the open project, and a fact it holds travelling
+   * through a renderer is a fact free to arrive late — File ▸ New file would stay greyed over a
+   * project already open.
+   *
+   * The PATH and not a boolean: a recent document says which project it belongs to, and only
+   * where that is not the one in front — two members for one fact would be free to disagree.
+   */
+  openProject: string | null
+  /**
+   * What File ▸ Open recent lists. From the main process for the same reason `hasProject` is: it
+   * is what holds the settings, and the two lists are written by opening things rather than by
+   * any window reporting them.
+   */
+  recentProjects: readonly RecentProject[]
+  recentDocuments: readonly RecentDocument[]
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
   overrides: BindingOverrides
   actions: MenuActions
@@ -153,20 +181,21 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const {
     language,
     workspace,
-    kind,
+    scope,
     tools,
     checked,
     abilities,
     isMac,
     isDevelopment,
+    openProject,
+    recentProjects,
+    recentDocuments,
     overrides,
     actions,
   } = options
 
-  // 🛑 The KIND and not the space alone: the 3D space also opens interfaces, and a scene row over
-  // one acts on a scene nobody is looking at. Every rank below reads this, never `workspace`.
-  const surface = scopeOfWorkspace(workspace, kind)
-
+  // 🛑 Every rank below reads the SCOPE for what edits, never `workspace`: the 3D space also opens
+  // interfaces, and a scene row over one acts on a scene nobody is looking at.
   /**
    * How a native row may carry a command's key, read off the registry so the menu never advertises
    * one a remap has moved. `registerAccelerator` is Windows and Linux ONLY: on macOS a row that
@@ -316,7 +345,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * commands keep their full title for the palette, where nothing stands above them.
    */
   const exportSubmenu = (): MenuItemConstructorOptions[] => {
-    if (surface === 'scene') {
+    if (scope === 'scene') {
       return [
         { label: t.menu.exportScene, submenu: exportItems('scene') },
         // Greyed rather than dropped: a row that comes and goes is one the eye has to look for.
@@ -432,8 +461,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     { role: 'undo', label: t.commands.undo.title },
     { role: 'redo', label: t.commands.redo.title },
   ]
-  const undo = surface && commandIn(surface, 'undo')
-  const redo = surface && commandIn(surface, 'redo')
+  const undo = scope && commandIn(scope, 'undo')
+  const redo = scope && commandIn(scope, 'redo')
 
   /**
    * What a scene does to what is selected, once the toolbar stopped drawing a button for each.
@@ -445,7 +474,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * unlike the keyboard one, which is what makes a key safe here where a row would not be.
    */
   const sceneEditItems: MenuItemConstructorOptions[] =
-    surface === 'scene'
+    scope === 'scene'
       ? [
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
@@ -512,6 +541,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           { type: 'separator' },
           commandItem('canvas.rulers', t.menu.rulers),
           commandItem('canvas.guides', t.menu.guides),
+          commandItem('canvas.grid', t.menu.grid),
           commandItem('canvas.clearGuides', t.menu.clearGuides),
           commandItem('canvas.snap', t.menu.snap),
         ]
@@ -570,7 +600,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * changes once a session, not gestures repeated by the minute, which is what a menu is for.
    */
   const sceneViewMenu: MenuItemConstructorOptions[] =
-    surface === 'scene'
+    scope === 'scene'
       ? [
           { type: 'separator' },
           { label: t.menu.sceneDisplay, submenu: displayItems() },
@@ -671,9 +701,42 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
+  /**
+   * The shelf, in one submenu: the projects first, by the same creation order every other surface
+   * lists them in, then the documents in the order they were last opened — which is what "recent
+   * files" means in every application, and what a project must NOT be ordered by, a shelf that
+   * reshuffles under the click being a shelf one misses.
+   *
+   * Absent altogether when there is nothing to list: an empty submenu is a row that looks broken.
+   */
+  const openRecentMenu = (): MenuItemConstructorOptions[] => {
+    const projects = projectsByCreation([...recentProjects]).map(entry => ({
+      label: projectName(entry.path),
+      click: () => actions.openRecent({ project: entry.path }),
+    }))
+
+    const documents = recentDocuments.map(entry => {
+      const title = stemOf(pathBaseNameOf(entry.path))
+
+      return {
+        // The project named beside it only where it is not the one in front: a row that performs
+        // a project SWITCH has to say so before it is clicked.
+        label: entry.project === openProject ? title : `${title} — ${projectName(entry.project)}`,
+        click: () => actions.openRecent({ project: entry.project, path: entry.path }),
+      }
+    })
+
+    if (projects.length === 0 && documents.length === 0) return []
+
+    const between: MenuItemConstructorOptions[] =
+      projects.length > 0 && documents.length > 0 ? [{ type: 'separator' }] : []
+
+    return [{ label: t.menu.openRecent, submenu: [...projects, ...between, ...documents] }]
+  }
+
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
-    surface === 'scene'
+    scope === 'scene'
       ? [
           {
             label: t.menu.add,
@@ -694,24 +757,48 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     {
       label: t.menu.file,
       submenu: [
+        // The window that offers both, and the one row of this menu that is never greyed: with no
+        // project open it is the way to one.
+        {
+          label: t.menu.newDocument,
+          ...keyOf('app.new'),
+          click: () => actions.runCommand('app.new'),
+        },
         {
           label: t.menu.newProject,
           ...keyOf('project.new'),
           click: () => actions.runCommand('project.new'),
         },
         {
+          label: t.menu.newFile,
+          // The rail's own order, and never the surface's: a native menu whose rows move under the
+          // pointer is a menu one has to read again every time. The WINDOW is where the order
+          // follows what one is doing.
+          submenu: CREATABLES.map(({ kind }) => ({
+            label: t.documents.kinds[kind],
+            // A document is a file in a project folder: with none open there is nowhere to write
+            // it, and the row would fail after the click rather than before it.
+            enabled: openProject !== null,
+            click: () => actions.newDocument({ kind }),
+          })),
+        },
+        { type: 'separator' },
+        {
           label: t.menu.openProject,
           ...keyOf('project.open'),
           click: () => actions.runCommand('project.open'),
         },
+        ...openRecentMenu(),
         { type: 'separator' },
         {
           label: t.menu.saveDocument,
+          enabled: abilities.includes('document.save'),
           ...keyOf('document.save'),
           click: () => actions.runCommand('document.save'),
         },
         {
           label: t.menu.saveDocumentAs,
+          enabled: abilities.includes('document.saveAs'),
           ...keyOf('document.saveAs'),
           click: () => actions.runCommand('document.saveAs'),
         },

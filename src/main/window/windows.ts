@@ -6,6 +6,7 @@ import { JOURNAL_ROUTE } from '@shared/domain/activity'
 import { fileInfoRoute } from '@shared/domain/fileInfo'
 import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
+import { characterWindowRoute } from '@shared/domain/characterWindow'
 import { GAME_WINDOW_ROUTE } from '@shared/domain/gameWindow'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
 import { NEW_DOCUMENT_ROUTE } from '@shared/domain/newDocument'
@@ -70,6 +71,16 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
 type AuxiliarySize = { width: number; height: number; minWidth: number; minHeight: number }
 
 /**
+ * Where macOS floats the three buttons, for every window of the studio that hides its bar.
+ *
+ * ONE offset, because `WindowTitleBar` stands exactly as tall as the studio's own `TitleBar`:
+ * two windows side by side put their lights on one line, which two offsets could not do. Both
+ * bars are `--sc-title-bar` tall — 2 × `y` plus the lights' 12px diameter, so a title is centred
+ * on them; `theme.test.ts` holds the two numbers together.
+ */
+const TRAFFIC_LIGHTS = { x: 16, y: 14 }
+
+/**
  * The shape shared by every window that is not a document: a size typed here rather than taken
  * from the screen, and no full screen — macOS would give it a space of its own, hiding the studio
  * behind it.
@@ -83,7 +94,9 @@ function auxiliaryWindow(size: AuxiliarySize): BrowserWindow {
     show: false,
     backgroundColor: chromeColor(),
     titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
+    // The studio's own offset, not one per family: `WindowTitleBar` stands as tall as `TitleBar`,
+    // so two windows side by side put their lights on one line.
+    trafficLightPosition: TRAFFIC_LIGHTS,
     fullscreenable: false,
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
@@ -153,7 +166,7 @@ export function createMainWindow(options: { deferShow?: boolean } = {}): Browser
     show: false,
     backgroundColor: chromeColor(),
     titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 14 },
+    trafficLightPosition: TRAFFIC_LIGHTS,
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
   })
@@ -447,6 +460,60 @@ export function openGameWindow(): BrowserWindow {
 
   load(window, { hash: GAME_WINDOW_ROUTE })
   gameWindow = window
+  return window
+}
+
+/** The one skeleton window — one character at a time, as `openCharacterWindow` explains. */
+let characterWindow: BrowserWindow | null = null
+
+/**
+ * A character edited on its own: its skeleton, its points of attachment, the motions it knows.
+ *
+ * ONE window, turned towards whichever character is opened — comparing two skeletons side by
+ * side is not what this is for. It reloads rather than messaging the fragment across, so a
+ * window the system restores finds its subject in its own URL.
+ */
+export function openCharacterWindow(assetId: string): BrowserWindow {
+  const hash = characterWindowRoute(assetId)
+  if (characterWindow && !characterWindow.isDestroyed()) {
+    revealWindow(characterWindow)
+    load(characterWindow, { hash })
+    return characterWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 720,
+    minHeight: 520,
+    show: false,
+    backgroundColor: chromeColor(),
+    // Framed like the studio and unlike the mirror or the game: this is a place one EDITS, and a
+    // native bar over the studio's own chrome read as another application's window.
+    titleBarStyle: 'hiddenInset',
+    // The studio's own offset, not one per family: `WindowTitleBar` stands as tall as `TitleBar`,
+    // so two windows side by side put their lights on one line.
+    trafficLightPosition: TRAFFIC_LIGHTS,
+    // Like every other window wearing `WindowTitleBar`: that bar's left inset is the room the
+    // traffic lights float in, and macOS takes them away in full screen — see the component.
+    fullscreenable: false,
+    title: TRANSLATIONS[windowLanguage()].character.window.title,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  window.on('closed', () => {
+    // Identity-checked, like the game's: an older window closing must not clear the slot a newer
+    // one now holds, nor tell the studio a character it is still editing has gone.
+    if (characterWindow !== window) return
+    characterWindow = null
+    studioWindow()?.webContents.send(EVENTS.characterWindowClosed)
+  })
+
+  load(window, { hash })
+  characterWindow = window
   return window
 }
 

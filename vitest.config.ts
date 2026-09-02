@@ -120,10 +120,12 @@ const DOM_BOUND = [
   // Imports the definition of all twenty-one panels, so it loads every panel component. It
   // PASSES under node — and covers less: the branches those modules run at import take the
   // other path without a browser, and `panels/**` went four branches over its budget.
-  'src/renderer/src/features/shell/components/ToolWindow/toolComponents.test.ts',
+  'src/renderer/src/features/shell/components/toolComponents.test.ts',
   'src/renderer/src/features/shell/unsavedGuard.test.ts',
   // `renderHook` mounts into a document, and this one has no component to make it a `.tsx`.
   'src/renderer/src/hooks/useTaskChoices.test.ts',
+  'src/renderer/src/hooks/usePixelPreview.test.ts',
+  'src/renderer/src/hooks/usePixelArtGrid.test.ts',
   'src/renderer/src/features/dictation/insertAtCaret.test.ts',
   'src/renderer/src/engines/audio/audioRender.test.ts',
   'src/renderer/src/engines/canvas/CanvasEngine.test.ts',
@@ -132,7 +134,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/core/canvas2d.test.ts',
   'src/renderer/src/engines/core/offScreenHost.test.ts',
   'src/renderer/src/engines/core/palette.test.ts',
-  'src/renderer/src/engines/scene/animationPainter.test.ts',
+  'src/renderer/src/engines/timeline/bandPainter.test.ts',
   // Draws the round mark of a joint on a canvas, exactly as `paneMaterials` draws its matcap.
   'src/renderer/src/engines/scene/boneJoints.test.ts',
   'src/renderer/src/engines/scene/bvhBuilder.test.ts',
@@ -143,14 +145,18 @@ const DOM_BOUND = [
   // Drives the worker by dispatching at `self`, which only a browser global has.
   'src/renderer/src/engines/scene/retarget.worker.test.ts',
   // Writes a real GLB, and `GLTFExporter` reaches for `FileReader`.
+  'src/renderer/src/engines/scene/glbSkin.test.ts',
+  'src/renderer/src/engines/scene/rigRead.test.ts',
   'src/renderer/src/engines/scene/rigRoundTrip.test.ts',
   'src/renderer/src/engines/scene/sceneExport.test.ts',
   // A stage opens an off-screen host before anything else, and a host is a div in a document.
   'src/renderer/src/engines/scene/sceneStage.test.ts',
   'src/renderer/src/engines/scene/scene-models.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-animation.test.ts',
+  'src/renderer/src/engines/scene/scene-renderer-bones.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-export.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-loaders.test.ts',
+  'src/renderer/src/engines/scene/scene-renderer-reskin.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
   'src/renderer/src/engines/scene/sceneRendererGroups.test.ts',
   // Mounts the engine to watch what holds the active zone; `paneMaterials` draws its matcap.

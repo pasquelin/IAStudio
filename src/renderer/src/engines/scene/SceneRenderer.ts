@@ -18,7 +18,6 @@ import {
   Quaternion,
   Raycaster,
   type Camera,
-  SkeletonHelper,
   SkinnedMesh,
   SpotLight,
   Sprite,
@@ -28,6 +27,7 @@ import {
   Vector4,
   WebGLRenderTarget,
   Vector3 as ThreeVector3,
+  type Bone,
 } from 'three'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
@@ -35,7 +35,8 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { anglesFromDirection, type SphericalAngles } from '@shared/domain/angles'
 import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
 import { clampFlySpeed, speedAfterWheel } from './flySpeed'
-import { notchesOf, PIVOT_AHEAD } from '../viewport/dolly'
+import { notchesOf } from '../viewport/dolly'
+import { gazeTargetOf, PIVOT_AHEAD } from '../viewport/orbitPivot'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -144,8 +145,13 @@ import { createRefCache, type RefCache } from '../core/refCache'
 import { drivenNodes, lensAt, poseAt, postAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import { SECOND, type Us } from '@shared/domain/time'
-import { nearestProjected, type Projected, type ProjectedBone } from './bonePicking'
-import { rigStateOf, type RigState } from './rigState'
+import {
+  nearestProjected,
+  nearestSegment,
+  type Projected,
+  type ProjectedSegment,
+} from './bonePicking'
+import { type RigState, isBoneObject, measuredMeshOf, rigStateOf } from './rigState'
 import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
 import { PostComposer } from '../postfx/PostComposer'
@@ -159,7 +165,7 @@ import {
   type ModelCache,
   type ModelSource,
 } from './modelCache'
-import { applyTransform, carry, placePivot, release, transformOf } from './pivot'
+import { applyTransform, carry, centreOf, placePivot, release, transformOf } from './pivot'
 import {
   applyShadowFlags,
   applyShadowQuality,
@@ -188,18 +194,33 @@ import {
 import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
 import CsgWorker from '../csg/csg.worker?worker'
-import SkinWorker from './skinWeights.worker?worker'
+import SkinWorker from '../character/skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
-import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
-import { applyRig, positionsIn, skinnableMeshesOf } from './rigBuild'
-import { createIkBinding, ikSpecsOf, type IkBinding } from './ik'
+import { createRetarget, type Retarget, type RetargetFit } from './retarget'
+import {
+  applyRig,
+  positionsIn,
+  reskinnableMeshesOf,
+  restInverses,
+  restRig,
+  unrig,
+  wearsRig,
+} from '../character/rigBuild'
+import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
+import { restWithin, type BoneAxis } from '@/engines/character/boneRest'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
-import { createSkinWeights, type SkinWeights } from './skinWeights'
-import type { SkinBinding } from './skinVertices'
+import { type BoneShapes, createBoneShapes, leafTail } from './boneShapes'
+import { createSkinWeights, type SkinWeights } from '../character/skinWeights'
+import type { SkinBinding } from '../character/skinVertices'
 import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
+import type { CharacterExtras } from '@shared/domain/character'
+import { characterExtrasIn, characterOf } from './rigRead'
+import { meshSampleOf, type MeshSample } from './rigSnap'
+import type { GlbSkinAttributes } from './glbSkin'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
+import './bvhPatches'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
@@ -272,6 +293,26 @@ export type SceneRendererOptions = {
    * five states it is in. Same reason as `onClips`: none of it lives in the document.
    */
   onRig?: (nodeId: string, rig: RigState) => void
+  /**
+   * The skeleton this model's FILE carries, as a document holds one, with what the studio wrote
+   * beside it. For the window that edits a character: only the engine ever decodes the file.
+   */
+  onCharacter?: (
+    nodeId: string,
+    rig: Rig | null,
+    extras: CharacterExtras | null,
+    /**
+     * What the mesh measures AND what it is made of — the envelope a fit proportions itself off,
+     * and the points that pull each joint inside the body rather than onto that envelope.
+     */
+    sample: MeshSample | null,
+  ) => void
+  /**
+   * The weights this side just worked out, for whoever writes the file back. Only the engine
+   * ever holds both a mesh and a rig, and asking for them again at ⌘S would pay for a million
+   * vertices a second time.
+   */
+  onSkinning?: (nodeId: string, skins: readonly GlbSkinAttributes[]) => void
   /**
    * What a skeleton of that signature means, worked out from a document's own rig. Kept by the
    * project rather than here: this port dies with the viewport, and the mapping outlives it.
@@ -426,6 +467,14 @@ function wasClick(from: { x: number; y: number } | null, event: PointerEvent): b
   return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
 }
 
+/**
+ * What a camera LOOKS AT — the pivot brought onto its line of sight. Four readers here take the
+ * pivot for that point and restore it by `lookAt`, and the pointer routinely leaves it off axis.
+ */
+function lookedAtBy(camera: Camera, pivot: ThreeVector3): ThreeVector3 {
+  return gazeTargetOf(camera.position, camera.getWorldDirection(new ThreeVector3()), pivot)
+}
+
 /** Where a shot's target stands and where its rail puts it: a camera driven per frame allocates
  * nothing. */
 const aimed = new ThreeVector3()
@@ -437,11 +486,17 @@ const right = new ThreeVector3()
 const step = new ThreeVector3()
 const flightGaze = new ThreeVector3()
 
-/** Posed on long-lived helpers: a fresh closure each would keep its enclosing scope alive. */
-const NOOP = (): void => {}
-
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
+const BONE_TAIL = new Vector3()
+
+/** Scratch for turning the bone that arrives at a dragged joint. See `articulateTowards`. */
+const JOINT_WANTED = new Vector3()
+const JOINT_RESTED = new Vector3()
+const JOINT_PIVOT = new Vector3()
+const JOINT_TURN = new Quaternion()
+const JOINT_FRAME = new Quaternion()
+const JOINT_LOCAL = new Quaternion()
 
 /** Scratch for placing a rail or one of its knobs, so a click over one allocates nothing. */
 const RAIL_SPOT = new Vector3()
@@ -597,6 +652,12 @@ export class SceneRenderer {
     // The nodes alone, and the helpers on purpose: a lamp's glyph is a place one looks AT, never
     // a surface one lands the pivot on.
     pickTargets: () => [...this.objects.values()],
+    // Blender's Navigation panel, under the two names it gives them — see `orbitPivot`.
+    pivotMode: () => ({
+      aroundSelection: this.view.orbitAroundSelection,
+      underCursor: this.view.orbitUnderCursor,
+    }),
+    selectionCentre: () => this.selectionCentre(),
     onWheel: event => this.spendWheelOnSpeed(event),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
@@ -662,8 +723,6 @@ export class SceneRenderer {
   private readonly animations = new SceneAnimations()
   /** The cameras the shots named last pass, so one they let go of can be put back where it was. */
   private railedCameras = new Set<string>()
-  /** One per rigged model, drawn over it. Beside the nodes like the grid — never inside one. */
-  private readonly skeletons = new Map<string, SkeletonHelper>()
   private showSkeletons = false
   /**
    * Whether a click picks a BONE rather than a mesh.
@@ -673,6 +732,7 @@ export class SceneRenderer {
    * that lands on whichever the ray happens to meet first.
    */
   private poseMode = false
+  private restEditing = false
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
   /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
@@ -702,6 +762,12 @@ export class SceneRenderer {
   private heldPreview: PreviewWatch | null = null
   /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
   private readonly boneRests = new Map<string, Transform>()
+  /** The rest a fitted rig gave each of its bones, per node — what a leash is measured from. */
+  private readonly rigRests = new Map<string, Map<string, Transform>>()
+  /** The axes a joint dragged must not leave. Empty until a window asks: a scene poses freely. */
+  private heldBoneAxes: readonly BoneAxis[] = []
+  /** Whether the pivot is standing in for the picked joint. See `articulateTowards`. */
+  private boneHandle = false
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -857,6 +923,8 @@ export class SceneRenderer {
   private readonly iks = new Map<string, IkBinding>()
   /** The joints of each drawn skeleton, refreshed with the pose. Beside the helper they double. */
   private readonly joints = new Map<string, BoneJoints>()
+  /** The bones themselves, drawn as solids: a line says nothing about which way a bone faces. */
+  private readonly boneSolids = new Map<string, BoneShapes>()
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
   /** Set by `prepareOffscreen`: what stops the backdrop being painted over a montage. */
@@ -1416,6 +1484,9 @@ export class SceneRenderer {
     if (!orbit) return
 
     const camera = this.viewport.camera
+    // The point LOOKED AT: a side view centred on a pivot the pointer left off the axis swings
+    // the camera onto a side of THAT, and `orbit.update()` ends on `lookAt` and keeps it there.
+    orbit.target.copy(lookedAtBy(camera, orbit.target))
     const distance = camera.position.distanceTo(orbit.target) || DEFAULT_VIEW_DISTANCE
     const { x, y, z } = viewPosition(direction, orbit.target, distance)
 
@@ -1453,7 +1524,11 @@ export class SceneRenderer {
   }
 
   private placePanes(): void {
-    const target = this.viewport.orbit?.target ?? this.pivot.position
+    const main = this.viewport.perspective
+    const pivot = this.viewport.orbit?.target
+    // What the MAIN view looks at, never the raw pivot: the sides would otherwise open centred
+    // on a point the pointer left off the axis — see `viewPlacement`, which says why.
+    const target = pivot ? lookedAtBy(main, pivot) : this.pivot.position
     this.viewport.setPaneHeight(this.sceneHeight())
 
     for (const [index, view] of this.paneViews.entries()) {
@@ -1756,7 +1831,12 @@ export class SceneRenderer {
    * write it twice. The grid, the trihedron, the gizmo and the light helpers are siblings of the
    * nodes rather than children, so none of them is reachable from here.
    */
-  exportTo(format: ExportFormat, scope: 'scene' | 'selection'): Promise<Uint8Array> {
+  exportTo(
+    format: ExportFormat,
+    scope: 'scene' | 'selection',
+    /** What glTF has no place for, written on the scene — see `ExportOptions.extras`. */
+    extras?: Record<string, unknown>,
+  ): Promise<Uint8Array> {
     const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
     const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
     // In DOCUMENT order, not in the order the objects were built: a node rebuilt after an undo
@@ -1777,6 +1857,7 @@ export class SceneRenderer {
             nameOf: id => this.applied.get(id)?.name,
             clipsFor: copies => this.bakedClips(copies),
             rankOf: id => rank.get(id),
+            ...(extras && { extras }),
           },
         ),
       ),
@@ -2068,14 +2149,35 @@ export class SceneRenderer {
     this.refreshSkeletons()
   }
 
+  /**
+   * Whether the bones on stage are the REST pose being edited rather than a pose being struck.
+   *
+   * The skeleton window sets it and nothing else does: there, a joint dragged is a joint put
+   * where it belongs, and the mesh must not follow it. A scene poses instead, and the whole
+   * point there is that the mesh DOES follow.
+   */
+  setRestEditing(on: boolean): void {
+    this.restEditing = on
+    if (on) this.restSkins()
+    // The two states hand the gizmo different things: editing PLACES the joint, posing turns the
+    // bone arriving at it through a handle standing outside the chain.
+    this.attachGizmo()
+    this.redraw()
+  }
+
+  /** Every skin of the stage re-measured from where its bones stand now. */
+  private restSkins(): void {
+    for (const holder of this.objects.values()) restInverses(holder)
+  }
+
   /** The one place the rule lives: written three times, one copy was already wrong. */
   private skeletonsVisible(): boolean {
     return this.showSkeletons || this.poseMode
   }
 
   private refreshSkeletons(): void {
-    for (const helper of this.skeletons.values()) helper.visible = this.skeletonsVisible()
     for (const joints of this.joints.values()) joints.points.visible = this.skeletonsVisible()
+    for (const solids of this.boneSolids.values()) solids.mesh.visible = this.skeletonsVisible()
     this.redraw()
   }
 
@@ -2091,41 +2193,75 @@ export class SceneRenderer {
   }
 
   /**
-   * Every bone on stage, as the screen sees it. Built per click rather than kept: a bone moves
-   * with its rig, and a cached projection would name whatever stood there a frame ago.
+   * Every bone as a SEGMENT on screen — from its own joint to its child's, which is the shape a
+   * hand aims at. Built per click rather than kept: a bone moves with its rig, and a cached
+   * projection would name whatever stood there a frame ago.
    */
-  private projectedBones(camera: Camera): ProjectedBone[] {
-    const projected: ProjectedBone[] = []
+  private projectedSegments(camera: Camera): ProjectedSegment[] {
+    const segments: ProjectedSegment[] = []
 
-    for (const [nodeId, helper] of this.skeletons) {
-      for (const bone of helper.bones) {
+    for (const [nodeId, solids] of this.boneSolids) {
+      // The very stretches drawn: the hips are clickable on the way to either leg, not only up
+      // the spine.
+      for (const { bone, child } of solids.links) {
         if (!bone.name) continue
 
         bone.getWorldPosition(BONE_WORLD)
+        // The stub drawn for a bone with no child is clickable too: a hand is taken by it.
+        if (child) child.getWorldPosition(BONE_TAIL)
+        else leafTail(bone, BONE_WORLD, BONE_TAIL)
         BONE_WORLD.project(camera)
-        projected.push({
+        BONE_TAIL.project(camera)
+
+        segments.push({
           nodeId,
           bone: bone.name,
-          x: BONE_WORLD.x,
-          y: BONE_WORLD.y,
-          z: BONE_WORLD.z,
+          head: { x: BONE_WORLD.x, y: BONE_WORLD.y, z: BONE_WORLD.z },
+          tail: { x: BONE_TAIL.x, y: BONE_TAIL.y, z: BONE_TAIL.z },
         })
       }
     }
 
-    return projected
+    return segments
+  }
+
+  /** Measured NOW: `rigStateOf` stops measuring the moment a model carries bones. */
+  meshSample(nodeId: string): MeshSample | null {
+    const holder = this.objects.get(nodeId)
+    return holder ? measuredMeshOf(holder) : null
   }
 
   /**
-   * Weights every mesh of a model against the rig its document holds, then binds them.
+   * Weights every mesh of a model against a rig, then binds them — what « make animatable » does.
    *
-   * Off the UI thread and reporting as it goes: half a million vertices against fifty-two bones
-   * is twenty-six million distances, and the window has to stay answerable throughout.
+   * Public because the skeleton window is what asks for it now: a scene reads the skin its files
+   * already carry, and only an editor puts a new one on. Off the UI thread and reporting as it
+   * goes — half a million vertices against fifty-two bones is twenty-six million distances.
    */
-  private async skinModel(nodeId: string, holder: Object3D, rig: Rig): Promise<void> {
+  async skinModel(nodeId: string, rig: Rig): Promise<void> {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return
+
+    // Before the branches below, which all return early: the leash needs the rig either way.
+    this.rigRests.set(nodeId, new Map(rig.bones.map(one => [one.name, one.rest])))
+
+    // 🛑 A model already wearing these very bones is having its REST edited, not its rig
+    // rebuilt: the weights are per vertex and unchanged, so putting the bones back where the
+    // rig now rests and taking the inverses again is the whole of it. Re-weighing here would
+    // cost half a million distances per joint dragged — and `skinnableMeshesOf` answers nothing
+    // for a skinned model anyway, so this used to return in silence and leave the character
+    // posed against a rest pose that no longer existed.
+    if (wearsRig(holder, rig)) {
+      restRig(holder, rig)
+      this.bindIk(nodeId, holder, rig)
+      this.redraw()
+      return
+    }
+
     // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
-    // the holder again after the awaits, when it may hold others.
-    const meshes = skinnableMeshesOf(holder)
+    // the holder again after the awaits, when it may hold others. The SKINNED ones too — a rig
+    // that changed shape is weighed again, and refusing them left « add hands » doing nothing.
+    const meshes = reskinnableMeshesOf(holder)
     if (meshes.length === 0) return
 
     this.stopSkinning(nodeId)
@@ -2148,12 +2284,30 @@ export class SceneRenderer {
       // The model may have been released while the weights were out.
       if (this.objects.get(nodeId) !== holder) return
 
+      // The skeleton this one replaces, off first: left on, `wearsRig` would count both sets and
+      // every later rest edit would be measured against bones nothing drives.
+      unrig(holder)
       applyRig(holder, rig, bound)
       this.bindIk(nodeId, holder, rig)
+      // Handed over rather than recomputed at save time: only this side ever weighs a mesh, and
+      // the order is `skinnableMeshesOf`'s — the same order a `.glb` spells its primitives in.
+      this.options.onSkinning?.(
+        nodeId,
+        bound.map((one, index) => ({
+          mesh: index,
+          primitive: 0,
+          joints: one.binding.skinIndex,
+          weights: one.binding.skinWeight,
+        })),
+      )
+      // 🛑 `applyRig` CLONES each geometry, and a clone carries no `boundsTree`: rigging threw
+      // away the tree built when the model landed.
+      void this.accelerateOrReport(holder, nodeId)
       // The bones exist only now: the helper was bound before them, when the holder carried none,
       // and without this a locally rigged character has a skeleton nothing can show or pick.
       this.bindSkeleton(nodeId, holder, true)
       this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+      await this.precompile()
       this.redraw()
     } finally {
       this.skinning.delete(nodeId)
@@ -2181,6 +2335,24 @@ export class SceneRenderer {
     if (binding) this.iks.set(nodeId, binding)
   }
 
+  /**
+   * The programs the stage now needs, built BEFORE the frame that would need them.
+   *
+   * 🛑 A skinned mesh is a shader variant of its own, so binding a rig asks for four programs the
+   * first frame after it: 292 ms on a warm shader cache, 8.4 SECONDS cold — and invisible to a
+   * JavaScript profile, since a driver compiles in the GPU process. Measured 2026-09-02.
+   */
+  private async precompile(): Promise<void> {
+    const gl = this.viewport.gl
+    if (!gl) return
+
+    try {
+      await gl.compileAsync(this.viewport.scene, this.viewport.camera)
+    } catch {
+      // Nothing to fall back to: the frame compiles what this could not, as it always did.
+    }
+  }
+
   /** Twenty-six million distances are not worth finishing for a model nobody will see again. */
   private stopSkinning(nodeId: string): void {
     this.skinning.get(nodeId)?.abort()
@@ -2188,45 +2360,53 @@ export class SceneRenderer {
   }
 
   /**
-   * A helper is built from the instance and hung beside the nodes, like the grid and the
-   * trihedron — never inside the model, where the outliner would list it as part of the scene
-   * and a click could pick it.
+   * Joints and solids are built from the instance and hung beside the nodes, like the grid and
+   * the trihedron — never inside the model, where the outliner would list them and a click could
+   * pick them.
    */
   private bindSkeleton(nodeId: string, root: Object3D, hasBones: boolean): void {
     this.unbindSkeleton(nodeId)
 
     if (!hasBones) return
 
-    const helper = new SkeletonHelper(root)
-    helper.visible = this.skeletonsVisible()
-    // Off the raycaster: the bones of a rig cross every mesh it drives, and a click would land
-    // on a line rather than on the model it belongs to.
-    helper.raycast = NOOP
-    this.skeletons.set(nodeId, helper)
-    this.viewport.scene.add(helper)
+    // Not three's `SkeletonHelper`: its lines showed through the solids, and a skeleton read as
+    // half wireframe — measured on screen.
+    const bones: Bone[] = []
+    root.traverse(object => {
+      if (isBoneObject(object)) bones.push(object)
+    })
 
-    // The joints beside the segments: the helper draws the bones and nothing marks where two of
-    // them MEET, which is the thing a click and a gizmo are actually aimed at.
-    const joints = createBoneJoints(helper.bones)
-    joints.points.visible = helper.visible
+    // The joints mark where two bones MEET, which is the thing a click and a gizmo are aimed at.
+    const joints = createBoneJoints(bones)
+    joints.points.visible = this.skeletonsVisible()
     this.joints.set(nodeId, joints)
     this.viewport.scene.add(joints.points)
+
+    // The bones as solids: a segment tells nothing about a bone's facing, so a rotation had no
+    // landmark at all.
+    const solids = createBoneShapes(bones)
+    solids.mesh.visible = this.skeletonsVisible()
+    this.boneSolids.set(nodeId, solids)
+    this.viewport.scene.add(solids.mesh)
+    // A skeleton bound after the pick — every reload of a model does this — would otherwise draw
+    // its joints at rest while a panel names one of them.
+    this.paintPickedJoint()
   }
 
   private unbindSkeleton(nodeId: string): void {
+    const solids = this.boneSolids.get(nodeId)
+    if (solids) {
+      solids.mesh.removeFromParent()
+      solids.dispose()
+      this.boneSolids.delete(nodeId)
+    }
+
     const joints = this.joints.get(nodeId)
     if (joints) {
       joints.points.removeFromParent()
       joints.dispose()
       this.joints.delete(nodeId)
     }
-
-    const helper = this.skeletons.get(nodeId)
-    if (!helper) return
-
-    helper.removeFromParent()
-    helper.dispose()
-    this.skeletons.delete(nodeId)
   }
 
   /**
@@ -2243,11 +2423,14 @@ export class SceneRenderer {
   /** Where the free camera stands and what it looks at, as plain numbers anything may hold. */
   viewPlacement(): CameraPlacement {
     const camera = this.viewport.perspective
-    // The orbit's target when there is one, and a point ahead of the camera otherwise: a
-    // viewport with no controls still has a direction, and `lookAt(0,0,0)` would be a lie.
-    const target =
-      this.viewport.orbit?.target ??
-      camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
+    const pivot = this.viewport.orbit?.target
+    // Brought back ONTO the line of sight: the pivot is where the pointer put it, off centre by
+    // design, and every reader of this restores a placement by `lookAt` — a framing published
+    // from an off-axis pivot comes back turned. A viewport with no controls has a gaze all the
+    // same, and `lookAt(0, 0, 0)` would be a lie.
+    const target = pivot
+      ? lookedAtBy(camera, pivot)
+      : camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
 
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
@@ -2455,8 +2638,8 @@ export class SceneRenderer {
     this.instances.follow?.(camera ?? null, this.shadowThrow)
 
     for (const helper of this.helpers.values()) hide(helper)
-    for (const skeleton of this.skeletons.values()) hide(skeleton)
     for (const joints of this.joints.values()) hide(joints.points)
+    for (const solids of this.boneSolids.values()) hide(solids.mesh)
     for (const frustum of this.frustums.values()) hide(frustum)
     // A body and a bulb are workshop furniture too: they stand where the thing they draw stands,
     // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
@@ -2784,7 +2967,7 @@ export class SceneRenderer {
     this.environment?.dispose()
     this.environment = null
     this.animations.clear()
-    for (const id of [...this.skeletons.keys()]) this.unbindSkeleton(id)
+    for (const id of [...this.boneSolids.keys()]) this.unbindSkeleton(id)
     this.post?.dispose()
     this.post = null
     this.textureCache.dispose()
@@ -3283,10 +3466,6 @@ export class SceneRenderer {
     // light synced before the set it lights would measure half a level. `apply` does it once
     // the last node is in place.
 
-    // Before anything is retargeted onto it: the document is where a bone's role was PUT RIGHT,
-    // and the port would otherwise go on reading roles off names that lied.
-    if (node.type === 'model' && node.model.rig) this.learnRig(node.model.rig)
-
     // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
     // binds what the file brought the moment it lands, and applies this reference there.
     if (node.type === 'model' && this.animations.has(node.id)) {
@@ -3685,15 +3864,19 @@ export class SceneRenderer {
       // from mesh and rig, like a BVH — so they are worked out again on every load. The skeleton
       // is reported before that finishes: a rig that takes a minute to bind still has bones the
       // inspector can name at once.
-      const held = applied.type === 'model' ? applied.model.rig : undefined
-      if (held) void this.skinModel(node.id, holder, held)
-
       // Read once and used twice: whether this model has bones at all is the same question the
       // helper asks, and answering it in two places is how the two came to disagree. The COUNT
       // and not the named ones — an export that stripped joint names still has a rig to draw.
       const rig = rigStateOf(holder, clipsOf(source))
       this.bindSkeleton(node.id, holder, rig.boneCount > 0)
       this.options.onRig?.(node.id, rig)
+      // Read off the very object that just landed: the skeleton window edits the FILE, and
+      // decoding it a second time to read its bones would pay for a million triangles twice.
+      const { rig: carried, extras } = characterOf(holder)
+      this.options.onCharacter?.(node.id, carried, extras, meshSampleOf(rig))
+      // 🛑 Before anything is retargeted onto it: the FILE is where a bone's role was put right,
+      // and a motion laid on a skeleton nobody has read plays on the wrong joints.
+      if (carried) this.learnRig(carried, extras?.roles)
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
       // on one of them would drive nothing at all until the next edit.
       this.applyPoses()
@@ -3718,18 +3901,15 @@ export class SceneRenderer {
       // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.redraw()
-      // Reported rather than swallowed, and under a scope of its own: `reportFailure` says a
-      // subject once per scope, so sharing `scene.model` would let a tree that failed swallow the
-      // message of a load that fails later for the same asset — two failures nothing relates.
-      void this.accelerate(holder).catch(error => reportFailure('scene.bvh', assetId, error))
+      void this.accelerateOrReport(holder, assetId)
     })
 
     return holder
   }
 
   /** Told once per skeleton, not per model: it is filed by what its bones ARE. */
-  private learnRig(rig: Rig): void {
-    const roles: Record<string, HumanoidRole> = {}
+  private learnRig(rig: Rig, corrected?: Readonly<Record<string, HumanoidRole>>): void {
+    const roles: Record<string, HumanoidRole> = { ...corrected }
     for (const bone of rig.bones) if (bone.role) roles[bone.name] = bone.role
     if (Object.keys(roles).length === 0) return
 
@@ -3789,7 +3969,7 @@ export class SceneRenderer {
 
       // Before the retarget and not after: it is the only moment both skeletons are in hand, and
       // it is what lets the screen say WHICH joint the motion has nothing to drive.
-      this.options.onClipFit?.(nodeId, clip.key, retargetFitOf(holder, source))
+      this.options.onClipFit?.(nodeId, clip.key, this.retarget.fitOf(holder, source))
 
       const adapted = (await this.retarget.adapt(holder, source, [first]))?.[0]
       if (!adapted || this.objects.get(nodeId) !== holder) return
@@ -3807,6 +3987,18 @@ export class SceneRenderer {
     } catch (error) {
       // Under a scope of its own: a failing animation must not swallow what a failing model says.
       reportFailure('scene.animation', clip.url, error)
+    }
+  }
+
+  /**
+   * The same, awaited by nobody. Under a scope of its OWN: `reportFailure` says a subject once
+   * per scope, so sharing `scene.model` would let a failed tree swallow a later load's message.
+   */
+  private async accelerateOrReport(object: Object3D, subject: string): Promise<void> {
+    try {
+      await this.accelerate(object)
+    } catch (error) {
+      reportFailure('scene.bvh', subject, error)
     }
   }
 
@@ -3998,8 +4190,22 @@ export class SceneRenderer {
 
   /** The object a node hangs from, or the scene for a node that hangs from nothing. */
   private parentObjectOf(id: string): Object3D {
-    const parentId = this.applied.get(id)?.parentId
-    return (parentId ? this.objects.get(parentId) : null) ?? this.viewport.scene
+    const applied = this.applied.get(id)
+    return (applied && this.hangerOf(applied)) ?? this.viewport.scene
+  }
+
+  /**
+   * What this node hangs FROM: its parent, or the bone of the socket it is attached to.
+   *
+   * The socket is read off the parent's own file rather than from the document: sockets live in
+   * the `.glb`, and the studio window learns them from the very object that landed.
+   */
+  private hangerOf(node: SceneNode): Object3D | null {
+    const parent = node.parentId ? this.objects.get(node.parentId) : this.viewport.scene
+    if (!parent || !node.attach) return parent ?? null
+
+    const socket = characterExtrasIn(parent)?.sockets?.find(one => one.id === node.attach?.socket)
+    return (socket && parent.getObjectByName(socket.bone)) ?? parent
   }
 
   /**
@@ -4016,7 +4222,7 @@ export class SceneRenderer {
     const object = this.objects.get(node.id)
     if (!object || object.parent === this.pivot) return
 
-    const parent = node.parentId ? this.objects.get(node.parentId) : this.viewport.scene
+    const parent = this.hangerOf(node)
     // A parent that is not built is not a reason to drop the child: the scene keeps it, and the
     // next sync — where the parent exists — hangs it where it belongs.
     if (!parent || object.parent === parent) return
@@ -4072,6 +4278,7 @@ export class SceneRenderer {
       if (object instanceof DirectionalLight || object instanceof SpotLight)
         this.viewport.scene.remove(object.target)
       this.objects.delete(id)
+      this.rigRests.delete(id)
     }
 
     const helper = this.helpers.get(id)
@@ -4102,6 +4309,18 @@ export class SceneRenderer {
     return this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
   }
 
+  /**
+   * Where the view turns when it turns around the selection — the SAME centre `placePivot` puts
+   * the gizmo on, computed by the same function, so the two can never name different points.
+   *
+   * Recomputed rather than read off `this.pivot`: that one is only placed while a gizmo exists,
+   * and a mode without one still has a selection — the reading `frameSelection` already makes.
+   */
+  private selectionCentre(): ThreeVector3 | null {
+    const objects = this.selectedObjects()
+    return objects.length > 0 ? centreOf(objects, new ThreeVector3()) : null
+  }
+
   private attachGizmo(): void {
     const gizmo = this.gizmo
     if (!gizmo) return
@@ -4114,10 +4333,20 @@ export class SceneRenderer {
     // directly: a bone is inside a model's instance, so the pivot has nothing to carry.
     const boneObject = this.pickedBoneObject()
     if (boneObject) {
+      this.boneHandle = this.articulates(boneObject)
       if (this.mode === 'select') gizmo.detach()
-      else gizmo.attach(boneObject)
+      else if (!this.boneHandle) gizmo.attach(boneObject)
+      else {
+        // 🛑 OUT of the chain: the gizmo attached to the joint itself has the bone it turns for
+        // a parent, so its own frame swung under the hand and the drag ran away.
+        boneObject.getWorldPosition(this.pivot.position)
+        this.pivot.quaternion.identity()
+        this.pivot.scale.set(1, 1, 1)
+        gizmo.attach(this.pivot)
+      }
       return
     }
+    this.boneHandle = false
 
     const knob = this.pickedKnob()
     if (knob) {
@@ -4147,12 +4376,13 @@ export class SceneRenderer {
 
   private readonly onGizmoGrab = (): void => {
     this.dragged = false
-    if (this.gizmo?.object !== this.pivot) return
+    if (this.gizmo?.object !== this.pivot || this.boneHandle) return
     carry(this.pivot, this.selectedObjects(), this.viewport.scene)
   }
 
   private readonly onGizmoChange = (): void => {
     this.dragged = true
+    this.holdDraggedBone()
     this.layOnSurface()
     // A box that stayed behind while its object moved is a box that says nothing. Re-reading a
     // bounding box is cheap — building one is not, which is why this is not `refreshAids`.
@@ -4163,6 +4393,63 @@ export class SceneRenderer {
     // 40 000 nodes, which per pointer move is three dropped frames.
     this.instances.moved(this.selectedIds, id => this.objects.get(id))
     this.redraw()
+  }
+
+  /**
+   * The joint the gizmo carries, brought back within its holds EVERY frame: held on release
+   * alone, a bone left the body as a long spike for the whole gesture. Seen on screen 2026-09-02.
+   */
+  private holdDraggedBone(): void {
+    const picked = this.pickedBone
+    const bone = this.pickedBoneObject()
+    if (!picked || !bone) return
+
+    const rest = this.rigRests.get(picked.nodeId)?.get(picked.bone)
+    if (!rest) return
+
+    // Posing ARTICULATES; editing a rest PLACES. Translating the joint alone left every bone at
+    // zero rotation, so the limb never turned and its skin stretched after the hand instead.
+    if (this.boneHandle) {
+      this.articulateTowards(bone, rest)
+      return
+    }
+    // Posing turns a bone on itself and moves nothing: there is no distance to hold.
+    if (!this.restEditing) return
+
+    applyTransform(bone, restWithin(rest, transformOf(bone), this.heldBoneAxes))
+  }
+
+  /**
+   * The bone ARRIVING at a dragged joint, turned so the joint lands where the hand asked — and
+   * the joint put back on the end of it, which is what keeps the limb rigid and its skin whole.
+   */
+  private articulateTowards(bone: Object3D, rest: Transform): void {
+    const parent = bone.parent
+    if (!parent) return
+
+    JOINT_WANTED.copy(this.pivot.position)
+    bone.position.set(rest.position.x, rest.position.y, rest.position.z)
+    parent.updateMatrixWorld(true)
+    bone.getWorldPosition(JOINT_RESTED)
+    parent.getWorldPosition(JOINT_PIVOT)
+
+    JOINT_RESTED.sub(JOINT_PIVOT)
+    JOINT_WANTED.sub(JOINT_PIVOT)
+    if (JOINT_RESTED.lengthSq() === 0 || JOINT_WANTED.lengthSq() === 0) return
+
+    JOINT_TURN.setFromUnitVectors(JOINT_RESTED.normalize(), JOINT_WANTED.normalize())
+    // The turn was measured in the world; a local quaternion is written in the GRANDPARENT's.
+    if (parent.parent) parent.parent.getWorldQuaternion(JOINT_FRAME)
+    else JOINT_FRAME.identity()
+
+    JOINT_LOCAL.copy(JOINT_FRAME).invert().multiply(JOINT_TURN).multiply(JOINT_FRAME)
+    parent.quaternion.premultiply(JOINT_LOCAL)
+    parent.updateMatrixWorld(true)
+
+    // Back onto the joint before the frame is drawn: a handle left where the pointer went floats
+    // off the body whenever the bone cannot reach that far. `TransformControls` measures the next
+    // move from its own start, so this costs the gesture nothing.
+    bone.getWorldPosition(this.pivot.position)
   }
 
   /**
@@ -4202,11 +4489,23 @@ export class SceneRenderer {
       this.options.onTransform([
         { id: picked.nodeId, bone: picked.bone, rest, transform: transformOf(boneObject) },
       ])
+      // The handle stayed where the pointer let it go, which is not where the joint landed.
+      this.attachGizmo()
       return
     }
 
     const target = this.gizmo?.object
     if (target) this.options.onTransform([{ id: target.name, transform: transformOf(target) }])
+  }
+
+  /**
+   * Whether dragging this joint TURNS the bone arriving at it rather than placing the joint.
+   *
+   * Posing articulates and never translates, so a bone keeps its length by construction. Turning
+   * the joint on itself is the other verb, and it needs no stand-in.
+   */
+  private articulates(bone: Object3D): boolean {
+    return !this.restEditing && this.mode === 'translate' && bone.parent !== null
   }
 
   /** The three object of the bone the pose mode picked, while one is picked and still on stage. */
@@ -4247,11 +4546,40 @@ export class SceneRenderer {
     if (pane === 0) this.options.onView?.(this.viewPlacement())
   }
 
+  /**
+   * The axes a joint dragged must not leave. The skeleton window owns those padlocks; the engine
+   * only obeys them.
+   */
+  setHeldBoneAxes(axes: readonly BoneAxis[]): void {
+    this.heldBoneAxes = axes
+  }
+
   /** Aims the gizmo at a bone, or lets go of the one it held. */
   setPickedBone(picked: { nodeId: string; bone: string } | null): void {
     this.pickedBone = picked
+    this.paintPickedJoint()
     this.attachGizmo()
     this.redraw()
+  }
+
+  /**
+   * Puts one bone where a hand asked, leaving the REST it was given alone: the mesh follows,
+   * since its skin was measured against that rest. What POSING is, as opposed to editing.
+   */
+  poseBone(nodeId: string, bone: string, transform: Transform): void {
+    const object = this.objects.get(nodeId)?.getObjectByName(bone)
+    if (!object) return
+
+    applyTransform(object, transform)
+    this.redraw()
+  }
+
+  /** The one mark saying which bone a panel is editing — nothing else in the viewport says it. */
+  private paintPickedJoint(): void {
+    for (const [nodeId, joints] of this.joints)
+      joints.pick(this.pickedBone?.nodeId === nodeId ? this.pickedBone.bone : null)
+    for (const [nodeId, solids] of this.boneSolids)
+      solids.pick(this.pickedBone?.nodeId === nodeId ? this.pickedBone.bone : null)
   }
 
   /**
@@ -4419,7 +4747,9 @@ export class SceneRenderer {
       if (!ndc) return
 
       // The camera of the view under the pointer, never the main one — `nodeAt` says why.
-      const picked = nearestProjected(this.projectedBones(this.cameraInHand()), {
+      // The whole BONE, not the point at its head: a skeleton is clicked on its bones, and
+      // asking for the nearest joint left the middle of every one of them dead.
+      const picked = nearestSegment(this.projectedSegments(this.cameraInHand()), {
         x: ndc.x,
         y: ndc.y,
       })
@@ -4662,15 +4992,18 @@ export class SceneRenderer {
     const from = camera.position.clone()
     const facing = camera.quaternion.clone()
 
-    helper.center.copy(orbit.target)
+    // The point LOOKED AT, never the raw pivot: off the axis it would name a side of the pivot
+    // rather than the side of the view, and `viewFrom` would send the camera there.
+    const looked = lookedAtBy(camera, orbit.target)
+    helper.center.copy(looked)
     // The helper reads where the camera stands to work out where it would send it, and one
     // sitting exactly on its target stands nowhere: every side would come back as the same
     // point. Pushed off first, and put back below whatever the click turns out to be.
-    if (from.equals(orbit.target)) camera.position.z += DEFAULT_VIEW_DISTANCE
+    if (from.equals(looked)) camera.position.z += DEFAULT_VIEW_DISTANCE
 
     const hit = helper.handleClick(event)
     if (hit) helper.update(HELPER_SETTLES)
-    const direction = hit ? directionOf(camera.position.clone().sub(orbit.target)) : null
+    const direction = hit ? directionOf(camera.position.clone().sub(looked)) : null
 
     // Put back everything the helper moved. It was only ever asked which side it aimed at; the
     // move itself belongs to `viewFrom`, which reads the distance off the camera it is about to
@@ -4716,7 +5049,15 @@ export class SceneRenderer {
     // Before the panes are drawn and after everything that writes a pose — the head, a clip, a
     // gizmo on the handle: whatever moved, the chain reaches for where the target stands NOW.
     for (const chain of this.iks.values()) chain.update()
+    // 🛑 Before the joints are read and after the chains: while a skeleton is being EDITED the
+    // bones ARE the rest pose, so the skin follows them rather than being deformed by them. A
+    // joint would otherwise drag the arm along with it for the whole of the gesture and snap
+    // back only on release — see `restRig`.
+    if (this.restEditing) this.restSkins()
     // After the chains, never before: the joints have to show where the bones ENDED UP.
+    for (const solids of this.boneSolids.values()) {
+      if (solids.mesh.visible) solids.refresh()
+    }
     for (const joints of this.joints.values()) {
       if (joints.points.visible) joints.refresh()
     }
@@ -4798,12 +5139,12 @@ function helperVisibilityMoved(held: ViewportOptions, next: ViewportOptions): bo
 /**
  * Whether a model has to be built again rather than patched.
  *
- * A rig counts as much as an asset: putting one on replaces every mesh by a skinned one and hangs
- * bones under the holder, which is a different object graph and not an edit of this one.
+ * A FILE that changed is not read here: it is not an edit of a document and cannot be seen in a
+ * comparison of two states. `reloadAsset` is the door for that, and it is imperative on purpose.
  */
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {
   if (node.type !== 'model') return true
-  return previous.model.assetId !== node.model.assetId || previous.model.rig !== node.model.rig
+  return previous.model.assetId !== node.model.assetId
 }
 
 function disposeMaterial(mesh: Mesh): void {

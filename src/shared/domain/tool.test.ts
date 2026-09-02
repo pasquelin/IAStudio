@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { isHorizontal } from '@pasquelin/panels'
 import {
   SCENARIO_TOOLS,
-  isHorizontal,
   placementIn,
   placementOf,
   placementsOf,
@@ -304,14 +304,7 @@ describe('the rail order of the upper right', () => {
   })
 
   it('reads the scene in 3D, and no longer the shelf', () => {
-    expect(upperRightIn('3d')).toEqual([
-      'assistant',
-      'scene',
-      'guiTree',
-      'lights',
-      'meshes',
-      'animations',
-    ])
+    expect(upperRightIn('3d')).toEqual(['assistant', 'scene', 'guiTree', 'lights', 'meshes'])
   })
 
   /**

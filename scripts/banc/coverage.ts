@@ -37,6 +37,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
     '66.1',
     '66.2',
     '66.4',
+    '68.8',
   ],
   'jobs.list': ['44.1'],
   'prompt.suggest': ['45.5'],
@@ -73,7 +74,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'files.trash': ['4.7', '4.8', '30.4'],
   'files.undoFileOperation': ['29.2', '29.3', '29.5', '29.6'],
   'files.redoFileOperation': ['42.4'],
-  'files.readUndoStack': ['42.2'],
+  'files.canUndoRedo': ['42.2'],
   'file.rename': ['4.4', '18.2'],
   'file.facts': ['4.6'],
   'file.reveal': ['42.5'],
@@ -90,7 +91,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
 
   'assets.searchProjectCatalogue': ['3.2', '3.3', '3.5', '3.6', '20.5'],
   'assets.counts': ['1.3'],
-  'assets.absent': ['43.3'],
+  'assets.listMissing': ['43.3'],
   'assets.captionImages': ['43.4'],
   'asset.get': ['43.1'],
   'asset.update': ['20.2'],
@@ -98,8 +99,18 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'asset.extractTextures': ['2.5', '3.4'],
   'assets.removeFromLibrary': ['43.2'],
 
-  'canvas.state': ['39.1'],
+  'canvas.state': ['39.1', '68.2'],
   'canvas.resize': ['39.2'],
+  'canvas.setPixelArt': ['68.1', '68.9'],
+  // 🛑 68.7 is a DECLARED blind spot in one direction: its own decor lays the cell with
+  // `canvas.drawPixels`, so what the oracle reads is the ERASURE, which the decor never does.
+  //
+  // 🛑 A second one, and it covers the whole rank: `canvasSurface`'s stub answers YES to every
+  // call the handler lets through. A layer nobody answers to is refused upstream, so that one IS
+  // measured — but a group, padlocked pixels, a caption, a shape and cells outside the marquee
+  // are refused by the ENGINE, and no rank can reach those. Faking them would put the studio's
+  // rules in the bench, which is the one thing a port may not do.
+  'canvas.drawPixels': ['68.3', '68.4', '68.5', '68.6', '68.7'],
   'canvas.crop': ['51.7'],
   'canvas.flipOrRotate': ['51.8'],
   'layer.add': ['19.1', '28.4'],
@@ -141,7 +152,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'track.setMuteSoloLockHeight': ['40.6'],
 
   'skybox.state': ['37.1'],
-  'skybox.setViewOptions': ['37.7'],
+  'skybox.setViewportOptions': ['37.7'],
   'skybox.adjustImage': ['37.5'],
   'skybox.resetAdjustments': ['37.6'],
   'skybox.setSun': ['37.3'],
@@ -195,6 +206,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'node.combineIntoSolid': ['6.10', '6.11', '6.12', '6.13', '6.14'],
   'node.swapSolidMatterAndTool': ['6.16'],
   'node.separate': ['6.13'],
+  'node.attach': ['50.12'],
   'node.rename': ['6.2', '6.9', '8.2'],
   'node.transform': [
     '6.3',
@@ -234,8 +246,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'path.removePoint': ['46.7'],
   'node.setLightSettings': ['8.3', '8.5', '24.4', '26.4', '26.5'],
   'node.setCameraLens': ['9.5'],
-  'model.wearMaterial': ['12.8', '12.9', '12.11'],
-  'model.wearImage': ['12.10'],
+  'model.setMaterialDocument': ['12.8', '12.9', '12.11'],
+  'model.setBaseColorImage': ['12.10'],
   'camera.addShot': ['9.3'],
   'camera.bindPathToShot': ['47.2'],
   'camera.createAndBindPath': ['47.1', '47.2'],
@@ -244,7 +256,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'node.reparent': ['46.8', '46.9'],
   'node.select': ['28.1'],
   'view.direction': ['47.4'],
-  'view.display': ['47.5'],
+  'view.setDisplayMode': ['47.5'],
   'scene.capture': ['47.6'],
   'world.applyPreset': ['48.1'],
   'world.setSceneLighting': ['10.2', '10.3', '10.7', '23.2', '27.3', '31.1'],
@@ -266,8 +278,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'post.setCameraStackMode': ['59.9', '59.10', '59.11'],
   'post.duplicate': ['59.13'],
   'post.reset': ['59.14'],
-  'post.key': ['59.15'],
-  'post.unkey': ['59.16'],
+  'post.addKeyframe': ['59.15'],
+  'post.removeKeyframe': ['59.16'],
   'post.listPresets': ['59.17'],
   'post.savePreset': ['59.18'],
   'post.renamePreset': ['59.19'],
@@ -276,11 +288,13 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'rig.state': ['50.1'],
   'rig.fit': ['50.2'],
   'rig.clear': ['50.10'],
-  'rig.hands': ['50.3'],
+  'rig.configureHands': ['50.3'],
+  'socket.add': ['50.11'],
+  'socket.remove': ['50.13'],
   'bone.add': ['50.4'],
   'bone.remove': ['50.7'],
   'bone.rename': ['50.5'],
-  'bone.role': ['50.6'],
+  'bone.setRole': ['50.6'],
   'ik.add': ['50.8'],
   'ik.remove': ['50.9'],
 
@@ -325,7 +339,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   // 59.1 only: the two others attach it in their own DECOR, which measures the setup, not the tool.
   'component.attach': ['60.1'],
   'component.detach': ['60.4'],
-  'component.set': ['60.2', '60.3'],
+  'component.setProperties': ['60.2', '60.3'],
   'play.start': ['61.1'],
   'play.stop': ['61.7'],
   'play.pause': ['61.3'],
@@ -362,7 +376,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'context.deleteProjectCard': ['57.5'],
   'settings.read': ['57.1'],
   'settings.write': ['10.1', '10.4', '10.5'],
-  'settings.pressButton': ['57.2'],
+  'settings.triggerAction': ['57.2'],
   'accounts.list': ['43.8'],
   'accounts.activate': ['43.9'],
   'accounts.rename': ['43.10'],

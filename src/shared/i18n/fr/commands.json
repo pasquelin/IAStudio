@@ -1,5 +1,6 @@
 {
   "commands": {
+    "appNew": { "title": "Nouveau…", "help": "Ouvre la fenêtre qui crée un projet ou un document, quel que soit l’écran" },
     "projectNew": {
       "title": "Nouveau projet",
       "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
@@ -272,6 +273,10 @@
       "title": "Repères",
       "help": "Affiche ou masque les repères posés sur l’image. Les masquer ne les efface pas."
     },
+    "canvasGrid": {
+      "title": "Grille de pixels",
+      "help": "Affiche ou masque la grille des pixels de l’œuvre. Uniquement sur un document en mode pixel art."
+    },
     "canvasClearGuides": {
       "title": "Effacer les repères",
       "help": "Retire tous les repères de l’image. Annulable, comme toute autre modification."
@@ -448,6 +453,10 @@
     "scenePoseMode": {
       "title": "Mode pose",
       "help": "Bascule entre la sélection des objets et celle des os d’un squelette."
+    },
+    "characterNavigate": {
+      "title": "Naviguer",
+      "help": "Traverser l’atelier comme dans un jeu : la souris tient le regard, W A S D déplacent, E et Q montent et descendent. La molette règle la vitesse. Échap rend la souris."
     },
     "sceneNavigate": {
       "title": "Naviguer",

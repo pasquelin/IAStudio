@@ -2,6 +2,7 @@ import activity from './activity.json'
 import ai from './ai.json'
 import assets from './assets.json'
 import assistant from './assistant.json'
+import character from './character.json'
 import code from './code.json'
 import commands from './commands.json'
 import common from './common.json'
@@ -36,6 +37,7 @@ export const fr = {
   ...ai,
   ...assets,
   ...assistant,
+  ...character,
   ...code,
   ...commands,
   ...common,

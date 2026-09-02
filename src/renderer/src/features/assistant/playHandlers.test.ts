@@ -13,7 +13,14 @@ describe('a game driven from outside the window', () => {
     installScene(DOCUMENT)
     registerSceneEngine(DOCUMENT, drawing())
     usePlay.setState({ reports: {} })
-    return () => forgetSceneEngine(DOCUMENT)
+    return () => {
+      // 🛑 Which document is playing lives in the MODULE, and no case put it back: a case that
+      // started one leaves `start` a NO-OP for the next, which then speaks to the session the
+      // first opened rather than to its own decor. Every case here reads a game it believes it
+      // set up.
+      usePlay.getState().stop(DOCUMENT)
+      forgetSceneEngine(DOCUMENT)
+    }
   })
 
   /** 🛑 At once: a start that waited for the WebAssembly would hold an MCP client for a second. */

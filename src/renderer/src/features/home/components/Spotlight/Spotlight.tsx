@@ -1,8 +1,9 @@
 import { mdiCreationOutline, mdiKeyOutline, mdiPlayOutline, mdiProgressClock } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { HOME_SURFACE } from '@shared/domain/tool'
+import { openNewDocument } from '@/features/shell/newDocument'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { isFinished } from '@shared/domain/job'
-import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { Carousel } from '@/components/Carousel/Carousel'
 import { useGauge } from '@/hooks/useGauge'
 import { getBridge } from '@/services/bridge'
@@ -11,7 +12,6 @@ import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { openDocument } from '@/features/shell/components/dockviewApi'
-import { enterWorkspace } from '../open'
 import { SpotlightCard, type Slide } from './SpotlightCard'
 import { SpotlightWaiting } from './SpotlightWaiting'
 import { projectName } from '@shared/domain/project'
@@ -124,7 +124,7 @@ export function Spotlight() {
       action: {
         label: t('home.spotlight.readyAction'),
         hint: t('home.spotlightReadyHint'),
-        onClick: () => enterWorkspace(DEFAULT_WORKSPACE),
+        onClick: () => void openNewDocument(HOME_SURFACE),
       },
     })
   }

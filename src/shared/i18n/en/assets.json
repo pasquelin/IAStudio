@@ -123,6 +123,9 @@
       "gui": "Interface"
     },
     "new": "New document",
+    "newKinds": "Document kinds",
+    "noProjectBody": "A document is a file inside a project. Open one, or make one, to begin.",
+    "recentProjects": "Recent projects",
     "newByKind": {
       "image": "New image",
       "scene": "New scene",

@@ -1,4 +1,11 @@
-import { AnimationClip, Bone, Object3D, QuaternionKeyframeTrack, VectorKeyframeTrack } from 'three'
+import {
+  AnimationClip,
+  Bone,
+  Matrix4,
+  Object3D,
+  QuaternionKeyframeTrack,
+  VectorKeyframeTrack,
+} from 'three'
 import { describe, expect, it } from 'vitest'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf } from '@shared/domain/skeletonProfile'
@@ -7,6 +14,7 @@ import {
   createRetarget,
   nodeTrackNameOf,
   retargetFitOf,
+  restOffsetsOf,
   retargetPlanOf,
   sameSkeleton,
   skeletonScaleOf,
@@ -187,6 +195,23 @@ describe('how well an animation fits a character', () => {
     expect(retargetFitOf(bare, HUMAN).missingInTarget).toContain('Head')
   })
 
+  /**
+   * 🛑 The screen said « this joint stays at rest » about a joint the transfer went on to drive:
+   * the plan read the corrections and the verdict read the names alone.
+   */
+  it('reads the roles put right by hand, exactly as a transfer does', () => {
+    const odd = treeOf(['b0', 'b1'])
+    const corrected = new Map([
+      [
+        skeletonSignatureOf(['b0', 'b1']),
+        { signature: 'ignored', roles: { b0: 'Hips' as HumanoidRole } },
+      ],
+    ])
+
+    expect(retargetFitOf(odd, HUMAN).matched).toEqual([])
+    expect(retargetFitOf(odd, HUMAN, corrected).matched).toEqual(['Hips'])
+  })
+
   // « Compatible » has to be a measurement rather than a hope: two skeletons of one convention
   // leave nothing on either side.
   it('finds nothing missing between two skeletons of the same convention', () => {
@@ -318,6 +343,33 @@ describe('reading how much bigger one skeleton is than another', () => {
     // Hip HEIGHT would be the obvious measure and cannot be used: Uthana builds its skeleton with
     // the hips at the origin, measured on the real file.
     expect(skeletonScaleOf(skinnedFromWire(headless), skinnedFromWire(UTHANA))).toBe(1)
+  })
+})
+
+describe('cancelling the difference of rest poses', () => {
+  const TURNED: WireBone[] = UTHANA.map(bone =>
+    bone.name.endsWith('Spine') ? { ...bone, quaternion: [0, 0, 0.383, 0.924] } : bone,
+  )
+
+  it('leaves nothing to cancel between two skeletons resting alike', () => {
+    const names = Object.fromEntries(UTHANA.map(bone => [bone.name, bone.name]))
+    const offsets = restOffsetsOf(skinnedFromWire(UTHANA), skinnedFromWire(UTHANA), names)
+
+    for (const offset of Object.values(offsets)) {
+      expect(offset.elements).toEqual(new Matrix4().elements)
+    }
+  })
+
+  // Two target bones may follow ONE source bone, and the quaternion maths of three writes in
+  // place: the second read a rest the first had already inverted.
+  it('answers the same turn twice when two bones follow one source bone', () => {
+    const spine = UTHANA.find(bone => bone.name.endsWith('Spine'))?.name ?? ''
+    const head = UTHANA.find(bone => bone.name.endsWith('Head'))?.name ?? ''
+    const names = { [spine]: spine, [head]: spine }
+
+    const offsets = restOffsetsOf(skinnedFromWire(UTHANA), skinnedFromWire(TURNED), names)
+
+    expect(offsets[head]?.elements).toEqual(offsets[spine]?.elements)
   })
 })
 

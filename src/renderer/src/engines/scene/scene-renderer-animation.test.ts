@@ -1,3 +1,4 @@
+import { retargetFitOf } from './retarget'
 import {
   AnimationClip,
   Bone,
@@ -9,6 +10,7 @@ import {
   VectorKeyframeTrack,
 } from 'three'
 import type { Object3D } from 'three'
+import { BONE_SHAPES } from './boneShapes'
 import { describe, expect, it, vi } from 'vitest'
 import { assetClip, bundledClip, clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
@@ -19,6 +21,7 @@ import type { BvhBuilder } from './bvhBuilder'
 import type { Retarget } from './retarget'
 import type * as ModelCache from './modelCache'
 import { animationTrack, cameraShot } from './animation-fixtures'
+import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
 import { cameraNodeFixture, meshNode, modelNodeFixture, pathNodeFixture } from './scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
 import {
@@ -50,6 +53,21 @@ function animatedModel(clips: AnimationClip[]): Group {
   cube.name = 'cube'
   root.add(cube)
   root.animations = clips
+  return root
+}
+
+/** The same, carrying a skeleton — which is where a role is read from now, never a document. */
+function riggedModel(clips: AnimationClip[], roles?: Record<string, string>): Group {
+  const root = animatedModel(clips)
+  const hips = new Bone()
+  hips.name = 'b0'
+  hips.position.set(0, 1, 0)
+  const spine = new Bone()
+  spine.name = 'b1'
+  hips.add(spine)
+  root.add(hips)
+  if (roles) root.userData = { iastudio: { roles } }
+
   return root
 }
 
@@ -199,47 +217,88 @@ describe('SceneRenderer and the bones a rig carries', () => {
    * The helpers hang beside the nodes, so the scene is where they are counted — reached by
    * walking up from the mounted model rather than into the engine: holder, then scene.
    */
-  const helpersAround = (loaded: Group): number =>
-    (loaded.parent?.parent?.children ?? []).filter(child => child.type === 'SkeletonHelper').length
+  const bonesAround = (loaded: Group): Object3D[] =>
+    (loaded.parent?.parent?.children ?? []).filter(child => child.name === BONE_SHAPES)
 
-  it('draws no helper for a model that carries no bone', async () => {
+  it('draws no bones for a model that carries none', async () => {
     const loaded = animatedModel([walk()])
     const engine = withModel(loaded)
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
 
     await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
-    expect(helpersAround(loaded)).toBe(0)
+    expect(bonesAround(loaded)).toHaveLength(0)
     engine.dispose()
   })
 
-  it('hangs one beside the nodes for a rigged model, hidden until asked for', async () => {
+  // The solids and not three's `SkeletonHelper`: its lines showed through them, and a skeleton
+  // read as half wireframe — measured on screen. The helper is kept, never hung in the scene.
+  it('hangs the bones beside the nodes for a rigged model, hidden until asked for', async () => {
     const loaded = rigged()
     const engine = withModel(loaded)
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
 
-    await vi.waitFor(() => expect(helpersAround(loaded)).toBe(1))
-
-    const helper = (loaded.parent?.parent?.children ?? []).find(
-      child => child.type === 'SkeletonHelper',
-    )
-    expect(helper?.visible).toBe(false)
+    await vi.waitFor(() => expect(bonesAround(loaded)).toHaveLength(1))
+    expect(bonesAround(loaded)[0]?.visible).toBe(false)
+    expect(
+      (loaded.parent?.parent?.children ?? []).filter(child => child.type === 'SkeletonHelper'),
+    ).toHaveLength(0)
 
     engine.setSkeletons(true)
-    expect(helper?.visible).toBe(true)
+    expect(bonesAround(loaded)[0]?.visible).toBe(true)
     engine.dispose()
   })
 
-  it('takes the helper away with the node it belonged to', async () => {
+  // What POSING is, as opposed to editing the rest: the bone moves and its skin follows, so
+  // nothing of the file's own skeleton is touched.
+  it('poses one bone where a hand asked', async () => {
+    const loaded = riggedModel([walk()])
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+
+    engine.poseBone('a', 'b1', { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0.5, z: 0 } })
+
+    expect(loaded.getObjectByName('b1')?.position.y).toBeCloseTo(0.5, 5)
+    engine.dispose()
+  })
+
+  /**
+   * A sword in a hand: the node still hangs from the CHARACTER, and the socket says which of its
+   * bones to follow. Hung from the model itself, it stood still while the arm swung.
+   */
+  it('hangs a node attached to a socket on the bone that socket names', async () => {
+    const loaded = riggedModel([walk()])
+    loaded.userData = {
+      [STUDIO_METADATA_KEY]: {
+        character: {
+          sockets: [{ id: 'hand', name: 'Main', bone: 'b1', rest: IDENTITY_TRANSFORM }],
+        },
+      },
+    }
+    const engine = withModel(loaded)
+    const sword = { ...meshNode('sword'), parentId: 'a', attach: { socket: 'hand' } }
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null), sword] })
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null), sword] })
+
+    await vi.waitFor(() =>
+      expect(loaded.getObjectByName('b1')?.children.map(child => child.name)).toContain('sword'),
+    )
+    engine.dispose()
+  })
+
+  it('takes the bones away with the node they belonged to', async () => {
     const loaded = rigged()
     const engine = withModel(loaded)
     engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
-    await vi.waitFor(() => expect(helpersAround(loaded)).toBe(1))
+    await vi.waitFor(() => expect(bonesAround(loaded)).toHaveLength(1))
 
     // Kept before the node goes: the model is unparented with it, and the walk up would end early.
     const scene = loaded.parent?.parent
     engine.apply(EMPTY_SCENE)
 
-    expect((scene?.children ?? []).filter(child => child.type === 'SkeletonHelper')).toHaveLength(0)
+    expect((scene?.children ?? []).filter(child => child.name === BONE_SHAPES)).toHaveLength(0)
     engine.dispose()
   })
 })
@@ -927,6 +986,8 @@ describe('SceneRenderer and the animations the app ships with', () => {
         asked.push({ target, clips: clips.map(clip => clip.name) })
         return Promise.resolve([...clips])
       },
+      // Read through the corrections a transfer would use — the double has none to apply.
+      fitOf: (target, source) => retargetFitOf(target, source),
       remember: profile => void learnt.push(profile),
       dispose: () => {},
     }
@@ -1066,36 +1127,17 @@ describe('SceneRenderer and the animations the app ships with', () => {
     engine.dispose()
   })
 
-  // Case 19 of the issue: a role put right by hand lives in the document, and until now nothing
-  // read it — the port went on deriving roles from names, which is what had been corrected.
-  it('tells the port what the document says this skeleton means', async () => {
+  // A role put right by hand lives in the character's own FILE — glTF has no other place for it,
+  // and the port would otherwise go on deriving roles from names, which is what was corrected.
+  it('tells the port what the file says this skeleton means', async () => {
     const retarget = straightThrough()
-    const { engine } = withShipped(animatedModel([]), animatedModel([walk('NlaTrack')]), retarget)
-    const rest = {
-      position: { x: 0, y: 1, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
-    }
-    const node = modelNode(shippedBlock())
+    const { engine } = withShipped(
+      riggedModel([], { b0: 'Hips' }),
+      animatedModel([walk('NlaTrack')]),
+      retarget,
+    )
 
-    engine.apply({
-      ...EMPTY_SCENE,
-      nodes: [
-        {
-          ...node,
-          model: {
-            ...node.model,
-            rig: {
-              origin: 'local',
-              bones: [
-                { name: 'b0', parent: null, rest, role: 'Hips' },
-                { name: 'b1', parent: 'b0', rest },
-              ],
-            },
-          },
-        },
-      ],
-    })
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock())] })
 
     await vi.waitFor(() => expect(retarget.learnt).toHaveLength(1))
     expect(retarget.learnt[0]).toEqual({
@@ -1110,30 +1152,18 @@ describe('SceneRenderer and the animations the app ships with', () => {
   it('hands what a project already learnt to the port, and reports what it learns', async () => {
     const known: SkeletonProfile = { signature: skeletonSignatureOf(['x']), roles: { x: 'Hips' } }
     const retarget = straightThrough()
-    const rest = IDENTITY_TRANSFORM
     const learnt: SkeletonProfile[] = []
     const engine = new SceneRenderer({
       onSelect: () => {},
       onTransform: () => {},
-      loadModel: () => Promise.resolve(animatedModel([])),
+      loadModel: () => Promise.resolve(riggedModel([], { b0: 'Hips' })),
       retarget,
       profiles: [known],
       onProfile: profile => void learnt.push(profile),
       bvh,
     })
 
-    engine.apply({
-      ...EMPTY_SCENE,
-      nodes: [
-        {
-          ...modelNode(shippedBlock()),
-          model: {
-            ...modelNode(shippedBlock()).model,
-            rig: { origin: 'local', bones: [{ name: 'b0', parent: null, rest, role: 'Hips' }] },
-          },
-        },
-      ],
-    })
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(shippedBlock())] })
 
     expect(retarget.learnt[0]).toEqual(known)
     await vi.waitFor(() => expect(learnt).toHaveLength(1))

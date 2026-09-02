@@ -317,33 +317,25 @@ describe('sceneFromPayload', () => {
       expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
     })
 
-    it('drops a model whose rig breaks an invariant of its own', () => {
+    // The skeleton left the document: it lives in the model's own file now, so a scene written
+    // when one did carry it opens with the dead key gone rather than with a rig nothing reads.
+    it('leaves the skeleton an older document carried behind', () => {
       const nodes: unknown[] = [
-        mesh('a'),
         {
           ...modelNodeFixture('m'),
           model: {
             assetId: 'x',
             rig: {
               origin: 'local',
-              bones: [{ name: 'Spine', parent: 'Hips', rest: IDENTITY_TRANSFORM }],
+              bones: [{ name: 'Hips', parent: null, rest: IDENTITY_TRANSFORM }],
             },
           },
         },
       ]
+      const node = sceneFromPayload({ nodes }).nodes[0]
 
-      expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
-    })
-
-    it('carries a rig through a round trip', () => {
-      const rest = { ...IDENTITY_TRANSFORM, position: { x: 0, y: 1, z: 0 } }
-      const model = modelNodeFixture('m')
-      model.model = {
-        ...model.model,
-        rig: { origin: 'local', bones: [{ name: 'Hips', parent: null, rest, role: 'Hips' }] },
-      }
-
-      expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+      expect(node?.id).toBe('m')
+      expect(node?.type === 'model' && 'rig' in node.model).toBe(false)
     })
   })
 

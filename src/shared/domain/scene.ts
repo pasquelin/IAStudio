@@ -8,7 +8,6 @@
  */
 import type { FontRef } from './font'
 import type { BodyPart } from './humanoid'
-import type { Rig } from './rig'
 import type { Us } from './time'
 import type { GeometryDescriptor } from './geometry'
 import { EMPTY_STACK, type CameraPost, type PostStack } from './postProcessing'
@@ -87,8 +86,6 @@ export const DEFAULT_PATH: PathDescriptor = Object.freeze({
  */
 export type ModelRef = {
   assetId: string
-  /** The skeleton the studio put on this model. The one exception to the rule above — see `rig.ts`. */
-  rig?: Rig
   /** What plays on this model: one lane per layer, and the blocks inside each. */
   lanes?: readonly ClipLane[]
   /**

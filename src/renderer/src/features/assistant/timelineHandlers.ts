@@ -21,7 +21,7 @@ import { mounted, NO_SCENE } from './sceneHandlers'
  * What a timeline CUES, driven from outside the window.
  *
  * 🛑 One action for the four lists: what `what` MEANS is read by the list, exactly as
- * `component.set` reads a value by what its descriptor declares. A model that had to tell four
+ * `component.setProperties` reads a value by what its descriptor declares. A model that had to tell four
  * schemas apart before asking for anything is a model that asks for nothing.
  */
 export const TIMELINE_HANDLERS: ActionHandlers = {
