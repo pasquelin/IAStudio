@@ -19,6 +19,7 @@ import {
 import { cellFor, cellsSpanning } from '@/engines/canvas/pixelGrid'
 import type { Size } from '@/engines/core/geometry'
 import { toggleView } from '@/features/image/canvasView'
+import { PixelArtPreview } from '@/features/image/components/PixelArt/PixelArtPreview'
 import { MAX_PICTURE_SIDE } from '@/features/image/pictureSize'
 import { formatDecimal } from '@/helpers/format'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
@@ -150,6 +151,8 @@ export function CanvasInspector({ documentId, canvas }: CanvasInspectorProps) {
 
         {cell !== null && (
           <>
+            <PixelArtPreview documentId={documentId} columns={columns} rows={rows} cell={cell} />
+
             <PropertyRow label={t('inspector.artResolution')}>
               <ValueGrid
                 options={ART_PRESETS.map(preset => ({
