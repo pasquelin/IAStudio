@@ -3971,7 +3971,7 @@ export class SceneRenderer {
     // A band wears the very handles a rail does — see `railOf`. Hung on the mesh itself, so they
     // travel with it and a pick reads their index out of the same names.
     const rail = railOf(node)
-    if (rail) dressWithRail(mesh, rail, this.meshColor)
+    if (rail) dressWithRail(mesh, rail, this.meshColor, true)
 
     return mesh
   }

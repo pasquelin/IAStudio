@@ -197,8 +197,8 @@ export function cameraBody(fill: string, edge: string): Object3D {
 /** How big a control point is built, in scene units. What it ends up drawn at is `KNOB_SHARE`. */
 export const PATH_KNOB_RADIUS = 0.14
 
-/** Past every surface of the scene, which all draw at zero — a handle one cannot see is no handle. */
-const KNOB_ORDER = 10
+/** Past every surface, which all draw at zero — a handle one cannot see is no handle. */
+const HANDLE_ORDER = 10
 
 /**
  * How much of the visible height a knob covers, whatever the distance: a hundred-and-twenty-eighth
@@ -240,26 +240,33 @@ export function knobIndexOf(name: string): number | null {
  * a point of a cloud is an index in a buffer, and nothing a transform control can hold.
  */
 export function buildPath(descriptor: PathDescriptor, colour: string): Object3D {
-  return dressWithRail(new Object3D(), descriptor, colour)
+  return dressWithRail(new Object3D(), descriptor, colour, false)
 }
 
 /**
  * The line and the knobs of a rail, hung under whatever carries it — a rail node, or the mesh of
  * a band swept along one. Both are edited through the same handles because both wear these.
+ *
+ * 🛑 `through` for a band and never for a rail: a rail hangs in the air, but a band's run lies
+ * INSIDE the surface it shapes, so its line and its knobs are behind what they pilot.
  */
 export function dressWithRail(
   object: Object3D,
   descriptor: PathDescriptor,
   colour: string,
+  through: boolean,
 ): Object3D {
-  const line = new Line(new BufferGeometry(), new LineBasicMaterial({ color: colour }))
-  line.renderOrder = KNOB_ORDER
+  const line = new Line(
+    new BufferGeometry(),
+    new LineBasicMaterial({ color: colour, depthTest: !through }),
+  )
+  if (through) line.renderOrder = HANDLE_ORDER
   line.name = PATH_CURVE_NAME
   line.geometry.setFromPoints(pathPoints(descriptor))
   object.add(line)
 
   for (const [index, point] of descriptor.points.entries()) {
-    const knob = pathKnob(index, colour)
+    const knob = pathKnob(index, colour, through)
     knob.position.set(point.x, point.y, point.z)
     object.add(knob)
   }
@@ -277,14 +284,12 @@ export function dressWithRail(
  * The matrix is recomposed by hand because three had already composed it for this draw: a scale
  * written and left there is a scale that shows up one frame late, and reads as a lag.
  */
-export function pathKnob(index: number, colour: string): Mesh {
+export function pathKnob(index: number, colour: string, through = false): Mesh {
   const knob = new Mesh(
     new SphereGeometry(PATH_KNOB_RADIUS, 8, 6),
-    // 🛑 Drawn THROUGH whatever stands in front: a rail of its own hangs in the air, but a band
-    // is swept along its run, so every knob of one sits inside the matter it shapes.
-    new MeshBasicMaterial({ color: colour, depthTest: false }),
+    new MeshBasicMaterial({ color: colour, depthTest: !through }),
   )
-  knob.renderOrder = KNOB_ORDER
+  if (through) knob.renderOrder = HANDLE_ORDER
   knob.name = knobName(index)
   knob.onBeforeRender = (_renderer, _scene, camera) => sizeKnobFor(knob, camera)
   knob.onAfterRender = () => restoreKnob(knob)

@@ -506,7 +506,7 @@ describe('dressWithRail', () => {
 
   /** A band wears the handles of the rail it is swept along — the mesh itself carries them. */
   it('hangs a line and a knob per point on whatever carries the rail', () => {
-    const mesh = dressWithRail(new Mesh(), rail, '#ffffff')
+    const mesh = dressWithRail(new Mesh(), rail, '#ffffff', true)
     const knobs = mesh.children.filter(child => child.name.startsWith(PATH_KNOB_PREFIX))
 
     expect(knobs).toHaveLength(3)
@@ -514,20 +514,23 @@ describe('dressWithRail', () => {
   })
 
   /**
-   * 🛑 Drawn THROUGH the matter: a rail hangs in the air, but a band's run lies inside the very
-   * surface it shapes — its knobs were behind it, and a handle one cannot see is no handle.
+   * 🛑 Drawn THROUGH the matter for a BAND: a rail hangs in the air, but a band's run lies inside
+   * the very surface it shapes — its handles were behind it, and one cannot grab those.
    */
-  it('draws its handles in front of every surface', () => {
-    const knob = dressWithRail(new Mesh(), rail, '#ffffff').children.find(child =>
-      child.name.startsWith(PATH_KNOB_PREFIX),
-    )
+  it('draws a banded rail in front of every surface, and a bare one in its place', () => {
+    const depthOf = (object: Object3D | undefined): boolean =>
+      object instanceof Mesh && object.material instanceof MeshBasicMaterial
+        ? object.material.depthTest
+        : true
+    const knobOf = (through: boolean): Object3D | undefined =>
+      dressWithRail(new Mesh(), rail, '#ffffff', through).children.find(child =>
+        child.name.startsWith(PATH_KNOB_PREFIX),
+      )
 
-    expect(
-      knob instanceof Mesh && knob.material instanceof MeshBasicMaterial
-        ? knob.material.depthTest
-        : true,
-    ).toBe(false)
-    expect(knob?.renderOrder).toBeGreaterThan(0)
+    expect(depthOf(knobOf(true))).toBe(false)
+    expect(knobOf(true)?.renderOrder).toBeGreaterThan(0)
+    // A rail of its own hangs in the air: seen through everything it would cross the whole set.
+    expect(depthOf(knobOf(false))).toBe(true)
   })
 })
 
