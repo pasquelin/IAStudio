@@ -60,6 +60,20 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     expect(body('nodeAt')).toContain('this.instances.nodeIdOf(hit) ??')
   })
 
+  it('tells the zone where the camera stands before the pane it is about to draw', () => {
+    // The one call of the grouping contract a FRAME makes, and the answer is what asks for the
+    // shadow maps again — a cell that just entered the zone was never drawn into them.
+    expect(body('dressPane')).toContain('this.instances.follow?.(camera)')
+  })
+
+  it('names its camera to the zone on every surface that is not a pane', () => {
+    // The preview comes through `hideWorkshop` on EVERY frame it is shown. Opened in full for it,
+    // the whole level went back into the scene and out of it again twice a frame, and its shadow
+    // maps had been drawn for another zone. A film and a capture name none, and get every cell.
+    expect(source).toContain('onInset: camera => this.hideWorkshop(camera)')
+    expect(source).toContain('this.instances.follow?.(camera ?? null)')
+  })
+
   it('dresses the meshes it draws with, and not only the ones it stands for', () => {
     // A display mode REPLACES a mesh's material. The instance was left out of that walk, so
     // sixty-four copies drew shaded inside a solid view — and every gate stayed green.

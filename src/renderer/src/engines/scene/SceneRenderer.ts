@@ -588,7 +588,7 @@ export class SceneRenderer {
     // viewport owns this call rather than a listener of this file.
     onPaneArmed: event => this.onPointerAim(event),
     // A preview shows what the camera FILMS: the same pass the film and the montage take.
-    onInset: () => this.hideWorkshop(),
+    onInset: camera => this.hideWorkshop(camera),
     // Every surface — the panes, the preview, the film — reaches ONE composer through here, so
     // an effect cannot differ between the editor and the render. See § 26 of the specification.
     onDraw: request => this.compose(request),
@@ -2402,7 +2402,7 @@ export class SceneRenderer {
    * An isolation is one of those tools, and it is put back the same way: what a camera films is
    * the scene, never the part of it somebody happened to be working on.
    */
-  private hideWorkshop(): () => void {
+  private hideWorkshop(camera?: ViewportCamera): () => void {
     const hidden: Object3D[] = []
     const hide = (object: Object3D | null | undefined): void => {
       if (!object?.visible) return
@@ -2424,10 +2424,11 @@ export class SceneRenderer {
     // whole film comes out lit by the room instead of by the document's own sky.
     this.environment?.borrowStudio(false)
 
-    // For the same reason, and it is the whole of what a zone has to be told: these paths render
-    // from a camera of their own, so every cell is drawn for them. `dressPane` narrows it again
-    // before the next pane, which is why the restore below has nothing to put back.
-    this.instances.follow?.(null)
+    // For the same reason, and it is the whole of what a zone has to be told. The preview names
+    // ITS camera, and comes here on every frame it is shown: opening the zone in full for it put
+    // the whole level back in the scene, twice a frame. A film and a capture name none, and every
+    // cell is drawn for them. `dressPane` narrows it again before the next pane.
+    this.instances.follow?.(camera ?? null)
 
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)

@@ -71,7 +71,7 @@ export type ViewportEngineOptions = {
    * the grid and the helpers have to be hidden for that pass and put back for the next — and
    * `onPane` has no symmetrical call after a pane is drawn.
    */
-  onInset?: () => () => void
+  onInset?: (camera: ViewportCamera) => () => void
   /**
    * Filmic tone mapping. Off by default because it changes how every existing colour lands,
    * and the scene editor was built and reviewed without it; a viewport that judges an HDR
@@ -1257,7 +1257,7 @@ export class ViewportEngine {
     target: WebGLRenderTarget,
     panesDrawn: boolean,
   ): void {
-    const restore = this.options.onInset?.()
+    const restore = this.options.onInset?.(inset.camera)
     renderer.getClearColor(this.insetClear)
     const heldAlpha = renderer.getClearAlpha()
     const heldAutoClear = renderer.autoClear
