@@ -17,7 +17,7 @@ function watching(camera: PlayCamera, controlled = true) {
     ports: testPorts({
       render: { place: () => {}, view: view => views.push(view), veil: () => {} },
     }),
-    systems: [createPlayCameraSystem(characters)],
+    systems: [createPlayCameraSystem({ characters })],
   })
   if (controlled) {
     world.entities.add({

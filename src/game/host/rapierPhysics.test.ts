@@ -25,6 +25,7 @@ const body = (
   lockRotation: false,
   sensor: false,
   character: null,
+  vehicle: null,
   ...over,
 })
 

@@ -6,7 +6,7 @@ import {
 import { createBundledAssets } from '@game/host/bundledAssets'
 import { createExportHost } from '@game/host/exportHost'
 import { loadQuickjsScripts } from '@game/host/quickjsScripts'
-import { loadRapierPhysics } from '@game/host/rapierPhysics'
+import { loadJoltPhysics } from '@game/host/joltPhysics'
 import type { EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
@@ -43,7 +43,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   const swap = createSceneSwap()
 
   const [physics, script, modules] = await Promise.all([
-    loadRapierPhysics(),
+    loadJoltPhysics(),
     loadQuickjsScripts(),
     modulesOf(game),
   ])

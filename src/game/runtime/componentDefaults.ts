@@ -6,6 +6,12 @@
  * four of thirteen had already drifted to zero.
  */
 export const COMPONENT_DEFAULTS = {
+  Path: { waypoints: '', speed: 2, mode: 'loop', orientToTangent: false },
+  Follow: { target: '', speed: 3, stopDistance: 1.5, acceleration: 8 },
+  Orbit: { target: '', radius: 5, speed: 45, height: 0 },
+  LookAt: { target: '', turnSpeed: 0 },
+  Patrol: { waypoints: '', speed: 2, waitSeconds: 1, mode: 'pingPong' },
+  Spin: { axis: 'y', speed: 90 },
   Collider: { fidelity: 'auto', friction: 0.6, restitution: 0 },
   RigidBody: { kind: 'dynamic', mass: 0, gravityScale: 1, lockRotation: false },
   CharacterController: {
@@ -16,4 +22,14 @@ export const COMPONENT_DEFAULTS = {
     slopeLimit: 45,
     snapDistance: 0.5,
   },
+  Vehicle: {
+    wheels: '',
+    wheelRadius: 0.35,
+    wheelWidth: 0.25,
+    suspensionLength: 0.4,
+    maxSteerAngle: 30,
+    maxTorque: 500,
+    drive: 'all',
+  },
+  Aircraft: { maxThrust: 12_000, wingArea: 16, stallAngle: 15, agility: 1, drag: 0.04 },
 }

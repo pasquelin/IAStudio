@@ -15,8 +15,8 @@ import { forgetSceneEngine, registerSceneEngine } from './sceneEngines'
  * The engine is 2,7 Mo of WebAssembly and this suite measures the STUDIO half — which game the
  * window was told to play, what comes back, and when it is forgotten.
  */
-vi.mock('@game/host/rapierPhysics', () => ({
-  loadRapierPhysics: () => Promise.resolve(createInertPhysics()),
+vi.mock('@game/host/joltPhysics', () => ({
+  loadJoltPhysics: () => Promise.resolve(createInertPhysics()),
 }))
 
 /** And the sandbox with it: a suite that measures a transport must not wait on a JIT. */

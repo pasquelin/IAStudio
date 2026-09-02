@@ -1,6 +1,6 @@
 import { orElse } from '@shared/promises'
 import type { DomInputTarget } from '@game/host/domInput'
-import { loadRapierPhysics } from '@game/host/rapierPhysics'
+import { loadJoltPhysics } from '@game/host/joltPhysics'
 import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import type { RuntimeReport } from '@shared/domain/gameRuntime'
@@ -32,7 +32,7 @@ export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
   // Both together, and each failing on its own: the two machines are independent, and a game
   // whose physics did not land still runs — it says so in its own log.
   const [physics, script] = await Promise.all([
-    orElse(loadRapierPhysics(), undefined),
+    orElse(loadJoltPhysics(), undefined),
     orElse(loadQuickjsScripts(), undefined),
   ])
 

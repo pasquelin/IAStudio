@@ -189,7 +189,8 @@
     "templateField": "Modèle de départ",
     "templateGroups": {
       "general": "Général",
-      "character": "Personnage"
+      "character": "Personnage",
+      "machine": "Machine"
     },
     "templates": {
       "empty": "Vide",
@@ -200,7 +201,9 @@
       "firstPerson": "1re personne",
       "thirdPerson": "3e personne",
       "topDown": "Vue de dessus",
-      "postProcessing": "Post-traitement"
+      "postProcessing": "Post-traitement",
+      "car": "Voiture",
+      "plane": "Avion"
     },
     "templateHints": {
       "empty": "Trois lumières, et rien d’autre à retirer",
@@ -211,7 +214,9 @@
       "firstPerson": "La caméra à hauteur d’œil, prête à marcher",
       "thirdPerson": "La caméra derrière l’épaule d’une silhouette",
       "topDown": "La caméra en plongée, au-dessus de la scène",
-      "postProcessing": "Un mouvement de caméra, une bascule de point et un halo animé — de quoi juger toute la chaîne"
+      "postProcessing": "Un mouvement de caméra, une bascule de point et un halo animé — de quoi juger toute la chaîne",
+      "car": "Une voiture sur ses quatre roues, à conduire sur le parcours",
+      "plane": "Un avion déjà en vol, à piloter au manche et aux gaz"
     },
     "uiTemplates": {
       "empty": "Vide",

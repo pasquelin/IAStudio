@@ -7,7 +7,10 @@ import type { CameraView } from '../ports/renderPort'
 /** Where the head is pointed, in radians. Yaw turns, pitch tips. */
 export type Look = { yaw: number; pitch: number }
 
-/** How far behind the shoulder the camera hangs, and how high a plan view stands and stands off. */
+/**
+ * How far behind the shoulder the camera hangs, and how high a plan view stands and stands off.
+ * A SHOULDER: what is driven asks for its own stand-off, a nine-metre plane being inside this one.
+ */
 const OVER_SHOULDER = 5
 const OVERHEAD_HEIGHT = 12
 const OVERHEAD_BACK = 4
@@ -20,7 +23,12 @@ const OVERHEAD_BACK = 4
  * the camera alone rather than silently behaving like a third-person one. The view is REWRITTEN
  * in place, like a port's arrays: read it within the frame, never keep it.
  */
-export function playView(play: ScenePlay, feet: Vector3, look: Look): CameraView | null {
+export function playView(
+  play: ScenePlay,
+  feet: Vector3,
+  look: Look,
+  back = OVER_SHOULDER,
+): CameraView | null {
   if (play.camera === 'orbit') return null
 
   VIEW.target.x = feet.x
@@ -50,9 +58,9 @@ export function playView(play: ScenePlay, feet: Vector3, look: Look): CameraView
   }
 
   if (play.camera === 'thirdPerson') {
-    VIEW.position.x = VIEW.target.x - aheadX * OVER_SHOULDER
-    VIEW.position.y = VIEW.target.y - aheadY * OVER_SHOULDER
-    VIEW.position.z = VIEW.target.z - aheadZ * OVER_SHOULDER
+    VIEW.position.x = VIEW.target.x - aheadX * back
+    VIEW.position.y = VIEW.target.y - aheadY * back
+    VIEW.position.z = VIEW.target.z - aheadZ * back
     return VIEW
   }
 

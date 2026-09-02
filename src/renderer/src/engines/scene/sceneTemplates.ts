@@ -25,6 +25,7 @@ import {
 } from '@shared/domain/postProcessing'
 import { SECOND, type Us } from '@shared/domain/time'
 import {
+  DEFAULT_GROUND,
   DEFAULT_WORLD,
   type MaterialDescriptor,
   type ScenePlay,
@@ -37,10 +38,13 @@ import {
   type SceneTemplateId,
 } from '@shared/domain/sceneTemplate'
 import { createDefaultScene } from './defaultScene'
+import { carNodes } from './carNodes'
+import { defaultMeshMaterial } from './checkerTextures'
 import { presetPatch } from './environmentPresets'
-import { cameraNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
+import { planeNodes } from './planeNodes'
+import { cameraNode, groupNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
 import { playgroundNodes } from './playgroundLevel'
-import type { SceneNode, SceneState } from './sceneState'
+import { IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
 
 const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
 
@@ -434,6 +438,89 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
       camera: 'topDown',
       moveSpeed: 6,
     }),
+
+  /*
+   * The SAME course the three character templates open on, driven rather than walked. Reused
+   * rather than built again: its ramps, its jumps and its walls are a driving course already, and
+   * a second set written here would be the doublon that stops the first from being used at all.
+   *
+   * 🛑 No stand-in, and that is not an omission: the camera watches a character before it watches
+   * a machine, so a silhouette left on the start pad would frame the car from a pair of feet.
+   */
+  car: () => ({
+    ...characterView([aimedCamera(3, 10, 1, START_PAD)], { camera: 'thirdPerson' }),
+    nodes: [
+      ...playgroundNodes(CAR_NAME),
+      sun(2.2, { x: 22, y: 26, z: 16 }),
+      skyLight(1.3),
+      ...carNodes({ x: 0, y: 0, z: START_PAD }, CAR_NAME),
+      aimedCamera(3, 10, 1, START_PAD),
+    ],
+  }),
+
+  /*
+   * Already in the air, at a hundred and twenty metres: a plane born on the ground is a plane
+   * whose first minute is a taxi, and there is nothing here to taxi to.
+   *
+   * The ground is the SCENE's own rather than a floor mesh: it is five metres thick, where a
+   * plane meeting a centimetre of plane at sixty metres a second goes through it.
+   */
+  plane: () => ({
+    nodes: [
+      ...airfieldNodes(),
+      sun(2.6, { x: 40, y: 50, z: 20 }),
+      skyLight(1.4),
+      ...planeNodes({ x: 0, y: CRUISE_ALTITUDE, z: 60 }),
+      aimedCamera(CRUISE_ALTITUDE + 6, 30, CRUISE_ALTITUDE, 60),
+    ],
+    world: {
+      ...presetPatch('outdoor'),
+      background: { kind: 'color', color: '#9fc0e0' },
+      ground: { ...DEFAULT_GROUND, visible: true, size: 1600, color: '#6f7f63' },
+    },
+    play: { ...WALKING, camera: 'thirdPerson' },
+  }),
+}
+
+/** Where the course begins, and where the car is parked: the band the framed views open on. */
+const START_PAD = STAND_IN_Z
+
+/** Who the set's beacon and drone watch here, the stand-in being nowhere on this template. */
+const CAR_NAME = 'Car'
+
+/** Metres. High enough that a plane finding its speed has room to dip while it does. */
+const CRUISE_ALTITUDE = 120
+
+/**
+ * Enough ground to read a speed against — a runway to line up on and a few standing marks. An
+ * empty plain gives an aeroplane no way to tell a hundred knots from a hover.
+ */
+function airfieldNodes(): SceneNode[] {
+  const field = groupNode(IDENTITY_TRANSFORM, 'Airfield')
+  const strip = (position: Vector3, size: { width: number; depth: number }, name: string) =>
+    meshNode(
+      { kind: 'box', width: size.width, height: 0.4, depth: size.depth },
+      {
+        transform: transformAt(position),
+        material: { ...defaultMeshMaterial(), color: '#3d4148' },
+        parentId: field.id,
+        name,
+      },
+    )
+
+  return [
+    field,
+    strip({ x: 0, y: 0.2, z: 0 }, { width: 30, depth: 600 }, 'Runway'),
+    ...[-1, 1].flatMap(side =>
+      [-180, 0, 180].map(z =>
+        strip(
+          { x: side * 60, y: 4, z },
+          { width: 24, depth: 40 },
+          `Hangar ${side < 0 ? 'West' : 'East'} ${z}`,
+        ),
+      ),
+    ),
+  ]
 }
 
 /**

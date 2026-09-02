@@ -108,7 +108,7 @@ function primitiveOf(shape: GeometryDescriptor, scale: PlainVector3): ColliderSh
     if (shape.radiusTop === shape.radiusBottom) {
       return { kind: 'cylinder', halfHeight, radius: Math.abs(shape.radiusTop * scale.x) }
     }
-    // Rapier's cone stands on its base, like three's cylinder with nothing on top.
+    // A cone stands on its base, like three's cylinder with nothing on top.
     if (shape.radiusTop === 0) {
       return { kind: 'cone', halfHeight, radius: Math.abs(shape.radiusBottom * scale.x) }
     }

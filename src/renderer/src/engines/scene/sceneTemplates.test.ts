@@ -9,6 +9,26 @@ import type { SceneNode } from './sceneState'
 const typesIn = (nodes: readonly SceneNode[]): string[] => nodes.map(node => node.type)
 
 describe('sceneFromTemplate', () => {
+  /**
+   * 🛑 What a machine points at, held against what the template actually carries. A name nobody
+   * wears is a beacon that never turns and a drone that never follows — in silence, since the
+   * systems answer nothing for a name they cannot resolve. Renaming the stand-in is what this
+   * catches, and only a template can: the level names `Character`, which the level does not hold.
+   */
+  it('points every component at a name its own template carries', () => {
+    for (const id of SCENE_TEMPLATE_IDS) {
+      const nodes = sceneFromTemplate(id).nodes
+      const names = new Set(nodes.map(node => node.name))
+      const wanted = nodes.flatMap(node =>
+        (node.components ?? []).flatMap(component =>
+          typeof component.target === 'string' && component.target !== '' ? [component.target] : [],
+        ),
+      )
+
+      expect({ id, missing: wanted.filter(name => !names.has(name)) }).toEqual({ id, missing: [] })
+    }
+  })
+
   it('opens every template on a lit scene, so none of them looks like a broken viewport', () => {
     for (const id of SCENE_TEMPLATE_IDS) {
       expect(typesIn(sceneFromTemplate(id).nodes)).toContain('light')

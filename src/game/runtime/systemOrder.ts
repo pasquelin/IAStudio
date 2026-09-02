@@ -6,6 +6,14 @@ export type SystemName =
   | 'input'
   | 'script'
   | 'movement'
+  | 'path'
+  | 'patrol'
+  | 'follow'
+  | 'orbit'
+  | 'spin'
+  | 'lookAt'
+  | 'vehicle'
+  | 'aircraft'
   | 'physics'
   | 'collision'
   | 'gameplay'
@@ -20,11 +28,27 @@ export type SystemName =
  * 🛑 It is a CONTRACT, not a convenience: physics after movement is why a wall stops a walker,
  * and the camera last is why it does not follow a position the physics then corrects. A script's
  * `onLateUpdate` runs in the `script` system's late pass, which is after all of this.
+ *
+ * 🛑 The six travelling systems sit between `movement` and `physics`, and `lookAt` last of them:
+ * it turns towards where a thing STANDS, so it must hear whatever moved it this step. They all
+ * write TRANSFORMS, which `writeConflicts` cannot name — its table holds component types, and
+ * `physics` and `movement` were already blind to each other for the same reason.
+ *
+ * 🛑 `vehicle` and `aircraft` sit just BEFORE `physics` because they write into the ENGINE, not
+ * into a transform: a pedal handed over after the step is a pedal the step never heard.
  */
 export const SYSTEM_ORDER: readonly SystemName[] = [
   'input',
   'script',
   'movement',
+  'path',
+  'patrol',
+  'follow',
+  'orbit',
+  'spin',
+  'lookAt',
+  'vehicle',
+  'aircraft',
   'physics',
   'collision',
   'gameplay',

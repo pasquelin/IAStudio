@@ -2,11 +2,14 @@
 
 import type {
   BodyDescriptor,
+  BodyForce,
+  BodyMotion,
   BodyPose,
   CharacterMove,
   CharacterMoved,
   PhysicsContact,
   PhysicsPort,
+  VehicleDrive,
 } from '../ports/physicsPort'
 
 export type NotedPhysics = PhysicsPort & {
@@ -14,10 +17,17 @@ export type NotedPhysics = PhysicsPort & {
   removed: string[]
   placed: BodyPose[]
   asked: CharacterMove[]
+  driven: VehicleDrive[]
+  pushed: BodyForce[]
   steps: number[]
   gravity: number
   /** What the next `poses` and `contacts` answer, so a case says what the engine decided. */
-  answers: { poses: BodyPose[]; contacts: PhysicsContact[]; moved: CharacterMoved[] }
+  answers: {
+    poses: BodyPose[]
+    contacts: PhysicsContact[]
+    moved: CharacterMoved[]
+    motion: BodyMotion[]
+  }
 }
 
 /** A physics that decides nothing and remembers everything — what a system is measured against. */
@@ -27,9 +37,11 @@ export function notedPhysics(): NotedPhysics {
     removed: [],
     placed: [],
     asked: [],
+    driven: [],
+    pushed: [],
     steps: [],
     gravity: 0,
-    answers: { poses: [], contacts: [], moved: [] },
+    answers: { poses: [], contacts: [], moved: [], motion: [] },
 
     setGravity: y => {
       noted.gravity = y
@@ -48,6 +60,15 @@ export function notedPhysics(): NotedPhysics {
       noted.asked.push(...wanted.map(one => ({ ...one, wanted: { ...one.wanted } })))
       return noted.answers.moved
     },
+    drive: wanted => {
+      noted.driven.push(...wanted.map(one => ({ ...one })))
+    },
+    push: forces => {
+      noted.pushed.push(
+        ...forces.map(one => ({ ...one, force: { ...one.force }, torque: { ...one.torque } })),
+      )
+    },
+    motion: bodies => noted.answers.motion.filter(one => bodies.includes(one.body)),
     step: dt => {
       noted.steps.push(dt)
     },

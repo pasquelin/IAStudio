@@ -52,6 +52,14 @@ const choiceField = (key: string, options: readonly string[]): ActionField => ({
   options,
 })
 
+/** A name, a list of names, or a list of points — what no number and no closed list can say. */
+const textField = (key: string): ActionField => ({
+  key,
+  kind: 'text',
+  labelKey: `game.fields.${key}`,
+  required: true,
+})
+
 const flagField = (key: string): ActionField => ({
   key,
   kind: 'boolean',
@@ -81,6 +89,92 @@ const MOVEMENT: ComponentDescriptor = {
     choiceField('mode', ['once', 'loop', 'pingPong']),
   ],
   defaults: { axis: 'y', speed: 1, distance: 2, mode: 'pingPong' },
+}
+
+/**
+ * The six that travel without the physics. They write TRANSFORMS, which is why they run before
+ * `physics` and why `writeConflicts` cannot see them meeting — its table names components.
+ *
+ * `target` and `waypoints` hold ENTITY names rather than positions, so an author moves the mark
+ * and the follower follows. `Path` is the exception: its waypoints are points, because a rail is
+ * a shape rather than a set of objects.
+ */
+const PATH: ComponentDescriptor = {
+  type: 'Path',
+  titleKey: 'game.components.Path.title',
+  descriptionKey: 'game.components.Path.description',
+  category: 'gameplay',
+  fields: [
+    textField('waypoints'),
+    numberField('speed', 0),
+    choiceField('mode', ['once', 'loop', 'pingPong']),
+    flagField('orientToTangent'),
+  ],
+  defaults: { waypoints: '', speed: 2, mode: 'loop', orientToTangent: false },
+}
+
+const FOLLOW: ComponentDescriptor = {
+  type: 'Follow',
+  titleKey: 'game.components.Follow.title',
+  descriptionKey: 'game.components.Follow.description',
+  category: 'gameplay',
+  fields: [
+    textField('target'),
+    numberField('speed', 0),
+    numberField('stopDistance', 0),
+    numberField('acceleration', 0),
+  ],
+  defaults: { target: '', speed: 3, stopDistance: 1.5, acceleration: 8 },
+}
+
+const ORBIT: ComponentDescriptor = {
+  type: 'Orbit',
+  titleKey: 'game.components.Orbit.title',
+  descriptionKey: 'game.components.Orbit.description',
+  category: 'gameplay',
+  // An empty `target` is the world's origin, which is what an author means by « turn about there ».
+  // A negative speed turns the other way, and a negative height hangs the orbit below its mark.
+  fields: [
+    textField('target'),
+    numberField('radius', 0),
+    numberField('speed', -720, 720),
+    numberField('height', -100, 100),
+  ],
+  defaults: { target: '', radius: 5, speed: 45, height: 0 },
+}
+
+const LOOK_AT: ComponentDescriptor = {
+  type: 'LookAt',
+  titleKey: 'game.components.LookAt.title',
+  descriptionKey: 'game.components.LookAt.description',
+  category: 'gameplay',
+  // A turn speed of zero is INSTANT, which is what a camera mount or a signpost wants.
+  fields: [textField('target'), numberField('turnSpeed', 0)],
+  defaults: { target: '', turnSpeed: 0 },
+}
+
+const PATROL: ComponentDescriptor = {
+  type: 'Patrol',
+  titleKey: 'game.components.Patrol.title',
+  descriptionKey: 'game.components.Patrol.description',
+  category: 'gameplay',
+  fields: [
+    textField('waypoints'),
+    numberField('speed', 0),
+    numberField('waitSeconds', 0),
+    choiceField('mode', ['once', 'loop', 'pingPong']),
+  ],
+  defaults: { waypoints: '', speed: 2, waitSeconds: 1, mode: 'pingPong' },
+}
+
+const SPIN: ComponentDescriptor = {
+  type: 'Spin',
+  titleKey: 'game.components.Spin.title',
+  descriptionKey: 'game.components.Spin.description',
+  category: 'gameplay',
+  // Degrees a second, and a negative one turns the other way.
+  fields: [choiceField('axis', ['x', 'y', 'z']), numberField('speed', -720, 720)],
+  defaults: { axis: 'y', speed: 90 },
 }
 
 const COLLIDER: ComponentDescriptor = {
@@ -155,6 +249,59 @@ const CHARACTER_CONTROLLER: ComponentDescriptor = {
   events: ['Collided'],
 }
 
+/**
+ * What rolls: a body the engine hangs on suspended, driven, steered wheels. `wheels` names the
+ * child nodes that DRAW them, in the body's own frame — their local place is where each wheel is
+ * hung, so an author moves a wheel mesh and the axle follows. The ones ahead of the centre steer.
+ */
+const VEHICLE: ComponentDescriptor = {
+  type: 'Vehicle',
+  titleKey: 'game.components.Vehicle.title',
+  descriptionKey: 'game.components.Vehicle.description',
+  category: 'physics',
+  fields: [
+    textField('wheels'),
+    numberField('wheelRadius', 0.05, 2),
+    numberField('wheelWidth', 0.05, 1),
+    numberField('suspensionLength', 0.05, 2),
+    numberField('maxSteerAngle', 0, 60),
+    numberField('maxTorque', 0, 20_000),
+    choiceField('drive', ['all', 'front', 'rear']),
+  ],
+  defaults: {
+    wheels: '',
+    wheelRadius: 0.35,
+    wheelWidth: 0.25,
+    suspensionLength: 0.4,
+    maxSteerAngle: 30,
+    maxTorque: 500,
+    drive: 'all',
+  },
+  requires: ['RigidBody'],
+  events: ['Collided'],
+}
+
+/**
+ * What flies: lift, drag and thrust computed on the body's own motion each step, and control
+ * surfaces that only bite with air over them — a plane standing still answers no stick.
+ */
+const AIRCRAFT: ComponentDescriptor = {
+  type: 'Aircraft',
+  titleKey: 'game.components.Aircraft.title',
+  descriptionKey: 'game.components.Aircraft.description',
+  category: 'physics',
+  fields: [
+    numberField('maxThrust', 0, 200_000),
+    numberField('wingArea', 0.1, 500),
+    numberField('stallAngle', 1, 45),
+    numberField('agility', 0, 10),
+    numberField('drag', 0, 1),
+  ],
+  defaults: { maxThrust: 12_000, wingArea: 16, stallAngle: 15, agility: 1, drag: 0.04 },
+  requires: ['RigidBody'],
+  events: ['Collided'],
+}
+
 const SCRIPT: ComponentDescriptor = {
   type: 'Script',
   titleKey: 'game.components.Script.title',
@@ -175,10 +322,18 @@ const SCRIPT: ComponentDescriptor = {
 export const COMPONENTS: Record<ComponentType, ComponentDescriptor> = {
   Health: HEALTH,
   Movement: MOVEMENT,
+  Path: PATH,
+  Follow: FOLLOW,
+  Orbit: ORBIT,
+  LookAt: LOOK_AT,
+  Patrol: PATROL,
+  Spin: SPIN,
   Collider: COLLIDER,
   RigidBody: RIGID_BODY,
   Trigger: TRIGGER,
   CharacterController: CHARACTER_CONTROLLER,
+  Vehicle: VEHICLE,
+  Aircraft: AIRCRAFT,
   Script: SCRIPT,
 }
 

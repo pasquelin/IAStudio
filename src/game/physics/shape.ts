@@ -15,7 +15,7 @@ export type ColliderShape =
    */
   | { kind: 'cuboid'; hx: number; hy: number; hz: number; at?: Vector3 }
   | { kind: 'ball'; radius: number }
-  /** `halfHeight` is the straight part only, as Rapier counts it — the caps stand on top. */
+  /** `halfHeight` is the straight part only — the caps stand on top of it, as both engines count. */
   | { kind: 'capsule'; halfHeight: number; radius: number }
   | { kind: 'cylinder'; halfHeight: number; radius: number }
   | { kind: 'cone'; halfHeight: number; radius: number }

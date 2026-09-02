@@ -23,9 +23,11 @@ export type BodyDescriptor = {
   sensor: boolean
   /** Moved by `moveCharacters` rather than by the step, and told what it hit. */
   character: CharacterSettings | null
+  /** Carried on wheels the engine suspends and drives — what a `Vehicle` is. */
+  vehicle: VehicleSettings | null
 }
 
-/** What Rapier's controller is given, in the units an author reads. */
+/** What the engine's character controller is given, in the units an author reads. */
 export type CharacterSettings = {
   /** The tallest ledge walked over rather than bumped into. */
   stepHeight: number
@@ -34,6 +36,45 @@ export type CharacterSettings = {
   /** How far below the feet the ground is still caught, so a slope down is walked, not fallen. */
   snapDistance: number
 }
+
+/**
+ * One wheel of a vehicle, in the body's own frame. `body` is the entity that DRAWS it: its world
+ * pose comes back in `poses`, so the wheel spins, steers and rides its suspension on screen.
+ */
+export type VehicleWheel = {
+  body: string
+  at: Vector3
+  steers: boolean
+  driven: boolean
+  handBraked: boolean
+}
+
+export type VehicleSettings = {
+  wheelRadius: number
+  wheelWidth: number
+  /** Metres of suspension travel at rest; the wheel hangs that far below `at` when unloaded. */
+  suspensionLength: number
+  /** Degrees, at full lock. */
+  maxSteerAngle: number
+  /** Newton-metres the engine can put through the driven wheels. */
+  maxTorque: number
+  wheels: readonly VehicleWheel[]
+}
+
+/** What a driver asks of a vehicle this step, each between −1 and 1 or 0 and 1. */
+export type VehicleDrive = {
+  body: string
+  forward: number
+  right: number
+  brake: number
+  handBrake: number
+}
+
+/** Newtons and newton-metres, in WORLD space, applied for the coming step only. */
+export type BodyForce = { body: string; force: Vector3; torque: Vector3 }
+
+/** How a body moves, in world space — what an aerodynamic model reads before pushing back. */
+export type BodyMotion = { body: string; linear: Vector3; angular: Vector3 }
 
 export type BodyPose = { body: string; position: Vector3; rotation: Quaternion }
 
@@ -67,6 +108,12 @@ export type PhysicsPort = {
   place: (poses: readonly BodyPose[]) => void
   /** Before the step, never after: the controller reads where the obstacles stand right now. */
   moveCharacters: (wanted: readonly CharacterMove[]) => readonly CharacterMoved[]
+  /** What each vehicle's driver asks. Ignored for a body that carries no wheels. */
+  drive: (wanted: readonly VehicleDrive[]) => void
+  /** Forces for the coming step. Ignored for anything the simulation does not own. */
+  push: (forces: readonly BodyForce[]) => void
+  /** 🛑 Reused between calls, like `poses`. A name the port does not hold is left out. */
+  motion: (bodies: readonly string[]) => readonly BodyMotion[]
   step: (dt: number) => void
   poses: () => readonly BodyPose[]
   contacts: () => readonly PhysicsContact[]

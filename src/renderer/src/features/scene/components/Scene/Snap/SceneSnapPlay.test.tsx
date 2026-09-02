@@ -21,8 +21,8 @@ import { SceneSnapPlay } from './SceneSnapPlay'
 const WALK = `script:${documentFolderOf('script')}/Walk.ts`
 
 /** 2,7 Mo of WebAssembly for a bar that draws two buttons — see `play.test.ts`. */
-vi.mock('@game/host/rapierPhysics', () => ({
-  loadRapierPhysics: () => Promise.resolve(createInertPhysics()),
+vi.mock('@game/host/joltPhysics', () => ({
+  loadJoltPhysics: () => Promise.resolve(createInertPhysics()),
 }))
 
 /** And the sandbox with it: a suite that measures a transport must not wait on a JIT. */

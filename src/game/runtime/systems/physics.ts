@@ -4,7 +4,13 @@ import type { ComponentType } from '@shared/domain/component'
 import type { Transform, Vector3 } from '@shared/domain/transform'
 import { eulerFromQuaternion, quaternionFromEuler } from '../../physics/quaternion'
 import type { ColliderShape } from '../../physics/shape'
-import type { BodyDescriptor, BodyKind, BodyPose } from '../../ports/physicsPort'
+import type {
+  BodyDescriptor,
+  BodyKind,
+  BodyPose,
+  VehicleSettings,
+  VehicleWheel,
+} from '../../ports/physicsPort'
 import type { Characters } from '../characters'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { flagOf, numberOf, textOf } from '../componentFields'
@@ -20,12 +26,15 @@ export const PHYSICAL: readonly ComponentType[] = [
   'RigidBody',
   'Trigger',
   'CharacterController',
+  'Vehicle',
+  'Aircraft',
 ]
 
 const BODY_KINDS: readonly BodyKind[] = ['fixed', 'dynamic', 'kinematic']
 
 const COLLIDER = COMPONENT_DEFAULTS.Collider
 const BODY = COMPONENT_DEFAULTS.RigidBody
+const VEHICLE = COMPONENT_DEFAULTS.Vehicle
 
 export type PhysicsSystemOptions = {
   /**
@@ -96,7 +105,7 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
         // either, and retrying would rebuild a geometry sixty times a second. Why it could not is
         // the STUDIO's to say — `shapeOf` is the only thing here that ever answers nothing.
         known.add(entity.id)
-        const descriptor = bodyOf(entity, options, characters)
+        const descriptor = bodyOf(entity, options, characters, world)
         if (descriptor) fresh.push(descriptor)
       }
     }
@@ -104,7 +113,7 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
     for (const name of known) if (!seen.has(name)) gone.push(name)
     for (const name of gone) known.delete(name)
 
-    // Rapier sends no parting event for a body it REMOVES, so a pair left in `triggered` would
+    // No engine sends a parting event for a body it REMOVES, so a pair left in `triggered` would
     // stay there for the life of the session — and a door would never close behind a corpse.
     for (const name of gone) {
       for (const pair of triggered) {
@@ -150,7 +159,7 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
       const port = world.ports.physics
       if (!started) {
         started = true
-        // A document writes the pull DOWNWARD as a positive number; Rapier reads an acceleration.
+        // A document writes the pull DOWNWARD as a positive number; an engine reads an acceleration.
         port.setGravity(-world.play.gravity)
         refuse(world, port.add(options.statics ?? []))
       }
@@ -184,6 +193,7 @@ function bodyOf(
   entity: Entity,
   options: PhysicsSystemOptions,
   characters: Characters,
+  world: World,
 ): BodyDescriptor | null {
   const walker = componentOf(entity, 'CharacterController')
   const collider = componentOf(entity, 'Collider')
@@ -208,7 +218,58 @@ function bodyOf(
     lockRotation: walker !== null || flagOf(rigid, 'lockRotation', BODY.lockRotation),
     sensor: componentOf(entity, 'Trigger') !== null,
     character: walker ? characters.settingsOf(entity) : null,
+    vehicle: vehicleOf(entity, world),
   }
+}
+
+/**
+ * The wheels a `Vehicle` hangs, read off the child nodes it NAMES. Their own transforms are where
+ * they hang, so an author moves a wheel mesh and the axle follows it.
+ *
+ * 🛑 Nothing for a vehicle whose wheels name nobody: a car built with no wheels would be a crate
+ * that answers the pedals, which is worse than one the port refuses by name.
+ */
+function vehicleOf(entity: Entity, world: World): VehicleSettings | null {
+  const settings = componentOf(entity, 'Vehicle')
+  if (!settings) return null
+
+  const drive = textOf(settings, 'drive', VEHICLE.drive)
+  const travel = numberOf(settings, 'suspensionLength', VEHICLE.suspensionLength)
+  const wheels: VehicleWheel[] = []
+  for (const said of textOf(settings, 'wheels', VEHICLE.wheels).split(',')) {
+    const name = said.trim()
+    const wheel = name === '' ? null : namedIn(world, name)
+    if (!wheel) continue
+
+    // Ahead is −Z, which is where a node's own forward points: the front axle is what steers.
+    const ahead = wheel.transform.position.z < 0
+    wheels.push({
+      body: wheel.id,
+      // 🛑 The node stands where the wheel RESTS; the spring is anchored one travel above it, so
+      // an author moves a wheel mesh rather than reasoning about where a suspension is bolted.
+      at: { ...wheel.transform.position, y: wheel.transform.position.y + travel },
+      steers: ahead,
+      driven: drive === 'all' || (drive === 'front') === ahead,
+      handBraked: !ahead,
+    })
+  }
+  if (wheels.length === 0) return null
+
+  return {
+    wheelRadius: numberOf(settings, 'wheelRadius', VEHICLE.wheelRadius),
+    wheelWidth: numberOf(settings, 'wheelWidth', VEHICLE.wheelWidth),
+    suspensionLength: travel,
+    maxSteerAngle: numberOf(settings, 'maxSteerAngle', VEHICLE.maxSteerAngle),
+    maxTorque: numberOf(settings, 'maxTorque', VEHICLE.maxTorque),
+    wheels,
+  }
+}
+
+/** By id first, then by name — the same order `steering.ts` reads an author's word in. */
+function namedIn(world: World, said: string): Entity | null {
+  return (
+    world.entities.get(said) ?? [...world.entities.all()].find(one => one.name === said) ?? null
+  )
 }
 
 /** What the step moved, written back into the entity it belongs to — in ITS own frame. */

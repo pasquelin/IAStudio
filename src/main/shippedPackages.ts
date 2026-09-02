@@ -16,6 +16,7 @@ export const SHIPPED: string[] = [
   // Runtime dependencies, loaded from `node_modules` rather than bundled.
   '@dimforge/rapier3d-compat',
   '@jitl/quickjs-singlefile-browser-release-sync',
+  'jolt-physics',
   '@mdi/js',
   '@mdi/react',
   '@modelcontextprotocol/sdk',

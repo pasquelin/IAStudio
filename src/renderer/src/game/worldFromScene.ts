@@ -5,9 +5,18 @@ import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
 import type { Entity } from '@game/runtime/entity'
 import { STEP_SECONDS } from '@game/runtime/gameLoop'
+import { createFollowSystem } from '@game/runtime/systems/follow'
+import { createLookAtSystem } from '@game/runtime/systems/lookAt'
 import { createMovementSystem } from '@game/runtime/systems/movement'
+import { createOrbitSystem } from '@game/runtime/systems/orbit'
+import { createPathSystem } from '@game/runtime/systems/path'
+import { createPatrolSystem } from '@game/runtime/systems/patrol'
+import { createSpinSystem } from '@game/runtime/systems/spin'
 import { createPhysicsSystem } from '@game/runtime/systems/physics'
+import { createPilots } from '@game/runtime/pilots'
+import { createAircraftSystem } from '@game/runtime/systems/aircraft'
 import { createPlayCameraSystem } from '@game/runtime/systems/playCamera'
+import { createVehicleSystem } from '@game/runtime/systems/vehicle'
 import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
 import { createTimelineSystem } from '@game/runtime/systems/timeline'
 import { createWorld, type System, type World } from '@game/runtime/world'
@@ -87,6 +96,7 @@ function systemsFor(
   const hierarchy = createHierarchy(byId)
   const placed = (entity: Entity): Transform => hierarchy.worldOf(entity.id, entity.transform)
   const characters = createCharacters()
+  const pilots = createPilots()
 
   /**
    * 🛑 A node hanging from another is FELT now, and that closed the hole this carried since the
@@ -122,6 +132,14 @@ function systemsFor(
       assetRef: id => ({ kind: 'asset', id }),
     }),
     createMovementSystem(),
+    createPathSystem(),
+    createPatrolSystem(),
+    createFollowSystem(),
+    createOrbitSystem(),
+    createSpinSystem(),
+    createLookAtSystem(),
+    createVehicleSystem(pilots),
+    createAircraftSystem(pilots),
     createPhysicsSystem({
       shapeOf,
       characters,
@@ -129,7 +147,7 @@ function systemsFor(
       worldOf: placed,
       localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
     }),
-    createPlayCameraSystem(characters, placed),
+    createPlayCameraSystem({ characters, worldOf: placed, pilots }),
   ]
 }
 
@@ -157,6 +175,7 @@ function groundOf(state: SceneState): readonly BodyDescriptor[] {
       lockRotation: false,
       sensor: false,
       character: null,
+      vehicle: null,
     },
   ]
 }

@@ -44,6 +44,9 @@ importers:
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
+      jolt-physics:
+        specifier: file:vendor/jolt-physics
+        version: file:vendor/jolt-physics
       mediabunny:
         specifier: ^1.53.1
         version: 1.53.1
@@ -3131,6 +3134,9 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  jolt-physics@file:vendor/jolt-physics:
+    resolution: {directory: vendor/jolt-physics, type: directory}
 
   jose@6.2.8:
     resolution: {integrity: sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ==}
@@ -7549,6 +7555,8 @@ snapshots:
       picocolors: 1.1.1
 
   jiti@2.7.0: {}
+
+  jolt-physics@file:vendor/jolt-physics: {}
 
   jose@6.2.8: {}
 

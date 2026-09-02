@@ -1,6 +1,10 @@
 {
   "game": {
     "components": {
+      "Aircraft": {
+        "title": "Avion",
+        "description": "Fait voler l’objet : portance, traînée et poussée calculées sur son propre mouvement, gouvernes qui ne répondent qu’avec du vent."
+      },
       "CharacterController": {
         "description": "Fait de l’objet celui qu’on dirige : il marche, il saute, il monte les marches.",
         "title": "Personnage"
@@ -9,13 +13,33 @@
         "description": "Donne à l’objet un volume que les autres ne peuvent pas traverser.",
         "title": "Volume"
       },
+      "Follow": {
+        "description": "Fait suivre une autre entité, en s’arrêtant à la distance demandée — un compagnon, une caméra d’épaule, un ennemi.",
+        "title": "Poursuite"
+      },
       "Health": {
         "description": "Des points de vie, qui descendent quand l’entité est touchée et la font mourir à zéro.",
         "title": "Santé"
       },
+      "LookAt": {
+        "description": "Oriente l’entité vers une autre, tout de suite ou à vitesse de rotation limitée — une tourelle, un panneau, une tête.",
+        "title": "Regard"
+      },
       "Movement": {
         "description": "Fait aller et venir l’entité toute seule, le long d’un axe — une plate-forme, un ascenseur, un piège.",
         "title": "Mouvement"
+      },
+      "Orbit": {
+        "description": "Fait tourner l’entité autour d’une autre, ou autour de l’origine — une lune, un satellite, une caméra qui tourne.",
+        "title": "Orbite"
+      },
+      "Path": {
+        "description": "Fait suivre à l’entité une suite de points, à vitesse constante — un chariot, une caméra de travelling, une plate-forme sur rail.",
+        "title": "Rail"
+      },
+      "Patrol": {
+        "description": "Fait aller l’entité d’un point nommé au suivant, avec un temps d’attente à chaque étape — une sentinelle, un ascenseur.",
+        "title": "Patrouille"
       },
       "RigidBody": {
         "description": "Confie l’objet à la simulation : il tombe, il glisse, il se fait pousser.",
@@ -25,15 +49,27 @@
         "title": "Script",
         "description": "Confie l’objet à du code : ce que l’auteur a écrit s’exécute à chaque pas."
       },
+      "Spin": {
+        "description": "Fait tourner l’entité sur un axe, sans fin — une pièce à ramasser, une hélice, un mécanisme.",
+        "title": "Rotation continue"
+      },
       "Trigger": {
         "description": "Ne bloque rien et prévient quand quelque chose entre dans son volume ou en sort.",
         "title": "Détecteur"
+      },
+      "Vehicle": {
+        "title": "Véhicule",
+        "description": "Pose l’objet sur des roues suspendues, motrices et directrices : il roule, il freine, il braque. Les roues sont ses objets enfants, nommées ici."
       }
     },
     "fields": {
+      "acceleration": "Montée en vitesse",
+      "agility": "Maniabilité",
       "axis": "Axe",
       "current": "Actuelle",
       "distance": "Distance",
+      "drag": "Traînée",
+      "drive": "Transmission",
       "fidelity": "Précision",
       "friction": "Frottement",
       "gravityScale": "Pesanteur",
@@ -43,14 +79,29 @@
       "lockRotation": "Bloquer la rotation",
       "mass": "Masse",
       "max": "Maximum",
+      "maxSteerAngle": "Braquage maximal",
+      "maxThrust": "Poussée maximale",
+      "maxTorque": "Couple moteur",
       "mode": "Parcours",
+      "orientToTangent": "Suivre la tangente",
       "radius": "Rayon",
       "restitution": "Rebond",
       "script": "Fichier",
       "slopeLimit": "Pente",
       "snapDistance": "Accroche",
       "speed": "Vitesse",
-      "stepHeight": "Marche"
+      "stallAngle": "Angle de décrochage",
+      "stepHeight": "Marche",
+      "stopDistance": "Distance d’arrêt",
+      "suspensionLength": "Débattement",
+      "target": "Cible",
+      "turnSpeed": "Vitesse de rotation",
+      "waitSeconds": "Attente",
+      "waypoints": "Points",
+      "wheelRadius": "Rayon des roues",
+      "wheelWidth": "Largeur des roues",
+      "wheels": "Roues",
+      "wingArea": "Surface alaire"
     },
     "play": {
       "faults_many": "{{count, number}} erreurs",
@@ -78,16 +129,19 @@
       "emptyHint": "Un composant dit ce que l’objet FAIT, quand son type dit ce qu’il dessine."
     },
     "values": {
+      "all": "Intégrale",
       "auto": "Automatique",
       "box": "Cube",
       "convexes": "Convexes",
       "dynamic": "Dynamique",
       "fixed": "Fixe",
+      "front": "Traction",
       "hull": "Enveloppe",
       "kinematic": "Pilotée",
       "loop": "En boucle",
       "once": "Une fois",
       "pingPong": "Aller-retour",
+      "rear": "Propulsion",
       "trimesh": "Triangles",
       "unknown": "Valeur inconnue",
       "x": "X",

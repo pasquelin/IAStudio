@@ -6,6 +6,7 @@ import { loadOnce } from './loadOnce'
 import { HULL_FLOOR, type ColliderShape } from '../physics/shape'
 import type {
   BodyDescriptor,
+  BodyMotion,
   BodyPose,
   CharacterMoved,
   PhysicsContact,
@@ -70,6 +71,7 @@ function createRapierPhysics(rapier: Rapier): PhysicsPort {
   const poses: BodyPose[] = []
   const contacts: PhysicsContact[] = []
   const moved: CharacterMoved[] = []
+  const motions: BodyMotion[] = []
   let controlling: BodyDescriptor['character'] = null
 
   // Hoisted rather than written at the call: it captures three maps and would be rebuilt sixty
@@ -104,7 +106,9 @@ function createRapierPhysics(rapier: Rapier): PhysicsPort {
         const shapes = descsOf(rapier, descriptor.shape)
         // Refused rather than added empty: a body with no collider falls through the world in
         // silence, and its name is the only thing that tells an author which object it was.
-        if (shapes.length === 0) {
+        // A vehicle is refused by name too: Rapier's raycast car is not the suspended one the
+        // port promises, and a body built without its wheels would sit there as a crate.
+        if (shapes.length === 0 || descriptor.vehicle) {
           refused.push(descriptor.body)
           continue
         }
@@ -160,6 +164,27 @@ function createRapierPhysics(rapier: Rapier): PhysicsPort {
         moved.push({ body: one.body, moved: step, grounded: controller.computedGrounded() })
       }
       return moved
+    },
+
+    drive: () => {},
+
+    push: forces => {
+      for (const one of forces) {
+        const body = held.get(one.body)
+        if (!body || body.descriptor.kind !== 'dynamic') continue
+        body.rigid.addForce(one.force, true)
+        body.rigid.addTorque(one.torque, true)
+      }
+    },
+
+    motion: names => {
+      motions.length = 0
+      for (const name of names) {
+        const body = held.get(name)
+        if (!body) continue
+        motions.push({ body: name, linear: body.rigid.linvel(), angular: body.rigid.angvel() })
+      }
+      return motions
     },
 
     step: dt => {
