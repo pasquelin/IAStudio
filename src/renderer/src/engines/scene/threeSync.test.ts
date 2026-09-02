@@ -592,6 +592,24 @@ describe('showPathHandles', () => {
     ])
   })
 
+  /**
+   * 🛑 A COLOUR OF ITS OWN, handed in: the anchors wear the mesh token and the tangents another,
+   * two things one drags for different reasons not reading as one. Written here as a hex, it
+   * would be the one surface of the studio that never follows its palette.
+   */
+  it('paints the tangents in the colour it is handed, apart from the anchors', () => {
+    const object = dressWithRail(new Mesh(), rail, '#111111', false, '#e0a350')
+    const colourOf = (name: string): string => {
+      const child = object.getObjectByName(name)
+      return child instanceof Mesh && child.material instanceof MeshBasicMaterial
+        ? `#${child.material.color.getHexString()}`
+        : ''
+    }
+
+    expect(colourOf(handleName('out', 1))).toBe('#e0a350')
+    expect(colourOf(knobName(1))).toBe('#111111')
+  })
+
   /** The bar is what makes a tangent readable as a lever: without it, a lone dot in a field. */
   it('ties each tangent to its anchor with a bar', () => {
     const object = buildPath(rail, '#ffffff')

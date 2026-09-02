@@ -202,12 +202,6 @@ export const PATH_KNOB_RADIUS = 0.14
 const HANDLE_ORDER = 10
 
 /**
- * The tangents are GREEN, the anchors the studio's own colour: two things one drags for different
- * reasons must not read as one. A document colour, not a token — this is painted into the scene.
- */
-const HANDLE_COLOUR = '#4ade80'
-
-/**
  * How much of the visible height a knob covers, whatever the distance: a hundred-and-twenty-eighth
  * of it, so about 14 px across on a viewport 900 px tall — the size a control point is drawn at in
  * the drawing tools a hand already knows.
@@ -286,6 +280,8 @@ export function dressWithRail(
   descriptor: PathDescriptor,
   colour: string,
   through: boolean,
+  /** What the tangents are painted in — a token of the studio, never a hex written here. */
+  handleColour: string = colour,
 ): Object3D {
   const line = new Line(
     new BufferGeometry(),
@@ -304,14 +300,14 @@ export function dressWithRail(
     // Hidden until its anchor is the one being worked on — see `showPathHandles`. Built either
     // way, so activating a point costs no rebuild and no frame.
     for (const part of ['in', 'out'] satisfies HandlePart[]) {
-      const handle = pathKnob(index, HANDLE_COLOUR, through)
+      const handle = pathKnob(index, handleColour, through)
       handle.name = handleName(part, index)
       handle.visible = false
       object.add(handle)
 
       const bar = new Line(
         new BufferGeometry(),
-        new LineBasicMaterial({ color: HANDLE_COLOUR, depthTest: !through }),
+        new LineBasicMaterial({ color: handleColour, depthTest: !through }),
       )
       bar.name = barName(part, index)
       bar.visible = false

@@ -263,11 +263,18 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
   if (knobs.length !== descriptor.points.length) {
     const worn = knobs[0]?.material
     const through = worn instanceof MeshBasicMaterial && !worn.depthTest
+    // Read off a tangent rather than passed in: the caller knows the mesh colour, and the two
+    // are different tokens — dressing again in one of them would repaint the pair grey.
+    const handle = object.children.find(child => handlePartOf(child.name))
+    const handleColour =
+      handle instanceof Mesh && handle.material instanceof MeshBasicMaterial
+        ? `#${handle.material.color.getHexString()}`
+        : colour
     for (const child of [...object.children]) {
       object.remove(child)
       if (child instanceof Mesh || child instanceof Line) child.geometry.dispose()
     }
-    dressWithRail(object, descriptor, colour, through)
+    dressWithRail(object, descriptor, colour, through, handleColour)
     return
   }
 

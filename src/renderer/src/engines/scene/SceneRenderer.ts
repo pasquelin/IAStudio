@@ -100,7 +100,6 @@ import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
 import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
-  buildPath,
   dressWithRail,
   cameraBody,
   helperFor,
@@ -863,6 +862,8 @@ export class SceneRenderer {
   private markerEdge = ''
   /** What a shape marked as a TOOL is painted in — see `applyNegative`. */
   private negativeColor = ''
+  /** What a rail's TANGENTS are painted in, apart from its anchors — see `dressWithRail`. */
+  private handleColor = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
   private displays: DisplayMode[] = ['shaded']
   /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
@@ -1152,9 +1153,10 @@ export class SceneRenderer {
       // surface of the scene: only its handles go.
       if (!chrome && node.type === 'path') rail.visible = false
       showPathKnobs(rail, chrome && rails.has(id))
-      // The pair of the ANCHOR being worked on, and of no other — see `showPathHandles`.
+      // The pair of the ANCHOR being worked on, and of no other — see `showPathHandles`. The
+      // index whichever of the three is held: taking a tangent must not put its own pair away.
       const held = this.pickedPathPoint
-      showPathHandles(rail, chrome && held?.nodeId === id && !held.part ? held.index : null)
+      showPathHandles(rail, chrome && held?.nodeId === id ? held.index : null)
     }
   }
 
@@ -3257,6 +3259,9 @@ export class SceneRenderer {
     this.markerColor = this.viewport.paletteToken('--color-elevated')
     this.markerEdge = this.viewport.paletteToken('--color-muted')
     this.negativeColor = this.viewport.paletteToken('--color-danger')
+    // Apart from the anchors', which wear the mesh colour: two things one drags for different
+    // reasons must not read as one.
+    this.handleColor = this.viewport.paletteToken('--color-warning')
     this.paintBackground()
 
     if (this.grid) {
@@ -3548,7 +3553,9 @@ export class SceneRenderer {
     if (node.type === 'sprite') return this.buildSprite(node)
     if (node.type === 'text') return this.buildText(node)
     if (node.type === 'camera') return this.buildCamera(node)
-    if (node.type === 'path') return buildPath(node.path, this.meshColor)
+    if (node.type === 'path') {
+      return dressWithRail(new Object3D(), node.path, this.meshColor, false, this.handleColor)
+    }
     if (node.type === 'carved') return this.buildCarved(node)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
@@ -3984,7 +3991,7 @@ export class SceneRenderer {
     // A band wears the very handles a rail does — see `railOf`. Hung on the mesh itself, so they
     // travel with it and a pick reads their index out of the same names.
     const rail = railOf(node)
-    if (rail) dressWithRail(mesh, rail, this.meshColor, true)
+    if (rail) dressWithRail(mesh, rail, this.meshColor, true, this.handleColor)
 
     return mesh
   }
