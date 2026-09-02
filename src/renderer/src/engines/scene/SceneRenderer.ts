@@ -2089,6 +2089,7 @@ export class SceneRenderer {
       // and without this a locally rigged character has a skeleton nothing can show or pick.
       this.bindSkeleton(nodeId, holder, true)
       this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+      await this.precompile()
       this.redraw()
     } finally {
       this.skinning.delete(nodeId)
@@ -2114,6 +2115,24 @@ export class SceneRenderer {
     const names = skinned.skeleton.bones.map(one => one.name)
     const binding = createIkBinding(skinned, ikSpecsOf(names, rig.ik))
     if (binding) this.iks.set(nodeId, binding)
+  }
+
+  /**
+   * The programs the stage now needs, built BEFORE the frame that would need them.
+   *
+   * 🛑 A skinned mesh is a shader variant of its own, so binding a rig asks for four programs the
+   * first frame after it: 292 ms on a warm shader cache, 8.4 SECONDS cold — and invisible to a
+   * JavaScript profile, since a driver compiles in the GPU process. Measured 2026-09-02.
+   */
+  private async precompile(): Promise<void> {
+    const gl = this.viewport.gl
+    if (!gl) return
+
+    try {
+      await gl.compileAsync(this.viewport.scene, this.viewport.camera)
+    } catch {
+      // Nothing to fall back to: the frame compiles what this could not, as it always did.
+    }
   }
 
   /** Twenty-six million distances are not worth finishing for a model nobody will see again. */
