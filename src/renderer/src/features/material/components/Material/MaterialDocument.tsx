@@ -103,7 +103,9 @@ export function MaterialDocument({ documentId }: { documentId: string }) {
   const three = useSettings(state => state.settings.three)
   useEffect(() => {
     engine.current?.setNavigationScheme(schemeFor(three.navigationPreset, customFrom(three)))
-  }, [engine, three])
+    // `documentId` too: the engine is rebuilt when it changes, and the new one would open on
+    // the studio's gestures while the scene turns by the chosen scheme.
+  }, [documentId, engine, three])
 
   useShelfRefresh(() => engine.current?.refreshMaps())
   // The sky the preview NAMES moved: no asset id changed, so the shelf says nothing.
