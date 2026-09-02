@@ -37,6 +37,12 @@ import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
 import { clampFlySpeed, speedAfterWheel } from './flySpeed'
 import { notchesOf } from '../viewport/dolly'
 import { gazeTargetOf, PIVOT_AHEAD } from '../viewport/orbitPivot'
+import {
+  customFrom,
+  schemeFor,
+  SCHEME_OF,
+  type NavigationScheme,
+} from '@shared/domain/navigationPreset'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -652,6 +658,7 @@ export class SceneRenderer {
     // a surface one lands the pivot on.
     pickTargets: () => [...this.objects.values()],
     // Blender's Navigation panel, under the two names it gives them — see `orbitPivot`.
+    scheme: () => this.scheme,
     pivotMode: () => ({
       aroundSelection: this.view.orbitAroundSelection,
       underCursor: this.view.orbitUnderCursor,
@@ -670,6 +677,12 @@ export class SceneRenderer {
    * in place would otherwise reach through into what every window opens on.
    */
   private view: ViewportOptions = { ...DEFAULT_SETTINGS.three }
+  /**
+   * Which application the view is driven like. Composed at `configure` and not per call: the
+   * flight reads it once a frame and the gestures once a press, for a value that moves on a
+   * settings write.
+   */
+  private scheme: NavigationScheme = SCHEME_OF.studio
 
   /**
    * Both raycasters read EVERY layer, the camera's and the one instancing moves meshes to: a
@@ -2933,13 +2946,33 @@ export class SceneRenderer {
   }
 
   /**
-   * Whether the camera owns the keyboard — a button held, or the mode armed.
+   * Whether the camera owns the keyboard — a button held, the mode armed, or, under Roblox,
+   * always. Which of the three is the preset's to say; `navigationPreset.test.ts` holds what
+   * `always` costs, being the two scene commands whose key it would otherwise swallow.
    *
    * Public because a key can mean two things at once: ⇧A opens the Add menu and is also
    * boost-strafe-left, and the held set cannot tell them apart — Shift is down either way.
    */
   get flying(): boolean {
+    if (this.scheme.fly === 'always') return true
     return this.flownWith !== null || this.navigating
+  }
+
+  /**
+   * Whether a GESTURE holds the keys. What a command ambiguous with a direction has to read —
+   * `flying` is unconditionally true under a permanent flight, and would disable it for good.
+   */
+  get flightHeld(): boolean {
+    return this.flownWith !== null || this.navigating
+  }
+
+  /**
+   * Whether the ARROWS are the camera's too. Only while a gesture holds the flight: a permanent
+   * one would cancel them in the capture phase for the whole window, and every tree, menu and
+   * slider of the studio navigates by arrow. The letters stay the camera's either way.
+   */
+  get flightOwnsArrows(): boolean {
+    return this.flightHeld
   }
 
   dispose(): void {
@@ -3102,6 +3135,7 @@ export class SceneRenderer {
     }
 
     this.view = next
+    this.scheme = schemeFor(next.navigationPreset, customFrom(next))
 
     // Through the viewport rather than onto the camera: the orthographic frustum is derived
     // from this very field of view, and has to be resized with it.
@@ -4687,7 +4721,9 @@ export class SceneRenderer {
     // Not while the mode is armed: it owns the keys with no button down, and a click that ends
     // this button's flight would stop a camera whose `W` is still physically held — `useShortcuts`
     // pushes nothing again until the next key transition.
-    if (!this.navigating) this.held.clear()
+    // Nor while the letters are the camera's for good: the release of a click that armed
+    // nothing would stop a camera whose key is still physically held.
+    if (!this.navigating && this.scheme.fly !== 'always') this.held.clear()
     // Only what froze thaws: the left button never froze anything, and thawing would re-arm the
     // orbits it never took. Asked rather than asserted, a handle may still be held under it.
     if (froze) this.syncPaneFreeze()
@@ -4706,9 +4742,13 @@ export class SceneRenderer {
     // those are the very keys that add to a selection. Picking on release, and only if the
     // pointer never moved, is what stops a recentring gesture from unpicking what it passes over.
     this.pressed = { x: event.clientX, y: event.clientY }
+    // Cleared here and not only in `startFlight`, which a scheme flying on the right button
+    // alone never calls for this press.
+    this.flew = false
     // ADDED to the left button, never substituted for what it already did: it goes on orbiting
-    // through `OrbitControls` and picking on release, and only gains the keys.
-    this.startFlight(event)
+    // and picking on release, and only gains the keys. Unity and Unreal keep their flight on the
+    // RIGHT button alone, so under those the left one arms nothing.
+    if (this.scheme.fly === 'anyButton') this.startFlight(event)
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {
@@ -5051,8 +5091,11 @@ export class SceneRenderer {
       if (this.flownWith === 0) {
         this.flownFrom = null
         this.flownWith = null
-        if (!this.navigating) this.held.clear()
       }
+      // Outside the branch, and for every scheme: a handle GRABBED must stop the camera, or one
+      // gesture moves the object and the point of view at once — which is what this exists for.
+      // A permanent flight is no exception; only a click that grabs nothing leaves the keys be.
+      if (!this.navigating) this.held.clear()
     }
     this.syncPaneFreeze()
   }
@@ -5081,9 +5124,9 @@ export class SceneRenderer {
 
     const moving = this.flying && this.held.size > 0
     if (moving) {
-      // Remembered rather than read back at the release: the keys are let go of first, and the
-      // release would then look exactly like a click — see `flew`.
-      this.flew = true
+      // Only under a button that armed it: a permanent flight moves the camera with no press at
+      // all, and `flew` left set killed every left click for the rest of the session.
+      if (this.flownWith !== null) this.flew = true
       this.fly(delta)
     }
     // The clips do not appear here: they stand where the head put them, and the head is advanced

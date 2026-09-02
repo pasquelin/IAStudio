@@ -449,6 +449,14 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     // that sky would reach no scene at all — which is what this whole batch is about.
     passed: run => read.world(run)?.environment.kind === 'sky',
   },
+  {
+    name: '10.8 drives the viewport like Blender',
+    said: ['Passe la navigation 3D en schéma Blender.'],
+    setup: cubeScene,
+    // No action of its own either: the scheme is a `three` setting, so `settings.write` is the
+    // road — the same one the grid takes above.
+    passed: run => read.wrote(run, 'three', 'navigationPreset'),
+  },
 
   // ——— 11. Import d'assets dans une scène ———
   {

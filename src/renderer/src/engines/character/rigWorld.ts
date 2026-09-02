@@ -13,7 +13,7 @@ export function worldPlaces(bones: readonly RigBone[]): Map<string, Vector3> {
     if (known) return known
 
     const parent = bone.parent === null ? null : byName.get(bone.parent)
-    const above = parent ? place(parent) : ORIGIN
+    const above = parent && parent !== bone ? place(parent) : ORIGIN
     const here = {
       x: above.x + bone.rest.position.x,
       y: above.y + bone.rest.position.y,

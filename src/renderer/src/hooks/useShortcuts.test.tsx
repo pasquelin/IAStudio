@@ -390,3 +390,31 @@ describe('useShortcuts', () => {
     expect(onCommand).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * The arrows are the interface's unless a GESTURE is holding the flight. Claimed under a
+ * permanent one — where `isFlying` is unconditionally true — they were cancelled in the capture
+ * phase for the whole window, and every tree, menu and slider stopped answering them.
+ */
+it('leaves the arrows to the interface when no gesture holds the flight', () => {
+  const held: string[][] = []
+  renderHook(
+    () =>
+      useShortcuts({
+        scope: 'scene',
+        enabled: true,
+        onCommand: () => {},
+        isFlying: () => true,
+        flightOwnsArrows: () => false,
+        onMotionChange: motions => held.push([...motions]),
+      }),
+    { wrapper: ShortcutsFixture },
+  )
+
+  fireEvent.keyDown(window, { code: 'ArrowUp' })
+  expect(held).toEqual([])
+
+  // The letters stay the camera's either way — that is the whole point of a permanent flight.
+  fireEvent.keyDown(window, { code: 'KeyW' })
+  expect(held).toEqual([['forward']])
+})

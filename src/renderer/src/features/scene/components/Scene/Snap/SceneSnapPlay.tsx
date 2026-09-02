@@ -1,5 +1,6 @@
 import { mdiAlertCircleOutline, mdiPlay, mdiStop } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { faultsOf } from '@shared/domain/gameRuntime'
 import { ToolButton } from '@/components/ToolButton'
 import { tipFor } from '@/helpers/tooltip'
 import { openScriptAt } from '@/helpers/openScript'
@@ -14,12 +15,7 @@ export type SceneSnapPlayProps = { documentId: string }
 export function SceneSnapPlay({ documentId }: SceneSnapPlayProps) {
   const { t } = useTranslation()
   const report = usePlay(state => playReportOf(state, documentId))
-  // Both, never one OR the other: a game that has a script fault and an engine error has two
-  // things wrong with it, and showing the first count hid the second.
-  const faults = [
-    ...report.errors.map(one => `${one.script}:${one.line} — ${one.message}`),
-    ...report.logs.filter(entry => entry.level === 'error').map(entry => entry.message),
-  ]
+  const faults = faultsOf(report)
   // The last one an editor can OPEN. A log line names no line, so it opens nothing.
   const addressable = report.errors.findLast(one => one.line > 0) ?? null
 

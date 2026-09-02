@@ -50,6 +50,14 @@ export type RuntimeReport = {
   veil: number
 }
 
+/** Script faults first, then log lines at error — both, never one or the other. */
+export function faultsOf(report: RuntimeReport): readonly string[] {
+  return [
+    ...report.errors.map(one => `${one.script}:${one.line} — ${one.message}`),
+    ...report.logs.filter(entry => entry.level === 'error').map(entry => entry.message),
+  ]
+}
+
 export const NOT_PLAYING: RuntimeReport = {
   state: 'edit',
   tick: 0,

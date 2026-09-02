@@ -1,6 +1,6 @@
 import { TIMELINE_TEMPLATES } from './animation'
 import { TEMPLATES_BY_GROUP } from './sceneTemplate'
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import { action, NODE_ID, type ActionField, type AssistantAction } from './assistantAction'
 import { COMPONENT_TYPES } from './componentRegistry'
 
 /**
@@ -9,13 +9,6 @@ import { COMPONENT_TYPES } from './componentRegistry'
  * `reach: 'mcp'` for all three: the briefing the window's own assistant reads is already at its
  * width, and three more entries push it past. The inspector is how the window does this.
  */
-const nodeIdField: ActionField = {
-  key: 'nodeId',
-  kind: 'text',
-  labelKey: 'assistant.fields.nodeId',
-  required: true,
-}
-
 const componentTypeField: ActionField = {
   key: 'type',
   kind: 'choice',
@@ -32,7 +25,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [nodeIdField, componentTypeField],
+    fields: [NODE_ID, componentTypeField],
   }),
   action({
     name: 'component.detach',
@@ -41,7 +34,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [nodeIdField, componentTypeField],
+    fields: [NODE_ID, componentTypeField],
   }),
   action({
     /**
@@ -56,7 +49,7 @@ export const GAME_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [
-      nodeIdField,
+      NODE_ID,
       componentTypeField,
       { key: 'field', kind: 'text', labelKey: 'assistant.fields.componentField', required: true },
       { key: 'value', kind: 'text', labelKey: 'assistant.fields.componentValue', required: true },
