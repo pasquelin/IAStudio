@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -13,6 +13,7 @@ import type { Asset } from '@shared/domain/asset'
 import type { SaveAnimationRequest } from '@shared/ipc'
 import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
 import { useAnimationViews } from '@/stores/animationView'
+import { useSettings } from '@/stores/settings'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { CharacterWindow } from './CharacterWindow'
 
@@ -34,6 +35,9 @@ const flown = vi.hoisted((): string[][] => [])
 /** Whether the persistent flight was armed, each time it was said. */
 const navigated = vi.hoisted((): boolean[] => [])
 
+/** Every viewport dressing handed to the engine, in order — the decor AND the navigation. */
+const configured = vi.hoisted((): Record<string, unknown>[] => [])
+
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
     constructor(options: unknown) {
@@ -43,7 +47,9 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     mount = vi.fn()
     dispose = vi.fn()
     apply = vi.fn()
-    configure = vi.fn()
+    configure = (next: Record<string, unknown>) => {
+      configured.push(next)
+    }
     setSkeletons = vi.fn()
     setPoseMode = vi.fn()
     setMode = vi.fn()
@@ -111,6 +117,7 @@ beforeEach(() => {
   navigated.length = 0
   holds.length = 0
   carried.length = 0
+  configured.length = 0
   clearCharacters()
   // The whole view, never the one flag a case happens to read: a padlock left closed by the case
   // before was what made the next one pass, and the leak showed only when the bar moved.
@@ -126,6 +133,29 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks()
+})
+
+/**
+ * A rig is EDITED here, gizmo and selection and all, so how the view turns belongs to the person
+ * — while the decor stays this window's own, which is bones on a grid and none of the studio's
+ * helpers. The window used to freeze both halves on the defaults.
+ */
+it('follows the person on how the view turns, and nothing else of the studio', async () => {
+  render(<CharacterWindow assetId={ASSET} />)
+  await waitFor(() => expect(configured.length).toBeGreaterThan(0))
+
+  // Changed while the window is OPEN, which is how a preference is changed: the settings live in
+  // another window, and this one must not have to be closed for the change to land.
+  act(() =>
+    useSettings.setState(state => ({
+      settings: { ...state.settings, three: { ...state.settings.three, orbitUnderCursor: true } },
+    })),
+  )
+
+  await waitFor(() => expect(configured.at(-1)?.orbitUnderCursor).toBe(true))
+  // Its own decor all the same, untouched by what the studio happens to show.
+  expect(configured.at(-1)?.showGrid).toBe(true)
+  expect(configured.at(-1)?.lightHelpers).toBe('off')
 })
 
 // Asked for at the first sight of the window: a joint could be moved and never turned, and the

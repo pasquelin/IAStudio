@@ -419,6 +419,20 @@ export const SETTING_REGISTRY = [
     dependsOn: { path: 'three.showGrid', equals: true },
   }),
   setting({
+    path: 'three.orbitAroundSelection',
+    kind: 'boolean',
+    section: 'spaces.three',
+    titleKey: 'settings.orbitAroundSelection.title',
+    helpKey: 'settings.orbitAroundSelection.help',
+  }),
+  setting({
+    path: 'three.orbitUnderCursor',
+    kind: 'boolean',
+    section: 'spaces.three',
+    titleKey: 'settings.orbitUnderCursor.title',
+    helpKey: 'settings.orbitUnderCursor.help',
+  }),
+  setting({
     path: 'three.flySpeed',
     kind: 'slider',
     section: 'spaces.three',

@@ -49,16 +49,38 @@ Three ways to move, which coexist.
 
 | Gesture | Effect |
 |---|---|
-| **Left-click + drag** in empty space | turns the view around the point being looked at |
+| **Alt + left-click + drag** | turns the view |
+| **Left-click + drag** in empty space | the same, holding nothing else |
+| **Middle button + drag** | slides the view sideways |
+| **Shift + Alt + left-click + drag** | the same, for a trackpad with no middle button |
 | **Wheel** | moves forward and back, **towards whatever the pointer aims at** |
 | **Right-click + drag** *(see below)* | flies |
 
-This is the default mode. You turn **around** the scene, as if walking round it.
+This is the default mode. You turn **around** the scene, as if walking round it. These are the
+gestures of Unity, Unreal and Maya: if you come from any of the three, there is nothing to relearn.
 
 > **The wheel travels towards what you aim at, and stops at nothing.** The point the view turns
 > around moves onto whatever the pointer names, and the camera **crosses** it if you keep going —
 > there is no invisible wall to slow down against and never reach. The step follows the distance
 > of what you aim at: wide far off, fine up close.
+
+#### What the view turns around
+
+This is the question that loses you your scene when nobody answers it. Three answers, in order:
+
+1. **What is selected**, while it is on screen — the very point the gizmo sits on. That is the
+   *Orbit around selection* setting, on out of the box;
+2. **What the pointer is over** as the gesture begins, if you turned *Orbit under the cursor* on
+   in the settings;
+3. otherwise, **the last point looked at** — the one the wheel, a sideways slide or <kbd>F</kbd>
+   put there.
+
+Both preferences live in **Settings ▸ Workspaces ▸ Modelling**. A selection off screen never serves as a
+point of rotation: the view would set off to find it.
+
+> **<kbd>F</kbd> frames the selection**, and puts the point of rotation back on it. That is the
+> gesture to remember when you no longer know where you are — it is the same in Blender, Unity,
+> Unreal and Maya.
 
 ### Flying through the scene — a button held
 
@@ -76,7 +98,7 @@ You move **through** the scene instead of around it, as in a video game. Release
 the camera returns to its normal mode.
 
 The button keeps everything it already did: the left one goes on turning around the scene and
-picking on release, the right one on moving the view. The keyboard is added, it replaces nothing.
+picking on release. The keyboard is added, it replaces nothing.
 One reservation: while you hold a tool's handle the keys do not move the camera — otherwise one
 gesture would move both the object and the point of view.
 

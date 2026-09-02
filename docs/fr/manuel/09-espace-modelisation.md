@@ -50,16 +50,39 @@ Trois façons de se déplacer, qui coexistent.
 
 | Geste | Effet |
 |---|---|
-| **Clic gauche + glisser** dans le vide | fait tourner la vue autour du point regardé |
+| **Alt + clic gauche + glisser** | fait tourner la vue |
+| **Clic gauche + glisser** dans le vide | la même chose, sans rien tenir d’autre |
+| **Bouton du milieu + glisser** | déplace la vue latéralement |
+| **Maj + Alt + clic gauche + glisser** | la même chose, pour un trackpad qui n’a pas de bouton du milieu |
 | **Molette** | avance et recule **vers ce que vise le pointeur** |
 | **Clic droit + glisser** *(voir ci-dessous)* | fait voler |
 
-C’est le mode par défaut. On tourne **autour** de la scène, comme si on en faisait le tour.
+C’est le mode par défaut. On tourne **autour** de la scène, comme si on en faisait le tour. Ces
+gestes sont ceux d’Unity, d’Unreal et de Maya : si vous venez de l’un des trois, vous n’avez rien
+à réapprendre.
 
 > **La molette avance vers ce que vous visez, et ne bute sur rien.** Le point autour duquel la vue
 > tourne se replace sur ce que le pointeur désigne, et la caméra le **traverse** si vous continuez
 > — il n’y a pas de mur invisible devant lequel on ralentit sans jamais arriver. Le pas suit la
 > distance de ce que vous visez : vaste au loin, fin de près.
+
+#### Autour de quoi la vue tourne
+
+C’est la question qui fait perdre sa scène quand on ne s’en occupe pas. Trois réponses, dans
+l’ordre :
+
+1. **Ce qui est sélectionné**, si c’est visible à l’écran — le point même où se pose le gizmo.
+   C’est le réglage *Tourner autour de la sélection*, activé d’origine ;
+2. **Ce que le pointeur survole** au début du geste, si vous avez activé *Tourner sous le
+   curseur* dans les réglages ;
+3. sinon, **le dernier point regardé** — celui que la molette, un déplacement latéral ou
+   <kbd>F</kbd> ont posé.
+
+Les deux réglages sont dans **Réglages ▸ Espaces de travail ▸ Modélisation**. Une sélection hors de l’écran ne sert
+jamais de point de rotation : la vue partirait la chercher.
+
+> **<kbd>F</kbd> cadre la sélection**, et repose le point de rotation dessus. C’est le geste à
+> retenir quand on ne sait plus où l’on est — il est le même dans Blender, Unity, Unreal et Maya.
 
 ### Voler dans la scène — un bouton maintenu
 
@@ -78,8 +101,7 @@ On se déplace **à travers** la scène au lieu d’en faire le tour, comme dans
 Relâchez le bouton, la caméra reprend son mode normal.
 
 Le bouton garde par ailleurs ce qu’il faisait : le gauche continue de tourner autour de la scène
-et de sélectionner au relâchement, le droit de déplacer la vue. Le clavier s’ajoute, il ne
-remplace rien. Une seule réserve : tant que vous tenez la poignée d’un outil, les touches ne
+et de sélectionner au relâchement. Le clavier s’ajoute, il ne remplace rien. Une seule réserve : tant que vous tenez la poignée d’un outil, les touches ne
 déplacent pas la caméra — sans quoi le même geste bougerait l’objet et le point de vue.
 
 > **Les touches sont lues à leur position physique.** WASD sur un clavier QWERTY et ZQSD sur un

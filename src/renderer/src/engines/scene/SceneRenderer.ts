@@ -34,7 +34,8 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { anglesFromDirection, type SphericalAngles } from '@shared/domain/angles'
 import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
 import { clampFlySpeed, speedAfterWheel } from './flySpeed'
-import { notchesOf, PIVOT_AHEAD } from '../viewport/dolly'
+import { notchesOf } from '../viewport/dolly'
+import { gazeTargetOf, PIVOT_AHEAD } from '../viewport/orbitPivot'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -163,7 +164,7 @@ import {
   type ModelCache,
   type ModelSource,
 } from './modelCache'
-import { applyTransform, carry, placePivot, release, transformOf } from './pivot'
+import { applyTransform, carry, centreOf, placePivot, release, transformOf } from './pivot'
 import {
   applyShadowFlags,
   applyShadowQuality,
@@ -438,6 +439,14 @@ function wasClick(from: { x: number; y: number } | null, event: PointerEvent): b
   return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
 }
 
+/**
+ * What a camera LOOKS AT — the pivot brought onto its line of sight. Four readers here take the
+ * pivot for that point and restore it by `lookAt`, and the pointer routinely leaves it off axis.
+ */
+function lookedAtBy(camera: Camera, pivot: ThreeVector3): ThreeVector3 {
+  return gazeTargetOf(camera.position, camera.getWorldDirection(new ThreeVector3()), pivot)
+}
+
 /** Where a shot's target stands and where its rail puts it: a camera driven per frame allocates
  * nothing. */
 const aimed = new ThreeVector3()
@@ -615,6 +624,12 @@ export class SceneRenderer {
     // The nodes alone, and the helpers on purpose: a lamp's glyph is a place one looks AT, never
     // a surface one lands the pivot on.
     pickTargets: () => [...this.objects.values()],
+    // Blender's Navigation panel, under the two names it gives them — see `orbitPivot`.
+    pivotMode: () => ({
+      aroundSelection: this.view.orbitAroundSelection,
+      underCursor: this.view.orbitUnderCursor,
+    }),
+    selectionCentre: () => this.selectionCentre(),
     onWheel: event => this.spendWheelOnSpeed(event),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
@@ -1421,6 +1436,9 @@ export class SceneRenderer {
     if (!orbit) return
 
     const camera = this.viewport.camera
+    // The point LOOKED AT: a side view centred on a pivot the pointer left off the axis swings
+    // the camera onto a side of THAT, and `orbit.update()` ends on `lookAt` and keeps it there.
+    orbit.target.copy(lookedAtBy(camera, orbit.target))
     const distance = camera.position.distanceTo(orbit.target) || DEFAULT_VIEW_DISTANCE
     const { x, y, z } = viewPosition(direction, orbit.target, distance)
 
@@ -1458,7 +1476,11 @@ export class SceneRenderer {
   }
 
   private placePanes(): void {
-    const target = this.viewport.orbit?.target ?? this.pivot.position
+    const main = this.viewport.perspective
+    const pivot = this.viewport.orbit?.target
+    // What the MAIN view looks at, never the raw pivot: the sides would otherwise open centred
+    // on a point the pointer left off the axis — see `viewPlacement`, which says why.
+    const target = pivot ? lookedAtBy(main, pivot) : this.pivot.position
     this.viewport.setPaneHeight(this.sceneHeight())
 
     for (const [index, view] of this.paneViews.entries()) {
@@ -2216,11 +2238,14 @@ export class SceneRenderer {
   /** Where the free camera stands and what it looks at, as plain numbers anything may hold. */
   viewPlacement(): CameraPlacement {
     const camera = this.viewport.perspective
-    // The orbit's target when there is one, and a point ahead of the camera otherwise: a
-    // viewport with no controls still has a direction, and `lookAt(0,0,0)` would be a lie.
-    const target =
-      this.viewport.orbit?.target ??
-      camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
+    const pivot = this.viewport.orbit?.target
+    // Brought back ONTO the line of sight: the pivot is where the pointer put it, off centre by
+    // design, and every reader of this restores a placement by `lookAt` — a framing published
+    // from an off-axis pivot comes back turned. A viewport with no controls has a gaze all the
+    // same, and `lookAt(0, 0, 0)` would be a lie.
+    const target = pivot
+      ? lookedAtBy(camera, pivot)
+      : camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
 
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
@@ -4072,6 +4097,18 @@ export class SceneRenderer {
     return this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
   }
 
+  /**
+   * Where the view turns when it turns around the selection — the SAME centre `placePivot` puts
+   * the gizmo on, computed by the same function, so the two can never name different points.
+   *
+   * Recomputed rather than read off `this.pivot`: that one is only placed while a gizmo exists,
+   * and a mode without one still has a selection — the reading `frameSelection` already makes.
+   */
+  private selectionCentre(): ThreeVector3 | null {
+    const objects = this.selectedObjects()
+    return objects.length > 0 ? centreOf(objects, new ThreeVector3()) : null
+  }
+
   private attachGizmo(): void {
     const gizmo = this.gizmo
     if (!gizmo) return
@@ -4738,15 +4775,18 @@ export class SceneRenderer {
     const from = camera.position.clone()
     const facing = camera.quaternion.clone()
 
-    helper.center.copy(orbit.target)
+    // The point LOOKED AT, never the raw pivot: off the axis it would name a side of the pivot
+    // rather than the side of the view, and `viewFrom` would send the camera there.
+    const looked = lookedAtBy(camera, orbit.target)
+    helper.center.copy(looked)
     // The helper reads where the camera stands to work out where it would send it, and one
     // sitting exactly on its target stands nowhere: every side would come back as the same
     // point. Pushed off first, and put back below whatever the click turns out to be.
-    if (from.equals(orbit.target)) camera.position.z += DEFAULT_VIEW_DISTANCE
+    if (from.equals(looked)) camera.position.z += DEFAULT_VIEW_DISTANCE
 
     const hit = helper.handleClick(event)
     if (hit) helper.update(HELPER_SETTLES)
-    const direction = hit ? directionOf(camera.position.clone().sub(orbit.target)) : null
+    const direction = hit ? directionOf(camera.position.clone().sub(looked)) : null
 
     // Put back everything the helper moved. It was only ever asked which side it aimed at; the
     // move itself belongs to `viewFrom`, which reads the distance off the camera it is about to

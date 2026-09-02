@@ -7,6 +7,7 @@ import {
   type Object3D,
   OrthographicCamera,
   PerspectiveCamera,
+  Plane,
   Raycaster,
   Scene,
   SRGBColorSpace,
@@ -19,7 +20,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
-import { dollyTo, notchesOf, PIVOT_AHEAD } from './dolly'
+import { dollyTo, notchesOf } from './dolly'
+import { gestureOf, type Gesture } from './gestures'
+import { orbitAround } from './orbit'
+import { gazeTargetOf, onScreen, pivotFor, type PivotMode } from './orbitPivot'
+import { panBy } from './pan'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
 import {
@@ -37,6 +42,12 @@ import { frustumHeight } from './screenScale'
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
 const ORIGIN = new Vector3()
+
+/** The ground the studio is built on. What a ray that met no object falls back to. */
+const GROUND = new Plane(new Vector3(0, 1, 0), 0)
+
+/** No preference set: the view turns around the point it last settled on, and nothing else. */
+const SETTLED_ONLY: PivotMode = { aroundSelection: false, underCursor: false }
 
 /**
  * The parts of a viewport every workspace repeats: a canvas it owns, a renderer, a camera that
@@ -117,6 +128,13 @@ export type ViewportEngineOptions = {
    * they set the speed. `true` consumes the event and no dolly happens.
    */
   onWheel?: (event: WheelEvent) => boolean
+  /**
+   * Centre of what the caller has selected, in world space, or `null` where nothing is. Where the
+   * gizmo sits, and what Blender turns around under the name *Orbit Around Selection*.
+   */
+  selectionCentre?: () => Vector3 | null
+  /** The two navigation preferences the pivot cascade reads — see `orbitPivot`. */
+  pivotMode?: () => PivotMode
   /**
    * Draws the scene the way its owner COMPOSES it, and answers whether it drew anything.
    *
@@ -252,7 +270,24 @@ const DEFAULT_REACH = 10
 
 /** How long a wheel must be still before the framing it left is published. */
 const WHEEL_SETTLES_MS = 250
-const gaze = new Vector3()
+
+/**
+ * Whether `OrbitControls` still owns the gestures of the camera it holds — see `armOrbits`.
+ *
+ * 🛑 The declared hole: disabled, its TOUCH handlers go with it, so pinch-zoom and two-finger pan
+ * are dead on a perspective pane. `dragBy` follows ONE `pointerId`, so a second finger is dropped.
+ */
+function ownsGestures(controls: OrbitControls): boolean {
+  return controls.object instanceof OrthographicCamera
+}
+
+/**
+ * Puts a pivot back on the line of sight, keeping the depth it had. What every surface that
+ * hands its gestures back to `OrbitControls` has to do first — see `settleOrbit`.
+ */
+function aimPivotAhead(camera: ViewportCamera, pivot: Vector3): void {
+  pivot.copy(gazeTargetOf(camera.position, camera.getWorldDirection(borrowedAim), pivot))
+}
 
 /** The camera an added view is currently drawing through — a borrowed one wins over both. */
 function cameraOf(pane: ExtraPane): ViewportCamera {
@@ -277,6 +312,21 @@ export class ViewportEngine {
    * full-scene raycast at trackpad rates — 8 to 32 ms a notch on a scene with no BVH tree.
    */
   private wheelAim: { readonly aim: Vector3; readonly aimed: Vector3 } | null = null
+  /**
+   * The navigation gesture the pointer holds, or `null`. One at a time, and only ever started on
+   * a perspective pane — an orthographic one keeps every gesture `OrbitControls` gives it.
+   */
+  private drag: {
+    readonly kind: Gesture
+    readonly pane: number
+    readonly pointerId: number
+    clientX: number
+    clientY: number
+    /** Where the press was, the pivot being decided from THERE at the first move — see `onNavigate`. */
+    pressedAt: PointerPosition | null
+    /** Whether a pixel was actually travelled, so a click that never moved publishes nothing. */
+    moved: boolean
+  } | null = null
   /** Pending « the wheel has stopped ». One gesture reports once — see `reportWheelSettled`. */
   private wheelSettling: ReturnType<typeof setTimeout> | null = null
   private output: ViewportOutput = {}
@@ -287,6 +337,8 @@ export class ViewportEngine {
   private active = 0
   /** Whether another gesture holds the pointer — see `freezePanes`. */
   private frozen = false
+  /** Which pane navigation answers in, or `null` where none does — see `armOrbits`. */
+  private armedPane: number | null = 0
   /**
    * Where the pointer last was, kept even while frozen so thawing can re-arm from it. Written in
    * place: this takes every pointer move, and a fresh object per move is garbage per move.
@@ -385,8 +437,14 @@ export class ViewportEngine {
     // sized for it.
     next.zoom = 1
 
+    // An orthographic pane hands every gesture back to `OrbitControls`, and its `update()` runs
+    // again — see `settleOrbit`. A pivot left where the pointer named it would swing the view on
+    // the very first frame after the swap.
+    if (kind === 'orthographic' && this.controls) aimPivotAhead(next, this.controls.target)
+
     this.fitProjection()
     if (this.controls) this.controls.object = next
+    this.armOrbits(this.armedPane)
     this.requestRender()
   }
 
@@ -508,14 +566,19 @@ export class ViewportEngine {
   }
 
   /**
-   * Hands the orbits to one pane and takes them from every other. `null` leaves all of them off,
-   * which is both a frozen viewport and a pointer that has left the surface.
+   * Hands the navigation to one pane and takes it from every other. `null` leaves all of them
+   * off, which is both a frozen viewport and a pointer that has left the surface.
+   *
+   * `OrbitControls.enabled` is NOT that flag: it says whether the control still owns the
+   * gestures, which it does on an orthographic pane only. It calls `update()` from its own move
+   * handlers, so refusing it the pointer is the one way to stop it re-aiming at its target.
    */
   private armOrbits(owner: number | null): void {
     // A single layout keeps `active` at 0, so the main orbit reads the same test as the others.
-    if (this.controls) this.controls.enabled = owner === 0
+    this.armedPane = owner
+    if (this.controls) this.controls.enabled = owner === 0 && ownsGestures(this.controls)
     for (const [index, pane] of this.extras.entries()) {
-      if (pane.controls) pane.controls.enabled = owner === index + 1
+      if (pane.controls) pane.controls.enabled = owner === index + 1 && ownsGestures(pane.controls)
     }
   }
 
@@ -641,14 +704,10 @@ export class ViewportEngine {
     const drawn = cameraOf(pane)
     if (pane.controls) {
       pane.controls.object = drawn
-      // The target is put in FRONT of the borrowed camera before anything updates: `update()`
-      // ends on `object.lookAt(target)`, so a target left where the pane last orbited would
-      // swing that camera round the moment it is lent — and again on every frame the pointer
-      // merely hovers the pane, with no gesture to report it.
-      if (camera) {
-        camera.getWorldDirection(borrowedAim)
-        pane.controls.target.copy(camera.position).addScaledVector(borrowedAim, PIVOT_AHEAD)
-      }
+      // Both ways round, a lent camera and one handed back: `update()` ends on `lookAt(target)`,
+      // so a target left where the pane last turned swings that camera the moment it changes hands.
+      aimPivotAhead(drawn, pane.controls.target)
+      this.armOrbits(this.armedPane)
       pane.controls.update()
     }
     this.layOutPanes()
@@ -670,7 +729,13 @@ export class ViewportEngine {
     const next = kind === 'perspective' ? pane.perspective : pane.orthographic
     next.position.copy(previous.position)
     next.quaternion.copy(previous.quaternion)
-    if (pane.controls) pane.controls.object = next
+    if (pane.controls) {
+      // The two `setProjection` makes for pane 0, and for the same reason: an orthographic pane
+      // takes its gestures back, and `update()` would swing it round a pivot left off the axis.
+      if (kind === 'orthographic') aimPivotAhead(next, pane.controls.target)
+      pane.controls.object = next
+      this.armOrbits(this.armedPane)
+    }
 
     this.layOutPanes()
     this.requestRender()
@@ -697,7 +762,9 @@ export class ViewportEngine {
     this.lastPointer.clientX = event.clientX
     this.lastPointer.clientY = event.clientY
 
-    if (this.layout !== 'single' && !this.frozen) {
+    // `this.drag` beside the freeze: a navigation gesture holds the pointer just as a handle does,
+    // and the pane under it must not change halfway — the wheel would then act on another view.
+    if (this.layout !== 'single' && !this.frozen && !this.drag) {
       const over = this.paneAtPointer(event)
       if (over !== null) this.active = over
       this.armOrbits(over)
@@ -802,6 +869,14 @@ export class ViewportEngine {
     this.host = host
     host.addEventListener('pointerdown', this.armPaneUnderPointer, true)
     host.addEventListener('pointermove', this.armPaneUnderPointer, true)
+    // After the arming, never before: it settles which pane is worked in, and this reads that.
+    host.addEventListener('pointerdown', this.onNavigate, true)
+    // The rest of the gesture on the WINDOW, and no pointer capture at all: a drag straying off
+    // the panel must go on turning, and `TransformControls` grabs the very same canvas — a
+    // capture taken here is one taken from IT, and released under a handle still being pulled.
+    window.addEventListener('pointermove', this.onNavigate, true)
+    window.addEventListener('pointerup', this.onNavigateRelease, true)
+    window.addEventListener('pointercancel', this.onNavigateRelease, true)
     // Not passive: the dolly cancels the event, and a passive listener may not. On the host for
     // the reason above — `OrbitControls` posts its own wheel listener on the canvas.
     host.addEventListener('wheel', this.onWheelCapture, { capture: true, passive: false })
@@ -813,6 +888,8 @@ export class ViewportEngine {
       if (this.onResize()) this.drawPendingFrame()
     })
     this.observer.observe(canvas)
+    // `OrbitControls` is born enabled, on a camera it may not own — see `armOrbits`.
+    this.armOrbits(this.armedPane)
     // Not drawn: the engine that owns this one is still building, and `onFrame` would run on it.
     this.onResize()
   }
@@ -832,6 +909,13 @@ export class ViewportEngine {
 
     this.host?.removeEventListener('pointerdown', this.armPaneUnderPointer, true)
     this.host?.removeEventListener('pointermove', this.armPaneUnderPointer, true)
+    this.host?.removeEventListener('pointerdown', this.onNavigate, true)
+    window.removeEventListener('pointermove', this.onNavigate, true)
+    window.removeEventListener('pointerup', this.onNavigateRelease, true)
+    window.removeEventListener('pointercancel', this.onNavigateRelease, true)
+    // Cleared like the wheel's own registers: a drag left set is one the next mount resumes
+    // from coordinates a panel ago, and the camera jumps on the first move.
+    this.drag = null
     this.host?.removeEventListener('wheel', this.onWheelCapture, true)
     this.host = null
 
@@ -952,7 +1036,7 @@ export class ViewportEngine {
     // An orthographic pane keeps the wheel `OrbitControls` gives it: it shows the same thing
     // wherever it stands, so it zooms by scaling its frustum. Its `zoomToCursor` is NOT the way to
     // anchor it — that one reads the whole canvas, so it drifts in every pane of a quad layout.
-    if (!(camera instanceof PerspectiveCamera) || !orbit?.enabled) return
+    if (!(camera instanceof PerspectiveCamera) || !orbit || this.armedPane !== index) return
 
     const held = this.wheelAim ?? this.aimWheel(event, camera, orbit)
     if (!held) return
@@ -960,15 +1044,16 @@ export class ViewportEngine {
 
     const move = dollyTo({
       position: camera.position,
-      forward: camera.getWorldDirection(gaze),
       aim: held.aim,
       aimed: held.aimed,
       notches: notchesOf(event.deltaY),
     })
 
     camera.position.copy(move.position)
-    orbit.target.copy(move.pivot)
-    orbit.update()
+    // Crossing leaves what was aimed at BEHIND: the pivot it had is kept while it is still in
+    // front, and only a pivot the camera has passed rests ahead — the next notch re-aims anyway.
+    if (move.pivot) orbit.target.copy(move.pivot)
+    else aimPivotAhead(camera, orbit.target)
     this.requestRender()
     this.reportWheelSettled(index)
     // Held past a crossing, the aimed point sits BEHIND the camera and the distance to it grows
@@ -1008,15 +1093,178 @@ export class ViewportEngine {
     if (!ndc) return null
 
     this.raycaster.setFromCamera(this.wheelNdc.set(ndc.x, ndc.y), camera)
-    const hit = this.raycaster.intersectObjects(this.options.pickTargets?.() ?? [], true)[0]
     // Nothing under the pointer still deserves a distance: without one, a wheel over empty sky
     // would have nothing to scale its step by. The pivot's own distance is what the view implies.
     const reach = camera.position.distanceTo(orbit.target) || DEFAULT_REACH
 
     return {
       aim: this.raycaster.ray.direction.clone(),
-      aimed: hit ? hit.point : this.raycaster.ray.at(reach, new Vector3()),
+      aimed: this.metByRay(reach) ?? this.raycaster.ray.at(reach, new Vector3()),
     }
+  }
+
+  /**
+   * What the ray already set on `raycaster` meets: an object first, then the GROUND — without
+   * which every gesture over the floor met nothing, `pickTargets` naming the nodes alone.
+   */
+  private metByRay(limit: number): Vector3 | null {
+    const hit = this.raycaster.intersectObjects(this.options.pickTargets?.() ?? [], true)[0]
+    if (hit) return hit.point
+
+    // Refused beyond what the view already implies: the plane is INFINITE, so a pointer a hair
+    // under the horizon meets it kilometres away, and the wheel spends 12% of that in one notch.
+    const ground = this.raycaster.ray.intersectPlane(GROUND, new Vector3())
+    return ground && this.raycaster.ray.origin.distanceTo(ground) <= limit ? ground : null
+  }
+
+  /** The same, from a pointer rather than from a ray already cast. */
+  private metByPointer(
+    event: PointerPosition,
+    camera: PerspectiveCamera,
+    limit: number,
+  ): Vector3 | null {
+    const ndc = this.pointerNdcOf(event)
+    if (!ndc) return null
+
+    this.raycaster.setFromCamera(this.wheelNdc.set(ndc.x, ndc.y), camera)
+    return this.metByRay(limit)
+  }
+
+  /**
+   * The selection's centre, and only while it is on SCREEN — the known complaint about the same
+   * setting in Unreal being that a distant selection yanks the view across the level.
+   */
+  private visibleSelection(camera: PerspectiveCamera): Vector3 | null {
+    const centre = this.options.selectionCentre?.()
+    return centre && onScreen(centre.clone().project(camera)) ? centre : null
+  }
+
+  /** Where a gesture about to start will turn — decided once, at the press. */
+  private pivotAt(at: PointerPosition, camera: PerspectiveCamera, orbit: OrbitControls): Vector3 {
+    // A camera moved since the last frame drew still carries that frame's world matrix, and both
+    // readings below go through it — a projection and a ray. `F` then a drag is exactly that.
+    camera.updateMatrixWorld()
+
+    return pivotFor(
+      {
+        selection: () => this.visibleSelection(camera),
+        // Bounded by what the camera SEES, never by the distance to the pivot: that one bounds
+        // the wheel, which spends 12% of what it aims at and has a fallback. Here there is none —
+        // refusing the ground leaves the pivot where it was, and the preference seems inert.
+        underCursor: () => this.metByPointer(at, camera, camera.far),
+        settled: orbit.target.clone(),
+      },
+      this.options.pivotMode?.() ?? SETTLED_ONLY,
+    )
+  }
+
+  /**
+   * The drag, taken from `OrbitControls` for the reason `orbit.ts` carries. Registered AFTER
+   * `armPaneUnderPointer`, which settles which pane is worked in before this reads it.
+   */
+  private readonly onNavigate = (event: PointerEvent): void => {
+    if (this.drag) return this.dragBy(event)
+    if (event.type !== 'pointerdown') return
+
+    const kind = gestureOf(event)
+    if (kind === null) return
+
+    const index = this.paneAtPointer(event)
+    if (index === null) return
+
+    const camera = this.cameraOfPane(index)
+    const orbit = this.orbitOfPane(index)
+    // Perspective only, exactly as the wheel: an orthographic pane shows the same thing wherever
+    // it stands, so every gesture it has stays with `OrbitControls`.
+    if (!(camera instanceof PerspectiveCamera) || !orbit || this.armedPane !== index) return
+    // The same two flags a caller already sets to lock a view down — see `viewFrom`.
+    if (!(kind === 'orbit' ? orbit.enableRotate : orbit.enablePan)) return
+
+    // The pivot is NOT laid here: this capture listener runs ahead of the gizmo, which may grab
+    // its handle on this very press. It is decided at the first move, once that is known.
+    this.drag = {
+      kind,
+      pane: index,
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pressedAt: { clientX: event.clientX, clientY: event.clientY },
+      moved: false,
+    }
+  }
+
+  private dragBy(event: PointerEvent): void {
+    const drag = this.drag
+    if (!drag) return
+    // A second pointer — a stylus, a touch — would otherwise steer the camera by the distance
+    // between two different hands.
+    if (event.pointerId !== drag.pointerId) return
+    // The reading that cannot lie, and what repairs a release swallowed by a native menu or lost
+    // off the window — the same one `SceneRenderer` makes of its flight.
+    if (event.buttons === 0) return this.endDrag()
+    // Re-read, never captured at the press: a gizmo grabs a handle on the very event that starts
+    // this, freezes the panes from its `dragging-changed`, and the drag must die there. That gate
+    // used to be `OrbitControls`, which refused every move while disabled.
+    if (this.armedPane !== drag.pane) return this.endDrag()
+
+    const camera = this.cameraOfPane(drag.pane)
+    const orbit = this.orbitOfPane(drag.pane)
+    // A pane whose camera was swapped mid-drag has nothing left to turn — see `setPaneCamera`.
+    if (!(camera instanceof PerspectiveCamera) || !orbit) return this.endDrag()
+
+    const deltaX = event.clientX - drag.clientX
+    const deltaY = event.clientY - drag.clientY
+    drag.clientX = event.clientX
+    drag.clientY = event.clientY
+    if (deltaX === 0 && deltaY === 0) return
+
+    // A dock still laying out measures nothing, and nothing is what both gestures would move —
+    // published all the same, it repaints every store reading the framing for a view that stood.
+    const height = this.rects[drag.pane]?.height ?? 0
+    if (height === 0) return
+    drag.moved = true
+
+    // Now that the gizmo has NOT taken the press — it would have frozen the panes above.
+    if (drag.pressedAt) {
+      if (drag.kind === 'orbit') orbit.target.copy(this.pivotAt(drag.pressedAt, camera, orbit))
+      drag.pressedAt = null
+    }
+    const common = {
+      position: camera.position,
+      quaternion: camera.quaternion,
+      pivot: orbit.target,
+      deltaX,
+      deltaY,
+      height,
+    }
+
+    if (drag.kind === 'orbit') {
+      const move = orbitAround(common)
+      camera.position.copy(move.position)
+      camera.quaternion.copy(move.quaternion)
+    } else {
+      const move = panBy({ ...common, fieldOfView: camera.fov })
+      camera.position.copy(move.position)
+      orbit.target.copy(move.pivot)
+    }
+
+    this.requestCameraRender()
+  }
+
+  /** `buttons === 0` is the reading that cannot lie: two buttons released out of order. */
+  private readonly onNavigateRelease = (event: PointerEvent): void => {
+    // The same reading `dragBy` makes: a second pointer going up must not end a mouse's orbit.
+    if (event.pointerId !== this.drag?.pointerId) return
+    if (event.type === 'pointerup' && event.buttons !== 0) return
+    this.endDrag()
+  }
+
+  private endDrag(): void {
+    const drag = this.drag
+    this.drag = null
+    // A press that never travelled a pixel is not a framing anybody decided — see the note on
+    // `onCameraSettled`, which a store reads and repaints everything from.
+    if (drag?.moved === true) this.options.onCameraSettled?.(drag.pane)
   }
 
   /**
@@ -1442,6 +1690,8 @@ export class ViewportEngine {
     // settles, and false once it has — which is what ends the loop instead of running forever.
     // Every pane is asked: the one being dragged is not always the one that is still settling.
     // Walked field by field rather than over `paneOrbits`, which would allocate a list per frame.
+    // Only where `OrbitControls` still owns the gestures — `armOrbits` says why `enabled` is
+    // that reading, and why `update()` must never run on a pane the pointer turns itself.
     let settling = this.controls?.enabled === true && this.controls.update()
     for (const pane of this.extras) {
       if (pane.controls?.enabled === true && pane.controls.update()) settling = true

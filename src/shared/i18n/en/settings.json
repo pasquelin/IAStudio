@@ -178,6 +178,14 @@
       "title": "Grid size",
       "help": "How far the grid reaches, in metres, and therefore how many squares it has — a square is always one metre. Make it bigger for a wide scene, smaller for a little object sitting near the camera."
     },
+    "orbitAroundSelection": {
+      "title": "Orbit around selection",
+      "help": "When you rotate the 3D view, it turns around whatever is selected rather than around a floating point ahead of you. That is what stops you losing your object as you close in on it. With nothing selected, or with the selection off screen, the view turns around the last point you looked at."
+    },
+    "orbitUnderCursor": {
+      "title": "Orbit under the cursor",
+      "help": "The view turns around whatever the pointer is over when you start rotating, rather than around a point set earlier. Handy for close work with no reframing; surprising if you come from Unity or Unreal, which offer no such option."
+    },
     "flySpeed": {
       "title": "Fly speed",
       "help": "How fast the camera moves when you fly through the 3D view, in metres per second. Too slow and crossing the scene takes ten seconds; too fast and you shoot past it without seeing it."
