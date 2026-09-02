@@ -4228,12 +4228,17 @@ export class SceneRenderer {
 
     const knob = this.pickedKnob()
     if (knob) {
-      // Translate only: a control point is a position, and rotating or scaling one would ask
-      // the gizmo to write something the descriptor has no room for.
-      if (this.mode === 'translate') gizmo.attach(knob)
-      else gizmo.detach()
+      // 🛑 A point is a POSITION, so holding one IS a translation whatever tool is armed: rotating
+      // or scaling would ask the gizmo to write what the descriptor has no room for, and leaving
+      // it detached made a handle one takes and cannot move — which reads as a dead handle.
+      gizmo.setMode('translate')
+      gizmo.attach(knob)
       return
     }
+
+    // Back to the armed tool: holding a point forced translation, and a rotate left behind would
+    // outlive the point that asked for it.
+    if (this.mode !== 'select') gizmo.setMode(this.mode)
 
     const target = gizmoTargetFor(this.mode, this.space, this.selectedObjects(), object =>
       this.applied.get(object.name),
