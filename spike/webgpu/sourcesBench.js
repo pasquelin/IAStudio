@@ -5,9 +5,16 @@
  * `render`, et `projectObject` visite chaque objet, dans la passe de couleur et dans chaque
  * carte d'ombre.
  *
- * Trois cas, même image à l'écran : sans source · sources à `matrixAutoUpdate` vrai (ce que le
- * moteur fait) · sources à `matrixAutoUpdate` faux. La différence entre le premier et le second
- * est le plancher qu'aucun regroupement ne peut rendre.
+ * Cinq cas, même image à l'écran : sans source · sources à `matrixAutoUpdate` vrai (ce que le
+ * moteur fait) · sources à `matrixAutoUpdate` faux · sources sous un conteneur INVISIBLE de la
+ * scène · sources hors du graphe rendu. La différence entre le premier et le second est le
+ * plancher qu'aucun regroupement ne peut rendre ; les deux derniers sont les deux mécanismes
+ * candidats de la phase 2A, et ce banc dit lequel vaut le prix qu'il coûte.
+ *
+ * `hidden` coupe `projectObject` — la couleur ET chaque carte d'ombre — et laisse
+ * `updateMatrixWorld` parcourir. `offgraph` coupe les trois : le conteneur n'est jamais ajouté à
+ * la scène. Ce que `offgraph` ne mesure PAS, et qui n'est pas gratuit dans le moteur : rafraîchir
+ * ces matrices à la main, que le moteur paie par changement de contenu et non par frame.
  *
  * Banc AUTONOME, en JavaScript, sans le moteur : il refait le placement de S2 et S3
  * (`engineScenes.sceneVaried`) en termes three.js et porte ses propres `median`/`seeded`, comme
@@ -15,6 +22,7 @@
  */
 import {
   AmbientLight,
+  Object3D,
   BoxGeometry,
   Color,
   CylinderGeometry,
@@ -38,6 +46,9 @@ const WARMUP = 20
 const BLOCKS = 8
 const FRAMES = 10
 const HIDDEN_LAYER = 2
+
+/** Les cinq façons de tenir les sources. Réduites par `kinds=` pour rejouer un seul cas. */
+const KINDS = (new URLSearchParams(location.search).get('kinds') ?? 'none,auto,frozen,hidden,offgraph').split(',')
 
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 const median = values => {
@@ -104,6 +115,13 @@ function build(count, sources) {
     scene.add(instance)
   }
   if (sources !== 'none') {
+    // Le conteneur des deux mécanismes candidats : invisible DANS la scène, ou hors d'elle.
+    const host = new Object3D()
+    if (sources === 'hidden') {
+      host.visible = false
+      scene.add(host)
+    }
+    const into = sources === 'hidden' || sources === 'offgraph' ? host : scene
     for (const { shape, paint, matrix } of placements) {
       const mesh = new Mesh(shapes[shape], paints[paint])
       matrix.decompose(mesh.position, mesh.quaternion, mesh.scale)
@@ -114,7 +132,7 @@ function build(count, sources) {
         mesh.updateMatrix()
         mesh.matrixAutoUpdate = false
       }
-      scene.add(mesh)
+      into.add(mesh)
     }
   }
 
@@ -129,7 +147,7 @@ export async function runSources(onProgress) {
   const query = new URLSearchParams(location.search)
   const counts = (query.get('counts') ?? '10000,50000').split(',').map(Number)
   for (const count of counts) {
-    for (const sources of ['none', 'auto', 'frozen']) {
+    for (const sources of KINDS) {
       onProgress?.({ count, sources })
       const stage = document.querySelector('#stage')
       stage.replaceChildren()
