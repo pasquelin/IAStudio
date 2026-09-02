@@ -65,8 +65,15 @@ export function usePixelPreview(
     }
 
     settle()
+    // 🛑 The HISTORY as well as the state, and the history is the half that matters: painting
+    // leaves `states` untouched — the pixels are in a texture and the command only records a
+    // patch — so on the state alone the preview never refreshed after a single stroke.
     const stop = useCanvases.subscribe((state, before) => {
-      if (state.states[documentId] !== before.states[documentId]) settle()
+      if (
+        state.states[documentId] !== before.states[documentId] ||
+        state.histories[documentId] !== before.histories[documentId]
+      )
+        settle()
     })
 
     return () => {

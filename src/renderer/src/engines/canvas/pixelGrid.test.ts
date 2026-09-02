@@ -3,6 +3,7 @@ import {
   cellFor,
   cellRuns,
   cellsOfLine,
+  cellsOfRect,
   cellsSpanning,
   gridIsLegible,
   stampRect,
@@ -61,6 +62,23 @@ describe('cellsOfLine', () => {
   it('refuses ends no document can hold rather than walking them', () => {
     expect(cellsOfLine({ x: 0, y: 0 }, { x: Number.NaN, y: 0 })).toEqual([])
     expect(cellsOfLine({ x: 0, y: 0 }, { x: 1e9, y: 0 })).toEqual([])
+  })
+})
+
+describe('cellsOfRect', () => {
+  it('draws the outline alone, and every cell of it once filled', () => {
+    expect(cellsOfRect({ x: 1, y: 1 }, { x: 3, y: 3 }, false)).toHaveLength(8)
+    expect(cellsOfRect({ x: 1, y: 1 }, { x: 3, y: 3 }, true)).toHaveLength(9)
+    expect(cellsOfRect({ x: 3, y: 3 }, { x: 1, y: 1 }, true)).toEqual(
+      cellsOfRect({ x: 1, y: 1 }, { x: 3, y: 3 }, true),
+    )
+  })
+
+  // 🛑 Measured: 4096 a side is 2 415 ms of the UI thread, and the corners come from a caller —
+  // `canvas.drawPixels` names them, so nothing else stands between a model and a frozen window.
+  it('refuses corners no grid can hold rather than walking them', () => {
+    expect(cellsOfRect({ x: 0, y: 0 }, { x: Number.NaN, y: 0 }, true)).toEqual([])
+    expect(cellsOfRect({ x: 0, y: 0 }, { x: 99_999, y: 99_999 }, true)).toEqual([])
   })
 })
 

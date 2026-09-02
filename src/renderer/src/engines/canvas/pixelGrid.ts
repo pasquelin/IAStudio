@@ -149,9 +149,13 @@ export function cellRect(at: Point, cell: number): Rect {
   return { x: at.x * cell, y: at.y * cell, width: cell, height: cell }
 }
 
+/** The walk below is quadratic: 2048 a side costs 323 ms of the UI thread, 4096 costs 2 415 ms. */
+const MAX_RECT_CELLS = 4_194_304
+
 /**
  * The cells of a rectangle between two corners, its outline alone unless `filled`. Ordered by
- * row, so what a caller reads back is what it would have written.
+ * row, so what a caller reads back is what it would have written. Empty past the ceiling, as a
+ * line is past its own — the corners come from a caller and nothing else bounds them.
  */
 export function cellsOfRect(from: Point, to: Point, filled: boolean): Point[] {
   const left = Math.min(from.x, to.x)
@@ -159,6 +163,7 @@ export function cellsOfRect(from: Point, to: Point, filled: boolean): Point[] {
   const top = Math.min(from.y, to.y)
   const bottom = Math.max(from.y, to.y)
   if (!Number.isFinite(left + right + top + bottom)) return []
+  if ((right - left + 1) * (bottom - top + 1) > MAX_RECT_CELLS) return []
 
   const cells: Point[] = []
   for (let y = top; y <= bottom; y += 1) {

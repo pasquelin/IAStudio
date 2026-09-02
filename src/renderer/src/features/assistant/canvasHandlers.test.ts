@@ -180,6 +180,15 @@ describe('the pixel-art grid, driven by value', () => {
     ).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
+  // 🛑 `Number('')` is zero, so a bare "3" used to land on row nought without a word said.
+  it('refuses a cell that does not name both of its coordinates', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['3'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
   // No engine is mounted under a headless run, so the port answers nothing and the refusal names
   // what a caller can act on rather than reporting a success that painted nothing.
   it('says so when nothing was painted', async () => {

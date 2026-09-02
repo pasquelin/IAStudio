@@ -1,6 +1,6 @@
 import type { Scenario } from './run'
 import * as read from './oracle'
-import { pixelArtBoat, paintedDot } from './setups'
+import { boatImage, pixelArtBoat, paintedDot } from './setups'
 
 /**
  * Section 68: the pixel-art grid, set and drawn on by value. What it measures is the CELLS a call
@@ -10,7 +10,10 @@ export const PIXEL_ART_SCENARIOS: readonly Scenario[] = [
   {
     name: '68.1 puts the document on a grid of 32 by 32',
     said: ['Passe ce document en pixel art, avec une grille de 32 sur 32.'],
-    passed: run => read.canvas(run)?.pixelCell !== null && read.canvas(run)?.width === 32,
+    // « ce document » wants one open, as 39.2 does for the same sentence: with none the studio
+    // answers `wrongSurface` and the whole rank reads as the model's fault.
+    setup: boatImage,
+    passed: run => (read.canvas(run)?.pixelCell ?? null) !== null && read.canvas(run)?.width === 32,
   },
   {
     name: '68.2 says whether the grid is on, and how big it is',

@@ -1,8 +1,10 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
+import { paintPixels } from '@/engines/canvas/commands'
 import { holdCanvas } from '@/features/image/canvasHosts'
 import { canvasHostStub, installCanvas } from '@/stores/canvas-fixtures'
+import { useCanvases } from '@/stores/canvases'
 import { usePixelPreview } from './usePixelPreview'
 
 const DOCUMENT = 'doc-1'
@@ -49,6 +51,23 @@ describe('usePixelPreview', () => {
 
     await waitFor(() => expect(draws).toHaveLength(1))
     expect(draws[0]).toEqual({ source: [0, 0, 112, 112, 0, 0, 7, 7], smoothing: false })
+  })
+
+  /**
+   * 🛑 A stroke hands the state straight back — `paintPixels` returns the very object it was
+   * given, the pixels living in a texture. Watching the state alone, the preview never redrew
+   * after a stroke, which is the only thing it is there to show. Measured in the running studio.
+   */
+  it('draws again when a stroke lands, which leaves the state untouched', async () => {
+    drop = holdCanvas(DOCUMENT, () => canvasHostStub({ flattenBitmap: async () => bitmap() }))
+    const draws: Draw[] = []
+    renderHook(() => usePixelPreview(DOCUMENT, surfaceOf(draws), 4, 4, 8))
+    await waitFor(() => expect(draws).toHaveLength(1))
+
+    const port = { restore: () => true, lost: () => {} }
+    act(() => useCanvases.getState().runCommand(DOCUMENT, paintPixels('patch-1', port)))
+
+    await waitFor(() => expect(draws).toHaveLength(2), { timeout: 2000 })
   })
 
   /**

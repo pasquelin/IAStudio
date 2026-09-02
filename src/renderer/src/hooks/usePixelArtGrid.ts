@@ -1,12 +1,15 @@
+import { useShallow } from 'zustand/react/shallow'
 import { gridOf } from '@/engines/canvas/pixelGrid'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { activeImageId, useDocuments } from '@/stores/documents'
 
 /**
- * What the image in front measures in cells — `null` when no image is there, or it is not on a
- * grid. The reactive half of `gridInFront`, which reads the same two stores at call time.
+ * The image in front, in cells — `null` off a grid. 🛑 `useShallow` because `gridOf` composes a
+ * fresh object: measured at 54 renders before React gave up. The trap `useGenerationContext` names.
  */
 export function usePixelArtGrid(): { columns: number; rows: number } | null {
   const documentId = useDocuments(activeImageId)
-  return useCanvases(state => (documentId === null ? null : gridOf(canvasOf(state, documentId))))
+  return useCanvases(
+    useShallow(state => (documentId === null ? null : gridOf(canvasOf(state, documentId)))),
+  )
 }

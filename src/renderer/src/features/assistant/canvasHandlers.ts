@@ -708,12 +708,14 @@ const PIXEL_INPUT: Record<PixelShape, string> = {
   fill: 'a fill takes the whole layer, or the box named by "x", "y", "toX" and "toY"',
 }
 
-/** A cell named as « x,y » — the shortest spelling a model gets right. */
+/** A cell as « x,y ». Both halves WANTED: `Number('')` is zero, so "3" landed on row nought. */
 function cellsAsked(input: Record<string, unknown>): Point[] | null {
   const written = textsOf(input, 'cells')
   const cells = written.map(one => {
-    const [x = '', y = ''] = one.split(',')
-    return { x: Number(x.trim()), y: Number(y.trim()) }
+    const said = one.split(',')
+    return said.length !== 2
+      ? { x: Number.NaN, y: Number.NaN }
+      : { x: Number((said[0] ?? '').trim()), y: Number((said[1] ?? '').trim()) }
   })
   return cells.every(at => Number.isInteger(at.x) && Number.isInteger(at.y)) ? cells : null
 }
