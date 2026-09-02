@@ -72,7 +72,15 @@ beforeEach(() => {
   posed.length = 0
   holds.length = 0
   clearCharacters()
-  useCharacterView.setState({ editingRest: false })
+  // The whole view, never the one flag a case happens to read: a padlock left closed by the case
+  // before was what made the next one pass, and the leak showed only when the bar moved.
+  useCharacterView.setState({
+    editingRest: false,
+    lockedLengths: true,
+    heldAxes: [],
+    pickedBone: null,
+    mode: 'translate',
+  })
   installFakeBridge()
 })
 
@@ -87,8 +95,10 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
 
   const bar = screen.getByRole('toolbar')
 
-  // Three verbs and the two toggles that qualify them all.
-  expect(within(bar).getAllByRole('button')).toHaveLength(5)
+  // Three verbs and the one toggle that qualifies them: the padlock belongs to editing a
+  // skeleton, and posing articulates, so a bone keeps its length with nothing to ask for.
+  expect(within(bar).getAllByRole('button')).toHaveLength(4)
+  expect(within(bar).queryByRole('button', { name: /longueurs/i })).toBeNull()
   // A joint is a point and a length: there is nothing about one to enlarge.
   expect(within(bar).queryByRole('button', { name: /échelle/i })).toBeNull()
   // The armed verb, which is the one the gizmo obeys — the lock beside it is pressed too.
@@ -104,6 +114,7 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
 
 // Refused on sight: a hand asking for a hundred pixels stretched a bone to the floor.
 it('holds the bone lengths from the first frame, and lets go of them on the bar', async () => {
+  useCharacterView.setState({ editingRest: true })
   render(<CharacterWindow assetId={ASSET} />)
 
   const lock = within(screen.getByRole('toolbar')).getByRole('button', { name: /longueurs/i })
@@ -125,6 +136,9 @@ it('holds the bone lengths from the first frame, and lets go of them on the bar'
  * Written on both, a joint pulled into the elbow it belongs in took the whole arm with it.
  */
 it('poses the bone the gizmo moved, and writes the skeleton only once the bar asks', async () => {
+  // Open, or the leash would pull a bone whose rest is the identity back onto its parent: this
+  // case is about which door a gesture takes, not about what the padlock holds.
+  useCharacterView.setState({ lockedLengths: false })
   seedCharacter(ASSET, RIG, {})
   render(<CharacterWindow assetId={ASSET} />)
   const move = { id: 'node-1', bone: 'Spine', transform: raised(0.2) }

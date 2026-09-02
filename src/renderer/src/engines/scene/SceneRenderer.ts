@@ -1954,6 +1954,9 @@ export class SceneRenderer {
   setRestEditing(on: boolean): void {
     this.restEditing = on
     if (on) this.restSkins()
+    // The two states hand the gizmo different things: editing PLACES the joint, posing turns the
+    // bone arriving at it through a handle standing outside the chain.
+    this.attachGizmo()
     this.redraw()
   }
 
@@ -4122,6 +4125,8 @@ export class SceneRenderer {
       this.articulateTowards(bone, rest)
       return
     }
+    // Posing turns a bone on itself and moves nothing: there is no distance to hold.
+    if (!this.restEditing) return
 
     applyTransform(bone, restWithin(rest, transformOf(bone), this.boneHold))
   }
@@ -4205,9 +4210,14 @@ export class SceneRenderer {
     if (target) this.options.onTransform([{ id: target.name, transform: transformOf(target) }])
   }
 
-  /** Whether dragging this joint TURNS the bone arriving at it rather than placing the joint. */
+  /**
+   * Whether dragging this joint TURNS the bone arriving at it rather than placing the joint.
+   *
+   * Posing articulates and never translates, so no padlock qualifies it — the length is held by
+   * construction. Turning the joint on itself is the other verb, and it needs no stand-in.
+   */
   private articulates(bone: Object3D): boolean {
-    return !this.restEditing && this.boneHold.lockedLengths && bone.parent !== null
+    return !this.restEditing && this.mode === 'translate' && bone.parent !== null
   }
 
   /** The three object of the bone the pose mode picked, while one is picked and still on stage. */

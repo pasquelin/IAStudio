@@ -257,7 +257,9 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
               label={t('character.tools')}
               tools={[
                 ...CHARACTER_TOOLS,
-                { ...CHARACTER_LOCK_TOOL, pressed: lockedLengths },
+                // Only while the skeleton is being EDITED: posing articulates, so a bone keeps
+                // its length by construction and the padlock would qualify nothing.
+                ...(editingRest ? [{ ...CHARACTER_LOCK_TOOL, pressed: lockedLengths }] : []),
                 { ...CHARACTER_REST_TOOL, pressed: editingRest },
               ]}
               activeTool={mode}

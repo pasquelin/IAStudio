@@ -84,6 +84,7 @@ const armOf = (model: Group): Object3D => {
 describe('a joint the gizmo carries', () => {
   it('keeps its distance to its parent for the whole drag, not only on release', async () => {
     const { engine, model } = await armOnStage()
+    engine.setRestEditing(true)
     engine.setBoneHold({ heldAxes: [], lockedLengths: true })
 
     dragTo(engine, handOf(model), 0, 8, 0)
@@ -95,6 +96,7 @@ describe('a joint the gizmo carries', () => {
 
   it('stays on the axes a padlock holds while it is dragged', async () => {
     const { engine, model } = await armOnStage()
+    engine.setRestEditing(true)
     engine.setBoneHold({ heldAxes: ['x'], lockedLengths: false })
 
     dragTo(engine, handOf(model), 5, 1, 2)
@@ -130,6 +132,7 @@ describe('a joint the gizmo carries', () => {
 
   it('follows the pointer where no hold is asked for', async () => {
     const { engine, model } = await armOnStage()
+    engine.setRestEditing(true)
 
     dragTo(engine, handOf(model), 0, 8, 0)
 
