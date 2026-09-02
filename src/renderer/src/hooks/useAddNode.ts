@@ -1,12 +1,19 @@
 import { useCallback } from 'react'
-import { addNode } from '@/engines/scene/commands'
-import { createNodeOf } from '@/engines/scene/nodeFactory'
-import { useScenes } from '@/stores/scenes'
+import { addNodes } from '@/engines/scene/commands'
+import { createNodesOf } from '@/engines/scene/nodeFactory'
+import { selectIn, useScenes } from '@/stores/scenes'
 
 /** The one way a node enters a scene: the toolbar, a panel's add menu and the native menu. */
 export function addNodeTo(documentId: string, kind: string): void {
-  const node = createNodeOf(kind)
-  if (node) useScenes.getState().runCommand(documentId, addNode(node))
+  // One command for the whole module, so a single ⌘Z takes back the body AND the eye.
+  const nodes = createNodesOf(kind)
+  const root = nodes[0]
+  if (!root) return
+
+  useScenes.getState().runCommand(documentId, addNodes(nodes))
+  // `addNodes` picks everything it put down, which is right for a duplicate and wrong here: an
+  // Add leaves ONE node picked, or the next gesture paints the arm and the camera too.
+  if (nodes.length > 1) selectIn(documentId, [root.id])
 }
 
 /** The same, bound to the document a component already holds. */

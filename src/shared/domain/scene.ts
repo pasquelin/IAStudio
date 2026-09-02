@@ -805,13 +805,14 @@ export type ExportFormat = 'glb' | 'gltf' | 'usdz' | 'obj' | 'ply' | 'stl'
 export const EXPORT_FORMATS: readonly ExportFormat[] = ['glb', 'gltf', 'usdz', 'obj', 'ply', 'stl']
 
 /** What is picked from the Add menu without being a mesh or a light. */
-export type ObjectKind = 'sprite' | 'text' | 'camera' | 'path'
+export type ObjectKind = 'sprite' | 'text' | 'camera' | 'path' | 'player'
 
 export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
   { kind: 'sprite' },
   { kind: 'text' },
   { kind: 'camera' },
   { kind: 'path' },
+  { kind: 'player' },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [

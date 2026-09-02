@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createNodeOf, groupNode, iconOf } from './nodeFactory'
+import { newComponent } from '@shared/domain/componentRegistry'
+import { createNodeOf, createNodesOf, groupNode, iconOf } from './nodeFactory'
+import { PLAYER_KIND } from './playerModule'
 import { lightNodeFixture, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
 
 describe('createNodeOf', () => {
@@ -84,5 +86,90 @@ describe('iconOf', () => {
     ]
 
     expect(new Set(icons).size).toBe(icons.length)
+  })
+})
+
+/**
+ * The module is the one node that IMPOSES a shape on what hangs under it: a body and an eye,
+ * always. Who the player is stops being decided by whichever controller a sweep met first.
+ */
+describe('the player module', () => {
+  const bornWith = (name: string) => createNodesOf(PLAYER_KIND).find(node => node.name === name)
+
+  it('is born as a body and an eye, parented the way the module reads', () => {
+    const nodes = createNodesOf(PLAYER_KIND)
+    const at = (name: string) => nodes.find(node => node.name === name)
+
+    expect(nodes.map(node => node.name)).toEqual([
+      'Player_Module',
+      'Capsule',
+      'Mesh',
+      'SpringArm',
+      'Camera',
+    ])
+    expect(at('Player_Module')?.parentId).toBeNull()
+    expect(at('Capsule')?.parentId).toBe(at('Player_Module')?.id)
+    expect(at('Mesh')?.parentId).toBe(at('Capsule')?.id)
+    expect(at('SpringArm')?.parentId).toBe(at('Player_Module')?.id)
+    expect(at('Camera')?.parentId).toBe(at('SpringArm')?.id)
+  })
+
+  it('marks the module itself, which is what makes it findable at all', () => {
+    expect(bornWith('Player_Module')?.components).toEqual([newComponent('Player')])
+  })
+
+  /** The capsule is the controller's own height and radius — it draws nothing of its own. */
+  it('puts the walking on the capsule and the drawing on the mesh under it', () => {
+    expect(bornWith('Capsule')?.type).toBe('group')
+    expect(bornWith('Capsule')?.components?.map(one => one.type)).toEqual(['CharacterController'])
+    expect(bornWith('Mesh')?.type).toBe('mesh')
+    expect(bornWith('Mesh')?.components).toBeUndefined()
+  })
+
+  it('hangs the camera on an arm rather than on the body, so a wall can push it in', () => {
+    expect(bornWith('SpringArm')?.components?.map(one => one.type)).toEqual(['SpringArm'])
+    expect(bornWith('Camera')?.type).toBe('camera')
+  })
+
+  /**
+   * 🛑 `entityNamed` reads an id first and a NAME after, and every scene the studio ships already
+   * holds a node called `Camera`: bound by name, the arm would film that one instead.
+   */
+  it('binds its arm to its own body and its own eye, by id', () => {
+    const nodes = createNodesOf(PLAYER_KIND)
+    const at = (name: string) => nodes.find(node => node.name === name)
+    const arm = at('SpringArm')?.components?.[0]
+
+    expect(arm?.subject).toBe(at('Capsule')?.id)
+    expect(arm?.camera).toBe(at('Camera')?.id)
+  })
+
+  /** What is FELT and what is SEEN are one body: the mesh is the controller's capsule, drawn. */
+  it('draws a mesh the size of the capsule the physics feels', () => {
+    const walker = bornWith('Capsule')?.components?.[0]
+    const mesh = bornWith('Mesh')
+
+    expect(mesh?.type === 'mesh' && mesh.geometry.kind === 'capsule' && mesh.geometry.radius).toBe(
+      walker?.radius,
+    )
+    expect(bornWith('Capsule')?.transform.position.y).toBe(Number(walker?.height) / 2)
+  })
+
+  it('gives every module its own ids', () => {
+    const first = createNodesOf(PLAYER_KIND).map(node => node.id)
+    const second = createNodesOf(PLAYER_KIND).map(node => node.id)
+
+    expect(new Set([...first, ...second]).size).toBe(first.length + second.length)
+  })
+})
+
+/** The door every add goes through. A module is several nodes; everything else is exactly one. */
+describe('createNodesOf', () => {
+  it('answers one node for a kind that is one node', () => {
+    expect(createNodesOf('box')).toHaveLength(1)
+  })
+
+  it('answers nothing for a kind no registry claims', () => {
+    expect(createNodesOf('hologram')).toEqual([])
   })
 })

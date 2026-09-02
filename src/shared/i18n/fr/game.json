@@ -49,6 +49,10 @@
         "title": "Script",
         "description": "Confie l’objet à du code : ce que l’auteur a écrit s’exécute à chaque pas."
       },
+      "Player": {
+        "title": "Joueur",
+        "description": "Désigne celui qu’on joue. Un seul par scène : ce qui pend sous lui est son corps et son œil, et c’est lui que la caméra suit."
+      },
       "Spin": {
         "description": "Fait tourner l’entité sur un axe, sans fin — une pièce à ramasser, une hélice, un mécanisme.",
         "title": "Rotation continue"

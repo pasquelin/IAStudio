@@ -17,6 +17,7 @@ export type JsonValue =
  * the six travelling ones with the systems that move them, and the two piloted ones with Jolt.
  */
 export type ComponentType =
+  | 'Player'
   | 'Health'
   | 'Movement'
   | 'Path'

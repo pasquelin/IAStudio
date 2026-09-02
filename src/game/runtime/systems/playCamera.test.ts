@@ -13,7 +13,12 @@ import { restingTransform } from '../entity'
 import { testPorts, testWorld } from '../world-fixtures'
 import { createPlayCameraSystem } from './playCamera'
 
-function watching(camera: PlayCamera, controlled = true, rigs: Rigs = createRigs()) {
+function watching(
+  camera: PlayCamera,
+  controlled = true,
+  rigs: Rigs = createRigs(),
+  playerBodyId: string | null = null,
+) {
   const pilots = createPilots()
   // The pointer the case moves between two frames, which is what the head is read off.
   const held: Pointer = { x: 0, y: 0, down: false }
@@ -31,7 +36,7 @@ function watching(camera: PlayCamera, controlled = true, rigs: Rigs = createRigs
       input: heldInput,
       render: { place: () => {}, view: view => views.push(view), veil: () => {} },
     }),
-    systems: [createPlayCameraSystem({ characters, pilots, rigs })],
+    systems: [createPlayCameraSystem({ characters, pilots, rigs, playerBodyId })],
   })
   if (controlled) {
     world.entities.add({
@@ -154,5 +159,35 @@ describe('the camera rank of a running game', () => {
     world.lateUpdate(0, STEP_SECONDS)
 
     expect(views).toEqual([])
+  })
+})
+
+/**
+ * 🛑 Who the player is is a STRUCTURE, not the order a sweep met a component in. Two characters
+ * in one scene used to frame whichever node the balayage reached first — invisible in the editor,
+ * and impossible for an author to choose.
+ */
+describe('the body a player module designates', () => {
+  it('frames the module body rather than the first walker the sweep met', () => {
+    const { world, views } = watching('firstPerson', true, createRigs(), 'second')
+    world.entities.add({
+      id: 'second',
+      name: 'second',
+      transform: { ...restingTransform(), position: { x: 8, y: 0, z: 0 } },
+      components: [newComponent('CharacterController')],
+    })
+
+    world.lateUpdate(0, STEP_SECONDS)
+
+    expect(views.at(-1)?.position.x).toBeCloseTo(8, 6)
+  })
+
+  /** Named a body the scene no longer holds, it frames whoever walks — never nothing at all. */
+  it('falls back on the sweep where the body it names is gone', () => {
+    const { world, views } = watching('firstPerson', true, createRigs(), 'removed')
+
+    world.lateUpdate(0, STEP_SECONDS)
+
+    expect(views.at(-1)?.position.x).toBeCloseTo(0, 6)
   })
 })

@@ -49,6 +49,10 @@
         "title": "Script",
         "description": "Hands the object to code: what its author wrote runs on every step."
       },
+      "Player": {
+        "title": "Player",
+        "description": "Names whoever is played. One per scene: what hangs under it is its body and its eye, and it is what the camera follows."
+      },
       "Spin": {
         "description": "Turns the entity about one axis, endlessly — a pickup, a propeller, a mechanism.",
         "title": "Spin"

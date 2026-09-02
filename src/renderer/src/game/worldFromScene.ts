@@ -26,6 +26,7 @@ import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
 import { createHierarchy } from './hierarchy'
+import { playerBodyIdOf } from '@/engines/scene/playerModule'
 
 /**
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
@@ -165,7 +166,15 @@ function systemsFor(
       // the shape and the frame of a body do.
       filmable: entity => byId.get(entity.id)?.type === 'camera',
     }),
-    createPlayCameraSystem({ characters, worldOf: placedAt, pilots, rigs }),
+    // Resolved here and not in the runtime, like `filmable` above: who hangs under what is a
+    // question about the TREE, which the window holds and the runtime does not.
+    createPlayCameraSystem({
+      characters,
+      worldOf: placedAt,
+      pilots,
+      rigs,
+      playerBodyId: playerBodyIdOf(state.nodes),
+    }),
   ]
 }
 

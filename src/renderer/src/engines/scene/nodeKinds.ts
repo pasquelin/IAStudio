@@ -1,4 +1,5 @@
 import {
+  mdiAccountOutline,
   mdiCubeScan,
   mdiFolderOutline,
   mdiFormatText,
@@ -59,6 +60,7 @@ const OBJECT_ICONS: Record<ObjectKind, string> = {
   text: mdiFormatText,
   camera: mdiVideoOutline,
   path: mdiVectorPolyline,
+  player: mdiAccountOutline,
 }
 
 /** The glyphs of the kinds no registry describes, since neither is picked from a menu. */
@@ -68,6 +70,7 @@ export const GROUP_ICON = mdiFolderOutline
 export const SPRITE_ICON = OBJECT_ICONS.sprite
 export const TEXT_ICON = OBJECT_ICONS.text
 export const PATH_ICON = OBJECT_ICONS.path
+export const PLAYER_ICON = OBJECT_ICONS.player
 
 /** i18n key of what a kind is called. */
 export function labelKeyOf(namespace: string, entry: AddEntry): string {

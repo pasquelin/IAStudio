@@ -9,7 +9,7 @@ describe('ADD_ENTRIES', () => {
       MESH_ENTRIES.length + LIGHT_ENTRIES.length + OBJECT_ENTRIES.length,
     )
     expect(ADD_ENTRIES[0]?.entry.kind).toBe('box')
-    expect(ADD_ENTRIES.at(-1)?.entry.kind).toBe('path')
+    expect(ADD_ENTRIES.at(-1)?.entry.kind).toBe('player')
   })
 
   // The key is derived, not declared: a missing string renders as `meshes.torusKnot` in the

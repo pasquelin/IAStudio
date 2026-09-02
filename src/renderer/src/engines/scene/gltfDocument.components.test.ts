@@ -9,6 +9,8 @@ import {
   sceneHoldsMore,
   type GltfDocumentOptions,
 } from './gltfDocument'
+import { playerModuleNodes } from './nodeFactory'
+import { playerBodyIdOf } from './playerModule'
 import { meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
@@ -97,5 +99,36 @@ describe('a components member that is not a list at all', () => {
 
     expect(sceneFromGltf(document).nodes[0]?.components).toEqual([])
     expect(sceneHoldsMore(document)).toEqual(['components'])
+  })
+})
+
+/**
+ * The module is the one node whose MEANING is its shape: a marker on a group, a body under it, a
+ * camera under an arm. A save that keeps the components and loses the parenting keeps nothing.
+ */
+describe('a player module written to a file and read back', () => {
+  const saved = (): SceneState =>
+    sceneFromGltf(written({ ...EMPTY_SCENE, nodes: [...playerModuleNodes()] }))
+
+  it('comes back with its body under it and its camera under its arm', () => {
+    const back = saved()
+    const at = (name: string) => back.nodes.find(node => node.name === name)
+
+    expect(back.nodes.map(node => node.name)).toEqual([
+      'Player_Module',
+      'Capsule',
+      'Mesh',
+      'SpringArm',
+      'Camera',
+    ])
+    expect(at('Capsule')?.parentId).toBe(at('Player_Module')?.id)
+    expect(at('Mesh')?.parentId).toBe(at('Capsule')?.id)
+    expect(at('Camera')?.parentId).toBe(at('SpringArm')?.id)
+  })
+
+  it('is still the node the studio reads as the player', () => {
+    const back = saved()
+
+    expect(playerBodyIdOf(back.nodes)).toBe(back.nodes.find(node => node.name === 'Capsule')?.id)
   })
 })

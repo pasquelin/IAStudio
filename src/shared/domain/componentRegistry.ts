@@ -67,6 +67,19 @@ const flagField = (key: string): ActionField => ({
   required: true,
 })
 
+/**
+ * Who is PLAYED. It carries no field on purpose: its presence is the whole of what it says, and
+ * what the player IS — a body, an eye — is the structure hanging under the node, not a value here.
+ */
+const PLAYER: ComponentDescriptor = {
+  type: 'Player',
+  titleKey: 'game.components.Player.title',
+  descriptionKey: 'game.components.Player.description',
+  category: 'gameplay',
+  fields: [],
+  defaults: {},
+}
+
 const HEALTH: ComponentDescriptor = {
   type: 'Health',
   titleKey: 'game.components.Health.title',
@@ -357,6 +370,7 @@ const SCRIPT: ComponentDescriptor = {
  * union that no surface can offer.
  */
 export const COMPONENTS: Record<ComponentType, ComponentDescriptor> = {
+  Player: PLAYER,
   Health: HEALTH,
   Movement: MOVEMENT,
   Path: PATH,

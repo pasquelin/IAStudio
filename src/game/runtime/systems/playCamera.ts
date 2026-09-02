@@ -22,6 +22,11 @@ export type PlayCameraOptions = {
   pilots: Pilots
   /** The camera node a spring arm placed, empty when the scene holds no arm. */
   rigs: Rigs
+  /**
+   * The body the scene's player module designates, resolved by the WINDOW like `filmable` and the
+   * shapes: the runtime holds no tree, so who hangs under what is answered where it is known.
+   */
+  playerBodyId?: string | null
 }
 
 /**
@@ -30,7 +35,7 @@ export type PlayCameraOptions = {
  * sliding sideways.
  */
 export function createPlayCameraSystem(options: PlayCameraOptions): System {
-  const { characters, worldOf, pilots, rigs } = options
+  const { characters, worldOf, pilots, rigs, playerBodyId } = options
   const chase: Look = { yaw: 0, pitch: 0 }
   const axes = restingAxes()
 
@@ -49,7 +54,10 @@ export function createPlayCameraSystem(options: PlayCameraOptions): System {
       // the step, and where the head points is a question about the frame being drawn.
       characters.aim(world.ports.input.pointer())
 
-      const walker = characters.leader()
+      // The module first, the sweep behind it: a module naming a body the scene no longer holds
+      // frames whoever walks rather than nothing at all.
+      const named = playerBodyId ? world.entities.get(playerBodyId) : null
+      const walker = named ?? characters.leader()
       if (walker) {
         const capsule = characters.capsuleOf(walker)
         pilots.take(walker, capsule.halfHeight + capsule.radius, OVER_SHOULDER, PILOT_RANK.walker)

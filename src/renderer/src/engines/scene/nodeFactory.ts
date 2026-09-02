@@ -8,16 +8,19 @@ import type {
 } from '@shared/domain/scene'
 import { DEFAULT_CAMERA, DEFAULT_PATH } from '@shared/domain/scene'
 import type { CsgGraph } from '@shared/domain/csg'
+import { COMPONENTS, newComponent } from '@shared/domain/componentRegistry'
 import { newId } from '@/helpers/ids'
 import { defaultMeshMaterial } from './checkerTextures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
+import { isPlayerModule, PLAYER_KIND } from './playerModule'
 import {
   CAMERA_ICON,
   CARVED_ICON,
   GROUP_ICON,
   MODEL_ICON,
   PATH_ICON,
+  PLAYER_ICON,
   SPRITE_ICON,
   TEXT_ICON,
 } from './nodeKinds'
@@ -244,8 +247,58 @@ export function groupNode(transform = IDENTITY_TRANSFORM, name = 'Group'): Scene
   }
 }
 
+/**
+ * The capsule draws nothing of its own: `CharacterController` already carries the height and the
+ * radius the physics feels, and what is SEEN is the mesh under it, which a model replaces.
+ */
+export function playerModuleNodes(): readonly SceneNode[] {
+  const module: SceneNode = {
+    ...groupNode(IDENTITY_TRANSFORM, 'Player_Module'),
+    components: [newComponent('Player')],
+  }
+  const capsule: SceneNode = {
+    // Half the controller's own height: a capsule stands ON the ground, and its node is its centre.
+    ...groupNode(transformAt({ x: 0, y: WALKER_HEIGHT / 2, z: 0 }), 'Capsule'),
+    parentId: module.id,
+    components: [newComponent('CharacterController')],
+  }
+  // three.js measures a capsule by its CYLINDER, so the caps are what the two radii add back.
+  const mesh = meshNode(
+    {
+      kind: 'capsule',
+      radius: WALKER_RADIUS,
+      height: WALKER_HEIGHT - 2 * WALKER_RADIUS,
+      capSegments: 8,
+      radialSegments: 16,
+    },
+    { parentId: capsule.id, name: 'Mesh' },
+  )
+  const arm: SceneNode = { ...groupNode(IDENTITY_TRANSFORM, 'SpringArm'), parentId: module.id }
+  const camera: SceneNode = { ...cameraNode(IDENTITY_TRANSFORM), parentId: arm.id }
+
+  return [
+    module,
+    capsule,
+    mesh,
+    // 🛑 By ID, never by name: `entityNamed` reads the id first and the name after, and every
+    // scene the studio ships already holds a node called `Camera` — which a name would capture.
+    {
+      ...arm,
+      components: [{ ...newComponent('SpringArm'), subject: capsule.id, camera: camera.id }],
+    },
+    camera,
+  ]
+}
+
+/** The controller's own defaults, read rather than copied: tuning one there moves the body here. */
+const WALKER_HEIGHT = Number(COMPONENTS.CharacterController.defaults.height)
+const WALKER_RADIUS = Number(COMPONENTS.CharacterController.defaults.radius)
+
 /** The glyph belongs to the registry entry, not to whichever panel happens to draw the node. */
 export function iconOf(node: SceneNode): string {
+  // Before the type, and it is the only glyph read off a component: a module wearing a folder is
+  // a module nobody finds in an outliner of thirty rows.
+  if (isPlayerModule(node)) return PLAYER_ICON
   if (node.type === 'model') return MODEL_ICON
   if (node.type === 'group') return GROUP_ICON
   if (node.type === 'sprite') return SPRITE_ICON
@@ -263,13 +316,18 @@ export function iconOf(node: SceneNode): string {
 }
 
 /**
- * One node from one registry entry, whichever registry knows the kind. The toolbar, the panels
- * and the native menu all add through here: three call sites building a node their own way is
- * three ways for a mesh to arrive without a material.
- *
- * A kind no registry claims, or one declared but not buildable yet, yields `null` rather than a
- * node with nothing in it.
+ * What one Add gives the scene, and the door the toolbar, the panels and the native menu share —
+ * three call sites building a node their own way is three ways for a mesh to arrive without a
+ * material. A LIST, because a module is several nodes born parented.
  */
+export function createNodesOf(kind: string): readonly SceneNode[] {
+  if (kind === PLAYER_KIND) return playerModuleNodes()
+
+  const node = createNodeOf(kind)
+  return node ? [node] : []
+}
+
+/** The single-node half of the door above. Nothing adds through this one — see `createNodesOf`. */
 export function createNodeOf(kind: string): SceneNode | null {
   const primitive = primitiveByKind(kind)
   if (primitive) return meshNode(primitive.create())

@@ -89,15 +89,17 @@
   },
   "objects": {
     "add": "Ajouter un objet",
-    "addHint": "Poser une caméra, un rail, un sprite ou du texte dans la scène",
+    "addHint": "Poser un joueur, une caméra, un rail, un sprite ou du texte dans la scène",
     "sprite": "Sprite",
     "text": "Texte",
     "camera": "Caméra",
     "path": "Chemin",
+    "player": "Joueur",
     "spriteHint": "Une image plane qui fait toujours face à la caméra",
     "textHint": "Du texte posé dans la scène, en volume",
     "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre",
-    "pathHint": "Un rail le long duquel une caméra peut courir pendant un plan"
+    "pathHint": "Un rail le long duquel une caméra peut courir pendant un plan",
+    "playerHint": "Celui qu’on joue : un corps qui marche et une caméra sur sa perche, posés ensemble"
   },
   "transport": {
     "play": "Lire",

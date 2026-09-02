@@ -31,7 +31,7 @@ import { captureSceneView } from '@/helpers/captureSceneView'
 import { canNegate } from '@/engines/csg/carve'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
-  addNode,
+  addNodes,
   attachNode,
   carveNodes,
   dressModel,
@@ -88,7 +88,7 @@ import { numericBoundsOf } from '@shared/domain/propertySpec'
 import { newId } from '@/helpers/ids'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import type { Command } from '@/engines/core/history'
-import { createNodeOf, modelNode } from '@/engines/scene/nodeFactory'
+import { createNodesOf, modelNode } from '@/engines/scene/nodeFactory'
 import {
   canCastShadow,
   canReceiveShadow,
@@ -121,7 +121,7 @@ import {
 /**
  * The scene graph, driven by value.
  *
- * Every node enters through `createNodeOf`, the factory the Add menu and the native menu go
+ * Every node enters through `createNodesOf`, the factory the Add menu and the native menu go
  * through — a second way of building a box is a second set of defaults to keep in step.
  */
 
@@ -591,32 +591,39 @@ function openShot(input: Record<string, unknown>): ActionOutcome {
   return { ok: true, data: { shotId: shot.id } }
 }
 
-/** Adds a node the caller built, answering the id it was born with. */
-function place(node: SceneNode | null): ActionOutcome {
-  if (!node) return refused('badInput', 'nothing to place — no node could be built from this call')
+/** Adds what the caller built, answering the id of the node the rest hangs from. */
+function place(nodes: readonly SceneNode[]): ActionOutcome {
+  const root = nodes[0]
+  if (!root) return refused('badInput', 'nothing to place — no node could be built from this call')
 
-  const outcome = edit(() => addNode(node))
-  return outcome.ok ? { ok: true, data: { nodeId: node.id } } : outcome
+  const outcome = edit(() => addNodes(nodes))
+  return outcome.ok ? { ok: true, data: { nodeId: root.id } } : outcome
 }
 
 function add(input: Record<string, unknown>): ActionOutcome {
-  // The factory answers `null` for a kind no registry declares, which is where it becomes a
-  // refusal rather than a node that never arrived.
-  const node = createNodeOf(textOf(input, 'kind') ?? '')
-  if (!node)
+  // The factory answers an empty list for a kind no registry declares, which is where it becomes
+  // a refusal rather than a node that never arrived.
+  const built = createNodesOf(textOf(input, 'kind') ?? '')
+  const root = built[0]
+  if (!root)
     return refused(
       'badInput',
       `no node kind "${textOf(input, 'kind') ?? ''}" can be built — the "kind" field of this action lists the ones that can`,
     )
 
-  return place({
-    ...node,
-    name: textOf(input, 'name') ?? node.name,
-    transform: {
-      ...node.transform,
-      position: vectorOf(input, 'position', node.transform.position),
+  // 🛑 The name and the place are the ROOT's: written onto each, a module would stack its body,
+  // its arm and its camera at one point under one name.
+  return place([
+    {
+      ...root,
+      name: textOf(input, 'name') ?? root.name,
+      transform: {
+        ...root.transform,
+        position: vectorOf(input, 'position', root.transform.position),
+      },
     },
-  })
+    ...built.slice(1),
+  ])
 }
 
 function select(input: Record<string, unknown>): ActionOutcome {
@@ -854,7 +861,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
    */
   'node.addModel': input => {
     const assetId = textOf(input, 'assetId') ?? ''
-    return withAsset(assetId, () => place(modelNode(assetId, textOf(input, 'name') ?? assetId)))
+    return withAsset(assetId, () => place([modelNode(assetId, textOf(input, 'name') ?? assetId)]))
   },
 
   'node.remove': input => editNode(input, node => removeNode(node.id)),

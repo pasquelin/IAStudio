@@ -535,7 +535,13 @@ describe('menuTemplate', () => {
   it('offers every object, each of them reachable', () => {
     const objects = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Objet')
 
-    expect(objects.map(item => item.label)).toEqual(['Sprite', 'Texte', 'Caméra', 'Chemin'])
+    expect(objects.map(item => item.label)).toEqual([
+      'Sprite',
+      'Texte',
+      'Caméra',
+      'Chemin',
+      'Joueur',
+    ])
     expect(objects.filter(item => item.enabled === false)).toEqual([])
   })
 

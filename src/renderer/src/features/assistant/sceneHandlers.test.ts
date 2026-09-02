@@ -127,7 +127,7 @@ describe('reading the scene in front', () => {
 
 describe('building a scene', () => {
   /**
-   * Through `createNodeOf`, the factory the Add menu and the native menu already go through: a
+   * Through `createNodesOf`, the factory the Add menu and the native menu already go through: a
    * second way of building a box would be a second set of defaults to keep in step.
    */
   it('adds any kind the Add menu offers, at the position given', async () => {

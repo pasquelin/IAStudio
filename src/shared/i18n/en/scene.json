@@ -89,15 +89,17 @@
   },
   "objects": {
     "add": "Add an object",
-    "addHint": "Puts a camera, a rail, a sprite or some text into the scene",
+    "addHint": "Puts a player, a camera, a rail, a sprite or some text into the scene",
     "sprite": "Sprite",
     "text": "Text",
     "camera": "Camera",
     "path": "Path",
+    "player": "Player",
     "spriteHint": "A flat image that always faces the camera",
     "textHint": "Text set into the scene, with depth",
     "cameraHint": "A stored point of view, beside the one being flown",
-    "pathHint": "A rail a camera can run along during a shot"
+    "pathHint": "A rail a camera can run along during a shot",
+    "playerHint": "Whoever is played: a walking body and a camera on its arm, set down together"
   },
   "transport": {
     "play": "Play",
