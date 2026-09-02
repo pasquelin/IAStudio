@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Vector3 } from '@shared/domain/scene'
 import type { SceneNode } from './sceneState'
-import { CIRCUIT_START, circuitLine, circuitNodes } from './circuitLevel'
+import { CIRCUIT_START, CIRCUIT_START_YAW, circuitLine, circuitNodes } from './circuitLevel'
 
 const named = (nodes: readonly SceneNode[], word: string): SceneNode[] =>
   nodes.filter(node => node.name.startsWith(word))
@@ -39,6 +39,22 @@ describe('the circuit a car opens on', () => {
   it('puts the car down on the tarmac rather than beside it', () => {
     // Half the track width: dead centre is 0, and the kerbs start at 6.
     expect(distanceToRun(tarmac, CIRCUIT_START.x, CIRCUIT_START.z)).toBeLessThan(6)
+  })
+
+  /**
+   * 🛑 Put down with no turn at all, the car sat ACROSS its own straight with the line off to one
+   * side. It faces down the track, and it waits just short of the line rather than on it.
+   */
+  it('lines the car up behind the start line, facing down the track', () => {
+    const line = nodes.find(node => node.name === 'Start Line')!
+    const ahead =
+      (line.transform.position.x - CIRCUIT_START.x) * Math.sin(CIRCUIT_START_YAW) +
+      (line.transform.position.z - CIRCUIT_START.z) * Math.cos(CIRCUIT_START_YAW)
+
+    // Ahead of the car, and within a couple of car lengths of it.
+    expect(ahead).toBeGreaterThan(0)
+    expect(ahead).toBeLessThan(8)
+    expect(line.transform.rotation.y).toBeCloseTo(CIRCUIT_START_YAW, 6)
   })
 
   // 🛑 A car put down INSIDE a fixed body is catapulted by the first step — 1500 kg resolving an

@@ -95,11 +95,13 @@ import { createAnimatedStacks } from './animatedStack'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
 import { postOf, stackDraws, type PostStack } from '@shared/domain/postProcessing'
 import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { railOf } from './nodeRail'
 import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
 import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
   buildPath,
+  dressWithRail,
   cameraBody,
   helperFor,
   knobIndexOf,
@@ -1133,10 +1135,12 @@ export class SceneRenderer {
 
     const rails = this.workedRailIds()
     for (const [id, node] of this.applied) {
-      if (node.type !== 'path') continue
+      if (!railOf(node)) continue
       const rail = this.objects.get(id)
       if (!rail) continue
-      if (!chrome) rail.visible = false
+      // A rail node is nothing BUT its line, so hiding the chrome hides it whole. A band is a
+      // surface of the scene: only its handles go.
+      if (!chrome && node.type === 'path') rail.visible = false
       showPathKnobs(rail, chrome && rails.has(id))
     }
   }
@@ -1150,7 +1154,7 @@ export class SceneRenderer {
     const rails = new Set<string>()
 
     for (const id of railsInUse(this.selectedIds, this.timeline.shots)) {
-      if (this.applied.get(id)?.type === 'path') rails.add(id)
+      if (railOf(this.applied.get(id))) rails.add(id)
     }
 
     return rails
@@ -3425,6 +3429,11 @@ export class SceneRenderer {
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
         if (this.needsEdges()) this.applyDisplay(object)
+
+        // The knobs stand where the rail says, and the rail lives IN the shape: rebuilt without
+        // this, a band redrew itself around handles left at the places they had before.
+        const rail = railOf(node)
+        if (rail) applyPath(object, rail, this.meshColor)
       }
 
       this.paintShape(object, node, before)
@@ -3958,6 +3967,11 @@ export class SceneRenderer {
     const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
     textures.apply(node.material)
     this.textures.set(node.id, textures)
+
+    // A band wears the very handles a rail does — see `railOf`. Hung on the mesh itself, so they
+    // travel with it and a pick reads their index out of the same names.
+    const rail = railOf(node)
+    if (rail) dressWithRail(mesh, rail, this.meshColor)
 
     return mesh
   }
@@ -4727,13 +4741,13 @@ export class SceneRenderer {
     if (!nearest || nearest.index === undefined) return null
 
     const nodeId = nearest.object.parent?.name
-    const node = nodeId ? this.applied.get(nodeId) : null
-    if (!nodeId || node?.type !== 'path') return null
+    const rail = nodeId ? railOf(this.applied.get(nodeId)) : null
+    if (!nodeId || !rail) return null
 
     // The MIDDLE of the sample three hands back: `index` names where the segment starts, so
     // reading it straight puts a click in the last sixty-fourth before a control point into the
     // stretch before it.
-    return { nodeId, index: segmentAt(node.path, (nearest.index + 0.5) / PATH_SAMPLES) }
+    return { nodeId, index: segmentAt(rail, (nearest.index + 0.5) / PATH_SAMPLES) }
   }
 
   /**
@@ -4751,8 +4765,7 @@ export class SceneRenderer {
     if (!nodeId || !ndc) return null
 
     const rail = this.objects.get(nodeId)
-    const node = this.applied.get(nodeId)
-    const anchor = node?.type === 'path' ? node.path.points.at(-1) : null
+    const anchor = railOf(this.applied.get(nodeId))?.points.at(-1)
     if (!rail || !anchor) return null
 
     const camera = this.cameraInHand()

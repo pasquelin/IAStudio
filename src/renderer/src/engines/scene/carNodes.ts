@@ -41,12 +41,13 @@ const WHEELS = [
 const wheelName = (car: string, corner: string): string => `${car} ${corner}`
 
 /** The wheel nodes are drawn where a wheel RESTS; the engine anchors each spring above that. */
-export function carNodes(at: Vector3, name = 'Car'): SceneNode[] {
+export function carNodes(at: Vector3, name = 'Car', yaw = 0): SceneNode[] {
   const body = {
     ...meshNode(
       { kind: 'box', width: HALF_WIDTH * 2, height: HALF_HEIGHT * 2, depth: HALF_LENGTH * 2 },
       {
-        transform: transformAt({ ...at, y: at.y + RIDE_HEIGHT }),
+        // The wheels and the cabin hang off the body, so turning it turns the whole machine.
+        transform: transformAt({ ...at, y: at.y + RIDE_HEIGHT }, { x: 0, y: yaw, z: 0 }),
         material: surface('#c9453d'),
         name,
       },

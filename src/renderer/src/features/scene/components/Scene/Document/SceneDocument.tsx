@@ -3,7 +3,8 @@ import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat, PathDescriptor, Vector3 as PlainVector3 } from '@shared/domain/scene'
 import { withMovedPoint, withPointAfter, withPointAppended } from '@/engines/scene/cameraPath'
-import { setPath, setTransform } from '@/engines/scene/commands'
+import { setGeometry, setPath, setTransform } from '@/engines/scene/commands'
+import { railOf } from '@/engines/scene/nodeRail'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -134,9 +135,16 @@ function editPath(
 ): void {
   const store = useScenes.getState()
   const node = nodeById(sceneOf(store, documentId), nodeId)
-  if (node?.type !== 'path') return
+  if (node?.type === 'path') {
+    store.runCommand(documentId, setPath(nodeId, edit(node.path)))
+    return
+  }
 
-  store.runCommand(documentId, setPath(nodeId, edit(node.path)))
+  // A band holds its rail INSIDE its shape, so the edit lands on the geometry rather than on a
+  // field of the node — the handles being the very same ones.
+  if (node?.type !== 'mesh' || node.geometry.kind !== 'ribbon') return
+  const shape = node.geometry
+  store.runCommand(documentId, setGeometry(nodeId, { ...shape, path: edit(shape.path) }))
 }
 
 /**
@@ -153,12 +161,12 @@ function addPathPoint(documentId: string, nodeId: string, index: number): void {
  * a run of clicks lays a trajectory and the gizmo sits on the last one laid.
  */
 function appendPathPoint(documentId: string, nodeId: string, point: PlainVector3): void {
-  const node = nodeById(sceneOf(useScenes.getState(), documentId), nodeId)
-  if (node?.type !== 'path') return
+  const rail = railOf(nodeById(sceneOf(useScenes.getState(), documentId), nodeId) ?? undefined)
+  if (!rail) return
 
   // Where the point WILL land, read before the edit: appending puts it at the length the rail
   // holds now. Read after, it would rest on `runCommand` having already applied.
-  const index = node.path.points.length
+  const index = rail.points.length
   editPath(documentId, nodeId, path => withPointAppended(path, point))
   useSceneViews.getState().setPickedPathPoint(documentId, { nodeId, index })
 }

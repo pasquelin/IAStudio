@@ -20,7 +20,7 @@ import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { bonesOfNode, clipsOfNode, rigOfNode, useModelFiles } from '@/stores/modelFiles'
 import { IDENTITY_TRANSFORM } from '@/engines/scene/sceneState'
-import { DISPLAY_MODES } from '@shared/domain/scene'
+import { DEFAULT_PATH, DISPLAY_MODES, type GeometryDescriptor } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
 
 const setDocumentTitle = vi.fn()
@@ -946,6 +946,30 @@ describe('SceneDocument and a point posed on a rail', () => {
       nodeId: 'rail',
       index: 1,
     })
+  })
+
+  /**
+   * 🛑 A band is swept along a rail held INSIDE its shape, and the viewport draws it the very
+   * handles a rail node gets. Without this the knobs were drawn on a band nothing could move.
+   */
+  it('poses and moves a point on the band a rail is swept into', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const shape: GeometryDescriptor = {
+      kind: 'ribbon',
+      path: { ...DEFAULT_PATH, points: [at(0), at(10), at(20)], closed: false },
+      width: 1,
+      height: 0.2,
+      segments: 16,
+    }
+    const band = { ...meshNode('band'), geometry: shape }
+    act(() => useScenes.getState().runCommand('doc-1', addNode(band)))
+
+    await act(async () => built.at(-1)?.onAddPathPoint?.('band', 0))
+    await act(async () => built.at(-1)?.onPathPoint?.('band', 0, at(-4)))
+
+    const node = nodesOf('doc-1').find(candidate => candidate.id === 'band')
+    const run = node?.type === 'mesh' && node.geometry.kind === 'ribbon' ? node.geometry.path : null
+    expect(run?.points.map(point => point.x)).toEqual([-4, 5, 10, 20])
   })
 
   it('costs one undo entry, which puts the rail back as it was', async () => {

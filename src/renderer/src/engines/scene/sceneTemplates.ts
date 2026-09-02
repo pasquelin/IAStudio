@@ -41,7 +41,7 @@ import {
 import { createDefaultScene } from './defaultScene'
 import { airfieldNodes } from './airfieldLevel'
 import { carNodes } from './carNodes'
-import { CIRCUIT_START, circuitNodes } from './circuitLevel'
+import { CIRCUIT_START, CIRCUIT_START_YAW, circuitNodes } from './circuitLevel'
 import { LYING_FLAT } from './levelParts'
 import { MOUNTAIN_WORLD, mountainNodes } from './mountainLevel'
 import { presetPatch } from './environmentPresets'
@@ -470,7 +470,7 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
       ...circuitNodes(),
       sun(2.4, { x: 60, y: 70, z: 40 }),
       skyLight(1.3),
-      ...carNodes(CIRCUIT_START, CAR_NAME),
+      ...carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW),
       aimedCamera(3, 10, 1, CIRCUIT_START.z),
       cameraRig(CAR_NAME, { orientation: 'subject', length: 8, height: 2.4 }),
     ],

@@ -237,8 +237,18 @@ export function knobIndexOf(name: string): number | null {
  * a point of a cloud is an index in a buffer, and nothing a transform control can hold.
  */
 export function buildPath(descriptor: PathDescriptor, colour: string): Object3D {
-  const object = new Object3D()
+  return dressWithRail(new Object3D(), descriptor, colour)
+}
 
+/**
+ * The line and the knobs of a rail, hung under whatever carries it — a rail node, or the mesh of
+ * a band swept along one. Both are edited through the same handles because both wear these.
+ */
+export function dressWithRail(
+  object: Object3D,
+  descriptor: PathDescriptor,
+  colour: string,
+): Object3D {
   const line = new Line(new BufferGeometry(), new LineBasicMaterial({ color: colour }))
   line.name = PATH_CURVE_NAME
   line.geometry.setFromPoints(pathPoints(descriptor))

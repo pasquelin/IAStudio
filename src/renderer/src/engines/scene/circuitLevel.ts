@@ -55,8 +55,32 @@ const KERB_TILE = 3
 const GRASS_TILE = 12.5
 const PADDOCK_TILE = 2
 
-/** The car starts on the loop itself, at angle zero — the far end of the longest straight. */
-export const CIRCUIT_START: Vector3 = { x: 0, y: 0, z: BASE_RADIUS * (1 + 0.34) }
+/** How far the finish line stands down the track from the first mark, and the car behind it. */
+const LINE_AHEAD = 6
+const CAR_BEHIND = 3
+
+/**
+ * Where the car is put down, and which way it faces — ON the loop, three metres short of the
+ * line, pointing down the track. Left at the mark itself with no turn, it sat across its own
+ * straight and had the line off to one side.
+ */
+export const CIRCUIT_START_YAW = startYaw()
+export const CIRCUIT_START: Vector3 = alongStart(CAR_BEHIND)
+
+function startYaw(): number {
+  const run = circuitLine(0)
+  return Math.atan2(run[1]!.x - run[0]!.x, run[1]!.z - run[0]!.z)
+}
+
+/** A point `ahead` metres down the track from the first mark, on the centre line. */
+function alongStart(ahead: number): Vector3 {
+  const first = circuitLine(0)[0]!
+  return {
+    x: first.x + Math.sin(CIRCUIT_START_YAW) * ahead,
+    y: 0,
+    z: first.z + Math.cos(CIRCUIT_START_YAW) * ahead,
+  }
+}
 
 /**
  * 🛑 POLAR, and that is the whole point: a loop written as a list of corners crossed itself six
@@ -198,21 +222,14 @@ export function circuitNodes(): SceneNode[] {
  * thirty-metre slab of chequer. Only the YAW comes from the run.
  */
 function startLine(parentId: string): SceneNode {
-  const line = circuitLine(0)
-  const first = line[0]!
-  const next = line[1]!
-  const yaw = Math.atan2(next.x - first.x, next.z - first.z)
+  const at = alongStart(LINE_AHEAD)
 
   return meshNode(
     { kind: 'box', width: TRACK_WIDTH, height: LINE_DEPTH, depth: 1.5 },
     {
       transform: transformAt(
-        {
-          x: first.x + Math.sin(yaw) * 6,
-          y: TARMAC_PROUD + LINE_DEPTH / 2,
-          z: first.z + Math.cos(yaw) * 6,
-        },
-        { x: 0, y: yaw, z: 0 },
+        { x: at.x, y: TARMAC_PROUD + LINE_DEPTH / 2, z: at.z },
+        { x: 0, y: CIRCUIT_START_YAW, z: 0 },
       ),
       material: markSurface(),
       parentId,
