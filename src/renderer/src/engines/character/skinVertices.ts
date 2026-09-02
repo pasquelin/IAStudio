@@ -79,8 +79,8 @@ export function skinRange(
 /**
  * The binding for every vertex of the request, or `null` if it was taken back mid-walk.
  *
- * Weights are the inverse of the distance to each bone, normalised to one — a vertex twice as far
- * from a bone follows it half as much. Candidates are restricted by region first: that is what
+ * Weights are the inverse SQUARE of the distance to each bone, normalised to one — a vertex twice
+ * as far from a bone follows it a quarter as much. Candidates are restricted by region first: that is what
  * stops the hand bone from catching a hip vertex when the arm hangs beside the body.
  */
 export function skinVertices(request: SkinRequest, progress?: SkinProgress): SkinBinding | null {
@@ -138,12 +138,22 @@ function writeInfluences(
   }
 
   let total = 0
-  for (let slot = 0; slot < held; slot += 1) total += 1 / ((near[slot] ?? 0) + EPSILON)
+  for (let slot = 0; slot < held; slot += 1) total += pull(near[slot] ?? 0)
 
   for (let slot = 0; slot < held; slot += 1) {
     skinIndex[vertex * INFLUENCES + slot] = bones[slot] ?? 0
-    skinWeight[vertex * INFLUENCES + slot] = 1 / ((near[slot] ?? 0) + EPSILON) / total
+    skinWeight[vertex * INFLUENCES + slot] = pull(near[slot] ?? 0) / total
   }
+}
+
+/**
+ * How hard a bone pulls one vertex, before the four are normalised — the INVERSE SQUARE, not the
+ * inverse: under `1/d` four bones at comparable distances shared a vertex almost evenly, and the
+ * dominant weight averaged 0.46 over the whole body. Measured on tripo-character, 2026-09-02.
+ */
+function pull(distance: number): number {
+  const near = distance + EPSILON
+  return 1 / (near * near)
 }
 
 /** Scratch for the four slots above. Module-level because the walk runs once, in one worker. */

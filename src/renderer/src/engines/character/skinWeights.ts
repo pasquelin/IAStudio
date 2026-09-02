@@ -6,6 +6,7 @@
  */
 import { isIkHandle, type Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
+import type { Vector3 } from '@shared/domain/transform'
 import { SKIN_REGIONS, type SkinRegion, type SkinRequest, type SkinResponse } from './skinMessage'
 import type { SkinBinding } from './skinVertices'
 import { createWorkerPort } from '../core/workerPort'
@@ -41,6 +42,14 @@ export function createSkinWeights(spawn: () => Worker): SkinWeights {
   }
 }
 
+/**
+ * How far past itself a leaf reaches, as a fraction of the bone arriving at it.
+ *
+ * 🛑 Measured as a POINT it never won a vertex against its parent's segment: on tripo-character
+ * the hand, the head and the toes drove no skin at all, so a hand posed left its own flesh behind.
+ */
+const LEAF_REACH = 1
+
 /** A rig as numbers: one segment and one region per bone, in the order the bones are spelled. */
 export function wireOf(positions: Float32Array, rig: Rig): Omit<SkinRequest, 'id'> {
   const world = worldPlaces(rig.bones)
@@ -49,14 +58,26 @@ export function wireOf(positions: Float32Array, rig: Rig): Omit<SkinRequest, 'id
 
   rig.bones.forEach((bone, index) => {
     const head = world.get(bone.name) ?? ORIGIN
-    // A bone reaches towards its first child; a leaf has none and measures as a point.
-    const tail = world.get(rig.bones.find(child => child.parent === bone.name)?.name ?? '') ?? head
+    const child = world.get(rig.bones.find(one => one.parent === bone.name)?.name ?? '')
+    // A bone reaches towards its first child; a leaf carries its parent's direction on.
+    const tail = child ?? leafTail(head, bone.parent === null ? null : world.get(bone.parent))
 
     segments.set([head.x, head.y, head.z, tail.x, tail.y, tail.z], index * 6)
     regions[index] = SKIN_REGIONS.indexOf(isIkHandle(bone.name) ? 'handle' : regionOf(bone.role))
   })
 
   return { position: positions, segments, regions }
+}
+
+/** Where a childless bone ends: on past itself, along the bone that arrives at it. */
+function leafTail(head: Vector3, parent: Vector3 | undefined | null): Vector3 {
+  if (!parent) return head
+
+  return {
+    x: head.x + (head.x - parent.x) * LEAF_REACH,
+    y: head.y + (head.y - parent.y) * LEAF_REACH,
+    z: head.z + (head.z - parent.z) * LEAF_REACH,
+  }
 }
 
 /**

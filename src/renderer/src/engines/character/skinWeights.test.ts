@@ -262,11 +262,19 @@ describe('a rig on the wire', () => {
     })
   })
 
-  it('gives a leaf bone no length, since it has no child to reach towards', () => {
+  // 🛑 As a point a leaf never won a vertex against its parent's segment: the hand, the head and
+  // the toes drove no skin at all, so posing a hand left its own flesh behind.
+  it('carries a leaf bone on past itself, along the bone that arrives at it', () => {
     const wire = wireOf(POSITIONS(), RIG)
     const hand = [...wire.segments.slice(12, 18)]
+    const arm = [...wire.segments.slice(6, 12)]
 
-    expect(hand.slice(0, 3)).toEqual(hand.slice(3))
+    // The hand rests at the arm's tail and reaches one arm's length further along it.
+    ;[0, 1, 2].forEach(axis => {
+      const along = (hand[axis] ?? 0) - (arm[axis] ?? 0)
+      expect(hand[axis + 3]).toBeCloseTo((hand[axis] ?? 0) + along, 5)
+    })
+    expect(hand.slice(0, 3)).not.toEqual(hand.slice(3))
   })
 
   it('labels each bone with the part of the body it drives', () => {

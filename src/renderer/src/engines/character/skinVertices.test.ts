@@ -95,6 +95,22 @@ describe('weighting a vertex', () => {
     expect(influences(beyond)[0]?.weight).toBe(1)
   })
 
+  // 🛑 Under `1/d` two bones at 1 and 2 shared a vertex two thirds to one third, and the dominant
+  // weight averaged 0.46 over a whole body: no bone held its own flesh, so posing one left it.
+  it('drops a bone twice as far to a QUARTER of the pull, not a half', () => {
+    const binding = bind(
+      [[1, 0, 0]],
+      [
+        { head: [0, 0, 0], tail: [0, 1, 0], region: 'trunk' },
+        { head: [3, 0, 0], tail: [3, 1, 0], region: 'trunk' },
+      ],
+    )
+
+    const [near, far] = influences(binding)
+    expect(near?.weight).toBeCloseTo(0.8, 3)
+    expect(far?.weight).toBeCloseTo(0.2, 3)
+  })
+
   it('takes at most four bones, however many are near', () => {
     const six: Bone[] = Array.from({ length: 6 }, (_, index) => ({
       head: [index * 0.1, 0, 0],
