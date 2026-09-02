@@ -19,20 +19,48 @@ import type { SceneNode } from './sceneState'
 function bodies(
   places: readonly number[],
   geometry: BoxGeometry = new BoxGeometry(1, 1, 1),
+  z = 0,
+  named = 'n',
 ): { nodes: SceneNode[]; objects: Map<string, Mesh> } {
   const nodes: SceneNode[] = []
   const objects = new Map<string, Mesh>()
   const material = new MeshStandardMaterial()
 
   for (const [at, x] of places.entries()) {
-    const node = meshNode(`n${at}`)
+    const node = meshNode(`${named}${at}`)
     const mesh = new Mesh(geometry, material)
-    mesh.position.set(x, 0, 0)
+    mesh.position.set(x, 0, z)
     mesh.updateMatrixWorld(true)
     nodes.push(node)
     objects.set(node.id, mesh)
   }
   return { nodes, objects }
+}
+
+/** Beside the camera, in the NEXT cell along z, and inside a view of 500 that turns to it. */
+const ASIDE_AT = CELL_SIZE + 20
+
+/**
+ * One lot over TWO cells of the same zone: one ahead of the camera, one beside it. The shape and
+ * the paint are shared, so the two are one group cut in two by the grid — the case the box is for.
+ */
+function aheadAndAside(): {
+  scene: Object3D
+  groups: ReturnType<typeof createCellGroups>
+} {
+  const scene = host()
+  const shape = new BoxGeometry(1, 1, 1)
+  const ahead = bodies(inOneCell(WORTH_INSTANCING, 20), shape, 0, 'a')
+  const aside = bodies(inOneCell(WORTH_INSTANCING, 0), shape, ASIDE_AT, 'b')
+  const objects = new Map([...ahead.objects, ...aside.objects])
+  // The same material object on both, so the spelling of the group is the same one.
+  for (const mesh of aside.objects.values()) {
+    const first = ahead.objects.get('a0')
+    if (first) mesh.material = first.material
+  }
+  const groups = createCellGroups(scene)
+  groups.rebuild([...ahead.nodes, ...aside.nodes], id => objects.get(id))
+  return { scene, groups }
 }
 
 /** `count` bodies inside one cell, around `x`. */
@@ -63,6 +91,15 @@ const twoCells = (): {
   return { scene, groups, nodes, objects }
 }
 
+/** What three would really draw: the instance visible, and every group it hangs from with it. */
+const drawnIn = (scene: Object3D): InstancedMesh[] =>
+  instancesIn(scene).filter(mesh => {
+    for (let at: Object3D | null = mesh; at && at !== scene; at = at.parent) {
+      if (!at.visible) return false
+    }
+    return true
+  })
+
 /** Where each cell the scene still holds stands, along x — one number per cell, sorted. */
 const standingIn = (scene: Object3D): number[] =>
   cellsIn(scene)
@@ -70,10 +107,17 @@ const standingIn = (scene: Object3D): number[] =>
     .map(mesh => mesh.instanceMatrix.array[12] ?? 0)
     .toSorted((one, other) => one - other)
 
-/** A view of `far` from where it stands — what decides which cells are drawn. */
-function looking(x: number, far: number): PerspectiveCamera {
+/** A view of `far` from where it stands, aimed along `at` — what decides what is drawn. */
+function looking(
+  x: number,
+  far: number,
+  at: { x: number; z: number } = { x: 1, z: 0 },
+): PerspectiveCamera {
   const camera = new PerspectiveCamera(50, 1, 0.1, far)
   camera.position.set(x, 0, 0)
+  camera.lookAt(x + at.x, 0, at.z)
+  camera.updateMatrixWorld(true)
+  camera.updateProjectionMatrix()
   return camera
 }
 
@@ -205,6 +249,76 @@ describe('the zone a camera holds', () => {
     // The pixel-for-pixel case: nothing a view could show is ever left out, so an ordinary scene
     // under the flag draws exactly the image it drew without it.
     expect(standingIn(scene)).toEqual([0, 20 * CELL_SIZE])
+  })
+})
+
+describe('the box a bucket really occupies', () => {
+  it('stops drawing what the view cannot reach, without moving its cell out of the scene', () => {
+    const { scene, groups } = aheadAndAside()
+
+    groups.follow?.(looking(0, 500))
+
+    // 🛑 Measured on 500 000 bodies: the box rejects 155 of the 381 calls three's SPHERE lets
+    // through, and every one of them was drawing no visible instance at all. The cell stays in
+    // the scene — the zone is a disc on purpose, and what a shadow needs is not what a view does.
+    expect(cellsIn(scene)).toHaveLength(2)
+    const shown = drawnIn(scene)
+    expect(shown).toHaveLength(1)
+    expect(shown[0]?.instanceMatrix.array[14]).toBe(0)
+  })
+
+  it('draws it again once the camera turns to it', () => {
+    const { scene, groups } = aheadAndAside()
+    groups.follow?.(looking(0, 500))
+
+    groups.follow?.(looking(0, 500, { x: 0, z: 1 }))
+
+    const shown = drawnIn(scene)
+    expect(shown).toHaveLength(1)
+    expect(shown[0]?.instanceMatrix.array[14]).toBe(ASIDE_AT)
+  })
+
+  it('draws every bucket again for a render that names no camera', () => {
+    const { scene, groups } = aheadAndAside()
+    groups.follow?.(looking(0, 500))
+
+    groups.follow?.(null)
+
+    expect(drawnIn(scene)).toHaveLength(instancesIn(scene).length)
+  })
+})
+
+describe('a cell whose bodies moved without changing cell', () => {
+  it('is measured again, so a body carried back into view is drawn again', () => {
+    const scene = host()
+    const shape = new BoxGeometry(1, 1, 1)
+    // Off to the side of a view aimed along x, but in the cell the camera stands in.
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 20), shape, 200)
+    const groups = createCellGroups(scene)
+    groups.rebuild(nodes, id => objects.get(id))
+    groups.follow?.(looking(0, 500))
+    expect(drawnIn(scene)).toHaveLength(0)
+
+    for (const mesh of objects.values()) {
+      mesh.position.setZ(0)
+      mesh.updateMatrixWorld(true)
+    }
+    groups.rebuild(nodes, id => objects.get(id))
+    groups.follow?.(looking(0, 500))
+
+    expect(drawnIn(scene)).toHaveLength(1)
+  })
+})
+
+describe('what the strategy publishes of its own index', () => {
+  it('says what the last query walked, and what the scene now holds', () => {
+    const { groups } = twoCells()
+
+    groups.follow?.(looking(0, 500))
+
+    // Nothing in the studio could see this before: the count lived in the spike alone.
+    expect(groups.stats?.()).toMatchObject({ cells: 2, cellsStanding: 1, cellsReturned: 1 })
+    expect(groups.stats?.().nodesVisited).toBeGreaterThan(0)
   })
 })
 

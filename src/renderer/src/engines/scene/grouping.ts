@@ -99,8 +99,25 @@ export type InstancedGroups = {
    * are the same wherever one looks from.
    */
   follow?: (camera: Camera | null) => boolean
+  /**
+   * What the last `follow` walked, for whoever measures the strategy from outside — the studio's
+   * counters, a bench, a probe. Only a strategy that holds a spatial index answers.
+   */
+  stats?: () => GroupingStats
   /** The engine is going away, and so are the meshes it built. */
   dispose: () => void
+}
+
+/** What a spatial strategy can say of the last frame it followed. */
+export type GroupingStats = {
+  /** Index nodes the last query opened — macro-chunks, plus the cells of those it looked into. */
+  nodesVisited: number
+  cellsReturned: number
+  /** Cells the scene holds right now; the rest are out of the walk entirely. */
+  cellsStanding: number
+  /** Cells the index knows of, empty ones excluded. */
+  cells: number
+  bytes: number
 }
 
 /** What holds the sources out of the walk, and hands them back on demand. */
