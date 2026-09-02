@@ -98,12 +98,18 @@ describe('editing the points of a rail', () => {
     expect(withPointAtEnd(closed).points.map(point => point.x)).toEqual([0, 10, 20, 10])
   })
 
-  /** The gesture of the viewport: a place was AIMED at, so nothing is guessed about where. */
-  it('appends a point exactly where a click named, on a closed rail as on an open one', () => {
+  /**
+   * The gesture of the viewport: a place was AIMED at, so nothing is guessed about where.
+   *
+   * 🛑 A CLOSED run has no end, so the point goes into the SPAN it falls in rather than onto the
+   * end of the list: appended there, the run left its last anchor, crossed the loop to reach the
+   * point and came back — a knot, measured on screen.
+   */
+  it('appends a point exactly where a click named, in the span it falls in', () => {
     expect(withPointAppended(three, at(7)).points.map(point => point.x)).toEqual([0, 10, 20, 7])
 
     const closed = { ...three, closed: true }
-    expect(withPointAppended(closed, at(7)).points.map(point => point.x)).toEqual([0, 10, 20, 7])
+    expect(withPointAppended(closed, at(7)).points.map(point => point.x)).toEqual([0, 7, 10, 20])
   })
 
   it('drops a point', () => {
@@ -172,5 +178,49 @@ describe('a Bézier rail', () => {
     expect(handlesMatch(grown)).toBe(true)
     expect(handlesMatch(cut)).toBe(true)
     expect(cut.points).toHaveLength(4)
+  })
+})
+
+describe('a closed run', () => {
+  const at = (x: number) => ({ x, y: 0, z: 0 })
+  const loop = (): PathDescriptor => ({
+    ...DEFAULT_PATH,
+    points: [at(0), at(10), at(20)],
+    closed: true,
+  })
+
+  /**
+   * A triangle, so the spans are told apart: on a run laid along one axis every span is as near
+   * as the next, and the reading would say nothing.
+   */
+  const triangle = (): PathDescriptor => ({
+    ...DEFAULT_PATH,
+    points: [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 },
+      { x: 5, y: 0, z: 10 },
+    ],
+    closed: true,
+  })
+
+  /** The point goes into the span it FALLS IN — never across the loop and back. */
+  it('takes a point into the span nearest to where it was aimed', () => {
+    const near = withPointAppended(triangle(), { x: 8, y: 0, z: 6 })
+
+    expect(near.points.map(point => `${point.x},${point.z}`)).toEqual([
+      '0,0',
+      '10,0',
+      '8,6',
+      '5,10',
+    ])
+  })
+
+  /** The panel's own button poses on it too, halfway along the span that comes back round. */
+  it('still takes a point posed by the panel', () => {
+    expect(withPointAtEnd(loop()).points.map(point => point.x)).toEqual([0, 10, 20, 10])
+  })
+
+  it('takes a point posed in a span of it', () => {
+    expect(withPointAfter(loop(), 0).points.map(point => point.x)).toEqual([0, 5, 10, 20])
   })
 })

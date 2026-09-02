@@ -4865,6 +4865,8 @@ export class SceneRenderer {
     if (!nodeId || !ndc) return null
 
     const rail = this.objects.get(nodeId)
+    // The LAST anchor is only where the plane stands: on a closed run the point still lands in
+    // the span it falls in — see `withPointAppended`.
     const anchor = railOf(this.applied.get(nodeId))?.points.at(-1)
     if (!rail || !anchor) return null
 

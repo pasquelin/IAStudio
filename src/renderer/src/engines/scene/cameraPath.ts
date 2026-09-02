@@ -181,7 +181,56 @@ export function withPointAtEnd(path: PathDescriptor): PathDescriptor {
  * viewport adds. `withPointAtEnd` guesses where instead, which is all a panel can do.
  */
 export function withPointAppended(path: PathDescriptor, point: PlainVector3): PathDescriptor {
-  return withPoints(path, [...path.points, point])
+  if (!path.closed) return withPoints(path, [...path.points, point])
+
+  // 🛑 A CLOSED run has no end: appended to the list, a point aimed at anywhere but the seam made
+  // the run leave its last anchor, cross the loop to reach it, and come back — a knot, measured
+  // on screen. It goes into the SPAN it falls in, which is where the eye put it.
+  const points = [...path.points]
+  points.splice(nearestSpan(path, point) + 1, 0, point)
+  return withPoints(path, points)
+}
+
+/** Which span of the run a point falls nearest to, by the index of the anchor that opens it. */
+function nearestSpan(path: PathDescriptor, point: PlainVector3): number {
+  const spans = path.closed ? path.points.length : path.points.length - 1
+  let nearest = 0
+  let best = Infinity
+
+  for (let at = 0; at < spans; at += 1) {
+    const from = path.points[at]!
+    const to = path.points[(at + 1) % path.points.length]!
+    const gap = distanceToSpan(point, from, to)
+    if (gap < best) {
+      best = gap
+      nearest = at
+    }
+  }
+
+  return nearest
+}
+
+function distanceToSpan(point: PlainVector3, from: PlainVector3, to: PlainVector3): number {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const dz = to.z - from.z
+  const length = dx * dx + dy * dy + dz * dz
+  const along =
+    length === 0
+      ? 0
+      : Math.max(
+          0,
+          Math.min(
+            1,
+            ((point.x - from.x) * dx + (point.y - from.y) * dy + (point.z - from.z) * dz) / length,
+          ),
+        )
+
+  return Math.hypot(
+    point.x - (from.x + dx * along),
+    point.y - (from.y + dy * along),
+    point.z - (from.z + dz * along),
+  )
 }
 
 /** One control point taken away. A rail never drops below two: one point is not a line. */
