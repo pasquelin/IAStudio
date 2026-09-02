@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
+import { bezierPathOf, DEFAULT_PATH, handlesMatch, type PathDescriptor } from '@shared/domain/scene'
 import {
   curveOf,
   pathPoints,
@@ -114,5 +114,63 @@ describe('editing the points of a rail', () => {
   it('refuses to drop below two points', () => {
     const two = pathOf([at(0), at(10)])
     expect(withoutPoint(two, 0)).toBe(two)
+  })
+})
+
+describe('a Bézier rail', () => {
+  const at = (x: number, z: number) => ({ x, y: 0, z })
+  const square = [at(-5, -5), at(5, -5), at(5, 5), at(-5, 5)]
+
+  /** 🛑 The conversion must be invisible: a rail that jumps when handles are turned on is a rail
+   * nobody dares turn them on for. */
+  it('keeps the shape a smooth rail already had', () => {
+    const smooth: PathDescriptor = { ...DEFAULT_PATH, points: square, closed: true }
+    const bezier = bezierPathOf(square, true)
+
+    for (const along of [0.1, 0.35, 0.6, 0.85]) {
+      const one = curveOf(smooth).getPointAt(along)
+      const other = curveOf(bezier).getPointAt(along)
+      // Within a tenth of a metre on a ten-metre square: the two parameterisations differ, the
+      // shape does not.
+      expect(one.distanceTo(other)).toBeLessThan(0.1)
+    }
+  })
+
+  /** The point of the whole thing: a tangent turned changes the curve, and only near its anchor. */
+  it('bends where a tangent is turned', () => {
+    const before = bezierPathOf(square, true)
+    const turned: PathDescriptor = {
+      ...before,
+      kind: 'bezier',
+      handles:
+        before.kind === 'bezier'
+          ? before.handles.map((held, at) =>
+              at === 1 ? { in: held.in, out: { x: 0, y: 6, z: 0 } } : held,
+            )
+          : [],
+    }
+
+    expect(curveOf(turned).getPointAt(0.3).y).toBeGreaterThan(1)
+    expect(curveOf(turned).getPointAt(0.8).y).toBeCloseTo(0, 5)
+  })
+
+  /** A point posed in a curve must not kink it: its own pair is smoothed from its neighbours. */
+  it('smooths the pair of a point it is handed', () => {
+    const posed = withPointAfter(bezierPathOf(square, true), 0)
+    const pair = posed.kind === 'bezier' ? posed.handles[1] : null
+
+    expect(posed.points).toHaveLength(5)
+    expect(posed.kind === 'bezier' ? posed.handles : []).toHaveLength(5)
+    expect(Math.hypot(pair?.out.x ?? 0, pair?.out.z ?? 0)).toBeGreaterThan(0)
+  })
+
+  /** A pair per anchor, whatever the edit: fewer would draw a curve past its own handles. */
+  it('keeps one pair per anchor through every edit', () => {
+    const grown = withPointAppended(bezierPathOf(square, false), at(0, 12))
+    const cut = withoutPoint(grown, 0)
+
+    expect(handlesMatch(grown)).toBe(true)
+    expect(handlesMatch(cut)).toBe(true)
+    expect(cut.points).toHaveLength(4)
   })
 })

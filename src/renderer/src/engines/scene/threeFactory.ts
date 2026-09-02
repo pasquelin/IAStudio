@@ -201,6 +201,12 @@ export const PATH_KNOB_RADIUS = 0.14
 const HANDLE_ORDER = 10
 
 /**
+ * The tangents are GREEN, the anchors the studio's own colour: two things one drags for different
+ * reasons must not read as one. A document colour, not a token — this is painted into the scene.
+ */
+const HANDLE_COLOUR = '#4ade80'
+
+/**
  * How much of the visible height a knob covers, whatever the distance: a hundred-and-twenty-eighth
  * of it, so about 14 px across on a viewport 900 px tall — the size a control point is drawn at in
  * the drawing tools a hand already knows.
@@ -231,6 +237,30 @@ export function knobIndexOf(name: string): number | null {
 
   const index = Number(name.slice(PATH_KNOB_PREFIX.length))
   return Number.isInteger(index) && index >= 0 ? index : null
+}
+
+/**
+ * The two tangents of an anchor, and the bar that ties each to it. Named apart from a knob: a
+ * pick has to say WHICH of the three it caught, the gizmo writing a different field for each.
+ */
+export const HANDLE_PREFIX = { in: 'path-in-', out: 'path-out-' }
+export const HANDLE_BAR_PREFIX = 'path-bar-'
+
+export type HandlePart = 'in' | 'out'
+
+export function handleName(part: HandlePart, index: number): string {
+  return `${HANDLE_PREFIX[part]}${index}`
+}
+
+/** Which tangent an object stands for, or `null` for one that is neither. */
+export function handlePartOf(name: string): { part: HandlePart; index: number } | null {
+  for (const part of ['in', 'out'] satisfies HandlePart[]) {
+    const prefix = HANDLE_PREFIX[part]
+    if (!name.startsWith(prefix)) continue
+    const index = Number(name.slice(prefix.length))
+    if (Number.isInteger(index) && index >= 0) return { part, index }
+  }
+  return null
 }
 
 /**
@@ -269,6 +299,24 @@ export function dressWithRail(
     const knob = pathKnob(index, colour, through)
     knob.position.set(point.x, point.y, point.z)
     object.add(knob)
+
+    // Hidden until its anchor is the one being worked on — see `showPathHandles`. Built either
+    // way, so activating a point costs no rebuild and no frame.
+    for (const part of ['in', 'out'] satisfies HandlePart[]) {
+      const handle = pathKnob(index, HANDLE_COLOUR, through)
+      handle.name = handleName(part, index)
+      handle.visible = false
+      object.add(handle)
+
+      const bar = new Line(
+        new BufferGeometry(),
+        new LineBasicMaterial({ color: HANDLE_COLOUR, depthTest: !through }),
+      )
+      bar.name = `${HANDLE_BAR_PREFIX}${part}-${index}`
+      bar.visible = false
+      if (through) bar.renderOrder = HANDLE_ORDER
+      object.add(bar)
+    }
   }
 
   return object

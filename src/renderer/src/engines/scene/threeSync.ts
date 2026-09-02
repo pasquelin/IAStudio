@@ -4,7 +4,9 @@ import {
   HemisphereLight,
   Line,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
+  Vector3 as ThreeVector3,
   PointLight,
   SpotLight,
   type BufferGeometry,
@@ -23,7 +25,19 @@ import type {
   Vector3,
 } from '@shared/domain/scene'
 import { pathPoints } from './cameraPath'
-import { bareLight, geometryFor, pathKnob, PATH_CURVE_NAME, PATH_KNOB_PREFIX } from './threeFactory'
+import { handleAt } from '@shared/domain/scene'
+import {
+  bareLight,
+  dressWithRail,
+  geometryFor,
+  HANDLE_BAR_PREFIX,
+  handleName,
+  handlePartOf,
+  knobIndexOf,
+  PATH_CURVE_NAME,
+  PATH_KNOB_PREFIX,
+  type HandlePart,
+} from './threeFactory'
 import { tileUvs } from './uvTiling'
 
 /*
@@ -244,18 +258,66 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
   if (line instanceof Line) line.geometry.setFromPoints(pathPoints(descriptor))
 
   const knobs = object.children.filter(
-    (child): child is Mesh => child.name.startsWith(PATH_KNOB_PREFIX) && child instanceof Mesh,
+    (child): child is Mesh => knobIndexOf(child.name) !== null && child instanceof Mesh,
   )
 
-  for (const extra of knobs.slice(descriptor.points.length)) {
-    object.remove(extra)
-    extra.geometry.dispose()
+  // A run that gained or lost an anchor is dressed again whole: every anchor carries three more
+  // objects now, and threading an insertion through four parallel lists is where a leak lives.
+  if (knobs.length !== descriptor.points.length) {
+    const worn = knobs[0]?.material
+    const through = worn instanceof MeshBasicMaterial && !worn.depthTest
+    for (const child of [...object.children]) {
+      object.remove(child)
+      if (child instanceof Mesh || child instanceof Line) child.geometry.dispose()
+    }
+    dressWithRail(object, descriptor, colour, through)
+    return
   }
 
   for (const [index, point] of descriptor.points.entries()) {
-    const knob = knobs[index] ?? pathKnob(index, colour)
-    if (!knobs[index]) object.add(knob)
-    knob.position.set(point.x, point.y, point.z)
+    knobs[index]?.position.set(point.x, point.y, point.z)
+    placeHandles(object, descriptor, index, point)
+  }
+}
+
+/** The two tangents of one anchor, and the bar tying each to it — all four in the rail's frame. */
+function placeHandles(
+  object: Object3D,
+  descriptor: PathDescriptor,
+  index: number,
+  point: Vector3,
+): void {
+  const pair = handleAt(descriptor, index)
+
+  for (const part of ['in', 'out'] satisfies HandlePart[]) {
+    const reach = pair[part]
+    const at = { x: point.x + reach.x, y: point.y + reach.y, z: point.z + reach.z }
+
+    object.getObjectByName(handleName(part, index))?.position.set(at.x, at.y, at.z)
+    const bar = object.getObjectByName(`${HANDLE_BAR_PREFIX}${part}-${index}`)
+    if (bar instanceof Line) {
+      bar.geometry.setFromPoints([
+        new ThreeVector3(point.x, point.y, point.z),
+        new ThreeVector3(at.x, at.y, at.z),
+      ])
+    }
+  }
+}
+
+/**
+ * The tangents shown on ONE anchor — the one being worked on — and on no other.
+ *
+ * 🛑 Every anchor at once is what makes a run of twenty-four unreadable: Photoshop shows the pair
+ * of the point one clicked, and that is the gesture this follows.
+ */
+export function showPathHandles(object: Object3D, index: number | null): void {
+  for (const child of object.children) {
+    const part = handlePartOf(child.name)
+    const bar = child.name.startsWith(HANDLE_BAR_PREFIX)
+      ? Number(child.name.split('-').at(-1))
+      : null
+    if (part) child.visible = part.index === index
+    else if (bar !== null) child.visible = bar === index
   }
 }
 

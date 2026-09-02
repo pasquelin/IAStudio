@@ -1,3 +1,4 @@
+import type { PickedPathPoint } from '@/engines/scene/SceneRenderer'
 import { create } from 'zustand'
 import { snapToFrame, type Us } from '@shared/domain/time'
 import {
@@ -36,8 +37,8 @@ export type SceneView = {
   poseMode: boolean
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null
-  /** The control point of a rail the gizmo holds. Never a node either — see `PathDescriptor`. */
-  pickedPathPoint: { nodeId: string; index: number } | null
+  /** The control point or tangent of a rail the gizmo holds. Never a node — see `PathDescriptor`. */
+  pickedPathPoint: PickedPathPoint | null
   /** Four views instead of one — top, front, left, and the one being flown. */
   quad: boolean
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */

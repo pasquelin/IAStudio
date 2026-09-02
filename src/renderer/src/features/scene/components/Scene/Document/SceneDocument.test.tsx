@@ -965,7 +965,7 @@ describe('SceneDocument and a point posed on a rail', () => {
     act(() => useScenes.getState().runCommand('doc-1', addNode(band)))
 
     await act(async () => built.at(-1)?.onAddPathPoint?.('band', 0))
-    await act(async () => built.at(-1)?.onPathPoint?.('band', 0, at(-4)))
+    await act(async () => built.at(-1)?.onPathPoint?.({ nodeId: 'band', index: 0 }, at(-4)))
 
     const node = nodesOf('doc-1').find(candidate => candidate.id === 'band')
     const run = node?.type === 'mesh' && node.geometry.kind === 'ribbon' ? node.geometry.path : null

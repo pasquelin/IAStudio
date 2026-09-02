@@ -395,8 +395,17 @@ function isGeometryRun(value: unknown): boolean {
 function isPath(value: unknown): boolean {
   if (!isRecord(value) || !Array.isArray(value.points)) return false
   if (value.points.length < 2 || !value.points.every(isVector3)) return false
+  if (!isOptionalFlag(value.closed)) return false
+  if (value.tension != null && !Number.isFinite(value.tension)) return false
 
-  return isOptionalFlag(value.closed) && (value.tension == null || Number.isFinite(value.tension))
+  // 🛑 One pair of tangents per anchor: a run holding fewer would draw a curve past the end of
+  // its own handles, and `handleAt` would hand back a corner where the file said otherwise.
+  if (value.kind !== 'bezier') return true
+  return (
+    Array.isArray(value.handles) &&
+    value.handles.length === value.points.length &&
+    value.handles.every(one => isRecord(one) && isVector3(one.in) && isVector3(one.out))
+  )
 }
 
 /**

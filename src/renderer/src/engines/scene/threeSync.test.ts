@@ -14,12 +14,16 @@ import {
   SpriteMaterial,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
+import { bezierPathOf, DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './lightTypes'
 import {
   buildPath,
   dressWithRail,
   geometryFor,
+  handleName,
+  handlePartOf,
+  knobIndexOf,
+  knobName,
   PATH_CURVE_NAME,
   PATH_KNOB_PREFIX,
   sizeKnobFor,
@@ -35,6 +39,7 @@ import {
   applyPath,
   applySprite,
   giveSecondUvSet,
+  showPathHandles,
   showPathKnobs,
   standardMaterialOf,
   tiledGeometry,
@@ -548,14 +553,62 @@ describe('showPathKnobs', () => {
 
     showPathKnobs(object, false)
     expect(
-      object.children.filter(child => child instanceof Mesh).map(knob => knob.visible),
+      object.children.filter(child => knobIndexOf(child.name) !== null).map(knob => knob.visible),
     ).toEqual([false, false])
     expect(object.getObjectByName(PATH_CURVE_NAME)?.visible).toBe(true)
 
     showPathKnobs(object, true)
     expect(
-      object.children.filter(child => child instanceof Mesh).map(knob => knob.visible),
+      object.children.filter(child => knobIndexOf(child.name) !== null).map(knob => knob.visible),
     ).toEqual([true, true])
+  })
+})
+
+describe('showPathHandles', () => {
+  const rail = bezierPathOf(
+    [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 },
+      { x: 10, y: 0, z: 10 },
+    ],
+    false,
+  )
+
+  /**
+   * 🛑 The pair of the anchor being worked on, and of no other: twenty-four anchors showing their
+   * tangents at once is a run nobody can read, and Photoshop shows the one clicked.
+   */
+  it('shows the tangents of one anchor and hides every other', () => {
+    const object = buildPath(rail, '#ffffff')
+
+    showPathHandles(object, 1)
+    const shown = object.children.filter(child => child.visible && handlePartOf(child.name))
+
+    expect(shown.map(child => child.name).sort()).toEqual([
+      handleName('in', 1),
+      handleName('out', 1),
+    ])
+  })
+
+  it('hides them all when no anchor is held', () => {
+    const object = buildPath(rail, '#ffffff')
+
+    showPathHandles(object, 1)
+    showPathHandles(object, null)
+
+    expect(object.children.filter(child => child.visible && handlePartOf(child.name))).toEqual([])
+  })
+
+  /** A tangent is drawn AT anchor + reach: stored relative, it travels when its anchor moves. */
+  it('stands each tangent off its own anchor', () => {
+    const object = buildPath(rail, '#ffffff')
+    applyPath(object, rail, '#ffffff')
+    const anchor = rail.points[1]!
+    const out = object.getObjectByName(handleName('out', 1))
+    const reach = rail.kind === 'bezier' ? rail.handles[1]!.out : { x: 0, y: 0, z: 0 }
+
+    expect(out?.position.x).toBeCloseTo(anchor.x + reach.x, 6)
+    expect(out?.position.z).toBeCloseTo(anchor.z + reach.z, 6)
   })
 })
 
@@ -629,18 +682,19 @@ describe('applyPath', () => {
   it('draws the line and one knob per control point', () => {
     const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
 
-    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(2)
+    expect(object.children.filter(child => knobIndexOf(child.name) !== null)).toHaveLength(2)
     expect(object.getObjectByName(PATH_CURVE_NAME)).toBeDefined()
   })
 
   it('follows a point that moved without building a knob for it', () => {
     const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
-    // Child 0 is the line, so the knob of the point that moves is the second one after it.
-    const knob = object.children[2]
+    // By NAME rather than by position: an anchor carries its two tangents and their bars, so what
+    // stands where among the children is not what this is about.
+    const knob = object.getObjectByName(knobName(1))
 
     applyPath(object, pathOf([at(0), at(4)]), '#ffffff')
 
-    expect(object.children[2]).toBe(knob)
+    expect(object.getObjectByName(knobName(1))).toBe(knob)
     expect(knob?.position.x).toBe(4)
   })
 
@@ -648,10 +702,10 @@ describe('applyPath', () => {
     const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
 
     applyPath(object, pathOf([at(0), at(5), at(10)]), '#ffffff')
-    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(3)
+    expect(object.children.filter(child => knobIndexOf(child.name) !== null)).toHaveLength(3)
 
     applyPath(object, pathOf([at(0), at(10)]), '#ffffff')
-    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(2)
+    expect(object.children.filter(child => knobIndexOf(child.name) !== null)).toHaveLength(2)
   })
 })
 

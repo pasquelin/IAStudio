@@ -2,7 +2,12 @@ import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat, PathDescriptor, Vector3 as PlainVector3 } from '@shared/domain/scene'
-import { withMovedPoint, withPointAfter, withPointAppended } from '@/engines/scene/cameraPath'
+import {
+  withMovedHandle,
+  withMovedPoint,
+  withPointAfter,
+  withPointAppended,
+} from '@/engines/scene/cameraPath'
 import { setGeometry, setPath, setTransform } from '@/engines/scene/commands'
 import { railOf } from '@/engines/scene/nodeRail'
 import i18next from 'i18next'
@@ -274,8 +279,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         useModelFiles.getState().reportClipFit(documentId, nodeId, clipKey, fit),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
-      onPathPoint: (nodeId, index, point) =>
-        editPath(documentId, nodeId, path => withMovedPoint(path, index, point)),
+      onPathPoint: (picked, point) =>
+        editPath(documentId, picked.nodeId, path =>
+          picked.part
+            ? withMovedHandle(path, picked.index, picked.part, point)
+            : withMovedPoint(path, picked.index, point),
+        ),
       onAddPathPoint: (nodeId, index) => addPathPoint(documentId, nodeId, index),
       onAppendPathPoint: (nodeId, point) => appendPathPoint(documentId, nodeId, point),
       // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it

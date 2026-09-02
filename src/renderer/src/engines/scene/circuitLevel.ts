@@ -4,7 +4,7 @@
  * 🛑 Written by its CENTRE LINE, never corner by corner. A track laid as a list of boxes drifts —
  * the kerbs stop matching the tarmac, and a car finds a wall in the middle of a straight.
  */
-import { DEFAULT_PATH, type MaterialDescriptor, type Vector3 } from '@shared/domain/scene'
+import { bezierPathOf, type MaterialDescriptor, type Vector3 } from '@shared/domain/scene'
 import { groupNode, meshNode, transformAt } from './nodeFactory'
 import {
   climbSurface,
@@ -113,9 +113,9 @@ function ribbonNode(band: {
   return meshNode(
     {
       kind: 'ribbon',
-      // A rail of its own, CLOSED and at the studio's own tension: the curve through the marks is
-      // what rounds a corner off — the marks alone gave a polygon with visible angles.
-      path: { ...DEFAULT_PATH, points: band.points, closed: true },
+      // A CLOSED Bézier rail: the curve through the marks is what rounds a corner off, and every
+      // mark carries the pair of tangents an author drags to set the angle at it.
+      path: bezierPathOf(band.points, true),
       width: band.width,
       height: band.height,
       segments: CURVE_SEGMENTS,

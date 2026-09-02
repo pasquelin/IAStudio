@@ -46,7 +46,15 @@ export type CameraDescriptor = {
 export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
 
 /** Re-exported for the same reason as the transform above: a scene is read from here. */
-export { DEFAULT_PATH, type PathDescriptor } from './path'
+export {
+  bezierPathOf,
+  DEFAULT_PATH,
+  handleAt,
+  handlesMatch,
+  type PathDescriptor,
+  type PathHandle,
+  type SmoothPath,
+} from './path'
 
 /**
  * An imported model, for the same reason and in the same shape as a texture: what a document

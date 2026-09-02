@@ -104,8 +104,11 @@ import {
   dressWithRail,
   cameraBody,
   helperFor,
+  handleName,
+  handlePartOf,
   knobIndexOf,
   knobName,
+  type HandlePart,
   PATH_CURVE_NAME,
   tuneViewHelper,
   type LightHelper,
@@ -122,6 +125,7 @@ import {
   applyPath,
   applySprite,
   lightFor,
+  showPathHandles,
   showPathKnobs,
   standardMaterialOf,
 } from './threeSync'
@@ -323,9 +327,9 @@ export type SceneRendererOptions = {
    * A control point of a rail was picked, or let go of. Apart from `onSelect` for the same
    * reason a bone is: a point has no id in the document, and no row in the tree.
    */
-  onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
-  /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
-  onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
+  onSelectPathPoint?: (picked: PickedPathPoint | null) => void
+  /** Where a picked control point or tangent was dragged to, in the frame of the rail. */
+  onPathPoint?: (picked: PickedPathPoint, point: PlainVector3) => void
   /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
   onAddPathPoint?: (nodeId: string, index: number) => void
   /** A point is to be posed at the END of that rail, where the click landed in its own frame. */
@@ -536,7 +540,13 @@ function isScenery(object: Object3D, isRail: (nodeId: string) => boolean): boole
 const LINE_GRAB = 1 / 150
 
 /** A control point, as the screen sees it. */
-type ProjectedKnob = Projected & { nodeId: string; index: number }
+type ProjectedKnob = Projected & PickedPathPoint
+
+/**
+ * What the gizmo holds on a rail: an anchor, or one of the two tangents that set the angle at it.
+ * `part` absent is the anchor itself — a document written before tangents existed says nothing.
+ */
+export type PickedPathPoint = { nodeId: string; index: number; part?: HandlePart }
 
 /** What the panel asks the engine to show in the corner — see `setCameraPreview`. */
 export type CameraPreviewRequest = {
@@ -723,7 +733,7 @@ export class SceneRenderer {
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
   /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
-  private pickedPathPoint: { nodeId: string; index: number } | null = null
+  private pickedPathPoint: PickedPathPoint | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
 
@@ -1142,6 +1152,9 @@ export class SceneRenderer {
       // surface of the scene: only its handles go.
       if (!chrome && node.type === 'path') rail.visible = false
       showPathKnobs(rail, chrome && rails.has(id))
+      // The pair of the ANCHOR being worked on, and of no other — see `showPathHandles`.
+      const held = this.pickedPathPoint
+      showPathHandles(rail, chrome && held?.nodeId === id && !held.part ? held.index : null)
     }
   }
 
@@ -4336,7 +4349,7 @@ export class SceneRenderer {
     const knob = this.pickedKnob()
     if (point && knob) {
       // The knob's own position IS the control point: both live in the rail's frame.
-      this.options.onPathPoint?.(point.nodeId, point.index, plainVector(knob.position))
+      this.options.onPathPoint?.(point, plainVector(knob.position))
       return
     }
 
@@ -4447,7 +4460,7 @@ export class SceneRenderer {
    * renamed, hidden or deleted on its own. `LightDescriptor` says why that matters — a node
    * nobody can rename is a property that leaked into the tree.
    */
-  setPickedPathPoint(picked: { nodeId: string; index: number } | null): void {
+  setPickedPathPoint(picked: PickedPathPoint | null): void {
     this.pickedPathPoint = picked
     this.attachGizmo()
     this.redraw()
@@ -4463,7 +4476,8 @@ export class SceneRenderer {
   private pickedKnob(): Object3D | null {
     const picked = this.pickedPathPoint
     if (!picked || !this.workedRailIds().has(picked.nodeId)) return null
-    return this.objects.get(picked.nodeId)?.getObjectByName(knobName(picked.index)) ?? null
+    const name = picked.part ? handleName(picked.part, picked.index) : knobName(picked.index)
+    return this.objects.get(picked.nodeId)?.getObjectByName(name) ?? null
   }
 
   /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
@@ -4668,7 +4682,7 @@ export class SceneRenderer {
    * was plainly visible. It also settles what a ray never could — the curve lies right across
    * its own control points, so the nearest INTERSECTION was often the line.
    */
-  private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
+  private pathPointAt(event: PointerEvent): PickedPathPoint | null {
     const ndc = this.viewport.pointerNdcOf(event)
     if (!ndc) return null
 
@@ -4677,7 +4691,7 @@ export class SceneRenderer {
       { x: ndc.x, y: ndc.y },
       KNOB_REACH,
     )
-    return picked ? { nodeId: picked.nodeId, index: picked.index } : null
+    return picked ? { nodeId: picked.nodeId, index: picked.index, part: picked.part } : null
   }
 
   /** Every knob of every rail being worked on, as the screen sees it. */
@@ -4686,12 +4700,22 @@ export class SceneRenderer {
 
     for (const rail of this.workedRails()) {
       for (const knob of rail.children) {
-        const index = knobIndexOf(knob.name)
+        // A tangent is only pickable while it SHOWS, which is while its anchor is the one held:
+        // hidden ones would take clicks meant for the surface behind them.
+        const handle = knob.visible ? handlePartOf(knob.name) : null
+        const index = handle?.index ?? knobIndexOf(knob.name)
         if (index === null) continue
 
         knob.getWorldPosition(RAIL_SPOT)
         RAIL_SPOT.project(camera)
-        projected.push({ nodeId: rail.name, index, x: RAIL_SPOT.x, y: RAIL_SPOT.y, z: RAIL_SPOT.z })
+        projected.push({
+          nodeId: rail.name,
+          index,
+          part: handle?.part,
+          x: RAIL_SPOT.x,
+          y: RAIL_SPOT.y,
+          z: RAIL_SPOT.z,
+        })
       }
     }
 

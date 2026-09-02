@@ -17,7 +17,7 @@ import {
   mdiVectorPolyline,
 } from '@mdi/js'
 import {
-  DEFAULT_PATH,
+  bezierPathOf,
   MESH_ENTRIES,
   type GeometryDescriptor,
   type MeshKind,
@@ -131,14 +131,14 @@ const MESH_BUILDERS: MeshBuilders = {
     // Born on a rail of its own, so its points are dragged with the very handles a rail has.
     create: () => ({
       kind: 'ribbon',
-      path: {
-        ...DEFAULT_PATH,
-        points: [
+      path: bezierPathOf(
+        [
           { x: 0, y: 0, z: 2 },
           { x: 2, y: 0, z: 0 },
           { x: 0, y: 0, z: -2 },
         ],
-      },
+        false,
+      ),
       width: 1,
       height: 0.2,
       segments: 32,
