@@ -175,16 +175,14 @@ function sceneOf(name: string, total: number, moving: number, warmup: number): B
 }
 
 /**
- * Une série où SEUL le nombre de corps change. Même géométrie, même densité, même hauteur de
- * chute, aucun décor — trois couches posées sur un sol qui frémit, dont l'empreinte grandit avec
- * le compte.
+ * A series where ONLY the number of bodies changes: same geometry, same density, same drop, no
+ * set — three layers on a floor that trembles, over a footprint that grows with the count.
  *
- * 🛑 Elle existe parce que `physics-500 → 2000 → 5000` n'est PAS monotone, et c'est mesuré : à
- * 5 000, le tas fait seize couches, soit dix-neuf mètres, et il faut cent vingt pas pour les
- * tomber quand le warmup en fait quatre-vingt-dix. Une part du tas est donc en chute libre au
- * moment du chronomètre, et les interactions par corps actif y sont PLUS BASSES qu'à 2 000 —
- * 0,95 contre 1,42 sous Rapier, 1,51 contre 2,23 sous Jolt. Un écart lu sur cette série-là dit
- * la géométrie, pas la charge.
+ * 🛑 It exists because `physics-500 → 2000 → 5000` is NOT monotonic, and that is measured: at
+ * 5 000 the pile is sixteen layers, nineteen metres, and takes 120 steps to fall where the warmup
+ * runs 90. Part of it is still in free fall at the clock, so interactions per active body are
+ * LOWER there than at 2 000 — 0,95 against 1,42 under Rapier, 1,51 against 2,23 under Jolt. A gap
+ * read on that series says the geometry, never the load.
  */
 const SCALE_LAYERS = 3
 
@@ -226,9 +224,9 @@ export const SCALE_SCENES: readonly BenchScene[] = [500, 1000, 2000, 3500, 5000]
 )
 
 /**
- * Deux mille corps, toujours, et SEULE la profondeur d'empilement change. La seule série qui
- * répond à « le coût par point de contact dépend-il de la longueur des chaînes de contact ? » —
- * mesuré à 0,9 µs sous Rapier quelle que soit la géométrie, et de 1,1 à 2,8 µs sous Jolt.
+ * Two thousand bodies, always, and ONLY the depth of the stack changes. The one series that
+ * answers « does the cost per contact point follow the length of the contact chains? » — measured
+ * at 0,9 µs under Rapier whatever the geometry, and from 1,1 to 2,8 µs under Jolt.
  */
 export const DEPTH_SCENES: readonly BenchScene[] = [1, 2, 4, 8, 16].map(layers =>
   stackSceneOf(2000, layers, `physics-depth-${layers}`, 400),
