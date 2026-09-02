@@ -81,7 +81,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     name: '50.3 adds the hands to that skeleton',
     said: ['Ajoute les mains à ce squelette.'],
     setup: rigged,
-    // FINGERS: a fitted skeleton already carries `LeftHand` and `RightHand` — what `rig.hands`
+    // FINGERS: a fitted skeleton already carries `LeftHand` and `RightHand` — what `rig.configureHands`
     // adds is the joints inside them.
     passed: run => (read.rig(run)?.bones.length ?? 0) > 22,
   },
@@ -458,7 +458,8 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
   {
     name: '57.2 puts the display settings back to their defaults',
     said: ["Remets les réglages d'affichage à leurs valeurs par défaut."],
-    passed: run => read.tried(run, 'settings.pressButton') || read.tried(run, 'settings.write'),
+    passed: run =>
+      read.tried(run, 'settings.triggerSettingAction') || read.tried(run, 'settings.write'),
   },
   {
     name: '57.3 says what it has remembered about the project',

@@ -252,7 +252,9 @@ describe('how a sky is looked at', () => {
   it('writes the projection, the lens and the probes, and reads them back', async () => {
     withSky()
 
-    expect(await runAction('skybox.setViewOptions', { view: 'equirect', probes: false })).toEqual({
+    expect(
+      await runAction('skybox.setViewportOptions', { view: 'equirect', probes: false }),
+    ).toEqual({
       ok: true,
     })
 
@@ -266,7 +268,7 @@ describe('how a sky is looked at', () => {
   it('refuses a call that names nothing at all', async () => {
     withSky()
 
-    expect(await runAction('skybox.setViewOptions', {})).toMatchObject({
+    expect(await runAction('skybox.setViewportOptions', {})).toMatchObject({
       ok: false,
       refusal: 'badInput',
     })

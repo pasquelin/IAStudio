@@ -78,7 +78,7 @@ describe('what keeps a model from guessing', () => {
         calls: JSON.stringify([
           { action: 'component.attach', input: { nodeId: 'Hero', type: 'Movement' } },
           {
-            action: 'component.set',
+            action: 'component.setProperties',
             input: { nodeId: 'Hero', type: 'Movement', field: 'speed', value: '9' },
           },
         ]),

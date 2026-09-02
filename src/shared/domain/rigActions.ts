@@ -77,9 +77,9 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     fields: [],
   }),
   action({
-    name: 'rig.hands',
-    titleKey: 'assistant.actions.rigHands.title',
-    descriptionKey: 'assistant.actions.rigHands.description',
+    name: 'rig.configureHands',
+    titleKey: 'assistant.actions.rigConfigureHands.title',
+    descriptionKey: 'assistant.actions.rigConfigureHands.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -141,9 +141,9 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
   action({
     // The roles keep the standard's own spelling, untranslated: they are the identifiers of the
     // Mixamo set. An absent role says the bone fills none.
-    name: 'bone.role',
-    titleKey: 'assistant.actions.boneRole.title',
-    descriptionKey: 'assistant.actions.boneRole.description',
+    name: 'bone.setRole',
+    titleKey: 'assistant.actions.boneSetRole.title',
+    descriptionKey: 'assistant.actions.boneSetRole.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

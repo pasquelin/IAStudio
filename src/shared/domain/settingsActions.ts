@@ -85,9 +85,9 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
      * The buttons of the settings window, which are not settings: they have no path and no value.
      * Two of them leave something behind, and `raises` is what asks about those two.
      */
-    name: 'settings.pressButton',
-    titleKey: 'assistant.actions.settingsPressButton.title',
-    descriptionKey: 'assistant.actions.settingsPressButton.description',
+    name: 'settings.triggerSettingAction',
+    titleKey: 'assistant.actions.settingsTriggerSettingAction.title',
+    descriptionKey: 'assistant.actions.settingsTriggerSettingAction.description',
     commitment: 'none',
     repeatable: true,
     raises: input => (IRREVERSIBLE.some(id => id === input.action) ? 'files' : 'none'),

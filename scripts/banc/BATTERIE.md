@@ -92,7 +92,7 @@ passe en ne faisant rien » :
 - **Ouvrir une image crée DÉJÀ son calque.** Le décor en ajoutait un second, et tous les comptes
   de calques étaient décalés de un.
 - **Un rail naît avec deux points**, donc « ajoute un point » se lit à trois.
-- **Un squelette posé nomme déjà `LeftHand` et `RightHand`** : ce que `rig.hands` ajoute, ce sont
+- **Un squelette posé nomme déjà `LeftHand` et `RightHand`** : ce que `rig.configureHands` ajoute, ce sont
   les doigts.
 - **Une copie s'appelle « … 2 »**, jamais « copie de … » : c'est `planFiles` qui la nomme.
 - **`path.addPoint` prend les trois axes ou aucun** — en nommer un seul est un `badInput`.
@@ -132,11 +132,11 @@ qu'un scénario tiendra demain.
 
 **`MCP reached: 200/230`.** Les trente actions que `coverage.ts` déclarait couvertes et qu'aucun
 run n'a touchées — chacune est un outil publié sur le fil MCP que personne n'a vu marcher :
-`prompt.describeStyle`, `actions.find`, `files.undoFileOperation`, `files.redoFileOperation`, `files.readUndoStack`,
+`prompt.describeStyle`, `actions.find`, `files.undoFileOperation`, `files.redoFileOperation`, `files.canUndoRedoFiles`,
 `cost.estimate`, `job.cancelCloudGeneration`, `asset.reveal`, `layer.editShapeLayer`, `guide.remove`, `clip.speed`,
 `track.add`, `skybox.setSourceImage`, `cloud.explorePublicFeed`, `cloud.pull`, `node.setPrimitiveParameters`, `model.textures`,
 `bone.remove`, `animation.removeBlock`, `animation.setBlockSettings`, `key.writeKeysOnOpenChannels`, `git.diff`, `git.stage`,
-`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.deleteProjectCard`, `settings.pressButton`,
+`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.deleteProjectCard`, `settings.triggerSettingAction`,
 `accounts.activate`.
 
 ### Ce que les chaînes disent, par volume

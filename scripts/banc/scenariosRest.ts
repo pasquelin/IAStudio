@@ -185,7 +185,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
     name: '42.2 gives the history of the last file operations',
     said: ['Montre-moi l’historique de mes dernières opérations sur les fichiers.'],
     setup: testFolders,
-    passed: run => read.spoke(run) && read.answeredWith(run, 'files.readUndoStack'),
+    passed: run => read.spoke(run) && read.answeredWith(run, 'files.canUndoRedoFiles'),
   },
   {
     name: '42.3 says what was opened recently',
@@ -235,7 +235,7 @@ export const REST_SCENARIOS: readonly Scenario[] = [
   {
     name: '43.3 says whether any asset lost its file',
     said: ['Y a-t-il des assets de ma bibliothèque dont le fichier a disparu ?'],
-    passed: run => read.idle(run) && read.answeredWith(run, 'assets.absent'),
+    passed: run => read.idle(run) && read.answeredWith(run, 'assets.listMissingProjectAssets'),
   },
   {
     name: '43.4 describes the boat picture and files it under keywords',

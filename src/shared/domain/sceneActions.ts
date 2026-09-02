@@ -495,9 +495,9 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * reaches every model wearing it. The slot is Blender's — a model carries one material per
      * primitive of its mesh, and a caller that names none means the first.
      */
-    name: 'model.wearMaterial',
-    titleKey: 'assistant.actions.modelWearMaterial.title',
-    descriptionKey: 'assistant.actions.modelWearMaterial.description',
+    name: 'model.setMaterialDocument',
+    titleKey: 'assistant.actions.modelSetMaterialDocument.title',
+    descriptionKey: 'assistant.actions.modelSetMaterialDocument.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -521,13 +521,13 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
      * The simple way to cover a model: ONE picture as its base colour, which is what Roblox's
      * `TextureID` is. No asset takes the dress off.
      *
-     * EXCLUSIVE with `model.wearMaterial`: a model is covered one way or the other, never both,
+     * EXCLUSIVE with `model.setMaterialDocument`: a model is covered one way or the other, never both,
      * so this drops whatever materials it wore. Nothing is derived from the picture — a normal
      * computed from the luminance of a photograph turns painted shadow into relief.
      */
-    name: 'model.wearImage',
-    titleKey: 'assistant.actions.modelWearImage.title',
-    descriptionKey: 'assistant.actions.modelWearImage.description',
+    name: 'model.setBaseColorImage',
+    titleKey: 'assistant.actions.modelSetBaseColorImage.title',
+    descriptionKey: 'assistant.actions.modelSetBaseColorImage.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
@@ -759,9 +759,9 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'view.display',
-    titleKey: 'assistant.actions.viewDisplay.title',
-    descriptionKey: 'assistant.actions.viewDisplay.description',
+    name: 'view.setDisplayMode',
+    titleKey: 'assistant.actions.viewSetDisplayMode.title',
+    descriptionKey: 'assistant.actions.viewSetDisplayMode.description',
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',

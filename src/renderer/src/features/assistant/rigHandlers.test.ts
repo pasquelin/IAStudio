@@ -114,10 +114,10 @@ describe('the skeleton', () => {
   it('ties a bone to a joint of the standard, and to none when no role is given', async () => {
     installCharacter()
 
-    await runAction('bone.role', { bone: 'Spine', role: 'Hips' })
+    await runAction('bone.setRole', { bone: 'Spine', role: 'Hips' })
     expect(held().rig?.bones.find(bone => bone.name === 'Spine')?.role).toBe('Hips')
 
-    await runAction('bone.role', { bone: 'Spine' })
+    await runAction('bone.setRole', { bone: 'Spine' })
     expect(held().rig?.bones.find(bone => bone.name === 'Spine')?.role).toBeUndefined()
   })
 

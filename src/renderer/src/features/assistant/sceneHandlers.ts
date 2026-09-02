@@ -1132,7 +1132,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'path.removePoint': input =>
     editPath(input, path => withoutPoint(path, numberOf(input, 'index') ?? -1)),
 
-  'model.wearMaterial': input =>
+  'model.setMaterialDocument': input =>
     editNode(input, node => {
       if (node.type !== 'model') return null
 
@@ -1152,7 +1152,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
     }),
 
   /** The picture must EXIST, or the model holds a reference nothing resolves — see `world.environment`. */
-  'model.wearImage': input => {
+  'model.setBaseColorImage': input => {
     const assetId = textOf(input, 'assetId')
     const write = (): ActionOutcome =>
       editNode(input, node =>
@@ -1393,7 +1393,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
       : editWorld(() => presetPatch(preset), `the preset "${preset}" writes nothing on this world`)
   },
 
-  'view.display': input => {
+  'view.setDisplayMode': input => {
     const open = mounted()
     const mode = oneOf(input, 'mode', DISPLAY_MODES)
     if (!open) return refused('wrongSurface', NO_SCENE)

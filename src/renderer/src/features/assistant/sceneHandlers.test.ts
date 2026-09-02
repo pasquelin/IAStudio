@@ -661,7 +661,7 @@ describe('how the scene is looked at', () => {
   })
 
   it('names the way the main view is drawn, where the command only cycles', async () => {
-    expect(await runAction('view.display', { mode: 'wireframe' })).toEqual({ ok: true })
+    expect(await runAction('view.setDisplayMode', { mode: 'wireframe' })).toEqual({ ok: true })
     expect(displayOfPane(sceneViewOf(useSceneViews.getState(), DOCUMENT).displays, 0)).toBe(
       'wireframe',
     )
@@ -1076,13 +1076,13 @@ describe('what a node is made of', () => {
     const added = await runAction('node.addModel', { assetId: 'asset-mesh', name: 'Chevalier' })
     const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
 
-    const missing = await runAction('model.wearMaterial', {
+    const missing = await runAction('model.setMaterialDocument', {
       nodeId,
       material: 'Aucune matière',
     })
     expect(missing.ok).toBe(false)
 
-    await runAction('model.wearMaterial', { nodeId, material: '' })
+    await runAction('model.setMaterialDocument', { nodeId, material: '' })
 
     const bare = nodeNamed('Chevalier')
     expect(bare).toMatchObject({ model: { assetId: 'asset-mesh' } })

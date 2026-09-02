@@ -579,7 +579,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ["Finalement retire-lui son habillage : qu'il reprenne celui de son propre fichier."],
     setup: async studio => {
       await modelSceneWithMaterial(studio)
-      await studio.run('model.wearMaterial', {
+      await studio.run('model.setMaterialDocument', {
         nodeId: named(studio, 'Knight'),
         material: 'Pierre',
       })

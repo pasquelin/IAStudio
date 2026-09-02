@@ -211,10 +211,10 @@ describe('what a second identical call can bring', () => {
       'project.rename',
       'project.trash',
       'settings.open',
-      'skybox.setViewOptions',
+      'skybox.setViewportOptions',
       'target.select',
       'view.direction',
-      'view.display',
+      'view.setDisplayMode',
     ])
   })
 

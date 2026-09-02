@@ -398,7 +398,7 @@ async function channel(input: Record<string, unknown>): Promise<ActionOutcome> {
 
 export const MATERIAL_HANDLERS: ActionHandlers = {
   'skybox.state': readSky,
-  'skybox.setViewOptions': skyboxView,
+  'skybox.setViewportOptions': skyboxView,
   'skybox.adjustImage': adjust,
   'skybox.resetAdjustments': () => runSky([resetAdjustments()], 'there was nothing to reset'),
   'skybox.setSun': sun,
