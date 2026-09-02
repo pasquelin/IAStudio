@@ -217,6 +217,15 @@ describe('placing and dressing an object', () => {
     expect(moved).toEqual({ ok: true, data: { position: { x: 0.5, y: 3, z: 0 } } })
   })
 
+  it('answers the material fields it painted, and only those', async () => {
+    const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
+    const meshId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
+
+    expect(
+      await runAction('node.setMeshMaterial', { nodeId: meshId, color: '#ff8800', roughness: 0.2 }),
+    ).toEqual({ ok: true, data: { color: '#ff8800', roughness: 0.2 } })
+  })
+
   it('paints a mesh, and refuses a node that carries no mesh material', async () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
     const meshId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
@@ -273,6 +282,15 @@ describe('placing and dressing an object', () => {
       light: { kind: 'hemisphere', intensity: 3, skyColor: '#ff0000' },
     })
     expect(light?.type === 'light' && 'color' in light.light).toBe(false)
+  })
+
+  it('answers the light fields it wrote, the target as one vector', async () => {
+    const spot = await runAction('node.add', { kind: 'spot', name: 'Poursuite' })
+    const spotId = spot.ok ? (spot.data as { nodeId: string }).nodeId : ''
+
+    expect(
+      await runAction('node.setLightSettings', { nodeId: spotId, intensity: 3, targetY: 2 }),
+    ).toEqual({ ok: true, data: { intensity: 3, target: { x: 0, y: 2, z: 0 } } })
   })
 
   /** A cone belongs to a spot, and its target is three numbers that land as one field. */
@@ -1245,6 +1263,16 @@ describe('a node an animation already drives', () => {
     const written = nodeNamed('Caméra')
     expect(written?.type === 'camera' && written.camera).toMatchObject({ fov: 50, near: 0.5 })
     expect(scene().animation.tracks[0]?.keys).toEqual([{ time: 0, value: { x: -20, y: 0, z: 0 } }])
+  })
+
+  it('answers the lens fields it wrote, as the viewport reads them', async () => {
+    const added = await runAction('node.add', { kind: 'camera', name: 'Caméra' })
+    const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
+
+    expect(await runAction('node.setCameraLens', { nodeId, fov: 24, near: 0.5 })).toEqual({
+      ok: true,
+      data: { fov: 24, near: 0.5 },
+    })
   })
 
   /** The floor `CAMERA_SPECS` holds, which the number field clamps and the registry cannot say. */
