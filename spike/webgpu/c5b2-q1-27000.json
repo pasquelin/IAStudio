@@ -1,0 +1,52 @@
+{
+  "at": "2026-09-02T14:38:35.918Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "count": 27000,
+      "far": 500,
+      "clock": {
+        "isolated": true,
+        "smallestStepMs": 0.004999995231628418,
+        "samples": 4171
+      },
+      "harnesses": [
+        {
+          "harness": "studio (C5-B0)",
+          "objectsInScene": 193,
+          "instancedMeshes": 91,
+          "drawFromWithShadowMs": 0.309,
+          "drawFromColourOnlyMs": 0.215,
+          "glRenderOnlyMs": 0.167,
+          "updateMatrixWorldMs": 0.027,
+          "glRenderWithoutMatrixWalkMs": 0.135,
+          "bufferWidth": 2400
+        },
+        {
+          "harness": "nu (C5-B1)",
+          "objectsInScene": 94,
+          "instancedMeshes": 91,
+          "glRenderOnlyMs": 0.142,
+          "updateMatrixWorldMs": 0.006,
+          "bufferWidth": 1600
+        }
+      ]
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "démarrage…",
+      "workingSetKb": 374512
+    },
+    {
+      "at": 4006,
+      "phase": "fin",
+      "workingSetKb": 374512
+    }
+  ]
+}

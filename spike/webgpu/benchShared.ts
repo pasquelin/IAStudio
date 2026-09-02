@@ -81,6 +81,45 @@ export const since = (before: DrawTally): DrawTally => ({
     }
     return drawArraysInstanced.call(this, mode, first, count, instances)
   }
+
+  // 🛑 `BatchedMesh` ne passe par AUCUNE des quatre entrées ci-dessus : il dessine par
+  // `WEBGL_multi_draw`. Sans ce patch le banc lisait « 0 instance, 0 appel » sur une scène qui
+  // dessinait 27 lots — un résultat qui se lisait comme une victoire écrasante.
+  type Counts = Int32Array | number[]
+  type MultiDraw = {
+    multiDrawElementsWEBGL: (mode: number, counts: Counts, countsOffset: number, type: number, offsets: Counts, offsetsOffset: number, drawcount: number) => void
+    multiDrawArraysWEBGL: (mode: number, firsts: Counts, firstsOffset: number, counts: Counts, countsOffset: number, drawcount: number) => void
+  }
+  // `as` : les surcharges typées de `getExtension` refusent un nom quelconque.
+  const getExtension = proto.getExtension as (this: WebGL2RenderingContext, name: string) => unknown
+  const wrapped = new WeakSet<object>()
+  const patched = function (this: WebGL2RenderingContext, name: string): unknown {
+    const extension = getExtension.call(this, name)
+    if (name === 'WEBGL_multi_draw' && extension && typeof extension === 'object' && !wrapped.has(extension)) {
+      const multi = extension as MultiDraw
+      const elements = multi.multiDrawElementsWEBGL
+      multi.multiDrawElementsWEBGL = function (mode, counts, countsOffset, type, offsets, offsetsOffset, drawcount) {
+        drawn.calls += 1
+        drawn.instances += drawcount
+        if (mode === TRIANGLES) {
+          for (let at = 0; at < drawcount; at += 1) drawn.triangles += (counts[countsOffset + at] ?? 0) / 3
+        }
+        return elements.call(this, mode, counts, countsOffset, type, offsets, offsetsOffset, drawcount)
+      }
+      const arrays = multi.multiDrawArraysWEBGL
+      multi.multiDrawArraysWEBGL = function (mode, firsts, firstsOffset, counts, countsOffset, drawcount) {
+        drawn.calls += 1
+        drawn.instances += drawcount
+        if (mode === TRIANGLES) {
+          for (let at = 0; at < drawcount; at += 1) drawn.triangles += (counts[countsOffset + at] ?? 0) / 3
+        }
+        return arrays.call(this, mode, firsts, firstsOffset, counts, countsOffset, drawcount)
+      }
+      wrapped.add(extension)
+    }
+    return extension
+  }
+  proto.getExtension = patched as typeof proto.getExtension
 }
 
 /** Le soleil de la scène : c'est sa carte que les bancs redessinent, et lui seul en porte une. */

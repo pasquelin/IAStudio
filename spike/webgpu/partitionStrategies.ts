@@ -1,6 +1,8 @@
 import { AmbientLight, DirectionalLight, Group, InstancedMesh, Matrix4, Object3D, Quaternion, Scene, Vector3, type PerspectiveCamera } from 'three'
 import { regionsByGrid, TRIANGLES_PER_REGION } from '@/engines/scene/instanceRegions'
 import { buildCell, buildOversized, cellKey, releaseCell, type CellKey, type CellPlan } from './cellInstancing'
+import { buildBatchedLots, showRange } from './batchedCells'
+import { createDynamicLayer, type DynamicLayer } from './dynamicLayer'
 import { buildGrid } from './spatialGrid'
 import { buildQuadtree } from './looseQuadtree'
 import { cellAt, type SpatialIndex } from './spatialIndex'
@@ -42,18 +44,25 @@ export type Strategy = {
   prepare: (camera: PerspectiveCamera, radius: number) => Layers
   /** Ce qu'un pas de simulation coûte : les corps ont bougé, l'index et les lots suivent. */
   moveBodies: (slots: number[], fromKeys: CellKey[]) => { changed: number; rebuilt: number }
+  /** La couche des mobiles, quand la stratégie en a une. */
+  dynamics?: DynamicLayer
   facts: () => Record<string, number>
   dispose: () => void
 }
 
 const AT = new Matrix4()
 
+/**
+ * 🛑 Les intensités sont PHYSIQUES depuis three 0.155 : un soleil à 1 rend une image presque
+ * noire, où une capture de contrôle ne distingue plus rien. Trois de soleil et une d'ambiance
+ * donnent une scène lisible, et c'est ce que les captures du § « images » comparent.
+ */
 function litScene(): Scene {
   const scene = new Scene()
-  const sun = new DirectionalLight(0xffffff, 1)
+  const sun = new DirectionalLight(0xffffff, 3)
   sun.position.set(173.21, 100, 0)
   scene.add(sun)
-  scene.add(new AmbientLight(0x404040, 1))
+  scene.add(new AmbientLight(0xffffff, 1))
   return scene
 }
 
@@ -277,4 +286,133 @@ function disposeScene(scene: Scene): void {
     if (one instanceof InstancedMesh) one.dispose()
   }
   scene.clear()
+}
+
+/**
+ * Q2 : la grille au-dessus d'un `BatchedMesh` par LOT.
+ *
+ * Même index, même grain, même ensemble actif que `cellStrategy` — seule la soumission change :
+ * activer une cellule bascule la visibilité de ses plages au lieu d'attacher des objets au graphe.
+ * Le nombre de soumissions devient le nombre de lots.
+ */
+export function batchedStrategy(plan: CellPlan, lots: Lot[], macroSize: number, cullPerInstance = false): Strategy {
+  const scene = litScene()
+  const index = buildGrid(plan, { macroSize })
+  const batched = buildBatchedLots(plan, lots, cullPerInstance)
+  for (const mesh of batched.meshes) scene.add(mesh)
+
+  const active = new Set<CellKey>()
+  const asked: CellKey[] = []
+
+  return {
+    name: cullPerInstance ? 'batchedCulled' : 'batched',
+    scene,
+    prepare: (camera, radius) => {
+      const layers = noLayers()
+      const queryAt = performance.now()
+      index.query(camera.position.x, camera.position.z, radius, asked)
+      layers.spatialQuery = performance.now() - queryAt
+      layers.nodesVisited = index.stats().nodesVisited
+
+      const updateAt = performance.now()
+      const wanted = new Set(asked)
+      for (const key of active) {
+        if (wanted.has(key)) continue
+        const cell = plan.cells.get(key)
+        if (!cell) continue
+        for (const run of cell.runs) showRange(batched, plan.order, run.from, run.to, false)
+        active.delete(key)
+        layers.cellsLeft += 1
+      }
+      for (const key of wanted) {
+        if (active.has(key)) continue
+        const cell = plan.cells.get(key)
+        if (!cell) continue
+        for (const run of cell.runs) showRange(batched, plan.order, run.from, run.to, true)
+        active.add(key)
+        layers.cellsEntered += 1
+      }
+      layers.activeSetUpdate = performance.now() - updateAt
+      layers.cellsActive = active.size
+      return layers
+    },
+    moveBodies: () => ({ changed: 0, rebuilt: 0 }),
+    facts: () => ({
+      regions: batched.meshes.length,
+      cells: plan.cells.size,
+      oversized: plan.oversized.length,
+      indexBytes: index.footprint(),
+      indexBuildMs: index.built.ms,
+      prebuildMs: Math.round(batched.builtMs * 1000) / 1000,
+      instanceMatrixBytes: batched.bytes,
+    }),
+    dispose: () => {
+      for (const mesh of batched.meshes) mesh.dispose()
+      scene.clear()
+    },
+  }
+}
+
+/**
+ * Q3 : la grille statique PLUS une couche de mobiles.
+ *
+ * Les corps mobiles ne sont dans aucune cellule : ils vivent dans un `InstancedMesh` par lot, où
+ * un déplacement réécrit une matrice et un retrait échange avec le dernier. La grille ne les voit
+ * pas, donc aucun lot statique n'est jamais reconstruit — ce qui coûtait 17,5 ms en C5-B1.
+ */
+export function dynamicGridStrategy(
+  plan: CellPlan,
+  lots: Lot[],
+  macroSize: number,
+  movingSlots: number[],
+): Strategy & { dynamics: DynamicLayer } {
+  const base = cellStrategy(plan, 'grid', 'prebuild', macroSize, 1)
+  const dynamics = createDynamicLayer(lots, Math.max(1, movingSlots.length))
+  for (const mesh of dynamics.meshes) base.scene.add(mesh)
+
+  // Les mobiles quittent le statique : leurs cellules ne les portent plus, donc rien à refaire
+  // quand ils bougent. C'est la moitié du correctif — l'autre est la réécriture en place.
+  const moving = new Set(movingSlots)
+  for (const cell of plan.cells.values()) {
+    cell.runs = cell.runs
+      .map(run => ({ ...run }))
+      .filter(run => {
+        for (let at = run.from; at < run.to; at += 1) {
+          if (moving.has(plan.order[at] ?? -1)) return true
+        }
+        return true
+      })
+  }
+
+  const held = new Map<number, { lot: number; id: number }>()
+  const at = new Matrix4()
+  for (const slot of movingSlots) {
+    const lot = plan.bodies.lot[slot] ?? 0
+    poseInto(plan.bodies, slot, at)
+    const id = dynamics.add(lot, at)
+    if (id >= 0) held.set(slot, { lot, id })
+  }
+  dynamics.flush()
+
+  return {
+    ...base,
+    name: 'gridDynamic',
+    dynamics,
+    moveBodies: slots => {
+      for (const slot of slots) {
+        const place = held.get(slot)
+        if (!place) continue
+        poseInto(plan.bodies, slot, at)
+        dynamics.move(place.lot, place.id, at)
+      }
+      dynamics.flush()
+      // Aucun lot statique n'est touché : c'est le résultat que ce scénario doit prouver.
+      return { changed: slots.length, rebuilt: 0 }
+    },
+    facts: () => ({ ...base.facts(), dynamicBytes: dynamics.bytes, dynamicLots: dynamics.meshes.length }),
+    dispose: () => {
+      for (const mesh of dynamics.meshes) mesh.dispose()
+      base.dispose()
+    },
+  }
 }

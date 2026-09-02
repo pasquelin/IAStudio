@@ -1,12 +1,13 @@
-import { PerspectiveCamera, WebGLRenderer } from 'three'
+import { Matrix4, PerspectiveCamera, WebGLRenderer } from 'three'
 import { createGlTimer, type GlTimer } from './glTimer.js'
 import { mean, median, nextFrame, round, since, tally, top } from './benchShared'
 import { clockResolution } from './clockProbe'
+import { comparePixels, pixelsOf } from './benchShared'
 import { DEFAULT_PLAN, openWorld, spanFor, type WorldSpread } from './openWorld'
 import { bodiesOf } from './worldBodies'
 import { cellAt } from './spatialIndex'
 import { cellKey, planCells, type CellKey, type CellPlan } from './cellInstancing'
-import { cellStrategy, regionStrategy, noLayers, type Layers, type Policy, type Strategy } from './partitionStrategies'
+import { batchedStrategy, cellStrategy, dynamicGridStrategy, regionStrategy, noLayers, type Layers, type Policy, type Strategy } from './partitionStrategies'
 import { trajectoriesFor } from './trajectories'
 
 /**
@@ -21,7 +22,8 @@ import { trajectoriesFor } from './trajectories'
 const WIDTH = 1600
 const HEIGHT = 900
 const QUERY = new URLSearchParams(location.search)
-const WARMUP = 30
+/** Dix frames suffisent à sortir du premier dessin ; trente ne changeaient que la durée. */
+const WARMUP = 10
 
 const percentile = (values: number[], share: number): number => {
   const sorted = [...values].sort((one, other) => one - other)
@@ -162,6 +164,38 @@ async function runOne(
       frames.push(drawOnce(renderer, strategy, camera, radius, timer))
       await nextFrame()
     }
+    // ── spawn : 200 mobiles créés et 200 détruits par frame, ce qu'un jeu fait vraiment
+    if (strategy.dynamics) {
+      const layer = strategy.dynamics
+      const spawnCost: number[] = []
+      const spawnFrames: Frame[] = []
+      const alive: { lot: number; id: number }[] = []
+      const pose = new Matrix4()
+      for (let at = 0; at < 120; at += 1) {
+        const spawnAt = performance.now()
+        for (let made = 0; made < 200; made += 1) {
+          const lot = made % layer.meshes.length
+          pose.makeTranslation(((made * 37) % 200) - 100, 1, ((made * 53) % 200) - 100)
+          const id = layer.add(lot, pose)
+          if (id >= 0) alive.push({ lot, id })
+        }
+        for (let gone = 0; gone < 200 && alive.length > 0; gone += 1) {
+          const last = alive.pop()
+          if (last) layer.remove(last.lot, last.id)
+        }
+        layer.flush()
+        spawnCost.push(performance.now() - spawnAt)
+        spawnFrames.push(drawOnce(renderer, strategy, camera, radius, timer))
+        await nextFrame()
+      }
+      Object.assign(out, fold('spawn', spawnFrames), {
+        spawnPerFrame: 200,
+        spawnCostMeanMs: round(mean(spawnCost)),
+        spawnCostP99Ms: percentile(spawnCost, 0.99),
+        spawnCostPeakMs: round(top(spawnCost)),
+      })
+    }
+
     Object.assign(out, fold('dynamic', frames), {
       dynamicBodies: many,
       dynamicUpdateMeanMs: round(mean(updates)),
@@ -263,23 +297,29 @@ export async function runPartitionBench(
       // DANS la fenêtre suivante : six cycles donnaient alors des plages qui se recouvraient
       // toutes (natif 0,121–0,382, grille 0,315–0,895) et ne décidaient rien.
       const held: { label: string; count: number; span: number; strategy: Strategy }[] = []
+      const builtIn = new Map<string, number>()
+      const shots = new Map<string, ImageData>()
+      const pngs = new Map<string, string>()
       for (const count of counts) {
         const state = openWorld({ ...DEFAULT_PLAN, count, spread: spreads[0] ?? 'uniform' })
         const { bodies, lots } = bodiesOf(state)
         const span = spanFor(count)
         for (const kind of kinds) {
-          onProgress?.({ phase: `construction ${count} ${kind}` })
+          onProgress?.({ phase: `construction ${count} ${kind}…` })
+          const madeAt = performance.now()
           // 🛑 Un plan PAR stratégie. Partagé, les deux candidats tiennent les mêmes `Group`, et
           // un `Group` n'appartient qu'à une scène : le second construit VOLAIT les cellules du
           // premier, qui dessinait alors zéro instance en 0,043 ms — un résultat qui se lisait
           // comme une victoire écrasante.
-          held.push({
+          const made = {
             label: `${count}:${kind}`,
             count,
             span,
             strategy:
               kind === 'regions'
                 ? regionStrategy(bodies, lots)
+                : kind === 'batched' || kind === 'batchedCulled'
+                ? batchedStrategy(planCells(bodies, lots, cellSizes[0] ?? 256), lots, macroSize, kind === 'batchedCulled')
                 : cellStrategy(
                     planCells(bodies, lots, cellSizes[0] ?? 256),
                     kind === 'grid' ? 'grid' : 'quadtree',
@@ -287,14 +327,25 @@ export async function runPartitionBench(
                     macroSize,
                     looseness,
                   ),
-          })
+          }
+          made.strategy.facts()
+          builtIn.set(made.label, round(performance.now() - madeAt))
+          held.push(made)
         }
       }
       try {
         for (let cycle = 0; cycle < cycles; cycle += 1) {
           for (const one of held) {
             onProgress?.({ phase: `cycle ${cycle + 1}/${cycles} · ${one.label}` })
-            const seen = await restOnly(renderer, camera, one.strategy, radius, one.span, 240)
+            const seen = await restOnly(renderer, camera, one.strategy, radius, one.span, 60)
+            // 🛑 L'image, prise DANS LA FOULÉE du dessin. Trois défauts majeurs de ce chantier
+            // n'ont été vus que par les pixels ; le compteur muet de `BatchedMesh` en est le
+            // quatrième, et une capture l'aurait montré avant les chiffres.
+            if (cycle === 0) {
+              renderer.render(one.strategy.scene, camera)
+              shots.set(one.label, pixelsOf(renderer.domElement))
+              pngs.set(one.label, renderer.domElement.toDataURL('image/png'))
+            }
             results.push({
               cycle: cycle + 1,
               count: one.count,
@@ -304,6 +355,7 @@ export async function runPartitionBench(
               clockIsolated: clock.isolated,
               clockStepMs: round(clock.smallestStepMs),
               ...one.strategy.facts(),
+              strategyBuildMs: builtIn.get(one.label) ?? 0,
               restTotalMeanMs: seen.total,
               restInstances: seen.instances,
               restCalls: seen.calls,
@@ -316,7 +368,18 @@ export async function runPartitionBench(
       } finally {
         for (const one of held) one.strategy.dispose()
       }
-      return { results, failures }
+      // Chaque variante comparée au TÉMOIN de son monde : une partition qui dessine autre chose
+      // que ce que le moteur actuel dessine n'a pas gagné, elle a perdu des objets.
+      const images: Record<string, unknown>[] = []
+      for (const [label, pixels] of shots) {
+        const witness = shots.get(`${label.split(':')[0]}:regions`)
+        images.push({
+          label,
+          againstWitness: witness && witness !== pixels ? comparePixels(pixels, witness, 12) : null,
+          png: pngs.get(label) ?? null,
+        })
+      }
+      return { results: [...results, { images }], failures }
     }
 
     for (const count of counts) {
@@ -337,10 +400,20 @@ export async function runPartitionBench(
               let strategy: Strategy | null = null
               try {
                 const madeAt = performance.now()
+                const movingSlots =
+                  dynamicShare > 0
+                    ? Array.from({ length: Math.round(bodies.count * dynamicShare) }, (_unused, at) =>
+                        Math.floor((at * 7919) % bodies.count),
+                      )
+                    : []
                 strategy =
-                  kind === 'regions'
+                  kind === 'gridDynamic'
+                    ? dynamicGridStrategy(plan, lots, macroSize, movingSlots)
+                    : kind === 'regions'
                     ? regionStrategy(bodies, lots)
-                    : cellStrategy(plan, kind === 'grid' ? 'grid' : 'quadtree', policy, macroSize, looseness)
+                    : kind === 'batched'
+                      ? batchedStrategy(plan, lots, macroSize)
+                      : cellStrategy(plan, kind === 'grid' ? 'grid' : 'quadtree', policy, macroSize, looseness)
                 const buildMs = performance.now() - madeAt
                 const row = await runOne(renderer, camera, strategy, kind === 'regions' ? null : plan, radius, span, DEFAULT_PLAN.seed, kind === 'regions' ? 0 : dynamicShare)
                 results.push({
