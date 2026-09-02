@@ -1015,4 +1015,4 @@ rien d'autre.
 - [ ] « Remplis tout le calque en blanc. »
 - [ ] « Efface le pixel en 3, 4. »
 - [ ] « Génère un sprite de personnage. »
-- [ ] « Repasse ce document en image normale. »
+- [ ] « Enlève la grille de pixel art de ce document. »

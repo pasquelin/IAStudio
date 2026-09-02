@@ -66,8 +66,13 @@ export const PIXEL_ART_SCENARIOS: readonly Scenario[] = [
       read.promptSent(run, 'image', 'pixel art') && read.promptSent(run, 'image', '32x32'),
   },
   {
+    /**
+     * 🛑 Said as the GRID and not as « image normale », which the model read three times out of
+     * three as the image WORKSPACE — `workspace.open`, never `canvas.setPixelArt`. The oracle is
+     * untouched: what it reads is still that the grid came off.
+     */
     name: '68.9 takes the document back off the grid',
-    said: ['Repasse ce document en image normale.'],
+    said: ['Enlève la grille de pixel art de ce document.'],
     setup: pixelArtBoat,
     passed: run => read.canvas(run)?.pixelCell === null,
   },
