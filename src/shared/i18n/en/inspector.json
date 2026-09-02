@@ -352,6 +352,9 @@
     "artResolution": "Resolution (cells)",
     "artColumns": "Columns",
     "artRows": "Rows",
+    "pixelArtGrid": "Show the grid",
+    "pixelArtPreview": "Artwork, one pixel per cell",
+    "pixelArtPreviewTooWide": "Too many cells to show one pixel each",
     "pixelSize": "Pixel size"
   }
 }

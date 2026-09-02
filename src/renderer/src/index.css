@@ -168,6 +168,16 @@
   --color-marquee-dark: #000000;
 
   /*
+   * The pixel-art grid, and it does not swap with the theme for the marching ants' reason: it is
+   * drawn over the document. A mid grey at two alphas rather than the ants' two passes — three
+   * hundred lines stroked twice per frame, redrawn on every pixel of a pan, is the 16 ms budget.
+   * At 55 % a mid grey shifts white and black alike by about a quarter, which is what lets ONE
+   * value read over any picture; the finer level sits under it, at half.
+   */
+  --color-grid-cell: #8080808c;
+  --color-grid-pixel: #80808047;
+
+  /*
    * The 3D viewport is neither a panel surface nor the chassis: it is a working space, and it
    * sits LIGHTER than both. A scene judged against near-black reads darker than it is, and the
    * grid it stands on disappears into the background.
@@ -518,6 +528,10 @@
    */
   --color-marquee-light: #ffffff;
   --color-marquee-dark: #000000;
+
+  /* Restated identically, for the marching ants' reason: ruled over the same document. */
+  --color-grid-cell: #8080808c;
+  --color-grid-pixel: #80808047;
   /*
    * Lighter than its dark counterpart: on a light document the same black would read as a hole
    * rather than as a dimmed part of the picture.

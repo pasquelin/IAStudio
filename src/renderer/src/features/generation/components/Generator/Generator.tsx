@@ -43,6 +43,8 @@ import { MissingCredentials } from '@/features/shell/components/MissingCredentia
 import { NoProject } from '@/features/shell/components/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
 import { GeneratorContext } from './GeneratorContext'
+import { GeneratorPixelArt } from './GeneratorPixelArt'
+import { usePixelArtGrid } from '@/hooks/usePixelArtGrid'
 import { GeneratorModel } from './GeneratorModel'
 import { GeneratorOperation } from './GeneratorOperation'
 import { GeneratorRun } from './GeneratorRun'
@@ -110,6 +112,10 @@ export function Generator() {
    * aside, not once.
    */
   const [contextUse, setContextUse] = useState<ContextUse>('apply')
+  // Held OUTSIDE `values`, like the context's own: it must never reach `buildBody`, and
+  // `unchangedSince` compares raw values to raw values.
+  const [pixelArt, setPixelArt] = useState(true)
+  const pixelArtGrid = usePixelArtGrid()
 
   /** Where this shot lands and the files it names — composed once, and read by the bridge too. */
   const choice = useDocuments(
@@ -170,7 +176,11 @@ export function Generator() {
 
       try {
         // What the workspace holds and no model schema publishes — `bodyExtras` owns the table.
-        const job = await submit({ id: modelId }, withBodyExtras(role, values), contextUse)
+        const job = await submit(
+          { id: modelId },
+          withBodyExtras(role, values, { fields, pixelArt }),
+          contextUse,
+        )
         claim(job)
         setRunningId(job?.id ?? null)
         return job
@@ -178,7 +188,7 @@ export function Generator() {
         setSubmitting(false)
       }
     },
-    [modelId, submit, contextUse, role],
+    [modelId, submit, contextUse, role, fields, pixelArt],
   )
 
   useEffect(() => {
@@ -331,6 +341,15 @@ export function Generator() {
             onUse={setContextUse}
           />
         )}
+
+        {/* Beside the context and for the same reason: what is added to a prompt is shown, and
+            can be turned off — a studio on a grid still wants a photo reference now and then. */}
+        <GeneratorPixelArt
+          fields={fields}
+          grid={pixelArtGrid}
+          applies={pixelArt}
+          onApplies={setPixelArt}
+        />
         {/* Below the sources and above the run: what is sent, then where it lands, then the
             generation itself — the order the eye reads the panel in. */}
         {role !== null && offered !== null && landing !== null && (

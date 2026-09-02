@@ -281,6 +281,7 @@ const KEY_GLYPHS: Record<string, string> = {
   Equal: '=',
   Minus: '−',
   Semicolon: ';',
+  Quote: "'",
   Comma: ',',
   Period: '.',
   Slash: '/',
@@ -373,6 +374,8 @@ const ACCELERATOR_MODIFIERS: Record<string, string> = {
 const ACCELERATOR_KEYS: Record<string, string> = {
   Comma: ',',
   Period: '.',
+  Semicolon: ';',
+  Quote: "'",
   Equal: '=',
   Minus: '-',
   Slash: '/',

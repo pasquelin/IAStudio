@@ -82,6 +82,8 @@ export type ActionName =
   | 'assets.removeFromLibrary'
   | 'canvas.state'
   | 'canvas.resize'
+  | 'canvas.setPixelArt'
+  | 'canvas.drawPixels'
   | 'canvas.crop'
   | 'canvas.flipOrRotate'
   | 'layer.add'

@@ -238,6 +238,8 @@ describe('acceleratorOf', () => {
   it('names the punctuation keys Electron will not take as codes', () => {
     expect(acceleratorOf('Meta+Comma')).toBe('CmdOrCtrl+,')
     expect(acceleratorOf('Meta+Equal')).toBe('CmdOrCtrl+=')
+    // `canvas.guides` ships on this one, and the menu advertised a key it could not register.
+    expect(acceleratorOf('Meta+Semicolon')).toBe('CmdOrCtrl+;')
   })
 
   it('keeps modifier order and passes named keys through', () => {

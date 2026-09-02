@@ -528,6 +528,8 @@ describe('the lists that stand for a union', () => {
       'assets.removeFromLibrary': true,
       'canvas.state': true,
       'canvas.resize': true,
+      'canvas.setPixelArt': true,
+      'canvas.drawPixels': true,
       'canvas.crop': true,
       'canvas.flipOrRotate': true,
       'layer.add': true,

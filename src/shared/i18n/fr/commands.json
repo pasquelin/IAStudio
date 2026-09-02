@@ -272,6 +272,10 @@
       "title": "Repères",
       "help": "Affiche ou masque les repères posés sur l’image. Les masquer ne les efface pas."
     },
+    "canvasGrid": {
+      "title": "Grille de pixels",
+      "help": "Affiche ou masque la grille des pixels de l’œuvre. Uniquement sur un document en mode pixel art."
+    },
     "canvasClearGuides": {
       "title": "Effacer les repères",
       "help": "Retire tous les repères de l’image. Annulable, comme toute autre modification."

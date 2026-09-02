@@ -1,10 +1,12 @@
+import { clamp } from '@shared/numeric'
 import { selectionOutline, type CanvasSelection } from './canvasSelection'
 import type { Guide, Rect } from './canvasState'
 import { cropChrome } from './crop'
 import { gripRects, HANDLE_IDS, outlinePoints, type Corners, type HandleId } from './handles'
 import { rulerStep, tickLabel, ticks } from './rulers'
+import { gridIsLegible } from './pixelGrid'
 import { paintShape, type ShapeGeometry } from './shapeGeometry'
-import { crisp, toScreen, visibleRect, type Viewport } from './viewport'
+import { crisp, crispOn, toScreen, visibleRect, type Viewport } from './viewport'
 import type { Point, Size } from '../core/geometry'
 
 /**
@@ -53,6 +55,9 @@ export type OverlayColors = {
   /** The two strokes of the marching ants — see the tokens for why they are white and black. */
   marqueeLight: string
   marqueeDark: string
+  /** The pixel-art grid, at its two steps: the cell of the artwork, and the document's pixel. */
+  gridCell: string
+  gridPixel: string
   /** Translucent: it dims what a crop is about to cut away without hiding it. */
   scrim: string
 }
@@ -164,12 +169,15 @@ export type ToolChrome = {
   overflowing: boolean
   selection: CanvasSelection
   /**
-   * Half the brush, in DOCUMENT units, while a painting tool is armed — `null` for every other
-   * tool. Drawn rather than set as a CSS cursor because a cursor cannot scale: the ring has to
-   * cover exactly what the next dab will, at 5% as at 1600%.
+   * What the next dab covers, in DOCUMENT units, while a painting tool is armed. Drawn rather
+   * than set as a CSS cursor because a cursor cannot scale: it has to cover exactly what the
+   * next dab will, at 5% as at 1600%.
    */
-  brushRadius: number | null
+  brushMark: BrushMark | null
 }
+
+/** A disc of that many document pixels, or the square of a cell on a grid. */
+export type BrushMark = { radius: number } | { stamp: Rect }
 
 export type OverlayScene = {
   viewport: Viewport
@@ -177,6 +185,14 @@ export type OverlayScene = {
   document: Size
   showRulers: boolean
   showGuides: boolean
+  showGrid: boolean
+  /** The document's grid, in document pixels. `null` when it is not on one at all. */
+  pixelCell: number | null
+  /**
+   * What the picture is rasterised at. The grid's hairlines are rounded on it and not on the
+   * display's own ratio: it is this resolution the blocks they mark are drawn at.
+   */
+  resolution: number
   guides: readonly Guide[]
   /** Highlighted while it is being dragged, so the hand knows which one it took. */
   activeGuideId: string | null
@@ -219,6 +235,9 @@ export function drawOverlay(context: OverlayContext, scene: OverlayScene, phase 
   context.setLineDash([])
 
   drawFrame(context, scene)
+  // Right after the frame: the grid is the finest and the most numerous chrome there is, and
+  // everything else has to read over it.
+  if (scene.showGrid) drawPixelGrid(context, scene)
   if (scene.showGuides) drawGuides(context, scene)
   drawTools(context, scene, phase)
   if (scene.showRulers) drawRulers(context, scene)
@@ -238,6 +257,58 @@ function drawFrame(context: OverlayContext, scene: OverlayScene): void {
     Math.round(corner.x - origin.x),
     Math.round(corner.y - origin.y),
   )
+}
+
+/** The artwork's own grid: the cell, and the document pixel under it where a cell holds more. */
+function drawPixelGrid(context: OverlayContext, scene: OverlayScene): void {
+  const cell = scene.pixelCell
+  if (cell === null) return
+
+  // The finer one first, so the cell's lines are drawn over it where the two land together.
+  if (cell > 1) rulePixelGrid(context, scene, 1, scene.colors.gridPixel)
+  rulePixelGrid(context, scene, cell, scene.colors.gridCell)
+}
+
+/**
+ * One step of it, in hairlines a device pixel wide — the ants' two passes would be three hundred
+ * lines stroked twice per frame, redrawn on every pixel of a pan.
+ */
+function rulePixelGrid(
+  context: OverlayContext,
+  scene: OverlayScene,
+  step: number,
+  color: string,
+): void {
+  const { viewport, document: size, host, resolution } = scene
+  if (!gridIsLegible(step, viewport.scale)) return
+
+  const visible = visibleRect(viewport, host)
+  // Bounded to the document, or the lines bleed over the checkerboard around it; and to the host,
+  // or every line of a 4096 document is emitted thirty times longer than the part on screen.
+  const left = clamp(visible.x, 0, size.width)
+  const right = clamp(visible.x + visible.width, 0, size.width)
+  const top = clamp(visible.y, 0, size.height)
+  const bottom = clamp(visible.y + visible.height, 0, size.height)
+  const fromY = Math.max(top * viewport.scale + viewport.y, 0)
+  const toY = Math.min(bottom * viewport.scale + viewport.y, host.height)
+  const fromX = Math.max(left * viewport.scale + viewport.x, 0)
+  const toX = Math.min(right * viewport.scale + viewport.x, host.width)
+
+  context.strokeStyle = color
+  context.lineWidth = 1 / resolution
+  context.beginPath()
+  for (const value of ticks(left, right, step)) {
+    const x = crispOn(value * viewport.scale + viewport.x, resolution)
+    context.moveTo(x, fromY)
+    context.lineTo(x, toY)
+  }
+  for (const value of ticks(top, bottom, step)) {
+    const y = crispOn(value * viewport.scale + viewport.y, resolution)
+    context.moveTo(fromX, y)
+    context.lineTo(toX, y)
+  }
+  context.stroke()
+  context.lineWidth = 1
 }
 
 function drawGuides(context: OverlayContext, scene: OverlayScene): void {
@@ -272,15 +343,26 @@ function drawTools(context: OverlayContext, scene: OverlayScene, phase: number):
  * loop alive for as long as the tool is armed.
  */
 function drawBrush(context: OverlayContext, scene: OverlayScene): void {
-  const radius = scene.tools.brushRadius
+  const mark = scene.tools.brushMark
   const at = scene.pointer
-  if (radius === null || !at) return
+  if (mark === null || !at) return
 
   twoTone(
     context,
     () => {
       context.beginPath()
-      context.arc(at.x, at.y, radius * scene.viewport.scale, 0, Math.PI * 2)
+      if ('radius' in mark) {
+        context.arc(at.x, at.y, mark.radius * scene.viewport.scale, 0, Math.PI * 2)
+        return
+      }
+      // The square the next dab lands on, where it lands: a ring centred on the hand would
+      // promise a cell the stamp does not cover once a brush spans an even number of them.
+      const near = toScreen(scene.viewport, mark.stamp)
+      const far = toScreen(scene.viewport, {
+        x: mark.stamp.x + mark.stamp.width,
+        y: mark.stamp.y + mark.stamp.height,
+      })
+      traceRect(context, { ...near, width: far.x - near.x, height: far.y - near.y })
     },
     scene.colors,
     3,

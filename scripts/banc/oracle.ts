@@ -200,6 +200,23 @@ export const modelCoveredBy = (run: Run, name: string): string | null => {
 export const canvas = (run: Run) =>
   firstOf(run, 'image', id => canvasOf(useCanvases.getState(), id))
 
+/** How many cells a call laid down — see `canvasSurface`, which records them as the port does. */
+export const paintedCells = (run: Run): number => run.studio.painted().size
+
+/** What a cell holds: a packed colour, `null` where it was erased, `undefined` if untouched. */
+export const painted = (run: Run, x: number, y: number): number | null | undefined =>
+  run.studio.painted().get(`${x},${y}`)
+
+/** Whether a generation of that family was sent a prompt CARRYING a word. */
+export const promptSent = (run: Run, family: ModelFamily, word: string): boolean =>
+  jobs(run).some(
+    one =>
+      run.studio.familyOf(one.targetId) === family &&
+      Object.values(run.studio.sentBodies()[one.id] ?? {}).some(
+        value => typeof value === 'string' && value.includes(word),
+      ),
+  )
+
 /**
  * What the document in front DESIGNATES, and of what kind — « sélectionne le calque » is not
  * « pointe quelque chose », and only the kind tells the two apart.

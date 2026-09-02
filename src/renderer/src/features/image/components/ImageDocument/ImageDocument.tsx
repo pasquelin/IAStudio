@@ -304,6 +304,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           return toggleView(documentId, 'rulers')
         case 'canvas.guides':
           return toggleView(documentId, 'guides')
+        case 'canvas.grid':
+          return toggleView(documentId, 'grid')
         case 'canvas.snap':
           return toggleView(documentId, 'snap')
         case 'canvas.clearGuides':
@@ -535,6 +537,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           extras={
             <ImageDocumentBrush
               armed={canvasToolFor(tool, mode)}
+              cell={canvas.pixelCell}
               brush={brush}
               onBrush={setBrush}
               shortcuts={brushKeys}

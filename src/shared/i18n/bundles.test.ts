@@ -274,6 +274,8 @@ describe('the translation bundles', () => {
       // The name of a genre, and it is the same two words in French. Translating it would
       // invent a term nobody who draws sprites uses.
       'inspector.pixelArt',
+      // The same genre, said on the row of a model that draws it.
+      'generation.suitsPixelArt',
     ])
 
     const copied = [...BUNDLES.fr]

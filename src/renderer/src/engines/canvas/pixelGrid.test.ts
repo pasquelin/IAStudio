@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { cellFor, cellsOfLine, cellsSpanning, gridIsLegible, stampRect } from './pixelGrid'
+import {
+  cellFor,
+  cellRuns,
+  cellsOfLine,
+  cellsOfRect,
+  cellsSpanning,
+  gridIsLegible,
+  stampRect,
+} from './pixelGrid'
 
 describe('stampRect', () => {
   it('gives one rectangle for every point inside the same cell', () => {
@@ -57,6 +65,23 @@ describe('cellsOfLine', () => {
   })
 })
 
+describe('cellsOfRect', () => {
+  it('draws the outline alone, and every cell of it once filled', () => {
+    expect(cellsOfRect({ x: 1, y: 1 }, { x: 3, y: 3 }, false)).toHaveLength(8)
+    expect(cellsOfRect({ x: 1, y: 1 }, { x: 3, y: 3 }, true)).toHaveLength(9)
+    expect(cellsOfRect({ x: 3, y: 3 }, { x: 1, y: 1 }, true)).toEqual(
+      cellsOfRect({ x: 1, y: 1 }, { x: 3, y: 3 }, true),
+    )
+  })
+
+  // 🛑 Measured: 4096 a side is 2 415 ms of the UI thread, and the corners come from a caller —
+  // `canvas.drawPixels` names them, so nothing else stands between a model and a frozen window.
+  it('refuses corners no grid can hold rather than walking them', () => {
+    expect(cellsOfRect({ x: 0, y: 0 }, { x: Number.NaN, y: 0 }, true)).toEqual([])
+    expect(cellsOfRect({ x: 0, y: 0 }, { x: 99_999, y: 99_999 }, true)).toEqual([])
+  })
+})
+
 describe('cellsSpanning', () => {
   it('counts a partial last column in, since it is still a cell one can paint', () => {
     expect(cellsSpanning(1024, 16)).toBe(64)
@@ -71,8 +96,40 @@ describe('cellFor', () => {
     expect(cellsSpanning(1024, cellFor(1024, 64))).toBe(64)
   })
 
+  /**
+   * 🛑 The title above claimed this and asserted only exact DIVISORS. Rounding overshot on
+   * sixteen counts of a 1024 side: 3 gave a cell of 341, which spans 4, and the field's second
+   * try was refused for naming the value already held — three columns could not be reached.
+   */
+  it('reaches a count that does not divide the side, which rounding overshot', () => {
+    expect(cellsSpanning(1024, cellFor(1024, 3))).toBe(3)
+    expect(cellsSpanning(800, cellFor(800, 7))).toBe(7)
+    expect(cellsSpanning(333, cellFor(333, 20))).toBe(20)
+  })
+
   it('never asks for a cell of nothing, however many are wanted', () => {
     expect(cellFor(64, 4096)).toBe(1)
+  })
+})
+
+describe('cellRuns', () => {
+  // Two 2-cell squares one step apart on a diagonal share a row: one run, not two overlapping
+  // squares — which is what keeps a half-opaque stroke flat.
+  it('merges the squares of a line into one run per row', () => {
+    const runs = cellRuns(
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 1 },
+      ],
+      8,
+      16,
+    )
+
+    expect(runs).toEqual([
+      { x: 0, y: 0, width: 16, height: 8 },
+      { x: 0, y: 8, width: 24, height: 8 },
+      { x: 8, y: 16, width: 16, height: 8 },
+    ])
   })
 })
 

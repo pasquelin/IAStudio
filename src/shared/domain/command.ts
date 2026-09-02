@@ -111,6 +111,7 @@ export type CommandId =
   | 'canvas.zoomActual'
   | 'canvas.rulers'
   | 'canvas.guides'
+  | 'canvas.grid'
   | 'canvas.clearGuides'
   | 'canvas.selectAll'
   | 'canvas.deselect'
@@ -917,6 +918,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.canvasGuides.title',
     helpKey: 'commands.canvasGuides.help',
     defaultBinding: 'Meta+Semicolon',
+  }),
+  command({
+    id: 'canvas.grid',
+    scope: 'canvas',
+    titleKey: 'commands.canvasGrid.title',
+    helpKey: 'commands.canvasGrid.help',
+    defaultBinding: 'Meta+Quote',
   }),
   command({
     id: 'canvas.clearGuides',

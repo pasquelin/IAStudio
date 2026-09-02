@@ -3,6 +3,7 @@ import { aimedAt, type Target } from '@shared/domain/target'
 import { packedColour } from '@shared/domain/color'
 import { toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
+import { PIXEL_SHAPES, type PixelShape } from '@shared/domain/pixelShape'
 import { embeddedFontOf, FONT_SOURCES, type FontRef } from '@shared/domain/font'
 import {
   ADJUSTMENT_KINDS,
@@ -31,6 +32,8 @@ import {
   localShape,
   SHAPE_INK,
 } from '@/engines/canvas/shapeGeometry'
+import { cellRect, cellsOfLine, cellsOfRect, gridOf } from '@/engines/canvas/pixelGrid'
+import { canvasHost } from '@/features/image/canvasHosts'
 import type { Point, Size } from '@/engines/core/geometry'
 import {
   addGuide,
@@ -46,6 +49,7 @@ import {
   removeLayer,
   renameLayer,
   resizeCanvas,
+  setPixelCell,
   resizeImage,
   rotateImage,
   setLayerAdjustment,
@@ -172,6 +176,7 @@ function readState(): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_IMAGE)
 
+  const grid = gridOf(open.state)
   return {
     ok: true,
     data: {
@@ -179,6 +184,9 @@ function readState(): ActionOutcome {
       width: open.state.width,
       height: open.state.height,
       dpi: open.state.dpi,
+      // Derived rather than stored, and the only thing a client needs in order to place a cell:
+      // asked to work it out from a size and a cell, a model gets it wrong one time in three.
+      ...(grid === null ? {} : { pixelArt: { cell: open.state.pixelCell, ...grid } }),
       activeLayerId: open.state.activeLayerId,
       guides: open.state.guides,
       // Flattened: a client that had to walk a tree to find a layer id would walk it wrong the
@@ -663,9 +671,134 @@ function editGuide(
       )
 }
 
+/**
+ * The document's grid, set in CELLS. Without a count only the mode changes; with one the document
+ * is resized to `columns × cell` so the artwork measures what was asked for.
+ *
+ * 🛑 A resize drops the pixel history: a patch names its rectangle in its own surface's
+ * coordinates, and `resurface` cannot carry those. Said in the action's description too.
+ */
+function setPixelArt(input: Record<string, unknown>): ActionOutcome {
+  const enabled = boolOf(input, 'enabled')
+  const cell = numberOf(input, 'cell') ?? 1
+  const columns = numberOf(input, 'columns')
+  const rows = numberOf(input, 'rows')
+
+  // 🛑 Both counts or neither: one alone was DROPPED and answered `ok`, so a model asking for
+  // « 32 columns » got the document's own size back and then placed cells on a grid of 512.
+  if ((columns === null) !== (rows === null))
+    return refused('badInput', 'a grid wants "columns" AND "rows", in cells — or neither of them')
+
+  return edit(() => {
+    const sized =
+      enabled && columns !== null && rows !== null
+        ? [resizeCanvas(columns * cell, rows * cell, { x: 0, y: 0 })]
+        : []
+    return [...sized, setPixelCell(enabled ? cell : null)]
+  }, 'this grid changed nothing about the document')
+}
+
+/** What each shape wants, said so a caller can repair its own call. */
+const PIXEL_INPUT: Record<PixelShape, string> = {
+  points: '"cells" wants at least one cell, each written "x,y" — for example ["3,4", "3,5"]',
+  line: 'a line wants "x", "y", "toX" and "toY", in cells',
+  rectangle: 'a rectangle wants "x", "y", "toX" and "toY", in cells — "filled" fills it',
+  fill: 'a fill takes the whole layer, or the box named by "x", "y", "toX" and "toY"',
+}
+
+/** A cell as « x,y ». Both halves WANTED: `Number('')` is zero, so "3" landed on row nought. */
+function cellsAsked(input: Record<string, unknown>): Point[] | null {
+  const written = textsOf(input, 'cells')
+  const cells = written.map(one => {
+    const said = one.split(',')
+    return said.length !== 2
+      ? { x: Number.NaN, y: Number.NaN }
+      : { x: Number((said[0] ?? '').trim()), y: Number((said[1] ?? '').trim()) }
+  })
+  return cells.every(at => Number.isInteger(at.x) && Number.isInteger(at.y)) ? cells : null
+}
+
+/** Which cells a shape covers, in grid coordinates. `null` when the input cannot name them. */
+function shapeCells(
+  shape: PixelShape,
+  input: Record<string, unknown>,
+  columns: number,
+  rows: number,
+): readonly Point[] | null {
+  if (shape === 'points') return cellsAsked(input)
+
+  const from = { x: numberOf(input, 'x'), y: numberOf(input, 'y') }
+  if (shape === 'fill' && from.x === null)
+    return cellsOfRect({ x: 0, y: 0 }, { x: columns - 1, y: rows - 1 }, true)
+  if (from.x === null || from.y === null) return null
+
+  const to = { x: numberOf(input, 'toX'), y: numberOf(input, 'toY') }
+  if (to.x === null || to.y === null) return null
+
+  const ends = [
+    { x: from.x, y: from.y },
+    { x: to.x, y: to.y },
+  ] as [Point, Point]
+  if (shape === 'line') return cellsOfLine(ends[0], ends[1])
+  return cellsOfRect(ends[0], ends[1], shape === 'fill' || boolOf(input, 'filled'))
+}
+
+function drawPixels(input: Record<string, unknown>): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface', NO_IMAGE)
+
+  const cell = open.state.pixelCell
+  if (cell === null)
+    return refused(
+      'badInput',
+      'this image is not on a pixel grid — canvas.setPixelArt puts it on one',
+    )
+
+  const shape = oneOf(input, 'shape', PIXEL_SHAPES)
+  if (!shape) return refused('badInput', `"shape" must be one of: ${PIXEL_SHAPES.join(', ')}`)
+
+  const erase = boolOf(input, 'erase')
+  const written = textOf(input, 'color')
+  if (erase === (written !== null))
+    return refused('badInput', 'name a "color" or ask to "erase", one of the two and not both')
+  const color = erase ? null : packedColour(written ?? '')
+  if (!erase && color === null)
+    return refused('badInput', `"${written ?? ''}" is not a colour — write one as "#rrggbb"`)
+
+  const { columns, rows } = gridOf(open.state) ?? { columns: 0, rows: 0 }
+  const asked = shapeCells(shape, input, columns, rows)
+  if (asked === null || asked.length === 0) return refused('badInput', PIXEL_INPUT[shape])
+
+  // Outside the grid is DROPPED, never folded back: a cell at 40 on a grid of 32 is a mistake,
+  // and painting it at 8 would answer a request nobody made.
+  const inside = asked.filter(at => at.x >= 0 && at.y >= 0 && at.x < columns && at.y < rows)
+  if (inside.length === 0)
+    return refused('badInput', `no cell of that lands on a grid of ${columns} by ${rows}`)
+
+  // By id OR by name, as `editLayer` twenty lines up: `canvas.state` answers both, and a model
+  // that copied the NAME out of it was told the layer did not exist.
+  const named = textOf(input, 'layerId')
+  const layer = named === null ? null : layerAimed(open.state, named)
+  if (named !== null && !layer) return refused('notFound', noLayer(named))
+
+  const painted = canvasHost(open.documentId)?.paintCells(
+    layer?.id ?? null,
+    inside.map(at => cellRect(at, cell)),
+    color,
+  )
+  return painted
+    ? { ok: true }
+    : refused(
+        'notFound',
+        'nothing was painted: no such layer, or it is a group, or its pixels are padlocked, or it is a caption or a shape, or the cells fall outside the selection',
+      )
+}
+
 export const CANVAS_HANDLERS: ActionHandlers = {
   'canvas.state': readState,
   'canvas.resize': resize,
+  'canvas.setPixelArt': setPixelArt,
+  'canvas.drawPixels': drawPixels,
   'canvas.crop': crop,
   'canvas.flipOrRotate': input => {
     const turn = TURNS[textOf(input, 'turn') ?? '']

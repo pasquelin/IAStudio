@@ -195,6 +195,18 @@ export const boatImage = async (studio: Studio): Promise<void> => {
   await studio.run('layer.rename', { layerId: layerAt(studio, 0), name: 'Bateau' })
 }
 
+/** That picture on a 32 × 32 grid, which is what section 68 draws on. */
+export const pixelArtBoat = async (studio: Studio): Promise<void> => {
+  await boatImage(studio)
+  await studio.run('canvas.setPixelArt', { enabled: true, columns: 32, rows: 32, cell: 1 })
+}
+
+/** A red cell already laid, so an erasure has something to take away. */
+export const paintedDot = async (studio: Studio): Promise<void> => {
+  await pixelArtBoat(studio)
+  await studio.run('canvas.drawPixels', { shape: 'points', cells: ['3,4'], color: '#ff0000' })
+}
+
 /** That picture with a second layer over it, which five scenarios of section 19 act on. */
 export const overlay = async (studio: Studio): Promise<void> => {
   await boatImage(studio)

@@ -1,3 +1,5 @@
+import { saysPixelArt } from './pixelArtPrompt'
+
 /**
  * A Scenario model's inputs are specific to each model and are discovered at runtime
  * (`GET /models/{id}`). `FieldDescriptor` is their normalized shape, the only one the
@@ -404,6 +406,49 @@ export function servesStudioCapability(
   if (entry.answers !== undefined && !model.capabilities.includes(entry.answers)) return false
   if (entry.excludes && ownsTag(model.tags, entry.excludes)) return false
   return entry.tags === undefined || ownsTag(model.tags, entry.tags)
+}
+
+/**
+ * 🛑 Named rather than described: in a DESCRIPTION these say bit depth, not a genre — « outputs
+ * 16-bit color », « 8-bit quantization » — and promoting a depth map as pixel art is worse than
+ * missing a sprite model, a promotion costing nothing when it does not fire. Measured 2026-09-02
+ * on the catalogue this profile reaches: 24 image models, zero tags, none carrying either word.
+ */
+const RETRO_NAMES: readonly string[] = ['8-bit', '16-bit']
+
+/**
+ * Whether a model says it draws pixel art. Used to PROMOTE, never to filter — a catalogue that
+ * hides what it did not recognise is worse than one that shows everything in a plain order.
+ *
+ * 🛑 `image` alone, because the grid only ever reaches an image body: `EXTRAS` holds every other
+ * family at `null`, so promoting a chiptune model would badge words that never travel.
+ */
+export function suitsPixelArt(model: {
+  name: string
+  family: ModelFamily
+  tags: readonly string[]
+  description?: string
+}): boolean {
+  if (model.family !== 'image') return false
+
+  const named = `${model.name} ${model.tags.join(' ')}`.toLowerCase()
+  return (
+    saysPixelArt(`${named} ${model.description ?? ''}`) ||
+    RETRO_NAMES.some(word => named.includes(word))
+  )
+}
+
+/**
+ * The ones that draw pixel art first, the catalogue's own order kept inside each half.
+ *
+ * 🛑 A SORT and never a filter, and the guarantee is structural rather than promised: every model
+ * handed in comes back out, so nothing is hidden by not being recognised.
+ */
+export function pixelArtFirst<T extends Parameters<typeof suitsPixelArt>[0]>(
+  models: readonly T[],
+): readonly T[] {
+  const suited = models.filter(suitsPixelArt)
+  return suited.length === 0 ? models : [...suited, ...models.filter(one => !suited.includes(one))]
 }
 
 /**

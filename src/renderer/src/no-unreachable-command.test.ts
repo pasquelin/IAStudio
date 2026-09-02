@@ -149,16 +149,16 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
  * driving the 3D space runs into first.
  */
 const NOT_PUBLISHED: readonly string[] = [
-  // A stroke goes through the engine's GPU surface and its patch history: this takes a live PORT,
-  // not a path, and publishing it needs an engine API that does not exist — see `canvasActions.ts`.
+  // The ENGINE reaches it, never a handler: `endPixels` calls `onPixels`, which the window has
+  // wired to this command since the brush existed. An action that paints goes through the port's
+  // `paintCells`, which knows nothing of it — a second door is the same entry pushed twice.
   'paintPixels',
   // The drag's own half of `layer.transform`: an absolute x and y, so a gesture coalesced into
   // one entry keeps the last apply. An action names the transform whole and goes through
   // `setLayerTransform` — a second door onto the same edit is an edit published twice.
   'translateLayer',
   // The inspector's document face is their one door: `canvas.resize` is what a call asks for,
-  // and it names neither a grid, a density nor a depth. `canvas.setPixelArt` drops the first.
-  'setPixelCell',
+  // and it names neither a density nor a depth.
   'setCanvasDpi',
   'setCanvasColorMode',
   'setCanvasBitDepth',

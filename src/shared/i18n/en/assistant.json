@@ -245,6 +245,14 @@
         "title": "Resize the image",
         "description": "Changes the frame of the image in front. Rescales the layers with it when asked to, and otherwise leaves them where they are, which is the difference between image size and canvas size."
       },
+      "canvasSetPixelArt": {
+        "title": "Set pixel art mode",
+        "description": "Puts the image in front on a pixel-art grid, or takes it off one. Given a count of columns and rows, resizes the document so the artwork measures exactly that in cells. 🛑 A resize drops the pixel history — strokes already laid stay, but ⌘Z no longer undoes them. Resizing and laying the grid are TWO undos: the first ⌘Z takes the grid off and leaves the size."
+      },
+      "canvasDrawPixels": {
+        "title": "Draw pixels",
+        "description": "Lays cells on the image in front, in one go and one undo — cells named one by one, a line, a rectangle filled or hollow, or a fill. Coordinates are in grid cells, not in document pixels."
+      },
       "canvasCrop": {
         "title": "Crop the image",
         "description": "Closes the frame onto a rectangle given in document coordinates. The layers keep their place, so what falls outside is what is cut away."
@@ -1290,6 +1298,17 @@
       "rotation": "Rotation, in degrees",
       "fontSize": "Type size",
       "colour": "Colour, as #rrggbb",
+      "color": "Colour",
+      "pixelArtEnabled": "Pixel art mode",
+      "columns": "Columns",
+      "rows": "Rows",
+      "cell": "Cell size",
+      "pixelShape": "Shape",
+      "cells": "Cells",
+      "toX": "To X",
+      "toY": "To Y",
+      "filled": "Filled",
+      "erase": "Erase",
       "width": "Width",
       "height": "Height",
       "align": "How the text is aligned",

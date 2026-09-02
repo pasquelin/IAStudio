@@ -1,5 +1,6 @@
 import { action, RELATIVE_FIELD, type ActionField, type AssistantAction } from './assistantAction'
 import { BLEND_MODES } from './canvasBlend'
+import { PIXEL_SHAPES } from './pixelShape'
 
 /**
  * The image workspace, driven by value rather than by gesture.
@@ -13,10 +14,28 @@ import { BLEND_MODES } from './canvasBlend'
  * `document.activate` rather than by naming it here — one way of saying "the document I mean",
  * not two.
  *
- * What is NOT here, said plainly: painting. A stroke goes through the engine's GPU surface and
- * its patch history, which no command in `engines/canvas/commands.ts` exposes — `paintPixels`
- * takes a live port, not a path. Publishing it needs an engine API that does not exist yet.
+ * What is NOT here yet, said plainly: painting. `engines/canvas/commands.ts` has no path onto a
+ * GPU surface, so an action that paints goes through `CanvasHost.paintCells` — published, and
+ * with no caller until one is written.
  */
+
+/** A count of cells, never of document pixels — the two are the same only at a cell of one. */
+const COUNT = (key: string): ActionField => ({
+  key,
+  kind: 'integer',
+  labelKey: `assistant.fields.${key}`,
+  required: false,
+  min: 1,
+})
+
+/** A cell's coordinate on the grid, which starts at its top-left corner. */
+const CELL_AT = (key: string): ActionField => ({
+  key,
+  kind: 'integer',
+  labelKey: `assistant.fields.${key}`,
+  required: false,
+  min: 0,
+})
 
 const LAYER: ActionField = {
   key: 'layerId',
@@ -333,6 +352,63 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.scalePixels',
         required: false,
       },
+    ],
+  }),
+  action({
+    name: 'canvas.setPixelArt',
+    titleKey: 'assistant.actions.canvasSetPixelArt.title',
+    descriptionKey: 'assistant.actions.canvasSetPixelArt.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'enabled',
+        kind: 'boolean',
+        labelKey: 'assistant.fields.pixelArtEnabled',
+        required: true,
+      },
+      // In CELLS, which is how a person says it — « a grid of 32 by 32 », never « 32 document
+      // pixels with a cell of one ». The handler turns them into the document's own size.
+      COUNT('columns'),
+      COUNT('rows'),
+      COUNT('cell'),
+    ],
+  }),
+  action({
+    name: 'canvas.drawPixels',
+    titleKey: 'assistant.actions.canvasDrawPixels.title',
+    descriptionKey: 'assistant.actions.canvasDrawPixels.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'shape',
+        kind: 'choice',
+        labelKey: 'assistant.fields.pixelShape',
+        required: true,
+        options: [...PIXEL_SHAPES],
+      },
+      // Repeated, and it is the field that matters: a sprite lands in ONE call rather than in
+      // thirty. `readInput` folds a lone value into a list of one.
+      {
+        key: 'cells',
+        kind: 'text',
+        labelKey: 'assistant.fields.cells',
+        required: false,
+        repeated: true,
+      },
+      CELL_AT('x'),
+      CELL_AT('y'),
+      CELL_AT('toX'),
+      CELL_AT('toY'),
+      { key: 'filled', kind: 'boolean', labelKey: 'assistant.fields.filled', required: false },
+      // `#rrggbb` at the SCHEMA, as the twelve other colours of the registry: as text, « rouge »
+      // crossed `validatesInput` and came back refused from the handler, one round too late.
+      { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
+      { key: 'erase', kind: 'boolean', labelKey: 'assistant.fields.erase', required: false },
+      { ...LAYER, required: false },
     ],
   }),
   action({

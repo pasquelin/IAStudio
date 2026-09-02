@@ -7,6 +7,7 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { holdCanvas } from '@/features/image/canvasHosts'
+import { canvasHostStub } from '@/stores/canvas-fixtures'
 import { installDocuments, retitleDocument } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
@@ -386,15 +387,9 @@ describe('exporting the document in front', () => {
 
   const withImage = (): void => {
     installDocuments({ 'doc-b': 'image' }, 'doc-b')
-    holdCanvas('doc-b', () => ({
-      pixelSnapshots: async () => [],
-      restoreSnapshot: async () => {},
-      flatten: async () => new Uint8Array(0),
-      flattenBitmap: async () => null,
-      snapshot: async () => PIXEL,
-      forgetPicture: async () => {},
-      turnQuarter: () => undefined,
-    }))
+    holdCanvas('doc-b', () =>
+      canvasHostStub({ flatten: async () => new Uint8Array(0), snapshot: async () => PIXEL }),
+    )
   }
 
   it('renders the image in front and writes it under its own title', async () => {

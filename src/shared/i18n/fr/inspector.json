@@ -352,6 +352,9 @@
     "artResolution": "Résolution (cellules)",
     "artColumns": "Colonnes",
     "artRows": "Lignes",
+    "pixelArtGrid": "Afficher la grille",
+    "pixelArtPreview": "L’œuvre, un pixel par cellule",
+    "pixelArtPreviewTooWide": "Trop de cellules pour en montrer une par pixel",
     "pixelSize": "Taille du pixel"
   }
 }

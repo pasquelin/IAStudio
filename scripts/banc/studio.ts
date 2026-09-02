@@ -23,6 +23,7 @@ import { registerConfirmer } from '@/features/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/features/assistant/executor'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { emptyGame, SCRIPT_EXTENSION, type GameManifest } from '@shared/domain/game'
+import { followTheCanvas, type PaintedCells } from './canvasSurface'
 import { standInForWorkers } from './codeWorker'
 import { drawing } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -84,6 +85,8 @@ export type Studio = {
   shell: MemoryShell
   /** What the open project is called — its manifest's name, which a rename rewrites. */
   projectName: () => string
+  /** What a call laid on the grid, by cell — `null` where it erased. See `canvasSurface`. */
+  painted: () => PaintedCells
   /** Every picture a generation was given to work FROM, as the generator's schema read them. */
   references: () => readonly string[]
   /** What family a job ran — the API's own answer, which `Job` does not carry. */
@@ -608,8 +611,12 @@ export async function createStudio(
   const leaveTheDock = followTheDock()
   const leaveTheGameWindow = followTheGameWindow()
   const leaveTheCommandBus = followTheCommandBus()
+  const painted: PaintedCells = new Map()
+  const leaveTheCanvas = followTheCanvas(painted)
   const leaveTheViewport = followTheViewport()
   const leaveTheWorkers = standInForWorkers()
+
+  const painted_ = (): PaintedCells => painted
 
   const run = async (
     action: ActionName,
@@ -638,6 +645,7 @@ export async function createStudio(
     game: () => manifest,
     assets: () => catalog.rows(),
     jobs: () => useJobs.getState().jobs,
+    painted: painted_,
     references: () => references,
     git,
     shell,
@@ -697,6 +705,7 @@ export async function createStudio(
       giveBackMeasure()
       leaveTheDock()
       leaveTheCommandBus()
+      leaveTheCanvas()
       leaveTheViewport()
       leaveTheGameWindow()
       leaveTheWorkers()

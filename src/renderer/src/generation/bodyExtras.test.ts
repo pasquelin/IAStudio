@@ -5,6 +5,10 @@ import { documentFolderOf } from '@shared/domain/document'
 import { useCode } from '@/stores/code'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
+import type { FieldDescriptor } from '@shared/domain/model'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
+import { canvasStore } from '@/stores/canvases'
+import { installIn } from '@/stores/document-fixtures'
 import { withBodyExtras } from './bodyExtras'
 
 // Where `installDocument` files a script — read off the domain, never spelt out: the folder is
@@ -13,6 +17,20 @@ const WALK = `script:${documentFolderOf('script')}/doc-1.ts`
 
 const CODE2CODE = aiRoleId('code', 'code2code')
 const TXT2CODE = aiRoleId('code', 'txt2code')
+const TXT2IMG = aiRoleId('image', 'txt2img')
+
+/** The field the API itself marks — never one guessed at by name, which lands in the negative. */
+const PROMPT: FieldDescriptor[] = [
+  { key: 'prompt', kind: 'longText', label: 'Prompt', required: true, promptSpark: true },
+]
+
+const onGrid = (cell: number | null): void =>
+  installIn(
+    canvasStore,
+    'doc-image',
+    { ...DEFAULT_CANVAS, width: 512, height: 512, pixelCell: cell },
+    'image',
+  )
 
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
@@ -47,12 +65,39 @@ describe('what a family adds to a generation beyond the form', () => {
     expect(withBodyExtras(TXT2CODE, { prompt: 'a spin' })[CODE_SOURCE_FIELD]).toBeUndefined()
   })
 
-  it('leaves the form alone for a family that adds nothing', () => {
-    installDocument('doc-1', 'code')
-    useCode.getState().installed(WALK, 'export const x = 1')
+  it('leaves the form alone for an image that is not on a pixel grid', () => {
+    onGrid(null)
 
-    expect(withBodyExtras(aiRoleId('image', 'txt2img'), { prompt: 'a cat' })).toEqual({
+    expect(withBodyExtras(TXT2IMG, { prompt: 'a cat' }, { fields: PROMPT })).toEqual({
       prompt: 'a cat',
+    })
+  })
+
+  // The grid is what the studio holds and no model schema publishes — the whole reason for the table.
+  it('says the grid after the subject on a pixel-art document', () => {
+    onGrid(16)
+
+    expect(withBodyExtras(TXT2IMG, { prompt: 'a knight' }, { fields: PROMPT })).toEqual({
+      prompt: 'a knight, pixel art, 32x32 sprite, hard edges, no anti-aliasing',
+    })
+  })
+
+  // The box exists so a studio on a grid can still ask for a photo reference without leaving
+  // the mode, which would resize the document and drop its pixel history.
+  it('leaves the form alone once the box is unticked', () => {
+    onGrid(16)
+
+    expect(
+      withBodyExtras(TXT2IMG, { prompt: 'a knight' }, { fields: PROMPT, pixelArt: false }),
+    ).toEqual({ prompt: 'a knight' })
+  })
+
+  /** An upscale has no prompt at all, and guessing a field by name is how one lands in the wrong. */
+  it('leaves a model with no prompt field of its own alone', () => {
+    onGrid(16)
+
+    expect(withBodyExtras(TXT2IMG, { image: 'asset-1' }, { fields: [] })).toEqual({
+      image: 'asset-1',
     })
   })
 

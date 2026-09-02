@@ -178,6 +178,7 @@
     "zoomActual": "Actual size",
     "rulers": "Rulers",
     "guides": "Guides",
+    "grid": "Pixel grid",
     "clearGuides": "Clear guides",
     "snap": "Snap",
     "help": "Help",

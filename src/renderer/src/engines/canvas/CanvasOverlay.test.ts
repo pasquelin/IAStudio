@@ -96,6 +96,8 @@ const COLORS = {
   accent: '#accent',
   marqueeLight: '#light',
   marqueeDark: '#dark',
+  gridCell: '#cell',
+  gridPixel: '#pixel',
   scrim: '#scrim',
 }
 
@@ -107,7 +109,7 @@ const NO_TOOL: ToolChrome = {
   lit: null,
   pending: null,
   selection: null,
-  brushRadius: null,
+  brushMark: null,
 }
 
 const RECT = { x: 10, y: 20, width: 30, height: 40 }
@@ -125,6 +127,9 @@ function scene(overrides: Partial<OverlayScene> = {}): OverlayScene {
     document: { width: 100, height: 100 },
     showRulers: false,
     showGuides: true,
+    showGrid: false,
+    pixelCell: null,
+    resolution: 1,
     guides: [],
     activeGuideId: null,
     pointer: null,
@@ -179,6 +184,62 @@ describe('drawOverlay', () => {
 
     expect(opsOf(calls, 'moveTo')).toEqual([[85.5, 0]])
     expect(opsOf(calls, 'lineTo')).toEqual([[85.5, 300]])
+  })
+
+  const gridScene = (overrides: Partial<OverlayScene> = {}): OverlayScene =>
+    scene({
+      showGuides: false,
+      showGrid: true,
+      pixelCell: 8,
+      document: { width: 16, height: 16 },
+      viewport: { x: 0, y: 0, scale: 2 },
+      ...overrides,
+    })
+
+  it('rules the document at its cell boundaries, bounded to the document', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, gridScene())
+
+    // Cell 8 at scale 2 is 16 screen pixels apart; boundaries at 0, 8 and 16 document pixels.
+    expect(opsOf(calls, 'moveTo')).toEqual([
+      [0.5, 0],
+      [16.5, 0],
+      [32.5, 0],
+      [0, 0.5],
+      [0, 16.5],
+      [0, 32.5],
+    ])
+    expect(opsOf(calls, 'lineTo')).toEqual([
+      [0.5, 32],
+      [16.5, 32],
+      [32.5, 32],
+      [32, 0.5],
+      [32, 16.5],
+      [32, 32.5],
+    ])
+  })
+
+  /**
+   * The finer level under the cell's, and its own ink: a grid drawn in one colour says nothing
+   * about which lines are the artwork's pixels.
+   */
+  it('rules the document pixel under the cell, each in its own ink', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, gridScene({ pixelCell: 4, viewport: { x: 0, y: 0, scale: 8 } }))
+
+    // The frame inks first, then the finer level, then the cell's over it.
+    expect(opsOf(calls, 'strokeStyle').flat()).toEqual(['#frame', '#pixel', '#cell'])
+    expect(opsOf(calls, 'stroke')).toHaveLength(2)
+  })
+
+  it('draws no grid under the threshold, nor off a pixel grid at all', () => {
+    const coarse = recorder()
+    drawOverlay(coarse.context, gridScene({ viewport: { x: 0, y: 0, scale: 0.5 } }))
+    expect(opsOf(coarse.calls, 'moveTo')).toEqual([])
+
+    const off = recorder()
+    drawOverlay(off.context, gridScene({ pixelCell: null }))
+    expect(opsOf(off.calls, 'moveTo')).toEqual([])
   })
 
   it('draws nothing for the guides once they are hidden', () => {
@@ -567,7 +628,7 @@ describe('the brush ring', () => {
 
   it('draws nothing while no painting tool is armed', () => {
     const { context, calls } = recorder()
-    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushRadius: null } }))
+    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushMark: null } }))
 
     expect(opsOf(calls, 'arc')).toHaveLength(0)
   })
@@ -576,14 +637,14 @@ describe('the brush ring', () => {
   // and a ring left at the last known point claims one.
   it('draws nothing once the pointer has left the canvas', () => {
     const { context, calls } = recorder()
-    drawOverlay(context, scene({ pointer: null, tools: { ...NO_TOOL, brushRadius: 12 } }))
+    drawOverlay(context, scene({ pointer: null, tools: { ...NO_TOOL, brushMark: { radius: 12 } } }))
 
     expect(opsOf(calls, 'arc')).toHaveLength(0)
   })
 
   it('rings the pointer where it is, in screen pixels', () => {
     const { context, calls } = recorder()
-    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushRadius: 12 } }))
+    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushMark: { radius: 12 } } }))
 
     // The pointer is already in screen space — it is what the rulers echo — so it is not
     // projected a second time.
@@ -596,7 +657,11 @@ describe('the brush ring', () => {
    */
   it('scales the radius with the zoom, so the ring covers what the dab will', () => {
     const { context, calls } = recorder()
-    const zoomed = scene({ viewport: VIEW, pointer: AT, tools: { ...NO_TOOL, brushRadius: 12 } })
+    const zoomed = scene({
+      viewport: VIEW,
+      pointer: AT,
+      tools: { ...NO_TOOL, brushMark: { radius: 12 } },
+    })
     drawOverlay(context, zoomed)
 
     expect(opsOf(calls, 'arc')[0]?.[2]).toBe(24)
@@ -607,7 +672,7 @@ describe('the brush ring', () => {
     const far = scene({
       viewport: { x: 0, y: 0, scale: 0.25 },
       pointer: AT,
-      tools: { ...NO_TOOL, brushRadius: 12 },
+      tools: { ...NO_TOOL, brushMark: { radius: 12 } },
     })
     drawOverlay(context, far)
 
@@ -618,7 +683,7 @@ describe('the brush ring', () => {
   // against a background of its own colour. Undashed, so it costs no frame loop.
   it('strokes twice, light under dark, and marches neither', () => {
     const { context, calls } = recorder()
-    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushRadius: 12 } }))
+    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushMark: { radius: 12 } } }))
 
     const inks = opsOf(calls, 'strokeStyle').map(args => args[0])
     expect(inks.slice(-2)).toEqual(['#light', '#dark'])
@@ -627,7 +692,7 @@ describe('the brush ring', () => {
 
   it('rings above the grips, never under them', () => {
     const { context, calls } = recorder()
-    const both = toolScene({ handles: cornersOfRect(RECT), brushRadius: 12 })
+    const both = toolScene({ handles: cornersOfRect(RECT), brushMark: { radius: 12 } })
     drawOverlay(context, { ...both, pointer: AT })
 
     const arc = calls.findIndex(call => call.op === 'arc')
