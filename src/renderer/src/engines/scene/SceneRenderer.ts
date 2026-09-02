@@ -148,6 +148,7 @@ import {
   showPathHandles,
   tiledGeometry,
   showPathKnobs,
+  showRailLine,
   standardMaterialOf,
 } from './threeSync'
 import {
@@ -1294,9 +1295,11 @@ export class SceneRenderer {
       const rail = this.objects.get(id)
       if (!rail) continue
       // A rail node is nothing BUT its line, so hiding the chrome hides it whole. A band is a
-      // surface of the scene: only its handles go.
+      // surface of the scene: only its aids go.
       if (!chrome && node.type === 'path') rail.visible = false
-      showPathKnobs(rail, chrome && rails.has(id))
+      const worked = chrome && rails.has(id)
+      showPathKnobs(rail, worked)
+      if (node.type !== 'path') showRailLine(rail, worked)
       // The pair of the ANCHOR being worked on, and of no other — see `showPathHandles`. The
       // index whichever of the three is held: taking a tangent must not put its own pair away.
       const held = this.pickedPathPoint

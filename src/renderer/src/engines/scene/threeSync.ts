@@ -246,6 +246,17 @@ export function showPathKnobs(object: Object3D, shown: boolean): void {
 }
 
 /**
+ * 🛑 The line of a BAND, shown only while it is worked on. A rail node keeps its own either way —
+ * it is nothing but that line, and hiding it would leave nothing to click. A band is a surface
+ * one clicks directly, so its line drew a permanent stripe down the middle, seen THROUGH the very
+ * cars it was under.
+ */
+export function showRailLine(object: Object3D, shown: boolean): void {
+  const line = object.getObjectByName(PATH_CURVE_NAME)
+  if (line) line.visible = shown
+}
+
+/**
  * A rail brought in line with its descriptor: the sampled line, and one knob per control point.
  *
  * Knobs are added and removed rather than rebuilt whole: a drag of one point emits a descriptor
