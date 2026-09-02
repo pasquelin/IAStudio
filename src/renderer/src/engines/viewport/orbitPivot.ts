@@ -52,3 +52,14 @@ export function pivotFor(
 export function onScreen({ x, y, z }: { x: number; y: number; z: number }): boolean {
   return Math.abs(x) <= 1 && Math.abs(y) <= 1 && z >= -1 && z <= 1
 }
+
+/**
+ * The pivot brought back onto the line of sight, keeping the depth it had.
+ *
+ * What every reader that takes the pivot for « what the camera looks at » needs, and they restore
+ * it by `lookAt`: a framing published from an off-axis pivot comes back TURNED.
+ */
+export function gazeTargetOf(position: Vector3, gaze: Vector3, pivot: Vector3): Vector3 {
+  const depth = pivot.clone().sub(position).dot(gaze)
+  return position.clone().addScaledVector(gaze, depth > 0 ? depth : PIVOT_AHEAD)
+}

@@ -21,11 +21,3 @@ export function gestureOf({ button, altKey, shiftKey }: GestureButton): Gesture 
   // reaches the gesture the middle button carries everywhere else.
   return altKey && shiftKey ? 'pan' : 'orbit'
 }
-
-/**
- * Whether the gesture was NAMED by a modifier rather than fallen into. Only a named one is taken
- * from the rest of the application: a bare left drag still has to reach the picking on release.
- */
-export function claimsEvent({ button, altKey }: GestureButton): boolean {
-  return button === 1 || altKey
-}

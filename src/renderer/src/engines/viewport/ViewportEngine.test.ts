@@ -1394,20 +1394,66 @@ describe('a viewport', () => {
     })
 
     /**
-     * The one thing a bare drag must not do. Picking decides on RELEASE whether the pointer ever
-     * moved, and a press swallowed here would leave every click in the viewport selecting nothing.
+     * Swallowed, a press takes `⌥`-click and `⌥⇧`-click on a rail with it — both decided on
+     * RELEASE, from a press the picking has to have seen. What tells a click from a drag is the
+     * travel, never the button, and the picking already reads it.
      */
-    it('leaves a bare press to the rest of the studio, and takes one a modifier named', () => {
+    it('swallows no press at all, whatever names the gesture', () => {
       const heard = vi.fn()
       host.addEventListener('pointerdown', heard)
       backedOff()
 
       host.dispatchEvent(press())
-      expect(heard).toHaveBeenCalledTimes(1)
-
       host.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
       host.dispatchEvent(press({ altKey: true }))
-      expect(heard).toHaveBeenCalledTimes(1)
+      host.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+      host.dispatchEvent(press({ button: 1 }))
+
+      expect(heard).toHaveBeenCalledTimes(3)
+    })
+
+    /**
+     * A gizmo grabs its handle on the very event that starts a drag here, and freezes the panes
+     * from its own `dragging-changed`. Left unread, the camera turned under the handle being
+     * pulled — the gate used to be `OrbitControls`, which refused every move while disabled.
+     */
+    it('lets go the moment the panes freeze, a handle having taken the pointer', () => {
+      const engine = backedOff()
+
+      host.dispatchEvent(press({ altKey: true }))
+      engine.freezePanes(true)
+      const stood = engine.camera.position.clone()
+      host.dispatchEvent(dragTo(500, 500))
+
+      expect(engine.camera.position.distanceTo(stood)).toBeCloseTo(0, 6)
+    })
+
+    /**
+     * The plane is INFINITE. A pointer a hair under the horizon meets it kilometres out, and the
+     * wheel spends 12% of the distance to what it aims at in a single notch.
+     */
+    it('refuses a ground further than the view already reaches, and takes one nearer', () => {
+      const engine = backedOff({ pivotMode: () => ({ aroundSelection: false, underCursor: true }) })
+      const aim = (at: [number, number, number], pivot: [number, number, number]) => {
+        engine.camera.lookAt(...at)
+        engine.orbit?.target.set(...pivot)
+        host.dispatchEvent(press({ altKey: true }))
+        host.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+      }
+
+      // A hair under the horizon from two metres up: the plane is met some two kilometres out.
+      engine.camera.position.set(0, 2, 10)
+      aim([0, 1.9, -100], [0, 2, 0])
+      expect(engine.orbit?.target.toArray()).toEqual([0, 2, 0])
+
+      // Down onto the origin from ten metres — off the vertical, which `lookAt` treats as
+      // degenerate. The plane is met within reach, and the pivot LANDS on it, a distance apart
+      // from where it would have stayed.
+      engine.camera.position.set(0, 10, 1)
+      aim([0, 0, 0], [5, 0, 5])
+      expect(engine.orbit?.target.x).toBeCloseTo(0, 6)
+      expect(engine.orbit?.target.y).toBeCloseTo(0, 6)
+      expect(engine.orbit?.target.z).toBeCloseTo(0, 6)
     })
 
     it('turns around the selection when the preference asks, wherever the pointer is', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Vector3 } from 'three'
-import { onScreen, pivotFor, type PivotMode } from './orbitPivot'
+import { gazeTargetOf, onScreen, PIVOT_AHEAD, pivotFor, type PivotMode } from './orbitPivot'
 
 const BOTH: PivotMode = { aroundSelection: true, underCursor: true }
 const NEITHER: PivotMode = { aroundSelection: false, underCursor: false }
@@ -55,5 +55,22 @@ describe('whether a point is worth turning around', () => {
 
   it('refuses one behind the camera, which projects into the box with its depth inverted', () => {
     expect(onScreen({ x: 0, y: 0, z: 1.6 })).toBe(false)
+  })
+})
+
+/**
+ * `viewPlacement`, the trihedron and a pane going orthographic all take the pivot for what the
+ * camera looks at, and restore it by `lookAt`. Off the axis, every one of them turns the view.
+ */
+describe('bringing a pivot back onto the line of sight', () => {
+  const FROM = new Vector3(0, 0, 10)
+  const GAZE = new Vector3(0, 0, -1)
+
+  it('keeps the depth it had, and drops what was off to the side', () => {
+    expect(gazeTargetOf(FROM, GAZE, new Vector3(6, -3, 4)).toArray()).toEqual([0, 0, 4])
+  })
+
+  it('rests ahead of the camera for a pivot that ended up behind it', () => {
+    expect(gazeTargetOf(FROM, GAZE, new Vector3(0, 0, 40)).z).toBeCloseTo(10 - PIVOT_AHEAD, 6)
   })
 })

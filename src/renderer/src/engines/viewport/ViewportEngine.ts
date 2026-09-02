@@ -21,9 +21,9 @@ import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
 import { dollyTo, notchesOf } from './dolly'
-import { claimsEvent, gestureOf, type Gesture } from './gestures'
+import { gestureOf, type Gesture } from './gestures'
 import { orbitAround } from './orbit'
-import { onScreen, PIVOT_AHEAD, pivotFor, type PivotMode } from './orbitPivot'
+import { gazeTargetOf, onScreen, pivotFor, type PivotMode } from './orbitPivot'
 import { panBy } from './pan'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
@@ -281,9 +281,7 @@ function ownsGestures(controls: OrbitControls): boolean {
  * hands its gestures back to `OrbitControls` has to do first — see `settleOrbit`.
  */
 function aimPivotAhead(camera: ViewportCamera, pivot: Vector3): void {
-  const gaze = camera.getWorldDirection(borrowedAim)
-  const depth = pivot.clone().sub(camera.position).dot(gaze)
-  pivot.copy(camera.position).addScaledVector(gaze, depth > 0 ? depth : PIVOT_AHEAD)
+  pivot.copy(gazeTargetOf(camera.position, camera.getWorldDirection(borrowedAim), pivot))
 }
 
 /** The camera an added view is currently drawing through — a borrowed one wins over both. */
@@ -724,7 +722,13 @@ export class ViewportEngine {
     const next = kind === 'perspective' ? pane.perspective : pane.orthographic
     next.position.copy(previous.position)
     next.quaternion.copy(previous.quaternion)
-    if (pane.controls) pane.controls.object = next
+    if (pane.controls) {
+      // The two `setProjection` makes for pane 0, and for the same reason: an orthographic pane
+      // takes its gestures back, and `update()` would swing it round a pivot left off the axis.
+      if (kind === 'orthographic') aimPivotAhead(next, pane.controls.target)
+      pane.controls.object = next
+      this.armOrbits(this.armedPane)
+    }
 
     this.layOutPanes()
     this.requestRender()
@@ -751,7 +755,9 @@ export class ViewportEngine {
     this.lastPointer.clientX = event.clientX
     this.lastPointer.clientY = event.clientY
 
-    if (this.layout !== 'single' && !this.frozen) {
+    // `this.drag` beside the freeze: a navigation gesture holds the pointer just as a handle does,
+    // and the pane under it must not change halfway — the wheel would then act on another view.
+    if (this.layout !== 'single' && !this.frozen && !this.drag) {
       const over = this.paneAtPointer(event)
       if (over !== null) this.active = over
       this.armOrbits(over)
@@ -1079,7 +1085,7 @@ export class ViewportEngine {
 
     return {
       aim: this.raycaster.ray.direction.clone(),
-      aimed: this.metByRay() ?? this.raycaster.ray.at(reach, new Vector3()),
+      aimed: this.metByRay(reach) ?? this.raycaster.ray.at(reach, new Vector3()),
     }
   }
 
@@ -1087,20 +1093,27 @@ export class ViewportEngine {
    * What the ray already set on `raycaster` meets: an object first, then the GROUND — without
    * which every gesture over the floor met nothing, `pickTargets` naming the nodes alone.
    */
-  private metByRay(): Vector3 | null {
+  private metByRay(limit: number): Vector3 | null {
     const hit = this.raycaster.intersectObjects(this.options.pickTargets?.() ?? [], true)[0]
     if (hit) return hit.point
 
-    return this.raycaster.ray.intersectPlane(GROUND, new Vector3())
+    // Refused beyond what the view already implies: the plane is INFINITE, so a pointer a hair
+    // under the horizon meets it kilometres away, and the wheel spends 12% of that in one notch.
+    const ground = this.raycaster.ray.intersectPlane(GROUND, new Vector3())
+    return ground && this.raycaster.ray.origin.distanceTo(ground) <= limit ? ground : null
   }
 
   /** The same, from a pointer rather than from a ray already cast. */
-  private metByPointer(event: PointerPosition, camera: PerspectiveCamera): Vector3 | null {
+  private metByPointer(
+    event: PointerPosition,
+    camera: PerspectiveCamera,
+    limit: number,
+  ): Vector3 | null {
     const ndc = this.pointerNdcOf(event)
     if (!ndc) return null
 
     this.raycaster.setFromCamera(this.wheelNdc.set(ndc.x, ndc.y), camera)
-    return this.metByRay()
+    return this.metByRay(limit)
   }
 
   /**
@@ -1121,7 +1134,12 @@ export class ViewportEngine {
     return pivotFor(
       {
         selection: () => this.visibleSelection(camera),
-        underCursor: () => this.metByPointer(event, camera),
+        underCursor: () =>
+          this.metByPointer(
+            event,
+            camera,
+            camera.position.distanceTo(orbit.target) || DEFAULT_REACH,
+          ),
         settled: orbit.target.clone(),
       },
       this.options.pivotMode?.() ?? SETTLED_ONLY,
@@ -1163,18 +1181,21 @@ export class ViewportEngine {
     // took it, and the picking listens on the canvas. A drag straying off the panel would
     // otherwise stall mid-gesture, which is what `OrbitControls` used its own capture for.
     this.renderer?.domElement.setPointerCapture(event.pointerId)
-
-    // Taken from the rest of the application only when a MODIFIER named the gesture: a bare drag
-    // goes on reaching the picking, which decides on release whether the pointer ever moved.
-    if (claimsEvent(event)) event.stopPropagation()
   }
 
   private dragBy(event: PointerEvent): void {
     const drag = this.drag
     if (!drag) return
+    // A second pointer — a stylus, a touch — would otherwise steer the camera by the distance
+    // between two different hands.
+    if (event.pointerId !== drag.pointerId) return
     // The reading that cannot lie, and what repairs a release swallowed by a native menu or lost
     // off the window — the same one `SceneRenderer` makes of its flight.
     if (event.buttons === 0) return this.endDrag()
+    // Re-read, never captured at the press: a gizmo grabs a handle on the very event that starts
+    // this, freezes the panes from its `dragging-changed`, and the drag must die there. That gate
+    // used to be `OrbitControls`, which refused every move while disabled.
+    if (this.armedPane !== drag.pane) return this.endDrag()
 
     const camera = this.cameraOfPane(drag.pane)
     const orbit = this.orbitOfPane(drag.pane)

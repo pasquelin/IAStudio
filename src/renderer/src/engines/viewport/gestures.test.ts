@@ -34,4 +34,13 @@ describe('what a button asks the view to do', () => {
   it('orbits under the keys that extend a selection, which no longer pan', () => {
     expect(gestureOf({ ...LEFT, shiftKey: true })).toBe('orbit')
   })
+
+  /**
+   * No press is ever swallowed, whatever names the gesture: `⌥`-click lays a point on a rail and
+   * `⌥⇧`-click adds one at its end, and both are decided on RELEASE, from a press the picking
+   * has to have seen. What separates a click from a drag is the travel, never the button.
+   */
+  it('names a gesture without claiming the press, the picking deciding on release', () => {
+    expect(gestureOf({ ...LEFT, altKey: true })).toBe('orbit')
+  })
 })

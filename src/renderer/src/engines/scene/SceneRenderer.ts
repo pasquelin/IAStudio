@@ -35,7 +35,7 @@ import { anglesFromDirection, type SphericalAngles } from '@shared/domain/angles
 import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
 import { clampFlySpeed, speedAfterWheel } from './flySpeed'
 import { notchesOf } from '../viewport/dolly'
-import { PIVOT_AHEAD } from '../viewport/orbitPivot'
+import { gazeTargetOf, PIVOT_AHEAD } from '../viewport/orbitPivot'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -2223,11 +2223,15 @@ export class SceneRenderer {
   /** Where the free camera stands and what it looks at, as plain numbers anything may hold. */
   viewPlacement(): CameraPlacement {
     const camera = this.viewport.perspective
-    // The orbit's target when there is one, and a point ahead of the camera otherwise: a
-    // viewport with no controls still has a direction, and `lookAt(0,0,0)` would be a lie.
-    const target =
-      this.viewport.orbit?.target ??
-      camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
+    const gaze = camera.getWorldDirection(new ThreeVector3())
+    const pivot = this.viewport.orbit?.target
+    // Brought back ONTO the line of sight: the pivot is where the pointer put it, off centre by
+    // design, and every reader of this restores a placement by `lookAt` — a framing published
+    // from an off-axis pivot comes back turned. A viewport with no controls has a gaze all the
+    // same, and `lookAt(0, 0, 0)` would be a lie.
+    const target = pivot
+      ? gazeTargetOf(camera.position, gaze, pivot)
+      : camera.position.clone().add(gaze)
 
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
@@ -4757,15 +4761,18 @@ export class SceneRenderer {
     const from = camera.position.clone()
     const facing = camera.quaternion.clone()
 
-    helper.center.copy(orbit.target)
+    // The point LOOKED AT, never the raw pivot: off the axis it would name a side of the pivot
+    // rather than the side of the view, and `viewFrom` would send the camera there.
+    const looked = gazeTargetOf(from, camera.getWorldDirection(new ThreeVector3()), orbit.target)
+    helper.center.copy(looked)
     // The helper reads where the camera stands to work out where it would send it, and one
     // sitting exactly on its target stands nowhere: every side would come back as the same
     // point. Pushed off first, and put back below whatever the click turns out to be.
-    if (from.equals(orbit.target)) camera.position.z += DEFAULT_VIEW_DISTANCE
+    if (from.equals(looked)) camera.position.z += DEFAULT_VIEW_DISTANCE
 
     const hit = helper.handleClick(event)
     if (hit) helper.update(HELPER_SETTLES)
-    const direction = hit ? directionOf(camera.position.clone().sub(orbit.target)) : null
+    const direction = hit ? directionOf(camera.position.clone().sub(looked)) : null
 
     // Put back everything the helper moved. It was only ever asked which side it aimed at; the
     // move itself belongs to `viewFrom`, which reads the distance off the camera it is about to
