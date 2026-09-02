@@ -1,4 +1,12 @@
-import { BoxGeometry, Group, InstancedMesh, Mesh, MeshStandardMaterial, Object3D } from 'three'
+import {
+  BoxGeometry,
+  Group,
+  InstancedMesh,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+} from 'three'
 import { PerspectiveCamera } from 'three'
 import { describe, expect, it } from 'vitest'
 import { meshNode, walked } from './scene-fixtures'
@@ -37,6 +45,13 @@ const cellsIn = (scene: Object3D): Group[] => scene.children.filter(child => chi
 
 const instancesIn = (scene: Object3D): InstancedMesh[] =>
   walked(scene).filter(child => child instanceof InstancedMesh)
+
+/** Where each cell the scene still holds stands, along x — one number per cell, sorted. */
+const standingIn = (scene: Object3D): number[] =>
+  cellsIn(scene)
+    .flatMap(cell => cell.children.filter(child => child instanceof InstancedMesh))
+    .map(mesh => mesh.instanceMatrix.array[12] ?? 0)
+    .toSorted((one, other) => one - other)
 
 /** A view of `far` from where it stands — what decides which cells are drawn. */
 function looking(x: number, far: number): PerspectiveCamera {
@@ -89,6 +104,18 @@ describe('createCellGroups', () => {
     })
   })
 
+  it('leaves the matrices of what it draws at identity, which is where they belong', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    createCellGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    scene.updateMatrixWorld(true)
+
+    // The instance holds WORLD matrices, so its own must stay identity — that is what makes it
+    // safe to leave the cell out of the walk, and what the frustum tests it by.
+    expect(instancesIn(scene)[0]?.matrixWorld.equals(new Matrix4())).toBe(true)
+  })
+
   it('draws a body too wide for a cell apart from the cells', () => {
     const scene = host()
     const wide = new BoxGeometry(4 * CELL_SIZE, 1, 4 * CELL_SIZE)
@@ -120,25 +147,28 @@ describe('the zone a camera holds', () => {
 
     // The resting state, and it is what makes the flag safe: an engine that never follows a
     // camera draws exactly what it drew before.
-    expect(cellsIn(scene).every(cell => cell.visible)).toBe(true)
+    expect(standingIn(scene)).toEqual([0, 20 * CELL_SIZE])
   })
 
-  it('turns off the cells the view cannot reach', () => {
+  it('takes the cells the view cannot reach out of the scene', () => {
     const { scene, groups } = twoCells()
 
     const moved = groups.follow?.(looking(0, 500))
 
+    // 🛑 OUT of it, not merely turned off: `visible` stops `projectObject` and nothing else, and
+    // `updateMatrixWorld` walks every child whatever the flag says — 0.97 ms a frame of pure
+    // walking on 6 912 meshes that draw nothing.
     expect(moved).toBe(true)
-    expect(cellsIn(scene).map(cell => cell.visible)).toEqual([true, false])
+    expect(standingIn(scene)).toEqual([0])
   })
 
-  it('turns them back on when the camera comes to them', () => {
+  it('puts them back when the camera comes to them', () => {
     const { scene, groups } = twoCells()
     groups.follow?.(looking(0, 500))
 
     groups.follow?.(looking(20 * CELL_SIZE, 500))
 
-    expect(cellsIn(scene).map(cell => cell.visible)).toEqual([false, true])
+    expect(standingIn(scene)).toEqual([20 * CELL_SIZE])
   })
 
   it('says nothing moved when the camera stayed in its zone', () => {
@@ -158,7 +188,7 @@ describe('the zone a camera holds', () => {
 
     // A film, a capture and a preview render from a camera of their own without ever following
     // one. A zone narrowed for the viewport would cut bodies out of what they write.
-    expect(cellsIn(scene).every(cell => cell.visible)).toBe(true)
+    expect(standingIn(scene)).toEqual([0, 20 * CELL_SIZE])
   })
 
   it('draws a whole level from a view wide enough to hold it', () => {
@@ -166,9 +196,9 @@ describe('the zone a camera holds', () => {
 
     groups.follow?.(looking(0, 40 * CELL_SIZE))
 
-    // The pixel-for-pixel case: nothing a view could show is ever turned off, so an ordinary
-    // scene under the flag draws exactly the image it drew without it.
-    expect(cellsIn(scene).every(cell => cell.visible)).toBe(true)
+    // The pixel-for-pixel case: nothing a view could show is ever left out, so an ordinary scene
+    // under the flag draws exactly the image it drew without it.
+    expect(standingIn(scene)).toEqual([0, 20 * CELL_SIZE])
   })
 })
 
