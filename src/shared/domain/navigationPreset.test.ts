@@ -115,11 +115,14 @@ describe('a scheme of one’s own', () => {
    * The two are picked on separate rows and `gestureOf` reads pan first: named alike, the
    * viewport simply stopped turning, with nothing anywhere saying why.
    */
-  it('keeps its orbit when the same chord is named for both', () => {
+  it('keeps its orbit when the same chord is named for both, and still pans', () => {
     const both = schemeFor('custom', { orbit: 'middle', pan: 'middle', fly: 'anyButton' })
 
     expect(both.orbit).not.toEqual([])
-    expect(both.pan).toEqual([])
+    // Emptied, it took panning away in silence — and naming the middle button for both is two
+    // clicks from the default. What is left falls back on the chord Blender pans with.
+    expect(both.pan).not.toEqual([])
+    expect(both.pan).not.toEqual(both.orbit)
   })
 
   it('leaves the two apart when they are different', () => {

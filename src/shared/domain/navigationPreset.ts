@@ -175,11 +175,6 @@ export function customFrom(three: {
   }
 }
 
-/**
- * The scheme in force. `custom` is composed from what the person chose; every other preset is
- * the table declared above, and neither carries bindings for `custom` — see `CustomNavigation`.
- */
-
 function sameChord(one: GestureChord, other: GestureChord): boolean {
   return (
     one.button === other.button &&
@@ -189,17 +184,27 @@ function sameChord(one: GestureChord, other: GestureChord): boolean {
   )
 }
 
+/** What a pan keeps once the orbit has taken what they share — Blender's chord where nothing. */
+function panApartFrom(
+  pan: readonly GestureChord[],
+  orbit: readonly GestureChord[],
+): readonly GestureChord[] {
+  const kept = pan.filter(chord => !orbit.some(other => sameChord(chord, other)))
+  return kept.length > 0 ? kept : SHIFT_MIDDLE
+}
+
+/**
+ * The scheme in force. `custom` is composed from what the person chose; every other preset is
+ * the table declared above, and neither carries bindings for `custom` — see `CustomNavigation`.
+ */
 export function schemeFor(preset: NavigationPreset, custom: CustomNavigation): NavigationScheme {
   if (preset !== 'custom') return SCHEME_OF[preset]
 
   return {
     orbit: ORBIT_CHORD[custom.orbit],
-    // Orbit wins a chord both name: the two are chosen on separate rows, and `gestureOf` reads
-    // pan first — picked alike, a viewport would simply stop turning, with nothing saying why.
-    // By VALUE, never by identity: it held only while the two tables aliased the same array.
-    pan: PAN_CHORD[custom.pan].filter(
-      chord => !ORBIT_CHORD[custom.orbit].some(other => sameChord(chord, other)),
-    ),
+    // Orbit wins a chord both name, and the pan falls back rather than emptying: naming the
+    // middle button for both is two clicks from the default, and it took panning away in silence.
+    pan: panApartFrom(PAN_CHORD[custom.pan], ORBIT_CHORD[custom.orbit]),
     fly: custom.fly,
     // The cost of `always` follows the MODE, not the application that asked for it: a scheme of
     // one's own that hands the letters to the camera swallows the same commands.
