@@ -60,10 +60,11 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         labelKey: 'assistant.fields.command',
         required: true,
         /**
-         * 🛑 The WHOLE registry, the five that raise a native picker included — leaving them out
-         * was tried and is worse: `options` is what the validator holds an input to, so
-         * `command.runStudioCommand project.new` came back `badInput` quoting the 126 remaining names, where
-         * the handler answers `nativeDialog` and says to use the action taking a path.
+         * 🛑 The WHOLE registry, the six that raise a dialogue only a person can fill included —
+         * five native pickers and `app.new`, which opens a window of the studio's own. Leaving
+         * them out was tried and is worse: `options` is what the validator holds an input to, so
+         * `command.runStudioCommand project.new` came back `badInput` quoting the 126 remaining
+         * names, where the handler answers `nativeDialog` and says what to use instead.
          */
         options: COMMAND_REGISTRY.map(descriptor => descriptor.id),
       },

@@ -112,9 +112,11 @@ function publishMenuContext(): void {
   const tools = availableToolIds(surface)
   const scene = sceneMenuState()
   const canvas = canvasAbilities()
-  const abilities = [...scene.abilities, ...canvas]
-
   const front = useDocuments.getState()
+  // Both refused in silence over a screen with no document — `routeCommand` answers `noSurface`
+  // and nothing on the menu said so, which is what an enabled row promises it will not do.
+  const saving: MenuAbility[] = front.activeId ? ['document.save', 'document.saveAs'] : []
+  const abilities = [...saving, ...scene.abilities, ...canvas]
   // The scope and not the kind, since the menu asks whose history ⌘Z pops: the 3D space opens
   // both scenes and interfaces, and the two do not answer the same.
   const scope = scopeOfWorkspace(

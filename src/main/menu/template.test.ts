@@ -620,6 +620,27 @@ describe('File ▸ New file', () => {
   })
 })
 
+/**
+ * Both refuse in silence over a screen with no document — `routeCommand` answers `noSurface` and
+ * nothing on the menu said so, which is what an enabled row promises it will not do.
+ */
+describe('the two Save rows', () => {
+  const saveRows = (given: Partial<MenuOptions> = {}) =>
+    submenuOf(menuTemplate(options(given)), 'Fichier').filter(item =>
+      ['Enregistrer', 'Enregistrer sous…'].includes(item.label ?? ''),
+    )
+
+  it('answer with a document in front', () => {
+    const rows = saveRows({ abilities: ['document.save', 'document.saveAs'] })
+
+    expect(rows.map(row => row.enabled)).toEqual([true, true])
+  })
+
+  it('are greyed with none', () => {
+    expect(saveRows().map(row => row.enabled)).toEqual([false, false])
+  })
+})
+
 describe('File ▸ Open recent', () => {
   const PROJECTS = [
     { path: '/projects/One', openedAt: '2026-09-01T10:00:00.000Z', createdAt: '2026-08-01' },

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { orElse } from '@shared/promises'
 import {
@@ -16,6 +16,7 @@ import { Button } from '@/components/Button'
 import { FolderPicker } from '@/components/FolderPicker/FolderPicker'
 import { FIELD_FILL, FILE_EXTENSION } from '@/components/styles'
 import { cn } from '@/helpers/cn'
+import { isComposing } from '@/helpers/composition'
 import { getBridge } from '@/services/bridge'
 import { takenDocumentNames, untitledDocumentName, useDocuments } from '@/stores/documents'
 import { DOCUMENT_NAME_REFUSALS } from '../../documentName'
@@ -105,6 +106,21 @@ export function NewDocumentForm({
     takenDocumentNames({ documents: {}, stored: [...stored, ...open] }, folder),
   )
 
+  /**
+   * Enter makes the document from anywhere in the form, the name field alone being where it used
+   * to work. What keeps the key says so itself: a folder row marks the event handled, and a plain
+   * BUTTON has its own click — a template tile is neither, `aria-pressed` saying it is a choice.
+   */
+  const onKeyDown = (event: KeyboardEvent<HTMLFormElement>): void => {
+    if (event.key !== 'Enter' || isComposing(event) || event.defaultPrevented) return
+
+    const target = event.target
+    if (target instanceof HTMLButtonElement && !target.hasAttribute('aria-pressed')) return
+
+    event.preventDefault()
+    commit()
+  }
+
   /** What this kind answers with, or nothing at all — never the other kind's id. */
   const templateOf = (): { template?: DocumentTemplateId } => {
     if (kind === 'scene') return { template }
@@ -112,16 +128,23 @@ export function NewDocumentForm({
     return {}
   }
 
+  /**
+   * The template travels for the kind that DREW a section and for no other: one that showed none
+   * would be answering with a choice nobody was offered.
+   */
+  const commit = (): void => {
+    if (!refusal) onSubmit({ kind, title: draft.trim(), folder, ...templateOf() })
+  }
+
   return (
     <form
       // The name at the top, the browser taking the slack, the buttons at the bottom edge
       // wherever that edge is.
       className="flex min-h-0 flex-1 flex-col gap-3"
+      onKeyDown={onKeyDown}
       onSubmit={event => {
         event.preventDefault()
-        // The template travels for the kind that DREW a section and for no other: one that showed
-        // none would be answering with a choice nobody was offered.
-        if (!refusal) onSubmit({ kind, title: draft.trim(), folder, ...templateOf() })
+        commit()
       }}
     >
       {/* Labelled where it shows, not by an `aria-label`: two bare fields under one heading leave

@@ -5,7 +5,7 @@ import { roleForKind, type DocumentKind } from '@shared/domain/document'
 import { UiIcon } from '@/components/UiIcon'
 import { WindowNav } from '@/components/WindowNav/WindowNav'
 import { WindowNavItem } from '@/components/WindowNav/WindowNavItem'
-import { WINDOW_ACTION_SECONDARY } from '@/components/windowStyles'
+import { WINDOW_ACTION } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { roleIcon, roleInk } from '@/helpers/workspaces'
@@ -39,7 +39,7 @@ export function NewDocumentKinds({
     <>
       <button
         type="button"
-        className={cn(WINDOW_ACTION_SECONDARY, 'justify-start')}
+        className={cn(WINDOW_ACTION, 'justify-start')}
         {...HINT_RIGHT(t('project.createHint'))}
         onClick={onNewProject}
       >
