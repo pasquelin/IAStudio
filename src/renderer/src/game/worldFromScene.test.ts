@@ -149,3 +149,36 @@ describe('the edit state, translated into something that runs', () => {
     })
   })
 })
+
+/**
+ * 🛑 `createHierarchy` reads the DOCUMENT's nodes while the entities hold copies, so a parent the
+ * game moves is composed from where it stood when Play began.
+ */
+describe('a body hanging from a parent the game moves', () => {
+  it('is placed where the parent stands NOW, not where the scene left it', () => {
+    const lift = {
+      ...meshNode('lift'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0, z: 0 } },
+      components: [
+        { ...newComponent('Movement'), axis: 'y', distance: 10, speed: 10, loop: 'pingPong' },
+      ],
+    }
+    const rider = {
+      ...meshNode('rider'),
+      parentId: lift.id,
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 1, z: 0 } },
+      components: [newComponent('Collider'), { ...newComponent('RigidBody'), kind: 'kinematic' }],
+    }
+    const state: SceneState = { ...EMPTY_SCENE, nodes: [lift, rider] }
+    const physics = notedPhysics()
+    const world = worldFromScene('doc-1', state, ports(physics))
+
+    for (let step = 0; step < 30; step++) world.step(1 / 60)
+
+    const lifted = world.entities.get(lift.id)?.transform.position.y ?? 0
+    const placed = physics.placed.at(-1)?.position.y ?? 0
+    expect(lifted).toBeGreaterThan(1)
+    // One metre above whatever the lift has reached — the whole of what composing a parent means.
+    expect(placed).toBeCloseTo(lifted + 1, 6)
+  })
+})

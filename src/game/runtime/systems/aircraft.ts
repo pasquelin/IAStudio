@@ -114,10 +114,20 @@ export function createAircraftSystem(
         push.torque.y = aero.torque.y
         push.torque.z = aero.torque.z
         forces.push(push)
-        pilots.take(entity, 0, CHASE_BACK, PILOT_RANK.machine)
       }
 
       if (forces.length > 0) world.ports.physics.push(forces)
+    },
+
+    /**
+     * 🛑 At the IMAGE like a car's, and for the same reason — plus one of its own: claimed inside
+     * the loop above, a plane whose motion the port had no answer for was skipped by `continue`
+     * and never got a camera at all.
+     */
+    lateUpdate: (world: World) => {
+      for (const entity of world.entities.withComponent('Aircraft')) {
+        if (componentOf(entity, 'Aircraft')) pilots.take(entity, 0, CHASE_BACK, PILOT_RANK.machine)
+      }
     },
   }
 }

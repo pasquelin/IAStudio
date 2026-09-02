@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+import type { Vector3 } from '@shared/domain/transform'
 import type {
   BodyDescriptor,
   BodyForce,
@@ -19,6 +20,7 @@ export type NotedPhysics = PhysicsPort & {
   asked: CharacterMove[]
   driven: VehicleDrive[]
   pushed: BodyForce[]
+  probes: { from: Vector3; to: Vector3; radius: number; ignore: readonly string[] }[]
   steps: number[]
   gravity: number
   /** What the next `poses` and `contacts` answer, so a case says what the engine decided. */
@@ -27,6 +29,8 @@ export type NotedPhysics = PhysicsPort & {
     contacts: PhysicsContact[]
     moved: CharacterMoved[]
     motion: BodyMotion[]
+    /** The fraction the next `cast` answers. A clear way is what a physics with no bodies has. */
+    cast: number | null
   }
 }
 
@@ -39,9 +43,10 @@ export function notedPhysics(): NotedPhysics {
     asked: [],
     driven: [],
     pushed: [],
+    probes: [],
     steps: [],
     gravity: 0,
-    answers: { poses: [], contacts: [], moved: [], motion: [] },
+    answers: { poses: [], contacts: [], moved: [], motion: [], cast: null },
 
     setGravity: y => {
       noted.gravity = y
@@ -71,6 +76,10 @@ export function notedPhysics(): NotedPhysics {
     // In the ORDER ASKED, as the real port answers: both callers walk a cursor over the result,
     // and a double answering in its own order would exercise the « port does not hold it » path.
     motion: bodies => bodies.flatMap(body => noted.answers.motion.filter(one => one.body === body)),
+    cast: (from, to, radius, ignore) => {
+      noted.probes.push({ from: { ...from }, to: { ...to }, radius, ignore: [...ignore] })
+      return noted.answers.cast
+    },
     step: dt => {
       noted.steps.push(dt)
     },

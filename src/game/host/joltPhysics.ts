@@ -138,6 +138,7 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
   const system = world.GetPhysicsSystem()
   const bodies = system.GetBodyInterface()
   const allocator = world.GetTempAllocator()
+  const query = system.GetNarrowPhaseQuery()
 
   const scratch: Scratch = {
     place: new jolt.RVec3(0, 0, 0),
@@ -158,11 +159,15 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
   const layerFilter = new jolt.DefaultObjectLayerFilter(world.GetObjectLayerPairFilter(), MOVING)
   const bodyFilter = new jolt.BodyFilter()
   const shapeFilter = new jolt.ShapeFilter()
+  const probe = probeOf(jolt)
 
   const held = new Map<string, Held>()
   const namesById = new Map<number, string>()
   const walking: Held[] = []
   const riding: Held[] = []
+  // Held as a LIST rather than sought each cast: every probe steps over every sensor, and a
+  // sweep of `held` for each would be a map walked once a frame per spring arm.
+  const sensing: Held[] = []
   const targets = new Map<string, Target>()
   const refused: string[] = []
   // `pool` HOLDS the poses and never shrinks; `poses` is the list of references handed out.
@@ -216,6 +221,8 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       const at = riding.indexOf(body)
       if (at >= 0) riding.splice(at, 1)
     }
+    const sensed = sensing.indexOf(body)
+    if (sensed >= 0) sensing.splice(sensed, 1)
     if (body.walker) {
       // The inner body goes with the character that owns it — removing it here would leave the
       // character sweeping a shape the body manager had already reclaimed.
@@ -233,6 +240,12 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
   }
 
   const build = (descriptor: BodyDescriptor): boolean => {
+    // 🛑 Asked of JOLT, and before anything is created: past the ceiling `CreateBody` hands back a
+    // null that the binder wraps at pointer zero, so `GetID()` answers index 0 — the FIRST body
+    // ever made, normally the floor, whose contacts and poses the new name then takes over.
+    // Measured before this line: 16 601 bodies added, NONE refused, and `dispose` threw.
+    if (system.GetNumBodies() >= system.GetMaxBodies()) return false
+
     // 🛑 Refused BEFORE the shape is built: Jolt will not move a mesh, where Rapier would. Named
     // rather than quietly swapped for its hull — a body felt as something other than what it
     // draws is the worse lie of the two.
@@ -245,6 +258,16 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
 
     // A vehicle is a DYNAMIC body or nothing: a suspension hung from a fixed one holds nothing up.
     if (descriptor.vehicle && (descriptor.kind !== 'dynamic' || descriptor.character)) return false
+
+    // 🛑 Named rather than built mute: with no driven axle the engine turns nothing, and a car that
+    // answers the pedal by standing still is a bug nobody can see the cause of.
+    if (
+      descriptor.vehicle &&
+      descriptor.vehicle.wheels.some(wheel => wheel.driven) &&
+      !pairedByAxle(descriptor.vehicle.wheels).some(axle => axle.driven)
+    ) {
+      return false
+    }
 
     const shape = builtShape(jolt, descriptor.shape, scratch)
     if (!shape) return false
@@ -273,6 +296,7 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
     namesById.set(id.GetIndexAndSequenceNumber(), descriptor.body)
     if (walker) walking.push(entry)
     if (ride) riding.push(entry)
+    if (descriptor.sensor) sensing.push(entry)
     return true
   }
 
@@ -309,7 +333,7 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
     place: next => {
       for (const pose of next) {
         const body = held.get(pose.body)
-        if (!body || body.descriptor.kind !== 'kinematic' || body.walker) continue
+        if (!body || !driven(body.descriptor) || body.walker) continue
         const target = targets.get(pose.body) ?? {
           position: { x: 0, y: 0, z: 0 },
           rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -399,6 +423,60 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       return motions
     },
 
+    cast: (from, to, radius, ignore) => {
+      const dx = to.x - from.x
+      const dy = to.y - from.y
+      const dz = to.z - from.z
+      if (dx === 0 && dy === 0 && dz === 0) return null
+
+      probe.ignored.Clear()
+      for (let at = 0; at < ignore.length; at++) {
+        const body = held.get(ignore[at]!)
+        if (body) probe.ignored.IgnoreBody(body.id)
+      }
+      for (let at = 0; at < sensing.length; at++) probe.ignored.IgnoreBody(sensing[at]!.id)
+
+      scratch.place.Set(from.x, from.y, from.z)
+      scratch.vector.Set(dx, dy, dz)
+      if (radius <= 0) {
+        probe.ray.set_mOrigin(scratch.place)
+        probe.ray.set_mDirection(scratch.vector)
+        probe.rayHit.Reset()
+        query.CastRay(
+          probe.ray,
+          probe.raySettings,
+          probe.rayHit,
+          broadFilter,
+          layerFilter,
+          probe.ignored,
+          shapeFilter,
+        )
+        return probe.rayHit.HadHit() ? probe.rayHit.mHit.mFraction : null
+      }
+
+      probe.at.SetTranslation(scratch.place)
+      probe.scale.Set(radius, radius, radius)
+      probe.along.Set(dx, dy, dz)
+      // 🛑 Built per cast, and it cannot be otherwise: the constructor CACHES the swept shape's
+      // world bounds, so a cast rewritten in place keeps the bounds of the one before. Measured —
+      // only what stood on the centre line was ever found, whatever the radius.
+      const sweep = new jolt.RShapeCast(probe.ball, probe.scale, probe.at, probe.along)
+      probe.shapeHit.Reset()
+      query.CastShape(
+        sweep,
+        probe.shapeSettings,
+        probe.zero,
+        probe.shapeHit,
+        broadFilter,
+        layerFilter,
+        probe.ignored,
+        shapeFilter,
+      )
+      const fraction = probe.shapeHit.HadHit() ? probe.shapeHit.mHit.mFraction : null
+      jolt.destroy(sweep)
+      return fraction
+    },
+
     step: dt => {
       contacts.length = 0
       for (const [name, target] of targets) {
@@ -420,8 +498,13 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       for (let index = 0; index < count; index++) {
         const id = active.at(index)
         const name = namesById.get(id.GetIndexAndSequenceNumber())
-        // A kinematic body is where the game just put it, and reading it back says nothing.
-        if (name === undefined || held.get(name)?.descriptor.kind !== 'dynamic') continue
+        if (name === undefined) continue
+        const descriptor = held.get(name)?.descriptor
+        // A body the GAME drives is where it just put it, and reading it back says nothing. Read
+        // off `driven` and not off `kind`: a sensor is kinematic whatever its author declared, so
+        // one declared dynamic was reported every step and `settle` wrote that frozen pose back
+        // over whatever `movement` or `spin` had just written.
+        if (!descriptor || descriptor.kind !== 'dynamic' || driven(descriptor)) continue
 
         bodies.GetPositionAndRotation(id, scratch.place, scratch.turn)
         const pose = pooled(pool, poses.length, freshPose)
@@ -466,6 +549,17 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       namesById.clear()
       targets.clear()
       for (const one of [
+        probe.ignored,
+        probe.ray,
+        probe.raySettings,
+        probe.rayHit,
+        probe.shapeSettings,
+        probe.shapeHit,
+        probe.ball,
+        probe.at,
+        probe.scale,
+        probe.along,
+        probe.zero,
         listener,
         broadFilter,
         layerFilter,
@@ -503,6 +597,56 @@ function pooled<T>(pool: T[], at: number, make: () => T): T {
   const made = make()
   pool.push(made)
   return made
+}
+
+/**
+ * Everything one probe reuses, built ONCE. A cast runs per spring arm per frame, and each of these
+ * is memory the engine's own heap holds — a fresh set a frame is a leak no collector reaches.
+ */
+type Probe = {
+  ignored: InstanceType<JoltModule['IgnoreMultipleBodiesFilter']>
+  ray: InstanceType<JoltModule['RRayCast']>
+  raySettings: InstanceType<JoltModule['RayCastSettings']>
+  rayHit: InstanceType<JoltModule['CastRayClosestHitCollisionCollector']>
+  shapeSettings: InstanceType<JoltModule['ShapeCastSettings']>
+  shapeHit: InstanceType<JoltModule['CastShapeClosestHitCollisionCollector']>
+  /** A unit sphere the sweep SCALES to the radius asked for, rather than one built per radius. */
+  ball: InstanceType<JoltModule['SphereShape']>
+  at: InstanceType<JoltModule['RMat44']>
+  scale: JoltVector
+  along: JoltVector
+  /** Where a shape cast reports its hits from. The origin keeps the fraction the one number. */
+  zero: JoltPlace
+}
+
+/**
+ * 🛑 The start is built axis by axis, NOT by `RMat44.prototype.sTranslation`: the binder hangs a
+ * static on the prototype, so calling it there passes a `this` with no pointer and writes its
+ * matrix at address zero. Measured — every cast of the port then answered a hit at fraction 0.
+ */
+function probeOf(jolt: JoltModule): Probe {
+  const at = new jolt.RMat44()
+  const axis = new jolt.Vec3(1, 0, 0)
+  at.SetAxisX(axis)
+  axis.Set(0, 1, 0)
+  at.SetAxisY(axis)
+  axis.Set(0, 0, 1)
+  at.SetAxisZ(axis)
+  jolt.destroy(axis)
+
+  return {
+    ignored: new jolt.IgnoreMultipleBodiesFilter(),
+    ray: new jolt.RRayCast(),
+    raySettings: new jolt.RayCastSettings(),
+    rayHit: new jolt.CastRayClosestHitCollisionCollector(),
+    shapeSettings: new jolt.ShapeCastSettings(),
+    shapeHit: new jolt.CastShapeClosestHitCollisionCollector(),
+    ball: new jolt.SphereShape(1),
+    at,
+    scale: new jolt.Vec3(1, 1, 1),
+    along: new jolt.Vec3(1, 0, 0),
+    zero: new jolt.RVec3(0, 0, 0),
+  }
 }
 
 const freshPose = (): BodyPose => ({
@@ -555,6 +699,10 @@ const writeContact = (
 
 const sensorOf = (held: Map<string, Held>, name: string): boolean =>
   held.get(name)?.descriptor.sensor === true
+
+/** Where the GAME puts a body rather than the simulation — what `place` moves and `poses` skips. */
+const driven = (descriptor: BodyDescriptor): boolean =>
+  descriptor.kind === 'kinematic' || descriptor.sensor
 
 /**
  * 🛑 A sensor is KINEMATIC whatever its author said: a Jolt sensor feels ACTIVE bodies only, so a
@@ -686,26 +834,37 @@ function rideOf(
 type Axle = { left: number; right: number; driven: boolean }
 
 /**
- * Wheels paired across the body, nearest by depth: what a differential and an anti-roll bar
- * join. A wheel with no opposite — three wheels, a trailer's lone one — is paired with nothing.
+ * Wheels paired across the body, nearest by depth: what a differential and an anti-roll bar join.
+ * A wheel with no opposite — three wheels, a trailer's lone one — is paired with nothing.
+ *
+ * 🛑 Paired by SIDE and never by sign: opened from a wheel at `x < 0` alone, a chassis whose pivot
+ * sat on the left wheel line paired nothing, `mDifferentials` stayed empty, and the engine drove
+ * no wheel at all. Measured — the car answered a full pedal by moving 0,016 m in two seconds.
  */
 function pairedByAxle(wheels: readonly VehicleWheel[]): Axle[] {
   const taken = new Set<number>()
   const axles: Axle[] = []
   wheels.forEach((wheel, index) => {
-    if (taken.has(index) || wheel.at.x >= 0) return
+    if (taken.has(index)) return
     let opposite = -1
     let nearest = Number.POSITIVE_INFINITY
     wheels.forEach((other, at) => {
       const apart = Math.abs(other.at.z - wheel.at.z)
-      if (taken.has(at) || other.at.x < 0 || apart >= nearest) return
+      if (taken.has(at) || at === index || other.at.x === wheel.at.x || apart >= nearest) return
       opposite = at
       nearest = apart
     })
-    if (opposite < 0) return
+    const other = wheels[opposite]
+    if (!other) return
+
     taken.add(index)
     taken.add(opposite)
-    axles.push({ left: index, right: opposite, driven: wheel.driven && wheels[opposite]!.driven })
+    const onTheLeft = wheel.at.x < other.at.x
+    axles.push({
+      left: onTheLeft ? index : opposite,
+      right: onTheLeft ? opposite : index,
+      driven: wheel.driven && other.driven,
+    })
   })
   return axles
 }

@@ -190,3 +190,27 @@ describe('the template the composition is judged on', () => {
     expect(demo.animation.sheet).toContain(demo.animation.shots[0]?.cameraId)
   })
 })
+
+/**
+ * 🛑 An arm is a COMPONENT, so no menu of node types can offer one — a template that ships without
+ * it is a feature nobody can reach without knowing where to look. Both names are checked because
+ * an arm naming nothing is an arm that does nothing, in silence.
+ */
+describe('the arm the playable templates hang their camera on', () => {
+  const wired: readonly { template: SceneTemplateId; subject: string }[] = [
+    { template: 'thirdPerson', subject: 'Character' },
+    { template: 'car', subject: 'Car' },
+  ]
+
+  for (const { template, subject } of wired) {
+    it(`wires ${template} to a subject and a camera the scene really holds`, () => {
+      const { nodes } = sceneFromTemplate(template)
+      const arm = nodes.flatMap(node => node.components ?? []).find(one => one.type === 'SpringArm')
+      const named = nodes.map(node => node.name)
+
+      expect(arm?.subject).toBe(subject)
+      expect(named).toContain(arm?.camera)
+      expect(named).toContain(subject)
+    })
+  }
+})

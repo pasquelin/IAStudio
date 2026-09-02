@@ -797,6 +797,8 @@ export class SceneRenderer {
   private navigating = false
   /** Whether the capture was actually granted. A refused mode must not move anybody's pivot. */
   private captured = false
+  /** Whether a running game is writing the camera — a third gesture that owns it, see `placeView`. */
+  private viewDriven = false
   /** Where the head looks while the pointer is captured. Read off the camera when the mode opens. */
   private look: SphericalAngles = DEFAULT_LOOK
   /** What the wheel left this session at. `configure` drops it, so an edited preference wins. */
@@ -2267,13 +2269,33 @@ export class SceneRenderer {
    * Where a running game puts the free camera. Moved directly rather than through the orbit, for
    * the reason `frameContents` gives — and asking for a frame through `repaint`, since what a
    * camera OF THE SCENE films has not changed.
+   *
+   * 🛑 It FREEZES the orbits, like a gizmo drag and a flight: damped, `OrbitControls` settles
+   * towards a spherical state of its own for a dozen frames after a drag, so a camera written
+   * every frame was eased back left by that residue. `releaseView` gives them back.
+   *
+   * 🛑 Its blind spot: the other three freeze for a GESTURE, this one for the whole game. In a quad
+   * layout `armPaneUnderPointer` then returns early throughout, so the working pane sticks and a
+   * pick runs against the camera of a pane one has left. A single view — every game window — is
+   * untouched: nothing arms an orbit there anyway.
    */
   placeView(placement: CameraPlacement): void {
     const camera = this.viewport.perspective
     camera.position.set(placement.position.x, placement.position.y, placement.position.z)
     camera.lookAt(placement.target.x, placement.target.y, placement.target.z)
     this.viewport.orbit?.target.set(placement.target.x, placement.target.y, placement.target.z)
+    // On the TRANSITION: this runs every frame of a game, for a value that changes twice a session.
+    if (!this.viewDriven) {
+      this.viewDriven = true
+      this.syncPaneFreeze()
+    }
     this.repaint()
+  }
+
+  /** Gives the camera back to the hand. What a STOP calls once it has put the framing back. */
+  releaseView(): void {
+    this.viewDriven = false
+    this.syncPaneFreeze()
   }
 
   /** What a framing and a shadow frustum are both measured against — see `UNFRAMED_NODES`. */
@@ -4454,7 +4476,7 @@ export class SceneRenderer {
     // time, and freezing would take that orbit away — see `startFlight`. The armed mode DOES
     // freeze: `OrbitControls.update()` ends on `lookAt(target)` and would undo every turn.
     this.viewport.freezePanes(
-      this.gizmo?.dragging === true || this.flownWith === 2 || this.navigating,
+      this.gizmo?.dragging === true || this.flownWith === 2 || this.navigating || this.viewDriven,
     )
   }
 

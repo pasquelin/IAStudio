@@ -269,6 +269,8 @@ export const CHARACTER_SCENE: BenchScene = {
 const WALK = [{ body: 'walker', wanted: { x: 0.05, y: -0.02, z: 0 } }]
 
 export type BenchRun = {
+  /** The filled port, for a bench that times one CALL rather than a whole frame. */
+  port: PhysicsPort
   /** One frame as a bench times it: the kinematics driven, the step, the poses read back. */
   frame: () => void
   /** How many bodies the last frame moved — what makes two timings comparable. */
@@ -319,6 +321,7 @@ export async function loadScene(
   return {
     frame,
     // `poses` walks the ACTIVE island alone on both engines, so its length IS the awake count.
+    port,
     awake: () => port.poses().length,
     dispose: () => port.dispose(),
   }

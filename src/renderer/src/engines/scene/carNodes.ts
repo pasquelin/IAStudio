@@ -74,6 +74,9 @@ export function carNodes(at: Vector3, name = 'Car'): SceneNode[] {
 /**
  * A wheel as the physics turns it: a cylinder about its own +Y, which is the axle Jolt is handed.
  * No component of its own — what moves it is the vehicle its body carries.
+ *
+ * 🛑 Laid on its side at REST, and only at rest: Play overwrites the pose every step, so without
+ * this the thumbnail and everything before the first step showed four flat discs.
  */
 function wheelNode(wheel: (typeof WHEELS)[number], car: string, parentId: string): SceneNode {
   return meshNode(
@@ -85,7 +88,7 @@ function wheelNode(wheel: (typeof WHEELS)[number], car: string, parentId: string
       segments: 24,
     },
     {
-      transform: transformAt({ x: wheel.x, y: AXLE_Y, z: wheel.z }),
+      transform: transformAt({ x: wheel.x, y: AXLE_Y, z: wheel.z }, { x: 0, y: 0, z: Math.PI / 2 }),
       material: surface('#26282e'),
       parentId,
       name: wheelName(car, wheel.corner),

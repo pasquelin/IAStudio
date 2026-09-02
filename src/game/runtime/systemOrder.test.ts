@@ -32,6 +32,7 @@ const EVERY_NAME: Record<SystemName, true> = {
   animator: true,
   audio: true,
   timeline: true,
+  springArm: true,
   camera: true,
 }
 

@@ -14,8 +14,10 @@ import { createPatrolSystem } from '@game/runtime/systems/patrol'
 import { createSpinSystem } from '@game/runtime/systems/spin'
 import { createPhysicsSystem } from '@game/runtime/systems/physics'
 import { createPilots } from '@game/runtime/pilots'
+import { createRigs } from '@game/runtime/rigs'
 import { createAircraftSystem } from '@game/runtime/systems/aircraft'
 import { createPlayCameraSystem } from '@game/runtime/systems/playCamera'
+import { createSpringArmSystem } from '@game/runtime/systems/springArm'
 import { createVehicleSystem } from '@game/runtime/systems/vehicle'
 import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
 import { createTimelineSystem } from '@game/runtime/systems/timeline'
@@ -61,14 +63,18 @@ export function worldFromScene(
       scripts.onFault ??
       (fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`)),
   }
+  // Filled the line after the world stands, and read only once a step runs: what lets the
+  // hierarchy compose a parent where the game has MOVED it — see `createHierarchy`.
+  let living: World | null = null
   const world = createWorld({
     scene: { kind: 'document', id: documentId },
     ports,
-    systems: systemsFor(state, ports, told),
+    systems: systemsFor(state, ports, told, id => living?.entities.get(id)?.transform ?? null),
     seed,
     step: STEP_SECONDS,
     play: state.world.play,
   })
+  living = world
 
   for (const node of state.nodes) {
     world.entities.add({
@@ -91,12 +97,15 @@ function systemsFor(
   state: SceneState,
   ports: GameApi,
   scripts: ScriptSystemOptions,
+  liveOf: (nodeId: string) => Transform | null,
 ): readonly System[] {
   const byId = new Map(state.nodes.map(node => [node.id, node]))
-  const hierarchy = createHierarchy(byId)
-  const placed = (entity: Entity): Transform => hierarchy.worldOf(entity.id, entity.transform)
+  const hierarchy = createHierarchy(byId, liveOf)
+  const placedAt = (entity: Entity, own: Transform): Transform => hierarchy.worldOf(entity.id, own)
+  const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
   const characters = createCharacters()
   const pilots = createPilots()
+  const rigs = createRigs()
 
   /**
    * 🛑 A node hanging from another is FELT now, and that closed the hole this carried since the
@@ -147,7 +156,16 @@ function systemsFor(
       worldOf: placed,
       localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
     }),
-    createPlayCameraSystem({ characters, worldOf: placed, pilots }),
+    createSpringArmSystem({
+      characters,
+      rigs,
+      worldOf: placedAt,
+      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
+      // The runtime holds no node TYPE, so what a camera is comes from the window — the same way
+      // the shape and the frame of a body do.
+      filmable: entity => byId.get(entity.id)?.type === 'camera',
+    }),
+    createPlayCameraSystem({ characters, worldOf: placedAt, pilots, rigs }),
   ]
 }
 

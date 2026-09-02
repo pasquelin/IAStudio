@@ -136,7 +136,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     // when there IS one: two promises a frame, for a request that is almost never there.
     if (swap.pending()) void asked()
 
-    render.place(placementsOf(world, placements))
+    render.place(placementsOf(world, placements, loop.alpha()))
     // The veil the arrived scene came in under, on ITS clock, which a swap restarts at zero.
     if (fading > 0) {
       const lift = veilLift(world.time.elapsed, fading, veiled)

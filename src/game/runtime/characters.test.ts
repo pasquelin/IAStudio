@@ -87,16 +87,38 @@ describe('what a character asks to move', () => {
   })
 
   it('turns the heading with a drag, and never past straight up', () => {
-    const world = walking()
     const characters = createCharacters()
 
-    world.input = pressing({ pointer: { x: 100, y: 100, down: true } })
-    characters.intents(world, STEP)
-    world.input = pressing({ pointer: { x: 0, y: -100000, down: true } })
-    characters.intents(world, STEP)
+    characters.aim({ x: 100, y: 100, down: true })
+    characters.aim({ x: 0, y: -100000, down: true })
 
     expect(characters.look().yaw).toBeGreaterThan(0)
     expect(characters.look().pitch).toBeLessThan(Math.PI / 2)
+  })
+
+  /** 🛑 A frame the accumulator ran no step of must still turn the head — see `Characters.aim`. */
+  it('turns the head without a step being run at all', () => {
+    const characters = createCharacters()
+
+    characters.aim({ x: 0, y: 0, down: true })
+    characters.aim({ x: 200, y: 0, down: true })
+
+    expect(characters.look().yaw).toBeCloseTo(-200 * 0.005, 6)
+  })
+
+  /**
+   * 🛑 What lets TWO late systems each take the live pointer: `springArm` reads it before the
+   * camera does, and the head must not turn twice as far because a scene holds an arm.
+   */
+  it('turns nothing on a second reading of one frame pointer', () => {
+    const characters = createCharacters()
+    characters.aim({ x: 0, y: 0, down: true })
+    characters.aim({ x: 200, y: 40, down: true })
+    const once = { ...characters.look() }
+
+    characters.aim({ x: 200, y: 40, down: true })
+
+    expect(characters.look()).toEqual(once)
   })
 
   it('names the first controller as the one the camera watches', () => {

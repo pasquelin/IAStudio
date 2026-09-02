@@ -16,7 +16,7 @@ import {
   type AnimationTimeline,
   type AnimationTrack,
 } from '@shared/domain/animation'
-import { newComponent } from '@shared/domain/componentRegistry'
+import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import {
   postEffect,
   readParams,
@@ -42,7 +42,7 @@ import { airfieldNodes } from './airfieldLevel'
 import { carNodes } from './carNodes'
 import { presetPatch } from './environmentPresets'
 import { planeNodes } from './planeNodes'
-import { cameraNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
+import { cameraNode, groupNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
 import { playgroundNodes } from './playgroundLevel'
 import type { SceneNode, SceneState } from './sceneState'
 
@@ -72,6 +72,20 @@ function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ
   const rotation = { x: pitchTowards(height, distance, targetHeight), y: 0, z: 0 }
   return cameraNode(transformAt({ x: 0, y: height, z: targetZ + distance }, rotation))
 }
+
+/**
+ * A camera on an arm, wired to what it films. Named parts, so an author can read the pair in the
+ * outliner and retune it — which is the whole of what makes an arm worth having.
+ */
+function cameraRig(subject: string, over: Record<string, string | number> = {}): SceneNode {
+  let arm = newComponent('SpringArm')
+  for (const [key, value] of Object.entries({ subject, camera: CAMERA_NAME, ...over })) {
+    arm = withComponentField(arm, key, value)
+  }
+  return { ...groupNode(transformAt(ORIGIN), 'Camera Rig'), components: [arm] }
+}
+
+const CAMERA_NAME = 'Camera'
 
 /**
  * The working floor: wearing the checker, catching shadows, throwing none. Its tiling is the
@@ -435,7 +449,10 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // The camera stands back BEHIND the stand-in, which stands at z = 10 — over the shoulder means
   // both on the same axis, and the aim is at chest height.
   thirdPerson: () =>
-    characterView([standIn(), aimedCamera(2.4, 5, 1, STAND_IN_Z)], { camera: 'thirdPerson' }),
+    characterView(
+      [standIn(), aimedCamera(2.4, 5, 1, STAND_IN_Z), cameraRig('Character', { height: 1.4 })],
+      { camera: 'thirdPerson' },
+    ),
 
   topDown: () =>
     characterView([standIn(), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
@@ -445,9 +462,15 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
 
   // 🛑 No stand-in, and that is not an omission: a walker wins the camera seat over a machine,
   // so a silhouette left on the pad would frame the car from a pair of feet.
+  // 🛑 The arm aims down the CAR's own nose, not where the pointer looks: a car turning under a
+  // camera the mouse alone aims reads as a car sliding sideways.
   car: () =>
     characterView(
-      [...carNodes({ x: 0, y: 0, z: START_PAD }, CAR_NAME), aimedCamera(3, 10, 1, START_PAD)],
+      [
+        ...carNodes({ x: 0, y: 0, z: START_PAD }, CAR_NAME),
+        aimedCamera(3, 10, 1, START_PAD),
+        cameraRig(CAR_NAME, { orientation: 'subject', length: 8, height: 2.4 }),
+      ],
       { camera: 'thirdPerson' },
       CAR_NAME,
     ),

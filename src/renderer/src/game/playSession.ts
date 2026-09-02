@@ -122,6 +122,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   const drawn: SceneDraw = {
     apply: state => deps.renderer.apply(state),
     viewPlacement: () => deps.renderer.viewPlacement(),
+    releaseView: () => deps.renderer.releaseView(),
     placeView: view => {
       steered = true
       deps.renderer.placeView(view)
@@ -212,8 +213,9 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     publish()
   }
 
-  const draw = (): void => {
-    world.ports.render.place(placementsOf(world, placements))
+  /** Between the two steps the frame falls between, which is what stops a 60 Hz picture juddering. */
+  const draw = (alpha: number): void => {
+    world.ports.render.place(placementsOf(world, placements, alpha))
   }
 
   /**
@@ -325,9 +327,10 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     }
 
     // 🛑 Drawn even while PAUSED, and the frames keep coming for it: the viewport re-applies the
-    // document on any change — a click on a node is one, the selection being part of the state —
-    // and a paused game that stopped drawing would snap back to the authored pose and stay there.
-    draw()
+    // document on any change — a click on a node is one — and a paused game that stopped drawing
+    // would snap back to the authored pose. AT the step while paused: the accumulator stops with
+    // it, so `alpha` is frozen where the pause fell and would walk a stepped world back to it.
+    draw(state === 'playing' ? loop.alpha() : 1)
     publishIfDue(nowMs)
   })
 
@@ -357,8 +360,10 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
         swapIfAsked()
         liftVeil()
       }
-      world.lateUpdate(0)
-      draw()
+      // AT the step, never between two: a reading taken halfway to a step reads a world nobody
+      // stepped to. `dt` is what the burst SIMULATED — a lag handed zero would never move.
+      world.lateUpdate(1, world.time.step * ran)
+      draw(1)
       publish()
       return ran
     },
@@ -376,6 +381,11 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       said = Number.NEGATIVE_INFINITY
       state = 'edit'
       deps.frames.stop()
+      // The camera is the only studio state a game touches, so it is the only one STOP restores —
+      // and only when it was touched, or a STOP would undo an orbit made by hand during the game.
+      // FIRST, and not last: a throw in the teardown below would leave the orbits frozen for good.
+      if (steered) deps.renderer.placeView(watching)
+      deps.renderer.releaseView()
       // 🛑 `clear`, not `dispose`: the engines are thrown away three lines below, so a STOP has
       // nothing to give back — and a `dispose` would run every `onDestroy` on the way out.
       world.events.clear()
@@ -390,9 +400,6 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       ports.physics.dispose()
       ports.script.dispose()
       deps.renderer.apply(deps.editState())
-      // The camera is the only studio state a game touches, so it is the only one STOP restores —
-      // and only when it was touched, or a STOP would undo an orbit made by hand during the game.
-      if (steered) deps.renderer.placeView(watching)
       publish()
     },
   }

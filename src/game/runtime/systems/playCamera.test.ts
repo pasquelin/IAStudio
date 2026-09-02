@@ -1,24 +1,37 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
+import { STEP_SECONDS } from '../gameLoop'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { DEFAULT_PLAY, type PlayCamera } from '@shared/domain/scene'
+import type { InputPort, Pointer } from '../../ports/inputPort'
 import type { CameraView } from '../../ports/renderPort'
 import { createCharacters } from '../characters'
-import { createPilots } from '../pilots'
+import { createPilots, PILOT_RANK } from '../pilots'
+import { createRigs, type Rigs } from '../rigs'
 import { restingTransform } from '../entity'
 import { testPorts, testWorld } from '../world-fixtures'
 import { createPlayCameraSystem } from './playCamera'
 
-function watching(camera: PlayCamera, controlled = true) {
+function watching(camera: PlayCamera, controlled = true, rigs: Rigs = createRigs()) {
+  const pilots = createPilots()
+  // The pointer the case moves between two frames, which is what the head is read off.
+  const held: Pointer = { x: 0, y: 0, down: false }
+  const heldInput: InputPort = {
+    state: () => ({ held: [], pressed: [], released: [], pointer: { ...held } }),
+    pointer: () => held,
+    endStep: () => {},
+    detach: () => {},
+  }
   const views: (CameraView | null)[] = []
   const characters = createCharacters()
   const world = testWorld({
     play: { ...DEFAULT_PLAY, camera },
     ports: testPorts({
+      input: heldInput,
       render: { place: () => {}, view: view => views.push(view), veil: () => {} },
     }),
-    systems: [createPlayCameraSystem({ characters, pilots: createPilots() })],
+    systems: [createPlayCameraSystem({ characters, pilots, rigs })],
   })
   if (controlled) {
     world.entities.add({
@@ -31,14 +44,14 @@ function watching(camera: PlayCamera, controlled = true) {
 
   // Through the character system's own sweep: the camera watches whoever it named first.
   characters.intents(world, 1 / 60)
-  return { world, views }
+  return { world, views, held, pilots }
 }
 
 describe('the camera rank of a running game', () => {
   it('watches the character from its eyes, measured up from its feet', () => {
     const { world, views } = watching('firstPerson')
 
-    world.lateUpdate(0)
+    world.lateUpdate(0, STEP_SECONDS)
 
     // A 1,8 capsule standing at the origin has its feet at −0,9.
     expect(views[0]?.position.y).toBeCloseTo(-0.9 + DEFAULT_PLAY.eyeHeight, 6)
@@ -48,7 +61,89 @@ describe('the camera rank of a running game', () => {
   it('leaves an orbited set alone', () => {
     const { world, views } = watching('orbit')
 
-    world.lateUpdate(0)
+    world.lateUpdate(0, STEP_SECONDS)
+
+    expect(views).toEqual([null])
+  })
+
+  /** 🛑 Sampled at the fixed step, a frame the accumulator ran none of ignored the mouse entirely. */
+  it('follows the pointer on a frame no fixed step was run on', () => {
+    const { world, views, held } = watching('firstPerson')
+    held.down = true
+    world.lateUpdate(0, STEP_SECONDS)
+    // Read at once: `playView` hands back ONE view it rewrites, so two frames kept are one object.
+    const before = views.at(-1)?.target.x ?? 0
+
+    held.x = 200
+    world.lateUpdate(0, STEP_SECONDS)
+
+    expect(views.at(-1)?.target.x ?? 0).not.toBeCloseTo(before, 3)
+  })
+
+  /** Everything around the leader is drawn between two steps; what the picture HANGS on must be too. */
+  it('frames the leader where it is drawn, not where the last step left it', () => {
+    const { world, views } = watching('firstPerson')
+    const hero = world.entities.get('hero')
+    if (hero) hero.transform.position.x = 4
+    world.step(1 / 60)
+    if (hero) hero.transform.position.x = 6
+
+    world.lateUpdate(0.5, STEP_SECONDS)
+
+    expect(views.at(-1)?.position.x).toBeCloseTo(5, 6)
+  })
+
+  /**
+   * 🛑 One writer of the view, always. An arm places a camera NODE; this reads it and films —
+   * which is what lets an arm be optional without a second path through the renderer.
+   */
+  it('films through the camera node a spring arm placed', () => {
+    const rigs = createRigs()
+    const { world, views } = watching('thirdPerson', true, rigs)
+    world.entities.add({
+      id: 'eye',
+      name: 'eye',
+      transform: { ...restingTransform(), position: { x: 2, y: 3, z: 4 } },
+      components: [],
+    })
+    const eye = world.entities.get('eye')
+    if (eye) rigs.take(eye)
+
+    world.lateUpdate(0, STEP_SECONDS)
+
+    expect(views.at(-1)?.position).toEqual({ x: 2, y: 3, z: 4 })
+    // A camera at rest looks down −Z, so the mark it is aimed at is one metre that way.
+    expect(views.at(-1)?.target.z).toBeCloseTo(3, 6)
+  })
+
+  /**
+   * 🛑 The seat is emptied on EVERY frame, arm or no arm. `take` refuses a claim of equal rank
+   * once the seat is full, so a seat kept while an arm films pins the first machine that ever
+   * claimed it — and frames it still once it is destroyed.
+   */
+  it('lets the seat go on a frame a spring arm holds the shot', () => {
+    const rigs = createRigs()
+    const { world, pilots } = watching('thirdPerson', false, rigs)
+    world.entities.add({ id: 'eye', name: 'eye', transform: restingTransform(), components: [] })
+    world.entities.add({ id: 'car', name: 'car', transform: restingTransform(), components: [] })
+    const eye = world.entities.get('eye')
+    const car = world.entities.get('car')
+    if (eye) rigs.take(eye)
+    if (car) pilots.take(car, 0, 5, PILOT_RANK.machine)
+
+    world.lateUpdate(0, STEP_SECONDS)
+
+    expect(pilots.leader()).toBeNull()
+  })
+
+  it('leaves an orbited set alone even when an arm placed a camera', () => {
+    const rigs = createRigs()
+    const { world, views } = watching('orbit', true, rigs)
+    world.entities.add({ id: 'eye', name: 'eye', transform: restingTransform(), components: [] })
+    const eye = world.entities.get('eye')
+    if (eye) rigs.take(eye)
+
+    world.lateUpdate(0, STEP_SECONDS)
 
     expect(views).toEqual([null])
   })
@@ -56,7 +151,7 @@ describe('the camera rank of a running game', () => {
   it('says nothing at all about a scene nobody walks', () => {
     const { world, views } = watching('firstPerson', false)
 
-    world.lateUpdate(0)
+    world.lateUpdate(0, STEP_SECONDS)
 
     expect(views).toEqual([])
   })

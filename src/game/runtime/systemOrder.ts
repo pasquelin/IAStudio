@@ -20,6 +20,7 @@ export type SystemName =
   | 'animator'
   | 'audio'
   | 'timeline'
+  | 'springArm'
   | 'camera'
 
 /**
@@ -36,6 +37,9 @@ export type SystemName =
  *
  * 🛑 `vehicle` and `aircraft` sit just BEFORE `physics` because they write into the ENGINE, not
  * into a transform: a pedal handed over after the step is a pedal the step never heard.
+ *
+ * 🛑 `springArm` sits just before `camera`, and both work in the LATE pass: an arm places the
+ * camera node of the frame being drawn, and the camera films through it on the same frame.
  */
 export const SYSTEM_ORDER: readonly SystemName[] = [
   'input',
@@ -55,6 +59,7 @@ export const SYSTEM_ORDER: readonly SystemName[] = [
   'animator',
   'audio',
   'timeline',
+  'springArm',
   'camera',
 ]
 

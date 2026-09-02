@@ -38,6 +38,8 @@ function bench(held: readonly string[] = [], over: Record<string, JsonValue> = {
 /** What the driver was last asked for, after `steps` steps at the scene's own pace. */
 const asked = (bench: Bench, steps = 1) => {
   for (let step = 0; step < steps; step++) bench.world.step(STEP_SECONDS)
+  // A whole FRAME, steps and all: the seat is claimed at the image, where the camera reads it.
+  bench.world.lateUpdate(0, STEP_SECONDS)
   return bench.physics.driven.at(-1) ?? null
 }
 

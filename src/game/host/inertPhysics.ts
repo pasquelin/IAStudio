@@ -23,6 +23,8 @@ export function createInertPhysics(): PhysicsPort {
     drive: () => {},
     push: () => {},
     motion: () => [],
+    // Nothing to be stopped by, so no probe ever is.
+    cast: () => null,
     step: () => {},
     poses: () => [],
     contacts: () => [],

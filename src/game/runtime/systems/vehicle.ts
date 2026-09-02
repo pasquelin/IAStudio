@@ -80,16 +80,24 @@ export function createVehicleSystem(
         drive.brake = braking ? 1 : 0
         drive.handBrake = handBrake
         wanted.push(drive)
-
-        const wheelRadius = numberOf(
-          componentOf(entity, 'Vehicle'),
-          'wheelRadius',
-          VEHICLE.wheelRadius,
-        )
-        pilots.take(entity, wheelRadius, CHASE_BACK, PILOT_RANK.machine)
       }
 
       world.ports.physics.drive(wanted)
+    },
+
+    /**
+     * 🛑 The seat is claimed at the IMAGE, never at the step: `playCamera` releases it every frame,
+     * so a frame the accumulator ran no step of left a driven car with no view at all while it was
+     * being drawn interpolated.
+     */
+    lateUpdate: (world: World) => {
+      for (const entity of world.entities.withComponent('Vehicle')) {
+        const settings = componentOf(entity, 'Vehicle')
+        if (!settings) continue
+
+        const wheelRadius = numberOf(settings, 'wheelRadius', VEHICLE.wheelRadius)
+        pilots.take(entity, wheelRadius, CHASE_BACK, PILOT_RANK.machine)
+      }
     },
   }
 }

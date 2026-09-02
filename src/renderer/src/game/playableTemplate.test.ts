@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { STEP_SECONDS } from '@game/runtime/gameLoop'
 import { TEMPLATES_BY_GROUP, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { createExportHost } from '@game/host/exportHost'
+import { loadJoltPhysics } from '@game/host/joltPhysics'
 import { notedPhysics } from '@game/physics/physics-fixtures'
+import type { BodyDescriptor } from '@game/ports/physicsPort'
 import type { CameraView } from '@game/ports/renderPort'
 import { sceneFromTemplate } from '@/engines/scene/sceneTemplates'
 import { worldFromScene } from './worldFromScene'
@@ -23,7 +26,7 @@ function played(id: SceneTemplateId) {
   })
 
   world.step(STEP)
-  world.lateUpdate(0)
+  world.lateUpdate(0, STEP_SECONDS)
   return { views, bodies: physics.added ?? [] }
 }
 
@@ -56,3 +59,51 @@ describe('what « Nouveau document ▸ Third Person » opens on', () => {
     expect(sceneFromTemplate(id).nodes.flatMap(node => node.components ?? [])).toEqual([])
   })
 })
+
+/**
+ * 🛑 Not `joltPhysics.test.ts`: a flight of loose boxes measures the CONTROLLER, and it climbs one.
+ * What a person cannot climb is THIS geometry, so this is where the case has to stand.
+ */
+describe('the court stair of the set a character template opens on', () => {
+  it('is climbed by a capsule pushed up it at walking pace', async () => {
+    const port = await loadJoltPhysics()
+    port.setGravity(-9.81)
+    // The set as the physics system builds it, minus whoever walks it: a walker of our own is put
+    // at the foot of the stair instead, so nothing here depends on where a template stands.
+    port.add([
+      ...played('firstPerson').bodies.filter(one => one.character === null),
+      WALKER_AT_THE_FOOT,
+    ])
+
+    for (let step = 0; step < 240; step++) {
+      port.moveCharacters([{ body: 'walker', wanted: { x: 4 / 60, y: -1 / 60, z: 0 } }])
+      port.step(STEP)
+    }
+
+    const walker = [...port.poses()].find(pose => pose.body === 'walker')
+    port.dispose()
+    // Out of the court, whose floor is at -2,5: standing on the floor above puts the capsule's
+    // centre at 0,9, and anything below zero is a walker still down in the hole.
+    expect(walker?.position.y ?? -99).toBeGreaterThan(0.5)
+  })
+})
+
+/** In the court, one step short of the first riser, facing the climb. */
+const WALKER_AT_THE_FOOT: BodyDescriptor = {
+  body: 'walker',
+  kind: 'kinematic',
+  shape: { kind: 'capsule', halfHeight: 0.6, radius: 0.3 },
+  transform: {
+    position: { x: 0.6, y: -1.6, z: 2.5 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  },
+  friction: 0.6,
+  restitution: 0,
+  mass: 0,
+  gravityScale: 1,
+  lockRotation: true,
+  sensor: false,
+  character: { stepHeight: 0.5, slopeLimit: 45, snapDistance: 0.5 },
+  vehicle: null,
+}

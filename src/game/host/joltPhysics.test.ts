@@ -31,6 +31,8 @@ const body = (
 
 const FLOOR: ColliderShape = { kind: 'cuboid', hx: 20, hy: 0.5, hz: 20 }
 
+const ORIGIN = { x: 0, y: 0, z: 0 }
+
 const poseOf = (port: PhysicsPort, name: string) =>
   [...port.poses()].find(pose => pose.body === name) ?? null
 
@@ -49,6 +51,39 @@ function run(port: PhysicsPort, count: number, name: string): { x: number; y: nu
 const QUAD = {
   vertices: new Float32Array([-2, 0, -2, 2, 0, -2, 2, 0, 2, -2, 0, 2]),
   indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
+}
+
+/** The playground's own stair, as `courtStair` derives it: eight risers of 0,3125 m, 0,6 m of run. */
+const STAIR_RISE = 0.3125
+const STAIR_RUN = 0.6
+const STAIR_STEPS = 8
+
+/** Metres a step at the pace a scene ships with, and the press a grounded character is held at. */
+const WALK_PACE = 4 / 60
+const GROUND_PRESS = -1 / 60
+
+/** A flight climbing towards +x, each step a slab from the floor up to its own tread, then a landing. */
+function flight(): BodyDescriptor[] {
+  const steps = Array.from({ length: STAIR_STEPS }, (_, index) => {
+    const top = (index + 1) * STAIR_RISE
+    return body({
+      body: `step${index}`,
+      kind: 'fixed',
+      shape: { kind: 'cuboid', hx: STAIR_RUN / 2, hy: top / 2, hz: 2 },
+      transform: at(index * STAIR_RUN + STAIR_RUN / 2, top / 2, 0),
+    })
+  })
+
+  const height = STAIR_STEPS * STAIR_RISE
+  steps.push(
+    body({
+      body: 'landing',
+      kind: 'fixed',
+      shape: { kind: 'cuboid', hx: 2, hy: height / 2, hz: 2 },
+      transform: at(STAIR_STEPS * STAIR_RUN + 2, height / 2, 0),
+    }),
+  )
+  return steps
 }
 
 describe('the physics as Jolt fills it', () => {
@@ -148,6 +183,135 @@ describe('the physics as Jolt fills it', () => {
     expect(walker?.position.y ?? 0).toBeGreaterThan(0.5)
   })
 
+  /**
+   * 🛑 The gap the two cases around it left: a wall is refused and a floor is stood on, and nothing
+   * said what a character does with an obstacle it is meant to walk OVER. The rise is `courtStair`'s.
+   */
+  it('stops a probe on the near face of a wall, and answers nothing down a clear way', () => {
+    port.add([
+      body({
+        body: 'wall',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 3 },
+        transform: at(5, 0, 0),
+      }),
+    ])
+
+    // The near face stands at 4,5 of the ten metres asked for.
+    expect(port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0, [])).toBeCloseTo(0.45, 2)
+    expect(port.cast(ORIGIN, { x: 0, y: 0, z: 10 }, 0, [])).toBeNull()
+  })
+
+  it('leaves out the bodies it is told to ignore', () => {
+    port.add([
+      body({
+        body: 'near',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 3 },
+        transform: at(2, 0, 0),
+      }),
+      body({
+        body: 'far',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 3 },
+        transform: at(6, 0, 0),
+      }),
+    ])
+
+    expect(port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0, [])).toBeCloseTo(0.15, 2)
+    expect(port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0, ['near'])).toBeCloseTo(0.55, 2)
+  })
+
+  it('stops a thick probe on the slot a ray of no thickness goes through', () => {
+    port.add([
+      body({
+        body: 'left',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 1.5 },
+        transform: at(5, 0, 1.6),
+      }),
+      body({
+        body: 'right',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 1.5 },
+        transform: at(5, 0, -1.6),
+      }),
+    ])
+
+    expect(port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0, [])).toBeNull()
+    // On the EDGE at (4,5; 0,1), not on the face: √(0,3² − 0,1²) short of it, so 4,217 of ten.
+    expect(port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0.3, [])).toBeCloseTo(0.4217, 3)
+  })
+
+  it('is not stopped by a sensor, which is what a sensor means', () => {
+    port.add([
+      body({
+        body: 'zone',
+        kind: 'fixed',
+        sensor: true,
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 3 },
+        transform: at(2, 0, 0),
+      }),
+      body({
+        body: 'wall',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 3 },
+        transform: at(6, 0, 0),
+      }),
+    ])
+
+    expect(port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0, [])).toBeCloseTo(0.55, 2)
+  })
+
+  it('gives back every byte a cast took, frame after frame', async () => {
+    port.add([
+      body({
+        body: 'wall',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 3, hz: 3 },
+        transform: at(5, 0, 0),
+      }),
+    ])
+
+    const marks: number[] = []
+    for (let cycle = 0; cycle < 5; cycle++) {
+      for (let frame = 0; frame < 60; frame++) {
+        port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0.3, ['wall'])
+        port.cast(ORIGIN, { x: 10, y: 0, z: 0 }, 0, [])
+      }
+      marks.push(await joltFreeBytes())
+    }
+
+    expect(Math.max(...marks) - Math.min(...marks)).toBeLessThanOrEqual(8)
+  })
+
+  it('walks a character up a flight of steps and onto the landing above them', () => {
+    port.add([
+      body({ body: 'floor', kind: 'fixed', shape: FLOOR, transform: at(0, -0.5, 0) }),
+      ...flight(),
+      body({
+        body: 'walker',
+        kind: 'kinematic',
+        shape: { kind: 'capsule', halfHeight: 0.6, radius: 0.3 },
+        transform: at(-1, 0.9, 0),
+        character: { stepHeight: 0.5, slopeLimit: 45, snapDistance: 0.5 },
+      }),
+    ])
+
+    // What `characters.ts` asks for while walking forward on the ground: the pace of a scene, and
+    // the constant press into the floor `GROUNDED_PULL` holds a standing character at. Two seconds,
+    // which is the flight and a stride onto the landing — a longer walk falls off the far end.
+    for (let step = 0; step < 120; step++) {
+      port.moveCharacters([{ body: 'walker', wanted: { x: WALK_PACE, y: GROUND_PRESS, z: 0 } }])
+      port.step(STEP)
+    }
+
+    const walker = poseOf(port, 'walker')
+    // The landing stands at 2,5, and the capsule's centre a half height plus a radius above it.
+    expect(walker?.position.y ?? 0).toBeGreaterThan(3.3)
+    expect(walker?.position.x ?? 0).toBeGreaterThan(STAIR_STEPS * STAIR_RUN)
+  })
+
   it('says a character is grounded when it stands on something, and not when it does not', () => {
     port.add([
       body({ body: 'floor', kind: 'fixed', shape: FLOOR, transform: at(0, -0.5, 0) }),
@@ -207,6 +371,30 @@ describe('the physics as Jolt fills it', () => {
   })
 
   /**
+   * 🛑 A sensor is kinematic in Jolt whatever its author declared — see `motionOf`. Read off `kind`
+   * alone, one declared DYNAMIC was reported every step and `settle` wrote its frozen pose back
+   * over whatever `movement` or `spin` had just written.
+   */
+  it('leaves a sensor where the game puts it, however its author declared it', () => {
+    port.add([
+      body({
+        body: 'gate',
+        sensor: true,
+        shape: { kind: 'cuboid', hx: 1, hy: 1, hz: 1 },
+        transform: at(0, 2, 0),
+      }),
+    ])
+
+    port.place([
+      { body: 'gate', position: { x: 0, y: 6, z: 0 }, rotation: { x: 0, y: 0, z: 0, w: 1 } },
+    ])
+    run(port, 60, 'gate')
+
+    // Nothing reported, and nothing fallen: the game owns where a trigger stands.
+    expect(poseOf(port, 'gate')).toBeNull()
+  })
+
+  /**
    * 🛑 Rapier SUMMED the masses of a body's colliders and this port divided to undo it. Jolt
    * weighs one shape once, so the division is gone — and this is what says so.
    */
@@ -219,6 +407,37 @@ describe('the physics as Jolt fills it', () => {
     // four pieces of the declared mass land where one piece of it does.
     expect(Math.abs(heavy - light)).toBeGreaterThan(1)
     expect(split).toBeCloseTo(light, 3)
+  })
+
+  /**
+   * 🛑 Past the ceiling `CreateBody` hands back a null the binder wraps at pointer zero, so the new
+   * body answered BodyID 0 — the floor — and took over its contacts and its poses. Measured before
+   * the guard: 16 601 bodies added, none refused, and `dispose` threw on the way out.
+   */
+  it('refuses by name once the body manager is full, and leaves the bodies it holds alone', () => {
+    port.add([
+      body({ body: 'floor', kind: 'fixed', shape: FLOOR, transform: at(0, -0.5, 0) }),
+      body({
+        body: 'crate',
+        shape: { kind: 'cuboid', hx: 0.5, hy: 0.5, hz: 0.5 },
+        transform: at(0, 5, 0),
+      }),
+    ])
+
+    const crowd = Array.from({ length: 16600 }, (_, index) =>
+      body({
+        body: `box${index}`,
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.1, hy: 0.1, hz: 0.1 },
+        transform: at(10, index * 0.5, 10),
+      }),
+    )
+    const refused = port.add(crowd)
+
+    expect(refused.length).toBeGreaterThan(0)
+    expect(refused.every(name => name.startsWith('box'))).toBe(true)
+    // The floor still IS the floor: a crate that fell through it would say its identity was taken.
+    expect(run(port, 180, 'crate').y).toBeGreaterThan(0)
   })
 
   /** A pierced wall, felt as the pieces ADR-25 decomposes it into: the window is a way through. */
@@ -398,6 +617,24 @@ describe('what rolls on wheels and what is pushed', () => {
     expect(gone.z).toBeLessThan(settled.z - 2)
     expect(gone.y).toBeGreaterThan(0.6)
     expect(Math.abs(gone.x)).toBeLessThan(0.2)
+  })
+
+  /**
+   * 🛑 The axles were opened from a wheel at `x < 0` alone, so a chassis whose pivot sits on the
+   * left wheel line paired nothing: `mDifferentials` stayed empty, `rideOf` still answered a
+   * `Ride`, and the engine drove no wheel at all — a car that answers the pedal by standing still.
+   */
+  it('drives a car whose pivot sits off the middle of its own axles', () => {
+    const shifted: VehicleSettings = {
+      ...CAR,
+      wheels: CAR.wheels.map(wheel => ({ ...wheel, at: { ...wheel.at, x: wheel.at.x + 0.9 } })),
+    }
+    expect(port.add([car({ vehicle: shifted })])).toEqual([])
+
+    const settled = driven(0, 0, 60)
+    const gone = driven(1, 0, 120)
+
+    expect(gone.z).toBeLessThan(settled.z - 2)
   })
 
   it('turns to the right on a right input, which is +X when heading −Z', () => {

@@ -286,15 +286,21 @@ function walkway(parentId: string): SceneNode[] {
   ]
 }
 
-/** Three blocks at rising heights, the gaps between them widening: the question a jump answers. */
+/**
+ * Three blocks at rising heights, the gaps between them widening: the question a jump answers.
+ *
+ * 🛑 Cut to what a HUMAN clears, and measured against the port: a jump of 2,8 m/s reaches 0,40 m
+ * and stays up 0,57 s, so it lands a block at 0,90 m and carries 2,3 m. The old course — 0,6 to
+ * 1,8 m across gaps up to 3,4 — was drawn for the 5 m/s jump, which reached 1,27 m.
+ */
 function jumps(parentId: string): SceneNode[] {
   const blocks: SceneNode[] = []
   let x = 3
 
-  for (const [index, gap] of [1.5, 2.4, 3.4].entries()) {
+  for (const [index, gap] of [1, 1.5, 2].entries()) {
     blocks.push(
       slab(
-        { x0: x, x1: x + 2, y0: 0, y1: 0.6 + index * 0.6, z0: -14, z1: -12 },
+        { x0: x, x1: x + 2, y0: 0, y1: 0.6 + index * 0.15, z0: -14, z1: -12 },
         `Jump Block ${index + 1}`,
         climbSurface(),
         parentId,

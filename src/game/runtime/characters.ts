@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import type { InputState } from '../ports/inputPort'
+import type { InputState, Pointer } from '../ports/inputPort'
 import type { CharacterMove, CharacterMoved, CharacterSettings } from '../ports/physicsPort'
 import { clamp, FULL_TURN } from '../numeric'
 import { numberOf } from './componentFields'
@@ -38,6 +38,13 @@ const GROUNDED_PULL = -1
 type Walker = { velocityY: number; wantedY: number; grounded: boolean }
 
 export type Characters = {
+  /**
+   * Where the head is pointed, off a live read of the pointer.
+   *
+   * 🛑 Once a FRAME, never once a step: sampled at the fixed step, a frame the accumulator ran
+   * none of ignored the mouse and the next took two moves at once.
+   */
+  aim: (pointer: Pointer) => void
   /** What each one asks to move this step, read off the input and the scene's own pace. */
   intents: (world: World, dt: number) => readonly CharacterMove[]
   /** What actually happened, back from the controller. */
@@ -70,26 +77,29 @@ export function createCharacters(): Characters {
   const look: Look = { yaw: 0, pitch: 0 }
   const pace = { x: 0, z: 0 }
   let first: Entity | null = null
-  let dragged: { x: number; y: number } | null = null
-
-  const turn = (input: InputState): void => {
-    if (!input.pointer.down) {
-      dragged = null
-      return
-    }
-    if (dragged) {
-      // Wrapped, like `normalizeAzimuth` does for the viewport: a session spent turning one way
-      // walks the yaw off into large floats, where a radian stops resolving a degree.
-      look.yaw = (look.yaw - (input.pointer.x - dragged.x) * LOOK_PER_PIXEL) % FULL_TURN
-      look.pitch -= (input.pointer.y - dragged.y) * LOOK_PER_PIXEL
-      look.pitch = clamp(look.pitch, -PITCH_LIMIT, PITCH_LIMIT)
-    }
-    dragged = { x: input.pointer.x, y: input.pointer.y }
-  }
+  // Rewritten rather than replaced: this runs on every frame of a drag.
+  const dragged = { x: 0, y: 0 }
+  let dragging = false
 
   return {
+    aim: pointer => {
+      if (!pointer.down) {
+        dragging = false
+        return
+      }
+      if (dragging) {
+        // Wrapped, like `normalizeAzimuth` does for the viewport: a session spent turning one way
+        // walks the yaw off into large floats, where a radian stops resolving a degree.
+        look.yaw = (look.yaw - (pointer.x - dragged.x) * LOOK_PER_PIXEL) % FULL_TURN
+        look.pitch -= (pointer.y - dragged.y) * LOOK_PER_PIXEL
+        look.pitch = clamp(look.pitch, -PITCH_LIMIT, PITCH_LIMIT)
+      }
+      dragged.x = pointer.x
+      dragged.y = pointer.y
+      dragging = true
+    },
+
     intents: (world, dt) => {
-      turn(world.input)
       moves.length = 0
       byBody.clear()
       first = null

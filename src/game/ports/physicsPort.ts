@@ -119,6 +119,14 @@ export type PhysicsPort = {
   push: (forces: readonly BodyForce[]) => void
   /** 🛑 Reused between calls, like `poses`. A name the port does not hold is left out. */
   motion: (bodies: readonly string[]) => readonly BodyMotion[]
+  /**
+   * How far a probe gets from `from` towards `to` before something stops it, as a fraction of the
+   * way — nothing when the way is clear. Above zero, `radius` sweeps a SPHERE: a ray of no
+   * thickness slips through the seam where two boxes meet, and a camera behind it then sees wall.
+   *
+   * 🛑 A sensor stops nothing, a cast included: that is what `sensor` says on a descriptor.
+   */
+  cast: (from: Vector3, to: Vector3, radius: number, ignore: readonly string[]) => number | null
   step: (dt: number) => void
   poses: () => readonly BodyPose[]
   contacts: () => readonly PhysicsContact[]

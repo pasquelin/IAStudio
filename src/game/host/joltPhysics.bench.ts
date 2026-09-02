@@ -23,3 +23,22 @@ describe('one step of physics, as Jolt fills it', async () => {
     })
   }
 })
+
+/** What a spring arm adds to a frame: one probe, on a scene of the size one is filmed in. */
+describe('one camera probe, as Jolt casts it', async () => {
+  const scene = BENCH_SCENES[1]!
+  const run = await loadScene(scene, loadJoltPhysics)
+  const { port } = run
+  const from = { x: 0, y: 6, z: 0 }
+  const to = { x: 0, y: 6, z: 8 }
+
+  bench(`${scene.name} — a ray`, () => {
+    port.cast(from, to, 0, EMPTY)
+  })
+
+  bench(`${scene.name} — a sphere of 0,2`, () => {
+    port.cast(from, to, 0.2, EMPTY)
+  })
+})
+
+const EMPTY: readonly string[] = []

@@ -177,6 +177,43 @@ const SPIN: ComponentDescriptor = {
   defaults: { axis: 'y', speed: 90 },
 }
 
+/**
+ * A camera on an arm, the way Unreal hangs one: `camera` behind `subject`, pulled in by a wall.
+ * 🛑 `orientation` is the whole of what a rig FEELS like — `pointer` aims where the player looks
+ * (Unreal's `bUsePawnControlRotation`), `subject` where the thing is pointed, `fixed` at its node.
+ */
+const SPRING_ARM: ComponentDescriptor = {
+  type: 'SpringArm',
+  titleKey: 'game.components.SpringArm.title',
+  descriptionKey: 'game.components.SpringArm.description',
+  category: 'gameplay',
+  fields: [
+    textField('subject'),
+    textField('camera'),
+    choiceField('orientation', ['pointer', 'subject', 'fixed']),
+    numberField('length', 0, 50),
+    numberField('height', -10, 10),
+    numberField('shoulder', -5, 5),
+    flagField('collision'),
+    numberField('probeRadius', 0, 2),
+    numberField('positionLag', 0, 2),
+    numberField('rotationLag', 0, 2),
+  ],
+  // Seconds, both lags, and zero is what an author writes for a camera welded to its subject.
+  defaults: {
+    subject: '',
+    camera: '',
+    orientation: 'pointer',
+    length: 4,
+    height: 1.6,
+    shoulder: 0,
+    collision: true,
+    probeRadius: 0.2,
+    positionLag: 0.08,
+    rotationLag: 0.05,
+  },
+}
+
 const COLLIDER: ComponentDescriptor = {
   type: 'Collider',
   titleKey: 'game.components.Collider.title',
@@ -241,7 +278,7 @@ const CHARACTER_CONTROLLER: ComponentDescriptor = {
   defaults: {
     height: 1.8,
     radius: 0.3,
-    jumpSpeed: 5,
+    jumpSpeed: 2.8,
     stepHeight: 0.5,
     slopeLimit: 45,
     snapDistance: 0.5,
@@ -328,6 +365,7 @@ export const COMPONENTS: Record<ComponentType, ComponentDescriptor> = {
   LookAt: LOOK_AT,
   Patrol: PATROL,
   Spin: SPIN,
+  SpringArm: SPRING_ARM,
   Collider: COLLIDER,
   RigidBody: RIGID_BODY,
   Trigger: TRIGGER,

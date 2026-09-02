@@ -41,6 +41,8 @@ function bench(held: readonly string[] = [], over: Record<string, JsonValue> = {
 
 const pushed = (bench: Bench, steps = 1) => {
   for (let step = 0; step < steps; step++) bench.world.step(STEP_SECONDS)
+  // A whole FRAME, steps and all: the seat is claimed at the image, where the camera reads it.
+  bench.world.lateUpdate(0, STEP_SECONDS)
   return bench.physics.pushed.at(-1) ?? null
 }
 

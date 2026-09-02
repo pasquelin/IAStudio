@@ -25,6 +25,7 @@ export type ComponentType =
   | 'LookAt'
   | 'Patrol'
   | 'Spin'
+  | 'SpringArm'
   | 'Collider'
   | 'RigidBody'
   | 'Trigger'
