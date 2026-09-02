@@ -5,7 +5,7 @@
  *
  * `x` is ASCII and not `×`: a non-ASCII character in a JSON body and in a CLIP tokenizer.
  */
-function pixelArtWords(columns: number, rows: number): string {
+export function pixelArtWords(columns: number, rows: number): string {
   return `pixel art, ${columns}x${rows} sprite, hard edges, no anti-aliasing`
 }
 
@@ -17,14 +17,22 @@ function pixelArtWords(columns: number, rows: number): string {
 export const PIXEL_ART_PROMPT_MAX = 90
 
 /**
+ * 🛑 The WORD, never the substring: « no pixel artifacts » and « a pixel artist » both carry
+ * « pixel art » and would have sent the grid nowhere, silently.
+ */
+const ALREADY_SAID = /pixel[\s-]?art(?![a-z])/i
+
+/**
  * The written prompt with the grid said after it. 🛑 Idempotent, and that is not a nicety: the
  * catalogue keeps what was WRITTEN, and from the main's side that already includes these words —
- * the window put them there before the IPC. A regeneration would double them, then triple them,
- * and nothing would go red. It also spares whoever typed them from reading them twice.
+ * the window put them there before the IPC. A regeneration would double them, then triple them.
+ *
+ * Blank in, blank out — the same arbitration as `bodyWithContext`: a style is a modifier, not a
+ * subject, and « pixel art, 64x64 sprite » alone is a prompt nobody wrote.
  */
 export function withPixelArtPrompt(written: string, columns: number, rows: number): string {
-  if (/pixel art/i.test(written)) return written
+  const subject = written.trim()
+  if (subject.length === 0 || ALREADY_SAID.test(subject)) return written
 
-  const words = pixelArtWords(columns, rows)
-  return written.trim().length === 0 ? words : `${written}, ${words}`
+  return `${subject}, ${pixelArtWords(columns, rows)}`
 }

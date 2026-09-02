@@ -13,12 +13,6 @@ import type { FormValues } from '@/helpers/dynamicForm'
 import { codeFileOf } from '@/stores/code'
 import { activeImageId, activeScriptId, useDocuments } from '@/stores/documents'
 
-/**
- * What a family adds beyond the form — what the WORKSPACE holds and no model schema publishes.
- *
- * A table rather than a branch in the panel, which serves every family and knows none:
- * `Record<ModelFamily, …>` makes the compiler ask for the line of the family that arrives.
- */
 /** The grid of the image in front — `null` when no image is there, or it is not on one. */
 export function gridInFront(): { columns: number; rows: number } | null {
   const documentId = activeImageId(useDocuments.getState())
@@ -32,6 +26,10 @@ type Extra = (
   pixelArt: boolean,
 ) => FormValues
 
+/**
+ * What a family adds beyond the form — what the WORKSPACE holds and no model schema publishes.
+ * A table rather than a branch in the panel: the compiler asks for the line of a family that arrives.
+ */
 const EXTRAS: Record<ModelFamily, Extra | null> = {
   /**
    * The studio's own grid, which no model schema publishes. Written HERE and not in the main:

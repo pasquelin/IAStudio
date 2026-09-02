@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { withPixelArtPrompt } from '@shared/domain/pixelArtPrompt'
+import { pixelArtWords } from '@shared/domain/pixelArtPrompt'
 import { promptKeyOf } from '@shared/domain/projectContext'
 import { CHECKBOX } from '@/components/styles'
 import { cn } from '@/helpers/cn'
@@ -37,10 +37,13 @@ export function GeneratorPixelArt({ fields, grid, applies, onApplies }: Generato
         {t('generation.pixelArtApplies')}
       </label>
 
-      {/* The words themselves, as the context shows its own: what is added is never a secret. */}
+      {/*
+        The WORDS, never `withPixelArtPrompt('')`: that one answers for a blank prompt, which is
+        no longer the phrase — and a box that showed what it would not send is worse than none.
+      */}
       {applies && (
         <p className="text-muted bg-surface text-tiny rounded-(--radius-sc-sm) p-1.5 whitespace-pre-wrap select-text">
-          {withPixelArtPrompt('', grid.columns, grid.rows)}
+          {pixelArtWords(grid.columns, grid.rows)}
         </p>
       )}
     </div>
