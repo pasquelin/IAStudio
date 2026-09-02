@@ -122,6 +122,10 @@ const SCOPE_RUNNERS: ScopeRunners = {
   // The application's own, which `routeCommand` runs before any surface is asked.
   global: null,
   spaces: null,
+  // 🛑 A WINDOW of its own, keyed by an asset rather than by a document: no workspace and no kind
+  // answers `character`, so `addressedBy` can never resolve one. A headless run has no such
+  // window, and its undo stack is the only thing the scope carries.
+  character: null,
 }
 
 /** The document the studio shows — what a command with no address lands on. */
