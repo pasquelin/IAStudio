@@ -4,6 +4,7 @@ import {
   CameraHelper,
   DirectionalLight,
   HemisphereLight,
+  BoxGeometry,
   Line,
   Mesh,
   MeshBasicMaterial,
@@ -563,6 +564,34 @@ describe('showPathKnobs', () => {
     expect(
       object.children.filter(child => knobIndexOf(child.name) !== null).map(knob => knob.visible),
     ).toEqual([true, true])
+  })
+})
+
+describe('applyPath when a run gains an anchor', () => {
+  const rail = bezierPathOf(
+    [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 },
+    ],
+    false,
+  )
+
+  /**
+   * 🛑 A band hangs its aids off its OWN mesh, and any node of the document may be reparented
+   * under that mesh from the outliner. Swept whole, the rebuild took the reparented node out of
+   * the scene and disposed a geometry the shared cache still counted as alive.
+   */
+  it('sweeps its own aids away and leaves what the document hung there', () => {
+    const band = dressWithRail(new Mesh(), rail, { knob: '#ffffff' }, true)
+    const child = new Mesh(new BoxGeometry(1, 1, 1))
+    child.name = 'a-node-of-the-document'
+    band.add(child)
+
+    applyPath(band, bezierPathOf([...rail.points, { x: 20, y: 0, z: 0 }], false), '#ffffff')
+
+    expect(band.getObjectByName('a-node-of-the-document')).toBe(child)
+    expect(child.geometry.getAttribute('position')).toBeDefined()
+    expect(band.children.filter(one => knobIndexOf(one.name) !== null)).toHaveLength(3)
   })
 })
 

@@ -125,6 +125,7 @@ import {
   helperFor,
   handleName,
   handlePartOf,
+  isRailAid,
   knobIndexOf,
   knobName,
   type HandlePart,
@@ -612,16 +613,13 @@ function withHeldFuzz<T>(raycaster: Raycaster, pick: () => T): T {
 function isScenery(object: Object3D, isRail: (nodeId: string) => boolean): boolean {
   for (let node: Object3D | null = object; node; node = node.parent) {
     if (!node.visible || node.name === MARKER_NAME || isRail(node.name)) return false
-    // 🛑 The AIDS of a rail, by name: a band IS scenery a point may be written onto, but its own
-    // line and knobs hang under it and were taking the clicks meant for the surface.
-    if (node.name.startsWith(RAIL_AID_PREFIX)) return false
+    // 🛑 The AIDS of a rail: a band IS scenery a point may be written onto, but its own line and
+    // knobs hang under it and were taking the clicks meant for the surface.
+    if (isRailAid(node.name)) return false
   }
 
   return true
 }
-
-/** What every helper of a rail is named after — the line, the knobs, the tangents and their bars. */
-const RAIL_AID_PREFIX = 'path-'
 
 /** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
 const LINE_GRAB = 1 / 150
@@ -987,6 +985,8 @@ export class SceneRenderer {
   private negativeColor = ''
   /** What a rail's TANGENTS are painted in, apart from its anchors — see `dressWithRail`. */
   private handleColor = ''
+  /** The band wearing a shape built for a DRAG rather than read from the document, if any. */
+  private previewedRail: string | null = null
   /** What its FIRST anchor is painted in: which end a run starts from is what says its direction. */
   private startColor = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
@@ -4789,6 +4789,28 @@ export class SceneRenderer {
       tiledGeometry({ ...node.geometry, path: next }, node.material.tilesPerMetre),
     )
     if (worn) this.freeGeometry(worn)
+    this.previewedRail = node.id
+  }
+
+  /**
+   * 🛑 The shape a drag built handed back to the one the DOCUMENT says. A gesture that ends
+   * without reporting — a point let go of, a key pressed mid-drag — would otherwise leave the
+   * band wearing a preview nothing ever replaces, and the screen would quietly lie.
+   */
+  private restorePreviewedRail(): void {
+    const id = this.previewedRail
+    this.previewedRail = null
+    if (!id) return
+
+    const node = this.applied.get(id)
+    const object = this.objects.get(id)
+    if (node?.type !== 'mesh' || !(object instanceof Mesh)) return
+
+    const worn = wearGeometry(
+      object,
+      this.shapes.acquire(node.geometry, node.material.tilesPerMetre),
+    )
+    if (worn) this.freeGeometry(worn)
   }
 
   /**
@@ -4815,6 +4837,9 @@ export class SceneRenderer {
 
     const point = this.pickedPathPoint
     const knob = this.pickedKnob()
+    // Before the report: the command that follows re-reads the document, and a preview left
+    // mounted would be what the next comparison finds instead of what the document holds.
+    this.restorePreviewedRail()
     if (point && knob) {
       // The knob's own position IS the control point: both live in the rail's frame.
       this.options.onPathPoint?.(point, plainVector(knob.position))
@@ -4929,6 +4954,7 @@ export class SceneRenderer {
    * nobody can rename is a property that leaked into the tree.
    */
   setPickedPathPoint(picked: PickedPathPoint | null): void {
+    this.restorePreviewedRail()
     this.pickedPathPoint = picked
     // 🛑 The aids too: the tangents of an anchor show on the one being WORKED ON, and picking one
     // is what changes that. Without this they were built, placed, and never once shown.

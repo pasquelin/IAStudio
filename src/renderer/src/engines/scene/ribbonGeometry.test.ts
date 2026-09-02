@@ -94,6 +94,19 @@ describe('a ribbon', () => {
     expect(Math.hypot(shifted[1]!.x, shifted[1]!.z)).toBeCloseTo(Math.SQRT2, 5)
   })
 
+  /**
+   * 🛑 The mitre is bounded by the RUN, not only by the width: measured, a one-unit offset on
+   * segments of 1 and 0,11 reached 3,03 and folded the band across its own next section.
+   */
+  it('never reaches a joint further than the segments meeting there', () => {
+    const tight = [at(0, 0), at(1, 0), at(0.9, 0.05)]
+    const shifted = offsetRun(tight, 1, false)
+    const reach = Math.hypot(shifted[1]!.x - tight[1]!.x, shifted[1]!.z - tight[1]!.z)
+
+    // The shorter of the two spans is 0,11: a joint reaching past it crosses what follows.
+    expect(reach).toBeLessThanOrEqual(Math.hypot(0.9 - 1, 0.05) + 1e-6)
+  })
+
   /** A closed run has no end to cap, and no seam where the last section meets the first. */
   it('closes on itself without a seam', () => {
     const square = [at(-5, -5), at(5, -5), at(5, 5), at(-5, 5)]

@@ -73,7 +73,7 @@ function sectionsOf(points: readonly Vector3[], ribbon: Ribbon): Section[] {
 
     const before = closed || at > 0 ? normalAt(points, at - 1) : null
     const after = closed || at < last ? normalAt(points, at) : null
-    const joint = bisector(before, after)
+    const joint = bisector(before, after, reachAt(points, at, half, closed))
 
     sections.push({
       leftX: here.x + joint.x * half,
@@ -123,6 +123,7 @@ export function offsetRun(
     const joint = bisector(
       closed || at > 0 ? normalAt(points, at - 1) : null,
       closed || at < last ? normalAt(points, at) : null,
+      reachAt(points, at, distance, closed),
     )
     return { x: point.x + joint.x * distance, y: point.y, z: point.z + joint.z * distance }
   })
@@ -131,6 +132,7 @@ export function offsetRun(
 function bisector(
   before: { x: number; z: number } | null,
   after: { x: number; z: number } | null,
+  limit: number,
 ): { x: number; z: number } {
   if (!before) return after ?? { x: 0, z: 0 }
   if (!after) return before
@@ -144,8 +146,28 @@ function bisector(
 
   const unitX = sumX / length
   const unitZ = sumZ / length
-  const stretch = Math.min(1 / (unitX * after.x + unitZ * after.z), MITER_LIMIT)
+  const stretch = Math.min(1 / (unitX * after.x + unitZ * after.z), MITER_LIMIT, limit)
   return { x: unitX * stretch, z: unitZ * stretch }
+}
+
+/**
+ * 🛑 How far a joint may reach, in multiples of the offset — the SHORTEST segment meeting there,
+ * over that offset. `MITER_LIMIT` alone bounds the stretch against the width and not against the
+ * run: measured, a one-unit offset on segments of 1 and 0,11 reached 3,03 and folded the band
+ * across its own next section.
+ */
+function reachAt(points: readonly Vector3[], at: number, offset: number, closed: boolean): number {
+  if (offset === 0) return MITER_LIMIT
+
+  const last = points.length - 1
+  const spanTo = (one: number, other: number): number => {
+    if (!closed && (one < 0 || other > last)) return Infinity
+    const from = points[(one + points.length) % points.length]!
+    const to = points[(other + points.length) % points.length]!
+    return Math.hypot(to.x - from.x, to.z - from.z)
+  }
+
+  return Math.min(spanTo(at - 1, at), spanTo(at, at + 1)) / Math.abs(offset)
 }
 
 /** The four faces between two sections: the lid, the floor, and a wall each side. */

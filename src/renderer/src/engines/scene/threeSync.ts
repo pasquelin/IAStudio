@@ -30,6 +30,7 @@ import {
   geometryFor,
   HANDLE_BAR_PREFIX,
   handlePartOf,
+  isRailAid,
   knobIndexOf,
   knobName,
   placeHandles,
@@ -277,7 +278,10 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
     // Read off what is already hung rather than passed in: the three are three tokens, and
     // dressing again in the anchors' would repaint the pair and the first point grey.
     const colours = { knob: colour, handle: colourNamed(null), start: colourNamed(knobName(0)) }
-    for (const child of [...object.children]) {
+    // 🛑 The AIDS alone, by name: a band hangs them off its own mesh, and any node of the document
+    // may be reparented under that mesh from the outliner. Swept whole, this took the reparented
+    // node out of the scene and disposed a geometry the shared cache still counted as alive.
+    for (const child of [...object.children].filter(one => isRailAid(one.name))) {
       object.remove(child)
       if (child instanceof Mesh || child instanceof Line) child.geometry.dispose()
     }

@@ -246,6 +246,14 @@ export const HANDLE_BAR_PREFIX = 'path-bar-'
 
 export type HandlePart = 'in' | 'out'
 
+/** Whether an object is one of a rail's own helpers rather than something the document owns. */
+export function isRailAid(name: string): boolean {
+  return name.startsWith(RAIL_AID_PREFIX)
+}
+
+/** What every helper of a rail is named after — the line, the knobs, the tangents and their bars. */
+export const RAIL_AID_PREFIX = 'path-'
+
 export function handleName(part: HandlePart, index: number): string {
   return `${HANDLE_PREFIX[part]}${index}`
 }
