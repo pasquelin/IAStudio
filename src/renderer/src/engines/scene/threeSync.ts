@@ -6,7 +6,6 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  Vector3 as ThreeVector3,
   PointLight,
   SpotLight,
   type BufferGeometry,
@@ -25,18 +24,16 @@ import type {
   Vector3,
 } from '@shared/domain/scene'
 import { pathPoints } from './cameraPath'
-import { handleAt } from '@shared/domain/scene'
 import {
   bareLight,
   dressWithRail,
   geometryFor,
   HANDLE_BAR_PREFIX,
-  handleName,
   handlePartOf,
   knobIndexOf,
+  placeHandles,
   PATH_CURVE_NAME,
   PATH_KNOB_PREFIX,
-  type HandlePart,
 } from './threeFactory'
 import { tileUvs } from './uvTiling'
 
@@ -277,30 +274,6 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
   for (const [index, point] of descriptor.points.entries()) {
     knobs[index]?.position.set(point.x, point.y, point.z)
     placeHandles(object, descriptor, index, point)
-  }
-}
-
-/** The two tangents of one anchor, and the bar tying each to it — all four in the rail's frame. */
-function placeHandles(
-  object: Object3D,
-  descriptor: PathDescriptor,
-  index: number,
-  point: Vector3,
-): void {
-  const pair = handleAt(descriptor, index)
-
-  for (const part of ['in', 'out'] satisfies HandlePart[]) {
-    const reach = pair[part]
-    const at = { x: point.x + reach.x, y: point.y + reach.y, z: point.z + reach.z }
-
-    object.getObjectByName(handleName(part, index))?.position.set(at.x, at.y, at.z)
-    const bar = object.getObjectByName(`${HANDLE_BAR_PREFIX}${part}-${index}`)
-    if (bar instanceof Line) {
-      bar.geometry.setFromPoints([
-        new ThreeVector3(point.x, point.y, point.z),
-        new ThreeVector3(at.x, at.y, at.z),
-      ])
-    }
   }
 }
 

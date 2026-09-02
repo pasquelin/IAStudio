@@ -4,6 +4,7 @@ import {
   CameraHelper,
   DirectionalLight,
   HemisphereLight,
+  Line,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -20,6 +21,7 @@ import {
   buildPath,
   dressWithRail,
   geometryFor,
+  barName,
   handleName,
   handlePartOf,
   knobIndexOf,
@@ -590,6 +592,16 @@ describe('showPathHandles', () => {
     ])
   })
 
+  /** The bar is what makes a tangent readable as a lever: without it, a lone dot in a field. */
+  it('ties each tangent to its anchor with a bar', () => {
+    const object = buildPath(rail, '#ffffff')
+    const bar = object.getObjectByName(barName('out', 1))
+    const drawn = bar instanceof Line ? bar.geometry.getAttribute('position') : null
+
+    expect(drawn?.count).toBe(2)
+    expect(drawn?.getX(0)).toBeCloseTo(rail.points[1]!.x, 6)
+  })
+
   it('hides them all when no anchor is held', () => {
     const object = buildPath(rail, '#ffffff')
 
@@ -599,10 +611,13 @@ describe('showPathHandles', () => {
     expect(object.children.filter(child => child.visible && handlePartOf(child.name))).toEqual([])
   })
 
-  /** A tangent is drawn AT anchor + reach: stored relative, it travels when its anchor moves. */
-  it('stands each tangent off its own anchor', () => {
+  /**
+   * 🛑 Placed by the BUILD, not only by a later sync: left to the sync, every tangent sat at the
+   * rail's own origin until something else changed the shape — a green dot in the middle of a
+   * field, and no bar anywhere.
+   */
+  it('stands each tangent off its own anchor from the moment it is built', () => {
     const object = buildPath(rail, '#ffffff')
-    applyPath(object, rail, '#ffffff')
     const anchor = rail.points[1]!
     const out = object.getObjectByName(handleName('out', 1))
     const reach = rail.kind === 'bezier' ? rail.handles[1]!.out : { x: 0, y: 0, z: 0 }

@@ -38,6 +38,7 @@ import {
 import type { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import { ribbonGeometry } from './ribbonGeometry'
 import type { GeometryDescriptor, LightKind, PathDescriptor } from '@shared/domain/scene'
+import { handleAt, type Vector3 as PlainVector3 } from '@shared/domain/scene'
 import { pathPoints } from './cameraPath'
 import { MARKER_NAME, solid } from './markerPaint'
 import { screenScale } from '../viewport/screenScale'
@@ -312,14 +313,46 @@ export function dressWithRail(
         new BufferGeometry(),
         new LineBasicMaterial({ color: HANDLE_COLOUR, depthTest: !through }),
       )
-      bar.name = `${HANDLE_BAR_PREFIX}${part}-${index}`
+      bar.name = barName(part, index)
       bar.visible = false
       if (through) bar.renderOrder = HANDLE_ORDER
       object.add(bar)
     }
+
+    placeHandles(object, descriptor, index, point)
   }
 
   return object
+}
+
+export function barName(part: HandlePart, index: number): string {
+  return `${HANDLE_BAR_PREFIX}${part}-${index}`
+}
+
+/**
+ * The two tangents of one anchor, and the bar tying each to it — all four in the rail's frame.
+ *
+ * 🛑 Called from the BUILD as well as from the sync: left to the sync alone, every tangent sat at
+ * the rail's origin until something else changed the shape, which is a green dot in a field.
+ */
+export function placeHandles(
+  object: Object3D,
+  descriptor: PathDescriptor,
+  index: number,
+  point: PlainVector3,
+): void {
+  const pair = handleAt(descriptor, index)
+
+  for (const part of ['in', 'out'] satisfies HandlePart[]) {
+    const reach = pair[part]
+    const at = new Vector3(point.x + reach.x, point.y + reach.y, point.z + reach.z)
+
+    object.getObjectByName(handleName(part, index))?.position.copy(at)
+    const bar = object.getObjectByName(barName(part, index))
+    if (bar instanceof Line) {
+      bar.geometry.setFromPoints([new Vector3(point.x, point.y, point.z), at])
+    }
+  }
 }
 
 /**
