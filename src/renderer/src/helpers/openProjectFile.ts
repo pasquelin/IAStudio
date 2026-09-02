@@ -1,4 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
+import { opensInStudio } from '@shared/domain/fileRole'
+import { nameOf } from '@shared/domain/folder'
 import { openDocument } from '@/features/shell/components/dockviewApi'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -49,6 +51,10 @@ export async function openProjectFile(path: string): Promise<FileOpening> {
   // Loaded on the call, as it was from the Explorer: `openAsset` reaches `ASSET_INTENTS`, which
   // names every editor's destination, and `eager-graph.test.ts` holds the first screen to less.
   if (adopted) {
+    // Catalogued is not the same as a tab: a heightmap `.exr` is held, and Preview still shows it.
+    if (!opensInStudio(nameOf(path))) {
+      return (await bridge.project.openFile(path)) ? 'system' : 'failed'
+    }
     const { openAsset } = await import('./openAsset')
     return (await openAsset(adopted)) ? 'asset' : 'failed'
   }

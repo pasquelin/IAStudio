@@ -14,6 +14,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { lendPictureMeasure } from '@/features/image/pictureSize'
+import { forgetReportedFailures } from '@/services/diagnostics'
 import { editPixelsOf, openAsset } from './openAsset'
 
 /** Written out rather than taken from the home's fixture, which pulls in a DOM this never uses. */
@@ -71,6 +72,7 @@ describe('opening an asset', () => {
     // picture is one whose ⌘S will not be faithful. Lending one is what makes these cases model
     // a machine that CAN read the file.
     giveBackMeasure = lendPictureMeasure(() => Promise.resolve({ width: 800, height: 600 }))
+    forgetReportedFailures()
   })
 
   afterEach(() => giveBackMeasure())
@@ -92,6 +94,15 @@ describe('opening an asset', () => {
 
     expect(canvasOf(useCanvases.getState(), opened().id).layers.at(-1)?.name).toBe('dusk.png')
     expect(useLayouts.getState().activeWorkspace).toBe('image')
+  })
+
+  it('does not open an OpenEXR as an image tab', async () => {
+    const before = openedCount()
+
+    await expect(openAsset(picture({ name: 'height', path: 'World/height.exr' }))).resolves.toBe(
+      false,
+    )
+    expect(openedCount()).toBe(before)
   })
 
   /**
