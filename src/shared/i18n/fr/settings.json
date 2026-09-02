@@ -178,6 +178,37 @@
       "title": "Taille de la grille",
       "help": "Jusqu’où le quadrillage s’étend, en mètres, et donc combien de carreaux il compte — un carreau vaut toujours un mètre. Agrandissez-le pour une scène vaste, réduisez-le pour un petit objet posé près de la caméra."
     },
+    "navigationPreset": {
+      "title": "Schéma de navigation",
+      "help": "Quelle application 3D ce viewport imite : ses gestes de souris et ses raccourcis. Un schéma ne déplace que ce que son application fait autrement — tout le reste garde les touches d’IA Studio, y compris ce que les autres n’ont pas. Vos propres remappages passent toujours devant.",
+      "studio": "IA Studio",
+      "unreal": "Unreal Engine",
+      "unity": "Unity",
+      "blender": "Blender",
+      "roblox": "Roblox Studio",
+      "custom": "Personnalisé"
+    },
+    "navigationCustomOrbit": {
+      "title": "Tourner avec",
+      "help": "Le geste qui fait pivoter la vue dans votre schéma personnel.",
+      "leftAlt": "Alt + clic gauche",
+      "left": "Clic gauche, avec ou sans Alt",
+      "middle": "Bouton du milieu"
+    },
+    "navigationCustomPan": {
+      "title": "Déplacer latéralement avec",
+      "help": "Le geste qui fait glisser la vue sans la faire tourner.",
+      "middle": "Bouton du milieu",
+      "middleShift": "Maj + bouton du milieu",
+      "leftAltShift": "Maj + Alt + clic gauche"
+    },
+    "navigationCustomFly": {
+      "title": "Touches de déplacement",
+      "help": "Quand ZQSD appartiennent à la caméra. En permanence, les lettres cessent d’être disponibles pour les commandes de la scène — c’est pourquoi Unity et Unreal exigent un bouton.",
+      "anyButton": "Tant qu’un bouton est tenu",
+      "rightButton": "Tant que le bouton droit est tenu",
+      "always": "En permanence"
+    },
     "orbitAroundSelection": {
       "title": "Tourner autour de la sélection",
       "help": "Quand vous faites pivoter la vue 3D, elle tourne autour de ce qui est sélectionné plutôt qu’autour d’un point flottant devant vous. C’est ce qui évite de perdre son objet dès qu’on s’en approche. Sans rien de sélectionné, ou si la sélection est hors de l’écran, la vue tourne autour du dernier point regardé."

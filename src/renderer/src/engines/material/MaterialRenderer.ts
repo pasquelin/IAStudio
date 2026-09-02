@@ -14,6 +14,7 @@ import { createTextureBinding, type TextureBinding } from '../scene/textureBindi
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/textureCache'
 import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
+import { SCHEME_OF, type NavigationScheme } from '@shared/domain/navigationPreset'
 import { ViewportEngine } from '../viewport/ViewportEngine'
 import {
   bindUniforms,
@@ -70,7 +71,19 @@ export class MaterialRenderer {
   private readonly viewport = new ViewportEngine({
     toneMapping: true,
     onFrame: delta => this.spin(delta),
+    scheme: () => this.scheme,
   })
+
+  /**
+   * Which application the preview is turned like. It shows ONE object centred, so it never wants
+   * a pivot of its own — but a person who orbits the scene on the middle button expects the same
+   * here, and two rules in one window is what the setting's help promises it is not.
+   */
+  private scheme: NavigationScheme = SCHEME_OF.studio
+
+  setNavigationScheme(scheme: NavigationScheme): void {
+    this.scheme = scheme
+  }
 
   private readonly material = new MeshStandardMaterial()
   private readonly mesh = new Mesh(previewGeometry('sphere', false), this.material)

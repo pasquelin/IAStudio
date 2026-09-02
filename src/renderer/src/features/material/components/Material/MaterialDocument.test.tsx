@@ -25,6 +25,7 @@ vi.mock('@/engines/material/MaterialRenderer', () => ({
     apply = vi.fn()
     dispose = vi.fn()
     refreshMaps = vi.fn()
+    setNavigationScheme = vi.fn()
     resetView = resetViewSpy
   },
 }))

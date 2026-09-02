@@ -15,9 +15,11 @@ import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import type { DocumentKind } from '@shared/domain/document'
 import type { RecentDocument } from '@shared/domain/project'
+import type { NavigationPreset } from '@shared/domain/navigationPreset'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
+  setNavigationPreset: () => {},
   openSettings: () => {},
   openLicences: () => {},
   openManual: () => {},
@@ -48,6 +50,7 @@ const options = ({
   scope: scopeOfWorkspace(workspace, kind),
   tools: ['meshes', 'lights', 'explorer', 'generator', 'inspector', 'assets'],
   checked: [],
+  navigationPreset: 'studio',
   abilities: [],
   isMac: true,
   isDevelopment: true,
@@ -1207,5 +1210,49 @@ describe('the edit menu of a space that opens two kinds', () => {
   it('keeps an undo over either kind', () => {
     expect(editRows('scene')).toContain('Annuler')
     expect(editRows('gui')).toContain('Annuler')
+  })
+})
+
+describe('the navigation schemes', () => {
+  const rows = (preset: NavigationPreset) =>
+    submenuOf(
+      submenuOf(menuTemplate(options({ scope: 'scene', navigationPreset: preset })), 'Affichage'),
+      'Navigation',
+    )
+
+  it('offers the four applications, the studio and one of one’s own, exactly one ticked', () => {
+    const shown = rows('blender')
+
+    expect(shown.map(row => row.label)).toEqual([
+      'IA Studio',
+      'Unreal Engine',
+      'Unity',
+      'Blender',
+      'Roblox Studio',
+      'Personnalisé',
+    ])
+    // `radio` and not a row of checkboxes: one is true at a time, and AppKit draws the mark.
+    expect(shown.every(row => row.type === 'radio')).toBe(true)
+    expect(shown.filter(row => row.checked).map(row => row.label)).toEqual(['Blender'])
+  })
+
+  it('writes the one that was picked, and nothing else', () => {
+    const picked: string[] = []
+    const template = menuTemplate(
+      options({
+        scope: 'scene',
+        actions: actions({ setNavigationPreset: preset => picked.push(preset) }),
+      }),
+    )
+
+    activate(submenuOf(submenuOf(template, 'Affichage'), 'Navigation')[3])
+
+    expect(picked).toEqual(['blender'])
+  })
+
+  /** A menu of the image space has no 3D view to drive, so it must not offer one. */
+  it('says nothing of navigation outside a scene', () => {
+    const shown = submenuOf(menuTemplate(options({ workspace: 'image' })), 'Affichage')
+    expect(shown.map(row => row.label)).not.toContain('Navigation')
   })
 })

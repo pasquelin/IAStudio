@@ -276,6 +276,11 @@ describe('the translation bundles', () => {
       'inspector.pixelArt',
       // The same genre, said on the row of a model that draws it.
       'generation.suitsPixelArt',
+      // Four applications and this one. A product keeps its name in every language, and
+      // `unity` and `blender` are one word each, which this already skips.
+      'settings.navigationPreset.studio',
+      'settings.navigationPreset.unreal',
+      'settings.navigationPreset.roblox',
     ])
 
     const copied = [...BUNDLES.fr]
