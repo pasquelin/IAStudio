@@ -4462,6 +4462,9 @@ export class SceneRenderer {
    */
   setPickedPathPoint(picked: PickedPathPoint | null): void {
     this.pickedPathPoint = picked
+    // 🛑 The aids too: the tangents of an anchor show on the one being WORKED ON, and picking one
+    // is what changes that. Without this they were built, placed, and never once shown.
+    this.showAidsForSelection()
     this.attachGizmo()
     this.redraw()
   }
