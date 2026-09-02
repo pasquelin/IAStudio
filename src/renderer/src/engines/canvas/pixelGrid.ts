@@ -1,6 +1,6 @@
 import { snap } from '@shared/numeric'
 import type { Point } from '../core/geometry'
-import { sided, type Rect } from './canvasState'
+import { sided, type CanvasState, type Rect } from './canvasState'
 
 // A CELL is one square of the artwork; `cell` is how many document pixels wide it is, and it
 // always comes from `pixelCellOf` — nothing here guards a division by it.
@@ -12,6 +12,14 @@ export function cellOf(value: number, cell: number): number {
 /** How many cells fit across a side. The last is clipped where `cell` does not divide it. */
 export function cellsSpanning(size: number, cell: number): number {
   return Math.max(1, Math.ceil(size / cell))
+}
+
+/** What the artwork measures, in cells — `null` for a document that is not on a grid. */
+export function gridOf(canvas: CanvasState): { columns: number; rows: number } | null {
+  const cell = canvas.pixelCell
+  return cell === null
+    ? null
+    : { columns: cellsSpanning(canvas.width, cell), rows: cellsSpanning(canvas.height, cell) }
 }
 
 /** The other way round: the cell a side has to be cut by to hold `wanted` of them. */

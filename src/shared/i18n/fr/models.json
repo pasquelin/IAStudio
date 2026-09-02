@@ -41,6 +41,7 @@
     "advancedHint": "Montrer les réglages qu’une génération ne demande pas",
     "advancedFewerHint": "Replier ces réglages",
     "contextApplies": "Appliquer le contexte du projet",
+    "pixelArtApplies": "Dire la grille du pixel art au modèle",
     "contextReferences": "Utiliser ces références",
     "contextReferencesHint": "Place les images du contexte dans les champs image de ce modèle"
   },
