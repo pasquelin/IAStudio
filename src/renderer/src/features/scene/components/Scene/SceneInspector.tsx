@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useTranslation } from 'react-i18next'
 import {
+  setGeometry,
   setGeometryOn,
   setPath,
   setLightOn,
@@ -91,6 +92,11 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   )
   const camera = node?.type === 'camera' ? node : null
   const path = node?.type === 'path' ? node : null
+  // A band is swept along a rail held inside its shape, and it is edited by the rail's own panel:
+  // the same points, the same closing, the same handles — see `railOf`.
+  const band =
+    mesh && mesh.geometry.kind === 'ribbon' ? { id: mesh.id, shape: mesh.geometry } : null
+  const rail = path?.path ?? band?.shape.path ?? null
   // The descriptors keep their identity across every edit that does not touch them, so the
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
@@ -258,10 +264,16 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         />
       )}
 
-      {path && (
+      {rail && (
         <PathSection
-          path={path.path}
-          onChange={next => edit.run(setPath(path.id, next))}
+          path={rail}
+          onChange={next =>
+            edit.run(
+              band
+                ? setGeometry(band.id, { ...band.shape, path: next })
+                : setPath(path?.id ?? '', next),
+            )
+          }
           gesture={edit.gesture}
         />
       )}

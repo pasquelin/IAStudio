@@ -265,8 +265,14 @@ export function handlePartOf(name: string): { part: HandlePart; index: number } 
  * a point of a cloud is an index in a buffer, and nothing a transform control can hold.
  */
 export function buildPath(descriptor: PathDescriptor, colour: string): Object3D {
-  return dressWithRail(new Object3D(), descriptor, colour, false)
+  return dressWithRail(new Object3D(), descriptor, { knob: colour }, false)
 }
+
+/**
+ * What a rail's three kinds of handle are painted in. `handle` and `start` fall back on the
+ * anchors' own colour, so a caller with nothing to say about them says nothing.
+ */
+export type RailColours = { knob: string; handle?: string; start?: string }
 
 /**
  * The line and the knobs of a rail, hung under whatever carries it — a rail node, or the mesh of
@@ -278,11 +284,11 @@ export function buildPath(descriptor: PathDescriptor, colour: string): Object3D 
 export function dressWithRail(
   object: Object3D,
   descriptor: PathDescriptor,
-  colour: string,
+  colours: RailColours,
   through: boolean,
-  /** What the tangents are painted in — a token of the studio, never a hex written here. */
-  handleColour: string = colour,
 ): Object3D {
+  const colour = colours.knob
+  const handleColour = colours.handle ?? colour
   const line = new Line(
     new BufferGeometry(),
     new LineBasicMaterial({ color: colour, depthTest: !through }),
@@ -293,7 +299,9 @@ export function dressWithRail(
   object.add(line)
 
   for (const [index, point] of descriptor.points.entries()) {
-    const knob = pathKnob(index, colour, through)
+    // 🛑 The FIRST anchor apart: a run of identical dots says nothing about which end it starts
+    // from, and a band swept along it has a direction one has to be able to read.
+    const knob = pathKnob(index, (index === 0 ? colours.start : undefined) ?? colour, through)
     knob.position.set(point.x, point.y, point.z)
     object.add(knob)
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import { cameraNodeFixture, meshNode, pathNodeFixture } from '@/engines/scene/scene-fixtures'
+import { bezierPathOf, type GeometryDescriptor } from '@shared/domain/scene'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useAnimationViews } from '@/stores/animationView'
 import { clearScenes, installScene, sceneNodeNow } from '@/stores/scene-fixtures'
@@ -213,5 +214,45 @@ describe('an undo with nothing behind it', () => {
 
     runSceneCommand(DOCUMENT, 'scene.delete')
     expect(runSceneCommand(DOCUMENT, 'scene.undo')).toBe(true)
+  })
+})
+
+describe('deleting the control point a rail or a band holds', () => {
+  const runOf = (id: string): number[] => {
+    const node = sceneNodeNow(DOCUMENT, id)
+    if (node?.type === 'path') return node.path.points.map(point => point.x)
+    return node?.type === 'mesh' && node.geometry.kind === 'ribbon'
+      ? node.geometry.path.points.map(point => point.x)
+      : []
+  }
+
+  it('takes the point away from a rail', () => {
+    useSceneViews.getState().setPickedPathPoint(DOCUMENT, { nodeId: 'rail', index: 1 })
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(runOf('rail')).toEqual([0, 20])
+  })
+
+  /**
+   * 🛑 A band holds its rail INSIDE its shape, and the refusal read the node's type: Delete on a
+   * point of a band fell straight through to the selection and took the band away whole.
+   */
+  it('takes the point away from a band, and leaves the band standing', () => {
+    const shape: GeometryDescriptor = {
+      kind: 'ribbon',
+      path: bezierPathOf([at(0), at(10), at(20)], false),
+      width: 1,
+      height: 0.2,
+      segments: 16,
+    }
+    const band = { ...meshNode('band'), geometry: shape }
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [band], selectedIds: ['band'] })
+    useSceneViews.getState().setPickedPathPoint(DOCUMENT, { nodeId: 'band', index: 1 })
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(runOf('band')).toEqual([0, 20])
+    expect(sceneNodeNow(DOCUMENT, 'band')).not.toBeNull()
   })
 })

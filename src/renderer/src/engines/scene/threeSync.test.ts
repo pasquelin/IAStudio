@@ -513,7 +513,7 @@ describe('dressWithRail', () => {
 
   /** A band wears the handles of the rail it is swept along — the mesh itself carries them. */
   it('hangs a line and a knob per point on whatever carries the rail', () => {
-    const mesh = dressWithRail(new Mesh(), rail, '#ffffff', true)
+    const mesh = dressWithRail(new Mesh(), rail, { knob: '#ffffff' }, true)
     const knobs = mesh.children.filter(child => child.name.startsWith(PATH_KNOB_PREFIX))
 
     expect(knobs).toHaveLength(3)
@@ -530,7 +530,7 @@ describe('dressWithRail', () => {
         ? object.material.depthTest
         : true
     const knobOf = (through: boolean): Object3D | undefined =>
-      dressWithRail(new Mesh(), rail, '#ffffff', through).children.find(child =>
+      dressWithRail(new Mesh(), rail, { knob: '#ffffff' }, through).children.find(child =>
         child.name.startsWith(PATH_KNOB_PREFIX),
       )
 
@@ -598,7 +598,12 @@ describe('showPathHandles', () => {
    * would be the one surface of the studio that never follows its palette.
    */
   it('paints the tangents in the colour it is handed, apart from the anchors', () => {
-    const object = dressWithRail(new Mesh(), rail, '#111111', false, '#e0a350')
+    const object = dressWithRail(
+      new Mesh(),
+      rail,
+      { knob: '#111111', handle: '#e0a350', start: '#3d7ab8' },
+      false,
+    )
     const colourOf = (name: string): string => {
       const child = object.getObjectByName(name)
       return child instanceof Mesh && child.material instanceof MeshBasicMaterial
@@ -608,6 +613,9 @@ describe('showPathHandles', () => {
 
     expect(colourOf(handleName('out', 1))).toBe('#e0a350')
     expect(colourOf(knobName(1))).toBe('#111111')
+    // 🛑 And the FIRST anchor apart from the rest: a run of identical dots says nothing about
+    // which end it starts from, and a band swept along it has a direction to read.
+    expect(colourOf(knobName(0))).toBe('#3d7ab8')
   })
 
   /** The bar is what makes a tangent readable as a lever: without it, a lone dot in a field. */

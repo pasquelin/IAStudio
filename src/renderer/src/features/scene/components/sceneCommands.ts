@@ -11,9 +11,11 @@ import {
   separateNode,
   removeNodes,
   rootedIn,
+  setGeometry,
   setNodeVisible,
   setPath,
 } from '@/engines/scene/commands'
+import { railOf } from '@/engines/scene/nodeRail'
 import { withoutPoint } from '@/engines/scene/cameraPath'
 import {
   putOnAnimationSheet,
@@ -79,12 +81,17 @@ export function removePickedPathPoint(documentId: string): boolean {
   if (!scene.selectedIds.includes(picked.nodeId)) return false
 
   const node = nodeById(scene, picked.nodeId)
-  if (node?.type !== 'path') return false
+  const rail = railOf(node ?? undefined)
+  if (!node || !rail) return false
 
-  const path = withoutPoint(node.path, picked.index)
-  if (path === node.path) return true
+  const path = withoutPoint(rail, picked.index)
+  if (path === rail) return true
 
-  store.runCommand(documentId, setPath(picked.nodeId, path))
+  // A band holds its rail inside its shape — see `railOf`: the edit lands on the geometry.
+  if (node.type === 'path') store.runCommand(documentId, setPath(picked.nodeId, path))
+  else if (node.type === 'mesh' && node.geometry.kind === 'ribbon') {
+    store.runCommand(documentId, setGeometry(picked.nodeId, { ...node.geometry, path }))
+  }
   useSceneViews.getState().setPickedPathPoint(documentId, null)
   return true
 }
