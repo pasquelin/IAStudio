@@ -308,7 +308,7 @@ export const POST_HANDLERS: ActionHandlers = {
    * stack, which is arithmetic no client should have to do. A parameter the catalogue does not
    * call animatable is refused rather than written where nothing reads.
    */
-  'post.addEffectKeyframe': input =>
+  'post.addKeyframe': input =>
     editPost(
       input,
       (target, stack, state) => {
@@ -333,7 +333,7 @@ export const POST_HANDLERS: ActionHandlers = {
       '"effectId" must name an instance of this composition and "value" is wanted, with "param" one of that effect\'s animatable parameters — post.state answers "effects" with their ids and their "params"',
     ),
 
-  'post.removeEffectKeyframe': input =>
+  'post.removeKeyframe': input =>
     editPost(
       input,
       (target, stack, state) => {

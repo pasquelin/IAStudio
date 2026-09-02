@@ -121,7 +121,7 @@ describe('composing without a panel', () => {
     await runAction('post.set', { effectId, param: 'strength', value: 0.5 })
 
     expect(
-      (await runAction('post.addEffectKeyframe', { effectId, param: 'strength', value: 2 })).ok,
+      (await runAction('post.addKeyframe', { effectId, param: 'strength', value: 2 })).ok,
     ).toBe(true)
 
     const track = scene().animation.tracks[0]
@@ -134,16 +134,16 @@ describe('composing without a panel', () => {
     const effectId = scene().world.post.effects[0]?.id ?? ''
 
     expect(
-      (await runAction('post.addEffectKeyframe', { effectId, param: 'animated', value: 1 })).ok,
+      (await runAction('post.addKeyframe', { effectId, param: 'animated', value: 1 })).ok,
     ).toBe(false)
     expect(scene().animation.tracks).toEqual([])
   })
 
   it('takes the key back off and leaves the channel standing', async () => {
     const effectId = await withBloom()
-    await runAction('post.addEffectKeyframe', { effectId, param: 'strength', value: 2 })
+    await runAction('post.addKeyframe', { effectId, param: 'strength', value: 2 })
 
-    expect((await runAction('post.removeEffectKeyframe', { effectId, param: 'strength' })).ok).toBe(
+    expect((await runAction('post.removeKeyframe', { effectId, param: 'strength' })).ok).toBe(
       true,
     )
 

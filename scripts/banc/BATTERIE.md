@@ -132,11 +132,11 @@ qu'un scénario tiendra demain.
 
 **`MCP reached: 200/230`.** Les trente actions que `coverage.ts` déclarait couvertes et qu'aucun
 run n'a touchées — chacune est un outil publié sur le fil MCP que personne n'a vu marcher :
-`prompt.describeStyle`, `actions.find`, `files.undoFileOperation`, `files.redoFileOperation`, `files.canUndoRedoFiles`,
+`prompt.describeStyle`, `actions.find`, `files.undoFileOperation`, `files.redoFileOperation`, `files.canUndoRedo`,
 `cost.estimate`, `job.cancelCloudGeneration`, `asset.reveal`, `layer.editShapeLayer`, `guide.remove`, `clip.speed`,
 `track.add`, `skybox.setSourceImage`, `cloud.explorePublicFeed`, `cloud.pull`, `node.setPrimitiveParameters`, `model.textures`,
 `bone.remove`, `animation.removeBlock`, `animation.setBlockSettings`, `key.writeKeysOnOpenChannels`, `git.diff`, `git.stage`,
-`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.deleteProjectCard`, `settings.triggerSettingAction`,
+`git.unstage`, `git.restore`, `git.stashPop`, `git.stashDrop`, `context.deleteProjectCard`, `settings.triggerAction`,
 `accounts.activate`.
 
 ### Ce que les chaînes disent, par volume

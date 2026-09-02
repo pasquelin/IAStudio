@@ -161,7 +161,7 @@
         "title": "Redo the last batch of file changes",
         "description": "Replays the batch of file changes that was just undone, exactly as the Explorer does. Answers with what moved and what was refused."
       },
-      "filesCanUndoRedoFiles": {
+      "filesCanUndoRedo": {
         "title": "Read the file undo stack",
         "description": "Says whether undoing or redoing would do anything, without attempting either. It is what greys out the two menu rows before they are clicked."
       },
@@ -225,7 +225,7 @@
         "title": "Caption images",
         "description": "Has the API read the named images and writes what it sees there as the asset’s name. Only images the library already knows can be captioned, so a purely local selection answers zero."
       },
-      "assetsListMissingProjectAssets": {
+      "assetsListMissing": {
         "title": "Find assets whose file has gone",
         "description": "Among the named assets, returns those the catalogue expects a file for that is no longer there. An asset that never had a local file is never one of them, since nothing was expected of it."
       },
@@ -937,7 +937,7 @@
         "title": "Rename an account",
         "description": "Changes the label an account appears under in the studio. Neither the key nor the secret crosses this boundary, in either direction."
       },
-      "settingsTriggerSettingAction": {
+      "settingsTriggerAction": {
         "title": "Press a settings button",
         "description": "Fires one of the buttons of the settings window — show a file, open the developer tools, copy the connection command, install the bridge, reset everything. The last two leave something behind and are asked about on screen."
       },
@@ -1025,11 +1025,11 @@
         "title": "Reset a post-processing effect",
         "description": "Brings every parameter of that effect back to what the catalogue declares, without taking it out of the stack or moving it."
       },
-      "postAddEffectKeyframe": {
+      "postAddKeyframe": {
         "title": "Key a post-processing parameter",
         "description": "Opens an animation channel on that parameter where it has none, and lays a key at the head. The value given is the one to SEE, and the delta against the stack is worked out here."
       },
-      "postRemoveEffectKeyframe": {
+      "postRemoveKeyframe": {
         "title": "Take a post-processing key off",
         "description": "Removes the key standing at the head on that parameter. The channel stays, exactly as when a key is taken off from the band."
       },

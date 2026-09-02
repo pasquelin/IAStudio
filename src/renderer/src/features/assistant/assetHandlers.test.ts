@@ -155,7 +155,7 @@ describe('correcting what the library holds', () => {
     installFakeBridge({ assets: { absent } })
 
     expect(
-      await runAction('assets.listMissingProjectAssets', { assetIds: ['asset-1', 'asset-2'] }),
+      await runAction('assets.listMissing', { assetIds: ['asset-1', 'asset-2'] }),
     ).toEqual({
       ok: true,
       data: ['asset-2'],

@@ -161,7 +161,7 @@
         "title": "Refaire le dernier lot de fichiers",
         "description": "Rejoue le lot de fichiers qui venait d’être annulé, exactement comme le fait l’Explorateur. Répond avec ce qui a bougé et ce qui a été refusé."
       },
-      "filesCanUndoRedoFiles": {
+      "filesCanUndoRedo": {
         "title": "Lire la pile des gestes de fichiers",
         "description": "Dit si annuler ou refaire ferait quelque chose, sans rien tenter. C’est ce qui grise les deux entrées de menu avant qu’on ne clique dessus."
       },
@@ -225,7 +225,7 @@
         "title": "Légender des images",
         "description": "Fait lire les images nommées par l’API et écrit ce qu’elle y voit comme nom de l’asset. Seules les images que la bibliothèque connaît peuvent l’être, donc une sélection purement locale répond zéro."
       },
-      "assetsListMissingProjectAssets": {
+      "assetsListMissing": {
         "title": "Repérer les assets dont le fichier a disparu",
         "description": "Parmi les assets nommés, rend ceux dont le catalogue attend un fichier qui n’est plus là. Un asset qui n’a jamais eu de fichier local n’en est jamais, puisque rien n’était attendu de lui."
       },
@@ -937,7 +937,7 @@
         "title": "Renommer un compte",
         "description": "Change l’étiquette sous laquelle un compte apparaît dans le studio. Ni la clé ni le secret ne traversent cette frontière, dans un sens comme dans l’autre."
       },
-      "settingsTriggerSettingAction": {
+      "settingsTriggerAction": {
         "title": "Actionner un bouton des réglages",
         "description": "Déclenche l’un des boutons de la fenêtre des réglages — révéler un fichier, ouvrir les outils de développement, copier la commande de connexion, installer la passerelle, tout remettre à zéro. Les deux derniers laissent quelque chose derrière eux et sont demandés à l’écran."
       },
@@ -1025,11 +1025,11 @@
         "title": "Réinitialiser un effet de post-traitement",
         "description": "Ramène tous les paramètres de cet effet à ce que le catalogue déclare, sans le retirer de la pile ni toucher à sa place."
       },
-      "postAddEffectKeyframe": {
+      "postAddKeyframe": {
         "title": "Poser une clé sur un paramètre de post-traitement",
         "description": "Ouvre un canal d’animation sur ce paramètre s’il n’en a pas, et y pose une clé à la tête. La valeur donnée est celle qu’on veut VOIR, et l’écart avec la pile est calculé ici."
       },
-      "postRemoveEffectKeyframe": {
+      "postRemoveKeyframe": {
         "title": "Retirer une clé de post-traitement",
         "description": "Retire la clé posée à la tête sur ce paramètre. Le canal reste en place, comme lorsqu’on retire une clé depuis la bande."
       },
