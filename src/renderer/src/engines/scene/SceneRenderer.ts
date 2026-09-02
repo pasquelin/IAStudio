@@ -94,7 +94,7 @@ import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { createAnimatedStacks } from './animatedStack'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
 import { postOf, stackDraws, type PostStack } from '@shared/domain/postProcessing'
-import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { curveOf, PATH_SAMPLES, segmentAt, withMovedHandle, withMovedPoint } from './cameraPath'
 import { railOf } from './nodeRail'
 import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
@@ -4275,6 +4275,7 @@ export class SceneRenderer {
     // matrices this reads. The moved slots alone, never a regrouping: that costs 47.5 ms on
     // 40 000 nodes, which per pointer move is three dropped frames.
     this.instances.moved(this.selectedIds, id => this.objects.get(id))
+    this.previewRail()
     this.redraw()
   }
 
@@ -4333,6 +4334,40 @@ export class SceneRenderer {
     // off the body whenever the bone cannot reach that far. `TransformControls` measures the next
     // move from its own start, so this costs the gesture nothing.
     bone.getWorldPosition(this.pivot.position)
+  }
+
+  /**
+   * The rail redrawn WHILE one of its points is dragged, from where the knob now stands.
+   *
+   * 🛑 The command lands on RELEASE — one drag, one undo — so nothing else would show the curve
+   * following: a band is swept along its rail, and the knob moving alone left the surface behind
+   * until the mouse came up.
+   */
+  private previewRail(): void {
+    const picked = this.pickedPathPoint
+    const knob = this.pickedKnob()
+    const node = picked ? this.applied.get(picked.nodeId) : undefined
+    const rail = railOf(node)
+    const object = picked ? this.objects.get(picked.nodeId) : undefined
+    if (!picked || !knob || !node || !rail || !object) return
+
+    const at = plainVector(knob.position)
+    const next = picked.part
+      ? withMovedHandle(rail, picked.index, picked.part, at)
+      : withMovedPoint(rail, picked.index, at)
+
+    applyPath(object, next, this.meshColor)
+    if (node.type !== 'mesh' || node.geometry.kind !== 'ribbon' || !(object instanceof Mesh)) return
+
+    // The shape is REBUILT per pointer move, and the one it wore given straight back: a band of
+    // three hundred sections is some eight thousand vertices, against a surface that would
+    // otherwise not move at all until the gesture ended.
+    const worn = wearGeometry(
+      object,
+      this.shapes.acquire({ ...node.geometry, path: next }, node.material.tilesPerMetre),
+    )
+    if (worn) this.freeGeometry(worn)
+    else this.shapes.release(object.geometry)
   }
 
   /**
