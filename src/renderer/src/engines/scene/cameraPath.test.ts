@@ -213,6 +213,9 @@ describe('a closed run', () => {
       '8,6',
       '5,10',
     ])
+    // 🛑 And it STAYS closed: posing a point is not a way of unpicking a loop, and only the
+    // panel's own toggle opens one.
+    expect(near.closed).toBe(true)
   })
 
   /** The panel's own button poses on it too, halfway along the span that comes back round. */
