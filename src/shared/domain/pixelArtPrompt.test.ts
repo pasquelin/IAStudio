@@ -28,6 +28,20 @@ describe('the pixel-art prompt', () => {
     )
   })
 
+  /**
+   * 🛑 The clause the studio writes, never bare digits. Read as digits, the tidy-up ate the
+   * person's own nouns — « a 64x64 sprite of a knight » went out as « a of a knight » — and a
+   * prompt merely mentioning the numbers was sent with no pixel-art words at all.
+   */
+  it('leaves the words of whoever wrote them alone', () => {
+    expect(withPixelArtPrompt('a 64x64 sprite of a knight', 32, 32)).toContain(
+      'a 64x64 sprite of a knight',
+    )
+    expect(withPixelArtPrompt('a 32x32 chessboard', 32, 32)).toBe(
+      'a 32x32 chessboard, pixel art, 32x32 sprite, hard edges, no anti-aliasing',
+    )
+  })
+
   /** A resize between two runs: the grid is REPLACED, never stacked — two would name neither. */
   it('replaces a grid the document no longer measures', () => {
     const sent = withPixelArtPrompt(withPixelArtPrompt('a knight', 32, 32), 64, 64)

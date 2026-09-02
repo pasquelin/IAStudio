@@ -63,8 +63,8 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
    * per opening, duplicates, and a list that moves while it is being read.
    */
   const models = useMemo(() => (onGrid ? pixelArtFirst(listed) : listed), [listed, onGrid])
-  // Memoised for the same reason `refusalOf` is, twenty lines down: an inline arrow hands the
-  // picker a new function per render, and every row memo with it.
+  // Memoised for the caller's sake, not the rows': `ModelPickerRow` is handed the STRING and
+  // compares it by value, so no row memo turns on this identity.
   const promotedOf = useCallback(
     (one: ModelSummary) =>
       onGrid && suitsPixelArt(one) ? t('generation.suitsPixelArt') : undefined,

@@ -1298,7 +1298,6 @@
       "rotation": "Rotation, in degrees",
       "fontSize": "Type size",
       "colour": "Colour, as #rrggbb",
-      "color": "Colour",
       "pixelArtEnabled": "Pixel art mode",
       "columns": "Columns",
       "rows": "Rows",

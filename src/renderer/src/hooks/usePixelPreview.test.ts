@@ -64,10 +64,34 @@ describe('usePixelPreview', () => {
     renderHook(() => usePixelPreview(DOCUMENT, surfaceOf(draws), 4, 4, 8))
     await waitFor(() => expect(draws).toHaveLength(1))
 
-    const port = { restore: () => true, lost: () => {} }
-    act(() => useCanvases.getState().runCommand(DOCUMENT, paintPixels('patch-1', port)))
+    act(() =>
+      useCanvases
+        .getState()
+        .runCommand(DOCUMENT, paintPixels('patch-1', { restore: () => true, lost: () => {} })),
+    )
 
     await waitFor(() => expect(draws).toHaveLength(2), { timeout: 2000 })
+  })
+
+  /**
+   * 🛑 Past `PREVIEW_MAX_CELLS` the frame draws an `EmptyState` and no canvas at all, so the retry
+   * above could never be satisfied — a whole-document extraction every 120 ms, panel open, for
+   * ever. Measured on the grid Alban was looking at: 2048 cells a side.
+   */
+  it('asks for nothing at all when there is no canvas to draw into', async () => {
+    let asked = 0
+    drop = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({
+        flattenBitmap: async () => {
+          asked += 1
+          return bitmap()
+        },
+      }),
+    )
+    renderHook(() => usePixelPreview(DOCUMENT, surfaceOf([]), 0, 0, 16))
+
+    await new Promise(resolve => setTimeout(resolve, 500))
+    expect(asked).toBe(0)
   })
 
   /**

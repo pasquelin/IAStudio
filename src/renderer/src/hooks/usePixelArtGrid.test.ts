@@ -5,9 +5,9 @@ import { installCanvas } from '@/stores/canvas-fixtures'
 import { usePixelArtGrid } from './usePixelArtGrid'
 
 /**
- * 🛑 The one case worth its own file: composing the answer without `useShallow` gave React a new
- * object on every read, and this very render threw « Maximum update depth exceeded » at 54.
- * Every gate was green on it — no suite mounted the generator over a document on a grid.
+ * 🛑 The one case worth its own file: without `useShallow` this very render throws « Maximum
+ * update depth exceeded », and every gate was green on it — no suite mounted the generator over
+ * a document on a grid. The count is in the hook.
  */
 describe('the grid of the image in front', () => {
   it('answers the artwork in cells, and settles', () => {
@@ -15,7 +15,7 @@ describe('the grid of the image in front', () => {
 
     const { result } = renderHook(() => usePixelArtGrid())
 
-    expect(result.current).toEqual({ columns: 32, rows: 16 })
+    expect(result.current).toEqual({ cell: 16, columns: 32, rows: 16 })
   })
 
   it('answers nothing for a document off the grid', () => {

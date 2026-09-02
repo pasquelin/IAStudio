@@ -22,6 +22,10 @@ export function usePixelPreview(
   cell: number,
 ): void {
   useEffect(() => {
+    // 🛑 No canvas is mounted past `PREVIEW_MAX_CELLS`, so the retry below would never be
+    // satisfied: a full-document extraction every 120 ms, for as long as the panel stays open.
+    if (columns === 0 || rows === 0) return
+
     let timer: ReturnType<typeof setTimeout> | null = null
     let live = true
     // Nothing is on screen yet, so an empty answer is worth asking again for: a document opens
