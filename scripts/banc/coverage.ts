@@ -104,6 +104,12 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'canvas.setPixelArt': ['68.1', '68.9'],
   // 🛑 68.7 is a DECLARED blind spot in one direction: its own decor lays the cell with
   // `canvas.drawPixels`, so what the oracle reads is the ERASURE, which the decor never does.
+  //
+  // 🛑 A second one, and it covers the whole rank: `canvasSurface`'s stub answers YES to every
+  // call the handler lets through. A layer nobody answers to is refused upstream, so that one IS
+  // measured — but a group, padlocked pixels, a caption, a shape and cells outside the marquee
+  // are refused by the ENGINE, and no rank can reach those. Faking them would put the studio's
+  // rules in the bench, which is the one thing a port may not do.
   'canvas.drawPixels': ['68.3', '68.4', '68.5', '68.6', '68.7'],
   'canvas.crop': ['51.7'],
   'canvas.flipOrRotate': ['51.8'],

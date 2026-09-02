@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { assistantAction, type ActionName } from '@shared/domain/assistant'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import { EMBEDDED_FONTS } from '@shared/domain/font'
@@ -13,6 +13,8 @@ import {
   type CanvasState,
 } from '@/engines/canvas/canvasState'
 import { MAX_SIDES, MIN_SIDES } from '@/engines/canvas/shapeGeometry'
+import { holdCanvas } from '@/features/image/canvasHosts'
+import { canvasHostStub } from '@/stores/canvas-fixtures'
 import { installIn } from '@/stores/document-fixtures'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
@@ -106,6 +108,12 @@ describe('what a layer stands at', () => {
 })
 
 describe('the pixel-art grid, driven by value', () => {
+  let drop = (): void => {}
+  afterEach(() => {
+    drop()
+    drop = (): void => {}
+  })
+
   const onGrid = (cell: number): void =>
     installIn(
       canvasStore,
@@ -178,6 +186,56 @@ describe('the pixel-art grid, driven by value', () => {
     expect(
       await runAction('canvas.drawPixels', { shape: 'points', cells: ['99,99'], color: '#ff0000' }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  // 🛑 One count alone was DROPPED and answered `ok`: the model then placed its cells on a grid
+  // of the document's own size, believing it had asked for 32.
+  it('refuses one count of a grid without the other', async () => {
+    expect(await runAction('canvas.setPixelArt', { enabled: true, columns: 32 })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
+  })
+
+  /**
+   * By id OR by NAME, as every other layer gesture of this file: `canvas.state` answers both, and
+   * a name copied out of it came back « no such layer ».
+   */
+  it('finds the layer a call names, and says so when nothing answers to it', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', {
+        shape: 'points',
+        cells: ['1,1'],
+        color: '#ff0000',
+        layerId: 'Nowhere',
+      }),
+    ).toMatchObject({ ok: false, refusal: 'notFound' })
+  })
+
+  // The three shapes the points case does not reach: a rectangle hollow or filled, a line between
+  // two corners, and a fill falling back on the whole layer when no box is named.
+  it('lays each shape on the cells it covers', async () => {
+    onGrid(16)
+    const laid: number[] = []
+    drop = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({
+        paintCells: (_layer, rects) => {
+          laid.push(rects.length)
+          return true
+        },
+      }),
+    )
+
+    const red = { color: '#ff0000' }
+    await runAction('canvas.drawPixels', { shape: 'rectangle', x: 0, y: 0, toX: 3, toY: 3, ...red })
+    const filled = { shape: 'rectangle', x: 0, y: 0, toX: 3, toY: 3, filled: true, ...red }
+    await runAction('canvas.drawPixels', filled)
+    await runAction('canvas.drawPixels', { shape: 'line', x: 0, y: 0, toX: 5, toY: 5, ...red })
+    await runAction('canvas.drawPixels', { shape: 'fill', ...red })
+
+    expect(laid).toEqual([12, 16, 6, 32 * 32])
   })
 
   // 🛑 `Number('')` is zero, so a bare "3" used to land on row nought without a word said.

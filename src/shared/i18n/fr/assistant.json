@@ -247,7 +247,7 @@
       },
       "canvasSetPixelArt": {
         "title": "Régler le mode pixel art",
-        "description": "Met l’image devant sur une grille de pixel art, ou l’en retire. Avec un nombre de colonnes et de lignes, redimensionne le document pour que l’œuvre mesure exactement cela en cellules. 🛑 Un redimensionnement efface l’historique des pixels — les traits déjà posés restent, mais ⌘Z ne les défait plus."
+        "description": "Met l’image devant sur une grille de pixel art, ou l’en retire. Avec un nombre de colonnes et de lignes, redimensionne le document pour que l’œuvre mesure exactement cela en cellules. 🛑 Un redimensionnement efface l’historique des pixels — les traits déjà posés restent, mais ⌘Z ne les défait plus. Redimensionner et poser la grille sont DEUX annulations : un premier ⌘Z retire la grille et laisse la taille."
       },
       "canvasDrawPixels": {
         "title": "Dessiner des pixels",

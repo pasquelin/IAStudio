@@ -32,7 +32,7 @@ import {
   localShape,
   SHAPE_INK,
 } from '@/engines/canvas/shapeGeometry'
-import { cellRect, cellsOfLine, cellsOfRect, cellsSpanning } from '@/engines/canvas/pixelGrid'
+import { cellRect, cellsOfLine, cellsOfRect, gridOf } from '@/engines/canvas/pixelGrid'
 import { canvasHost } from '@/features/image/canvasHosts'
 import type { Point, Size } from '@/engines/core/geometry'
 import {
@@ -176,6 +176,7 @@ function readState(): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_IMAGE)
 
+  const grid = gridOf(open.state)
   return {
     ok: true,
     data: {
@@ -185,15 +186,7 @@ function readState(): ActionOutcome {
       dpi: open.state.dpi,
       // Derived rather than stored, and the only thing a client needs in order to place a cell:
       // asked to work it out from a size and a cell, a model gets it wrong one time in three.
-      ...(open.state.pixelCell === null
-        ? {}
-        : {
-            pixelArt: {
-              cell: open.state.pixelCell,
-              columns: cellsSpanning(open.state.width, open.state.pixelCell),
-              rows: cellsSpanning(open.state.height, open.state.pixelCell),
-            },
-          }),
+      ...(grid === null ? {} : { pixelArt: { cell: open.state.pixelCell, ...grid } }),
       activeLayerId: open.state.activeLayerId,
       guides: open.state.guides,
       // Flattened: a client that had to walk a tree to find a layer id would walk it wrong the
@@ -691,6 +684,11 @@ function setPixelArt(input: Record<string, unknown>): ActionOutcome {
   const columns = numberOf(input, 'columns')
   const rows = numberOf(input, 'rows')
 
+  // 🛑 Both counts or neither: one alone was DROPPED and answered `ok`, so a model asking for
+  // « 32 columns » got the document's own size back and then placed cells on a grid of 512.
+  if ((columns === null) !== (rows === null))
+    return refused('badInput', 'a grid wants "columns" AND "rows", in cells — or neither of them')
+
   return edit(() => {
     const sized =
       enabled && columns !== null && rows !== null
@@ -767,8 +765,7 @@ function drawPixels(input: Record<string, unknown>): ActionOutcome {
   if (!erase && color === null)
     return refused('badInput', `"${written ?? ''}" is not a colour — write one as "#rrggbb"`)
 
-  const columns = cellsSpanning(open.state.width, cell)
-  const rows = cellsSpanning(open.state.height, cell)
+  const { columns, rows } = gridOf(open.state) ?? { columns: 0, rows: 0 }
   const asked = shapeCells(shape, input, columns, rows)
   if (asked === null || asked.length === 0) return refused('badInput', PIXEL_INPUT[shape])
 
@@ -778,8 +775,14 @@ function drawPixels(input: Record<string, unknown>): ActionOutcome {
   if (inside.length === 0)
     return refused('badInput', `no cell of that lands on a grid of ${columns} by ${rows}`)
 
+  // By id OR by name, as `editLayer` twenty lines up: `canvas.state` answers both, and a model
+  // that copied the NAME out of it was told the layer did not exist.
+  const named = textOf(input, 'layerId')
+  const layer = named === null ? null : layerAimed(open.state, named)
+  if (named !== null && !layer) return refused('notFound', noLayer(named))
+
   const painted = canvasHost(open.documentId)?.paintCells(
-    textOf(input, 'layerId'),
+    layer?.id ?? null,
     inside.map(at => cellRect(at, cell)),
     color,
   )

@@ -404,7 +404,9 @@ export const CANVAS_ACTIONS: readonly AssistantAction[] = [
       CELL_AT('toX'),
       CELL_AT('toY'),
       { key: 'filled', kind: 'boolean', labelKey: 'assistant.fields.filled', required: false },
-      { key: 'color', kind: 'text', labelKey: 'assistant.fields.color', required: false },
+      // `#rrggbb` at the SCHEMA, as the twelve other colours of the registry: as text, « rouge »
+      // crossed `validatesInput` and came back refused from the handler, one round too late.
+      { key: 'color', kind: 'color', labelKey: 'assistant.fields.colour', required: false },
       { key: 'erase', kind: 'boolean', labelKey: 'assistant.fields.erase', required: false },
       { ...LAYER, required: false },
     ],

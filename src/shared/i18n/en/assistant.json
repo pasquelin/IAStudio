@@ -247,7 +247,7 @@
       },
       "canvasSetPixelArt": {
         "title": "Set pixel art mode",
-        "description": "Puts the image in front on a pixel-art grid, or takes it off one. Given a count of columns and rows, resizes the document so the artwork measures exactly that in cells. 🛑 A resize drops the pixel history — strokes already laid stay, but ⌘Z no longer undoes them."
+        "description": "Puts the image in front on a pixel-art grid, or takes it off one. Given a count of columns and rows, resizes the document so the artwork measures exactly that in cells. 🛑 A resize drops the pixel history — strokes already laid stay, but ⌘Z no longer undoes them. Resizing and laying the grid are TWO undos: the first ⌘Z takes the grid off and leaves the size."
       },
       "canvasDrawPixels": {
         "title": "Draw pixels",
