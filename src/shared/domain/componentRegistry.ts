@@ -76,8 +76,10 @@ const PLAYER: ComponentDescriptor = {
   titleKey: 'game.components.Player.title',
   descriptionKey: 'game.components.Player.description',
   category: 'gameplay',
-  fields: [],
-  defaults: {},
+  // `from` is the module FILE these nodes were read out of, kept so the studio can offer to read
+  // them again. Empty for a module built in the scene and never filed.
+  fields: [textField('from')],
+  defaults: { from: '' },
 }
 
 const HEALTH: ComponentDescriptor = {

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import { EmptyState } from '@/components/EmptyState'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
+import { leaveProject } from '@/helpers/leaveProject'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 import { wornModelDress } from '@/features/material/modelDress'
@@ -87,15 +88,4 @@ export function GameWindow() {
       {report !== null && <GameWindowDebug report={report} />}
     </div>
   )
-}
-
-/** The unsubscribe the connection answers with, awaited where a teardown cannot be async. */
-async function leaveProject(leaving: Promise<() => void>): Promise<void> {
-  // Swallowed with a reason: the window is going away, and a project read that never answered has
-  // nothing left to unsubscribe from.
-  try {
-    ;(await leaving)()
-  } catch {
-    /* the connection never landed */
-  }
 }

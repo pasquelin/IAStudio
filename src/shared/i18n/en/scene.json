@@ -87,6 +87,13 @@
     "removePathPoint": "Remove this point",
     "removePathPointHint": "Takes the point off the path. A path always keeps its last two points"
   },
+  "playerWindow": {
+    "title": "Player module",
+    "file": "Save as a module",
+    "fileHint": "Writes this module into a file of the project, which the scene remembers",
+    "reading": "Reading the module…",
+    "unreadable": "This module could not be read"
+  },
   "objects": {
     "add": "Add an object",
     "addHint": "Puts a player, a camera, a rail, a sprite or some text into the scene",

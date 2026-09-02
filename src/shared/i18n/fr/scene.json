@@ -87,6 +87,13 @@
     "removePathPoint": "Retirer ce point",
     "removePathPointHint": "Retire le point du chemin. Un chemin garde toujours ses deux derniers points"
   },
+  "playerWindow": {
+    "title": "Module joueur",
+    "file": "Enregistrer comme module",
+    "fileHint": "Écrit ce module dans un fichier du projet, que la scène retiendra",
+    "reading": "Lecture du module…",
+    "unreadable": "Ce module n’a pas pu être lu"
+  },
   "objects": {
     "add": "Ajouter un objet",
     "addHint": "Poser un joueur, une caméra, un rail, un sprite ou du texte dans la scène",

@@ -165,3 +165,31 @@ export function bringsSecondPlayer(
 ): boolean {
   return allPartsOf(nodes).length > 0 && incoming.some(isPlayerModule)
 }
+
+/**
+ * The module's own nodes, in the order they hang — what a module FILE holds, and nothing else of
+ * the scene around it. `subtreesOf` keeps the roots it was named, so the module opens the list.
+ */
+export function playerModuleFileOf(nodes: readonly SceneNode[]): readonly SceneNode[] | null {
+  const module = playerPartsOf(nodes)?.module
+  return module ? subtreesOf(nodes, [module.id]) : null
+}
+
+/** The file these nodes were read out of, or `null` for a module built in the scene and never filed. */
+export function playerModuleFrom(nodes: readonly SceneNode[]): string | null {
+  const held = playerPartsOf(nodes)?.module.components?.find(one => one.type === 'Player')
+  return typeof held?.from === 'string' && held.from !== '' ? held.from : null
+}
+
+/** The same nodes, marked with the file they now come from — what filing a module writes back. */
+export function withPlayerModuleFrom(
+  nodes: readonly SceneNode[],
+  from: string,
+): readonly SceneNode[] {
+  return nodes.map(node => {
+    const held = node.components?.find(one => one.type === 'Player')
+    return held
+      ? { ...node, components: withComponent(node.components ?? [], { ...held, from }) }
+      : node
+  })
+}

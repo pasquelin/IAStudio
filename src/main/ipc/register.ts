@@ -44,6 +44,7 @@ import { registerFileInfoWindow } from '@main/window/fileInfo'
 import { registerHelpWindows } from '@main/window/help'
 import { registerCharacterWindow } from '@main/window/characterWindow'
 import { registerGameWindow } from '@main/window/gameWindow'
+import { registerPlayerModuleWindow } from '@main/window/playerModuleWindow'
 import { registerMirrorWindow } from '@main/window/mirror'
 import { registerNewDocumentWindow } from '@main/window/newDocument'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
@@ -55,6 +56,7 @@ export function registerIpc(services: Services): void {
   registerMirrorWindow()
   registerGameWindow()
   registerCharacterWindow()
+  registerPlayerModuleWindow()
   registerHelpWindows()
   registerFileInfoWindow()
   registerNewDocumentWindow()

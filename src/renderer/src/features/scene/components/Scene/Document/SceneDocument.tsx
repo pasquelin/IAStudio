@@ -18,6 +18,8 @@ import { isSnapping } from '@shared/domain/snap'
 import { SceneSnapBar } from '../Snap/SceneSnapBar'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
+import { isPlayerModule } from '@/engines/scene/playerModule'
+import { fileModuleOf } from '@/features/player/fileModule'
 import { movesToCommand } from '@/engines/scene/animationCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
@@ -210,6 +212,8 @@ function openNodeMenu(documentId: string, nodeId: string | null): void {
     run: command => runSceneCommand(documentId, command),
     onToggleVisible: () => toggleNodeVisible(documentId, node.id),
     onSheet: scene.animation.sheet.includes(nodeId),
+    // Only on the module itself: the row acts on what this node IS, like the two carve ones.
+    ...(isPlayerModule(node) ? { onFileAsModule: () => void fileModuleOf(documentId) } : {}),
   })
 }
 

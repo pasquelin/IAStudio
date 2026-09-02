@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { PLAYER_MODULE_FORMAT, PLAYER_MODULE_SEGMENT } from '@shared/domain/playerModuleFile'
 import { projectName } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbChunksOf } from '@shared/domain/glbContainer'
@@ -64,6 +65,7 @@ import {
   parseSaveLayered,
   parseSaveMesh,
   parseSavePicture,
+  parseSavePlayerModule,
   parseGame,
   parseSaveTexture,
   parseSearchTerm,
@@ -504,7 +506,6 @@ export function registerProjectHandlers({
           type: 'audio',
           extension: WAV_EXTENSION,
           ...(probe ? { probe } : {}),
-          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
         },
         request.wav,
       ),
@@ -576,6 +577,24 @@ export function registerProjectHandlers({
     // The same asset, edited — what ⌘S means on a document opened from one. `replaceBytes` keeps
     // the id, the name and the tags, and moves the extension with the bytes.
     return landPicture(request, png, PNG_EXTENSION, probe)
+  })
+
+  handle(CHANNELS.assetsSavePlayerModule, async (_event, value) => {
+    const request = parseSavePlayerModule(value)
+
+    // `.player.gltf`, so the double-click that opens a module tells itself from the one that
+    // puts a mesh into a scene. The extension a reader needs is still `.gltf`.
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: `${request.name}${PLAYER_MODULE_SEGMENT}`,
+          type: 'mesh',
+          extension: PLAYER_MODULE_FORMAT,
+        },
+        Buffer.from(request.gltf, 'utf8'),
+      ),
+    )
   })
 
   handle(CHANNELS.assetsSaveLayered, async (_event, value) => {

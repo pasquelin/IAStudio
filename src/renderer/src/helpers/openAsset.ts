@@ -5,7 +5,13 @@ import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { documentById, documentForAsset, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
-import { editorIntent, opensAsCharacter, pixelEditorIntent, type AssetIntent } from './assetIntents'
+import {
+  editorIntent,
+  opensAsCharacter,
+  opensAsPlayerModule,
+  pixelEditorIntent,
+  type AssetIntent,
+} from './assetIntents'
 
 /**
  * What opening an asset does — double-click or Enter: a tab of its own, in the space that edits
@@ -27,9 +33,13 @@ import { editorIntent, opensAsCharacter, pixelEditorIntent, type AssetIntent } f
  * but `openProjectFile` reports the gesture back to a caller that has to say what happened.
  */
 export async function openAsset(asset: Asset, into?: AssetIntent): Promise<boolean> {
-  // A character is edited in a window of its own, on the FILE — never as one node of a scene.
-  // Only where nobody named a destination: « Send to », the viewport drop and `node.addModel`
-  // all pass an intent, and each still puts a model in a scene.
+  // Both are edited in a window of their own, on the FILE — never as one node of a scene. Only
+  // where nobody named a destination: « Send to », the viewport drop and `node.addModel` all
+  // pass an intent, and each still puts a model in a scene.
+  if (!into && opensAsPlayerModule(asset)) {
+    await getBridge()?.playerModuleWindow.open(asset.id)
+    return true
+  }
   if (!into && opensAsCharacter(asset)) {
     await getBridge()?.characterWindow.open(asset.id)
     return true

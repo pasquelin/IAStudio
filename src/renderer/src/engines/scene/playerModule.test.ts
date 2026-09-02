@@ -4,10 +4,14 @@ import { playerModuleNodes } from './nodeFactory'
 import { cameraNode, groupNode } from './nodeFactory'
 import {
   leavesPlayerModule,
+  playerModuleFileOf,
+  playerModuleFrom,
   playerPartsOf,
   tearsPlayerApart,
   withBoundPlayerArm,
+  withPlayerModuleFrom,
 } from './playerModule'
+import { meshNode } from './scene-fixtures'
 import type { SceneNode } from './sceneState'
 
 const armOf = (nodes: readonly SceneNode[], moduleId: string) =>
@@ -168,5 +172,39 @@ describe('a node standing between the module and what it requires', () => {
     const mesh = nodes.find(node => node.name === 'Mesh')
 
     expect(tearsPlayerApart(nodes, [mesh?.id ?? ''])).toBe(false)
+  })
+})
+
+/**
+ * A module travels as a glTF of its own: the same five nodes, read back by the same door the
+ * scene uses. The scene keeps the nodes AND a trace of the file — a strict reader opens both.
+ */
+describe('a module written as a file of its own', () => {
+  it('carries the module and nothing else of the scene', () => {
+    const module = playerModuleNodes()
+    const scene = [meshNode('floor'), ...module]
+
+    // The SET and the parenting are what a file carries; `subtreesOf` walks its own order.
+    expect(
+      playerModuleFileOf(scene)
+        ?.map(node => node.name)
+        .sort(),
+    ).toEqual(module.map(node => node.name).sort())
+    expect(playerModuleFileOf(scene)?.[0]?.name).toBe('Player_Module')
+  })
+
+  it('answers nothing for a scene that holds no module', () => {
+    expect(playerModuleFileOf([meshNode('floor')])).toBeNull()
+  })
+
+  /** The trace rides in the `Player` component, where every other component already travels. */
+  it('remembers the file its nodes were read out of', () => {
+    const filed = withPlayerModuleFrom(playerModuleNodes(), 'modules/Heros.player.gltf')
+
+    expect(playerModuleFrom(filed)).toBe('modules/Heros.player.gltf')
+  })
+
+  it('has no trace before it is filed', () => {
+    expect(playerModuleFrom(playerModuleNodes())).toBeNull()
   })
 })

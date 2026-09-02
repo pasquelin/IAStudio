@@ -237,6 +237,7 @@ export type Channels = {
   assetsAbsent: 'assets:absent'
   assetsSaveAudio: 'assets:save-audio'
   assetsSavePicture: 'assets:save-picture'
+  assetsSavePlayerModule: 'assets:save-player-module'
   assetsSaveLayered: 'assets:save-layered'
   /** Writes a character's own `.glb` back, its skeleton in it. See `SaveMeshRequest`. */
   assetsSaveMesh: 'assets:save-mesh'
@@ -341,6 +342,7 @@ export type Channels = {
   characterWindowOpen: 'character:open-window'
   /** Opens the game window, or reveals the one already open. See `GAME_ROUTE`. */
   gameWindowOpen: 'game:open-window'
+  playerModuleWindowOpen: 'player:open-module-window'
   /** Closes it. What a Stop pressed in the studio does — the window is the main process's. */
   gameWindowClose: 'game:close-window'
 
@@ -493,6 +495,7 @@ export const CHANNELS: Channels = {
   assetsAbsent: 'assets:absent',
   assetsSaveAudio: 'assets:save-audio',
   assetsSavePicture: 'assets:save-picture',
+  assetsSavePlayerModule: 'assets:save-player-module',
   assetsSaveLayered: 'assets:save-layered',
   assetsSaveMesh: 'assets:save-mesh',
   assetsSaveAnimation: 'assets:save-animation',
@@ -591,6 +594,7 @@ export const CHANNELS: Channels = {
   mirrorOpen: 'mirror:open',
   characterWindowOpen: 'character:open-window',
   gameWindowOpen: 'game:open-window',
+  playerModuleWindowOpen: 'player:open-module-window',
   gameWindowClose: 'game:close-window',
   helpOpen: 'help:open',
 
@@ -667,6 +671,19 @@ export type SaveAnimationRequest = SaveRequestBase & { glb: Uint8Array }
  */
 export type SaveLayeredRequest = SaveRequestBase & {
   document: OraDocument
+}
+
+/**
+ * A player module on its way into the project as a glTF of its own — see
+ * `StudioBridge['assets']['savePlayerModule']`.
+ *
+ * Text and not bytes, unlike its neighbours: what the renderer holds is a glTF document, and
+ * `JSON.stringify` on this side is what the main process would otherwise redo on the other.
+ */
+export type SavePlayerModuleRequest = {
+  name: string
+  /** The module as a glTF document, already serialised — see `savePlayerModule`. */
+  gltf: string
 }
 
 /**
@@ -1782,6 +1799,11 @@ export type StudioBridge = {
      */
     savePicture: (request: SavePictureRequest) => Promise<Asset>
     /**
+     * Files a player module as a glTF of its own. 🛑 Always a NEW file: nothing here replaces the
+     * one a module was filed as before, so filing twice leaves the first behind.
+     */
+    savePlayerModule: (request: SavePlayerModuleRequest) => Promise<Asset>
+    /**
      * Puts a LAYERED picture into the project, as an OpenRaster container.
      *
      * Unlike `savePicture` it may overwrite: the container holds the whole stack, so writing it
@@ -2247,6 +2269,13 @@ export type StudioBridge = {
    */
   mirror: {
     open: () => Promise<void>
+  }
+  /**
+   * The module window. Same line as `mirror`: what it EDITS it reads for itself off the file the
+   * route names, and the only thing this side owns is opening the window on one.
+   */
+  playerModuleWindow: {
+    open: (assetId: string) => Promise<void>
   }
   /**
    * The skeleton window. Same line as `gameWindow`: what it EDITS travels between the windows on

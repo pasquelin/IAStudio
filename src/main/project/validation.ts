@@ -38,6 +38,7 @@ import type {
   SaveLayeredRequest,
   SaveMeshRequest,
   SavePictureRequest,
+  SavePlayerModuleRequest,
   SaveTextureRequest,
 } from '@shared/ipc'
 import { assetId } from '@main/assets/validation'
@@ -295,6 +296,17 @@ export function parseSavePicture(value: unknown): SavePictureRequest {
  * layers — and refusing it would lose the half of the document the standard cannot carry.
  */
 const MAX_STUDIO_STATE = 64 * 1024 * 1024
+
+/** The studio state's ceiling rather than a picture's: a mesh swapped in for the stand-in grows one. */
+const savePlayerModule = z.object({
+  name: z.string().trim().min(1).max(200),
+  derivedFrom: assetId.optional(),
+  gltf: z.string().min(1).max(MAX_STUDIO_STATE),
+})
+
+export function parseSavePlayerModule(value: unknown): SavePlayerModuleRequest {
+  return savePlayerModule.parse(value)
+}
 
 const oraBase = {
   name: z.string().max(200),
