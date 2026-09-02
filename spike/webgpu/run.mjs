@@ -23,7 +23,18 @@ async function main() {
     configFile: false,
     // Port LIBRE, jamais fixe : une fenetre du banc restee ouverte tenait le port, et le
     // lancement suivant mourait au demarrage en laissant croire a un plantage du banc.
-    server: { port: 0, strictPort: false, fs: { allow: [ROOT] } },
+    server: {
+      port: 0,
+      strictPort: false,
+      fs: { allow: [ROOT] },
+      // 🛑 L'ISOLATION CROSS-ORIGIN, sans quoi `performance.now()` est clampé à 100 µs et une
+      // mesure sous la milliseconde n'existe pas. Isolée, la page retombe à ~5 µs. Tout est servi
+      // par ce serveur, même origine, donc `require-corp` ne bloque rien.
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+      },
+    },
     logLevel: 'warn',
     // Le banc du chantier C importe le VRAI moteur : les alias du dépôt, et ses deux constantes.
     resolve: {

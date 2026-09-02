@@ -1,0 +1,16 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Résolution de l'horloge</title>
+<body>
+  <div id="stage"></div>
+  <div id="log">démarrage…</div>
+  <script type="module">
+    import { runClockProbe } from './clockProbe.ts'
+    const log = document.querySelector('#log')
+    window.__done = false
+    runClockProbe().then(report => {
+      window.__report = report; window.__done = true
+      log.textContent = JSON.stringify(report.results[0])
+    })
+  </script>
+</body>
