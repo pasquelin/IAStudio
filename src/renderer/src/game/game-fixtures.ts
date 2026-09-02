@@ -31,7 +31,7 @@ export function drawnBy(over: Partial<SceneDraw> = {}): SceneDraw {
  * read the engine off the registry, and an engine without these two refused every still and every
  * export the bench ever asked for — « the scene viewport gave back no still », measured 2026-09-01.
  */
-const PNG_HEAD = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+export const PNG_HEAD = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
 /**
  * The registry holds a whole `SceneRenderer`, and a game asks it for three methods. Standing in

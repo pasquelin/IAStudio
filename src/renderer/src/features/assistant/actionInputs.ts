@@ -75,3 +75,30 @@ export function textsOf(input: Record<string, unknown>, key: string): string[] {
     ? value.filter((item): item is string => typeof item === 'string')
     : []
 }
+
+/**
+ * What a WRITE answers: the fields of `held` the call named, as they now stand, and only those —
+ * see `movedOf` for the measure behind it. The whole object is many times the room there is.
+ */
+export function namedOf<T extends object>(input: Record<string, unknown>, held: T): Partial<T> {
+  // `Object.fromEntries` widens to `Record<string, unknown>`; the keys come from `held` itself.
+  return Object.fromEntries(
+    Object.entries(held).filter(([key]) => input[key] !== undefined),
+  ) as Partial<T>
+}
+
+/** The same for a field COMPOSED of several: `positionX` names `position`, `roughnessMin` a range. */
+export function composedNamedOf<T extends object, K extends keyof T & string>(
+  input: Record<string, unknown>,
+  held: T,
+  keys: readonly K[],
+  suffixes: readonly string[],
+  stemOf: (key: K) => string = key => key,
+): Partial<T> {
+  // Same widening as `namedOf`.
+  return Object.fromEntries(
+    keys
+      .filter(key => suffixes.some(suffix => input[`${stemOf(key)}${suffix}`] !== undefined))
+      .map((key): [string, unknown] => [key, held[key]]),
+  ) as Partial<T>
+}

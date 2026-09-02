@@ -462,7 +462,7 @@ export const RIG_HANDLERS: ActionHandlers = {
       state => (state.rig ? setCharacterRig(null) : null),
       'this character carries no rig to clear — rig.state answers "rigged", and rig.fit builds one',
     ),
-  'rig.hands': () =>
+  'rig.configureHands': () =>
     editCharacter(
       state => (state.rig ? addCharacterHands() : null),
       'this character carries no rig to add hands to — rig.fit builds one first',
@@ -507,7 +507,7 @@ export const RIG_HANDLERS: ActionHandlers = {
         : renameCharacterBone(bone, name)
     }, '"bone" must name a bone of this character and "name" must be free of the others'),
 
-  'bone.role': input =>
+  'bone.setRole': input =>
     editCharacter(state => {
       const bone = boneOf(state, textOf(input, 'bone'))
       const role: HumanoidRole | null = oneOf(input, 'role', HUMANOID_ROLES)

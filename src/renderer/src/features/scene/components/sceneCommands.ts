@@ -1,7 +1,6 @@
 import type { CommandId } from '@shared/domain/command'
 import type { CsgOperation } from '@shared/domain/csg'
 import { canInvertCarve, canNegate, canSeparate } from '@/engines/csg/carve'
-import { canRedo, canUndo } from '@/engines/core/history'
 import {
   addNodes,
   carveNodes,
@@ -21,11 +20,14 @@ import {
   removeCameraShot,
   takeOffAnimationSheet,
 } from '@/engines/scene/animationCommands'
-import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
+import { nodeById, rootsOf, selectedNodes, type SceneNode } from '@/engines/scene/sceneState'
+import { newId } from '@/helpers/ids'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
-import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
+import type { CommandAnswer } from '@/services/commandBus'
+import { runHistoryCommand } from '@/services/historyCommand'
+import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 /**
@@ -113,7 +115,15 @@ const OPERATION_OF: Record<'scene.carve' | 'scene.weld' | 'scene.intersect', Csg
   'scene.intersect': 'intersect',
 }
 
-export function runSceneCommand(documentId: string, command: CommandId): boolean {
+/**
+ * What a command that CREATES answers — see `publishCommand`: the ids of what it made, roots only,
+ * a subtree copied whole being one thing to the hand that asked.
+ */
+const madeOf = (copies: readonly SceneNode[]): CommandAnswer => ({
+  nodeIds: rootsOf(copies).map(node => node.id),
+})
+
+export function runSceneCommand(documentId: string, command: CommandId): CommandAnswer {
   const store = useScenes.getState()
   const { nodes, selectedIds } = sceneOf(store, documentId)
   const picked = selectedNodes(nodes, selectedIds)
@@ -145,9 +155,12 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
       if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
       return true
 
-    case 'scene.duplicate':
-      if (picked.length > 0) store.runCommand(documentId, addNodes(copiesOf(nodes, picked)))
-      return true
+    case 'scene.duplicate': {
+      if (picked.length === 0) return true
+      const copies = copiesOf(nodes, picked)
+      store.runCommand(documentId, addNodes(copies))
+      return madeOf(copies)
+    }
 
     case 'scene.copy':
       if (picked.length > 0) useSceneClipboard.getState().copy(copiesOf(nodes, picked))
@@ -163,13 +176,17 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
       // Copied again on the way out: pasting twice must not put the same ids in twice.
       const held = useSceneClipboard.getState().nodes
       if (held.length === 0) return true
-      store.runCommand(documentId, addNodes(rootedIn(copiesOf(held, held), nodes)))
-      return true
+      const pasted = rootedIn(copiesOf(held, held), nodes)
+      store.runCommand(documentId, addNodes(pasted))
+      return madeOf(pasted)
     }
 
-    case 'scene.group':
-      if (picked.length > 0) store.runCommand(documentId, groupNodes(picked))
-      return true
+    case 'scene.group': {
+      if (picked.length === 0) return true
+      const id = newId()
+      store.runCommand(documentId, groupNodes(picked, id))
+      return { nodeIds: [id] }
+    }
 
     // Marks the selection as tools for the next fold — Roblox's Negate. Not a fold itself, so it
     // sits above the three and asks only that something carry a shape.
@@ -210,19 +227,9 @@ export function runSceneCommand(documentId: string, command: CommandId): boolean
      * 🛑 `false` on an empty stack, which is what a caller needs: answered `ok` regardless, a
      * model sent nine undos in a row and took the whole decor apart (bench pass, 2026-08-26).
      */
-    case 'scene.undo': {
-      if (!canUndo(sceneHistoryOf(store, documentId))) return false
-
-      store.undo(documentId)
-      return true
-    }
-
-    case 'scene.redo': {
-      if (!canRedo(sceneHistoryOf(store, documentId))) return false
-
-      store.redo(documentId)
-      return true
-    }
+    case 'scene.undo':
+    case 'scene.redo':
+      return runHistoryCommand(sceneStore, 'scene', documentId, command) ?? false
 
     default:
       return false

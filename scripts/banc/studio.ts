@@ -14,18 +14,19 @@ import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { DEFAULT_LANGUAGE } from '@shared/i18n'
 import { initI18n } from '@/i18n'
 import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
-import { nameOf, parentOf, pathIn, type FileKind } from '@shared/domain/folder'
+import { FOLDER_ROOT, nameOf, parentOf, pathIn, type FileKind } from '@shared/domain/folder'
 import type { Job } from '@shared/domain/job'
 import type { ModelFamily } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
 import { describeStudio } from '@main/assistant/studioState'
 import { registerConfirmer } from '@/features/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/features/assistant/executor'
-import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
+import { armCommandScope, subscribeToCommands, type CommandAnswer } from '@/services/commandBus'
 import { emptyGame, SCRIPT_EXTENSION, type GameManifest } from '@shared/domain/game'
 import { followTheCanvas, type PaintedCells } from './canvasSurface'
+import { followDocuments } from './followDocuments'
 import { standInForWorkers } from './codeWorker'
-import { drawing } from '@/game/game-fixtures'
+import { drawing, PNG_HEAD } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { createGameStage } from '@/game/gameStage'
@@ -41,7 +42,23 @@ import { useProjectContext } from '@/stores/projectContext'
 import { useTasks } from '@/stores/tasks'
 import { unsavedDocumentIds } from '@/features/shell/documentIo'
 import type { PlayState } from '@shared/domain/gameRuntime'
-import { frontDocumentIn, useDocuments } from '@/stores/documents'
+import { documentById, frontDocumentIn, useDocuments } from '@/stores/documents'
+import {
+  commandDescriptor,
+  scopeOfWorkspace,
+  type CommandId,
+  type CommandScope,
+} from '@shared/domain/command'
+import { runAudioCommand } from '@/features/audio/components/audioCommands'
+import { runCanvasCommand } from '@/features/image/components/ImageDocument/canvasCommands'
+import { runExplorerCommand } from '@/features/explorer/components/Explorer/explorerCommands'
+import { runSequenceCommand } from '@/features/video/components/TimelineCanvas/sequenceCommands'
+import i18next from 'i18next'
+import { runGuiDocumentCommand } from '@/features/gui/components/Gui/Document/guiDocumentCommands'
+import { runMaterialCommand } from '@/features/material/components/Material/materialCommands'
+import { runSkyboxCommand } from '@/features/skybox/components/Skybox/Document/skyboxCommands'
+import { lendSkyboxExportPort } from '@/features/skybox/components/Skybox/Document/skyboxExportFiles'
+import { lendMaterialExportPort } from '@/features/material/materialExportFiles'
 import { playReportOf, usePlay } from '@/stores/play'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { declarePanelsOf } from '@/features/shell/panelSpecs'
@@ -62,6 +79,74 @@ import { createMemoryGit, type MemoryGit } from './memoryGit'
 import { createMemoryShell, type MemoryShell } from './memoryShell'
 import { createMemoryFolder, type MemoryFolder } from './memoryFolder'
 import { projectName, withRecentProject } from '@shared/domain/project'
+
+type ScopeRunner = (command: CommandId, to: string | null) => CommandAnswer
+
+/** A runner of a DOCUMENT scope: the command lands on the document it names, or the one in front. */
+const onDocument =
+  (
+    scope: CommandScope,
+    run: (documentId: string, command: CommandId) => CommandAnswer,
+  ): ScopeRunner =>
+  (command, to) => {
+    const documentId = addressedBy(scope, to)
+    return documentId !== null && run(documentId, command)
+  }
+
+/**
+ * 🛑 TOTAL, so a scope added to `CommandScope` does not compile until it says who answers it —
+ * a `Map` left the bench refusing `wrongSurface` in silence, the very hole this table fills.
+ */
+type ScopeRunners = Record<CommandScope, ScopeRunner | null>
+
+/**
+ * The project folder belongs to no document, and the window holds one panel of it at all times:
+ * landing at the root, and settling as the panel's own runner does.
+ */
+const EXPLORER: ScopeRunner = command =>
+  runExplorerCommand(command, {
+    into: FOLDER_ROOT,
+    folderName: i18next.t('explorer.newFolderName'),
+  })
+
+/** The scopes a headless run can answer, each by the function its own tab calls. */
+const SCOPE_RUNNERS: ScopeRunners = {
+  scene: onDocument('scene', runSceneCommand),
+  gui: onDocument('gui', runGuiDocumentCommand),
+  skybox: onDocument('skybox', runSkyboxCommand),
+  material: onDocument('material', runMaterialCommand),
+  audio: onDocument('audio', runAudioCommand),
+  canvas: onDocument('canvas', runCanvasCommand),
+  sequence: onDocument('sequence', runSequenceCommand),
+  explorer: EXPLORER,
+  // The application's own, which `routeCommand` runs before any surface is asked.
+  global: null,
+  spaces: null,
+}
+
+/** The document the studio shows — what a command with no address lands on. */
+function frontDocument(): DocumentDescriptor | null {
+  const { activeId, documents } = useDocuments.getState()
+  return activeId === null ? null : (documents[activeId] ?? null)
+}
+
+/**
+ * 🛑 The scope a document edits through, read off `scopeOfWorkspace` rather than off a table of
+ * this bench's own: an interface opens in the 3D space and answers `gui`, so a runner picked by
+ * workspace would have sent ⌘Z on an interface to the scene's history.
+ */
+const scopeOf = (document: DocumentDescriptor | null): CommandScope | null =>
+  document === null ? null : scopeOfWorkspace(document.workspace, document.kind)
+
+/** Where a command of this scope lands: the document it NAMES, or the one in front. */
+function addressedBy(scope: CommandScope, to: string | null): string | null {
+  const document = to === null ? frontDocument() : documentById(useDocuments.getState(), to)
+  return scopeOf(document) === scope ? (document?.id ?? null) : null
+}
+
+/** What the GPU exports answer here: one picture named after the document — see `PNG_HEAD`. */
+const stillNamed = ({ name }: { name: string }) =>
+  Promise.resolve([{ name, extension: '.png', bytes: PNG_HEAD }])
 
 /**
  * 🛑 Nothing here decides. Every call goes through `runConfirmedAction`, the door the window AND
@@ -400,16 +485,24 @@ export async function createStudio(
 
         return { version: DOCUMENT_VERSION, kind, title: held.title, updatedAt: WHEN, content }
       },
-      // The file moves and the descriptor keeps its id: a document's identity survives a rename,
-      // which is the whole reason `DocumentDescriptor.id` is not its path.
+      /**
+       * 🛑 Resolved by IDENTITY and never by path, as the real port resolves `(id, kind)`: a
+       * document of this session that has no file yet borrows the DEFAULT path, which another
+       * document's file may already hold — renaming it moved that file and took over its entry.
+       */
       rename: async (documentId, kind, title) => {
-        const held = documentsOnDisk.get(documentId)
-        if (!held) throw new Error(`no document ${documentId}`)
+        const onDisk = documentsOnDisk.get(documentId)
+        // The WINDOW's descriptor when the folder holds none: a document created in this session
+        // has no file until it is saved, and the real port answers a path rather than throwing.
+        const held = onDisk ?? useDocuments.getState().documents[documentId]
+        if (!held || held.kind !== kind) throw new Error(`no document ${documentId}`)
 
         const renamed = documentFileName(title, kind)
-        await ops.rename(held.path, renamed)
         const next = { ...held, kind, title, path: pathIn(parentOf(held.path) ?? '', renamed) }
-        documentsOnDisk.set(documentId, next)
+        if (onDisk) {
+          await ops.rename(onDisk.path, renamed)
+          documentsOnDisk.set(documentId, next)
+        }
         return next
       },
     },
@@ -488,6 +581,10 @@ export async function createStudio(
 
   const references: string[] = []
   const giveBackMeasure = lendPictureMeasure(() => Promise.resolve(PICTURE))
+  // 🛑 The two exports that build their own WebGL context on the way out, which jsdom has not
+  // got: both refused « could not be rendered for export » on every run, measured 2026-09-01.
+  const giveBackSky = lendSkyboxExportPort(stillNamed)
+  const giveBackMaterial = lendMaterialExportPort(stillNamed)
   const closeGenerator = installGeneratorPanel(cloud.fieldsOf, given => references.push(...given))
   // The person, who typed the sentence: a headless run has nobody to ask, and refusing every
   // spend would score the whole of sections 20 to 22 on a studio never asked to generate.
@@ -557,20 +654,38 @@ export async function createStudio(
   }
 
   /**
-   * 🛑 The one scope a headless run can stand in for, and it delegates rather than reimplements:
-   * `runSceneCommand` is the function the viewport itself calls. The other scopes stay unarmed —
-   * their commands live inside components, so `command.runStudioCommand` still answers `wrongSurface` there.
+   * 🛑 Armed as a TAB arms it — the scope of the document in front, and that one only. Armed for
+   * good, `command.runStudioCommand` answered `nothingToDo` where the studio answers
+   * `wrongSurface`, and the bench would have taught a model a refusal the product never gives.
+   * The one exception is the project folder, which no document carries and every window shows.
    */
   const followTheCommandBus = (): (() => void) => {
-    const disarm = armCommandScope('scene')
-    const stop = subscribeToCommands(command => {
-      const scene = frontDocumentIn(useDocuments.getState(), '3d')
-      return scene !== null && runSceneCommand(scene, command)
+    let armedScope: CommandScope | null = null
+    let disarm: (() => void) | null = null
+
+    const followTheFront = (): void => {
+      const scope = scopeOf(frontDocument())
+      const answered = scope !== null && SCOPE_RUNNERS[scope] !== null ? scope : null
+      if (answered === armedScope) return
+
+      disarm?.()
+      armedScope = answered
+      disarm = answered === null ? null : armCommandScope(answered)
+    }
+
+    const disarmExplorer = armCommandScope('explorer')
+    const stop = subscribeToCommands((command, to) => {
+      const scope = commandDescriptor(command)?.scope
+      return (scope !== undefined && SCOPE_RUNNERS[scope]?.(command, to)) ?? false
     })
+    const unfollow = useDocuments.subscribe(followTheFront)
+    followTheFront()
 
     return () => {
       stop()
-      disarm()
+      unfollow()
+      disarm?.()
+      disarmExplorer()
     }
   }
 
@@ -581,21 +696,14 @@ export async function createStudio(
    * What it draws is nothing, and that is all a bench needs: the WORLD is what a scenario reads,
    * and the renderer is only what the runtime hands its placements to.
    */
-  const followTheViewport = (): (() => void) => {
-    const held = new Set<string>()
-    const stop = useDocuments.subscribe(state => {
-      for (const documentId of Object.keys(state.documents)) {
-        if (held.has(documentId)) continue
-        held.add(documentId)
+  const followTheViewport = (): (() => void) =>
+    followDocuments(
+      () => true,
+      documentId => {
         registerSceneEngine(documentId, drawing())
-      }
-    })
-
-    return () => {
-      stop()
-      for (const documentId of held) forgetSceneEngine(documentId)
-    }
-  }
+        return () => forgetSceneEngine(documentId)
+      },
+    )
 
   /**
    * 🛑 The second SURFACE a headless run has not got: a game runs in a WINDOW of its own, and
@@ -628,11 +736,6 @@ export async function createStudio(
     return outcome
   }
 
-  const front = (): DocumentDescriptor | null => {
-    const { activeId, documents } = useDocuments.getState()
-    return activeId === null ? null : (documents[activeId] ?? null)
-  }
-
   const studio: Studio = {
     run,
     state: async () => {
@@ -640,7 +743,7 @@ export async function createStudio(
       return read.ok ? describeStudio(read.data) : ''
     },
     documents: () => Object.values(useDocuments.getState().documents),
-    front,
+    front: frontDocument,
     files: () => folder.paths(),
     game: () => manifest,
     assets: () => catalog.rows(),
@@ -703,6 +806,8 @@ export async function createStudio(
       closeChooser()
       closeGenerator()
       giveBackMeasure()
+      giveBackSky()
+      giveBackMaterial()
       leaveTheDock()
       leaveTheCommandBus()
       leaveTheCanvas()

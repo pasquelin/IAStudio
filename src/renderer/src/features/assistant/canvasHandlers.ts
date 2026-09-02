@@ -1,7 +1,7 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import { aimedAt, type Target } from '@shared/domain/target'
 import { packedColour } from '@shared/domain/color'
-import { toRadians } from '@shared/domain/angles'
+import { toDegrees, toRadians } from '@shared/domain/angles'
 import { BLEND_MODES } from '@shared/domain/canvasBlend'
 import { PIXEL_SHAPES, type PixelShape } from '@shared/domain/pixelShape'
 import { embeddedFontOf, FONT_SOURCES, type FontRef } from '@shared/domain/font'
@@ -71,7 +71,7 @@ import { turnPort } from '@/features/image/turnPort'
 import { canvasOf, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { activeImageId, useDocuments } from '@/stores/documents'
 import type { ActionHandlers } from './actionHandler'
-import { boolOf, composedNumber, numberOf, oneOf, textOf, textsOf } from './actionInputs'
+import { boolOf, composedNumber, namedOf, numberOf, oneOf, textOf, textsOf } from './actionInputs'
 
 /**
  * The layer stack, driven by value.
@@ -138,15 +138,21 @@ function editLayer(
   build: (layer: Layer, state: CanvasState) => Commands,
   /** What a caller does when the layer IS there and the builder still declines. */
   nothing: string,
+  /** What the call answers, read off the layer AFTER the commands — see `namedOf`. */
+  answer?: (layer: Layer) => unknown,
 ): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_IMAGE)
 
   const named = textOf(input, 'layerId')
   const layer = layerAimed(open.state, named)
-  return layer
-    ? run(open.documentId, build(layer, open.state), nothing)
-    : refused('notFound', noLayer(named))
+  if (!layer) return refused('notFound', noLayer(named))
+
+  const outcome = run(open.documentId, build(layer, open.state), nothing)
+  if (!outcome.ok || !answer) return outcome
+
+  const after = layerById(canvasOf(useCanvases.getState(), open.documentId), layer.id)
+  return after ? { ok: true, data: answer(after) } : outcome
 }
 
 /** What a caller does about a layer nobody answers to — spelled once for the two sites. */
@@ -328,6 +334,7 @@ function style(input: Record<string, unknown>): ActionOutcome {
       ...(input.clipped === undefined ? [] : [setLayerClipped(id, boolOf(input, 'clipped'))]),
     ],
     'this call named nothing to set: opacity, fillOpacity, blend, visible or clipped',
+    layer => namedOf(input, layer),
   )
 }
 
@@ -358,6 +365,11 @@ function transform(input: Record<string, unknown>): ActionOutcome {
       }),
     ],
     'nothing to move: this layer takes x, y, scaleX, scaleY or rotation',
+    // Degrees back, as they came in.
+    layer => ({
+      ...namedOf(input, layer.transform),
+      ...(degrees === null ? {} : { rotation: toDegrees(layer.transform.rotation) }),
+    }),
   )
 }
 

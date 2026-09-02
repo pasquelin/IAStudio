@@ -569,6 +569,27 @@ describe('styling and placing a layer', () => {
     expect(canvas().layers[0]?.transform).toMatchObject({ x: 40, rotation: Math.PI / 2, scaleX: 1 })
   })
 
+  it('answers the dials it set, and only those', async () => {
+    expect(
+      await runAction('layer.setOpacityBlendAndVisibility', {
+        layerId: 'layer-a',
+        opacity: 0.5,
+        blend: 'multiply',
+      }),
+    ).toEqual({ ok: true, data: { opacity: 0.5, blend: 'multiply' } })
+  })
+
+  it('answers where the layer landed, the rotation in degrees as it came in', async () => {
+    expect(
+      await runAction('layer.transform', {
+        layerId: 'layer-a',
+        x: 10,
+        rotation: 90,
+        relative: true,
+      }),
+    ).toEqual({ ok: true, data: { x: 10, rotation: 90 } })
+  })
+
   it('writes a text layer’s words, and refuses one that holds pixels', async () => {
     withLayers(textLayer('layer-t', 'Titre', { x: 0, y: 0 }), pixelLayer('layer-p', 'Fond'))
 

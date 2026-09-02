@@ -384,7 +384,7 @@ export const FILE_HANDLERS: ActionHandlers = {
 
   'files.redoFileOperation': () => changing(bridge => bridge.project.redoFile()),
 
-  'files.readUndoStack': () => inProject(bridge => bridge.project.fileHistory()),
+  'files.canUndoRedoFiles': () => inProject(bridge => bridge.project.fileHistory()),
 
   'file.reveal': input =>
     inProject(bridge => bridge.project.revealFile(textOf(input, 'path') ?? '')),

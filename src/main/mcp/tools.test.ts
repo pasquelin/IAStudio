@@ -70,7 +70,7 @@ describe('the registry, published as tools', () => {
       // Named a folder, it writes without a picker to ask first — see `gameActions`.
       'game.export',
       'git.commit',
-      'settings.pressButton',
+      'settings.triggerSettingAction',
     ])
     for (const action of marked) {
       const tool = mcpTools().find(one => one.name === toolName(action.name))

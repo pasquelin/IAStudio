@@ -443,7 +443,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     (command: CommandId) => {
       // What acts on the selection is shared with the node menu, which arrives by the same ids —
       // see `runSceneCommand`. What is left below is what only this viewport can answer for.
-      if (runSceneCommand(documentId, command)) return
+      const shared = runSceneCommand(documentId, command)
+      if (shared !== false) return shared
 
       switch (command) {
         // Each of these LEAVES navigation. `useShortcuts` only swallows the motion keys, so `V`,

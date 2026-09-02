@@ -60,6 +60,51 @@ describe('deleting while a shot is chosen in the band', () => {
   })
 })
 
+/**
+ * 🛑 A command that CREATES names what it made: a bare « ran » left a client running
+ * `scene.duplicate` again for an id that never came — ten refusals in one bench pass (2026-09-02).
+ */
+describe('a command that makes something', () => {
+  it('answers the roots of what it duplicated, the children carried along unnamed', () => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('parent'), meshNode('child', 'parent')],
+      selectedIds: ['parent'],
+    })
+
+    const made = runSceneCommand(DOCUMENT, 'scene.duplicate')
+
+    const nodes = sceneOf(useScenes.getState(), DOCUMENT).nodes
+    expect(nodes).toHaveLength(4)
+    expect(made).toEqual({ nodeIds: [nodes[2]?.id] })
+    expect(nodes[3]?.parentId).toBe(nodes[2]?.id)
+  })
+
+  it('answers the group it put over the selection', () => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('a'), meshNode('b')],
+      selectedIds: ['a', 'b'],
+    })
+
+    const made = runSceneCommand(DOCUMENT, 'scene.group')
+
+    const group = sceneOf(useScenes.getState(), DOCUMENT).nodes.find(node => node.type === 'group')
+    expect(made).toEqual({ nodeIds: [group?.id] })
+  })
+
+  it('answers what it pasted, and a plain « ran » for an empty selection', () => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('a')], selectedIds: ['a'] })
+    runSceneCommand(DOCUMENT, 'scene.copy')
+
+    const pasted = runSceneCommand(DOCUMENT, 'scene.paste')
+    expect(pasted).toEqual({ nodeIds: [sceneOf(useScenes.getState(), DOCUMENT).nodes[1]?.id] })
+
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('a')], selectedIds: [] })
+    expect(runSceneCommand(DOCUMENT, 'scene.duplicate')).toBe(true)
+  })
+})
+
 describe('deleting while a control point is held', () => {
   it('takes the point away and leaves the rail standing', () => {
     useSceneViews.getState().setPickedPathPoint(DOCUMENT, { nodeId: 'rail', index: 1 })

@@ -43,7 +43,15 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
     scenario.answers,
   )
 
-  await scenario.setup?.(studio)
+  try {
+    await scenario.setup?.(studio)
+  } catch (error) {
+    // The caller closes by the handle this throw takes away, and the ports would stay lent to a
+    // run that is over — the next case then fails for the wrong reason.
+    studio.close()
+    throw error
+  }
+
   // What the decor changed is not what the model changed — see `settle`.
   studio.settle()
   useAssistant.setState({ turns: [], spent: 0 })

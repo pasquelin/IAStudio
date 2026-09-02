@@ -449,6 +449,11 @@ async function chainOn(
     }
 
     if (answer.calls.length === 0) {
+      // Once, on the opening round alone — see `NUDGE`. Sent back with the history carrying why.
+      if (round === 1 && answer.say !== '') {
+        patch(set, id, { nudged: true })
+        continue
+      }
       // The one way a model says a request is done. Nothing was lost.
       patch(set, id, { lost: answer.say === '' && round === 1 })
       return
@@ -643,9 +648,10 @@ const ALREADY_SETTLED =
 
 /** The same, for a relative change: repeating it would apply it twice, not settle it. */
 const ALREADY_APPLIED =
-  'that exact relative change already ran in this turn, and running it again would apply it ' +
-  'twice. What it answered is written above in this conversation — read the value that stands ' +
-  'there before asking for another change.'
+  'this turn already moved that very field of that very thing, by a relative amount. A second ' +
+  'one lands ON TOP of the first, whatever figure it carries — what it answered is written ' +
+  'above in this conversation: read the value that stands there, and change it absolutely if ' +
+  'it is wrong.'
 
 /** Rewrites one turn in place, leaving the others as they were. */
 function patch(

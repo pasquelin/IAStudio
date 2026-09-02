@@ -466,3 +466,9 @@ export function cameraIds(nodes: readonly SceneNode[]): ReadonlySet<string> {
 export function firstCameraId(nodes: readonly SceneNode[]): string | null {
   return cameraIds(nodes).values().next().value ?? null
 }
+
+/** The nodes of a set whose parent is not in it — what a gesture over a subtree acts on once. */
+export function rootsOf(nodes: readonly SceneNode[]): SceneNode[] {
+  const ids = new Set(nodes.map(node => node.id))
+  return nodes.filter(node => node.parentId === null || !ids.has(node.parentId))
+}

@@ -293,9 +293,9 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
     fields: [],
   }),
   action({
-    name: 'files.readUndoStack',
-    titleKey: 'assistant.actions.filesReadUndoStack.title',
-    descriptionKey: 'assistant.actions.filesReadUndoStack.description',
+    name: 'files.canUndoRedoFiles',
+    titleKey: 'assistant.actions.filesCanUndoRedoFiles.title',
+    descriptionKey: 'assistant.actions.filesCanUndoRedoFiles.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',

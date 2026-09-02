@@ -87,7 +87,7 @@
       },
       "activityRecent": {
         "title": "Read the recent activity",
-        "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did."
+        "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did. How one generation WENT is job.readCloudGeneration, which answers it whole."
       },
       "projectsList": {
         "title": "List the recent projects",
@@ -123,7 +123,7 @@
       },
       "filesSearch": {
         "title": "Search the project’s files",
-        "description": "Searches the whole open project by name and returns the matching entries with their paths. Changes nothing on screen."
+        "description": "Searches the whole open project by name and returns the matching entries with their paths. Changes nothing on screen. Finding is not opening: file.open opens what was found, and file.rename renames it."
       },
       "filesMove": {
         "title": "Move files",
@@ -161,7 +161,7 @@
         "title": "Redo the last batch of file changes",
         "description": "Replays the batch of file changes that was just undone, exactly as the Explorer does. Answers with what moved and what was refused."
       },
-      "filesReadUndoStack": {
+      "filesCanUndoRedoFiles": {
         "title": "Read the file undo stack",
         "description": "Says whether undoing or redoing would do anything, without attempting either. It is what greys out the two menu rows before they are clicked."
       },
@@ -203,7 +203,7 @@
       },
       "assetsSearchProjectCatalogue": {
         "title": "Search the project’s catalogue",
-        "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The catalogue holds assets, not the project’s files: a file the person names is found by searching the project’s files. The account’s remote library is elsewhere again."
+        "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The catalogue holds assets, not the project’s files: a file the person names is found by searching the project’s files. The account’s remote library is elsewhere again. What the catalogue holds ON one asset — where it came from, how it is tagged — is asset.get, on the ids this hands back."
       },
       "assetsCounts": {
         "title": "Count the project’s catalogue",
@@ -225,7 +225,7 @@
         "title": "Caption images",
         "description": "Has the API read the named images and writes what it sees there as the asset’s name. Only images the library already knows can be captioned, so a purely local selection answers zero."
       },
-      "assetsAbsent": {
+      "assetsListMissingProjectAssets": {
         "title": "Find assets whose file has gone",
         "description": "Among the named assets, returns those the catalogue expects a file for that is no longer there. An asset that never had a local file is never one of them, since nothing was expected of it."
       },
@@ -311,7 +311,7 @@
       },
       "layerDuplicate": {
         "title": "Duplicate a layer",
-        "description": "Copies one layer just above itself, children included, every copy given a fresh id. Answers with the id of the copy."
+        "description": "Copies one layer just above itself, children included, every copy given a fresh id. Answers with the id of the copy. The image’s FILE is copied by files.duplicate; this copies one layer inside it."
       },
       "layerGroup": {
         "title": "Group layers",
@@ -397,7 +397,7 @@
         "title": "Read the sky being edited",
         "description": "Answers the sky in front — its equirectangular source, its image settings, where its sun sits and what colour it is, and what its environment lights — plus what produced it when it came from a generation."
       },
-      "skyboxSetViewOptions": {
+      "skyboxSetViewportOptions": {
         "title": "Set how a sky is looked at",
         "description": "Chooses the projection the sky is drawn under, how wide the lens opens, and whether the test objects stand in it. It is session state, as every way of looking at a document is, and none of it is saved."
       },
@@ -471,7 +471,7 @@
       },
       "gitPull": {
         "title": "Fetch and merge",
-        "description": "Fetches the remote and merges into the current branch, which rewrites the working copy. A conflict stops there and is settled afterwards."
+        "description": "Fetches the remote and merges into the current branch, which rewrites the working copy. A conflict stops there and is settled afterwards. Asked only for what the remote holds, this is the wrong call: git.fetch reads it without touching the working copy."
       },
       "gitPush": {
         "title": "Publish to the remote repository",
@@ -483,7 +483,7 @@
       },
       "cloudExplorePublicFeed": {
         "title": "Browse what everyone published",
-        "description": "Answers one page of the public feed of a given kind, newest first. These assets are not yours, and looking at them fetches none of them."
+        "description": "Answers one page of the public feed of a given kind, newest first. These assets are not yours, and looking at them fetches none of them. cloud.pull is what brings one down into the project, bytes and all."
       },
       "cloudFindSimilarPublished": {
         "title": "Find what resembles an asset",
@@ -535,7 +535,7 @@
       },
       "updatesState": {
         "title": "Read where the update stands",
-        "description": "Says where the application update stands — nothing in sight, downloading, or ready to install on the next quit."
+        "description": "Says where the application update stands — nothing in sight, downloading, or ready to install on the next quit. updates.install is what installs it and restarts the studio."
       },
       "mediaCapabilities": {
         "title": "Tell what the studio can decode",
@@ -603,11 +603,11 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no parent, drawn, standing at the origin unturned and unscaled, the studio’s own colour, a shape divided as its own kind always is. Measurements are never left out. A list that holds nothing is left out whole."
+        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no parent, drawn, standing at the origin unturned and unscaled, the studio’s own colour, a shape divided as its own kind always is. Measurements are never left out. A list that holds nothing is left out whole. To describe ONE object with its components and what may still be added to it, studio.describe."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",
-        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the object was born with."
+        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the object was born with. A model of the project, or the one a generation has just answered, comes in through node.addModel; this makes a primitive."
       },
       "nodeAddModel": {
         "title": "Place a model from the library",
@@ -669,13 +669,13 @@
         "title": "Remove a point from a rail",
         "description": "Drops a control point. A rail never falls below two points, one point being no line, and the call is refused there."
       },
-      "modelWearMaterial": {
+      "modelSetMaterialDocument": {
         "title": "Dress a model in a material",
         "description": "Makes an imported model wear a material of the project, named by the title of its document. The model then follows that material, so editing one of its channels or dials repaints it, with nothing asked here again. An empty title takes it off, and the model goes back to what its own file carries."
       },
       "nodeSetLightSettings": {
         "title": "Set a light",
-        "description": "Changes everything the kind of light in hand carries — its colour, intensity, range, decay, the width and softness of its cone, its target, and the two colours of a hemisphere light. A field the kind does not carry is refused."
+        "description": "Changes everything the kind of light in hand carries — its colour, intensity, range, decay, the width and softness of its cone, its target, and the two colours of a hemisphere light. A field the kind does not carry is refused. A glow, a bloom or any other effect is not a light: post.set writes one parameter of an effect and post.reset puts it back."
       },
       "nodeSetCameraLens": {
         "title": "Set a camera lens",
@@ -725,7 +725,7 @@
         "title": "Take a model’s skeleton off",
         "description": "Returns the model to being a mesh, with no bones and no handles. The gesture undoes like every other one of the scene."
       },
-      "rigHands": {
+      "rigConfigureHands": {
         "title": "Add the finger bones",
         "description": "Puts the thirty finger bones at rest on whatever hands the skeleton already holds. With no hands recognised, nothing is written."
       },
@@ -749,7 +749,7 @@
         "title": "Rename a bone",
         "description": "Changes a bone’s name, its children following on their own. A name already taken is refused rather than half written."
       },
-      "boneRole": {
+      "boneSetRole": {
         "title": "Say which joint a bone IS",
         "description": "Ties a bone to one of the joints of the humanoid standard, or to none when the role is left out. Whatever bone held that role loses it in the same move."
       },
@@ -809,7 +809,7 @@
         "title": "Set a channel’s flags",
         "description": "Mutes a channel, plays it alone, or locks it. It is how one WORKS rather than a change to the document, so nothing is added to the history."
       },
-      "viewDisplay": {
+      "viewSetDisplayMode": {
         "title": "Choose how the scene is drawn",
         "description": "Switches the main view to shaded, wireframe, material-only or one of the other ways of drawing. The menu command only cycles from one to the next; this one names which."
       },
@@ -855,11 +855,11 @@
       },
       "gitStatus": {
         "title": "Read the repository",
-        "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all."
+        "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all. What changed INSIDE a file is git.diff; this only names the files."
       },
       "gitLog": {
         "title": "Read the history",
-        "description": "Returns a page of recorded versions, newest first, across every branch, with the names that point at each one."
+        "description": "Returns a page of recorded versions, newest first, across every branch, with the names that point at each one. What changed inside a file between two versions is git.diff."
       },
       "gitListCommitFiles": {
         "title": "Read what a version changed",
@@ -937,7 +937,7 @@
         "title": "Rename an account",
         "description": "Changes the label an account appears under in the studio. Neither the key nor the secret crosses this boundary, in either direction."
       },
-      "settingsPressButton": {
+      "settingsTriggerSettingAction": {
         "title": "Press a settings button",
         "description": "Fires one of the buttons of the settings window — show a file, open the developer tools, copy the connection command, install the bridge, reset everything. The last two leave something behind and are asked about on screen."
       },
@@ -973,7 +973,7 @@
         "title": "Separate a solid",
         "description": "Breaks apart a solid of the scene in front and gives back the shapes it was made of, each where it stood. Answers with the ids of the objects handed back."
       },
-      "modelWearImage": {
+      "modelSetBaseColorImage": {
         "title": "Cover a model with an image",
         "description": "Puts one image of the project over a whole imported model, as its base colour — the simple way to dress it. It excludes materials: a model covered with an image wears none, and the other way round. No other channel is derived from it. With no image, the dress comes off and the model goes back to what its own file carries."
       },
@@ -1025,11 +1025,11 @@
         "title": "Reset a post-processing effect",
         "description": "Brings every parameter of that effect back to what the catalogue declares, without taking it out of the stack or moving it."
       },
-      "postKey": {
+      "postAddEffectKeyframe": {
         "title": "Key a post-processing parameter",
         "description": "Opens an animation channel on that parameter where it has none, and lays a key at the head. The value given is the one to SEE, and the delta against the stack is worked out here."
       },
-      "postUnkey": {
+      "postRemoveEffectKeyframe": {
         "title": "Take a post-processing key off",
         "description": "Removes the key standing at the head on that parameter. The channel stays, exactly as when a key is taken off from the band."
       },
@@ -1053,7 +1053,7 @@
         "title": "Detach a component",
         "description": "Takes the component of the named type off an object of the scene. Refused when the object has not got one."
       },
-      "componentSet": {
+      "componentSetProperties": {
         "title": "Set a component",
         "description": "Writes one field of a component the object carries. A field the component does not declare is ignored."
       },
@@ -1139,7 +1139,7 @@
       },
       "prefabInstantiate": {
         "title": "Instance a prefab",
-        "description": "Lays the objects of another scene document of the project into the open scene, with fresh ids, where it is asked for."
+        "description": "Lays the objects of another scene document of the project into the open scene, with fresh ids, where it is asked for. A game already RUNNING is sent to another scene by play.loadScene, which this does not do."
       },
       "memoryRecall": {
         "title": "Recall what was learned",
