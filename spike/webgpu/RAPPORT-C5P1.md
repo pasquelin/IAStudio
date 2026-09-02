@@ -306,7 +306,8 @@ remplit que quelques-uns.
 Mesuré : `counts=500000,5000,500` a rendu un témoin `off` qui différait de `off` sur **2 972 888
 pixels** et n'affichait pas les mêmes comptes (148 appels contre 159, 9 153 instances visibles
 contre 9 116) — alors que rien du chemin `off` n'avait changé. Rejouées taille par taille, les deux
-campagnes sont propres et le témoin retombe à 0 pixel.
+campagnes sont propres et le témoin retombe à 0 pixel. **Le relevé faux n'est pas conservé sur le
+disque** : `c5p1-check.json` (500 000) et `c5p1-small.json` (5 000 et 500) sont ceux du tableau.
 
 Douze moteurs montés dans une page, dont quatre portant 500 000 nœuds, dépassent ce que la page
 tient. **Une taille de monde par campagne**, et le témoin `off` joué deux fois reste le seul juge
