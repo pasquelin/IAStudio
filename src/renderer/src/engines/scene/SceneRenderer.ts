@@ -790,6 +790,12 @@ export class SceneRenderer {
    */
   private shadowThrow: ShadowThrow | null = null
   /**
+   * The camera the zone was last narrowed to. A preview narrows it to ITS own on every frame it
+   * is shown, and a zone left there makes the next pane widen it again — which reads as « cells
+   * moved » and redraws every shadow map, on a scene where nothing moved at all.
+   */
+  private zonedTo: ViewportCamera | null = null
+  /**
    * Whether the parent pass has anything to walk. Only content can change where a node hangs —
    * `keepsItsGroup` reads `parentId`, so a node that merely MOVED kept the parent it had.
    */
@@ -1919,6 +1925,7 @@ export class SceneRenderer {
     // Before the dressing, and both answers kept: a cell that just came into the zone is a body
     // the shadow maps were drawn without.
     const zoned = this.instances.follow?.(camera, this.shadowThrow) ?? false
+    this.zonedTo = camera
 
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
     const dressed = dressForPane(
@@ -2438,7 +2445,8 @@ export class SceneRenderer {
     // For the same reason, and it is the whole of what a zone has to be told. The preview names
     // ITS camera, and comes here on every frame it is shown: opening the zone in full for it put
     // the whole level back in the scene, twice a frame. A film and a capture name none, and every
-    // cell is drawn for them. `dressPane` narrows it again before the next pane.
+    // cell is drawn for them.
+    const zonedTo = this.zonedTo
     this.instances.follow?.(camera ?? null, this.shadowThrow)
 
     for (const helper of this.helpers.values()) hide(helper)
@@ -2464,6 +2472,11 @@ export class SceneRenderer {
     return () => {
       for (const object of hidden) object.visible = true
       if (masked) this.applyVisibility()
+      // 🛑 The zone back where it was found. Left on the preview's own, the next pane widens it
+      // again and answers « moved », which redraws every shadow map — every frame a preview is
+      // shown, on a scene nothing touched.
+      if (zonedTo) this.instances.follow?.(zonedTo, this.shadowThrow)
+      this.zonedTo = zonedTo
     }
   }
 
