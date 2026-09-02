@@ -740,7 +740,6 @@ body,
 .pnl-root {
   --pnl-rail: var(--sc-rail);
   --pnl-rail-button: var(--sc-rail-button);
-  --pnl-rail-inset: var(--sc-rail-inset);
   --pnl-gutter: var(--sc-gutter);
   --pnl-header: var(--sc-header);
   --pnl-tab: var(--sc-tab);
