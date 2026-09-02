@@ -2,12 +2,13 @@ import {
   Frustum,
   Group,
   InstancedMesh,
+  Box3,
   Matrix4,
+  Sphere,
   Vector3,
   type Mesh,
   type Object3D,
   type PerspectiveCamera,
-  type Sphere,
 } from 'three'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { SceneRenderer, type PartitionMode } from '@/engines/scene/SceneRenderer'
@@ -32,7 +33,9 @@ const HEIGHT = 900
 const QUERY = new URLSearchParams(location.search)
 const WARMUP = 10
 
-const EYE = new Vector3()
+const SPHERE = new Sphere()
+const BOX = new Box3()
+const CORNER = new Vector3()
 
 type Numbers = Record<string, number | string | null>
 
@@ -154,11 +157,14 @@ function decompose(
   inFrustum: number
   standing: number
   cellsInFrustum: number
-  callsBeyondFar: number
-  cellsBeyondFar: number
+  emptyCalls: number
+  emptyInstances: number
+  emptyThinCalls: number
+  thinDrawn: number
+  shownInstances: number
+  boxRejected: number
 } {
   const calls = draw().calls
-  EYE.copy(camera.position)
 
   const held = drawn.map(mesh => mesh.visible)
   for (const mesh of drawn) mesh.visible = false
@@ -170,22 +176,33 @@ function decompose(
   )
   let inFrustum = 0
   let standing = 0
-  let beyondFar = 0
+  let emptyCalls = 0
+  let emptyInstances = 0
+  let emptyThinCalls = 0
+  let thinCalls = 0
+  let shownInstances = 0
+  let boxRejected = 0
   const cells = new Set<Object3D>()
-  const far = new Set<Object3D>()
   for (const mesh of drawn) {
     if (!reaches(mesh, scene)) continue
     standing += 1
     if (!frustum.intersectsObject(mesh)) continue
     inFrustum += 1
-    const cell = mesh.parent ?? mesh
-    cells.add(cell)
-    // Ce que la zone laisse entrer et que le plan lointain condamne : une cellule dont le point
-    // le plus proche est déjà au-delà de `far` ne peut montrer aucune de ses instances, mais sa
-    // sphère englobante mord encore le frustum, donc three la dessine.
-    if (nearestOf(mesh) <= camera.far) continue
-    beyondFar += 1
-    far.add(cell)
+    cells.add(mesh.parent ?? mesh)
+    // 🛑 Le seul test qui prouve un appel gaspillé : AUCUNE de ses instances n'est dans le
+    // frustum. Comparer une distance euclidienne à `camera.far` ne le prouve pas — `far` est une
+    // profondeur sur l'axe de vue, et un corps à 600 unités peut se tenir à z = 450.
+    const shown = shownIn(mesh, frustum)
+    shownInstances += shown
+    // Ce qu'un test de BOÎTE rejetterait là où la sphère de three accepte : la sphère
+    // circonscrit la boîte des instances, donc elle est toujours la plus large des deux.
+    if (!frustum.intersectsBox(BOX)) boxRejected += 1
+    const held = instanceCountOf(mesh)
+    if (held < 16) thinCalls += 1
+    if (shown > 0) continue
+    emptyCalls += 1
+    emptyInstances += held
+    if (held < 16) emptyThinCalls += 1
   }
   return {
     workshopCalls,
@@ -193,17 +210,48 @@ function decompose(
     inFrustum,
     standing,
     cellsInFrustum: cells.size,
-    callsBeyondFar: beyondFar,
-    cellsBeyondFar: far.size,
+    emptyCalls,
+    emptyInstances,
+    emptyThinCalls,
+    thinDrawn: thinCalls,
+    shownInstances,
+    boxRejected,
   }
 }
 
-/** La distance du point le plus proche de ce que ce mesh dessine, depuis la caméra. */
-function nearestOf(mesh: Mesh): number {
-  const sphere = (mesh as unknown as { boundingSphere: Sphere | null }).boundingSphere
-  if (!sphere) return 0
-  return Math.max(0, EYE.distanceTo(sphere.center) - sphere.radius)
+/**
+ * Combien des instances de ce mesh le frustum retient VRAIMENT, sphère du corps comprise — et,
+ * au passage, la boîte englobante de ces instances, laissée dans `BOX` pour l'appelant.
+ */
+function shownIn(mesh: Mesh, frustum: Frustum): number {
+  BOX.makeEmpty()
+  if (!(mesh instanceof InstancedMesh)) return 1
+  const reach = mesh.geometry.boundingSphere?.radius ?? 0
+  const held = mesh.instanceMatrix.array
+  let shown = 0
+  for (let at = 0; at < mesh.count; at += 1) {
+    const base = at * 16
+    SPHERE.center.set(held[base + 12] ?? 0, held[base + 13] ?? 0, held[base + 14] ?? 0)
+    SPHERE.radius = reach * scaleOf(held, base)
+    BOX.expandByPoint(CORNER.copy(SPHERE.center).addScalar(SPHERE.radius))
+    BOX.expandByPoint(CORNER.copy(SPHERE.center).subScalar(SPHERE.radius))
+    if (frustum.intersectsSphere(SPHERE)) shown += 1
+  }
+  return shown
 }
+
+/** La plus grande des trois longueurs de colonne : ce dont la sphère du corps est multipliée. */
+function scaleOf(held: ArrayLike<number>, base: number): number {
+  let widest = 0
+  for (let column = 0; column < 3; column += 1) {
+    const at = base + column * 4
+    const length = Math.hypot(held[at] ?? 0, held[at + 1] ?? 0, held[at + 2] ?? 0)
+    if (length > widest) widest = length
+  }
+  return widest
+}
+
+const instanceCountOf = (mesh: Mesh): number => (mesh instanceof InstancedMesh ? mesh.count : 1)
 
 /** Whether the walk of the scene still reaches it — a cell out of the zone has left it. */
 function reaches(mesh: Object3D, scene: Object3D): boolean {
@@ -291,6 +339,7 @@ async function measureOne(
   const groups = renderer['instances'] as {
     follow?: (camera: PerspectiveCamera | null) => boolean
     drawn: () => readonly Mesh[]
+    stats?: () => { nodesVisited: number; cellsReturned: number; cells: number; bytes: number }
   }
 
   const draw = (): { submitMs: number; followMs: number; matrixMs: number; calls: number; instances: number; triangles: number } => {
@@ -338,6 +387,7 @@ async function measureOne(
   const pixels = pixelsOf(canvas)
 
   const shape = shapeOf(renderer)
+  const walked = groups.stats?.() ?? { nodesVisited: 0, cellsReturned: 0, cells: 0, bytes: 0 }
   const split = decompose(scene, camera, groups.drawn(), draw)
 
   // Le prix d'un changement de document : ce que la partition doit rendre en n'invalidant que
@@ -376,6 +426,10 @@ async function measureOne(
       triangles: last.triangles,
       ...shape,
       ...split,
+      nodesVisited: walked.nodesVisited,
+      cellsReturned: walked.cellsReturned,
+      cellsKnown: walked.cells,
+      indexBytes: walked.bytes,
       addMedianMs: round(median(addMs)),
       dropMedianMs: round(median(dropMs)),
     },

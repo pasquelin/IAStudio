@@ -17,6 +17,7 @@ import {
   heldOutOfDraw,
   shapeAndPaint,
   sweep,
+  worldReach,
   writeMoved,
   type Grouped,
   type GroupingStats,
@@ -99,7 +100,7 @@ export function createCellGroups(
     // drawn by is reused and only the matrices that really moved reach the GPU.
     if (held && sameOrder(held.ids, members.ids)) {
       if (rewrite(held.mesh, members.meshes)) {
-        boxes.set(held.mesh, boxOf(members.meshes, reachOf(shape)))
+        boxes.set(held.mesh, boxOf(members.meshes, shape))
         // The cell's own box is their union: left alone it would be the union of where they
         // STOOD, and a body carried back into view would stay hidden with its cell.
         const cell = members.cell === null ? undefined : cells.get(members.cell)
@@ -126,18 +127,40 @@ export function createCellGroups(
     // Its own bounds are what the frustum tests: without this a whole cell is culled by the box
     // of a single instance, and it disappears as soon as the camera turns.
     mesh.computeBoundingSphere()
-    boxes.set(mesh, boxOf(members.meshes, reachOf(shape)))
-    groupOf(members.cell).add(mesh)
+    boxes.set(mesh, boxOf(members.meshes, shape))
+    const into = groupOf(members.cell)
+    if (members.cell !== null) {
+      const cell = cells.get(members.cell)
+      if (cell) owners.set(mesh, cell)
+    }
+    into.add(mesh)
     buckets.set(name, { cell: members.cell, ids: members.ids, mesh })
     listStale = true
   }
 
   /**
-   * The box the bodies of one bucket really occupy — always inside the sphere three tests it by,
-   * so a bucket this box misses can show nothing. Measured on 500 000 bodies: it rejects 155 of
-   * the 381 calls the sphere lets through, and all 155 were drawing no visible instance at all.
+   * Measured on 500 000 bodies: this box rejects 155 of the 381 calls three's SPHERE lets through,
+   * every one of them drawing no visible instance at all.
    */
   const boxes = new WeakMap<InstancedMesh, Box3>()
+  /** The cell each mesh hangs in, so a move can grow ITS box too — see `growBoxes`. */
+  const owners = new WeakMap<InstancedMesh, Held>()
+
+  /**
+   * Grows what a moved body is measured by, so a move can only ever show more: its own bucket,
+   * and the cell whose box is the union of its buckets'. Leaving the cell out hid the whole of it
+   * for the length of a drag — `moved` never marks a cell for remeasuring.
+   */
+  const growBoxes = (id: string, objectOf: (id: string) => Object3D | undefined): void => {
+    const at = placed.get(id)
+    const object = objectOf(id)
+    if (!at || !object) return
+    const reach = worldReach(at.instance.geometry, object.matrixWorld)
+    const box = boxes.get(at.instance)
+    if (box) grow(box, object.matrixWorld, reach)
+    const cell = owners.get(at.instance)
+    if (cell) grow(cell.box, object.matrixWorld, reach)
+  }
 
   const drawEvery = (): boolean => {
     let moved = false
@@ -188,7 +211,7 @@ export function createCellGroups(
       const touched = writeMoved(placed, ids, objectOf)
       // Grown, never recut, exactly as the sphere is: a box that shrank under a moving body
       // would hide geometry that is on screen.
-      if (touched) for (const id of ids) growBox(boxes, placed, id, objectOf)
+      if (touched) for (const id of ids) growBoxes(id, objectOf)
       return touched
     },
 
@@ -319,14 +342,13 @@ function splitByCell(
   shape: BufferGeometry,
 ): Map<string, Members> {
   const held = new Map<string, Members>()
-  const reach = reachOf(shape)
   for (const [at, mesh] of worn.meshes.entries()) {
     const id = worn.ids[at]
     if (id === undefined) continue
     // The translation read straight off the world matrix, never `decompose`: a non-uniform scale
     // inside a rotated parent shears, and a decomposed translation of a sheared matrix drifts.
     const stands = mesh.matrixWorld.elements
-    const spills = !index.fitsACell(reach * mesh.matrixWorld.getMaxScaleOnAxis())
+    const spills = !index.fitsACell(worldReach(shape, mesh.matrixWorld))
     const cell = spills ? null : index.cellAt(stands[12] ?? 0, stands[14] ?? 0)
     const name = `${worn.key}|${spills ? 'loose' : cell}`
     const inside = held.get(name)
@@ -343,37 +365,16 @@ const VIEW = new Matrix4()
 const CORNER = new Vector3()
 
 /** The box the bodies of a bucket occupy, each grown by its own reach. */
-function boxOf(meshes: readonly Mesh[], reach: number): Box3 {
+function boxOf(meshes: readonly Mesh[], shape: BufferGeometry): Box3 {
   const box = new Box3()
-  for (const mesh of meshes) {
-    const stands = mesh.matrixWorld.elements
-    const grown = reach * mesh.matrixWorld.getMaxScaleOnAxis()
-    CORNER.set(stands[12] ?? 0, stands[13] ?? 0, stands[14] ?? 0)
-    box.expandByPoint(CORNER.addScalar(grown))
-    CORNER.set(stands[12] ?? 0, stands[13] ?? 0, stands[14] ?? 0)
-    box.expandByPoint(CORNER.subScalar(grown))
-  }
+  for (const mesh of meshes) grow(box, mesh.matrixWorld, worldReach(shape, mesh.matrixWorld))
   return box
 }
 
-/** Grows the box of whichever bucket holds this body, so a move can only ever show more. */
-function growBox(
-  boxes: WeakMap<InstancedMesh, Box3>,
-  placed: Placed,
-  id: string,
-  objectOf: (id: string) => Object3D | undefined,
-): void {
-  const at = placed.get(id)
-  const object = objectOf(id)
-  const box = at && boxes.get(at.instance)
-  if (!box || !object) return
-  const reach =
-    (at.instance.geometry.boundingSphere?.radius ?? 0) * object.matrixWorld.getMaxScaleOnAxis()
-  const stands = object.matrixWorld.elements
-  CORNER.set(stands[12] ?? 0, stands[13] ?? 0, stands[14] ?? 0)
-  box.expandByPoint(CORNER.addScalar(reach))
-  CORNER.set(stands[12] ?? 0, stands[13] ?? 0, stands[14] ?? 0)
-  box.expandByPoint(CORNER.subScalar(reach))
+/** Takes in where a body stands, and how far what it draws reaches around that. */
+function grow(box: Box3, placement: Matrix4, reach: number): void {
+  box.expandByPoint(CORNER.setFromMatrixPosition(placement).addScalar(reach))
+  box.expandByPoint(CORNER.setFromMatrixPosition(placement).subScalar(reach))
 }
 
 /** Whether a cell holds the same bodies it held, in the same slots. */
@@ -410,11 +411,6 @@ function samePlace(held: ArrayLike<number>, base: number, stands: readonly numbe
     if (held[base + at] !== Math.fround(stands[at] ?? 0)) return false
   }
   return true
-}
-
-function reachOf(geometry: BufferGeometry): number {
-  if (!geometry.boundingSphere) geometry.computeBoundingSphere()
-  return geometry.boundingSphere?.radius ?? 0
 }
 
 /**

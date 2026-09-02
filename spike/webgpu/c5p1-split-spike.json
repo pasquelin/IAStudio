@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-02T16:43:38.294Z",
+  "at": "2026-09-02T16:49:36.889Z",
   "platform": "darwin",
   "electron": "43.4.0",
   "chrome": "150.0.7871.224",
@@ -11,13 +11,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 5728.27,
-      "submitMeanMs": 0.631,
-      "submitMedianMs": 0.685,
-      "submitPeakMs": 0.705,
-      "followMeanMs": 0.001,
-      "matrixMeanMs": 0.295,
-      "gpuMs": 3.064,
+      "applyMs": 5334.475,
+      "submitMeanMs": 0.534,
+      "submitMedianMs": 0.565,
+      "submitPeakMs": 0.61,
+      "followMeanMs": 0,
+      "matrixMeanMs": 0.242,
+      "gpuMs": 3.031,
       "calls": 125,
       "instances": 223488,
       "triangles": 17086012,
@@ -32,10 +32,10 @@
       "inFrustum": 125,
       "standing": 1235,
       "cellsInFrustum": 1,
-      "callsBeyondFar": 26,
-      "cellsBeyondFar": 1,
-      "addMedianMs": 1301.13,
-      "dropMedianMs": 1374.985
+      "emptyCalls": 45,
+      "emptyInstances": 55307,
+      "addMedianMs": 1147.31,
+      "dropMedianMs": 1203.91
     },
     {
       "label": "witness",
@@ -43,13 +43,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 5563.25,
-      "submitMeanMs": 0.706,
-      "submitMedianMs": 0.77,
-      "submitPeakMs": 0.78,
-      "followMeanMs": 0.001,
-      "matrixMeanMs": 0.295,
-      "gpuMs": 3.085,
+      "applyMs": 4961.565,
+      "submitMeanMs": 0.546,
+      "submitMedianMs": 0.555,
+      "submitPeakMs": 0.565,
+      "followMeanMs": 0,
+      "matrixMeanMs": 0.165,
+      "gpuMs": 3.099,
       "calls": 125,
       "instances": 223488,
       "triangles": 17086012,
@@ -64,10 +64,10 @@
       "inFrustum": 125,
       "standing": 1235,
       "cellsInFrustum": 1,
-      "callsBeyondFar": 26,
-      "cellsBeyondFar": 1,
-      "addMedianMs": 1212.46,
-      "dropMedianMs": 1232.04
+      "emptyCalls": 45,
+      "emptyInstances": 55307,
+      "addMedianMs": 1070.58,
+      "dropMedianMs": 1111.435
     },
     {
       "label": "grid",
@@ -75,13 +75,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 6022.905,
-      "submitMeanMs": 1.063,
-      "submitMedianMs": 1.07,
-      "submitPeakMs": 1.25,
-      "followMeanMs": 0.027,
-      "matrixMeanMs": 0.238,
-      "gpuMs": 1.8,
+      "applyMs": 5361.855,
+      "submitMeanMs": 0.831,
+      "submitMedianMs": 0.855,
+      "submitPeakMs": 0.87,
+      "followMeanMs": 0.02,
+      "matrixMeanMs": 0.152,
+      "gpuMs": 3.93,
       "calls": 324,
       "instances": 27349,
       "triangles": 9813524,
@@ -96,10 +96,10 @@
       "inFrustum": 324,
       "standing": 1458,
       "cellsInFrustum": 12,
-      "callsBeyondFar": 54,
-      "cellsBeyondFar": 2,
-      "addMedianMs": 1359.675,
-      "dropMedianMs": 1354.945
+      "emptyCalls": 50,
+      "emptyInstances": 4437,
+      "addMedianMs": 1453.06,
+      "dropMedianMs": 1363.85
     },
     {
       "label": "gridWide",
@@ -107,13 +107,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 5639.575,
-      "submitMeanMs": 1.995,
-      "submitMedianMs": 2.045,
-      "submitPeakMs": 2.205,
-      "followMeanMs": 0.014,
-      "matrixMeanMs": 0.866,
-      "gpuMs": 1.76,
+      "applyMs": 5562.04,
+      "submitMeanMs": 2.101,
+      "submitMedianMs": 2.1,
+      "submitPeakMs": 2.44,
+      "followMeanMs": 0.013,
+      "matrixMeanMs": 1.125,
+      "gpuMs": 1.933,
       "calls": 324,
       "instances": 27349,
       "triangles": 9813524,
@@ -128,10 +128,10 @@
       "inFrustum": 324,
       "standing": 6912,
       "cellsInFrustum": 12,
-      "callsBeyondFar": 54,
-      "cellsBeyondFar": 2,
-      "addMedianMs": 1387.725,
-      "dropMedianMs": 1407.075
+      "emptyCalls": 50,
+      "emptyInstances": 4437,
+      "addMedianMs": 1546.74,
+      "dropMedianMs": 1575.28
     },
     {
       "mode": "pixels",
@@ -176,24 +176,24 @@
   "failures": [],
   "rendererMemory": [
     {
-      "at": 20258,
+      "at": 18508,
       "phase": "witness · 500000",
-      "workingSetKb": 3031040
+      "workingSetKb": 3008352
     },
     {
-      "at": 39956,
+      "at": 35896,
       "phase": "grid · 500000",
-      "workingSetKb": 3773088
+      "workingSetKb": 3792288
     },
     {
-      "at": 59953,
+      "at": 56663,
       "phase": "gridWide · 500000",
-      "workingSetKb": 3944864
+      "workingSetKb": 3123472
     },
     {
-      "at": 74472,
+      "at": 73050,
       "phase": "fin",
-      "workingSetKb": 3585152
+      "workingSetKb": 3317392
     }
   ]
 }

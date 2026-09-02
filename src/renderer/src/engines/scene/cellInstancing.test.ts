@@ -10,7 +10,7 @@ import {
 import { PerspectiveCamera } from 'three'
 import { describe, expect, it } from 'vitest'
 import { meshNode, walked } from './scene-fixtures'
-import { WORTH_INSTANCING } from './grouping'
+import { isDrawn, WORTH_INSTANCING } from './grouping'
 import { createCellGroups } from './cellInstancing'
 import { CELL_SIZE } from './worldPartition'
 import type { SceneNode } from './sceneState'
@@ -93,12 +93,7 @@ const twoCells = (): {
 
 /** What three would really draw: the instance visible, and every group it hangs from with it. */
 const drawnIn = (scene: Object3D): InstancedMesh[] =>
-  instancesIn(scene).filter(mesh => {
-    for (let at: Object3D | null = mesh; at && at !== scene; at = at.parent) {
-      if (!at.visible) return false
-    }
-    return true
-  })
+  instancesIn(scene).filter(mesh => isDrawn(mesh, scene))
 
 /** Where each cell the scene still holds stands, along x — one number per cell, sorted. */
 const standingIn = (scene: Object3D): number[] =>
@@ -306,6 +301,31 @@ describe('a cell whose bodies moved without changing cell', () => {
     groups.rebuild(nodes, id => objects.get(id))
     groups.follow?.(looking(0, 500))
 
+    expect(drawnIn(scene)).toHaveLength(1)
+  })
+})
+
+describe('a body dragged into view', () => {
+  it('brings its whole cell back with it, without any rebuild', () => {
+    const scene = host()
+    const shape = new BoxGeometry(1, 1, 1)
+    // Off to the side of a view aimed along x: the cell is standing and drawn by nobody.
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 20), shape, 200)
+    const groups = createCellGroups(scene)
+    groups.rebuild(nodes, id => objects.get(id))
+    groups.follow?.(looking(0, 500))
+    expect(drawnIn(scene)).toHaveLength(0)
+
+    // A drag reports through `moved` alone — a body keeps its cell until a change of CONTENT.
+    const dragged = objects.get('n0')
+    if (!dragged) throw new Error('no body to drag')
+    dragged.position.set(20, 0, 0)
+    dragged.updateMatrixWorld(true)
+    groups.moved(['n0'], id => objects.get(id))
+    groups.follow?.(looking(0, 500))
+
+    // The cell's box is the union of its lots'. Grown on the lot alone, the cell stayed where its
+    // bodies STOOD and took the dragged one off screen with it, for the length of the gesture.
     expect(drawnIn(scene)).toHaveLength(1)
   })
 })

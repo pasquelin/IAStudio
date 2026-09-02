@@ -1,6 +1,6 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D } from 'three'
+import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SphereGeometry } from 'three'
 import { describe, expect, it } from 'vitest'
-import { heldOutOfDraw, unhang } from './grouping'
+import { heldOutOfDraw, unhang, worldReach } from './grouping'
 import { walked } from './scene-fixtures'
 
 const bodyIn = (parent: Object3D): Mesh => {
@@ -134,5 +134,21 @@ describe('unhang', () => {
 
     expect(scene.children).not.toContain(mesh)
     expect(mesh.parent).toBeNull()
+  })
+})
+
+describe('how far a placed shape reaches', () => {
+  it('never reads under what a SHEARED placement really stretches', () => {
+    const stretched = new Object3D()
+    stretched.scale.set(1, 1, 3)
+    const turned = new Object3D()
+    turned.rotation.set(0, Math.PI / 4, 0)
+    stretched.add(turned)
+    stretched.updateMatrixWorld(true)
+
+    // A rotated child of a non-uniformly scaled parent stretches by 3; `getMaxScaleOnAxis`
+    // measures the three columns and answers 2.236. A bound read off it culls what is on screen.
+    expect(turned.matrixWorld.getMaxScaleOnAxis()).toBeCloseTo(2.236, 3)
+    expect(worldReach(new SphereGeometry(1), turned.matrixWorld)).toBeGreaterThanOrEqual(3)
   })
 })

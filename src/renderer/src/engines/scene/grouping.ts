@@ -367,6 +367,31 @@ export function writeMoved(
   return touched
 }
 
+/**
+ * How far what this shape draws reaches from where it stands, once placed. Measured on first use:
+ * only a drawn mesh has had three measure it.
+ */
+export function worldReach(geometry: BufferGeometry, placement: Matrix4): number {
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere()
+  return (geometry.boundingSphere?.radius ?? 0) * stretchOf(placement)
+}
+
+/**
+ * The most a placement can stretch a direction — never LESS, which is the whole point.
+ *
+ * `getMaxScaleOnAxis` measures the three columns and misses a shear: a child rotated an eighth of
+ * a turn under a parent scaled (1, 1, 3) stretches by 3 and answers 2.236. A bound read off it
+ * culls geometry that is on screen. This norm is never below the true one, for nine squares.
+ */
+function stretchOf(placement: Matrix4): number {
+  const at = placement.elements
+  let squared = 0
+  for (const column of [0, 4, 8]) {
+    for (let row = 0; row < 3; row += 1) squared += (at[column + row] ?? 0) ** 2
+  }
+  return Math.sqrt(squared)
+}
+
 const REACHED = new Vector3()
 
 /**
@@ -379,13 +404,13 @@ const REACHED = new Vector3()
 export function widen(bounds: Sphere | null, geometry: BufferGeometry, placement: Matrix4): void {
   if (!bounds) return
   const reach =
-    (geometry.boundingSphere?.radius ?? 0) * placement.getMaxScaleOnAxis() +
+    worldReach(geometry, placement) +
     bounds.center.distanceTo(REACHED.setFromMatrixPosition(placement))
   if (reach > bounds.radius) bounds.radius = reach
 }
 
 /** What three.js would draw: this object visible, and every one it hangs from up to the host. */
-function isDrawn(mesh: Object3D, host: Object3D): boolean {
+export function isDrawn(mesh: Object3D, host: Object3D): boolean {
   for (let at: Object3D | null = mesh; at && at !== host; at = at.parent) {
     if (!at.visible) return false
   }

@@ -181,11 +181,143 @@ transformation) · `onGizmoChange` écrit `selectedIds` sans leur descendance, l
 `regroupInstances` a été corrigé pour le faire · `refreshAids` en `boundingBoxes: 'all'` accroche
 et décroche toutes les sources à chaque `apply`.
 
-## 8. Ce que le lot ne fait pas
+## 8. Étape 3 — le bypass géométrique
 
-- Le CPU de soumission ne rejoint pas la cible du § 1 : le levier nommé par la mesure est
-  **l'étape 3**, le bypass géométrique — 52 appels de moins de 16 instances à 500 000, 96 sur 96 à
-  500.
+### Ce que la mesure a dit AVANT d'écrire quoi que ce soit
+
+Trois conceptions ont été mesurées puis écartées, et c'est le contrôle qui les a écartées.
+
+**Le contrôle**, d'abord : le banc compte les instances qu'un frustum retient VRAIMENT, sphère du
+corps comprise. Il rend **9 116 instances visibles, identiques dans les quatre colonnes** — même
+monde, même caméra, quelle que soit la stratégie. Une mesure qui ne rend pas ce nombre est fausse.
+
+| | soumises | visibles | sur-soumission |
+|---|---:|---:|---:|
+| `off` | 231 397 | 9 116 | **×25,4** |
+| `grid`, étape 2 | 31 506 | 9 116 | ×3,5 |
+
+1. **« Fusionner les lots peu peuplés »** — écartée. Sur les 191 appels qui ne dessinaient AUCUNE
+   instance visible, **aucun** n'était un appel de moins de 16 instances (`emptyThinCalls = 0`).
+   La fusion n'aurait retiré aucun appel vide, et aurait rendu 18 appels permanents.
+2. **« Un seuil sous lequel on ne partitionne pas »** — écartée : il n'y a **pas de régression** à
+   500 ni à 5 000. L'écart `off` → `grid` y tenait dans l'écart du témoin `off` à lui-même.
+3. **Ce qui restait, et qui a été écrit** : three teste un `InstancedMesh` par sa **sphère**. Sur un
+   lot étalé dans une cellule de 256, cette sphère mord le frustum sans qu'aucune de ses instances
+   n'y soit. La **boîte** des instances est toujours contenue dans cette sphère : un lot qu'elle
+   rate ne peut rien montrer. Mesuré avant écriture : **la boîte rejette 155 des 381 appels**, tous
+   pris parmi les 191 vides.
+
+### Ce que ça donne
+
+500 000 corps, `D = 500`, 8 cycles, machine au repos, **campagne d'une seule taille de monde**
+(voir le § 12). La colonne « étape 2 » est la campagne du lot précédent, même machine, même repos.
+
+| | `off` | témoin `off` | étape 2 | **étape 3** |
+|---|---:|---:|---:|---:|
+| appels de dessin | 159 | 159 | 397 | **246** |
+| `gl.render` CPU | 0,719 | 0,789 | 1,422 | **0,942** |
+| `follow` | 0,000 | 0,000 | 0,041 | **0,268** |
+| **total par frame** | **0,719** | **0,789** | **1,463** | **1,210** |
+| GPU | 3,524 | 3,370 | 1,876 | **1,431** |
+| instances soumises | 231 397 | 231 397 | 31 506 | **17 848** |
+| instances visibles | 9 116 | 9 116 | 9 116 | 9 116 |
+| sur-soumission | ×25,4 | — | ×3,5 | **×2,0** |
+| nœuds visités | — | — | non publié | **80** |
+| cellules rendues / connues | — | — | — | **52 / 256** |
+
+**−38 % d'appels, −43 % d'instances soumises, −24 % de GPU, −17 % de CPU total.** Le rapport au
+témoin passe de ×2,1 à **×1,5**. Image : les deux pixels du § 4, inchangés — aucun de plus. **[M]**
+
+**Deux étages, et c'est une mesure qui l'a imposé.** À plat, sur tous les lots de toutes les
+cellules debout, le test coûtait **0,42 ms de `follow` par frame** — plus de la moitié de ce qu'il
+rendait. La cellule d'abord, ses lots seulement si elle est dans le champ : **0,27 ms**. **[M]**
+
+**Trois défauts de correction, tous trouvés par relecture et non par la mesure — tous du même côté
+de l'invariant : ils CACHAIENT ce que le rendu montrerait.**
+
+1. La boîte d'une cellule est l'union de celles de ses lots. Une reconstruction qui ne fait que
+   **réécrire** des matrices la laissait sur l'union des places PRÉCÉDENTES.
+2. **Un glisser** passe par `moved`, jamais par une reconstruction : la boîte du lot grandissait,
+   celle de la cellule non — et la cellule entière disparaissait pour toute la durée du geste.
+3. **`getMaxScaleOnAxis` n'est pas une borne supérieure sous cisaillement.** Un enfant tourné d'un
+   huitième de tour sous un parent d'échelle (1, 1, 3) s'étire de 3 et il répond 2,236 : une boîte
+   lue dessus est 34 % trop petite. La norme de Frobenius n'est jamais en dessous de la vraie, pour
+   neuf carrés — elle coûte 4 appels et 365 instances sur les 246 et 17 848 du tableau.
+
+Le premier en détail, parce qu'il est le moins visible : La boîte d'une cellule est l'union
+de celles de ses lots. Une reconstruction qui ne fait que **réécrire** des matrices — un corps
+reparenté, qui garde sa cellule et ses voisins — mettait à jour la boîte du lot et laissait celle
+de la cellule sur l'union des places PRÉCÉDENTES : un corps ramené dans le champ restait caché avec
+sa cellule. Corrigé, et tenu par un test qui échoue à vue quand on retire la ligne. **[C]**
+
+### Les petits mondes
+
+| | CPU `off` | témoin | CPU `grid` | GPU `off` | témoin | GPU `grid` | appels | soumises / visibles |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 500 | 0,325 | 0,325 | **0,452** | 0,887 | 0,888 | **0,434** | 54 → 77 | 514 → **248** / 134 |
+| 5 000 | 0,285 | 0,324 | **0,430** | 0,63 | 1,30 | 1,11 | 51 → 83 | 5 030 → **2 964** / 1 298 |
+
+**À 500 les deux témoins tiennent à 0,001 ms des deux côtés, donc tout se lit : la partition coûte
++0,13 ms de CPU et rend 0,45 ms de GPU.** À 5 000, le CPU coûte +0,11 à +0,15 ms ; le GPU y est
+illisible, les deux témoins s'écartant de 0,67 ms l'un de l'autre. 0 pixel dans les six
+comparaisons. **[M]**
+
+**C'est plus cher qu'à l'étape 2** (+0,06 alors) : le rejet par boîte se paie sur les petits mondes
+sans rien y rendre, puisqu'il n'y a presque rien à rejeter. Un seuil qui le désactiverait sous une
+certaine taille est le sujet le plus naturel d'un lot suivant — mais il n'est pas dans celui-ci, et
+0,13 ms ne le justifie pas à lui seul.
+
+## 9. Le rayon de zone — ce que je vous ai annoncé était faux
+
+**Correction.** Les « 54 appels de gaspillage pur » que j'ai avancés reposaient sur un test
+faux : il comparait une distance **euclidienne** à `camera.far`, qui est une profondeur sur l'axe
+de vue. Un corps à 600 unités peut se tenir à z = 450 et être parfaitement visible.
+
+Le test qui prouve vraiment un appel gaspillé est celui du § 8 — aucune de ses instances dans le
+frustum — et il dit que **le rayon n'a rien à rendre** :
+
+- Le disque doit contenir tout ce que le frustum peut montrer. Son coin lointain est à
+  `hypot(far, h, h·aspect)` = **774** pour `far = 500`, pas 500 ; les 500 du banc de spike sont
+  **plus petits que son propre frustum** — il pouvait retirer des cellules visibles, et n'a coûté
+  0 pixel que sur la vue qu'il mesurait.
+- Le `+ cellSize / 2` s'ajoute parce qu'un corps de portée ≤ 128 déborde de sa cellule d'autant, et
+  que la requête teste le RECTANGLE de la cellule.
+- **La forme est porteuse, pas seulement la taille** : le disque ignore la direction de la caméra
+  exprès. Une cellule hors du champ peut porter une ombre DANS le champ, et la passe d'ombre
+  regarde depuis la lumière. Rétrécir le disque à ce que la caméra voit casserait les ombres — ce
+  que le rejet par boîte du § 8 fait déjà, et qui est écrit au § 10 comme angle mort.
+
+**Rien n'a donc été changé au rayon.** Il est déjà minimal-correct. **[M]** + **[C]**
+
+## 10. La piste laissée pour plus tard
+
+**27 lots par cellule**, des deux côtés — production 6 912 meshes / 257 cellules = 26,9 ; spike
+6 075 / 225 = 27,0. Une cellule coûte ses 27 appels même quand trois de ses lots seulement sont
+réellement peuplés, et c'est le plafond que ni l'étape 3 ni le grain ne franchissent : le nombre
+d'appels reste `27 × cellules retenues`.
+
+Piste notée, **hors de ce lot** : ramasser les lots peu peuplés d'une cellule dans un mesh résiduel
+par macro-chunk, ou tout autre moyen de ne pas payer un appel par lot déclaré quand la cellule n'en
+remplit que quelques-uns.
+
+## 12. Un défaut de banc, à ne pas repayer
+
+**Une campagne qui enchaîne plusieurs tailles de monde dans la même page rend des relevés faux.**
+Mesuré : `counts=500000,5000,500` a rendu un témoin `off` qui différait de `off` sur **2 972 888
+pixels** et n'affichait pas les mêmes comptes (148 appels contre 159, 9 153 instances visibles
+contre 9 116) — alors que rien du chemin `off` n'avait changé. Rejouées taille par taille, les deux
+campagnes sont propres et le témoin retombe à 0 pixel.
+
+Douze moteurs montés dans une page, dont quatre portant 500 000 nœuds, dépassent ce que la page
+tient. **Une taille de monde par campagne**, et le témoin `off` joué deux fois reste le seul juge
+de la validité d'un relevé.
+
+## 13. Ce que le lot ne fait pas
+
+- Le CPU de soumission ne rejoint toujours pas la parité du § 1 : ×1,6 après l'étape 3, contre
+  ×2,1 avant. Ce qui reste est le plafond du § 10.
+- **Le rejet par boîte cache aussi pour la passe d'OMBRE**, puisqu'il éteint le mesh. C'est la même
+  compromission que la zone, en plus serré — voir la ligne suivante, et le § 9.
 - **Les cartes d'ombre d'une frame sont tracées pour la zone des PANNEAUX.** Un aperçu ou un film
   qui regarde ailleurs voit des corps dont l'ombre manque, jusqu'à ce que les cartes soient
   redemandées. Sous `off` la question ne se pose pas, toutes les cellules étant toujours là.
