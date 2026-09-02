@@ -7,7 +7,7 @@ import { displayStep, fromDisplayLength, toDisplayLength } from '@shared/domain/
 import { IDENTITY_TRANSFORM, type Transform, type Vector3 } from '@shared/domain/transform'
 import { Button } from '@/components/Button'
 import { InlineRename } from '@/components/InlineRename'
-import { Panel } from '@/components/Panel'
+import { Surface } from '@pasquelin/panels'
 import { PropertyRow } from '@/components/PropertyRow'
 import { PropertySection } from '@/components/PropertySection'
 import { QuietNote } from '@/components/QuietNote'
@@ -90,7 +90,7 @@ export function CharacterWindowInspector({
     // On Tailwind's own scale rather than a number invented here, and wide enough for the one
     // row that decides it: three axis fields, their letters and the end column. At 320 px a
     // joint's offset read `-0` — the value cut, not the field.
-    <Panel className="w-96 shrink-0">
+    <Surface className="w-96 shrink-0">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PropertySection title={t('character.skeleton')} scId="character.skeleton">
           {!rig && (
@@ -208,7 +208,7 @@ export function CharacterWindowInspector({
           />
         </PropertySection>
       </div>
-    </Panel>
+    </Surface>
   )
 }
 

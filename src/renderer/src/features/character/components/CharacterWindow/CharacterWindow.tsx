@@ -5,8 +5,7 @@ import type { CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Transform } from '@shared/domain/transform'
 import { EmptyState } from '@/components/EmptyState'
-import { Panel } from '@/components/Panel'
-import { PanelHeader } from '@/components/PanelHeader'
+import { PanelHeader, Surface } from '@pasquelin/panels'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { PANE_TOOLBAR, PANE_TOOLBAR_ASIDE } from '@/components/styles'
 import { TooltipHost } from '@/components/TooltipHost'
@@ -352,14 +351,14 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
           {/* The studio's own band and its own title bar, on this window's workshop scene.
               🛑 `AnimationActions` and never `TimelineActions`, which reads the STUDIO's active
               tab — mounted here it would drive the scene open in the window beside. */}
-          <Panel aria-label={t('character.band')} className="h-64">
+          <Surface aria-label={t('character.band')} className="h-64">
             <PanelHeader title={t('character.band')} fillActions>
               <AnimationActions documentId={workshopIdOf(assetId)} filmable={false} />
             </PanelHeader>
             <div className="flex min-h-0 flex-1 flex-col">
               <AnimationPanel documentId={workshopIdOf(assetId)} />
             </div>
-          </Panel>
+          </Surface>
 
           {/* 🛑 What makes Play do anything at all: the head is React's, run forward by this and
               pushed into the engine by it. Without it the button armed a flag nobody read. */}
