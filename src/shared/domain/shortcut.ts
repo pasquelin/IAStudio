@@ -374,6 +374,7 @@ const ACCELERATOR_MODIFIERS: Record<string, string> = {
 const ACCELERATOR_KEYS: Record<string, string> = {
   Comma: ',',
   Period: '.',
+  Semicolon: ';',
   Quote: "'",
   Equal: '=',
   Minus: '-',
