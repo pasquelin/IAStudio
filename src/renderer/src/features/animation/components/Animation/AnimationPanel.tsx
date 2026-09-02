@@ -2,6 +2,7 @@ import { mdiRhombus } from '@mdi/js'
 import { useMemo, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/components/EmptyState'
+import { PanelHeader } from '@/components/PanelHeader'
 import { putOnAnimationSheet } from '@/engines/scene/animationCommands'
 import { sceneNodeDrag } from '@/features/scene/components/dragged'
 import { clipKeyOf, clipLane, MAIN_LANE_ID } from '@shared/domain/scene'
@@ -108,6 +109,9 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     })
   }, [timeline, nodes, expanded, lengths, order, t])
 
+  // The block whose settings stand beside the band, and what names them: one answer, read twice.
+  const settled = playedBlockOf(nodes, pickedBlock)
+
   /**
    * The PANEL takes the drop, never the canvas: an empty band draws no canvas at all — the empty
    * state stands there — and that is the very moment a first object is dropped.
@@ -143,9 +147,17 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
           {/* Beside the block one is looking at, and only then: mounted whatever was picked, it
               was 224 px of bordered nothing on every band holding no block — the skeleton
               window's own band holds none at all. */}
-          {playedBlockOf(nodes, pickedBlock) && (
-            <aside className="border-edge w-56 shrink-0 overflow-y-auto border-l px-2 py-1">
-              <TimelineClipSettings documentId={documentId} />
+          {settled && (
+            <aside
+              aria-label={t('animation.blockSettings')}
+              className="border-edge w-56 shrink-0 overflow-y-auto border-l"
+            >
+              {/* Named, and named after the BLOCK: unlabelled it was a column of controls with
+                  nothing saying what they settled — « c'est quoi à droite de la timeline ». */}
+              <PanelHeader title={clipRefLabel(settled.played, t)} />
+              <div className="px-2 py-1">
+                <TimelineClipSettings documentId={documentId} />
+              </div>
             </aside>
           )}
         </div>

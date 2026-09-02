@@ -1,13 +1,11 @@
 import { mdiPause, mdiPlay, mdiSkipNext, mdiSkipPrevious } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { clipKeyOf, CLIP_SPEED, type ClipLane } from '@shared/domain/scene'
+import { clipKeyOf, type ClipLane } from '@shared/domain/scene'
 import { usToSeconds } from '@shared/domain/time'
-import { setModelLanes } from '@/engines/scene/commands'
 import { nodeById } from '@/engines/scene/sceneState'
-import { clipSpanOf, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
+import { clipSpanOf, laneHolding } from '@/engines/scene/clipBlend'
 import { clipLengthOf, useModelFiles } from '@/stores/modelFiles'
 import { SliderField } from '@/components/SliderField'
-import { ToggleField } from '@/components/ToggleField'
 import { ToolButton } from '@/components/ToolButton'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -26,10 +24,12 @@ const NO_LANES: readonly ClipLane[] = []
 const SCRUB_STEP = 0.05
 
 /**
- * Play, restart, speed and loop, on the block that was just laid.
+ * Listening to the block that was just laid: play, restart, and where along it to stand.
  *
- * It plays the REAL block through the real retargeting, on the real character: what the issue
- * asks in as many words. There is nothing to rehearse and nothing that could differ.
+ * It plays the REAL block through the real retargeting, on the real character — nothing here is
+ * a rehearsal. 🛑 What SETTLES the block — speed, loop, transition, root motion — belongs to
+ * `TimelineClipSettings`, which stands beside the band the block was laid on and is on screen at
+ * the same moment: drawn here too, the same two controls appeared twice.
  */
 export function CharacterMotionPickerPreview({
   documentId,
@@ -60,18 +60,6 @@ export function CharacterMotionPickerPreview({
   // A looping block wraps AT its length — the mixer reads `length % length` as the first pose —
   // so the end of the run is the step before it. A block that holds its last pose ends on it.
   const end = played.loop ? Math.max(0, seconds - SCRUB_STEP) : seconds
-
-  const write = (speed: number, loop: boolean): void => {
-    const next = lanesWith(lanes, lane.id, clips =>
-      clips.map(clip => (clip.id === clipId ? { ...clip, speed, loop } : clip)),
-    )
-    // `replace` and not a command: the workshop scene is a SCRATCH, and an undo entry laid on it
-    // is one no key of this window can ever reach — see the `character` command scope.
-    if (next) {
-      const scenes = useScenes.getState()
-      scenes.replace(documentId, setModelLanes(nodeId, next).apply(sceneOf(scenes, documentId)))
-    }
-  }
 
   const watch = (at: number, playing: boolean): void =>
     useSceneViews.getState().setPreview(documentId, { nodeId, clipId, at, playing })
@@ -114,21 +102,6 @@ export function CharacterMotionPickerPreview({
           onChange={at => watch(at, false)}
         />
       )}
-      <SliderField
-        label={t('inspector.clipSpeed')}
-        scId="animationPicker.speed"
-        min={CLIP_SPEED.min}
-        max={CLIP_SPEED.max}
-        step={0.1}
-        value={played.speed}
-        onChange={speed => write(speed, played.loop)}
-      />
-      <ToggleField
-        label={t('inspector.clipLoop')}
-        scId="animationPicker.loop"
-        value={played.loop}
-        onChange={loop => write(played.speed, loop)}
-      />
     </div>
   )
 }

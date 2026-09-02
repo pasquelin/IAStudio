@@ -267,6 +267,7 @@
     "renderNeedsCamera": "Ajoutez une caméra à la scène pour pouvoir la rendre",
     "bone": "Os",
     "wholeModel": "Le modèle entier",
+    "blockSettings": "Réglages du bloc",
     "loop": "Lecture en boucle",
     "loopHint": "La tête repart au début au lieu de s’arrêter à la fin",
     "autoKey": "Enregistrement automatique",

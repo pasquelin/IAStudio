@@ -267,6 +267,7 @@
     "renderNeedsCamera": "Add a camera to the scene to render it",
     "bone": "Bone",
     "wholeModel": "The whole model",
+    "blockSettings": "Block settings",
     "loop": "Loop playback",
     "loopHint": "The head starts over instead of stopping at the end",
     "autoKey": "Auto-key",
