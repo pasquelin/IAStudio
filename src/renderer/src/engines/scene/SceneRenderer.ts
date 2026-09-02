@@ -229,9 +229,9 @@ export type GroupingStrategy = 'instanced' | 'batched'
 /**
  * Whether the world is cut into cells the camera turns off, or drawn whole.
  *
- * `off` — the default — is the studio as it has always drawn. `grid` files every body under a
- * cell of 256 and draws only the cells its view can reach: measured on a level of 500 000, 20 462
- * instances against 223 488 and 2.26 ms of GPU against 2.86. See `cellInstancing`.
+ * `grid` — the default — files every body under a cell of 256 and draws only the cells its view
+ * can reach: measured on a level of 500 000, 17 848 instances against 231 397 and 1.43 ms of GPU
+ * against 3.52. `off` is the studio as it drew before it. See `cellInstancing`.
  */
 export type PartitionMode = 'off' | 'grid'
 
@@ -345,8 +345,8 @@ export type SceneRendererOptions = {
    */
   grouping?: GroupingStrategy
   /**
-   * Whether the level is cut into cells only the ones a view reaches are drawn from. `off` by
-   * default: the whole world is grouped as it always was.
+   * Whether the level is cut into cells only the ones a view reaches are drawn from. `grid` by
+   * default; `off` groups the whole world as the studio did before the cells.
    */
   partition?: PartitionMode
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
@@ -4789,13 +4789,14 @@ function disposeMaterial(mesh: Mesh): void {
 }
 
 /**
- * Which of the three strategies draws the repeated shapes. The partition answers first: it holds
- * a zone the other two have no notion of, so asking for both is asking for the cells.
+ * Which of the three strategies draws the repeated shapes — the cells unless something says
+ * otherwise. Naming a `grouping` is asking to leave them: the other two hold no zone at all.
  */
 function groupsFor(
   options: SceneRendererOptions,
 ): (host: Object3D, ownMaterialOf: (mesh: Mesh) => Material | Material[]) => InstancedGroups {
-  if (options.partition === 'grid') return createCellGroups
+  const partition = options.partition ?? (options.grouping ? 'off' : 'grid')
+  if (partition === 'grid') return createCellGroups
   return options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups
 }
 
