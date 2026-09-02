@@ -360,7 +360,59 @@ l'étirement, **isotropiquement** — 76 unités pour un pilier de 5 × 87 × 5.
 près ne rejetait donc jamais rien. Une boîte serrée sur la vraie enveloppe rejetterait davantage ;
 ce n'est pas dans ce lot.
 
-## 13. Un défaut de banc, à ne pas repayer
+## 13. Étape 4 — la couche dynamique
+
+`spike/webgpu/dynamicLayer{Bench.ts,.html}`, 500 000 corps, 40 frames de mouvement après chauffe.
+
+**Ce qui est écrit.** Un corps qui passe par `moved` est promu **une fois pour toutes** sur le lot
+de son groupe, hors de toute cellule : slot à vie, matrice réécrite en place, sortie par
+**swap-remove** — la dernière instance recouvre le trou et le compte baisse d'un, là où un
+`splice` décalerait toutes les matrices suivantes. Un mobile n'est **pas cullé** : une sphère
+mesurée une fois est fausse à son premier pas.
+
+### Ce que ça donne
+
+| | mobiles | **couche, moyenne** | pic | 1re passe (promotion) | document, hors couche | meshes | statiques refaits |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `off` · 1 % | 5 015 | **1,24** | 5,30 | 5,76 | 1,32 | 1 235 → 1 235 | **0** |
+| `grid` · 1 % | 5 015 | **2,29** | 6,59 | 22,01 | 2,82 | 6 912 → **6 920** | **0** |
+| `off` · 5 % | 25 073 | **21,21** | 25,32 | 28,91 | 20,33 | 1 235 → 1 235 | **0** |
+| `grid` · 5 % | 25 073 | **20,82** | 21,78 | 89,55 | 24,08 | 6 912 → **6 920** | **0** |
+
+| spawn (200 corps retirés par passe, 12 passes) | `rebuild` seul | `apply` complet |
+|---|---:|---:|
+| `off` | 918 ms | 1 437 ms |
+| `grid` | 1 271 ms | 1 617 ms |
+
+**Ce qui marche, et qui est le contrat de l'étape** : **zéro mesh statique reconstruit** pendant le
+mouvement, des deux côtés et aux deux taux. Huit lots de mobiles naissent (6 912 → 6 920), un par
+groupe rencontré. Le swap-remove tient : un test vérifie que le dernier corps vient occuper le
+trou plutôt que de décaler la suite. **[M]**
+
+### 🛑 Ce que la mesure dit et qu'il faut lire en entier
+
+**Le ×21 de C5-B2 § 4 ne se retrouve PAS en production, et c'est explicable : il était mesuré
+contre une structure que la production n'a jamais eue.** B2 comparait la couche séparée à une
+structure UNIQUE qui reconstruisait 947 meshes par frame de mouvement. Le `moved` de la production
+écrit ses matrices en place depuis toujours — `instancing.ts` comme `cellInstancing.ts` — donc son
+point de départ était déjà celui que B2 présentait comme l'arrivée : **0,90 ms mesuré par B2 pour
+la couche séparée, 1,24 ms mesuré ici pour la production SANS couche, sur le même nombre de
+mobiles.**
+
+**Sur ces scénarios, la couche coûte plus qu'elle ne rend** : +1,05 ms à 1 % (mesuré deux fois,
++1,07 puis +1,05), et à parité à 5 %. La promotion est un coût ponctuel réel — **22 ms** pour
+5 015 corps, **90 ms** pour 25 073 — payé à leur premier mouvement.
+
+**Ce qu'elle rend n'est pas capté par ces scénarios** : une cellule cesse de grandir autour d'un
+mobile, et aucun changement de contenu ne la reconstruit plus pour lui. Le décor de mesure déplace
+les corps de 0,01 unité par frame, soit 0,4 unité en tout — une boîte de cellule ne s'en déforme
+pas. Le bénéfice se verrait sur un mouvement long ou un changement de contenu fréquent ; **il n'est
+pas mesuré ici, et je ne le présente pas comme acquis.** **[H]**
+
+**Garder ou retirer la couche est donc une décision à prendre avec ces chiffres**, pas une
+conclusion de ce rapport.
+
+## 14. Un défaut de banc, à ne pas repayer
 
 **Une campagne qui enchaîne plusieurs tailles de monde dans la même page rend des relevés faux.**
 Mesuré : `counts=500000,5000,500` a rendu un témoin `off` qui différait de `off` sur **2 972 888
@@ -373,7 +425,7 @@ Douze moteurs montés dans une page, dont quatre portant 500 000 nœuds, dépass
 tient. **Une taille de monde par campagne**, et le témoin `off` joué deux fois reste le seul juge
 de la validité d'un relevé.
 
-## 14. Ce que le lot ne fait pas
+## 15. Ce que le lot ne fait pas
 
 - Le CPU de soumission ne rejoint toujours pas la parité du § 1 : ×1,6 après l'étape 3, contre
   ×2,1 avant. Ce qui reste est le plafond du § 10.

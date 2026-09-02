@@ -63,7 +63,8 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
   it('tells the zone where the camera stands before the pane it is about to draw', () => {
     // The one call of the grouping contract a FRAME makes, and the answer is what asks for the
     // shadow maps again — a cell that just entered the zone was never drawn into them.
-    expect(body('dressPane')).toContain('this.instances.follow?.(camera)')
+    // The throw goes with it: what the zone hides for the camera, it hides for the light too.
+    expect(body('dressPane')).toContain('this.instances.follow?.(camera, this.shadowThrow)')
   })
 
   it('names its camera to the zone on every surface that is not a pane', () => {
@@ -71,7 +72,7 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     // the whole level went back into the scene and out of it again twice a frame, and its shadow
     // maps had been drawn for another zone. A film and a capture name none, and get every cell.
     expect(source).toContain('onInset: camera => this.hideWorkshop(camera)')
-    expect(source).toContain('this.instances.follow?.(camera ?? null)')
+    expect(source).toContain('this.instances.follow?.(camera ?? null, this.shadowThrow)')
   })
 
   it('dresses the meshes it draws with, and not only the ones it stands for', () => {
