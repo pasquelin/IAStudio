@@ -21,10 +21,40 @@ const FIVE_SHAPES: GeometryDescriptor[] = [
   { kind: 'torusKnot', radius: 0.45, tube: 0.15, tubularSegments: 48, radialSegments: 10, p: 2, q: 3 },
 ]
 
-const THREE_SHAPES: GeometryDescriptor[] = [
+/**
+ * Les quatre RÉSOLUTIONS que le chantier C3 mesure, du plein à un dixième des triangles.
+ *
+ * Ce n'est PAS un LOD : c'est la scène entière construite plus légère, pour lire le plafond du
+ * gain avant d'écrire le moindre mécanisme. Rien d'autre ne change — même graine, mêmes
+ * placements, mêmes matériaux, même nombre de corps — donc `full` doit rendre le relevé de C2.
+ *
+ * Triangles d'une sphère `w × h` : `w · h · 2 − w · 2`. D'un cylindre à `s` segments et une
+ * hauteur : `s · 4`. Un cube en fait douze et n'a rien à rendre.
+ */
+export type ShapeLevel = 'product' | 'full' | 'half' | 'quarter' | 'tenth'
+
+const SPHERES: Record<ShapeLevel, { widthSegments: number; heightSegments: number }> = {
+  // Ce que `meshPrimitives.ts` pose quand quelqu'un ajoute une sphère : 960 triangles, 2,7 fois
+  // la sphère du banc. C'est cette scène-là qu'un utilisateur construit, pas `full`.
+  product: { widthSegments: 32, heightSegments: 16 },
+  full: { widthSegments: 16, heightSegments: 12 },
+  half: { widthSegments: 12, heightSegments: 8 },
+  quarter: { widthSegments: 8, heightSegments: 6 },
+  tenth: { widthSegments: 6, heightSegments: 4 },
+}
+
+const CYLINDERS: Record<ShapeLevel, number> = { product: 32, full: 16, half: 12, quarter: 8, tenth: 6 }
+
+const threeShapes = (level: ShapeLevel): GeometryDescriptor[] => [
   { kind: 'box', width: 1, height: 1, depth: 1 },
-  { kind: 'sphere', radius: 0.6, widthSegments: 16, heightSegments: 12 },
-  { kind: 'cylinder', radiusTop: 0.5, radiusBottom: 0.5, height: 1.2, segments: 16 },
+  { kind: 'sphere', radius: 0.6, ...(SPHERES[level] ?? SPHERES.full) },
+  {
+    kind: 'cylinder',
+    radiusTop: 0.5,
+    radiusBottom: 0.5,
+    height: 1.2,
+    segments: CYLINDERS[level] ?? CYLINDERS.full,
+  },
 ]
 
 const EIGHT_PAINTS = ['#ff5544', '#44ff66', '#4466ff', '#ffee44', '#ff44dd', '#44eeff', '#eeeeee', '#888888']
@@ -74,7 +104,8 @@ export function sceneS1(): SceneState {
 }
 
 /** S2 et S3 : N corps, trois formes × huit peintures, placés, tournés et mis à l'échelle au hasard. */
-export function sceneVaried(count: number, seed = 7): SceneState {
+export function sceneVaried(count: number, seed = 7, level: ShapeLevel = 'full'): SceneState {
+  const shapes = threeShapes(level)
   // Le générateur du jeu : le même tirage à chaque passe, donc la même scène des deux côtés du flag.
   const { next: random } = createRandom(seed)
   const reach = Math.ceil(Math.cbrt(count)) * 1.3
@@ -84,7 +115,7 @@ export function sceneVaried(count: number, seed = 7): SceneState {
     const scale = 0.6 + random() * 0.8
     nodes.push({
       ...base,
-      geometry: THREE_SHAPES[at % THREE_SHAPES.length] ?? THREE_SHAPES[0]!,
+      geometry: shapes[at % shapes.length] ?? shapes[0]!,
       material: { ...base.material, color: EIGHT_PAINTS[(at * 7) % EIGHT_PAINTS.length] ?? '#ffffff' },
       transform: {
         position: { x: (random() - 0.5) * 2 * reach, y: (random() - 0.5) * 2 * reach, z: (random() - 0.5) * 2 * reach },
@@ -136,7 +167,8 @@ export const withOneAdded = (state: SceneState): SceneState => {
     ...state,
     nodes: [
       ...state.nodes,
-      { ...base, geometry: THREE_SHAPES[0]!, material: { ...base.material, color: '#ff5544' } },
+      // Le cube : douze triangles à toutes les résolutions, donc la colonne reste comparable.
+      { ...base, geometry: threeShapes('full')[0]!, material: { ...base.material, color: '#ff5544' } },
     ],
   }
 }

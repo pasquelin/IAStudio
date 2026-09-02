@@ -4,7 +4,7 @@ import { SceneRenderer, type GroupingStrategy } from '@/engines/scene/SceneRende
 import type { CameraPlacement } from '@/engines/scene/sceneView'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { createGlTimer, type GlTimer } from './glTimer.js'
-import { centresOf, sceneS1, sceneVaried, withBodyMoved, withNothingMoved, withOneAdded, withOneMoved, withoutMaps } from './engineScenes'
+import { centresOf, sceneS1, sceneVaried, type ShapeLevel, withBodyMoved, withNothingMoved, withOneAdded, withOneMoved, withoutMaps } from './engineScenes'
 import { checker } from './floorScenes.js'
 
 /**
@@ -315,10 +315,21 @@ const timed = (times: number, run: (at: number) => void): number => {
 
 export type SceneName = 'S1' | 'S2' | 'S3'
 
+/**
+ * La résolution des primitives, pour lire le plafond d'un LOD avant d'en écrire un.
+ *
+ * Un niveau inconnu ARRÊTE le banc : retomber sur `full` en silence ferait publier un relevé de
+ * pleine résolution sous le nom d'un dixième, ce qu'aucune relecture ne rattraperait.
+ */
+const LEVELS: readonly ShapeLevel[] = ['product', 'full', 'half', 'quarter', 'tenth']
+const asked = QUERY.get('lod') ?? 'full'
+const LEVEL = LEVELS.find(level => level === asked)
+if (!LEVEL) throw new Error(`lod inconnu : ${asked} — attendu ${LEVELS.join(', ')}`)
+
 const SCENES: Record<SceneName, () => SceneState> = {
   S1: sceneS1,
-  S2: () => sceneVaried(10_000),
-  S3: () => sceneVaried(50_000),
+  S2: () => sceneVaried(10_000, 7, LEVEL),
+  S3: () => sceneVaried(50_000, 7, LEVEL),
 }
 
 export type Step = { scene: SceneName; grouping: GroupingStrategy; phase: string }

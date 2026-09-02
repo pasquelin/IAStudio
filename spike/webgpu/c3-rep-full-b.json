@@ -1,0 +1,64 @@
+{
+  "at": "2026-09-02T10:20:32.731Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "scene": "S3",
+      "grouping": "instanced",
+      "bodies": 50000,
+      "firstApplyMs": 503.9,
+      "applyStillMs": 6.5,
+      "applyOneMovedMs": 7.1,
+      "applyOneAddedMs": 112.2,
+      "fullFrameCpuMs": 0.5,
+      "fullScenePassCpuMs": 0.553,
+      "fullFrameMs": 8.3,
+      "fullFps": 120.482,
+      "fullGpuMs": 4.267,
+      "fullDrawCalls": 169,
+      "fullMultiDrawCalls": 0,
+      "fullInstancedCalls": 160,
+      "fullPlainCalls": 9,
+      "fullBodiesByLot": 0,
+      "fullBodiesByInstance": 100000,
+      "fullTriangles": 14266896,
+      "turnedShareInView": 30,
+      "turnedFrameCpuMs": 0.4,
+      "turnedScenePassCpuMs": 0.447,
+      "turnedFrameMs": 8.1,
+      "turnedFps": 123.457,
+      "turnedGpuMs": 3.218,
+      "turnedDrawCalls": 161,
+      "turnedMultiDrawCalls": 0,
+      "turnedInstancedCalls": 152,
+      "turnedPlainCalls": 9,
+      "turnedBodiesByLot": 0,
+      "turnedBodiesByInstance": 97906,
+      "turnedTriangles": 13529808,
+      "heapBefore": 13.192,
+      "heapLoaded": 255.915,
+      "heapEdited": 306.918
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2268,
+      "phase": "S3 instanced — 70 % hors champ",
+      "workingSetKb": 496352
+    },
+    {
+      "at": 4344,
+      "phase": "S3 instanced — 100 éditions",
+      "workingSetKb": 503088
+    },
+    {
+      "at": 6388,
+      "phase": "fin",
+      "workingSetKb": 505040
+    }
+  ]
+}
