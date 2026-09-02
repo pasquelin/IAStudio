@@ -412,6 +412,11 @@ pas mesuré ici, et je ne le présente pas comme acquis.** **[H]**
 **Garder ou retirer la couche est donc une décision à prendre avec ces chiffres**, pas une
 conclusion de ce rapport.
 
+**Un défaut trouvé par la relecture adversariale, pas par la mesure** : `dispose` ne parcourait que
+les cellules, et un lot de mobiles ne pend d'aucune d'elles — son mesh restait dans la scène et son
+tampon d'instances sur le GPU. Le test de démontage existant ne promouvait aucun corps, donc il
+passait vert sur exactement ce chemin. Corrigé, et tenu par un second cas qui promeut d'abord.
+
 ## 14. Un défaut de banc, à ne pas repayer
 
 **Une campagne qui enchaîne plusieurs tailles de monde dans la même page rend des relevés faux.**

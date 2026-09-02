@@ -297,6 +297,17 @@ export function createCellGroups(
 
   const clear = (): void => {
     for (const [name, bucket] of buckets) drop(name, bucket)
+    // The movers with them: they hang from the host and no bucket names them, so a `dispose`
+    // that only walked the cells left their instance buffers on the GPU and their meshes in the
+    // scene — the one half of the teardown a test that never promoted anything could not see.
+    for (const lot of mobiles.values()) {
+      for (const id of lot.ids) placed.delete(id)
+      lot.mesh.removeFromParent()
+      lot.mesh.dispose()
+    }
+    mobiles.clear()
+    moving.clear()
+    listStale = true
   }
 
   return {

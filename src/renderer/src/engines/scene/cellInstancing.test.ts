@@ -533,16 +533,40 @@ describe('a body that moves', () => {
 })
 
 describe('disposing the groups', () => {
-  it('takes its meshes out of the scene and gives the sources back to the walk', () => {
+  const settled = (): {
+    scene: Object3D
+    groups: ReturnType<typeof createCellGroups>
+    objects: Map<string, Mesh>
+  } => {
     const scene = host()
     const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
     for (const mesh of objects.values()) scene.add(mesh)
     const groups = createCellGroups(scene)
     groups.rebuild(nodes, id => objects.get(id))
+    return { scene, groups, objects }
+  }
+
+  it('takes its meshes out of the scene and gives the sources back to the walk', () => {
+    const { scene, groups, objects } = settled()
 
     groups.dispose()
 
     expect(instancesIn(scene)).toHaveLength(0)
     expect(walked(scene)).toContain(objects.get('n0'))
+  })
+
+  it('takes the lots of the MOVERS with them, which no bucket names', () => {
+    const { scene, groups, objects } = settled()
+    const mover = objects.get('n2')
+    if (!mover) throw new Error('no body to move')
+    mover.position.set(0, 3, 0)
+    mover.updateMatrixWorld(true)
+    groups.moved(['n2'], id => objects.get(id))
+
+    groups.dispose()
+
+    // A lot of movers hangs from the host and belongs to no cell: a teardown that walked the
+    // cells alone left its instance buffer on the GPU and its mesh in the scene.
+    expect(instancesIn(scene)).toHaveLength(0)
   })
 })
