@@ -1,0 +1,49 @@
+{
+  "at": "2026-09-02T12:15:32.609Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "count": 50000,
+      "span": 600,
+      "sunAt": {
+        "x": 173.21,
+        "y": 100,
+        "z": 0
+      },
+      "sunDistance": 200,
+      "asShipped": {
+        "near": 0.5,
+        "far": 500,
+        "left": -856.102338812332,
+        "right": 856.102338812332
+      },
+      "opened": {
+        "near": 0.5,
+        "far": 1400
+      },
+      "difference": {
+        "share": 0,
+        "meanGap": 0
+      },
+      "shadowsVisible": {
+        "share": 0.9135,
+        "meanGap": 10.1
+      },
+      "mapSize": 2048,
+      "unitsPerTexel": 0.84,
+      "groundFrom": 425.13,
+      "groundTo": 779.64
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "fin",
+      "workingSetKb": 498240
+    }
+  ]
+}
