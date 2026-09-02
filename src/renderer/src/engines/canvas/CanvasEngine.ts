@@ -105,7 +105,7 @@ import type { Point, Size } from '../core/geometry'
 import { blurRadius, brushSettingsOf, DEFAULT_BRUSH, type BrushSettings } from './brush'
 import type { CanvasTool } from './canvasTool'
 import { brushRect, grownBy, unionOf } from './tiles'
-import { cellAt, cellRuns, cellsOfLine, stampRect } from './pixelGrid'
+import { cellAt, cellBox, cellRuns, cellsOfLine, onCellBoundary, stampRect } from './pixelGrid'
 import {
   containIn,
   DEFAULT_VIEW,
@@ -397,7 +397,9 @@ type Gesture =
    * The drag's two points, in document units. `to` is held rather than derived on release: it is
    * the point AFTER shift has been applied, and the layer must store the square that was drawn.
    */
-  | { kind: 'shape'; from: Point; to: Point }
+  // `origin` is where the hand PRESSED, kept raw: the box grows away from the far end, so
+  // which way it grows changes the moment a drag crosses back over its own anchor.
+  | { kind: 'shape'; origin: Point; from: Point; to: Point }
   /** Sizing a caption's box by its diagonal. A drag of nothing at all is a click, which opens one. */
   | { kind: 'text'; from: Point; to: Point }
   /** Pulling one grip of a caption's box. `box` and `origin` are what it stood at when taken. */
@@ -1501,6 +1503,16 @@ export class CanvasEngine {
     this.stamp.filters = [this.softener]
   }
 
+  /**
+   * The two corners of a dragged box, on whole cells while the document is on a grid. `cropRect`
+   * clamps to the document afterwards, so an edge of a document the cell does not divide lands
+   * on the document's own edge rather than on a boundary.
+   */
+  private gridBox(from: Point, to: Point): { from: Point; to: Point } {
+    const cell = this.pixelCell()
+    return cell === null ? { from, to } : cellBox(from, to, cell)
+  }
+
   /** What the next dab covers, which on a grid is a square and not the disc the size names. */
   private brushMark(at: Point): BrushMark {
     const cell = this.pixelCell()
@@ -2415,6 +2427,13 @@ export class CanvasEngine {
    */
   private snappedMove(origin: Point, from: Point, to: Point): Point {
     const raw = { x: origin.x + to.x - from.x, y: origin.y + to.y - from.y }
+    // 🛑 Before the guides, and whatever the magnetism says: a layer moved half a pixel makes the
+    // sprite's transform resample the whole artwork, and that is invisible until it cannot be
+    // undone. The grid is the mode, not a preference — so a layer that arrived off it is pulled
+    // ON, absolute rather than by its delta, at the price of moving before the hand does.
+    const cell = this.pixelCell()
+    if (cell !== null) return onCellBoundary(raw, cell)
+
     const state = this.state
     if (!this.view.snap || !state) return raw
 
@@ -2602,6 +2621,8 @@ export class CanvasEngine {
       }
 
       // The box comes from the drag, or from a click, which has none: settled on release.
+      // Left off the grid on purpose: a caption is words, not cells, and its box is a layout —
+      // what a grid owes it is that its PLACEMENT lands on one, which `snappedMove` does.
       this.gesture = { kind: 'text', from: point, to: point }
       return
     }
@@ -2609,7 +2630,7 @@ export class CanvasEngine {
     if (this.tool === 'shape') {
       // No paint target and no undo tiles: a shape lands as a layer of its own, so the armed
       // layer is neither written to nor required to exist.
-      this.gesture = { kind: 'shape', from: point, to: point }
+      this.gesture = { kind: 'shape', origin: point, from: point, to: point }
       return
     }
 
@@ -2871,12 +2892,13 @@ export class CanvasEngine {
         return
       }
       case 'select': {
+        const carved = this.gridBox(gesture.from, point)
         // A lasso follows the hand; the other two are a box between where it started and where
         // it is now, so only the lasso needs what came before.
         this.publishSelection(
           this.selectionShape === 'lasso'
             ? extendLasso(this.selection, point)
-            : dragSelection(this.selectionShape, gesture.from, point, event.shiftKey),
+            : dragSelection(this.selectionShape, carved.from, carved.to, event.shiftKey),
         )
         return
       }
@@ -2908,7 +2930,8 @@ export class CanvasEngine {
       }
       case 'crop': {
         // Clamped here rather than at the commit, so the frame drawn is the frame applied.
-        this.setCropping(cropRect(gesture.from, point, this.documentSize(), event.shiftKey))
+        const framed = this.gridBox(gesture.from, point)
+        this.setCropping(cropRect(framed.from, framed.to, this.documentSize(), event.shiftKey))
         this.overlay.invalidate()
         return
       }
@@ -2916,7 +2939,9 @@ export class CanvasEngine {
         // Against the frame the drag started on, never the current one: every move is absolute,
         // or a grip nudged twice would compound its own displacement.
         const size = this.documentSize()
-        const next = resizeCrop(gesture.origin, gesture.handle, point, size, event.shiftKey)
+        const cell = this.pixelCell()
+        const pulled = cell === null ? point : onCellBoundary(point, cell)
+        const next = resizeCrop(gesture.origin, gesture.handle, pulled, size, event.shiftKey)
         // A collapsed adjustment keeps the last good frame rather than dropping it: the hand is
         // still down, and a frame that vanished mid-drag could not be pulled back open.
         if (next) this.setCropping(next)
@@ -2926,7 +2951,9 @@ export class CanvasEngine {
       case 'shape': {
         // Previewed in the overlay, not in the layer: a layer per pointer move would be a
         // hundred entries in the history for one gesture.
-        gesture.to = constrainedTo(this.shapeKind, gesture.from, point, event.shiftKey)
+        const drawn = this.gridBox(gesture.origin, point)
+        gesture.from = drawn.from
+        gesture.to = constrainedTo(this.shapeKind, drawn.from, drawn.to, event.shiftKey)
         this.pending = shapeGeometry(this.shapeKind, gesture.from, gesture.to, {
           sides: this.shapeSides,
           constrain: false,
@@ -3419,8 +3446,11 @@ export class CanvasEngine {
     const line = drawn.kind === 'line' || drawn.kind === 'arrow'
     const width = strokeWidth(this.brush.size)
     const local = localShape(this.shapeKind, from, to, this.shapeSides, line ? width : 0)
+    const cell = this.pixelCell()
 
-    this.options.onShape(local.at, {
+    // A ring places its vertices by `cos`/`sin`, so the box the outline gives back is fractional
+    // even between two corners on the grid — and a layer placed on a fraction resamples.
+    this.options.onShape(cell === null ? local.at : onCellBoundary(local.at, cell), {
       shape: this.shapeKind,
       from: local.from,
       to: local.to,

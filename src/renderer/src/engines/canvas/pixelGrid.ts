@@ -1,3 +1,4 @@
+import { snap } from '@shared/numeric'
 import type { Point } from '../core/geometry'
 import { sided, type Rect } from './canvasState'
 
@@ -25,6 +26,36 @@ export function stampRect(at: Point, cell: number, brushSize: number): Rect {
   const row = cellOf(at.y, cell) - back
 
   return { x: column * cell, y: row * cell, width: across * cell, height: across * cell }
+}
+
+/**
+ * A point moved to the nearest cell BOUNDARY — where a layer's origin lands. Not `cellAt`, which
+ * answers which cell a point is inside: an origin belongs between two cells, not to one of them.
+ */
+export function onCellBoundary(at: Point, cell: number): Point {
+  return { x: snap(at.x, cell), y: snap(at.y, cell) }
+}
+
+/** One end of a span, grown AWAY from the other — see `cellBox`. */
+function grown(near: number, far: number, cell: number): number {
+  const bound = near <= far ? Math.floor(near / cell) : Math.ceil(near / cell)
+  return bound * cell
+}
+
+/**
+ * The corners of a box grown to whole cells, each away from the other, and the drag's own
+ * orientation kept — a right-to-left drag stays one, which is what tells an arrow its head.
+ *
+ * 🛑 Never the NEAREST boundary for both: the answer would then depend on where inside a cell the
+ * hand started. Measured on a cell of 16 — a drag of 8 px from 220 crosses a boundary and takes
+ * NOTHING, while the same 8 px from 210 takes a cell. Grown outward, every cell touched is taken
+ * and a drag inside one cell takes that one.
+ */
+export function cellBox(from: Point, to: Point, cell: number): { from: Point; to: Point } {
+  return {
+    from: { x: grown(from.x, to.x, cell), y: grown(from.y, to.y, cell) },
+    to: { x: grown(to.x, from.x, cell), y: grown(to.y, from.y, cell) },
+  }
 }
 
 /** The cell a document point falls in, as grid coordinates. */

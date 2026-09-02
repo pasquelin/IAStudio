@@ -2931,6 +2931,63 @@ function release(x = 400, y = 400): void {
   window.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y }))
 }
 
+describe('the gestures of a pixel grid', () => {
+  // Aligned whatever the magnetism says: on a grid the alignment is the mode, not a preference.
+  it('lands a moved layer on a cell boundary, ahead of the magnetism', async () => {
+    const stack: CanvasState = {
+      ...DEFAULT_CANVAS,
+      pixelCell: 16,
+      layers: [{ ...pixelLayer('t', 'T'), transform: { ...IDENTITY, x: 0, y: 0 } }],
+      activeLayerId: 't',
+    }
+    const { engine, host, layers } = await mounted(stack, 'move')
+    engine.setView({ ...DEFAULT_VIEW, rulers: false, guides: false, snap: true })
+
+    press(host, 200, 200)
+    drag(host, 237, 205)
+    release(237, 205)
+
+    // The hand moved by (37, 5); the layer lands on the nearest boundary of a 16 px cell.
+    expect(layers).toContain('translate:t:32:0')
+  })
+
+  /**
+   * A marquee off the grid selects a fraction of a cell, which no dab can ever fill. Both ends
+   * grow OUTWARD: rounding each to its nearest boundary makes a drag of the same length select a
+   * cell or nothing at all, depending where inside a cell the hand happened to start.
+   */
+  it('carves a marquee outward, onto whole cells', async () => {
+    const { engine, host, selections } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 16 })
+    engine.setTool('select')
+    engine.setView({ ...DEFAULT_VIEW, rulers: false, guides: false, snap: false })
+
+    press(host, 205, 205)
+    drag(host, 253, 261)
+    release(253, 261)
+    await nextFrame()
+
+    expect(selections.at(-1)).toEqual({
+      kind: 'rect',
+      rect: { x: 192, y: 192, width: 64, height: 80 },
+    })
+  })
+
+  it('takes the cell a drag never left, rather than nothing at all', async () => {
+    const { engine, host, selections } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 16 })
+    engine.setTool('select')
+
+    press(host, 220, 220)
+    drag(host, 228, 228)
+    release(228, 228)
+    await nextFrame()
+
+    expect(selections.at(-1)).toEqual({
+      kind: 'rect',
+      rect: { x: 208, y: 208, width: 32, height: 32 },
+    })
+  })
+})
+
 describe('a stroke on a pixel grid', () => {
   // The press stamps the first cell, each move the cells of the line after it — merged into one
   // rectangle per row, so no fragment of a half-opaque stroke is drawn onto itself.
