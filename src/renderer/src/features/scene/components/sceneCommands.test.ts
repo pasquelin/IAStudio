@@ -288,12 +288,15 @@ describe('the gestures a player module refuses', () => {
     expect(useSceneClipboard.getState().nodes).toEqual([])
   })
 
+  /** 🛑 Held BEFORE as well as after: a name the module no longer wears selects nothing, deletes
+   * nothing, and passes this case without exercising a single refusal. */
   it('lets go of what it does not require', () => {
-    pick('Mesh')
+    pick('Figure')
+    expect(nodesNow().some(node => node.name === 'Figure')).toBe(true)
 
     runSceneCommand(DOCUMENT, 'scene.delete')
 
-    expect(nodesNow().some(node => node.name === 'Mesh')).toBe(false)
+    expect(nodesNow().some(node => node.name === 'Figure')).toBe(false)
   })
 
   it('goes away whole when the module itself is named', () => {
