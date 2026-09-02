@@ -92,8 +92,10 @@ export function CharacterWindowFit({ assetId, sample }: CharacterWindowFitProps)
           beats laying one on a horse and letting the person find out. */}
       {!HUMANOID_KINDS.includes(kind) && <QuietNote>{t('inspector.rigNotHumanoid')}</QuietNote>}
 
+      {/* Neutral like every other action of this panel: « Créer le squelette » and « Ajouter les
+          mains » never share a screen, so a blue one and a grey one read as two languages rather
+          than as a rank. One style for one kind of action. */}
       <Button
-        variant="primary"
         disabled={!HUMANOID_KINDS.includes(kind)}
         onClick={() =>
           useCharacters
