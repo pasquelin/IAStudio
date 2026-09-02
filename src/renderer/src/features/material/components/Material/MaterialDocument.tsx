@@ -1,5 +1,5 @@
 import { mdiTextureBox } from '@mdi/js'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -23,6 +23,8 @@ import { placeMaterialChannel } from '../placeChannel'
 import { materialExportFiles } from '../../materialExportFiles'
 import { MaterialToolbar } from './MaterialToolbar'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
+import { useSettings } from '@/stores/settings'
+import { customFrom, schemeFor } from '@shared/domain/navigationPreset'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useSkyRefresh } from '@/hooks/useSkyRefresh'
 import { useMountedEngine } from '@/hooks/useMountedEngine'
@@ -95,6 +97,13 @@ export function MaterialDocument({ documentId }: { documentId: string }) {
       }),
     texture,
   )
+
+  // The preview turns like the scene does: two rules in one window is what the setting's help
+  // promises it is not — see `MaterialRenderer.setNavigationScheme`.
+  const three = useSettings(state => state.settings.three)
+  useEffect(() => {
+    engine.current?.setNavigationScheme(schemeFor(three.navigationPreset, customFrom(three)))
+  }, [engine, three])
 
   useShelfRefresh(() => engine.current?.refreshMaps())
   // The sky the preview NAMES moved: no asset id changed, so the shelf says nothing.
