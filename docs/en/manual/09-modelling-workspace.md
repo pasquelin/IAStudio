@@ -82,6 +82,36 @@ point of rotation: the view would set off to find it.
 > gesture to remember when you no longer know where you are — it is the same in Blender, Unity,
 > Unreal and Maya.
 
+### Driving the view like another application
+
+Coming from Unreal, Unity, Blender or Roblox Studio, there is nothing to relearn: **View ▸
+Navigation** in the menu, or **Settings ▸ Workspaces ▸ Modelling**, changes the scheme of
+gestures AND of shortcuts in one go.
+
+| Scheme | Turn | Slide sideways | WASD | Move / Rotate / Scale |
+|---|---|---|---|---|
+| **IA Studio** | Alt + left, or left alone | middle | a button held | `G` `R` `S` |
+| **Unreal**, **Unity** | Alt + left | middle | **right button held** | `W` `E` `R` |
+| **Blender** | **middle** | **Shift + middle** | Walk/Fly mode, on <kbd>Shift</kbd>+<kbd>`</kbd> | `G` `R` `S` |
+| **Roblox Studio** | Alt + left | middle | **always** | `G` `R` `T` |
+| **Custom** | your choice | your choice | your choice | yours |
+
+> **A scheme only replaces what its own application does differently.** Everything it says
+> nothing about keeps IA Studio's keys — including the commands the others have no equivalent
+> for. And your own remaps, made in **Settings ▸ Shortcuts**, always win over the scheme.
+
+> **Going back to "IA Studio" resets the shortcuts.** It is the scheme every other one falls back
+> to: choosing it gives each command the key the software declares.
+
+**Roblox moves two shortcuts, and it cannot be helped.** There the letters belong to the camera
+with nothing held, so `S` can no longer scale: it moves to `T`, and *Add* moves from <kbd>⇧A</kbd>
+to <kbd>⇧N</kbd>. Avoiding exactly this is why Unity and Unreal ask for the right button. The
+arrow keys stay with the interface in every case.
+
+**The custom scheme** opens three more choices in the settings — what to turn with, what to slide
+with, and when the letters belong to the camera. The keyboard itself is customised from the
+shortcuts screen, whichever scheme is chosen.
+
 ### Flying through the scene — a button held
 
 **Hold a mouse button**, left or right, and the keys below move the camera. Without letting go:
