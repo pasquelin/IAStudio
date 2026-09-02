@@ -66,15 +66,21 @@ describe('the navigation presets', () => {
   it.each(NAVIGATION_PRESETS)(
     'keeps the scene of %s off the keys a permanent flight takes',
     preset => {
-      if (SCHEME_OF[preset].fly !== 'always') return
+      if (schemeFor(preset, MILD).fly !== 'always') return
 
       const taken: string[] = []
       for (const one of COMMAND_REGISTRY.filter(each => each.scope === 'scene')) {
         const key = keyOf(one.id, preset)
-        // A chord is safe: a flight reads a bare key, never one under a modifier.
-        if (!key || key.includes('+')) continue
-        if (FLOWN.has(key)) taken.push(`${one.id} on ${key} (qwerty)`)
-        if (AZERTY_AT[key] && FLOWN.has(AZERTY_AT[key])) taken.push(`${one.id} on ${key} (azerty)`)
+        if (!key) continue
+        // Only the three modifiers `motionFor` REFUSES are safe. Shift is boost, so ⇧A reads as
+        // boost-strafe-left and is swallowed whole — the reading this guard used to get wrong.
+        if (/(^|\+)(Meta|Ctrl|Alt)\+/.test(key)) continue
+        const bare = key.replace(/^Shift\+/, '')
+        if (bare.includes('+')) continue
+        if (FLOWN.has(bare)) taken.push(`${one.id} on ${key} (qwerty)`)
+        if (AZERTY_AT[bare] && FLOWN.has(AZERTY_AT[bare])) {
+          taken.push(`${one.id} on ${key} (azerty)`)
+        }
       }
       expect(taken).toEqual([])
     },
@@ -88,7 +94,10 @@ describe('the navigation presets', () => {
   it('moves the same two commands for a scheme of one’s own turned permanent', () => {
     const taken = COMMAND_REGISTRY.filter(one => one.scope === 'scene')
       .map(one => keyOf(one.id, 'custom', PERMANENT))
-      .filter((key): key is string => key !== null && !key.includes('+'))
+      .filter((key): key is string => key !== null)
+      .filter(key => !/(^|\+)(Meta|Ctrl|Alt)\+/.test(key))
+      .map(key => key.replace(/^Shift\+/, ''))
+      .filter(key => !key.includes('+'))
       .filter(key => FLOWN.has(key) || (AZERTY_AT[key] && FLOWN.has(AZERTY_AT[key])))
 
     expect(taken).toEqual([])
@@ -98,5 +107,25 @@ describe('the navigation presets', () => {
 
   it('keeps the studio preset as the one every other falls back to', () => {
     expect(SCHEME_OF.studio.bindings).toEqual({})
+  })
+})
+
+describe('a scheme of one’s own', () => {
+  /**
+   * The two are picked on separate rows and `gestureOf` reads pan first: named alike, the
+   * viewport simply stopped turning, with nothing anywhere saying why.
+   */
+  it('keeps its orbit when the same chord is named for both', () => {
+    const both = schemeFor('custom', { orbit: 'middle', pan: 'middle', fly: 'anyButton' })
+
+    expect(both.orbit).not.toEqual([])
+    expect(both.pan).toEqual([])
+  })
+
+  it('leaves the two apart when they are different', () => {
+    const apart = schemeFor('custom', { orbit: 'leftAlt', pan: 'middle', fly: 'anyButton' })
+
+    expect(apart.orbit).not.toEqual([])
+    expect(apart.pan).not.toEqual([])
   })
 })

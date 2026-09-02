@@ -29,6 +29,9 @@ export const NAVIGATION_PRESETS: readonly NavigationPreset[] = [
  */
 export type FlyMode = 'anyButton' | 'rightButton' | 'always'
 
+/** Every scheme but one's own, which is composed rather than declared — see `schemeFor`. */
+export type DeclaredPreset = Exclude<NavigationPreset, 'custom'>
+
 /** A mouse gesture, spelled as the parts a `PointerEvent` carries. */
 export type GestureChord = {
   /** 0 left, 1 middle, 2 right — as `PointerEvent.button` numbers them. */
@@ -55,7 +58,20 @@ export type NavigationScheme = {
 const DISPLACED_BY_A_PERMANENT_FLIGHT: BindingOverrides = {
   'scene.scale': 'KeyT',
   'scene.display': 'KeyK',
+  // Shift is BOOST, so a flight reads ⇧A as boost-strafe-left and swallows it whole. Chords are
+  // NOT safe under a permanent flight — only the ones `motionFor` refuses are.
+  'scene.add': 'Shift+KeyN',
+  'scene.quad': 'Shift+KeyU',
+  'scene.quadEdges': 'Shift+KeyJ',
 }
+
+/** The chords the five schemes are built from, spelled once. */
+const ALT_LEFT: readonly GestureChord[] = [{ button: 0, alt: true }]
+const ANY_LEFT: readonly GestureChord[] = [{ button: 0 }, { button: 0, alt: true }]
+const MIDDLE: readonly GestureChord[] = [{ button: 1 }]
+const SHIFT_MIDDLE: readonly GestureChord[] = [{ button: 1, shift: true }]
+const ALT_MIDDLE: readonly GestureChord[] = [{ button: 1 }, { button: 1, alt: true }]
+const SHIFT_ALT_LEFT: readonly GestureChord[] = [{ button: 0, alt: true, shift: true }]
 
 /** The three verbs every one of them puts on the same three keys — or does not. */
 const UNITY_TOOLS: BindingOverrides = {
@@ -64,26 +80,26 @@ const UNITY_TOOLS: BindingOverrides = {
   'scene.scale': 'KeyR',
 }
 
-export const SCHEME_OF: Record<NavigationPreset, NavigationScheme> = {
+export const SCHEME_OF: Record<DeclaredPreset, NavigationScheme> = {
   /**
    * The studio's own, and the DEFAULT. Its layer is empty by construction: it IS the fallback
    * every other preset falls back to, so choosing it resets the keys to what the repo declares.
    */
   studio: {
-    orbit: [{ button: 0 }, { button: 0, alt: true }],
-    pan: [{ button: 1 }, { button: 0, alt: true, shift: true }],
+    orbit: ANY_LEFT,
+    pan: [...MIDDLE, ...SHIFT_ALT_LEFT],
     fly: 'anyButton',
     bindings: {},
   },
   unreal: {
-    orbit: [{ button: 0, alt: true }],
-    pan: [{ button: 1 }],
+    orbit: ALT_LEFT,
+    pan: MIDDLE,
     fly: 'rightButton',
     bindings: UNITY_TOOLS,
   },
   unity: {
-    orbit: [{ button: 0, alt: true }],
-    pan: [{ button: 1 }, { button: 1, alt: true }],
+    orbit: ALT_LEFT,
+    pan: ALT_MIDDLE,
     fly: 'rightButton',
     bindings: UNITY_TOOLS,
   },
@@ -93,8 +109,8 @@ export const SCHEME_OF: Record<NavigationPreset, NavigationScheme> = {
    * walk mode onto the chord Blender gives it.
    */
   blender: {
-    orbit: [{ button: 1 }],
-    pan: [{ button: 1, shift: true }],
+    orbit: MIDDLE,
+    pan: SHIFT_MIDDLE,
     fly: 'anyButton',
     bindings: { 'scene.navigate': 'Shift+Backquote' },
   },
@@ -104,17 +120,10 @@ export const SCHEME_OF: Record<NavigationPreset, NavigationScheme> = {
    * its key is the character `z`, which on AZERTY sits where `forward` is read by POSITION.
    */
   roblox: {
-    orbit: [{ button: 0, alt: true }],
-    pan: [{ button: 1 }],
+    orbit: ALT_LEFT,
+    pan: MIDDLE,
     fly: 'always',
     bindings: DISPLACED_BY_A_PERMANENT_FLIGHT,
-  },
-  /** Never read through this table — `schemeFor` composes it. Here so the record is complete. */
-  custom: {
-    orbit: [{ button: 0, alt: true }],
-    pan: [{ button: 1 }],
-    fly: 'anyButton',
-    bindings: {},
   },
 }
 
@@ -131,15 +140,15 @@ export const CUSTOM_PANS: readonly CustomPan[] = ['middle', 'middleShift', 'left
 export const FLY_MODES: readonly FlyMode[] = ['anyButton', 'rightButton', 'always']
 
 const ORBIT_CHORD: Record<CustomOrbit, readonly GestureChord[]> = {
-  leftAlt: [{ button: 0, alt: true }],
-  left: [{ button: 0 }, { button: 0, alt: true }],
-  middle: [{ button: 1 }],
+  leftAlt: ALT_LEFT,
+  left: ANY_LEFT,
+  middle: MIDDLE,
 }
 
 const PAN_CHORD: Record<CustomPan, readonly GestureChord[]> = {
-  middle: [{ button: 1 }],
-  middleShift: [{ button: 1, shift: true }],
-  leftAltShift: [{ button: 0, alt: true, shift: true }],
+  middle: MIDDLE,
+  middleShift: SHIFT_MIDDLE,
+  leftAltShift: SHIFT_ALT_LEFT,
 }
 
 /** What a person's own scheme is made of. Their KEYS need nothing here: `shortcuts.overrides` is
@@ -159,10 +168,12 @@ export function schemeFor(preset: NavigationPreset, custom: CustomNavigation): N
 
   return {
     orbit: ORBIT_CHORD[custom.orbit],
-    pan: PAN_CHORD[custom.pan],
+    // Orbit wins a chord both name: the two are chosen on separate rows, and `gestureOf` reads
+    // pan first — picked alike, a viewport would simply stop turning, with nothing saying why.
+    pan: PAN_CHORD[custom.pan].filter(chord => !ORBIT_CHORD[custom.orbit].includes(chord)),
     fly: custom.fly,
     // The cost of `always` follows the MODE, not the application that asked for it: a scheme of
-    // one's own that hands the letters to the camera swallows the same two commands.
+    // one's own that hands the letters to the camera swallows the same commands.
     bindings: custom.fly === 'always' ? DISPLACED_BY_A_PERMANENT_FLIGHT : {},
   }
 }

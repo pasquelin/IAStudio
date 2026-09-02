@@ -496,7 +496,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         // Never mid-flight: the very keys that open this menu are boost and strafe-left, and a
         // native menu takes the focus — the keyups then go to it and the boost stays held.
         case 'scene.add':
-          return engine.current?.flying ? undefined : openNodeMenu(documentId, null)
+          return engine.current?.flightHeld ? undefined : openNodeMenu(documentId, null)
       }
     },
     [documentId, view, cycleDisplay, armTool],

@@ -117,7 +117,7 @@ export function useShortcuts({
       if (!handlers.current.isFlying?.() || isTyping(event.target)) return
       // On the CODE, never the signature: holding Shift to boost would sign every direction as
       // `Shift+…`, and the table would match none of them.
-      const motion = motionFor(event.code)
+      const motion = motionFor(event.code, event)
       if (!motion) return
 
       // Holding a key repeats keydown; only a set that actually changed is worth reporting.

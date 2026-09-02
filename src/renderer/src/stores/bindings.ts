@@ -126,6 +126,17 @@ const MOTION_BY_CODE: ReadonlyMap<Signature, MotionId> = new Map(
  * signature: boost IS Shift, so a signature would spell it `Shift+ShiftLeft` and spell every
  * direction pressed under it `Shift+…` — a table of bare codes matches none of those.
  */
-export function motionFor(code: string): MotionId | null {
+export function motionFor(code: string, chord: HeldModifiers = {}): MotionId | null {
+  // Shift is BOOST and belongs to the flight; the other three never do — without this, ⌘Z under
+  // a permanent flight is eaten as `forward` on AZERTY, where the key printing `z` sits at `KeyW`.
+  if (chord.ctrlKey === true || chord.metaKey === true || chord.altKey === true) return null
   return MOTION_BY_CODE.get(code) ?? null
+}
+
+/** What a keypress holds. `shiftKey` is named and IGNORED on purpose: it is the boost key. */
+export type HeldModifiers = {
+  ctrlKey?: boolean
+  metaKey?: boolean
+  altKey?: boolean
+  shiftKey?: boolean
 }

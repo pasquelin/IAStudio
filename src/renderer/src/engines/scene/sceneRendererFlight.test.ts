@@ -80,11 +80,13 @@ describe('SceneRenderer and the buttons that fly', () => {
   /**
    * A click during an armed flight ends the BUTTON's flight, and used to take the keys with it:
    * the camera stopped with `W` still physically down, and nothing pushes the set again until the
-   * next key transition.
+   * next key transition. A PERMANENT flight is the same reading: the release of a click that
+   * armed nothing must not stop a camera whose key is still down.
    */
-  it('leaves the held keys alone when a button ends but the mode is still armed', () => {
-    expect(endFlight).toContain('if (!this.navigating) this.held.clear()')
-    expect(draggingChanged).toContain('if (!this.navigating) this.held.clear()')
+  it('leaves the held keys alone when a button ends but the camera still owns them', () => {
+    const kept = "if (!this.navigating && this.scheme.fly !== 'always') this.held.clear()"
+    expect(endFlight).toContain(kept)
+    expect(draggingChanged).toContain(kept)
   })
 
   it('captures the pointer for as long as the mode is armed', () => {

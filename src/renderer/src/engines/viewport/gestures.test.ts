@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SCHEME_OF, type NavigationPreset } from '@shared/domain/navigationPreset'
+import { SCHEME_OF, type DeclaredPreset } from '@shared/domain/navigationPreset'
 import { gestureOf } from './gestures'
 
 const LEFT = { button: 0, altKey: false, shiftKey: false }
@@ -7,9 +7,9 @@ const MIDDLE = { button: 1, altKey: false, shiftKey: false }
 const RIGHT = { button: 2, altKey: false, shiftKey: false }
 
 /** Every preset but the studio's, whose bare left drag is its own — see the cases below. */
-const OTHERS: readonly NavigationPreset[] = ['unreal', 'unity', 'blender', 'roblox']
-const PANNERS: readonly NavigationPreset[] = ['studio', 'unreal', 'unity', 'roblox']
-const ALT_ORBITERS: readonly NavigationPreset[] = ['unreal', 'unity', 'roblox']
+const OTHERS: readonly DeclaredPreset[] = ['unreal', 'unity', 'blender', 'roblox']
+const PANNERS: readonly DeclaredPreset[] = ['studio', 'unreal', 'unity', 'roblox']
+const ALT_ORBITERS: readonly DeclaredPreset[] = ['unreal', 'unity', 'roblox']
 
 const studio = (over = {}) => gestureOf({ ...LEFT, ...over }, SCHEME_OF.studio)
 
