@@ -10,13 +10,30 @@ describe('the pixel-art prompt', () => {
 
   /**
    * The catalogue keeps what was WRITTEN, and by then these words are part of it: a regeneration
-   * would double them, then triple them, with nothing going red.
+   * would double them, then triple them, with nothing going red. What settles it is the GRID.
    */
-  it('adds nothing to a prompt that already says pixel art', () => {
+  it('adds nothing the second time round', () => {
     const once = withPixelArtPrompt('a knight', 32, 32)
 
     expect(withPixelArtPrompt(once, 32, 32)).toBe(once)
-    expect(withPixelArtPrompt('a PIXEL ART knight', 32, 32)).toBe('a PIXEL ART knight')
+  })
+
+  /**
+   * 🛑 Measured on the bench of 2026-09-02, rank 68.8: asked for a sprite, a model writes « pixel
+   * art » itself. Settled on the genre, the studio's own grid then never travelled at all.
+   */
+  it('still says the grid to a prompt that named the genre on its own', () => {
+    expect(withPixelArtPrompt('a knight, pixel art style', 32, 32)).toBe(
+      'a knight, pixel art style, 32x32 sprite',
+    )
+  })
+
+  /** A resize between two runs: the grid is REPLACED, never stacked — two would name neither. */
+  it('replaces a grid the document no longer measures', () => {
+    const sent = withPixelArtPrompt(withPixelArtPrompt('a knight', 32, 32), 64, 64)
+
+    expect(sent).toContain('64x64 sprite')
+    expect(sent).not.toContain('32x32')
   })
 
   /**

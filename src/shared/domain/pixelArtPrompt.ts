@@ -25,17 +25,26 @@ const SAID = /pixel[\s-]?art(?![a-z])/i
 
 export const saysPixelArt = (text: string): boolean => SAID.test(text)
 
+/** A grid clause the studio wrote before, which a resize has since made a lie. */
+const OTHER_GRID = /,?\s*\d+x\d+ sprite/gi
+
 /**
- * The written prompt with the grid said after it. 🛑 Idempotent, and that is not a nicety: the
- * catalogue keeps what was WRITTEN, and from the main's side that already includes these words —
- * the window put them there before the IPC. A regeneration would double them, then triple them.
+ * The written prompt with the grid said after it. 🛑 What settles idempotence is the GRID, not
+ * the genre: measured on the bench of 2026-09-02, a model asked for a sprite writes « pixel art »
+ * itself, and on the genre alone the studio's own grid never travelled — 68.8 failed on it.
  *
  * Blank in, blank out — the same arbitration as `bodyWithContext`: a style is a modifier, not a
  * subject, and « pixel art, 64x64 sprite » alone is a prompt nobody wrote.
  */
 export function withPixelArtPrompt(written: string, columns: number, rows: number): string {
   const subject = written.trim()
-  if (subject.length === 0 || saysPixelArt(subject)) return written
+  if (subject.length === 0) return written
 
-  return `${subject}, ${pixelArtWords(columns, rows)}`
+  const grid = `${columns}x${rows}`
+  if (subject.includes(grid)) return written
+
+  // Replaced and never stacked: a regeneration of a document resized since would otherwise carry
+  // two grids, and the reader cannot tell which one the studio means.
+  const said = subject.replace(OTHER_GRID, '')
+  return saysPixelArt(said) ? `${said}, ${grid} sprite` : `${said}, ${pixelArtWords(columns, rows)}`
 }
