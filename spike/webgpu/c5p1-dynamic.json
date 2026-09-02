@@ -1,0 +1,98 @@
+{
+  "at": "2026-09-02T18:03:17.760Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "mode": "off",
+      "count": 500000,
+      "share": 1,
+      "movers": 5015,
+      "updateMeanMs": 1.242,
+      "updatePeakMs": 5.295,
+      "documentMeanMs": 1.324,
+      "promoteMs": 5.76,
+      "meshesBefore": 1235,
+      "meshesAfterWarmup": 1235,
+      "meshesAfter": 1235,
+      "meshesRebuilt": 0,
+      "instancesAfter": 501444
+    },
+    {
+      "mode": "off",
+      "count": 500000,
+      "share": 5,
+      "movers": 25073,
+      "updateMeanMs": 21.207,
+      "updatePeakMs": 25.32,
+      "documentMeanMs": 20.327,
+      "promoteMs": 28.905,
+      "meshesBefore": 1235,
+      "meshesAfterWarmup": 1235,
+      "meshesAfter": 1235,
+      "meshesRebuilt": 0,
+      "instancesAfter": 501444
+    },
+    {
+      "mode": "off",
+      "count": 500000,
+      "scenario": "spawn",
+      "rebuildMeanMs": 918.143,
+      "rebuildPeakMs": 1535.475,
+      "applyMs": 1436.84
+    },
+    {
+      "mode": "grid",
+      "count": 500000,
+      "share": 1,
+      "movers": 5015,
+      "updateMeanMs": 2.291,
+      "updatePeakMs": 6.59,
+      "documentMeanMs": 2.817,
+      "promoteMs": 22.005,
+      "meshesBefore": 6912,
+      "meshesAfterWarmup": 6920,
+      "meshesAfter": 6920,
+      "meshesRebuilt": 0,
+      "instancesAfter": 501444
+    },
+    {
+      "mode": "grid",
+      "count": 500000,
+      "share": 5,
+      "movers": 25073,
+      "updateMeanMs": 20.818,
+      "updatePeakMs": 21.78,
+      "documentMeanMs": 24.078,
+      "promoteMs": 89.55,
+      "meshesBefore": 6912,
+      "meshesAfterWarmup": 6920,
+      "meshesAfter": 6920,
+      "meshesRebuilt": 0,
+      "instancesAfter": 501444
+    },
+    {
+      "mode": "grid",
+      "count": 500000,
+      "scenario": "spawn",
+      "rebuildMeanMs": 1271.252,
+      "rebuildPeakMs": 2140.575,
+      "applyMs": 1616.705
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 49511,
+      "phase": "grid · 5 %",
+      "workingSetKb": 4480032
+    },
+    {
+      "at": 80509,
+      "phase": "fin",
+      "workingSetKb": 4705120
+    }
+  ]
+}

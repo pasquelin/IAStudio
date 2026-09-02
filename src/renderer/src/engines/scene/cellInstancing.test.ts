@@ -424,22 +424,111 @@ describe('a rebuild after a change of content', () => {
   })
 })
 
-describe('a body that only moved', () => {
-  it('is written into its slot without the cell being built again', () => {
+describe('a body that moves', () => {
+  const moving = (): {
+    scene: Object3D
+    groups: ReturnType<typeof createCellGroups>
+    objects: Map<string, Mesh>
+    nodes: SceneNode[]
+    cell: InstancedMesh
+  } => {
     const scene = host()
     const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
     const groups = createCellGroups(scene)
     groups.rebuild(nodes, id => objects.get(id))
-    const held = groups.drawn()[0]
+    const cell = groups.drawn()[0]
+    if (!(cell instanceof InstancedMesh)) throw new Error('the cell was never built')
+    return { scene, groups, objects, nodes, cell }
+  }
 
-    const mesh = objects.get('n2')
-    if (!mesh) throw new Error('no body to move')
-    mesh.position.set(0, 3, 0)
+  const shove = (
+    groups: ReturnType<typeof createCellGroups>,
+    objects: Map<string, Mesh>,
+    id: string,
+    y: number,
+  ): boolean => {
+    const mesh = objects.get(id)
+    if (!mesh) throw new Error(`no body ${id}`)
+    mesh.position.set(0, y, 0)
     mesh.updateMatrixWorld(true)
+    return groups.moved([id], held => objects.get(held))
+  }
 
-    expect(groups.moved(['n2'], id => objects.get(id))).toBe(true)
-    expect(groups.drawn()[0]).toBe(held)
-    expect(held instanceof InstancedMesh && held.instanceMatrix.array[2 * 16 + 13]).toBe(3)
+  /** The lot of movers: hung from the host, and the only mesh outside every cell group. */
+  const moverLot = (scene: Object3D): InstancedMesh | undefined =>
+    scene.children.find(child => child instanceof InstancedMesh)
+
+  it('leaves the grid for a lot of its own, without rebuilding its cell', () => {
+    const { scene, groups, objects, cell } = moving()
+
+    expect(shove(groups, objects, 'n2', 3)).toBe(true)
+
+    // The SAME cell object, one body lighter — no rebuild — and the mover drawn beside it.
+    expect(groups.drawn()).toContain(cell)
+    expect(cell.count).toBe(WORTH_INSTANCING - 1)
+    expect(moverLot(scene)?.count).toBe(1)
+  })
+
+  it('is written where it now stands', () => {
+    const { scene, groups, objects } = moving()
+
+    shove(groups, objects, 'n2', 3)
+
+    expect(moverLot(scene)?.instanceMatrix.array[13]).toBe(3)
+  })
+
+  it('fills the hole it left with the LAST body, rather than shifting the rest', () => {
+    const { groups, objects, cell } = moving()
+
+    shove(groups, objects, 'n2', 3)
+
+    // A splice would move every matrix after the hole — the whole cost the layer exists to
+    // avoid. `n15` stood at x = 15; it now stands in the slot `n2` left.
+    expect(cell.instanceMatrix.array[2 * 16 + 12]).toBe(WORTH_INSTANCING - 1)
+  })
+
+  it('keeps its slot for life, and pays nothing on the moves after the first', () => {
+    const { scene, groups, objects, cell } = moving()
+    shove(groups, objects, 'n2', 3)
+
+    shove(groups, objects, 'n2', 7)
+    shove(groups, objects, 'n2', 9)
+
+    expect(cell.count).toBe(WORTH_INSTANCING - 1)
+    expect(moverLot(scene)?.count).toBe(1)
+    expect(moverLot(scene)?.instanceMatrix.array[13]).toBe(9)
+  })
+
+  it('is never culled, since a sphere measured once is wrong at its first step', () => {
+    const { scene, groups, objects } = moving()
+
+    shove(groups, objects, 'n2', 3)
+
+    expect(moverLot(scene)?.frustumCulled).toBe(false)
+  })
+
+  it('stays off the grid when the content changes around it', () => {
+    const { scene, groups, objects, nodes, cell } = moving()
+    shove(groups, objects, 'n2', 3)
+
+    groups.rebuild(nodes, id => objects.get(id))
+
+    // A change of content must not put a mover back in a cell: that would rebuild the cell for
+    // it, on every change, which is exactly what the layer exists to stop.
+    expect(moverLot(scene)?.count).toBe(1)
+    expect(groups.drawn()).toContain(cell)
+  })
+
+  it('leaves its lot when the document no longer holds it', () => {
+    const { scene, groups, objects, nodes } = moving()
+    shove(groups, objects, 'n2', 3)
+
+    groups.rebuild(
+      nodes.filter(node => node.id !== 'n2'),
+      id => objects.get(id),
+    )
+
+    expect(moverLot(scene)?.count).toBe(0)
   })
 })
 

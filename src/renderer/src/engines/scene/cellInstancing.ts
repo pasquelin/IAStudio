@@ -99,15 +99,24 @@ export function createCellGroups(
     const held = buckets.get(name)
     // The cell is untouched: its bodies are the same ones in the same order, so the mesh it was
     // drawn by is reused and only the matrices that really moved reach the GPU.
-    if (held && sameOrder(held.ids, members.ids)) {
-      if (rewrite(held.mesh, members.meshes)) {
-        boxes.set(held.mesh, boxOf(members.meshes, shape))
-        // The cell's own box is their union: left alone it would be the union of where they
-        // STOOD, and a body carried back into view would stay hidden with its cell.
-        const cell = members.cell === null ? undefined : cells.get(members.cell)
-        if (cell) cell.stale = true
+    // The cell is untouched — the same bodies, whatever their order. A swap-remove reorders a
+    // bucket for O(1), so the fast path is element-wise and the set is only built when it fails.
+    if (held && held.ids.length === members.ids.length) {
+      const moved = sameOrder(held.ids, members.ids)
+        ? rewrite(held.mesh, members.meshes)
+        : sameSet(held.ids, members.ids)
+          ? rewriteBy(held, members)
+          : null
+      if (moved !== null) {
+        if (moved) {
+          boxes.set(held.mesh, boxOf(members.meshes, shape))
+          // The cell's own box is their union: left alone it would be the union of where they
+          // STOOD, and a body carried back into view would stay hidden with its cell.
+          const cell = members.cell === null ? undefined : cells.get(members.cell)
+          if (cell) cell.stale = true
+        }
+        return
       }
-      return
     }
     if (held) drop(name, held)
 
@@ -129,13 +138,15 @@ export function createCellGroups(
     // of a single instance, and it disappears as soon as the camera turns.
     mesh.computeBoundingSphere()
     boxes.set(mesh, boxOf(members.meshes, shape))
+    const bucket: Bucket = { cell: members.cell, ids: members.ids, mesh, key: worn.key }
+    bucketOf.set(mesh, bucket)
     const into = groupOf(members.cell)
     if (members.cell !== null) {
       const cell = cells.get(members.cell)
       if (cell) owners.set(mesh, cell)
     }
     into.add(mesh)
-    buckets.set(name, { cell: members.cell, ids: members.ids, mesh })
+    buckets.set(name, bucket)
     listStale = true
   }
 
@@ -146,6 +157,104 @@ export function createCellGroups(
   const boxes = new WeakMap<InstancedMesh, Box3>()
   /** The cell each mesh hangs in, so a move can grow ITS box too — see `growBoxes`. */
   const owners = new WeakMap<InstancedMesh, Held>()
+  /** Which bucket a mesh draws for, so a body can be taken out of it without rebuilding it. */
+  const bucketOf = new WeakMap<InstancedMesh, Bucket>()
+  /** One lot per group for the bodies that move, outside every cell — see `Mobile`. */
+  const mobiles = new Map<string, Mobile>()
+  /** The bodies that have left the grid. A body that moved once will move again. */
+  const moving = new Set<string>()
+
+  /**
+   * Takes a body out of the lot it sits in WITHOUT rebuilding that lot: the last instance is
+   * written over the hole and the count drops by one. A splice would shift every matrix after it,
+   * which is the whole cost this exists to avoid.
+   */
+  const takeOut = (mesh: InstancedMesh, ids: string[], slot: number): void => {
+    const last = ids.length - 1
+    const swapped = ids[last]
+    if (slot !== last && swapped !== undefined) {
+      mesh.getMatrixAt(last, AT)
+      mesh.setMatrixAt(slot, AT)
+      mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
+      ids[slot] = swapped
+      placed.set(swapped, { instance: mesh, slot })
+    }
+    ids.pop()
+    mesh.count = ids.length
+    mesh.instanceMatrix.needsUpdate = true
+  }
+
+  /** A lot of `held` slots for one group, replacing the one it outgrew. */
+  const widen = (key: string, like: InstancedMesh, held: Mobile | undefined): Mobile => {
+    const room = Math.max(32, (held?.ids.length ?? 0) * 2)
+    const mesh = new InstancedMesh(like.geometry, like.material, room)
+    mesh.matrixAutoUpdate = false
+    // 🛑 A mover goes anywhere: a bounding sphere measured once is wrong at its first step, and
+    // three would cull the lot off screen while its bodies are in front of the camera.
+    mesh.frustumCulled = false
+    mesh.castShadow = like.castShadow
+    mesh.receiveShadow = like.receiveShadow
+    const ids = held?.ids ?? []
+    for (const [slot, id] of ids.entries()) {
+      held?.mesh.getMatrixAt(slot, AT)
+      mesh.setMatrixAt(slot, AT)
+      placed.set(id, { instance: mesh, slot })
+    }
+    mesh.count = ids.length
+    mesh.instanceMatrix.needsUpdate = true
+    if (held) {
+      held.mesh.removeFromParent()
+      held.mesh.dispose()
+    }
+    host.add(mesh)
+    const lot: Mobile = { mesh, ids }
+    mobiles.set(key, lot)
+    listStale = true
+    return lot
+  }
+
+  /**
+   * Moves a body off the grid and onto the lot of movers, once and for all.
+   *
+   * Its cell stops growing around it — a box that only ever grows would end up covering the level
+   * — and no change of content ever rebuilds a static cell for it again.
+   */
+  const promote = (id: string, objectOf: (id: string) => Object3D | undefined): void => {
+    const at = placed.get(id)
+    const source = objectOf(id)
+    if (!at || !source) return
+    const bucket = bucketOf.get(at.instance)
+    if (!bucket) return
+
+    takeOut(at.instance, bucket.ids, at.slot)
+    moving.add(id)
+
+    const held = mobiles.get(bucket.key)
+    const lot =
+      !held || held.ids.length >= held.mesh.instanceMatrix.count
+        ? widen(bucket.key, at.instance, held)
+        : held
+    const slot = lot.ids.length
+    lot.ids.push(id)
+    lot.mesh.count = lot.ids.length
+    lot.mesh.setMatrixAt(slot, source.matrixWorld)
+    lot.mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
+    lot.mesh.instanceMatrix.needsUpdate = true
+    placed.set(id, { instance: lot.mesh, slot })
+  }
+
+  /** A mover the document no longer holds: out of its lot by the same swap, and forgotten. */
+  const demote = (id: string): void => {
+    const at = placed.get(id)
+    moving.delete(id)
+    if (!at) return
+    for (const lot of mobiles.values()) {
+      if (lot.mesh !== at.instance) continue
+      takeOut(lot.mesh, lot.ids, at.slot)
+      placed.delete(id)
+      return
+    }
+  }
 
   /**
    * Grows what a moved body is measured by, so a move can only ever show more: its own bucket,
@@ -154,12 +263,15 @@ export function createCellGroups(
    */
   const growBoxes = (id: string, objectOf: (id: string) => Object3D | undefined): void => {
     const at = placed.get(id)
-    const object = objectOf(id)
-    if (!at || !object) return
-    const reach = worldReach(at.instance.geometry, object.matrixWorld)
+    if (!at) return
     const box = boxes.get(at.instance)
-    if (box) grow(box, object.matrixWorld, reach)
     const cell = owners.get(at.instance)
+    // A mover has neither, and asking for its reach first cost 1.0 ms a frame on 5 015 of them.
+    if (!box && !cell) return
+    const object = objectOf(id)
+    if (!object) return
+    const reach = worldReach(at.instance.geometry, object.matrixWorld)
+    if (box) grow(box, object.matrixWorld, reach)
     if (cell) grow(cell.box, object.matrixWorld, reach)
   }
 
@@ -190,11 +302,12 @@ export function createCellGroups(
   return {
     rebuild: (nodes, objectOf) => {
       const settled = new Set<string>()
+      const seen = new Set<string>()
       let instanced = 0
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
         const first = worn.meshes[0]
         if (!first) continue
-        for (const [name, members] of splitByCell(worn, index, first.geometry)) {
+        for (const [name, members] of splitByCell(worn, index, first.geometry, moving, seen)) {
           settle(name, members, worn, first.geometry)
           settled.add(name)
         }
@@ -202,23 +315,29 @@ export function createCellGroups(
       }
       // What nothing settled on holds bodies that left, were hidden, or changed group.
       for (const [name, bucket] of buckets) if (!settled.has(name)) drop(name, bucket)
+      // A mover the sweep no longer met is gone from the document — the despawn half of a spawn.
+      for (const id of [...moving]) if (!seen.has(id)) demote(id)
       return instanced
     },
 
-    // The body keeps the cell it was built in until the next change of content: a gesture that
-    // crossed a border would otherwise rebuild two cells per pointer move. What it costs is a
-    // cell drawn a little further than it reaches.
+    // A body that moves leaves the grid for the lot of movers, and never comes back to it.
     moved: (ids, objectOf) => {
+      // Promoted BEFORE the write, so the matrix lands in the lot the body now belongs to.
+      for (const id of ids) if (!moving.has(id)) promote(id, objectOf)
       const touched = writeMoved(placed, ids, objectOf)
       // Grown, never recut, exactly as the sphere is: a box that shrank under a moving body
-      // would hide geometry that is on screen.
+      // would hide geometry that is on screen. A mover has neither box nor cell, so this is a
+      // no-op for it — which is the point of taking it off the grid.
       if (touched) for (const id of ids) growBoxes(id, objectOf)
       return touched
     },
 
+    // The movers among them: a display mode REPLACES a material, and a lot left out of that walk
+    // goes on drawing shaded while everything around it wears the stand-in.
     drawn: () => {
       if (listStale) {
         listed = [...buckets.values()].map(bucket => bucket.mesh)
+        for (const lot of mobiles.values()) listed.push(lot.mesh)
         listStale = false
       }
       return listed
@@ -308,7 +427,16 @@ export function createCellGroups(
 }
 
 /** What one cell of one group draws, and the nodes it stands for, index for index. */
-type Bucket = { cell: CellKey | null; ids: string[]; mesh: InstancedMesh }
+type Bucket = { cell: CellKey | null; ids: string[]; mesh: InstancedMesh; key: string }
+
+/**
+ * The lot of one group's MOVERS, hung straight from the host.
+ *
+ * No cell, no zone, no box: a body that moves goes anywhere, and the whole point is that nothing
+ * it does ever rebuilds a static cell. Measured in C5-B2 on 5 014 movers of 500 000: 0.901 ms an
+ * update against 19.10 in a single structure, and zero mesh rebuilt against 947.
+ */
+type Mobile = { mesh: InstancedMesh; ids: string[] }
 
 /** A cell in the scene: its group, the box its lots together occupy, and whether that box holds. */
 type Held = { group: Group; box: Box3; stale: boolean }
@@ -341,11 +469,19 @@ function splitByCell(
   worn: Grouped,
   index: WorldPartition,
   shape: BufferGeometry,
+  moving: ReadonlySet<string>,
+  seen: Set<string>,
 ): Map<string, Members> {
   const held = new Map<string, Members>()
   for (const [at, mesh] of worn.meshes.entries()) {
     const id = worn.ids[at]
     if (id === undefined) continue
+    // A mover keeps its slot on its own lot: putting it back in a cell would rebuild that cell
+    // on every change of content, which is what the layer exists to stop.
+    if (moving.has(id)) {
+      seen.add(id)
+      continue
+    }
     // The translation read straight off the world matrix, never `decompose`: a non-uniform scale
     // inside a rotated parent shears, and a decomposed translation of a sheared matrix drifts.
     const stands = mesh.matrixWorld.elements
@@ -364,6 +500,7 @@ function splitByCell(
 const FRUSTUM = new Frustum()
 const VIEW = new Matrix4()
 const CORNER = new Vector3()
+const AT = new Matrix4()
 const SWEPT = new Box3()
 const LANDED = new Box3()
 
@@ -394,6 +531,37 @@ function boxOf(meshes: readonly Mesh[], shape: BufferGeometry): Box3 {
 function grow(box: Box3, placement: Matrix4, reach: number): void {
   box.expandByPoint(CORNER.setFromMatrixPosition(placement).addScalar(reach))
   box.expandByPoint(CORNER.setFromMatrixPosition(placement).subScalar(reach))
+}
+
+/** Whether it holds the same bodies at all, order aside — the slow half of the check above. */
+function sameSet(held: readonly string[], now: readonly string[]): boolean {
+  const known = new Set(now)
+  for (const id of held) if (!known.has(id)) return false
+  return true
+}
+
+/**
+ * Writes the matrices of a bucket whose bodies were REORDERED — a mover taken out of it by a
+ * swap. Each slot keeps the body it held, so nothing has to be rebuilt for a change of order.
+ */
+function rewriteBy(bucket: Bucket, members: Members): boolean {
+  const byId = new Map<string, Mesh>()
+  for (const [at, id] of members.ids.entries()) {
+    const mesh = members.meshes[at]
+    if (mesh) byId.set(id, mesh)
+  }
+  const held = bucket.mesh.instanceMatrix.array
+  let moved = false
+  for (const [slot, id] of bucket.ids.entries()) {
+    const source = byId.get(id)
+    if (!source || samePlace(held, slot * 16, source.matrixWorld.elements)) continue
+    bucket.mesh.setMatrixAt(slot, source.matrixWorld)
+    moved = true
+  }
+  if (!moved) return false
+  bucket.mesh.instanceMatrix.needsUpdate = true
+  bucket.mesh.computeBoundingSphere()
+  return true
 }
 
 /** Whether a cell holds the same bodies it held, in the same slots. */
