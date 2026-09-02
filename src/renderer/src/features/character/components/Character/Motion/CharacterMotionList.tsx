@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ClipSource } from '@shared/domain/scene'
 import { INLINE_LINK } from '@/components/styles'
+import { hasMotion } from '@/character/characterMotion'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { QuietNote } from '@/components/QuietNote'
 import { ToolButton } from '@/components/ToolButton'
 import { linkCharacterMotion, unlinkCharacterMotion } from '@/engines/character/characterCommands'
@@ -16,6 +18,8 @@ export type CharacterMotionListProps = {
   /** The workshop scene this window drives, which is where a motion is tried out. */
   documentId: string
   nodeId: string
+  /** Files what the band plays. Absent where nothing can export it. */
+  onSave?: () => Promise<void>
 }
 
 /**
@@ -24,9 +28,15 @@ export type CharacterMotionListProps = {
  * 🛑 References, never copies: a motion is a file of its own, playable by every character whose
  * bones carry the same names — swallowing one into a `.glb` would take it from the others.
  */
-export function CharacterMotionList({ assetId, documentId, nodeId }: CharacterMotionListProps) {
+export function CharacterMotionList({
+  assetId,
+  documentId,
+  nodeId,
+  onSave,
+}: CharacterMotionListProps) {
   const { t } = useTranslation()
   const motions = useCharacters(state => characterOf(state, assetId).motions)
+  const played = useScenes(state => hasMotion(sceneOf(state, documentId).animation))
   const [open, setOpen] = useState(false)
   const [opener, setOpener] = useState<HTMLElement | null>(null)
 
@@ -59,6 +69,14 @@ export function CharacterMotionList({ assetId, documentId, nodeId }: CharacterMo
           />
         </div>
       ))}
+
+      {/* Only once the band holds a key: a file claiming a motion it does not have is worse
+          than no file. What it writes is a motion of the PROJECT, playable by any character. */}
+      {played && onSave && (
+        <button type="button" className={INLINE_LINK} onClick={() => void onSave()}>
+          {t('character.motionSave')}
+        </button>
+      )}
 
       <button ref={setOpener} type="button" className={INLINE_LINK} onClick={() => setOpen(!open)}>
         {t('character.motionAdd')}

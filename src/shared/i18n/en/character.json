@@ -30,6 +30,7 @@
     "socketBone": "Bone",
     "socketEmpty": "No attachment point. An object is hung on one from a scene.",
     "motionAdd": "Add a motion",
+    "motionSave": "Save the motion",
     "motionRemove": "Remove this motion",
     "motionEmpty": "This character cannot play any motion yet.",
     "motionNew": "New motion",

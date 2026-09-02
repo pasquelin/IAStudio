@@ -30,6 +30,7 @@
     "socketBone": "Os",
     "socketEmpty": "Aucun point d’attache. Un objet s’y accroche depuis une scène.",
     "motionAdd": "Ajouter un mouvement",
+    "motionSave": "Enregistrer le mouvement",
     "motionRemove": "Retirer ce mouvement",
     "motionEmpty": "Ce personnage ne sait encore jouer aucun mouvement.",
     "motionNew": "Nouveau mouvement",

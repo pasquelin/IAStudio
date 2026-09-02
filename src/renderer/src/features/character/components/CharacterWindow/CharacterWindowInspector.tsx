@@ -40,6 +40,8 @@ export type CharacterWindowInspectorProps = {
   nodeId: string
   /** What the engine measured of the mesh, for the rigger that fits itself to it. */
   sample: MeshSample | null
+  /** Files what the band plays as a motion of the project — the window holds the engine. */
+  onSaveMotion?: () => Promise<void>
 }
 
 /**
@@ -53,6 +55,7 @@ export function CharacterWindowInspector({
   sample,
   documentId,
   nodeId,
+  onSaveMotion,
 }: CharacterWindowInspectorProps) {
   const { t } = useTranslation()
   const character = useCharacters(state => characterOf(state, assetId))
@@ -195,7 +198,12 @@ export function CharacterWindowInspector({
         </PropertySection>
 
         <PropertySection title={t('character.motions')} scId="character.motions">
-          <CharacterMotionList assetId={assetId} documentId={documentId} nodeId={nodeId} />
+          <CharacterMotionList
+            assetId={assetId}
+            documentId={documentId}
+            nodeId={nodeId}
+            onSave={onSaveMotion}
+          />
         </PropertySection>
       </div>
     </Panel>

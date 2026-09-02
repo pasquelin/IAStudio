@@ -17,6 +17,7 @@ import { createCharacterStage, workshopIdOf } from '@/character/characterStage'
 import { useAccounts } from '@/stores/accounts'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { saveCharacter, type CharacterSkinning } from '@/character/characterSave'
+import { saveCharacterMotion } from '@/character/characterMotion'
 import { useConnections } from '@/hooks/useConnections'
 import { reportFailure } from '@/services/diagnostics'
 import { useMenuScope } from '@/hooks/useMenuScope'
@@ -92,6 +93,25 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   }
   useShortcuts({ scope: 'character', enabled: true, onCommand: runCommand })
   useMenuScope('character', runCommand)
+
+  /**
+   * The band's own motion, filed as a project asset: the workshop scene exported with the clip
+   * the timeline bakes. Here rather than in the panel, since only this window holds the engine.
+   */
+  const saveMotion = async (): Promise<void> => {
+    const engine = engineRef.current
+    if (!engine) return
+
+    try {
+      await saveCharacterMotion(
+        assetId,
+        t('character.motionNew'),
+        await engine.exportTo('glb', 'scene'),
+      )
+    } catch (error) {
+      reportFailure('assets.copy', assetId, error)
+    }
+  }
 
   useEffect(() => {
     engineRef.current?.setMode(mode)
@@ -244,6 +264,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
           <CharacterWindowInspector
             assetId={assetId}
             sample={sample}
+            onSaveMotion={saveMotion}
             documentId={workshopIdOf(assetId)}
             nodeId={nodeId ?? ''}
           />
