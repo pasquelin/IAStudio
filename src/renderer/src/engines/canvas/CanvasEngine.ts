@@ -112,6 +112,7 @@ import {
   fitTo,
   onDevicePixels,
   sameViewport,
+  wheelStep,
   toDocument,
   zoomCanvasAt,
   type CanvasView,
@@ -585,6 +586,8 @@ export class CanvasEngine {
   private readonly loaded = new Set<string>()
   /** The viewport the world was last moved to — see `applyViewport`. `null` until the first one. */
   private applied: Viewport | null = null
+  /** Wheel travel not yet worth a stop — see `wheelStop`. */
+  private wheelDebt = 0
   /**
    * Where the picture actually landed inside each layer's surface — what `containIn` worked out
    * when it was drawn, kept so the handles can grip the photo rather than the document.
@@ -803,7 +806,11 @@ export class CanvasEngine {
     // change too: a softener hung by `setTool` before it would stay hung on the grid.
     const regridded = onPixelGrid(previous) !== onPixelGrid(state)
     // Nothing feathers on a grid, and the softener is tuned from the state as much as the tool.
-    if (regridded) this.tuneSoftener()
+    // The wheel's travel goes with it: the two ladders do not measure the same thing.
+    if (regridded) {
+      this.tuneSoftener()
+      this.wheelDebt = 0
+    }
     if (previous && previous.layers === state.layers && !resized) {
       if (!regridded) return
       // The one change that reaches the GPU without a layer moving: the sampling, and the
@@ -1933,7 +1940,8 @@ export class CanvasEngine {
     if (!this.state || this.hostSize.width === 0) return
     this.framed = true
     const document = { width: this.state.width, height: this.state.height }
-    this.moveTo(fitTo(document, this.hostSize, this.view.rulers ? RULER_SIZE : 0))
+    const inset = this.view.rulers ? RULER_SIZE : 0
+    this.moveTo(fitTo(document, this.hostSize, inset, onPixelGrid(this.state)))
   }
 
   dispose(): void {
@@ -3105,15 +3113,25 @@ export class CanvasEngine {
    */
   private readonly onWheel = (event: WheelEvent): void => {
     event.preventDefault()
-    // Once per wheel event rather than once per gesture: a zoom has no pointer down to refresh
-    // the rectangle, and a panel moved without resizing would anchor the zoom next to the cursor.
-    this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
     const viewport = this.view.viewport
 
     if (event.ctrlKey || event.metaKey) {
+      // Once per wheel event rather than once per gesture: a zoom has no pointer down to refresh
+      // the rectangle, and a panel moved without resizing would anchor it next to the cursor.
+      this.bounds = this.host?.getBoundingClientRect() ?? this.bounds
+      const host = this.toHost(event)
+
+      if (onPixelGrid(this.state)) {
+        const stepped = wheelStep(viewport.scale, this.wheelDebt, event.deltaY)
+        this.wheelDebt = stepped.debt
+        if (stepped.scale !== viewport.scale) {
+          this.moveTo(zoomCanvasAt(viewport, stepped.scale, host))
+        }
+        return
+      }
+
       // Exponential, so a notch feels the same at 5% and at 800%.
-      const scale = viewport.scale * Math.exp(-event.deltaY / 250)
-      this.moveTo(zoomCanvasAt(viewport, scale, this.toHost(event)))
+      this.moveTo(zoomCanvasAt(viewport, viewport.scale * Math.exp(-event.deltaY / 250), host))
       return
     }
 
