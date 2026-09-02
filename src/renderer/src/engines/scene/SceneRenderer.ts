@@ -5,6 +5,7 @@ import {
   Color,
   type AnimationClip,
   DirectionalLight,
+  Euler,
   GridHelper,
   type Intersection,
   Light,
@@ -59,7 +60,9 @@ import {
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
 import { applyFog, applyToneMapping } from './worldBinding'
-import { createViewportAids } from './viewportAids'
+import { createViewportAids, type AidBody, type AidRigs } from './viewportAids'
+import { springArmRigsOf } from './springArmRigs'
+import type { Vector3 as TurnedVector } from '@shared/domain/transform'
 import { drawsNode, isolating, NOTHING_ISOLATED, type Isolation } from './isolation'
 import { pixelRatioFor, shadowMapSizeFor } from './viewportQuality'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
@@ -787,6 +790,10 @@ export class SceneRenderer {
   private lit: { dress: EnvironmentDress | null; intensity: number; rotation: number } | null = null
   /** Boxes, origins and normals. Hung beside the nodes for the reason the ground is not. */
   private readonly aids = createViewportAids()
+
+  /** What the last state asks to be DRAWN off its components, so `refreshAids` knows there is
+   * something to draw at all. */
+  private rigs: AidRigs = { bodies: new Map(), arms: new Map() }
   /** What the VIEWPORT hides, which is never what the document hides — see `isolation.ts`. */
   private isolation: Isolation = NOTHING_ISOLATED
 
@@ -1103,6 +1110,13 @@ export class SceneRenderer {
     this.tuneShadowsIfMoved()
     this.applyCameraShots()
     this.showAidsForSelection()
+    // 🛑 What the renderer reads off a COMPONENT, drawn rather than rendered: a walking body and
+    // the arm a camera hangs on are volumes no geometry carries, and nothing else would show
+    // them. Here and not at the top of the pass: an arm is measured off where its body stands.
+    this.rigs = {
+      bodies: capsuleBodiesOf(state.nodes),
+      arms: springArmRigsOf(state.nodes, id => this.facingOf(id)),
+    }
     // After the transforms and the poses: a box is read off where an object actually stands.
     this.refreshAids()
     this.applyWorld(state.world)
@@ -3006,6 +3020,16 @@ export class SceneRenderer {
     if (gridMoved || lensMoved || shadowsMoved) this.redraw()
   }
 
+  /** How a node is turned, in world — what an arm reading a rotation hangs behind. */
+  private facingOf(id: string): TurnedVector | null {
+    const object = this.objects.get(id)
+    if (!object) return null
+
+    object.updateWorldMatrix(true, false)
+    FACING.setFromQuaternion(object.getWorldQuaternion(FACED))
+    return { x: FACING.x, y: FACING.y, z: FACING.z }
+  }
+
   /**
    * The boxes, origins and normals, rebuilt from what is on stage and what the settings ask for.
    *
@@ -3018,14 +3042,24 @@ export class SceneRenderer {
       this.view.boundingBoxes !== 'off' ||
       this.view.origins ||
       this.view.normals ||
+      this.rigs.bodies.size > 0 ||
+      this.rigs.arms.size > 0 ||
       !this.aids.idle()
     if (!wants) return
 
-    this.aids.apply(this.objects, this.selectedIds, this.view, {
-      box: this.viewport.paletteToken('--color-accent'),
-      origin: this.viewport.paletteToken('--color-muted'),
-      normal: this.viewport.paletteToken('--color-accent'),
-    })
+    this.aids.apply(
+      this.objects,
+      this.selectedIds,
+      this.view,
+      {
+        box: this.viewport.paletteToken('--color-accent'),
+        origin: this.viewport.paletteToken('--color-muted'),
+        normal: this.viewport.paletteToken('--color-accent'),
+        body: this.viewport.paletteToken('--color-accent'),
+        arm: this.viewport.paletteToken('--color-muted'),
+      },
+      this.rigs,
+    )
     this.redraw()
   }
 
@@ -5115,3 +5149,24 @@ function disposeMaterial(mesh: Mesh): void {
   if (Array.isArray(material)) for (const entry of material) entry.dispose()
   else material.dispose()
 }
+
+/**
+ * What each walking node FEELS, read off its controller. The physics reads the same two fields —
+ * `characters.capsuleOf` — so what is drawn is what is felt, never a node's own geometry.
+ */
+function capsuleBodiesOf(nodes: readonly SceneNode[]): ReadonlyMap<string, AidBody> {
+  const found = new Map<string, AidBody>()
+  for (const node of nodes) {
+    const walker = node.components?.find(one => one.type === 'CharacterController')
+    if (!walker) continue
+
+    const height = Number(walker.height)
+    const radius = Number(walker.radius)
+    if (Number.isFinite(height) && Number.isFinite(radius)) found.set(node.id, { height, radius })
+  }
+  return found
+}
+
+// Rewritten in place: `facingOf` answers once per arm per apply.
+const FACING = new Euler()
+const FACED = new Quaternion()

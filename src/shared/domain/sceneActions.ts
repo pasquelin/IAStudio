@@ -20,6 +20,7 @@ import {
   FOG_DENSITY,
   FOG_KINDS,
   GROUND_SIZE,
+  FIGURE_ENTRIES,
   LIGHT_ENTRIES,
   MATERIAL_SLOTS,
   MESH_ENTRIES,
@@ -41,13 +42,14 @@ import {
  */
 
 /**
- * Everything the Add menu offers, in one list — the primitives, the lights, and the three
+ * Everything the Add menu offers, in one list — the primitives, the lights, the figures and the
  * objects that belong to no family. Read from the registries rather than restated, so a
  * fourteenth primitive is offered here the day it is offered on screen.
  */
 const NODE_KINDS: readonly string[] = [
   ...MESH_ENTRIES.map(entry => entry.kind),
   ...LIGHT_ENTRIES.map(entry => entry.kind),
+  ...FIGURE_ENTRIES.map(entry => entry.kind),
   ...OBJECT_ENTRIES.map(entry => entry.kind),
 ]
 

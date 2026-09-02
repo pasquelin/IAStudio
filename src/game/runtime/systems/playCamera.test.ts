@@ -7,6 +7,7 @@ import { DEFAULT_PLAY, type PlayCamera } from '@shared/domain/scene'
 import type { InputPort, Pointer } from '../../ports/inputPort'
 import type { CameraView } from '../../ports/renderPort'
 import { createCharacters } from '../characters'
+import { createPossessions } from '../possessions'
 import { createPilots, PILOT_RANK } from '../pilots'
 import { createRigs, type Rigs } from '../rigs'
 import { restingTransform } from '../entity'
@@ -29,7 +30,7 @@ function watching(
     detach: () => {},
   }
   const views: (CameraView | null)[] = []
-  const characters = createCharacters()
+  const characters = createCharacters(createPossessions())
   const world = testWorld({
     play: { ...DEFAULT_PLAY, camera },
     ports: testPorts({

@@ -6,6 +6,7 @@ import type { Component, JsonValue } from '@shared/domain/component'
 import { DEFAULT_PLAY } from '@shared/domain/scene'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { createCharacters } from '../characters'
+import { createPossessions } from '../possessions'
 import { restingTransform, type Entity } from '../entity'
 import { STEP_SECONDS } from '../gameLoop'
 import { createRigs, type Rigs } from '../rigs'
@@ -40,7 +41,7 @@ function rigged(
     ports: testPorts({ physics }),
     systems: [
       createSpringArmSystem({
-        characters: createCharacters(),
+        characters: createCharacters(createPossessions()),
         rigs,
         // Flat: every node of these cases hangs from nothing, so its own frame IS the world's.
         worldOf: (_, own) => own,

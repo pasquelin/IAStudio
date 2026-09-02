@@ -23,6 +23,17 @@ const childOf = (nodes: readonly SceneNode[], parentId: string) =>
   nodes.find(node => node.parentId === parentId)
 
 describe('what a module points its arm at', () => {
+  /** A name a reader sees, resolved to the exact node of THIS module — never a namesake. */
+  it('resolves the name its arm carries to its own node', () => {
+    const foreign = { ...groupNode(undefined, 'Capsule'), id: 'other-capsule' }
+    const nodes = withBoundPlayerArm([foreign, ...playerModuleNodes()])
+    const module = nodes.find(node => node.name === 'Player_Module')
+    const arm = armOf(nodes, module?.id ?? '')
+
+    expect(arm?.components?.[0]?.subject).toBe(playerPartsOf(nodes)?.body?.id)
+    expect(arm?.components?.[0]?.subject).not.toBe('other-capsule')
+  })
+
   it('is the body and the eye it hangs with', () => {
     const nodes = withBoundPlayerArm(playerModuleNodes())
     const module = nodes[0]
@@ -60,8 +71,8 @@ describe('what a module points its arm at', () => {
   })
 
   /**
-   * 🛑 Both fields stay editable in the inspector. An author aiming the arm at the car the player
-   * drives must not have it silently put back on the capsule at every Play.
+   * 🛑 Both fields stay editable. An author aiming the arm at the car the player drives must not
+   * have it put back on the capsule at every Play — only what points INSIDE is resolved.
    */
   it('leaves a subject the author aimed somewhere else alone', () => {
     const car = groupNode(undefined, 'Car')
@@ -88,6 +99,18 @@ describe('what a module points its arm at', () => {
     )
 
     expect(playerPartsOf([...nodes, holder])?.eye?.type).toBe('camera')
+  })
+
+  /**
+   * 🛑 An arm acts only once the scene PLAYS, so nothing in the editor would move the camera off
+   * its parent's origin — where it stood at the player's feet, with no arm drawn to explain it.
+   */
+  it('seats its camera where the arm will put it on the first frame', () => {
+    const nodes = playerModuleNodes()
+    const camera = nodes.find(node => node.type === 'camera')
+
+    // The two components' defaults: half of 1,8 up to the body's centre, 1,6 over it, 4 back.
+    expect(camera?.transform.position).toEqual({ x: 0, y: 2.5, z: 4 })
   })
 
   it('leaves a scene holding no module untouched', () => {

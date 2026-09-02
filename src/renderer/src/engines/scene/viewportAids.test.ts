@@ -1,16 +1,35 @@
 import { describe, expect, it } from 'vitest'
 import {
   BoxHelper,
+  LineSegments,
   BufferAttribute,
   BufferGeometry,
   Mesh,
   Object3D,
   Raycaster,
+  Matrix4,
   Vector3,
 } from 'three'
-import { createViewportAids, type AidPalette, type AidSettings } from './viewportAids'
+import {
+  createViewportAids,
+  type AidBody,
+  type AidPalette,
+  type AidRigs,
+  type AidSettings,
+} from './viewportAids'
 
-const PALETTE: AidPalette = { box: '#ffffff', origin: '#888888', normal: '#00ff00' }
+const PALETTE: AidPalette = {
+  box: '#ffffff',
+  origin: '#888888',
+  normal: '#00ff00',
+  body: '#00aaff',
+  arm: '#8888ff',
+}
+
+/** No walking body and no arm, which is what every case here but the last two is about. */
+const NO_RIG: AidRigs = { bodies: new Map(), arms: new Map() }
+
+const bodied = (bodies: ReadonlyMap<string, AidBody>): AidRigs => ({ bodies, arms: new Map() })
 
 const OFF: AidSettings = {
   boundingBoxes: 'off',
@@ -39,7 +58,7 @@ const boxes = (host: Object3D) => host.children.filter(child => child instanceof
 describe('the aids drawn over a scene', () => {
   it('draws nothing at all by default', () => {
     const aids = createViewportAids()
-    aids.apply(new Map([['a', new Object3D()]]), [], OFF, PALETTE)
+    aids.apply(new Map([['a', new Object3D()]]), [], OFF, PALETTE, NO_RIG)
 
     expect(aids.object.children).toHaveLength(0)
   })
@@ -51,13 +70,13 @@ describe('the aids drawn over a scene', () => {
       ['b', new Object3D()],
     ])
 
-    aids.apply(objects, ['a'], { ...OFF, boundingBoxes: 'selected' }, PALETTE)
+    aids.apply(objects, ['a'], { ...OFF, boundingBoxes: 'selected' }, PALETTE, NO_RIG)
     expect(boxes(aids.object)).toHaveLength(1)
 
-    aids.apply(objects, ['a'], { ...OFF, boundingBoxes: 'all' }, PALETTE)
+    aids.apply(objects, ['a'], { ...OFF, boundingBoxes: 'all' }, PALETTE, NO_RIG)
     expect(boxes(aids.object)).toHaveLength(2)
 
-    aids.apply(objects, ['a'], OFF, PALETTE)
+    aids.apply(objects, ['a'], OFF, PALETTE, NO_RIG)
     expect(boxes(aids.object)).toHaveLength(0)
   })
 
@@ -66,8 +85,8 @@ describe('the aids drawn over a scene', () => {
     const aids = createViewportAids()
     const settings = { ...OFF, boundingBoxes: 'all' } satisfies AidSettings
 
-    aids.apply(new Map([['a', new Object3D()]]), [], settings, PALETTE)
-    aids.apply(new Map(), [], settings, PALETTE)
+    aids.apply(new Map([['a', new Object3D()]]), [], settings, PALETTE, NO_RIG)
+    aids.apply(new Map(), [], settings, PALETTE, NO_RIG)
 
     expect(aids.object.children).toHaveLength(0)
   })
@@ -77,9 +96,9 @@ describe('the aids drawn over a scene', () => {
     const objects = new Map([['a', new Object3D()]])
     const settings = { ...OFF, boundingBoxes: 'all' } satisfies AidSettings
 
-    aids.apply(objects, [], settings, PALETTE)
+    aids.apply(objects, [], settings, PALETTE, NO_RIG)
     const built = boxes(aids.object)[0]
-    aids.apply(objects, [], settings, PALETTE)
+    aids.apply(objects, [], settings, PALETTE, NO_RIG)
 
     expect(boxes(aids.object)[0]).toBe(built)
   })
@@ -93,7 +112,9 @@ describe('the aids drawn over a scene', () => {
     const aids = createViewportAids()
     const objects = new Map([['a', meshWithout()]])
 
-    expect(() => aids.apply(objects, ['a'], { ...OFF, normals: true }, PALETTE)).not.toThrow()
+    expect(() =>
+      aids.apply(objects, ['a'], { ...OFF, normals: true }, PALETTE, NO_RIG),
+    ).not.toThrow()
     expect(aids.object.children).toHaveLength(0)
   })
 
@@ -105,10 +126,10 @@ describe('the aids drawn over a scene', () => {
     ])
     const settings = { ...OFF, normals: true } satisfies AidSettings
 
-    aids.apply(objects, ['a'], settings, PALETTE)
+    aids.apply(objects, ['a'], settings, PALETTE, NO_RIG)
     expect(aids.object.children).toHaveLength(1)
 
-    aids.apply(objects, ['a', 'b'], settings, PALETTE)
+    aids.apply(objects, ['a', 'b'], settings, PALETTE, NO_RIG)
     expect(aids.object.children).toHaveLength(2)
   })
 
@@ -119,6 +140,7 @@ describe('the aids drawn over a scene', () => {
       ['a'],
       { boundingBoxes: 'all', origins: true, normals: true, normalLength: 0.2 },
       PALETTE,
+      NO_RIG,
     )
 
     expect(aids.object.children.length).toBeGreaterThan(2)
@@ -132,6 +154,7 @@ describe('the aids drawn over a scene', () => {
       ['a'],
       { boundingBoxes: 'all', origins: true, normals: true, normalLength: 0.2 },
       PALETTE,
+      NO_RIG,
     )
     aids.dispose()
 
@@ -143,10 +166,168 @@ describe('the aids drawn over a scene', () => {
   it('takes its helpers out of the raycaster', () => {
     const aids = createViewportAids()
     const boxed = new Mesh(new BufferGeometry())
-    aids.apply(new Map([['a', boxed]]), [], { ...OFF, boundingBoxes: 'all' }, PALETTE)
+    aids.apply(new Map([['a', boxed]]), [], { ...OFF, boundingBoxes: 'all' }, PALETTE, NO_RIG)
 
     const ray = new Raycaster(new Vector3(0, 0, 5), new Vector3(0, 0, -1))
 
     expect(ray.intersectObject(aids.object, true)).toEqual([])
+  })
+})
+
+/**
+ * 🛑 The one thing drawn from a COMPONENT rather than from a geometry. A walking body is the two
+ * figures the physics reads — `characters.capsuleOf` — and no node's shape carries them.
+ */
+describe('the cage a walking body wears', () => {
+  const BODY = bodied(new Map([['a', { height: 1.8, radius: 0.3 }]]))
+
+  /** A matrix no case should ever read — `?? ` here would otherwise pass a missing cage. */
+  const MISSED = new Matrix4().setPosition(999, 999, 999)
+
+  it('is drawn without anything being switched on', () => {
+    const aids = createViewportAids()
+
+    aids.apply(new Map([['a', new Object3D()]]), [], OFF, PALETTE, BODY)
+
+    expect(aids.object.children).toHaveLength(1)
+    expect(aids.idle()).toBe(false)
+  })
+
+  /**
+   * 🛑 Nothing recomposes the chain here, and that is the whole case: the renderer writes the
+   * LOCAL transforms and calls `apply` straight after, while `matrixWorld` is only recomposed at
+   * the draw — measured on the player module, whose cage took the identity and, both updates
+   * being off, stayed there. A case that recomposed the chain itself stayed green throughout.
+   */
+  it('stands where the node stands, chain unrecomposed, and follows it', () => {
+    const module = new Object3D()
+    module.position.set(0, 0, 10)
+    const walker = new Object3D()
+    walker.position.set(0, 0.9, 0)
+    module.add(walker)
+
+    const aids = createViewportAids()
+    aids.apply(new Map([['a', walker]]), [], OFF, PALETTE, BODY)
+    const placed = new Vector3().setFromMatrixPosition(
+      aids.object.children[0]?.matrixWorld ?? MISSED,
+    )
+    expect(placed.y).toBeCloseTo(0.9)
+    expect(placed.z).toBeCloseTo(10)
+
+    module.position.set(4, 0, 10)
+    aids.refreshBoxes()
+
+    const moved = new Vector3().setFromMatrixPosition(
+      aids.object.children[0]?.matrixWorld ?? MISSED,
+    )
+    expect(moved.x).toBeCloseTo(4)
+    expect(moved.y).toBeCloseTo(0.9)
+    expect(moved.z).toBeCloseTo(10)
+  })
+
+  /** Rebuilt on a change of FIGURE alone: `apply` runs on every selection and every drag frame. */
+  it('is kept across an apply that changes neither figure', () => {
+    const walker = new Object3D()
+    const aids = createViewportAids()
+    aids.apply(new Map([['a', walker]]), [], OFF, PALETTE, BODY)
+    const first = aids.object.children[0]
+
+    aids.apply(new Map([['a', walker]]), ['a'], OFF, PALETTE, BODY)
+
+    expect(aids.object.children[0]).toBe(first)
+  })
+
+  it('is rebuilt when the controller is retuned', () => {
+    const walker = new Object3D()
+    const aids = createViewportAids()
+    aids.apply(new Map([['a', walker]]), [], OFF, PALETTE, BODY)
+    const first = aids.object.children[0]
+
+    aids.apply(
+      new Map([['a', walker]]),
+      [],
+      OFF,
+      PALETTE,
+      bodied(new Map([['a', { height: 2, radius: 0.3 }]])),
+    )
+
+    expect(aids.object.children[0]).not.toBe(first)
+  })
+
+  it('goes away with the node it outlined', () => {
+    const aids = createViewportAids()
+    aids.apply(new Map([['a', new Object3D()]]), [], OFF, PALETTE, BODY)
+
+    aids.apply(new Map(), [], OFF, PALETTE, NO_RIG)
+
+    expect(aids.object.children).toHaveLength(0)
+  })
+})
+
+/**
+ * 🛑 Drawn from a COMPONENT as well, and it is the only way to SEE an arm at all: nothing places
+ * the camera until the scene plays, so the editor showed one standing at its parent's feet.
+ */
+describe('the arm a camera hangs on', () => {
+  const RIG: AidRigs = {
+    bodies: new Map(),
+    arms: new Map([
+      ['arm', { subjectId: 'a', lift: { x: 0, y: 1.6, z: 0 }, back: { x: 0, y: 0, z: 4 } }],
+    ]),
+  }
+
+  /** Where the drawn arm starts and ends, in world — what the eye actually reads off the screen. */
+  const spans = (aids: ReturnType<typeof createViewportAids>): [Vector3, Vector3] => {
+    const drawn = aids.object.children[0]
+    const points = drawn instanceof LineSegments ? drawn.geometry.getAttribute('position') : null
+    if (!points || !drawn) throw new Error('no arm drawn')
+
+    const at = (index: number) =>
+      new Vector3().fromBufferAttribute(points, index).applyMatrix4(drawn.matrixWorld)
+    return [at(0), at(1)]
+  }
+
+  it('reaches from over the body up to where the camera will sit', () => {
+    const walker = new Object3D()
+    walker.position.set(0, 0.9, 0)
+    const aids = createViewportAids()
+
+    aids.apply(new Map([['a', walker]]), [], OFF, PALETTE, RIG)
+    const [pivot, seat] = spans(aids)
+
+    expect(pivot.toArray()).toEqual([0, 2.5, 0])
+    expect(seat.toArray()).toEqual([0, 2.5, 4])
+  })
+
+  /** The same trap the cage fell into: nothing recomposes the chain before an aid is drawn. */
+  it('follows the body it hangs off, chain unrecomposed', () => {
+    const module = new Object3D()
+    const walker = new Object3D()
+    walker.position.set(0, 0.9, 0)
+    module.add(walker)
+    const aids = createViewportAids()
+    aids.apply(new Map([['a', walker]]), [], OFF, PALETTE, RIG)
+
+    module.position.set(5, 0, 0)
+    aids.refreshBoxes()
+
+    expect(spans(aids)[0].x).toBeCloseTo(5)
+  })
+
+  it('draws nothing for an arm whose body is not on stage', () => {
+    const aids = createViewportAids()
+
+    aids.apply(new Map(), [], OFF, PALETTE, RIG)
+
+    expect(aids.object.children).toHaveLength(0)
+  })
+
+  it('goes away with the arm it drew', () => {
+    const aids = createViewportAids()
+    aids.apply(new Map([['a', new Object3D()]]), [], OFF, PALETTE, RIG)
+
+    aids.apply(new Map([['a', new Object3D()]]), [], OFF, PALETTE, NO_RIG)
+
+    expect(aids.object.children).toHaveLength(0)
   })
 })

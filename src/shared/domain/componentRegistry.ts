@@ -78,8 +78,11 @@ const PLAYER: ComponentDescriptor = {
   category: 'gameplay',
   // `from` is the module FILE these nodes were read out of, kept so the studio can offer to read
   // them again. Empty for a module built in the scene and never filed.
-  fields: [textField('from')],
-  defaults: { from: '' },
+  //
+  // 🛑 `possesses` is what the player currently RIDES — a car, a lift, anything the scene holds.
+  // Empty means it holds its own body, which is the ordinary case. See `possession.ts`.
+  fields: [textField('from'), textField('possesses')],
+  defaults: { from: '', possesses: '' },
 }
 
 const HEALTH: ComponentDescriptor = {

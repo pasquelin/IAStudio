@@ -7,6 +7,7 @@ import type { Component } from '@shared/domain/component'
 import type { GameEvent, GameEventName } from '@shared/domain/gameEvent'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { createCharacters } from '../characters'
+import { createPossessions } from '../possessions'
 import type { ColliderShape } from '../../physics/shape'
 import { restingTransform } from '../entity'
 import { testPorts, testWorld } from '../world-fixtures'
@@ -23,7 +24,7 @@ function bench(over: Partial<WorldOptions> = {}): Bench {
   const physics = notedPhysics()
   const seen: GameEvent[] = []
 
-  const characters = createCharacters()
+  const characters = createCharacters(createPossessions())
   const world = testWorld({
     ports: testPorts({ physics }),
     systems: [createPhysicsSystem({ shapeOf: () => CUBE, characters })],
@@ -231,7 +232,7 @@ describe('what falls, what blocks and what walks', () => {
    */
   it('asks for a shape once, not once a frame', () => {
     const physics = notedPhysics()
-    const characters = createCharacters()
+    const characters = createCharacters(createPossessions())
     let asked = 0
     const world = testWorld({
       ports: testPorts({ physics }),

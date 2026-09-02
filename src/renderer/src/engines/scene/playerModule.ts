@@ -73,8 +73,8 @@ function partsIn(nodes: readonly SceneNode[], module: SceneNode): FoundParts {
  * names. 🛑 `copiesOf` remaps `id` and `parentId` and nothing inside a component, so a duplicated
  * module keeps an arm aimed at the original's camera — and a name resolved globally did the same.
  *
- * What an author WROTE is left alone: both fields stay editable, so only a blank, a name the
- * scene no longer holds, or one belonging to ANOTHER module is filled in from the tree.
+ * What a field NAMES is resolved inside the module first, so `Capsule` reads as itself and plays
+ * as an exact id. What points OUTSIDE — the car a player drives — is the author's, and is kept.
  */
 export function withBoundPlayerArm(nodes: readonly SceneNode[]): readonly SceneNode[] {
   const found = allPartsOf(nodes)
@@ -86,15 +86,26 @@ export function withBoundPlayerArm(nodes: readonly SceneNode[]): readonly SceneN
   }
 
   const bound = new Map<string, Component>()
-  for (const { module, arm, body, eye } of found) {
+  for (const parts of found) {
+    const { arm, body, eye } = parts
     const held = arm?.components?.find(one => one.type === 'SpringArm')
     if (!arm || !held) continue
 
+    const inside = new Map(
+      parts.inside.flatMap(node => [
+        [node.id, node],
+        [node.name, node],
+      ]),
+    )
     const own = (said: unknown, fresh?: SceneNode): string | null => {
-      if (!fresh) return null
-      const at = typeof said === 'string' ? holder.get(said) : undefined
-      const stale = said === '' || (at !== undefined && at !== module.id)
-      return stale || !nodes.some(node => node.id === said) ? fresh.id : null
+      if (typeof said !== 'string') return fresh?.id ?? null
+
+      // Named inside the module — by id or by the name a reader sees — so it plays as an exact id.
+      const here = inside.get(said)
+      if (here) return here.id
+
+      const elsewhere = nodes.some(node => node.id === said || node.name === said)
+      return elsewhere ? null : (fresh?.id ?? null)
     }
 
     const subject = own(held.subject, body)

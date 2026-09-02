@@ -3,8 +3,9 @@ import { DEFAULT_CHECKER_TEXTURE } from '@shared/domain/checkerTexture'
 import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
+import { isPlayerModule, playerPartsOf } from './playerModule'
 import { pitchTowards, sceneFromTemplate } from './sceneTemplates'
-import type { SceneNode } from './sceneState'
+import { subtreesOf, type SceneNode } from './sceneState'
 
 const typesIn = (nodes: readonly SceneNode[]): string[] => nodes.map(node => node.type)
 
@@ -65,14 +66,22 @@ describe('sceneFromTemplate', () => {
     expect(typesIn(sceneFromTemplate('cinematic').nodes)).toContain('path')
   })
 
-  it('stands a person-sized stand-in in the two templates that frame one', () => {
-    const framed: SceneTemplateId[] = ['thirdPerson', 'topDown']
-    for (const id of framed) {
-      const capsule = sceneFromTemplate(id).nodes.find(
-        node => node.type === 'mesh' && node.geometry.kind === 'capsule',
-      )
-      expect(capsule?.transform.position.y).toBeCloseTo(0.9)
-    }
+  it('stands a person-sized stand-in in the template that frames one', () => {
+    const capsule = sceneFromTemplate('topDown').nodes.find(
+      node => node.type === 'mesh' && node.geometry.kind === 'capsule',
+    )
+
+    expect(capsule?.transform.position.y).toBeCloseTo(0.9)
+  })
+
+  /** The module carries its own body: what stands is its `Capsule`, and the mesh hangs under it. */
+  it('opens the third person on a player module rather than a loose stand-in', () => {
+    const { nodes } = sceneFromTemplate('thirdPerson')
+    const parts = playerPartsOf(nodes)
+
+    expect(parts?.module.name).toBe('Player_Module')
+    expect(parts?.body?.transform.position.y).toBeCloseTo(0.9)
+    expect(nodes.filter(node => node.type === 'camera')).toHaveLength(1)
   })
 
   it('gives the character templates feet on the ground, which nothing reads yet', () => {
@@ -99,11 +108,23 @@ describe('sceneFromTemplate', () => {
   // Three cadrages over an empty floor proved nothing: what makes them worth picking is a set
   // one can climb, fall off and bump into — the same one for the three.
   it('opens the three character views on the same level, moving only the camera', () => {
-    const shapesOf = (id: SceneTemplateId): string =>
-      sceneFromTemplate(id)
-        .nodes.filter(node => node.type === 'mesh')
+    // The LEVEL alone, and it has to be said in two ways: `thirdPerson` stands a player MODULE
+    // on it — a figure of a dozen meshes — while the other two still carry the old `Character`
+    // capsule. Whoever walks the set is not the set, in either shape; the second line goes the
+    // day the last template is migrated.
+    const shapesOf = (id: SceneTemplateId): string => {
+      const { nodes } = sceneFromTemplate(id)
+      const walker = new Set(
+        subtreesOf(
+          nodes,
+          nodes.filter(isPlayerModule).map(node => node.id),
+        ).map(node => node.id),
+      )
+      return nodes
+        .filter(node => node.type === 'mesh' && !walker.has(node.id) && node.name !== 'Character')
         .map(node => (node.type === 'mesh' ? node.geometry.kind : ''))
         .join()
+    }
 
     expect(shapesOf('topDown')).toBe(shapesOf('thirdPerson'))
     expect(shapesOf('firstPerson').split(',').length).toBeGreaterThan(15)
@@ -192,13 +213,12 @@ describe('the template the composition is judged on', () => {
 })
 
 /**
- * 🛑 An arm is a COMPONENT, so no menu of node types can offer one — a template that ships without
- * it is a feature nobody can reach without knowing where to look. Both names are checked because
- * an arm naming nothing is an arm that does nothing, in silence.
+ * 🛑 An arm is a COMPONENT, so no menu of node types can offer one — a template shipping without
+ * it is a feature nobody reaches. What is left here is the MACHINE, which has no module yet:
+ * `thirdPerson` left this list the day its arm stopped naming anything.
  */
 describe('the arm the playable templates hang their camera on', () => {
   const wired: readonly { template: SceneTemplateId; subject: string }[] = [
-    { template: 'thirdPerson', subject: 'Character' },
     { template: 'car', subject: 'Car' },
   ]
 

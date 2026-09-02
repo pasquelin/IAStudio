@@ -71,6 +71,12 @@
     "pointHint": "Radiates in every direction from a single point",
     "spotHint": "A cone of light, with its angle and its softened edge"
   },
+  "figures": {
+    "add": "Add a figure",
+    "addHint": "Lay down a silhouette in volume, each part editable afterwards like any mesh",
+    "humanoid": "Humanoid",
+    "humanoidHint": "A low-poly human silhouette, painted as clothes, the size of a walking body"
+  },
   "scene": {
     "root": "Scene",
     "onAir": "On air",

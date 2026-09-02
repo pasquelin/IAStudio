@@ -157,6 +157,7 @@
     "add": "Add",
     "mesh": "Mesh",
     "light": "Light",
+    "figure": "Figure",
     "object": "Object",
     "import": "Import",
     "importBundle": "Edit with its media (OTIOZ)…",

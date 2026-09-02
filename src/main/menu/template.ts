@@ -12,6 +12,7 @@ import {
 } from '@shared/domain/project'
 import {
   DISPLAY_MODES,
+  FIGURE_ENTRIES,
   LIGHT_ENTRIES,
   EXPORT_FORMATS,
   MESH_ENTRIES,
@@ -19,6 +20,7 @@ import {
   VIEW_DIRECTIONS,
   type DisplayMode,
   type LightKind,
+  type FigureKind,
   type MeshKind,
   type ObjectKind,
   type SceneEntry,
@@ -301,7 +303,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   ]
 
   const entryItem =
-    <K extends MeshKind | LightKind | ObjectKind>(labels: Record<K, string>) =>
+    <K extends MeshKind | LightKind | FigureKind | ObjectKind>(labels: Record<K, string>) =>
     (entry: SceneEntry<K>): MenuItemConstructorOptions => ({
       label: labels[entry.kind],
       enabled: !entry.disabled,
@@ -762,6 +764,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
             submenu: [
               { label: t.menu.mesh, submenu: MESH_ENTRIES.map(entryItem<MeshKind>(t.meshes)) },
               { label: t.menu.light, submenu: LIGHT_ENTRIES.map(entryItem<LightKind>(t.lights)) },
+              {
+                label: t.menu.figure,
+                submenu: FIGURE_ENTRIES.map(entryItem<FigureKind>(t.figures)),
+              },
               {
                 label: t.menu.object,
                 submenu: OBJECT_ENTRIES.map(entryItem<ObjectKind>(t.objects)),

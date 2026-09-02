@@ -97,6 +97,7 @@
       "mode": "Course",
       "orientToTangent": "Follow the tangent",
       "orientation": "Orientation",
+      "possesses": "Possessed item",
       "positionLag": "Position lag",
       "probeRadius": "Probe radius",
       "radius": "Radius",

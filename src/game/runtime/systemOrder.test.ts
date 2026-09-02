@@ -26,6 +26,7 @@ const EVERY_NAME: Record<SystemName, true> = {
   lookAt: true,
   vehicle: true,
   aircraft: true,
+  possession: true,
   physics: true,
   collision: true,
   gameplay: true,

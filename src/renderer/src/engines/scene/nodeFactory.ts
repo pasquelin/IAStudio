@@ -6,11 +6,14 @@ import type {
   Transform,
   Vector3,
 } from '@shared/domain/scene'
-import { DEFAULT_CAMERA, DEFAULT_PATH } from '@shared/domain/scene'
+import { DEFAULT_CAMERA, DEFAULT_PATH, type FigureKind } from '@shared/domain/scene'
 import type { CsgGraph } from '@shared/domain/csg'
 import { COMPONENTS, newComponent } from '@shared/domain/componentRegistry'
+import { aheadOf } from '@game/runtime/playView'
+import { armPivot, armSeat } from '@game/runtime/systems/springArmRig'
 import { newId } from '@/helpers/ids'
 import { defaultMeshMaterial } from './checkerTextures'
+import { figureByKind, type FigureDescriptor } from './figures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
 import { isPlayerModule, PLAYER_KIND } from './playerModule'
@@ -262,29 +265,28 @@ export function playerModuleNodes(): readonly SceneNode[] {
     parentId: module.id,
     components: [newComponent('CharacterController')],
   }
-  // three.js measures a capsule by its CYLINDER, so the caps are what the two radii add back.
-  const mesh = meshNode(
-    {
-      kind: 'capsule',
-      radius: WALKER_RADIUS,
-      height: WALKER_HEIGHT - 2 * WALKER_RADIUS,
-      capSegments: 8,
-      radialSegments: 16,
-    },
-    { parentId: capsule.id, name: 'Mesh' },
-  )
+  // 🛑 A figure and not a capsule: what stands in a walking body is a BODY, and a capsule inside
+  // a capsule showed nothing a cage does not already draw. Every part of it stays an editable
+  // mesh — see `figures.ts` — so replacing the look of a player is replacing these nodes.
+  const figure = figureNodesUnder(capsule.id)
   const arm: SceneNode = { ...groupNode(IDENTITY_TRANSFORM, 'SpringArm'), parentId: module.id }
-  const camera: SceneNode = { ...cameraNode(IDENTITY_TRANSFORM), parentId: arm.id }
+  // 🛑 Where the arm will put it on the first frame of play, worked out from the very functions
+  // the system uses. Left at its parent's origin, the camera stood at the player's feet, and
+  // nothing in the editor moves it: an arm only acts once the scene is playing.
+  const camera: SceneNode = {
+    ...cameraNode(transformAt(armRestSeat(capsule.transform.position))),
+    parentId: arm.id,
+  }
 
+  // 🛑 The NAMES its own children wear, never their ids: a uuid is a field nobody can read, and
+  // the tree resolves these two inside the module at every world build — see `withBoundPlayerArm`.
   return [
     module,
     capsule,
-    mesh,
-    // 🛑 By ID, never by name: `entityNamed` reads the id first and the name after, and every
-    // scene the studio ships already holds a node called `Camera` — which a name would capture.
+    ...figure,
     {
       ...arm,
-      components: [{ ...newComponent('SpringArm'), subject: capsule.id, camera: camera.id }],
+      components: [{ ...newComponent('SpringArm'), subject: capsule.name, camera: camera.name }],
     },
     camera,
   ]
@@ -292,7 +294,74 @@ export function playerModuleNodes(): readonly SceneNode[] {
 
 /** The controller's own defaults, read rather than copied: tuning one there moves the body here. */
 const WALKER_HEIGHT = Number(COMPONENTS.CharacterController.defaults.height)
-const WALKER_RADIUS = Number(COMPONENTS.CharacterController.defaults.radius)
+
+/**
+ * Where a resting arm seats its camera, over a body standing at `body` — in the module's own
+ * frame, the arm hanging at its origin.
+ */
+function armRestSeat(body: Vector3): Vector3 {
+  const arm = COMPONENTS.SpringArm.defaults
+  const pivot = armPivot(body, Number(arm.height), Number(arm.shoulder), 0, { x: 0, y: 0, z: 0 })
+  return armSeat(pivot, aheadOf(LEVEL, { x: 0, y: 0, z: 0 }), Number(arm.length), {
+    x: 0,
+    y: 0,
+    z: 0,
+  })
+}
+
+/** The look a game starts on, which is the one an editor has to show. */
+const LEVEL = { yaw: 0, pitch: 0 }
+
+/**
+ * A figure laid down as real nodes: one group, and a painted box per part. The one place a figure
+ * becomes a scene, as `meshNode` is the one place a mesh does.
+ *
+ * `scale` sizes the whole thing without touching a part: a figure is a family of its own and
+ * knows nothing of a controller, so it is the caller that fits one to the body it fills.
+ */
+export function figureNodes(
+  figure: FigureDescriptor,
+  scale = 1,
+  parentId: string | null = null,
+): readonly SceneNode[] {
+  const root = {
+    ...groupNode(transformAt({ x: 0, y: 0, z: 0 }), 'Figure'),
+    parentId,
+    transform: {
+      ...transformAt({ x: 0, y: 0, z: 0 }),
+      scale: { x: scale, y: scale, z: scale },
+    },
+  }
+  return [
+    root,
+    ...figure.parts.map(part =>
+      meshNode(
+        { kind: 'box', width: part.size.x, height: part.size.y, depth: part.size.z },
+        {
+          // A fresh vector per part: `transformAt` KEEPS what it is handed, and the parts are a
+          // module-level table — two figures shared one position each, and moving a leg on one
+          // moved it on the other.
+          transform: transformAt({ ...part.at }),
+          // Composed here rather than through `levelParts.surface`, which would close an import
+          // cycle back onto this module. A descriptor PER part: two nodes holding one object
+          // would be recoloured together.
+          material: { ...defaultMeshMaterial(), color: part.colour },
+          name: part.name,
+          parentId: root.id,
+        },
+      ),
+    ),
+  ]
+}
+
+/** The default figure, sized to the body it stands in — the module's own stand-in. */
+function figureNodesUnder(bodyId: string): readonly SceneNode[] {
+  const figure = figureByKind(DEFAULT_FIGURE)?.create()
+  return figure ? figureNodes(figure, WALKER_HEIGHT / figure.height, bodyId) : []
+}
+
+/** Which figure a fresh module stands in. Typed, so dropping it from the family breaks the build. */
+const DEFAULT_FIGURE: FigureKind = 'humanoid'
 
 /** The glyph belongs to the registry entry, not to whichever panel happens to draw the node. */
 export function iconOf(node: SceneNode): string {
@@ -322,6 +391,9 @@ export function iconOf(node: SceneNode): string {
  */
 export function createNodesOf(kind: string): readonly SceneNode[] {
   if (kind === PLAYER_KIND) return playerModuleNodes()
+
+  const figure = figureByKind(kind)
+  if (figure) return figureNodes(figure.create())
 
   const node = createNodeOf(kind)
   return node ? [node] : []

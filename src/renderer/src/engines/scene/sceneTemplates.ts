@@ -46,7 +46,15 @@ import { LYING_FLAT } from './levelParts'
 import { MOUNTAIN_WORLD, mountainNodes } from './mountainLevel'
 import { presetPatch } from './environmentPresets'
 import { planeNodes } from './planeNodes'
-import { cameraNode, groupNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
+import {
+  cameraNode,
+  groupNode,
+  lightNode,
+  meshNode,
+  pathNode,
+  playerModuleNodes,
+  transformAt,
+} from './nodeFactory'
 import { playgroundNodes } from './playgroundLevel'
 import type { SceneNode, SceneState } from './sceneState'
 
@@ -112,8 +120,17 @@ function standIn(): SceneNode {
       { kind: 'capsule', radius: 0.3, height: 1.2, capSegments: 8, radialSegments: 16 },
       { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }), name: 'Character' },
     ),
-    components: [newComponent('CharacterController'), newComponent('Health')],
+    components: [newComponent('CharacterController')],
   }
+}
+
+/**
+ * The player module, put down where the stand-in stands. It brings its own body, its own arm and
+ * the eye it films through — nothing here names a camera, which is the whole of what it replaces.
+ */
+function playerModuleAt(z: number): readonly SceneNode[] {
+  const [root, ...rest] = playerModuleNodes()
+  return root ? [{ ...root, transform: transformAt({ x: 0, y: 0, z }) }, ...rest] : []
 }
 
 /** Clear of the pit, on the floor band the two framed views open on. */
@@ -449,11 +466,10 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
 
   // The camera stands back BEHIND the stand-in, which stands at z = 10 — over the shoulder means
   // both on the same axis, and the aim is at chest height.
+  // 🛑 The module and nothing else: it carries the body, the arm and the camera, bound by the
+  // TREE. The trio it replaces bound them by name, and a second `Camera` captured the arm.
   thirdPerson: () =>
-    characterView(
-      [standIn(), aimedCamera(2.4, 5, 1, STAND_IN_Z), cameraRig('Character', { height: 1.4 })],
-      { camera: 'thirdPerson' },
-    ),
+    characterView([...playerModuleAt(STAND_IN_Z)], { camera: 'thirdPerson' }, 'Capsule'),
 
   topDown: () =>
     characterView([standIn(), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {

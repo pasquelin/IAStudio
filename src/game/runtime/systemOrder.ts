@@ -14,6 +14,7 @@ export type SystemName =
   | 'lookAt'
   | 'vehicle'
   | 'aircraft'
+  | 'possession'
   | 'physics'
   | 'collision'
   | 'gameplay'
@@ -40,6 +41,10 @@ export type SystemName =
  *
  * 🛑 `springArm` sits just before `camera`, and both work in the LATE pass: an arm places the
  * camera node of the frame being drawn, and the camera films through it on the same frame.
+ *
+ * 🛑 `possession` sits just BEFORE `physics` so a ridden body is frozen before the step asks it
+ * what it wants — and it carries that body in the LATE pass, where what it rides has already
+ * been moved and the arm has not yet read where it stands.
  */
 export const SYSTEM_ORDER: readonly SystemName[] = [
   'input',
@@ -53,6 +58,7 @@ export const SYSTEM_ORDER: readonly SystemName[] = [
   'lookAt',
   'vehicle',
   'aircraft',
+  'possession',
   'physics',
   'collision',
   'gameplay',

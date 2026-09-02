@@ -6,6 +6,7 @@
  * four of thirteen had already drifted to zero.
  */
 export const COMPONENT_DEFAULTS = {
+  Player: { from: '', possesses: '' },
   Path: { waypoints: '', speed: 2, mode: 'loop', orientToTangent: false },
   Follow: { target: '', speed: 3, stopDistance: 1.5, acceleration: 8 },
   Orbit: { target: '', radius: 5, speed: 45, height: 0 },

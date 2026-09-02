@@ -8,7 +8,23 @@
  * `VertexNormalsHelper` per mesh of an imported model is not, which is why the normals are drawn
  * on the selection alone.
  */
-import { AxesHelper, Box3, BoxHelper, Color, Group, Mesh, Vector3, type Object3D } from 'three'
+import {
+  AxesHelper,
+  Box3,
+  BoxHelper,
+  BufferAttribute,
+  BufferGeometry,
+  CapsuleGeometry,
+  Color,
+  Group,
+  LineBasicMaterial,
+  LineSegments,
+  Mesh,
+  Vector3,
+  WireframeGeometry,
+  type Object3D,
+} from 'three'
+import type { ArmRig } from './springArmRigs'
 import { VertexNormalsHelper } from 'three/addons/helpers/VertexNormalsHelper.js'
 import { showsAid, type HelperVisibility } from '@shared/domain/scene'
 
@@ -17,6 +33,22 @@ export type AidPalette = {
   box: string
   origin: string
   normal: string
+  /** The cage a walking body is outlined with. */
+  body: string
+  /** The arm a camera hangs on, and the seat at the end of it. */
+  arm: string
+}
+
+/** The capsule a `CharacterController` FEELS, as the physics reads it — never a node's geometry. */
+export type AidBody = { height: number; radius: number }
+
+/**
+ * What is drawn off the COMPONENTS rather than off a geometry — the two volumes no shape carries.
+ * Keyed by node: a body by the one that walks, an arm by the one that carries the arm.
+ */
+export type AidRigs = {
+  bodies: ReadonlyMap<string, AidBody>
+  arms: ReadonlyMap<string, ArmRig>
 }
 
 export type AidSettings = {
@@ -43,6 +75,9 @@ export type ViewportAids = {
     selectedIds: readonly string[],
     settings: AidSettings,
     palette: AidPalette,
+    /** Always drawn: a volume one cannot see is one nobody tunes — the same bargain every engine
+     * makes with its collision shapes. */
+    rigs: AidRigs,
   ) => void
   /** The boxes follow what moved. Cheap — a `BoxHelper` re-reads a bounding box, nothing else. */
   refreshBoxes: () => void
@@ -61,6 +96,10 @@ export function createViewportAids(): ViewportAids {
   const origins = new Map<string, AxesHelper>()
   /** Keyed by node, though a node may be a whole model: see `normalsFor`, which picks one mesh. */
   const normals = new Map<string, VertexNormalsHelper>()
+  /** Keyed by node, and rebuilt only when the FIGURES change — see the sweep in `apply`. */
+  const cages = new Map<string, { line: LineSegments; body: AidBody; object: Object3D }>()
+  /** The same bargain for the arms, whose shape is rebuilt only when the arm itself is retuned. */
+  const armsDrawn = new Map<string, { line: LineSegments; rig: ArmRig; object: Object3D }>()
 
   const drop = <T extends Object3D & { dispose: () => void }>(held: Map<string, T>, id: string) => {
     const helper = held.get(id)
@@ -77,9 +116,46 @@ export function createViewportAids(): ViewportAids {
   return {
     object: host,
 
-    idle: () => boxes.size === 0 && origins.size === 0 && normals.size === 0,
+    idle: () =>
+      boxes.size === 0 &&
+      origins.size === 0 &&
+      normals.size === 0 &&
+      cages.size === 0 &&
+      armsDrawn.size === 0,
 
-    apply: (objects, selectedIds, settings, palette) => {
+    apply: (objects, selectedIds, settings, palette, rigs) => {
+      const { bodies, arms } = rigs
+      // Rebuilt on a change of FIGURE alone: `apply` runs on every selection and every frame of a
+      // slider drag, and a cage rebuilt there would re-upload its geometry each time.
+      for (const [id, held] of [...cages]) {
+        const wanted = bodies.get(id)
+        const same =
+          wanted && wanted.height === held.body.height && wanted.radius === held.body.radius
+        if (!same || objects.get(id) !== held.object) dropLine(cages, id)
+      }
+      for (const [id, body] of bodies) {
+        const object = objects.get(id)
+        if (cages.has(id) || !object) continue
+        const line = capsuleCage(body, palette.body)
+        cages.set(id, { line, body, object })
+        host.add(line)
+      }
+      for (const [id, held] of [...armsDrawn]) {
+        const wanted = arms.get(id)
+        const same = wanted && sameArm(wanted, held.rig)
+        if (!same || objects.get(held.rig.subjectId) !== held.object) dropLine(armsDrawn, id)
+      }
+      for (const [id, rig] of arms) {
+        const object = objects.get(rig.subjectId)
+        if (armsDrawn.has(id) || !object) continue
+        const line = armLine(rig, palette.arm)
+        armsDrawn.set(id, { line, rig, object })
+        host.add(line)
+      }
+
+      poseCages(cages)
+      poseArms(armsDrawn)
+
       const selected = new Set(selectedIds)
       const wanted = (visibility: HelperVisibility, id: string): boolean =>
         showsAid(visibility, selected, id) && (objects.get(id)?.visible ?? false)
@@ -147,10 +223,16 @@ export function createViewportAids(): ViewportAids {
     // `VertexNormalsHelper.update` walks every vertex and re-uploads its buffer. One belongs on
     // every frame of a drag; the other does not.
     refreshBoxes: () => {
+      poseCages(cages)
+      poseArms(armsDrawn)
+
       for (const helper of boxes.values()) helper.update()
     },
 
     dispose: () => {
+      for (const id of [...cages.keys()]) dropLine(cages, id)
+      for (const id of [...armsDrawn.keys()]) dropLine(armsDrawn, id)
+
       host.removeFromParent()
       dropAll(boxes)
       dropAll(origins)
@@ -201,3 +283,105 @@ function originSize(object: Object3D): number {
   const size = new Box3().setFromObject(object).getSize(new Vector3())
   return Math.max(MIN_ORIGIN, Math.max(size.x, size.y, size.z) * ORIGIN_SCALE)
 }
+
+/** The cage a walking body wears — sparse on purpose, so it reads as a volume and not as a solid. */
+function capsuleCage(body: AidBody, colour: string): LineSegments {
+  const cylinder = Math.max(0, body.height - 2 * body.radius)
+  const line = new LineSegments(
+    new WireframeGeometry(new CapsuleGeometry(body.radius, cylinder, 4, 8)),
+    new LineBasicMaterial({ color: new Color(colour), depthTest: false }),
+  )
+  // 🛑 `matrixWorld` written DIRECTLY, both updates off: an aid hangs from the workshop group
+  // rather than from the node, and three recomposes `matrixWorld` from a local `matrix` — which
+  // drew the cage metres away from the body it outlines. See `poseCages` for the other half.
+  line.matrixAutoUpdate = false
+  line.matrixWorldAutoUpdate = false
+  line.raycast = () => {}
+  line.renderOrder = 1
+  return line
+}
+
+/**
+ * 🛑 The chain is recomposed here, never assumed: the renderer writes the LOCAL transforms and
+ * draws the aids straight after, while `matrixWorld` is only recomposed at the draw. Read as it
+ * stood, a cage took the identity and — both updates being off — never left it.
+ *
+ * The two chains it needs and nothing else, as `railCamera` does: `scene.updateMatrixWorld(true)`
+ * would recompose every object of the scene, bones included, on every apply.
+ */
+function poseCages(held: Map<string, { line: LineSegments; object: Object3D }>): void {
+  for (const cage of held.values()) {
+    cage.object.updateWorldMatrix(true, false)
+    cage.line.matrixWorld.copy(cage.object.matrixWorld)
+  }
+}
+
+/** An arm stands over the body it hangs off — the lift being world, as the system reads it. */
+function poseArms(held: Map<string, { line: LineSegments; rig: ArmRig; object: Object3D }>): void {
+  for (const arm of held.values()) {
+    arm.object.updateWorldMatrix(true, false)
+    STANDING.setFromMatrixPosition(arm.object.matrixWorld)
+    arm.line.matrixWorld.makeTranslation(
+      STANDING.x + arm.rig.lift.x,
+      STANDING.y + arm.rig.lift.y,
+      STANDING.z + arm.rig.lift.z,
+    )
+  }
+}
+
+/**
+ * The arm itself and the seat at the end of it: one line out to the camera's place, and a small
+ * cross marking it — a bare segment reads as a stray edge of the scene.
+ */
+function armLine(rig: ArmRig, colour: string): LineSegments {
+  const { x, y, z } = rig.back
+  const points = [0, 0, 0, x, y, z]
+  for (const [dx, dy, dz] of SEAT_CROSS) {
+    points.push(x - dx, y - dy, z - dz, x + dx, y + dy, z + dz)
+  }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(points), 3))
+
+  const line = new LineSegments(
+    geometry,
+    new LineBasicMaterial({ color: new Color(colour), depthTest: false }),
+  )
+  // The same bargain the cage makes: written world matrix, both updates off. See `poseArms`.
+  line.matrixAutoUpdate = false
+  line.matrixWorldAutoUpdate = false
+  line.raycast = () => {}
+  line.renderOrder = 1
+  return line
+}
+
+/** Retuning the arm is what rebuilds its shape; moving the body is not. */
+function sameArm(wanted: ArmRig, held: ArmRig): boolean {
+  return (
+    wanted.subjectId === held.subjectId &&
+    alike(wanted.lift, held.lift) &&
+    alike(wanted.back, held.back)
+  )
+}
+
+const alike = (one: { x: number; y: number; z: number }, other: typeof one): boolean =>
+  one.x === other.x && one.y === other.y && one.z === other.z
+
+function dropLine(held: Map<string, { line: LineSegments }>, id: string): void {
+  const drawn = held.get(id)
+  if (!drawn) return
+  drawn.line.removeFromParent()
+  drawn.line.geometry.dispose()
+  const material = drawn.line.material
+  if (!Array.isArray(material)) material.dispose()
+  held.delete(id)
+}
+
+/** How far the seat's cross reaches on each axis — small enough to read as a mark, not a shape. */
+const SEAT_CROSS: readonly (readonly [number, number, number])[] = [
+  [0.1, 0, 0],
+  [0, 0.1, 0],
+  [0, 0, 0.1],
+]
+
+// Rewritten in place: `poseArms` runs on every apply and on every frame of a drag.
+const STANDING = new Vector3()

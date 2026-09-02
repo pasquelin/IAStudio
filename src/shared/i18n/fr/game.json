@@ -97,6 +97,7 @@
       "mode": "Parcours",
       "orientToTangent": "Suivre la tangente",
       "orientation": "Orientation",
+      "possesses": "Élément possédé",
       "positionLag": "Retard de position",
       "probeRadius": "Rayon de sonde",
       "radius": "Rayon",

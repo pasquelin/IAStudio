@@ -3,6 +3,7 @@ import {
   mdiCubeScan,
   mdiFolderOutline,
   mdiFormatText,
+  mdiHumanMale,
   mdiImageOutline,
   mdiLightbulbOutline,
   mdiShapeOutline,
@@ -12,6 +13,7 @@ import {
   mdiVideoOutline,
 } from '@mdi/js'
 import { OBJECT_ENTRIES, type ObjectKind } from '@shared/domain/scene'
+import { FIGURE_TYPES } from './figures'
 import { LIGHT_TYPES } from './lightTypes'
 import { MESH_PRIMITIVES } from './meshPrimitives'
 import type { SceneNodeType } from './sceneState'
@@ -78,11 +80,12 @@ export function labelKeyOf(namespace: string, entry: AddEntry): string {
 }
 
 /**
- * The three families a scene grows by, each with the glyph its button wears. The two with a
- * panel come from `NODE_KINDS`; the objects have none — see `PanelNodeType`.
+ * The families a scene grows by, each with the glyph its button wears. The two with a panel come
+ * from `NODE_KINDS`; the figures and the objects have none — see `PanelNodeType`.
  */
 export const ADD_FAMILIES: readonly NodeKind[] = [
   ...Object.values(NODE_KINDS),
+  { icon: mdiHumanMale, entries: FIGURE_TYPES, namespace: 'figures' },
   {
     icon: mdiShapePlusOutline,
     entries: OBJECT_ENTRIES.map(entry => ({ ...entry, icon: OBJECT_ICONS[entry.kind] })),

@@ -6,6 +6,7 @@ import { DEFAULT_PLAY } from '@shared/domain/scene'
 import type { InputState } from '../ports/inputPort'
 import { createCharacters } from './characters'
 import { restingTransform } from './entity'
+import { createPossessions } from './possessions'
 import { testWorld } from './world-fixtures'
 import type { World } from './world'
 
@@ -35,7 +36,7 @@ describe('what a character asks to move', () => {
     const world = walking()
     world.input = pressing({ held: ['KeyW'] })
 
-    const [move] = createCharacters().intents(world, STEP)
+    const [move] = createCharacters(createPossessions()).intents(world, STEP)
 
     expect(move?.wanted.z).toBeCloseTo(-4 * STEP, 6)
     expect(move?.wanted.x).toBeCloseTo(0, 6)
@@ -46,7 +47,7 @@ describe('what a character asks to move', () => {
     const world = walking()
     world.input = pressing({ held: ['KeyW', 'KeyD'] })
 
-    const [move] = createCharacters().intents(world, STEP)
+    const [move] = createCharacters(createPossessions()).intents(world, STEP)
 
     expect(Math.hypot(move?.wanted.x ?? 0, move?.wanted.z ?? 0)).toBeCloseTo(4 * STEP, 6)
   })
@@ -54,7 +55,7 @@ describe('what a character asks to move', () => {
   it('falls by the pull the SCENE declares, not by one of its own', () => {
     const world = walking(10)
 
-    const [move] = createCharacters().intents(world, STEP)
+    const [move] = createCharacters(createPossessions()).intents(world, STEP)
 
     expect(move?.wanted.y).toBeCloseTo(-10 * STEP * STEP, 8)
   })
@@ -62,7 +63,7 @@ describe('what a character asks to move', () => {
   /** A jump from nothing is how a character climbs a wall it should not. */
   it('jumps only from the ground', () => {
     const world = walking(10)
-    const characters = createCharacters()
+    const characters = createCharacters(createPossessions())
     world.input = pressing({ pressed: ['Space'] })
 
     const inAir = characters.intents(world, STEP)[0]?.wanted.y ?? 0
@@ -76,7 +77,7 @@ describe('what a character asks to move', () => {
   /** A fall nobody stopped keeps getting faster, and a character standing still would sink. */
   it('stops gaining speed once it is standing on something', () => {
     const world = walking(10)
-    const characters = createCharacters()
+    const characters = createCharacters(createPossessions())
 
     for (let step = 0; step < 60; step++) {
       characters.intents(world, STEP)
@@ -87,7 +88,7 @@ describe('what a character asks to move', () => {
   })
 
   it('turns the heading with a drag, and never past straight up', () => {
-    const characters = createCharacters()
+    const characters = createCharacters(createPossessions())
 
     characters.aim({ x: 100, y: 100, down: true })
     characters.aim({ x: 0, y: -100000, down: true })
@@ -98,7 +99,7 @@ describe('what a character asks to move', () => {
 
   /** 🛑 A frame the accumulator ran no step of must still turn the head — see `Characters.aim`. */
   it('turns the head without a step being run at all', () => {
-    const characters = createCharacters()
+    const characters = createCharacters(createPossessions())
 
     characters.aim({ x: 0, y: 0, down: true })
     characters.aim({ x: 200, y: 0, down: true })
@@ -111,7 +112,7 @@ describe('what a character asks to move', () => {
    * camera does, and the head must not turn twice as far because a scene holds an arm.
    */
   it('turns nothing on a second reading of one frame pointer', () => {
-    const characters = createCharacters()
+    const characters = createCharacters(createPossessions())
     characters.aim({ x: 0, y: 0, down: true })
     characters.aim({ x: 200, y: 40, down: true })
     const once = { ...characters.look() }
@@ -123,7 +124,7 @@ describe('what a character asks to move', () => {
 
   it('names the first controller as the one the camera watches', () => {
     const world = walking()
-    const characters = createCharacters()
+    const characters = createCharacters(createPossessions())
 
     characters.intents(world, STEP)
     const leader = characters.leader()

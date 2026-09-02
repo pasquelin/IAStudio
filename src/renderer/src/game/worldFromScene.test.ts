@@ -221,3 +221,48 @@ describe('a scene holding a player module', () => {
     expect(arm?.camera).toBe(idOf(state, 'Camera'))
   })
 })
+
+/**
+ * 🛑 What the whole design turns on: nothing here touches the ARM. The body is carried onto what
+ * the player rides, and the arm — which watches the body — follows for free. An arm rewritten at
+ * runtime, or a body reparented, would both have been ways of saying the same thing worse.
+ */
+describe('a player module that possesses something', () => {
+  const drivable = (possesses: string): SceneState => ({
+    ...EMPTY_SCENE,
+    nodes: [
+      {
+        ...meshNode('car'),
+        name: 'Car',
+        transform: { ...IDENTITY_TRANSFORM, position: { x: 12, y: 0, z: -5 } },
+      },
+      ...playerModuleNodes().map(node =>
+        node.components?.some(one => one.type === 'Player')
+          ? {
+              ...node,
+              components: [withComponentField(newComponent('Player'), 'possesses', possesses)],
+            }
+          : node,
+      ),
+    ],
+  })
+
+  const bodyAt = (state: SceneState, world: World) => {
+    world.step(1 / 60)
+    world.lateUpdate(1, 1 / 60)
+    const body = state.nodes.find(node => node.name === 'Capsule')?.id ?? ''
+    return world.entities.get(body)?.transform.position
+  }
+
+  it('stands its body on what it rides, without an arm being rewritten', () => {
+    const state = drivable('Car')
+
+    expect(bodyAt(state, worldFromScene('doc-1', state, ports()))).toMatchObject({ x: 12, z: -5 })
+  })
+
+  it('leaves its body where the module put it when it rides nothing', () => {
+    const state = drivable('')
+
+    expect(bodyAt(state, worldFromScene('doc-1', state, ports()))).toMatchObject({ x: 0, z: 0 })
+  })
+})

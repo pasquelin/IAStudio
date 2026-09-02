@@ -815,6 +815,15 @@ export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
   { kind: 'player' },
 ]
 
+/**
+ * A figure is a SET of meshes, never one shape: a silhouette wearing clothes needs a colour per
+ * part, and a node carries a single material. What the studio lays down is real mesh nodes an
+ * author can then edit one by one — see `figures.ts`.
+ */
+export type FigureKind = 'humanoid'
+
+export const FIGURE_ENTRIES: readonly SceneEntry<FigureKind>[] = [{ kind: 'humanoid' }]
+
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [
   { kind: 'ambient' },
   { kind: 'directional' },

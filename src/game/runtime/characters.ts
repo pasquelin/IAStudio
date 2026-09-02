@@ -8,6 +8,7 @@ import { keysHeld } from './keysHeld'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
 import type { Look } from './playView'
+import type { Possessions } from './possessions'
 import type { World } from './world'
 
 const WALKER = COMPONENT_DEFAULTS.CharacterController
@@ -68,7 +69,7 @@ export type Characters = {
  * 🛑 One look for the whole world: there is one pointer, so a second controller walks the same
  * heading.
  */
-export function createCharacters(): Characters {
+export function createCharacters(possessions: Possessions): Characters {
   const walkers = new WeakMap<Entity, Walker>()
   const byBody = new Map<string, Walker>()
   // `pool` HOLDS the moves and never shrinks; `moves` is the list handed to the port.
@@ -107,7 +108,12 @@ export function createCharacters(): Characters {
       for (const entity of world.entities.withComponent('CharacterController')) {
         const settings = componentOf(entity, 'CharacterController')
         if (!settings) continue
+        // Before the freeze, deliberately: a player in a car is still the one the camera watches,
+        // and its body is standing on the car — see `possession.ts`.
         first ??= entity
+        // 🛑 A held body asks for NOTHING — no pace, and no gravity either: a frozen walker left
+        // falling sinks through whatever carries it.
+        if (possessions.holds(entity.id)) continue
 
         const walker = walkers.get(entity) ?? { velocityY: 0, wantedY: 0, grounded: false }
         walkers.set(entity, walker)

@@ -3,6 +3,8 @@ import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domai
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
+import { createPossessions } from '@game/runtime/possessions'
+import { createPossessionSystem } from '@game/runtime/systems/possession'
 import type { Entity } from '@game/runtime/entity'
 import { STEP_SECONDS } from '@game/runtime/gameLoop'
 import { createFollowSystem } from '@game/runtime/systems/follow'
@@ -108,7 +110,8 @@ function systemsFor(
   const hierarchy = createHierarchy(byId, liveOf)
   const placedAt = (entity: Entity, own: Transform): Transform => hierarchy.worldOf(entity.id, own)
   const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
-  const characters = createCharacters()
+  const possessions = createPossessions()
+  const characters = createCharacters(possessions)
   const pilots = createPilots()
   // The module's own eye takes the shot, where the sweep would have handed it to whichever arm
   // it met first — a choice no outliner shows.
@@ -157,6 +160,14 @@ function systemsFor(
     createLookAtSystem(),
     createVehicleSystem(pilots, placed),
     createAircraftSystem(pilots, placed),
+    // Resolved here like `filmable` below: which node is a module's BODY is a question about the
+    // tree, which the window holds and the runtime does not.
+    createPossessionSystem({
+      possessions,
+      bodyIdOf: moduleId => (moduleId === player?.module.id ? (player.body?.id ?? null) : null),
+      worldOf: placedAt,
+      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
+    }),
     createPhysicsSystem({
       shapeOf,
       characters,

@@ -71,6 +71,12 @@
     "pointHint": "Rayonne dans toutes les directions depuis un point",
     "spotHint": "Un cône de lumière, avec son angle et son bord adouci"
   },
+  "figures": {
+    "add": "Ajouter une figure",
+    "addHint": "Poser une silhouette en volume, dont chaque partie s’édite ensuite comme une maille",
+    "humanoid": "Humanoïde",
+    "humanoidHint": "Une silhouette humaine en polygones, habillée de couleurs, à la taille d’un corps qui marche"
+  },
   "scene": {
     "root": "Scène",
     "onAir": "À l’antenne",

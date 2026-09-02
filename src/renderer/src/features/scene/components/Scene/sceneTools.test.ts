@@ -166,7 +166,12 @@ describe('SCENE_TOOLS', () => {
  */
 describe('ADD_TOOLS', () => {
   it('offers one button per family a scene grows by', () => {
-    expect(ADD_TOOLS.map(tool => tool.id)).toEqual(['add:meshes', 'add:lights', 'add:objects'])
+    expect(ADD_TOOLS.map(tool => tool.id)).toEqual([
+      'add:meshes',
+      'add:lights',
+      'add:figures',
+      'add:objects',
+    ])
   })
 
   /** Three flat lists rather than one of twenty-four: a flyout has no submenu to fold them into. */

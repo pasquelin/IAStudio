@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { newComponent } from '@shared/domain/componentRegistry'
-import { createNodeOf, createNodesOf, groupNode, iconOf } from './nodeFactory'
+import { figureByKind } from './figures'
+import { createNodeOf, createNodesOf, figureNodes, groupNode, iconOf } from './nodeFactory'
 import { PLAYER_KIND } from './playerModule'
 import { lightNodeFixture, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
 
@@ -100,16 +101,13 @@ describe('the player module', () => {
     const nodes = createNodesOf(PLAYER_KIND)
     const at = (name: string) => nodes.find(node => node.name === name)
 
-    expect(nodes.map(node => node.name)).toEqual([
-      'Player_Module',
-      'Capsule',
-      'Mesh',
-      'SpringArm',
-      'Camera',
-    ])
+    // The figure's own parts hang under it and are its business — see `figures.test.ts`.
+    expect(nodes.map(node => node.name).filter(name => name !== undefined)).toEqual(
+      expect.arrayContaining(['Player_Module', 'Capsule', 'Figure', 'SpringArm', 'Camera']),
+    )
     expect(at('Player_Module')?.parentId).toBeNull()
     expect(at('Capsule')?.parentId).toBe(at('Player_Module')?.id)
-    expect(at('Mesh')?.parentId).toBe(at('Capsule')?.id)
+    expect(at('Figure')?.parentId).toBe(at('Capsule')?.id)
     expect(at('SpringArm')?.parentId).toBe(at('Player_Module')?.id)
     expect(at('Camera')?.parentId).toBe(at('SpringArm')?.id)
   })
@@ -119,11 +117,11 @@ describe('the player module', () => {
   })
 
   /** The capsule is the controller's own height and radius — it draws nothing of its own. */
-  it('puts the walking on the capsule and the drawing on the mesh under it', () => {
+  it('puts the walking on the capsule and the drawing on the figure under it', () => {
     expect(bornWith('Capsule')?.type).toBe('group')
     expect(bornWith('Capsule')?.components?.map(one => one.type)).toEqual(['CharacterController'])
-    expect(bornWith('Mesh')?.type).toBe('mesh')
-    expect(bornWith('Mesh')?.components).toBeUndefined()
+    expect(bornWith('Figure')?.type).toBe('group')
+    expect(bornWith('Figure')?.components).toBeUndefined()
   })
 
   it('hangs the camera on an arm rather than on the body, so a wall can push it in', () => {
@@ -131,26 +129,25 @@ describe('the player module', () => {
     expect(bornWith('Camera')?.type).toBe('camera')
   })
 
-  /**
-   * 🛑 `entityNamed` reads an id first and a NAME after, and every scene the studio ships already
-   * holds a node called `Camera`: bound by name, the arm would film that one instead.
-   */
-  it('binds its arm to its own body and its own eye, by id', () => {
-    const nodes = createNodesOf(PLAYER_KIND)
-    const at = (name: string) => nodes.find(node => node.name === name)
-    const arm = at('SpringArm')?.components?.[0]
+  /** 🛑 Readable names, never ids: a uuid is a field an author cannot read, let alone correct. */
+  it('names its own children in its arm, as a reader sees them', () => {
+    const arm = bornWith('SpringArm')?.components?.[0]
 
-    expect(arm?.subject).toBe(at('Capsule')?.id)
-    expect(arm?.camera).toBe(at('Camera')?.id)
+    expect(arm?.subject).toBe('Capsule')
+    expect(arm?.camera).toBe('Camera')
   })
 
-  /** What is FELT and what is SEEN are one body: the mesh is the controller's capsule, drawn. */
-  it('draws a mesh the size of the capsule the physics feels', () => {
+  /**
+   * 🛑 What is FELT and what is SEEN are one body — but a figure knows nothing of a controller,
+   * so it is the module that SIZES one to the body it fills. A capsule drawn inside a capsule
+   * showed nothing the cage does not already draw, which is why it went.
+   */
+  it('scales the figure to the body the physics feels, and stands the body on the ground', () => {
     const walker = bornWith('Capsule')?.components?.[0]
-    const mesh = bornWith('Mesh')
 
-    expect(mesh?.type === 'mesh' && mesh.geometry.kind === 'capsule' && mesh.geometry.radius).toBe(
-      walker?.radius,
+    const figure = figureByKind('humanoid')?.create()
+    expect(bornWith('Figure')?.transform.scale.y).toBeCloseTo(
+      Number(walker?.height) / Number(figure?.height),
     )
     expect(bornWith('Capsule')?.transform.position.y).toBe(Number(walker?.height) / 2)
   })
@@ -171,5 +168,63 @@ describe('createNodesOf', () => {
 
   it('answers nothing for a kind no registry claims', () => {
     expect(createNodesOf('hologram')).toEqual([])
+  })
+})
+
+/**
+ * The one place a figure becomes a scene, as `meshNode` is the one place a mesh does. What it
+ * builds is ORDINARY nodes: that is the whole bargain of the family — glTF, the inspector, undo
+ * and instancing all serve a figure without knowing one exists.
+ */
+describe('a figure laid down as nodes', () => {
+  const humanoid = () =>
+    figureNodes(figureByKind('humanoid')?.create() ?? { kind: 'humanoid', height: 0, parts: [] })
+
+  it('hangs every part off one group, so a scene gains one row and not thirteen', () => {
+    const nodes = humanoid()
+    const group = nodes[0]
+
+    expect(group?.type).toBe('group')
+    expect(group?.name).toBe('Figure')
+    expect(nodes.slice(1).every(node => node.parentId === group?.id)).toBe(true)
+  })
+
+  it('paints each part the colour the registry gave it', () => {
+    const figure = figureByKind('humanoid')?.create()
+    const painted = figureNodes(figure ?? { kind: 'humanoid', height: 0, parts: [] })
+      .slice(1)
+      .map(node => (node.type === 'mesh' ? node.material.color : null))
+
+    expect(painted).toEqual(figure?.parts.map(part => part.colour))
+  })
+
+  /** A part recoloured afterwards must not drag its twin: two nodes holding one object would. */
+  it('gives every part a material of its own', () => {
+    const materials = humanoid().flatMap(node => (node.type === 'mesh' ? [node.material] : []))
+
+    expect(new Set(materials).size).toBe(materials.length)
+  })
+
+  /**
+   * 🛑 The same trap `levelParts.surface` names for materials: `transformAt` KEEPS the vector it
+   * is handed, and the parts are a module-level table — so two figures shared one position each,
+   * and moving a leg on one moved it on the other.
+   */
+  it('gives every part a position of its own, across two figures', () => {
+    const one = humanoid()
+    const other = humanoid()
+    const held = [...one, ...other].map(node => node.transform.position)
+
+    expect(new Set(held).size).toBe(held.length)
+  })
+
+  it('sizes the whole thing without touching a part, so one figure fits any body', () => {
+    const worn = figureNodes(
+      figureByKind('humanoid')?.create() ?? { kind: 'humanoid', height: 0, parts: [] },
+      0.5,
+    )
+
+    expect(worn[0]?.transform.scale).toEqual({ x: 0.5, y: 0.5, z: 0.5 })
+    expect(worn[1]?.transform.scale).toEqual({ x: 1, y: 1, z: 1 })
   })
 })

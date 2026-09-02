@@ -114,15 +114,13 @@ describe('a player module written to a file and read back', () => {
     const back = saved()
     const at = (name: string) => back.nodes.find(node => node.name === name)
 
-    expect(back.nodes.map(node => node.name)).toEqual([
-      'Player_Module',
-      'Capsule',
-      'Mesh',
-      'SpringArm',
-      'Camera',
-    ])
+    // The figure's own parts ride along; what a module MEANS is these five and how they hang.
+    expect(back.nodes.map(node => node.name)).toEqual(
+      expect.arrayContaining(['Player_Module', 'Capsule', 'Figure', 'SpringArm', 'Camera']),
+    )
     expect(at('Capsule')?.parentId).toBe(at('Player_Module')?.id)
-    expect(at('Mesh')?.parentId).toBe(at('Capsule')?.id)
+    expect(at('Figure')?.parentId).toBe(at('Capsule')?.id)
+    expect(at('SpringArm')?.parentId).toBe(at('Player_Module')?.id)
     expect(at('Camera')?.parentId).toBe(at('SpringArm')?.id)
   })
 

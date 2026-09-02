@@ -11,6 +11,7 @@ import { poseAt } from '../placements'
 import { aheadOf, lookOf, type Look } from '../playView'
 import type { Rigs } from '../rigs'
 import { createTargets, turnTowards } from '../steering'
+import { armPivot, armSeat } from './springArmRig'
 import type { System, World } from '../world'
 
 const ARM = COMPONENT_DEFAULTS.SpringArm
@@ -97,15 +98,14 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
 
         // The pivot: the anchor lifted to the height asked for, and pushed off the centre line.
         aheadOf(kept.look, AHEAD)
-        const shoulder = numberOf(settings, 'shoulder', ARM.shoulder)
-        PIVOT.x = anchor.position.x + Math.cos(kept.look.yaw) * shoulder
-        PIVOT.y = anchor.position.y + numberOf(settings, 'height', ARM.height)
-        PIVOT.z = anchor.position.z - Math.sin(kept.look.yaw) * shoulder
-
-        const length = numberOf(settings, 'length', ARM.length)
-        WANTED.x = PIVOT.x - AHEAD.x * length
-        WANTED.y = PIVOT.y - AHEAD.y * length
-        WANTED.z = PIVOT.z - AHEAD.z * length
+        armPivot(
+          anchor.position,
+          numberOf(settings, 'height', ARM.height),
+          numberOf(settings, 'shoulder', ARM.shoulder),
+          kept.look.yaw,
+          PIVOT,
+        )
+        armSeat(PIVOT, AHEAD, numberOf(settings, 'length', ARM.length), WANTED)
 
         const glide = approach(numberOf(settings, 'positionLag', ARM.positionLag), over)
         kept.at.x += (WANTED.x - kept.at.x) * glide

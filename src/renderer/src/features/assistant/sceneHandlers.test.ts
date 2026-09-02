@@ -1462,8 +1462,9 @@ describe('a player module an outside client acts on', () => {
     expect(nodesNow().some(node => node.name === 'Camera')).toBe(true)
   })
 
+  /** The figure is what the module SHOWS, never one of the three parts it cannot lose. */
   it('still removes what the module does not require', async () => {
-    expect(await runAction('node.remove', { nodeId: idOf('Mesh') })).toMatchObject({ ok: true })
-    expect(nodesNow().some(node => node.name === 'Mesh')).toBe(false)
+    expect(await runAction('node.remove', { nodeId: idOf('Figure') })).toMatchObject({ ok: true })
+    expect(nodesNow().some(node => node.name === 'Figure')).toBe(false)
   })
 })
