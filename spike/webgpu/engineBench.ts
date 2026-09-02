@@ -6,6 +6,7 @@ import type { SceneState } from '@/engines/scene/sceneState'
 import { createGlTimer, type GlTimer } from './glTimer.js'
 import { centresOf, sceneS1, sceneVaried, type ShapeLevel, withBodyMoved, withNothingMoved, withOneAdded, withOneMoved, withoutMaps } from './engineScenes'
 import { checker } from './floorScenes.js'
+import { LOD_STRATEGIES, rigLod, type LodRig } from './lodStrategies'
 
 /**
  * Le banc du chantier C : le VRAI `SceneRenderer`, monté sur une fenêtre, mesuré des deux côtés
@@ -197,9 +198,26 @@ function turnedAway(full: CameraPlacement, centres: Point[], fov: number, want =
   return { placement, share: shareInView(placement, centres, fov) }
 }
 
-type View = 'full' | 'turned'
+type View = 'full' | 'turned' | 'inside'
 
-type Frame = { cpu: number; calls: number; multi: number; instanced: number; plain: number; triangles: number; multiDrawn: number; instancedDrawn: number }
+/**
+ * Une caméra POSÉE dans le niveau, au centre des corps, regardant à l'horizontale.
+ *
+ * Les deux vues de C2 cadrent le niveau depuis le dehors, à une distance où tout est également
+ * loin : ni une distance max ni un LOD n'y disent quoi que ce soit. D'ici, le corps le plus proche
+ * est à quelques unités et le plus lointain à la diagonale du niveau.
+ */
+function insideOf(centres: Point[]): CameraPlacement {
+  const middle = { x: 0, y: 0, z: 0 }
+  for (const centre of centres) {
+    middle.x += centre.x / centres.length
+    middle.y += centre.y / centres.length
+    middle.z += centre.z / centres.length
+  }
+  return { position: middle, target: { x: middle.x + 1, y: middle.y, z: middle.z } }
+}
+
+type Frame = { cpu: number; lodCpu: number; calls: number; multi: number; instanced: number; plain: number; triangles: number; multiDrawn: number; instancedDrawn: number }
 
 /**
  * UNE frame telle que le studio la dessine — passe d'ombre, panneaux, post, trihèdre — et ce
@@ -210,8 +228,10 @@ type Frame = { cpu: number; calls: number; multi: number; instanced: number; pla
  * compteurs à zéro, celui du viewport qui dessine, le nôtre qui lit l'horloge — l'horodatage du
  * rappel est le début de la frame, `performance.now()` est l'après-dessin.
  */
-function frameOf(renderer: SceneRenderer, timer: GlTimer | null): Promise<Frame> {
+function frameOf(renderer: SceneRenderer, timer: GlTimer | null, lod: LodRig | null = null): Promise<Frame> {
   return new Promise(resolve => {
+    // AVANT la frame, comme un vrai LOD : le niveau est choisi, puis la scène est dessinée.
+    const lodCpu = lod?.apply(renderer['viewport'].perspective, HEIGHT) ?? 0
     requestAnimationFrame(() => {
       resetCount()
       timer?.begin()
@@ -220,7 +240,7 @@ function frameOf(renderer: SceneRenderer, timer: GlTimer | null): Promise<Frame>
     requestAnimationFrame(started => {
       const cpu = performance.now() - started
       timer?.end()
-      resolve({ cpu, ...counted })
+      resolve({ cpu, lodCpu, ...counted })
     })
   })
 }
@@ -246,7 +266,7 @@ function clampFar(renderer: SceneRenderer, metres: number): void {
   }
 }
 
-async function measureView(renderer: SceneRenderer, canvas: HTMLCanvasElement, view: View): Promise<Numbers> {
+async function measureView(renderer: SceneRenderer, canvas: HTMLCanvasElement, view: View, lod: LodRig | null = null): Promise<Numbers> {
   const gl = canvas.getContext('webgl2')
   const timer = gl ? createGlTimer(gl) : null
   clampFar(renderer, Number(QUERY.get('far') ?? 0))
@@ -254,18 +274,20 @@ async function measureView(renderer: SceneRenderer, canvas: HTMLCanvasElement, v
   // Une frame que quelqu'un d'autre a demandée finirait devant nos rappels : on la laisse passer.
   await nextFrame()
   await nextFrame()
-  for (let frame = 0; frame < WARMUP; frame++) await frameOf(renderer, timer)
+  for (let frame = 0; frame < WARMUP; frame++) await frameOf(renderer, timer, lod)
   timer?.collect()
 
   const cpu: number[] = []
+  const cpuOfLod: number[] = []
   const wall: number[] = []
   const gpu: number[] = []
   let last = performance.now()
   let counts: Frame | null = null
   for (let frame = 0; frame < FPS_FRAMES; frame++) {
-    counts = await frameOf(renderer, timer)
+    counts = await frameOf(renderer, timer, lod)
     const now = performance.now()
     cpu.push(counts.cpu)
+    cpuOfLod.push(counts.lodCpu)
     wall.push(now - last)
     last = now
     gpu.push(...(timer?.collect() ?? []))
@@ -284,6 +306,17 @@ async function measureView(renderer: SceneRenderer, canvas: HTMLCanvasElement, v
     scenePass.push((performance.now() - started) / FRAMES)
     await nextFrame()
   }
+  // Sur un BLOC de quinze, jamais sur une frame : `performance.now()` est clampé à 100 µs, et le
+  // choix par lot passe très au-dessous — mesuré par frame, il lisait zéro.
+  const lodBlocks: number[] = []
+  for (let block = 0; lod && block < BLOCKS; block++) {
+    const started = performance.now()
+    for (let frame = 0; frame < FRAMES; frame++) lod.apply(renderer['viewport'].perspective, HEIGHT)
+    lodBlocks.push((performance.now() - started) / FRAMES)
+    await nextFrame()
+  }
+  const lodCpu = lodBlocks.length > 0 ? median(lodBlocks) : (cpuOfLod.length > 0 ? median(cpuOfLod) : 0)
+  const levels = lod?.chosen() ?? []
   timer?.dispose()
 
   const prefix = view
@@ -300,6 +333,12 @@ async function measureView(renderer: SceneRenderer, canvas: HTMLCanvasElement, v
     [`${prefix}BodiesByLot`]: counts?.multiDrawn ?? null,
     [`${prefix}BodiesByInstance`]: counts?.instancedDrawn ?? null,
     [`${prefix}Triangles`]: counts ? Math.round(counts.triangles) : null,
+    [`${prefix}LodCpuMs`]: round(lodCpu),
+    // Ce que la stratégie a VRAIMENT choisi, plutôt que ce qu'on lui prête : le niveau moyen des
+    // lots, et la part restée au plus fin.
+    [`${prefix}LodMeanLevel`]: levels.length > 0 ? round(levels.reduce((sum, at) => sum + at, 0) / levels.length) : null,
+    [`${prefix}LodAtBest`]: levels.length > 0 ? levels.filter(at => at === 0).length : null,
+    [`${prefix}LodLots`]: levels.length,
   }
 }
 
@@ -321,10 +360,17 @@ export type SceneName = 'S1' | 'S2' | 'S3'
  * Un niveau inconnu ARRÊTE le banc : retomber sur `full` en silence ferait publier un relevé de
  * pleine résolution sous le nom d'un dixième, ce qu'aucune relecture ne rattraperait.
  */
+/** Un mot de l'URL, ou le banc s'arrête : retomber sur un défaut publierait un relevé sous un nom qui ment. */
+function oneOf<T extends string>(known: readonly T[], asked: string, what: string): T {
+  const found = known.find(name => name === asked)
+  if (!found) throw new Error(`${what} inconnu : ${asked} — attendu ${known.join(', ')}`)
+  return found
+}
+
 const LEVELS: readonly ShapeLevel[] = ['product', 'full', 'half', 'quarter', 'tenth']
-const asked = QUERY.get('lod') ?? 'full'
-const LEVEL = LEVELS.find(level => level === asked)
-if (!LEVEL) throw new Error(`lod inconnu : ${asked} — attendu ${LEVELS.join(', ')}`)
+const LEVEL = oneOf(LEVELS, QUERY.get('lod') ?? 'full', 'lod')
+/** La stratégie de LOD maquettée sur ce que le moteur a construit — voir `lodStrategies.ts`. */
+const STRATEGY = oneOf(LOD_STRATEGIES, QUERY.get('strategy') ?? 'none', 'strategy')
 
 const SCENES: Record<SceneName, () => SceneState> = {
   S1: sceneS1,
@@ -365,8 +411,19 @@ async function measureOne(scene: SceneName, grouping: GroupingStrategy, onProgre
   await frameOf(renderer, null)
   const heapLoaded = heapMb()
 
+  /**
+   * Le rig prend la main sur les lots que `apply` vient de poser — et il est REFAIT par vue : un
+   * changement de contenu reconstruit tous les `InstancedMesh`, donc un rig posé une fois pointe
+   * sur des objets détruits dès que la section `apply` est passée. Mesuré : les vues d'après
+   * dessinaient les lots d'origine ET des étagères mortes, soit PLUS de triangles sans LOD.
+   */
+  const rigFor = (): LodRig | null =>
+    STRATEGY === 'none' ? null : rigLod(renderer['viewport'].scene, STRATEGY, LEVEL)
+
   progress('plein champ')
-  const fullView = await measureView(renderer, canvas, 'full')
+  const fullRig = rigFor()
+  const fullView = await measureView(renderer, canvas, 'full', fullRig)
+  fullRig?.dispose()
 
   progress('apply')
   const still = Array.from({ length: APPLY_PASSES }, () => withNothingMoved(state))
@@ -381,7 +438,18 @@ async function measureOne(scene: SceneName, grouping: GroupingStrategy, onProgre
   const centres = centresOf(state)
   const { placement, share } = turnedAway(full, centres, DEFAULT_SETTINGS.three.fieldOfView)
   renderer.placeView(placement)
-  const turnedView = await measureView(renderer, canvas, 'turned')
+  const turnedRig = rigFor()
+  const turnedView = await measureView(renderer, canvas, 'turned', turnedRig)
+  turnedRig?.dispose()
+
+  // 🛑 La vue qui manquait à C2 : prise DANS le niveau, pas depuis le dehors. C'est la seule où
+  // les distances s'étalent assez pour qu'un LOD veuille dire quelque chose — et la seule qui
+  // ressemble à ce qu'un jeu regarde.
+  progress('depuis le dedans')
+  renderer.placeView(insideOf(centres))
+  const insideRig = rigFor()
+  const insideView = await measureView(renderer, canvas, 'inside', insideRig)
+  insideRig?.dispose()
   renderer.placeView(full)
 
   progress('100 éditions')
@@ -409,6 +477,7 @@ async function measureOne(scene: SceneName, grouping: GroupingStrategy, onProgre
     ...fullView,
     turnedShareInView: round(share * 100),
     ...turnedView,
+    ...insideView,
     heapBefore,
     heapLoaded,
     heapEdited,

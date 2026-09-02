@@ -1,0 +1,93 @@
+{
+  "at": "2026-09-02T10:32:38.964Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "scene": "S3",
+      "grouping": "instanced",
+      "bodies": 50000,
+      "firstApplyMs": 513.4,
+      "applyStillMs": 4.1,
+      "applyOneMovedMs": 4.1,
+      "applyOneAddedMs": 112.4,
+      "fullFrameCpuMs": 4.6,
+      "fullScenePassCpuMs": 0.62,
+      "fullFrameMs": 11.4,
+      "fullFps": 87.719,
+      "fullGpuMs": 9.416,
+      "fullDrawCalls": 345,
+      "fullMultiDrawCalls": 0,
+      "fullInstancedCalls": 336,
+      "fullPlainCalls": 9,
+      "fullBodiesByLot": 0,
+      "fullBodiesByInstance": 100000,
+      "fullTriangles": 36667216,
+      "fullLodCpuMs": 0,
+      "fullLodMeanLevel": null,
+      "fullLodAtBest": null,
+      "fullLodLots": 0,
+      "turnedShareInView": 30,
+      "turnedFrameCpuMs": 0.6,
+      "turnedScenePassCpuMs": 0.387,
+      "turnedFrameMs": 8.3,
+      "turnedFps": 120.482,
+      "turnedGpuMs": 6.232,
+      "turnedDrawCalls": 310,
+      "turnedMultiDrawCalls": 0,
+      "turnedInstancedCalls": 301,
+      "turnedPlainCalls": 9,
+      "turnedBodiesByLot": 0,
+      "turnedBodiesByInstance": 95931,
+      "turnedTriangles": 32760976,
+      "turnedLodCpuMs": 0,
+      "turnedLodMeanLevel": null,
+      "turnedLodAtBest": null,
+      "turnedLodLots": 0,
+      "insideFrameCpuMs": 0.7,
+      "insideScenePassCpuMs": 0.307,
+      "insideFrameMs": 8.3,
+      "insideFps": 120.482,
+      "insideGpuMs": 5.792,
+      "insideDrawCalls": 294,
+      "insideMultiDrawCalls": 0,
+      "insideInstancedCalls": 285,
+      "insidePlainCalls": 9,
+      "insideBodiesByLot": 0,
+      "insideBodiesByInstance": 94082,
+      "insideTriangles": 30985936,
+      "insideLodCpuMs": 0,
+      "insideLodMeanLevel": null,
+      "insideLodAtBest": null,
+      "insideLodLots": 0,
+      "heapBefore": 13.245,
+      "heapLoaded": 275.764,
+      "heapEdited": 280.492
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "S3 instanced — plein champ",
+      "workingSetKb": 470272
+    },
+    {
+      "at": 4005,
+      "phase": "S3 instanced — 70 % hors champ",
+      "workingSetKb": 492688
+    },
+    {
+      "at": 6007,
+      "phase": "S3 instanced — depuis le dedans",
+      "workingSetKb": 493040
+    },
+    {
+      "at": 8010,
+      "phase": "fin",
+      "workingSetKb": 500064
+    }
+  ]
+}
