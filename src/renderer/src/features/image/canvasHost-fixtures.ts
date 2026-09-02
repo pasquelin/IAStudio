@@ -14,10 +14,9 @@ export function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}
   return {
     ...host,
     /**
-     * NOT overridable, because the engine cannot make the two disagree: `snapshot()` IS
-     * `flatten()` with a base64 pass after it. A fake that answered bytes to one and nothing to
-     * the other described a state no engine reaches, and it is what let ⌘S read the whole picture
-     * back off the card twice without a single case going red.
+     * NOT overridable: `snapshot()` IS `flatten()` with a base64 pass after it, and a fake that
+     * answered bytes to one and nothing to the other let ⌘S read the picture back off the card
+     * twice with no case going red.
      */
     snapshot: async () => {
       const png = await host.flatten()

@@ -1,10 +1,11 @@
 import { cellOf } from '@/engines/canvas/pixelGrid'
 import type { Rect } from '@/engines/canvas/canvasState'
+import { fakeCanvas } from '@/features/image/canvasHost-fixtures'
 import { holdCanvas } from '@/features/image/canvasHosts'
 import { newId } from '@/helpers/ids'
 import { pixelPort } from '@/features/image/pixelPort'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { useDocuments } from '@/stores/documents'
+import { followDocuments } from './followDocuments'
 
 /** What a cell holds once something has been laid on it — `null` where a call erased. */
 export type PaintedCells = Map<string, number | null>
@@ -18,24 +19,15 @@ const at = (x: number, y: number): string => `${x},${y}`
  *
  * What stands in is a PORT and never a rule: the cells it records come from `pixelGrid`, the
  * production arithmetic, and the history entry goes through `pixelPort(...).record` — the very
- * line `ImageDocument` wires. Nothing of the studio is re-implemented.
+ * line `ImageDocument` wires. Nothing of the studio is re-implemented. The rest of the port is
+ * `fakeCanvas`: a save and an export read their pixels off it, and with none both refused.
  */
 export function followTheCanvas(painted: PaintedCells): () => void {
-  const held = new Map<string, () => void>()
-
-  const hold = (documentId: string): void => {
-    const port = pixelPort(documentId, () => ({ restorePixels: () => true }))
-
-    held.set(
-      documentId,
-      holdCanvas(documentId, () => ({
-        pixelSnapshots: async () => [],
-        restoreSnapshot: async () => {},
-        flatten: async () => null,
-        flattenBitmap: async () => null,
-        snapshot: async () => null,
-        forgetPicture: async () => {},
-        turnQuarter: () => {},
+  return followDocuments(
+    document => document.kind === 'image',
+    documentId => {
+      const port = pixelPort(documentId, () => ({ restorePixels: () => true }))
+      const host = fakeCanvas({
         paintCells: (_layerId: string | null, rects: readonly Rect[], color: number | null) => {
           const cell = canvasOf(useCanvases.getState(), documentId).pixelCell
           if (cell === null) return false
@@ -46,19 +38,9 @@ export function followTheCanvas(painted: PaintedCells): () => void {
           port.record(newId())
           return true
         },
-      })),
-    )
-  }
+      })
 
-  const stop = useDocuments.subscribe(state => {
-    for (const [documentId, document] of Object.entries(state.documents)) {
-      if (document.kind === 'image' && !held.has(documentId)) hold(documentId)
-    }
-  })
-
-  return () => {
-    stop()
-    for (const drop of held.values()) drop()
-    held.clear()
-  }
+      return holdCanvas(documentId, () => host)
+    },
+  )
 }

@@ -14,16 +14,17 @@ import { extensionOf, stemOf } from '@shared/domain/fileName'
 import { DEFAULT_LANGUAGE } from '@shared/i18n'
 import { initI18n } from '@/i18n'
 import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
-import { nameOf, parentOf, pathIn, type FileKind } from '@shared/domain/folder'
+import { FOLDER_ROOT, nameOf, parentOf, pathIn, type FileKind } from '@shared/domain/folder'
 import type { Job } from '@shared/domain/job'
 import type { ModelFamily } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
 import { describeStudio } from '@main/assistant/studioState'
 import { registerConfirmer } from '@/features/assistant/confirm'
 import { runAction, runConfirmedAction } from '@/features/assistant/executor'
-import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
+import { armCommandScope, subscribeToCommands, type CommandAnswer } from '@/services/commandBus'
 import { emptyGame, SCRIPT_EXTENSION, type GameManifest } from '@shared/domain/game'
 import { followTheCanvas, type PaintedCells } from './canvasSurface'
+import { followDocuments } from './followDocuments'
 import { standInForWorkers } from './codeWorker'
 import { drawing, PNG_HEAD } from '@/game/game-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -48,9 +49,11 @@ import {
   type CommandId,
   type CommandScope,
 } from '@shared/domain/command'
-import { holdCanvas } from '@/features/image/canvasHosts'
-import { fakeCanvas } from '@/features/image/canvasHost-fixtures'
 import { runAudioCommand } from '@/features/audio/components/audioCommands'
+import { runCanvasCommand } from '@/features/image/components/ImageDocument/canvasCommands'
+import { runExplorerCommand } from '@/features/explorer/components/Explorer/explorerCommands'
+import { runSequenceCommand } from '@/features/video/components/TimelineCanvas/sequenceCommands'
+import i18next from 'i18next'
 import { runGuiDocumentCommand } from '@/features/gui/components/Gui/Document/guiDocumentCommands'
 import { runMaterialCommand } from '@/features/material/components/Material/materialCommands'
 import { runSkyboxCommand } from '@/features/skybox/components/Skybox/Document/skyboxCommands'
@@ -450,28 +453,22 @@ export async function createStudio(
         return { version: DOCUMENT_VERSION, kind, title: held.title, updatedAt: WHEN, content }
       },
       /**
-       * The file moves and the descriptor keeps its id: a document's identity survives a rename,
-       * which is the whole reason `DocumentDescriptor.id` is not its path.
-       *
-       * 🛑 The WINDOW's descriptor when the folder holds none. A document created in this session
-       * has no file until it is saved, and the real port answers a path for it rather than
-       * throwing (`locate`, `main/project/documents.ts`). Throwing here came back to the model as
-       * « the title "Scène Finale" is invalid » — `asNameFailure` reads an unknown error as a bad
-       * NAME — and 41.2 spent twelve rounds arguing with a refusal about the wrong thing.
+       * 🛑 Resolved by IDENTITY and never by path, as the real port resolves `(id, kind)`: a
+       * document of this session that has no file yet borrows the DEFAULT path, which another
+       * document's file may already hold — renaming it moved that file and took over its entry.
        */
       rename: async (documentId, kind, title) => {
-        const held =
-          documentsOnDisk.get(documentId) ?? useDocuments.getState().documents[documentId]
+        const onDisk = documentsOnDisk.get(documentId)
+        // The WINDOW's descriptor when the folder holds none: a document created in this session
+        // has no file until it is saved, and the real port answers a path rather than throwing.
+        const held = onDisk ?? useDocuments.getState().documents[documentId]
         if (!held || held.kind !== kind) throw new Error(`no document ${documentId}`)
 
         const renamed = documentFileName(title, kind)
         const next = { ...held, kind, title, path: pathIn(parentOf(held.path) ?? '', renamed) }
-        // Only a file that EXISTS moves, and it keeps the key the folder listed it under: a
-        // second entry for one file would have `documents.list` answer it twice.
-        if (folder.kindOf(held.path)) {
-          await ops.rename(held.path, renamed)
-          const listed = [...documentsOnDisk].find(([, one]) => one.path === held.path)?.[0]
-          documentsOnDisk.set(listed ?? documentId, next)
+        if (onDisk) {
+          await ops.rename(onDisk.path, renamed)
+          documentsOnDisk.set(documentId, next)
         }
         return next
       },
@@ -669,36 +666,14 @@ export async function createStudio(
    * What it draws is nothing, and that is all a bench needs: the WORLD is what a scenario reads,
    * and the renderer is only what the runtime hands its placements to.
    */
-  const followTheViewport = (): (() => void) => {
-    const held = new Map<string, () => void>()
-    const stop = useDocuments.subscribe(state => {
-      for (const [documentId, document] of Object.entries(state.documents)) {
-        if (held.has(documentId)) continue
+  const followTheViewport = (): (() => void) =>
+    followDocuments(
+      () => true,
+      documentId => {
         registerSceneEngine(documentId, drawing())
-        // The canvas port too: a save and an export of an image read their pixels off it, and
-        // with none both refused « an engine not yet mounted » — measured 2026-09-01.
-        const canvas = document.kind === 'image' ? fakeCanvas() : null
-        const releaseCanvas = canvas && holdCanvas(documentId, () => canvas)
-        held.set(documentId, () => {
-          forgetSceneEngine(documentId)
-          releaseCanvas?.()
-        })
-      }
-
-      // 🛑 A CLOSED document gives its surfaces back: left registered, a scene nobody shows still
-      // answers `play.start`, and an image closed by the model still saves its pixels.
-      for (const [documentId, release] of [...held]) {
-        if (state.documents[documentId]) continue
-        release()
-        held.delete(documentId)
-      }
-    })
-
-    return () => {
-      stop()
-      for (const release of held.values()) release()
-    }
-  }
+        return () => forgetSceneEngine(documentId)
+      },
+    )
 
   /**
    * 🛑 The second SURFACE a headless run has not got: a game runs in a WINDOW of its own, and
