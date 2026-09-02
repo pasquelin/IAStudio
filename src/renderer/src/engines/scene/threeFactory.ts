@@ -36,6 +36,7 @@ import {
   type Light,
 } from 'three'
 import type { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
+import { ribbonGeometry } from './ribbonGeometry'
 import type { GeometryDescriptor, LightKind, PathDescriptor } from '@shared/domain/scene'
 import { pathPoints } from './cameraPath'
 import { MARKER_NAME, solid } from './markerPaint'
@@ -87,6 +88,8 @@ export function geometryFor(descriptor: GeometryDescriptor): BufferGeometry {
       return new OctahedronGeometry(descriptor.radius)
     case 'plane':
       return new PlaneGeometry(descriptor.width, descriptor.height)
+    case 'ribbon':
+      return ribbonGeometry(descriptor)
     case 'ring':
       return new RingGeometry(descriptor.innerRadius, descriptor.outerRadius, descriptor.segments)
     case 'sphere':

@@ -10,8 +10,25 @@
  * Each primitive carries its own parameters rather than a shared bag of optionals: a sphere has
  * no depth, and a type that lets it have one stops describing anything.
  */
+import type { Vector3 } from './transform'
+
 export type GeometryDescriptor =
   | { kind: 'box'; width: number; height: number; depth: number }
+  /**
+   * A band swept along a run of points — a kerb, a road, a river bank.
+   *
+   * 🛑 The one shape a run of boxes cannot make. Laid end to end they leave a wedge at every
+   * turn; overlapped to close it, their corners stand proud and the band reads as a staircase.
+   * Here each joint is cut on the BISECTOR, so two sections share an edge and nothing overlaps.
+   */
+  | {
+      kind: 'ribbon'
+      /** In the node's OWN frame, so moving the band moves its run. Two at the very least. */
+      points: readonly Vector3[]
+      width: number
+      height: number
+      closed: boolean
+    }
   | { kind: 'capsule'; radius: number; height: number; capSegments: number; radialSegments: number }
   | { kind: 'circle'; radius: number; segments: number }
   | { kind: 'cylinder'; radiusTop: number; radiusBottom: number; height: number; segments: number }

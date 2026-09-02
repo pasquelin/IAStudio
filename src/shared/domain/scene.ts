@@ -805,6 +805,7 @@ export const MESH_ENTRIES: readonly SceneEntry<MeshKind>[] = [
   { kind: 'lathe' },
   { kind: 'octahedron' },
   { kind: 'plane' },
+  { kind: 'ribbon' },
   { kind: 'ring' },
   { kind: 'sphere' },
   { kind: 'tetrahedron' },

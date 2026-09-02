@@ -14,6 +14,7 @@ import {
   mdiSoccer,
   mdiSphere,
   mdiSquareOutline,
+  mdiVectorPolyline,
 } from '@mdi/js'
 import { MESH_ENTRIES, type GeometryDescriptor, type MeshKind } from '@shared/domain/scene'
 
@@ -118,6 +119,21 @@ const MESH_BUILDERS: MeshBuilders = {
       radialSegments: 8,
       p: 2,
       q: 3,
+    }),
+  },
+  ribbon: {
+    icon: mdiVectorPolyline,
+    // Two points and a straight four metres: a band added by hand is something to drag out, and
+    // a closed one of two points has no area at all.
+    create: () => ({
+      kind: 'ribbon',
+      points: [
+        { x: 0, y: 0, z: 2 },
+        { x: 0, y: 0, z: -2 },
+      ],
+      width: 1,
+      height: 0.2,
+      closed: false,
     }),
   },
   tube: {

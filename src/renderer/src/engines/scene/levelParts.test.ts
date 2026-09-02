@@ -32,6 +32,17 @@ function spanOfShape(shape: CsgPart['geometry']): number {
     return Math.max(shape.radiusTop * 2, shape.radiusBottom * 2, shape.height)
   }
   if (shape.kind === 'sphere') return shape.radius * 2
+  // A band is read ALONG its run: a kerb of six hundred metres shows its grid over that, not
+  // over the metre it is wide.
+  if (shape.kind === 'ribbon') {
+    const run = shape.points
+    const around = run.reduce((total, from, index) => {
+      const to = run[(index + 1) % run.length]!
+      const last = index === run.length - 1
+      return last && !shape.closed ? total : total + Math.hypot(to.x - from.x, to.z - from.z)
+    }, 0)
+    return Math.max(around, shape.width)
+  }
   return 1
 }
 
@@ -67,6 +78,23 @@ const LEVELS: [string, () => readonly SceneNode[]][] = [
 
 describe('every surface a built level lays', () => {
   beforeAll(() => rememberCheckerTextures(OPEN_PROJECT))
+
+  /*
+   * 🛑 The world's own ground lies at y = 0, and a face laid IN that plane fights it for every
+   * pixel: the runway was flush, and came out with a sawtooth edge and speckle down its length.
+   */
+  it.each(LEVELS)('lays no face in the plane of the ground, on the %s', (_level, build) => {
+    const flush = build().filter(node => {
+      if (node.type !== 'mesh') return false
+      const shape = node.geometry
+      // The face one SEES: a plane lies where it stands, a box shows its lid.
+      if (shape.kind === 'plane') return Math.abs(node.transform.position.y) < 0.01
+      if (shape.kind !== 'box') return false
+      return Math.abs(node.transform.position.y + shape.height / 2) < 0.01
+    })
+
+    expect(flush.map(node => node.name)).toEqual([])
+  })
 
   // 🛑 Reading a document CLAMPS the density (`revivedMaterial`), so a level written outside the
   // bounds looks one way when created and another once saved and reopened, with nothing said.

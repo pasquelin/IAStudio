@@ -19,6 +19,9 @@ type Extent = { width: number; height: number; depth: number }
 const HANGAR_X = 60
 const HANGAR_Z = [-180, 0, 180]
 
+/** How far the strip's top face stands over the world's ground — above the fields at 0,05 m. */
+const STRIP_PROUD = 0.12
+
 /** Metres between squares. One is what turns a 600 m strip into a shimmer from the air. */
 const STRIP_TILE = 5
 const HANGAR_TILE = 2
@@ -47,11 +50,11 @@ export function airfieldNodes(): SceneNode[] {
 
   return [
     field,
-    // Sunk so its TOP face is the ground the scene already owns: laid on it, a plane that lands
-    // buries 0,4 m of its undercarriage in a strip nothing collides with.
+    // 🛑 Sunk, but its top face PROUD of the world's ground rather than flush with it: laid flush,
+    // the two surfaces fought for the same pixel and the strip came out with a sawtooth edge.
     {
       ...block(0, 0, RUNWAY, dense(groundSurface(), STRIP_TILE), 'Runway'),
-      transform: transformAt({ x: 0, y: -RUNWAY.height / 2, z: 0 }),
+      transform: transformAt({ x: 0, y: STRIP_PROUD - RUNWAY.height / 2, z: 0 }),
       receiveShadow: false,
     },
     ...[-1, 1].flatMap(side =>

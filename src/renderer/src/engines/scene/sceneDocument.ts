@@ -307,6 +307,7 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'mesh') {
     return (
       describes(value.geometry, GEOMETRY_SPECS) &&
+      isGeometryRun(value.geometry) &&
       isMaterial(value.material) &&
       isOptionalFlag(value.negative)
     )
@@ -379,6 +380,15 @@ function isCsgPart(value: unknown): boolean {
 
 function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
+}
+
+/**
+ * The run a ribbon is swept along. No spec describes it — a list of points is edited on the shape
+ * rather than in a row — so `describes` walks straight past it and this is what checks it.
+ */
+function isGeometryRun(value: unknown): boolean {
+  if (!isRecord(value) || value.kind !== 'ribbon') return true
+  return Array.isArray(value.points) && value.points.length >= 2 && value.points.every(isVector3)
 }
 
 /** Its points and its shape. `closed` and `tension` absent mean the defaults `revived` lays in. */
@@ -744,9 +754,16 @@ function measures(value: unknown, spec: PropertySpec): boolean {
   return value === undefined || matches(value, spec)
 }
 
+/**
+ * 🛑 Read off the CONTROL, never assumed numeric. Falling through to `Number.isFinite` cost the
+ * whole node for any field that is not a number — a ribbon's `closed` was dropped in silence.
+ */
 function matches(value: unknown, spec: PropertySpec): boolean {
   if (spec.control === 'color') return typeof value === 'string'
   if (spec.control === 'vector3') return isVector3(value)
+  if (spec.control === 'toggle') return typeof value === 'boolean'
+  if (spec.control === 'choice') return spec.options.some(one => one === value)
+  if (spec.control === 'asset') return typeof value === 'string'
   // `Number.isFinite`, not `typeof`: JSON has no NaN, but `1e999` parses to Infinity, and a
   // geometry built from one produces vertices the raycaster then never hits.
   return Number.isFinite(value)

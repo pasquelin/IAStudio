@@ -3,6 +3,7 @@
 /** The palette, the ground and the components every built level lays — one source for the three. */
 import type { CheckerTextureId } from '@shared/domain/checkerTexture'
 import type { Component } from '@shared/domain/component'
+import type { CollisionFidelity } from '@shared/domain/csg'
 import { newComponent } from '@shared/domain/componentRegistry'
 import type { MaterialDescriptor, Vector3 } from '@shared/domain/scene'
 import { defaultMeshMaterial } from './checkerTextures'
@@ -74,6 +75,9 @@ export function fieldNode(patch: {
  * 🛑 Named `fixedBody` rather than `solid`: `playgroundLevel` exports a `solid` handing back a
  * Collider ALONE, and two `solid` in one folder is the bare word the auto import picks at random.
  */
-export function fixedBody(): Component[] {
-  return [newComponent('Collider'), { ...newComponent('RigidBody'), kind: 'fixed' }]
+export function fixedBody(fidelity: CollisionFidelity | 'auto' = 'auto'): Component[] {
+  return [
+    { ...newComponent('Collider'), fidelity },
+    { ...newComponent('RigidBody'), kind: 'fixed' },
+  ]
 }
