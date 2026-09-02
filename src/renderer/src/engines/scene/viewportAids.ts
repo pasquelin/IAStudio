@@ -12,9 +12,11 @@ import {
   AxesHelper,
   Box3,
   BoxHelper,
-  BufferAttribute,
-  BufferGeometry,
   CapsuleGeometry,
+  CylinderGeometry,
+  Matrix4,
+  MeshBasicMaterial,
+  Quaternion,
   Color,
   Group,
   LineBasicMaterial,
@@ -22,6 +24,7 @@ import {
   Mesh,
   Vector3,
   WireframeGeometry,
+  type BufferGeometry,
   type Object3D,
 } from 'three'
 import type { ArmRig } from './springArmRigs'
@@ -36,7 +39,7 @@ export type AidPalette = {
   normal: string
   /** The cage a walking body is outlined with. */
   body: string
-  /** The arm a camera hangs on, and the seat at the end of it. */
+  /** The arm a camera hangs on — the one aid painted a colour of its own. */
   arm: string
 }
 
@@ -100,7 +103,7 @@ export function createViewportAids(): ViewportAids {
   /** Keyed by node, and rebuilt only when the FIGURES change — see the sweep in `apply`. */
   const cages = new Map<string, { line: LineSegments; body: AidBody; object: Object3D }>()
   /** The same bargain for the arms, whose shape is rebuilt only when the arm itself is retuned. */
-  const armsDrawn = new Map<string, { line: LineSegments; rig: ArmRig; object: Object3D }>()
+  const armsDrawn = new Map<string, { line: Mesh; rig: ArmRig; object: Object3D }>()
 
   const drop = <T extends Object3D & { dispose: () => void }>(held: Map<string, T>, id: string) => {
     const helper = held.get(id)
@@ -297,15 +300,21 @@ function capsuleCage(body: AidBody, colour: string): LineSegments {
  * metres away from what it outlines. `poseCages` and `poseArms` are the other half.
  */
 function aidLine(geometry: BufferGeometry, colour: string): LineSegments {
-  const line = new LineSegments(
-    geometry,
-    new LineBasicMaterial({ color: new Color(colour), depthTest: false }),
+  return asAid(
+    new LineSegments(
+      geometry,
+      new LineBasicMaterial({ color: new Color(colour), depthTest: false }),
+    ),
   )
-  line.matrixAutoUpdate = false
-  line.matrixWorldAutoUpdate = false
-  line.raycast = () => {}
-  line.renderOrder = 1
-  return line
+}
+
+/** Decoration: never picked, never in a shadow map, and placed by a written world matrix. */
+function asAid<T extends Object3D>(drawn: T): T {
+  drawn.matrixAutoUpdate = false
+  drawn.matrixWorldAutoUpdate = false
+  drawn.raycast = () => {}
+  drawn.renderOrder = 1
+  return drawn
 }
 
 /**
@@ -331,32 +340,49 @@ function poseCages(held: Map<string, { line: LineSegments; object: Object3D }>):
   for (const cage of held.values()) cage.line.matrixWorld.copy(standing(cage.object).matrixWorld)
 }
 
-/** An arm stands over the body it hangs off — the lift being world, as the system reads it. */
-function poseArms(held: Map<string, { line: LineSegments; rig: ArmRig; object: Object3D }>): void {
+/** An arm starts AT the body it watches — its far end is where the camera sits. */
+function poseArms(held: Map<string, { line: Mesh; object: Object3D }>): void {
   for (const arm of held.values()) {
     STANDING.setFromMatrixPosition(standing(arm.object).matrixWorld)
-    arm.line.matrixWorld.makeTranslation(
-      STANDING.x + arm.rig.lift.x,
-      STANDING.y + arm.rig.lift.y,
-      STANDING.z + arm.rig.lift.z,
-    )
+    arm.line.matrixWorld.makeTranslation(STANDING.x, STANDING.y, STANDING.z)
   }
 }
 
 /**
- * The arm itself and the seat at the end of it: one line out to the camera's place, and a small
- * cross marking it — a bare segment reads as a stray edge of the scene.
+ * 🛑 A SOLID and not a line: `linewidth` is ignored by WebGL, so a `LineSegments` arm was one
+ * pixel wide whatever was asked — the thing nobody could see. Nothing marks its far end, where
+ * the camera's own body already stands.
+ *
+ * Reach BAKED into the geometry, so placing it stays the translation `poseArms` writes.
  */
-function armLine(rig: ArmRig, colour: string): LineSegments {
-  const { x, y, z } = rig.back
-  const points = [0, 0, 0, x, y, z]
-  for (const [dx, dy, dz] of SEAT_CROSS) {
-    points.push(x - dx, y - dy, z - dz, x + dx, y + dy, z + dz)
+function armLine(rig: ArmRig, colour: string): Mesh {
+  REACH.set(rig.lift.x + rig.back.x, rig.lift.y + rig.back.y, rig.lift.z + rig.back.z)
+  const length = REACH.length()
+  const geometry = new CylinderGeometry(ARM_THICKNESS, ARM_THICKNESS, length, 6)
+  if (length > 0) {
+    // A cylinder is born standing up its own Y: laid along the reach, then pushed to its middle.
+    geometry.applyMatrix4(
+      TURN.makeRotationFromQuaternion(ARM_TURN.setFromUnitVectors(UPRIGHT, REACH.normalize())),
+    )
   }
-  const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(points), 3))
-  return aidLine(geometry, colour)
+  geometry.translate(
+    (rig.lift.x + rig.back.x) / 2,
+    (rig.lift.y + rig.back.y) / 2,
+    (rig.lift.z + rig.back.z) / 2,
+  )
+
+  return asAid(
+    new Mesh(geometry, new MeshBasicMaterial({ color: new Color(colour), depthTest: false })),
+  )
 }
+
+/** Thick enough to read across a set, thin enough not to hide the body it points at. */
+const ARM_THICKNESS = 0.022
+
+const REACH = new Vector3()
+const TURN = new Matrix4()
+const ARM_TURN = new Quaternion()
+const UPRIGHT = new Vector3(0, 1, 0)
 
 /** Retuning the arm is what rebuilds its shape; moving the body is not. */
 function sameArm(wanted: ArmRig, held: ArmRig): boolean {
@@ -367,7 +393,7 @@ function sameArm(wanted: ArmRig, held: ArmRig): boolean {
   )
 }
 
-function dropLine(held: Map<string, { line: LineSegments }>, id: string): void {
+function dropLine(held: Map<string, { line: Mesh | LineSegments }>, id: string): void {
   const drawn = held.get(id)
   if (!drawn) return
   drawn.line.removeFromParent()
@@ -376,13 +402,6 @@ function dropLine(held: Map<string, { line: LineSegments }>, id: string): void {
   if (!Array.isArray(material)) material.dispose()
   held.delete(id)
 }
-
-/** How far the seat's cross reaches on each axis — small enough to read as a mark, not a shape. */
-const SEAT_CROSS: readonly (readonly [number, number, number])[] = [
-  [0.1, 0, 0],
-  [0, 0.1, 0],
-  [0, 0, 0.1],
-]
 
 // Rewritten in place: `poseArms` runs on every apply and on every frame of a drag.
 const STANDING = new Vector3()

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { Group, LineSegments, type Object3D } from 'three'
+import { Group, type Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { SceneRenderer } from './SceneRenderer'
 import { newComponent } from '@shared/domain/componentRegistry'
@@ -37,8 +37,9 @@ const drawnAids = (chrome: boolean, nodes = [...playerModuleNodes()]): number =>
     ...(chrome ? {} : { chrome: false }),
   })
   renderer.apply({ ...EMPTY_SCENE, nodes })
+  // Everything hanging off the workshop group: the cage is a line, the arm a solid.
   const drawn: readonly Object3D[] = held.aids?.object.children ?? []
-  return drawn.filter(child => child instanceof LineSegments).length
+  return drawn.length
 }
 
 /** Stripped of every figure, which is what a hand-edited file routinely holds. */

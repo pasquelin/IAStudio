@@ -3,7 +3,6 @@ import {
   AxesHelper,
   Box3,
   BoxHelper,
-  LineSegments,
   BufferAttribute,
   BufferGeometry,
   Mesh,
@@ -307,27 +306,37 @@ describe('the arm a camera hangs on', () => {
     ]),
   }
 
-  /** Where the drawn arm starts and ends, in world — what the eye actually reads off the screen. */
+  /**
+   * The two ENDS of the drawn arm, in world — what the eye actually reads off the screen. Read
+   * off the bounding box rather than off two vertices: the arm is a solid, since `linewidth` is
+   * ignored by WebGL and a one-pixel line was the thing nobody could see.
+   */
   const spans = (aids: ReturnType<typeof createViewportAids>): [Vector3, Vector3] => {
     const drawn = aids.object.children[0]
-    const points = drawn instanceof LineSegments ? drawn.geometry.getAttribute('position') : null
-    if (!points || !drawn) throw new Error('no arm drawn')
+    if (!drawn) throw new Error('no arm drawn')
 
-    const at = (index: number) =>
-      new Vector3().fromBufferAttribute(points, index).applyMatrix4(drawn.matrixWorld)
-    return [at(0), at(1)]
+    const box = new Box3().setFromObject(drawn)
+    // The rig runs +y and +z from the body, so the low corner is the body and the high the seat.
+    return [box.min.clone(), box.max.clone()]
   }
 
-  it('reaches from over the body up to where the camera will sit', () => {
+  /**
+   * 🛑 From the BODY to the seat, in one diagonal: an arm drawn from the pivot ran level, four
+   * metres off in mid-air, and read as a stray edge joined to neither end. What one has to see is
+   * which body this camera watches.
+   */
+  it('reaches from the body it watches to where the camera sits', () => {
     const walker = new Object3D()
     walker.position.set(0, 0.9, 0)
     const aids = createViewportAids()
 
     aids.apply(new Map([['a', walker]]), [], OFF, PALETTE, RIG)
-    const [pivot, seat] = spans(aids)
+    const [body, seat] = spans(aids)
 
-    expect(pivot.toArray()).toEqual([0, 2.5, 0])
-    expect(seat.toArray()).toEqual([0, 2.5, 4])
+    expect(body.z).toBeCloseTo(0, 1)
+    expect(body.y).toBeCloseTo(0.9, 1)
+    expect(seat.y).toBeCloseTo(2.5, 1)
+    expect(seat.z).toBeCloseTo(4, 1)
   })
 
   /** The same trap the cage fell into: nothing recomposes the chain before an aid is drawn. */
@@ -342,7 +351,7 @@ describe('the arm a camera hangs on', () => {
     module.position.set(5, 0, 0)
     aids.refreshBoxes()
 
-    expect(spans(aids)[0].x).toBeCloseTo(5)
+    expect(spans(aids)[0].x).toBeCloseTo(5, 1)
   })
 
   it('draws nothing for an arm whose body is not on stage', () => {

@@ -3057,7 +3057,9 @@ export class SceneRenderer {
       origin: this.viewport.paletteToken('--color-muted'),
       normal: accent,
       body: accent,
-      arm: this.viewport.paletteToken('--color-muted'),
+      // 🛑 The one aid with a colour of its OWN, and Alban's call: an arm painted like the rest
+      // was read as scenery. Red says « this camera watches THAT body », and nothing else does.
+      arm: this.viewport.paletteToken('--color-danger'),
     })
   }
 
