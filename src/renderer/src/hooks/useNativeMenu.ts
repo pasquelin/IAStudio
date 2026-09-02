@@ -5,6 +5,8 @@ import { availableToolIds } from '@/helpers/toolRegistry'
 import { getBridge } from '@/services/bridge'
 import { routeCommand } from '@/services/commandRouter'
 import { addNodeTo } from '@/hooks/useAddNode'
+import { createDocumentOfKind } from '@/features/shell/newDocument'
+import { openRecent } from '@/features/shell/openRecent'
 import { canMaskFromSelection, canMergeDown } from '@/engines/canvas/canvasState'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
@@ -218,6 +220,12 @@ export function useNativeMenu(): void {
     // The verdict is dropped on purpose: a menu row that reaches nothing is a row already greyed
     // out, and there is nobody to answer. An MCP client is the caller that needs it.
     const stopCommand = bridge.menu.onCommand(command => void routeCommand(command))
+    // One row of File ▸ New. The same door the plus button opens, with the kind already named:
+    // the name and the folder are still asked, so a template is still offered where there is one.
+    const stopDocumentNew = bridge.menu.onDocumentNew(({ kind }) => void createDocumentOfKind(kind))
+
+    const stopOpenRecent = bridge.menu.onOpenRecent(request => void openRecent(request))
+
     // The same path the toolbar and the panels take: two ways of adding a node would drift.
     const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => {
       // Of the right kind: the menu is app-wide, and a node written under an image document
@@ -241,6 +249,8 @@ export function useNativeMenu(): void {
     return () => {
       stopTool()
       stopCommand()
+      stopDocumentNew()
+      stopOpenRecent()
       stopSceneAdd()
       stopSceneView()
       stopSceneDisplay()

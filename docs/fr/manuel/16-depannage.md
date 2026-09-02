@@ -46,7 +46,7 @@ sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 
 | Ce que vous lisez | Ce que ça veut dire |
 |---|---|
-| « Aucun projet ouvert » | il faut créer ou ouvrir un projet (`⌘N` / `⌘O`) |
+| « Aucun projet ouvert » | il faut créer ou ouvrir un projet (`⌘N` puis un clic, ou `⌘O`) |
 | « Aucun document ouvert. Générez ou ouvrez un asset pour commencer. » | le centre de la fenêtre attend un premier onglet |
 | « Aucun asset. Générez quelque chose pour commencer. » | l’Explorateur du projet est encore vide |
 | « Aucune génération en cours. » | rien ne se génère en ce moment — la liste des générations est vide |

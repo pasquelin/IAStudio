@@ -34,6 +34,9 @@ function open(ask: NewDocumentAsk | null, onDisk: DocumentDescriptor[] = []): vo
   installFakeBridge({
     newDocument: { request: () => Promise.resolve(ask), answer: given => answer(given) },
     documents: { list: () => Promise.resolve(onDisk) },
+    // Where a role's folder actually is — asked, never composed, since only the main process
+    // reads the markers a rename in the Finder leaves behind.
+    project: { folderFor: (role: string) => Promise.resolve(`Dossiers/${role}`) },
   })
 }
 
@@ -94,7 +97,9 @@ describe('NewDocumentWindow', () => {
     expect(screen.queryByRole('button', { name: 'Base' })).toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
-    expect(answer).toHaveBeenCalledWith(made({ kind: 'image', title: 'Image 1', folder: 'documents' }))
+    expect(answer).toHaveBeenCalledWith(
+      made({ kind: 'image', title: 'Image 1', folder: 'documents' }),
+    )
   })
 
   it('marks the chosen template, and only that one', async () => {
@@ -178,6 +183,22 @@ describe('NewDocumentWindow', () => {
 
     expect(await screen.findByRole('textbox')).toHaveValue('Image 1')
     expect(screen.getByText('.ora')).toBeInTheDocument()
+  })
+
+  /**
+   * The fallback moved here with the kind: which folder a document belongs to depends on what it
+   * IS, and that is settled in this window now. The studio hands over the Explorer's selection
+   * and nothing else.
+   */
+  it("opens on the kind's own folder when the Explorer pointed at nothing", async () => {
+    open({ ...ASK, picked: null })
+    render(<NewDocumentWindow />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Créer' }))
+
+    expect(answer).toHaveBeenCalledWith(
+      made({ kind: 'scene', title: 'Scène 1', folder: 'Dossiers/scenes', template: 'basic' }),
+    )
   })
 
   describe('with no project open', () => {

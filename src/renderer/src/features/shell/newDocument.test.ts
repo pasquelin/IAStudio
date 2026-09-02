@@ -47,7 +47,10 @@ const madeAs = (
   folder: string,
   kind: DocumentKind = 'scene',
   template?: NamedDocumentPlace['template'],
-): NewDocumentAnswer => ({ answer: 'made', place: { kind, title, folder, ...(template ? { template } : {}) } })
+): NewDocumentAnswer => ({
+  answer: 'made',
+  place: { kind, title, folder, ...(template ? { template } : {}) },
+})
 
 /**
  * Installs the bridge with the window's answers already decided, in order — the last one repeats,

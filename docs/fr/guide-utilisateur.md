@@ -79,7 +79,7 @@ chez votre fournisseur. Cliquez **Ajouter un compte** : le studio vérifie
 tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 
 **2. Créez un projet.**
-`⌘N` / `Ctrl+N`. Choisissez un dossier et un nom. Un projet est un **dossier sur votre disque** :
+`⌥⌘N` / `Alt+Ctrl+N` — ou `⌘N`, puis **Créer un projet**. Choisissez un dossier et un nom. Un projet est un **dossier sur votre disque** :
 tout ce que vous fabriquerez atterrira dedans.
 
 **3. Choisissez un espace.**

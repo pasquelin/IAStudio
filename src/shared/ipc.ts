@@ -224,6 +224,7 @@ export type Channels = {
   documentWrite: 'document:write'
   documentRename: 'document:rename'
   documentRemove: 'document:remove'
+  documentOpened: 'document:opened'
   documentConfirmClose: 'document:confirm-close'
   documentConfirmDelete: 'document:confirm-delete'
   documentConfirmOverwrite: 'document:confirm-overwrite'
@@ -479,6 +480,7 @@ export const CHANNELS: Channels = {
   documentWrite: 'document:write',
   documentRename: 'document:rename',
   documentRemove: 'document:remove',
+  documentOpened: 'document:opened',
   documentConfirmClose: 'document:confirm-close',
   documentConfirmDelete: 'document:confirm-delete',
   documentConfirmOverwrite: 'document:confirm-overwrite',
@@ -1039,6 +1041,8 @@ export const EVENTS = {
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
   windowLanguage: 'evt:window-language',
+  documentNew: 'evt:document-new',
+  openRecent: 'evt:open-recent',
   sceneAdd: 'evt:scene-add',
   sceneView: 'evt:scene-view',
   sceneDisplay: 'evt:scene-display',
@@ -1061,6 +1065,20 @@ export type ToolRequest = {
   zone: ToolZone
   tool: ToolId
 }
+
+/**
+ * Which kind File ▸ New asks the window in front to make. An EVENT rather than a `CommandId`,
+ * exactly as `SceneAddRequest` is: eight rows carrying no shortcut of their own would be eight
+ * dead entries in the shortcut settings.
+ */
+export type NewDocumentRequest = { kind: DocumentKind }
+
+/**
+ * One row of File ▸ Open recent: a project folder, and the document inside it when the row names
+ * one. The two in one shape rather than two events — the gesture is the same, and a document of
+ * another project IS a project switch followed by an opening.
+ */
+export type RecentOpenRequest = { project: string; path?: string }
 
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind | ObjectKind }
@@ -1672,6 +1690,14 @@ export type StudioBridge = {
      */
     rename: (id: string, kind: DocumentKind, title: string) => Promise<DocumentDescriptor>
     remove: (id: string, kind: DocumentKind) => Promise<void>
+    /**
+     * Notes that this document was just put in front, for the shelf File ▸ Open recent draws.
+     *
+     * The window says WHICH document and nothing else: the project holding it is the main
+     * process's to know — it owns the open project — and a window composing the pair would be a
+     * second answer, late by exactly the switch that had just happened.
+     */
+    opened: (path: string, kind: DocumentKind) => Promise<void>
     /**
      * What to do with a modified document being closed. Native rather than drawn in the window:
      * this is the OS convention every desktop application answers with, and the wording lives
@@ -2285,6 +2311,8 @@ export type StudioBridge = {
     popup: (items: readonly ContextMenuItem[]) => Promise<string | null>
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
     onCommand: (callback: (command: CommandId) => void) => Unsubscribe
+    onDocumentNew: (callback: (request: NewDocumentRequest) => void) => Unsubscribe
+    onOpenRecent: (callback: (request: RecentOpenRequest) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
     onSceneView: (callback: (request: SceneViewRequest) => void) => Unsubscribe
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe

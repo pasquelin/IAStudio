@@ -25,6 +25,8 @@ import {
   type AssistantActionRequest,
   type LogEntry,
   type McpState,
+  type NewDocumentRequest,
+  type RecentOpenRequest,
   type SceneAddRequest,
   type SceneDisplayRequest,
   type SceneViewRequest,
@@ -191,6 +193,7 @@ const bridge: StudioBridge = {
   },
   documents: {
     list: () => ipcRenderer.invoke(CHANNELS.documentList),
+    opened: (path, kind) => ipcRenderer.invoke(CHANNELS.documentOpened, path, kind),
     read: (id, kind) => ipcRenderer.invoke(CHANNELS.documentRead, id, kind),
     write: (id, kind, file, force, folder) =>
       ipcRenderer.invoke(CHANNELS.documentWrite, id, kind, file, force, folder),
@@ -363,6 +366,8 @@ const bridge: StudioBridge = {
     popup: items => ipcRenderer.invoke(CHANNELS.menuPopup, items),
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
     onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
+    onDocumentNew: callback => subscribe<NewDocumentRequest>(EVENTS.documentNew, callback),
+    onOpenRecent: callback => subscribe<RecentOpenRequest>(EVENTS.openRecent, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
     onSceneView: callback => subscribe<SceneViewRequest>(EVENTS.sceneView, callback),
     onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),

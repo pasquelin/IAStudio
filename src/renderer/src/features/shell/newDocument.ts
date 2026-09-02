@@ -11,7 +11,11 @@ import { documentPathFor } from '@shared/domain/documentName'
 import { parentOf } from '@shared/domain/folder'
 import { SCRIPT_STARTER } from '@shared/domain/game'
 import { DEFAULT_SCENE_TEMPLATE, isSceneTemplateId } from '@shared/domain/sceneTemplate'
-import type { DocumentTemplateId, NewDocumentAnswer, NewDocumentAsk } from '@shared/domain/newDocument'
+import type {
+  DocumentTemplateId,
+  NewDocumentAnswer,
+  NewDocumentAsk,
+} from '@shared/domain/newDocument'
 import { DEFAULT_UI_TEMPLATE, isUiTemplateId } from '@shared/domain/uiTemplates'
 import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
 import { seedGuiTemplate } from '@/stores/gui'
@@ -71,7 +75,10 @@ async function pickedFolder(): Promise<string | null> {
 }
 
 /** What the window is handed, read fresh every time it is asked — a project may have opened. */
-async function askFor(kind: DocumentKind | null, surface: ToolSurface | null): Promise<NewDocumentAsk> {
+async function askFor(
+  kind: DocumentKind | null,
+  surface: ToolSurface | null,
+): Promise<NewDocumentAsk> {
   // The folders first: what they hold is what the suggested name has to step over.
   await useDocuments.getState().relist()
   const open = useProject.getState().project

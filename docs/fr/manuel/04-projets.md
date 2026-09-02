@@ -23,12 +23,24 @@ logiciel qui l’a créé est un projet qu’on perd le jour où le logiciel ne 
 
 | Action | Raccourci | Menu |
 |---|---|---|
-| **Nouveau projet** | `⌘N` / `Ctrl+N` | **Fichier ▸ Nouveau projet…** |
+| **Nouveau…** | `⌘N` / `Ctrl+N` | **Fichier ▸ Nouveau…** |
+| **Nouveau projet** | `⌥⌘N` / `Alt+Ctrl+N` | **Fichier ▸ Nouveau projet…** |
 | **Ouvrir un projet** | `⌘O` / `Ctrl+O` | **Fichier ▸ Ouvrir un projet…** |
+| **Ouvrir un projet récent** | — | **Fichier ▸ Ouvrir récent** |
+
+**`⌘N` ouvre une fenêtre**, la même depuis n’importe quel écran : elle propose de créer un projet
+et, en dessous, chaque type de document — image, vidéo, scène, interface, script, audio, matière,
+ciel. Les types de l’espace où vous êtes sont en tête de liste ; tous les autres restent
+accessibles. **Le bouton vert `+`**, en haut de la colonne d’icônes, ouvre exactement la même
+fenêtre.
+
+**Aucun projet ouvert ?** La fenêtre le dit et offre la sortie sur place : vos projets récents,
+d’un clic, ou les deux boutons pour en créer ou en ouvrir un. Le projet s’ouvre et vous
+continuez — sans repasser par l’accueil.
 
 **Les deux gestes sont aussi dans le panneau Explorateur**, quand aucun projet n’est ouvert : il
 affiche alors **Ouvrir un projet** et **Créer un projet**, à sa place habituelle dans la colonne
-de gauche. C’est là pour ne pas avoir à repasser par l’accueil depuis un espace de travail.
+de gauche.
 
 **Un seul projet est ouvert à la fois.** Ouvrir le second ferme le premier — sans rien perdre :
 tout ce qui était enregistré l’est resté.

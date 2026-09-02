@@ -46,7 +46,9 @@ export function windowControl(active: boolean): string {
     'flex h-(--sc-control) cursor-pointer items-center rounded-(--radius-sc-sm) border-none text-xs',
     // Dimmed by INK rather than by opacity, as every quiet line of these windows is: an opacity
     // lets the column's own surface through, and reads as a rendering fault rather than a refusal.
-    'disabled:cursor-not-allowed disabled:text-base-content/40 disabled:hover:bg-transparent',
+    // `/70` is the same alpha `WINDOW_CAPTION` carries — a refusal still has to be READ, and
+    // `tokens.test.ts` measures this one composed on its fill like every other ink here.
+    'disabled:cursor-not-allowed disabled:text-base-content/70 disabled:hover:bg-transparent',
     active ? 'bg-primary text-primary-content' : 'hover:bg-base-300 bg-transparent',
   )
 }

@@ -320,7 +320,7 @@ your provider's dashboard. Click **Add an account**: the studio checks them
 straight away and puts a green **In use** badge on the row.
 
 **2. Create a project.**
-`⌘N` / `Ctrl+N`. Choose a folder and a name. A project is a **folder on your disk**: everything
+`⌥⌘N` / `Alt+Ctrl+N` — or `⌘N`, then **New project**. Choose a folder and a name. A project is a **folder on your disk**: everything
 you make will land inside it.
 
 **3. Choose a workspace.**

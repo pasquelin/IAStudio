@@ -10,6 +10,7 @@ import {
   type MenuCheck,
 } from '@shared/domain/command'
 import { sameOrder } from '@shared/collections'
+import type { RecentDocument, RecentProject } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { frontWindow, sendToFront } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
@@ -52,6 +53,50 @@ let shown: WindowMenu | null = null
  * read from `windowLanguage()`, so this menu and the native dialogs cannot answer differently.
  */
 let overrides: BindingOverrides = {}
+/**
+ * What the main process holds and no window reports: the open project, and the two shelves File ▸
+ * Open recent draws. A fact routed through a renderer is a fact free to arrive late — File ▸ New
+ * file would stay greyed over a project already open.
+ */
+let openProject: string | null = null
+let recentProjects: readonly RecentProject[] = []
+let recentDocuments: readonly RecentDocument[] = []
+
+/** Told by the project store, the one place that knows. Rebuilds only when the answer moved. */
+export function noteProjectOpen(path: string | null): void {
+  if (path === openProject) return
+
+  openProject = path
+  buildMenu()
+}
+
+/** What the two lists DRAW, so a settings write that moved neither rebuilds nothing. */
+function shelfSignature(
+  projects: readonly RecentProject[],
+  documents: readonly RecentDocument[],
+): string {
+  return JSON.stringify([
+    projects.map(one => one.path),
+    documents.map(one => [one.project, one.path]),
+  ])
+}
+
+/**
+ * Told by the settings store, which is where both shelves live. Its caller rebuilds for its own
+ * reasons — the remapped keys — so this one only does when what the menu draws actually moved.
+ */
+export function noteRecent(
+  projects: readonly RecentProject[],
+  documents: readonly RecentDocument[],
+): void {
+  if (shelfSignature(projects, documents) === shelfSignature(recentProjects, recentDocuments)) {
+    return
+  }
+
+  recentProjects = projects
+  recentDocuments = documents
+  buildMenu()
+}
 
 /** One reading of the front window, where four used to walk every window of the app in turn. */
 function focusedMenu(): WindowMenu | null {
@@ -77,6 +122,9 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
     abilities: shown?.abilities ?? [],
     isMac,
     isDevelopment,
+    openProject,
+    recentProjects,
+    recentDocuments,
     // What this system ships under what the user remapped, exactly as the window reads them:
     // the menu would otherwise advertise ⌃⌘F on a machine whose full-screen key is F11.
     overrides: { ...platformDefaults(isMac), ...overrides },
@@ -88,6 +136,8 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
       toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
       openTool: request => sendToFront(EVENTS.openTool, request),
       runCommand: command => sendToFront(EVENTS.menuCommand, command),
+      newDocument: request => sendToFront(EVENTS.documentNew, request),
+      openRecent: request => sendToFront(EVENTS.openRecent, request),
       addNode: request => sendToFront(EVENTS.sceneAdd, request),
       viewFrom: request => sendToFront(EVENTS.sceneView, request),
       setDisplay: request => sendToFront(EVENTS.sceneDisplay, request),

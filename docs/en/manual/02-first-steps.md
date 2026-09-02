@@ -118,7 +118,8 @@ neither your projects nor what you write in them.
 
 ## Step 5 — Create your first project
 
-`⌘N` / `Ctrl+N`, or menu **File ▸ New project…**
+`⌥⌘N` / `Alt+Ctrl+N`, or menu **File ▸ New project…** — or `⌘N`, which opens the window
+offering a project as well as a document
 
 The studio asks for **a folder**, and that folder *becomes* the project — nothing is built above
 or below it. Make one from the picker if you need to (**New Folder**) and give it the name you

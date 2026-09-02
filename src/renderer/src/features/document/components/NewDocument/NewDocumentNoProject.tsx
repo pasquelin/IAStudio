@@ -39,7 +39,7 @@ export function NewDocumentNoProject({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <h2 className="m-0 text-base font-semibold">{t('project.none')}</h2>
         <p className={cn(WINDOW_CAPTION, 'm-0')}>{t('documents.noProjectBody')}</p>
       </div>

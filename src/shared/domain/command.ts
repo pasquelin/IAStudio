@@ -253,9 +253,9 @@ function command(descriptor: CommandDescriptor): CommandDescriptor {
 
 export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   /**
-   * ⌘N makes a FILE, as it does in every other application — a project moved to ⇧⌘N for it on
-   * 2026-09-02. Not `raisesDialog`: this one opens a window of the studio's own, which an outside
-   * client can drive and read, where a native picker is a modal nothing can fill.
+   * ⌘N makes a FILE, as it does in every other application — a project moved off it on 2026-09-02.
+   * Not `raisesDialog`: this one opens a window of the studio's own, which an outside client can
+   * drive and read, where a native picker is a modal nothing can fill.
    */
   command({
     id: 'app.new',
@@ -270,7 +270,8 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     raisesDialog: true,
     titleKey: 'commands.projectNew.title',
     helpKey: 'commands.projectNew.help',
-    defaultBinding: 'Shift+Meta+KeyN',
+    // ⌥⌘N and not ⇧⌘N: the Explorer's New folder holds that one, as every Finder-shaped app does.
+    defaultBinding: 'Alt+Meta+KeyN',
   }),
   command({
     id: 'project.open',

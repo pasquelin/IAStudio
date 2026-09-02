@@ -210,6 +210,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       // as one that worked, which would have a test believe the disk had agreed.
       rename: () => Promise.reject(new Error('no rename stubbed')),
       remove: () => Promise.resolve(),
+      opened: () => Promise.resolve(),
       // Cancel and refuse: a test that does not stub these cannot lose a document by omission.
       confirmClose: () => Promise.resolve<CloseChoice>('cancel'),
       // Yes, where its neighbours answer no: this is the one dialogue whose default WRITES, and
@@ -419,6 +420,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       popup: () => Promise.resolve(null),
       onOpenTool: noSubscription,
       onCommand: noSubscription,
+      onDocumentNew: noSubscription,
+      onOpenRecent: noSubscription,
       onSceneAdd: noSubscription,
       onSceneView: noSubscription,
       onSceneDisplay: noSubscription,
