@@ -15,6 +15,12 @@ function runOf(nodes: readonly SceneNode[], name: string): readonly Vector3[] {
   return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry.path.points : []
 }
 
+/** How tall a band stands — what tells a strip a car crosses from a wall that stops it. */
+function heightOf(nodes: readonly SceneNode[], name: string): number | null {
+  const band = nodes.find(node => node.name === name)
+  return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry.height : null
+}
+
 /** How far a point sits from a closed run — the nearest of its spans. */
 function distanceToRun(run: readonly Vector3[], x: number, z: number): number {
   const point = { x, y: 0, z }
@@ -84,14 +90,60 @@ describe('the circuit a car opens on', () => {
   })
 
   /**
-   * 🛑 The track is THREE meshes and no boolean: one band for the tarmac and one a side. It was
-   * twenty-four slabs and forty-eight kerb blocks, welded — which kept every corner standing.
+   * 🛑 A kerb is a few CENTIMETRES: it shakes a car that puts a wheel over it, and a driver keeps
+   * the throttle down. At ninety it was a wall painted like a kerb, and the two roles — saying
+   * where the track ends, and stopping a car that leaves it — were the same object.
+   */
+  it('makes the kerbs a strip a car crosses rather than a wall', () => {
+    for (const name of ['Kerb Left', 'Kerb Right']) {
+      expect(heightOf(nodes, name)).toBeLessThanOrEqual(0.1)
+    }
+  })
+
+  /** What stops a car, and it is NOT the kerb: held back in the grass, so leaving the track
+   * costs a run through it before anything is met. */
+  it('holds a barrier back in the grass, well clear of the kerbs', () => {
+    for (const side of ['Left', 'Right']) {
+      const barrier = runOf(nodes, `Barrier ${side}`)
+      const gaps = barrier.map((from, index) => {
+        const to = barrier[(index + 1) % barrier.length]!
+        return distanceToRun(tarmac, (from.x + to.x) / 2, (from.z + to.z) / 2)
+      })
+
+      // The kerbs sit at 6,5 from the centre line and are a metre across: past 9 is past them.
+      expect(Math.min(...gaps)).toBeGreaterThan(9)
+      expect(heightOf(nodes, `Barrier ${side}`)).toBeGreaterThanOrEqual(0.8)
+    }
+  })
+
+  // A barrier a car drives through is scenery. Felt as the band it is, for the reason the kerbs are.
+  it('has both barriers felt as the bands they are', () => {
+    const fidelities = named(nodes, 'Barrier').map(
+      node => (node.components ?? []).find(one => one.type === 'Collider')?.fidelity,
+    )
+
+    expect(named(nodes, 'Barrier').map(node => node.name)).toEqual([
+      'Barrier Left',
+      'Barrier Right',
+    ])
+    expect(fidelities).toEqual(['trimesh', 'trimesh'])
+  })
+
+  /**
+   * 🛑 One band a piece and no boolean: it was twenty-four slabs and forty-eight kerb blocks,
+   * welded — which kept every corner standing.
    */
   it('draws the track as one band a piece, and nothing carved', () => {
     const drawn = nodes.filter(node => node.type === 'mesh' || node.type === 'carved')
     const bands = drawn.filter(node => node.type === 'mesh' && node.geometry.kind === 'ribbon')
 
-    expect(bands.map(node => node.name).sort()).toEqual(['Kerb Left', 'Kerb Right', 'Tarmac'])
+    expect(bands.map(node => node.name).sort()).toEqual([
+      'Barrier Left',
+      'Barrier Right',
+      'Kerb Left',
+      'Kerb Right',
+      'Tarmac',
+    ])
     expect(drawn.filter(node => node.type === 'carved')).toEqual([])
   })
 
@@ -114,11 +166,13 @@ describe('the circuit a car opens on', () => {
     }
   })
 
-  // 🛑 The scenery is DECOR: a hedge is not where a lap is decided, so only the kerbs stop.
+  // 🛑 The scenery is DECOR: a hedge is not where a lap is decided, so only the two bands that
+  // border the track are felt at all.
   it('leaves everything around the track free of collision', () => {
     const felt = nodes.filter(
       node =>
         !node.name.startsWith('Kerb') &&
+        !node.name.startsWith('Barrier') &&
         (node.components ?? []).some(one => one.type === 'RigidBody'),
     )
 

@@ -29,9 +29,19 @@ const TARMAC_PROUD = 0.03
 /** The line is LAID on the tarmac, so its own thickness sits above it rather than half inside. */
 const LINE_DEPTH = 0.04
 
-/** Tall enough to stop a car rather than launch it, and thick enough not to be tunnelled through. */
-const KERB_HEIGHT = 0.9
+/**
+ * 🛑 A kerb SHAKES a car, it does not stop one. At ninety centimetres it was a wall painted like a
+ * kerb, and one object carried both roles — where the track ends, and what a car that leaves it meets.
+ */
+const KERB_HEIGHT = 0.07
 const KERB_THICKNESS = 1
+
+/** The other half of that split: what stops a car, held back in the grass past the kerb. */
+const BARRIER_HEIGHT = 0.9
+const BARRIER_THICKNESS = 0.6
+
+/** Metres of grass between the outer edge of a kerb and the barrier — the room to gather a slide. */
+const BARRIER_CLEARANCE = 3
 
 /**
  * How many points the loop is drawn through, and how wide it is before the harmonics stretch it.
@@ -52,6 +62,7 @@ const CURVE_SEGMENTS = MARKS * 15
  */
 const TARMAC_TILE = 5
 const KERB_TILE = 3
+const BARRIER_TILE = 2
 const GRASS_TILE = 12.5
 const PADDOCK_TILE = 2
 
@@ -172,6 +183,8 @@ export function circuitNodes(): SceneNode[] {
   // sunk to it exactly, the tarmac could not be seen at all. Three centimetres is both.
   const road = circuitLine(TARMAC_PROUD - TARMAC_DEPTH)
 
+  const barrierEdge = TRACK_WIDTH / 2 + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2
+
   const kerbs = [-1, 1].map(side =>
     ribbonNode({
       points: offsetRun(circuitLine(0), side * edge, true),
@@ -180,6 +193,17 @@ export function circuitNodes(): SceneNode[] {
       material: dense(climbSurface(), KERB_TILE),
       parentId: circuit.id,
       name: `Kerb ${side < 0 ? 'Left' : 'Right'}`,
+    }),
+  )
+
+  const barriers = [-1, 1].map(side =>
+    ribbonNode({
+      points: offsetRun(circuitLine(0), side * barrierEdge, true),
+      width: BARRIER_THICKNESS,
+      height: BARRIER_HEIGHT,
+      material: dense(obstacleSurface(), BARRIER_TILE),
+      parentId: circuit.id,
+      name: `Barrier ${side < 0 ? 'Left' : 'Right'}`,
     }),
   )
 
@@ -201,7 +225,7 @@ export function circuitNodes(): SceneNode[] {
     },
     // 🛑 `trimesh`: a closed band is not convex, and its hull is the whole infield — a car would
     // meet a wall the moment it left the grid.
-    ...kerbs.map(kerb => ({ ...kerb, components: fixedBody('trimesh') })),
+    ...[...kerbs, ...barriers].map(band => ({ ...band, components: fixedBody('trimesh') })),
     startLine(circuit.id),
   ]
 }
