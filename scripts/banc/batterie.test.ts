@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { play } from './play'
 import { createStudio, type Studio, type Think } from './studio'
 import { rankOf } from './coverage'
-import { assetOf, boatImage, opened } from './setups'
+import { assetOf, boatImage, montage, opened } from './setups'
 import { PROJECT } from './project'
 import type { Scenario } from './run'
 import { SCENARIOS } from './scenarios'
@@ -275,11 +275,21 @@ describe('what a run with no window can still carry out', () => {
     expect(answers).toEqual([expect.stringMatching(/nothing left to do/)])
   })
 
-  it('leaves a scope no headless surface answers refused, rather than silently doing nothing', async () => {
+  it('carries the commands of an image, of a montage and of the project folder', async () => {
     const canvas = await answering(boatImage, [
-      { action: 'command.runStudioCommand', input: { command: 'canvas.zoomIn' } },
+      { action: 'command.runStudioCommand', input: { command: 'canvas.selectAll' } },
+    ])
+    const sequence = await answering(montage(), [
+      { action: 'command.runStudioCommand', input: { command: 'sequence.undo' } },
+    ])
+    // A folder and not an undo: the file stack lives in the main process, so `explorer.undo`
+    // answers before it knows whether there was anything to take back — see `runExplorerCommand`.
+    const explorer = await answering(undefined, [
+      { action: 'command.runStudioCommand', input: { command: 'explorer.newFolder' } },
     ])
 
-    expect(canvas).toEqual([expect.stringMatching(/wrongSurface/)])
+    expect(canvas).toEqual([expect.stringMatching(/^ok/)])
+    expect(sequence).toEqual([expect.stringMatching(/nothing left to do/)])
+    expect(explorer).toEqual([expect.stringMatching(/^ok/)])
   })
 })

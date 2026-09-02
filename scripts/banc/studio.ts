@@ -657,8 +657,7 @@ export async function createStudio(
    * 🛑 Armed as a TAB arms it — the scope of the document in front, and that one only. Armed for
    * good, `command.runStudioCommand` answered `nothingToDo` where the studio answers
    * `wrongSurface`, and the bench would have taught a model a refusal the product never gives.
-   * The explorer, the montage strip and the canvas tools live inside their components alone, so
-   * those scopes stay unarmed here.
+   * The one exception is the project folder, which no document carries and every window shows.
    */
   const followTheCommandBus = (): (() => void) => {
     let armedScope: CommandScope | null = null
@@ -666,7 +665,7 @@ export async function createStudio(
 
     const followTheFront = (): void => {
       const scope = scopeOf(frontDocument())
-      const answered = scope !== null && SCOPE_RUNNERS.has(scope) ? scope : null
+      const answered = scope !== null && SCOPE_RUNNERS[scope] !== null ? scope : null
       if (answered === armedScope) return
 
       disarm?.()
@@ -674,13 +673,10 @@ export async function createStudio(
       disarm = answered === null ? null : armCommandScope(answered)
     }
 
+    const disarmExplorer = armCommandScope('explorer')
     const stop = subscribeToCommands((command, to) => {
       const scope = commandDescriptor(command)?.scope
-      const runner = scope === undefined ? undefined : SCOPE_RUNNERS.get(scope)
-      if (!runner || scope === undefined) return false
-
-      const documentId = addressedBy(scope, to)
-      return documentId !== null && runner(documentId, command)
+      return (scope !== undefined && SCOPE_RUNNERS[scope]?.(command, to)) ?? false
     })
     const unfollow = useDocuments.subscribe(followTheFront)
     followTheFront()
@@ -689,6 +685,7 @@ export async function createStudio(
       stop()
       unfollow()
       disarm?.()
+      disarmExplorer()
     }
   }
 

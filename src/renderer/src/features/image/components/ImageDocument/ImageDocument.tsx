@@ -36,18 +36,15 @@ import {
   addLayer,
   cropToRect,
   flatten,
-  flipImage,
   mergeDown,
   removeLayer,
   resizeCaption,
-  rotateImage,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { useDocumentTitle } from '@/hooks/useDocumentTitle'
 import { canvasOf, isCanvasDirty, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, canvasViewOf, cropFrameOf } from '@/stores/canvasViews'
 import { useDocumentIsInFront } from '@/stores/documents'
-import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../../canvasView'
 import { guidePort } from '../../guidePort'
 import {
   AI_EDIT_TOOL,
@@ -68,6 +65,7 @@ import {
 import { layerPort } from '../../layerPort'
 import { prepareEdit } from '../../aiActions'
 import { exportLayeredPicture, exportPicture } from '../../exportPicture'
+import { runCanvasCommand } from './canvasCommands'
 import { maskFromSelection } from '../../maskActions'
 import { placeAsset } from '../../placeAsset'
 import { revealAssets } from '@/helpers/revealPanel'
@@ -75,7 +73,6 @@ import { useLivePreview } from '@/hooks/useLivePreview'
 import { useDocuments } from '@/stores/documents'
 import { holdCanvas } from '../../canvasHosts'
 import { pixelPort } from '../../pixelPort'
-import { turnPort } from '../../turnPort'
 import { ZoomBar } from '../ZoomBar'
 
 export type ImageDocumentProps = { documentId: string }
@@ -291,25 +288,12 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       const arming = armedBy(command)
       if (arming) return pick(arming.tool, arming.mode)
 
+      // What reads nothing but the stores is shared with a headless run — see `runCanvasCommand`.
+      // What is left below is what only a tab with an engine on screen can answer for.
+      const shared = runCanvasCommand(documentId, command)
+      if (shared !== false) return shared
+
       switch (command) {
-        case 'canvas.zoomIn':
-          return zoomIn(documentId)
-        case 'canvas.zoomOut':
-          return zoomOut(documentId)
-        case 'canvas.zoomFit':
-          return zoomToFit(documentId)
-        case 'canvas.zoomActual':
-          return zoomToActual(documentId)
-        case 'canvas.rulers':
-          return toggleView(documentId, 'rulers')
-        case 'canvas.guides':
-          return toggleView(documentId, 'guides')
-        case 'canvas.grid':
-          return toggleView(documentId, 'grid')
-        case 'canvas.snap':
-          return toggleView(documentId, 'snap')
-        case 'canvas.clearGuides':
-          return clearGuides(documentId)
         case 'canvas.export':
         case 'canvas.exportLayered': {
           const host = engine.current
@@ -332,15 +316,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           const way = command === 'canvas.brushLarger' ? 'larger' : 'smaller'
           return setBrush(current => resizedBrush(current, way))
         }
-        case 'canvas.selectAll': {
-          const stack = canvasOf(useCanvases.getState(), documentId)
-          return useCanvasViews.getState().setSelection(documentId, {
-            kind: 'rect',
-            rect: { x: 0, y: 0, width: stack.width, height: stack.height },
-          })
-        }
-        case 'canvas.deselect':
-          return useCanvasViews.getState().setSelection(documentId, null)
         // Both no-ops without a frame on screen, which is what makes ⏎ and ⎋ safe to bind here:
         // the engine answers, and only the document in front is listening.
         case 'canvas.cropApply':
@@ -395,24 +370,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
             .getState()
             .runCommand(documentId, flatten(id, t('commands.canvasFlatten.layerName')))
         }
-        case 'canvas.flipHorizontal':
-          return useCanvases.getState().runCommand(documentId, flipImage('horizontal'))
-        case 'canvas.flipVertical':
-          return useCanvases.getState().runCommand(documentId, flipImage('vertical'))
-        case 'canvas.rotateCw':
-        case 'canvas.rotateCcw':
-          // The port turns the pixels, from inside the command — so an undo unturns them. Done
-          // here instead, ⌘Z gave back a portrait frame over landscape textures.
-          return useCanvases
-            .getState()
-            .runCommand(
-              documentId,
-              rotateImage(command === 'canvas.rotateCw', turnPort(documentId)),
-            )
-        case 'canvas.undo':
-          return useCanvases.getState().undo(documentId)
-        case 'canvas.redo':
-          return useCanvases.getState().redo(documentId)
       }
     },
     [armed, documentId, pick, t],
