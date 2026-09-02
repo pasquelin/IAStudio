@@ -758,6 +758,12 @@ export class SceneRenderer {
   /** Nodes that only MOVED since the last grouping — their slots are still theirs. */
   private readonly movedNodes = new Set<string>()
   /**
+   * What hangs from each node, by id. Read off the DOCUMENT rather than the graph: a body drawn
+   * by a group is held out of its parent's children, so a walk of the objects cannot answer.
+   * Rebuilt with the groups, which is the one moment a parent can have changed.
+   */
+  private readonly childNodes = new Map<string, string[]>()
+  /**
    * The box the shadow frusta are cut from, held across passes. A move only ever GROWS it; it is
    * dropped when the content changes, which is the one thing that can make it shrink.
    */
@@ -1540,6 +1546,7 @@ export class SceneRenderer {
       this.viewport.scene.updateMatrixWorld()
       // The sources that walk no longer reaches, composed against the parents it just wrote.
       this.instances.refreshSources()
+      this.readChildNodes()
       const instanced = this.instances.rebuild([...this.applied.values()], id =>
         this.objects.get(id),
       )
@@ -1552,14 +1559,37 @@ export class SceneRenderer {
     }
     if (this.movedNodes.size === 0) return
 
-    // The moved nodes alone, never the whole scene: refreshing all of it costs the traversal of
-    // every source — 15 ms against 3 on 50 000 nodes, per typed placement, measured 02/09.
-    for (const id of this.movedNodes) this.objects.get(id)?.updateWorldMatrix(true, false)
+    // The moved nodes and what hangs from them, never the whole scene: refreshing all of it costs
+    // the traversal of every source — 15 ms against 3 on 50 000 nodes, per typed placement,
+    // measured 02/09.
+    const moved = this.movedWithWhatHangsFromThem()
+    for (const id of moved) this.objects.get(id)?.updateWorldMatrix(true, false)
 
     // Only the slots that moved. Their region's bounds are widened rather than recut, so the
     // culling stays conservative until the next real change of content puts them back exact.
-    this.instances.moved(this.movedNodes, id => this.objects.get(id))
+    this.instances.moved(moved, id => this.objects.get(id))
     this.movedNodes.clear()
+  }
+
+  /** Every node whose place in the world the move changed — the moved ones, and their offspring. */
+  private movedWithWhatHangsFromThem(): string[] {
+    const moved = [...this.movedNodes]
+    // Grown while it is walked, so a whole branch is reached without a second structure.
+    for (let at = 0; at < moved.length; at += 1) {
+      const under = this.childNodes.get(moved[at] ?? '')
+      if (under) moved.push(...under)
+    }
+    return moved
+  }
+
+  private readChildNodes(): void {
+    this.childNodes.clear()
+    for (const node of this.applied.values()) {
+      if (!node.parentId) continue
+      const kept = this.childNodes.get(node.parentId)
+      if (kept) kept.push(node.id)
+      else this.childNodes.set(node.parentId, [node.id])
+    }
   }
 
   /** Which view the pointer is over — what a display command acts on. */

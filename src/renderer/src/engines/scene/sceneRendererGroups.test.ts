@@ -158,6 +158,33 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
     expect(placedAt(renderer, 3)).toBe(15)
   })
 
+  /**
+   * `moved` wrote the slots of the nodes of the pass and of nothing else, and a child whose own
+   * placement did not change is never one of them.
+   */
+  it('follows the parent it hangs from, which moved without it', () => {
+    const nodes: SceneNode[] = [
+      // A paint of its own, so the crate is a group of one and falls under the floor: a lot keys
+      // on the MATERIAL, and a crate sharing it would take a slot in the very lot being read.
+      {
+        ...meshNode('crate'),
+        material: { ...meshNode('crate').material, color: '#123456' },
+      },
+      ...inARow(WORTH_INSTANCING).map(node => ({ ...node, parentId: 'crate' })),
+    ]
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    const moved = nodes.map(node =>
+      node.id === 'crate'
+        ? { ...node, transform: { ...node.transform, position: { x: 100, y: 0, z: 0 } } }
+        : node,
+    )
+    renderer.apply({ ...EMPTY_SCENE, nodes: moved })
+
+    expect(placedAt(renderer, 3)).toBe(115)
+  })
+
   it('follows a placement typed rather than dragged', () => {
     const nodes = inARow(WORTH_INSTANCING)
     const renderer = rendererOf(grouping)
