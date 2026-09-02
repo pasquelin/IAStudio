@@ -2,7 +2,9 @@ import { InstancedMesh, Mesh, type BufferGeometry, type Material, type Object3D 
 import { stableKey } from '@shared/hash'
 import { TRIANGLES_PER_REGION, regionsByGrid, type SpatialRegions } from './instanceRegions'
 import {
+  carriesNoNode,
   DRAWN_BY_INSTANCE,
+  heldOutOfDraw,
   spellingOf,
   sweep,
   widen,
@@ -35,6 +37,7 @@ export function createInstancedGroups(
   const drawn: InstancedMesh[] = []
   /** Where a node's matrix sits, so a move can be written without walking the scene again. */
   const placed = new Map<string, { instance: InstancedMesh; slot: number }>()
+  const sources = heldOutOfDraw()
   // Everything a draw call would have to change: the shape, and what it is painted with. Two
   // nodes that differ by any of it cannot share one call, so they are two groups.
   const keyOf = spellingOf(node =>
@@ -54,6 +57,7 @@ export function createInstancedGroups(
     rebuild: (nodes, objectOf) => {
       clear()
 
+      const held: Mesh[] = []
       let instanced = 0
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf)) {
         const first = worn.meshes[0]
@@ -90,9 +94,13 @@ export function createInstancedGroups(
           drawn.push(instance)
         }
 
-        for (const mesh of worn.meshes) mesh.layers.set(DRAWN_BY_INSTANCE)
+        for (const mesh of worn.meshes) {
+          mesh.layers.set(DRAWN_BY_INSTANCE)
+          if (carriesNoNode(mesh, objectOf)) held.push(mesh)
+        }
         instanced += worn.meshes.length
       }
+      sources.hold(held)
       return instanced
     },
 
@@ -120,7 +128,17 @@ export function createInstancedGroups(
 
     nodeIdOf: () => null,
 
-    dispose: clear,
+    hangSources: sources.hang,
+
+    dropSources: sources.drop,
+
+    refreshSources: sources.refresh,
+
+    // The sources back in the walk with it: nothing draws for them any more.
+    dispose: () => {
+      clear()
+      sources.hang()
+    },
   }
 }
 

@@ -70,8 +70,143 @@ export type InstancedGroups = {
   pickable: () => readonly Mesh[]
   /** The node a hit on one of `pickable` stands for, or nothing for a hit on anything else. */
   nodeIdOf: (hit: Intersection) => string | null
+  /**
+   * Hangs every source back under the node it belongs to, for whoever reads the tree DOWNWARD.
+   *
+   * A source is drawn by something else, so it is kept out of the array three walks — see
+   * `heldOutOfDraw`. Reading the scene BY ID needs nothing of this; walking a parent's children
+   * does, and so does `updateMatrixWorld`, which composes through them.
+   */
+  hangSources: () => void
+  /** Back out of the walk, where the last rebuild left them. */
+  dropSources: () => void
+  /**
+   * Composes the world matrices of the sources held out of the walk, which no longer reaches
+   * them. A group COPIES those matrices, so this runs between `updateMatrixWorld` and a rebuild.
+   */
+  refreshSources: () => void
   /** The engine is going away, and so are the meshes it built. */
   dispose: () => void
+}
+
+/** What holds the sources out of the walk, and hands them back on demand. */
+export type HeldOutOfDraw = {
+  /** The sources a rebuild has just settled on. Whatever was held and is not goes back in. */
+  hold: (meshes: readonly Mesh[]) => void
+  /** Composes the world matrices of what is held: no walk of the scene reaches them. */
+  refresh: () => void
+  hang: () => void
+  drop: () => void
+}
+
+/**
+ * The sources of the groups, held OUT of the array three walks.
+ *
+ * A source keeps its `parent`: everything that reads the tree UPWARD goes on answering as it did
+ * — `isDrawn` below, `updateWorldMatrix` when a node moves, and `hangFromParent`, which finds it
+ * already under its parent and does nothing. What it leaves is `parent.children`, the one array
+ * `updateMatrixWorld`, `projectObject` and every shadow pass walk.
+ *
+ * Measured on this Mac, 50 000 shadowed sources beside what draws them: 11.07 ms of a render
+ * spent in that walk, 0.07 once they are out of it. An invisible container spares `projectObject`
+ * alone and lands at 5.63 — half, for the same bookkeeping.
+ *
+ * 🛑 A reader that walks a parent's children sees nothing of them. The exporter is the one such
+ * reader here, and `hangSources` is what it calls first.
+ */
+export function heldOutOfDraw(): HeldOutOfDraw {
+  let held: readonly Mesh[] = []
+  let hung = true
+
+  /** By the parent each one hangs from NOW: a drag carries a source under the pivot mid-gesture. */
+  const byParent = (meshes: readonly Mesh[]): Map<Object3D, Mesh[]> => {
+    const parents = new Map<Object3D, Mesh[]>()
+    for (const mesh of meshes) {
+      if (!mesh.parent) continue
+      const kept = parents.get(mesh.parent)
+      if (kept) kept.push(mesh)
+      else parents.set(mesh.parent, [mesh])
+    }
+    return parents
+  }
+
+  const hang = (): void => {
+    if (hung) return
+    hung = true
+    for (const [parent, meshes] of byParent(held)) {
+      const ours = new Set<Object3D>(meshes)
+      // The array rebuilt in one pass rather than spliced mesh by mesh: a source leaves a list of
+      // fifty thousand siblings, and one splice each is quadratic. Filtered first, so a source a
+      // gesture already put back is not held twice.
+      parent.children = [...parent.children.filter(child => !ours.has(child)), ...meshes]
+    }
+  }
+
+  const drop = (): void => {
+    if (!hung) return
+    hung = false
+    for (const [parent, meshes] of byParent(held)) {
+      const ours = new Set<Object3D>(meshes)
+      parent.children = parent.children.filter(child => !ours.has(child))
+    }
+  }
+
+  return {
+    // ONE pass over each parent's children rather than a hang then a drop: the two together cost
+    // 20 ms of a change of content on 50 000 bodies, and all the second undoes is the first.
+    hold: meshes => {
+      const out = new Set<Object3D>(meshes)
+      const back = byParent(held.filter(mesh => !out.has(mesh)))
+      const parents = new Set<Object3D>(back.keys())
+      for (const mesh of meshes) if (mesh.parent) parents.add(mesh.parent)
+
+      for (const parent of parents) {
+        const returning = back.get(parent) ?? []
+        const known = new Set<Object3D>(returning)
+        parent.children = [
+          ...parent.children.filter(child => !out.has(child) && !known.has(child)),
+          ...returning,
+        ]
+      }
+      held = [...meshes]
+      hung = false
+    },
+
+    refresh: () => {
+      for (const mesh of held) {
+        const parent = mesh.parent
+        if (!parent) continue
+        if (mesh.matrixAutoUpdate) mesh.updateMatrix()
+        mesh.matrixWorld.multiplyMatrices(parent.matrixWorld, mesh.matrix)
+      }
+    },
+
+    hang,
+    drop,
+  }
+}
+
+/**
+ * Takes an object out of the tree for good, held out of the walk or not.
+ *
+ * `removeFromParent` does nothing at all to a source a group holds out of its parent's children:
+ * three splices by index and clears `parent` only when it finds one. A released node would keep
+ * its parent and be hung back by the next rebuild, disposed geometry and all.
+ */
+export function unhang(object: Object3D): void {
+  object.removeFromParent()
+  object.parent = null
+}
+
+/**
+ * Whether a source may leave the walk: nothing standing for a NODE hangs from it.
+ *
+ * A node built under one would go off the graph with its parent and stay there — the detaching
+ * leaves `parent` alone, so `hangFromParent` finds the child already where it belongs and puts
+ * nothing back. Such a source is still DRAWN by its group; it just stays in the walk.
+ */
+export function carriesNoNode(mesh: Mesh, objectOf: (id: string) => Object3D | undefined): boolean {
+  return !mesh.children.some(child => objectOf(child.name) === child)
 }
 
 /**

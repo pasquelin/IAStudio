@@ -203,7 +203,7 @@ import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import './bvhPatches'
-import type { InstancedGroups } from './grouping'
+import { unhang, type InstancedGroups } from './grouping'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
@@ -1538,9 +1538,12 @@ export class SceneRenderer {
       // one pass that did is `tuneShadows`, which only runs when a light casts. Without this a
       // body of a fresh group was drawn at the origin.
       this.viewport.scene.updateMatrixWorld()
+      // The sources that walk no longer reaches, composed against the parents it just wrote.
+      this.instances.refreshSources()
       const instanced = this.instances.rebuild([...this.applied.values()], id =>
         this.objects.get(id),
       )
+      this.holdSources()
       // Only when there are instances to dress: they are new objects wearing what their sources
       // wore, so a pane that believed the scene already dressed would leave them out of a solid
       // or a material view. An ordinary scene reaches no group and must pay nothing.
@@ -1646,19 +1649,53 @@ export class SceneRenderer {
     // The copies are taken synchronously inside `exportObjects`, so putting the document's own
     // visibility back for the length of this call is enough — an isolation running while somebody
     // exports must not write a file missing whatever they were not looking at.
-    return this.asDocumented(() =>
-      exportObjects(
-        roots.flatMap(id => this.objects.get(id) ?? []),
-        format,
-        {
-          // The objects wear node ids, which is what picking reads back off a hit. A file wears
-          // the names the document gave them.
-          nameOf: id => this.applied.get(id)?.name,
-          clipsFor: copies => this.bakedClips(copies),
-          rankOf: id => rank.get(id),
-        },
+    return this.asHung(() =>
+      this.asDocumented(() =>
+        exportObjects(
+          roots.flatMap(id => this.objects.get(id) ?? []),
+          format,
+          {
+            // The objects wear node ids, which is what picking reads back off a hit. A file wears
+            // the names the document gave them.
+            nameOf: id => this.applied.get(id)?.name,
+            clipsFor: copies => this.bakedClips(copies),
+            rankOf: id => rank.get(id),
+          },
+        ),
       ),
     )
+  }
+
+  /**
+   * Runs something against the scene as a TREE, with every body a group draws for back under the
+   * node it hangs from.
+   *
+   * `Object3D.children` is what an exporter writes a parent's contents from, and a source drawn
+   * by a group is held out of it — see `heldOutOfDraw`. Reading the scene BY ID needs none of
+   * this; walking it downward does. The copies are taken synchronously inside `exportObjects`,
+   * so putting them back for the length of the call is enough — the same reasoning as
+   * `asDocumented`, which this wraps.
+   */
+  private asHung<T>(run: () => T): T {
+    this.instances.hangSources()
+    try {
+      return run()
+    } finally {
+      this.holdSources()
+    }
+  }
+
+  /**
+   * Whether the bodies a group draws for belong in the walk of the scene.
+   *
+   * They are what carries the EDGES: `applyWireOverlay` hangs a `LineSegments` under each mesh,
+   * and a source out of the walk takes its outline with it. So the edge modes pay the traversal
+   * the grouping exists to give back — 16.2 ms of scene pass against 0.29 on 50 000 bodies,
+   * measured 02/09 — and every other mode does not.
+   */
+  private holdSources(): void {
+    if (this.needsEdges()) this.instances.hangSources()
+    else this.instances.dropSources()
   }
 
   /**
@@ -1745,6 +1782,9 @@ export class SceneRenderer {
     for (const object of this.objects.values()) {
       applyWireOverlay(object, anyEdges, this.wireMaterial, quads)
     }
+    // After the outlines are hung or dropped: whether the sources belong in the walk is exactly
+    // whether they carry any.
+    this.holdSources()
     this.redraw()
   }
 
@@ -3875,8 +3915,8 @@ export class SceneRenderer {
       // Its own buffer, and a child of the mesh rather than the mesh: nothing else frees it.
       applyWireOverlay(object, false, this.wireMaterial)
       // Not `scene.remove`: mid-drag the object hangs off the pivot, and the scene would not
-      // find it to remove.
-      object.removeFromParent()
+      // find it to remove. And `unhang` rather than `removeFromParent`: see there.
+      unhang(object)
       if (object instanceof Mesh) {
         this.freeGeometry(object.geometry)
         disposeMaterial(object)

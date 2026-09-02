@@ -10,8 +10,10 @@ import './bvhPatches'
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
 import {
+  carriesNoNode,
   DRAWN_BY_INSTANCE,
   DRAWN_TRIANGLES,
+  heldOutOfDraw,
   spellingOf,
   sweep,
   widen,
@@ -44,6 +46,7 @@ export function createBatchedGroups(
   const members = new WeakMap<BatchedMesh, string[]>()
   /** Whether the lots have trees for a ray to walk. Built on the first pick, not per rebuild. */
   let treesStale = true
+  const sources = heldOutOfDraw()
   const paintOf = spellingOf(node => (node.type === 'mesh' ? stableKey(node.material) : ''))
   // The buffer LAYOUT is part of the key: three refuses to put an unindexed shape beside an
   // indexed one, or two attribute sets in one buffer.
@@ -67,6 +70,7 @@ export function createBatchedGroups(
     rebuild: (nodes, objectOf) => {
       clear()
 
+      const held: Mesh[] = []
       let batched = 0
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf)) {
         const first = worn.meshes[0]
@@ -112,9 +116,13 @@ export function createBatchedGroups(
         host.add(lot)
         drawn.push(lot)
 
-        for (const mesh of worn.meshes) mesh.layers.set(DRAWN_BY_INSTANCE)
+        for (const mesh of worn.meshes) {
+          mesh.layers.set(DRAWN_BY_INSTANCE)
+          if (carriesNoNode(mesh, objectOf)) held.push(mesh)
+        }
         batched += worn.meshes.length
       }
+      sources.hold(held)
       return batched
     },
 
@@ -153,7 +161,17 @@ export function createBatchedGroups(
         ? (members.get(hit.object)?.[hit.batchId] ?? null)
         : null,
 
-    dispose: clear,
+    hangSources: sources.hang,
+
+    dropSources: sources.drop,
+
+    refreshSources: sources.refresh,
+
+    // The sources back in the walk with it: nothing draws for them any more.
+    dispose: () => {
+      clear()
+      sources.hang()
+    },
   }
 }
 

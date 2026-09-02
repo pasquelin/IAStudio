@@ -2,7 +2,7 @@ import { BatchedMesh, Group, InstancedMesh, Matrix4, type Object3D } from 'three
 import { byCodeUnit } from '@shared/text'
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer, type GroupingStrategy } from './SceneRenderer'
-import { directionalLight, gltfNodesOf, meshNode } from './scene-fixtures'
+import { directionalLight, gltfNodesOf, groupNodeFixture, meshNode } from './scene-fixtures'
 import { WORTH_INSTANCING } from './grouping'
 import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './sceneState'
 
@@ -171,5 +171,122 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
     renderer.apply({ ...EMPTY_SCENE, nodes: moved })
 
     expect(placedAt(renderer, 3)).toBe(900)
+  })
+})
+
+describe.each(STRATEGIES)('the sources a %s group draws for, from outside the engine', grouping => {
+  /** `as`: what a frame walks is the engine's own scene, and it is private by design. */
+  const graphOf = (renderer: SceneRenderer): Object3D =>
+    (renderer as unknown as { viewport: { scene: Object3D } }).viewport.scene
+
+  const walked = (root: Object3D): Object3D[] => {
+    const met: Object3D[] = []
+    root.traverse(child => met.push(child))
+    return met
+  }
+
+  /** Where the group put the body of one slot, along x. */
+  const placedIn = (renderer: SceneRenderer, slot: number): number => {
+    const held = new Matrix4()
+    for (const child of graphOf(renderer).children) {
+      if (child instanceof InstancedMesh) child.getMatrixAt(slot, held)
+      else if (child instanceof BatchedMesh) child.getMatrixAt(slot, held)
+      else continue
+      return held.elements[12] ?? 0
+    }
+    throw new Error('nothing was grouped')
+  }
+
+  /** One group's worth of copies, all hanging from a crate — the shape a decor really has. */
+  const inACrate = (): SceneNode[] => [
+    groupNodeFixture('crate'),
+    ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
+      ...meshNode(`c${at}`, 'crate'),
+      transform: {
+        position: { x: at * 5, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 },
+      },
+    })),
+  ]
+
+  it('are no longer walked by a frame, which is what they cost', () => {
+    const nodes = inACrate()
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    const met = walked(graphOf(renderer)).map(object => object.name)
+    for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
+    expect(met).toContain('crate')
+  })
+
+  it('are still written to the file, under the node they hang from', async () => {
+    const nodes = inACrate()
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    const names = await namesOf(renderer)
+    for (const node of nodes) expect(names).toContain(node.id)
+  })
+
+  it('are back out of the walk once the file is written', async () => {
+    const nodes = inACrate()
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+    await namesOf(renderer)
+
+    const met = walked(graphOf(renderer)).map(object => object.name)
+    for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
+  })
+
+  // `both` and not `wireframe`: `showsEdges` draws the overlay for that one and, without quads,
+  // leaves `wireframe` to the material's own flag — so the sources carry nothing to draw.
+  it('stay in the walk while the edges are on, since they are what carries them', () => {
+    const nodes = inACrate()
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    renderer.setDisplayModes(['both'])
+
+    const met = walked(graphOf(renderer)).map(object => object.name)
+    for (const node of nodes.slice(1)) expect(met).toContain(node.id)
+  })
+
+  it('leave it again once the edges go', () => {
+    const nodes = inACrate()
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    renderer.setDisplayModes(['both'])
+    renderer.setDisplayModes(['shaded'])
+
+    const met = walked(graphOf(renderer)).map(object => object.name)
+    for (const node of nodes.slice(1)) expect(met).not.toContain(node.id)
+  })
+
+  it('do not come back to it once their node is gone', () => {
+    const nodes = inACrate()
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    renderer.apply({ ...EMPTY_SCENE, nodes: nodes.filter(node => node.id !== 'c0') })
+    renderer.setDisplayModes(['both'])
+
+    expect(walked(graphOf(renderer)).map(object => object.name)).not.toContain('c0')
+  })
+
+  it('stand where a crate that MOVED puts them, which no walk refreshes any more', () => {
+    const nodes = inACrate()
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    const moved = nodes.map(node =>
+      node.id === 'crate'
+        ? { ...node, transform: { ...node.transform, position: { x: 100, y: 0, z: 0 } } }
+        : node,
+    )
+    renderer.apply({ ...EMPTY_SCENE, nodes: moved })
+
+    expect(placedIn(renderer, 3)).toBe(115)
   })
 })

@@ -93,7 +93,8 @@ describe('createInstancedGroups', () => {
     const { nodes, objects } = alike(WORTH_INSTANCING)
     createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
 
-    // What keeps picking alive: they are still in the scene, matrices and all — just not drawn.
+    // What keeps picking alive: they are still in `objects`, matrices and all — just neither
+    // drawn nor walked, which is a layer and a place in the tree, not the same thing.
     for (const mesh of objects.values()) {
       expect(mesh.layers.isEnabled(DRAWN_BY_INSTANCE)).toBe(true)
       expect(mesh.layers.isEnabled(0)).toBe(false)
@@ -366,6 +367,97 @@ describe('keepsItsGroup', () => {
     // them, since the source that stopped casting is the one nothing draws.
     for (const moved of elsewhere) {
       expect(keepsItsGroup(node, { ...node, ...moved })).toBe(false)
+    }
+  })
+})
+
+describe('the sources a group draws for', () => {
+  /** Hung where the engine hangs them: under the scene, which is what a render walks. */
+  const hungIn = (scene: Object3D, objects: Map<string, Mesh>): void => {
+    for (const mesh of objects.values()) scene.add(mesh)
+  }
+
+  const walked = (root: Object3D): Object3D[] => {
+    const met: Object3D[] = []
+    root.traverse(child => met.push(child))
+    return met
+  }
+
+  it('leave the walk of the scene, which is what a frame pays for them', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    for (const mesh of objects.values()) expect(walked(scene)).not.toContain(mesh)
+  })
+
+  it('go on hanging from the node they belong to, which is what answers upward', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    for (const mesh of objects.values()) expect(mesh.parent).toBe(scene)
+  })
+
+  it('come back to the walk when their group shrinks under the floor', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    groups.rebuild(nodes.slice(0, 4), id => objects.get(id))
+    for (const node of nodes.slice(0, 4)) {
+      expect(walked(scene)).toContain(objects.get(node.id))
+    }
+  })
+
+  it('come back to it when the engine goes', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    groups.dispose()
+    for (const mesh of objects.values()) expect(walked(scene)).toContain(mesh)
+  })
+
+  it('stay in it when a node of its own hangs from one, which would go off the graph with it', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    const carrier = objects.get('n0')
+    const child = new Object3D()
+    child.name = 'lamp'
+    carrier?.add(child)
+
+    const count = createInstancedGroups(scene).rebuild(nodes, id =>
+      id === 'lamp' ? child : objects.get(id),
+    )
+
+    // Still DRAWN by the instance — only its place in the tree is kept.
+    expect(count).toBe(WORTH_INSTANCING)
+    expect(walked(scene)).toContain(carrier)
+    expect(walked(scene)).not.toContain(objects.get('n1'))
+  })
+
+  it('go back where a caller reads the tree, and out again after', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    groups.hangSources()
+    const seen = walked(scene)
+    groups.dropSources()
+
+    for (const mesh of objects.values()) {
+      expect(seen).toContain(mesh)
+      expect(walked(scene)).not.toContain(mesh)
     }
   })
 })
