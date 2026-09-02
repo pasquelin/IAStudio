@@ -225,9 +225,31 @@ function frameOf(renderer: SceneRenderer, timer: GlTimer | null): Promise<Frame>
   })
 }
 
+/**
+ * Le plafond de ce qu'une DISTANCE MAX rendrait, mesuré par le plan lointain de la caméra.
+ *
+ * Ce que trois fait déjà : un objet dont la sphère tombe derrière `far` sort du frustum et n'est
+ * pas dessiné. Ce n'est pas une distance max livrée — la passe d'ombre garde la sienne, et rien
+ * ne s'estompe au bord — mais c'est ce qu'elle pourrait couper.
+ *
+ * 🛑 Il ne mesure RIEN sur les deux vues de ce banc : toutes deux cadrent le niveau depuis le
+ * DEHORS, donc le plan lointain garde tout ou couperait tout. À 80 m sur S3 il rend 97 086 corps
+ * sur 100 000, et la vue tournée ne bouge pas d'un triangle. Il attend une vue prise DANS le
+ * niveau, que ce banc n'a pas.
+ */
+function clampFar(renderer: SceneRenderer, metres: number): void {
+  if (metres <= 0) return
+  const viewport = renderer['viewport'] as unknown as { perspective: PerspectiveCamera; paneCameras: PerspectiveCamera[] }
+  for (const camera of [viewport.perspective, ...viewport.paneCameras]) {
+    camera.far = metres
+    camera.updateProjectionMatrix()
+  }
+}
+
 async function measureView(renderer: SceneRenderer, canvas: HTMLCanvasElement, view: View): Promise<Numbers> {
   const gl = canvas.getContext('webgl2')
   const timer = gl ? createGlTimer(gl) : null
+  clampFar(renderer, Number(QUERY.get('far') ?? 0))
 
   // Une frame que quelqu'un d'autre a demandée finirait devant nos rappels : on la laisse passer.
   await nextFrame()
