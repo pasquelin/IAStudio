@@ -417,7 +417,70 @@ les cellules, et un lot de mobiles ne pend d'aucune d'elles — son mesh restait
 tampon d'instances sur le GPU. Le test de démontage existant ne promouvait aucun corps, donc il
 passait vert sur exactement ce chemin. Corrigé, et tenu par un second cas qui promeut d'abord.
 
-## 14. Un défaut de banc, à ne pas repayer
+## 14. La couche dynamique, tranchée sur un VRAI déplacement
+
+Le décor du § 13 déplaçait les corps de 0,4 unité en tout : il ne mesurait rien de ce que la
+couche doit rendre. Celui-ci — `spike/webgpu/crossing{Bench.ts,.html}` — déplace **1 % des corps à
+1 m par frame**, la vitesse `run` de C5-B0, sur 300 puis 900 frames. À un grain de 256, 300 frames
+font **1,17 cellule** et 900 en font **3,52** : les deux sont donnés, parce que « 300 frames » et
+« plusieurs cellules » ne tiennent pas ensemble à cette vitesse.
+
+Le bras **sans couche** est le code d'avant l'étape 4 (`717f00e7b`), rejoué par le même banc.
+
+### Sans la couche — le chemin en place ne tient pas
+
+| 900 frames, 4 848 mobiles | `off` | **`grid` SANS couche** |
+|---|---:|---:|
+| corps **non dessinés** | 0 | **3 273 sur 4 848 (68 %)** |
+| dérive maximale | 0 | **900 unités** |
+| cellule la plus large | — | **531,8 → 2 142,2** (×4,03) |
+| `moved`, moyenne | 2,49 | **7,72** |
+
+**Un corps qui a quitté sa cellule n'est plus dessiné du tout dès que sa cellule d'origine sort de
+la zone** : il part avec elle, et il en est parti 68 % au bout de 3,5 cellules. Et la boîte de la
+cellule la plus large **quadruple**, parce qu'elle ne fait que croître autour des corps qui la
+traversent — le rejet du § 8 s'émousse à mesure. **[M]**
+
+🛑 **Sur cette caméra, cela n'a coûté AUCUN pixel** : les 3 273 absents étaient tous hors du champ
+(`adriftInView = 0`). Le défaut est structurel et mesuré ; il ne s'est pas VU sur cette vue-là, et
+je ne le présente pas autrement. Une caméra tournée vers leur destination le montrerait.
+
+### Avec la couche
+
+| | `off` | `grid` promotion | **`grid` déclaré** |
+|---|---:|---:|---:|
+| corps non dessinés | 0 | **0** | **0** |
+| cellule la plus large | — | **531,8 → 531,8** | **531,8 → 531,8** |
+| `moved`, 300 frames | 1,84 | 2,03 | **1,90** |
+| `moved`, 900 frames | 2,55 | 3,21 | **2,61** |
+| **première passe** | 5,44 | **19,3 à 23,0** | **5,4 à 5,9** |
+| pixels contre `off` | — | **0** | **0** |
+
+**Décision : la couche reste.** Le chemin en place sans elle n'est pas correct sur un vrai
+déplacement — il perd les deux tiers des mobiles et laisse la boîte de cellule enfler d'un facteur
+quatre. **[M]**
+
+### Ce que la déclaration change
+
+**Elle supprime le pic de première passe** : 19 à 23 ms de promotion pour 4 848 corps deviennent
+**5,4 à 5,9 ms**, soit le coût de `off` lui-même (5,4). Un corps déclaré n'est jamais mis dans une
+cellule, donc son premier mouvement n'a plus rien à promouvoir et aucune cellule n'est défaite pour
+lui. En régime, la couche déclarée est à **+0,06 ms** de `off` à 300 frames et **+0,06** à 900 —
+sous l'écart des témoins. La promotion reste, pour ce qui bouge sans l'avoir dit. **[M]**
+
+Le modèle ne crée **aucun type neuf** : `movesOnItsOwn` lit `Movement`, `RigidBody` ou
+`CharacterController`, que le dépôt déclare déjà — sa propre règle veut qu'un composant sans
+système soit un champ de formulaire qui ne fait rien.
+
+### Le défaut que la relecture a trouvé, et que la mesure ne pouvait pas voir
+
+Un mobile déclaré qui **change de groupe** — une peinture ou une forme modifiée, la déclaration
+inchangée — restait dans son ancien lot : **dessiné deux fois, dans deux matériaux, tant qu'il
+continuait à se déclarer mobile.** `shed` demandait « ce corps a-t-il été vu ? » au lieu de « a-t-il
+été vu POUR CE LOT ? ». Corrigé, et tenu par un test qui échoue à vue quand on remet la question
+globale. **[C]**
+
+## 15. Un défaut de banc, à ne pas repayer
 
 **Une campagne qui enchaîne plusieurs tailles de monde dans la même page rend des relevés faux.**
 Mesuré : `counts=500000,5000,500` a rendu un témoin `off` qui différait de `off` sur **2 972 888
@@ -430,7 +493,23 @@ Douze moteurs montés dans une page, dont quatre portant 500 000 nœuds, dépass
 tient. **Une taille de monde par campagne**, et le témoin `off` joué deux fois reste le seul juge
 de la validité d'un relevé.
 
-## 15. Ce que le lot ne fait pas
+**Trois autres, payés sur le décor du § 14.** `redraw()` ne dessine pas, il **demande** une frame :
+lire le canvas juste après rend un tampon quelconque, et la comparaison annonçait **85 % de pixels
+différents entre deux rendus identiques** — on dessine soi-même et on lit dans la foulée. Une
+vérification « chaque mobile est-il dessiné au bon endroit » écrite lot par lot est en O(mobiles ×
+instances) et ne finit pas ; elle se fait en une passe sur les abscisses dessinées, puis par
+recherche dichotomique. Et un groupe d'UN corps est sous le plancher d'instanciation, donc jamais
+groupé : un décor qui fait changer un corps de groupe doit laisser les deux groupes au-dessus de
+seize, sans quoi il ne mesure rien.
+
+**Un incident sans perte, mais à connaître.** Les douze `RAPPORT-*.md` de `spike/webgpu/` ont
+disparu du disque en cours de session alors qu'ils étaient suivis par git. Ce sont les gardes
+larges — qui lisent chaque fichier suivi — qui l'ont signalé, et `git checkout` les a tous rendus :
+rien n'était perdu, tout était commité. **La cause n'est pas établie** : ni `pnpm check`, ni
+`pnpm format`, ni `run.mjs` ne le reproduisent, et `run.mjs` n'appelle aucune fonction de
+suppression. Écrit ici parce qu'un fichier suivi qui s'efface sans bruit se reverra peut-être.
+
+## 16. Ce que le lot ne fait pas
 
 - Le CPU de soumission ne rejoint toujours pas la parité du § 1 : ×1,6 après l'étape 3, contre
   ×2,1 avant. Ce qui reste est le plafond du § 10.

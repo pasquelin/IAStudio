@@ -1,0 +1,86 @@
+{
+  "at": "2026-09-02T18:47:52.299Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "label": "off",
+      "mode": "off",
+      "declare": false,
+      "movers": 4848,
+      "frames": 900,
+      "travelled": 900,
+      "cellsCrossed": 3.516,
+      "updateMeanMs": 2.545,
+      "updatePeakMs": 55.995,
+      "firstFrameMs": 5.435,
+      "widestCellBefore": 0,
+      "widestCellAfter": 0,
+      "meshes": 1235,
+      "adrift": 0,
+      "adriftInView": 0,
+      "worstDrift": 0
+    },
+    {
+      "label": "grid",
+      "mode": "grid",
+      "declare": false,
+      "movers": 4848,
+      "frames": 900,
+      "travelled": 900,
+      "cellsCrossed": 3.516,
+      "updateMeanMs": 3.206,
+      "updatePeakMs": 198.31,
+      "firstFrameMs": 198.31,
+      "widestCellBefore": 531.757,
+      "widestCellAfter": 531.757,
+      "meshes": 6936,
+      "adrift": 0,
+      "adriftInView": 0,
+      "worstDrift": 0
+    },
+    {
+      "label": "gridDeclared",
+      "mode": "grid",
+      "declare": true,
+      "movers": 4848,
+      "frames": 900,
+      "travelled": 900,
+      "cellsCrossed": 3.516,
+      "updateMeanMs": 2.606,
+      "updatePeakMs": 41.365,
+      "firstFrameMs": 5.82,
+      "widestCellBefore": 531.757,
+      "widestCellAfter": 531.757,
+      "meshes": 6936,
+      "adrift": 0,
+      "adriftInView": 0,
+      "worstDrift": 0
+    },
+    {
+      "pixels": "grid",
+      "share": 0,
+      "meanGap": 9.7
+    },
+    {
+      "pixels": "gridDeclared",
+      "share": 0,
+      "meanGap": 9.7
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 29869,
+      "phase": "terminé",
+      "workingSetKb": 4619360
+    },
+    {
+      "at": 31872,
+      "phase": "fin",
+      "workingSetKb": 4619360
+    }
+  ]
+}

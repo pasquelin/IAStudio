@@ -1,0 +1,58 @@
+{
+  "at": "2026-09-02T18:37:18.931Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "label": "off",
+      "mode": "off",
+      "declare": false,
+      "movers": 4848,
+      "frames": 900,
+      "travelled": 900,
+      "cellsCrossed": 3.516,
+      "updateMeanMs": 2.492,
+      "updatePeakMs": 18.21,
+      "firstFrameMs": 5.01,
+      "widestCellBefore": 0,
+      "widestCellAfter": 0,
+      "meshes": 1235,
+      "adrift": 0,
+      "adriftInView": 0,
+      "worstDrift": 0
+    },
+    {
+      "label": "grid",
+      "mode": "grid",
+      "declare": false,
+      "movers": 4848,
+      "frames": 900,
+      "travelled": 900,
+      "cellsCrossed": 3.516,
+      "updateMeanMs": 7.718,
+      "updatePeakMs": 144.34,
+      "firstFrameMs": 11.35,
+      "widestCellBefore": 531.757,
+      "widestCellAfter": 2142.239,
+      "meshes": 6912,
+      "adrift": 3273,
+      "adriftInView": 0,
+      "worstDrift": 900
+    },
+    {
+      "pixels": "grid",
+      "share": 0,
+      "meanGap": 9.7
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 19456,
+      "phase": "fin",
+      "workingSetKb": 4416224
+    }
+  ]
+}

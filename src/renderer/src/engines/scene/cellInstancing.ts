@@ -162,12 +162,7 @@ export function createCellGroups(
   const bucketOf = new WeakMap<InstancedMesh, Bucket>()
   /** One lot per group for the bodies that move, outside every cell — see `Mobile`. */
   const mobiles = new Map<string, Mobile>()
-  /**
-   * The bodies the FALLBACK put on a lot: one that moved without ever declaring it would.
-   *
-   * Declaration is the normal path — `movesOnItsOwn` reads what the document says — and this is
-   * what catches the rest. Sticky, because a body that moved once will move again.
-   */
+  /** The fallback's own: what moved without ever declaring it would. Sticky — it will move again. */
   const promoted = new Set<string>()
 
   /**
@@ -260,10 +255,8 @@ export function createCellGroups(
   }
 
   /**
-   * Puts the movers of one group on its lot, keeping the slot of everyone already there.
-   *
-   * The declared path: nothing is promoted, nothing is taken out of a cell — these bodies were
-   * never put in one. A slot is kept for life, so only the matrices move.
+   * Puts the movers of one group on its lot, keeping the slot of everyone already there — a
+   * declared body was never in a cell, so nothing is taken out of one.
    */
   const settleMobile = (key: string, members: Members, like: InstancedMesh | Mesh): void => {
     if (members.ids.length === 0 && !mobiles.has(key)) return
@@ -289,18 +282,22 @@ export function createCellGroups(
   }
 
   /**
-   * The bodies a lot holds that this rebuild did not meet: gone from the document, or no longer
-   * declaring that they move. Found in the LOT rather than through `placed`, which `settle` has
-   * already pointed at the cell that just took the body back.
+   * What a lot holds and this rebuild did not put there: gone from the document, back on the
+   * grid, or moved to ANOTHER group — a body whose paint changed answers to a different lot, and
+   * a check that only asked « was it seen at all » left it drawn twice, in two materials, for good.
+   *
+   * Found in the LOT rather than through `placed`, which `settle` has already pointed at the cell
+   * that took the body back. Walked backwards: a swap moves the last body into the hole, and that
+   * one is behind us.
    */
-  const shed = (seen: ReadonlySet<string>): void => {
-    for (const lot of mobiles.values()) {
-      for (const id of lot.ids.filter(held => !seen.has(held))) {
-        const slot = lot.ids.indexOf(id)
-        if (slot < 0) continue
+  const shed = (seen: ReadonlyMap<string, string>): void => {
+    for (const [key, lot] of mobiles) {
+      for (let slot = lot.ids.length - 1; slot >= 0; slot -= 1) {
+        const id = lot.ids[slot]
+        if (id === undefined || seen.get(id) === key) continue
         takeOut(lot.mesh, lot.ids, slot)
         promoted.delete(id)
-        // Only when nothing else claimed it: a body back on the grid keeps the entry `settle` wrote.
+        // Only when nothing else claimed it: a body elsewhere keeps the entry its new home wrote.
         if (placed.get(id)?.instance === lot.mesh) placed.delete(id)
       }
     }
@@ -363,7 +360,8 @@ export function createCellGroups(
   return {
     rebuild: (nodes, objectOf) => {
       const settled = new Set<string>()
-      const seen = new Set<string>()
+      /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
+      const seen = new Map<string, string>()
       let instanced = 0
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
         const first = worn.meshes[0]
@@ -539,7 +537,7 @@ function splitByCell(
   worn: Grouped,
   index: WorldPartition,
   shape: BufferGeometry,
-  seen: Set<string>,
+  seen: Map<string, string>,
   movers: Members,
   promoted: ReadonlySet<string>,
 ): Map<string, Members> {
@@ -550,7 +548,7 @@ function splitByCell(
     // 🛑 DECLARED, not deduced: what the document says a body does is read off the node, once per
     // rebuild. Putting a mover back in a cell would rebuild that cell on every change of content.
     if (promoted.has(id) || movesOnItsOwn(worn.nodes[at]?.components)) {
-      seen.add(id)
+      seen.set(id, worn.key)
       movers.ids.push(id)
       movers.meshes.push(mesh)
       continue

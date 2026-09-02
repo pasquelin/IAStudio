@@ -14,7 +14,7 @@ import { isDrawn, WORTH_INSTANCING } from './grouping'
 import { createCellGroups } from './cellInstancing'
 import { CELL_SIZE } from './worldPartition'
 import type { Component } from '@shared/domain/component'
-import type { SceneNode } from './sceneState'
+import type { MeshNode, SceneNode } from './sceneState'
 
 /** Bodies of one shape, laid out by the caller — which is the whole of what a cell is decided by. */
 function bodies(
@@ -70,6 +70,9 @@ const inOneCell = (count: number, x: number): number[] =>
 
 /** What a body says of itself when a system drives it — the declared path. */
 const MOVES: Component = { type: 'Movement' }
+
+/** A second spelling, so a body can change GROUP without ceasing to declare that it moves. */
+const OTHER_SHAPE: MeshNode['geometry'] = { kind: 'box', width: 2, height: 2, depth: 2 }
 
 const host = (): Object3D => new Object3D()
 
@@ -476,6 +479,34 @@ describe('a body that DECLARES it moves', () => {
     groups.rebuild(nodes, id => objects.get(id))
 
     expect(moverLot(scene)?.count).toBe(1)
+  })
+
+  it('is drawn ONCE when it changes group without stopping to declare it', () => {
+    // TWO groups, each above the floor once the mover has moved across: a group of one is never
+    // instanced at all, and the case would not be exercised.
+    const scene = host()
+    const one = bodies(inOneCell(WORTH_INSTANCING + 1, 0), new BoxGeometry(1, 1, 1), 0, 'a')
+    const two = bodies(inOneCell(WORTH_INSTANCING - 1, 40), new BoxGeometry(2, 2, 2), 0, 'b')
+    const objects = new Map([...one.objects, ...two.objects])
+    const nodes = [
+      ...one.nodes.map(node => (node.id === 'a2' ? { ...node, components: [MOVES] } : node)),
+      ...two.nodes.map(node => ({ ...node, geometry: OTHER_SHAPE })),
+    ]
+    const groups = createCellGroups(scene)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    const moved = objects.get('a2')
+    if (!moved) throw new Error('no body to repaint')
+    moved.geometry = two.objects.get('b0')?.geometry ?? moved.geometry
+    groups.rebuild(
+      nodes.map(node => (node.id === 'a2' ? { ...node, geometry: OTHER_SHAPE } : node)),
+      id => objects.get(id),
+    )
+
+    // 🛑 Its old lot has to let go of it. Checking only « was it seen at all » left it drawn by
+    // both lots, in two shapes, for as long as it kept declaring that it moves.
+    const held = scene.children.filter(child => child instanceof InstancedMesh)
+    expect(held.reduce((sum, lot) => sum + lot.count, 0)).toBe(1)
   })
 
   it('goes back to the grid once it stops declaring it', () => {
