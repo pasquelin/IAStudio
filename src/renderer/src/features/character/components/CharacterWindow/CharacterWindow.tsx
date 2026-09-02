@@ -2,7 +2,7 @@ import { mdiSkull } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CommandId } from '@shared/domain/command'
-import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { Transform } from '@shared/domain/transform'
 import { EmptyState } from '@/components/EmptyState'
 import { PanelHeader, Surface } from '@pasquelin/panels'
@@ -52,6 +52,22 @@ export type CharacterWindowProps = { assetId: string }
  * It holds an ENGINE of its own — a WebGL context never crosses a window — and its subject is a
  * FILE, never a node of a scene. A fixed layout and no dock: there is nothing here to rearrange.
  */
+/**
+ * The decor is this window's own — it shows bones on a grid, never the studio's helpers. The two
+ * NAVIGATION preferences are the person's, and follow them here as they do in a scene.
+ */
+function characterViewport(three: Settings['three']): Settings['three'] {
+  return {
+    ...DEFAULT_SETTINGS.three,
+    orbitAroundSelection: three.orbitAroundSelection,
+    orbitUnderCursor: three.orbitUnderCursor,
+    showGrid: true,
+    lightHelpers: 'off',
+    cameraHelpers: 'off',
+    boundingBoxes: 'off',
+  }
+}
+
 export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const { t } = useTranslation()
 
@@ -64,6 +80,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     useAssets(state => state.connect),
   ])
 
+  const three = useSettings(state => state.settings.three)
   const hostRef = useRef<HTMLDivElement>(null)
   const engineRef = useRef<SceneRenderer | null>(null)
   // Beside the ref, and not instead of it: a ref never re-renders, and the clock is a component
@@ -200,6 +217,11 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     void engine.skinModel(nodeId, character.rig)
   }, [character.rig, nodeId])
 
+  // Its own effect: the one that mounts the renderer must not run again for a preference.
+  useEffect(() => {
+    engineRef.current?.configure(characterViewport(three))
+  }, [three])
+
   useEffect(() => {
     const element = hostRef.current
     if (!element) return
@@ -248,13 +270,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     renderer.mount(element)
     engineRef.current = renderer
     setLive(renderer)
-    renderer.configure({
-      ...DEFAULT_SETTINGS.three,
-      showGrid: true,
-      lightHelpers: 'off',
-      cameraHelpers: 'off',
-      boundingBoxes: 'off',
-    })
+    renderer.configure(characterViewport(useSettings.getState().settings.three))
 
     // Armed from the first frame: this window is ABOUT the bones, where a scene draws them on
     // demand. A click picks a joint, and the gizmo it hands it to MOVES it — a skeleton is
