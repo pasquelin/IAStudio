@@ -1,11 +1,22 @@
-import { Group, InstancedMesh, type Object3D, type PerspectiveCamera } from 'three'
+import {
+  Frustum,
+  Group,
+  InstancedMesh,
+  Matrix4,
+  Vector3,
+  type Mesh,
+  type Object3D,
+  type PerspectiveCamera,
+  type Sphere,
+} from 'three'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { SceneRenderer, type PartitionMode } from '@/engines/scene/SceneRenderer'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { createGlTimer, type GlTimer } from './glTimer.js'
 import { comparePixels, mean, median, nextFrame, pixelsOf, round, since, tally, top } from './benchShared'
-import { centresOf, DEFAULT_PLAN, openWorld } from './openWorld'
+import { centresOf, DEFAULT_PLAN, openWorld, spanFor } from './openWorld'
+import { trajectoriesFor } from './trajectories'
 
 /**
  * C5-P1 : le flag de PRODUCTION mesuré, `off` contre `grid`.
@@ -21,6 +32,8 @@ const HEIGHT = 900
 const QUERY = new URLSearchParams(location.search)
 const WARMUP = 10
 
+const EYE = new Vector3()
+
 type Numbers = Record<string, number | string | null>
 
 function hostOf(): HTMLDivElement {
@@ -35,7 +48,7 @@ function hostOf(): HTMLDivElement {
 }
 
 /** Le milieu des corps, où la caméra se pose : une vue prise DANS le niveau, jamais du dehors. */
-function middleOf(state: SceneState): { x: number; y: number; z: number } {
+function middleOf(state: SceneState): Point {
   const centres = centresOf(state)
   const count = centres.length / 3
   const middle = { x: 0, y: 2, z: 0 }
@@ -46,8 +59,26 @@ function middleOf(state: SceneState): { x: number; y: number; z: number } {
   return middle
 }
 
+/**
+ * Là où le banc de spike se tient : `rest` de `trajectoriesFor`, à `-span * 0,6`, hauteur d'yeux.
+ * Le centre du monde et ce point sont à 1 138 unités l'un de l'autre — comparer 397 appels à 244
+ * sans le même point de vue ne compare rien.
+ */
+const spikePose = (count: number): { position: Point; target: Point } => {
+  const pose = trajectoriesFor({
+    span: spanFor(count),
+    far: 500,
+    seed: DEFAULT_PLAN.seed,
+    boundaryAt: 347.851,
+  })[0]?.poseAt(0)
+  if (!pose) throw new Error('no trajectory to stand on')
+  return pose
+}
+
+type Point = { x: number; y: number; z: number }
+
 /** Un corps de plus, posé près de la caméra : l'ajout dont on veut le prix. */
-const withOneAdded = (state: SceneState, at: { x: number; y: number; z: number }): SceneState => ({
+const withOneAdded = (state: SceneState, at: Point): SceneState => ({
   ...state,
   nodes: [
     ...state.nodes,
@@ -103,6 +134,81 @@ function shapeOf(renderer: SceneRenderer): {
     thinInstances += object.count
   })
   return { cellsHeld, cellsDrawn, meshes, walked, thinCalls, thinInstances }
+}
+
+/**
+ * D'où viennent les appels de dessin : ceux du REGROUPEMENT, et ceux du mobilier d'atelier que la
+ * scène du studio porte et que le banc de spike n'a pas — repères de lampe, aides, marqueurs.
+ *
+ * Le mobilier se mesure en éteignant ce que la stratégie dessine, jamais l'inverse : `drawn()` est
+ * la seule liste qui nomme exactement ses meshes, des deux côtés du flag.
+ */
+function decompose(
+  scene: Object3D,
+  camera: PerspectiveCamera,
+  drawn: readonly Mesh[],
+  draw: () => { calls: number },
+): {
+  workshopCalls: number
+  groupCalls: number
+  inFrustum: number
+  standing: number
+  cellsInFrustum: number
+  callsBeyondFar: number
+  cellsBeyondFar: number
+} {
+  const calls = draw().calls
+  EYE.copy(camera.position)
+
+  const held = drawn.map(mesh => mesh.visible)
+  for (const mesh of drawn) mesh.visible = false
+  const workshopCalls = draw().calls
+  for (const [at, mesh] of drawn.entries()) mesh.visible = held[at] ?? true
+
+  const frustum = new Frustum().setFromProjectionMatrix(
+    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
+  )
+  let inFrustum = 0
+  let standing = 0
+  let beyondFar = 0
+  const cells = new Set<Object3D>()
+  const far = new Set<Object3D>()
+  for (const mesh of drawn) {
+    if (!reaches(mesh, scene)) continue
+    standing += 1
+    if (!frustum.intersectsObject(mesh)) continue
+    inFrustum += 1
+    const cell = mesh.parent ?? mesh
+    cells.add(cell)
+    // Ce que la zone laisse entrer et que le plan lointain condamne : une cellule dont le point
+    // le plus proche est déjà au-delà de `far` ne peut montrer aucune de ses instances, mais sa
+    // sphère englobante mord encore le frustum, donc three la dessine.
+    if (nearestOf(mesh) <= camera.far) continue
+    beyondFar += 1
+    far.add(cell)
+  }
+  return {
+    workshopCalls,
+    groupCalls: calls - workshopCalls,
+    inFrustum,
+    standing,
+    cellsInFrustum: cells.size,
+    callsBeyondFar: beyondFar,
+    cellsBeyondFar: far.size,
+  }
+}
+
+/** La distance du point le plus proche de ce que ce mesh dessine, depuis la caméra. */
+function nearestOf(mesh: Mesh): number {
+  const sphere = (mesh as unknown as { boundingSphere: Sphere | null }).boundingSphere
+  if (!sphere) return 0
+  return Math.max(0, EYE.distanceTo(sphere.center) - sphere.radius)
+}
+
+/** Whether the walk of the scene still reaches it — a cell out of the zone has left it. */
+function reaches(mesh: Object3D, scene: Object3D): boolean {
+  for (let at: Object3D | null = mesh; at; at = at.parent) if (at === scene) return true
+  return false
 }
 
 /**
@@ -165,7 +271,11 @@ async function measureOne(
   const applyMs = round(performance.now() - openedAt)
 
   const middle = middleOf(state)
-  renderer.placeView({ position: middle, target: { x: middle.x + 1, y: middle.y, z: middle.z } })
+  const stands =
+    QUERY.get('pose') === 'spike'
+      ? spikePose(count)
+      : { position: middle, target: { x: middle.x + 1, y: middle.y, z: middle.z } }
+  renderer.placeView(stands)
   const camera: PerspectiveCamera = renderer['viewport'].perspective
   camera.far = far
   camera.updateProjectionMatrix()
@@ -180,6 +290,7 @@ async function measureOne(
   // `as` : la stratégie de dessin est privée par construction, et c'est elle qu'on mesure.
   const groups = renderer['instances'] as {
     follow?: (camera: PerspectiveCamera | null) => boolean
+    drawn: () => readonly Mesh[]
   }
 
   const draw = (): { submitMs: number; followMs: number; matrixMs: number; calls: number; instances: number; triangles: number } => {
@@ -227,6 +338,7 @@ async function measureOne(
   const pixels = pixelsOf(canvas)
 
   const shape = shapeOf(renderer)
+  const split = decompose(scene, camera, groups.drawn(), draw)
 
   // Le prix d'un changement de document : ce que la partition doit rendre en n'invalidant que
   // les cellules touchées. Les états sont composés AVANT le chronomètre.
@@ -263,6 +375,7 @@ async function measureOne(
       instances: last.instances,
       triangles: last.triangles,
       ...shape,
+      ...split,
       addMedianMs: round(median(addMs)),
       dropMedianMs: round(median(dropMs)),
     },
