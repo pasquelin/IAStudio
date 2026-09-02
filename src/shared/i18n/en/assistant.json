@@ -87,7 +87,7 @@
       },
       "activityRecent": {
         "title": "Read the recent activity",
-        "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did."
+        "description": "Returns what the studio has recorded lately — generations, file operations, failures — newest first. This is how to find out what an action actually did. How one generation WENT is job.readCloudGeneration, which answers it whole."
       },
       "projectsList": {
         "title": "List the recent projects",
@@ -123,7 +123,7 @@
       },
       "filesSearch": {
         "title": "Search the project’s files",
-        "description": "Searches the whole open project by name and returns the matching entries with their paths. Changes nothing on screen."
+        "description": "Searches the whole open project by name and returns the matching entries with their paths. Changes nothing on screen. Finding is not opening: file.open opens what was found, and file.rename renames it."
       },
       "filesMove": {
         "title": "Move files",
@@ -203,7 +203,7 @@
       },
       "assetsSearchProjectCatalogue": {
         "title": "Search the project’s catalogue",
-        "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The catalogue holds assets, not the project’s files: a file the person names is found by searching the project’s files. The account’s remote library is elsewhere again."
+        "description": "Searches THIS project’s own catalogue, on this machine, by text, kind and tags, and can narrow to what was generated. The catalogue holds assets, not the project’s files: a file the person names is found by searching the project’s files. The account’s remote library is elsewhere again. What the catalogue holds ON one asset — where it came from, how it is tagged — is asset.get, on the ids this hands back."
       },
       "assetsCounts": {
         "title": "Count the project’s catalogue",
@@ -311,7 +311,7 @@
       },
       "layerDuplicate": {
         "title": "Duplicate a layer",
-        "description": "Copies one layer just above itself, children included, every copy given a fresh id. Answers with the id of the copy."
+        "description": "Copies one layer just above itself, children included, every copy given a fresh id. Answers with the id of the copy. The image’s FILE is copied by files.duplicate; this copies one layer inside it."
       },
       "layerGroup": {
         "title": "Group layers",
@@ -471,7 +471,7 @@
       },
       "gitPull": {
         "title": "Fetch and merge",
-        "description": "Fetches the remote and merges into the current branch, which rewrites the working copy. A conflict stops there and is settled afterwards."
+        "description": "Fetches the remote and merges into the current branch, which rewrites the working copy. A conflict stops there and is settled afterwards. Asked only for what the remote holds, this is the wrong call: git.fetch reads it without touching the working copy."
       },
       "gitPush": {
         "title": "Publish to the remote repository",
@@ -483,7 +483,7 @@
       },
       "cloudExplorePublicFeed": {
         "title": "Browse what everyone published",
-        "description": "Answers one page of the public feed of a given kind, newest first. These assets are not yours, and looking at them fetches none of them."
+        "description": "Answers one page of the public feed of a given kind, newest first. These assets are not yours, and looking at them fetches none of them. cloud.pull is what brings one down into the project, bytes and all."
       },
       "cloudFindSimilarPublished": {
         "title": "Find what resembles an asset",
@@ -535,7 +535,7 @@
       },
       "updatesState": {
         "title": "Read where the update stands",
-        "description": "Says where the application update stands — nothing in sight, downloading, or ready to install on the next quit."
+        "description": "Says where the application update stands — nothing in sight, downloading, or ready to install on the next quit. updates.install is what installs it and restarts the studio."
       },
       "mediaCapabilities": {
         "title": "Tell what the studio can decode",
@@ -603,11 +603,11 @@
       },
       "sceneState": {
         "title": "Read the scene being edited",
-        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no parent, drawn, standing at the origin unturned and unscaled, the studio’s own colour, a shape divided as its own kind always is. Measurements are never left out. A list that holds nothing is left out whole."
+        "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no parent, drawn, standing at the origin unturned and unscaled, the studio’s own colour, a shape divided as its own kind always is. Measurements are never left out. A list that holds nothing is left out whole. To describe ONE object with its components and what may still be added to it, studio.describe."
       },
       "nodeAdd": {
         "title": "Add an object to the scene",
-        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the object was born with."
+        "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the object was born with. A model of the project, or the one a generation has just answered, comes in through node.addModel; this makes a primitive."
       },
       "nodeAddModel": {
         "title": "Place a model from the library",
@@ -675,7 +675,7 @@
       },
       "nodeSetLightSettings": {
         "title": "Set a light",
-        "description": "Changes everything the kind of light in hand carries — its colour, intensity, range, decay, the width and softness of its cone, its target, and the two colours of a hemisphere light. A field the kind does not carry is refused."
+        "description": "Changes everything the kind of light in hand carries — its colour, intensity, range, decay, the width and softness of its cone, its target, and the two colours of a hemisphere light. A field the kind does not carry is refused. A glow, a bloom or any other effect is not a light: post.set writes one parameter of an effect and post.reset puts it back."
       },
       "nodeSetCameraLens": {
         "title": "Set a camera lens",
@@ -855,11 +855,11 @@
       },
       "gitStatus": {
         "title": "Read the repository",
-        "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all."
+        "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all. What changed INSIDE a file is git.diff; this only names the files."
       },
       "gitLog": {
         "title": "Read the history",
-        "description": "Returns a page of recorded versions, newest first, across every branch, with the names that point at each one."
+        "description": "Returns a page of recorded versions, newest first, across every branch, with the names that point at each one. What changed inside a file between two versions is git.diff."
       },
       "gitListCommitFiles": {
         "title": "Read what a version changed",
@@ -1139,7 +1139,7 @@
       },
       "prefabInstantiate": {
         "title": "Instance a prefab",
-        "description": "Lays the objects of another scene document of the project into the open scene, with fresh ids, where it is asked for."
+        "description": "Lays the objects of another scene document of the project into the open scene, with fresh ids, where it is asked for. A game already RUNNING is sent to another scene by play.loadScene, which this does not do."
       },
       "memoryRecall": {
         "title": "Recall what was learned",

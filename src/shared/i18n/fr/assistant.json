@@ -87,7 +87,7 @@
       },
       "activityRecent": {
         "title": "Lire l’activité récente",
-        "description": "Rend ce que le studio a consigné dernièrement — générations, opérations sur les fichiers, échecs — du plus récent au plus ancien. C’est ainsi qu’on apprend ce qu’une action a réellement fait."
+        "description": "Rend ce que le studio a consigné dernièrement — générations, opérations sur les fichiers, échecs — du plus récent au plus ancien. C’est ainsi qu’on apprend ce qu’une action a réellement fait. Comment une génération s’est PASSÉE est job.readCloudGeneration, qui la rend entière."
       },
       "projectsList": {
         "title": "Lister les projets récents",
@@ -123,7 +123,7 @@
       },
       "filesSearch": {
         "title": "Chercher dans les fichiers du projet",
-        "description": "Cherche dans tout le projet ouvert par le nom et rend les entrées trouvées avec leur chemin. Ne change rien à l’écran."
+        "description": "Cherche dans tout le projet ouvert par le nom et rend les entrées trouvées avec leur chemin. Ne change rien à l’écran. Trouver n’est pas ouvrir : file.open ouvre ce qui a été trouvé, et file.rename le renomme."
       },
       "filesMove": {
         "title": "Déplacer des fichiers",
@@ -203,7 +203,7 @@
       },
       "assetsSearchProjectCatalogue": {
         "title": "Chercher dans le catalogue du projet",
-        "description": "Cherche par texte, par nature et par tags dans le catalogue de CE projet, sur cette machine, et peut se restreindre à ce qui a été généré. Le catalogue porte des assets, pas les fichiers du projet : un fichier que la personne nomme se trouve en cherchant dans les fichiers du projet. La bibliothèque distante du compte est encore ailleurs."
+        "description": "Cherche par texte, par nature et par tags dans le catalogue de CE projet, sur cette machine, et peut se restreindre à ce qui a été généré. Le catalogue porte des assets, pas les fichiers du projet : un fichier que la personne nomme se trouve en cherchant dans les fichiers du projet. La bibliothèque distante du compte est encore ailleurs. Ce que le catalogue porte SUR un asset — d’où il vient, comment il est étiqueté — est asset.get, sur les ids que ceci rend."
       },
       "assetsCounts": {
         "title": "Compter le catalogue du projet",
@@ -311,7 +311,7 @@
       },
       "layerDuplicate": {
         "title": "Dupliquer un calque",
-        "description": "Copie un calque juste au-dessus de lui-même, enfants compris, chaque copie recevant un identifiant neuf. Répond avec l’identifiant de la copie."
+        "description": "Copie un calque juste au-dessus de lui-même, enfants compris, chaque copie recevant un identifiant neuf. Répond avec l’identifiant de la copie. Le FICHIER de l’image se copie par files.duplicate ; ceci copie un calque à l’intérieur."
       },
       "layerGroup": {
         "title": "Grouper des calques",
@@ -471,7 +471,7 @@
       },
       "gitPull": {
         "title": "Rapatrier et fusionner",
-        "description": "Rapatrie le dépôt distant et fusionne dans la branche courante, ce qui réécrit la copie de travail. Un conflit s’arrête et se tranche ensuite."
+        "description": "Rapatrie le dépôt distant et fusionne dans la branche courante, ce qui réécrit la copie de travail. Un conflit s’arrête et se tranche ensuite. Quand on demande seulement ce que le distant porte, c’est le mauvais appel : git.fetch le lit sans toucher à la copie de travail."
       },
       "gitPush": {
         "title": "Publier vers le dépôt distant",
@@ -483,7 +483,7 @@
       },
       "cloudExplorePublicFeed": {
         "title": "Parcourir ce que tout le monde a publié",
-        "description": "Rend une page du flux public d’une nature donnée, du plus récent au plus ancien. Ces assets ne sont pas les vôtres, et les regarder n’en rapatrie aucun."
+        "description": "Rend une page du flux public d’une nature donnée, du plus récent au plus ancien. Ces assets ne sont pas les vôtres, et les regarder n’en rapatrie aucun. cloud.pull est ce qui en fait descendre une dans le projet, octets compris."
       },
       "cloudFindSimilarPublished": {
         "title": "Chercher ce qui ressemble à un asset",
@@ -535,7 +535,7 @@
       },
       "updatesState": {
         "title": "Lire l’état des mises à jour",
-        "description": "Dit où en est la mise à jour de l’application — rien en vue, en cours de téléchargement, ou prête à s’installer à la prochaine fermeture."
+        "description": "Dit où en est la mise à jour de l’application — rien en vue, en cours de téléchargement, ou prête à s’installer à la prochaine fermeture. updates.install est ce qui l’installe et redémarre le studio."
       },
       "mediaCapabilities": {
         "title": "Savoir ce que le studio sait décoder",
@@ -603,11 +603,11 @@
       },
       "sceneState": {
         "title": "Lire la scène en cours d’édition",
-        "description": "Répond chaque objet du document 3D en avant — son identifiant, son nom, son type, son parent, sa visibilité et sa transformation, avec la géométrie, la matière ou la lumière qu’il porte — plus ce qui est sélectionné, les plans de caméra et le réglage de la scène. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : aucun parent, visible, à l’origine sans rotation ni échelle, la couleur du studio, une forme divisée comme sa sorte l’est toujours. Les mesures ne sont jamais omises. Une liste qui ne tient rien est omise entière."
+        "description": "Répond chaque objet du document 3D en avant — son identifiant, son nom, son type, son parent, sa visibilité et sa transformation, avec la géométrie, la matière ou la lumière qu’il porte — plus ce qui est sélectionné, les plans de caméra et le réglage de la scène. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : aucun parent, visible, à l’origine sans rotation ni échelle, la couleur du studio, une forme divisée comme sa sorte l’est toujours. Les mesures ne sont jamais omises. Une liste qui ne tient rien est omise entière. Pour décrire UN objet avec ses composants et ce qu’on peut encore lui ajouter, studio.describe."
       },
       "nodeAdd": {
         "title": "Ajouter un objet à la scène",
-        "description": "Pose une primitive, une lumière, une caméra, un sprite ou un texte dans le document 3D devant, à la position donnée. Répond avec l’identifiant reçu par l’objet à sa naissance."
+        "description": "Pose une primitive, une lumière, une caméra, un sprite ou un texte dans le document 3D devant, à la position donnée. Répond avec l’identifiant reçu par l’objet à sa naissance. Un modèle du projet, ou celui qu’une génération vient de rendre, entre par node.addModel ; ceci fabrique une primitive."
       },
       "nodeAddModel": {
         "title": "Placer un modèle de la bibliothèque",
@@ -675,7 +675,7 @@
       },
       "nodeSetLightSettings": {
         "title": "Régler une lumière",
-        "description": "Change tout ce que porte la sorte de lumière visée — sa couleur, son intensité, sa portée, son atténuation, l’ouverture et le fondu de son cône, sa cible, et les deux couleurs d’une lumière hémisphérique. Un champ que la sorte ne porte pas est refusé."
+        "description": "Change tout ce que porte la sorte de lumière visée — sa couleur, son intensité, sa portée, son atténuation, l’ouverture et le fondu de son cône, sa cible, et les deux couleurs d’une lumière hémisphérique. Un champ que la sorte ne porte pas est refusé. Un halo, un bloom ou tout autre effet n’est pas une lumière : post.set écrit un paramètre d’un effet et post.reset le remet."
       },
       "nodeSetCameraLens": {
         "title": "Régler l’objectif d’une caméra",
@@ -855,11 +855,11 @@
       },
       "gitStatus": {
         "title": "Lire le dépôt",
-        "description": "Rend la branche, ce qu’elle suit, son avance ou son retard, et chaque fichier modifié avec la moitié de git où il se trouve. Dit aussi quand le projet n’a aucun dépôt."
+        "description": "Rend la branche, ce qu’elle suit, son avance ou son retard, et chaque fichier modifié avec la moitié de git où il se trouve. Dit aussi quand le projet n’a aucun dépôt. Ce qui a changé DANS un fichier est git.diff ; ceci ne fait que nommer les fichiers."
       },
       "gitLog": {
         "title": "Lire l’historique",
-        "description": "Rend une page de versions enregistrées, de la plus récente à la plus ancienne, toutes branches confondues, avec les noms qui pointent sur chacune."
+        "description": "Rend une page de versions enregistrées, de la plus récente à la plus ancienne, toutes branches confondues, avec les noms qui pointent sur chacune. Ce qui a changé dans un fichier entre deux versions est git.diff."
       },
       "gitListCommitFiles": {
         "title": "Lire ce qu’une version a changé",
@@ -1139,7 +1139,7 @@
       },
       "prefabInstantiate": {
         "title": "Instancier un prefab",
-        "description": "Pose dans la scène ouverte les objets d’un autre document de scène du projet, avec des identifiants neufs, à l’endroit demandé."
+        "description": "Pose dans la scène ouverte les objets d’un autre document de scène du projet, avec des identifiants neufs, à l’endroit demandé. Une partie déjà EN COURS s’envoie dans une autre scène par play.loadScene, ce que ceci ne fait pas."
       },
       "memoryRecall": {
         "title": "Retrouver ce qui a été appris",
