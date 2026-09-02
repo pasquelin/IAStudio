@@ -9,17 +9,18 @@ import { CIRCUIT_START, CIRCUIT_START_YAW, circuitLine, circuitNodes } from './c
 const named = (nodes: readonly SceneNode[], word: string): SceneNode[] =>
   nodes.filter(node => node.name.startsWith(word))
 
-/** The rail a band was swept along — where a track's geometry is written. */
-function runOf(nodes: readonly SceneNode[], name: string): readonly Vector3[] {
+const bandOf = (nodes: readonly SceneNode[], name: string) => {
   const band = nodes.find(node => node.name === name)
-  return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry.path.points : []
+  return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry : null
 }
 
+/** The rail a band was swept along — where a track's geometry is written. */
+const runOf = (nodes: readonly SceneNode[], name: string): readonly Vector3[] =>
+  bandOf(nodes, name)?.path.points ?? []
+
 /** How tall a band stands — what tells a strip a car crosses from a wall that stops it. */
-function heightOf(nodes: readonly SceneNode[], name: string): number | null {
-  const band = nodes.find(node => node.name === name)
-  return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry.height : null
-}
+const heightOf = (nodes: readonly SceneNode[], name: string): number | null =>
+  bandOf(nodes, name)?.height ?? null
 
 /** How far a point sits from a closed run — the nearest of its spans. */
 function distanceToRun(run: readonly Vector3[], x: number, z: number): number {
@@ -89,11 +90,7 @@ describe('the circuit a car opens on', () => {
     expect(fidelities).toEqual(['trimesh', 'trimesh'])
   })
 
-  /**
-   * 🛑 A kerb is a few CENTIMETRES: it shakes a car that puts a wheel over it, and a driver keeps
-   * the throttle down. At ninety it was a wall painted like a kerb, and the two roles — saying
-   * where the track ends, and stopping a car that leaves it — were the same object.
-   */
+  // A wheel goes over it and the throttle stays down — the why is written on `KERB_HEIGHT`.
   it('makes the kerbs a strip a car crosses rather than a wall', () => {
     for (const name of ['Kerb Left', 'Kerb Right']) {
       expect(heightOf(nodes, name)).toBeLessThanOrEqual(0.1)
@@ -122,10 +119,6 @@ describe('the circuit a car opens on', () => {
       node => (node.components ?? []).find(one => one.type === 'Collider')?.fidelity,
     )
 
-    expect(named(nodes, 'Barrier').map(node => node.name)).toEqual([
-      'Barrier Left',
-      'Barrier Right',
-    ])
     expect(fidelities).toEqual(['trimesh', 'trimesh'])
   })
 

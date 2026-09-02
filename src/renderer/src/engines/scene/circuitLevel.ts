@@ -175,37 +175,53 @@ function surroundings(): SceneNode[] {
   return [grounds, grass, paddock, ...posts]
 }
 
+/** The pair a track wears on both sides, swept along the same centre line. */
+function sideBands(
+  parentId: string,
+  centre: readonly Vector3[],
+  band: {
+    offset: number
+    width: number
+    height: number
+    material: MaterialDescriptor
+    name: string
+  },
+): SceneNode[] {
+  return [-1, 1].map(side =>
+    ribbonNode({
+      points: offsetRun(centre, side * band.offset, true),
+      width: band.width,
+      height: band.height,
+      material: band.material,
+      parentId,
+      name: `${band.name} ${side < 0 ? 'Left' : 'Right'}`,
+    }),
+  )
+}
+
 export function circuitNodes(): SceneNode[] {
   const circuit = groupNode(IDENTITY_TRANSFORM, 'Circuit')
-  const edge = TRACK_WIDTH / 2 + KERB_THICKNESS / 2
+  const centre = circuitLine(0)
 
   // 🛑 Nearly SUNK: laid on the ground the car rests on, 57 % of each wheel sat inside the slab;
   // sunk to it exactly, the tarmac could not be seen at all. Three centimetres is both.
   const road = circuitLine(TARMAC_PROUD - TARMAC_DEPTH)
 
-  const barrierEdge = TRACK_WIDTH / 2 + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2
+  const kerbs = sideBands(circuit.id, centre, {
+    offset: TRACK_WIDTH / 2 + KERB_THICKNESS / 2,
+    width: KERB_THICKNESS,
+    height: KERB_HEIGHT,
+    material: dense(climbSurface(), KERB_TILE),
+    name: 'Kerb',
+  })
 
-  const kerbs = [-1, 1].map(side =>
-    ribbonNode({
-      points: offsetRun(circuitLine(0), side * edge, true),
-      width: KERB_THICKNESS,
-      height: KERB_HEIGHT,
-      material: dense(climbSurface(), KERB_TILE),
-      parentId: circuit.id,
-      name: `Kerb ${side < 0 ? 'Left' : 'Right'}`,
-    }),
-  )
-
-  const barriers = [-1, 1].map(side =>
-    ribbonNode({
-      points: offsetRun(circuitLine(0), side * barrierEdge, true),
-      width: BARRIER_THICKNESS,
-      height: BARRIER_HEIGHT,
-      material: dense(obstacleSurface(), BARRIER_TILE),
-      parentId: circuit.id,
-      name: `Barrier ${side < 0 ? 'Left' : 'Right'}`,
-    }),
-  )
+  const barriers = sideBands(circuit.id, centre, {
+    offset: TRACK_WIDTH / 2 + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2,
+    width: BARRIER_THICKNESS,
+    height: BARRIER_HEIGHT,
+    material: dense(obstacleSurface(), BARRIER_TILE),
+    name: 'Barrier',
+  })
 
   return [
     circuit,
