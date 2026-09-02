@@ -168,16 +168,14 @@ describe('the buttons of the settings window', () => {
    * setting back to its default — are asked about, and the four others are not.
    */
   it('asks first for the two nothing takes back', () => {
-    expect(commitmentOfCall('settings.triggerAction', { action: 'advanced.reset' })).toBe(
-      'files',
-    )
+    expect(commitmentOfCall('settings.triggerAction', { action: 'advanced.reset' })).toBe('files')
     expect(
       commitmentOfCall('settings.triggerAction', {
         action: 'advanced.installResolveBridge',
       }),
     ).toBe('files')
-    expect(
-      commitmentOfCall('settings.triggerAction', { action: 'advanced.openDevtools' }),
-    ).toBe('none')
+    expect(commitmentOfCall('settings.triggerAction', { action: 'advanced.openDevtools' })).toBe(
+      'none',
+    )
   })
 })

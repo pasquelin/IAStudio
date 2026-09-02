@@ -143,9 +143,7 @@ describe('composing without a panel', () => {
     const effectId = await withBloom()
     await runAction('post.addKeyframe', { effectId, param: 'strength', value: 2 })
 
-    expect((await runAction('post.removeKeyframe', { effectId, param: 'strength' })).ok).toBe(
-      true,
-    )
+    expect((await runAction('post.removeKeyframe', { effectId, param: 'strength' })).ok).toBe(true)
 
     expect(scene().animation.tracks).toHaveLength(1)
     expect(scene().animation.tracks[0]?.keys).toEqual([])
