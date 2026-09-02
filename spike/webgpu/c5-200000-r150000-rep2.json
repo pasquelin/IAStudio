@@ -1,0 +1,243 @@
+{
+  "at": "2026-09-02T12:25:06.083Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "count": 200000,
+      "spread": "uniform",
+      "level": "product",
+      "trianglesPerRegion": 150000,
+      "shadowDepth": "default",
+      "shadowFar": 500,
+      "shadowSide": 3409.888,
+      "span": 1200,
+      "tiles": 576,
+      "landmarks": 6066,
+      "props": 193934,
+      "clusters": 0,
+      "bodies": 200576,
+      "applyMs": 2145.2,
+      "regions": 531,
+      "restCpuMeanMs": 2.028,
+      "restCpuPeakMs": 4,
+      "restCpuMedianMs": 1.9,
+      "restGpuMs": 17.249,
+      "restGpuPeakMs": 22.677,
+      "restCalls": 521,
+      "restCallsPeak": 521,
+      "restTriangles": 67752944,
+      "restTrianglesPeak": 67752944,
+      "restInstances": 310824,
+      "restInstancesPeak": 310824,
+      "restScenePassCpuMs": 1.427,
+      "restColourPassCpuMs": 1.167,
+      "restColourCalls": 238,
+      "restColourTriangles": 30933528,
+      "restColourInstances": 146054,
+      "restShadowCalls": 283,
+      "restShadowTriangles": 36819416,
+      "restShadowInstances": 164770,
+      "walkCpuMeanMs": 1.572,
+      "walkCpuPeakMs": 1.8,
+      "walkCpuMedianMs": 1.6,
+      "walkGpuMs": 11.438,
+      "walkGpuPeakMs": 16.83,
+      "walkCalls": 518,
+      "walkCallsPeak": 521,
+      "walkTriangles": 67322864,
+      "walkTrianglesPeak": 67752944,
+      "walkInstances": 310376,
+      "walkInstancesPeak": 310824,
+      "walkScenePassCpuMs": 1.347,
+      "walkColourPassCpuMs": 1.18,
+      "walkColourCalls": 234,
+      "walkColourTriangles": 30372888,
+      "walkColourInstances": 145470,
+      "walkShadowCalls": 283,
+      "walkShadowTriangles": 36819416,
+      "walkShadowInstances": 164770,
+      "runCpuMeanMs": 1.578,
+      "runCpuPeakMs": 1.9,
+      "runCpuMedianMs": 1.6,
+      "runGpuMs": 10.764,
+      "runGpuPeakMs": 14.331,
+      "runCalls": 510,
+      "runCallsPeak": 544,
+      "runTriangles": 66528624,
+      "runTrianglesPeak": 71222128,
+      "runInstances": 303428,
+      "runInstancesPeak": 309171,
+      "runScenePassCpuMs": 1.36,
+      "runColourPassCpuMs": 1.12,
+      "runColourCalls": 233,
+      "runColourTriangles": 30457368,
+      "runColourInstances": 137875,
+      "runShadowCalls": 283,
+      "runShadowTriangles": 36819416,
+      "runShadowInstances": 164770,
+      "spinCpuMeanMs": 1.546,
+      "spinCpuPeakMs": 2,
+      "spinCpuMedianMs": 1.5,
+      "spinGpuMs": 11.022,
+      "spinGpuPeakMs": 15.183,
+      "spinCalls": 480,
+      "spinCallsPeak": 513,
+      "spinTriangles": 62609840,
+      "spinTrianglesPeak": 67050224,
+      "spinInstances": 293181,
+      "spinInstancesPeak": 298808,
+      "spinScenePassCpuMs": 1.353,
+      "spinColourPassCpuMs": 1.12,
+      "spinColourCalls": 222,
+      "spinColourTriangles": 29222616,
+      "spinColourInstances": 132733,
+      "spinShadowCalls": 283,
+      "spinShadowTriangles": 36819416,
+      "spinShadowInstances": 164770,
+      "teleportCpuMeanMs": 1.631,
+      "teleportCpuPeakMs": 1.9,
+      "teleportCpuMedianMs": 1.6,
+      "teleportGpuMs": 7.289,
+      "teleportGpuPeakMs": 15.076,
+      "teleportCalls": 317,
+      "teleportCallsPeak": 317,
+      "teleportTriangles": 40726128,
+      "teleportTrianglesPeak": 40726128,
+      "teleportInstances": 245433,
+      "teleportInstancesPeak": 245433,
+      "teleportScenePassCpuMs": 1.187,
+      "teleportColourPassCpuMs": 0.893,
+      "teleportColourCalls": 34,
+      "teleportColourTriangles": 3906712,
+      "teleportColourInstances": 80663,
+      "teleportShadowCalls": 283,
+      "teleportShadowTriangles": 36819416,
+      "teleportShadowInstances": 164770,
+      "highCpuMeanMs": 1.935,
+      "highCpuPeakMs": 2.9,
+      "highCpuMedianMs": 1.9,
+      "highGpuMs": 20.221,
+      "highGpuPeakMs": 28.365,
+      "highCalls": 566,
+      "highCallsPeak": 566,
+      "highTriangles": 73689712,
+      "highTrianglesPeak": 73689712,
+      "highInstances": 329593,
+      "highInstancesPeak": 329593,
+      "highScenePassCpuMs": 1.407,
+      "highColourPassCpuMs": 1.22,
+      "highColourCalls": 283,
+      "highColourTriangles": 36870296,
+      "highColourInstances": 164823,
+      "highShadowCalls": 283,
+      "highShadowTriangles": 36819416,
+      "highShadowInstances": 164770
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "200000 — uniform — repos",
+      "workingSetKb": 1224352
+    },
+    {
+      "at": 4006,
+      "phase": "200000 — uniform — repos",
+      "workingSetKb": 1224544
+    },
+    {
+      "at": 6007,
+      "phase": "200000 — uniform — marche",
+      "workingSetKb": 1224784
+    },
+    {
+      "at": 8009,
+      "phase": "200000 — uniform — marche",
+      "workingSetKb": 1224896
+    },
+    {
+      "at": 10011,
+      "phase": "200000 — uniform — marche",
+      "workingSetKb": 1224992
+    },
+    {
+      "at": 12024,
+      "phase": "200000 — uniform — marche",
+      "workingSetKb": 1225120
+    },
+    {
+      "at": 14045,
+      "phase": "200000 — uniform — marche",
+      "workingSetKb": 1225120
+    },
+    {
+      "at": 16048,
+      "phase": "200000 — uniform — course",
+      "workingSetKb": 1226048
+    },
+    {
+      "at": 18050,
+      "phase": "200000 — uniform — course",
+      "workingSetKb": 1226112
+    },
+    {
+      "at": 20053,
+      "phase": "200000 — uniform — course",
+      "workingSetKb": 1209952
+    },
+    {
+      "at": 22055,
+      "phase": "200000 — uniform — course",
+      "workingSetKb": 1209968
+    },
+    {
+      "at": 24058,
+      "phase": "200000 — uniform — rotation",
+      "workingSetKb": 1210352
+    },
+    {
+      "at": 26060,
+      "phase": "200000 — uniform — rotation",
+      "workingSetKb": 1210480
+    },
+    {
+      "at": 28065,
+      "phase": "200000 — uniform — rotation",
+      "workingSetKb": 1135936
+    },
+    {
+      "at": 30067,
+      "phase": "200000 — uniform — téléportation",
+      "workingSetKb": 1138304
+    },
+    {
+      "at": 32084,
+      "phase": "200000 — uniform — téléportation",
+      "workingSetKb": 1138464
+    },
+    {
+      "at": 34086,
+      "phase": "200000 — uniform — vue haute",
+      "workingSetKb": 1138576
+    },
+    {
+      "at": 36089,
+      "phase": "200000 — uniform — vue haute",
+      "workingSetKb": 1138768
+    },
+    {
+      "at": 38092,
+      "phase": "200000 — uniform — vue haute",
+      "workingSetKb": 1138848
+    },
+    {
+      "at": 40093,
+      "phase": "fin",
+      "workingSetKb": 1147760
+    }
+  ]
+}
