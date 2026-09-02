@@ -3850,7 +3850,7 @@ export class SceneRenderer {
 
     const reach = this.measureShadowReach()
     for (const light of framed) fitShadowCamera(light, reach)
-    this.shadowThrow = throwOf(framed[0], this.heldShadowBounds())
+    this.shadowThrow = throwsOf(framed, this.heldShadowBounds())
   }
 
   /**
@@ -4806,21 +4806,20 @@ function groupsFor(
 }
 
 /**
- * Which way the shadows of a light fall, and how low they can land. Read off the light's own
- * target, which is where three points it; an empty set answers the origin, and the floor comes
- * from the box the shadow camera was just fitted to.
+ * Which ways the shadows fall, and how low they can land — one direction per CASTING light, read
+ * off each light's own target. An empty set answers the origin, and the floor comes from the box
+ * the shadow cameras were just fitted to.
  */
-function throwOf(light: Object3D | undefined, bounds: Box3): ShadowThrow | null {
-  if (!light) return null
-  const target = Reflect.get(light, 'target')
-  const at = new ThreeVector3()
-  if (target instanceof Object3D) target.getWorldPosition(at)
-  const direction = at.sub(light.getWorldPosition(new ThreeVector3())).normalize()
-  if (direction.lengthSq() === 0) return null
-  return {
-    x: direction.x,
-    y: direction.y,
-    z: direction.z,
-    floor: bounds.isEmpty() ? 0 : bounds.min.y,
+function throwsOf(lights: readonly Object3D[], bounds: Box3): ShadowThrow | null {
+  const along: { x: number; y: number; z: number }[] = []
+  for (const light of lights) {
+    const target = Reflect.get(light, 'target')
+    const at = new ThreeVector3()
+    if (target instanceof Object3D) target.getWorldPosition(at)
+    const direction = at.sub(light.getWorldPosition(new ThreeVector3())).normalize()
+    if (direction.lengthSq() === 0) continue
+    along.push({ x: direction.x, y: direction.y, z: direction.z })
   }
+  if (along.length === 0) return null
+  return { along, floor: bounds.isEmpty() ? 0 : bounds.min.y }
 }

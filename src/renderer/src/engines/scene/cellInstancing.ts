@@ -625,13 +625,18 @@ const LANDED = new Box3()
  * their hull, which that union contains. A sun at the horizon throws nothing that lands.
  */
 function sweptBy(box: Box3, cast: ShadowThrow | null | undefined): Box3 {
-  if (!cast || cast.y >= 0 || box.isEmpty()) return box
+  if (!cast || box.isEmpty()) return box
   const drop = box.max.y - cast.floor
   if (drop <= 0) return box
-  const along = drop / -cast.y
   SWEPT.copy(box)
-  LANDED.copy(box).translate(CORNER.set(cast.x * along, -drop, cast.z * along))
-  return SWEPT.union(LANDED)
+  for (const along of cast.along) {
+    // A light at or above the horizon throws nothing that lands.
+    if (along.y >= 0) continue
+    const far = drop / -along.y
+    LANDED.copy(box).translate(CORNER.set(along.x * far, -drop, along.z * far))
+    SWEPT.union(LANDED)
+  }
+  return SWEPT
 }
 
 /** The box the bodies of a bucket occupy, each grown by its own reach. */

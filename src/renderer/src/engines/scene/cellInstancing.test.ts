@@ -292,7 +292,10 @@ describe('the box a bucket really occupies', () => {
 
 describe('the shadow a rejected bucket would have thrown', () => {
   /** Un soleil bas en +z : les ombres partent vers -z, donc vers l'axe où la caméra regarde. */
-  const LOW_SUN = { x: 0, y: -0.316, z: -0.948, floor: -100 }
+  const LOW_SUN = { along: [{ x: 0, y: -0.316, z: -0.948 }], floor: -100 }
+
+  /** Un second soleil, opposé : son ombre part vers +z, donc à l'écart de ce que la caméra voit. */
+  const AWAY = { x: 0, y: -0.316, z: 0.948 }
 
   it('keeps a bucket out of the view whose shadow falls into it', () => {
     const { scene, groups } = aheadAndAside()
@@ -311,7 +314,25 @@ describe('the shadow a rejected bucket would have thrown', () => {
   it('hides it again under a sun overhead, whose shadow falls under the body', () => {
     const { scene, groups } = aheadAndAside()
 
-    groups.follow?.(looking(0, 500), { x: 0, y: -1, z: 0, floor: -1 })
+    groups.follow?.(looking(0, 500), { along: [{ x: 0, y: -1, z: 0 }], floor: -1 })
+
+    expect(drawnIn(scene)).toHaveLength(1)
+  })
+
+  it('reads EVERY casting light, not just the one that happened to come first', () => {
+    const { scene, groups } = aheadAndAside()
+
+    // 🛑 The one that throws INTO the view is second. A set lit from two sides has no order the
+    // document decides: whichever light `this.objects` yields first would win.
+    groups.follow?.(looking(0, 500), { along: [AWAY, LOW_SUN.along[0]!], floor: -100 })
+
+    expect(drawnIn(scene)).toHaveLength(2)
+  })
+
+  it('hides it when NO light throws its shadow into the view', () => {
+    const { scene, groups } = aheadAndAside()
+
+    groups.follow?.(looking(0, 500), { along: [AWAY, { x: 0, y: -1, z: 0 }], floor: -1 })
 
     expect(drawnIn(scene)).toHaveLength(1)
   })

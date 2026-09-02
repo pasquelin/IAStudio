@@ -125,10 +125,11 @@ export type InstancedGroups = {
  * took its shadow off the ground with it, over 2.0 % of the pixels.
  */
 export type ShadowThrow = {
-  /** The light's own direction, normalised: where a shadow travels. */
-  x: number
-  y: number
-  z: number
+  /**
+   * Where a shadow travels, one normalised direction per CASTING light — a set lit from two sides
+   * throws two ways, and reading only the first hides a caster whose other shadow is on screen.
+   */
+  along: readonly { x: number; y: number; z: number }[]
   /** The lowest thing a shadow can land on. */
   floor: number
 }
