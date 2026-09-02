@@ -1,5 +1,6 @@
 import { BatchedMesh, Box3, Group, InstancedMesh, Matrix4, Vector3, type Object3D } from 'three'
 import { byCodeUnit } from '@shared/text'
+import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer, type GroupingStrategy, type PartitionMode } from './SceneRenderer'
 import { directionalLight, gltfNodesOf, groupNodeFixture, meshNode, walked } from './scene-fixtures'
@@ -387,6 +388,36 @@ describe.each(DRAWINGS)('a crate whose bodies a %s group draws', (_name, drawing
     ;(renderer as unknown as { refreshAids: () => void }).refreshAids()
 
     expect(crateOf(renderer).children).toHaveLength(before)
+  })
+
+  it('leaves it alone while a pane shows EDGES, where the sources are already in the walk', () => {
+    const renderer = settled()
+    // `both` is what hangs every source back under its parent — `showsEdges`, `syncSourceWalk`.
+    renderer.setDisplayModes(['both'])
+    const before = [...crateOf(renderer).children]
+    expect(before).toHaveLength(WORTH_INSTANCING)
+
+    // 🛑 Boxes on everything is what makes `refreshAids` hang anything at all. A second copy
+    // pushed while they are already in the walk is filtered out WITH the first: the bodies leave
+    // the walk while the grouping still believes them hung, so `hangSources` short-circuits and
+    // nothing composes their matrices any more.
+    renderer.configure({ ...DEFAULT_SETTINGS.three, boundingBoxes: 'all' })
+
+    expect(crateOf(renderer).children).toEqual(before)
+  })
+
+  it('still measures a box while a pane shows edges', () => {
+    const renderer = settled()
+    renderer.setDisplayModes(['both'])
+    const engine = renderer as unknown as {
+      withHungUnder: <T>(ids: Iterable<string>, run: () => T) => T
+    }
+
+    const empty = engine.withHungUnder(['crate'], () =>
+      new Box3().setFromObject(crateOf(renderer)).isEmpty(),
+    )
+
+    expect(empty).toBe(false)
   })
 
   it('holds every body of a crate whose bodies each carry a node', () => {

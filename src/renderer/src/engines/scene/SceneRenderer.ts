@@ -1645,6 +1645,11 @@ export class SceneRenderer {
    * Bounded by what is asked for rather than by the scene: the parents touched are these nodes.
    */
   private withHungUnder<T>(ids: Iterable<string>, run: () => T): T {
+    // 🛑 Already in the walk, and nothing to do: `syncSourceWalk` hangs EVERY source while a pane
+    // shows edges. A second copy pushed here is filtered out WITH the first, so the body leaves
+    // the walk while the grouping still believes it hung — and `hangSources` then short-circuits.
+    if (this.needsEdges()) return run()
+
     const hung: Object3D[] = []
     for (const id of this.descendantsOf(ids)) {
       const object = this.objects.get(id)
