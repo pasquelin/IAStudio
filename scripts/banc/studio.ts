@@ -42,7 +42,9 @@ import { unsavedDocumentIds } from '@/features/shell/documentIo'
 import type { PlayState } from '@shared/domain/gameRuntime'
 import { frontDocumentIn, useDocuments } from '@/stores/documents'
 import { playReportOf, usePlay } from '@/stores/play'
-import { useLayouts } from '@/stores/layouts'
+import { toolSurface, useLayouts } from '@/stores/layouts'
+import { declarePanelsOf } from '@/features/shell/panelSpecs'
+import { subscribeToToolState } from '@/hooks/useToolState'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -536,9 +538,18 @@ export async function createStudio(
       if (wanted !== null) useDocuments.getState().activate(wanted)
     })
 
+    /**
+     * 🛑 A SURFACE, like the dock above: the chassis registry is filled by rendering `<Panel>`,
+     * and nothing renders headless. Subscribed through the same list `useToolState` reads, so
+     * the two cannot answer differently about what a surface offers.
+     */
+    const onOffer = subscribeToToolState(() => declarePanelsOf(toolSurface()))
+    declarePanelsOf(toolSurface())
+
     return () => {
       onDocument()
       onSpace()
+      onOffer()
     }
   }
 

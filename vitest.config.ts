@@ -120,7 +120,7 @@ const DOM_BOUND = [
   // Imports the definition of all twenty-one panels, so it loads every panel component. It
   // PASSES under node — and covers less: the branches those modules run at import take the
   // other path without a browser, and `panels/**` went four branches over its budget.
-  'src/renderer/src/features/shell/components/ToolWindow/toolComponents.test.ts',
+  'src/renderer/src/features/shell/components/toolComponents.test.ts',
   'src/renderer/src/features/shell/unsavedGuard.test.ts',
   // `renderHook` mounts into a document, and this one has no component to make it a `.tsx`.
   'src/renderer/src/hooks/useTaskChoices.test.ts',

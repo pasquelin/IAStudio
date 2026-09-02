@@ -46,6 +46,23 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   problems: { load: () => import('@/features/code/tools/problems'), role: null },
 }
 
+/**
+ * Whether a panel publishes anything on its title row — answered from the table, so the shell
+ * can ask before the panel's chunk has arrived. The header lays itself out on the first paint.
+ */
+export function hasActions(id: ToolId): boolean {
+  return TOOL_ENTRIES[id].role !== null
+}
+
+/**
+ * Whether its actions take the row's free width. Only the montage asks for it: a transport is a
+ * whole bar, where a band holding a list with two buttons wants them at the end — which is what
+ * the chassis gives every panel of a horizontal zone otherwise.
+ */
+export function fillsActions(id: ToolId): boolean {
+  return TOOL_ENTRIES[id].role === 'fill-actions'
+}
+
 /** A panel that publishes no actions still needs something for `lazy` to resolve to. */
 const NoActions = () => null
 
@@ -58,7 +75,6 @@ function panel({ load, role }: ToolEntry): ToolDefinition {
       role === null
         ? undefined
         : lazy(async () => ({ default: (await load()).definition.Actions ?? NoActions })),
-    fillActions: role === 'fill-actions',
   }
 }
 

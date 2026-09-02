@@ -75,12 +75,6 @@ describe('the tool table', () => {
     )
   })
 
-  it('declares a filled action row for exactly the panels that ask for one', () => {
-    expect(idsWhere(tool => tool.fillActions === true)).toEqual(
-      panelsWhere(tool => tool.fillActions === true),
-    )
-  })
-
   /**
    * What the language used to hold on its own, before the panels went lazy: a key named its own
    * module, because it WAS the binding. Now the specifier sits beside the key as a string, and

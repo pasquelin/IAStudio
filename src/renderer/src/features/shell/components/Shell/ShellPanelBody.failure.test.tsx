@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ToolWindow } from './ToolWindow'
+import { ShellPanelActions } from './ShellPanelActions'
+import { ShellPanelBody } from './ShellPanelBody'
 
 // A tool that cannot render, which no real one does on demand. Its own file because `vi.mock`
-// is hoisted over the whole module, and the other ToolWindow tests need the real registry.
-// The factory is async so it can reach `lazy` — hoisting puts it above every import.
-vi.mock('./toolComponents', async () => {
+// is hoisted over the whole module, and the other tests need the real registry. The factory is
+// async so it can reach `lazy` — hoisting puts it above every import.
+vi.mock('../toolComponents', async () => {
   const { lazy } = await import('react')
 
   const panels: Record<string, unknown> = {
@@ -33,6 +34,7 @@ vi.mock('./toolComponents', async () => {
   return {
     isKnownTool: (id: string) => id in panels,
     toolDefinition: (id: string) => panels[id],
+    hasActions: (id: string) => 'Actions' in ((panels[id] ?? {}) as object),
   }
 })
 
@@ -45,17 +47,16 @@ afterEach(() => {
 })
 
 describe('a panel whose tool throws', () => {
-  it('keeps its header, so the panel can still be closed', () => {
-    render(<ToolWindow tool="assets" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+  it('draws the failure in the body, leaving the frame to close it', () => {
+    render(<ShellPanelBody tool="assets" />)
 
-    expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
     expect(screen.getByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
   })
 
   it('does not take the rest of the window with it', () => {
     render(
       <div>
-        <ToolWindow tool="assets" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />
+        <ShellPanelBody tool="assets" />
         <p>the rest of the studio</p>
       </div>,
     )
@@ -66,45 +67,44 @@ describe('a panel whose tool throws', () => {
 
 describe('a half switched to another tool', () => {
   it('does not hand the failure of the last tool to the next one', () => {
-    const { rerender } = render(
-      <ToolWindow tool="assets" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />,
-    )
+    const { rerender } = render(<ShellPanelBody tool="assets" />)
     expect(screen.getByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
 
     // What the rail does: same element, another tool. The boundary must not survive it.
-    rerender(<ToolWindow tool="layers" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+    rerender(<ShellPanelBody tool="layers" />)
 
     expect(screen.getByText('layer list')).toBeInTheDocument()
     expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
   })
 
   it('gives the next tool its actions back, even if the last one lost them', () => {
-    const { rerender } = render(
-      <ToolWindow tool="layers" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />,
-    )
+    const { rerender } = render(<ShellPanelActions tool="layers" />)
     expect(screen.queryByText('explorer actions')).not.toBeInTheDocument()
 
-    rerender(<ToolWindow tool="explorer" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+    rerender(<ShellPanelActions tool="explorer" />)
 
     expect(screen.getByText('explorer actions')).toBeInTheDocument()
   })
 })
 
 describe('a panel whose chunk never arrives', () => {
-  it('keeps its header, so the panel can still be closed', async () => {
-    render(<ToolWindow tool="scene" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+  it('says so rather than suspending for ever', async () => {
+    render(<ShellPanelBody tool="scene" />)
 
     expect(await screen.findByText('Ce panneau a rencontré une erreur.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
   })
 })
 
 describe('a panel whose header actions throw', () => {
-  it('drops the actions and keeps both the content and the close button', () => {
-    render(<ToolWindow tool="layers" zone="left" onFocus={vi.fn()} onClose={vi.fn()} />)
+  it('drops the actions and keeps the content', () => {
+    render(
+      <>
+        <ShellPanelActions tool="layers" />
+        <ShellPanelBody tool="layers" />
+      </>,
+    )
 
     expect(screen.getByText('layer list')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Retirer le module' })).toBeInTheDocument()
     // The content is fine, so the panel must not claim otherwise.
     expect(screen.queryByText('Ce panneau a rencontré une erreur.')).not.toBeInTheDocument()
   })

@@ -170,7 +170,7 @@ export const useModels = create<ModelsState>()(
 
 /**
  * The state of one family's browser, defaulted here rather than at each reader — the shape
- * `canvasViewOf` and `arrangementOf` settled on. The shared constant is never rebuilt: a
+ * `canvasViewOf` settled on. The shared constant is never rebuilt: a
  * selector returning a fresh object hands React a new snapshot on every render.
  */
 export function modelCollectionOf(

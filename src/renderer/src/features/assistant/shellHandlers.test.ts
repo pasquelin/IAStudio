@@ -7,6 +7,7 @@ import { toolIsShown } from '@/helpers/revealPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDictation } from '@/stores/dictation'
 import { useLayouts } from '@/stores/layouts'
+import { chassisFor } from '@/stores/panels-fixtures'
 import { runAction } from './executor'
 
 /** What the main process answers about the microphone, which is the authority on it. */
@@ -139,6 +140,9 @@ describe('what surrounds the documents', () => {
 describe('the panels of the surface in front', () => {
   beforeEach(() => {
     useLayouts.setState({ activeWorkspace: 'image', home: false })
+    // The chassis as the shell would have set it up: an action reads the DECLARED panels, and
+    // nothing declares them until `<Panels>` is on screen.
+    chassisFor('image')
   })
 
   /**

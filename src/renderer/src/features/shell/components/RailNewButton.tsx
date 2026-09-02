@@ -5,7 +5,7 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { ToolButton } from '@/components/ToolButton'
 import { useLayouts, useToolSurface } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
-import { createDocumentIn } from '../../newDocument'
+import { createDocumentIn } from '../newDocument'
 import { HOME_SURFACE } from '@shared/domain/tool'
 
 /**

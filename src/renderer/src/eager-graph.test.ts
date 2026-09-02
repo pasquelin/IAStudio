@@ -181,7 +181,7 @@ describe('the opening chunk', () => {
     expect([...unresolved]).toEqual([])
     expect(packages).toContain('react')
     expect(packages).toContain('dockview-react')
-    expect(files).toContain('./features/shell/components/ToolWindow/toolComponents.ts')
+    expect(files).toContain('./features/shell/components/toolComponents.ts')
     expect(files).toContain('../../shared/domain/tool.ts')
     // Deep anchors, both of them the first screen itself: the walk has to reach past the entry
     // point and past the shell, or every negative assertion below passes on an empty graph.
@@ -296,9 +296,9 @@ describe('the opening chunk', () => {
   })
 
   /**
-   * Deferred by `features/shell/components/ToolWindow/toolComponents.ts` on 9 August: every panel of the table, the home screen's
-   * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
-   * the guard still green.
+   * Deferred by `features/shell/components/toolComponents.ts` on 9 August: every panel of the
+   * table, the home screen's own included. Stated over the whole folder, so a panel added
+   * tomorrow cannot land eager with the guard still green.
    *
    * The three left are reached for something other than a zone: the jobs list and its row
    * ARE a panel of the table since 11 August — but they are also what the status bar's flyout

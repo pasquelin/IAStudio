@@ -11,7 +11,7 @@ import { useDictation } from '@/stores/dictation'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
-import { useTools } from '@/stores/tools'
+import { panelsStore } from '@/stores/panels'
 
 /**
  * Where a command goes, and whether anything took it — one router for the three doors that fire
@@ -56,7 +56,7 @@ function toggleDictation(): CommandRouting {
 function runHere(command: CommandId): CommandRouting | null {
   switch (command) {
     case 'layout.reset':
-      useTools.getState().reset()
+      panelsStore.getState().reset()
       return 'ran'
     case 'project.new':
       void useProject.getState().createPicked()

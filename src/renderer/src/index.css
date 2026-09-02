@@ -712,6 +712,40 @@ body,
 }
 
 /*
+ * The panel chassis reads its own gauges and colours from these, so `@pasquelin/panels` is
+ * dressed by the studio's tokens rather than by the neutral palette it ships — the same rule
+ * React Flow follows below, and the one no component escapes.
+ *
+ * Every value is a REFERENCE, never a copy: the density switch rewrites the `--sc-*` half under
+ * `[data-density='compact']`, and a copied number would stop following it. The chassis has no
+ * second declaration as a result.
+ *
+ * `--pnl-surface` has no counterpart here and takes the panel's own colour: it exists for a tab
+ * strip, which the studio draws with Dockview rather than with the chassis.
+ */
+.pnl-root {
+  --pnl-rail: var(--sc-rail);
+  --pnl-rail-button: var(--sc-rail-button);
+  --pnl-rail-inset: var(--sc-rail-inset);
+  --pnl-gutter: var(--sc-gutter);
+  --pnl-header: var(--sc-header);
+  --pnl-tab: var(--sc-tab);
+  --pnl-radius: var(--radius-sc-lg);
+  --pnl-radius-sm: var(--radius-sc-md);
+  --pnl-font-size: var(--text-body);
+
+  --pnl-chassis: var(--color-chassis);
+  --pnl-panel: var(--color-panel);
+  --pnl-surface: var(--color-panel);
+  --pnl-elevated: var(--color-elevated);
+  --pnl-border: var(--color-border);
+  --pnl-text: var(--color-text);
+  --pnl-muted: var(--color-muted);
+  --pnl-accent: var(--color-accent);
+  --pnl-accent-text: var(--color-accent-content);
+}
+
+/*
  * React Flow reads its own colours from these, so the canvas is dressed by the studio's tokens
  * rather than by a stylesheet holding hex values of its own — the one rule no component escapes.
  *

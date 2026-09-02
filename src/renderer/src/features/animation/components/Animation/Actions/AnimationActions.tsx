@@ -27,9 +27,9 @@ const MIN_FPS = 1
 const MAX_FPS = 120
 
 /**
- * The transport and the settings of a scene's animation, rendered by `ToolWindow` on the panel's
- * own title bar — the same place the montage puts its tools, and for the same reason: a band is
- * short, and a row of controls above it costs a row of keys.
+ * The transport and the settings of a scene's animation, drawn on the panel's own title bar —
+ * the same place the montage puts its tools, and for the same reason: a band is short, and a
+ * row of controls above it costs a row of keys.
  */
 export function AnimationActions({ documentId }: AnimationActionsProps) {
   const { t } = useTranslation()
