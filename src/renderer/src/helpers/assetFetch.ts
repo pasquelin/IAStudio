@@ -9,6 +9,11 @@ export async function fetchAsset(assetId: string): Promise<Response> {
   return fetchOver(assetUrl(assetId), assetId)
 }
 
+/** An asset's bytes, which is what every container reader here asks for. */
+export async function assetBytes(assetId: string): Promise<Uint8Array> {
+  return new Uint8Array(await (await fetchAsset(assetId)).arrayBuffer())
+}
+
 /** The original, for an export that must not play the 720p proxy. */
 export async function fetchOriginalAsset(assetId: string): Promise<Response> {
   return fetchOver(assetMasterUrl(assetId), assetId)

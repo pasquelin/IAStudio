@@ -118,6 +118,16 @@ const COMBINATORS: readonly string[] = [
 const SPREAD_OVER_A_SELECTION: readonly string[] = ['setGeometryOn', 'setLightOn', 'setCameraOn']
 
 /**
+ * Reached through a GESTURE of the store, which does the edit and one thing more that a panel and
+ * an action must not diverge on. Named one by one: reading the store whole would let every command
+ * it mentions read as published.
+ */
+const THROUGH_A_GESTURE: Readonly<Record<string, string>> = {
+  // Laying a block also CHOOSES it — `stores/scenes.ts`, and `animation.addBlock` performs it.
+  addModelClip: 'laySceneClip',
+}
+
+/**
  * Reached through `command.runStudioCommand` rather than by an action of its own — the OTHER door, which this
  * rule cannot see: a client fires the registry command beside each one and the surface in front
  * builds the edit. Listed so they do not read as gestures nothing can reach.
@@ -162,6 +172,9 @@ const NOT_PUBLISHED: readonly string[] = [
   'setCanvasDpi',
   'setCanvasColorMode',
   'setCanvasBitDepth',
+  // Taking a filed motion back onto the band. Nothing stands in the way of an action here — the
+  // gesture is `reopenCharacterMotion`, and it names an asset — it is simply not published yet.
+  'loadAnimation',
   // The grip's half of the pair `layer.editTextLayer` and `layer.transform` already publish: it writes a
   // caption's box AND its corner in ONE entry, because a north or west grip pulls both at once.
   // A call names them one after the other and pays two undos, which no hand can do.
@@ -182,6 +195,7 @@ describe('what edits a document, and what an outside client may ask for', () => 
       ...SPREAD_OVER_A_SELECTION,
       ...NOT_PUBLISHED,
       ...Object.keys(THROUGH_A_COMMAND),
+      ...Object.keys(THROUGH_A_GESTURE),
     ])
     const orphans = COMMANDS.flatMap(([module, names]) =>
       names
@@ -204,6 +218,7 @@ describe('what edits a document, and what an outside client may ask for', () => 
       ...SPREAD_OVER_A_SELECTION,
       ...NOT_PUBLISHED,
       ...Object.keys(THROUGH_A_COMMAND),
+      ...Object.keys(THROUGH_A_GESTURE),
     ]
 
     expect(listed.filter(name => !declared.has(name)).sort()).toEqual([])

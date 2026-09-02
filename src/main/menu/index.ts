@@ -2,8 +2,10 @@ import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
 import {
+  COMMAND_SCOPES,
   platformDefaults,
   type BindingOverrides,
+  type CommandScope,
   type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
@@ -20,16 +22,15 @@ import {
   openSettingsWindow,
   openUsageWindow,
 } from '@main/window/windows'
-import { isDocumentKind, type DocumentKind } from '@shared/domain/document'
 import { menuTemplate } from './template'
 
 /** Everything one window reported about itself, which is everything the menu draws from it. */
 type WindowMenu = {
-  surface: ToolSurface
+  surface: ToolSurface | null
   tools: readonly ToolId[]
   checked: readonly MenuCheck[]
   abilities: readonly MenuAbility[]
-  kind: DocumentKind | null
+  scope: CommandScope | null
 }
 
 /**
@@ -70,7 +71,7 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
   const template = menuTemplate({
     language: windowLanguage(),
     workspace: shown?.surface ?? null,
-    kind: shown?.kind ?? null,
+    scope: shown?.scope ?? null,
     tools: shown?.tools ?? [],
     checked: shown?.checked ?? [],
     abilities: shown?.abilities ?? [],
@@ -118,7 +119,8 @@ function sameMenu(next: WindowMenu | null, drawn: WindowMenu | null): boolean {
     next.surface === drawn.surface &&
     sameOrder(next.tools, drawn.tools) &&
     sameOrder(next.checked, drawn.checked) &&
-    sameOrder(next.abilities, drawn.abilities)
+    sameOrder(next.abilities, drawn.abilities) &&
+    next.scope === drawn.scope
   )
 }
 
@@ -134,10 +136,10 @@ function rebuildInNewLanguage(): void {
 export function registerMenuHandlers(): void {
   followWindowLanguage(rebuildInNewLanguage)
 
-  handle(CHANNELS.windowWorkspace, (event, next, tools, checked, abilities, kind) => {
+  handle(CHANNELS.windowWorkspace, (event, next, tools, checked, abilities, scope) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
     // preload from an older build could name a surface this one has dropped.
-    if (next !== HOME_SURFACE && !WORKSPACE_IDS.includes(next)) return
+    if (next !== null && next !== HOME_SURFACE && !WORKSPACE_IDS.includes(next)) return
     // The three lists are defaulted for the same reason the surface is checked: an older preload
     // sends fewer arguments, and an `undefined` stored here throws in every later comparison —
     // freezing the menu on the next focus change rather than on this call.
@@ -147,7 +149,7 @@ export function registerMenuHandlers(): void {
       checked: checked ?? [],
       abilities: abilities ?? [],
       // Same defaulting, same reason: an older preload sends nothing here.
-      kind: kind && isDocumentKind(kind) ? kind : null,
+      scope: scope && COMMAND_SCOPES.includes(scope) ? scope : null,
     })
     rebuildIfStale()
   })

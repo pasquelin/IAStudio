@@ -10,7 +10,6 @@ import {
   layerAt,
   madeCar,
   modelScene,
-  named,
   opened,
   overlay,
 } from './setups'
@@ -33,7 +32,7 @@ const styled =
 /** The knight with a skeleton already fitted — nine of the ten rig requests start from one. */
 const rigged = async (studio: Studio): Promise<void> => {
   await modelScene(studio)
-  await studio.run('rig.fit', { nodeId: named(studio, 'Knight') })
+  await studio.run('rig.fit', {})
 }
 
 /** The boat picture with its two layers filed under a group. */
@@ -105,10 +104,9 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     // read on the bone the person is pointing at rather than anywhere on the skeleton.
     setup: async studio => {
       await rigged(studio)
-      await studio.run('bone.add', { nodeId: named(studio, 'Knight'), parent: 'RightLowerArm' })
+      await studio.run('bone.add', { parent: 'RightLowerArm' })
       const added = bonesOf(studio).at(-1) ?? ''
       await studio.run('bone.rename', {
-        nodeId: named(studio, 'Knight'),
         bone: added,
         name: 'Main Droite',
       })
@@ -123,7 +121,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     // at nothing and any removal would pass.
     setup: async studio => {
       await rigged(studio)
-      await studio.run('bone.add', { nodeId: named(studio, 'Knight'), parent: 'RightLowerArm' })
+      await studio.run('bone.add', { parent: 'RightLowerArm' })
     },
     // Back to the three the fit laid: the one added by the decor is the one to go.
     passed: run => read.rig(run)?.bones.length === 3,
@@ -139,7 +137,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     said: ['Retire cette contrainte IK.'],
     setup: async studio => {
       await rigged(studio)
-      await studio.run('ik.add', { nodeId: named(studio, 'Knight'), bone: 'LeftFoot' })
+      await studio.run('ik.add', { bone: 'LeftFoot' })
     },
     passed: run => (read.rig(run)?.ik ?? []).length === 0,
   },
@@ -148,6 +146,34 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     said: ['Enlève complètement le squelette de ce personnage.'],
     setup: rigged,
     passed: run => read.rig(run) === null,
+  },
+
+  // A point on a bone, then something hung on it: a sword in a hand is the whole reason a
+  // character carries points at all, and neither half had a door a client could reach.
+  {
+    name: '50.11 lays an attachment point on the right hand',
+    said: ["Pose un point d'attache sur sa main droite, appelé Main Droite."],
+    setup: rigged,
+    passed: run => read.sockets(run).some(one => one.name === 'Main Droite'),
+  },
+  {
+    name: '50.12 hangs the cube on that point',
+    said: ['Accroche le cube à Main Droite.'],
+    setup: async studio => {
+      await rigged(studio)
+      await studio.run('socket.add', { bone: 'RightHand', name: 'Main Droite' })
+      await studio.run('node.add', { kind: 'box', name: 'Cube' })
+    },
+    passed: run => read.nodeNamed(run, 'Cube')?.attach !== undefined,
+  },
+  {
+    name: '50.13 takes that attachment point back off',
+    said: ["Retire le point d'attache Main Droite."],
+    setup: async studio => {
+      await rigged(studio)
+      await studio.run('socket.add', { bone: 'RightHand', name: 'Main Droite' })
+    },
+    passed: run => read.sockets(run).length === 0,
   },
 
   {

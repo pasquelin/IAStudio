@@ -212,6 +212,8 @@ const bridge: StudioBridge = {
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
     savePicture: request => ipcRenderer.invoke(CHANNELS.assetsSavePicture, request),
     saveLayered: request => ipcRenderer.invoke(CHANNELS.assetsSaveLayered, request),
+    saveMesh: request => ipcRenderer.invoke(CHANNELS.assetsSaveMesh, request),
+    saveAnimation: request => ipcRenderer.invoke(CHANNELS.assetsSaveAnimation, request),
     readLayered: assetId => ipcRenderer.invoke(CHANNELS.assetsReadLayered, assetId),
     saveTexture: request => ipcRenderer.invoke(CHANNELS.assetsSaveTexture, request),
     installBundledTextures: () => ipcRenderer.invoke(CHANNELS.texturesInstallBundled),
@@ -327,6 +329,10 @@ const bridge: StudioBridge = {
   },
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
+  },
+  characterWindow: {
+    open: assetId => ipcRenderer.invoke(CHANNELS.characterWindowOpen, assetId),
+    onClosed: callback => subscribe<void>(EVENTS.characterWindowClosed, callback),
   },
   gameWindow: {
     open: () => ipcRenderer.invoke(CHANNELS.gameWindowOpen),

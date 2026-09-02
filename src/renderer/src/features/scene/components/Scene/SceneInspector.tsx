@@ -26,7 +26,6 @@ import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from '../../../../components/DescriptorSection'
-import { AnimationSection } from '../../../animation/components/Animation/AnimationSection'
 import { CameraAlignButton } from '../Camera/CameraAlignButton'
 import { CameraShotSection } from '../Camera/ShotSection/CameraShotSection'
 import { ComponentsSection } from '../ComponentsSection'
@@ -38,6 +37,7 @@ import { MaterialSection } from '../../../material/components/Material/MaterialS
 import { ModelDressSection } from '../ModelDressSection/ModelDressSection'
 import { materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { PathSection } from '../PathSection'
+import { AttachSection } from '../AttachSection'
 import { ShadowSection } from '../ShadowSection'
 import { SpriteSection } from '../SpriteSection'
 import { TextSection } from '../TextSection'
@@ -163,6 +163,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             edit={edit}
           />
           <ShadowSection node={node} selection={selection} edit={edit} />
+          {/* The anchor alone: two objects hung on one socket would stand inside each other. */}
+          <AttachSection node={node} documentId={documentId} edit={edit} />
           {/* The anchor alone, unlike the sections above: a component carries values of its own,
               and writing one onto every selected object would overwrite what each was given. */}
           <ComponentsSection node={node} edit={edit} />
@@ -230,8 +232,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
       {model && (
         <>
-          <RigSection documentId={documentId} node={model} edit={edit} />
-          <AnimationSection documentId={documentId} node={model} edit={edit} />
+          <RigSection documentId={documentId} node={model} />
           {/* On the anchor alone, unlike a material: how many slots a model has depends on what
               its own file carries, so spreading a dress over a selection would name slots meshes
               beside it never had. */}

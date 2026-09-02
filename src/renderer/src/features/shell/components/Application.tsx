@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { connectRemoteActions } from '@/features/assistant/remoteActions'
+import { watchTheCharacterWindow } from '@/character/characterWatch'
 import { connectThoughtStream } from '@/features/assistant/thoughtStream'
-import { useAccountChange } from '@/hooks/useAccountChange'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useConnections } from '@/hooks/useConnections'
 import { useMainLogs } from '@/hooks/useMainLogs'
@@ -31,6 +30,7 @@ import { connectPreparation } from '@/stores/preparation'
 import { connectSubSelectionRelease } from '@/stores/subSelection'
 import { connectSkyboxGeneration } from '@/stores/skyboxGeneration'
 import { Shell } from './Shell/Shell'
+import { StudioQueries } from './StudioQueries'
 
 export function Application() {
   useMainLogs()
@@ -86,6 +86,9 @@ export function Application() {
   // An action asked for from outside the application lands on the same gate the modal uses, so
   // a generation started from a terminal still asks on this screen before it spends.
   useEffect(() => connectRemoteActions(), [])
+  // The skeleton window edits a character in a realm of its own, and an action asking about one
+  // runs HERE: this is what lets the studio answer for it.
+  useEffect(() => watchTheCharacterWindow(), [])
   useEffect(() => connectThoughtStream(), [])
 
   // Same reason again: a scene selects from four doors — the outliner, the viewport, the node
@@ -95,24 +98,9 @@ export function Application() {
   useAppliedSettings()
   useDictationShortcut()
 
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
-      }),
-  )
-
-  /*
-   * Everything cached from the API belongs to the account that was active when it was fetched,
-   * and none of the query keys say which. Without this, switching accounts leaves the previous
-   * one's models and their signed previews on screen — nothing refetches them, since the keys
-   * did not change and `refetchOnWindowFocus` is off.
-   */
-  useAccountChange(() => client.clear())
-
   return (
-    <QueryClientProvider client={client}>
+    <StudioQueries>
       <Shell />
-    </QueryClientProvider>
+    </StudioQueries>
   )
 }

@@ -621,6 +621,10 @@
         "title": "Renommer un objet",
         "description": "Appelle autrement un objet de la scène devant. L’identifiant ne change pas, donc rien de ce qui le désignait n’est perdu."
       },
+      "nodeAttach": {
+        "title": "Accrocher un objet à un personnage",
+        "description": "Accroche un objet au point d’attache du personnage dont il dépend — une épée dans la main. Sans point nommé, l’objet suit le personnage entier."
+      },
       "nodeTransform": {
         "title": "Placer un objet",
         "description": "Déplace, oriente ou redimensionne un objet. Les rotations sont des angles d’Euler en radians, et tout axe omis garde la valeur que l’objet avait déjà."
@@ -724,6 +728,14 @@
       "rigHands": {
         "title": "Ajouter les os des doigts",
         "description": "Pose les trente os de doigts au repos sur les mains que le squelette porte déjà. Sans mains reconnues, rien n’est écrit."
+      },
+      "socketAdd": {
+        "title": "Poser un point d’attache",
+        "description": "Pose sur un os du personnage devant un point qu’un objet d’une scène peut suivre — une main, un dos. Le point vit dans le fichier du personnage."
+      },
+      "socketRemove": {
+        "title": "Retirer un point d’attache",
+        "description": "Retire un point d’attache du personnage devant. Ce qui le suivait retombe sur le personnage lui-même."
       },
       "boneAdd": {
         "title": "Ajouter un os",
@@ -1496,7 +1508,8 @@
       "memoryFile": "Fichier du projet que cela concerne",
       "memoryTo": "Identifiant de la mémoire visée",
       "projectName": "Nom du projet",
-      "projectParent": "Créé dans"
+      "projectParent": "Créé dans",
+      "socket": "Point d’attache"
     },
     "listening": "L’assistant vous écoute",
     "done": "L’assistant a répondu",

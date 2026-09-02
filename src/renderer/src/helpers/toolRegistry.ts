@@ -1,7 +1,6 @@
 import {
   mdiAlertCircleOutline,
   mdiChatOutline,
-  mdiRunFast,
   mdiBookOpenPageVariantOutline,
   mdiCreationOutline,
   mdiFileTreeOutline,
@@ -69,7 +68,6 @@ const ICONS: Record<ToolId, string> = {
   // The home's own. `mdiFolderOutline` is the Explorer's and `mdiCreationOutline` the
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
-  animations: mdiRunFast,
   text: mdiFormatText,
   // An open book: what the project SAYS about itself, beside the folder that holds it and
   // the fork that tracks it. Neither of those two, and neither the sparkle of a generation.

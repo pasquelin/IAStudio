@@ -231,6 +231,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       saveAudio: () => Promise.reject(new Error('no project')),
       savePicture: () => Promise.reject(new Error('no project')),
       saveLayered: () => Promise.reject(new Error('no project')),
+      saveMesh: () => Promise.reject(new Error('no project')),
+      saveAnimation: () => Promise.reject(new Error('no project')),
       // `null`, not a rejection: « this asset is not a container » is the ordinary answer, and
       // every caller of it falls back to opening a flat picture.
       readLayered: () => Promise.resolve(null),
@@ -369,6 +371,11 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     mirror: {
       open: () => Promise.resolve(),
       ...overrides.mirror,
+    },
+    characterWindow: {
+      open: () => Promise.resolve(),
+      onClosed: () => () => {},
+      ...overrides.characterWindow,
     },
     gameWindow: {
       open: () => Promise.resolve(),

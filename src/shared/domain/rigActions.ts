@@ -12,7 +12,9 @@ import { CLIP_SOURCES, CLIP_SPEED, MAX_CLIP_FADE, ROOT_MOTIONS } from './scene'
  * one of these runs the very command the panel runs, so a batch lands in the scene's own history
  * and ⌘Z takes it back.
  *
- * They act on a model node of the 3D tab in front — `scene.state` says which nodes those are.
+ * 🛑 TWO subjects, and the split is the whole point: the skeleton is a property of a FILE, so
+ * `rig.*`, `bone.*` and `ik.*` act on the character the skeleton window holds and name no node.
+ * What plays WHEN is a property of a scene, so the band's own actions still name one.
  */
 const NODE: ActionField = {
   key: 'nodeId',
@@ -50,7 +52,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [NODE],
+    fields: [],
   }),
   action({
     /**
@@ -63,7 +65,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [NODE],
+    fields: [],
   }),
   action({
     name: 'rig.clear',
@@ -72,7 +74,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [NODE],
+    fields: [],
   }),
   action({
     name: 'rig.hands',
@@ -81,7 +83,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [NODE],
+    fields: [],
   }),
   action({
     // The name is composed from the parent's, as the panel's own button does — a bone named from
@@ -92,7 +94,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [NODE, { ...BONE, key: 'parent', labelKey: 'assistant.fields.parentBone' }],
+    fields: [{ ...BONE, key: 'parent', labelKey: 'assistant.fields.parentBone' }],
   }),
   action({
     name: 'bone.remove',
@@ -101,7 +103,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [NODE, BONE],
+    fields: [BONE],
   }),
   action({
     name: 'bone.rename',
@@ -111,10 +113,30 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [
-      NODE,
       BONE,
       { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
     ],
+  }),
+  action({
+    name: 'socket.add',
+    titleKey: 'assistant.actions.socketAdd.title',
+    descriptionKey: 'assistant.actions.socketAdd.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      BONE,
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
+    ],
+  }),
+  action({
+    name: 'socket.remove',
+    titleKey: 'assistant.actions.socketRemove.title',
+    descriptionKey: 'assistant.actions.socketRemove.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [{ key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true }],
   }),
   action({
     // The roles keep the standard's own spelling, untranslated: they are the identifiers of the
@@ -126,7 +148,6 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [
-      NODE,
       BONE,
       {
         key: 'role',
@@ -144,7 +165,7 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [NODE, BONE],
+    fields: [BONE],
   }),
   action({
     name: 'ik.remove',
@@ -154,7 +175,6 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [
-      NODE,
       { key: 'chainId', kind: 'text', labelKey: 'assistant.fields.chainId', required: true },
     ],
   }),

@@ -32,28 +32,29 @@ import { canNegate } from '@/engines/csg/carve'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
   addNode,
+  attachNode,
   carveNodes,
+  dressModel,
   invertCarve,
   multi,
   removeNode,
   renameNode,
   reorderNodes,
   reparentNode,
+  separateNode,
   setCamera,
   setGeometry,
   setLight,
   setMaterialOn,
-  dressModel,
-  wearMaterialAt,
   setNodeVisible,
-  setPath,
   setNodesNegative,
+  setPath,
   setSelection,
   setShadowOn,
   setSpriteOn,
   setTextOn,
   setWorld,
-  separateNode,
+  wearMaterialAt,
 } from '@/engines/scene/commands'
 import { carriesMaterial } from '@/engines/scene/sceneState'
 import { backgroundOfKind, fogOfKind } from '@/engines/scene/sceneWorld'
@@ -99,6 +100,7 @@ import {
 import { activeSceneId, documentNamedOfKind, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
+import { useCharacters } from '@/stores/character'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { withAsset, type ActionHandlers } from './actionHandler'
 import { nodeAimed } from './nodeAimed'
@@ -781,6 +783,17 @@ function worldGround(input: Record<string, unknown>): ActionOutcome {
   }, 'this call named nothing to write on the ground: visible, color, size, opacity or receiveShadow')
 }
 
+/**
+ * A point by NAME, as a person says it, resolved to the id the file writes. Passed through when
+ * no character is open: a client that read the file knows the id, and this must not lose it.
+ */
+function socketIdOf(named: string | null | undefined): string | null {
+  if (!named) return null
+
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.sockets.find(one => one.name === named || one.id === named)?.id ?? named
+}
+
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
 
@@ -896,6 +909,11 @@ export const SCENE_HANDLERS: ActionHandlers = {
     const given = after.nodes.filter(one => !open.state.nodes.includes(one)).map(one => one.id)
     return { ok: true, data: { nodeIds: given } }
   },
+
+  // An empty socket takes it back off, as the field says: the node then hangs from the
+  // character itself, which is where it stood before a point was named.
+  'node.attach': input =>
+    editNode(input, node => attachNode(node.id, socketIdOf(textOf(input, 'socket')))),
 
   'node.rename': input =>
     editNode(input, node => renameNode(node.id, textOf(input, 'name') ?? node.name)),

@@ -275,6 +275,20 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     fields: [NODE],
   }),
   action({
+    name: 'node.attach',
+    titleKey: 'assistant.actions.nodeAttach.title',
+    descriptionKey: 'assistant.actions.nodeAttach.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      NODE,
+      // Empty takes it back off: a point refines the parent, and dropping it leaves the node
+      // hanging from the character itself.
+      { key: 'socket', kind: 'text', labelKey: 'assistant.fields.socket', required: false },
+    ],
+  }),
+  action({
     name: 'node.rename',
     titleKey: 'assistant.actions.nodeRename.title',
     descriptionKey: 'assistant.actions.nodeRename.description',

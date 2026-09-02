@@ -1,4 +1,4 @@
-import { mdiRecordCircleOutline } from '@mdi/js'
+import { mdiRecordCircleOutline, mdiRepeat } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { secondsToUs, usToSeconds, type Us } from '@shared/domain/time'
@@ -17,7 +17,14 @@ import { TimelineTransport } from '../../../../timeline/components/Timeline/Time
 import { AnimationActionsRenderButton } from './AnimationActionsRenderButton'
 import { animationTools, runAnimationTool } from './animationTools'
 
-export type AnimationActionsProps = { documentId: string }
+export type AnimationActionsProps = {
+  documentId: string
+  /**
+   * Whether this band writes a film. A workshop scene holds one character and nothing else — no
+   * camera can be put in it — so the button would stand grey for ever rather than offer anything.
+   */
+  filmable?: boolean
+}
 
 /** What a band may be asked to last, in seconds — a frame at the low end, an hour at the top. */
 const MIN_DURATION = 0.1
@@ -31,7 +38,7 @@ const MAX_FPS = 120
  * the same place the montage puts its tools, and for the same reason: a band is short, and a
  * row of controls above it costs a row of keys.
  */
-export function AnimationActions({ documentId }: AnimationActionsProps) {
+export function AnimationActions({ documentId, filmable = true }: AnimationActionsProps) {
   const { t } = useTranslation()
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
@@ -42,6 +49,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
   const playing = useSceneViews(state => sceneViewOf(state, documentId).playing)
   const head = useSceneFrameHead(documentId, timeline.fps)
   const autoKey = useAnimationViews(state => animationViewOf(state, documentId).autoKey)
+  const looping = useAnimationViews(state => animationViewOf(state, documentId).looping)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
   const bones = useModelFiles(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
@@ -82,6 +90,15 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
           }
           views.setPlaying(documentId, !view.playing)
         }}
+      />
+      <ToolButton
+        icon={mdiRepeat}
+        label={t('animation.loop')}
+        description={t('animation.loopHint')}
+        tooltip={TIP_BOTTOM}
+        variant="header"
+        active={looping}
+        onClick={() => useAnimationViews.getState().setLooping(documentId, !looping)}
       />
       <ToolButton
         icon={mdiRecordCircleOutline}
@@ -146,7 +163,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
         />
       </div>
 
-      <AnimationActionsRenderButton documentId={documentId} />
+      {filmable && <AnimationActionsRenderButton documentId={documentId} />}
     </>
   )
 }

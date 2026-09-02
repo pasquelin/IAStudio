@@ -42,6 +42,7 @@ import { registerNewsHandlers } from '@main/news/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { registerFileInfoWindow } from '@main/window/fileInfo'
 import { registerHelpWindows } from '@main/window/help'
+import { registerCharacterWindow } from '@main/window/characterWindow'
 import { registerGameWindow } from '@main/window/gameWindow'
 import { registerMirrorWindow } from '@main/window/mirror'
 import { registerNewDocumentWindow } from '@main/window/newDocument'
@@ -53,6 +54,7 @@ export function registerIpc(services: Services): void {
   registerWindowControls()
   registerMirrorWindow()
   registerGameWindow()
+  registerCharacterWindow()
   registerHelpWindows()
   registerFileInfoWindow()
   registerNewDocumentWindow()

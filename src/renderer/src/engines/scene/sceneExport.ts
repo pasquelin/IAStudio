@@ -89,6 +89,13 @@ export type ExportOptions = {
    * and `clone` carries them over, so they are collected from the copies directly.
    */
   clipsFor?: (copies: readonly Object3D[]) => AnimationClip[]
+  /**
+   * What the file carries of the studio's own, written on the SCENE — `GLTFLoader` hands
+   * `scenes[i].extras` back as `scene.userData`, and reads nothing of the root's.
+   *
+   * glTF only: the other three formats reserve no place for a reader to ignore.
+   */
+  extras?: Record<string, unknown>
 }
 
 /** The clips the copied models brought with them, gathered wherever they hang in the subtree. */
@@ -102,7 +109,7 @@ function clipsIn(roots: readonly Object3D[]): AnimationClip[] {
 export async function exportObjects(
   objects: readonly Object3D[],
   format: ExportFormat,
-  { nameOf, decoder, clipsFor }: ExportOptions = {},
+  { nameOf, decoder, clipsFor, extras }: ExportOptions = {},
 ): Promise<Uint8Array> {
   // Said rather than written: both exporters default to `onlyVisible`, so a hidden node used to
   // produce a valid, empty file — and nothing on screen distinguished that from a success.
@@ -119,7 +126,7 @@ export async function exportObjects(
     const animations = [...clipsIn(roots), ...(clipsFor?.(roots) ?? [])]
     if (nameOf) for (const root of roots) rename(root, nameOf)
 
-    return await write(roots, format, decoder ?? owned ?? ownedDecoder(), animations)
+    return await write(roots, format, decoder ?? owned ?? ownedDecoder(), animations, extras)
   } finally {
     owned?.dispose()
   }
@@ -130,8 +137,10 @@ function write(
   format: ExportFormat,
   decoder: TextureDecoder,
   animations: readonly AnimationClip[],
+  extras?: Record<string, unknown>,
 ): Promise<Uint8Array> {
-  if (format === 'glb' || format === 'gltf') return toGltf(roots, format, decoder, animations)
+  if (format === 'glb' || format === 'gltf')
+    return toGltf(roots, format, decoder, animations, extras)
   if (format !== 'usdz') return toShapes(oneScene(roots), format)
 
   const exporter = new USDZExporter()
@@ -255,9 +264,12 @@ function dropOverlays(object: Object3D): void {
  * and per input beyond, so several roots and a flat list wrote nothing at all — measured 20/08 on
  * a `.gltf` of eight roots, which Unreal 5.8.1 imported with no `AnimSequence`.
  */
-function oneScene(roots: readonly Object3D[]): Scene {
+function oneScene(roots: readonly Object3D[], extras?: Record<string, unknown>): Scene {
   const scene = new Scene()
   scene.children.push(...roots)
+  // `serializeUserData` writes this to the scene's `extras`, which is where `glbSkin` puts the
+  // studio's own too — one place per file, whichever side wrote it.
+  if (extras) scene.userData = extras
   return scene
 }
 
@@ -266,6 +278,7 @@ async function toGltf(
   format: Exclude<ExportFormat, 'usdz'>,
   decoder: TextureDecoder,
   animations: readonly AnimationClip[],
+  extras?: Record<string, unknown>,
 ): Promise<Uint8Array> {
   const binary = format === 'glb'
   const exporter = new GLTFExporter()
@@ -274,7 +287,7 @@ async function toGltf(
   // `animations` is passed rather than left out, and that is the whole point of this option: the
   // exporter writes NOTHING of an animation it was not handed — a scene animated in the studio,
   // and a model that arrived animated, both left as still poses.
-  const result = await exporter.parseAsync(oneScene(roots), {
+  const result = await exporter.parseAsync(oneScene(roots, extras), {
     binary,
     animations: [...animations],
   })

@@ -8,7 +8,8 @@ import {
   setAnimationKey,
   setTimelineSettings,
 } from '@/engines/scene/animationCommands'
-import { animationRows, CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/scene/animationRows'
+import { animationRows } from '@/engines/scene/animationRows'
+import { CHANNEL_HEIGHT, SUBJECT_HEIGHT } from '@/engines/timeline/bandRows'
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { cameraNodeFixture, meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
@@ -88,6 +89,8 @@ describe('dragging a clip block', () => {
           selected: [],
           pickedBlock: null,
           autoKey: false,
+          looping: false,
+          openMotion: null,
           order: [],
         },
       },
@@ -330,6 +333,8 @@ describe('scrubbing and picking on the band', () => {
           selected: [],
           pickedBlock: null,
           autoKey: false,
+          looping: false,
+          openMotion: null,
           order: [],
         },
       },
@@ -416,6 +421,8 @@ describe('following a duration that changes', () => {
           selected: [],
           pickedBlock: null,
           autoKey: false,
+          looping: false,
+          openMotion: null,
           order: [],
         },
       },
@@ -470,6 +477,8 @@ describe('removing a picked key with the keyboard', () => {
           selected: [],
           pickedBlock: null,
           autoKey: false,
+          looping: false,
+          openMotion: null,
           order: [],
         },
       },
@@ -554,6 +563,8 @@ describe('dragging a shot', () => {
           selected: [],
           pickedBlock: null,
           autoKey: false,
+          looping: false,
+          openMotion: null,
           order: [],
         },
       },
@@ -657,6 +668,8 @@ describe('the three gestures a chosen block answers to', () => {
           selected: [],
           pickedBlock: 'c1',
           autoKey: false,
+          looping: false,
+          openMotion: null,
           order: [],
         },
       },

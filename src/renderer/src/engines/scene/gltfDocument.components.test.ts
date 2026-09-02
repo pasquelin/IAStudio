@@ -62,6 +62,16 @@ describe('a scene document carrying components', () => {
     expect(sceneFromGltf(document).nodes[0]?.components).toEqual([])
   })
 
+  // 🛑 A rig belongs to the model's own file now, and this reader drops the one a node holds.
+  // Written back in silence, a ⌘S on an old scene would take every skeleton it carried with it.
+  it('refuses to save over a scene still carrying a skeleton on one of its nodes', () => {
+    const document = written(sceneWith())
+    const node = payloadNodes(document)[0]
+    if (node) node.model = { assetId: 'x', rig: { origin: 'local', bones: [] } }
+
+    expect(sceneHoldsMore(document)).toEqual(['nodes.model.rig'])
+  })
+
   it('refuses to save over a file holding a component it cannot act on', () => {
     const document = written(sceneWith([newComponent('Health')]))
     const node = payloadNodes(document)[0]

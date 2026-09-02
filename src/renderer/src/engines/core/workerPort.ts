@@ -30,7 +30,24 @@ export type WorkerPort<T> = {
   record: (id: number, slot: PortSlot<T>) => void
   /** `false` when the request was already answered for — what tells a late abort from a live one. */
   forget: (id: number) => boolean
+  /**
+   * One request, out and back: claimed, posted, recorded, and taken back on an abort.
+   *
+   * 🛑 The order is the contract, not a style — posting BEFORE recording is what leaves no slot
+   * behind when the structured clone refuses a payload. Written out three times before this, in
+   * three engines, each with the same six comments.
+   */
+  send: (
+    request: (id: number) => { message: unknown; transfer?: Transferable[] },
+    watch?: PortWatch,
+  ) => Promise<T | null>
   dispose: () => void
+}
+
+/** What a caller may follow a request with: how far it has got, and a way to take it back. */
+export type PortWatch = {
+  onProgress?: (progress: number) => void
+  signal?: AbortSignal
 }
 
 /** @param what names the worker in the two failures no `try` inside it can catch. */
@@ -69,7 +86,7 @@ export function createWorkerPort<T, R extends PortResponse>(
     waiting.clear()
   }
 
-  return {
+  const port: WorkerPort<T> = {
     claim: () => (nextId += 1),
 
     running: () => {
@@ -93,6 +110,53 @@ export function createWorkerPort<T, R extends PortResponse>(
 
     forget: id => waiting.delete(id),
 
+    send: (request, watch) =>
+      new Promise((resolve, reject) => {
+        if (gone) {
+          resolve(null)
+          return
+        }
+
+        const id = nextId + 1
+        nextId += 1
+        const running = port.running()
+        const { message, transfer } = request(id)
+        // Posted before it is recorded: a payload the structured clone cannot carry throws with
+        // no slot left behind.
+        running.postMessage(message, transfer ?? [])
+
+        const give = (): void => {
+          if (!waiting.delete(id)) return
+          watch?.signal?.removeEventListener('abort', give)
+          running.postMessage({ id, cancel: true })
+          resolve(null)
+        }
+
+        // Wrapped rather than dropped at each exit: a request leaves the register by four paths,
+        // and one that forgot its listener would leak with nothing to say so.
+        const settled =
+          <V>(hand: (value: V) => void) =>
+          (value: V): void => {
+            watch?.signal?.removeEventListener('abort', give)
+            hand(value)
+          }
+
+        waiting.set(id, {
+          resolve: settled(resolve),
+          reject: settled(reject),
+          onProgress: watch?.onProgress,
+        })
+
+        // Abandoned before it was even asked: an `abort` already delivered never calls the
+        // listener below, which would outlive the request on a signal one caller keeps.
+        if (watch?.signal?.aborted) {
+          give()
+          return
+        }
+
+        watch?.signal?.addEventListener('abort', give)
+      }),
+
     dispose: () => {
       gone = true
       worker?.terminate()
@@ -102,4 +166,6 @@ export function createWorkerPort<T, R extends PortResponse>(
       waiting.clear()
     },
   }
+
+  return port
 }

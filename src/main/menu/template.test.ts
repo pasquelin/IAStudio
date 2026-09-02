@@ -2,7 +2,7 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 import { APP_NAME } from '@shared/constants'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
-import { COMMAND_REGISTRY } from '@shared/domain/command'
+import { COMMAND_REGISTRY, scopeOfWorkspace } from '@shared/domain/command'
 import {
   DISPLAY_MODES,
   EXPORT_FORMATS,
@@ -34,10 +34,15 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   ...overrides,
 })
 
-const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
+/** The scope derived from the space and the kind, as the studio window derives it before announcing. */
+const options = ({
+  kind = null,
+  workspace = '3d',
+  ...given
+}: Partial<MenuOptions> & { kind?: DocumentKind | null } = {}): MenuOptions => ({
   language: 'fr',
-  workspace: '3d',
-  kind: 'scene',
+  workspace,
+  scope: scopeOfWorkspace(workspace, kind),
   tools: ['meshes', 'lights', 'explorer', 'generator', 'inspector', 'assets'],
   checked: [],
   abilities: [],
@@ -336,6 +341,17 @@ describe('the Edit menu', () => {
       activate(rows.find(row => row.label === 'Grouper'))
       expect(runCommand).toHaveBeenCalledWith('scene.group')
     })
+  })
+
+  // The skeleton window: no space, no document, a history all the same.
+  it('binds undo to a history the window reports without any space', () => {
+    const entries = submenuOf(
+      menuTemplate(options({ workspace: null, scope: 'character' })),
+      'Édition',
+    )
+
+    expect(entries[0]?.id).toBe('character.undo')
+    expect(entries[1]?.id).toBe('character.redo')
   })
 
   /**

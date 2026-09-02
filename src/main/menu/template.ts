@@ -21,13 +21,12 @@ import {
   bindingOf,
   commandDescriptor,
   commandIn,
-  scopeOfWorkspace,
   type BindingOverrides,
   type CommandId,
+  type CommandScope,
   type MenuAbility,
   type MenuCheck,
 } from '@shared/domain/command'
-import type { DocumentKind } from '@shared/domain/document'
 import { acceleratorOf, typesText } from '@shared/domain/shortcut'
 import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
@@ -83,8 +82,8 @@ export type MenuOptions = {
    * drops, which is the whole point of naming the surface rather than the workspace.
    */
   workspace: ToolSurface | null
-  /** The kind of the tab in front, which is what says whose history Undo pops. */
-  kind: DocumentKind | null
+  /** Whose history Undo pops, `null` where nothing is undoable — see `setWorkspace` in `shared/ipc.ts`. */
+  scope: CommandScope | null
   /**
    * The panels the focused window can currently open, as it reported them. Not derived from the
    * registry here: whether the generator exists depends on a model being chosen, which only the
@@ -153,7 +152,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const {
     language,
     workspace,
-    kind,
+    scope,
     tools,
     checked,
     abilities,
@@ -163,10 +162,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     actions,
   } = options
 
-  // 🛑 The KIND and not the space alone: the 3D space also opens interfaces, and a scene row over
-  // one acts on a scene nobody is looking at. Every rank below reads this, never `workspace`.
-  const surface = scopeOfWorkspace(workspace, kind)
-
+  // 🛑 Every rank below reads the SCOPE for what edits, never `workspace`: the 3D space also opens
+  // interfaces, and a scene row over one acts on a scene nobody is looking at.
   /**
    * How a native row may carry a command's key, read off the registry so the menu never advertises
    * one a remap has moved. `registerAccelerator` is Windows and Linux ONLY: on macOS a row that
@@ -316,7 +313,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * commands keep their full title for the palette, where nothing stands above them.
    */
   const exportSubmenu = (): MenuItemConstructorOptions[] => {
-    if (surface === 'scene') {
+    if (scope === 'scene') {
       return [
         { label: t.menu.exportScene, submenu: exportItems('scene') },
         // Greyed rather than dropped: a row that comes and goes is one the eye has to look for.
@@ -432,8 +429,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     { role: 'undo', label: t.commands.undo.title },
     { role: 'redo', label: t.commands.redo.title },
   ]
-  const undo = surface && commandIn(surface, 'undo')
-  const redo = surface && commandIn(surface, 'redo')
+  const undo = scope && commandIn(scope, 'undo')
+  const redo = scope && commandIn(scope, 'redo')
 
   /**
    * What a scene does to what is selected, once the toolbar stopped drawing a button for each.
@@ -445,7 +442,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * unlike the keyboard one, which is what makes a key safe here where a row would not be.
    */
   const sceneEditItems: MenuItemConstructorOptions[] =
-    surface === 'scene'
+    scope === 'scene'
       ? [
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
@@ -571,7 +568,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * changes once a session, not gestures repeated by the minute, which is what a menu is for.
    */
   const sceneViewMenu: MenuItemConstructorOptions[] =
-    surface === 'scene'
+    scope === 'scene'
       ? [
           { type: 'separator' },
           { label: t.menu.sceneDisplay, submenu: displayItems() },
@@ -674,7 +671,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
-    surface === 'scene'
+    scope === 'scene'
       ? [
           {
             label: t.menu.add,

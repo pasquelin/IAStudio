@@ -45,6 +45,14 @@ export type SceneNodeBase = {
    * rendering — the behaviour lives in a system, never in the component.
    */
   components?: readonly Component[]
+  /**
+   * The attachment point of the PARENT this node hangs on — a sword in a hand, a hat on a head.
+   *
+   * It REFINES `parentId` and never replaces it: the parent is still the character, and this
+   * says which of its sockets to follow. A node whose parent carries no such socket hangs from
+   * the character itself, which is where it stood before the socket was named.
+   */
+  attach?: { socket: string }
 }
 
 export type SceneNode = SceneNodeBase &

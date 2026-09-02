@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { TooltipHost } from './TooltipHost'
-import { DRAGGABLE } from '@/helpers/appRegion'
+import { WindowTitleBar } from './WindowTitleBar'
 
 export type WindowShellProps = {
   /** Already translated, as every design component takes its words. */
@@ -60,15 +60,7 @@ export function WindowShell({
 }: WindowShellProps) {
   return (
     <div className="bg-base-200 text-base-content flex h-full flex-col">
-      <header
-        style={DRAGGABLE}
-        className="text-body flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 font-medium"
-      >
-        {/* A heading rather than bare words: it is the only thing naming the window to a reader,
-            and Tailwind's preflight leaves an `h1` at the size its container gives it. */}
-        <h1>{title}</h1>
-        {headerActions}
-      </header>
+      <WindowTitleBar title={title} actions={headerActions} />
 
       <div className="flex min-h-0 flex-1">
         {nav && (

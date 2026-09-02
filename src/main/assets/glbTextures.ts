@@ -1,13 +1,7 @@
 import { isRecord } from '@shared/guards'
+import { glbChunksOf, glbJson } from '@shared/domain/glbContainer'
 import { textureSlotsOf } from '@shared/domain/gltf'
 import type { PbrChannel } from '@shared/domain/material'
-
-/** `glTF` in ASCII, little-endian — the four bytes every `.glb` opens with. */
-const GLB_MAGIC = 0x46546c67
-const JSON_CHUNK = 0x4e4f534a
-const BIN_CHUNK = 0x004e4942
-const HEADER_BYTES = 12
-const CHUNK_HEADER_BYTES = 8
 
 /**
  * How a glTF texture slot maps onto the studio's own channels.
@@ -50,10 +44,10 @@ export type EmbeddedTexture = {
  * and a model whose bytes are not a `.glb` is a normal thing to click on.
  */
 export function embeddedTextures(file: Uint8Array): EmbeddedTexture[] {
-  const chunks = chunksOf(file)
+  const chunks = glbChunksOf(file)
   if (!chunks) return []
 
-  const gltf: unknown = parseJson(chunks.json)
+  const gltf: unknown = glbJson(chunks.json)
   if (!isRecord(gltf)) return []
 
   const images = Array.isArray(gltf.images) ? gltf.images : []
@@ -101,43 +95,6 @@ function channelWornBy(slots: readonly string[]): PbrChannel | undefined {
   const only = [...claimed]
 
   return claimed.size === 1 ? only[0] : undefined
-}
-
-/** The two chunks a `.glb` is made of, or null when the bytes are not one. */
-function chunksOf(file: Uint8Array): { json: Uint8Array; bin: Uint8Array } | null {
-  if (file.byteLength < HEADER_BYTES) return null
-
-  const view = new DataView(file.buffer, file.byteOffset, file.byteLength)
-  if (view.getUint32(0, true) !== GLB_MAGIC) return null
-
-  let json: Uint8Array | null = null
-  let bin: Uint8Array | null = null
-
-  let offset = HEADER_BYTES
-  while (offset + CHUNK_HEADER_BYTES <= file.byteLength) {
-    const length = view.getUint32(offset, true)
-    const kind = view.getUint32(offset + 4, true)
-    const start = offset + CHUNK_HEADER_BYTES
-    // A length that overruns the file is a truncated download, not a chunk: stop rather than
-    // hand a reader a window onto bytes that are not there.
-    if (start + length > file.byteLength) break
-
-    const body = file.subarray(start, start + length)
-    if (kind === JSON_CHUNK) json ??= body
-    if (kind === BIN_CHUNK) bin ??= body
-
-    offset = start + length
-  }
-
-  return json ? { json, bin: bin ?? new Uint8Array() } : null
-}
-
-function parseJson(bytes: Uint8Array): unknown {
-  try {
-    return JSON.parse(new TextDecoder().decode(bytes))
-  } catch {
-    return null
-  }
 }
 
 /**

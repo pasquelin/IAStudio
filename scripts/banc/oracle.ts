@@ -27,6 +27,7 @@ import { toDb } from '@/engines/audio/audioData'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { usePostPresets } from '@/stores/postPresets'
 import { useSettings } from '@/stores/settings'
+import { useCharacters } from '@/stores/character'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -171,10 +172,21 @@ export const montage = (run: Run) => {
 export const animationView = (run: Run) =>
   firstOf(run, '3d', id => animationViewOf(useAnimationViews.getState(), id))
 
-/** The skeleton of the model in the open scene — a rig lives on its node's `model`, nowhere else. */
-export const rig = (run: Run) => {
-  const model = nodes(run).find(one => one.type === 'model')
-  return model?.type === 'model' ? (model.model.rig ?? null) : null
+/**
+ * The skeleton of the character the window holds.
+ *
+ * 🛑 Not a node's: a rig belongs to a FILE now, and the studio keeps no document for one — the
+ * skeleton window is where it is read and edited.
+ */
+export const rig = (_run: Run) => {
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.rig ?? null
+}
+
+/** The attachment points that character carries — they live in its file, never in the scene. */
+export const sockets = (_run: Run) => {
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.sockets ?? []
 }
 
 /**

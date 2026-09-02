@@ -52,10 +52,23 @@ function jointDisc(): Texture | null {
   return new CanvasTexture(canvas)
 }
 
+/**
+ * The two colours a joint takes. Handed in for `jointDisc`'s reason: a runner resolves no custom
+ * property at all, so both tokens come back the same and nothing could be told apart.
+ */
+export type JointColours = { rest: string; picked: string }
+
+const JOINT_COLOURS = (): JointColours => ({
+  rest: rootColour('--color-muted'),
+  picked: rootColour('--color-accent'),
+})
+
 export type BoneJoints = {
   points: Points
   /** Reads every bone's world position again — they move with the pose, every frame. */
   refresh: () => void
+  /** Paints one joint as the CHOSEN one, or none. Nothing else says which bone is being edited. */
+  pick: (bone: string | null) => void
   dispose: () => void
 }
 
@@ -68,15 +81,27 @@ export type BoneJoints = {
 export function createBoneJoints(
   bones: readonly Bone[],
   drawDisc: () => Texture | null = jointDisc,
+  readColours: () => JointColours = JOINT_COLOURS,
 ): BoneJoints {
   const geometry = new BufferGeometry()
   const positions = new Float32Array(bones.length * 3)
   const attribute = new BufferAttribute(positions, 3)
   geometry.setAttribute('position', attribute)
 
+  // The accent says what is CHOSEN, exactly as the timeline's keys do — so the joints at rest
+  // are muted and the picked one alone takes it. Painted them all accent, a skeleton offered no
+  // way at all to see which bone a panel was editing.
+  const colours = new Float32Array(bones.length * 3)
+  const colour = new BufferAttribute(colours, 3)
+  geometry.setAttribute('color', colour)
+
+  const palette = readColours()
+  const restColour = new Color(palette.rest)
+  const pickedColour = new Color(palette.picked)
+
   const disc = drawDisc()
   const material = new PointsMaterial({
-    color: new Color(rootColour('--color-accent')),
+    vertexColors: true,
     size: JOINT_SIZE,
     // Screen-sized, and drawn THROUGH the mesh: a joint inside a body is exactly the one a user
     // is looking for, and one that disappears under a shoulder cannot be aimed at.
@@ -101,6 +126,16 @@ export function createBoneJoints(
   const held = new Set<Object3D>(bones)
   const roots = bones.filter(bone => !bone.parent || !held.has(bone.parent))
 
+  const pick = (picked: string | null): void => {
+    for (const [index, bone] of bones.entries()) {
+      const paint = bone.name === picked ? pickedColour : restColour
+      colours[index * 3] = paint.r
+      colours[index * 3 + 1] = paint.g
+      colours[index * 3 + 2] = paint.b
+    }
+    colour.needsUpdate = true
+  }
+
   const refresh = (): void => {
     for (const root of roots) root.updateWorldMatrix(true, true)
 
@@ -114,10 +149,12 @@ export function createBoneJoints(
   }
 
   refresh()
+  pick(null)
 
   return {
     points,
     refresh,
+    pick,
     dispose: () => {
       geometry.dispose()
       material.dispose()

@@ -62,13 +62,18 @@ function spineTurn(): WireClip {
 }
 
 /** `null` asks for no rate at all — passing `undefined` would fall back on the default below. */
-function ask(id: number, clips: readonly WireClip[], fps: number | null = 30): void {
+function ask(
+  id: number,
+  clips: readonly WireClip[],
+  fps: number | null = 30,
+  source: readonly WireBone[] = SOURCE,
+): void {
   self.dispatchEvent(
     new MessageEvent('message', {
       data: {
         id,
         target: TARGET,
-        source: SOURCE,
+        source,
         clips,
         names: { Hip: 'mixamorigHips', Waist: 'mixamorigSpine', Head: 'mixamorigHead' },
         hip: 'mixamorigHips',
@@ -95,6 +100,27 @@ function spineTurnAt(frames: number): WireClip {
   return wireClipOf(
     new AnimationClip('walk', 1, [
       new QuaternionKeyframeTrack('mixamorigSpine.quaternion', times, values),
+    ]),
+  )
+}
+
+/**
+ * The SAME bones, resting 45° about Z on the spine — what a Mixamo rig does and what a
+ * fitted one never does, its rests all being the identity. Derived, so the two cannot drift apart.
+ */
+const TURNED_SOURCE: WireBone[] = SOURCE.map(bone =>
+  bone.name === 'mixamorigSpine' ? { ...bone, quaternion: [0, 0, 0.383, 0.924] } : bone,
+)
+
+/** A clip that holds the source exactly where it rests: nothing of the target should move. */
+function restingClip(): WireClip {
+  return wireClipOf(
+    new AnimationClip('rest', 1, [
+      new QuaternionKeyframeTrack(
+        'mixamorigSpine.quaternion',
+        [0, 1],
+        [0, 0, 0.383, 0.924, 0, 0, 0.383, 0.924],
+      ),
     ]),
   )
 }
@@ -134,6 +160,22 @@ describe('replaying an animation on another skeleton', () => {
 
     // A quarter turn about Y, sampled: the identity quaternion would be [0, 0, 0, 1].
     expect(Math.abs(last[1] ?? 0)).toBeGreaterThan(0.3)
+  })
+
+  // 🛑 three copies the source bone's WORLD orientation onto the target one. Two skeletons whose
+  // rests differ therefore fold the character in two — measured on a fitted rig, whose rests are
+  // all the identity, playing a Mixamo motion.
+  it('leaves a bone at rest when the motion holds its source at rest, whatever the rests are', async () => {
+    ask(1, [restingClip()], 30, TURNED_SOURCE)
+    await drain()
+
+    const answer = settled()
+    if (!answer?.done || !answer.ok) throw new Error('the worker did not answer with clips')
+    const turned = answer.clips[0]?.tracks.find(track => track.name === 'Waist.quaternion')
+    const last = turned?.values.slice(-4) ?? new Float32Array()
+
+    expect(Math.abs(last[2] ?? 1)).toBeLessThan(0.01)
+    expect(Math.abs(last[3] ?? 0)).toBeGreaterThan(0.99)
   })
 
   it('reads the hips’ travel at the target’s size, so its feet do not slide', async () => {

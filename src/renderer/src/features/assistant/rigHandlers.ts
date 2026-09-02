@@ -7,7 +7,6 @@ import {
   type HumanoidRole,
 } from '@shared/domain/humanoid'
 import { speaksBundle } from '@/helpers/speaksBundle'
-import { childBone } from '@shared/domain/rig'
 import {
   assetClip,
   bundledClip,
@@ -31,29 +30,33 @@ import { clampPlayhead } from '@/engines/scene/animationEval'
 import { clipsEdited, clipsMoved, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { channelNames } from '@/helpers/channelNames'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
-import {
-  addIkChain,
-  addModelClip,
-  addRigBone,
-  addRigHands,
-  removeIkChain,
-  removeModelClip,
-  removeRigBone,
-  renameRigBone,
-  setModelLanes,
-  setModelRig,
-  setRigBoneRole,
-} from '@/engines/scene/commands'
+import { removeModelClip, setModelLanes } from '@/engines/scene/commands'
+import { rigFit, rigFitFaultOf, type Bounds } from '@/engines/scene/rigFit'
 import type { Command } from '@/engines/core/history'
-import { rigFit, rigFitFaultOf } from '@/engines/scene/rigFit'
+import type { CharacterState } from '@/engines/character/characterState'
+import {
+  addCharacterBone,
+  addCharacterHands,
+  addCharacterIkChain,
+  addCharacterSocket,
+  removeCharacterBone,
+  removeCharacterIkChain,
+  removeCharacterSocket,
+  renameCharacterBone,
+  setCharacterBoneRole,
+  setCharacterRig,
+} from '@/engines/character/characterCommands'
+import { workshopIdOf } from '@/character/characterStage'
+import { useCharacters } from '@/stores/character'
 import { nodeById, type ModelNode, type SceneState } from '@/engines/scene/sceneState'
+import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { newId } from '@/helpers/ids'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useAnimationViews } from '@/stores/animationView'
 import { getBridge } from '@/services/bridge'
 import { activeSceneId, useDocuments } from '@/stores/documents'
-import { clipsOfNode, rigOfNode, useModelFiles } from '@/stores/modelFiles'
-import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
+import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
+import { laySceneClip, sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
 import { NO_SCENE } from './sceneHandlers'
 import { boolOf, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
@@ -106,24 +109,57 @@ function editModelOf(
   return { ok: true }
 }
 
-/** The bone named on that model, so a name nobody answers to is a refusal rather than a no-op. */
-function boneOf(node: ModelNode, name: string | null): string | null {
-  return name !== null && node.model.rig?.bones.some(bone => bone.name === name) ? name : null
+/**
+ * The character the skeleton window is editing, or nothing.
+ *
+ * 🛑 A skeleton lives in a FILE now, not on a node: an action that named a node would be naming
+ * the one place the studio no longer keeps one.
+ */
+function character(): CharacterState | null {
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open ?? null
+}
+
+function noCharacter(): ActionOutcome {
+  return refused(
+    'wrongSurface',
+    'no character is open — a skeleton is edited in its own window, which file.open puts a `.glb` in',
+  )
+}
+
+/** The bone named on that character, so a name nobody answers to is a refusal rather than a no-op. */
+function boneOf(state: CharacterState, name: string | null): string | null {
+  return name !== null && state.rig?.bones.some(bone => bone.name === name) ? name : null
+}
+
+/** One edit of the open character, refused when the build declines. */
+function editCharacter(
+  build: (state: CharacterState) => Command<CharacterState> | null,
+  nothing: string,
+): ActionOutcome {
+  const open = character()
+  if (!open) return noCharacter()
+
+  const command = build(open)
+  if (!command) return refused('notFound', nothing)
+
+  useCharacters.getState().runCommand(open.assetId, command)
+  return { ok: true }
 }
 
 /**
  * The skeleton the studio fits to the mesh it has measured. `null` bounds mean the engine has not
  * read the model yet, which is a wait rather than a fault.
  */
-function fitRig(input: Record<string, unknown>): ActionOutcome {
-  const open = model(input)
-  if (!open) return noModel(input)
+function fitRig(): ActionOutcome {
+  const open = character()
+  if (!open) return noCharacter()
 
-  const bounds = rigOfNode(useModelFiles.getState(), open.documentId, open.node.id)?.bounds
+  const bounds = boundsOfCharacter(open.assetId)
   if (!bounds)
     return refused(
       'notFound',
-      'the studio has not measured this model yet — rig.state answers "status"; wait for it to read the file, then send this again',
+      'the studio has not measured this character yet — rig.state answers "status"; wait for it to read the file, then send this again',
     )
 
   const fault = rigFitFaultOf(bounds)
@@ -132,28 +168,39 @@ function fitRig(input: Record<string, unknown>): ActionOutcome {
       'failed',
       fault === 'noGeometry'
         ? 'this model measures too small to lay bones in — it carries no geometry the studio can fit a rig to'
-        : 'this model lies down, and a rig is proportioned off the height — stand it up with node.transform, then send this again',
+        : 'this model lies down, and a rig is proportioned off the height — stand it up, then send this again',
     )
 
-  useScenes.getState().runCommand(open.documentId, setModelRig(open.node.id, rigFit(bounds)))
+  useCharacters.getState().runCommand(open.assetId, setCharacterRig(rigFit(bounds)))
   return { ok: true }
 }
 
-/** What the panels read off a character: its bones, their roles, its handles and its blocks. */
-function rigState(input: Record<string, unknown>): ActionOutcome {
-  const open = model(input)
-  if (!open) return noModel(input)
+/**
+ * What the engine measured of the open character.
+ *
+ * 🛑 Its OWN workshop scene, never « the first model of any document »: a fit proportions itself
+ * off a height, and one read from another mesh would lay a skeleton of the wrong size.
+ */
+function boundsOfCharacter(assetId: string): Bounds | null {
+  const files = useModelFiles.getState()
+  const measured = files.rigs[workshopIdOf(assetId)] ?? {}
 
-  const rig = open.node.model.rig
+  return Object.values(measured).find(rig => rig.bounds)?.bounds ?? null
+}
+
+/** What the panels read off a character: its bones, their roles, its handles, what it can play. */
+function rigState(): ActionOutcome {
+  const open = character()
+  if (!open) return noCharacter()
+
   return {
     ok: true,
     data: {
-      rigged: rig !== undefined,
-      bones: rig?.bones ?? [],
-      ik: rig?.ik ?? [],
-      lanes: open.node.model.lanes ?? [],
-      // What the engine measured, which is what decides whether a bare mesh can be rigged at all.
-      status: rigOfNode(useModelFiles.getState(), open.documentId, open.node.id)?.status ?? null,
+      rigged: open.rig !== null,
+      bones: open.rig?.bones ?? [],
+      ik: open.rig?.ik ?? [],
+      sockets: open.sockets,
+      motions: open.motions,
     },
   }
 }
@@ -181,11 +228,7 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
         `asset "${assetId}" is of type "${asset.type}", and a block wants one of type "animation" — assets.searchProjectCatalogue with type "animation" answers which are`,
       )
 
-    return editModelOf(
-      input,
-      node => addModelClip(node.id, assetClip(newId(), asset.id, asset.name)),
-      'that asset built no block on this model',
-    )
+    return layBlockOf(input, assetClip(newId(), asset.id, asset.name))
   }
 
   if (assetId !== null || clipName === null)
@@ -206,15 +249,19 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
       `"${clipName}" is not among the "${source}" clips this model can play — animations.list answers "embedded" and "bundled" by name`,
     )
 
-  return editModelOf(
+  return layBlockOf(
     input,
-    node =>
-      addModelClip(
-        node.id,
-        source === 'embedded' ? embeddedClip(newId(), clipName) : bundledClip(newId(), clipName),
-      ),
-    'that clip built no block on this model',
+    source === 'embedded' ? embeddedClip(newId(), clipName) : bundledClip(newId(), clipName),
   )
+}
+
+/** Laid through the very gesture the panels use, so a block an assistant lays lands CHOSEN too. */
+function layBlockOf(input: Record<string, unknown>, clip: ClipRef): ActionOutcome {
+  const open = model(input)
+  if (!open) return noModel(input)
+
+  laySceneClip(open.documentId, open.node.id, clip)
+  return { ok: true }
 }
 
 /** The animations shipped with the app, by folder — the picker's own second list. */
@@ -410,88 +457,76 @@ function keyPose(input: Record<string, unknown>): ActionOutcome {
 export const RIG_HANDLERS: ActionHandlers = {
   'rig.state': rigState,
   'rig.fit': fitRig,
-  'rig.clear': input =>
-    editModelOf(
-      input,
-      node => setModelRig(node.id, null),
-      'this model carries no rig to clear — rig.state answers "rigged", and rig.fit builds one',
+  'rig.clear': () =>
+    editCharacter(
+      state => (state.rig ? setCharacterRig(null) : null),
+      'this character carries no rig to clear — rig.state answers "rigged", and rig.fit builds one',
     ),
-  'rig.hands': input =>
-    editModelOf(
-      input,
-      node => addRigHands(node.id),
-      'this model carries no rig to add hands to — rig.fit builds one first, and rig.state answers "rigged"',
+  'rig.hands': () =>
+    editCharacter(
+      state => (state.rig ? addCharacterHands() : null),
+      'this character carries no rig to add hands to — rig.fit builds one first',
     ),
+
+  'socket.add': input =>
+    editCharacter(state => {
+      const bone = boneOf(state, textOf(input, 'bone'))
+      const name = textOf(input, 'name') ?? ''
+      return bone === null || name === ''
+        ? null
+        : addCharacterSocket({ id: newId(), name, bone, rest: IDENTITY_TRANSFORM })
+    }, '"bone" must name a bone of this character and "name" the point — rig.state answers "bones"'),
+
+  'socket.remove': input =>
+    editCharacter(state => {
+      const named = textOf(input, 'name')
+      const socket = state.sockets.find(one => one.name === named || one.id === named)
+      return socket ? removeCharacterSocket(socket.id) : null
+    }, '"name" must name an attachment point this character carries — rig.state answers "sockets"'),
 
   'bone.add': input =>
-    editModelOf(
-      input,
-      node => {
-        const parent = boneOf(node, textOf(input, 'parent'))
-        return parent === null
-          ? null
-          : addRigBone(node.id, childBone(node.model.rig?.bones ?? [], parent))
-      },
-      '"parent" must name a bone of this model\'s rig — rig.state answers "bones" with their names',
-    ),
+    editCharacter(state => {
+      const parent = boneOf(state, textOf(input, 'parent'))
+      return parent === null ? null : addCharacterBone(parent)
+    }, '"parent" must name a bone of this character — rig.state answers "bones" with their names'),
 
   'bone.remove': input =>
-    editModelOf(
-      input,
-      node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        return bone === null ? null : removeRigBone(node.id, bone)
-      },
-      '"bone" must name a bone of this model\'s rig — rig.state answers "bones" with their names',
-    ),
+    editCharacter(state => {
+      const bone = boneOf(state, textOf(input, 'bone'))
+      return bone === null ? null : removeCharacterBone(bone)
+    }, '"bone" must name a bone of this character — rig.state answers "bones" with their names'),
 
   'bone.rename': input =>
-    editModelOf(
-      input,
-      node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        const name = textOf(input, 'name') ?? ''
-        // A name already taken is refused here rather than by the command, which writes nothing for
-        // a duplicate — and a client told `ok` would believe the rename took.
-        return bone === null || node.model.rig?.bones.some(one => one.name === name)
-          ? null
-          : renameRigBone(node.id, bone, name)
-      },
-      '"bone" must name a bone of this model\'s rig and "name" must be free of the others — rig.state answers "bones"',
-    ),
+    editCharacter(state => {
+      const bone = boneOf(state, textOf(input, 'bone'))
+      const name = textOf(input, 'name') ?? ''
+      // A name already taken is refused here rather than by the command, which writes nothing
+      // for a duplicate — and a client told `ok` would believe the rename took.
+      return bone === null || state.rig?.bones.some(one => one.name === name)
+        ? null
+        : renameCharacterBone(bone, name)
+    }, '"bone" must name a bone of this character and "name" must be free of the others'),
 
   'bone.role': input =>
-    editModelOf(
-      input,
-      node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        const role: HumanoidRole | null = oneOf(input, 'role', HUMANOID_ROLES)
-        return bone === null ? null : setRigBoneRole(node.id, bone, role)
-      },
-      '"bone" must name a bone of this model\'s rig — rig.state answers "bones" with their names',
-    ),
+    editCharacter(state => {
+      const bone = boneOf(state, textOf(input, 'bone'))
+      const role: HumanoidRole | null = oneOf(input, 'role', HUMANOID_ROLES)
+      return bone === null ? null : setCharacterBoneRole(bone, role)
+    }, '"bone" must name a bone of this character — rig.state answers "bones" with their names'),
 
   'ik.add': input =>
-    editModelOf(
-      input,
-      node => {
-        const bone = boneOf(node, textOf(input, 'bone'))
-        return bone === null ? null : addIkChain(node.id, bone)
-      },
-      '"bone" must name a bone of this model\'s rig — rig.state answers "bones" with their names',
-    ),
+    editCharacter(state => {
+      const bone = boneOf(state, textOf(input, 'bone'))
+      return bone === null ? null : addCharacterIkChain(bone)
+    }, '"bone" must name a bone of this character — rig.state answers "bones" with their names'),
 
   'ik.remove': input =>
-    editModelOf(
-      input,
-      node => {
-        const chainId = textOf(input, 'chainId') ?? ''
-        return node.model.rig?.ik?.some(chain => chain.id === chainId)
-          ? removeIkChain(node.id, chainId)
-          : null
-      },
-      '"chainId" must name a handle of this model — rig.state answers "ik" with their ids',
-    ),
+    editCharacter(state => {
+      const chainId = textOf(input, 'chainId') ?? ''
+      return state.rig?.ik?.some(chain => chain.id === chainId)
+        ? removeCharacterIkChain(chainId)
+        : null
+    }, '"chainId" must name a handle of this character — rig.state answers "ik" with their ids'),
 
   'animations.list': listAnimations,
   'animation.addBlock': addAnimation,

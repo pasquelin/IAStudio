@@ -159,6 +159,7 @@
       "spaces": "Dans la barre des espaces",
       "explorer": "Dans l’explorateur",
       "scene": "Dans la vue 3D",
+      "character": "Dans le squelette",
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",
       "skybox": "Dans le ciel",

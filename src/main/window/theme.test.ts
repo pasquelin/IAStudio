@@ -28,6 +28,30 @@ function colorsIn(block: string): Map<string, string> {
   )
 }
 
+/** macOS draws each light 12px across; the bar centres its text on that circle. */
+const LIGHT_DIAMETER = 12
+
+/**
+ * The bar over a window is a CSS gauge and the lights are placed by this process: two numbers in
+ * two trees that nothing else relates. Off by one padding, every title sat above the lights.
+ */
+describe('the title bar and the traffic lights', () => {
+  const lights = /TRAFFIC_LIGHTS = \{ x: \d+, y: (\d+) \}/.exec(
+    readFileSync(new URL('./windows.ts', import.meta.url), 'utf8'),
+  )
+  const bar = /--sc-title-bar: (\d+)px;/.exec(blockFrom(':root {'))
+
+  it('centres a title on the lights: the bar is twice their offset plus their diameter', () => {
+    expect(lights?.[1]).toBeDefined()
+    expect(Number(bar?.[1])).toBe(2 * Number(lights?.[1]) + LIGHT_DIAMETER)
+  })
+
+  // The lights are placed once, whatever the density: a bar that shrank with it would leave them.
+  it('does not let the compact density move the bar', () => {
+    expect(blockFrom(":root[data-density='compact'] {")).not.toContain('--sc-title-bar')
+  })
+})
+
 const reference = colorsIn(blockFrom('@theme {'))
 const dark = colorsIn(blockFrom(`name: '${THEME_ATTRIBUTE.dark}'`))
 const light = colorsIn(blockFrom(`name: '${THEME_ATTRIBUTE.light}'`))
