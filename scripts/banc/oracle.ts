@@ -471,7 +471,10 @@ export const wrote = (run: Run, section: string, key: string): boolean =>
 
     const asked = one.input['settings']
     const written = isRecord(asked) ? asked[section] : undefined
-    return isRecord(written) && Object.keys(written).some(name => name.toLowerCase().includes(key))
+    // BOTH sides lowered: folded on the written name alone, a key in camelCase could never
+    // match, and the scenario failed whatever the model did.
+    const wanted = key.toLowerCase()
+    return isRecord(written) && Object.keys(written).some(n => n.toLowerCase().includes(wanted))
   })
 
 /** Whether a search was actually run, and on a word the sentence carries. */

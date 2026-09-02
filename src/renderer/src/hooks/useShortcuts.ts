@@ -39,6 +39,8 @@ export type ShortcutsOptions = {
    * twice per gesture would drop whatever was held across it.
    */
   isFlying?: () => boolean
+  /** Whether the ARROWS fly too — see `SceneRenderer.flightOwnsArrows`. */
+  flightOwnsArrows?: () => boolean
 }
 
 function holdsText(): boolean {
@@ -64,11 +66,12 @@ export function useShortcuts({
   onCommand,
   onMotionChange,
   isFlying,
+  flightOwnsArrows,
 }: ShortcutsOptions): {
   heldMotion: RefObject<Set<MotionId>>
 } {
   const heldMotion = useRef<Set<MotionId>>(new Set())
-  const handlers = useLatest({ onCommand, onMotionChange, isFlying })
+  const handlers = useLatest({ onCommand, onMotionChange, isFlying, flightOwnsArrows })
 
   /**
    * The same surface, reached the other way: the native menu fires a command outright rather
@@ -119,6 +122,11 @@ export function useShortcuts({
       // `Shift+…`, and the table would match none of them.
       const motion = motionFor(event.code, event)
       if (!motion) return
+      // An arrow belongs to the interface unless a gesture is holding the flight — see
+      // `flightOwnsArrows`. Claimed under a permanent one, it died window-wide for the session.
+      // Defaults to yes, which is what a flight held by a gesture has always done. Only a
+      // PERMANENT one narrows it — claimed there, arrows died window-wide for the session.
+      if (event.code.startsWith('Arrow') && handlers.current.flightOwnsArrows?.() === false) return
 
       // Holding a key repeats keydown; only a set that actually changed is worth reporting.
       if (!held.has(motion)) {

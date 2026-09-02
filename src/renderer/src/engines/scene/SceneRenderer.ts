@@ -36,7 +36,12 @@ import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
 import { clampFlySpeed, speedAfterWheel } from './flySpeed'
 import { notchesOf } from '../viewport/dolly'
 import { gazeTargetOf, PIVOT_AHEAD } from '../viewport/orbitPivot'
-import { schemeFor, SCHEME_OF, type NavigationScheme } from '@shared/domain/navigationPreset'
+import {
+  customFrom,
+  schemeFor,
+  SCHEME_OF,
+  type NavigationScheme,
+} from '@shared/domain/navigationPreset'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -2751,6 +2756,15 @@ export class SceneRenderer {
     return this.flownWith !== null || this.navigating
   }
 
+  /**
+   * Whether the ARROWS are the camera's too. Only while a gesture holds the flight: a permanent
+   * one would cancel them in the capture phase for the whole window, and every tree, menu and
+   * slider of the studio navigates by arrow. The letters stay the camera's either way.
+   */
+  get flightOwnsArrows(): boolean {
+    return this.flightHeld
+  }
+
   dispose(): void {
     // A preview left running would keep posing a model whose caches this method is about to drop.
     cancelAnimationFrame(this.previewFrame)
@@ -2911,11 +2925,7 @@ export class SceneRenderer {
     }
 
     this.view = next
-    this.scheme = schemeFor(next.navigationPreset, {
-      orbit: next.navigationCustomOrbit,
-      pan: next.navigationCustomPan,
-      fly: next.navigationCustomFly,
-    })
+    this.scheme = schemeFor(next.navigationPreset, customFrom(next))
 
     // Through the viewport rather than onto the camera: the orthographic frustum is derived
     // from this very field of view, and has to be resized with it.
@@ -4851,8 +4861,11 @@ export class SceneRenderer {
       if (this.flownWith === 0) {
         this.flownFrom = null
         this.flownWith = null
-        if (!this.navigating && this.scheme.fly !== 'always') this.held.clear()
       }
+      // Outside the branch, and for every scheme: a handle GRABBED must stop the camera, or one
+      // gesture moves the object and the point of view at once — which is what this exists for.
+      // A permanent flight is no exception; only a click that grabs nothing leaves the keys be.
+      if (!this.navigating) this.held.clear()
     }
     this.syncPaneFreeze()
   }

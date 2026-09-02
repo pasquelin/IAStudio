@@ -84,9 +84,12 @@ describe('SceneRenderer and the buttons that fly', () => {
    * armed nothing must not stop a camera whose key is still down.
    */
   it('leaves the held keys alone when a button ends but the camera still owns them', () => {
-    const kept = "if (!this.navigating && this.scheme.fly !== 'always') this.held.clear()"
-    expect(endFlight).toContain(kept)
-    expect(draggingChanged).toContain(kept)
+    expect(endFlight).toContain(
+      "if (!this.navigating && this.scheme.fly !== 'always') this.held.clear()",
+    )
+    // A handle GRABBED is the exception, and it holds for every scheme: one gesture must not
+    // move the object and the point of view at once, permanent flight included.
+    expect(draggingChanged).toContain('if (!this.navigating) this.held.clear()')
   })
 
   it('captures the pointer for as long as the mode is armed', () => {

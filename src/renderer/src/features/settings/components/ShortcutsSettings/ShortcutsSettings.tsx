@@ -1,4 +1,3 @@
-import { useSettings } from '@/stores/settings'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -11,6 +10,7 @@ import {
 } from '@shared/domain/command'
 import type { Signature } from '@shared/domain/shortcut'
 import { useOverrides } from '@/hooks/useOverrides'
+import { useStagedNavigation } from '@/hooks/useStagedNavigation'
 import { resolveBindings } from '@/stores/bindings'
 import { WINDOW_CAPTION } from '@/components/windowStyles'
 import { ShortcutsSettingsScope } from './ShortcutsSettingsScope'
@@ -31,15 +31,10 @@ export function ShortcutsSettings() {
   // Resolved once and handed down: a merge per row is 171 of them on every keystroke.
   // The scheme too: it is the middle layer, so a row shows the key the CHOSEN application gives
   // a command, and calls it remapped only where the person themselves moved it.
-  const three = useSettings(state => state.settings.three)
+  const [preset, custom] = useStagedNavigation()
   const resolved = useMemo(
-    () =>
-      resolveBindings(overrides, three.navigationPreset, {
-        orbit: three.navigationCustomOrbit,
-        pan: three.navigationCustomPan,
-        fly: three.navigationCustomFly,
-      }),
-    [overrides, three],
+    () => resolveBindings(overrides, preset, custom),
+    [overrides, preset, custom],
   )
   /**
    * What is listening, if anything. ONE state rather than one per listener: a row and the

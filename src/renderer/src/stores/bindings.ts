@@ -6,6 +6,7 @@ import {
 } from '@shared/domain/command'
 import { DEFAULT_MOTION, type MotionId, type Signature } from '@shared/domain/shortcut'
 import {
+  customFrom,
   schemeFor,
   type CustomNavigation,
   type NavigationPreset,
@@ -46,19 +47,6 @@ function withPlatformDefaults(
   return merged
 }
 
-/** The three choices a person's own scheme is made of, read off the settings they live in. */
-function customOf(three: {
-  navigationCustomOrbit: CustomNavigation['orbit']
-  navigationCustomPan: CustomNavigation['pan']
-  navigationCustomFly: CustomNavigation['fly']
-}): CustomNavigation {
-  return {
-    orbit: three.navigationCustomOrbit,
-    pan: three.navigationCustomPan,
-    fly: three.navigationCustomFly,
-  }
-}
-
 /**
  * The same merge, uncached, for a table the store does not hold — the shortcuts screen reads its
  * own draft. 🛑 Never `withPlatformDefaults`: its memo has ONE slot, and two identities alternating
@@ -85,7 +73,7 @@ export function useBindingOverrides(): BindingOverrides {
     withPlatformDefaults(
       state.settings.shortcuts.overrides,
       state.settings.three.navigationPreset,
-      customOf(state.settings.three),
+      customFrom(state.settings.three),
     ),
   )
 }
@@ -98,7 +86,7 @@ export function useBinding(id: CommandId): Signature | null {
       withPlatformDefaults(
         state.settings.shortcuts.overrides,
         state.settings.three.navigationPreset,
-        customOf(state.settings.three),
+        customFrom(state.settings.three),
       ),
     ),
   )
@@ -107,7 +95,7 @@ export function useBinding(id: CommandId): Signature | null {
 /** Read outside React, on a keydown: subscribing per event would be a subscription per frame. */
 export function currentOverrides(): BindingOverrides {
   const { shortcuts, three } = useSettings.getState().settings
-  return withPlatformDefaults(shortcuts.overrides, three.navigationPreset, customOf(three))
+  return withPlatformDefaults(shortcuts.overrides, three.navigationPreset, customFrom(three))
 }
 
 /**

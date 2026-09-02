@@ -232,6 +232,7 @@ import { promptAssistApiOf } from './provider/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu, noteNavigationPreset, noteProjectOpen, noteRecent } from './menu'
+import { customFrom, schemeFor } from '@shared/domain/navigationPreset'
 import { setWindowLanguage, windowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
 
@@ -574,8 +575,10 @@ export function createSettings(): SettingsStore {
       setWindowLanguage(effectiveLanguage(current.general.language, machineLanguages()))
       buildMenu(current.shortcuts.overrides)
       // After the build, like the shelves: it rebuilds only when the chosen application moved.
-      noteNavigationPreset(current.three.navigationPreset, preset =>
-        settings.write({ three: { ...settings.read().three, navigationPreset: preset } }),
+      noteNavigationPreset(
+        current.three.navigationPreset,
+        schemeFor(current.three.navigationPreset, customFrom(current.three)).bindings,
+        preset => settings.write({ three: { ...settings.read().three, navigationPreset: preset } }),
       )
       // After the build above and not before: it rebuilds only when a shelf actually moved, and
       // most settings writes move neither.

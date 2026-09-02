@@ -533,6 +533,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     // nothing has to tick when the keyboard is idle.
     onMotionChange: held => engine.current?.setMotion(held),
     isFlying: () => engine.current?.flying ?? false,
+    flightOwnsArrows: () => engine.current?.flightOwnsArrows ?? false,
     onCommand: run,
   })
 

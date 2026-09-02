@@ -160,9 +160,35 @@ export type CustomNavigation = {
 }
 
 /**
+ * The three choices read off the settings branch they live in. Typed by SHAPE and not by
+ * `Settings['three']`: that module imports this one, and naming it would close the loop.
+ */
+export function customFrom(three: {
+  navigationCustomOrbit: CustomOrbit
+  navigationCustomPan: CustomPan
+  navigationCustomFly: FlyMode
+}): CustomNavigation {
+  return {
+    orbit: three.navigationCustomOrbit,
+    pan: three.navigationCustomPan,
+    fly: three.navigationCustomFly,
+  }
+}
+
+/**
  * The scheme in force. `custom` is composed from what the person chose; every other preset is
  * the table declared above, and neither carries bindings for `custom` — see `CustomNavigation`.
  */
+
+function sameChord(one: GestureChord, other: GestureChord): boolean {
+  return (
+    one.button === other.button &&
+    (one.alt ?? false) === (other.alt ?? false) &&
+    (one.shift ?? false) === (other.shift ?? false) &&
+    (one.ctrl ?? false) === (other.ctrl ?? false)
+  )
+}
+
 export function schemeFor(preset: NavigationPreset, custom: CustomNavigation): NavigationScheme {
   if (preset !== 'custom') return SCHEME_OF[preset]
 
@@ -170,7 +196,10 @@ export function schemeFor(preset: NavigationPreset, custom: CustomNavigation): N
     orbit: ORBIT_CHORD[custom.orbit],
     // Orbit wins a chord both name: the two are chosen on separate rows, and `gestureOf` reads
     // pan first — picked alike, a viewport would simply stop turning, with nothing saying why.
-    pan: PAN_CHORD[custom.pan].filter(chord => !ORBIT_CHORD[custom.orbit].includes(chord)),
+    // By VALUE, never by identity: it held only while the two tables aliased the same array.
+    pan: PAN_CHORD[custom.pan].filter(
+      chord => !ORBIT_CHORD[custom.orbit].some(other => sameChord(chord, other)),
+    ),
     fly: custom.fly,
     // The cost of `always` follows the MODE, not the application that asked for it: a scheme of
     // one's own that hands the letters to the camera swallows the same commands.
