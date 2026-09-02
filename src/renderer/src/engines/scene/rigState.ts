@@ -131,7 +131,7 @@ function walkBones(root: Object3D): { bones: SkeletonBone[]; boneCount: number }
 export function rigStateOf(root: Object3D, clips: readonly AnimationClip[] = []): RigState {
   const { bones, boneCount } = walkBones(root)
   const status = statusOf(root, bones, boneCount, clips.length > 0)
-  const measured = status === 'staticMesh' ? measureOf(root) : null
+  const measured = status === 'staticMesh' ? measuredMeshOf(root) : null
 
   return {
     status,
@@ -151,10 +151,10 @@ export function rigStateOf(root: Object3D, clips: readonly AnimationClip[] = [])
  * skeleton wherever the model happens to stand in the scene, and scale it by whatever scale the
  * node wears.
  *
- * A bare mesh alone, and that is not an optimisation: `setFromObject` walks a `SkinnedMesh`
- * through its bones, and one whose geometry carries no skin attributes throws inside three.
+ * Public because a hand is fitted long after the mesh stopped being bare, and needs the same
+ * points on a model that carries bones.
  */
-function measureOf(root: Object3D): { bounds: Bounds; points: Float32Array } {
+export function measuredMeshOf(root: Object3D): { bounds: Bounds; points: Float32Array } {
   const box = new Box3()
   const point = new Vector3()
   const kept: number[] = []

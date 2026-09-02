@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { Panel } from '@/components/Panel'
 import { PanelHeader } from '@/components/PanelHeader'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
-import { PANE_TOOLBAR } from '@/components/styles'
+import { PANE_TOOLBAR, PANE_TOOLBAR_ASIDE } from '@/components/styles'
 import { TooltipHost } from '@/components/TooltipHost'
 import { WindowTitleBar } from '@/components/WindowTitleBar'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
@@ -39,6 +39,8 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationActions } from '@/features/animation/components/Animation/Actions/AnimationActions'
 import { AnimationPanel } from '@/features/animation/components/Animation/AnimationPanel'
 import { SceneClock } from '@/features/scene/components/Scene/SceneClock'
+import { SceneNavigationHint } from '@/features/scene/components/Scene/SceneNavigationHint'
+import { SceneSpeedControl } from '@/features/scene/components/Scene/SceneSpeedControl'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
 import { CHARACTER_EDIT_REST, CHARACTER_STATE_TOOLS, CHARACTER_TOOLS } from './characterTools'
 import { CharacterWindowInspector } from './CharacterWindowInspector'
@@ -85,6 +87,11 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const mode = useCharacterView(state => state.mode)
   const heldAxes = useCharacterView(state => state.heldAxes)
   const editingRest = useCharacterView(state => state.editingRest)
+  // The persistent flight, exactly as the studio's viewport arms it: the engine owns the pointer
+  // capture, and this only says whether the mode is meant to be on.
+  const [navigating, setNavigating] = useState(false)
+  /** Metres per second the wheel left the flight at, or `null` while it has said nothing. */
+  const [flySpeed, setFlySpeed] = useState<number | null>(null)
 
   // Its OWN scope and not the scene's: ⌘Z here must not reach the scene a studio window is
   // showing beside it. Two doors to one handler: the keys the window sees, and the rows the menu
@@ -93,6 +100,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     const store = useCharacters.getState()
     if (command === 'character.undo') store.undo(assetId)
     if (command === 'character.redo') store.redo(assetId)
+    if (command === 'character.navigate') setNavigating(current => !current)
     // Awaited by nobody, and nothing to extract: the journal is the only place the failure goes.
     // The weights through a ref: a save held back behind another reads them as it starts, and
     // what this closure captured is what the engine had weighed one render ago.
@@ -101,7 +109,15 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
         reportFailure('document.save', assetId, error),
       )
   }
-  useShortcuts({ scope: 'character', enabled: true, onCommand: runCommand })
+  useShortcuts({
+    scope: 'character',
+    enabled: true,
+    onCommand: runCommand,
+    // 🛑 The same camera as the studio's viewport. Without these two the keys reached no engine
+    // at all: this window orbited and nothing else, where every other 3D surface flies.
+    onMotionChange: held => engineRef.current?.setMotion(held),
+    isFlying: () => engineRef.current?.flying ?? false,
+  })
   useMenuScope('character', runCommand)
 
   /**
@@ -131,6 +147,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
       reportFailure('assets.copy', assetId, error)
     }
   }
+
+  useEffect(() => {
+    engineRef.current?.setNavigating(navigating)
+  }, [navigating, live])
 
   useEffect(() => {
     engineRef.current?.setMode(mode)
@@ -206,6 +226,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
           else engineRef.current?.poseBone(move.id, move.bone, kept)
         }
       },
+      // 🛑 The engine leaves the flight on its own — Escape, a lost capture — and says so. Unheard,
+      // the state stayed `true` and the next press of the key put `false` on a mode already over.
+      onNavigatingChange: setNavigating,
+      onFlySpeedChange: setFlySpeed,
       // The workshop is the character and a floor: the furniture of a scene has nothing to say
       // about a skeleton.
       chrome: false,
@@ -292,6 +316,20 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
                   if (chosen) view.setCharacterMode(chosen.mode)
                 }}
               />
+              {/* How fast the camera travels, the studio's own control: a workshop is a metre
+                  across and the preference is set for a scene, so a flight opened far too fast. */}
+              <Toolbar
+                orientation="horizontal"
+                label={t('character.cameraSpeed')}
+                className={PANE_TOOLBAR_ASIDE}
+                extras={
+                  <SceneSpeedControl
+                    speed={flySpeed}
+                    onSpeed={speed => engineRef.current?.setFlySpeed(speed)}
+                  />
+                }
+              />
+              {navigating && <SceneNavigationHint speed={flySpeed} />}
               {/* While the FILE is still landing, never while it merely carries no skeleton: a
                   bare mesh is on screen and animatable from the panel beside it, and the sentence
                   sat over a character plainly there. `sample` is what the engine measured. */}
@@ -304,6 +342,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             <CharacterWindowInspector
               assetId={assetId}
               sample={sample}
+              onMeasure={() => (nodeId ? (engineRef.current?.meshSample(nodeId) ?? null) : null)}
               onSaveMotion={saveMotion}
               documentId={workshopIdOf(assetId)}
               nodeId={nodeId ?? ''}

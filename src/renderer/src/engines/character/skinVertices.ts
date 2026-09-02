@@ -9,7 +9,7 @@
  * whole forearm's influence at the elbow, and the skin folds there instead of bending.
  */
 import { clamp } from '@shared/numeric'
-import { INFLUENCES, SKIN_REGIONS, type SkinRequest } from './skinMessage'
+import { INFLUENCES, SKIN_REGION_WITHIN, SKIN_REGIONS, type SkinRequest } from './skinMessage'
 
 export type SkinBinding = { skinIndex: Uint16Array; skinWeight: Float32Array }
 
@@ -18,6 +18,12 @@ const TRUNK = 0
 
 /** Index of `handle` in `SKIN_REGIONS` — read from the list, never counted by hand. */
 const HANDLE = SKIN_REGIONS.indexOf('handle')
+
+/** The region each region sits inside, by index — `-1` for one that sits in nothing. */
+const WITHIN = Int8Array.from(SKIN_REGIONS, region => {
+  const holder = SKIN_REGION_WITHIN[region]
+  return holder === undefined ? -1 : SKIN_REGIONS.indexOf(holder)
+})
 
 /** Keeps a vertex sitting exactly on a bone from weighing infinity. */
 const EPSILON = 1e-6
@@ -171,8 +177,11 @@ function mayDrive(vertexRegion: number, boneRegion: number): boolean {
   // A handle is nobody's region, and nobody's trunk: six chains would otherwise take six
   // handfuls of vertices away from the limbs they belong to.
   if (boneRegion === HANDLE) return false
+  if (boneRegion === vertexRegion || boneRegion === TRUNK) return true
 
-  return boneRegion === vertexRegion || boneRegion === TRUNK
+  // A region is also driven by the one it sits INSIDE: a knuckle still follows the hand, while
+  // the finger beside it never does.
+  return boneRegion === WITHIN[vertexRegion]
 }
 
 /** Distance from a point to a bone's segment, clamped to its ends so a limb has no reach beyond itself. */

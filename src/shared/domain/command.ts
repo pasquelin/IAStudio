@@ -171,6 +171,7 @@ export type CommandId =
   | 'gui.redo'
   | 'character.undo'
   | 'character.redo'
+  | 'character.navigate'
 
 /**
  * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
@@ -1249,6 +1250,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.redo.title',
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+  // 🛑 The same key as `scene.navigate`, and DECLARED rather than shared: a scope holds its own
+  // commands, and this window had two — so every key of the studio's viewport was dead here.
+  command({
+    id: 'character.navigate',
+    scope: 'character',
+    titleKey: 'commands.characterNavigate.title',
+    helpKey: 'commands.characterNavigate.help',
+    defaultBinding: 'Backquote',
   }),
   // The take editor was one of two surfaces whose history had no key and no menu row: its two
   // buttons were the whole of it, so the bar could not be relieved of them without this pair.

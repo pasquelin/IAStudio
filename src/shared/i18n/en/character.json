@@ -8,6 +8,7 @@
       "unreadable": "This file could not be read."
     },
     "skeleton": "Skeleton",
+    "cameraSpeed": "Camera speed",
     "tools": "Skeleton tools",
     "manipulate": "Manipulate",
     "manipulateHint": "Dragging a joint turns the bone arriving at it: the limb follows as one, and its skin with it",

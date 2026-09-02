@@ -28,6 +28,12 @@ const holds = vi.hoisted((): string[][] => [])
 /** What each export was asked to carry of the studio's own — the band, for a motion. */
 const carried = vi.hoisted((): (Record<string, unknown> | null)[] => [])
 
+/** Every set of directions the keyboard handed the camera. */
+const flown = vi.hoisted((): string[][] => [])
+
+/** Whether the persistent flight was armed, each time it was said. */
+const navigated = vi.hoisted((): boolean[] => [])
+
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
     constructor(options: unknown) {
@@ -51,6 +57,15 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     }
     skinModel = vi.fn()
     frameContents = vi.fn()
+    meshSample = vi.fn()
+    // A flight is under way, which is the one state a motion key is read in.
+    flying = true
+    setMotion = (held: Set<string>) => {
+      flown.push([...held])
+    }
+    setNavigating = (on: boolean) => {
+      navigated.push(on)
+    }
     // What the clock pushes into the engine: the head, and what a block is being watched on.
     setPlayhead = vi.fn()
     setPreview = vi.fn()
@@ -92,6 +107,8 @@ const restOfSpine = (): Transform | undefined =>
 beforeEach(() => {
   built.length = 0
   posed.length = 0
+  flown.length = 0
+  navigated.length = 0
   holds.length = 0
   carried.length = 0
   clearCharacters()
@@ -265,4 +282,64 @@ it('files the motion with its band inside, and saves onto that same file afterwa
     replaces: 'asset-walk',
     glb: new Uint8Array([1, 2]),
   })
+})
+
+/**
+ * 🛑 This window wired neither `onMotionChange` nor `isFlying`, so its keys reached no engine at
+ * all: it orbited and nothing else, where every other 3D surface of the studio flies.
+ */
+it('flies the camera on the keys, like the viewport of the studio', async () => {
+  render(<CharacterWindow assetId={ASSET} />)
+
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', key: 'w' }))
+  })
+
+  expect(flown.at(-1)).toEqual(['forward'])
+
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', key: 'w' }))
+  })
+
+  expect(flown.at(-1)).toEqual([])
+})
+
+// 🛑 The studio's viewport arms a persistent flight on one key; this window declared two commands
+// in all — undo and redo — so nothing here could ever hold the camera without a button pressed.
+it('arms the persistent flight on its own key, and disarms it on the next press', async () => {
+  render(<CharacterWindow assetId={ASSET} />)
+
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', key: '`' }))
+  })
+  expect(navigated.at(-1)).toBe(true)
+
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', key: '`' }))
+  })
+  expect(navigated.at(-1)).toBe(false)
+})
+
+/**
+ * 🛑 The engine leaves the flight on its own — Escape, a lost pointer capture. Unheard, the
+ * window's state stayed armed and the next press of the key disarmed a mode already over: the
+ * first press after an Escape did nothing at all.
+ */
+it('arms the flight again after the engine has left it on its own', async () => {
+  render(<CharacterWindow assetId={ASSET} />)
+
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', key: '`' }))
+  })
+  expect(navigated.at(-1)).toBe(true)
+
+  await act(async () => {
+    built.at(-1)?.onNavigatingChange?.(false)
+  })
+
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', key: '`' }))
+  })
+
+  expect(navigated.at(-1)).toBe(true)
 })

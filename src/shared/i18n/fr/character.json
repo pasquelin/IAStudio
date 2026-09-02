@@ -8,6 +8,7 @@
       "unreadable": "Ce fichier n’a pas pu être lu."
     },
     "skeleton": "Squelette",
+    "cameraSpeed": "Vitesse de caméra",
     "tools": "Outils du squelette",
     "manipulate": "Manipuler",
     "manipulateHint": "Tirer une articulation fait pivoter l’os qui y arrive : le membre suit d’un bloc, et la maille avec lui",

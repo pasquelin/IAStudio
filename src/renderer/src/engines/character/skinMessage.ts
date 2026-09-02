@@ -18,8 +18,14 @@ export type SkinRegion =
   | 'legRight'
   /** 🛑 A handle one pulls, and no part of the body: `mayDrive` allows it for nothing. */
   | 'handle'
+  /**
+   * 🛑 One region per FINGER, and the reason is measured: fingers stand a centimetre apart on a
+   * hand, so a vertex of the index was within reach of the middle's bones and bending one moved
+   * two. An arm alone is not a fine enough grain to hold a hand together.
+   */
+  | `${'thumb' | 'index' | 'middle' | 'ring' | 'little'}${'Left' | 'Right'}`
 
-/** The order is the wire format: a region crosses as its index in this list. */
+/** The order is the wire format: a region crosses as its index in this list. Append only. */
 export const SKIN_REGIONS: readonly SkinRegion[] = [
   'trunk',
   'head',
@@ -28,7 +34,34 @@ export const SKIN_REGIONS: readonly SkinRegion[] = [
   'legLeft',
   'legRight',
   'handle',
+  'thumbLeft',
+  'indexLeft',
+  'middleLeft',
+  'ringLeft',
+  'littleLeft',
+  'thumbRight',
+  'indexRight',
+  'middleRight',
+  'ringRight',
+  'littleRight',
 ]
+
+/**
+ * Which region a region is PART of. A finger belongs to its arm, so the hand and the forearm
+ * still reach a knuckle, while the finger beside it never does.
+ */
+export const SKIN_REGION_WITHIN: Partial<Record<SkinRegion, SkinRegion>> = {
+  thumbLeft: 'armLeft',
+  indexLeft: 'armLeft',
+  middleLeft: 'armLeft',
+  ringLeft: 'armLeft',
+  littleLeft: 'armLeft',
+  thumbRight: 'armRight',
+  indexRight: 'armRight',
+  middleRight: 'armRight',
+  ringRight: 'armRight',
+  littleRight: 'armRight',
+}
 
 /** How many bones may drive one vertex. Four, because that is what a `SkinnedMesh` reads. */
 export const INFLUENCES = 4

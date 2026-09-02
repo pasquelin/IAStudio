@@ -16,7 +16,8 @@ import {
   type Rig,
   type RigBone,
 } from '@shared/domain/rig'
-import { rigHandBones } from '../scene/rigFit'
+import { rigHandBones } from '../scene/rigHandBones'
+import type { MeshSample } from '../scene/rigSnap'
 import { ikLinksOf } from './ik'
 import type { CharacterState } from './characterState'
 
@@ -100,10 +101,10 @@ export function setCharacterBoneRest(name: string, rest: Transform): Command<Cha
   return editBones('bone.rest', bones => rigWithRest(bones, name, rest))
 }
 
-/** The thirty joints inside the hands a fit stops at the wrists. */
-export function addCharacterHands(): Command<CharacterState> {
+/** `sample` puts the joints IN the fingers; without it they are laid along the hand. */
+export function addCharacterHands(sample: MeshSample | null = null): Command<CharacterState> {
   return editBones('rig.hands', bones => {
-    const hands = rigHandBones(bones)
+    const hands = rigHandBones(bones, sample)
     return hands && rigWithBones(bones, hands)
   })
 }

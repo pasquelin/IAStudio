@@ -24,7 +24,7 @@ import {
   setCharacterBoneRole,
 } from '@/engines/character/characterCommands'
 import { restWithin } from '@/engines/character/boneRest'
-import { rigHandBones } from '@/engines/scene/rigFit'
+import { rigHandBones } from '@/engines/scene/rigHandBones'
 import type { MeshSample } from '@/engines/scene/rigSnap'
 import { CharacterMotionList } from '../Character/Motion/CharacterMotionList'
 import { CharacterWindowFit } from './CharacterWindowFit'
@@ -40,6 +40,8 @@ export type CharacterWindowInspectorProps = {
   nodeId: string
   /** What the engine measured of the mesh, for the rigger that fits itself to it. */
   sample: MeshSample | null
+  /** The same, measured NOW: a model that carries bones stopped being measured at load. */
+  onMeasure?: () => MeshSample | null
   /** Files what the band plays as a motion of the project — the window holds the engine. */
   onSaveMotion?: (asNew: boolean) => Promise<void>
 }
@@ -55,6 +57,7 @@ export function CharacterWindowInspector({
   sample,
   documentId,
   nodeId,
+  onMeasure,
   onSaveMotion,
 }: CharacterWindowInspectorProps) {
   const { t } = useTranslation()
@@ -190,7 +193,7 @@ export function CharacterWindowInspector({
           )}
 
           {rig && rigHandBones(rig.bones) && (
-            <Button onClick={() => run(assetId, addCharacterHands())}>
+            <Button onClick={() => run(assetId, addCharacterHands(onMeasure?.() ?? null))}>
               {t('inspector.addHands')}
             </Button>
           )}

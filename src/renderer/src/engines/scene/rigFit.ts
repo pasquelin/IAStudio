@@ -7,14 +7,7 @@
  * The body only, twenty-two bones, stopping at the wrists: a bounding box cannot say where a
  * knuckle is, and thirty finger bones dropped at a guess would capture vertices at a guess.
  */
-import {
-  fingerRole,
-  HUMANOID_BODY_ROLES,
-  HUMANOID_FINGER_JOINTS,
-  HUMANOID_FINGERS,
-  HUMANOID_SIDES,
-  type HumanoidBodyRole,
-} from '@shared/domain/humanoid'
+import { HUMANOID_BODY_ROLES, type HumanoidBodyRole } from '@shared/domain/humanoid'
 import type { Rig, RigBone } from '@shared/domain/rig'
 import type { Vector3 } from '@shared/domain/transform'
 
@@ -164,58 +157,6 @@ function spreadOf(size: Vector3, across: 'x' | 'z'): number {
   const out = (reach - BODY_HALF_WIDTH) / (ARMS_OUT_REACH - BODY_HALF_WIDTH)
 
   return Math.min(1, Math.max(0, out))
-}
-
-/**
- * The thirty finger bones, laid AT REST off whatever hands the rig already holds.
- *
- * At rest and not fitted, which is the whole point and the issue's own wording: a bounding box
- * cannot say where a knuckle is, so these are laid evenly and are meant to be put right at the
- * gizmo. `null` when the rig names no hand, or already carries fingers.
- *
- * Each segment is a sixth of the forearm, so three of them make half a forearm — a hand's own
- * proportion — and the five fingers are spread across the same span.
- */
-export function rigHandBones(bones: readonly RigBone[]): RigBone[] | null {
-  const added: RigBone[] = []
-
-  for (const side of HUMANOID_SIDES) {
-    const hand = bones.find(bone => bone.role === `${side}Hand`)
-    const arm = bones.find(bone => bone.role === `${side}LowerArm`)
-    if (!hand || !arm) continue
-
-    const segment = lengthOf(hand.rest.position) / 6
-    // A hand that already has fingers is left alone: laying a second set on it would be thirty
-    // names already taken, and `rigWithBones` would refuse the lot for one side's sake.
-    if (segment <= 0 || bones.some(bone => bone.role === `${side}Thumb1`)) continue
-
-    for (const [index, finger] of HUMANOID_FINGERS.entries()) {
-      for (const joint of HUMANOID_FINGER_JOINTS) {
-        added.push({
-          name: `${side}${finger}${joint}`,
-          parent: joint === 1 ? hand.name : `${side}${finger}${joint - 1}`,
-          role: fingerRole(side, finger, joint),
-          rest: {
-            // Along the arm's own direction, so a left hand's fingers point left and a right
-            // hand's right; spread across Z only on the knuckle, the rest of the chain trailing.
-            position: {
-              x: Math.sign(hand.rest.position.x || 1) * segment,
-              y: 0,
-              z: joint === 1 ? (index - 2) * segment * 0.6 : 0,
-            },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-          },
-        })
-      }
-    }
-  }
-
-  return added.length > 0 ? added : null
-}
-
-function lengthOf(position: Vector3): number {
-  return Math.hypot(position.x, position.y, position.z)
 }
 
 /**

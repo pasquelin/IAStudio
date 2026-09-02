@@ -5,7 +5,12 @@
  * answers many times, and a caller that can take one back, neither of which `bvhBuilder` carries.
  */
 import { isIkHandle, type Rig } from '@shared/domain/rig'
-import type { HumanoidRole } from '@shared/domain/humanoid'
+import {
+  HUMANOID_FINGERS,
+  type HumanoidFinger,
+  type HumanoidRole,
+  type HumanoidSide,
+} from '@shared/domain/humanoid'
 import type { Vector3 } from '@shared/domain/transform'
 import { SKIN_REGIONS, type SkinRegion, type SkinRequest, type SkinResponse } from './skinMessage'
 import type { SkinBinding } from './skinVertices'
@@ -94,7 +99,20 @@ export function regionOf(role: HumanoidRole | undefined): SkinRegion {
   const part = role.slice(side.length)
   if (LEG_PARTS.some(leg => part.startsWith(leg))) return side === 'Left' ? 'legLeft' : 'legRight'
 
+  // A finger before the arm, and never the arm alone — see `SkinRegion`.
+  const finger = HUMANOID_FINGERS.find(one => part.startsWith(one))
+  if (finger) return FINGER_REGIONS[finger][side]
+
   return side === 'Left' ? 'armLeft' : 'armRight'
 }
 
 const LEG_PARTS: readonly string[] = ['UpperLeg', 'LowerLeg', 'Foot', 'Toes']
+
+/** Written out rather than composed: `toLowerCase` answers a `string`, which is not a region. */
+const FINGER_REGIONS: Record<HumanoidFinger, Record<HumanoidSide, SkinRegion>> = {
+  Thumb: { Left: 'thumbLeft', Right: 'thumbRight' },
+  Index: { Left: 'indexLeft', Right: 'indexRight' },
+  Middle: { Left: 'middleLeft', Right: 'middleRight' },
+  Ring: { Left: 'ringLeft', Right: 'ringRight' },
+  Little: { Left: 'littleLeft', Right: 'littleRight' },
+}

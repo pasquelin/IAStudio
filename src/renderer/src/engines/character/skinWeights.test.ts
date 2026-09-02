@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Rig } from '@shared/domain/rig'
-import { INFLUENCES, SKIN_REGIONS, type SkinIncoming, type SkinResponse } from './skinMessage'
+import { HUMANOID_ROLES } from '@shared/domain/humanoid'
+import {
+  INFLUENCES,
+  SKIN_REGION_WITHIN,
+  SKIN_REGIONS,
+  type SkinIncoming,
+  type SkinResponse,
+} from './skinMessage'
 import { createSkinWeights, regionOf, wireOf } from './skinWeights'
 
 const REST = (x: number, y: number, z: number) => ({
@@ -297,8 +304,10 @@ describe('which part of a body a role belongs to', () => {
     expect(regionOf('Head')).toBe('head')
   })
 
-  it('sorts a finger with the arm that carries it', () => {
-    expect(regionOf('LeftThumb1')).toBe('armLeft')
+  it('gives each finger a region of its own, under the arm that carries it', () => {
+    expect(regionOf('LeftThumb1')).toBe('thumbLeft')
+    expect(regionOf('LeftIndex2')).toBe('indexLeft')
+    expect(regionOf('RightLittle3')).toBe('littleRight')
   })
 
   // A shoulder goes with its arm, and the join is still covered: the trunk agrees with every
@@ -310,5 +319,29 @@ describe('which part of a body a role belongs to', () => {
 
   it('calls a bone filling no role trunk, which agrees with everything', () => {
     expect(regionOf(undefined)).toBe('trunk')
+  })
+})
+
+describe('the regions on the wire', () => {
+  /**
+   * 🛑 A region crosses as its INDEX in `SKIN_REGIONS`, and the list is written by hand beside a
+   * union of seventeen. One missing name answers `-1`, which a `Uint8Array` carries as 255: that
+   * bone then drives nothing at all, in silence, on every character.
+   */
+  it('names a region of the list for every humanoid role there is', () => {
+    const unlisted = HUMANOID_ROLES.filter(role => !SKIN_REGIONS.includes(regionOf(role)))
+
+    expect(unlisted).toEqual([])
+  })
+
+  // A finger sits inside its arm, and that is what keeps the hand driving its knuckles.
+  it('holds every finger inside an arm of the list', () => {
+    const orphans = SKIN_REGIONS.filter(region => {
+      const within = SKIN_REGION_WITHIN[region]
+      return within !== undefined && !SKIN_REGIONS.includes(within)
+    })
+
+    expect(orphans).toEqual([])
+    expect(Object.keys(SKIN_REGION_WITHIN)).toHaveLength(10)
   })
 })

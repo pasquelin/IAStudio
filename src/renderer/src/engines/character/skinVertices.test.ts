@@ -231,3 +231,26 @@ describe('a mesh with no rig to bind to', () => {
     expect(binding.skinWeight).toEqual(new Float32Array(INFLUENCES))
   })
 })
+
+describe('a hand of five fingers', () => {
+  /** The index and the middle a centimetre apart, and the hand they both leave from. */
+  const HAND: readonly Bone[] = [
+    { head: [0, 0, 0], tail: [0, 0.08, 0], region: 'armLeft' },
+    { head: [0, 0.08, 0], tail: [0, 0.16, 0], region: 'indexLeft' },
+    { head: [0.01, 0.08, 0], tail: [0.01, 0.16, 0], region: 'middleLeft' },
+  ]
+
+  // 🛑 Every finger was `armLeft`, so bending one moved two — seen on screen.
+  it('leaves the flesh of one finger to that finger', () => {
+    const binding = bind([[0, 0.12, 0]], HAND)
+
+    expect(influences(binding).map(one => one.bone)).toEqual([1, 0])
+  })
+
+  // The hand still drives its own knuckles: a finger is INSIDE the arm, not beside it.
+  it('lets the hand drive a knuckle its finger leaves from', () => {
+    const binding = bind([[0, 0.085, 0]], HAND)
+
+    expect(influences(binding).map(one => one.bone)).toContain(0)
+  })
+})

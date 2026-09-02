@@ -149,7 +149,7 @@ import {
   type Projected,
   type ProjectedSegment,
 } from './bonePicking'
-import { type RigState, isBoneObject, rigStateOf } from './rigState'
+import { type RigState, isBoneObject, measuredMeshOf, rigStateOf } from './rigState'
 import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
 import { PostComposer } from '../postfx/PostComposer'
@@ -2016,6 +2016,12 @@ export class SceneRenderer {
     }
 
     return segments
+  }
+
+  /** Measured NOW: `rigStateOf` stops measuring the moment a model carries bones. */
+  meshSample(nodeId: string): MeshSample | null {
+    const holder = this.objects.get(nodeId)
+    return holder ? measuredMeshOf(holder) : null
   }
 
   /**
