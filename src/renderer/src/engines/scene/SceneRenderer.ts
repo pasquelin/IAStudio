@@ -439,6 +439,14 @@ function wasClick(from: { x: number; y: number } | null, event: PointerEvent): b
   return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
 }
 
+/**
+ * What a camera LOOKS AT — the pivot brought onto its line of sight. Four readers here take the
+ * pivot for that point and restore it by `lookAt`, and the pointer routinely leaves it off axis.
+ */
+function lookedAtBy(camera: Camera, pivot: ThreeVector3): ThreeVector3 {
+  return gazeTargetOf(camera.position, camera.getWorldDirection(new ThreeVector3()), pivot)
+}
+
 /** Where a shot's target stands and where its rail puts it: a camera driven per frame allocates
  * nothing. */
 const aimed = new ThreeVector3()
@@ -1428,6 +1436,9 @@ export class SceneRenderer {
     if (!orbit) return
 
     const camera = this.viewport.camera
+    // The point LOOKED AT: a side view centred on a pivot the pointer left off the axis swings
+    // the camera onto a side of THAT, and `orbit.update()` ends on `lookAt` and keeps it there.
+    orbit.target.copy(lookedAtBy(camera, orbit.target))
     const distance = camera.position.distanceTo(orbit.target) || DEFAULT_VIEW_DISTANCE
     const { x, y, z } = viewPosition(direction, orbit.target, distance)
 
@@ -1465,7 +1476,11 @@ export class SceneRenderer {
   }
 
   private placePanes(): void {
-    const target = this.viewport.orbit?.target ?? this.pivot.position
+    const main = this.viewport.perspective
+    const pivot = this.viewport.orbit?.target
+    // What the MAIN view looks at, never the raw pivot: the sides would otherwise open centred
+    // on a point the pointer left off the axis — see `viewPlacement`, which says why.
+    const target = pivot ? lookedAtBy(main, pivot) : this.pivot.position
     this.viewport.setPaneHeight(this.sceneHeight())
 
     for (const [index, view] of this.paneViews.entries()) {
@@ -2223,15 +2238,14 @@ export class SceneRenderer {
   /** Where the free camera stands and what it looks at, as plain numbers anything may hold. */
   viewPlacement(): CameraPlacement {
     const camera = this.viewport.perspective
-    const gaze = camera.getWorldDirection(new ThreeVector3())
     const pivot = this.viewport.orbit?.target
     // Brought back ONTO the line of sight: the pivot is where the pointer put it, off centre by
     // design, and every reader of this restores a placement by `lookAt` — a framing published
     // from an off-axis pivot comes back turned. A viewport with no controls has a gaze all the
     // same, and `lookAt(0, 0, 0)` would be a lie.
     const target = pivot
-      ? gazeTargetOf(camera.position, gaze, pivot)
-      : camera.position.clone().add(gaze)
+      ? lookedAtBy(camera, pivot)
+      : camera.position.clone().add(camera.getWorldDirection(new ThreeVector3()))
 
     return { position: plainVector(camera.position), target: plainVector(target) }
   }
@@ -4763,7 +4777,7 @@ export class SceneRenderer {
 
     // The point LOOKED AT, never the raw pivot: off the axis it would name a side of the pivot
     // rather than the side of the view, and `viewFrom` would send the camera there.
-    const looked = gazeTargetOf(from, camera.getWorldDirection(new ThreeVector3()), orbit.target)
+    const looked = lookedAtBy(camera, orbit.target)
     helper.center.copy(looked)
     // The helper reads where the camera stands to work out where it would send it, and one
     // sitting exactly on its target stands nowhere: every side would come back as the same

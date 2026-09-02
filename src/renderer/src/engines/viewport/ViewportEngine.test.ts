@@ -1508,6 +1508,85 @@ describe('a viewport', () => {
       expect(engine.orbit?.enabled).toBe(false)
     })
 
+    /**
+     * `TransformControls` grabs the SAME canvas in its own `pointerdown`. A capture taken here is
+     * one taken from it, and released the moment a handle freezes the panes — the gizmo then stops
+     * following a pointer that has left the canvas, and never sees the release that would free it.
+     */
+    it('takes no pointer capture, the gizmo grabbing the same canvas', () => {
+      const engine = backedOff()
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+      const captured = vi.fn()
+      canvas.setPointerCapture = captured
+
+      host.dispatchEvent(press({ altKey: true }))
+
+      expect(captured).not.toHaveBeenCalled()
+    })
+
+    /** What the capture used to buy, bought on the window instead: panels are small, drags are not. */
+    it('goes on turning once the pointer has strayed off the panel', () => {
+      const engine = backedOff()
+
+      host.dispatchEvent(press({ altKey: true }))
+      window.dispatchEvent(
+        new PointerEvent('pointermove', { clientX: 2000, clientY: 400, buttons: 1 }),
+      )
+
+      expect(engine.camera.position.x).not.toBeCloseTo(0, 3)
+    })
+
+    /**
+     * A pivot the camera has PASSED is behind it: the next orbit would swing the view through
+     * half a turn, and the pan and the wheel would both collapse onto that hand's breadth.
+     */
+    it('rests the pivot ahead when a flick carries the camera past what it aimed at', () => {
+      const engine = backedOff()
+      engine.orbit?.target.set(0, 0, 9.9)
+
+      host.dispatchEvent(
+        new WheelEvent('wheel', {
+          deltaY: -500,
+          clientX: 320,
+          clientY: 400,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+
+      const pivot = engine.orbit?.target
+      if (!pivot) throw new Error('mounted with no orbit')
+      expect(pivot.clone().sub(engine.camera.position).z).toBeLessThan(0)
+    })
+
+    it('lets a second pointer come and go without ending the one drag under way', () => {
+      const engine = backedOff()
+
+      host.dispatchEvent(press({ altKey: true }))
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 7, bubbles: true }))
+      window.dispatchEvent(
+        new PointerEvent('pointermove', { clientX: 420, clientY: 400, buttons: 1 }),
+      )
+
+      expect(engine.camera.position.x).not.toBeCloseTo(0, 3)
+    })
+
+    /** A panel detached mid-orbit: remounted, the first move would resume from a panel ago. */
+    it('leaves no drag behind for the next mount to resume', () => {
+      const engine = backedOff()
+      host.dispatchEvent(press({ altKey: true }))
+
+      engine.dispose()
+      engine.mount(host)
+      engine.camera.position.set(0, 0, 10)
+      window.dispatchEvent(
+        new PointerEvent('pointermove', { clientX: 2000, clientY: 400, buttons: 1 }),
+      )
+
+      expect(engine.camera.position.x).toBeCloseTo(0, 6)
+    })
+
     /** An orthographic pane shows the same thing wherever it stands: every gesture stays put. */
     it('leaves an orthographic view to `OrbitControls`', () => {
       const engine = backedOff()

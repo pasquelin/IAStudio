@@ -864,9 +864,12 @@ export class ViewportEngine {
     host.addEventListener('pointermove', this.armPaneUnderPointer, true)
     // After the arming, never before: it settles which pane is worked in, and this reads that.
     host.addEventListener('pointerdown', this.onNavigate, true)
-    host.addEventListener('pointermove', this.onNavigate, true)
-    host.addEventListener('pointerup', this.onNavigateRelease, true)
-    host.addEventListener('pointercancel', this.onNavigateRelease, true)
+    // The rest of the gesture on the WINDOW, and no pointer capture at all: a drag straying off
+    // the panel must go on turning, and `TransformControls` grabs the very same canvas — a
+    // capture taken here is one taken from IT, and released under a handle still being pulled.
+    window.addEventListener('pointermove', this.onNavigate, true)
+    window.addEventListener('pointerup', this.onNavigateRelease, true)
+    window.addEventListener('pointercancel', this.onNavigateRelease, true)
     // Not passive: the dolly cancels the event, and a passive listener may not. On the host for
     // the reason above — `OrbitControls` posts its own wheel listener on the canvas.
     host.addEventListener('wheel', this.onWheelCapture, { capture: true, passive: false })
@@ -900,9 +903,12 @@ export class ViewportEngine {
     this.host?.removeEventListener('pointerdown', this.armPaneUnderPointer, true)
     this.host?.removeEventListener('pointermove', this.armPaneUnderPointer, true)
     this.host?.removeEventListener('pointerdown', this.onNavigate, true)
-    this.host?.removeEventListener('pointermove', this.onNavigate, true)
-    this.host?.removeEventListener('pointerup', this.onNavigateRelease, true)
-    this.host?.removeEventListener('pointercancel', this.onNavigateRelease, true)
+    window.removeEventListener('pointermove', this.onNavigate, true)
+    window.removeEventListener('pointerup', this.onNavigateRelease, true)
+    window.removeEventListener('pointercancel', this.onNavigateRelease, true)
+    // Cleared like the wheel's own registers: a drag left set is one the next mount resumes
+    // from coordinates a panel ago, and the camera jumps on the first move.
+    this.drag = null
     this.host?.removeEventListener('wheel', this.onWheelCapture, true)
     this.host = null
 
@@ -1037,9 +1043,10 @@ export class ViewportEngine {
     })
 
     camera.position.copy(move.position)
-    // Not while crossing: what was aimed at is behind the camera now, and the pivot it had is a
-    // real point of the world where a distance ahead would be a number picked out of nowhere.
+    // Crossing leaves what was aimed at BEHIND: the pivot it had is kept while it is still in
+    // front, and only a pivot the camera has passed rests ahead — the next notch re-aims anyway.
     if (move.pivot) orbit.target.copy(move.pivot)
+    else aimPivotAhead(camera, orbit.target)
     this.requestRender()
     this.reportWheelSettled(index)
     // Held past a crossing, the aimed point sits BEHIND the camera and the distance to it grows
@@ -1177,10 +1184,6 @@ export class ViewportEngine {
       clientY: event.clientY,
       moved: false,
     }
-    // On the CANVAS, never on the host: capture retargets every further event to the element that
-    // took it, and the picking listens on the canvas. A drag straying off the panel would
-    // otherwise stall mid-gesture, which is what `OrbitControls` used its own capture for.
-    this.renderer?.domElement.setPointerCapture(event.pointerId)
   }
 
   private dragBy(event: PointerEvent): void {
@@ -1234,6 +1237,8 @@ export class ViewportEngine {
 
   /** `buttons === 0` is the reading that cannot lie: two buttons released out of order. */
   private readonly onNavigateRelease = (event: PointerEvent): void => {
+    // The same reading `dragBy` makes: a second pointer going up must not end a mouse's orbit.
+    if (event.pointerId !== this.drag?.pointerId) return
     if (event.type === 'pointerup' && event.buttons !== 0) return
     this.endDrag()
   }
@@ -1241,10 +1246,6 @@ export class ViewportEngine {
   private endDrag(): void {
     const drag = this.drag
     this.drag = null
-    const canvas = this.renderer?.domElement
-    if (drag && canvas?.hasPointerCapture(drag.pointerId)) {
-      canvas.releasePointerCapture(drag.pointerId)
-    }
     // A press that never travelled a pixel is not a framing anybody decided — see the note on
     // `onCameraSettled`, which a store reads and repaints everything from.
     if (drag?.moved === true) this.options.onCameraSettled?.(drag.pane)
