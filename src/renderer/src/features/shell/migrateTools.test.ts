@@ -201,6 +201,15 @@ describe('a layout stored before the placements moved', () => {
     expect(openFrom({ left: 'ghost' })).toEqual({ left: {} })
   })
 
+  // The upper left was only left on its default; the shelf stored in the band claims it. An
+  // explicit choice outranks a default, whichever of the two the rebuild reads first.
+  it('lets a named panel win a half left on its default', () => {
+    expect(openFrom({ left: { primary: null }, bottom: { primary: 'assets' } })).toEqual({
+      left: { primary: 'assets' },
+      bottomRight: {},
+    })
+  })
+
   it('keeps a default half that no panel claims', () => {
     expect(openFrom({ right: { primary: null, secondary: 'inspector' } })).toEqual({
       right: { primary: null, secondary: 'inspector' },
