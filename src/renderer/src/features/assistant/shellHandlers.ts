@@ -130,7 +130,7 @@ export const SHELL_HANDLERS: ActionHandlers = {
   // it would be offering a refusal.
   'panels.list': () => {
     const surface = toolSurface()
-    const panels = availableToolIds(surface).map(id => ({ id, open: toolIsShown(id, surface) }))
+    const panels = availableToolIds(surface).map(id => ({ id, open: toolIsShown(id) }))
     return { ok: true, data: panels }
   },
 
