@@ -38,6 +38,30 @@ function aFrameWithAnInset(renderer: SceneRenderer, pane: Camera, inset: Camera)
   renderer['hideWorkshop'](inset as PerspectiveCamera)()
 }
 
+describe('what a drag asks of the dress', () => {
+  it('reads what the move BUILT, since a drag never reaches a rebuild', () => {
+    const renderer = rendererOf()
+    let asked = 0
+    // `as`: the drawing strategy is private by construction, and it is the one being watched.
+    const groups = renderer['instances'] as {
+      moved: (ids: Iterable<string>, objectOf: (id: string) => unknown) => boolean
+      builtAnew?: () => boolean
+    }
+    groups.moved = () => true
+    groups.builtAnew = () => {
+      asked += 1
+      return false
+    }
+
+    renderer['onGizmoChange']()
+
+    // 🛑 A promotion makes a lot at the first pointer move, outside any rebuild. Unasked, the
+    // pane goes on believing the scene dressed, and the fresh lot draws shaded in a solid view
+    // for the whole gesture.
+    expect(asked).toBe(1)
+  })
+})
+
 describe('the zone across a frame that draws a preview', () => {
   it('gives it back to the camera the pane left it on', () => {
     const renderer = rendererOf()

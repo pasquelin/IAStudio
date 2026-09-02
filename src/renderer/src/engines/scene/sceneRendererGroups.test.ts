@@ -1,4 +1,4 @@
-import { BatchedMesh, Box3, Group, InstancedMesh, Matrix4, Vector3, type Object3D } from 'three'
+import { BatchedMesh, Box3, Group, InstancedMesh, Matrix4, Object3D, Vector3 } from 'three'
 import { byCodeUnit } from '@shared/text'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { describe, expect, it } from 'vitest'
@@ -404,6 +404,27 @@ describe.each(DRAWINGS)('a crate whose bodies a %s group draws', (_name, drawing
     renderer.configure({ ...DEFAULT_SETTINGS.three, boundingBoxes: 'all' })
 
     expect(crateOf(renderer).children).toEqual(before)
+  })
+
+  it('leaves a source a DRAG carried under the pivot where the drag put it', () => {
+    const renderer = settled()
+    const engine = renderer as unknown as {
+      objects: Map<string, Object3D>
+      withHungUnder: <T>(ids: Iterable<string>, run: () => T) => T
+    }
+    const carried = engine.objects.get('c0')
+    if (!carried) throw new Error('no body to carry')
+    const pivot = new Object3D()
+    graphOf(renderer).add(pivot)
+    // What `carry` does: `Object3D.attach` ends on `children.push`, whatever the walk holds.
+    pivot.attach(carried)
+
+    engine.withHungUnder(['c0'], () => null)
+
+    // 🛑 Shaded, so no pane hangs anything — yet the body IS in the walk. A second copy pushed
+    // and both filtered out leaves it parented to the pivot and in nobody's children: its matrix
+    // stops being composed, and `release` reads an empty pivot, so the drag reports nothing.
+    expect(pivot.children).toContain(carried)
   })
 
   it('still measures a box while a pane shows edges', () => {

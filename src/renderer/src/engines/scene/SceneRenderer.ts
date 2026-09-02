@@ -1671,11 +1671,20 @@ export class SceneRenderer {
 
     // Only the slots that moved. Their region's bounds are widened rather than recut, so the
     // culling stays conservative until the next real change of content puts them back exact.
-    this.instances.moved(moved, id => this.objects.get(id))
-    // A promotion BUILDS a lot mid-drag, and a fresh mesh wears the document's own material: a
-    // pane that believed the scene already dressed would draw it shaded in a solid view.
-    if (this.instances.builtAnew?.() === true) forgetDress(this.paneMemory)
+    this.writeMovedSlots(moved)
     this.movedNodes.clear()
+  }
+
+  /**
+   * Writes the slots of what moved, and dresses again if a promotion BUILT a lot doing it.
+   *
+   * 🛑 Both paths go through here, and the gizmo's is the one that matters: a drag never reaches
+   * `regroupInstances`, so a lot born mid-gesture wore the document's material in a solid view
+   * for the whole drag.
+   */
+  private writeMovedSlots(ids: Iterable<string>): void {
+    this.instances.moved(ids, id => this.objects.get(id))
+    if (this.instances.builtAnew?.() === true) forgetDress(this.paneMemory)
   }
 
   /**
@@ -1719,26 +1728,31 @@ export class SceneRenderer {
    * Bounded by what is asked for rather than by the scene: the parents touched are these nodes.
    */
   private withHungUnder<T>(ids: Iterable<string>, run: () => T): T {
-    // 🛑 Already in the walk, and nothing to do: `syncSourceWalk` hangs EVERY source while a pane
-    // shows edges. A second copy pushed here is filtered out WITH the first, so the body leaves
-    // the walk while the grouping still believes it hung — and `hangSources` then short-circuits.
-    if (this.needsEdges()) return run()
-
-    const hung: Object3D[] = []
+    /** By PARENT, so hanging and dropping are each one pass over a `children` array, never one
+     * per body — a floor of fifty thousand tiles makes that difference quadratic. */
+    const added = new Map<Object3D, Set<Object3D>>()
     for (const id of this.descendantsOf(ids)) {
       const object = this.objects.get(id)
-      if (object?.parent && this.instances.holdsSource(object)) {
-        object.parent.children.push(object)
-        hung.push(object)
-      }
+      const parent = object?.parent
+      if (!object || !parent || !this.instances.holdsSource(object)) continue
+      const mine = added.get(parent)
+      if (mine) mine.add(object)
+      else added.set(parent, new Set([object]))
+    }
+
+    for (const [parent, mine] of added) {
+      // 🛑 MEMBERSHIP, never a proxy for it. A source is already in the walk while a pane shows
+      // edges, and a drag carries one under the pivot through `Object3D.attach`, which pushes
+      // whatever it is given. A second copy pushed here leaves WITH the first, and the body is
+      // out of the walk for good — its matrix stops being composed, and the drag reports nothing.
+      for (const child of parent.children) mine.delete(child)
+      parent.children.push(...mine)
     }
     try {
       return run()
     } finally {
-      const ours = new Set<Object3D>(hung)
-      for (const object of hung) {
-        const parent = object.parent
-        if (parent) parent.children = parent.children.filter(child => !ours.has(child))
+      for (const [parent, mine] of added) {
+        if (mine.size > 0) parent.children = parent.children.filter(child => !mine.has(child))
       }
     }
   }
@@ -4390,7 +4404,7 @@ export class SceneRenderer {
     // grouping left it for the whole gesture. `TransformControls` has already written the world
     // matrices this reads. The moved slots alone, never a regrouping: that costs 47.5 ms on
     // 40 000 nodes, which per pointer move is three dropped frames.
-    this.instances.moved(this.selectedIds, id => this.objects.get(id))
+    this.writeMovedSlots(this.selectedIds)
     this.redraw()
   }
 

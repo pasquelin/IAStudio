@@ -34,7 +34,15 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     // A rebuild of 40 000 nodes costs 32.7 ms; rewriting the slots that moved costs 3.5 µs. Both
     // paths live here, and a `regroupInstances` that lost one would silently take the other.
     expect(body('regroupInstances')).toContain('instances.rebuild')
-    expect(body('regroupInstances')).toContain('instances.moved')
+    expect(body('regroupInstances')).toContain('this.writeMovedSlots')
+  })
+
+  it('dresses again whatever a move BUILT, on the gizmo path as on the document one', () => {
+    // A drag never reaches `regroupInstances`: `onGizmoChange` writes the slots itself. A lot
+    // born of a promotion mid-gesture wore the document's material through a whole solid view.
+    expect(body('writeMovedSlots')).toContain('instances.moved')
+    expect(body('writeMovedSlots')).toContain('builtAnew')
+    expect(source).toContain('this.writeMovedSlots(this.selectedIds)')
   })
 
   it('never lets a changed node mark neither the grouping nor its own slot', () => {

@@ -254,6 +254,43 @@ describe('the zone a camera holds', () => {
   })
 })
 
+describe('where the zone believes the eye stands', () => {
+  it('reads the camera in WORLD space, not where its parent left it', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    const groups = createCellGroups(scene)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    // A camera of the document hangs under what carries it — a rig, a rail, a group.
+    const rig = new Object3D()
+    rig.position.set(40 * CELL_SIZE, 0, 0)
+    const camera = looking(0, 500)
+    rig.add(camera)
+    rig.updateMatrixWorld(true)
+    groups.follow?.(camera)
+
+    // 🛑 Read LOCAL, the disc lands on the origin and holds a cell the eye is ten thousand units
+    // from. Measured on what the scene HOLDS: the frustum test below is already in world space,
+    // so it hides the mistake by turning the cell off instead of taking it out.
+    expect(standingIn(scene)).toEqual([])
+  })
+
+  it('reads it where it stands NOW, not where the last frame drew it', () => {
+    const { scene, groups } = twoCells()
+    const camera = looking(0, 500)
+    groups.follow?.(camera)
+    expect(drawnIn(scene)).toHaveLength(1)
+
+    // 🛑 What `OrbitControls` does, and what a pane sees: it writes `position`, and only `render`
+    // composes the matrices — so `matrixWorldInverse` still holds LAST frame's pose. The zone
+    // itself follows (it reads the position), which is why this is measured on what is DRAWN.
+    camera.position.set(20 * CELL_SIZE, 0, 0)
+    groups.follow?.(camera)
+
+    expect(drawnIn(scene)).toHaveLength(1)
+  })
+})
+
 describe('the box a bucket really occupies', () => {
   it('stops drawing what the view cannot reach, without moving its cell out of the scene', () => {
     const { scene, groups } = aheadAndAside()

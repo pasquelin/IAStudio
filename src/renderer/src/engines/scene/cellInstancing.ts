@@ -447,7 +447,15 @@ export function createCellGroups(
     follow: (camera, cast) => {
       const radius = camera ? seenFrom(camera) + index.cellSize / 2 : Infinity
       if (!camera || !Number.isFinite(radius)) return drawEvery()
-      index.query(camera.position.x, camera.position.z, radius, near)
+      // 🛑 The camera's own matrices first, and BOTH of them. A pane is dressed before `render`
+      // composes anything, so `matrixWorldInverse` is a frame behind — the cell entering the view
+      // is tested against where the eye stood last frame. And a camera of the document hangs
+      // under whatever carries it, so `position` is LOCAL: read raw, the disc is centred on the
+      // origin and the whole level leaves the scene.
+      camera.updateWorldMatrix(true, false)
+      camera.matrixWorldInverse.copy(camera.matrixWorld).invert()
+      camera.getWorldPosition(EYE)
+      index.query(EYE.x, EYE.z, radius, near)
 
       wanted.clear()
       for (const key of near) wanted.add(key)
@@ -612,6 +620,7 @@ function splitByCell(
 const FRUSTUM = new Frustum()
 const VIEW = new Matrix4()
 const CORNER = new Vector3()
+const EYE = new Vector3()
 const AT = new Matrix4()
 const SWEPT = new Box3()
 const LANDED = new Box3()
