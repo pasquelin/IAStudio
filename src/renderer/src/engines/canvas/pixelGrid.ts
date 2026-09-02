@@ -22,9 +22,15 @@ export function gridOf(canvas: CanvasState): { columns: number; rows: number } |
     : { columns: cellsSpanning(canvas.width, cell), rows: cellsSpanning(canvas.height, cell) }
 }
 
-/** The other way round: the cell a side has to be cut by to hold `wanted` of them. */
+/**
+ * The other way round: the cell a side has to be cut by to hold `wanted` of them.
+ *
+ * 🛑 `ceil` and not `sided`, whose `round` overshoots: on 1024, sixteen counts a cell CAN reach
+ * were unreachable through this — 3 gave a cell of 341, which spans 4, and the second try was
+ * refused in silence for naming the value already held.
+ */
 export function cellFor(size: number, wanted: number): number {
-  return sided(size / wanted)
+  return Math.max(1, Math.ceil(size / wanted))
 }
 
 /** The square a dab stamps. Two points inside one cell give the same rectangle — that is the mode. */

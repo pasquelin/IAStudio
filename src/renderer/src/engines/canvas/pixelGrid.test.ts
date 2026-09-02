@@ -96,6 +96,17 @@ describe('cellFor', () => {
     expect(cellsSpanning(1024, cellFor(1024, 64))).toBe(64)
   })
 
+  /**
+   * 🛑 The title above claimed this and asserted only exact DIVISORS. Rounding overshot on
+   * sixteen counts of a 1024 side: 3 gave a cell of 341, which spans 4, and the field's second
+   * try was refused for naming the value already held — three columns could not be reached.
+   */
+  it('reaches a count that does not divide the side, which rounding overshot', () => {
+    expect(cellsSpanning(1024, cellFor(1024, 3))).toBe(3)
+    expect(cellsSpanning(800, cellFor(800, 7))).toBe(7)
+    expect(cellsSpanning(333, cellFor(333, 20))).toBe(20)
+  })
+
   it('never asks for a cell of nothing, however many are wanted', () => {
     expect(cellFor(64, 4096)).toBe(1)
   })
