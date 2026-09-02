@@ -283,6 +283,33 @@ describe('the box a bucket really occupies', () => {
   })
 })
 
+describe('the shadow a rejected bucket would have thrown', () => {
+  /** Un soleil bas en +z : les ombres partent vers -z, donc vers l'axe où la caméra regarde. */
+  const LOW_SUN = { x: 0, y: -0.316, z: -0.948, floor: -100 }
+
+  it('keeps a bucket out of the view whose shadow falls into it', () => {
+    const { scene, groups } = aheadAndAside()
+    groups.follow?.(looking(0, 500))
+    expect(drawnIn(scene)).toHaveLength(1)
+
+    groups.follow?.(looking(0, 500), LOW_SUN)
+
+    // Hiding a caster hides its shadow with it: `WebGLShadowMap.renderObject` returns on
+    // `visible === false` and tests `layers` against the VIEW camera, so neither flag can spare
+    // one pass and not the other. Measured on pillars just out of frame: 2.0 % of the pixels
+    // lost their shadow, and it came back the moment the camera turned to them.
+    expect(drawnIn(scene)).toHaveLength(2)
+  })
+
+  it('hides it again under a sun overhead, whose shadow falls under the body', () => {
+    const { scene, groups } = aheadAndAside()
+
+    groups.follow?.(looking(0, 500), { x: 0, y: -1, z: 0, floor: -1 })
+
+    expect(drawnIn(scene)).toHaveLength(1)
+  })
+})
+
 describe('a cell whose bodies moved without changing cell', () => {
   it('is measured again, so a body carried back into view is drawn again', () => {
     const scene = host()

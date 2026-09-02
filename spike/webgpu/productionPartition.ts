@@ -308,8 +308,10 @@ async function measureOne(
   })
   renderer.prepareOffscreen({ alpha: false, pixelRatio: 1 })
   renderer.mount(host)
-  // Couleur seule : c'est la fenêtre du § 1, et la passe d'ombre est un tout autre chantier.
-  renderer.configure({ ...DEFAULT_SETTINGS.three, showGrid: false, shadows: false })
+  // Couleur seule par défaut : c'est la fenêtre du § 1. `shadows=on` mesure ce que le balayage
+  // d'ombre coûte au rejet, puisqu'un lot dont l'ombre entre dans le champ ne peut plus être caché.
+  const shadows = QUERY.get('shadows') === 'on'
+  renderer.configure({ ...DEFAULT_SETTINGS.three, showGrid: false, shadows })
   const canvas = host.querySelector('canvas')
   if (!canvas) throw new Error('the engine mounted no canvas')
 

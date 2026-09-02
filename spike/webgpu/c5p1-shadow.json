@@ -1,0 +1,136 @@
+{
+  "at": "2026-09-02T17:46:37.320Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "lit": [
+        {
+          "asked": true,
+          "castShadow": true,
+          "shadowRight": 494.9747468305833,
+          "shadowFar": 500,
+          "mapSize": 2048,
+          "shadowMapEnabled": true,
+          "shadowMapAuto": false
+        },
+        {
+          "asked": true,
+          "castShadow": true,
+          "shadowRight": 494.9747468305833,
+          "shadowFar": 500,
+          "mapSize": 2048,
+          "shadowMapEnabled": true,
+          "shadowMapAuto": false
+        },
+        {
+          "asked": false,
+          "castShadow": true,
+          "shadowRight": 494.9747468305833,
+          "shadowFar": 500,
+          "mapSize": 2048,
+          "shadowMapEnabled": false,
+          "shadowMapAuto": false
+        },
+        {
+          "asked": true,
+          "castShadow": true,
+          "shadowRight": 494.9747468305833,
+          "shadowFar": 500,
+          "mapSize": 2048,
+          "shadowMapEnabled": true,
+          "shadowMapAuto": false
+        }
+      ],
+      "turns": 0.604,
+      "litVersusUnlit": 0.0231
+    },
+    {
+      "heading": 0,
+      "shadowShare": 0.0231,
+      "witness": 0,
+      "grid": 0,
+      "gridMeanGap": 5.6,
+      "gridHidden": 5,
+      "gridDrawn": 17,
+      "gridPillarDrawn": true,
+      "offPillarDrawn": true
+    },
+    {
+      "heading": 10,
+      "shadowShare": 0.0266,
+      "witness": 0,
+      "grid": 0,
+      "gridMeanGap": 0,
+      "gridHidden": 5,
+      "gridDrawn": 17,
+      "gridPillarDrawn": true,
+      "offPillarDrawn": true
+    },
+    {
+      "heading": 20,
+      "shadowShare": 0.0283,
+      "witness": 0,
+      "grid": 0,
+      "gridMeanGap": 0,
+      "gridHidden": 6,
+      "gridDrawn": 17,
+      "gridPillarDrawn": true,
+      "offPillarDrawn": true
+    },
+    {
+      "heading": 30,
+      "shadowShare": 0.0287,
+      "witness": 0,
+      "grid": 0,
+      "gridMeanGap": 0,
+      "gridHidden": 7,
+      "gridDrawn": 17,
+      "gridPillarDrawn": true,
+      "offPillarDrawn": true
+    },
+    {
+      "heading": 40,
+      "shadowShare": 0.0273,
+      "witness": 0,
+      "grid": 0,
+      "gridMeanGap": 0,
+      "gridHidden": 7,
+      "gridDrawn": 17,
+      "gridPillarDrawn": true,
+      "offPillarDrawn": true
+    },
+    {
+      "heading": 50,
+      "shadowShare": 0.0277,
+      "witness": 0,
+      "grid": 0,
+      "gridMeanGap": 0,
+      "gridHidden": 7,
+      "gridDrawn": 17,
+      "gridPillarDrawn": true,
+      "offPillarDrawn": true
+    },
+    {
+      "heading": 60,
+      "shadowShare": 0.0309,
+      "witness": 0,
+      "grid": 0,
+      "gridMeanGap": 0,
+      "gridHidden": 8,
+      "gridDrawn": 17,
+      "gridPillarDrawn": true,
+      "offPillarDrawn": true
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2004,
+      "phase": "fin",
+      "workingSetKb": 402528
+    }
+  ]
+}

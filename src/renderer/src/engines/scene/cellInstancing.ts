@@ -21,6 +21,7 @@ import {
   writeMoved,
   type Grouped,
   type GroupingStats,
+  type ShadowThrow,
   type InstancedGroups,
   type Placed,
 } from './grouping'
@@ -232,7 +233,7 @@ export function createCellGroups(
     // says. Measured on 500 000 bodies, 6 912 meshes held: 0.97 ms a frame of pure walking.
     //
     // `null` draws every cell — a film and a capture render from a camera of their own.
-    follow: camera => {
+    follow: (camera, cast) => {
       const radius = camera ? seenFrom(camera) + index.cellSize / 2 : Infinity
       if (!camera || !Number.isFinite(radius)) return drawEvery()
       index.query(camera.position.x, camera.position.z, radius, near)
@@ -266,7 +267,7 @@ export function createCellGroups(
         const held = cells.get(key)
         if (!held) continue
         if (held.stale) remeasure(held, boxes)
-        const inField = FRUSTUM.intersectsBox(held.box)
+        const inField = FRUSTUM.intersectsBox(sweptBy(held.box, cast))
         if (held.group.visible !== inField) {
           held.group.visible = inField
           moved = true
@@ -276,7 +277,7 @@ export function createCellGroups(
           const box = child instanceof InstancedMesh ? boxes.get(child) : undefined
           // No box means a bucket whose bodies moved and were never measured again: drawn, and
           // three's own sphere decides. Never the other way — this must only ever hide.
-          const draws = box ? FRUSTUM.intersectsBox(box) : true
+          const draws = box ? FRUSTUM.intersectsBox(sweptBy(box, cast)) : true
           if (child.visible === draws) continue
           child.visible = draws
           moved = true
@@ -363,6 +364,24 @@ function splitByCell(
 const FRUSTUM = new Frustum()
 const VIEW = new Matrix4()
 const CORNER = new Vector3()
+const SWEPT = new Box3()
+const LANDED = new Box3()
+
+/**
+ * The box grown by where its own shadow can fall — hiding a caster hides its shadow with it.
+ *
+ * The union of the box and the box dropped onto the floor along the light: the swept volume is
+ * their hull, which that union contains. A sun at the horizon throws nothing that lands.
+ */
+function sweptBy(box: Box3, cast: ShadowThrow | null | undefined): Box3 {
+  if (!cast || cast.y >= 0 || box.isEmpty()) return box
+  const drop = box.max.y - cast.floor
+  if (drop <= 0) return box
+  const along = drop / -cast.y
+  SWEPT.copy(box)
+  LANDED.copy(box).translate(CORNER.set(cast.x * along, -drop, cast.z * along))
+  return SWEPT.union(LANDED)
+}
 
 /** The box the bodies of a bucket occupy, each grown by its own reach. */
 function boxOf(meshes: readonly Mesh[], shape: BufferGeometry): Box3 {

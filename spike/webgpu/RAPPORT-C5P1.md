@@ -300,7 +300,67 @@ Piste notée, **hors de ce lot** : ramasser les lots peu peuplés d'une cellule 
 par macro-chunk, ou tout autre moyen de ne pas payer un appel par lot déclaré quand la cellule n'en
 remplit que quelques-uns.
 
-## 12. Un défaut de banc, à ne pas repayer
+## 12. L'ombre d'un corps hors champ — elle POPPAIT
+
+`spike/webgpu/shadowZone.{ts,html}` : un sol, **32 piliers hauts groupés franchement de côté**
+(78° hors de l'axe), un soleil bas en +z dont l'ombre revient à 30°, donc dans le champ. La caméra
+tourne sur place de 0 à 60°, et l'on compare `off` et `grid` à chaque cap.
+
+**Trois contrôles, sans lesquels le relevé ne dit rien** — et les trois ont servi :
+
+- **l'image bouge-t-elle ?** 60,4 % des pixels changent entre le cap 0 et le cap 60. Une première
+  version visait `y = 8` à UNE unité devant une caméra posée à 12 : un piqué de 63°, la caméra
+  regardait le sol sous elle et tout rendait « 0 différent » ;
+- **l'ombre est-elle dans l'image ?** 2,3 à 3,1 % des pixels diffèrent entre ombres allumées et
+  éteintes, à chaque cap ;
+- **le rejet est-il engagé ?** 5 à 8 lots sur 17 sont cachés. Un premier comptage n'a lu que
+  `mesh.visible` et annonçait 0 : c'est le GROUPE de la cellule que le premier étage éteint.
+
+### Le défaut, mesuré
+
+| cap | part ombrée | témoin `off`/`off` | **`grid` contre `off`** | piliers dessinés |
+|---:|---:|---:|---:|---|
+| 0 | 2,31 % | 0 | **2,03 %** | `off` oui · `grid` **non** |
+| 10 | 2,66 % | 0 | **2,39 %** | `off` oui · `grid` **non** |
+| 20 à 60 | 2,7 à 3,1 % | 0 | 0 | oui des deux côtés |
+
+**Presque toute l'ombre disparaissait** — 2,03 % de pixels changés pour 2,31 % d'ombre — dès que le
+caster sortait du champ, et revenait au cap 20 quand il y rentrait. C'est le pop. **[M]**
+
+### Pourquoi ni `visible` ni un calque ne peuvent le corriger
+
+`WebGLShadowMap.renderObject` de three 0.185, dans l'ordre : `if ( object.visible === false )
+return;` puis `const visible = object.layers.test( camera.layers );` — et ce `camera` est la caméra
+**de VUE**, pas la lumière. Les deux leviers que le dépôt utilise déjà pour retirer un objet de la
+passe couleur le retirent donc aussi de la passe d'ombre. **Limiter le rejet à la passe couleur
+n'est pas exprimable dans cette version de three.** **[C]**
+
+### Ce qui a été fait à la place
+
+**Un lot n'est rejeté que si NI LUI NI SON OMBRE n'atteignent le champ.** La boîte testée est
+l'union de la boîte du lot et de cette même boîte tombée sur le sol le long de la lumière — le
+volume balayé est leur enveloppe convexe, que cette union contient. `SceneRenderer` publie la
+direction du soleil et le plancher de la scène (`ShadowThrow`), lus là où la caméra d'ombre est
+déjà ajustée.
+
+| après correction | |
+|---|---|
+| `grid` contre `off`, tous caps | **0 pixel** |
+| lots encore cachés | **5 à 8 sur 17** — le rejet travaille toujours |
+| 500 000 corps, ombres ALLUMÉES | **246 appels, 17 848 instances** |
+| 500 000 corps, ombres éteintes | **246 appels, 17 848 instances** |
+
+**Le balayage ne coûte rien de mesurable sur ce monde** : le soleil y est à 30° et les corps font
+une à cinquante unités, donc la boîte grandit de trois unités pour un accessoire. Il coûtera sur un
+soleil rasant et des casters hauts — c'est-à-dire exactement quand il est nécessaire. GPU sur ce
+monde, ombres allumées : **4,24 → 1,61 ms**. **[M]**
+
+**Ce que le décor a appris au passage** : la boîte d'un lot est grossie du rayon de sa sphère fois
+l'étirement, **isotropiquement** — 76 unités pour un pilier de 5 × 87 × 5. Un décor calé à un degré
+près ne rejetait donc jamais rien. Une boîte serrée sur la vraie enveloppe rejetterait davantage ;
+ce n'est pas dans ce lot.
+
+## 13. Un défaut de banc, à ne pas repayer
 
 **Une campagne qui enchaîne plusieurs tailles de monde dans la même page rend des relevés faux.**
 Mesuré : `counts=500000,5000,500` a rendu un témoin `off` qui différait de `off` sur **2 972 888
@@ -313,12 +373,10 @@ Douze moteurs montés dans une page, dont quatre portant 500 000 nœuds, dépass
 tient. **Une taille de monde par campagne**, et le témoin `off` joué deux fois reste le seul juge
 de la validité d'un relevé.
 
-## 13. Ce que le lot ne fait pas
+## 14. Ce que le lot ne fait pas
 
 - Le CPU de soumission ne rejoint toujours pas la parité du § 1 : ×1,6 après l'étape 3, contre
   ×2,1 avant. Ce qui reste est le plafond du § 10.
-- **Le rejet par boîte cache aussi pour la passe d'OMBRE**, puisqu'il éteint le mesh. C'est la même
-  compromission que la zone, en plus serré — voir la ligne suivante, et le § 9.
 - **Les cartes d'ombre d'une frame sont tracées pour la zone des PANNEAUX.** Un aperçu ou un film
   qui regarde ailleurs voit des corps dont l'ombre manque, jusqu'à ce que les cartes soient
   redemandées. Sous `off` la question ne se pose pas, toutes les cellules étant toujours là.

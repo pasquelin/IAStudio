@@ -205,7 +205,7 @@ import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
 import './bvhPatches'
-import { unhang, type InstancedGroups } from './grouping'
+import { unhang, type InstancedGroups, type ShadowThrow } from './grouping'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
@@ -784,6 +784,11 @@ export class SceneRenderer {
    * dropped when the content changes, which is the one thing that can make it shrink.
    */
   private shadowBounds: Box3 | null = null
+  /**
+   * Where a shadow falls, for a grouping that hides by the CAMERA's frustum: what it takes off
+   * screen it takes out of the shadow pass too. `null` when no light throws one.
+   */
+  private shadowThrow: ShadowThrow | null = null
   /**
    * Whether the parent pass has anything to walk. Only content can change where a node hangs —
    * `keepsItsGroup` reads `parentId`, so a node that merely MOVED kept the parent it had.
@@ -1907,7 +1912,7 @@ export class SceneRenderer {
 
     // Before the dressing, and both answers kept: a cell that just came into the zone is a body
     // the shadow maps were drawn without.
-    const zoned = this.instances.follow?.(camera) ?? false
+    const zoned = this.instances.follow?.(camera, this.shadowThrow) ?? false
 
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
     const dressed = dressForPane(
@@ -2428,7 +2433,7 @@ export class SceneRenderer {
     // ITS camera, and comes here on every frame it is shown: opening the zone in full for it put
     // the whole level back in the scene, twice a frame. A film and a capture name none, and every
     // cell is drawn for them. `dressPane` narrows it again before the next pane.
-    this.instances.follow?.(camera ?? null)
+    this.instances.follow?.(camera ?? null, this.shadowThrow)
 
     for (const helper of this.helpers.values()) hide(helper)
     for (const skeleton of this.skeletons.values()) hide(skeleton)
@@ -3832,10 +3837,14 @@ export class SceneRenderer {
     }
     // The scene is walked only if some light would read the answer: a set lit by a hemisphere
     // and a point light has no box to size, and measuring it would be a pass for nothing.
-    if (framed.length === 0) return
+    if (framed.length === 0) {
+      this.shadowThrow = null
+      return
+    }
 
     const reach = this.measureShadowReach()
     for (const light of framed) fitShadowCamera(light, reach)
+    this.shadowThrow = throwOf(framed[0], this.heldShadowBounds())
   }
 
   /**
@@ -4788,4 +4797,24 @@ function groupsFor(
 ): (host: Object3D, ownMaterialOf: (mesh: Mesh) => Material | Material[]) => InstancedGroups {
   if (options.partition === 'grid') return createCellGroups
   return options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups
+}
+
+/**
+ * Which way the shadows of a light fall, and how low they can land. Read off the light's own
+ * target, which is where three points it; an empty set answers the origin, and the floor comes
+ * from the box the shadow camera was just fitted to.
+ */
+function throwOf(light: Object3D | undefined, bounds: Box3): ShadowThrow | null {
+  if (!light) return null
+  const target = Reflect.get(light, 'target')
+  const at = new ThreeVector3()
+  if (target instanceof Object3D) target.getWorldPosition(at)
+  const direction = at.sub(light.getWorldPosition(new ThreeVector3())).normalize()
+  if (direction.lengthSq() === 0) return null
+  return {
+    x: direction.x,
+    y: direction.y,
+    z: direction.z,
+    floor: bounds.isEmpty() ? 0 : bounds.min.y,
+  }
 }

@@ -98,7 +98,7 @@ export type InstancedGroups = {
    * shadow maps have to be drawn again. Nothing else implements it: the groups of a whole level
    * are the same wherever one looks from.
    */
-  follow?: (camera: Camera | null) => boolean
+  follow?: (camera: Camera | null, cast?: ShadowThrow | null) => boolean
   /**
    * What the last `follow` walked, for whoever measures the strategy from outside — the studio's
    * counters, a bench, a probe. Only a strategy that holds a spatial index answers.
@@ -106,6 +106,23 @@ export type InstancedGroups = {
   stats?: () => GroupingStats
   /** The engine is going away, and so are the meshes it built. */
   dispose: () => void
+}
+
+/**
+ * Where a shadow falls, and how far down it can travel before it lands.
+ *
+ * 🛑 What a strategy that hides by the CAMERA's frustum has to be told. `WebGLShadowMap` returns
+ * on `object.visible === false` and tests `object.layers` against the VIEW camera, so nothing
+ * hidden for the colour pass reaches the shadow pass either — measured, a body just out of frame
+ * took its shadow off the ground with it, over 2.0 % of the pixels.
+ */
+export type ShadowThrow = {
+  /** The light's own direction, normalised: where a shadow travels. */
+  x: number
+  y: number
+  z: number
+  /** The lowest thing a shadow can land on. */
+  floor: number
 }
 
 /** What a spatial strategy can say of the last frame it followed. */
