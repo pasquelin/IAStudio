@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 
+import { clamp } from '../../numeric'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { componentOf, type Entity } from '../entity'
 import { numberOf, textOf } from '../componentFields'
-import { stepTowards } from '../steering'
+import { entityNamed, stepTowards } from '../steering'
 import type { System, World } from '../world'
 
 const PATROL = COMPONENT_DEFAULTS.Patrol
@@ -34,7 +35,7 @@ export function createPatrolSystem(): System {
         marks.length = 0
         for (const said of textOf(settings, 'waypoints', PATROL.waypoints).split(',')) {
           const name = said.trim()
-          const mark = name === '' ? null : (world.entities.get(name) ?? namedIn(world, name))
+          const mark = name === '' ? null : entityNamed(world, name)
           if (mark && mark !== entity) marks.push(mark)
         }
         if (marks.length === 0) continue
@@ -61,12 +62,6 @@ export function createPatrolSystem(): System {
   }
 }
 
-/** The first entity wearing that name. A sweep, and a round names a handful of marks. */
-function namedIn(world: World, name: string): Entity | null {
-  for (const entity of world.entities.all()) if (entity.name === name) return entity
-  return null
-}
-
 /** `once` stops at the far end; the two others fold the round back, by wrapping or by walking it back. */
 function advance(round: Round, count: number, mode: string): void {
   if (mode === 'loop') {
@@ -82,5 +77,5 @@ function advance(round: Round, count: number, mode: string): void {
   // pingPong, and the default.
   if (round.forward && round.at + 1 >= count) round.forward = false
   else if (!round.forward && round.at === 0) round.forward = true
-  round.at = Math.max(0, Math.min(count - 1, round.at + (round.forward ? 1 : -1)))
+  round.at = clamp(round.at + (round.forward ? 1 : -1), 0, count - 1)
 }

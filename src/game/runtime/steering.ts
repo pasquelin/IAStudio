@@ -27,23 +27,34 @@ export type Targets = {
  * the moment the name changes or the entity it found is destroyed.
  */
 export function createTargets(): Targets {
-  const found = new WeakMap<Entity, { said: string; entity: Entity }>()
+  const found = new WeakMap<Entity, { said: string; entity: Entity | null }>()
 
   return {
     of: (world, from, said) => {
       if (said === '') return null
 
       const kept = found.get(from)
-      if (kept && kept.said === said && world.entities.get(kept.entity.id) !== null) {
-        return kept.entity
+      // 🛑 A MISS is remembered too: a name nobody wears would otherwise sweep the whole scene
+      // for every follower on every step, which is the one case the cache exists for.
+      if (kept && kept.said === said) {
+        if (kept.entity === null) return null
+        if (world.entities.get(kept.entity.id) !== null) return kept.entity
       }
 
-      const byId = world.entities.get(said)
-      const entity = byId ?? [...world.entities.all()].find(one => one.name === said) ?? null
-      if (entity) found.set(from, { said, entity })
+      const entity = entityNamed(world, said)
+      found.set(from, { said, entity })
       return entity
     },
   }
+}
+
+/** The entity a word names — its id first, then its name. What an author may write, said once. */
+export function entityNamed(world: World, said: string): Entity | null {
+  const byId = world.entities.get(said)
+  if (byId) return byId
+
+  for (const entity of world.entities.all()) if (entity.name === said) return entity
+  return null
 }
 
 /**
@@ -105,5 +116,3 @@ export function turnTowards(rotation: Vector3, direction: Vector3, most: number)
 const WANTED: Quaternion = { x: 0, y: 0, z: 0, w: 1 }
 const HELD: Quaternion = { x: 0, y: 0, z: 0, w: 1 }
 const STEPPED: Quaternion = { x: 0, y: 0, z: 0, w: 1 }
-
-export const DEGREES = Math.PI / 180

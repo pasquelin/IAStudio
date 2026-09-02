@@ -74,7 +74,7 @@ function slab(
  * A fresh descriptor per call, never one shared: two nodes holding the same object would be
  * edited together by accident.
  */
-function surface(color: string, texture?: CheckerTextureId): MaterialDescriptor {
+export function surface(color: string, texture?: CheckerTextureId): MaterialDescriptor {
   return { ...defaultMeshMaterial(texture), color }
 }
 

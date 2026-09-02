@@ -2,12 +2,14 @@
 
 import { clamp } from '../../numeric'
 import { aeroForces, type Aero, type Airframe, type Stick } from '../../physics/aerodynamics'
-import { axesOf, quaternionFromEuler, restingAxes } from '../../physics/quaternion'
+import { axesOfEuler, restingAxes } from '../../physics/quaternion'
 import type { BodyForce } from '../../ports/physicsPort'
+import type { Component } from '@shared/domain/component'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
-import type { Pilots } from '../pilots'
+import { keyHeld, keysHeld } from '../keysHeld'
+import { PILOT_RANK, type Pilots } from '../pilots'
 import type { System, World } from '../world'
 
 const AIRCRAFT = COMPONENT_DEFAULTS.Aircraft
@@ -31,19 +33,20 @@ const CRUISE_THROTTLE = 0.6
 const CHASE_BACK = 30
 
 /**
- * What flies: the stick read off the keyboard, and the forces its own motion earns it, pushed
- * into the body every step.
- *
- * 🛑 The throttle is a LEVER, not a pedal: it is held between steps and moved by the keys, because
- * an engine that idles the moment a finger lifts is not something anyone can fly. It lives here
- * rather than in the component — a component is what an author wrote, never what a game is doing.
+ * 🛑 The throttle is a LEVER held between steps, not a pedal: an engine that idles the moment a
+ * finger lifts is not something anyone can fly. It lives here rather than in the component — a
+ * component is what an author wrote, never what a game is doing.
  */
 export function createAircraftSystem(pilots: Pilots): System {
   const throttles = new WeakMap<Entity, number>()
   const forces: BodyForce[] = []
+  const pool: BodyForce[] = []
   const names: string[] = []
+  const flying: Entity[] = []
+  const settings: Component[] = []
   const axes = restingAxes()
-  const spun = { x: 0, y: 0, z: 0, w: 1 }
+  const stick: Stick = { throttle: 0, pitch: 0, roll: 0, yaw: 0 }
+  const frame: Airframe = { maxThrust: 0, wingArea: 0, stallAngle: 0, agility: 0, drag: 0 }
   const aero: Aero = { force: { x: 0, y: 0, z: 0 }, torque: { x: 0, y: 0, z: 0 } }
 
   return {
@@ -52,44 +55,62 @@ export function createAircraftSystem(pilots: Pilots): System {
     writes: [],
 
     fixedUpdate: (world: World, dt: number) => {
-      forces.length = 0
+      flying.length = 0
       names.length = 0
-      const flying: Entity[] = []
+      settings.length = 0
       for (const entity of world.entities.withComponent('Aircraft')) {
-        if (!componentOf(entity, 'Aircraft')) continue
+        const held = componentOf(entity, 'Aircraft')
+        if (!held) continue
         flying.push(entity)
+        settings.push(held)
         names.push(entity.id)
       }
       if (flying.length === 0) return
 
-      const motions = new Map(world.ports.physics.motion(names).map(one => [one.body, one]))
-      for (const entity of flying) {
-        const settings = componentOf(entity, 'Aircraft')
-        const motion = motions.get(entity.id)
-        if (!settings || !motion) continue
+      // Read ONCE: there is one stick, and every plane in the scene answers it.
+      const input = world.input
+      stick.pitch = keysHeld(input, NOSE_UP) - keysHeld(input, NOSE_DOWN)
+      stick.roll = keysHeld(input, ROLL_RIGHT) - keysHeld(input, ROLL_LEFT)
+      stick.yaw = keyHeld(input, YAW_RIGHT) - keyHeld(input, YAW_LEFT)
+      const lever = keyHeld(input, THROTTLE_UP) - keyHeld(input, THROTTLE_DOWN)
 
-        const lever = held(world, THROTTLE_UP) - held(world, THROTTLE_DOWN)
-        const throttle = clamp(
+      forces.length = 0
+      const motions = world.ports.physics.motion(names)
+      let read = 0
+      for (let index = 0; index < flying.length; index++) {
+        const entity = flying[index]
+        const held = settings[index]
+        if (!entity || !held) continue
+        // `motion` answers in the order it was asked, leaving out what the port does not hold.
+        const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
+        if (!motion) continue
+
+        stick.throttle = clamp(
           (throttles.get(entity) ?? CRUISE_THROTTLE) + lever * THROTTLE_RATE * dt,
           0,
           1,
         )
-        throttles.set(entity, throttle)
+        throttles.set(entity, stick.throttle)
+        readFrame(held, frame)
+        aeroForces(
+          frame,
+          stick,
+          axesOfEuler(entity.transform.rotation, axes),
+          motion.linear,
+          motion.angular,
+          aero,
+        )
 
-        const stick: Stick = {
-          throttle,
-          pitch: pressed(world, NOSE_UP) - pressed(world, NOSE_DOWN),
-          roll: pressed(world, ROLL_RIGHT) - pressed(world, ROLL_LEFT),
-          yaw: held(world, YAW_RIGHT) - held(world, YAW_LEFT),
-        }
-        axesOf(quaternionFromEuler(entity.transform.rotation, spun), axes)
-        aeroForces(frameOf(settings), stick, axes, motion.linear, motion.angular, aero)
-        forces.push({
-          body: entity.id,
-          force: { ...aero.force },
-          torque: { ...aero.torque },
-        })
-        pilots.take({ entity, below: 0, back: CHASE_BACK }, world.time.tick)
+        const push = pooled(pool, forces.length)
+        push.body = entity.id
+        push.force.x = aero.force.x
+        push.force.y = aero.force.y
+        push.force.z = aero.force.z
+        push.torque.x = aero.torque.x
+        push.torque.y = aero.torque.y
+        push.torque.z = aero.torque.z
+        forces.push(push)
+        pilots.take(entity, 0, CHASE_BACK, PILOT_RANK.machine, world.time.tick)
       }
 
       if (forces.length > 0) world.ports.physics.push(forces)
@@ -97,17 +118,24 @@ export function createAircraftSystem(pilots: Pilots): System {
   }
 }
 
-const frameOf = (settings: NonNullable<ReturnType<typeof componentOf>>): Airframe => ({
-  maxThrust: numberOf(settings, 'maxThrust', AIRCRAFT.maxThrust),
-  wingArea: numberOf(settings, 'wingArea', AIRCRAFT.wingArea),
-  stallAngle: numberOf(settings, 'stallAngle', AIRCRAFT.stallAngle),
-  agility: numberOf(settings, 'agility', AIRCRAFT.agility),
-  drag: numberOf(settings, 'drag', AIRCRAFT.drag),
-})
+function readFrame(settings: Component, into: Airframe): Airframe {
+  into.maxThrust = numberOf(settings, 'maxThrust', AIRCRAFT.maxThrust)
+  into.wingArea = numberOf(settings, 'wingArea', AIRCRAFT.wingArea)
+  into.stallAngle = numberOf(settings, 'stallAngle', AIRCRAFT.stallAngle)
+  into.agility = numberOf(settings, 'agility', AIRCRAFT.agility)
+  into.drag = numberOf(settings, 'drag', AIRCRAFT.drag)
+  return into
+}
 
-const held = (world: World, key: string): number => (world.input.held.includes(key) ? 1 : 0)
+function pooled(pool: BodyForce[], at: number): BodyForce {
+  const kept = pool[at]
+  if (kept) return kept
 
-function pressed(world: World, keys: readonly string[]): number {
-  for (const key of keys) if (world.input.held.includes(key)) return 1
-  return 0
+  const made: BodyForce = {
+    body: '',
+    force: { x: 0, y: 0, z: 0 },
+    torque: { x: 0, y: 0, z: 0 },
+  }
+  pool.push(made)
+  return made
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 import type { Vector3 } from '@shared/domain/transform'
-import { clamp } from '../numeric'
-import type { Axes } from './quaternion'
+import { clamp, DEGREES } from '../numeric'
+import { dot, type Axes } from './quaternion'
 
 /** What an `Aircraft` component says of its airframe, in the units an author reads. */
 export type Airframe = {
@@ -37,13 +37,10 @@ const CONTROL = 0.12
 const STABILITY = 0.4
 const DAMPING = 0.35
 
-const DEGREES = Math.PI / 180
-
 /**
- * The forces on an airframe moving through still air, written into `into` — read per aircraft per
- * step. Thrust along the nose; lift across the airflow, from the wing's angle to it; drag against
- * it; and torques that only bite with air over the surfaces, so a plane standing still answers
- * no stick at all, which is what a runway is for.
+ * The forces on an airframe moving through still air, written into `into`. 🛑 The torques only
+ * bite with air over the surfaces: a plane standing still answers no stick, which is what a
+ * runway is for.
  */
 export function aeroForces(
   frame: Airframe,
@@ -112,6 +109,3 @@ export function liftCoefficient(attack: number, stall: number): number {
   if (past <= 0) return linear
   return linear * clamp(1 - past / stall, 0, 1)
 }
-
-const dot = (one: Vector3, other: Vector3): number =>
-  one.x * other.x + one.y * other.y + one.z * other.z

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { Vector3 } from '@shared/domain/transform'
+import { clamp } from '../../numeric'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { componentOf, type Entity } from '../entity'
 import { flagOf, numberOf, textOf } from '../componentFields'
@@ -76,7 +77,7 @@ function advance(run: Run, count: number, mode: string): void {
   if (mode === 'pingPong') {
     if (run.forward && run.at + 1 >= count) run.forward = false
     else if (!run.forward && run.at === 0) run.forward = true
-    run.at = Math.max(0, Math.min(count - 1, run.at + (run.forward ? 1 : -1)))
+    run.at = clamp(run.at + (run.forward ? 1 : -1), 0, count - 1)
     return
   }
 

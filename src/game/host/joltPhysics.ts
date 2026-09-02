@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { Vector3 } from '@shared/domain/transform'
+import { DEGREES } from '../numeric'
 import { quaternionFromEuler } from '../physics/quaternion'
 import { HULL_FLOOR, type ColliderShape } from '../physics/shape'
 import type {
@@ -64,8 +65,6 @@ const CHARACTER_STEP = 1 / 60
 /** A rounded corner cannot be wider than the half extent it rounds. */
 const CONVEX_RADIUS = 0.05
 
-const DEGREES = Math.PI / 180
-
 const engine = loadOnce(startEngine)
 
 /**
@@ -82,21 +81,14 @@ async function startEngine(): Promise<JoltModule> {
 }
 
 /**
- * How many bytes are left in the engine's heap, which grows by 🛑 our build alone — the npm one
- * is FIXED at 128 Mo and aborts past it. It is the whole memory measure this port has, since every
- * Jolt object lives there and none of them is ever collected.
- *
- * A static of Jolt's own, read through the prototype: it answers for the engine, not for a world.
+ * Bytes left in the engine's heap — the whole memory measure this port has. 🛑 It grows by OUR
+ * build alone: the npm one is fixed at 128 Mo and aborts past it.
  */
 export async function joltFreeBytes(): Promise<number> {
   return (await engine()).JoltInterface.prototype.sGetFreeMemory()
 }
 
-/**
- * Held for the life of the world and rewritten in place. Everything Jolt hands out lives in the
- * WebAssembly heap, where nothing is collected: a body that moves every frame would otherwise
- * leave two objects a frame behind it, and the leak shows after twenty minutes, not in a bench.
- */
+/** Rewritten in place: nothing in Jolt's heap is collected, so a body that moves would leak. */
 type Scratch = {
   place: JoltPlace
   turn: JoltQuat
@@ -177,8 +169,10 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
   const pool: BodyPose[] = []
   const poses: BodyPose[] = []
   const contacts: PhysicsContact[] = []
+  const contactPool: PhysicsContact[] = []
   const moved: CharacterMoved[] = []
   const motions: BodyMotion[] = []
+  const motionPool: BodyMotion[] = []
 
   // Hoisted rather than written at the call: it captures two maps and would be rebuilt sixty
   // times a second.
@@ -187,8 +181,10 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
     const other = namesById.get(second)
     if (one === undefined || other === undefined) return
     const sensed = sensorOf(held, one) || sensorOf(held, other)
-    contacts.push({ body: one, other, started, sensed })
-    contacts.push({ body: other, other: one, started, sensed })
+    writeContact(pooled(contactPool, contacts.length, freshContact), one, other, started, sensed)
+    contacts.push(contactPool[contacts.length]!)
+    writeContact(pooled(contactPool, contacts.length, freshContact), other, one, started, sensed)
+    contacts.push(contactPool[contacts.length]!)
   }
 
   const listener = new jolt.ContactListenerJS()
@@ -368,9 +364,9 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       for (const one of wanted) {
         const body = held.get(one.body)
         if (!body?.ride) continue
-        body.ride.controller.SetDriverInput(one.forward, one.right, one.brake, one.handBrake)
+        body.ride.controller.SetDriverInput(one.forward, one.steer, one.brake, one.handBrake)
         // A car left alone goes to sleep, and a sleeping one hears no pedal.
-        if (one.forward !== 0 || one.right !== 0 || one.brake !== 0 || one.handBrake !== 0) {
+        if (one.forward !== 0 || one.steer !== 0 || one.brake !== 0 || one.handBrake !== 0) {
           bodies.ActivateBody(body.id)
         }
       }
@@ -392,16 +388,10 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       for (const name of names) {
         const body = held.get(name)
         if (!body) continue
-        const linear = bodies.GetLinearVelocity(body.id)
-        const angular = bodies.GetAngularVelocity(body.id)
-        const one = pooledMotion(motions.length)
+        const one = pooled(motionPool, motions.length, freshMotion)
         one.body = name
-        one.linear.x = linear.GetX()
-        one.linear.y = linear.GetY()
-        one.linear.z = linear.GetZ()
-        one.angular.x = angular.GetX()
-        one.angular.y = angular.GetY()
-        one.angular.z = angular.GetZ()
+        writeVector(one.linear, bodies.GetLinearVelocity(body.id))
+        writeVector(one.angular, bodies.GetAngularVelocity(body.id))
         motions.push(one)
       }
       return motions
@@ -432,15 +422,8 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
         if (name === undefined || held.get(name)?.descriptor.kind !== 'dynamic') continue
 
         bodies.GetPositionAndRotation(id, scratch.place, scratch.turn)
-        const pose = pooled(pool, poses.length)
-        pose.body = name
-        pose.position.x = scratch.place.GetX()
-        pose.position.y = scratch.place.GetY()
-        pose.position.z = scratch.place.GetZ()
-        pose.rotation.x = scratch.turn.GetX()
-        pose.rotation.y = scratch.turn.GetY()
-        pose.rotation.z = scratch.turn.GetZ()
-        pose.rotation.w = scratch.turn.GetW()
+        const pose = pooled(pool, poses.length, freshPose)
+        writePose(pose, name, scratch.place, scratch.turn)
         poses.push(pose)
       }
 
@@ -448,17 +431,9 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       // leave the active island, and the camera that watches it would then never hear again.
       for (const entry of walking) {
         if (!entry.walker) continue
-        const at = entry.walker.character.GetPosition()
-        const spun = entry.walker.character.GetRotation()
-        const pose = pooled(pool, poses.length)
-        pose.body = entry.descriptor.body
-        pose.position.x = at.GetX()
-        pose.position.y = at.GetY()
-        pose.position.z = at.GetZ()
-        pose.rotation.x = spun.GetX()
-        pose.rotation.y = spun.GetY()
-        pose.rotation.z = spun.GetZ()
-        pose.rotation.w = spun.GetW()
+        const pose = pooled(pool, poses.length, freshPose)
+        const walker = entry.walker.character
+        writePose(pose, entry.descriptor.body, walker.GetPosition(), walker.GetRotation())
         poses.push(pose)
       }
 
@@ -474,17 +449,8 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
             scratch.axle,
             scratch.rim,
           )
-          const at = placed.GetTranslation()
-          const spun = placed.GetRotation().GetQuaternion()
-          const pose = pooled(pool, poses.length)
-          pose.body = wheel.body
-          pose.position.x = at.GetX()
-          pose.position.y = at.GetY()
-          pose.position.z = at.GetZ()
-          pose.rotation.x = spun.GetX()
-          pose.rotation.y = spun.GetY()
-          pose.rotation.z = spun.GetZ()
-          pose.rotation.w = spun.GetW()
+          const pose = pooled(pool, poses.length, freshPose)
+          writePose(pose, wheel.body, placed.GetTranslation(), placed.GetRotation().GetQuaternion())
           poses.push(pose)
         }
       }
@@ -527,32 +493,62 @@ const SPUN = { x: 0, y: 0, z: 0, w: 1 }
 const idOf = (jolt: JoltModule, pointer: number): number =>
   jolt.wrapPointer(pointer, jolt.Body).GetID().GetIndexAndSequenceNumber()
 
-function pooled(pool: BodyPose[], at: number): BodyPose {
+/** One idiom for every buffer of this port: what a step hands out is never allocated by a step. */
+function pooled<T>(pool: T[], at: number, make: () => T): T {
   const kept = pool[at]
   if (kept) return kept
 
-  const made: BodyPose = {
-    body: '',
-    position: { x: 0, y: 0, z: 0 },
-    rotation: { x: 0, y: 0, z: 0, w: 1 },
-  }
+  const made = make()
   pool.push(made)
   return made
 }
 
-const motionPool: BodyMotion[] = []
+const freshPose = (): BodyPose => ({
+  body: '',
+  position: { x: 0, y: 0, z: 0 },
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
+})
 
-function pooledMotion(at: number): BodyMotion {
-  const kept = motionPool[at]
-  if (kept) return kept
+const freshMotion = (): BodyMotion => ({
+  body: '',
+  linear: { x: 0, y: 0, z: 0 },
+  angular: { x: 0, y: 0, z: 0 },
+})
 
-  const made: BodyMotion = {
-    body: '',
-    linear: { x: 0, y: 0, z: 0 },
-    angular: { x: 0, y: 0, z: 0 },
-  }
-  motionPool.push(made)
-  return made
+const freshContact = (): PhysicsContact => ({ body: '', other: '', started: false, sensed: false })
+
+/** A pose read off whatever Jolt hands back — a body, a character, a wheel's world transform. */
+function writePose(pose: BodyPose, name: string, at: JoltPlaceLike, spun: JoltQuatLike): void {
+  pose.body = name
+  pose.position.x = at.GetX()
+  pose.position.y = at.GetY()
+  pose.position.z = at.GetZ()
+  pose.rotation.x = spun.GetX()
+  pose.rotation.y = spun.GetY()
+  pose.rotation.z = spun.GetZ()
+  pose.rotation.w = spun.GetW()
+}
+
+type JoltPlaceLike = { GetX: () => number; GetY: () => number; GetZ: () => number }
+type JoltQuatLike = JoltPlaceLike & { GetW: () => number }
+
+const writeVector = (into: Vector3, read: JoltPlaceLike): void => {
+  into.x = read.GetX()
+  into.y = read.GetY()
+  into.z = read.GetZ()
+}
+
+const writeContact = (
+  contact: PhysicsContact,
+  body: string,
+  other: string,
+  started: boolean,
+  sensed: boolean,
+): void => {
+  contact.body = body
+  contact.other = other
+  contact.started = started
+  contact.sensed = sensed
 }
 
 const sensorOf = (held: Map<string, Held>, name: string): boolean =>
@@ -612,12 +608,8 @@ function addedBody(
 }
 
 /**
- * Wheels hung from a body: Jolt's suspended, engine-driven vehicle rather than a raycast car.
- *
- * 🛑 Forward is −Z here, as three.js and every other system of this tree read it, where Jolt
- * defaults to +Z: the constraint AND each wheel are told so, or the car reverses on a forward
- * pedal. What the settings hold is reference counted — the wheels, the controller — so only
- * the parent is destroyed, and its last release frees the rest.
+ * 🛑 Forward is −Z here, as every other system of this tree reads it, where Jolt defaults to +Z:
+ * the constraint AND each wheel are told so, or the car reverses on a forward pedal.
  */
 function rideOf(
   jolt: JoltModule,
@@ -635,7 +627,9 @@ function rideOf(
   settings.mWheels.clear()
   for (const wheel of wanted.wheels) {
     const one = new jolt.WheelSettingsWV()
-    scratch.vector.Set(wheel.at.x, wheel.at.y, wheel.at.z)
+    // 🛑 `at` is where the wheel RESTS; the spring is anchored one travel above it, so no caller
+    // has to know where a spring is bolted.
+    scratch.vector.Set(wheel.at.x, wheel.at.y + wanted.suspensionLength, wheel.at.z)
     one.mPosition = scratch.vector
     scratch.vector.Set(0, 0, -1)
     one.mWheelForward = scratch.vector
@@ -745,13 +739,9 @@ function walkerOf(
 }
 
 /**
- * One Jolt shape per body — the shape's own scale is already baked in, since Jolt holds no scale
- * of its own and a document's is not uniform. Answers nothing for a cloud enclosing no volume.
- *
- * 🛑 Nothing here nests one SETTINGS inside another, and that is not a matter of taste: a settings
- * object a parent holds is reference counted, so destroying it frees what the parent still owns,
- * and the NEXT world built in this engine reads a corrupted heap. Children are built into SHAPES
- * and composed, which is the one lifetime Jolt manages on its own.
+ * 🛑 Nothing here nests one SETTINGS inside another: a settings a parent holds is reference
+ * counted, so destroying it frees what the parent still owns and the NEXT world reads a
+ * corrupted heap. Children are built into SHAPES and composed.
  */
 function builtShape(jolt: JoltModule, shape: ColliderShape, scratch: Scratch): JoltShape | null {
   if (shape.kind === 'hull') return hullOf(jolt, shape.points, scratch)

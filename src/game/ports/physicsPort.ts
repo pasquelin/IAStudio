@@ -38,8 +38,9 @@ export type CharacterSettings = {
 }
 
 /**
- * One wheel of a vehicle, in the body's own frame. `body` is the entity that DRAWS it: its world
- * pose comes back in `poses`, so the wheel spins, steers and rides its suspension on screen.
+ * One wheel. `body` is the entity that DRAWS it, and its world pose comes back in `poses`.
+ *
+ * 🛑 `at` is where the wheel RESTS in the body's frame; the engine anchors the spring above it.
  */
 export type VehicleWheel = {
   body: string
@@ -65,7 +66,8 @@ export type VehicleSettings = {
 export type VehicleDrive = {
   body: string
   forward: number
-  right: number
+  /** Full lock to the right at 1, to the left at −1. */
+  steer: number
   brake: number
   handBrake: number
 }
@@ -108,7 +110,10 @@ export type PhysicsPort = {
   place: (poses: readonly BodyPose[]) => void
   /** Before the step, never after: the controller reads where the obstacles stand right now. */
   moveCharacters: (wanted: readonly CharacterMove[]) => readonly CharacterMoved[]
-  /** What each vehicle's driver asks. Ignored for a body that carries no wheels. */
+  /**
+   * What each vehicle's driver asks. 🛑 A car is the ENGINE's and a wing is a system's: engines
+   * ship a suspended car and none ships an aerofoil, so the port descends a rung here alone.
+   */
   drive: (wanted: readonly VehicleDrive[]) => void
   /** Forces for the coming step. Ignored for anything the simulation does not own. */
   push: (forces: readonly BodyForce[]) => void

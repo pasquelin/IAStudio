@@ -50,7 +50,7 @@ const rolling = (bench: Bench, along: number): void => {
 
 describe('what a car is driven by', () => {
   it('asks for nothing while no key is held', () => {
-    expect(asked(bench())).toEqual({ body: 'car', forward: 0, right: 0, brake: 0, handBrake: 0 })
+    expect(asked(bench())).toEqual({ body: 'car', forward: 0, steer: 0, brake: 0, handBrake: 0 })
   })
 
   it('opens the throttle forward and closes it in reverse', () => {
@@ -59,9 +59,9 @@ describe('what a car is driven by', () => {
   })
 
   it('steers by the two keys, and not past full lock on both', () => {
-    expect(asked(bench(['KeyD']))?.right).toBe(1)
-    expect(asked(bench(['ArrowLeft']))?.right).toBe(-1)
-    expect(asked(bench(['KeyA', 'KeyD']))?.right).toBe(0)
+    expect(asked(bench(['KeyD']))?.steer).toBe(1)
+    expect(asked(bench(['ArrowLeft']))?.steer).toBe(-1)
+    expect(asked(bench(['KeyA', 'KeyD']))?.steer).toBe(0)
   })
 
   /**

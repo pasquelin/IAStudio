@@ -10,7 +10,7 @@ export type Quaternion = { x: number; y: number; z: number; w: number }
  * written in a document means. By hand rather than through three, which an exported game would
  * then carry whole for two conversions.
  */
-export function quaternionFromEuler(angles: Vector3, into = SPUN()): Quaternion {
+export function quaternionFromEuler(angles: Vector3, into = restingTurn()): Quaternion {
   const c1 = Math.cos(angles.x / 2)
   const c2 = Math.cos(angles.y / 2)
   const c3 = Math.cos(angles.z / 2)
@@ -25,7 +25,7 @@ export function quaternionFromEuler(angles: Vector3, into = SPUN()): Quaternion 
   return into
 }
 
-const SPUN = (): Quaternion => ({ x: 0, y: 0, z: 0, w: 1 })
+const restingTurn = (): Quaternion => ({ x: 0, y: 0, z: 0, w: 1 })
 
 /**
  * The same convention back. Written INTO the vector it is given: a step reads a pose per body per
@@ -69,13 +69,10 @@ export function eulerFromQuaternion(rotation: Quaternion, into: Vector3): Vector
 }
 
 /**
- * The turn that points a node's FORWARD — three's −Z — along `direction`, with +Y up. Written into
- * `into` for the reason `eulerFromQuaternion` is: a system reads one per entity per step.
- *
- * A direction of nothing leaves `into` as it was: there is no answer, and turning to an arbitrary
- * one would be a visible flick.
+ * The turn that points a node's FORWARD — three's −Z — along `direction`, with +Y up. A direction
+ * of nothing leaves `into` as it was: turning to an arbitrary one would be a visible flick.
  */
-export function quaternionLookingAt(direction: Vector3, into = SPUN()): Quaternion {
+export function quaternionLookingAt(direction: Vector3, into = restingTurn()): Quaternion {
   const length = Math.hypot(direction.x, direction.y, direction.z)
   if (length === 0) return into
 
@@ -169,6 +166,16 @@ export const restingAxes = (): Axes => ({
   up: { x: 0, y: 1, z: 0 },
 })
 
+/** The axes an entity's own Euler angles turn the basis into — what a piloted body is read by. */
+export function axesOfEuler(angles: Vector3, into: Axes): Axes {
+  return axesOf(quaternionFromEuler(angles, TURNED), into)
+}
+
+const TURNED: Quaternion = { x: 0, y: 0, z: 0, w: 1 }
+
+export const dot = (one: Vector3, other: Vector3): number =>
+  one.x * other.x + one.y * other.y + one.z * other.z
+
 function normalized(turn: Quaternion): Quaternion {
   const length = Math.hypot(turn.x, turn.y, turn.z, turn.w)
   if (length === 0) return turn
@@ -180,17 +187,15 @@ function normalized(turn: Quaternion): Quaternion {
 }
 
 /**
- * The shortest turn from `from` to `to`, `fraction` of the way. Written into `into`.
- *
- * 🛑 Quaternions and not Euler angles, and that is the whole reason this exists: interpolating
- * three angles walks a different path than the shortest one and flips at the poles, which a
- * turret tracking a target overhead reaches every time.
+ * The shortest turn from `from` to `to`, `fraction` of the way. 🛑 Quaternions and not Euler
+ * angles: interpolating three angles walks another path and flips at the poles, which a turret
+ * tracking something overhead reaches every time.
  */
 export function quaternionSlerp(
   from: Quaternion,
   to: Quaternion,
   fraction: number,
-  into = SPUN(),
+  into = restingTurn(),
 ): Quaternion {
   let dot = from.x * to.x + from.y * to.y + from.z * to.z + from.w * to.w
   // The far side of the same rotation: a quaternion and its negative are one turn, and taking the

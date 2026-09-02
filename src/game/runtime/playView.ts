@@ -11,17 +11,15 @@ export type Look = { yaw: number; pitch: number }
  * How far behind the shoulder the camera hangs, and how high a plan view stands and stands off.
  * A SHOULDER: what is driven asks for its own stand-off, a nine-metre plane being inside this one.
  */
-const OVER_SHOULDER = 5
+export const OVER_SHOULDER = 5
 const OVERHEAD_HEIGHT = 12
 const OVERHEAD_BACK = 4
 
 /**
- * Where the scene is watched from, given how it says it is WALKED. `feet` is the contact with the
- * floor, never the centre: a document writes `eyeHeight` as metres above the ground.
+ * Where the scene is watched from. `feet` is the contact with the floor, never the centre.
  *
- * 🛑 Nothing for `orbit`, and nothing for a mode this does not know — a fifth `PlayCamera` leaves
- * the camera alone rather than silently behaving like a third-person one. The view is REWRITTEN
- * in place, like a port's arrays: read it within the frame, never keep it.
+ * 🛑 Nothing for `orbit` nor for a mode this does not know — a fifth `PlayCamera` leaves the
+ * camera alone rather than silently behaving like a third-person one. The view is reused.
  */
 export function playView(
   play: ScenePlay,

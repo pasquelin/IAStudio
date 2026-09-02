@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-import type { Vector3 } from '@shared/domain/transform'
 import { clamp } from '../../numeric'
+import { axesOfEuler, dot, restingAxes } from '../../physics/quaternion'
 import type { VehicleDrive } from '../../ports/physicsPort'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
-import type { Pilots } from '../pilots'
-import { axesOf, quaternionFromEuler, restingAxes } from '../../physics/quaternion'
+import { keyHeld, keysHeld } from '../keysHeld'
+import { PILOT_RANK, type Pilots } from '../pilots'
 import type { System, World } from '../world'
 
 const VEHICLE = COMPONENT_DEFAULTS.Vehicle
@@ -25,21 +25,16 @@ const STOPPED = 0.1
 const CHASE_BACK = 9
 
 /**
- * What a car is DRIVEN by: the pedals and the wheel, read off the keyboard and handed to the
- * engine's own suspended vehicle. The wheels themselves are hung by the physics system, which
- * builds the body — this one only ever says what the driver asks.
- *
  * 🛑 The reverse pedal BRAKES while the car still rolls forward, and only reverses once it has
  * stopped. Handed straight through, a car asked to reverse at speed spins its wheels backwards
  * against the road, which reads as a car that will not stop.
  */
 export function createVehicleSystem(pilots: Pilots): System {
   const wanted: VehicleDrive[] = []
+  const pool: VehicleDrive[] = []
+  const names: string[] = []
+  const driving: Entity[] = []
   const heading = restingAxes()
-  const spun = { x: 0, y: 0, z: 0, w: 1 }
-  // Kept per vehicle: which way it was last asked to go, which is what tells a brake from a
-  // reversal. By ENTITY, like every other system of this tree holds its own state.
-  const going = new WeakMap<Entity, number>()
 
   return {
     name: 'vehicle',
@@ -47,60 +42,58 @@ export function createVehicleSystem(pilots: Pilots): System {
     writes: [],
 
     fixedUpdate: (world: World) => {
-      wanted.length = 0
+      driving.length = 0
+      names.length = 0
       for (const entity of world.entities.withComponent('Vehicle')) {
-        const settings = componentOf(entity, 'Vehicle')
-        if (!settings) continue
+        if (!componentOf(entity, 'Vehicle')) continue
+        driving.push(entity)
+        names.push(entity.id)
+      }
+      if (driving.length === 0) return
 
-        const asked = pressed(world, THROTTLE) - pressed(world, REVERSE)
-        const last = going.get(entity) ?? 1
-        const speed = alongNose(entity, world, heading, spun)
-        // Braking while it still rolls the other way; the new direction is taken once stopped.
-        const braking = asked * last < 0 && Math.abs(speed) > STOPPED && asked * speed < 0
-        if (!braking && asked !== 0) going.set(entity, asked)
+      // Read ONCE: there is one keyboard, and every car in the scene answers the same pedals.
+      const input = world.input
+      const asked = keysHeld(input, THROTTLE) - keysHeld(input, REVERSE)
+      const steer = clamp(keysHeld(input, RIGHT) - keysHeld(input, LEFT), -1, 1)
+      const handBrake = keyHeld(input, HAND_BRAKE)
 
-        const holding = world.input.held.includes(HAND_BRAKE) ? 1 : 0
-        wanted.push({
-          body: entity.id,
-          forward: braking || holding === 1 ? 0 : asked,
-          right: clamp(pressed(world, RIGHT) - pressed(world, LEFT), -1, 1),
-          brake: braking ? 1 : 0,
-          handBrake: holding,
-        })
-        // The first one declared is the one the camera rides in, as the first controller is.
-        pilots.take(
-          {
-            entity,
-            below: numberOf(settings, 'wheelRadius', VEHICLE.wheelRadius),
-            back: CHASE_BACK,
-          },
-          world.time.tick,
+      wanted.length = 0
+      const motions = world.ports.physics.motion(names)
+      let read = 0
+      for (const entity of driving) {
+        // `motion` answers in the order it was asked, leaving out what the port does not hold.
+        const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
+        const speed = motion
+          ? dot(motion.linear, axesOfEuler(entity.transform.rotation, heading).forward)
+          : 0
+        const braking = asked * speed < 0 && Math.abs(speed) > STOPPED
+
+        const drive = pooled(pool, wanted.length)
+        drive.body = entity.id
+        drive.forward = braking || handBrake === 1 ? 0 : asked
+        drive.steer = steer
+        drive.brake = braking ? 1 : 0
+        drive.handBrake = handBrake
+        wanted.push(drive)
+
+        const wheelRadius = numberOf(
+          componentOf(entity, 'Vehicle'),
+          'wheelRadius',
+          VEHICLE.wheelRadius,
         )
+        pilots.take(entity, wheelRadius, CHASE_BACK, PILOT_RANK.machine, world.time.tick)
       }
 
-      if (wanted.length > 0) world.ports.physics.drive(wanted)
+      world.ports.physics.drive(wanted)
     },
   }
 }
 
-/** How fast it is going along its own nose: forward positive, whatever way the car is pointed. */
-function alongNose(
-  entity: Entity,
-  world: World,
-  heading: ReturnType<typeof restingAxes>,
-  spun: { x: number; y: number; z: number; w: number },
-): number {
-  const [motion] = world.ports.physics.motion([entity.id])
-  if (!motion) return 0
+function pooled(pool: VehicleDrive[], at: number): VehicleDrive {
+  const kept = pool[at]
+  if (kept) return kept
 
-  axesOf(quaternionFromEuler(entity.transform.rotation, spun), heading)
-  return dot(motion.linear, heading.forward)
-}
-
-const dot = (one: Vector3, other: Vector3): number =>
-  one.x * other.x + one.y * other.y + one.z * other.z
-
-function pressed(world: World, keys: readonly string[]): number {
-  for (const key of keys) if (world.input.held.includes(key)) return 1
-  return 0
+  const made: VehicleDrive = { body: '', forward: 0, steer: 0, brake: 0, handBrake: 0 }
+  pool.push(made)
+  return made
 }

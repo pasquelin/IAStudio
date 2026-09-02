@@ -3,36 +3,38 @@
 import type { Entity } from './entity'
 
 /**
- * What the camera rides in when no character walks: how far under it the ground stands, and how
- * far behind it a chase camera belongs — a nine-metre plane watched from a shoulder is watched
- * from inside its own tail.
+ * What the camera watches, how far under it the ground stands, and how far behind it a chase
+ * camera belongs — a nine-metre plane watched from a shoulder is watched from inside its own tail.
  */
 type Pilot = { entity: Entity; below: number; back: number }
 
+/** Who wins the seat when a scene holds both: a walker is what the player IS, a car what it drives. */
+export const PILOT_RANK = { walker: 0, machine: 1 }
+
 /**
- * Who the player drives — a car, a plane. Declared by the system that steers it, read by the
- * camera. One seat rather than a `leader()` per system: there is one player, so the two systems
- * compete for it, and the first to claim it in a step keeps it.
- *
- * 🛑 The claim carries the STEP it was made for, and a new step empties the seat. Without that, an
- * entity destroyed mid-game would be framed for ever — a `leader()` here cannot ask the world.
+ * The one seat the camera reads. 🛑 A claim carries the STEP it was made for, and a new step
+ * empties the seat — an entity destroyed mid-game would otherwise be framed for ever.
  */
 export type Pilots = {
-  take: (pilot: Pilot, tick: number) => void
+  take: (entity: Entity, below: number, back: number, rank: number, tick: number) => void
   leader: () => Pilot | null
 }
 
 export function createPilots(): Pilots {
   let held: Pilot | null = null
+  let bestRank = 0
   let at = -1
 
   return {
-    take: (pilot, tick) => {
+    take: (entity, below, back, rank, tick) => {
       if (tick !== at) {
         at = tick
         held = null
       }
-      held ??= pilot
+      if (held && rank >= bestRank) return
+
+      held = { entity, below, back }
+      bestRank = rank
     },
     leader: () => held,
   }

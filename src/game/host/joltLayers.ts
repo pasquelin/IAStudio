@@ -6,10 +6,8 @@ type JoltModule = Awaited<ReturnType<typeof startJolt>>
 type JoltSettings = InstanceType<JoltModule['JoltSettings']>
 
 /**
- * Which object layer a body goes in, and which pairs are allowed to meet.
- *
- * 🛑 Jolt asks for three filters, and a world built without them collides nothing at all. Two layers carry the whole of the current contract; this is the one file that
- * grows the day a wheel asks for a layer of its own.
+ * Which object layer a body goes in, and which pairs may meet. 🛑 Jolt asks for three filters,
+ * and a world built without them collides nothing at all.
  */
 export const NON_MOVING = 0
 export const MOVING = 1

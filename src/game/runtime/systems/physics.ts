@@ -15,6 +15,7 @@ import type { Characters } from '../characters'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { flagOf, numberOf, textOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
+import { entityNamed } from '../steering'
 import type { System, World } from '../world'
 
 /**
@@ -234,20 +235,17 @@ function vehicleOf(entity: Entity, world: World): VehicleSettings | null {
   if (!settings) return null
 
   const drive = textOf(settings, 'drive', VEHICLE.drive)
-  const travel = numberOf(settings, 'suspensionLength', VEHICLE.suspensionLength)
   const wheels: VehicleWheel[] = []
   for (const said of textOf(settings, 'wheels', VEHICLE.wheels).split(',')) {
     const name = said.trim()
-    const wheel = name === '' ? null : namedIn(world, name)
+    const wheel = name === '' ? null : entityNamed(world, name)
     if (!wheel) continue
 
     // Ahead is −Z, which is where a node's own forward points: the front axle is what steers.
     const ahead = wheel.transform.position.z < 0
     wheels.push({
       body: wheel.id,
-      // 🛑 The node stands where the wheel RESTS; the spring is anchored one travel above it, so
-      // an author moves a wheel mesh rather than reasoning about where a suspension is bolted.
-      at: { ...wheel.transform.position, y: wheel.transform.position.y + travel },
+      at: { ...wheel.transform.position },
       steers: ahead,
       driven: drive === 'all' || (drive === 'front') === ahead,
       handBraked: !ahead,
@@ -258,18 +256,11 @@ function vehicleOf(entity: Entity, world: World): VehicleSettings | null {
   return {
     wheelRadius: numberOf(settings, 'wheelRadius', VEHICLE.wheelRadius),
     wheelWidth: numberOf(settings, 'wheelWidth', VEHICLE.wheelWidth),
-    suspensionLength: travel,
+    suspensionLength: numberOf(settings, 'suspensionLength', VEHICLE.suspensionLength),
     maxSteerAngle: numberOf(settings, 'maxSteerAngle', VEHICLE.maxSteerAngle),
     maxTorque: numberOf(settings, 'maxTorque', VEHICLE.maxTorque),
     wheels,
   }
-}
-
-/** By id first, then by name — the same order `steering.ts` reads an author's word in. */
-function namedIn(world: World, said: string): Entity | null {
-  return (
-    world.entities.get(said) ?? [...world.entities.all()].find(one => one.name === said) ?? null
-  )
 }
 
 /** What the step moved, written back into the entity it belongs to — in ITS own frame. */

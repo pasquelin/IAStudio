@@ -4,10 +4,10 @@
  * The aeroplane the aircraft template opens on: a fuselage the physics feels, and the surfaces it
  * flies by, drawn as children so the airframe reads in the outliner.
  */
-import type { MaterialDescriptor, Vector3 } from '@shared/domain/scene'
+import type { Vector3 } from '@shared/domain/scene'
 import { newComponent } from '@shared/domain/componentRegistry'
-import { defaultMeshMaterial } from './checkerTextures'
 import { meshNode, transformAt } from './nodeFactory'
+import { surface } from './playgroundLevel'
 import type { SceneNode } from './sceneState'
 
 /** Metres. A light single: nine long, twelve across, twenty square metres of wing. */
@@ -19,8 +19,6 @@ const FIN = { width: 0.2, height: 1.7, depth: 1.2 }
 /** Where the tail surfaces stand, measured from the fuselage's own centre. +Z is behind. */
 const TAIL_Z = 3.8
 
-const paint = (color: string): MaterialDescriptor => ({ ...defaultMeshMaterial(), color })
-
 /**
  * 🛑 The fuselage is the ROOT and a MESH, not a group: what a body is felt as comes from what its
  * own node draws, and a group would fly through the ground unfelt. The wings carry no collider —
@@ -30,7 +28,7 @@ export function planeNodes(at: Vector3, name = 'Aeroplane'): SceneNode[] {
   const fuselage = {
     ...meshNode(
       { kind: 'box', ...FUSELAGE },
-      { transform: transformAt(at), material: paint('#e2e6ec'), name },
+      { transform: transformAt(at), material: surface('#e2e6ec'), name },
     ),
     components: [
       newComponent('Collider'),
@@ -55,7 +53,7 @@ export function planeNodes(at: Vector3, name = 'Aeroplane'): SceneNode[] {
       { kind: 'box', ...geometry },
       {
         transform: transformAt(position),
-        material: paint(color),
+        material: surface(color),
         parentId: fuselage.id,
         name: partName,
       },

@@ -3,13 +3,12 @@
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { componentOf } from '../entity'
 import { numberOf, textOf } from '../componentFields'
-import { DEGREES } from '../steering'
+import { DEGREES, FULL_TURN } from '../../numeric'
 import type { System, World } from '../world'
 
 const SPIN = COMPONENT_DEFAULTS.Spin
 
 /** A hair over a full turn, so a session spent spinning does not walk the angle into large floats. */
-const FULL_TURN = Math.PI * 2
 
 /** What turns on its own and never stops — a pickup, a propeller, a mechanism. */
 export function createSpinSystem(): System {

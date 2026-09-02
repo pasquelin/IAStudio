@@ -1,16 +1,6 @@
 /**
- * Builds the Jolt engine the studio ships, which is NOT the one npm publishes.
- *
- * 🛑 The published single-threaded flavours are compiled WITHOUT SIMD — `build.sh` of
- * JoltPhysics.js passes `-DENABLE_SIMD=ON` to the multi-threaded target alone, and the README
- * says so. Measured 2026-09-01: the npm build is 2,7 times slower than this one, which is the
- * whole difference between passing the switch gate and failing it.
- *
- * The artefact lands in `vendor/jolt-physics/`, a package the manifest depends on by `file:`, so
- * `import Jolt from 'jolt-physics/wasm-compat'` reads OUR build and `collect-licences.mjs` reads
- * OUR manifest rather than describing a package whose bytes we do not use.
- *
- * Run by hand at a Jolt bump, never by the gate: it wants Docker and several minutes.
+ * 🛑 The published single-threaded flavours carry no SIMD — `build.sh` passes `-DENABLE_SIMD=ON`
+ * to the multi-threaded target alone. Measured 2026-09-01: the npm build is 2,7 times slower.
  */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
@@ -75,10 +65,8 @@ function fetchSource() {
 }
 
 /**
- * 🛑 Built from a CLEAN tree, and the output file removed first. Neither is tidiness: the two configurations write the
- * same path, and cmake judges an existing output up to date against file dependencies alone. Two
- * builds landed byte-identical this way on 2026-09-01, which would have read as « SIMD changes
- * nothing » and closed the enquiry on a false measure.
+ * 🛑 The output is removed first: two configurations write the same path, and cmake judges an
+ * existing one up to date. Two builds landed byte-identical this way on 2026-09-01.
  */
 function build(name, flags) {
   const script = [

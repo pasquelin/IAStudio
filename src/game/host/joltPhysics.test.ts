@@ -320,7 +320,8 @@ describe('the physics as Jolt fills it', () => {
   })
 })
 
-/** A hatchback on four wheels, the front pair steering and every wheel driven. Forward is −Z. */
+/** A hatchback on four wheels, the front pair steering and every wheel driven. Forward is −Z.
+ * `at` is where each wheel RESTS: centre 0,45 under the body, so its contact sits 0,80 under it. */
 const CAR: VehicleSettings = {
   wheelRadius: 0.35,
   wheelWidth: 0.25,
@@ -335,9 +336,21 @@ const CAR: VehicleSettings = {
       driven: true,
       handBraked: false,
     },
-    { body: 'fr', at: { x: 0.9, y: -0.1, z: -1.4 }, steers: true, driven: true, handBraked: false },
-    { body: 'bl', at: { x: -0.9, y: -0.1, z: 1.4 }, steers: false, driven: true, handBraked: true },
-    { body: 'br', at: { x: 0.9, y: -0.1, z: 1.4 }, steers: false, driven: true, handBraked: true },
+    {
+      body: 'fr',
+      at: { x: 0.9, y: -0.45, z: -1.4 },
+      steers: true,
+      driven: true,
+      handBraked: false,
+    },
+    {
+      body: 'bl',
+      at: { x: -0.9, y: -0.45, z: 1.4 },
+      steers: false,
+      driven: true,
+      handBraked: true,
+    },
+    { body: 'br', at: { x: 0.9, y: -0.45, z: 1.4 }, steers: false, driven: true, handBraked: true },
   ],
 }
 
@@ -345,7 +358,7 @@ const car = (over: Partial<BodyDescriptor> = {}): BodyDescriptor =>
   body({
     body: 'car',
     shape: { kind: 'cuboid', hx: 0.9, hy: 0.25, hz: 2 },
-    transform: at(0, 0.9, 0),
+    transform: at(0, 0.8, 0),
     mass: 1500,
     vehicle: CAR,
     ...over,
@@ -365,10 +378,10 @@ describe('what rolls on wheels and what is pushed', () => {
   })
 
   /** Where the car last stood: a car left alone falls asleep, and a sleeper reports no pose. */
-  const driven = (forward: number, right: number, steps: number, handBrake = 0) => {
+  const driven = (forward: number, steer: number, steps: number, handBrake = 0) => {
     let last = { x: 0, y: 0, z: 0 }
     for (let step = 0; step < steps; step++) {
-      port.drive([{ body: 'car', forward, right, brake: 0, handBrake }])
+      port.drive([{ body: 'car', forward, steer, brake: 0, handBrake }])
       port.step(STEP)
       const pose = poseOf(port, 'car')
       if (pose) last = { ...pose.position }
@@ -383,7 +396,7 @@ describe('what rolls on wheels and what is pushed', () => {
 
     // Forward is −Z; the body hangs on its springs rather than resting on the floor.
     expect(gone.z).toBeLessThan(settled.z - 2)
-    expect(gone.y).toBeGreaterThan(0.4)
+    expect(gone.y).toBeGreaterThan(0.6)
     expect(Math.abs(gone.x)).toBeLessThan(0.2)
   })
 
@@ -404,7 +417,7 @@ describe('what rolls on wheels and what is pushed', () => {
     for (const name of ['fl', 'fr', 'bl', 'br']) {
       const wheel = wheels.get(name)!
       expect(wheel.y).toBeLessThan(body.y)
-      expect(wheel.y).toBeGreaterThan(0.2)
+      expect(wheel.y).toBeGreaterThan(0.1)
       expect(Math.abs(wheel.x - body.x)).toBeCloseTo(0.9, 1)
     }
   })

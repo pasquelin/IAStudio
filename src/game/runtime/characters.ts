@@ -2,8 +2,9 @@
 
 import type { InputState } from '../ports/inputPort'
 import type { CharacterMove, CharacterMoved, CharacterSettings } from '../ports/physicsPort'
-import { clamp } from '../numeric'
+import { clamp, FULL_TURN } from '../numeric'
 import { numberOf } from './componentFields'
+import { keysHeld } from './keysHeld'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
 import type { Look } from './playView'
@@ -26,8 +27,6 @@ const LOOK_PER_PIXEL = 0.005
 
 /** A hair under straight up, where yaw and pitch would turn about the same axis. */
 const PITCH_LIMIT = Math.PI / 2 - 0.01
-
-const FULL_TURN = Math.PI * 2
 
 /**
  * Kept pressing into the floor while standing. Zero would let `snapToGround` lose a character
@@ -168,21 +167,11 @@ function paceInto(
   step: number,
   yaw: number,
 ): void {
-  const ahead = pressed(input, FORWARD) - pressed(input, BACK)
-  const side = pressed(input, RIGHT) - pressed(input, LEFT)
+  const ahead = keysHeld(input, FORWARD) - keysHeld(input, BACK)
+  const side = keysHeld(input, RIGHT) - keysHeld(input, LEFT)
   const length = Math.hypot(ahead, side)
   const walk = length === 0 ? 0 : step / length
 
   into.x = (-Math.sin(yaw) * ahead + Math.cos(yaw) * side) * walk
   into.z = (-Math.cos(yaw) * ahead - Math.sin(yaw) * side) * walk
-}
-
-/** Indexed on both sides: this is read four times per character per step. */
-function pressed(input: InputState, keys: readonly string[]): number {
-  for (let key = 0; key < keys.length; key++) {
-    for (let held = 0; held < input.held.length; held++) {
-      if (input.held[held] === keys[key]) return 1
-    }
-  }
-  return 0
 }

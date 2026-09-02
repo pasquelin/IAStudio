@@ -5,6 +5,7 @@ import { newComponent } from '@shared/domain/componentRegistry'
 import { DEFAULT_PLAY, type PlayCamera } from '@shared/domain/scene'
 import type { CameraView } from '../../ports/renderPort'
 import { createCharacters } from '../characters'
+import { createPilots } from '../pilots'
 import { restingTransform } from '../entity'
 import { testPorts, testWorld } from '../world-fixtures'
 import { createPlayCameraSystem } from './playCamera'
@@ -17,7 +18,7 @@ function watching(camera: PlayCamera, controlled = true) {
     ports: testPorts({
       render: { place: () => {}, view: view => views.push(view), veil: () => {} },
     }),
-    systems: [createPlayCameraSystem({ characters })],
+    systems: [createPlayCameraSystem({ characters, pilots: createPilots() })],
   })
   if (controlled) {
     world.entities.add({

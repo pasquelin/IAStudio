@@ -3,12 +3,11 @@
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { componentOf, type Entity } from '../entity'
 import { numberOf, textOf } from '../componentFields'
-import { createTargets, DEGREES } from '../steering'
+import { DEGREES, FULL_TURN } from '../../numeric'
+import { createTargets } from '../steering'
 import type { System, World } from '../world'
 
 const ORBIT = COMPONENT_DEFAULTS.Orbit
-
-const FULL_TURN = Math.PI * 2
 
 /**
  * What turns about something else — a moon, a satellite, a circling camera. A target nobody named

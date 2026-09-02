@@ -4,7 +4,8 @@ import type { Vector3 } from '@shared/domain/transform'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { componentOf } from '../entity'
 import { numberOf, textOf } from '../componentFields'
-import { createTargets, DEGREES, turnTowards } from '../steering'
+import { DEGREES } from '../../numeric'
+import { createTargets, turnTowards } from '../steering'
 import type { System, World } from '../world'
 
 const LOOK_AT = COMPONENT_DEFAULTS.LookAt

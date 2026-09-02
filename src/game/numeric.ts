@@ -7,3 +7,8 @@
 export function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value))
 }
+
+export const DEGREES = Math.PI / 180
+
+/** A hair over a full turn: past a few million radians a float stops resolving a degree. */
+export const FULL_TURN = Math.PI * 2
