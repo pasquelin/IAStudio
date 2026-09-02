@@ -4,7 +4,7 @@
  * 🛑 Written by its CENTRE LINE, never corner by corner. A track laid as a list of boxes drifts —
  * the kerbs stop matching the tarmac, and a car finds a wall in the middle of a straight.
  */
-import type { MaterialDescriptor, Vector3 } from '@shared/domain/scene'
+import { DEFAULT_PATH, type MaterialDescriptor, type Vector3 } from '@shared/domain/scene'
 import { groupNode, meshNode, transformAt } from './nodeFactory'
 import {
   climbSurface,
@@ -39,6 +39,12 @@ const KERB_THICKNESS = 1
  */
 const MARKS = 24
 const BASE_RADIUS = 95
+
+/**
+ * Fifteen cross-sections per mark. Measured on the loop: the tightest turn goes from 50,4° a
+ * section to 10,7°, where ten sections leave it at 16,1° — the hairpin is where it shows.
+ */
+const CURVE_SEGMENTS = MARKS * 15
 
 /**
  * 🛑 Metres between squares. The studio default of one turned a 340 m field into noise and a
@@ -81,7 +87,15 @@ function ribbonNode(band: {
   name: string
 }): SceneNode {
   return meshNode(
-    { kind: 'ribbon', points: band.points, width: band.width, height: band.height, closed: true },
+    {
+      kind: 'ribbon',
+      // A rail of its own, CLOSED and at the studio's own tension: the curve through the marks is
+      // what rounds a corner off — the marks alone gave a polygon with visible angles.
+      path: { ...DEFAULT_PATH, points: band.points, closed: true },
+      width: band.width,
+      height: band.height,
+      segments: CURVE_SEGMENTS,
+    },
     {
       transform: IDENTITY_TRANSFORM,
       material: band.material,

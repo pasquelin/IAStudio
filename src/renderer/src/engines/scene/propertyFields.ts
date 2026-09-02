@@ -89,7 +89,10 @@ export const GEOMETRY_SPECS: SpecsOf<GeometryDescriptor> = {
     width: SIZE,
     // A finer step than a size's: a kerb is two decimetres tall, and a painted stripe less.
     height: { control: 'number', min: 0.001, step: 0.05 },
-    closed: { control: 'toggle' },
+    // A band is cut along its whole LENGTH, where every other count goes round an axis: a lap of
+    // six hundred metres wants three hundred and sixty, and a hundred and twenty-eight is a
+    // 4,7 m step — 20° of turn in the hairpin.
+    segments: { control: 'number', min: 2, max: 512, step: 1 },
   },
   ring: {
     innerRadius: { control: 'number', min: 0, step: 0.1 },

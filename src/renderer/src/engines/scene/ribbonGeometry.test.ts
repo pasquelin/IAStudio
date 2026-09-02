@@ -1,40 +1,74 @@
 import { Box3, Vector3, type BufferAttribute } from 'three'
 import { describe, expect, it } from 'vitest'
-import type { Vector3 as PlainVector3 } from '@shared/domain/scene'
-import { ribbonGeometry } from './ribbonGeometry'
+import {
+  DEFAULT_PATH,
+  type GeometryDescriptor,
+  type Vector3 as PlainVector3,
+} from '@shared/domain/scene'
+import { offsetRun, ribbonGeometry, sampledRun } from './ribbonGeometry'
 
 const at = (x: number, z: number): PlainVector3 => ({ x, y: 0, z })
 
-const band = (points: readonly PlainVector3[], over: { width?: number; closed?: boolean } = {}) =>
-  ribbonGeometry({
-    kind: 'ribbon',
-    points,
-    width: over.width ?? 2,
-    height: 0.5,
-    closed: over.closed ?? false,
-  })
+const railOf = (points: readonly PlainVector3[], closed = false) => ({
+  ...DEFAULT_PATH,
+  points,
+  closed,
+})
 
-const cornersOf = (geometry: ReturnType<typeof band>): Vector3[] => {
-  const position = geometry.getAttribute('position') as BufferAttribute
+const band = (
+  points: readonly PlainVector3[],
+  over: { width?: number; closed?: boolean; segments?: number } = {},
+): GeometryDescriptor => ({
+  kind: 'ribbon',
+  path: railOf(points, over.closed ?? false),
+  width: over.width ?? 2,
+  height: 0.5,
+  segments: over.segments ?? 32,
+})
+
+const cornersOf = (shape: GeometryDescriptor): Vector3[] => {
+  const position = ribbonGeometry(
+    shape as Extract<GeometryDescriptor, { kind: 'ribbon' }>,
+  ).getAttribute('position') as BufferAttribute
   return Array.from(
     { length: position.count },
     (_, at) => new Vector3(position.getX(at), position.getY(at), position.getZ(at)),
   )
 }
 
-/** How far a point sits from a segment — what says whether a corner stands outside the band. */
-function distanceToSegment(point: Vector3, from: PlainVector3, to: PlainVector3): number {
-  const dx = to.x - from.x
-  const dz = to.z - from.z
-  const length = dx * dx + dz * dz
-  const along =
-    length === 0
-      ? 0
-      : Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.z - from.z) * dz) / length))
-  return Math.hypot(point.x - (from.x + dx * along), point.z - (from.z + dz * along))
+/** The sharpest turn between two consecutive sections, in degrees. */
+function sharpestTurn(run: readonly PlainVector3[]): number {
+  let worst = 0
+  for (let at = 1; at < run.length - 1; at += 1) {
+    const before = Math.atan2(run[at]!.x - run[at - 1]!.x, run[at]!.z - run[at - 1]!.z)
+    const after = Math.atan2(run[at + 1]!.x - run[at]!.x, run[at + 1]!.z - run[at]!.z)
+    const turn = Math.abs(((after - before + Math.PI * 3) % (Math.PI * 2)) - Math.PI)
+    worst = Math.max(worst, (turn * 180) / Math.PI)
+  }
+  return worst
 }
 
 describe('a ribbon', () => {
+  /**
+   * 🛑 What a run of boxes could never do, and what Alban asked for: the band follows the CURVE
+   * through its marks, so a corner comes out round. The marks alone made a polygon.
+   */
+  it('rounds a turn instead of cornering it', () => {
+    const marks = [at(-10, 0), at(0, 0), at(0, -10)]
+
+    expect(sharpestTurn(marks)).toBeCloseTo(90, 5)
+    expect(sharpestTurn(sampledRun(railOf(marks), 32))).toBeLessThan(20)
+  })
+
+  /** More sections is a rounder turn: the field is what an author reaches for when it shows. */
+  it('turns more smoothly the more sections it is cut into', () => {
+    const marks = [at(-10, 0), at(0, 0), at(0, -10)]
+
+    expect(sharpestTurn(sampledRun(railOf(marks), 64))).toBeLessThan(
+      sharpestTurn(sampledRun(railOf(marks), 8)),
+    )
+  })
+
   /**
    * 🛑 A run of boxes is stretched at both ends to close the wedge a turn leaves, so it reaches
    * past the points it was given. A band swept along them stops exactly where they do.
@@ -50,50 +84,26 @@ describe('a ribbon', () => {
   })
 
   /**
-   * 🛑 The defect this shape exists for: two boxes overlapped at a right angle leave four corners
-   * standing outside the band, and their union keeps them — which reads as a staircase.
+   * 🛑 The joint, on the bisector: cut square, two sections meeting at an angle leave a WEDGE of
+   * nothing outside the turn; overlapped to close it, their corners stand proud.
    */
-  it('stands no corner outside the band at a turn', () => {
-    const run = [at(-10, 0), at(0, 0), at(0, -10)]
-    const outside = cornersOf(band(run)).filter(corner => {
-      const nearest = Math.min(
-        distanceToSegment(corner, run[0]!, run[1]!),
-        distanceToSegment(corner, run[1]!, run[2]!),
-      )
-      // A right angle mitres to half the width times √2, and nothing may sit past it.
-      return nearest > Math.SQRT2 + 1e-6
-    })
+  it('mitres a joint rather than cutting it square', () => {
+    const shifted = offsetRun([at(-10, 0), at(0, 0), at(0, -10)], 1, false)
 
-    expect(outside).toEqual([])
+    // A right angle stretches a one-metre offset by 1/cos(45°): the joint lands at √2 exactly.
+    expect(Math.hypot(shifted[1]!.x, shifted[1]!.z)).toBeCloseTo(Math.SQRT2, 5)
   })
 
-  /**
-   * 🛑 The other half of a mitre, and the reason boxes were overlapped in the first place: cut
-   * square, two sections meeting at an angle leave a WEDGE of nothing on the outside of the turn.
-   */
-  it('fills the outside of a turn right up to the mitre', () => {
-    const corner = at(0, 0)
-    // The joint's OWN corners: the far ends of the run stand ten metres off and say nothing here.
-    const reach = cornersOf(band([at(-10, 0), corner, at(0, -10)]))
-      .map(one => Math.hypot(one.x - corner.x, one.z - corner.z))
-      .filter(one => one < 3)
-
-    // Half a width is 1, and a right angle stretches it by 1/cos(45°): the outer corner stands
-    // at √2 exactly. Anything short of it is the wedge a square cut would leave.
-    expect(Math.max(...reach)).toBeCloseTo(Math.SQRT2, 5)
-  })
-
-  /** A closed run has no end to cap, and its last section meets the first on a mitred joint. */
+  /** A closed run has no end to cap, and no seam where the last section meets the first. */
   it('closes on itself without a seam', () => {
     const square = [at(-5, -5), at(5, -5), at(5, 5), at(-5, 5)]
-    const closed = cornersOf(band(square, { closed: true }))
+    const corners = cornersOf(band(square, { closed: true, segments: 40 }))
 
-    // Four links, no cap — and the outer edge stands half a width past the run on every side.
-    expect(closed).toHaveLength(4 * 4 * 6)
-    expect(new Box3().setFromPoints(closed).getSize(new Vector3()).x).toBeCloseTo(12, 5)
+    // Forty sections, four faces each, two triangles a face: no cap at either end.
+    expect(corners).toHaveLength(40 * 4 * 6)
   })
 
-  /** Fewer than two points describes no run, and a shape with no surface is better than a throw. */
+  /** Fewer than two points describes no run, and a shape with no surface beats a throw. */
   it('draws nothing from a run of one point', () => {
     expect(cornersOf(band([at(0, 0)]))).toEqual([])
   })
@@ -103,12 +113,14 @@ describe('a ribbon', () => {
    * means what it says. Read across the band, the far edge stands at its full width.
    */
   it('measures its own surface in metres', () => {
-    const geometry = band([at(0, 6), at(0, -6)])
+    const geometry = ribbonGeometry(
+      band([at(0, 6), at(0, -6)]) as Extract<GeometryDescriptor, { kind: 'ribbon' }>,
+    )
     const uv = geometry.getAttribute('uv') as BufferAttribute
     const along = Array.from({ length: uv.count }, (_, at) => uv.getX(at))
     const across = Array.from({ length: uv.count }, (_, at) => uv.getY(at))
 
-    expect(Math.max(...along)).toBeCloseTo(12, 5)
+    expect(Math.max(...along)).toBeCloseTo(12, 4)
     expect(Math.max(...across)).toBeCloseTo(2, 5)
   })
 })

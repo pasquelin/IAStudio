@@ -10,7 +10,7 @@
  * Each primitive carries its own parameters rather than a shared bag of optionals: a sphere has
  * no depth, and a type that lets it have one stops describing anything.
  */
-import type { Vector3 } from './transform'
+import type { PathDescriptor } from './path'
 
 export type GeometryDescriptor =
   | { kind: 'box'; width: number; height: number; depth: number }
@@ -23,11 +23,12 @@ export type GeometryDescriptor =
    */
   | {
       kind: 'ribbon'
-      /** In the node's OWN frame, so moving the band moves its run. Two at the very least. */
-      points: readonly Vector3[]
+      /** The very descriptor a rail carries, so a band is edited by the tools a rail already has. */
+      path: PathDescriptor
       width: number
       height: number
-      closed: boolean
+      /** How many cross-sections the curve is cut into. What makes a turn round rather than a corner. */
+      segments: number
     }
   | { kind: 'capsule'; radius: number; height: number; capSegments: number; radialSegments: number }
   | { kind: 'circle'; radius: number; segments: number }

@@ -105,7 +105,9 @@ const GEOMETRY_FIELDS: readonly ActionField[] = [
   dial('innerRadius', { min: 0 }),
   dial('outerRadius', { min: SMALLEST }),
   dial('tube', { min: SMALLEST }),
-  count('segments', 3, 128),
+  // The union of what the kinds declare: a ribbon is cut along its length and reaches 512, where
+  // a count going round an axis stops at 128. `sceneHandlers.test.ts` holds the two together.
+  count('segments', 2, 512),
   count('capSegments', 1, 128),
   count('radialSegments', 1, 128),
   count('widthSegments', 3, 128),

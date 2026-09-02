@@ -16,7 +16,12 @@ import {
   mdiSquareOutline,
   mdiVectorPolyline,
 } from '@mdi/js'
-import { MESH_ENTRIES, type GeometryDescriptor, type MeshKind } from '@shared/domain/scene'
+import {
+  DEFAULT_PATH,
+  MESH_ENTRIES,
+  type GeometryDescriptor,
+  type MeshKind,
+} from '@shared/domain/scene'
 
 export type MeshPrimitive = {
   kind: MeshKind
@@ -123,17 +128,20 @@ const MESH_BUILDERS: MeshBuilders = {
   },
   ribbon: {
     icon: mdiVectorPolyline,
-    // Two points and a straight four metres: a band added by hand is something to drag out, and
-    // a closed one of two points has no area at all.
+    // Born on a rail of its own, so its points are dragged with the very handles a rail has.
     create: () => ({
       kind: 'ribbon',
-      points: [
-        { x: 0, y: 0, z: 2 },
-        { x: 0, y: 0, z: -2 },
-      ],
+      path: {
+        ...DEFAULT_PATH,
+        points: [
+          { x: 0, y: 0, z: 2 },
+          { x: 2, y: 0, z: 0 },
+          { x: 0, y: 0, z: -2 },
+        ],
+      },
       width: 1,
       height: 0.2,
-      closed: false,
+      segments: 32,
     }),
   },
   tube: {

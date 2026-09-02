@@ -1,5 +1,6 @@
 import { BufferAttribute, BufferGeometry } from 'three'
-import type { GeometryDescriptor, Vector3 } from '@shared/domain/scene'
+import type { GeometryDescriptor, PathDescriptor, Vector3 } from '@shared/domain/scene'
+import { pathPoints } from './cameraPath'
 
 type Ribbon = Extract<GeometryDescriptor, { kind: 'ribbon' }>
 
@@ -24,12 +25,12 @@ type Section = {
  * close that wedge leave their corners standing proud — which is the staircase this replaces.
  */
 export function ribbonGeometry(ribbon: Ribbon): BufferGeometry {
-  const sections = sectionsOf(ribbon)
+  const sections = sectionsOf(sampledRun(ribbon.path, ribbon.segments), ribbon)
   const position: number[] = []
   const uv: number[] = []
   // A run of one point describes no band. Its attributes are still written, empty: a geometry
   // missing `position` throws inside three's own bounds and export passes.
-  const links = sections.length < 2 ? 0 : ribbon.closed ? sections.length : sections.length - 1
+  const links = sections.length < 2 ? 0 : ribbon.path.closed ? sections.length : sections.length - 1
 
   for (let at = 0; at < links; at += 1) {
     const here = sections[at]!
@@ -40,7 +41,7 @@ export function ribbonGeometry(ribbon: Ribbon): BufferGeometry {
     faces(position, uv, here, next, ahead, ribbon.height)
   }
 
-  if (!ribbon.closed && links > 0) {
+  if (!ribbon.path.closed && links > 0) {
     caps(position, uv, sections[0]!, sections[sections.length - 1]!, ribbon.height)
   }
 
@@ -65,11 +66,11 @@ function spanBetween(here: Section, next: Section): number {
  * The offset is the bisector's own normal, lengthened by 1/cos(θ/2) so the two sections meeting
  * there share an edge — capped, since a hairpin of 170° would otherwise raise a spike.
  */
-function sectionsOf(ribbon: Ribbon): Section[] {
-  const points = ribbon.points
+function sectionsOf(points: readonly Vector3[], ribbon: Ribbon): Section[] {
   const last = points.length - 1
   if (points.length < 2) return []
 
+  const closed = ribbon.path.closed
   const half = ribbon.width / 2
   const sections: Section[] = []
   let along = 0
@@ -78,8 +79,8 @@ function sectionsOf(ribbon: Ribbon): Section[] {
     const here = points[at]!
     if (at > 0) along += Math.hypot(here.x - points[at - 1]!.x, here.z - points[at - 1]!.z)
 
-    const before = ribbon.closed || at > 0 ? normalAt(points, at - 1) : null
-    const after = ribbon.closed || at < last ? normalAt(points, at) : null
+    const before = closed || at > 0 ? normalAt(points, at - 1) : null
+    const after = closed || at < last ? normalAt(points, at) : null
     const joint = bisector(before, after)
 
     sections.push({
@@ -102,6 +103,21 @@ function normalAt(points: readonly Vector3[], at: number): { x: number; z: numbe
   const length = Math.hypot(to.x - from.x, to.z - from.z)
   if (length === 0) return { x: 0, z: 0 }
   return { x: -(to.z - from.z) / length, z: (to.x - from.x) / length }
+}
+
+/**
+ * The curve cut into sections — what rounds a corner off, and the whole reason a band carries a
+ * rail's own descriptor rather than a list of points.
+ *
+ * 🛑 A closed curve's last sample IS its first: kept, it would make a section of zero length and
+ * a normal of nothing at the seam.
+ */
+export function sampledRun(path: PathDescriptor, segments: number): Vector3[] {
+  if (path.points.length < 2) return [...path.points]
+
+  const sampled = pathPoints(path, Math.max(segments, path.points.length))
+  const run = path.closed ? sampled.slice(0, -1) : sampled
+  return run.map(point => ({ x: point.x, y: point.y, z: point.z }))
 }
 
 /**

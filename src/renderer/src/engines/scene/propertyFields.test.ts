@@ -31,8 +31,9 @@ describe('geometryFields', () => {
       const descriptor = primitiveByKind(entry.kind)?.create?.()
       if (!descriptor) continue
 
+      // What a panel can draw: a ribbon carries a whole rail, which is dragged on the shape.
       const editable = Object.entries(descriptor).filter(
-        ([name, value]) => name !== 'kind' && !Array.isArray(value),
+        ([name, value]) => name !== 'kind' && typeof value !== 'object',
       )
       const fields = geometryFields(descriptor)
       expect(fields.map(field => field.name)).toEqual(editable.map(([name]) => name))

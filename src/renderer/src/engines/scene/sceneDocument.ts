@@ -383,12 +383,12 @@ function isOptionalFlag(value: unknown): boolean {
 }
 
 /**
- * The run a ribbon is swept along. No spec describes it — a list of points is edited on the shape
- * rather than in a row — so `describes` walks straight past it and this is what checks it.
+ * The rail a ribbon is swept along. No spec describes it — a run of points is dragged on the
+ * shape, never typed in a row — so `describes` walks past it and this is what checks it.
  */
 function isGeometryRun(value: unknown): boolean {
   if (!isRecord(value) || value.kind !== 'ribbon') return true
-  return Array.isArray(value.points) && value.points.length >= 2 && value.points.every(isVector3)
+  return isPath(value.path)
 }
 
 /** Its points and its shape. `closed` and `tension` absent mean the defaults `revived` lays in. */
@@ -755,8 +755,9 @@ function measures(value: unknown, spec: PropertySpec): boolean {
 }
 
 /**
- * 🛑 Read off the CONTROL, never assumed numeric. Falling through to `Number.isFinite` cost the
- * whole node for any field that is not a number — a ribbon's `closed` was dropped in silence.
+ * 🛑 Read off the CONTROL, never assumed numeric: falling through to `Number.isFinite` cost the
+ * WHOLE node for any field that is not a number. No table read here carries one of the three
+ * below today — it is an assurance, and it was a real defect for the hour a ribbon held a flag.
  */
 function matches(value: unknown, spec: PropertySpec): boolean {
   if (spec.control === 'color') return typeof value === 'string'

@@ -35,11 +35,11 @@ function spanOfShape(shape: CsgPart['geometry']): number {
   // A band is read ALONG its run: a kerb of six hundred metres shows its grid over that, not
   // over the metre it is wide.
   if (shape.kind === 'ribbon') {
-    const run = shape.points
-    const around = run.reduce((total, from, index) => {
+    const run = shape.path.points
+    const around = run.reduce((total: number, from, index) => {
       const to = run[(index + 1) % run.length]!
       const last = index === run.length - 1
-      return last && !shape.closed ? total : total + Math.hypot(to.x - from.x, to.z - from.z)
+      return last && !shape.path.closed ? total : total + Math.hypot(to.x - from.x, to.z - from.z)
     }, 0)
     return Math.max(around, shape.width)
   }

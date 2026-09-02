@@ -75,22 +75,6 @@ describe('sceneFromPayload', () => {
     )
   })
 
-  /**
-   * 🛑 Every control, not just the numeric ones: `matches` fell through to `Number.isFinite`, so
-   * a descriptor holding a boolean lost its node — silently, and the file kept the rest.
-   */
-  it('keeps a shape whose field is not a number', () => {
-    const run = [
-      { x: 0, y: 0, z: 1 },
-      { x: 0, y: 0, z: -1 },
-    ]
-    const nodes: unknown[] = [
-      nodeWith({ geometry: { kind: 'ribbon', points: run, width: 1, height: 0.2, closed: false } }),
-    ]
-
-    expect(sceneFromPayload({ nodes }).nodes).toHaveLength(1)
-  })
-
   /** No spec describes a run of points, so nothing else would refuse a file that wrote rubbish. */
   it('drops a band whose run is not a run', () => {
     const nodes: unknown[] = [

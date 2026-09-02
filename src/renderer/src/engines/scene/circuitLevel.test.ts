@@ -8,10 +8,10 @@ import { CIRCUIT_START, circuitLine, circuitNodes } from './circuitLevel'
 const named = (nodes: readonly SceneNode[], word: string): SceneNode[] =>
   nodes.filter(node => node.name.startsWith(word))
 
-/** The run a band was swept along — where a track's geometry is written. */
+/** The rail a band was swept along — where a track's geometry is written. */
 function runOf(nodes: readonly SceneNode[], name: string): readonly Vector3[] {
   const band = nodes.find(node => node.name === name)
-  return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry.points : []
+  return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry.path.points : []
 }
 
 /** How far a point sits from a closed run — the distance to the nearest of its segments. */

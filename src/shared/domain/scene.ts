@@ -45,34 +45,8 @@ export type CameraDescriptor = {
 
 export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
 
-/**
- * A rail: the line a camera runs along during a shot.
- *
- * A node of the scene like any other, so it inherits the outliner row, the selection, the gizmo,
- * the rename, the visibility, undo, copy and paste — everything `SceneNode` already gives.
- *
- * `kind` is an open union: a Bézier one would be another value here, and no document written
- * before it would have to be migrated.
- */
-export type PathDescriptor = {
-  kind: 'catmullrom'
-  /** In the node's OWN frame, so moving the rail moves the trajectory. Two at the very least. */
-  points: readonly Vector3[]
-  closed: boolean
-  /** Catmull-Rom tension: 0 is angular, 0.5 is three.js's own default. */
-  tension: number
-}
-
-export const DEFAULT_PATH: PathDescriptor = Object.freeze({
-  kind: 'catmullrom',
-  // Five units apart along Z, which is the axis a camera born from the Add menu looks down.
-  points: Object.freeze([
-    Object.freeze({ x: 0, y: 0, z: 0 }),
-    Object.freeze({ x: 0, y: 0, z: -5 }),
-  ]),
-  closed: false,
-  tension: 0.5,
-})
+/** Re-exported for the same reason as the transform above: a scene is read from here. */
+export { DEFAULT_PATH, type PathDescriptor } from './path'
 
 /**
  * An imported model, for the same reason and in the same shape as a texture: what a document
