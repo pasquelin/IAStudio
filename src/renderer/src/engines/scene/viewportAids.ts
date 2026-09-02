@@ -27,6 +27,7 @@ import {
 import type { ArmRig } from './springArmRigs'
 import { VertexNormalsHelper } from 'three/addons/helpers/VertexNormalsHelper.js'
 import { showsAid, type HelperVisibility } from '@shared/domain/scene'
+import { sameVector3 } from '@shared/domain/transform'
 
 export type AidPalette = {
   /** What a bounding box is drawn in. */
@@ -170,7 +171,7 @@ export function createViewportAids(): ViewportAids {
       }
       for (const [id, object] of objects) {
         if (!wanted(settings.boundingBoxes, id) || boxes.has(id)) continue
-        const helper = new BoxHelper(object, new Color(palette.box))
+        const helper = new BoxHelper(standing(object), new Color(palette.box))
         // A box is decoration: never picked, never in a shadow map, never exported.
         helper.raycast = () => {}
         boxes.set(id, helper)
@@ -185,7 +186,7 @@ export function createViewportAids(): ViewportAids {
       if (settings.origins) {
         for (const [id, object] of objects) {
           if (origins.has(id) || !object.visible) continue
-          const helper = new AxesHelper(originSize(object))
+          const helper = new AxesHelper(originSize(standing(object)))
           helper.raycast = () => {}
           origins.set(id, helper)
           host.add(helper)
@@ -213,9 +214,9 @@ export function createViewportAids(): ViewportAids {
 
       for (const [id, helper] of origins) {
         const object = objects.get(id)
-        if (object) helper.position.setFromMatrixPosition(object.matrixWorld)
+        if (object) helper.position.setFromMatrixPosition(standing(object).matrixWorld)
       }
-      for (const helper of boxes.values()) helper.update()
+      for (const helper of boxes.values()) refreshBox(helper)
       for (const helper of normals.values()) helper.update()
     },
 
@@ -287,13 +288,19 @@ function originSize(object: Object3D): number {
 /** The cage a walking body wears — sparse on purpose, so it reads as a volume and not as a solid. */
 function capsuleCage(body: AidBody, colour: string): LineSegments {
   const cylinder = Math.max(0, body.height - 2 * body.radius)
+  return aidLine(new WireframeGeometry(new CapsuleGeometry(body.radius, cylinder, 4, 8)), colour)
+}
+
+/**
+ * 🛑 `matrixWorld` written DIRECTLY, both updates off: an aid hangs from the workshop group rather
+ * than from the node, so three would recompose its place from a local `matrix` — which drew it
+ * metres away from what it outlines. `poseCages` and `poseArms` are the other half.
+ */
+function aidLine(geometry: BufferGeometry, colour: string): LineSegments {
   const line = new LineSegments(
-    new WireframeGeometry(new CapsuleGeometry(body.radius, cylinder, 4, 8)),
+    geometry,
     new LineBasicMaterial({ color: new Color(colour), depthTest: false }),
   )
-  // 🛑 `matrixWorld` written DIRECTLY, both updates off: an aid hangs from the workshop group
-  // rather than from the node, and three recomposes `matrixWorld` from a local `matrix` — which
-  // drew the cage metres away from the body it outlines. See `poseCages` for the other half.
   line.matrixAutoUpdate = false
   line.matrixWorldAutoUpdate = false
   line.raycast = () => {}
@@ -302,25 +309,32 @@ function capsuleCage(body: AidBody, colour: string): LineSegments {
 }
 
 /**
- * 🛑 The chain is recomposed here, never assumed: the renderer writes the LOCAL transforms and
- * draws the aids straight after, while `matrixWorld` is only recomposed at the draw. Read as it
- * stood, a cage took the identity and — both updates being off — never left it.
+ * 🛑 Where an object actually STANDS, never where its last frame left it. The renderer writes the
+ * LOCAL transforms and draws the aids straight after, while three recomposes `matrixWorld` at the
+ * draw — measured: a mesh 40 m out under a moved parent was boxed at the origin.
  *
- * The two chains it needs and nothing else, as `railCamera` does: `scene.updateMatrixWorld(true)`
- * would recompose every object of the scene, bones included, on every apply.
+ * Its OWN chain and nothing else, as `railCamera` does: `scene.updateMatrixWorld(true)` would
+ * recompose every object of the scene, bones included, on every apply.
  */
+function standing(object: Object3D): Object3D {
+  object.updateWorldMatrix(true, false)
+  return object
+}
+
+/** A box re-reads its object's bounds, which are only true once the chain above it is composed. */
+function refreshBox(helper: BoxHelper): void {
+  standing(helper.object)
+  helper.update()
+}
+
 function poseCages(held: Map<string, { line: LineSegments; object: Object3D }>): void {
-  for (const cage of held.values()) {
-    cage.object.updateWorldMatrix(true, false)
-    cage.line.matrixWorld.copy(cage.object.matrixWorld)
-  }
+  for (const cage of held.values()) cage.line.matrixWorld.copy(standing(cage.object).matrixWorld)
 }
 
 /** An arm stands over the body it hangs off — the lift being world, as the system reads it. */
 function poseArms(held: Map<string, { line: LineSegments; rig: ArmRig; object: Object3D }>): void {
   for (const arm of held.values()) {
-    arm.object.updateWorldMatrix(true, false)
-    STANDING.setFromMatrixPosition(arm.object.matrixWorld)
+    STANDING.setFromMatrixPosition(standing(arm.object).matrixWorld)
     arm.line.matrixWorld.makeTranslation(
       STANDING.x + arm.rig.lift.x,
       STANDING.y + arm.rig.lift.y,
@@ -341,30 +355,17 @@ function armLine(rig: ArmRig, colour: string): LineSegments {
   }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(points), 3))
-
-  const line = new LineSegments(
-    geometry,
-    new LineBasicMaterial({ color: new Color(colour), depthTest: false }),
-  )
-  // The same bargain the cage makes: written world matrix, both updates off. See `poseArms`.
-  line.matrixAutoUpdate = false
-  line.matrixWorldAutoUpdate = false
-  line.raycast = () => {}
-  line.renderOrder = 1
-  return line
+  return aidLine(geometry, colour)
 }
 
 /** Retuning the arm is what rebuilds its shape; moving the body is not. */
 function sameArm(wanted: ArmRig, held: ArmRig): boolean {
   return (
     wanted.subjectId === held.subjectId &&
-    alike(wanted.lift, held.lift) &&
-    alike(wanted.back, held.back)
+    sameVector3(wanted.lift, held.lift) &&
+    sameVector3(wanted.back, held.back)
   )
 }
-
-const alike = (one: { x: number; y: number; z: number }, other: typeof one): boolean =>
-  one.x === other.x && one.y === other.y && one.z === other.z
 
 function dropLine(held: Map<string, { line: LineSegments }>, id: string): void {
   const drawn = held.get(id)

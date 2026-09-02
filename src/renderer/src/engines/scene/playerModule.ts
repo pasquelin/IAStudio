@@ -69,21 +69,13 @@ function partsIn(nodes: readonly SceneNode[], module: SceneNode): FoundParts {
 }
 
 /**
- * Every module's arm, pointed at the body and the eye it HANGS with rather than at two written
- * names. 🛑 `copiesOf` remaps `id` and `parentId` and nothing inside a component, so a duplicated
- * module keeps an arm aimed at the original's camera — and a name resolved globally did the same.
- *
- * What a field NAMES is resolved inside the module first, so `Capsule` reads as itself and plays
- * as an exact id. What points OUTSIDE — the car a player drives — is the author's, and is kept.
+ * Every module's arm, pointed at the body and the eye it HANGS with. 🛑 `copiesOf` remaps ids and
+ * nothing inside a component, so a name resolved globally aimed a duplicate at the original's
+ * camera. What points OUTSIDE — the car a player drives — is the author's, and is kept.
  */
 export function withBoundPlayerArm(nodes: readonly SceneNode[]): readonly SceneNode[] {
   const found = allPartsOf(nodes)
   if (found.length === 0) return nodes
-
-  const holder = new Map<string, string>()
-  for (const parts of found) {
-    for (const node of parts.inside) holder.set(node.id, parts.module.id)
-  }
 
   const bound = new Map<string, Component>()
   for (const parts of found) {

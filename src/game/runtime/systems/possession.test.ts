@@ -137,3 +137,41 @@ describe('what a held body asks the physics for', () => {
     expect(characters.intents(world, STEP_SECONDS)).toEqual([])
   })
 })
+
+/**
+ * 🛑 The other half of freezing a body: `characters.intents` asks the port for nothing, but the
+ * port keeps REPORTING the walker, and `settle` writes that stale pose back on every fixed step —
+ * ahead of the late pass that carries. Anything reading the body inside a step saw it standing
+ * where it boarded, and dismounting resumed from there.
+ */
+describe('a held body against the physics', () => {
+  it('is left where it was carried, not where the engine still reports it', async () => {
+    const { createPhysicsSystem } = await import('./physics')
+    const { createCharacters } = await import('../characters')
+    const possessions = createPossessions()
+    const world = testWorld({
+      systems: [
+        createPhysicsSystem({
+          shapeOf: () => null,
+          characters: createCharacters(possessions),
+          possessions,
+        }),
+      ],
+    })
+    world.entities.add({
+      id: 'body',
+      name: 'Capsule',
+      transform: at(0, 0.9, 0),
+      components: [{ type: 'CharacterController', height: 1.8, radius: 0.3 }],
+    })
+    world.step(STEP_SECONDS)
+
+    // Carried onto something that has driven off, as `possession.lateUpdate` writes it.
+    possessions.hold('body')
+    const body = world.entities.get('body')
+    if (body) body.transform.position.x = 30
+    world.step(STEP_SECONDS)
+
+    expect(world.entities.get('body')?.transform.position.x).toBe(30)
+  })
+})

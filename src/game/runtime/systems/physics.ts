@@ -12,6 +12,7 @@ import type {
   VehicleWheel,
 } from '../../ports/physicsPort'
 import type { Characters } from '../characters'
+import type { Possessions } from '../possessions'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { flagOf, numberOf, textOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
@@ -45,6 +46,11 @@ export type PhysicsSystemOptions = {
   shapeOf: (entity: Entity) => ColliderShape | null
   /** Shared with the camera system, which watches whoever this one walks. */
   characters: Characters
+  /**
+   * The bodies a player is riding something else with. 🛑 The port goes on REPORTING a walker it
+   * was asked to move by nothing, and writing that pose back undid the carry on every step.
+   */
+  possessions: Possessions
   /** Bodies belonging to no entity: the scene's own floor, which is not a node. */
   statics?: readonly BodyDescriptor[]
   /**
@@ -169,7 +175,7 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
       drive(world)
       characters.settle(port.moveCharacters(characters.intents(world, dt)))
       port.step(dt)
-      settle(world, options.localOf)
+      settle(world, options.localOf, options.possessions)
       announce(world, triggered)
     },
 
@@ -264,10 +270,15 @@ function vehicleOf(entity: Entity, world: World): VehicleSettings | null {
 }
 
 /** What the step moved, written back into the entity it belongs to — in ITS own frame. */
-function settle(world: World, localOf: PhysicsSystemOptions['localOf']): void {
+function settle(
+  world: World,
+  localOf: PhysicsSystemOptions['localOf'],
+  possessions: Possessions,
+): void {
   for (const pose of world.ports.physics.poses()) {
     const entity = world.entities.get(pose.body)
-    if (!entity) continue
+    // A carried body is placed by `possession`, not by the engine that still holds its capsule.
+    if (!entity || possessions.holds(pose.body)) continue
 
     const turned = eulerFromQuaternion(pose.rotation, TURNED)
     const local = localOf ? localOf(entity, pose.position, turned) : null

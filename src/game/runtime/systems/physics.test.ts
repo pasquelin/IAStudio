@@ -24,10 +24,12 @@ function bench(over: Partial<WorldOptions> = {}): Bench {
   const physics = notedPhysics()
   const seen: GameEvent[] = []
 
-  const characters = createCharacters(createPossessions())
+  // One `possessions` for both: `characters` reads it, and `settle` reads the same answer.
+  const possessions = createPossessions()
+  const characters = createCharacters(possessions)
   const world = testWorld({
     ports: testPorts({ physics }),
-    systems: [createPhysicsSystem({ shapeOf: () => CUBE, characters })],
+    systems: [createPhysicsSystem({ shapeOf: () => CUBE, characters, possessions })],
     ...over,
   })
 
@@ -243,6 +245,7 @@ describe('what falls, what blocks and what walks', () => {
             return null
           },
           characters,
+          possessions: createPossessions(),
         }),
       ],
     })

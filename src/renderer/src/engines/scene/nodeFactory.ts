@@ -251,8 +251,8 @@ export function groupNode(transform = IDENTITY_TRANSFORM, name = 'Group'): Scene
 }
 
 /**
- * The capsule draws nothing of its own: `CharacterController` already carries the height and the
- * radius the physics feels, and what is SEEN is the mesh under it, which a model replaces.
+ * The capsule draws nothing of its own: `CharacterController` carries the height and radius the
+ * physics feels, and what is SEEN is the figure under it — which a model replaces.
  */
 export function playerModuleNodes(): readonly SceneNode[] {
   const module: SceneNode = {

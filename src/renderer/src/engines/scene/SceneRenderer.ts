@@ -62,6 +62,8 @@ import { createGroundPlane } from './groundPlane'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidRigs } from './viewportAids'
 import { springArmRigsOf } from './springArmRigs'
+import { COMPONENT_DEFAULTS } from '@game/runtime/componentDefaults'
+import { numberOf } from '@game/runtime/componentFields'
 import type { Vector3 as TurnedVector } from '@shared/domain/transform'
 import { drawsNode, isolating, NOTHING_ISOLATED, type Isolation } from './isolation'
 import { pixelRatioFor, shadowMapSizeFor } from './viewportQuality'
@@ -793,7 +795,7 @@ export class SceneRenderer {
 
   /** What the last state asks to be DRAWN off its components, so `refreshAids` knows there is
    * something to draw at all. */
-  private rigs: AidRigs = { bodies: new Map(), arms: new Map() }
+  private rigs: AidRigs = NO_RIGS
   /** What the VIEWPORT hides, which is never what the document hides — see `isolation.ts`. */
   private isolation: Isolation = NOTHING_ISOLATED
 
@@ -1113,10 +1115,17 @@ export class SceneRenderer {
     // 🛑 What the renderer reads off a COMPONENT, drawn rather than rendered: a walking body and
     // the arm a camera hangs on are volumes no geometry carries, and nothing else would show
     // them. Here and not at the top of the pass: an arm is measured off where its body stands.
-    this.rigs = {
-      bodies: capsuleBodiesOf(state.nodes),
-      arms: springArmRigsOf(state.nodes, id => this.facingOf(id)),
-    }
+    //
+    // 🛑 A window that PLAYS the scene draws neither, whatever the settings say — the same cut
+    // `showAidsForSelection` makes for frustums, lamps, markers and rails. Answering to no
+    // setting, these two showed the player a cage around their own character.
+    this.rigs =
+      this.options.chrome === false
+        ? NO_RIGS
+        : {
+            bodies: capsuleBodiesOf(state.nodes),
+            arms: springArmRigsOf(state.nodes, id => this.facingOf(id)),
+          }
     // After the transforms and the poses: a box is read off where an object actually stands.
     this.refreshAids()
     this.applyWorld(state.world)
@@ -5160,13 +5169,23 @@ function capsuleBodiesOf(nodes: readonly SceneNode[]): ReadonlyMap<string, AidBo
     const walker = node.components?.find(one => one.type === 'CharacterController')
     if (!walker) continue
 
-    const height = Number(walker.height)
-    const radius = Number(walker.radius)
-    if (Number.isFinite(height) && Number.isFinite(radius)) found.set(node.id, { height, radius })
+    // 🛑 Through `numberOf` and the runtime's OWN defaults, as `characters.capsuleOf` reads them:
+    // a controller tuned to nothing is felt at 1,8 by the physics, and read raw it gave `NaN` —
+    // so the one body a cage exists for was outlined by nothing at all.
+    found.set(node.id, {
+      height: numberOf(walker, 'height', WALKER.height),
+      radius: numberOf(walker, 'radius', WALKER.radius),
+    })
   }
   return found
 }
 
+/** The runtime's own defaults, so what is DRAWN is what is FELT — see `characters.capsuleOf`. */
+const WALKER = COMPONENT_DEFAULTS.CharacterController
+
 // Rewritten in place: `facingOf` answers once per arm per apply.
 const FACING = new Euler()
 const FACED = new Quaternion()
+
+/** Nothing drawn off a component — what a window that plays the scene is handed. */
+const NO_RIGS: AidRigs = { bodies: new Map(), arms: new Map() }

@@ -68,8 +68,8 @@ const flagField = (key: string): ActionField => ({
 })
 
 /**
- * Who is PLAYED. It carries no field on purpose: its presence is the whole of what it says, and
- * what the player IS — a body, an eye — is the structure hanging under the node, not a value here.
+ * Who is PLAYED. What the player IS — a body, an eye — is the STRUCTURE hanging under the node
+ * and never a value here; the two fields say only where it came from and what it currently rides.
  */
 const PLAYER: ComponentDescriptor = {
   type: 'Player',

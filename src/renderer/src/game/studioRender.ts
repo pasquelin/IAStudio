@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import { copyTransform, type Transform, type Vector3 } from '@shared/domain/transform'
+import { copyTransform, sameVector3, type Transform } from '@shared/domain/transform'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
@@ -109,10 +109,7 @@ export function createStudioRender(
 const NOWHERE = { x: Number.NaN, y: Number.NaN, z: Number.NaN }
 
 const sameView = (one: CameraView, other: CameraView): boolean =>
-  samePoint(one.position, other.position) && samePoint(one.target, other.target)
-
-const samePoint = (one: Vector3, other: Vector3): boolean =>
-  one.x === other.x && one.y === other.y && one.z === other.z
+  sameVector3(one.position, other.position) && sameVector3(one.target, other.target)
 
 const sameTransform = (one: Transform, other: Transform): boolean =>
   one.position.x === other.position.x &&

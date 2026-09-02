@@ -171,6 +171,7 @@ function systemsFor(
     createPhysicsSystem({
       shapeOf,
       characters,
+      possessions,
       statics: groundOf(state),
       worldOf: placed,
       localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),

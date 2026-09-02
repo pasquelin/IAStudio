@@ -506,6 +506,7 @@ export function registerProjectHandlers({
           type: 'audio',
           extension: WAV_EXTENSION,
           ...(probe ? { probe } : {}),
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
         },
         request.wav,
       ),

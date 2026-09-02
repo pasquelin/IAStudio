@@ -40,9 +40,16 @@ export function springArmRigsOf(
     const subjectId = arm && held.get(textOf(arm, 'subject', ARM.subject))
     if (!arm || !subjectId) continue
 
+    // 🛑 The three arms of `aimedAt` (`springArm.ts`) and its fallback, or the aid draws an arm
+    // otherwise than it will be ridden: an orientation the registry gains later falls back on the
+    // POINTER there, and reading anything else here would be silently wrong.
     const orientation = textOf(arm, 'orientation', ARM.orientation)
     const turned =
-      orientation === 'pointer' ? null : facingOf(orientation === 'subject' ? subjectId : node.id)
+      orientation === 'subject'
+        ? facingOf(subjectId)
+        : orientation === 'fixed'
+          ? facingOf(node.id)
+          : null
     const look = turned ? lookOf(turned, AXES, LOOK) : LEVEL
 
     const lift = armPivot(

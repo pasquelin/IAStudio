@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AxesHelper,
+  Box3,
   BoxHelper,
   LineSegments,
   BufferAttribute,
@@ -131,6 +133,35 @@ describe('the aids drawn over a scene', () => {
 
     aids.apply(objects, ['a', 'b'], settings, PALETTE, NO_RIG)
     expect(aids.object.children).toHaveLength(2)
+  })
+
+  /**
+   * 🛑 The same trap the cage fell into, and it was left standing on the OTHER aids: the renderer
+   * writes the local transforms and draws straight after, while three recomposes `matrixWorld`
+   * at the draw. Measured — a mesh 40 m out under a moved parent was boxed at the origin.
+   */
+  it('boxes and marks an object where it stands in the WORLD, chain unrecomposed', () => {
+    const module = new Object3D()
+    module.position.set(0, 0, 40)
+    const mesh = meshWithNormals()
+    mesh.position.set(0, 2, 0)
+    module.add(mesh)
+    const aids = createViewportAids()
+
+    aids.apply(
+      new Map([['a', mesh]]),
+      [],
+      { ...OFF, boundingBoxes: 'all', origins: true },
+      PALETTE,
+      NO_RIG,
+    )
+
+    const box = aids.object.children.find(child => child instanceof BoxHelper)
+    const axes = aids.object.children.find(child => child instanceof AxesHelper)
+    expect(new Box3().setFromObject(box ?? new Object3D()).getCenter(new Vector3()).z).toBeCloseTo(
+      40,
+    )
+    expect(axes?.position.z).toBeCloseTo(40)
   })
 
   it('hangs everything from one group, so a render pass hides the lot with one flag', () => {
