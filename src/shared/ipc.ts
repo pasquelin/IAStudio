@@ -19,7 +19,7 @@ import type { FavoriteRecipe } from './domain/favorite'
 import type { FileFacts } from './domain/fileInfo'
 import type { FileHistory, FileOutcome } from './domain/fileOp'
 import type { GameManifest, GameScriptFile, GameState } from './domain/game'
-import type { NamedDocumentPlace, NewDocumentAsk } from './domain/newDocument'
+import type { NewDocumentAnswer, NewDocumentAsk } from './domain/newDocument'
 import type { NewsPage, NewsTopic } from './domain/news'
 import type { FolderEntry } from './domain/folder'
 import type { FolderRole, RoleFolders } from './domain/folderRole'
@@ -2267,10 +2267,10 @@ export type StudioBridge = {
    * nothing was made, and the close button is the plainest way to say it.
    */
   newDocument: {
-    ask: (ask: NewDocumentAsk) => Promise<NamedDocumentPlace | null>
+    ask: (ask: NewDocumentAsk) => Promise<NewDocumentAnswer | null>
     /** What the open window was asked, or `null` when nothing is pending. */
     request: () => Promise<NewDocumentAsk | null>
-    answer: (place: NamedDocumentPlace | null) => Promise<void>
+    answer: (answer: NewDocumentAnswer | null) => Promise<void>
   }
   menu: {
     /**

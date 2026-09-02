@@ -44,6 +44,9 @@ export const WINDOW_ROW_BUTTON = cn(WINDOW_ROW, 'hover:bg-base-300 w-full text-l
 export function windowControl(active: boolean): string {
   return cn(
     'flex h-(--sc-control) cursor-pointer items-center rounded-(--radius-sc-sm) border-none text-xs',
+    // Dimmed by INK rather than by opacity, as every quiet line of these windows is: an opacity
+    // lets the column's own surface through, and reads as a rendering fault rather than a refusal.
+    'disabled:cursor-not-allowed disabled:text-base-content/40 disabled:hover:bg-transparent',
     active ? 'bg-primary text-primary-content' : 'hover:bg-base-300 bg-transparent',
   )
 }

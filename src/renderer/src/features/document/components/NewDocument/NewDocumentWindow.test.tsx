@@ -1,19 +1,24 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import type { NamedDocumentPlace, NewDocumentAsk } from '@shared/domain/newDocument'
+import type { NewDocumentAnswer, NewDocumentAsk } from '@shared/domain/newDocument'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { NewDocumentWindow } from './NewDocumentWindow'
 
 const ASK: NewDocumentAsk = {
   kind: 'scene',
-  folder: 'documents',
-  suggested: 'Scène 1',
+  surface: '3d',
+  picked: 'documents',
   projectName: 'One',
+  recentProjects: [],
   open: [],
 }
+
+/** What a filled form answers with — the place, under the word that says a document was made. */
+const made = (place: Record<string, unknown>): NewDocumentAnswer =>
+  ({ answer: 'made', place }) as NewDocumentAnswer
 
 const stored = (fileName: string): DocumentDescriptor => ({
   id: fileName,
@@ -23,11 +28,11 @@ const stored = (fileName: string): DocumentDescriptor => ({
   path: `documents/${fileName}`,
 })
 
-const answer = vi.fn<(place: NamedDocumentPlace | null) => Promise<void>>()
+const answer = vi.fn<(given: NewDocumentAnswer | null) => Promise<void>>()
 
 function open(ask: NewDocumentAsk | null, onDisk: DocumentDescriptor[] = []): void {
   installFakeBridge({
-    newDocument: { request: () => Promise.resolve(ask), answer: place => answer(place) },
+    newDocument: { request: () => Promise.resolve(ask), answer: given => answer(given) },
     documents: { list: () => Promise.resolve(onDisk) },
   })
 }
@@ -63,11 +68,9 @@ describe('NewDocumentWindow', () => {
     await userEvent.clear(field)
     await userEvent.type(field, 'Niveau{Enter}')
 
-    expect(answer).toHaveBeenCalledWith({
-      title: 'Niveau',
-      folder: 'documents',
-      template: 'basic',
-    })
+    expect(answer).toHaveBeenCalledWith(
+      made({ kind: 'scene', title: 'Niveau', folder: 'documents', template: 'basic' }),
+    )
   })
 
   it('answers the template that was picked, not the one it opened on', async () => {
@@ -77,23 +80,21 @@ describe('NewDocumentWindow', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Cinéma' }))
     await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
 
-    expect(answer).toHaveBeenCalledWith({
-      title: 'Scène 1',
-      folder: 'documents',
-      template: 'cinematic',
-    })
+    expect(answer).toHaveBeenCalledWith(
+      made({ kind: 'scene', title: 'Scène 1', folder: 'documents', template: 'cinematic' }),
+    )
   })
 
   // The other five kinds have one thing to be, and a choice nobody was offered must not travel.
   it('offers no template for a kind that has none, and answers without one', async () => {
-    open({ ...ASK, kind: 'image', suggested: 'Image 1' })
+    open({ ...ASK, kind: 'image' })
     render(<NewDocumentWindow />)
 
     await screen.findByRole('textbox')
     expect(screen.queryByRole('button', { name: 'Base' })).toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: 'Créer' }))
-    expect(answer).toHaveBeenCalledWith({ title: 'Image 1', folder: 'documents' })
+    expect(answer).toHaveBeenCalledWith(made({ kind: 'image', title: 'Image 1', folder: 'documents' }))
   })
 
   it('marks the chosen template, and only that one', async () => {
@@ -151,6 +152,67 @@ describe('NewDocumentWindow', () => {
 
     await screen.findByRole('alert')
     expect(screen.getByRole('button', { name: 'Créer' })).toBeDisabled()
+  })
+
+  /**
+   * The column is the half this window gained: every kind reachable from everywhere, ordered by
+   * the space one came from. Ordered and never filtered — a list that dropped the far kinds would
+   * put the studio back where creating depended on the screen one happened to be looking at.
+   */
+  it('offers every kind, the ones of the space it was opened from first', async () => {
+    open(ASK)
+    render(<NewDocumentWindow />)
+
+    const column = within(await screen.findByRole('navigation'))
+    const kinds = column.getAllByRole('listitem').map(row => row.textContent)
+
+    expect(kinds.slice(0, 4)).toEqual(['Scène', 'Interface', 'Matière', 'Ciel'])
+    expect(kinds).toHaveLength(8)
+  })
+
+  it('names the picked kind, and proposes a name of that kind', async () => {
+    open(ASK)
+    render(<NewDocumentWindow />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Image' }))
+
+    expect(await screen.findByRole('textbox')).toHaveValue('Image 1')
+    expect(screen.getByText('.ora')).toBeInTheDocument()
+  })
+
+  describe('with no project open', () => {
+    const NO_PROJECT: NewDocumentAsk = {
+      ...ASK,
+      projectName: null,
+      recentProjects: [{ path: '/projects/Two', openedAt: '2026-09-01T10:00:00.000Z' }],
+    }
+
+    /** Dimmed and not hidden: a column that changes length under the eye reads as a fault. */
+    it('offers the kinds and refuses them', async () => {
+      open(NO_PROJECT)
+      render(<NewDocumentWindow />)
+
+      expect(await screen.findByRole('button', { name: 'Scène' })).toBeDisabled()
+      expect(screen.queryByRole('textbox')).toBeNull()
+    })
+
+    // The click this whole lot exists to remove: no closing the window, no hunting the title bar.
+    it('offers the shelf of projects, and hands the choice to the studio', async () => {
+      open(NO_PROJECT)
+      render(<NewDocumentWindow />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Two' }))
+
+      expect(answer).toHaveBeenCalledWith({ answer: 'recentProject', path: '/projects/Two' })
+    })
+
+    it('hands over the two pickers rather than raising them here', async () => {
+      open(NO_PROJECT)
+      render(<NewDocumentWindow />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Ouvrir un projet' }))
+      expect(answer).toHaveBeenCalledWith({ answer: 'openProject' })
+    })
   })
 
   it('shows nothing to fill in when nothing was asked', async () => {

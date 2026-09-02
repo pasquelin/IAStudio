@@ -1,6 +1,7 @@
 import { commandDescriptor, type CommandId } from '@shared/domain/command'
 import type { StudioBridge } from '@shared/ipc'
 import { saveDocument, saveDocumentAs } from '@/features/shell/documentIo'
+import { openNewDocument } from '@/features/shell/newDocument'
 import { importOtioz } from '@/features/shell/otioImport'
 import { revealChat } from '@/features/assistant/components/Assistant/Toast/revealChat'
 import { applyWorkspaceMove } from '@/helpers/applyWorkspaceMove'
@@ -9,7 +10,7 @@ import { commandScopeIsArmed, publishCommand } from '@/services/commandBus'
 import { reportFailure } from '@/services/diagnostics'
 import { useDictation } from '@/stores/dictation'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { panelsStore } from '@/stores/panels'
 
@@ -60,6 +61,11 @@ function runHere(command: CommandId): CommandRouting | null {
   switch (command) {
     case 'layout.reset':
       panelsStore.getState().reset()
+      return 'ran'
+    // The one door for both, and the surface only orders what it offers: a project is makeable
+    // from anywhere, and so is every kind of document.
+    case 'app.new':
+      void openNewDocument(toolSurface())
       return 'ran'
     case 'project.new':
       void useProject.getState().createPicked()

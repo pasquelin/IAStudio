@@ -37,6 +37,7 @@ export type CommandScope =
   | 'gui'
 
 export type CommandId =
+  | 'app.new'
   | 'project.new'
   | 'project.open'
   | 'document.save'
@@ -251,13 +252,25 @@ function command(descriptor: CommandDescriptor): CommandDescriptor {
 }
 
 export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
+  /**
+   * ⌘N makes a FILE, as it does in every other application — a project moved to ⇧⌘N for it on
+   * 2026-09-02. Not `raisesDialog`: this one opens a window of the studio's own, which an outside
+   * client can drive and read, where a native picker is a modal nothing can fill.
+   */
+  command({
+    id: 'app.new',
+    scope: 'global',
+    titleKey: 'commands.appNew.title',
+    helpKey: 'commands.appNew.help',
+    defaultBinding: 'Meta+KeyN',
+  }),
   command({
     id: 'project.new',
     scope: 'global',
     raisesDialog: true,
     titleKey: 'commands.projectNew.title',
     helpKey: 'commands.projectNew.help',
-    defaultBinding: 'Meta+KeyN',
+    defaultBinding: 'Shift+Meta+KeyN',
   }),
   command({
     id: 'project.open',

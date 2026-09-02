@@ -13,6 +13,12 @@ export type WindowNavItemProps = {
   hint: string
   onSelect: () => void
   /**
+   * Offered but not available — a kind of document with no project to write it into. Dimmed and
+   * not hidden: a row that vanishes reads as a display fault, and the column would change length
+   * under the eye of whoever opened a project.
+   */
+  disabled?: boolean
+  /**
    * How deep in a tree of sections; `undefined` for a flat list, which is what leaves such a
    * list its own left padding. A number rather than a padding string: the indent is a gauge, and
    * a caller writing pixels would be right at exactly one density.
@@ -42,6 +48,7 @@ export function WindowNavItem({
   active,
   hint,
   onSelect,
+  disabled,
   depth,
   className,
   nested,
@@ -51,6 +58,7 @@ export function WindowNavItem({
     <li>
       <button
         type="button"
+        disabled={disabled}
         aria-current={active ? 'page' : undefined}
         {...HINT_RIGHT(hint)}
         onClick={onSelect}
