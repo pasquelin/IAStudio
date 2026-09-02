@@ -18,9 +18,12 @@ export const PIXEL_ART_PROMPT_MAX = 90
 
 /**
  * 🛑 The WORD, never the substring: « no pixel artifacts » and « a pixel artist » both carry
- * « pixel art » and would have sent the grid nowhere, silently.
+ * « pixel art ». One reader for the whole studio — `suitsPixelArt` asked the same question and
+ * answered it differently, which is two truths about one genre in one folder.
  */
-const ALREADY_SAID = /pixel[\s-]?art(?![a-z])/i
+const SAID = /pixel[\s-]?art(?![a-z])/i
+
+export const saysPixelArt = (text: string): boolean => SAID.test(text)
 
 /**
  * The written prompt with the grid said after it. 🛑 Idempotent, and that is not a nicety: the
@@ -32,7 +35,7 @@ const ALREADY_SAID = /pixel[\s-]?art(?![a-z])/i
  */
 export function withPixelArtPrompt(written: string, columns: number, rows: number): string {
   const subject = written.trim()
-  if (subject.length === 0 || ALREADY_SAID.test(subject)) return written
+  if (subject.length === 0 || saysPixelArt(subject)) return written
 
   return `${subject}, ${pixelArtWords(columns, rows)}`
 }

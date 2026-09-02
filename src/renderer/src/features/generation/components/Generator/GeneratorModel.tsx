@@ -1,7 +1,7 @@
 import { useCallback, useId, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { providerOfModel, type AiRoleId } from '@shared/domain/aiRole'
-import { suitsPixelArt, type ModelSummary } from '@shared/domain/model'
+import { pixelArtFirst, suitsPixelArt, type ModelSummary } from '@shared/domain/model'
 import type { PlanAccess } from '@shared/domain/plan'
 import { ModelPicker } from '@/components/ModelPicker/ModelPicker'
 import { ModelDownloadDialog } from '@/features/models/components/ModelDownloadDialog'
@@ -62,11 +62,15 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
    * at offset 300 will not appear. Seeding the list with a search of its own would be a request
    * per opening, duplicates, and a list that moves while it is being read.
    */
-  const models = useMemo(() => {
-    if (!onGrid) return listed
-    const suited = listed.filter(suitsPixelArt)
-    return [...suited, ...listed.filter(one => !suited.includes(one))]
-  }, [listed, onGrid])
+  const models = useMemo(() => (onGrid ? pixelArtFirst(listed) : listed), [listed, onGrid])
+  // Memoised for the same reason `refusalOf` is, twenty lines down: an inline arrow hands the
+  // picker a new function per render, and every row memo with it.
+  const promotedOf = useCallback(
+    (one: ModelSummary) =>
+      onGrid && suitsPixelArt(one) ? t('generation.suitsPixelArt') : undefined,
+    [onGrid, t],
+  )
+
   const select = useModels(state => state.select)
   const chooseAiProvider = useAiModels(state => state.chooseAiProvider)
   const projectPath = useAiModels(state => state.overview?.projectPath ?? null)
@@ -94,9 +98,7 @@ export function GeneratorModel({ capability, modelId, name, plan }: GeneratorMod
         <ModelPicker
           id={field}
           models={models}
-          promotedOf={(one: ModelSummary) =>
-            onGrid && suitsPixelArt(one) ? t('generation.suitsPixelArt') : undefined
-          }
+          promotedOf={promotedOf}
           value={modelId}
           onChange={id => {
             const model = models.find(one => one.id === id)

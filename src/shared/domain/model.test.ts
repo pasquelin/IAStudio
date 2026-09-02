@@ -6,6 +6,7 @@ import {
   servesStudioCapability,
   STUDIO_CAPABILITIES,
   studioCapability,
+  pixelArtFirst,
   suitsPixelArt,
   tagLabel,
   TAGS_BY_FAMILY,
@@ -180,11 +181,44 @@ describe('what suits pixel art', () => {
   })
 
   // The name, the description and the tags alike: a person reads all three, and no catalogue
-  // count says which one a real pixel-art model wears — see `PIXEL_ART_WORDS`.
-  it('answers to the words wherever they are written', () => {
+  // count says which one a real pixel-art model wears.
+  it('answers to the genre wherever it is written', () => {
     expect(suitsPixelArt(model({ name: 'Pixel Art Sprites' }))).toBe(true)
-    expect(suitsPixelArt(model({ description: 'clean 8-bit game assets' }))).toBe(true)
+    expect(suitsPixelArt(model({ description: 'sprites, pixel-art ready' }))).toBe(true)
     expect(suitsPixelArt(model({ tags: ['pixelart'] }))).toBe(true)
     expect(suitsPixelArt(model({ name: 'Photoreal Portraits' }))).toBe(false)
+  })
+
+  /**
+   * 🛑 A promotion badges the row, so a false one is worse than a miss: these three all read as
+   * pixel art on a substring, and two of them are bit depth said in the only place it is said.
+   */
+  it('is not fooled by a word that merely starts with it, nor by bit depth', () => {
+    expect(suitsPixelArt(model({ name: 'Remove Pixel Artifacts' }))).toBe(false)
+    expect(suitsPixelArt(model({ description: 'outputs 16-bit colour depth' }))).toBe(false)
+    expect(suitsPixelArt(model({ description: '8-bit quantization, smaller files' }))).toBe(false)
+    expect(suitsPixelArt(model({ name: '8-bit Diffusion' }))).toBe(true)
+  })
+
+  /** The grid only ever reaches an image body — `EXTRAS` holds every other family at `null`. */
+  it('promotes nothing outside the family the grid can reach', () => {
+    expect(suitsPixelArt(model({ name: 'Pixel Art Sprites', family: 'audio' }))).toBe(false)
+  })
+
+  /**
+   * 🛑 The promise the picker is given: a SORT, so every model handed in comes back out. Counted
+   * rather than asserted per case — a filter that dropped one would still pass an order check.
+   */
+  it('lifts the suited ones without dropping any, and keeps the order in each half', () => {
+    const listed = [
+      model({ id: 'a', name: 'Photoreal' }),
+      model({ id: 'b', name: 'Pixel Art Sprites' }),
+      model({ id: 'c', name: 'Landscapes' }),
+      model({ id: 'd', name: 'Pixel Art Tiles' }),
+    ]
+
+    expect(pixelArtFirst(listed).map(one => one.id)).toEqual(['b', 'd', 'a', 'c'])
+    expect(pixelArtFirst(listed)).toHaveLength(listed.length)
+    expect(pixelArtFirst(listed.filter(one => !suitsPixelArt(one)))).toEqual([listed[0], listed[2]])
   })
 })
