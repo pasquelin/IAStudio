@@ -11,7 +11,6 @@ import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/aboutPanel'
 import { APP_ICON_PATH } from '@main/resources'
 import { buildMenu, noteNavigationPreset } from '@main/menu'
-import { customFrom, schemeFor } from '@shared/domain/navigationPreset'
 import { broadcast } from '@main/ipc/broadcast'
 import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
@@ -121,14 +120,10 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   buildMenu(services.settings.read().shortcuts.overrides)
   // Seeded here like the overrides above: `onChange` only fires on a WRITE, so without this the
   // ticked row lies on a stored preset and every row of it is inert until some other setting moves.
-  const startingThree = services.settings.read().three
-  noteNavigationPreset(
-    startingThree.navigationPreset,
-    schemeFor(startingThree.navigationPreset, customFrom(startingThree)).bindings,
-    preset =>
-      services.settings.write({
-        three: { ...services.settings.read().three, navigationPreset: preset },
-      }),
+  noteNavigationPreset(services.settings.read().three, preset =>
+    services.settings.write({
+      three: { ...services.settings.read().three, navigationPreset: preset },
+    }),
   )
 
   // Subscribed here, not beside the lock: reached any earlier, `showMainWindow` would find no
