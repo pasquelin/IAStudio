@@ -797,6 +797,9 @@ Sur mon personnage principal, dans la scène Test MCP :
 - [ ] « Ajoute une contrainte IK sur sa jambe gauche. »
 - [ ] « Retire cette contrainte IK. »
 - [x] « Enlève complètement le squelette de ce personnage. »
+- [ ] « Pose un point d'attache sur sa main droite, appelé Main Droite. »
+- [ ] « Accroche le cube à Main Droite. »
+- [ ] « Retire le point d'attache Main Droite. »
 
 ## 51. Calques avancés et repères
 

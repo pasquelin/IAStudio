@@ -38,8 +38,10 @@ import {
   addCharacterBone,
   addCharacterHands,
   addCharacterIkChain,
+  addCharacterSocket,
   removeCharacterBone,
   removeCharacterIkChain,
+  removeCharacterSocket,
   renameCharacterBone,
   setCharacterBoneRole,
   setCharacterRig,
@@ -47,6 +49,7 @@ import {
 import { workshopIdOf } from '@/character/characterStage'
 import { useCharacters } from '@/stores/character'
 import { nodeById, type ModelNode, type SceneState } from '@/engines/scene/sceneState'
+import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { newId } from '@/helpers/ids'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useAnimationViews } from '@/stores/animationView'
@@ -464,6 +467,22 @@ export const RIG_HANDLERS: ActionHandlers = {
       state => (state.rig ? addCharacterHands() : null),
       'this character carries no rig to add hands to — rig.fit builds one first',
     ),
+
+  'socket.add': input =>
+    editCharacter(state => {
+      const bone = boneOf(state, textOf(input, 'bone'))
+      const name = textOf(input, 'name') ?? ''
+      return bone === null || name === ''
+        ? null
+        : addCharacterSocket({ id: newId(), name, bone, rest: IDENTITY_TRANSFORM })
+    }, '"bone" must name a bone of this character and "name" the point — rig.state answers "bones"'),
+
+  'socket.remove': input =>
+    editCharacter(state => {
+      const named = textOf(input, 'name')
+      const socket = state.sockets.find(one => one.name === named || one.id === named)
+      return socket ? removeCharacterSocket(socket.id) : null
+    }, '"name" must name an attachment point this character carries — rig.state answers "sockets"'),
 
   'bone.add': input =>
     editCharacter(state => {

@@ -165,6 +165,14 @@ export function setNodeVisible(id: string, visible: boolean): NodeEdit {
   return editNode('visible', id, { visible })
 }
 
+/**
+ * Hangs a node on one of its parent's attachment points, or takes it off — `null` lets it hang
+ * from the character itself again.
+ */
+export function attachNode(id: string, socket: string | null): NodeEdit {
+  return editNode('attach', id, socket === null ? { attach: undefined } : { attach: { socket } })
+}
+
 export function renameNode(id: string, name: string): NodeEdit {
   return editNode('rename', id, { name })
 }
@@ -264,7 +272,10 @@ export function setLight(id: string, light: LightDescriptor): NodeEdit {
  * geometry, which is exactly what the union exists to forbid.
  */
 type NodePatch = Partial<
-  Pick<SceneNode, 'name' | 'visible' | 'transform' | 'castShadow' | 'receiveShadow' | 'components'>
+  Pick<
+    SceneNode,
+    'name' | 'visible' | 'transform' | 'castShadow' | 'receiveShadow' | 'components' | 'attach'
+  >
 >
 
 /** What one edit writes on one node, and `null` when the node is not its business. */

@@ -621,6 +621,10 @@
         "title": "Rename an object",
         "description": "Calls one object of the scene in front something else. The id does not change, so nothing that pointed at it is lost."
       },
+      "nodeAttach": {
+        "title": "Hang an object on a character",
+        "description": "Hangs an object on the attachment point of the character it belongs to — a sword in a hand. With no point named, the object follows the whole character."
+      },
       "nodeTransform": {
         "title": "Place an object",
         "description": "Moves, turns or scales one object. Rotations are Euler angles in radians, and every axis left out keeps the value the object already had."
@@ -724,6 +728,14 @@
       "rigHands": {
         "title": "Add the finger bones",
         "description": "Puts the thirty finger bones at rest on whatever hands the skeleton already holds. With no hands recognised, nothing is written."
+      },
+      "socketAdd": {
+        "title": "Lay an attachment point",
+        "description": "Lays a point on a bone of the character in front that an object of a scene can follow — a hand, a back. The point lives in the character’s file."
+      },
+      "socketRemove": {
+        "title": "Remove an attachment point",
+        "description": "Removes an attachment point from the character in front. Whatever followed it falls back onto the character itself."
       },
       "boneAdd": {
         "title": "Add a bone",
@@ -1496,7 +1508,8 @@
       "memoryFile": "Project file this is about",
       "memoryTo": "Id of the memory pointed at",
       "projectName": "Project name",
-      "projectParent": "Created in"
+      "projectParent": "Created in",
+      "socket": "Attachment point"
     },
     "listening": "The assistant is listening",
     "done": "The assistant has answered",

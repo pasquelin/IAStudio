@@ -20,6 +20,7 @@ import type { BvhBuilder } from './bvhBuilder'
 import type { Retarget } from './retarget'
 import type * as ModelCache from './modelCache'
 import { animationTrack, cameraShot } from './animation-fixtures'
+import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
 import { cameraNodeFixture, meshNode, modelNodeFixture, pathNodeFixture } from './scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneNode, type SceneState } from './sceneState'
 import {
@@ -257,6 +258,32 @@ describe('SceneRenderer and the bones a rig carries', () => {
     engine.poseBone('a', 'b1', { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0.5, z: 0 } })
 
     expect(loaded.getObjectByName('b1')?.position.y).toBeCloseTo(0.5, 5)
+    engine.dispose()
+  })
+
+  /**
+   * A sword in a hand: the node still hangs from the CHARACTER, and the socket says which of its
+   * bones to follow. Hung from the model itself, it stood still while the arm swung.
+   */
+  it('hangs a node attached to a socket on the bone that socket names', async () => {
+    const loaded = riggedModel([walk()])
+    loaded.userData = {
+      [STUDIO_METADATA_KEY]: {
+        character: {
+          sockets: [{ id: 'hand', name: 'Main', bone: 'b1', rest: IDENTITY_TRANSFORM }],
+        },
+      },
+    }
+    const engine = withModel(loaded)
+    const sword = { ...meshNode('sword'), parentId: 'a', attach: { socket: 'hand' } }
+
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null), sword] })
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null), sword] })
+
+    await vi.waitFor(() =>
+      expect(loaded.getObjectByName('b1')?.children.map(child => child.name)).toContain('sword'),
+    )
     engine.dispose()
   })
 

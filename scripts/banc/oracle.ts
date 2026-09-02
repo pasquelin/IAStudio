@@ -183,6 +183,12 @@ export const rig = (_run: Run) => {
   return open?.rig ?? null
 }
 
+/** The attachment points that character carries — they live in its file, never in the scene. */
+export const sockets = (_run: Run) => {
+  const open = Object.values(useCharacters.getState().states).find(one => one.assetId !== '')
+  return open?.sockets ?? []
+}
+
 /**
  * The MATERIAL an imported model wears, by the id of its document — a reference, so nothing of it
  * is on the node to read. `null` means the model wears what its own file carries.

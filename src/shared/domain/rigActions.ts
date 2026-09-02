@@ -118,6 +118,27 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
+    name: 'socket.add',
+    titleKey: 'assistant.actions.socketAdd.title',
+    descriptionKey: 'assistant.actions.socketAdd.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      BONE,
+      { key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true },
+    ],
+  }),
+  action({
+    name: 'socket.remove',
+    titleKey: 'assistant.actions.socketRemove.title',
+    descriptionKey: 'assistant.actions.socketRemove.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [{ key: 'name', kind: 'text', labelKey: 'assistant.fields.name', required: true }],
+  }),
+  action({
     // The roles keep the standard's own spelling, untranslated: they are the identifiers of the
     // Mixamo set. An absent role says the bone fills none.
     name: 'bone.role',

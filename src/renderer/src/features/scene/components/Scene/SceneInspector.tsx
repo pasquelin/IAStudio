@@ -37,6 +37,7 @@ import { MaterialSection } from '../../../material/components/Material/MaterialS
 import { ModelDressSection } from '../ModelDressSection/ModelDressSection'
 import { materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { PathSection } from '../PathSection'
+import { AttachSection } from '../AttachSection'
 import { ShadowSection } from '../ShadowSection'
 import { SpriteSection } from '../SpriteSection'
 import { TextSection } from '../TextSection'
@@ -162,6 +163,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
             edit={edit}
           />
           <ShadowSection node={node} selection={selection} edit={edit} />
+          {/* The anchor alone: two objects hung on one socket would stand inside each other. */}
+          <AttachSection node={node} documentId={documentId} edit={edit} />
           {/* The anchor alone, unlike the sections above: a component carries values of its own,
               and writing one onto every selected object would overwrite what each was given. */}
           <ComponentsSection node={node} edit={edit} />

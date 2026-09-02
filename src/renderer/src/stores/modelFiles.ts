@@ -1,3 +1,4 @@
+import type { CharacterSocket } from '@shared/domain/character'
 import { create } from 'zustand'
 import { withoutKey } from '@/helpers/objects'
 import type { RetargetFit } from '@/engines/scene/retarget'
@@ -25,6 +26,12 @@ type ModelFilesState = {
     lengths?: Readonly<Record<string, number>>,
   ) => void
   reportRig: (documentId: string, nodeId: string, rig: RigState) => void
+  /**
+   * The attachment points each character carries, by node. They live in the `.glb`, so only the
+   * engine that loaded it ever sees them — and the inspector has to offer them by name.
+   */
+  sockets: Record<string, Record<string, readonly CharacterSocket[]>>
+  reportSockets: (documentId: string, nodeId: string, sockets: readonly CharacterSocket[]) => void
   /** How many MATERIALS each model's file carries — its slots. The count lives in the GLB. */
   materials: Record<string, Record<string, number>>
   reportMaterials: (documentId: string, nodeId: string, count: number) => void
@@ -69,6 +76,15 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       rigs: {
         ...state.rigs,
         [documentId]: { ...state.rigs[documentId], [nodeId]: rig },
+      },
+    })),
+
+  sockets: {},
+  reportSockets: (documentId, nodeId, sockets) =>
+    set(state => ({
+      sockets: {
+        ...state.sockets,
+        [documentId]: { ...state.sockets[documentId], [nodeId]: sockets },
       },
     })),
 

@@ -148,6 +148,34 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     passed: run => read.rig(run) === null,
   },
 
+  // A point on a bone, then something hung on it: a sword in a hand is the whole reason a
+  // character carries points at all, and neither half had a door a client could reach.
+  {
+    name: '50.11 lays an attachment point on the right hand',
+    said: ["Pose un point d'attache sur sa main droite, appelé Main Droite."],
+    setup: rigged,
+    passed: run => read.sockets(run).some(one => one.name === 'Main Droite'),
+  },
+  {
+    name: '50.12 hangs the cube on that point',
+    said: ['Accroche le cube à Main Droite.'],
+    setup: async studio => {
+      await rigged(studio)
+      await studio.run('socket.add', { bone: 'RightHand', name: 'Main Droite' })
+      await studio.run('node.add', { kind: 'box', name: 'Cube' })
+    },
+    passed: run => read.nodeNamed(run, 'Cube')?.attach !== undefined,
+  },
+  {
+    name: '50.13 takes that attachment point back off',
+    said: ["Retire le point d'attache Main Droite."],
+    setup: async studio => {
+      await rigged(studio)
+      await studio.run('socket.add', { bone: 'RightHand', name: 'Main Droite' })
+    },
+    passed: run => read.sockets(run).length === 0,
+  },
+
   {
     name: '51.1 groups the two layers under Fond',
     said: ['Regroupe mes deux calques dans un groupe appelé Fond.'],

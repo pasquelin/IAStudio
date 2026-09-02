@@ -251,6 +251,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onClips: (nodeId, clips, lengths) =>
         useModelFiles.getState().report(documentId, nodeId, clips, lengths),
       onRig: (nodeId, rig) => useModelFiles.getState().reportRig(documentId, nodeId, rig),
+      // The attachment points of the file, which only the engine that loaded it ever sees: a
+      // node hangs on one by name, and the inspector has to offer them.
+      onCharacter: (nodeId, _rig, extras) =>
+        useModelFiles.getState().reportSockets(documentId, nodeId, extras?.sockets ?? []),
       onMaterials: (nodeId, count) =>
         useModelFiles.getState().reportMaterials(documentId, nodeId, count),
       // The project's, not the document's: the same character opens in the next document of this

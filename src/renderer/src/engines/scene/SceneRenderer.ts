@@ -213,7 +213,7 @@ import type { Rig } from '@shared/domain/rig'
 import type { HumanoidRole } from '@shared/domain/humanoid'
 import { skeletonSignatureOf, type SkeletonProfile } from '@shared/domain/skeletonProfile'
 import type { CharacterExtras } from '@shared/domain/character'
-import { characterOf } from './rigRead'
+import { characterExtrasIn, characterOf } from './rigRead'
 import { meshSampleOf, type MeshSample } from './rigSnap'
 import type { GlbSkinAttributes } from './glbSkin'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
@@ -3893,8 +3893,22 @@ export class SceneRenderer {
 
   /** The object a node hangs from, or the scene for a node that hangs from nothing. */
   private parentObjectOf(id: string): Object3D {
-    const parentId = this.applied.get(id)?.parentId
-    return (parentId ? this.objects.get(parentId) : null) ?? this.viewport.scene
+    const applied = this.applied.get(id)
+    return (applied && this.hangerOf(applied)) ?? this.viewport.scene
+  }
+
+  /**
+   * What this node hangs FROM: its parent, or the bone of the socket it is attached to.
+   *
+   * The socket is read off the parent's own file rather than from the document: sockets live in
+   * the `.glb`, and the studio window learns them from the very object that landed.
+   */
+  private hangerOf(node: SceneNode): Object3D | null {
+    const parent = node.parentId ? this.objects.get(node.parentId) : this.viewport.scene
+    if (!parent || !node.attach) return parent ?? null
+
+    const socket = characterExtrasIn(parent)?.sockets?.find(one => one.id === node.attach?.socket)
+    return (socket && parent.getObjectByName(socket.bone)) ?? parent
   }
 
   /**
@@ -3911,7 +3925,7 @@ export class SceneRenderer {
     const object = this.objects.get(node.id)
     if (!object || object.parent === this.pivot) return
 
-    const parent = node.parentId ? this.objects.get(node.parentId) : this.viewport.scene
+    const parent = this.hangerOf(node)
     // A parent that is not built is not a reason to drop the child: the scene keeps it, and the
     // next sync — where the parent exists — hangs it where it belongs.
     if (!parent || object.parent === parent) return

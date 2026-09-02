@@ -18,6 +18,7 @@ import {
   removeNode,
   removeNodes,
   rootedIn,
+  attachNode,
   renameNode,
   setCameraOn,
   setGeometry,
@@ -129,6 +130,30 @@ describe('renameNode', () => {
     const renamed = command.apply(start)
     expect(renamed.nodes[0]?.name).toBe('Cube')
     expect(command.revert(renamed).nodes[0]?.name).toBe('a')
+  })
+})
+
+/**
+ * A socket REFINES the parent, it does not replace it: the node still hangs from the character,
+ * and this says which of its points to follow.
+ */
+describe('attachNode', () => {
+  it('hangs a node on a socket, and takes it off again', () => {
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
+
+    const hung = attachNode('a', 'socket-hand').apply(start)
+
+    expect(nodeById(hung, 'a')?.attach).toEqual({ socket: 'socket-hand' })
+    expect(nodeById(attachNode('a', null).apply(hung), 'a')?.attach).toBeUndefined()
+  })
+
+  it('leaves the parent alone: what a socket says is WHERE on it, never on what', () => {
+    const child = { ...mesh('b'), parentId: 'a' }
+    const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a'), child], selectedIds: [] }
+
+    const hung = attachNode('b', 'socket-hand').apply(start)
+
+    expect(nodeById(hung, 'b')?.parentId).toBe('a')
   })
 })
 

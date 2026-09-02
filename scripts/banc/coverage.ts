@@ -206,6 +206,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'node.combineIntoSolid': ['6.10', '6.11', '6.12', '6.13', '6.14'],
   'node.swapSolidMatterAndTool': ['6.16'],
   'node.separate': ['6.13'],
+  'node.attach': ['50.12'],
   'node.rename': ['6.2', '6.9', '8.2'],
   'node.transform': [
     '6.3',
@@ -288,6 +289,8 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'rig.fit': ['50.2'],
   'rig.clear': ['50.10'],
   'rig.hands': ['50.3'],
+  'socket.add': ['50.11'],
+  'socket.remove': ['50.13'],
   'bone.add': ['50.4'],
   'bone.remove': ['50.7'],
   'bone.rename': ['50.5'],
