@@ -40,14 +40,21 @@ const WHEELS = [
 
 const wheelName = (car: string, corner: string): string => `${car} ${corner}`
 
-/** The wheel nodes are drawn where a wheel RESTS; the engine anchors each spring above that. */
-export function carNodes(at: Vector3, name = 'Car', yaw = 0): SceneNode[] {
+/**
+ * `heading` is where the car is meant to GO. 🛑 Its nose is at −Z — `WHEELS` puts the front axle
+ * there — so the half turn is what makes a heading of zero drive down +Z rather than back up it.
+ * The wheels are drawn where one RESTS; the engine anchors each spring above that.
+ */
+export function carNodes(at: Vector3, name = 'Car', heading = 0): SceneNode[] {
   const body = {
     ...meshNode(
       { kind: 'box', width: HALF_WIDTH * 2, height: HALF_HEIGHT * 2, depth: HALF_LENGTH * 2 },
       {
         // The wheels and the cabin hang off the body, so turning it turns the whole machine.
-        transform: transformAt({ ...at, y: at.y + RIDE_HEIGHT }, { x: 0, y: yaw, z: 0 }),
+        transform: transformAt(
+          { ...at, y: at.y + RIDE_HEIGHT },
+          { x: 0, y: heading + Math.PI, z: 0 },
+        ),
         material: surface('#c9453d'),
         name,
       },

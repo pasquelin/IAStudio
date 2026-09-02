@@ -5,6 +5,7 @@ import {
   DirectionalLight,
   HemisphereLight,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   type Object3D,
   PerspectiveCamera,
@@ -15,7 +16,14 @@ import {
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './lightTypes'
-import { buildPath, geometryFor, PATH_CURVE_NAME, sizeKnobFor } from './threeFactory'
+import {
+  buildPath,
+  dressWithRail,
+  geometryFor,
+  PATH_CURVE_NAME,
+  PATH_KNOB_PREFIX,
+  sizeKnobFor,
+} from './threeFactory'
 import { DEFAULT_MATERIAL } from './sceneState'
 import {
   applyCamera,
@@ -483,6 +491,43 @@ describe('applyCamera', () => {
     applyCamera(camera, { fov: 50, near: 0.1, far: 5 }, 40)
 
     expect(seen).toEqual([5])
+  })
+})
+
+describe('dressWithRail', () => {
+  const rail = {
+    ...DEFAULT_PATH,
+    points: [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 },
+    ],
+  }
+
+  /** A band wears the handles of the rail it is swept along — the mesh itself carries them. */
+  it('hangs a line and a knob per point on whatever carries the rail', () => {
+    const mesh = dressWithRail(new Mesh(), rail, '#ffffff')
+    const knobs = mesh.children.filter(child => child.name.startsWith(PATH_KNOB_PREFIX))
+
+    expect(knobs).toHaveLength(3)
+    expect(mesh.getObjectByName(PATH_CURVE_NAME)).toBeDefined()
+  })
+
+  /**
+   * 🛑 Drawn THROUGH the matter: a rail hangs in the air, but a band's run lies inside the very
+   * surface it shapes — its knobs were behind it, and a handle one cannot see is no handle.
+   */
+  it('draws its handles in front of every surface', () => {
+    const knob = dressWithRail(new Mesh(), rail, '#ffffff').children.find(child =>
+      child.name.startsWith(PATH_KNOB_PREFIX),
+    )
+
+    expect(
+      knob instanceof Mesh && knob.material instanceof MeshBasicMaterial
+        ? knob.material.depthTest
+        : true,
+    ).toBe(false)
+    expect(knob?.renderOrder).toBeGreaterThan(0)
   })
 })
 

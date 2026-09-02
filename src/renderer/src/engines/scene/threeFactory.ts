@@ -197,6 +197,9 @@ export function cameraBody(fill: string, edge: string): Object3D {
 /** How big a control point is built, in scene units. What it ends up drawn at is `KNOB_SHARE`. */
 export const PATH_KNOB_RADIUS = 0.14
 
+/** Past every surface of the scene, which all draw at zero — a handle one cannot see is no handle. */
+const KNOB_ORDER = 10
+
 /**
  * How much of the visible height a knob covers, whatever the distance: a hundred-and-twenty-eighth
  * of it, so about 14 px across on a viewport 900 px tall — the size a control point is drawn at in
@@ -250,6 +253,7 @@ export function dressWithRail(
   colour: string,
 ): Object3D {
   const line = new Line(new BufferGeometry(), new LineBasicMaterial({ color: colour }))
+  line.renderOrder = KNOB_ORDER
   line.name = PATH_CURVE_NAME
   line.geometry.setFromPoints(pathPoints(descriptor))
   object.add(line)
@@ -276,8 +280,11 @@ export function dressWithRail(
 export function pathKnob(index: number, colour: string): Mesh {
   const knob = new Mesh(
     new SphereGeometry(PATH_KNOB_RADIUS, 8, 6),
-    new MeshBasicMaterial({ color: colour }),
+    // 🛑 Drawn THROUGH whatever stands in front: a rail of its own hangs in the air, but a band
+    // is swept along its run, so every knob of one sits inside the matter it shapes.
+    new MeshBasicMaterial({ color: colour, depthTest: false }),
   )
+  knob.renderOrder = KNOB_ORDER
   knob.name = knobName(index)
   knob.onBeforeRender = (_renderer, _scene, camera) => sizeKnobFor(knob, camera)
   knob.onAfterRender = () => restoreKnob(knob)
