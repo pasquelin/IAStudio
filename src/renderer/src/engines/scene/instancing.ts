@@ -2,8 +2,6 @@ import { InstancedMesh, Mesh, type BufferGeometry, type Material, type Object3D 
 import { stableKey } from '@shared/hash'
 import { TRIANGLES_PER_REGION, regionsByGrid, type SpatialRegions } from './instanceRegions'
 import {
-  carriesNoNode,
-  DRAWN_BY_INSTANCE,
   heldOutOfDraw,
   spellingOf,
   sweep,
@@ -57,9 +55,8 @@ export function createInstancedGroups(
     rebuild: (nodes, objectOf) => {
       clear()
 
-      const held: Mesh[] = []
       let instanced = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf)) {
+      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
         const first = worn.meshes[0]
         if (!first) continue
 
@@ -94,13 +91,8 @@ export function createInstancedGroups(
           drawn.push(instance)
         }
 
-        for (const mesh of worn.meshes) {
-          mesh.layers.set(DRAWN_BY_INSTANCE)
-          if (carriesNoNode(mesh, objectOf)) held.push(mesh)
-        }
         instanced += worn.meshes.length
       }
-      sources.hold(held)
       return instanced
     },
 

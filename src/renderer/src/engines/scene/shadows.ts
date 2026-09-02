@@ -85,9 +85,9 @@ export function applyShadowFlags(
  * one from carrying a string that reads like an id.
  */
 export function ownedByAnotherNode(
-  objects: ReadonlyMap<string, Object3D>,
+  objectOf: (id: string) => Object3D | undefined,
 ): (child: Object3D) => boolean {
-  return child => objects.get(child.name) === child
+  return child => objectOf(child.name) === child
 }
 
 /**

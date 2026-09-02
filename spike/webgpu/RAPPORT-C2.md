@@ -11,7 +11,7 @@ Même banc qu'en phase 1 — `engine.html` monte le VRAI `SceneRenderer`, `apply
 ## Ce que cette phase a livré, et ce qu'elle n'a pas livré
 
 **2A a atteint son but, largement.** Les corps que dessine un groupe ne sont plus parcourus :
-la passe de scène de S3 tombe de **16,2 · 18,1 ms à 0,37 · 0,36**, et la frame de 22 · 25 ms à
+la passe de scène de S3 tombe de **16,2 · 18,1 ms à 0,28 · 0,26**, et la frame de 22 · 25 ms à
 8,3 — au vsync, 120 FPS contre 45,5 · 39,7.
 
 🛑 **2B n'a rien livré, et c'est un résultat, pas un abandon.** Ses trois leviers ont été mesurés :
@@ -57,7 +57,7 @@ son parent et ne fait rien. Ce qui lit **vers le bas** ne la voit plus.
 |---|---|---|
 | le rendu et chaque carte d'ombre | `projectObject` sur `children` | **c'est le but** |
 | `scene.updateMatrixWorld()` | `children` | ne les atteint plus — `refreshSources` compose les leurs, entre la passe et le regroupement |
-| l'export | `placedCopy` puis `traverse` des copies | **les perdrait** — `asHung` les raccroche le temps de l'appel, et `holdSources` les ressort |
+| l'export | `placedCopy` puis `traverse` des copies | **les perdrait** — `asHung` les raccroche le temps de l'appel, et `syncSourceWalk` les ressort |
 | `nodeAt`, `sceneryUnder`, le snap de surface | `intersectObjects([...objects.values()])` | rien : le rayon prend une liste, jamais la scène |
 | `statsOf` | `objects.values()` puis les enfants, dédoublonné par `met` | rien : chaque source y est encore, comptée une fois |
 | `framedObjects`, `sceneHeight`, la boîte d'ombre | `expandByObject` par objet d'`objects` | rien : chacune est étendue pour elle-même |
@@ -69,17 +69,20 @@ son parent et ne fait rien. Ce qui lit **vers le bas** ne la voit plus.
 
 | scène | frame | passe de scène | GPU | FPS | appels |
 |---|---|---|---|---|---|
-| S1 · 544 | 8,3 · 8,3 → 8,3 · 8,3 | 0,22 · 0,25 → **0,18 · 0,17** | 1,72 · 1,21 → 1,51 · 1,29 | 120 → 120 | 122 |
-| S2 · 10 000 | 8,3 · 8,3 → 8,3 · 8,3 | 1,69 · 1,65 → **0,17 · 0,11** | 2,97 · 2,08 → 2,41 · 2,00 | 120 → 120 | 57 |
-| S3 · 50 000 | **22,0 · 25,2 → 8,3 · 8,3** | 16,2 · 18,1 → **0,37 · 0,36** | 6,64 · 12,8 → 4,17 · 4,18 | **45,5 · 39,7 → 120** | 169 |
+| S1 · 544 | 8,3 · 8,3 → 8,3 · 8,3 | 0,22 · 0,25 → **0,17 · 0,19** | 1,72 · 1,21 → 1,33 · 1,99 | 120 → 120 | 122 |
+| S2 · 10 000 | 8,3 · 8,3 → 8,3 · 8,3 | 1,69 · 1,65 → **0,11 · 0,12** | 2,97 · 2,08 → 1,67 · 3,36 | 120 → 120 | 57 |
+| S3 · 50 000 | **22,0 · 25,2 → 8,3 · 8,4** | 16,2 · 18,1 → **0,28 · 0,26** | 6,64 · 12,8 → 4,15 · 6,58 | **45,5 · 39,7 → 120 · 119** | 169 |
 
-Passe de scène en vue tournée (70 % hors champ) : S3 **16,4 · 15,7 → 0,32 · 0,29**.
+Passe de scène en vue tournée (70 % hors champ) : S3 **16,4 · 15,7 → 0,27 · 0,26**.
+
+Le GPU, lui, ne se compare pas d'un ordre à l'autre — 4,15 en ordre normal contre 6,58 en inversé
+sur la MÊME scène, comme C1 l'écrivait déjà de sa colonne. Seules les passes CPU tranchent.
 
 Le lot y gagne aussi, mais **en vue tournée seulement** — S3 20,8 · 22,4 → 5,5 · 5,7 ms de passe ;
 plein champ son parcours par instance domine et ne bouge pas (27,7 · 29,6 → 26,5 · 26,0). Le défaut
 reste `instanced`, comme C1 l'a tranché.
 
-**À 50 000 corps il ne reste plus de passe de scène à optimiser** : 0,37 ms, c'est le dessin des
+**À 50 000 corps il ne reste plus de passe de scène à optimiser** : 0,28 ms, c'est le dessin des
 169 appels et rien d'autre.
 
 ## 4. Le prix, écrit plutôt que déduit
@@ -87,9 +90,9 @@ reste `instanced`, comme C1 l'a tranché.
 Un changement de CONTENU paie une passe de plus sur les enfants de chaque parent, plus la
 recomposition des matrices que le parcours n'atteint plus, plus l'index des enfants du § 8.
 
-**`1 ajouté` sur S3, cinq relevés** : C1 donnait 104,4 · 95,8 ; C2 donne 101 · 105,8, et trois
-passes intermédiaires 108,1 · 104,0 · 116,1. **La colonne ne sépare pas les deux versions** — son
-bruit propre est du même ordre que ce qui a été ajouté.
+**`1 ajouté` sur S3, sept relevés** : C1 donnait 104,4 · 95,8 ; C2 donne 109,5 · 110,1, et les
+cinq passes intermédiaires 101 · 105,8 · 108,1 · 104,0 · 116,1. **La colonne ne sépare pas les
+deux versions** — son bruit propre est du même ordre que ce qui a été ajouté.
 
 🛑 **La première écriture, elle, coûtait bien 30 %** : elle raccrochait toutes les sources puis les
 ressortait, deux passes dont la seconde défait la première. Corrigée en une passe unique avant
@@ -102,10 +105,10 @@ même scène. **Aucune conclusion mémoire n'est tirée.**
 
 - **Une source dont un NŒUD dépend.** Détachée, l'enfant partirait avec elle et `hangFromParent`,
   qui lit `parent`, ne le ramènerait jamais. Elle reste dans le parcours et continue d'être
-  dessinée par son groupe (`carriesNoNode`).
+  dessinée par son groupe (`sweep`).
 - **Toutes les sources, dès qu'un mode dessine les ARÊTES.** `applyWireOverlay` accroche un
   `LineSegments` sous chaque mesh, et une source hors du parcours emporte son contour. Le mode
-  `both` repaie donc les 16 ms de S3 (`holdSources`). Le mode `wireframe` sans quads n'est pas
+  `both` repaie donc les 16 ms de S3 (`syncSourceWalk`). Le mode `wireframe` sans quads n'est pas
   concerné : il passe par le drapeau du matériau, et `showsEdges` le dit.
 - **Une source qu'un glissé multiple a portée sous le pivot** : elle y revient à la fin du geste et
   reste dans le parcours jusqu'au prochain changement de contenu. Une poignée d'objets, pas
@@ -202,7 +205,7 @@ par le regroupement suivant, géométrie libérée comprise. `unhang` ferme le c
 
 ## 10. Où part le temps, maintenant
 
-Sur S3, la frame tient à 8,3 ms au vsync, dont **4,2 ms de GPU** et 0,37 ms de passe de scène. Le
+Sur S3, la frame tient à 8,3 ms au vsync, dont **4,2 ms de GPU** et 0,28 ms de passe de scène. Le
 GPU, c'est **14,3 M de triangles** par frame — 7,1 M par passe, dessinés deux fois. Et ces
 triangles viennent des FORMES : les 16 667 sphères à 352 triangles pèsent 5,9 des 7,1 M.
 

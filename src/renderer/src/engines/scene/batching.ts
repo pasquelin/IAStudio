@@ -10,8 +10,6 @@ import './bvhPatches'
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
 import {
-  carriesNoNode,
-  DRAWN_BY_INSTANCE,
   DRAWN_TRIANGLES,
   heldOutOfDraw,
   spellingOf,
@@ -70,9 +68,8 @@ export function createBatchedGroups(
     rebuild: (nodes, objectOf) => {
       clear()
 
-      const held: Mesh[] = []
       let batched = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf)) {
+      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
         const first = worn.meshes[0]
         if (!first) continue
 
@@ -116,13 +113,8 @@ export function createBatchedGroups(
         host.add(lot)
         drawn.push(lot)
 
-        for (const mesh of worn.meshes) {
-          mesh.layers.set(DRAWN_BY_INSTANCE)
-          if (carriesNoNode(mesh, objectOf)) held.push(mesh)
-        }
         batched += worn.meshes.length
       }
-      sources.hold(held)
       return batched
     },
 

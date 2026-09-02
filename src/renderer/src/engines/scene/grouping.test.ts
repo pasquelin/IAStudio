@@ -1,18 +1,12 @@
 import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { describe, expect, it } from 'vitest'
-import { carriesNoNode, heldOutOfDraw, unhang } from './grouping'
+import { heldOutOfDraw, unhang } from './grouping'
+import { walked } from './scene-fixtures'
 
 const bodyIn = (parent: Object3D): Mesh => {
   const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial())
   parent.add(mesh)
   return mesh
-}
-
-/** What a walk of the tree actually meets — the one question this module exists to answer. */
-const walked = (root: Object3D): Object3D[] => {
-  const met: Object3D[] = []
-  root.traverse(child => met.push(child))
-  return met
 }
 
 describe('holding the sources of a group out of the walk', () => {
@@ -140,31 +134,5 @@ describe('unhang', () => {
 
     expect(scene.children).not.toContain(mesh)
     expect(mesh.parent).toBeNull()
-  })
-})
-
-describe('carriesNoNode', () => {
-  it('lets a bare source leave the walk', () => {
-    const mesh = bodyIn(new Object3D())
-
-    expect(carriesNoNode(mesh, () => undefined)).toBe(true)
-  })
-
-  it('lets one wearing an overlay leave it too', () => {
-    const mesh = bodyIn(new Object3D())
-    const overlay = new Object3D()
-    overlay.name = 'edges'
-    mesh.add(overlay)
-
-    expect(carriesNoNode(mesh, () => undefined)).toBe(true)
-  })
-
-  it('keeps in the walk a source another node hangs from', () => {
-    const mesh = bodyIn(new Object3D())
-    const child = new Object3D()
-    child.name = 'n7'
-    mesh.add(child)
-
-    expect(carriesNoNode(mesh, id => (id === 'n7' ? child : undefined))).toBe(false)
   })
 })

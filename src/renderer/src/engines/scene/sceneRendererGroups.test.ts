@@ -2,7 +2,7 @@ import { BatchedMesh, Group, InstancedMesh, Matrix4, type Object3D } from 'three
 import { byCodeUnit } from '@shared/text'
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer, type GroupingStrategy } from './SceneRenderer'
-import { directionalLight, gltfNodesOf, groupNodeFixture, meshNode } from './scene-fixtures'
+import { directionalLight, gltfNodesOf, groupNodeFixture, meshNode, walked } from './scene-fixtures'
 import { WORTH_INSTANCING } from './grouping'
 import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './sceneState'
 
@@ -44,6 +44,22 @@ const sceneOf = (nodes: SceneNode[]): SceneState => ({
   ...EMPTY_SCENE,
   nodes: [directionalLight('sun'), ...nodes],
 })
+
+/** `as`: reaching for what the engine drew is the whole point, and it is private by design. */
+const graphOf = (renderer: SceneRenderer): Object3D =>
+  (renderer as unknown as { viewport: { scene: Object3D } }).viewport.scene
+
+/** Where the group put the body of one slot, along x. */
+const placedAt = (renderer: SceneRenderer, slot: number): number => {
+  const held = new Matrix4()
+  for (const child of graphOf(renderer).children) {
+    if (child instanceof InstancedMesh) child.getMatrixAt(slot, held)
+    else if (child instanceof BatchedMesh) child.getMatrixAt(slot, held)
+    else continue
+    return held.elements[12] ?? 0
+  }
+  throw new Error('nothing was grouped')
+}
 
 const rendererOf = (grouping: GroupingStrategy = 'batched'): SceneRenderer =>
   new SceneRenderer({
@@ -132,19 +148,6 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
       },
     }))
 
-  const placedAt = (renderer: SceneRenderer, slot: number): number => {
-    // `as`: reaching for what the engine drew is the whole point, and it is private by design.
-    const scene = (renderer as unknown as { viewport: { scene: Object3D } }).viewport.scene
-    const held = new Matrix4()
-    for (const child of scene.children) {
-      if (child instanceof InstancedMesh) child.getMatrixAt(slot, held)
-      else if (child instanceof BatchedMesh) child.getMatrixAt(slot, held)
-      else continue
-      return held.elements[12] ?? 0
-    }
-    throw new Error('nothing was grouped')
-  }
-
   /**
    * A scene with NO directional light: the shadow pass is the one thing that used to refresh the
    * world matrices before the grouping copied them, so without a lamp every copy of a fresh
@@ -202,28 +205,6 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
 })
 
 describe.each(STRATEGIES)('the sources a %s group draws for, from outside the engine', grouping => {
-  /** `as`: what a frame walks is the engine's own scene, and it is private by design. */
-  const graphOf = (renderer: SceneRenderer): Object3D =>
-    (renderer as unknown as { viewport: { scene: Object3D } }).viewport.scene
-
-  const walked = (root: Object3D): Object3D[] => {
-    const met: Object3D[] = []
-    root.traverse(child => met.push(child))
-    return met
-  }
-
-  /** Where the group put the body of one slot, along x. */
-  const placedIn = (renderer: SceneRenderer, slot: number): number => {
-    const held = new Matrix4()
-    for (const child of graphOf(renderer).children) {
-      if (child instanceof InstancedMesh) child.getMatrixAt(slot, held)
-      else if (child instanceof BatchedMesh) child.getMatrixAt(slot, held)
-      else continue
-      return held.elements[12] ?? 0
-    }
-    throw new Error('nothing was grouped')
-  }
-
   /** One group's worth of copies, all hanging from a crate — the shape a decor really has. */
   const inACrate = (): SceneNode[] => [
     groupNodeFixture('crate'),
@@ -314,6 +295,6 @@ describe.each(STRATEGIES)('the sources a %s group draws for, from outside the en
     )
     renderer.apply({ ...EMPTY_SCENE, nodes: moved })
 
-    expect(placedIn(renderer, 3)).toBe(115)
+    expect(placedAt(renderer, 3)).toBe(115)
   })
 })

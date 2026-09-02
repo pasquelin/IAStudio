@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-02T08:49:20.267Z",
+  "at": "2026-09-02T09:10:44.984Z",
   "platform": "darwin",
   "electron": "43.4.0",
   "chrome": "150.0.7871.224",
@@ -9,15 +9,15 @@
       "scene": "S1",
       "grouping": "instanced",
       "bodies": 544,
-      "firstApplyMs": 15.2,
+      "firstApplyMs": 17,
       "applyStillMs": 0.1,
       "applyOneMovedMs": 0.1,
-      "applyOneAddedMs": 1.6,
-      "fullFrameCpuMs": 0.6,
-      "fullScenePassCpuMs": 0.18,
+      "applyOneAddedMs": 2,
+      "fullFrameCpuMs": 0.7,
+      "fullScenePassCpuMs": 0.173,
       "fullFrameMs": 8.3,
       "fullFps": 120.482,
-      "fullGpuMs": 1.509,
+      "fullGpuMs": 1.333,
       "fullDrawCalls": 122,
       "fullMultiDrawCalls": 0,
       "fullInstancedCalls": 26,
@@ -26,11 +26,11 @@
       "fullBodiesByInstance": 1000,
       "fullTriangles": 394024,
       "turnedShareInView": 30.147,
-      "turnedFrameCpuMs": 0.4,
-      "turnedScenePassCpuMs": 0.107,
+      "turnedFrameCpuMs": 0.6,
+      "turnedScenePassCpuMs": 0.093,
       "turnedFrameMs": 8.3,
       "turnedFps": 120.482,
-      "turnedGpuMs": 0.925,
+      "turnedGpuMs": 0.759,
       "turnedDrawCalls": 90,
       "turnedMultiDrawCalls": 0,
       "turnedInstancedCalls": 26,
@@ -38,23 +38,23 @@
       "turnedBodiesByLot": 0,
       "turnedBodiesByInstance": 1000,
       "turnedTriangles": 388256,
-      "heapBefore": 13.147,
-      "heapLoaded": 20.116,
-      "heapEdited": 22.035
+      "heapBefore": 13.181,
+      "heapLoaded": 26.067,
+      "heapEdited": 25.526
     },
     {
       "scene": "S1",
       "grouping": "batched",
       "bodies": 544,
-      "firstApplyMs": 11,
+      "firstApplyMs": 13.8,
       "applyStillMs": 0,
       "applyOneMovedMs": 0.1,
       "applyOneAddedMs": 2,
-      "fullFrameCpuMs": 1.1,
+      "fullFrameCpuMs": 1.2,
       "fullScenePassCpuMs": 0.4,
       "fullFrameMs": 8.3,
       "fullFps": 120.482,
-      "fullGpuMs": 2.778,
+      "fullGpuMs": 2.403,
       "fullDrawCalls": 122,
       "fullMultiDrawCalls": 26,
       "fullInstancedCalls": 0,
@@ -63,11 +63,11 @@
       "fullBodiesByInstance": 0,
       "fullTriangles": 388764,
       "turnedShareInView": 30.147,
-      "turnedFrameCpuMs": 1,
-      "turnedScenePassCpuMs": 0.307,
+      "turnedFrameCpuMs": 0.9,
+      "turnedScenePassCpuMs": 0.267,
       "turnedFrameMs": 8.3,
       "turnedFps": 120.482,
-      "turnedGpuMs": 1.491,
+      "turnedGpuMs": 1.275,
       "turnedDrawCalls": 88,
       "turnedMultiDrawCalls": 24,
       "turnedInstancedCalls": 0,
@@ -75,23 +75,23 @@
       "turnedBodiesByLot": 676,
       "turnedBodiesByInstance": 0,
       "turnedTriangles": 245236,
-      "heapBefore": 23.141,
-      "heapLoaded": 21.897,
-      "heapEdited": 31.149
+      "heapBefore": 26.597,
+      "heapLoaded": 41.067,
+      "heapEdited": 41.758
     },
     {
       "scene": "S2",
       "grouping": "instanced",
       "bodies": 10000,
-      "firstApplyMs": 125.1,
+      "firstApplyMs": 110.4,
       "applyStillMs": 0.5,
-      "applyOneMovedMs": 0.8,
-      "applyOneAddedMs": 20.8,
+      "applyOneMovedMs": 0.6,
+      "applyOneAddedMs": 22.2,
       "fullFrameCpuMs": 0.4,
-      "fullScenePassCpuMs": 0.173,
+      "fullScenePassCpuMs": 0.113,
       "fullFrameMs": 8.3,
       "fullFps": 120.482,
-      "fullGpuMs": 2.406,
+      "fullGpuMs": 1.672,
       "fullDrawCalls": 57,
       "fullMultiDrawCalls": 0,
       "fullInstancedCalls": 48,
@@ -101,10 +101,10 @@
       "fullTriangles": 2853144,
       "turnedShareInView": 30,
       "turnedFrameCpuMs": 0.4,
-      "turnedScenePassCpuMs": 0.127,
+      "turnedScenePassCpuMs": 0.1,
       "turnedFrameMs": 8.3,
       "turnedFps": 120.482,
-      "turnedGpuMs": 1.405,
+      "turnedGpuMs": 1.163,
       "turnedDrawCalls": 57,
       "turnedMultiDrawCalls": 0,
       "turnedInstancedCalls": 48,
@@ -112,23 +112,23 @@
       "turnedBodiesByLot": 0,
       "turnedBodiesByInstance": 20000,
       "turnedTriangles": 2853144,
-      "heapBefore": 32.103,
-      "heapLoaded": 76.416,
-      "heapEdited": 74.272
+      "heapBefore": 42.54,
+      "heapLoaded": 73.283,
+      "heapEdited": 87.755
     },
     {
       "scene": "S2",
       "grouping": "batched",
       "bodies": 10000,
-      "firstApplyMs": 97.7,
-      "applyStillMs": 0.5,
+      "firstApplyMs": 88.4,
+      "applyStillMs": 0.4,
       "applyOneMovedMs": 0.6,
-      "applyOneAddedMs": 22.6,
-      "fullFrameCpuMs": 7.8,
+      "applyOneAddedMs": 22.9,
+      "fullFrameCpuMs": 8.2,
       "fullScenePassCpuMs": 2.287,
-      "fullFrameMs": 13.9,
-      "fullFps": 71.942,
-      "fullGpuMs": 3.872,
+      "fullFrameMs": 14,
+      "fullFps": 71.429,
+      "fullGpuMs": 3.399,
       "fullDrawCalls": 25,
       "fullMultiDrawCalls": 16,
       "fullInstancedCalls": 0,
@@ -137,11 +137,11 @@
       "fullBodiesByInstance": 0,
       "fullTriangles": 2816212,
       "turnedShareInView": 30,
-      "turnedFrameCpuMs": 7.3,
-      "turnedScenePassCpuMs": 1.113,
-      "turnedFrameMs": 8.8,
-      "turnedFps": 113.636,
-      "turnedGpuMs": 2.402,
+      "turnedFrameCpuMs": 7.9,
+      "turnedScenePassCpuMs": 1.12,
+      "turnedFrameMs": 9,
+      "turnedFps": 111.111,
+      "turnedGpuMs": 2.274,
       "turnedDrawCalls": 25,
       "turnedMultiDrawCalls": 16,
       "turnedInstancedCalls": 0,
@@ -149,23 +149,23 @@
       "turnedBodiesByLot": 13158,
       "turnedBodiesByInstance": 0,
       "turnedTriangles": 1872864,
-      "heapBefore": 84.159,
-      "heapLoaded": 117.867,
-      "heapEdited": 137.544
+      "heapBefore": 97.519,
+      "heapLoaded": 129.779,
+      "heapEdited": 145.302
     },
     {
       "scene": "S3",
       "grouping": "instanced",
       "bodies": 50000,
-      "firstApplyMs": 487.7,
-      "applyStillMs": 2.2,
+      "firstApplyMs": 483.2,
+      "applyStillMs": 2.1,
       "applyOneMovedMs": 3.2,
-      "applyOneAddedMs": 101,
-      "fullFrameCpuMs": 0.5,
-      "fullScenePassCpuMs": 0.367,
+      "applyOneAddedMs": 109.5,
+      "fullFrameCpuMs": 0.6,
+      "fullScenePassCpuMs": 0.28,
       "fullFrameMs": 8.3,
       "fullFps": 120.482,
-      "fullGpuMs": 4.168,
+      "fullGpuMs": 4.151,
       "fullDrawCalls": 169,
       "fullMultiDrawCalls": 0,
       "fullInstancedCalls": 160,
@@ -175,10 +175,10 @@
       "fullTriangles": 14266896,
       "turnedShareInView": 30,
       "turnedFrameCpuMs": 0.5,
-      "turnedScenePassCpuMs": 0.32,
+      "turnedScenePassCpuMs": 0.267,
       "turnedFrameMs": 8.3,
       "turnedFps": 120.482,
-      "turnedGpuMs": 3.339,
+      "turnedGpuMs": 3.119,
       "turnedDrawCalls": 161,
       "turnedMultiDrawCalls": 0,
       "turnedInstancedCalls": 152,
@@ -186,23 +186,23 @@
       "turnedBodiesByLot": 0,
       "turnedBodiesByInstance": 97906,
       "turnedTriangles": 13529808,
-      "heapBefore": 147.178,
-      "heapLoaded": 260.446,
-      "heapEdited": 286.23
+      "heapBefore": 154.696,
+      "heapLoaded": 286.999,
+      "heapEdited": 311.028
     },
     {
       "scene": "S3",
       "grouping": "batched",
       "bodies": 50000,
-      "firstApplyMs": 449.3,
-      "applyStillMs": 2.1,
+      "firstApplyMs": 443.5,
+      "applyStillMs": 2,
       "applyOneMovedMs": 3.2,
-      "applyOneAddedMs": 113.4,
-      "fullFrameCpuMs": 29.9,
-      "fullScenePassCpuMs": 26.533,
-      "fullFrameMs": 51.4,
-      "fullFps": 19.455,
-      "fullGpuMs": 6.925,
+      "applyOneAddedMs": 123.4,
+      "fullFrameCpuMs": 31.2,
+      "fullScenePassCpuMs": 26.667,
+      "fullFrameMs": 51.9,
+      "fullFps": 19.268,
+      "fullGpuMs": 7.038,
       "fullDrawCalls": 25,
       "fullMultiDrawCalls": 16,
       "fullInstancedCalls": 0,
@@ -211,11 +211,11 @@
       "fullBodiesByInstance": 0,
       "fullTriangles": 14034092,
       "turnedShareInView": 30,
-      "turnedFrameCpuMs": 21.7,
-      "turnedScenePassCpuMs": 5.487,
-      "turnedFrameMs": 32.1,
-      "turnedFps": 31.153,
-      "turnedGpuMs": 5.505,
+      "turnedFrameCpuMs": 22.8,
+      "turnedScenePassCpuMs": 5.68,
+      "turnedFrameMs": 32.3,
+      "turnedFps": 30.96,
+      "turnedGpuMs": 5.368,
       "turnedDrawCalls": 25,
       "turnedMultiDrawCalls": 16,
       "turnedInstancedCalls": 0,
@@ -223,112 +223,112 @@
       "turnedBodiesByLot": 65302,
       "turnedBodiesByInstance": 0,
       "turnedTriangles": 9309732,
-      "heapBefore": 283.543,
-      "heapLoaded": 272.963,
-      "heapEdited": 299.94
+      "heapBefore": 306.601,
+      "heapLoaded": 265.003,
+      "heapEdited": 299.979
     }
   ],
   "failures": [],
   "rendererMemory": [
     {
-      "at": 2002,
+      "at": 2003,
       "phase": "S1 instanced — 70 % hors champ",
-      "workingSetKb": 168496
+      "workingSetKb": 172912
     },
     {
-      "at": 4004,
+      "at": 4005,
       "phase": "S1 batched — plein champ",
-      "workingSetKb": 178064
+      "workingSetKb": 200144
     },
     {
-      "at": 6006,
+      "at": 6008,
       "phase": "S1 batched — 70 % hors champ",
-      "workingSetKb": 189168
+      "workingSetKb": 203616
     },
     {
-      "at": 8009,
+      "at": 8011,
       "phase": "S2 instanced — plein champ",
-      "workingSetKb": 277056
+      "workingSetKb": 274512
     },
     {
-      "at": 10011,
+      "at": 10014,
       "phase": "S2 instanced — 70 % hors champ",
-      "workingSetKb": 281872
+      "workingSetKb": 289216
     },
     {
-      "at": 12014,
+      "at": 12017,
       "phase": "S2 batched — plein champ",
-      "workingSetKb": 329888
+      "workingSetKb": 338624
     },
     {
-      "at": 14016,
-      "phase": "S2 batched — plein champ",
-      "workingSetKb": 337984
+      "at": 14020,
+      "phase": "S2 batched — 70 % hors champ",
+      "workingSetKb": 349936
     },
     {
-      "at": 16035,
+      "at": 16022,
       "phase": "S2 batched — 100 éditions",
-      "workingSetKb": 344208
+      "workingSetKb": 343440
     },
     {
-      "at": 18080,
+      "at": 18025,
       "phase": "S3 instanced — plein champ",
-      "workingSetKb": 480880
+      "workingSetKb": 482752
     },
     {
-      "at": 20083,
+      "at": 20028,
       "phase": "S3 instanced — 70 % hors champ",
-      "workingSetKb": 503872
+      "workingSetKb": 506416
     },
     {
-      "at": 22322,
+      "at": 22162,
       "phase": "S3 batched — plein champ",
-      "workingSetKb": 513728
+      "workingSetKb": 522384
     },
     {
-      "at": 24324,
+      "at": 24164,
       "phase": "S3 batched — plein champ",
-      "workingSetKb": 495232
+      "workingSetKb": 495920
     },
     {
-      "at": 26340,
+      "at": 26169,
       "phase": "S3 batched — plein champ",
-      "workingSetKb": 495520
+      "workingSetKb": 496176
     },
     {
-      "at": 28343,
+      "at": 28196,
       "phase": "S3 batched — plein champ",
-      "workingSetKb": 495792
+      "workingSetKb": 496432
     },
     {
-      "at": 30556,
+      "at": 30530,
       "phase": "S3 batched — plein champ",
-      "workingSetKb": 503680
+      "workingSetKb": 504480
     },
     {
-      "at": 33489,
+      "at": 33499,
       "phase": "S3 batched — plein champ",
-      "workingSetKb": 510848
+      "workingSetKb": 511488
     },
     {
-      "at": 35829,
+      "at": 35836,
       "phase": "S3 batched — 70 % hors champ",
-      "workingSetKb": 528304
+      "workingSetKb": 529152
     },
     {
-      "at": 37840,
+      "at": 37845,
       "phase": "S3 batched — 70 % hors champ",
-      "workingSetKb": 526512
+      "workingSetKb": 527552
     },
     {
-      "at": 39842,
+      "at": 39901,
       "phase": "S3 batched — 70 % hors champ",
-      "workingSetKb": 526624
+      "workingSetKb": 527664
     },
     {
-      "at": 41845,
+      "at": 41904,
       "phase": "fin",
-      "workingSetKb": 516448
+      "workingSetKb": 517504
     }
   ]
 }

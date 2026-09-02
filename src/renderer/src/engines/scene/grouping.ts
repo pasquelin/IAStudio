@@ -9,6 +9,7 @@ import {
   type Sphere,
 } from 'three'
 import { cachedOn } from '../core/cachedOn'
+import { ownedByAnotherNode } from './shadows'
 import type { SceneNode } from './sceneState'
 
 /**
@@ -116,7 +117,8 @@ export type HeldOutOfDraw = {
  */
 export function heldOutOfDraw(): HeldOutOfDraw {
   let held: readonly Mesh[] = []
-  let hung = true
+  /** Out of the walk is the resting state: a rebuild alone takes its sources out of it. */
+  let hung = false
 
   /** By the parent each one hangs from NOW: a drag carries a source under the pivot mid-gesture. */
   const byParent = (meshes: readonly Mesh[]): Map<Object3D, Mesh[]> => {
@@ -130,49 +132,50 @@ export function heldOutOfDraw(): HeldOutOfDraw {
     return parents
   }
 
-  const hang = (): void => {
-    if (hung) return
-    hung = true
+  /**
+   * The array rebuilt in one pass rather than spliced mesh by mesh: a source leaves a list of
+   * fifty thousand siblings, and one splice each is quadratic. Filtered first, so a source a
+   * gesture already put back is not held twice.
+   */
+  const walkThem = (yes: boolean): void => {
+    if (hung === yes) return
+    hung = yes
     for (const [parent, meshes] of byParent(held)) {
       const ours = new Set<Object3D>(meshes)
-      // The array rebuilt in one pass rather than spliced mesh by mesh: a source leaves a list of
-      // fifty thousand siblings, and one splice each is quadratic. Filtered first, so a source a
-      // gesture already put back is not held twice.
-      parent.children = [...parent.children.filter(child => !ours.has(child)), ...meshes]
-    }
-  }
-
-  const drop = (): void => {
-    if (!hung) return
-    hung = false
-    for (const [parent, meshes] of byParent(held)) {
-      const ours = new Set<Object3D>(meshes)
-      parent.children = parent.children.filter(child => !ours.has(child))
+      const kept = parent.children.filter(child => !ours.has(child))
+      parent.children = yes ? [...kept, ...meshes] : kept
     }
   }
 
   return {
-    // ONE pass over each parent's children rather than a hang then a drop: the two together cost
-    // 20 ms of a change of content on 50 000 bodies, and all the second undoes is the first.
+    // Nothing to move while they are hung: whichever set the rebuild settled on is in the walk
+    // already, since a source only ever leaves it here. Otherwise ONE pass over each parent's
+    // children — a hang then a drop cost 20 ms of a change of content on 50 000 bodies, and all
+    // the second undid was the first.
     hold: meshes => {
+      if (hung) {
+        held = meshes
+        return
+      }
       const out = new Set<Object3D>(meshes)
       const back = byParent(held.filter(mesh => !out.has(mesh)))
       const parents = new Set<Object3D>(back.keys())
       for (const mesh of meshes) if (mesh.parent) parents.add(mesh.parent)
 
       for (const parent of parents) {
-        const returning = back.get(parent) ?? []
-        const known = new Set<Object3D>(returning)
+        const returning = back.get(parent)
+        const known = returning ? new Set<Object3D>(returning) : null
         parent.children = [
-          ...parent.children.filter(child => !out.has(child) && !known.has(child)),
-          ...returning,
+          ...parent.children.filter(child => !out.has(child) && !known?.has(child)),
+          ...(returning ?? []),
         ]
       }
-      held = [...meshes]
-      hung = false
+      held = meshes
     },
 
+    // Nothing to compose while they are hung: the walk that just ran did it.
     refresh: () => {
+      if (hung) return
       for (const mesh of held) {
         const parent = mesh.parent
         if (!parent) continue
@@ -181,8 +184,8 @@ export function heldOutOfDraw(): HeldOutOfDraw {
       }
     },
 
-    hang,
-    drop,
+    hang: () => walkThem(true),
+    drop: () => walkThem(false),
   }
 }
 
@@ -199,17 +202,6 @@ export function unhang(object: Object3D): void {
 }
 
 /**
- * Whether a source may leave the walk: nothing standing for a NODE hangs from it.
- *
- * A node built under one would go off the graph with its parent and stay there — the detaching
- * leaves `parent` alone, so `hangFromParent` finds the child already where it belongs and puts
- * nothing back. Such a source is still DRAWN by its group; it just stays in the walk.
- */
-export function carriesNoNode(mesh: Mesh, objectOf: (id: string) => Object3D | undefined): boolean {
-  return !mesh.children.some(child => objectOf(child.name) === child)
-}
-
-/**
  * What a lot really draws, written on it by whoever built it and read by the density view.
  *
  * A `BatchedMesh` holds ONE copy of each distinct shape in a buffer sized for what was reserved,
@@ -223,7 +215,8 @@ export type Grouped = { ids: string[]; meshes: Mesh[]; material: Material }
 
 /**
  * What both strategies share of a rebuild: which meshes are drawn at all, what a group is keyed
- * by, and which groups fall under the floor — those go straight back to the camera's layer.
+ * by, which groups fall under the floor — those go straight back to the camera's layer — and
+ * which sources may leave the walk of the scene.
  *
  * The shadow flags and the tool mark belong to every key: a group carries ONE of each, and the
  * shadow camera reads only the layer the sources have left, so a group that mixed them would
@@ -236,6 +229,7 @@ export function sweep(
   host: Object3D,
   ownMaterialOf: (mesh: Mesh) => Material | Material[],
   keyOf: (node: SceneNode, mesh: Mesh) => string,
+  sources: HeldOutOfDraw,
 ): Grouped[] {
   const groups = new Map<string, Grouped>()
   for (const node of nodes) {
@@ -262,12 +256,26 @@ export function sweep(
   }
 
   const worth: Grouped[] = []
+  const held: Mesh[] = []
+  const ownedByANode = ownedByAnotherNode(objectOf)
   for (const group of groups.values()) {
     // Back to the camera's layer: a group that shrank below the floor since the last pass would
     // otherwise stay invisible with nothing drawing it.
-    if (group.meshes.length < WORTH_INSTANCING) for (const mesh of group.meshes) mesh.layers.set(0)
-    else worth.push(group)
+    if (group.meshes.length < WORTH_INSTANCING) {
+      for (const mesh of group.meshes) mesh.layers.set(0)
+      continue
+    }
+    worth.push(group)
+    for (const mesh of group.meshes) {
+      mesh.layers.set(DRAWN_BY_INSTANCE)
+      // A source a NODE hangs from stays in the walk: that child would go off the graph with it,
+      // and `hangFromParent` reads `parent`, which the holding leaves alone, so it would find the
+      // child already where it belongs and put nothing back. The source is drawn by its group all
+      // the same.
+      if (!mesh.children.some(ownedByANode)) held.push(mesh)
+    }
   }
+  sources.hold(held)
   return worth
 }
 

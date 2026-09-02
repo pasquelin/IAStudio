@@ -621,7 +621,7 @@ export class SceneRenderer {
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
-  private readonly belongsToAnotherNode = ownedByAnotherNode(this.objects)
+  private readonly belongsToAnotherNode = ownedByAnotherNode(id => this.objects.get(id))
   private readonly helpers = new Map<string, LightHelper>()
   /** The frustum drawn under each camera of the scene — what makes one clickable. */
   private readonly frustums = new Map<string, CameraHelper>()
@@ -1550,7 +1550,7 @@ export class SceneRenderer {
       const instanced = this.instances.rebuild([...this.applied.values()], id =>
         this.objects.get(id),
       )
-      this.holdSources()
+      this.syncSourceWalk()
       // Only when there are instances to dress: they are new objects wearing what their sources
       // wore, so a pane that believed the scene already dressed would leave them out of a solid
       // or a material view. An ordinary scene reaches no group and must pay nothing.
@@ -1571,13 +1571,19 @@ export class SceneRenderer {
     this.movedNodes.clear()
   }
 
-  /** Every node whose place in the world the move changed — the moved ones, and their offspring. */
-  private movedWithWhatHangsFromThem(): string[] {
+  /**
+   * Every node whose place in the world the move changed — the moved ones, and their offspring.
+   * `subtreesOf` answers the same question over the document; this one holds its index between
+   * two moves, which is what a drag pays for at every pointer event.
+   */
+  private movedWithWhatHangsFromThem(): Iterable<string> {
+    if (this.childNodes.size === 0) return this.movedNodes
+
     const moved = [...this.movedNodes]
     // Grown while it is walked, so a whole branch is reached without a second structure.
     for (let at = 0; at < moved.length; at += 1) {
-      const under = this.childNodes.get(moved[at] ?? '')
-      if (under) moved.push(...under)
+      const id = moved[at]
+      for (const child of (id && this.childNodes.get(id)) || []) moved.push(child)
     }
     return moved
   }
@@ -1698,20 +1704,15 @@ export class SceneRenderer {
 
   /**
    * Runs something against the scene as a TREE, with every body a group draws for back under the
-   * node it hangs from.
-   *
-   * `Object3D.children` is what an exporter writes a parent's contents from, and a source drawn
-   * by a group is held out of it — see `heldOutOfDraw`. Reading the scene BY ID needs none of
-   * this; walking it downward does. The copies are taken synchronously inside `exportObjects`,
-   * so putting them back for the length of the call is enough — the same reasoning as
-   * `asDocumented`, which this wraps.
+   * node it hangs from: `Object3D.children` is what an exporter writes a parent's contents from,
+   * and a source drawn by a group is held out of it — see `heldOutOfDraw`.
    */
   private asHung<T>(run: () => T): T {
     this.instances.hangSources()
     try {
       return run()
     } finally {
-      this.holdSources()
+      this.syncSourceWalk()
     }
   }
 
@@ -1723,7 +1724,7 @@ export class SceneRenderer {
    * the grouping exists to give back — 16.2 ms of scene pass against 0.29 on 50 000 bodies,
    * measured 02/09 — and every other mode does not.
    */
-  private holdSources(): void {
+  private syncSourceWalk(): void {
     if (this.needsEdges()) this.instances.hangSources()
     else this.instances.dropSources()
   }
@@ -1814,7 +1815,7 @@ export class SceneRenderer {
     }
     // After the outlines are hung or dropped: whether the sources belong in the walk is exactly
     // whether they carry any.
-    this.holdSources()
+    this.syncSourceWalk()
     this.redraw()
   }
 

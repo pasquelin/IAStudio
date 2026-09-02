@@ -8,7 +8,7 @@ import {
 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { EDGE_LAYER } from './sceneView'
-import { meshNode } from './scene-fixtures'
+import { meshNode, walked } from './scene-fixtures'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
 import type { SceneNode } from './sceneState'
@@ -377,12 +377,6 @@ describe('the sources a group draws for', () => {
     for (const mesh of objects.values()) scene.add(mesh)
   }
 
-  const walked = (root: Object3D): Object3D[] => {
-    const met: Object3D[] = []
-    root.traverse(child => met.push(child))
-    return met
-  }
-
   it('leave the walk of the scene, which is what a frame pays for them', () => {
     const scene = host()
     const { nodes, objects } = alike(WORTH_INSTANCING)
@@ -423,6 +417,19 @@ describe('the sources a group draws for', () => {
 
     groups.dispose()
     for (const mesh of objects.values()) expect(walked(scene)).toContain(mesh)
+  })
+
+  it('leave it wearing the edges hung under them, which stand for no node', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    const edges = new Object3D()
+    edges.name = 'overlay'
+    objects.get('n0')?.add(edges)
+
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    expect(walked(scene)).not.toContain(objects.get('n0'))
   })
 
   it('stay in it when a node of its own hangs from one, which would go off the graph with it', () => {

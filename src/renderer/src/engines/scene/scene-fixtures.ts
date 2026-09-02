@@ -1,3 +1,4 @@
+import type { Object3D } from 'three'
 import { Texture, type ColorSpace } from 'three'
 import {
   DEFAULT_CAMERA,
@@ -43,6 +44,13 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
     geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
     material: DEFAULT_MATERIAL,
   }
+}
+
+/** What a walk of the tree actually meets — a source a group draws for is not in it. */
+export function walked(root: Object3D): Object3D[] {
+  const met: Object3D[] = []
+  root.traverse(child => met.push(child))
+  return met
 }
 
 /** A transform others hang from — what makes a body a CHILD rather than a root of the scene. */
