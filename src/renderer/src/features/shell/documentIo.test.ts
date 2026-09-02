@@ -1,4 +1,5 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import { canvasHostStub } from '@/stores/canvas-fixtures'
 import { DEFAULT_WORLD } from '@shared/domain/scene'
 import type { Asset } from '@shared/domain/asset'
 import { otioStudioMetadata } from '@shared/domain/otio'
@@ -111,20 +112,9 @@ beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
 })
 
-/**
- * A fake engine behind the canvas port. Written once so a member added to `CanvasHost` is one
- * edit here rather than one per case — nine of them had spelled the same stubs out.
- */
+/** The shared stub, plus the one coupling a suite about saving may not be allowed to break. */
 function fakeCanvas(overrides: Omit<Partial<CanvasHost>, 'snapshot'> = {}): CanvasHost {
-  const host = {
-    pixelSnapshots: () => Promise.resolve([]),
-    restoreSnapshot: () => Promise.resolve(),
-    flatten: () => Promise.resolve<Uint8Array<ArrayBuffer> | null>(FLATTEN),
-    flattenBitmap: () => Promise.resolve<ImageBitmap | null>(null),
-    forgetPicture: () => Promise.resolve(),
-    turnQuarter: () => undefined,
-    ...overrides,
-  }
+  const host = canvasHostStub({ flatten: async () => FLATTEN, ...overrides })
 
   return {
     ...host,

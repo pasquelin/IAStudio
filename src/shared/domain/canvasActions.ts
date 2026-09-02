@@ -13,9 +13,9 @@ import { BLEND_MODES } from './canvasBlend'
  * `document.activate` rather than by naming it here — one way of saying "the document I mean",
  * not two.
  *
- * What is NOT here, said plainly: painting. A stroke goes through the engine's GPU surface and
- * its patch history, which no command in `engines/canvas/commands.ts` exposes — `paintPixels`
- * takes a live port, not a path. Publishing it needs an engine API that does not exist yet.
+ * What is NOT here yet, said plainly: painting. `engines/canvas/commands.ts` has no path onto a
+ * GPU surface, so an action that paints goes through `CanvasHost.paintCells` — published, and
+ * with no caller until one is written.
  */
 
 const LAYER: ActionField = {

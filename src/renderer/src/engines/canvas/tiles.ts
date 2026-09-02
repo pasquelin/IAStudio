@@ -111,6 +111,31 @@ export function unionOf(rects: readonly Rect[]): Rect {
   return { x: left, y: top, width: right - left, height: bottom - top }
 }
 
+/** Whether two boxes share any area at all. Touching edges do not. */
+export function overlaps(one: Rect, other: Rect): boolean {
+  return (
+    one.x < other.x + other.width &&
+    other.x < one.x + one.width &&
+    one.y < other.y + other.height &&
+    other.y < one.y + one.height
+  )
+}
+
+/**
+ * One box per row of `rects`, rather than one over them all. A diagonal set's own union is the
+ * whole document, and every tile handed to the patch store is photographed — enough to evict
+ * the entries of older strokes out of the history.
+ */
+export function rowBoxes(rects: readonly Rect[]): Rect[] {
+  const rows = new Map<number, Rect[]>()
+  for (const rect of rects) {
+    const row = rows.get(rect.y)
+    if (row) row.push(rect)
+    else rows.set(rect.y, [rect])
+  }
+  return [...rows.values()].map(unionOf)
+}
+
 /**
  * The same box, opened by a margin on all four sides.
  *

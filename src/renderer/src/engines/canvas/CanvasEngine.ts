@@ -51,6 +51,7 @@ import {
   dragSelection,
   extendLasso,
   isEmptySelection,
+  selectionBounds,
   selectionOutline,
   type CanvasSelection,
   type SelectionShape,
@@ -104,7 +105,7 @@ import {
 import type { Point, Size } from '../core/geometry'
 import { blurRadius, brushSettingsOf, DEFAULT_BRUSH, type BrushSettings } from './brush'
 import type { CanvasTool } from './canvasTool'
-import { brushRect, grownBy, unionOf } from './tiles'
+import { brushRect, grownBy, overlaps, rowBoxes } from './tiles'
 import { cellAt, cellBox, cellRuns, cellsOfLine, onCellBoundary, stampRect } from './pixelGrid'
 import {
   containIn,
@@ -2772,6 +2773,64 @@ export class CanvasEngine {
     return WRITING_TOOLS.has(this.tool) && this.paintTarget() === null
   }
 
+  /**
+   * The same target, resolved by ID and synchronously — what a call needs. Arming a layer and
+   * painting on it in one turn cannot wait for the state to come back down through React.
+   *
+   * Through `paintTarget`, so every refusal is asked of the one function that knows them all;
+   * and always at the PIXELS, since which surface the bar happens to aim at is a state of the
+   * hand, and a call that names a layer must not dig its mask instead.
+   */
+  private paintTargetOf(layerId: string | null): BrushTarget | null {
+    const state = this.state
+    if (layerId === null || !state) return this.paintTarget()
+
+    const painting = this.painting
+    this.state = { ...state, activeLayerId: layerId }
+    this.painting = 'pixels'
+    try {
+      return this.paintTarget()
+    } finally {
+      // The same OBJECT, not an equal one: `refuses` caches on its identity.
+      this.state = state
+      this.painting = painting
+    }
+  }
+
+  /**
+   * Cells painted in one pass and ONE history entry, whatever their number. A null colour erases
+   * them. `null` for a layer that refuses the paint — see `paintTargetOf`.
+   */
+  paintCells(layerId: string | null, rects: readonly Rect[], color: number | null): boolean {
+    // 🛑 A stroke is in flight, and `patches.begin` throws away whatever is open: the trait would
+    // lose its tiles, end with no history entry at all, and leave its pixels on the surface.
+    if (this.gesture.kind === 'paint' || rects.length === 0) return false
+
+    const target = this.paintTargetOf(layerId)
+    if (!target) return false
+    // A marquee cuts the pass, so cells wholly outside it change nothing — and an entry that
+    // changes nothing is a ⌘Z the user watches do something invisible. Its BOX only: a rect
+    // inside the box of an ellipse but outside the ellipse still poses one.
+    const marquee = selectionBounds(this.selection)
+    if (marquee && !rects.some(rect => overlaps(rect, marquee))) return false
+
+    this.beginPixels(target)
+    const sheet = new Graphics()
+    for (const rect of rects) sheet.rect(rect.x, rect.y, rect.width, rect.height)
+    this.ink(sheet, color, 1)
+    // One box PER ROW, not one over the whole set: `unionOf` on a diagonal line is the document,
+    // and `PixelPatches` photographs every tile it is handed — enough to evict the entries of
+    // older strokes out of the history.
+    this.commit(
+      target,
+      rowBoxes(rects).map(box => grownBy(mapRect(target.toSurface, box), 1)),
+      sheet,
+    )
+    sheet.destroy()
+    this.endPixels()
+    return true
+  }
+
   /** The surface a stroke may land on: armed, able to hold pixels, and not padlocked. */
   private paintTarget(): BrushTarget | null {
     const layer = this.activeLayer()
@@ -3246,7 +3305,7 @@ export class CanvasEngine {
     }
 
     const radius = this.brush.size / 2
-    this.paint(target, brushRect(points, radius), () => {
+    this.paint(target, [brushRect(points, radius)], () => {
       for (const point of points) this.stamp.circle(point.x, point.y, radius)
     })
   }
@@ -3259,38 +3318,55 @@ export class CanvasEngine {
     const runs = cellRuns(cells, cell, this.brush.size)
     // One pixel of slack, as `brushRect` keeps: a layer placed on a fraction maps a run's edge
     // onto a fragment the antialiasing paints, in a tile an undo would otherwise leave behind.
-    this.paint(target, grownBy(unionOf(runs), 1), () => {
-      for (const run of runs) this.stamp.rect(run.x, run.y, run.width, run.height)
-    })
+    this.paint(
+      target,
+      runs.map(run => grownBy(run, 1)),
+      () => {
+        for (const run of runs) this.stamp.rect(run.x, run.y, run.width, run.height)
+      },
+    )
   }
 
   /** What a disc and a run share: the tiles they cost, the one pass, the blend. */
-  private paint(target: BrushTarget, covered: Rect, trace: () => void): void {
+  private paint(target: BrushTarget, covered: readonly Rect[], trace: () => void): void {
+    this.stamp.clear()
+    trace()
+    this.ink(this.stamp, this.tool === 'eraser' ? null : this.brush.color, this.brush.opacity)
+    // The fringe is added AFTER the mapping, and it has to be: a filter is applied once the
+    // container's transform has run, so its padding counts SURFACE pixels while the brush's
+    // radius counts document ones. Added before, a layer scaled 2× recorded half its stroke.
+    this.commit(
+      target,
+      covered.map(box => grownBy(mapRect(target.toSurface, box), this.fringe())),
+      this.stamp,
+    )
+  }
+
+  /** The colour a sheet lays down, and `null` for the pass that takes colour away. */
+  private ink(sheet: Graphics, color: number | null, alpha: number): void {
+    sheet.fill({ color: color ?? 0xffffff, alpha })
+    // Erasing is the same pass in `erase` blend: on a transparent layer, painting white would
+    // just paint white.
+    sheet.blendMode = color === null ? 'erase' : 'normal'
+  }
+
+  /**
+   * The tiles an undo will put back, then ONE pass onto the surface. `covered` is already in
+   * SURFACE space, which is where a filter's padding is counted and where antialiasing spills.
+   */
+  private commit(target: BrushTarget, covered: readonly Rect[], sheet: Graphics): void {
     const renderer = this.app?.renderer
     if (!renderer) return
 
     // Before a single pixel is written: what the tiles hold now is what an undo will put back.
-    // Mapped onto the surface, like the dabs themselves — tiles index the texture, and a stroke
-    // on a turned layer covers a different set of them than its document-space box suggests.
-    //
-    // The fringe is added AFTER the mapping, and it has to be: a filter is applied once the
-    // container's transform has run, so its padding is a count of surface pixels while the
-    // brush's radius is a count of document ones. Added before, a layer scaled 2× recorded half
-    // the box its stroke actually covered, and an undo left the fringe behind.
-    this.patches?.touch(grownBy(mapRect(target.toSurface, covered), this.fringe()))
-
-    const erasing = this.tool === 'eraser'
-    this.stamp.clear()
-    trace()
-    this.stamp.fill({ color: erasing ? 0xffffff : this.brush.color, alpha: this.brush.opacity })
-    // Erasing is the same stroke in `erase` blend: on a transparent layer, painting white
-    // would just paint white.
-    this.stamp.blendMode = erasing ? 'erase' : 'normal'
+    // Mapped onto the surface by the caller — tiles index the texture, and a stroke on a turned
+    // layer covers a different set of them than its document-space box suggests.
+    for (const box of covered) this.patches?.touch(box)
 
     // `clear: false`, or every dab would wipe the stroke that came before it. And `target`,
     // not the `renderTexture` option, which v8 deprecated.
     renderer.render({
-      container: this.inSurfaceSpace(target.toSurface, this.clipped(this.stamp)),
+      container: this.inSurfaceSpace(target.toSurface, this.clipped(sheet)),
       target: target.surface.texture,
       clear: false,
     })

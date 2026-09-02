@@ -2931,6 +2931,61 @@ function release(x = 400, y = 400): void {
   window.dispatchEvent(new PointerEvent('pointerup', { clientX: x, clientY: y }))
 }
 
+describe('painting cells by call', () => {
+  const CELL = { x: 0, y: 0, width: 1, height: 1 }
+  const two: readonly Rect[] = [CELL, { x: 4, y: 4, width: 1, height: 1 }]
+
+  // The invariant a client depends on: ⌘Z must not cost one press per cell.
+  it('lays a whole set of cells as ONE history entry', async () => {
+    const { engine, patches } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 1 })
+
+    expect(engine.paintCells(null, two, 0xff0000)).toBe(true)
+    expect(patches).toHaveLength(1)
+  })
+
+  // The one branch of the call a client can see from outside: a null colour takes pixels away.
+  it('erases the cells rather than painting them when no colour is named', async () => {
+    const { engine } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 1 })
+    gpu.painted = []
+
+    expect(engine.paintCells(null, two, null)).toBe(true)
+    expect(gpu.painted).not.toHaveLength(0)
+  })
+
+  /**
+   * A refusal leaves the history alone: an entry that changes nothing is a ⌘Z the user watches
+   * do something invisible. The layer is named by ID and is NOT the armed one, which is the
+   * whole reason the call resolves its own target.
+   */
+  it('refuses an absent layer and a padlocked one, and pushes nothing for either', async () => {
+    const locked: CanvasState = {
+      ...DEFAULT_CANVAS,
+      layers: [
+        pixelLayer('armed', 'Armed'),
+        { ...pixelLayer('l', 'L'), locked: { ...UNLOCKED, pixels: true } },
+      ],
+      activeLayerId: 'armed',
+    }
+    const { engine, patches } = await mounted(locked)
+
+    expect(engine.paintCells('nobody', [CELL], 0)).toBe(false)
+    expect(engine.paintCells('l', [CELL], 0)).toBe(false)
+    expect(patches).toHaveLength(0)
+  })
+
+  /**
+   * 🛑 `patches.begin` throws away whatever is open: a call landing between two `pointermove`
+   * would take the trait's tiles with it, and the trait would end with no entry at all.
+   */
+  it('refuses while a stroke is in flight', async () => {
+    const { engine, host } = await mounted({ ...DEFAULT_CANVAS, pixelCell: 1 }, 'pencil')
+
+    press(host, 200, 200)
+    expect(engine.paintCells(null, two, 0xff0000)).toBe(false)
+    release(200, 200)
+  })
+})
+
 describe('the gestures of a pixel grid', () => {
   // Aligned whatever the magnetism says: on a grid the alignment is the mode, not a preference.
   it('lands a moved layer on a cell boundary, ahead of the magnetism', async () => {

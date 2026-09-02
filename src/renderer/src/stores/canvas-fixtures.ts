@@ -14,6 +14,7 @@ import { installIn } from './document-fixtures'
  * Lives beside the stores rather than beside `layerFixture` for the same reason `installScene`
  * does: `engines/` must not reach for a store.
  */
+/** A whole `CanvasHost` that answers nothing, so a suite states only the member it exercises. */
 export function canvasHostStub(overrides: Partial<CanvasHost> = {}): CanvasHost {
   return {
     pixelSnapshots: async () => [],
@@ -23,6 +24,7 @@ export function canvasHostStub(overrides: Partial<CanvasHost> = {}): CanvasHost 
     snapshot: async () => null,
     forgetPicture: async () => {},
     turnQuarter: () => {},
+    paintCells: () => false,
     ...overrides,
   }
 }
