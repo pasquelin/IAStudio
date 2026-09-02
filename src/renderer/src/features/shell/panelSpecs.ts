@@ -44,8 +44,10 @@ export function declarePanelsOf(surface: ToolSurface, state: ToolState = toolSta
   // the window uses — so a headless run says what a reader would see, pseudo-locale included.
   chassis.declare(panelSpecsOf(surface, state, id => i18next.t(toolTitleKey(id))))
   // Written before `setView`, which settles the view it ARRIVES at off the store's own defaults —
-  // what `<Panels>` does with its `defaultOpen`, for a run that has no provider to do it.
-  panelsStore.setState({ defaults: DEFAULT_OPEN[familyOf(surface)] })
+  // what `<Panels>` does with its `defaultOpen`, for a run that has no provider to do it. Only
+  // when it moves: this runs again on every answer a `requires` asks about.
+  const defaults = DEFAULT_OPEN[familyOf(surface)]
+  if (defaults !== chassis.defaults) panelsStore.setState({ defaults })
   chassis.setView(familyOf(surface))
   chassis.settle()
 }
