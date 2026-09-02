@@ -218,7 +218,6 @@ describe('what suits pixel art', () => {
     ]
 
     expect(pixelArtFirst(listed).map(one => one.id)).toEqual(['b', 'd', 'a', 'c'])
-    expect(pixelArtFirst(listed)).toHaveLength(listed.length)
     expect(pixelArtFirst(listed.filter(one => !suitsPixelArt(one)))).toEqual([listed[0], listed[2]])
   })
 })

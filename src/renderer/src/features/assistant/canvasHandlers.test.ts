@@ -230,8 +230,15 @@ describe('the pixel-art grid, driven by value', () => {
 
     const red = { color: '#ff0000' }
     await runAction('canvas.drawPixels', { shape: 'rectangle', x: 0, y: 0, toX: 3, toY: 3, ...red })
-    const filled = { shape: 'rectangle', x: 0, y: 0, toX: 3, toY: 3, filled: true, ...red }
-    await runAction('canvas.drawPixels', filled)
+    await runAction('canvas.drawPixels', {
+      shape: 'rectangle',
+      x: 0,
+      y: 0,
+      toX: 3,
+      toY: 3,
+      filled: true,
+      ...red,
+    })
     await runAction('canvas.drawPixels', { shape: 'line', x: 0, y: 0, toX: 5, toY: 5, ...red })
     await runAction('canvas.drawPixels', { shape: 'fill', ...red })
 
@@ -244,6 +251,9 @@ describe('the pixel-art grid, driven by value', () => {
 
     expect(
       await runAction('canvas.drawPixels', { shape: 'points', cells: ['3'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['3,'], color: '#ff0000' }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 

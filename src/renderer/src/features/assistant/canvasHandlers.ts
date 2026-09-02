@@ -186,7 +186,7 @@ function readState(): ActionOutcome {
       dpi: open.state.dpi,
       // Derived rather than stored, and the only thing a client needs in order to place a cell:
       // asked to work it out from a size and a cell, a model gets it wrong one time in three.
-      ...(grid === null ? {} : { pixelArt: { cell: open.state.pixelCell, ...grid } }),
+      ...(grid === null ? {} : { pixelArt: grid }),
       activeLayerId: open.state.activeLayerId,
       guides: open.state.guides,
       // Flattened: a client that had to walk a tree to find a layer id would walk it wrong the
@@ -695,7 +695,9 @@ function setPixelArt(input: Record<string, unknown>): ActionOutcome {
         ? [resizeCanvas(columns * cell, rows * cell, { x: 0, y: 0 })]
         : []
     return [...sized, setPixelCell(enabled ? cell : null)]
-  }, 'this grid changed nothing about the document')
+    // No sentence for « nothing happened »: the builder always hands `setPixelCell` back, so
+    // `run` never reaches its empty-list refusal from here.
+  }, '')
 }
 
 /** What each shape wants, said so a caller can repair its own call. */
@@ -706,16 +708,16 @@ const PIXEL_INPUT: Record<PixelShape, string> = {
   fill: 'a fill takes the whole layer, or the box named by "x", "y", "toX" and "toY"',
 }
 
-/** A cell as « x,y ». Both halves WANTED: `Number('')` is zero, so "3" landed on row nought. */
+/** A cell as « x,y ». 🛑 Both halves WANTED and non-empty: `Number('')` is zero, and "3" then
+ * "3," both landed on row nought — counting the commas was not enough. */
+const CELL_WRITTEN = /^\s*(-?\d+)\s*,\s*(-?\d+)\s*$/
+
 function cellsAsked(input: Record<string, unknown>): Point[] | null {
-  const written = textsOf(input, 'cells')
-  const cells = written.map(one => {
-    const said = one.split(',')
-    return said.length !== 2
-      ? { x: Number.NaN, y: Number.NaN }
-      : { x: Number((said[0] ?? '').trim()), y: Number((said[1] ?? '').trim()) }
+  const cells = textsOf(input, 'cells').flatMap(one => {
+    const said = CELL_WRITTEN.exec(one)
+    return said ? [{ x: Number(said[1]), y: Number(said[2]) }] : []
   })
-  return cells.every(at => Number.isInteger(at.x) && Number.isInteger(at.y)) ? cells : null
+  return cells.length === textsOf(input, 'cells').length ? cells : null
 }
 
 /** Which cells a shape covers, in grid coordinates. `null` when the input cannot name them. */
@@ -747,12 +749,13 @@ function drawPixels(input: Record<string, unknown>): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_IMAGE)
 
-  const cell = open.state.pixelCell
-  if (cell === null)
+  const grid = gridOf(open.state)
+  if (grid === null)
     return refused(
       'badInput',
       'this image is not on a pixel grid — canvas.setPixelArt puts it on one',
     )
+  const { cell, columns, rows } = grid
 
   const shape = oneOf(input, 'shape', PIXEL_SHAPES)
   if (!shape) return refused('badInput', `"shape" must be one of: ${PIXEL_SHAPES.join(', ')}`)
@@ -765,7 +768,6 @@ function drawPixels(input: Record<string, unknown>): ActionOutcome {
   if (!erase && color === null)
     return refused('badInput', `"${written ?? ''}" is not a colour — write one as "#rrggbb"`)
 
-  const { columns, rows } = gridOf(open.state) ?? { columns: 0, rows: 0 }
   const asked = shapeCells(shape, input, columns, rows)
   if (asked === null || asked.length === 0) return refused('badInput', PIXEL_INPUT[shape])
 
@@ -778,7 +780,7 @@ function drawPixels(input: Record<string, unknown>): ActionOutcome {
   // By id OR by name, as `editLayer` twenty lines up: `canvas.state` answers both, and a model
   // that copied the NAME out of it was told the layer did not exist.
   const named = textOf(input, 'layerId')
-  const layer = named === null ? null : layerAimed(open.state, named)
+  const layer = layerAimed(open.state, named)
   if (named !== null && !layer) return refused('notFound', noLayer(named))
 
   const painted = canvasHost(open.documentId)?.paintCells(

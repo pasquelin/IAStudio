@@ -1298,7 +1298,6 @@
       "rotation": "Rotation, en degrés",
       "fontSize": "Corps du texte",
       "colour": "Couleur, en #rrggbb",
-      "color": "Couleur",
       "pixelArtEnabled": "Mode pixel art",
       "columns": "Colonnes",
       "rows": "Lignes",

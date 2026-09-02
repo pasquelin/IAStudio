@@ -15,11 +15,13 @@ export function cellsSpanning(size: number, cell: number): number {
 }
 
 /** What the artwork measures, in cells — `null` for a document that is not on a grid. */
-export function gridOf(canvas: CanvasState): { columns: number; rows: number } | null {
+export function gridOf(
+  canvas: CanvasState,
+): { cell: number; columns: number; rows: number } | null {
   const cell = canvas.pixelCell
   return cell === null
     ? null
-    : { columns: cellsSpanning(canvas.width, cell), rows: cellsSpanning(canvas.height, cell) }
+    : { cell, columns: cellsSpanning(canvas.width, cell), rows: cellsSpanning(canvas.height, cell) }
 }
 
 /**
@@ -30,7 +32,7 @@ export function gridOf(canvas: CanvasState): { columns: number; rows: number } |
  * refused in silence for naming the value already held.
  */
 export function cellFor(size: number, wanted: number): number {
-  return Math.max(1, Math.ceil(size / wanted))
+  return cellsSpanning(size, wanted)
 }
 
 /** The square a dab stamps. Two points inside one cell give the same rectangle — that is the mode. */

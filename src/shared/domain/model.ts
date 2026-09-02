@@ -447,8 +447,8 @@ export function suitsPixelArt(model: {
 export function pixelArtFirst<T extends Parameters<typeof suitsPixelArt>[0]>(
   models: readonly T[],
 ): readonly T[] {
-  const suited = models.filter(suitsPixelArt)
-  return suited.length === 0 ? models : [...suited, ...models.filter(one => !suited.includes(one))]
+  const suited = new Set(models.filter(suitsPixelArt))
+  return [...suited, ...models.filter(one => !suited.has(one))]
 }
 
 /**
