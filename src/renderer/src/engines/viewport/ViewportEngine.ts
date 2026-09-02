@@ -22,6 +22,7 @@ import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
 import { dollyTo, notchesOf } from './dolly'
 import { gestureOf, type Gesture } from './gestures'
+import { SCHEME_OF, type NavigationScheme } from '@shared/domain/navigationPreset'
 import { orbitAround } from './orbit'
 import { gazeTargetOf, onScreen, pivotFor, type PivotMode } from './orbitPivot'
 import { panBy } from './pan'
@@ -135,6 +136,8 @@ export type ViewportEngineOptions = {
   selectionCentre?: () => Vector3 | null
   /** The two navigation preferences the pivot cascade reads — see `orbitPivot`. */
   pivotMode?: () => PivotMode
+  /** Which application's gestures the buttons answer to — see `navigationPreset`. */
+  scheme?: () => NavigationScheme
   /**
    * Draws the scene the way its owner COMPOSES it, and answers whether it drew anything.
    *
@@ -1166,7 +1169,7 @@ export class ViewportEngine {
     if (this.drag) return this.dragBy(event)
     if (event.type !== 'pointerdown') return
 
-    const kind = gestureOf(event)
+    const kind = gestureOf(event, this.options.scheme?.() ?? SCHEME_OF.studio)
     if (kind === null) return
 
     const index = this.paneAtPointer(event)

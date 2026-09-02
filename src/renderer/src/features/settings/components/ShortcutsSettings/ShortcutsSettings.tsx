@@ -1,3 +1,4 @@
+import { useSettings } from '@/stores/settings'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -28,7 +29,10 @@ export function ShortcutsSettings() {
   // What the screen SHOWS is resolved against the system; what `bind` writes is not — see
   // `resolveBindings`. Read raw, this screen offered ⌃⌘F for a full screen that answers F11.
   // Resolved once and handed down: a merge per row is 171 of them on every keystroke.
-  const resolved = useMemo(() => resolveBindings(overrides), [overrides])
+  // The scheme too: it is the middle layer, so a row shows the key the CHOSEN application gives
+  // a command, and calls it remapped only where the person themselves moved it.
+  const preset = useSettings(state => state.settings.three.navigationPreset)
+  const resolved = useMemo(() => resolveBindings(overrides, preset), [overrides, preset])
   /**
    * What is listening, if anything. ONE state rather than one per listener: a row and the
    * search box each holding their own meant a keypress could be recorded as a binding and used

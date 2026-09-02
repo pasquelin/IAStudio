@@ -1,3 +1,4 @@
+import type { NavigationPreset } from './navigationPreset'
 import type { LanguagePreference } from '../i18n/languages'
 // From the model module rather than from the registry: `shellActions.ts` reads this file, and the
 // registry reads it back — `import-cycles.test.ts` holds that count at zero.
@@ -176,6 +177,12 @@ export type Settings = {
     showGrid: boolean
     /** Extent of the ground grid, in metres. */
     gridSize: number
+    /**
+     * Which application's viewport this one drives like. A PARTIAL layer: it moves the gestures
+     * and the keys its own application binds differently, and everything else keeps the studio's
+     * — which is what lets the commands the others have no equivalent for survive every preset.
+     */
+    navigationPreset: NavigationPreset
     /**
      * Whether the view turns around what is SELECTED — Blender's *Orbit Around Selection* and
      * Unreal's *Orbit camera around selection*, on here where both ship it off. It is the most
@@ -377,6 +384,7 @@ export const DEFAULT_SETTINGS: Settings = {
   three: {
     showGrid: true,
     gridSize: 20,
+    navigationPreset: 'studio',
     orbitAroundSelection: true,
     orbitUnderCursor: false,
     flySpeed: 4,

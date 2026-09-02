@@ -5,6 +5,7 @@ import {
   type CommandId,
 } from '@shared/domain/command'
 import { DEFAULT_MOTION, type MotionId, type Signature } from '@shared/domain/shortcut'
+import { SCHEME_OF, type NavigationPreset } from '@shared/domain/navigationPreset'
 import { IS_MAC } from '@/helpers/platform'
 import { useSettings } from './settings'
 
@@ -19,13 +20,20 @@ const PLATFORM_DEFAULTS = platformDefaults(IS_MAC)
  * written table, the platform's own keys would be saved as though the user had remapped them —
  * which is also why a row asks the stored table whether it is remapped.
  */
-let mergedFrom: BindingOverrides | null = null
+let mergedFrom: { overrides: BindingOverrides; preset: NavigationPreset } | null = null
 let merged: BindingOverrides = PLATFORM_DEFAULTS
 
-function withPlatformDefaults(overrides: BindingOverrides): BindingOverrides {
-  if (overrides !== mergedFrom) {
-    mergedFrom = overrides
-    merged = { ...PLATFORM_DEFAULTS, ...overrides }
+/**
+ * Three layers, and the person's own is the last: what this system ships, then what the chosen
+ * application binds differently, then every remap that was actually made — see `navigationPreset`.
+ */
+function withPlatformDefaults(
+  overrides: BindingOverrides,
+  preset: NavigationPreset,
+): BindingOverrides {
+  if (mergedFrom?.overrides !== overrides || mergedFrom.preset !== preset) {
+    mergedFrom = { overrides, preset }
+    merged = { ...PLATFORM_DEFAULTS, ...SCHEME_OF[preset].bindings, ...overrides }
   }
   return merged
 }
@@ -36,8 +44,11 @@ function withPlatformDefaults(overrides: BindingOverrides): BindingOverrides {
  * through it would make `useBindingOverrides` answer a fresh object every other read, which is
  * exactly what `useSyncExternalStore` refuses. The caller memoises.
  */
-export function resolveBindings(overrides: BindingOverrides): BindingOverrides {
-  return { ...PLATFORM_DEFAULTS, ...overrides }
+export function resolveBindings(
+  overrides: BindingOverrides,
+  preset: NavigationPreset,
+): BindingOverrides {
+  return { ...PLATFORM_DEFAULTS, ...SCHEME_OF[preset].bindings, ...overrides }
 }
 
 /**
@@ -48,19 +59,28 @@ export function resolveBindings(overrides: BindingOverrides): BindingOverrides {
  * windows nor the native menu — and where no screen could edit them at all.
  */
 export function useBindingOverrides(): BindingOverrides {
-  return useSettings(state => withPlatformDefaults(state.settings.shortcuts.overrides))
+  return useSettings(state =>
+    withPlatformDefaults(state.settings.shortcuts.overrides, state.settings.three.navigationPreset),
+  )
 }
 
 /** The key one command answers to, for a tooltip or a toolbar. */
 export function useBinding(id: CommandId): Signature | null {
   return useSettings(state =>
-    bindingOf(id, withPlatformDefaults(state.settings.shortcuts.overrides)),
+    bindingOf(
+      id,
+      withPlatformDefaults(
+        state.settings.shortcuts.overrides,
+        state.settings.three.navigationPreset,
+      ),
+    ),
   )
 }
 
 /** Read outside React, on a keydown: subscribing per event would be a subscription per frame. */
 export function currentOverrides(): BindingOverrides {
-  return withPlatformDefaults(useSettings.getState().settings.shortcuts.overrides)
+  const { shortcuts, three } = useSettings.getState().settings
+  return withPlatformDefaults(shortcuts.overrides, three.navigationPreset)
 }
 
 /**

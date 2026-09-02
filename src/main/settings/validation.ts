@@ -1,3 +1,4 @@
+import { NAVIGATION_PRESETS } from '@shared/domain/navigationPreset'
 import { currentModelFamily } from '@shared/domain/model'
 import { LANDING_CHOICES } from '@shared/domain/settings'
 import { isRecord, mapKeys } from '@shared/guards'
@@ -185,6 +186,7 @@ const handles = boundsOf('three.gizmoSize')
 const three = z.object({
   showGrid: z.boolean().optional(),
   gridSize: z.number().int().min(grid.min).max(grid.max).optional(),
+  navigationPreset: z.enum(NAVIGATION_PRESETS).optional(),
   orbitAroundSelection: z.boolean().optional(),
   orbitUnderCursor: z.boolean().optional(),
   flySpeed: z.number().min(fly.min).max(fly.max).optional(),

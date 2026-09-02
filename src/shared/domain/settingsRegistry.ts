@@ -1,3 +1,4 @@
+import { NAVIGATION_PRESETS } from './navigationPreset'
 import { LANGUAGES } from '../i18n/languages'
 import { ASSISTANT_STEPS_MAX, ASSISTANT_STEPS_MIN } from './assistantSteps'
 import { DICTATION_MODES } from './dictation'
@@ -417,6 +418,17 @@ export const SETTING_REGISTRY = [
     min: 2,
     max: 500,
     dependsOn: { path: 'three.showGrid', equals: true },
+  }),
+  setting({
+    path: 'three.navigationPreset',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.navigationPreset.title',
+    helpKey: 'settings.navigationPreset.help',
+    options: NAVIGATION_PRESETS.map(value => ({
+      value,
+      labelKey: `settings.navigationPreset.${value}`,
+    })),
   }),
   setting({
     path: 'three.orbitAroundSelection',
