@@ -268,7 +268,12 @@ describe('the gestures a player module refuses', () => {
     selectIn(DOCUMENT, [idOf(name)])
   }
 
-  beforeEach(() => clearScenes())
+  // 🛑 The clipboard as well as the scenes: it is a module-level store that outlives a case, so
+  // what a neighbouring one cut was still sitting in it when this file gained a second describe.
+  beforeEach(() => {
+    clearScenes()
+    useSceneClipboard.getState().copy([])
+  })
 
   it('keeps its camera through a Delete that named it', () => {
     pick('Camera')
