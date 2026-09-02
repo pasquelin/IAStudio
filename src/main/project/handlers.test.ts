@@ -201,6 +201,33 @@ describe('project handlers', () => {
       })
     })
 
+    /**
+     * Clicking the document already in front happens all day and moves nothing — writing there is
+     * a disk write plus a broadcast to every window.
+     */
+    it('writes nothing when it is already the one at the top', async () => {
+      const injected = deps(catalog)
+      injected.settings.read = () => ({
+        ...DEFAULT_SETTINGS,
+        storage: {
+          ...DEFAULT_SETTINGS.storage,
+          recentDocuments: [
+            {
+              project: PROJECT,
+              path: 'Modelling/Scenes/Niveau.gltf',
+              kind: 'scene',
+              openedAt: '2026-09-01T10:00:00.000Z',
+            },
+          ],
+        },
+      })
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.documentOpened, 'Modelling/Scenes/Niveau.gltf', 'scene')
+
+      expect(injected.settings.write).not.toHaveBeenCalled()
+    })
+
     /** Nothing to note rather than an error: a window with no project has opened no document. */
     it('writes nothing with no project open', async () => {
       const injected = deps(catalog)

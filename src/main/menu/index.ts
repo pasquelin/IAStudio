@@ -54,9 +54,8 @@ let shown: WindowMenu | null = null
  */
 let overrides: BindingOverrides = {}
 /**
- * What the main process holds and no window reports: the open project, and the two shelves File ▸
- * Open recent draws. A fact routed through a renderer is a fact free to arrive late — File ▸ New
- * file would stay greyed over a project already open.
+ * What the main process holds and no window reports. A fact routed through a renderer is free to
+ * arrive late — File ▸ New file would stay greyed over a project already open.
  */
 let openProject: string | null = null
 let recentProjects: readonly RecentProject[] = []

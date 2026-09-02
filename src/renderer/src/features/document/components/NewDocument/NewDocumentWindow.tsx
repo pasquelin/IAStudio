@@ -12,19 +12,10 @@ import { NewDocumentKinds } from './NewDocumentKinds'
 import { NewDocumentNoProject } from './NewDocumentNoProject'
 
 /**
- * What to make, what to call it and where it goes — asked in a WINDOW before anything is made.
+ * What to make, what to call it and where it goes. A window rather than a modal: the studio is
+ * held on the other end until this answers, and a window that goes away answers `null`.
  *
- * A window rather than a modal over the studio: it is moved, resized and put beside what one is
- * looking at, and closing it means nothing was made — the studio is held on the other end until
- * this answers, and the main process answers `null` for a window that went away.
- *
- * The kinds on the left, the form on the right: the shape of the settings window, because it is
- * the same question. The row a person lands on is the likeliest one for the space they came
- * from, already selected, so Enter alone still makes a document — naming costs nothing to
- * whoever does not care to.
- *
- * With no project open the form gives way to the ways INTO one, and none of them acts here: the
- * studio owns leaving a project. See `NewDocumentAnswer`.
+ * None of the ways into a project acts here — the studio owns leaving one. See `NewDocumentAnswer`.
  */
 export function NewDocumentWindow() {
   const { t } = useTranslation()

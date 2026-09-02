@@ -720,15 +720,22 @@ export function registerProjectHandlers({
     const open = project.current()
     if (!open) return Promise.resolve()
 
+    const inside = parseFolderPath(path)
     const stored = settings.read().storage
+    // Already at the top: a document clicked twice, or come back to from its tab. Writing there
+    // is a disk write and a broadcast to every window, on a gesture that happens all day and
+    // moves nothing.
+    const [first] = stored.recentDocuments
+    if (first?.project === open.path && first.path === inside) return Promise.resolve()
+
     settings.write({
       storage: {
         recentDocuments: withRecentDocument(stored.recentDocuments, {
           project: open.path,
-          path: parseFolderPath(path),
+          path: inside,
           kind: parseDocumentKind(kind),
-          // Read here rather than injected: nothing asserts on the stamp, and the shelf orders
-          // by it only against its own writes.
+          // Read here rather than injected: nothing asserts on the stamp, and the shelf orders by
+          // it only against its own writes.
           openedAt: new Date().toISOString(),
         }),
       },

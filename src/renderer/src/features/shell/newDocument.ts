@@ -55,14 +55,10 @@ export async function createScript(
 }
 
 /**
- * The folder the Explorer is pointing at, or `null` for the window to open on the kind's own.
+ * The folder the Explorer points at, or `null` for the window to fall back on the kind's own.
  *
- * A row that is a FILE means the folder holding it — what is on screen around the selection is
- * what the user is looking at, whichever row carries the highlight. The disk is asked which of
- * the two it is: a path alone cannot say, and a folder mistaken for a file would open the field
- * one level too high.
- *
- * Resolved here and not in the window because only the studio holds a selection.
+ * The DISK is asked which of the two a row is: a path alone cannot say, and a folder mistaken for
+ * a file opens the field one level too high. Resolved here because only the studio has a selection.
  */
 async function pickedFolder(): Promise<string | null> {
   const picked = selectedFilePaths(useSelection.getState()).at(-1)
@@ -108,19 +104,11 @@ async function enterProject(given: NewDocumentAnswer): Promise<void> {
 }
 
 /**
- * Makes a document, on the name and in the folder its author gives it, and puts it in front.
+ * Makes a document of the kind this space opens, and puts it in front.
  *
- * Its own file because four surfaces ask for it — the plus button, the native menu, the home and
- * the assistant — and the copies had already started to differ. Deliberately away from
- * `documentIo`, which reaches every engine: the plus button must not import three megabytes to
- * open an empty canvas.
- *
- * A folder gone read-only, or removed under us, leaves the workspace empty rather than failing
- * loudly: that is the honest outcome on screen, and the studio has nowhere to say more until it
- * grows a notification.
- *
- * It ANSWERS all the same — `null` for a window called off, a folder that refused, a kind with no
- * workspace. A caller from outside the window is held on the other end of this.
+ * Away from `documentIo`, which reaches every engine: the plus button must not import three
+ * megabytes to open an empty canvas. Answers `null` for a window called off or a folder that
+ * refused — a caller from outside the window is held on the other end of this.
  */
 export function createDocumentIn(
   workspace: WorkspaceId,
@@ -130,11 +118,8 @@ export function createDocumentIn(
 }
 
 /**
- * Asks WHAT to make before making it — the plus button, ⌘N, and the home's tiles.
- *
- * The surface orders the kinds and never filters them: everything is offered from everywhere, or
- * the studio is back where this lot found it, with the gesture depending on the screen one
- * happens to be looking at.
+ * Asks WHAT to make before making it — the plus button, ⌘N, and the home's tiles. The surface
+ * ORDERS the kinds and never filters them, or creating depends again on the screen one is on.
  */
 export function openNewDocument(surface: ToolSurface | null): Promise<DocumentDescriptor | null> {
   return made(null, surface).catch(() => null)
@@ -155,11 +140,8 @@ export type NamedCreation = { title: string; folder?: string; template?: Documen
 
 /**
  * Asks until there is an answer to act on: a way into a project is taken and the question put
- * again, so opening one does not cost the gesture that was being made.
- *
- * The loop always ends on a person — every turn either makes a document or reopens a window they
- * can close, and cancelling the project picker leaves them looking at the same window they
- * summoned.
+ * again, so opening one does not cost the gesture that was being made. Every turn either makes a
+ * document or reopens a window the person can close.
  */
 async function made(
   kind: DocumentKind | null,

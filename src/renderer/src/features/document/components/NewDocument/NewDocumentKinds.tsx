@@ -21,14 +21,10 @@ export type NewDocumentKindsProps = {
 }
 
 /**
- * What the studio can make, as the column of the window that makes it.
+ * What the studio can make, as the column of the window that makes it. The project row is pinned
+ * over the scrolling list, the shape the settings window uses for its search field.
  *
- * The project row is pinned above the list rather than being its first entry, which is the shape
- * the settings window already uses for its search field: the list scrolls, what sits over it does
- * not, and a project is not a document to be picked among documents.
- *
- * Each glyph is inked by its section, the same hue the Explorer inks that file with — the studio
- * has one colour code for what a file IS, and a second one here would teach a second language.
+ * Inked by SECTION, the hue the Explorer already gives that file: one colour code, not two.
  */
 export function NewDocumentKinds({
   creatables,

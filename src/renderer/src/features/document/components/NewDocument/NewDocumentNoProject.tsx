@@ -20,14 +20,10 @@ export type NewDocumentNoProjectProps = {
 }
 
 /**
- * The pane with no project open: why nothing can be made yet, and the shortest ways out of it.
+ * The pane with no project open: why nothing can be made yet, and the shelf that gets out of it
+ * without closing this window.
  *
- * The shelf is offered here rather than behind a second gesture, which is the whole point of the
- * screen — a document needs a project, and asking someone to close this window, find the title
- * bar and come back is the click this lot exists to remove.
- *
- * None of the three acts here: they are ANSWERED to the studio, which owns leaving a project and
- * everything that follows it. See `NewDocumentAnswer`.
+ * None of the three acts here — they are ANSWERED to the studio, which owns leaving a project.
  */
 export function NewDocumentNoProject({
   recent,

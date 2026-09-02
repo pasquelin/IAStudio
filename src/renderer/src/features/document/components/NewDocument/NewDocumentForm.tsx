@@ -34,15 +34,11 @@ export type NewDocumentFormProps = {
 }
 
 /**
- * What a document is called, what it opens on, and where it goes.
+ * What a document is called, what it opens on, and where it goes. Mounted under a `key` of its
+ * kind, so picking another remounts rather than reconciles — which is what leaves it one effect.
  *
- * Mounted under a `key` of its kind, which is what lets it hold no effect but the one below: the
- * suggested name and the starting folder are read once, and picking another kind remounts rather
- * than reconciles. Two states for the two template families for the same reason as before —
- * `empty` is the one id both of them spell.
- *
- * Refused where it is TYPED rather than at the disk, and the refusal follows the folder: a name
- * taken in one is free in the next.
+ * A name is refused where it is TYPED and the refusal follows the FOLDER: one taken here is free
+ * in the next. Two template states because `empty` is the one id both families spell.
  */
 export function NewDocumentForm({
   kind,

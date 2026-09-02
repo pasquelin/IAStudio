@@ -715,15 +715,16 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       click: () => actions.openRecent({ project: entry.path }),
     }))
 
-    const documents = recentDocuments.map(entry => ({
-      // The project's name beside the document's, and only where it is not the one in front: a
-      // row that performs a project SWITCH has to say so before it is clicked.
-      label:
-        entry.project === openProject
-          ? stemOf(pathBaseNameOf(entry.path))
-          : `${stemOf(pathBaseNameOf(entry.path))} — ${projectName(entry.project)}`,
-      click: () => actions.openRecent({ project: entry.project, path: entry.path }),
-    }))
+    const documents = recentDocuments.map(entry => {
+      const title = stemOf(pathBaseNameOf(entry.path))
+
+      return {
+        // The project named beside it only where it is not the one in front: a row that performs
+        // a project SWITCH has to say so before it is clicked.
+        label: entry.project === openProject ? title : `${title} — ${projectName(entry.project)}`,
+        click: () => actions.openRecent({ project: entry.project, path: entry.path }),
+      }
+    })
 
     if (projects.length === 0 && documents.length === 0) return []
 
