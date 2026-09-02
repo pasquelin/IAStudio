@@ -1,5 +1,5 @@
 import { shownIn } from '@pasquelin/panels'
-import { placementIn, type ToolId, type ToolSurface, type ToolZone } from '@shared/domain/tool'
+import { placementIn, type ToolId, type ToolZone } from '@shared/domain/tool'
 import { offeredPlacement, toolStateOf } from '@/helpers/toolRegistry'
 import { toolSurface } from '@/stores/layouts'
 import { panelsStore } from '@/stores/panels'
@@ -22,15 +22,21 @@ export function revealTool(tool: ToolId): boolean {
   if (!offeredPlacement(tool, toolSurface(), toolStateOf())) return false
 
   panelsStore.getState().show(tool)
-  return true
+  // The same answer `panels.list` gives, rather than the call having been made: `offeredPlacement`
+  // reads the stores while the registry follows the shell's render, so the two are a tick apart
+  // whenever an answer has just landed — and `show` does nothing for an id it cannot find.
+  return toolIsShown(tool)
 }
 
 /**
- * Whether this surface is showing that panel right now. A half that was never named shows the
- * first panel its surface declares, so the arrangement alone does not answer it.
+ * Whether the surface IN FRONT is showing that panel right now. A half that was never named shows
+ * the first panel its surface declares, so the arrangement alone does not answer it.
+ *
+ * 🛑 No surface to ask about: what the chassis draws is what the view in front holds, resolved
+ * against the registry the shell declared for it. Taking one made the answer look addressable.
  */
-export function toolIsShown(tool: ToolId, surface: ToolSurface): boolean {
-  const placement = placementIn(tool, surface)
+export function toolIsShown(tool: ToolId): boolean {
+  const placement = placementIn(tool, toolSurface())
   if (!placement) return false
 
   return isShown(tool, placement.zone)

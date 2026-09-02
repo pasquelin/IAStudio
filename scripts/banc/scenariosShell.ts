@@ -1,7 +1,6 @@
 import type { Studio } from './studio'
 import type { Run, Scenario } from './run'
 import { toolIsShown } from '@/helpers/revealPanel'
-import { toolSurface } from '@/stores/layouts'
 import * as read from './oracle'
 import {
   assetOf,
@@ -335,13 +334,13 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
       await boatImage(studio)
       await studio.run('panel.open', { panel: 'text' })
     },
-    passed: () => toolIsShown('layers', toolSurface()),
+    passed: () => toolIsShown('layers'),
   },
   {
     name: '55.6 closes the layers panel',
     said: ['Ferme le panneau des calques.'],
     setup: withPanel,
-    passed: () => !toolIsShown('layers', toolSurface()),
+    passed: () => !toolIsShown('layers'),
   },
   {
     name: '55.7 opens a mirror of the view on the second screen',

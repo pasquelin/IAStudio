@@ -4,6 +4,8 @@ import { chassisFor } from '@/stores/panels-fixtures'
 import { panelsStore } from '@/stores/panels'
 import { useLayouts } from '@/stores/layouts'
 import { useDocuments } from '@/stores/documents'
+import { useProject } from '@/stores/project'
+import { trackByGit } from '@/stores/git-fixtures'
 import { installDocument } from '@/stores/document-fixtures'
 import { revealAssets, revealTool } from './revealPanel'
 
@@ -91,5 +93,38 @@ describe('revealing a panel the surface is not offering', () => {
 
     expect(revealTool('assistant')).toBe(true)
     expect(drawn('right').primary).toBe('assistant')
+  })
+})
+
+/**
+ * 🛑 `offeredPlacement` reads the STORES; the chassis registry is filled by the shell's render.
+ * The two are a tick apart whenever an answer a `requires` asks about has just landed — a project
+ * opening, `git init` finishing — and `show` does nothing at all for an id it cannot find.
+ */
+describe('revealing a panel the chassis has not been told about yet', () => {
+  it('answers no rather than yes over a half that never moved', () => {
+    // Declared with no project, so the Git panel is not in the registry...
+    useProject.setState({ project: null })
+    chassisFor('image')
+
+    // ...and now there is one, which is what `offeredPlacement` reads.
+    trackByGit()
+    useProject.setState({
+      project: { path: '/projects/one', manifest: { version: 1, createdAt: '', updatedAt: '' } },
+    })
+
+    expect(revealTool('git')).toBe(false)
+    expect(drawn('left').secondary).toBe('explorer')
+  })
+
+  it('answers yes once the shell has declared it', () => {
+    trackByGit()
+    useProject.setState({
+      project: { path: '/projects/one', manifest: { version: 1, createdAt: '', updatedAt: '' } },
+    })
+    chassisFor('image')
+
+    expect(revealTool('git')).toBe(true)
+    expect(drawn('left').secondary).toBe('git')
   })
 })

@@ -160,10 +160,10 @@ describe('the panels of the surface in front', () => {
 
   it('opens one, and closes it again', async () => {
     expect(await runAction('panel.open', { panel: 'assets' })).toEqual({ ok: true })
-    expect(toolIsShown('assets', 'image')).toBe(true)
+    expect(toolIsShown('assets')).toBe(true)
 
     expect(await runAction('panel.close', { panel: 'assets' })).toEqual({ ok: true })
-    expect(toolIsShown('assets', 'image')).toBe(false)
+    expect(toolIsShown('assets')).toBe(false)
   })
 
   // The Explorer sits on the home and in no space: naming it here is a refusal, not a no-op.
@@ -185,7 +185,7 @@ describe('the panels of the surface in front', () => {
       ok: false,
       refusal: 'wrongSurface',
     })
-    expect(toolIsShown('generator', 'image')).toBe(true)
+    expect(toolIsShown('generator')).toBe(true)
   })
 
   // A placement `requires` a project or a repository, and opening one without it put a DIFFERENT
