@@ -30,15 +30,19 @@ export function springArmRigsOf(
 ): ReadonlyMap<string, ArmRig> {
   const bound = withBoundPlayerArm(nodes)
   const found = new Map<string, ArmRig>()
-  // The id first and the FIRST name after, exactly as `entityNamed` resolves one: an arm outside a
-  // module keeps the name its author typed, and reading ids alone drew nothing for those.
-  const held = new Map(bound.map(node => [node.id, node.id]))
-  for (const node of bound) if (!held.has(node.name)) held.set(node.name, node.id)
+  // Built only once an arm is actually found: a scene of forty thousand nodes and no spring arm
+  // paid a Map of forty thousand entries on every selection and every frame of a drag.
+  let held: Map<string, string> | null = null
 
   for (const node of bound) {
     const arm = node.components?.find(one => one.type === 'SpringArm')
-    const subjectId = arm && held.get(textOf(arm, 'subject', ARM.subject))
-    if (!arm || !subjectId) continue
+    if (!arm) continue
+
+    // The id first and the FIRST name after, exactly as `entityNamed` resolves one: an arm outside
+    // a module keeps the name its author typed, and reading ids alone drew nothing for those.
+    held ??= namesAndIds(bound)
+    const subjectId = held.get(textOf(arm, 'subject', ARM.subject))
+    if (!subjectId) continue
 
     // 🛑 The three arms of `aimedAt` (`springArm.ts`) and its fallback, or the aid draws an arm
     // otherwise than it will be ridden: an orientation the registry gains later falls back on the
@@ -67,6 +71,13 @@ export function springArmRigsOf(
     found.set(node.id, { subjectId, lift, back })
   }
   return found
+}
+
+/** Every node reachable by what an author may write: its id, and the first node of that name. */
+function namesAndIds(nodes: readonly SceneNode[]): Map<string, string> {
+  const held = new Map(nodes.map(node => [node.id, node.id]))
+  for (const node of nodes) if (!held.has(node.name)) held.set(node.name, node.id)
+  return held
 }
 
 const AXES = restingAxes()

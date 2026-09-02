@@ -60,8 +60,9 @@ import {
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
 import { applyFog, applyToneMapping } from './worldBinding'
-import { createViewportAids, type AidBody, type AidRigs } from './viewportAids'
+import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
 import { springArmRigsOf } from './springArmRigs'
+import { cachedOn } from '../core/cachedOn'
 import { COMPONENT_DEFAULTS } from '@game/runtime/componentDefaults'
 import { numberOf } from '@game/runtime/componentFields'
 import type { Vector3 as TurnedVector } from '@shared/domain/transform'
@@ -3040,11 +3041,31 @@ export class SceneRenderer {
   }
 
   /**
+   * 🛑 Five `getComputedStyle` calls, kept until the theme moves. `refreshAids` runs on every
+   * state change — a selection, a frame of a slider drag — and no longer bows out early once a
+   * scene holds a walking body, so reading them per call forced five style recalcs per frame.
+   *
+   * Off the CANVAS and never `cachedToken`, which reads the main document's root: a detached
+   * panel paints from a window of its own.
+   */
+  private aidPaletteHeld: AidPalette | null = null
+
+  private aidPalette(): AidPalette {
+    const accent = this.viewport.paletteToken('--color-accent')
+    return (this.aidPaletteHeld ??= {
+      box: accent,
+      origin: this.viewport.paletteToken('--color-muted'),
+      normal: accent,
+      body: accent,
+      arm: this.viewport.paletteToken('--color-muted'),
+    })
+  }
+
+  /**
    * The boxes, origins and normals, rebuilt from what is on stage and what the settings ask for.
    *
    * Called from `apply`, which runs on every state change — a selection, a frame of a slider
-   * drag. Nothing asked for and nothing drawn is the ordinary case and has to cost nothing: the
-   * three palette reads below are `getComputedStyle` calls, on a DOM React has just touched.
+   * drag. Nothing asked for and nothing drawn is the ordinary case and has to cost nothing.
    */
   private refreshAids(): void {
     const wants =
@@ -3056,19 +3077,7 @@ export class SceneRenderer {
       !this.aids.idle()
     if (!wants) return
 
-    this.aids.apply(
-      this.objects,
-      this.selectedIds,
-      this.view,
-      {
-        box: this.viewport.paletteToken('--color-accent'),
-        origin: this.viewport.paletteToken('--color-muted'),
-        normal: this.viewport.paletteToken('--color-accent'),
-        body: this.viewport.paletteToken('--color-accent'),
-        arm: this.viewport.paletteToken('--color-muted'),
-      },
-      this.rigs,
-    )
+    this.aids.apply(this.objects, this.selectedIds, this.view, this.aidPalette(), this.rigs)
     this.redraw()
   }
 
@@ -3188,6 +3197,7 @@ export class SceneRenderer {
   private readonly onPaletteChanged = (): void => {
     if (!this.viewport.canvas) return
 
+    this.aidPaletteHeld = null
     this.applyPalette()
     // A ground with no colour of its own reads the palette like a mesh does, and `applyPalette`
     // does not reach it: it is not a node, so the loop below never walks it.
@@ -5164,6 +5174,14 @@ function disposeMaterial(mesh: Mesh): void {
  * `characters.capsuleOf` — so what is drawn is what is felt, never a node's own geometry.
  */
 function capsuleBodiesOf(nodes: readonly SceneNode[]): ReadonlyMap<string, AidBody> {
+  // Cached on the LIST, as `allPartsOf` is: `apply` runs on every selection and every frame of a
+  // slider drag, and neither changes the identity of `nodes` — this was a third walk of it.
+  return cachedOn(bodiesByNodes, nodes, () => walkCapsuleBodies(nodes))
+}
+
+const bodiesByNodes = new WeakMap<readonly SceneNode[], ReadonlyMap<string, AidBody>>()
+
+function walkCapsuleBodies(nodes: readonly SceneNode[]): ReadonlyMap<string, AidBody> {
   const found = new Map<string, AidBody>()
   for (const node of nodes) {
     const walker = node.components?.find(one => one.type === 'CharacterController')
