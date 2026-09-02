@@ -296,9 +296,9 @@ describe('the opening chunk', () => {
   })
 
   /**
-   * Deferred by `features/shell/components/ToolWindow/toolComponents.ts` on 9 August: every panel of the table, the home screen's
-   * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
-   * the guard still green.
+   * Deferred by `features/shell/components/toolComponents.ts` on 9 August: every panel of the
+   * table, the home screen's own included. Stated over the whole folder, so a panel added
+   * tomorrow cannot land eager with the guard still green.
    *
    * The three left are reached for something other than a zone: the jobs list and its row
    * ARE a panel of the table since 11 August — but they are also what the status bar's flyout
