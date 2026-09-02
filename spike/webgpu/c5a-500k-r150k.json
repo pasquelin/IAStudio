@@ -1,0 +1,273 @@
+{
+  "at": "2026-09-02T12:28:17.326Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "count": 500000,
+      "spread": "uniform",
+      "level": "product",
+      "trianglesPerRegion": 150000,
+      "shadowDepth": "default",
+      "shadowFar": 500,
+      "shadowSide": 5383.949,
+      "span": 1897,
+      "tiles": 1444,
+      "landmarks": 15139,
+      "props": 484861,
+      "clusters": 0,
+      "bodies": 501444,
+      "applyMs": 5521.6,
+      "regions": 1235,
+      "restCpuMeanMs": 3.263,
+      "restCpuPeakMs": 7.1,
+      "restCpuMedianMs": 3.1,
+      "restGpuMs": 20.65,
+      "restGpuPeakMs": 26.866,
+      "restCalls": 667,
+      "restCallsPeak": 667,
+      "restTriangles": 93817720,
+      "restTrianglesPeak": 93817720,
+      "restInstances": 575309,
+      "restInstancesPeak": 575309,
+      "restScenePassCpuMs": 2.44,
+      "restColourPassCpuMs": 2.087,
+      "restColourCalls": 247,
+      "restColourTriangles": 34523580,
+      "restColourInstances": 260802,
+      "restShadowCalls": 420,
+      "restShadowTriangles": 59294140,
+      "restShadowInstances": 314507,
+      "walkCpuMeanMs": 2.622,
+      "walkCpuPeakMs": 2.9,
+      "walkCpuMedianMs": 2.6,
+      "walkGpuMs": 14.451,
+      "walkGpuPeakMs": 16.347,
+      "walkCalls": 667,
+      "walkCallsPeak": 668,
+      "walkTriangles": 93770040,
+      "walkTrianglesPeak": 93898680,
+      "walkInstances": 576131,
+      "walkInstancesPeak": 577976,
+      "walkScenePassCpuMs": 2.52,
+      "walkColourPassCpuMs": 2.16,
+      "walkColourCalls": 243,
+      "walkColourTriangles": 33882940,
+      "walkColourInstances": 261829,
+      "walkShadowCalls": 420,
+      "walkShadowTriangles": 59294140,
+      "walkShadowInstances": 314507,
+      "runCpuMeanMs": 2.739,
+      "runCpuPeakMs": 6.4,
+      "runCpuMedianMs": 2.7,
+      "runGpuMs": 15.565,
+      "runGpuPeakMs": 20.273,
+      "runCalls": 680,
+      "runCallsPeak": 722,
+      "runTriangles": 95717752,
+      "runTrianglesPeak": 101865592,
+      "runInstances": 588989,
+      "runInstancesPeak": 597779,
+      "runScenePassCpuMs": 2.593,
+      "runColourPassCpuMs": 2.26,
+      "runColourCalls": 239,
+      "runColourTriangles": 33113532,
+      "runColourInstances": 273420,
+      "runShadowCalls": 420,
+      "runShadowTriangles": 59294140,
+      "runShadowInstances": 314507,
+      "spinCpuMeanMs": 2.841,
+      "spinCpuPeakMs": 4,
+      "spinCpuMedianMs": 2.8,
+      "spinGpuMs": 15.125,
+      "spinGpuPeakMs": 19.04,
+      "spinCalls": 681,
+      "spinCallsPeak": 699,
+      "spinTriangles": 95838328,
+      "spinTrianglesPeak": 98298552,
+      "spinInstances": 583913,
+      "spinInstancesPeak": 598674,
+      "spinScenePassCpuMs": 2.56,
+      "spinColourPassCpuMs": 2.133,
+      "spinColourCalls": 277,
+      "spinColourTriangles": 38707452,
+      "spinColourInstances": 282744,
+      "spinShadowCalls": 420,
+      "spinShadowTriangles": 59294140,
+      "spinShadowInstances": 314507,
+      "teleportCpuMeanMs": 2.886,
+      "teleportCpuPeakMs": 4.3,
+      "teleportCpuMedianMs": 2.9,
+      "teleportGpuMs": 11.922,
+      "teleportGpuPeakMs": 19.097,
+      "teleportCalls": 464,
+      "teleportCallsPeak": 464,
+      "teleportTriangles": 65095656,
+      "teleportTrianglesPeak": 65095656,
+      "teleportInstances": 467047,
+      "teleportInstancesPeak": 467047,
+      "teleportScenePassCpuMs": 2.247,
+      "teleportColourPassCpuMs": 1.84,
+      "teleportColourCalls": 44,
+      "teleportColourTriangles": 5801516,
+      "teleportColourInstances": 152540,
+      "teleportShadowCalls": 420,
+      "teleportShadowTriangles": 59294140,
+      "teleportShadowInstances": 314507,
+      "highCpuMeanMs": 3.111,
+      "highCpuPeakMs": 7.8,
+      "highCpuMedianMs": 3.1,
+      "highGpuMs": 19.143,
+      "highGpuPeakMs": 27.676,
+      "highCalls": 631,
+      "highCallsPeak": 631,
+      "highTriangles": 88591096,
+      "highTrianglesPeak": 88591096,
+      "highInstances": 567262,
+      "highInstancesPeak": 567262,
+      "highScenePassCpuMs": 2.4,
+      "highColourPassCpuMs": 2.007,
+      "highColourCalls": 211,
+      "highColourTriangles": 29296956,
+      "highColourInstances": 252755,
+      "highShadowCalls": 420,
+      "highShadowTriangles": 59294140,
+      "highShadowInstances": 314507
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "500000 — uniform — repos",
+      "workingSetKb": 2679760
+    },
+    {
+      "at": 4005,
+      "phase": "500000 — uniform — repos",
+      "workingSetKb": 2679904
+    },
+    {
+      "at": 6033,
+      "phase": "500000 — uniform — repos",
+      "workingSetKb": 2680016
+    },
+    {
+      "at": 8035,
+      "phase": "500000 — uniform — marche",
+      "workingSetKb": 2675824
+    },
+    {
+      "at": 10037,
+      "phase": "500000 — uniform — marche",
+      "workingSetKb": 2675920
+    },
+    {
+      "at": 12039,
+      "phase": "500000 — uniform — marche",
+      "workingSetKb": 2676000
+    },
+    {
+      "at": 14045,
+      "phase": "500000 — uniform — marche",
+      "workingSetKb": 2676048
+    },
+    {
+      "at": 16047,
+      "phase": "500000 — uniform — marche",
+      "workingSetKb": 2676128
+    },
+    {
+      "at": 18048,
+      "phase": "500000 — uniform — marche",
+      "workingSetKb": 2676128
+    },
+    {
+      "at": 20050,
+      "phase": "500000 — uniform — course",
+      "workingSetKb": 2676368
+    },
+    {
+      "at": 22052,
+      "phase": "500000 — uniform — course",
+      "workingSetKb": 2676560
+    },
+    {
+      "at": 24057,
+      "phase": "500000 — uniform — course",
+      "workingSetKb": 2676640
+    },
+    {
+      "at": 26058,
+      "phase": "500000 — uniform — course",
+      "workingSetKb": 2676848
+    },
+    {
+      "at": 28060,
+      "phase": "500000 — uniform — course",
+      "workingSetKb": 2676912
+    },
+    {
+      "at": 30062,
+      "phase": "500000 — uniform — course",
+      "workingSetKb": 2676944
+    },
+    {
+      "at": 32064,
+      "phase": "500000 — uniform — rotation",
+      "workingSetKb": 2678368
+    },
+    {
+      "at": 34065,
+      "phase": "500000 — uniform — rotation",
+      "workingSetKb": 2678592
+    },
+    {
+      "at": 36068,
+      "phase": "500000 — uniform — rotation",
+      "workingSetKb": 2679040
+    },
+    {
+      "at": 38070,
+      "phase": "500000 — uniform — rotation",
+      "workingSetKb": 2679056
+    },
+    {
+      "at": 40071,
+      "phase": "500000 — uniform — téléportation",
+      "workingSetKb": 2679088
+    },
+    {
+      "at": 42130,
+      "phase": "500000 — uniform — téléportation",
+      "workingSetKb": 2679152
+    },
+    {
+      "at": 44163,
+      "phase": "500000 — uniform — vue haute",
+      "workingSetKb": 2679216
+    },
+    {
+      "at": 46165,
+      "phase": "500000 — uniform — vue haute",
+      "workingSetKb": 2679280
+    },
+    {
+      "at": 48170,
+      "phase": "500000 — uniform — vue haute",
+      "workingSetKb": 2679280
+    },
+    {
+      "at": 50172,
+      "phase": "500000 — uniform — vue haute",
+      "workingSetKb": 2588576
+    },
+    {
+      "at": 52175,
+      "phase": "fin",
+      "workingSetKb": 2588544
+    }
+  ]
+}
