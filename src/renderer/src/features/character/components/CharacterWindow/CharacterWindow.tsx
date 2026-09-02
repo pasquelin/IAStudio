@@ -78,6 +78,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const picked = useCharacterView(state => state.pickedBone)
   const mode = useCharacterView(state => state.mode)
   const lockedLengths = useCharacterView(state => state.lockedLengths)
+  const heldAxes = useCharacterView(state => state.heldAxes)
   const editingRest = useCharacterView(state => state.editingRest)
 
   // Its OWN scope and not the scene's: ⌘Z here must not reach the scene a studio window is
@@ -118,6 +119,12 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   useEffect(() => {
     engineRef.current?.setMode(mode)
   }, [mode])
+
+  // 🛑 The padlocks reach the DRAG, not just the release: unleashed for the length of a gesture,
+  // a joint leaves the body and drags the skin after it — seen on screen the 2026-09-02.
+  useEffect(() => {
+    engineRef.current?.setBoneHold({ heldAxes, lockedLengths })
+  }, [heldAxes, lockedLengths])
 
   // 🛑 The rest is put back BEFORE the engine measures the skins against it: a bone left where a
   // pose placed it would be bound there, and that pose would become the character's own shape.
@@ -216,6 +223,10 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     renderer.setPoseMode(true)
     renderer.setRestEditing(useCharacterView.getState().editingRest)
     renderer.setMode(useCharacterView.getState().mode)
+    renderer.setBoneHold({
+      heldAxes: useCharacterView.getState().heldAxes,
+      lockedLengths: useCharacterView.getState().lockedLengths,
+    })
 
     const stage = createCharacterStage({ renderer, assetId })
 

@@ -4,6 +4,7 @@ import { act } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { Rig } from '@shared/domain/rig'
+import type { BoneHold } from '@/engines/character/boneRest'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
@@ -16,6 +17,9 @@ const built = vi.hoisted((): SceneRendererOptions[] => [])
 
 /** Every bone the engine was asked to POSE, which is the gesture that writes nothing. */
 const posed = vi.hoisted((): string[] => [])
+
+/** Every hold the engine was handed — what a joint is kept within for the whole of a drag. */
+const holds = vi.hoisted((): BoneHold[] => [])
 
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
@@ -32,6 +36,9 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setMode = vi.fn()
     setPickedBone = vi.fn()
     setRestEditing = vi.fn()
+    setBoneHold = (hold: BoneHold) => {
+      holds.push(hold)
+    }
     poseBone = (_nodeId: string, bone: string) => {
       posed.push(bone)
     }
@@ -63,6 +70,7 @@ const restOfSpine = (): Transform | undefined =>
 beforeEach(() => {
   built.length = 0
   posed.length = 0
+  holds.length = 0
   clearCharacters()
   useCharacterView.setState({ editingRest: false })
   installFakeBridge()
@@ -101,10 +109,14 @@ it('holds the bone lengths from the first frame, and lets go of them on the bar'
   const lock = within(screen.getByRole('toolbar')).getByRole('button', { name: /longueurs/i })
 
   expect(useCharacterView.getState().lockedLengths).toBe(true)
+  // 🛑 The engine, not just the store: the leash is what keeps a joint on its parent for the
+  // whole of a drag, and one applied on release alone lets the bone leave the body meanwhile.
+  expect(holds.at(-1)).toEqual({ heldAxes: [], lockedLengths: true })
 
   await userEvent.click(lock)
 
   expect(useCharacterView.getState().lockedLengths).toBe(false)
+  expect(holds.at(-1)).toEqual({ heldAxes: [], lockedLengths: false })
 })
 
 /**

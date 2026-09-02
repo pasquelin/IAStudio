@@ -205,6 +205,7 @@ import {
   wearsRig,
 } from '../character/rigBuild'
 import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
+import { restWithin, type BoneHold } from '@/engines/character/boneRest'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
 import { type BoneShapes, createBoneShapes, leafTail } from './boneShapes'
 import { createSkinWeights, type SkinWeights } from '../character/skinWeights'
@@ -718,6 +719,10 @@ export class SceneRenderer {
   private heldPreview: PreviewWatch | null = null
   /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
   private readonly boneRests = new Map<string, Transform>()
+  /** The rest a fitted rig gave each of its bones, per node — what a leash is measured from. */
+  private readonly rigRests = new Map<string, Map<string, Transform>>()
+  /** What a joint dragged is held to. Nothing at all until a window asks: a scene poses freely. */
+  private boneHold: BoneHold = { heldAxes: [], lockedLengths: false }
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -2012,6 +2017,9 @@ export class SceneRenderer {
   async skinModel(nodeId: string, rig: Rig): Promise<void> {
     const holder = this.objects.get(nodeId)
     if (!holder) return
+
+    // Before the branches below, which all return early: the leash needs the rig either way.
+    this.rigRests.set(nodeId, new Map(rig.bones.map(one => [one.name, one.rest])))
 
     // 🛑 A model already wearing these very bones is having its REST edited, not its rig
     // rebuilt: the weights are per vertex and unchanged, so putting the bones back where the
@@ -3981,6 +3989,7 @@ export class SceneRenderer {
       if (object instanceof DirectionalLight || object instanceof SpotLight)
         this.viewport.scene.remove(object.target)
       this.objects.delete(id)
+      this.rigRests.delete(id)
     }
 
     const helper = this.helpers.get(id)
@@ -4062,6 +4071,7 @@ export class SceneRenderer {
 
   private readonly onGizmoChange = (): void => {
     this.dragged = true
+    this.holdDraggedBone()
     this.layOnSurface()
     // A box that stayed behind while its object moved is a box that says nothing. Re-reading a
     // bounding box is cheap — building one is not, which is why this is not `refreshAids`.
@@ -4072,6 +4082,19 @@ export class SceneRenderer {
     // 40 000 nodes, which per pointer move is three dropped frames.
     this.instances.moved(this.selectedIds, id => this.objects.get(id))
     this.redraw()
+  }
+
+  /**
+   * The joint the gizmo carries, brought back within its holds EVERY frame: held on release
+   * alone, a bone left the body as a long spike for the whole gesture. Seen on screen 2026-09-02.
+   */
+  private holdDraggedBone(): void {
+    const picked = this.pickedBone
+    const bone = this.pickedBoneObject()
+    if (!picked || !bone) return
+
+    const rest = this.rigRests.get(picked.nodeId)?.get(picked.bone)
+    if (rest) applyTransform(bone, restWithin(rest, transformOf(bone), this.boneHold))
   }
 
   /**
@@ -4154,6 +4177,14 @@ export class SceneRenderer {
       return
     }
     if (pane === 0) this.options.onView?.(this.viewPlacement())
+  }
+
+  /**
+   * What a joint dragged is held to: the axes it must not leave, and whether it keeps its distance
+   * to its parent. The skeleton window owns those padlocks; the engine only obeys them.
+   */
+  setBoneHold(hold: BoneHold): void {
+    this.boneHold = hold
   }
 
   /** Aims the gizmo at a bone, or lets go of the one it held. */

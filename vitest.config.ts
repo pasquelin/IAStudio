@@ -153,6 +153,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/scene/sceneStage.test.ts',
   'src/renderer/src/engines/scene/scene-models.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-animation.test.ts',
+  'src/renderer/src/engines/scene/scene-renderer-bones.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-export.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-loaders.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
