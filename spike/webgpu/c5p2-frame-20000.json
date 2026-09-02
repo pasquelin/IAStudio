@@ -1,0 +1,512 @@
+{
+  "at": "2026-09-02T20:43:39.266Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "mode": "weight",
+      "template": "empty",
+      "nodes": 3,
+      "meshes": 0,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "basic",
+      "nodes": 5,
+      "meshes": 2,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "photoStudio",
+      "nodes": 6,
+      "meshes": 2,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "cinematic",
+      "nodes": 5,
+      "meshes": 1,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "archvis",
+      "nodes": 3,
+      "meshes": 1,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "postProcessing",
+      "nodes": 9,
+      "meshes": 4,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "firstPerson",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "mode": "weight",
+      "template": "thirdPerson",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "mode": "weight",
+      "template": "topDown",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "label": "off",
+      "mode": "off",
+      "template": "world:20000",
+      "nodes": 20065,
+      "applyMs": 276.825,
+      "submitMeanMs": 0.259,
+      "submitMedianMs": 0.265,
+      "submitPeakMs": 0.29,
+      "followMeanMs": 0,
+      "gpuMs": 1.671,
+      "calls": 83,
+      "instances": 20078,
+      "triangles": 7112052,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 67,
+      "submittedInstances": 20064,
+      "grouped": 67,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "witness",
+      "mode": "off",
+      "template": "world:20000",
+      "nodes": 20065,
+      "applyMs": 237.76,
+      "submitMeanMs": 0.314,
+      "submitMedianMs": 0.33,
+      "submitPeakMs": 0.375,
+      "followMeanMs": 0,
+      "gpuMs": 1.695,
+      "calls": 83,
+      "instances": 20078,
+      "triangles": 7112052,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 67,
+      "submittedInstances": 20064,
+      "grouped": 67,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "grid",
+      "mode": "grid",
+      "template": "world:20000",
+      "nodes": 20065,
+      "applyMs": 249.215,
+      "submitMeanMs": 0.874,
+      "submitMedianMs": 0.885,
+      "submitPeakMs": 0.91,
+      "followMeanMs": 0.059,
+      "gpuMs": 2.367,
+      "calls": 372,
+      "instances": 17432,
+      "triangles": 6133844,
+      "cellsHeld": 17,
+      "cellsDrawn": 16,
+      "instancedMeshes": 432,
+      "submittedInstances": 17943,
+      "grouped": 432,
+      "nodesVisited": 80,
+      "cellsKnown": 16
+    },
+    {
+      "mode": "pixels",
+      "template": "world:20000",
+      "against": "witness",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "pixels",
+      "template": "world:20000",
+      "against": "grid",
+      "pixels": 983,
+      "worst": 37,
+      "spots": [
+        "917,575 69,72,65 vs 61,64,57",
+        "918,575 69,72,65 vs 65,68,61",
+        "1479,575 75,79,71 vs 74,78,70",
+        "915,576 87,77,76 vs 86,76,75",
+        "917,576 69,72,65 vs 65,68,61",
+        "983,576 69,73,66 vs 70,74,67",
+        "1480,576 74,78,71 vs 74,78,70",
+        "1482,576 75,79,71 vs 74,78,70"
+      ]
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "opened",
+      "calls": 83,
+      "instances": 20078
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "added",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "movedOne",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "dragged",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "released",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "removed",
+      "calls": 83,
+      "instances": 20078
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "undone",
+      "calls": 83,
+      "instances": 20078
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "opened",
+      "calls": 83,
+      "instances": 20078
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "added",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "movedOne",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "dragged",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "released",
+      "calls": 84,
+      "instances": 20079
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "removed",
+      "calls": 83,
+      "instances": 20078
+    },
+    {
+      "mode": "off",
+      "template": "world:20000",
+      "step": "undone",
+      "calls": 83,
+      "instances": 20078
+    },
+    {
+      "mode": "grid",
+      "template": "world:20000",
+      "step": "opened",
+      "calls": 0,
+      "instances": 0
+    },
+    {
+      "mode": "grid",
+      "template": "world:20000",
+      "step": "added",
+      "calls": 0,
+      "instances": 0
+    },
+    {
+      "mode": "grid",
+      "template": "world:20000",
+      "step": "movedOne",
+      "calls": 0,
+      "instances": 0
+    },
+    {
+      "mode": "grid",
+      "template": "world:20000",
+      "step": "dragged",
+      "calls": 1,
+      "instances": 6
+    },
+    {
+      "mode": "grid",
+      "template": "world:20000",
+      "step": "released",
+      "calls": 1,
+      "instances": 6
+    },
+    {
+      "mode": "grid",
+      "template": "world:20000",
+      "step": "removed",
+      "calls": 1,
+      "instances": 6
+    },
+    {
+      "mode": "grid",
+      "template": "world:20000",
+      "step": "undone",
+      "calls": 1,
+      "instances": 6
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "witness",
+      "step": "opened",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "witness",
+      "step": "added",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "witness",
+      "step": "movedOne",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "witness",
+      "step": "dragged",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "witness",
+      "step": "released",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "witness",
+      "step": "removed",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "witness",
+      "step": "undone",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "grid",
+      "step": "opened",
+      "pixels": 870291,
+      "worst": 551,
+      "spots": [
+        "835,512 127,122,113 vs 0,0,0",
+        "836,512 169,163,151 vs 0,0,0",
+        "837,512 169,163,151 vs 0,0,0",
+        "838,512 169,163,151 vs 0,0,0",
+        "839,512 169,163,151 vs 0,0,0",
+        "840,512 169,163,151 vs 0,0,0",
+        "841,512 169,163,151 vs 0,0,0",
+        "842,512 169,163,151 vs 0,0,0"
+      ]
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "grid",
+      "step": "added",
+      "pixels": 870291,
+      "worst": 675,
+      "spots": [
+        "835,512 127,122,113 vs 0,0,0",
+        "836,512 169,163,151 vs 0,0,0",
+        "837,512 169,163,151 vs 0,0,0",
+        "838,512 169,163,151 vs 0,0,0",
+        "839,512 169,163,151 vs 0,0,0",
+        "840,512 169,163,151 vs 0,0,0",
+        "841,512 169,163,151 vs 0,0,0",
+        "842,512 169,163,151 vs 0,0,0"
+      ]
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "grid",
+      "step": "movedOne",
+      "pixels": 870291,
+      "worst": 675,
+      "spots": [
+        "835,512 127,122,113 vs 0,0,0",
+        "836,512 169,163,151 vs 0,0,0",
+        "837,512 169,163,151 vs 0,0,0",
+        "838,512 169,163,151 vs 0,0,0",
+        "839,512 169,163,151 vs 0,0,0",
+        "840,512 169,163,151 vs 0,0,0",
+        "841,512 169,163,151 vs 0,0,0",
+        "842,512 169,163,151 vs 0,0,0"
+      ]
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "grid",
+      "step": "dragged",
+      "pixels": 870399,
+      "worst": 675,
+      "spots": [
+        "835,512 127,122,113 vs 0,0,0",
+        "836,512 169,163,151 vs 0,0,0",
+        "837,512 169,163,151 vs 0,0,0",
+        "838,512 169,163,151 vs 0,0,0",
+        "839,512 169,163,151 vs 0,0,0",
+        "840,512 169,163,151 vs 0,0,0",
+        "841,512 169,163,151 vs 0,0,0",
+        "842,512 169,163,151 vs 0,0,0"
+      ]
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "grid",
+      "step": "released",
+      "pixels": 870399,
+      "worst": 675,
+      "spots": [
+        "835,512 127,122,113 vs 0,0,0",
+        "836,512 169,163,151 vs 0,0,0",
+        "837,512 169,163,151 vs 0,0,0",
+        "838,512 169,163,151 vs 0,0,0",
+        "839,512 169,163,151 vs 0,0,0",
+        "840,512 169,163,151 vs 0,0,0",
+        "841,512 169,163,151 vs 0,0,0",
+        "842,512 169,163,151 vs 0,0,0"
+      ]
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "grid",
+      "step": "removed",
+      "pixels": 870399,
+      "worst": 551,
+      "spots": [
+        "835,512 127,122,113 vs 0,0,0",
+        "836,512 169,163,151 vs 0,0,0",
+        "837,512 169,163,151 vs 0,0,0",
+        "838,512 169,163,151 vs 0,0,0",
+        "839,512 169,163,151 vs 0,0,0",
+        "840,512 169,163,151 vs 0,0,0",
+        "841,512 169,163,151 vs 0,0,0",
+        "842,512 169,163,151 vs 0,0,0"
+      ]
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:20000",
+      "against": "grid",
+      "step": "undone",
+      "pixels": 870399,
+      "worst": 551,
+      "spots": [
+        "835,512 127,122,113 vs 0,0,0",
+        "836,512 169,163,151 vs 0,0,0",
+        "837,512 169,163,151 vs 0,0,0",
+        "838,512 169,163,151 vs 0,0,0",
+        "839,512 169,163,151 vs 0,0,0",
+        "840,512 169,163,151 vs 0,0,0",
+        "841,512 169,163,151 vs 0,0,0",
+        "842,512 169,163,151 vs 0,0,0"
+      ]
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2327,
+      "phase": "édition grid · world:20000",
+      "workingSetKb": 782624
+    },
+    {
+      "at": 4330,
+      "phase": "fin",
+      "workingSetKb": 859696
+    }
+  ]
+}

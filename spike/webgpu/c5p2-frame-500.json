@@ -1,0 +1,435 @@
+{
+  "at": "2026-09-02T20:43:33.731Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "mode": "weight",
+      "template": "empty",
+      "nodes": 3,
+      "meshes": 0,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "basic",
+      "nodes": 5,
+      "meshes": 2,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "photoStudio",
+      "nodes": 6,
+      "meshes": 2,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "cinematic",
+      "nodes": 5,
+      "meshes": 1,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "archvis",
+      "nodes": 3,
+      "meshes": 1,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "postProcessing",
+      "nodes": 9,
+      "meshes": 4,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "firstPerson",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "mode": "weight",
+      "template": "thirdPerson",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "mode": "weight",
+      "template": "topDown",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "label": "off",
+      "mode": "off",
+      "template": "world:500",
+      "nodes": 505,
+      "applyMs": 80.11,
+      "submitMeanMs": 0.21,
+      "submitMedianMs": 0.205,
+      "submitPeakMs": 0.275,
+      "followMeanMs": 0,
+      "gpuMs": 0.639,
+      "calls": 42,
+      "instances": 504,
+      "triangles": 176636,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 24,
+      "submittedInstances": 486,
+      "grouped": 24,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "witness",
+      "mode": "off",
+      "template": "world:500",
+      "nodes": 505,
+      "applyMs": 52.79,
+      "submitMeanMs": 0.244,
+      "submitMedianMs": 0.255,
+      "submitPeakMs": 0.26,
+      "followMeanMs": 0,
+      "gpuMs": 0.308,
+      "calls": 42,
+      "instances": 504,
+      "triangles": 176636,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 24,
+      "submittedInstances": 486,
+      "grouped": 24,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "grid",
+      "mode": "grid",
+      "template": "world:500",
+      "nodes": 505,
+      "applyMs": 51.31,
+      "submitMeanMs": 0.396,
+      "submitMedianMs": 0.38,
+      "submitPeakMs": 0.535,
+      "followMeanMs": 0.036,
+      "gpuMs": 0.655,
+      "calls": 114,
+      "instances": 504,
+      "triangles": 176636,
+      "cellsHeld": 5,
+      "cellsDrawn": 5,
+      "instancedMeshes": 96,
+      "submittedInstances": 486,
+      "grouped": 96,
+      "nodesVisited": 53,
+      "cellsKnown": 4
+    },
+    {
+      "mode": "pixels",
+      "template": "world:500",
+      "against": "witness",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "pixels",
+      "template": "world:500",
+      "against": "grid",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "opened",
+      "calls": 42,
+      "instances": 504
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "added",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "movedOne",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "dragged",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "released",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "removed",
+      "calls": 42,
+      "instances": 504
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "undone",
+      "calls": 42,
+      "instances": 504
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "opened",
+      "calls": 42,
+      "instances": 504
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "added",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "movedOne",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "dragged",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "released",
+      "calls": 43,
+      "instances": 505
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "removed",
+      "calls": 42,
+      "instances": 504
+    },
+    {
+      "mode": "off",
+      "template": "world:500",
+      "step": "undone",
+      "calls": 42,
+      "instances": 504
+    },
+    {
+      "mode": "grid",
+      "template": "world:500",
+      "step": "opened",
+      "calls": 114,
+      "instances": 504
+    },
+    {
+      "mode": "grid",
+      "template": "world:500",
+      "step": "added",
+      "calls": 115,
+      "instances": 505
+    },
+    {
+      "mode": "grid",
+      "template": "world:500",
+      "step": "movedOne",
+      "calls": 115,
+      "instances": 505
+    },
+    {
+      "mode": "grid",
+      "template": "world:500",
+      "step": "dragged",
+      "calls": 117,
+      "instances": 505
+    },
+    {
+      "mode": "grid",
+      "template": "world:500",
+      "step": "released",
+      "calls": 117,
+      "instances": 505
+    },
+    {
+      "mode": "grid",
+      "template": "world:500",
+      "step": "removed",
+      "calls": 116,
+      "instances": 504
+    },
+    {
+      "mode": "grid",
+      "template": "world:500",
+      "step": "undone",
+      "calls": 116,
+      "instances": 504
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "witness",
+      "step": "opened",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "witness",
+      "step": "added",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "witness",
+      "step": "movedOne",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "witness",
+      "step": "dragged",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "witness",
+      "step": "released",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "witness",
+      "step": "removed",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "witness",
+      "step": "undone",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "grid",
+      "step": "opened",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "grid",
+      "step": "added",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "grid",
+      "step": "movedOne",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "grid",
+      "step": "dragged",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "grid",
+      "step": "released",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "grid",
+      "step": "removed",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    },
+    {
+      "mode": "editPixels",
+      "template": "world:500",
+      "against": "grid",
+      "step": "undone",
+      "pixels": 0,
+      "worst": 0,
+      "spots": []
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2005,
+      "phase": "fin",
+      "workingSetKb": 540208
+    }
+  ]
+}
