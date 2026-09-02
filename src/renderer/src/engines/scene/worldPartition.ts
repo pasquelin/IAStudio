@@ -57,9 +57,13 @@ const AXIS = HALF_SPAN * 2
 export const cellKey = (cx: number, cz: number): CellKey =>
   (clamped(cx) + HALF_SPAN) * AXIS + (clamped(cz) + HALF_SPAN)
 
+/** Read apart, so a query that visits forty-five cells allocates no pair for any of them. */
+const cellX = (key: CellKey): number => Math.floor(key / AXIS) - HALF_SPAN
+const cellZ = (key: CellKey): number => (key % AXIS) - HALF_SPAN
+
 export const cellCoords = (key: CellKey): { cx: number; cz: number } => ({
-  cx: Math.floor(key / AXIS) - HALF_SPAN,
-  cz: (key % AXIS) - HALF_SPAN,
+  cx: cellX(key),
+  cz: cellZ(key),
 })
 
 const clamped = (cell: number): number => Math.max(-HALF_SPAN, Math.min(HALF_SPAN - 1, cell))
@@ -77,10 +81,8 @@ export function buildPartition(cellSize = CELL_SIZE, macroSize = MACRO_SIZE): Wo
   let cells = 0
   const seen = { nodesVisited: 0, cellsReturned: 0 }
 
-  const macroOf = (key: CellKey): CellKey => {
-    const { cx, cz } = cellCoords(key)
-    return cellKey(Math.floor(cx / perMacro), Math.floor(cz / perMacro))
-  }
+  const macroOf = (key: CellKey): CellKey =>
+    cellKey(Math.floor(cellX(key) / perMacro), Math.floor(cellZ(key) / perMacro))
 
   return {
     cellSize,
@@ -127,8 +129,8 @@ export function buildPartition(cellSize = CELL_SIZE, macroSize = MACRO_SIZE): Wo
           if (!touches(mx * macroSpan, mz * macroSpan, macroSpan, x, z, radius)) continue
           for (const key of inside) {
             seen.nodesVisited += 1
-            const { cx, cz } = cellCoords(key)
-            if (touches(cx * cellSize, cz * cellSize, cellSize, x, z, radius)) into.push(key)
+            const lowX = cellX(key) * cellSize
+            if (touches(lowX, cellZ(key) * cellSize, cellSize, x, z, radius)) into.push(key)
           }
         }
       }

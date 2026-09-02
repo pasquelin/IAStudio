@@ -1,13 +1,13 @@
-import { InstancedMesh, Mesh, type BufferGeometry, type Material, type Object3D } from 'three'
-import { stableKey } from '@shared/hash'
+import { InstancedMesh, type BufferGeometry, type Material, type Mesh, type Object3D } from 'three'
 import { TRIANGLES_PER_REGION, regionsByGrid, type SpatialRegions } from './instanceRegions'
 import {
   heldOutOfDraw,
-  spellingOf,
+  shapeAndPaint,
   sweep,
-  widen,
+  writeMoved,
   type Grouped,
   type InstancedGroups,
+  type Placed,
 } from './grouping'
 import type { SceneNode } from './sceneState'
 
@@ -33,14 +33,9 @@ export function createInstancedGroups(
   ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
 ): InstancedGroups {
   const drawn: InstancedMesh[] = []
-  /** Where a node's matrix sits, so a move can be written without walking the scene again. */
-  const placed = new Map<string, { instance: InstancedMesh; slot: number }>()
+  const placed: Placed = new Map()
   const sources = heldOutOfDraw()
-  // Everything a draw call would have to change: the shape, and what it is painted with. Two
-  // nodes that differ by any of it cannot share one call, so they are two groups.
-  const keyOf = spellingOf(node =>
-    node.type === 'mesh' ? stableKey([node.geometry, node.material]) : '',
-  )
+  const keyOf = shapeAndPaint()
 
   const clear = (): void => {
     for (const instance of drawn) {
@@ -96,23 +91,7 @@ export function createInstancedGroups(
       return instanced
     },
 
-    moved: (ids, objectOf) => {
-      let touched = false
-      for (const id of ids) {
-        const at = placed.get(id)
-        const mesh = objectOf(id)
-        if (!at || !(mesh instanceof Mesh)) continue
-
-        at.instance.setMatrixAt(at.slot, mesh.matrixWorld)
-        // The slot alone rather than the whole buffer: forty thousand matrices re-uploaded per
-        // pointer move is the cost this exists to give back.
-        at.instance.instanceMatrix.addUpdateRange(at.slot * 16, 16)
-        at.instance.instanceMatrix.needsUpdate = true
-        widen(at.instance.boundingSphere, at.instance.geometry, mesh.matrixWorld)
-        touched = true
-      }
-      return touched
-    },
+    moved: (ids, objectOf) => writeMoved(placed, ids, objectOf),
 
     drawn: () => drawn,
 

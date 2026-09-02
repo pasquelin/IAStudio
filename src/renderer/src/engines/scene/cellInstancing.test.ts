@@ -46,6 +46,23 @@ const cellsIn = (scene: Object3D): Group[] => scene.children.filter(child => chi
 const instancesIn = (scene: Object3D): InstancedMesh[] =>
   walked(scene).filter(child => child instanceof InstancedMesh)
 
+/** Two cells a level apart, already built — what both the zone and a rebuild are read on. */
+const twoCells = (): {
+  scene: Object3D
+  groups: ReturnType<typeof createCellGroups>
+  nodes: SceneNode[]
+  objects: Map<string, Mesh>
+} => {
+  const scene = host()
+  const { nodes, objects } = bodies([
+    ...inOneCell(WORTH_INSTANCING, 0),
+    ...inOneCell(WORTH_INSTANCING, 20 * CELL_SIZE),
+  ])
+  const groups = createCellGroups(scene)
+  groups.rebuild(nodes, id => objects.get(id))
+  return { scene, groups, nodes, objects }
+}
+
 /** Where each cell the scene still holds stands, along x — one number per cell, sorted. */
 const standingIn = (scene: Object3D): number[] =>
   cellsIn(scene)
@@ -131,17 +148,6 @@ describe('createCellGroups', () => {
 })
 
 describe('the zone a camera holds', () => {
-  const twoCells = (): { scene: Object3D; groups: ReturnType<typeof createCellGroups> } => {
-    const scene = host()
-    const { nodes, objects } = bodies([
-      ...inOneCell(WORTH_INSTANCING, 0),
-      ...inOneCell(WORTH_INSTANCING, 20 * CELL_SIZE),
-    ])
-    const groups = createCellGroups(scene)
-    groups.rebuild(nodes, id => objects.get(id))
-    return { scene, groups }
-  }
-
   it('draws every cell until a camera says where it stands', () => {
     const { scene } = twoCells()
 
@@ -203,24 +209,8 @@ describe('the zone a camera holds', () => {
 })
 
 describe('a rebuild after a change of content', () => {
-  const level = (): {
-    scene: Object3D
-    groups: ReturnType<typeof createCellGroups>
-    nodes: SceneNode[]
-    objects: Map<string, Mesh>
-  } => {
-    const scene = host()
-    const { nodes, objects } = bodies([
-      ...inOneCell(WORTH_INSTANCING, 0),
-      ...inOneCell(WORTH_INSTANCING, 20 * CELL_SIZE),
-    ])
-    const groups = createCellGroups(scene)
-    groups.rebuild(nodes, id => objects.get(id))
-    return { scene, groups, nodes, objects }
-  }
-
   it('keeps the cells nothing touched, and builds again only the one that changed', () => {
-    const { groups, nodes, objects } = level()
+    const { groups, nodes, objects } = twoCells()
     const [near, far] = groups.drawn()
 
     // One body deleted from the far cell. The near one holds the same bodies in the same slots.
@@ -232,7 +222,7 @@ describe('a rebuild after a change of content', () => {
   })
 
   it('draws for one body fewer once it is gone', () => {
-    const { groups, nodes, objects } = level()
+    const { groups, nodes, objects } = twoCells()
 
     groups.rebuild(nodes.slice(0, -1), id => objects.get(id))
 
@@ -241,7 +231,7 @@ describe('a rebuild after a change of content', () => {
   })
 
   it('forgets a cell nothing stands in any more', () => {
-    const { scene, groups, nodes, objects } = level()
+    const { scene, groups, nodes, objects } = twoCells()
 
     groups.rebuild(nodes.slice(0, WORTH_INSTANCING), id => objects.get(id))
 
@@ -249,7 +239,7 @@ describe('a rebuild after a change of content', () => {
   })
 
   it('rebuilds nothing at all when nothing moved', () => {
-    const { groups, nodes, objects } = level()
+    const { groups, nodes, objects } = twoCells()
     const held = groups.drawn()
 
     groups.rebuild(nodes, id => objects.get(id))
@@ -258,7 +248,7 @@ describe('a rebuild after a change of content', () => {
   })
 
   it('writes the matrix of a body carried elsewhere inside its own cell', () => {
-    const { groups, nodes, objects } = level()
+    const { groups, nodes, objects } = twoCells()
     const mesh = objects.get('n0')
     if (!mesh) throw new Error('no body to carry')
 

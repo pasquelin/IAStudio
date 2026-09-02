@@ -1,22 +1,22 @@
 import {
   Group,
   InstancedMesh,
-  Mesh,
   OrthographicCamera,
   PerspectiveCamera,
   type BufferGeometry,
   type Camera,
   type Material,
+  type Mesh,
   type Object3D,
 } from 'three'
-import { stableKey } from '@shared/hash'
 import {
   heldOutOfDraw,
-  spellingOf,
+  shapeAndPaint,
   sweep,
-  widen,
+  writeMoved,
   type Grouped,
   type InstancedGroups,
+  type Placed,
 } from './grouping'
 import { buildPartition, type CellKey, type WorldPartition } from './worldPartition'
 
@@ -43,13 +43,13 @@ export function createCellGroups(
   const cells = new Map<CellKey, Group>()
   /** What each (group, cell) draws, held so a rebuild that did not touch it pays nothing. */
   const buckets = new Map<string, Bucket>()
-  /** Where a node's matrix sits, so a move can be written without walking the scene again. */
-  const placed = new Map<string, { instance: InstancedMesh; slot: number }>()
+  const placed: Placed = new Map()
   const sources = heldOutOfDraw()
-  const keyOf = spellingOf(node =>
-    node.type === 'mesh' ? stableKey([node.geometry, node.material]) : '',
-  )
+  const keyOf = shapeAndPaint()
   const near: CellKey[] = []
+  /** The cells the host currently holds, and a scratch set so a frame allocates neither. */
+  const standing = new Set<CellKey>()
+  const wanted = new Set<CellKey>()
   let listed: InstancedMesh[] = []
   let listStale = true
 
@@ -61,6 +61,7 @@ export function createCellGroups(
     group.matrixAutoUpdate = false
     host.add(group)
     cells.set(cell, group)
+    standing.add(cell)
     index.hold(cell)
     return group
   }
@@ -78,6 +79,7 @@ export function createCellGroups(
     if (!group || group.children.length > 0) return
     group.removeFromParent()
     cells.delete(bucket.cell)
+    standing.delete(bucket.cell)
     index.release(bucket.cell)
   }
 
@@ -115,16 +117,17 @@ export function createCellGroups(
 
   const drawEvery = (): boolean => {
     let moved = false
-    for (const group of cells.values()) {
-      if (group.parent) continue
+    for (const [key, group] of cells) {
+      if (standing.has(key)) continue
       host.add(group)
+      standing.add(key)
       moved = true
     }
     return moved
   }
 
   const clear = (): void => {
-    for (const [name, bucket] of [...buckets]) drop(name, bucket)
+    for (const [name, bucket] of buckets) drop(name, bucket)
   }
 
   return {
@@ -141,30 +144,14 @@ export function createCellGroups(
         instanced += worn.meshes.length
       }
       // What nothing settled on holds bodies that left, were hidden, or changed group.
-      for (const [name, bucket] of [...buckets]) if (!settled.has(name)) drop(name, bucket)
+      for (const [name, bucket] of buckets) if (!settled.has(name)) drop(name, bucket)
       return instanced
     },
 
-    moved: (ids, objectOf) => {
-      let touched = false
-      for (const id of ids) {
-        const at = placed.get(id)
-        const mesh = objectOf(id)
-        if (!at || !(mesh instanceof Mesh)) continue
-
-        at.instance.setMatrixAt(at.slot, mesh.matrixWorld)
-        // The slot alone rather than the whole buffer: forty thousand matrices re-uploaded per
-        // pointer move is the cost this exists to give back.
-        at.instance.instanceMatrix.addUpdateRange(at.slot * 16, 16)
-        at.instance.instanceMatrix.needsUpdate = true
-        // Widened rather than recut, and the body keeps the cell it was built in until the next
-        // change of content: a gesture that crossed a border would otherwise have to rebuild two
-        // cells per pointer move. What it costs is a cell drawn a little further than it reaches.
-        widen(at.instance.boundingSphere, at.instance.geometry, mesh.matrixWorld)
-        touched = true
-      }
-      return touched
-    },
+    // The body keeps the cell it was built in until the next change of content: a gesture that
+    // crossed a border would otherwise rebuild two cells per pointer move. What it costs is a
+    // cell drawn a little further than it reaches.
+    moved: (ids, objectOf) => writeMoved(placed, ids, objectOf),
 
     drawn: () => {
       if (listStale) {
@@ -180,24 +167,30 @@ export function createCellGroups(
 
     // 🛑 A cell out of the zone LEAVES the scene; it is not merely turned off. `visible` stops
     // `projectObject` and nothing else: `updateMatrixWorld` walks every child whatever the flag
-    // says — the guard on `matrixWorldAutoUpdate` spares the matrix, never the descent. Measured
-    // on 500 000 bodies, 6 912 meshes held: 0.97 ms a frame of pure walking, for cells that draw
-    // nothing.
+    // says. Measured on 500 000 bodies, 6 912 meshes held: 0.97 ms a frame of pure walking.
     //
-    // `null` draws every cell: a film, a capture and a preview each render from a camera of their
-    // own without ever passing here, and a zone narrowed for the viewport would cut bodies out of
-    // them. The next pane narrows it again, so nothing has to put it back.
+    // `null` draws every cell — a film and a capture render from a camera of their own.
     follow: camera => {
       const radius = camera ? seenFrom(camera) + index.cellSize / 2 : Infinity
       if (!camera || !Number.isFinite(radius)) return drawEvery()
       index.query(camera.position.x, camera.position.z, radius, near)
-      const shown = new Set(near)
+
+      wanted.clear()
+      for (const key of near) wanted.add(key)
       let moved = false
-      for (const [key, group] of cells) {
-        const draws = shown.has(key)
-        if (draws === (group.parent !== null)) continue
-        if (draws) host.add(group)
-        else group.removeFromParent()
+      for (const key of near) {
+        const group = standing.has(key) ? null : cells.get(key)
+        if (!group) continue
+        host.add(group)
+        standing.add(key)
+        moved = true
+      }
+      // Over what STANDS rather than over the whole world: the second walk is the size of the
+      // zone, not of the document — 53 cells against 257 on the level measured.
+      for (const key of standing) {
+        if (wanted.has(key)) continue
+        cells.get(key)?.removeFromParent()
+        standing.delete(key)
         moved = true
       }
       return moved

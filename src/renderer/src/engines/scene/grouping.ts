@@ -3,12 +3,14 @@ import {
   Vector3,
   type BufferGeometry,
   type Camera,
+  type InstancedMesh,
   type Intersection,
   type Material,
   type Matrix4,
   type Object3D,
   type Sphere,
 } from 'three'
+import { stableKey } from '@shared/hash'
 import { cachedOn } from '../core/cachedOn'
 import type { SceneNode } from './sceneState'
 
@@ -312,6 +314,40 @@ export function sweep(
 export function spellingOf(spell: (node: SceneNode) => string): (node: SceneNode) => string {
   const spelled = new WeakMap<SceneNode, string>()
   return node => cachedOn(spelled, node, () => spell(node))
+}
+
+/** Everything a draw call would have to change: the shape, and what it is painted with. */
+export const shapeAndPaint = (): ((node: SceneNode) => string) =>
+  spellingOf(node => (node.type === 'mesh' ? stableKey([node.geometry, node.material]) : ''))
+
+/** Where a node's matrix sits, so a move can be written without walking the scene again. */
+export type Placed = Map<string, { instance: InstancedMesh; slot: number }>
+
+/**
+ * Writes the matrices of the nodes that just moved, into the slots they already hold.
+ *
+ * The slot alone rather than the whole buffer: forty thousand matrices re-uploaded per pointer
+ * move is the cost this exists to give back. The bounds are widened rather than recut, so the
+ * culling stays conservative until the next change of content puts them back exact.
+ */
+export function writeMoved(
+  placed: Placed,
+  ids: Iterable<string>,
+  objectOf: (id: string) => Object3D | undefined,
+): boolean {
+  let touched = false
+  for (const id of ids) {
+    const at = placed.get(id)
+    const mesh = objectOf(id)
+    if (!at || !(mesh instanceof Mesh)) continue
+
+    at.instance.setMatrixAt(at.slot, mesh.matrixWorld)
+    at.instance.instanceMatrix.addUpdateRange(at.slot * 16, 16)
+    at.instance.instanceMatrix.needsUpdate = true
+    widen(at.instance.boundingSphere, at.instance.geometry, mesh.matrixWorld)
+    touched = true
+  }
+  return touched
 }
 
 const REACHED = new Vector3()
