@@ -41,7 +41,7 @@ function showPanel(input: Record<string, unknown>, run: (panel: ToolId) => boole
     ? { ok: true }
     : refused(
         'wrongSurface',
-        `the studio did not move the "${panel}" panel — panels.list answers whether it already stands the way this call asks for`,
+        `the studio did not move the "${panel}" panel — either it already stands that way, or the screen has just changed and the docks have not caught up with it. panels.list answers what is up right now`,
       )
 }
 
