@@ -8,8 +8,7 @@ type JoltSettings = InstanceType<JoltModule['JoltSettings']>
 /**
  * Which object layer a body goes in, and which pairs are allowed to meet.
  *
- * 🛑 Jolt asks for three filters that Rapier never did, and a world built without them collides
- * nothing at all. Two layers carry the whole of the current contract; this is the one file that
+ * 🛑 Jolt asks for three filters, and a world built without them collides nothing at all. Two layers carry the whole of the current contract; this is the one file that
  * grows the day a wheel asks for a layer of its own.
  */
 export const NON_MOVING = 0
@@ -25,7 +24,7 @@ const BROAD_PHASE_LAYERS = 2
 export function layerJoltSettings(jolt: JoltModule, settings: JoltSettings): void {
   const pairs = new jolt.ObjectLayerPairFilterTable(OBJECT_LAYERS)
   // Two resting bodies never meet, and asking the broadphase to watch a pair it would skip is
-  // work for an event nobody can receive — what `setActiveEvents` bought on the Rapier side.
+  // work for an event nobody can receive.
   pairs.EnableCollision(NON_MOVING, MOVING)
   pairs.EnableCollision(MOVING, MOVING)
 

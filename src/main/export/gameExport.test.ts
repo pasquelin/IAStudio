@@ -27,7 +27,7 @@ function writing(over: Partial<GameExportPorts> = {}) {
     runtime: () =>
       Promise.resolve([
         { name: 'runtime.js', body: new Uint8Array([2]) },
-        { name: 'rapier-abc.js', body: new Uint8Array([3]) },
+        { name: 'jolt-abc.js', body: new Uint8Array([3]) },
       ]),
     write: (relative, body) => {
       written.set(relative, body)
@@ -47,13 +47,13 @@ describe('a game written to run with no studio', () => {
 
     const report = await writeExportedGame(ports, ASKED)
 
-    // 🛑 The chunks too: `runtime.js` imports Rapier and the sandbox by name, and a page shipped
+    // 🛑 The chunks too: `runtime.js` imports the physics and the sandbox by name, and a page shipped
     // with the entry alone loads nothing at all.
     expect([...written.keys()].sort()).toEqual([
       'assets/checker.png',
       'game.json',
       'index.html',
-      'rapier-abc.js',
+      'jolt-abc.js',
       'runtime.js',
       'scenes/doc-1.gltf',
       'scripts/Walk.js',

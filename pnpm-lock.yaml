@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@dimforge/rapier3d-compat':
-        specifier: ^0.20.0
-        version: 0.20.0
       '@jitl/quickjs-singlefile-browser-release-sync':
         specifier: ^0.32.0
         version: 0.32.0
@@ -391,9 +388,6 @@ packages:
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
-
-  '@dimforge/rapier3d-compat@0.20.0':
-    resolution: {integrity: sha512-X4W9pJBdGRX5CO3c/gUNjBFEFG2fn4nYxp9k8STdBDaLa0/w5XTW2ArpayS+9jGFojTi3uFSOWAElCd4rkpekA==}
 
   '@electron-internal/extract-zip@1.0.5':
     resolution: {integrity: sha512-+bqFCP98pLI0Tt0XQo1TmlXtwjWchISndDOxCkEcIuUgXWpBnLyRI+2DU+mesvnMMX6L1XDqYNA0lXNDHd/yiA==}
@@ -5007,8 +5001,6 @@ snapshots:
   '@csstools/css-tokenizer@4.0.0': {}
 
   '@dimforge/rapier3d-compat@0.12.0': {}
-
-  '@dimforge/rapier3d-compat@0.20.0': {}
 
   '@electron-internal/extract-zip@1.0.5': {}
 

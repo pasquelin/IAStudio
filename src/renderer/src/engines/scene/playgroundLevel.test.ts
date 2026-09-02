@@ -123,7 +123,7 @@ describe('the playground level', () => {
       .filter(box => box !== null)
       .sort((a, b) => a.y1 - b.y1)
     // 🛑 Read off the controller rather than written here: the rise was once hand-set to 0,50,
-    // which is EXACTLY this number and exactly its `snapDistance`. Rapier's own skin and a float
+    // which is EXACTLY this number and exactly its `snapDistance`. The controller's skin and a float
     // then put a step on either side of the limit — the walker climbed one, caught on the next
     // and was snapped back onto the one before. Seen on screen; no test of this file saw it.
     const climbed = Number(COMPONENTS.CharacterController.defaults.stepHeight)

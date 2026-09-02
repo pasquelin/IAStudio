@@ -24,7 +24,7 @@ export type ExportHostDeps = {
   player: Player
   /** Asset identifier → the file shipped beside the page. Written when the game is exported. */
   files: Readonly<Record<string, string>>
-  /** What simulates. Absent until the engine's WebAssembly has landed — see `loadRapierPhysics`. */
+  /** What simulates. Absent until the engine's WebAssembly has landed — see `loadJoltPhysics`. */
   physics?: PhysicsPort
   /** Where a game's own code runs. Absent leaves every script silent — see `loadQuickjsScripts`. */
   script?: ScriptPort

@@ -128,7 +128,7 @@ describe('what falls, what blocks and what walks', () => {
     const shape = physics.added[0]?.shape
 
     expect(shape?.kind).toBe('capsule')
-    // The straight part only, as Rapier counts it: 1,8 tall less a cap at each end.
+    // The straight part only, as a capsule is counted: 1,8 tall less a cap at each end.
     expect(shape?.kind === 'capsule' ? shape.halfHeight : 0).toBeCloseTo(0.6, 6)
     expect(shape?.kind === 'capsule' ? shape.radius : 0).toBeCloseTo(0.3, 6)
   })
@@ -167,7 +167,7 @@ describe('what falls, what blocks and what walks', () => {
   })
 
   /**
-   * Rapier sends no parting event for a body it REMOVES, so a pair left behind would sit in the
+   * No engine sends a parting event for a body it REMOVES, so a pair left behind would sit in the
    * set for the life of the session — and the door it opened would never close.
    */
   it('forgets a trigger pair with the entity that was standing in it', () => {

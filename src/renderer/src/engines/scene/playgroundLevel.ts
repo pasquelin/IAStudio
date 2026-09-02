@@ -187,7 +187,7 @@ function walls(parentId: string): SceneNode[] {
 /**
  * 🛑 The rise is DERIVED from the drop and the count, never written by hand — and that is what was
  * wrong with it. At five steps it came to 0,50 m, which is exactly the `stepHeight` a
- * `CharacterController` ships with, and exactly its `snapDistance`: Rapier's own skin and a float
+ * `CharacterController` ships with, and exactly its `snapDistance`: the controller's own skin and a float
  * put the obstacle on either side of the limit from one step to the next, so a walker climbed one,
  * caught on the next, and was snapped back down onto the one before. Eight steps leave the margin.
  */
