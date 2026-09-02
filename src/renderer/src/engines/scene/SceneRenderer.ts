@@ -28,7 +28,6 @@ import {
   Vector3 as ThreeVector3,
   type Bone,
 } from 'three'
-import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
@@ -219,6 +218,7 @@ import { characterExtrasIn, characterOf } from './rigRead'
 import { meshSampleOf, type MeshSample } from './rigSnap'
 import type { GlbSkinAttributes } from './glbSkin'
 import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
+import './bvhPatches'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createInstancedGroups, keepsItsGroup, type InstancedGroups } from './instancing'
@@ -448,15 +448,6 @@ const forward = new ThreeVector3()
 const right = new ThreeVector3()
 const step = new ThreeVector3()
 const flightGaze = new ThreeVector3()
-
-/**
- * three-mesh-bvh reads a `boundsTree` if the mesh has one and falls back to walking triangles if
- * it has none, so patching the prototypes once is safe for every mesh in the studio — the two
- * other 3D spaces included, where no tree is ever built.
- */
-BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
-BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
-Mesh.prototype.raycast = acceleratedRaycast
 
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
@@ -2096,6 +2087,9 @@ export class SceneRenderer {
           weights: one.binding.skinWeight,
         })),
       )
+      // 🛑 `applyRig` CLONES each geometry, and a clone carries no `boundsTree`: rigging threw
+      // away the tree built when the model landed.
+      void this.accelerateOrReport(holder, nodeId)
       // The bones exist only now: the helper was bound before them, when the holder carried none,
       // and without this a locally rigged character has a skeleton nothing can show or pick.
       this.bindSkeleton(nodeId, holder, true)
@@ -3670,10 +3664,7 @@ export class SceneRenderer {
       // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.redraw()
-      // Reported rather than swallowed, and under a scope of its own: `reportFailure` says a
-      // subject once per scope, so sharing `scene.model` would let a tree that failed swallow the
-      // message of a load that fails later for the same asset — two failures nothing relates.
-      void this.accelerate(holder).catch(error => reportFailure('scene.bvh', assetId, error))
+      void this.accelerateOrReport(holder, assetId)
     })
 
     return holder
@@ -3759,6 +3750,18 @@ export class SceneRenderer {
     } catch (error) {
       // Under a scope of its own: a failing animation must not swallow what a failing model says.
       reportFailure('scene.animation', clip.url, error)
+    }
+  }
+
+  /**
+   * The same, awaited by nobody. Under a scope of its OWN: `reportFailure` says a subject once
+   * per scope, so sharing `scene.model` would let a failed tree swallow a later load's message.
+   */
+  private async accelerateOrReport(object: Object3D, subject: string): Promise<void> {
+    try {
+      await this.accelerate(object)
+    } catch (error) {
+      reportFailure('scene.bvh', subject, error)
     }
   }
 

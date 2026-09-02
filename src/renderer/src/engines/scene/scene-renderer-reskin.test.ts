@@ -1,4 +1,5 @@
 import { Bone, BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh } from 'three'
+import { MeshBVH } from 'three-mesh-bvh'
 import { describe, expect, it, vi } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { Rig, RigBone } from '@shared/domain/rig'
@@ -48,6 +49,17 @@ const skin: SkinWeights = {
 
 const holding = (id: string): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture(id)] })
 
+/** The picking trees, built here rather than in the worker jsdom cannot spawn. */
+function trees() {
+  return {
+    accelerate: (mesh: Mesh) => {
+      mesh.geometry.boundsTree = new MeshBVH(mesh.geometry)
+      return Promise.resolve()
+    },
+    dispose: () => {},
+  }
+}
+
 /** The whole tree the model hangs in: the bones go on its HOLDER, which the stage owns. */
 function stageOf(model: Object3D): Object3D {
   let top = model
@@ -78,6 +90,7 @@ async function rigged(): Promise<{ engine: SceneRenderer; model: Object3D }> {
     onTransform: vi.fn(),
     loadModel: () => Promise.resolve(model),
     skin,
+    bvh: trees(),
   })
 
   engine.apply(holding('a'))
@@ -121,6 +134,15 @@ describe('a rig laid on a model that already wears one', () => {
     expect(first).toHaveLength(1)
     expect(first[0]?.parent).toBeNull()
     expect(boneNamesOf(model)).toEqual(['Hips', 'LeftThumb1'])
+    engine.dispose()
+  })
+
+  // 🛑 `applyRig` CLONES each geometry, and a clone carries no `boundsTree`: rigging threw away
+  // the tree built when the model landed, and every ray then walked the triangles again.
+  it('leaves the mesh it just skinned carrying a picking tree', async () => {
+    const { engine, model } = await rigged()
+
+    expect(skinnedIn(model).map(one => one.geometry.boundsTree !== undefined)).toEqual([true])
     engine.dispose()
   })
 

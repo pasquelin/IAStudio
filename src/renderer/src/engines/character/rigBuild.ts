@@ -133,6 +133,7 @@ export function applyRig(
     // The geometry is CLONED. `SkeletonUtils.clone` shares it with the cached source on purpose,
     // so writing skin attributes onto it would hand every other node built from the same file
     // this model's weights — and the last rig posed would silently drive all of them.
+    // 🛑 A clone carries no `boundsTree`: the caller owes this mesh its picking tree again.
     const geometry = mesh.geometry.clone()
     // Only a clone of OURS is freed: the first rig replaces the mesh the cache lends, whose
     // geometry other nodes of the same file share. A re-rig replaces our own, and leaving it
