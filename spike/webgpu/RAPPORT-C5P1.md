@@ -8,29 +8,30 @@ engagées.
 
 ## 1. Ce qui a été écrit
 
-| commit | fichiers |
+| commit | ce qu'il pose |
 |---|---|
-| `11d8771e4` | `engines/scene/worldPartition.ts` + son test — la grille et la zone |
-| `61b2df176` | `engines/scene/cellInstancing.ts` + son test · `grouping.ts` (le contrat) · `SceneRenderer.ts` (le flag) · `sceneRendererGroups.test.ts` · `no-layer-for-a-line.test.ts` |
-| `0a5aa2636` | une cellule hors zone SORT de la scène — voir § 5 |
+| `11d8771e4` | `engines/scene/worldPartition.ts` + test — la grille et la requête par disque |
+| `61b2df176` | `engines/scene/cellInstancing.ts` + test · le contrat de `grouping.ts` · le flag dans `SceneRenderer` · `sceneRendererGroups.test.ts` mesure désormais TROIS façons de dessiner |
+| `0a5aa2636` | une cellule hors zone SORT de la scène — § 5 |
+| `97153ef04` | `spike/webgpu/productionPartition.{ts,html}` — le banc du vrai moteur, et ses témoins |
+| `f7ee6ac3c` | `writeMoved` et `shapeAndPaint` descendus dans `grouping.ts` ; trois allocations par frame en moins |
+| `bb89c5333` | l'aperçu nomme SA caméra à la zone au lieu de la rouvrir — § 7 |
 
-Le flag est **`partition: 'off' | 'grid'`, défaut `off`**, à côté de `grouping` et selon le même
-modèle que `batching.ts` : une stratégie alternative dans son propre fichier, jamais activée par
-défaut. `sceneRendererGroups.test.ts` mesure désormais **trois** façons de dessiner et non deux.
+Le flag est **`partition: 'off' | 'grid'`, défaut `off`**, selon le modèle de `batching.ts` : une
+stratégie alternative dans son propre fichier, jamais activée par défaut.
 
 Deux écarts assumés par rapport au code de spike :
 
-- **L'index est ANCRÉ SUR L'ORIGINE du monde**, pas sur l'étendue des corps. Lu sur l'étendue, il
+- **L'index est ancré sur l'ORIGINE du monde**, pas sur l'étendue des corps. Lu sur l'étendue, il
   bouge le jour où un corps est ajouté au-delà de l'ancien bord, et toutes les cellules changent de
   clé avec lui — ce qu'un index incrémental doit précisément éviter. **[C]**
 - **`hold` / `release` remplacent `build(centres)`** : une cellule entre et sort de l'index une par
   une, ce que la règle « n'invalider que les cellules touchées » exige.
 
 Le contrat `InstancedGroups` gagne **une** méthode, optionnelle, que seule la partition
-implémente : `follow(camera | null)`. Elle est appelée depuis `dressPane` — donc une fois par pane
-et par frame, avant le dessin — et depuis `hideWorkshop`, avec `null`, ce qui rouvre la zone en
-grand : le film, la capture et l'aperçu rendent depuis une caméra à eux sans jamais passer par un
-pane, et une zone rétrécie pour le viewport leur retirerait des corps.
+implémente : `follow(camera | null)`, appelée depuis `dressPane` — une fois par pane et par frame,
+avant le dessin, et sa réponse redemande les cartes d'ombre — et depuis `hideWorkshop`, que le
+film, la capture et l'aperçu franchissent tous.
 
 ## 2. Le banc de spike, rejoué (contrôle)
 
@@ -55,29 +56,34 @@ vrai `SceneRenderer` des deux côtés du flag et mesure `gl.render` de la passe 
 éteintes — la fenêtre du § 1. Caméra posée DANS le niveau, `far = 500`, 8 cycles après 10 frames
 de chauffe.
 
+**Il joue `off` DEUX fois**, et c'est ce qui rend le reste lisible : sans ce témoin, l'écart entre
+deux moteurs se mettrait sur le dos de la partition. La colonne `zone ouverte` est le second
+contrôle — la partition regroupe mais ne retire aucune cellule.
+
 ### 500 000 corps (501 445 nœuds avec le sol)
 
 | | `off` | témoin `off` n°2 | **`grid`** | `grid` zone ouverte |
 |---|---:|---:|---:|---:|
-| `gl.render` CPU, moyenne | 0,499 | 0,661 | **1,124** | 2,971 |
-| dont marche des matrices | 0,171 | 0,183 | 0,285 | 1,828 |
-| `follow` | 0,000 | 0,000 | **0,036** | 0,005 |
-| GPU | 3,440 | 3,411 | **1,865** | 2,143 |
+| `gl.render` CPU, moyenne | 0,706 | 0,719 | **1,422** | 2,001 |
+| dont marche des matrices | 0,328 | 0,289 | 0,524 | 1,128 |
+| `follow` | 0,000 | 0,001 | **0,041** | 0,015 |
+| GPU | 3,363 | 3,465 | **1,876** | 2,531 |
 | appels de dessin | 159 | 159 | 397 | 432 |
 | instances dessinées | 231 397 | 231 397 | **31 506** | 34 311 |
 | triangles | 19 767 548 | — | **11 464 392** | 12 402 400 |
 | meshes dans la scène | 1 235 | 1 235 | 1 404 | 6 912 |
-| cellules dessinées | — | — | **53 / 257** | 257 / 257 |
-| appels de moins de 16 instances | 0 | 0 | **52** (336 inst.) | 385 (2 913) |
+| cellules dessinées | — | — | **53** | 257 |
+| appels de moins de 16 instances | 0 | 0 | **52** | 385 |
 
 **Ce que la partition rend :** les instances sont divisées par **7,3** (231 397 → 31 506), les
-triangles par 1,7, le GPU passe de **3,44 à 1,87 ms (−46 %)**, et la zone active ne coûte que
-**0,036 ms** par frame — recherche et diff des cellules comprises. **[M]**
+triangles par 1,7, le GPU passe de **3,36 à 1,88 ms (−44 %)**, et la zone active coûte **0,041 ms**
+par frame — requête et diff compris. Les deux témoins `off` tiennent à 0,013 ms de CPU et 0,10 ms
+de GPU l'un de l'autre, donc ces écarts-là se lisent. **[M]**
 
-**Ce qu'elle coûte : le CPU de soumission, ×2,25 (0,50 → 1,12 ms).** La cible du § 1 était la
-PARITÉ avec le témoin ; production s'en écarte bien au-delà de ±20 %. La cause est mesurée et
-tient en une ligne : **la soumission suit le nombre d'appels**, à ~3,2 µs l'appel des deux côtés
-(0,499/159 = 3,1 · 1,124/397 = 2,8), et la partition multiplie les appels par 2,5. **[M]**
+**Ce qu'elle coûte : le CPU de soumission, ×2,0 (0,71 → 1,42 ms).** La cible du § 1 était la
+PARITÉ avec le témoin ; la production s'en écarte bien au-delà de ±20 %. La cause est mesurée et
+tient en une ligne : **la soumission suit le nombre d'appels**, à ~3,5 µs l'appel des deux côtés
+(0,706/159 = 4,4 · 1,422/397 = 3,6), et la partition multiplie les appels par 2,5. **[M]**
 
 Pourquoi 397 appels ici et 244 au banc de spike : les deux ne regroupent pas de la même façon — la
 production clé sur (descripteur de géométrie, descripteur de matériau, drapeaux d'ombre, marque
@@ -85,19 +91,29 @@ d'outil) et découpe sur une grille ancrée à l'origine, le spike sur (forme, c
 ancrée sur les corps. Le témoin lui-même diffère déjà : 159 appels en production contre 125 au
 spike. **[H]** pour l'attribution, **[M]** pour les deux comptes.
 
-### Les petits mondes
+### Les petits mondes — ce que le témoin autorise à dire, et rien de plus
 
-| | CPU `off` | CPU `grid` | GPU `off` | GPU `grid` | appels | instances | appels fins |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| 500 corps | 0,182 | **0,221** | 0,68 | **0,72** | 54 → 80 | 514 → 268 | **96 sur 96** |
-| 5 000 corps | 0,173 | **0,221** | 0,87 | **1,10** | 51 → 86 | 5 030 → 3 118 | 5 sur 108 |
+| 5 000 corps | `off` | témoin | `grid` |
+|---|---:|---:|---:|
+| CPU | 0,153 | 0,203 | 0,234 |
+| GPU | 0,733 | 0,765 | 1,118 |
+| appels · instances | 51 · 5 030 | — | 86 · 3 118 |
 
-**La régression annoncée est là, et elle est petite en absolu** : +0,04 ms de CPU dans les deux
-cas, et un GPU qui monte au lieu de descendre alors que la partition dessine deux fois moins de
-triangles — le prix fixe des appels supplémentaires. **À 500 corps, les 96 appels tirent tous
-moins de 16 instances** : c'est exactement la mesure que l'étape 3 (bypass géométrique) attend.
-**[M]** — le GPU se lit à ce niveau avec prudence, une seconde campagne donnait 1,12 et 1,66 ms
-pour ces mêmes deux lignes.
+| 500 corps | `off` | témoin | `grid` |
+|---|---:|---:|---:|
+| CPU | 0,230 | 0,169 | 0,231 |
+| GPU | 0,889 | 0,351 | 0,520 |
+| appels · instances | 54 · 514 | — | 80 · 268 |
+| appels de moins de 16 instances | 0 sur 24 | — | **96 sur 96** |
+
+**À 500 corps, RIEN n'est mesurable** : le témoin `off` s'écarte de `off` de 0,061 ms en CPU et
+d'un facteur 2,5 en GPU, soit plus que tout écart `off` → `grid`. Une régression annoncée ici
+serait une lecture de bruit. **[M]**
+
+**À 5 000, un seul écart dépasse le témoin : le GPU, +0,35 ms**, alors que la partition dessine
+1,8 fois moins de triangles — le prix fixe des 35 appels supplémentaires. **Et les 96 appels sur
+96 de la scène à 500 disent où l'étape 3 doit mordre**, indépendamment de toute mesure de temps.
+**[M]**
 
 ## 4. L'image
 
@@ -118,49 +134,67 @@ dessin** que tout regroupement produit, pas un corps perdu. **[M]** pour l'attri
 **La règle du lot demandait 0 pixel. Le résultat est 2, sur le plus grand monde seulement, et le
 contrôle dit qu'ils ne viennent pas de la zone.** Livré comme tel, pas comme un succès.
 
-## 5. Le défaut trouvé en cours de route
+## 5. Le défaut trouvé par la mesure
 
-Première version : une cellule hors zone était **éteinte** (`visible = false`). Mesuré :
-soumission à 2,97 ms et 1,83 ms de marche de matrices par frame, pour 6 912 meshes dont 6 900 ne
-dessinaient rien.
+Première version : une cellule hors zone était **éteinte** (`visible = false`).
 
 `visible` arrête `projectObject` et **rien d'autre** : `Object3D.updateMatrixWorld` de three 0.185
 descend dans tous les enfants quoi qu'en dise le drapeau, et la garde sur `matrixWorldAutoUpdate`
-épargne la matrice, jamais la descente. Une cellule hors zone **sort** donc de la scène. La marche
-retombe à 0,285 ms et la soumission à 1,124. **[M]** + **[C]**
+épargne la matrice, jamais la descente. Une cellule hors zone **sort** donc de la scène. La colonne
+`zone ouverte` du § 3 chiffre encore ce que coûtait l'autre version — **6 912 meshes tenus contre
+1 404, 1,128 ms de marche de matrices contre 0,524, et 2,001 ms de soumission contre 1,422**.
+**[M]** + **[C]**
 
 ## 6. Le coût d'un changement de document
 
 `apply` d'un état où **un corps est ajouté**, puis d'un état où il est **retiré**, médiane de 5
 passes :
 
-| | `off` | `grid` |
-|---|---:|---:|
-| 500 corps | 0,59 / 0,64 ms | 0,58 / 0,58 ms |
-| 5 000 corps | 5,20 / 4,88 ms | 5,31 / 4,66 ms |
-| 500 000 corps | 1 086 / 1 123 ms | 1 327 / 1 314 ms |
+| | `off` | témoin | `grid` |
+|---|---:|---:|---:|
+| 500 corps | 0,53 / 0,57 ms | 0,51 / 0,52 | 0,62 / 0,63 |
+| 5 000 corps | 5,24 / 4,65 ms | 5,64 / 5,66 | 6,82 / 6,80 |
+| 500 000 corps | 1 341 / 1 292 ms | 1 254 / 1 273 | 1 410 / 1 416 |
 
 **L'invalidation par cellule EXISTE et elle est prouvée par le test unitaire** — « keeps the cells
 nothing touched, and builds again only the one that changed » : le mesh de la cellule intacte est
 le MÊME objet après la reconstruction, seule la cellule touchée en reçoit un neuf, et les matrices
 des cellules intactes ne sont réécrites que si elles ont vraiment bougé.
 
-**Mais elle ne se voit pas en millisecondes à 500 000**, et il faut le dire ainsi : `apply` y est
-dominé par la réconciliation du studio sur 501 445 nœuds, pas par le regroupement. À cette taille
-`grid` est même **20 % plus lent** que `off` — le rangement par cellule s'ajoute au balayage. À
-5 000 et à 500, les deux sont à égalité. **[M]**
+**Mais elle ne se voit pas en millisecondes**, et il faut le dire ainsi : à 500 000, `apply` est
+dominé par la réconciliation du studio sur 501 445 nœuds, pas par le regroupement — l'écart
+`grid` − `off` (+8 %) est du même ordre que l'écart entre les deux passes de `off` (+7 %). À 5 000
+l'écart est de 1,5 ms, hors témoin celui-là. **[M]**
 
-## 7. Ce que le lot ne fait pas
+## 7. Ce que la revue a corrigé, et ce qu'elle a laissé
+
+Corrigé dans le lot : **l'aperçu en incrustation rouvrait la zone en grand à chaque frame.**
+`onInset` passe par `hideWorkshop`, appelé une fois par frame tant que la préview est montrée ; le
+niveau entier rentrait dans la scène puis en ressortait deux fois par frame, et l'aperçu dessinait
+des cellules avec des cartes d'ombre tracées pour la zone des panneaux, `needsUpdate` ayant déjà
+été consommé. L'incrustation a une caméra : elle la donne désormais. **[C]**
+
+**Hors périmètre, signalé et non corrigé** — trois défauts de `SceneRenderer` que ce lot ne touche
+pas et qui existaient avant lui : `withHungUnder` ré-ajoute une source déjà accrochée puis retire
+les DEUX copies (un glisser multi-sélection de corps instanciés ne rapporte alors aucune
+transformation) · `onGizmoChange` écrit `selectedIds` sans leur descendance, là où
+`regroupInstances` a été corrigé pour le faire · `refreshAids` en `boundingBoxes: 'all'` accroche
+et décroche toutes les sources à chaque `apply`.
+
+## 8. Ce que le lot ne fait pas
 
 - Le CPU de soumission ne rejoint pas la cible du § 1 : le levier nommé par la mesure est
   **l'étape 3**, le bypass géométrique — 52 appels de moins de 16 instances à 500 000, 96 sur 96 à
   500.
+- **Les cartes d'ombre d'une frame sont tracées pour la zone des PANNEAUX.** Un aperçu ou un film
+  qui regarde ailleurs voit des corps dont l'ombre manque, jusqu'à ce que les cartes soient
+  redemandées. Sous `off` la question ne se pose pas, toutes les cellules étant toujours là.
 - **Aucun nombre de nœuds visités n'est publié par la production** : `worldPartition` le compte
   (`stats()`), mais rien ne l'expose au travers du contrat `InstancedGroups`. Le 45 du § 2 est
-  celui du banc de spike. Le test unitaire tient la borne (< 80 pour une zone de 500 sur 10 000
+  celui du banc de spike ; le test unitaire tient la borne (< 80 pour une zone de 500 sur 10 000
   cellules).
 - Un corps qui traverse une frontière de cellule **pendant un geste** reste dessiné par sa cellule
   d'origine jusqu'au prochain changement de contenu : `moved` élargit les bornes plutôt que de
   redécouper, comme `instancing.ts` le fait déjà pour ses régions. C'est l'étape 4 qui traite les
   mobiles.
-- Ni C3 (LOD), ni les ombres, ni l'activation par défaut.
+- Ni C3 (LOD), ni l'activation par défaut.
