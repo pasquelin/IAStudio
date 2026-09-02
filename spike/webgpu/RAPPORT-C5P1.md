@@ -720,8 +720,55 @@ est le correctif naturel ; il n'est pas dans ce lot, et 0,008 ms ne le justifie 
   `refreshAids`) n'ont pas été touchés — ils ne bloquent pas le défaut, et le glisser
   multi-sélection du banc passe par `moved`, qui n'est pas leur chemin.
 
+### 🛑 Trois défauts que le DÉFAUT rend atteignables
+
+La revue de correction a lu la branche entière, et c'est ce qui rend ces trois-là importants : ils
+sont **antérieurs à ce lot** — étapes 3 et 4 — mais `createCellGroups` n'était **jamais construit
+en production** tant que le flag restait à `off`. Les activer par défaut les met sur le chemin de
+tout le monde. **Aucun n'est corrigé ici** : ce sont des correctifs d'étapes précédentes, sans
+mesure ni test dans ce lot, et l'arbitrage revient à l'utilisateur.
+
+1. **🔴 Un mobile promu pendant un mode d'affichage garde le remplaçant pour de bon.**
+   `settle` construit ses lots de cellule avec `worn.material`, que `sweep` a obtenu par
+   `ownMaterialOf` — le rappel dont le commentaire dit précisément « an instance born during a
+   solid pass would wear the stand-in for good ». **`widen` prend `like.material`**, où `like` est
+   soit une instance de cellule que `dressForPane` a déjà revêtue, soit un mesh source lui aussi
+   revêtu. Chemin : une vue en `solid` / `material` / `normals`, puis un corps déclaré mobile qui
+   apparaît ou qu'on déplace → le lot naît en portant le remplaçant comme matériau PROPRE,
+   `paneMemory` n'a rien à restaurer, et le retour en `shaded` laisse ces mobiles peints jusqu'à
+   la prochaine reconstruction complète. **`widen` doit recevoir le matériau du GROUPE**, pas un
+   mesh. `cellInstancing.ts` — vérifié dans le code, non mesuré à l'écran.
+2. **`throwOf(framed[0], …)` ne garde que la PREMIÈRE lumière projetante**, alors que la ligne
+   au-dessus ajuste la caméra d'ombre de **toutes**. `follow` grossit donc chaque boîte de cellule
+   le long de cette seule direction : avec deux directionnelles opposées, un caster hors champ dont
+   l'ombre entre dans l'image PAR LA SECONDE est caché, et son ombre disparaît — exactement le pop
+   que le § 12 existe pour empêcher. L'ordre de `framed` vient de l'itération de `this.objects`,
+   donc **laquelle gagne est arbitraire**.
+3. **L'aperçu en incrustation redessine les cartes d'ombre à CHAQUE frame.** `hideWorkshop` appelle
+   `follow(camera)` mais la fermeture qu'il rend ne le défait pas — la remise en place est déléguée
+   au `dressPane` suivant, qui rend alors `true`, ce que `ViewportEngine` traduit en
+   `shadowMap.needsUpdate = true`. Tant qu'une préview est montrée, les cartes sont retracées même
+   si rien n'a bougé. Le § 16 disait la moitié du problème (les cartes sont tracées pour la zone
+   des panneaux) ; **le coût par frame n'y était pas.** Même trou pour un film ou une capture, qui
+   passent par `follow(null)` : le niveau ENTIER reste attaché jusqu'à la passe de pane suivante.
+
+**Un quatrième, celui-là vraiment indépendant du flag** : le `withHungUnder` du § 7, dont la revue
+donne enfin le mécanisme. `holdsSource` répond vrai pour toute source du dernier rebuild **qu'elle
+soit accrochée ou non** ; quand un pane montre les arêtes, `syncSourceWalk` a déjà appelé
+`hangSources`, donc `withHungUnder` accroche une SECONDE copie et son `finally` retire les DEUX.
+La source sort de la marche pendant que `hung` reste vrai, et les deux garde-fous suivants
+court-circuitent (`if (hung === yes) return`, `if (hung) return`). Le test « leaves the tree exactly
+as it found it » n'exerce que le chemin sans arêtes.
+
+**Et un cosmétique** : `lowX` est masqué à l'intérieur de `query` (`worldPartition.ts`) — deux sens
+différents dans la même fonction de vingt lignes, sans conséquence aujourd'hui.
+
 ### Ce qu'il faudrait pour merger `feat/open-world`
 
+0. **Les trois défauts ci-dessus, en premier.** Le premier est visible à l'écran par n'importe
+   quel utilisateur qui déplace un corps mobile depuis une vue non ombrée ; les deux autres
+   touchent l'ombre et l'aperçu. Ils appartiennent aux étapes 3 et 4 et sont sortis de ce lot,
+   mais **c'est l'activation par défaut qui les met en service**.
 1. **L'arbitrage sur les 412 pixels de la vue cadrée de dehors.** Le lot a été livré sous la règle
    « 0 pixel » ; elle ne tient plus sur cette vue-là. Aucun corps n'est perdu et l'écart est de
    3 % par canal au pire, mais c'est à l'utilisateur de dire si l'ordre de dessin est un prix
