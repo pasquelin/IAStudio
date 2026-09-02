@@ -16,6 +16,7 @@ import {
 import {
   heldOutOfDraw,
   shapeAndPaint,
+  withFlags,
   sweep,
   worldReach,
   writeMoved,
@@ -55,7 +56,7 @@ export function createCellGroups(
   const buckets = new Map<string, Bucket>()
   const placed: Placed = new Map()
   const sources = heldOutOfDraw()
-  const keyOf = shapeAndPaint()
+  const keyOf = withFlags(shapeAndPaint())
   const near: CellKey[] = []
   /** The cells the host currently holds, and a scratch set so a frame allocates neither. */
   const standing = new Set<CellKey>()
@@ -416,7 +417,7 @@ export function createCellGroups(
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { cell: null, ids: [], meshes: [] }
-        for (const [name, members] of splitByCell(
+        for (const [cell, members] of splitByCell(
           worn,
           index,
           first.geometry,
@@ -424,6 +425,7 @@ export function createCellGroups(
           movers,
           promoted,
         )) {
+          const name = bucketName(worn.key, cell)
           settle(name, members, worn, first.geometry)
           settled.add(name)
         }
@@ -614,8 +616,8 @@ function splitByCell(
   seen: Map<string, string>,
   movers: Members,
   promoted: ReadonlySet<string>,
-): Map<string, Members> {
-  const held = new Map<string, Members>()
+): Map<CellKey | null, Members> {
+  const held = new Map<CellKey | null, Members>()
   for (const [at, mesh] of worn.meshes.entries()) {
     const id = worn.ids[at]
     if (id === undefined) continue
@@ -631,16 +633,22 @@ function splitByCell(
     // inside a rotated parent shears, and a decomposed translation of a sheared matrix drifts.
     const stands = mesh.matrixWorld.elements
     const spills = !index.fitsACell(worldReach(shape, mesh.matrixWorld))
+    // Filed under the cell ITSELF, never under its name: naming here spelled one string per body
+    // and hashed it, 5 000 of them a rebuild on 5 000 bodies. The name is composed once per
+    // bucket, by the caller that settles it.
     const cell = spills ? null : index.cellAt(stands[12] ?? 0, stands[14] ?? 0)
-    const name = `${worn.key}|${spills ? 'loose' : cell}`
-    const inside = held.get(name)
+    const inside = held.get(cell)
     if (inside) {
       inside.ids.push(id)
       inside.meshes.push(mesh)
-    } else held.set(name, { cell, ids: [id], meshes: [mesh] })
+    } else held.set(cell, { cell, ids: [id], meshes: [mesh] })
   }
   return held
 }
+
+/** What names a bucket: its group, and the cell of it — the loose lot standing for no cell. */
+const bucketName = (key: string, cell: CellKey | null): string =>
+  `${key}|${cell === null ? 'loose' : cell}`
 
 const FRUSTUM = new Frustum()
 const VIEW = new Matrix4()

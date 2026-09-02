@@ -331,9 +331,7 @@ export function sweep(
       continue
     }
 
-    const key = `${keyOf(node, mesh)}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}${
-      node.negative === true ? 1 : 0
-    }`
+    const key = keyOf(node, mesh)
     const held = groups.get(key)
     if (held) {
       held.ids.push(node.id)
@@ -383,6 +381,34 @@ export function spellingOf(spell: (node: SceneNode) => string): (node: SceneNode
 /** Everything a draw call would have to change: the shape, and what it is painted with. */
 export const shapeAndPaint = (): ((node: SceneNode) => string) =>
   spellingOf(node => (node.type === 'mesh' ? stableKey([node.geometry, node.material]) : ''))
+
+/** The three things a draw call cannot share, as one small number: shadows both ways, negative. */
+export const flagsOf = (node: SceneNode, mesh: Mesh): number =>
+  (mesh.castShadow ? 4 : 0) +
+  (mesh.receiveShadow ? 2 : 0) +
+  (node.type === 'mesh' && node.negative === true ? 1 : 0)
+
+/**
+ * A spelling that reads the NODE alone, completed by the flags and held on that node.
+ *
+ * The sweep used to compose this string itself, once per body per pass — 5 000 of them on a
+ * rebuild of 5 000, hashed straight into a map. The flags are compared instead of respelled, and
+ * a node that kept them keeps its key. Only for a `spell` that reads nothing off the mesh: what
+ * is held is keyed by the node, and a mesh that changed alone would keep a stale key.
+ */
+export function withFlags(
+  spell: (node: SceneNode) => string,
+): (node: SceneNode, mesh: Mesh) => string {
+  const held = new WeakMap<SceneNode, { flags: number; key: string }>()
+  return (node, mesh) => {
+    const flags = flagsOf(node, mesh)
+    const known = held.get(node)
+    if (known?.flags === flags) return known.key
+    const key = `${spell(node)}|${flags}`
+    held.set(node, { flags, key })
+    return key
+  }
+}
 
 /** Where a node's matrix sits, so a move can be written without walking the scene again. */
 export type Placed = Map<string, { instance: InstancedMesh; slot: number }>

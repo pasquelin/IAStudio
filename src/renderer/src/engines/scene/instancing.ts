@@ -3,6 +3,7 @@ import { TRIANGLES_PER_REGION, regionsByGrid, type SpatialRegions } from './inst
 import {
   heldOutOfDraw,
   shapeAndPaint,
+  withFlags,
   trianglesOf,
   sweep,
   writeMoved,
@@ -36,7 +37,7 @@ export function createInstancedGroups(
   const drawn: InstancedMesh[] = []
   const placed: Placed = new Map()
   const sources = heldOutOfDraw()
-  const keyOf = shapeAndPaint()
+  const keyOf = withFlags(shapeAndPaint())
 
   const clear = (): void => {
     for (const instance of drawn) {
