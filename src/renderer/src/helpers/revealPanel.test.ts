@@ -7,7 +7,7 @@ import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { trackByGit } from '@/stores/git-fixtures'
 import { installDocument } from '@/stores/document-fixtures'
-import { revealAssets, revealTool } from './revealPanel'
+import { revealAssets, revealTool, toolIsShown } from './revealPanel'
 
 beforeEach(() => {
   useLayouts.setState({ activeWorkspace: 'image', home: false })
@@ -126,5 +126,32 @@ describe('revealing a panel the chassis has not been told about yet', () => {
 
     expect(revealTool('git')).toBe(true)
     expect(drawn('left').secondary).toBe('git')
+  })
+})
+
+/**
+ * 🛑 The other axis of the same lag, and the costlier one: the chassis' VIEW follows the shell's
+ * render too. Between the home coming forward and that render, `show` writes into the family the
+ * chassis still holds — a panel named in the spaces' arrangement while the home is on screen.
+ */
+describe('revealing a panel while the chassis is still on the other view', () => {
+  it('answers no, and writes into neither arrangement', () => {
+    trackByGit()
+    useProject.setState({
+      project: { path: '/projects/one', manifest: { version: 1, createdAt: '', updatedAt: '' } },
+    })
+    chassisFor('image')
+    useLayouts.setState({ home: true })
+
+    expect(revealTool('git')).toBe(false)
+    expect(panelsStore.getState().views.workspaces?.left?.secondary).toBeNull()
+  })
+
+  it('says the same of what is shown, rather than reading the other view', () => {
+    chassisFor('image')
+    useLayouts.setState({ home: true })
+
+    // `explorer` leads the lower left of a SPACE; the home is in front and holds its own.
+    expect(toolIsShown('explorer')).toBe(false)
   })
 })

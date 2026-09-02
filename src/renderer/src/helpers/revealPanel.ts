@@ -1,5 +1,11 @@
 import { shownIn } from '@pasquelin/panels'
-import { placementIn, type ToolId, type ToolZone } from '@shared/domain/tool'
+import {
+  familyOf,
+  placementIn,
+  type ToolId,
+  type ToolSurface,
+  type ToolZone,
+} from '@shared/domain/tool'
 import { offeredPlacement, toolStateOf } from '@/helpers/toolRegistry'
 import { toolSurface } from '@/stores/layouts'
 import { panelsStore } from '@/stores/panels'
@@ -19,13 +25,23 @@ import { panelsStore } from '@/stores/panels'
  * every other surface a question the click never asked.
  */
 export function revealTool(tool: ToolId): boolean {
-  if (!offeredPlacement(tool, toolSurface(), toolStateOf())) return false
+  const surface = toolSurface()
+  if (!offeredPlacement(tool, surface, toolStateOf()) || !chassisFollows(surface)) return false
 
   panelsStore.getState().show(tool)
   // The same answer `panels.list` gives, rather than the call having been made: `offeredPlacement`
   // reads the stores while the registry follows the shell's render, so the two are a tick apart
   // whenever an answer has just landed — and `show` does nothing for an id it cannot find.
   return toolIsShown(tool)
+}
+
+/**
+ * Whether the chassis has caught up with the surface in front. It is brought forward by the
+ * shell's render, so between a store saying `home` and that render the chassis still holds the
+ * spaces — and everything below would then answer about a screen nobody is looking at.
+ */
+function chassisFollows(surface: ToolSurface): boolean {
+  return panelsStore.getState().view === familyOf(surface)
 }
 
 /**
@@ -36,8 +52,9 @@ export function revealTool(tool: ToolId): boolean {
  * against the registry the shell declared for it. Taking one made the answer look addressable.
  */
 export function toolIsShown(tool: ToolId): boolean {
-  const placement = placementIn(tool, toolSurface())
-  if (!placement) return false
+  const surface = toolSurface()
+  const placement = placementIn(tool, surface)
+  if (!placement || !chassisFollows(surface)) return false
 
   return isShown(tool, placement.zone)
 }
@@ -58,10 +75,12 @@ function isShown(tool: ToolId, zone: ToolZone): boolean {
 export function closeTool(tool: ToolId): boolean {
   const surface = toolSurface()
   const placement = placementIn(tool, surface)
-  if (!placement || !isShown(tool, placement.zone)) return false
+  if (!placement || !chassisFollows(surface) || !isShown(tool, placement.zone)) return false
 
   panelsStore.getState().close(placement.zone, placement.slot)
-  return true
+  // Answered on what the zone draws, like the opening above: `close` empties the half it is given
+  // whatever the chassis holds there.
+  return !isShown(tool, placement.zone)
 }
 
 /**
