@@ -669,3 +669,65 @@ describe('disposing the groups', () => {
     expect(instancesIn(scene)).toHaveLength(0)
   })
 })
+
+describe('a lot of movers born while a pane wears a stand-in', () => {
+  /**
+   * What a display mode does to what is already drawn: `dressForPane` replaces the material of
+   * every mesh it walks, and remembers the real one — but only for a mesh that HAD it.
+   */
+  const dressed = (scene: Object3D, stand: MeshStandardMaterial): void => {
+    for (const mesh of instancesIn(scene)) mesh.material = stand
+  }
+
+  const moverLot = (scene: Object3D): InstancedMesh | undefined =>
+    scene.children.find(child => child instanceof InstancedMesh)
+
+  it('wears the material of the DOCUMENT, never the stand-in the cell was wearing', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    const groups = createCellGroups(scene, mesh => own.get(mesh) ?? mesh.material)
+    // What `SceneRenderer` hands the strategy: the material the DOCUMENT dresses a mesh in, which
+    // a pane in a solid view has already replaced on the mesh itself.
+    const own = new Map<Mesh, MeshStandardMaterial>()
+    const paint = objects.get('n0')?.material
+    if (!(paint instanceof MeshStandardMaterial)) throw new Error('no paint to remember')
+    groups.rebuild(nodes, id => objects.get(id))
+
+    const stand = new MeshStandardMaterial()
+    dressed(scene, stand)
+    for (const mesh of objects.values()) {
+      own.set(mesh, paint)
+      mesh.material = stand
+    }
+
+    const mover = objects.get('n2')
+    if (!mover) throw new Error('no body to move')
+    mover.position.set(0, 3, 0)
+    mover.updateMatrixWorld(true)
+    groups.moved(['n2'], id => objects.get(id))
+
+    // 🛑 Born wearing the stand-in, the lot has nothing for `paneMemory` to give back: going
+    // back to a shaded view leaves the mover painted, and only a full rebuild undoes it.
+    expect(moverLot(scene)?.material).toBe(paint)
+  })
+
+  it('says it built something, so the next pane dresses what it made', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    const groups = createCellGroups(scene)
+    groups.rebuild(nodes, id => objects.get(id))
+    // The rebuild's own lots are already answered for: the question is what a MOVE makes.
+    groups.builtAnew?.()
+
+    const mover = objects.get('n2')
+    if (!mover) throw new Error('no body to move')
+    mover.position.set(0, 3, 0)
+    mover.updateMatrixWorld(true)
+    groups.moved(['n2'], id => objects.get(id))
+
+    expect(groups.builtAnew?.()).toBe(true)
+    // Asked and answered: a pane that has already dressed what was made must not redress on
+    // every frame of a drag.
+    expect(groups.builtAnew?.()).toBe(false)
+  })
+})

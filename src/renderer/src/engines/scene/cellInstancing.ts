@@ -139,7 +139,13 @@ export function createCellGroups(
     // of a single instance, and it disappears as soon as the camera turns.
     mesh.computeBoundingSphere()
     boxes.set(mesh, boxOf(members.meshes, shape))
-    const bucket: Bucket = { cell: members.cell, ids: members.ids, mesh, key: worn.key }
+    const bucket: Bucket = {
+      cell: members.cell,
+      ids: members.ids,
+      mesh,
+      key: worn.key,
+      paint: worn.material,
+    }
     bucketOf.set(mesh, bucket)
     const into = groupOf(members.cell)
     if (members.cell !== null) {
@@ -185,10 +191,21 @@ export function createCellGroups(
     mesh.instanceMatrix.needsUpdate = true
   }
 
-  /** A lot of `held` slots for one group, replacing the one it outgrew. */
-  const widen = (key: string, like: InstancedMesh | Mesh, held: Mobile | undefined): Mobile => {
+  /**
+   * A lot of `held` slots for one group, replacing the one it outgrew.
+   *
+   * 🛑 `paint` is the group's own, never `like.material`: a display mode has already replaced the
+   * material ON the meshes, and a lot born wearing the stand-in has nothing `paneMemory` can give
+   * back — it stays painted through the return to a shaded view.
+   */
+  const widen = (
+    key: string,
+    like: InstancedMesh | Mesh,
+    held: Mobile | undefined,
+    paint: Material | Material[],
+  ): Mobile => {
     const room = Math.max(32, (held?.ids.length ?? 0) * 2)
-    const mesh = new InstancedMesh(like.geometry, like.material, room)
+    const mesh = new InstancedMesh(like.geometry, paint, room)
     mesh.matrixAutoUpdate = false
     // 🛑 A mover goes anywhere: a bounding sphere measured once is wrong at its first step, and
     // three would cull the lot off screen while its bodies are in front of the camera.
@@ -208,12 +225,16 @@ export function createCellGroups(
       held.mesh.dispose()
     }
     host.add(mesh)
-    const lot: Mobile = { mesh, ids }
+    const lot: Mobile = { mesh, ids, paint }
     mobiles.set(key, lot)
     lotOf.set(mesh, lot)
     listStale = true
+    built = true
     return lot
   }
+
+  /** Whether a mesh was made outside a rebuild, for the pane that has to dress what was made. */
+  let built = false
 
   /**
    * Moves a body off the grid and onto the lot of movers, once and for all.
@@ -234,7 +255,7 @@ export function createCellGroups(
     const held = mobiles.get(bucket.key)
     const lot =
       !held || held.ids.length >= held.mesh.instanceMatrix.count
-        ? widen(bucket.key, at.instance, held)
+        ? widen(bucket.key, at.instance, held, held?.paint ?? bucket.paint)
         : held
     const slot = lot.ids.length
     lot.ids.push(id)
@@ -258,7 +279,12 @@ export function createCellGroups(
    * Puts the movers of one group on its lot, keeping the slot of everyone already there — a
    * declared body was never in a cell, so nothing is taken out of one.
    */
-  const settleMobile = (key: string, members: Members, like: InstancedMesh | Mesh): void => {
+  const settleMobile = (
+    key: string,
+    members: Members,
+    like: InstancedMesh | Mesh,
+    paint: Material | Material[],
+  ): void => {
     if (members.ids.length === 0 && !mobiles.has(key)) return
     let lot = mobiles.get(key)
     for (const [at, id] of members.ids.entries()) {
@@ -270,7 +296,8 @@ export function createCellGroups(
         lot.mesh.instanceMatrix.addUpdateRange(held.slot * 16, 16)
         continue
       }
-      if (!lot || lot.ids.length >= lot.mesh.instanceMatrix.count) lot = widen(key, like, lot)
+      if (!lot || lot.ids.length >= lot.mesh.instanceMatrix.count)
+        lot = widen(key, like, lot, paint)
       const slot = lot.ids.length
       lot.ids.push(id)
       lot.mesh.count = lot.ids.length
@@ -378,7 +405,7 @@ export function createCellGroups(
           settle(name, members, worn, first.geometry)
           settled.add(name)
         }
-        settleMobile(worn.key, movers, first)
+        settleMobile(worn.key, movers, first, worn.material)
         instanced += worn.meshes.length
       }
       // What nothing settled on holds bodies that left, were hidden, or changed group.
@@ -473,6 +500,13 @@ export function createCellGroups(
       return moved
     },
 
+    // Read AND cleared: a pane that has dressed what was made must not redress every frame.
+    builtAnew: () => {
+      const made = built
+      built = false
+      return made
+    },
+
     stats: (): GroupingStats => {
       const { nodesVisited, cellsReturned, cells: held, bytes } = index.stats()
       return { nodesVisited, cellsReturned, cellsStanding: standing.size, cells: held, bytes }
@@ -494,8 +528,17 @@ export function createCellGroups(
   }
 }
 
-/** What one cell of one group draws, and the nodes it stands for, index for index. */
-type Bucket = { cell: CellKey | null; ids: string[]; mesh: InstancedMesh; key: string }
+/**
+ * What one cell of one group draws, and the nodes it stands for, index for index. `paint` is the
+ * group's own material, held because a promotion happens outside a rebuild and has no group left.
+ */
+type Bucket = {
+  cell: CellKey | null
+  ids: string[]
+  mesh: InstancedMesh
+  key: string
+  paint: Material | Material[]
+}
 
 /**
  * The lot of one group's MOVERS, hung straight from the host.
@@ -504,7 +547,7 @@ type Bucket = { cell: CellKey | null; ids: string[]; mesh: InstancedMesh; key: s
  * it does ever rebuilds a static cell. Measured in C5-B2 on 5 014 movers of 500 000: 0.901 ms an
  * update against 19.10 in a single structure, and zero mesh rebuilt against 947.
  */
-type Mobile = { mesh: InstancedMesh; ids: string[] }
+type Mobile = { mesh: InstancedMesh; ids: string[]; paint: Material | Material[] }
 
 /** A cell in the scene: its group, the box its lots together occupy, and whether that box holds. */
 type Held = { group: Group; box: Box3; stale: boolean }

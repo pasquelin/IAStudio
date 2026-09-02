@@ -1572,10 +1572,13 @@ export class SceneRenderer {
         this.objects.get(id),
       )
       this.syncSourceWalk()
+      // Read before the test, since asking CLEARS it: a lot the rebuild made must not leave the
+      // flag standing for the next move to find.
+      const built = this.instances.builtAnew?.() === true
       // Only when there are instances to dress: they are new objects wearing what their sources
       // wore, so a pane that believed the scene already dressed would leave them out of a solid
       // or a material view. An ordinary scene reaches no group and must pay nothing.
-      if (instanced > 0) forgetDress(this.paneMemory)
+      if (instanced > 0 || built) forgetDress(this.paneMemory)
       return
     }
     if (this.movedNodes.size === 0) return
@@ -1589,6 +1592,9 @@ export class SceneRenderer {
     // Only the slots that moved. Their region's bounds are widened rather than recut, so the
     // culling stays conservative until the next real change of content puts them back exact.
     this.instances.moved(moved, id => this.objects.get(id))
+    // A promotion BUILDS a lot mid-drag, and a fresh mesh wears the document's own material: a
+    // pane that believed the scene already dressed would draw it shaded in a solid view.
+    if (this.instances.builtAnew?.() === true) forgetDress(this.paneMemory)
     this.movedNodes.clear()
   }
 

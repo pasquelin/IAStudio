@@ -100,6 +100,14 @@ export type InstancedGroups = {
    */
   follow?: (camera: Camera | null, cast?: ShadowThrow | null) => boolean
   /**
+   * Whether this strategy BUILT a mesh since the question was last asked — read and cleared.
+   *
+   * A promotion makes a lot mid-drag, outside any rebuild, and a fresh mesh wears the document's
+   * own material: a pane that believed the scene already dressed would leave it undressed. Only a
+   * strategy that builds outside `rebuild` answers.
+   */
+  builtAnew?: () => boolean
+  /**
    * What the last `follow` walked, for whoever measures the strategy from outside — the studio's
    * counters, a bench, a probe. Only a strategy that holds a spatial index answers.
    */
