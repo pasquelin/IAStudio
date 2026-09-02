@@ -1434,10 +1434,13 @@ describe('a viewport', () => {
      */
     it('refuses a ground further than the view already reaches, and takes one nearer', () => {
       const engine = backedOff({ pivotMode: () => ({ aroundSelection: false, underCursor: true }) })
+      // A move, never a press alone: the pivot is decided at the first pixel travelled, once the
+      // gizmo has demonstrably NOT taken the press — see `onNavigate`.
       const aim = (at: [number, number, number], pivot: [number, number, number]) => {
         engine.camera.lookAt(...at)
         engine.orbit?.target.set(...pivot)
         host.dispatchEvent(press({ altKey: true }))
+        window.dispatchEvent(dragTo(321, 400))
         host.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
       }
 
@@ -1463,6 +1466,7 @@ describe('a viewport', () => {
       })
 
       host.dispatchEvent(press({ altKey: true }))
+      window.dispatchEvent(dragTo(321, 400))
 
       expect(engine.orbit?.target.z).toBeCloseTo(4, 6)
     })
@@ -1474,6 +1478,7 @@ describe('a viewport', () => {
       })
 
       host.dispatchEvent(press({ altKey: true }))
+      window.dispatchEvent(dragTo(321, 400))
 
       expect(engine.orbit?.target.z).toBe(0)
     })
