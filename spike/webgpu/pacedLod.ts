@@ -2,6 +2,8 @@ import { InstancedMesh, Matrix4, Vector3, type Object3D, type PerspectiveCamera 
 import { laddersFor, screenRadius, SCREEN_STEPS, type Ladder } from './lodStrategies'
 import type { ShapeLevel } from './engineScenes'
 
+const round = (value: number): number => Math.round(value * 1000) / 1000
+
 /**
  * Le LOD par corps rendu ÉVÉNEMENTIEL et AMORTI — la variante 4 du chantier C3.
  *
@@ -26,6 +28,16 @@ export type Pumped = {
   done: boolean
 }
 
+/** Où part le temps de CONSTRUIRE le rig — ce que 2C mesure, phase par phase. */
+export type BuiltIn = {
+  /** Créer les géométries de chaque niveau. Zéro quand une échelle déjà bâtie est passée. */
+  laddersMs: number
+  /** Trouver les lots et allouer un `InstancedMesh` par niveau et par lot. */
+  shelvesMs: number
+  /** Les tables par corps : niveau porté, fente occupée, occupant de chaque fente. */
+  tablesMs: number
+}
+
 export type PacedLod = {
   /** La caméra a-t-elle bougé assez pour rouvrir le travail ? Vrai si le balayage est reparti. */
   mark: (camera: PerspectiveCamera) => boolean
@@ -34,7 +46,14 @@ export type PacedLod = {
   settled: () => boolean
   /** Combien de corps le rig tient, tous lots confondus. */
   bodies: () => number
-  dispose: () => void
+  /** Ce que sa construction a coûté, par phase. */
+  builtIn: () => BuiltIn
+  /** Les étagères posées dans la scène, pour compter ce qu'une reconstruction réalloue. */
+  shelves: () => number
+  /** L'échelle de géométries, à repasser à un rig suivant pour ne pas les rebâtir. */
+  ladders: () => Map<number, Ladder>
+  /** Ce que le rig a détruit ou non : une échelle passée de l'extérieur ne lui appartient pas. */
+  dispose: (keepLadders?: boolean) => void
 }
 
 /**
@@ -98,15 +117,18 @@ function rackOf(scene: Object3D, lot: InstancedMesh, ladder: Ladder): Rack {
     return shelf
   })
   lot.visible = false
-  return {
-    lot,
-    ladder,
-    shelves,
-    level: new Int8Array(lot.count).fill(-1),
-    slot: new Int32Array(lot.count).fill(-1),
-    occupant: shelves.map(() => new Int32Array(lot.count).fill(-1)),
-  }
+  return { lot, ladder, shelves, level: EMPTY_LEVEL, slot: EMPTY_SLOT, occupant: [] }
 }
+
+/** Les tables par corps, allouées à part : c'est la moitié de ce qu'une reconstruction réalloue. */
+function tablesOf(rack: Rack): void {
+  rack.level = new Int8Array(rack.lot.count).fill(-1)
+  rack.slot = new Int32Array(rack.lot.count).fill(-1)
+  rack.occupant = rack.shelves.map(() => new Int32Array(rack.lot.count).fill(-1))
+}
+
+const EMPTY_LEVEL = new Int8Array(0)
+const EMPTY_SLOT = new Int32Array(0)
 
 /** La fente qui vient de bouger, et elle seule : marquer le tampon entier le ré-uploade en entier. */
 function touched(shelf: InstancedMesh, slot: number): void {
@@ -156,8 +178,21 @@ function shelve(rack: Rack, body: number, level: number): void {
   rack.slot[body] = slot
 }
 
-export function pacedLod(scene: Object3D, level: ShapeLevel, hysteresis = HYSTERESIS): PacedLod {
-  const ladders = laddersFor(level)
+/**
+ * `held` est l'échelle de géométries d'un rig précédent : la passer est le cas TIÈDE, celui d'une
+ * scène déjà ouverte qu'on modifie. Sans elle, chaque reconstruction rebâtit les neuf géométries.
+ */
+export function pacedLod(
+  scene: Object3D,
+  level: ShapeLevel,
+  hysteresis = HYSTERESIS,
+  held?: Map<number, Ladder>,
+): PacedLod {
+  const laddersFrom = performance.now()
+  const ladders = held ?? laddersFor(level)
+  const laddersMs = performance.now() - laddersFrom
+
+  const shelvesFrom = performance.now()
   const racks: Rack[] = []
   scene.traverse(object => {
     if (!(object instanceof InstancedMesh)) return
@@ -166,6 +201,11 @@ export function pacedLod(scene: Object3D, level: ShapeLevel, hysteresis = HYSTER
     )
     if (ladder) racks.push(rackOf(scene, object, ladder))
   })
+  const shelvesMs = performance.now() - shelvesFrom
+
+  const tablesFrom = performance.now()
+  for (const rack of racks) tablesOf(rack)
+  const tablesMs = performance.now() - tablesFrom
 
   const total = racks.reduce((sum, rack) => sum + rack.lot.count, 0)
   /**
@@ -297,7 +337,18 @@ export function pacedLod(scene: Object3D, level: ShapeLevel, hysteresis = HYSTER
 
     bodies: () => total,
 
-    dispose: () => {
+    builtIn: () => ({
+      laddersMs: round(laddersMs),
+      shelvesMs: round(shelvesMs),
+      tablesMs: round(tablesMs),
+    }),
+
+    shelves: () => racks.reduce((sum, rack) => sum + rack.shelves.length, 0),
+
+    /** L'échelle, pour qu'une reconstruction ne rebâtisse pas neuf géométries déjà en main. */
+    ladders: () => ladders,
+
+    dispose: keepLadders => {
       for (const rack of racks) {
         rack.lot.visible = true
         for (const shelf of rack.shelves) {
@@ -305,6 +356,7 @@ export function pacedLod(scene: Object3D, level: ShapeLevel, hysteresis = HYSTER
           shelf.dispose()
         }
       }
+      if (keepLadders) return
       for (const { levels } of ladders.values()) for (const geometry of levels) geometry.dispose()
     },
   }
