@@ -1,4 +1,7 @@
-import type { NavigationPreset } from '@shared/domain/navigationPreset'
+import { customFrom, schemeFor, type NavigationPreset } from '@shared/domain/navigationPreset'
+
+/** The settings branch the scheme is read off — spelled by shape, as `customFrom` is. */
+type NavigationSettings = Parameters<typeof customFrom>[0] & { navigationPreset: NavigationPreset }
 import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
@@ -71,11 +74,13 @@ let writeNavigationPreset: (preset: NavigationPreset) => void = () => {}
 
 /** Told by the settings store, which owns both halves. Rebuilds only when the answer moved. */
 export function noteNavigationPreset(
-  preset: NavigationPreset,
-  bindings: BindingOverrides,
+  three: NavigationSettings,
   write: (preset: NavigationPreset) => void,
 ): void {
   writeNavigationPreset = write
+
+  const preset = three.navigationPreset
+  const bindings = schemeFor(preset, customFrom(three)).bindings
   if (preset === navigationPreset && sameBindings(bindings, schemeBindings)) return
 
   navigationPreset = preset
