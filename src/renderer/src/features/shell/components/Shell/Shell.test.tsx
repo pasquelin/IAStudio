@@ -32,6 +32,9 @@ beforeEach(() => {
   installFakeBridge()
   // Every test below is about the docks, which the home covers entirely — see its own block.
   useLayouts.setState({ activeWorkspace: 'image', layout: null, home: false })
+  // Shared with every other file: a case that opens one leaves the studio holding it, and the
+  // panels asking for a project are then offered where the case beside it says they are not.
+  useProject.setState({ project: null })
   resetChassis()
   // The store is shared across files: one test turns the home off, and every later one would
   // inherit a studio whose entry point does not exist.
@@ -76,6 +79,34 @@ describe('the default layout', () => {
     expect(drawn()).toContain('Inspecteur')
     expect(drawn()).not.toContain('Calques')
     expect(drawn()).not.toContain('Timeline')
+  })
+})
+
+/**
+ * 🛑 Which halves a surface STARTS with is the studio's decision, and it is made once per view.
+ * Read off "whatever happens to be declared the second the chassis settles", a half whose panels
+ * all wait on something — a project being read, git answering — stays shut for good.
+ */
+describe('the halves a surface starts with', () => {
+  it('opens the band in Video, on a studio entered through Image', () => {
+    const { rerender } = renderShell()
+
+    useLayouts.setState({ activeWorkspace: 'video' })
+    rerender(withQueries(<Shell />))
+
+    expect(drawn()).toContain('Timeline')
+  })
+
+  it('gives the home’s lower left to the Explorer when the project it waited for opens', () => {
+    useLayouts.setState({ home: true })
+    const { rerender } = renderShell()
+
+    useProject.setState({
+      project: { path: '/projects/one', manifest: { version: 1, createdAt: '', updatedAt: '' } },
+    })
+    rerender(withQueries(<Shell />))
+
+    expect(drawn()).toContain('Explorateur')
   })
 })
 

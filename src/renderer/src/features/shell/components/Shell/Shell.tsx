@@ -28,10 +28,11 @@ import { AccountSelect } from '../AccountSelect'
 import { ProjectSelect } from '../ProjectSelect'
 import { TitleBar } from '../TitleBar/TitleBar'
 import { UiIcon } from '@/components/UiIcon'
-import { fillsActions, hasActions } from '../toolComponents'
+import { hasActions } from '../toolComponents'
 import { toolIcon, toolTitleKey } from '@/helpers/toolRegistry'
 import { panelSpecsOf } from '../../panelSpecs'
 import { LAYOUT_KEY, layoutStorage } from '../../layoutStorage'
+import { DEFAULT_OPEN } from '../../defaultOpen'
 import { useToolState } from '@/hooks/useToolState'
 import { familyOf, type ToolId } from '@shared/domain/tool'
 import { panelsStore } from '@/stores/panels'
@@ -126,6 +127,8 @@ export function Shell() {
       // The studio's own key, read through the twenty versions `zustand/persist` wrote under it.
       storage={layoutStorage}
       storageKey={LAYOUT_KEY}
+      // The halves the studio opens on, which are not "whatever is declared right now".
+      defaultOpen={DEFAULT_OPEN[familyOf(surface)]}
       railHeader={<RailNewButton />}
       labels={labels}
       className="min-h-0 flex-1"
@@ -179,7 +182,6 @@ export function Shell() {
           // in front of its close button, and every band panel took the width the montage asks
           // for.
           actions={hasActions(spec.id) ? <ShellPanelActions tool={spec.id} /> : undefined}
-          fillActions={fillsActions(spec.id)}
         >
           <ShellPanelBody tool={spec.id} />
         </Panel>
