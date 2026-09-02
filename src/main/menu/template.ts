@@ -512,6 +512,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           { type: 'separator' },
           commandItem('canvas.rulers', t.menu.rulers),
           commandItem('canvas.guides', t.menu.guides),
+          commandItem('canvas.grid', t.menu.grid),
           commandItem('canvas.clearGuides', t.menu.clearGuides),
           commandItem('canvas.snap', t.menu.snap),
         ]

@@ -18,10 +18,12 @@ import {
 } from '@/engines/canvas/commands'
 import { cellFor, cellsSpanning } from '@/engines/canvas/pixelGrid'
 import type { Size } from '@/engines/core/geometry'
+import { toggleView } from '@/features/image/canvasView'
 import { MAX_PICTURE_SIDE } from '@/features/image/pictureSize'
 import { formatDecimal } from '@/helpers/format'
 import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { useCanvases } from '@/stores/canvases'
+import { canvasViewOf, useCanvasViews } from '@/stores/canvasViews'
 
 export type CanvasInspectorProps = { documentId: string; canvas: CanvasState }
 
@@ -42,6 +44,8 @@ export function CanvasInspector({ documentId, canvas }: CanvasInspectorProps) {
   // `1024` would cut the picture to one pixel on its first digit — pixels ⌘Z cannot give back.
   const [pending, setPending] = useState<Size | null>(null)
   const lastCell = useRef(canvas.pixelCell ?? FIRST_CELL)
+  // A way of looking, so it lives with the rulers and the guides rather than in the document.
+  const grid = useCanvasViews(state => canvasViewOf(state, documentId).grid)
 
   const cell = canvas.pixelCell
   const size: Size = pending ?? canvas
@@ -177,6 +181,13 @@ export function CanvasInspector({ documentId, canvas }: CanvasInspectorProps) {
               step={1}
               onChange={wanted => resolve(wanted, canvas.height)}
               {...edit.gesture}
+            />
+
+            <ToggleField
+              label={t('inspector.pixelArtGrid')}
+              scId="canvas.pixelArt.grid"
+              value={grid}
+              onChange={() => toggleView(documentId, 'grid')}
             />
 
             <NumberField

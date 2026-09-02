@@ -81,6 +81,9 @@ describe('the light theme', () => {
       '--color-monitor',
       '--color-marquee-light',
       '--color-marquee-dark',
+      // And the pixel grid, ruled over the same document for the same reason.
+      '--color-grid-cell',
+      '--color-grid-pixel',
       // The three axis stripes, and their reason is arithmetic rather than editorial: a stripe
       // has to clear 3:1 against `surface` on BOTH themes, which pinches its luminance between
       // 0.146 and 0.273 — a window narrow enough that one value serves the two. Measured in

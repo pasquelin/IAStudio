@@ -272,6 +272,10 @@
       "title": "Guides",
       "help": "Shows or hides the guides laid on the image. Hiding them does not remove them."
     },
+    "canvasGrid": {
+      "title": "Pixel grid",
+      "help": "Shows or hides the grid of the artwork’s own pixels. Only on a document set to pixel art."
+    },
     "canvasClearGuides": {
       "title": "Clear guides",
       "help": "Removes every guide from the image. Undoable, like any other edit."

@@ -30,6 +30,8 @@ export type CanvasView = {
   rulers: boolean
   guides: boolean
   snap: boolean
+  /** The pixel-art grid. Drawn only on a document that is on one — see `CanvasState.pixelCell`. */
+  grid: boolean
 }
 
 export const DEFAULT_VIEW: CanvasView = {
@@ -37,6 +39,7 @@ export const DEFAULT_VIEW: CanvasView = {
   rulers: true,
   guides: true,
   snap: true,
+  grid: true,
 }
 
 export function sameViewport(a: Viewport, b: Viewport): boolean {
@@ -67,6 +70,15 @@ export function onDevicePixels(viewport: Viewport, ratio: number): Viewport {
     x: Math.round(viewport.x * ratio) / ratio,
     y: Math.round(viewport.y * ratio) / ratio,
   }
+}
+
+/**
+ * The same convention on a DEVICE pixel, for a hairline one device pixel wide. The world's origin
+ * is snapped there (`onDevicePixels`), so a line rounded in CSS pixels lands BESIDE the block it
+ * marks rather than on it — on half the pan positions of a retina screen.
+ */
+export function crispOn(value: number, resolution: number): number {
+  return (Math.round(value * resolution) + 0.5) / resolution
 }
 
 export function toScreen(viewport: Viewport, point: Point): Point {

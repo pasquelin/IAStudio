@@ -76,6 +76,7 @@ import { resizeCursor, rotateCursor, UPRIGHT, type Facing } from './cursors'
 import {
   CanvasOverlay,
   RULER_SIZE,
+  type BrushMark,
   type OverlayColors,
   type OverlayScene,
   type PendingShape,
@@ -104,7 +105,7 @@ import type { Point, Size } from '../core/geometry'
 import { blurRadius, brushSettingsOf, DEFAULT_BRUSH, type BrushSettings } from './brush'
 import type { CanvasTool } from './canvasTool'
 import { brushRect, grownBy, unionOf } from './tiles'
-import { cellAt, cellRuns, cellsOfLine } from './pixelGrid'
+import { cellAt, cellRuns, cellsOfLine, stampRect } from './pixelGrid'
 import {
   containIn,
   DEFAULT_VIEW,
@@ -464,6 +465,8 @@ export const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
   accent: '--color-accent',
   marqueeLight: '--color-marquee-light',
   marqueeDark: '--color-marquee-dark',
+  gridCell: '--color-grid-cell',
+  gridPixel: '--color-grid-pixel',
   scrim: '--color-scrim',
 }
 
@@ -483,6 +486,8 @@ export const FALLBACK_COLORS: OverlayColors = {
   accent: '#346ef2',
   marqueeLight: '#ffffff',
   marqueeDark: '#000000',
+  gridCell: '#8080808c',
+  gridPixel: '#80808047',
   scrim: '#00000099',
 }
 
@@ -505,6 +510,8 @@ function readColors(element: HTMLElement): OverlayColors {
     accent: read('accent'),
     marqueeLight: read('marqueeLight'),
     marqueeDark: read('marqueeDark'),
+    gridCell: read('gridCell'),
+    gridPixel: read('gridPixel'),
     scrim: read('scrim'),
   }
 }
@@ -1487,6 +1494,13 @@ export class CanvasEngine {
     this.stamp.filters = [this.softener]
   }
 
+  /** What the next dab covers, which on a grid is a square and not the disc the size names. */
+  private brushMark(at: Point): BrushMark {
+    const cell = this.pixelCell()
+    if (cell === null) return { radius: this.brush.size / 2 }
+    return { stamp: stampRect(toDocument(this.shownViewport(), at), cell, this.brush.size) }
+  }
+
   /** Whether the armed tool stamps a disc, and so whether the ring stands for anything. */
   private ringed(): boolean {
     return RINGED_TOOLS.has(this.tool)
@@ -2041,6 +2055,9 @@ export class CanvasEngine {
       document: { width: this.state.width, height: this.state.height },
       showRulers: this.view.rulers,
       showGuides: this.view.guides,
+      showGrid: this.view.grid,
+      pixelCell: this.state.pixelCell,
+      resolution: this.app?.renderer.resolution ?? window.devicePixelRatio,
       guides: this.state.guides,
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
@@ -2060,7 +2077,8 @@ export class CanvasEngine {
         overflowing: this.overflowing.has(this.state.activeLayerId ?? ''),
         selection: this.selection,
         // Not while the tool is refusing: a ring is a promise that a dab lands there.
-        brushRadius: this.ringed() && !this.refuses() ? this.brush.size / 2 : null,
+        brushMark:
+          this.pointer && this.ringed() && !this.refuses() ? this.brushMark(this.pointer) : null,
       },
     }
   }

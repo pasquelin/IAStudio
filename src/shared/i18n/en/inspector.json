@@ -352,6 +352,7 @@
     "artResolution": "Resolution (cells)",
     "artColumns": "Columns",
     "artRows": "Rows",
+    "pixelArtGrid": "Show the grid",
     "pixelSize": "Pixel size"
   }
 }

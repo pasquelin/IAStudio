@@ -4171,7 +4171,7 @@ describe('the brush ring', () => {
  * The stakes are not that the fallback looks wrong. `token()` answers an empty string for a name
  * `index.css` no longer declares, and `readColors` falls back on exactly that answer — so a
  * renamed or removed token turns this table into the real source of the overlay's colours, on
- * every canvas, with the whole suite green. Two of these nine tokens were repainted on 12 August
+ * every canvas, with the whole suite green. Two of these eleven tokens were repainted on 12 August
  * alone.
  *
  * Pinned against the DARK declarations only, and that is a decision rather than an oversight: a

@@ -352,6 +352,7 @@
     "artResolution": "Résolution (cellules)",
     "artColumns": "Colonnes",
     "artRows": "Lignes",
+    "pixelArtGrid": "Afficher la grille",
     "pixelSize": "Taille du pixel"
   }
 }
