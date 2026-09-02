@@ -4,7 +4,8 @@ import type { Entity } from './entity'
 
 /**
  * The camera node a spring arm drives, handed from `springArm` to the system that films.
- * 🛑 The FIRST arm of the sweep wins: an author with two turns one off by clearing its `camera`.
+ * 🛑 The player module's own eye wins; failing one, the FIRST arm of the sweep does — an author
+ * with two and no module turns one off by clearing its `camera`.
  */
 export type Rigs = {
   take: (camera: Entity) => void
@@ -13,12 +14,13 @@ export type Rigs = {
   release: () => void
 }
 
-export function createRigs(): Rigs {
+export function createRigs(preferred: string | null): Rigs {
   let held: Entity | null = null
 
   return {
     take: camera => {
-      held ??= camera
+      // Which arm the sweep met first is not a choice an author can see, let alone make.
+      if (held === null || camera.id === preferred) held = camera
     },
     leader: () => held,
     release: () => {

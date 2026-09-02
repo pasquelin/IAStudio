@@ -16,7 +16,7 @@ import { createPlayCameraSystem } from './playCamera'
 function watching(
   camera: PlayCamera,
   controlled = true,
-  rigs: Rigs = createRigs(),
+  rigs: Rigs = createRigs(null),
   playerBodyId: string | null = null,
 ) {
   const pilots = createPilots()
@@ -103,7 +103,7 @@ describe('the camera rank of a running game', () => {
    * which is what lets an arm be optional without a second path through the renderer.
    */
   it('films through the camera node a spring arm placed', () => {
-    const rigs = createRigs()
+    const rigs = createRigs(null)
     const { world, views } = watching('thirdPerson', true, rigs)
     world.entities.add({
       id: 'eye',
@@ -127,7 +127,7 @@ describe('the camera rank of a running game', () => {
    * claimed it — and frames it still once it is destroyed.
    */
   it('lets the seat go on a frame a spring arm holds the shot', () => {
-    const rigs = createRigs()
+    const rigs = createRigs(null)
     const { world, pilots } = watching('thirdPerson', false, rigs)
     world.entities.add({ id: 'eye', name: 'eye', transform: restingTransform(), components: [] })
     world.entities.add({ id: 'car', name: 'car', transform: restingTransform(), components: [] })
@@ -142,7 +142,7 @@ describe('the camera rank of a running game', () => {
   })
 
   it('leaves an orbited set alone even when an arm placed a camera', () => {
-    const rigs = createRigs()
+    const rigs = createRigs(null)
     const { world, views } = watching('orbit', true, rigs)
     world.entities.add({ id: 'eye', name: 'eye', transform: restingTransform(), components: [] })
     const eye = world.entities.get('eye')
@@ -169,7 +169,7 @@ describe('the camera rank of a running game', () => {
  */
 describe('the body a player module designates', () => {
   it('frames the module body rather than the first walker the sweep met', () => {
-    const { world, views } = watching('firstPerson', true, createRigs(), 'second')
+    const { world, views } = watching('firstPerson', true, createRigs(null), 'second')
     world.entities.add({
       id: 'second',
       name: 'second',
@@ -184,7 +184,7 @@ describe('the body a player module designates', () => {
 
   /** Named a body the scene no longer holds, it frames whoever walks — never nothing at all. */
   it('falls back on the sweep where the body it names is gone', () => {
-    const { world, views } = watching('firstPerson', true, createRigs(), 'removed')
+    const { world, views } = watching('firstPerson', true, createRigs(null), 'removed')
 
     world.lateUpdate(0, STEP_SECONDS)
 

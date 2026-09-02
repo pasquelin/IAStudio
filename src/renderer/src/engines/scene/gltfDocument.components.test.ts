@@ -10,7 +10,7 @@ import {
   type GltfDocumentOptions,
 } from './gltfDocument'
 import { playerModuleNodes } from './nodeFactory'
-import { playerBodyIdOf } from './playerModule'
+import { playerPartsOf } from './playerModule'
 import { meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
@@ -129,6 +129,8 @@ describe('a player module written to a file and read back', () => {
   it('is still the node the studio reads as the player', () => {
     const back = saved()
 
-    expect(playerBodyIdOf(back.nodes)).toBe(back.nodes.find(node => node.name === 'Capsule')?.id)
+    expect(playerPartsOf(back.nodes)?.body?.id).toBe(
+      back.nodes.find(node => node.name === 'Capsule')?.id,
+    )
   })
 })

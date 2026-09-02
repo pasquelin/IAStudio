@@ -26,7 +26,7 @@ import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
 import { createHierarchy } from './hierarchy'
-import { playerBodyIdOf } from '@/engines/scene/playerModule'
+import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
 
 /**
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
@@ -50,11 +50,15 @@ const GROUND_DEPTH = 5
  */
 export function worldFromScene(
   documentId: string,
-  state: SceneState,
+  given: SceneState,
   ports: GameApi,
   scripts: Partial<ScriptSystemOptions> = {},
   seed = 1,
 ): World {
+  // A module's arm reads the TREE rather than its two written names. It rewrites the STATE where
+  // `filmable` and the seat stay closure arguments: `springArm` reads its two fields off the
+  // ENTITY, so what the tree says has to be in the components an entity is built from.
+  const state: SceneState = { ...given, nodes: withBoundPlayerArm(given.nodes) }
   const told: ScriptSystemOptions = {
     modules: scripts.modules ?? [],
     // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
@@ -106,7 +110,10 @@ function systemsFor(
   const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
   const characters = createCharacters()
   const pilots = createPilots()
-  const rigs = createRigs()
+  // The module's own eye takes the shot, where the sweep would have handed it to whichever arm
+  // it met first — a choice no outliner shows.
+  const player = playerPartsOf(state.nodes)
+  const rigs = createRigs(player?.eye?.id ?? null)
 
   /**
    * 🛑 A node hanging from another is FELT now, and that closed the hole this carried since the
@@ -173,7 +180,7 @@ function systemsFor(
       worldOf: placedAt,
       pilots,
       rigs,
-      playerBodyId: playerBodyIdOf(state.nodes),
+      playerBodyId: player?.body?.id ?? null,
     }),
   ]
 }

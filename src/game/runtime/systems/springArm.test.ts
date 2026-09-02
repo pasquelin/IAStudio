@@ -34,7 +34,7 @@ function rigged(
   eye: Entity
 } {
   const physics = notedPhysics()
-  const rigs = createRigs()
+  const rigs = createRigs(null)
   const world = testWorld({
     play: { ...DEFAULT_PLAY, camera: 'thirdPerson' },
     ports: testPorts({ physics }),
