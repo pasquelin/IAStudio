@@ -84,6 +84,37 @@ jamais de point de rotation : la vue partirait la chercher.
 > **<kbd>F</kbd> cadre la sélection**, et repose le point de rotation dessus. C’est le geste à
 > retenir quand on ne sait plus où l’on est — il est le même dans Blender, Unity, Unreal et Maya.
 
+### Conduire la vue comme une autre application
+
+Si vous venez d’Unreal, d’Unity, de Blender ou de Roblox Studio, vous n’avez rien à réapprendre :
+**Affichage ▸ Navigation** dans le menu, ou **Réglages ▸ Espaces de travail ▸ Modélisation**, change le
+schéma de gestes ET de raccourcis d’un coup.
+
+| Schéma | Tourner | Déplacer latéralement | ZQSD | Déplacer / Tourner / Redimensionner |
+|---|---|---|---|---|
+| **IA Studio** | Alt + gauche, ou gauche seul | milieu | un bouton tenu | `G` `R` `S` |
+| **Unreal**, **Unity** | Alt + gauche | milieu | **bouton droit tenu** | `W` `E` `R` |
+| **Blender** | **milieu** | **Maj + milieu** | mode Walk/Fly, en <kbd>Maj</kbd>+<kbd>`</kbd> | `G` `R` `S` |
+| **Roblox Studio** | Alt + gauche | milieu | **en permanence** | `G` `R` `T` |
+| **Personnalisé** | au choix | au choix | au choix | les vôtres |
+
+> **Un schéma ne remplace que ce que son application fait autrement.** Tout ce dont il ne dit
+> rien garde les touches d’IA Studio — y compris les commandes dont les autres logiciels n’ont
+> aucun équivalent. Et vos propres remappages, faits dans **Réglages ▸ Raccourcis**, passent
+> toujours devant le schéma.
+
+> **Revenir à « IA Studio » remet les raccourcis à zéro.** C’est le schéma sur lequel tous les
+> autres retombent : le choisir rend à chaque commande la touche que le logiciel déclare.
+
+**Roblox déplace deux raccourcis, et c’est inévitable.** Chez lui les lettres appartiennent à la
+caméra sans qu’on tienne rien, donc `S` ne peut plus redimensionner : il passe sur `T`, et
+*Ajouter* passe de <kbd>⇧A</kbd> à <kbd>⇧N</kbd>. C’est exactement pour éviter ça qu’Unity et
+Unreal exigent le bouton droit. Les flèches, elles, restent à l’interface dans tous les cas.
+
+**Le schéma personnalisé** ouvre trois choix de plus dans les réglages — avec quoi tourner, avec
+quoi déplacer latéralement, et quand les lettres appartiennent à la caméra. Le clavier, lui, se
+personnalise depuis l’écran des raccourcis, quel que soit le schéma.
+
 ### Voler dans la scène — un bouton maintenu
 
 **Maintenez un bouton de la souris**, gauche ou droit, et les touches ci-dessous déplacent la
