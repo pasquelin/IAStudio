@@ -24,14 +24,7 @@ type CharacterViewState = {
   heldAxes: readonly BoneAxis[]
   holdCharacterAxis: (axis: BoneAxis, held: boolean) => void
   /**
-   * Whether a joint dragged keeps its distance to its parent — which is what makes the bone TURN
-   * rather than stretch. On by default: a bone stretched to the floor is what a hand asking for a
-   * hundred pixels gets otherwise, and almost never what it meant.
-   */
-  lockedLengths: boolean
-  lockCharacterLengths: (locked: boolean) => void
-  /**
-   * Whether the gizmo edits the skeleton's REST rather than striking a pose. Off by default:
+   * Whether the gizmo edits the SKELETON rather than manipulating the character. Off by default:
    * the window is opened to make a character move, and the mesh follows a bone that is posed.
    */
   editingRest: boolean
@@ -43,8 +36,6 @@ export const useCharacterView = create<CharacterViewState>()(set => ({
   pickBone: pickedBone => set(state => (state.pickedBone === pickedBone ? state : { pickedBone })),
   mode: 'translate',
   setCharacterMode: mode => set({ mode }),
-  lockedLengths: true,
-  lockCharacterLengths: lockedLengths => set({ lockedLengths }),
   editingRest: false,
   editCharacterRest: editingRest => set({ editingRest }),
   heldAxes: [],

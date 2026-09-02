@@ -205,7 +205,7 @@ import {
   wearsRig,
 } from '../character/rigBuild'
 import { createIkBinding, ikSpecsOf, type IkBinding } from '../character/ik'
-import { restWithin, type BoneHold } from '@/engines/character/boneRest'
+import { restWithin, type BoneAxis } from '@/engines/character/boneRest'
 import { createBoneJoints, type BoneJoints } from './boneJoints'
 import { type BoneShapes, createBoneShapes, leafTail } from './boneShapes'
 import { createSkinWeights, type SkinWeights } from '../character/skinWeights'
@@ -729,8 +729,8 @@ export class SceneRenderer {
   private readonly boneRests = new Map<string, Transform>()
   /** The rest a fitted rig gave each of its bones, per node — what a leash is measured from. */
   private readonly rigRests = new Map<string, Map<string, Transform>>()
-  /** What a joint dragged is held to. Nothing at all until a window asks: a scene poses freely. */
-  private boneHold: BoneHold = { heldAxes: [], lockedLengths: false }
+  /** The axes a joint dragged must not leave. Empty until a window asks: a scene poses freely. */
+  private heldBoneAxes: readonly BoneAxis[] = []
   /** Whether the pivot is standing in for the picked joint. See `articulateTowards`. */
   private boneHandle = false
   private readonly held = new Set<MotionId>()
@@ -4147,7 +4147,7 @@ export class SceneRenderer {
     // Posing turns a bone on itself and moves nothing: there is no distance to hold.
     if (!this.restEditing) return
 
-    applyTransform(bone, restWithin(rest, transformOf(bone), this.boneHold))
+    applyTransform(bone, restWithin(rest, transformOf(bone), this.heldBoneAxes))
   }
 
   /**
@@ -4232,8 +4232,8 @@ export class SceneRenderer {
   /**
    * Whether dragging this joint TURNS the bone arriving at it rather than placing the joint.
    *
-   * Posing articulates and never translates, so no padlock qualifies it — the length is held by
-   * construction. Turning the joint on itself is the other verb, and it needs no stand-in.
+   * Posing articulates and never translates, so a bone keeps its length by construction. Turning
+   * the joint on itself is the other verb, and it needs no stand-in.
    */
   private articulates(bone: Object3D): boolean {
     return !this.restEditing && this.mode === 'translate' && bone.parent !== null
@@ -4278,11 +4278,11 @@ export class SceneRenderer {
   }
 
   /**
-   * What a joint dragged is held to: the axes it must not leave, and whether it keeps its distance
-   * to its parent. The skeleton window owns those padlocks; the engine only obeys them.
+   * The axes a joint dragged must not leave. The skeleton window owns those padlocks; the engine
+   * only obeys them.
    */
-  setBoneHold(hold: BoneHold): void {
-    this.boneHold = hold
+  setHeldBoneAxes(axes: readonly BoneAxis[]): void {
+    this.heldBoneAxes = axes
   }
 
   /** Aims the gizmo at a bone, or lets go of the one it held. */

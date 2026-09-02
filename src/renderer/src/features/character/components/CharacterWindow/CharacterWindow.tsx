@@ -33,13 +33,7 @@ import { renameNode } from '@/engines/scene/commands'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationPanel } from '@/features/animation/components/Animation/AnimationPanel'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
-import {
-  CHARACTER_EDIT_REST,
-  CHARACTER_LOCK_LENGTHS,
-  CHARACTER_LOCK_TOOL,
-  CHARACTER_REST_TOOL,
-  CHARACTER_TOOLS,
-} from './characterTools'
+import { CHARACTER_EDIT_REST, CHARACTER_STATE_TOOLS, CHARACTER_TOOLS } from './characterTools'
 import { CharacterWindowInspector } from './CharacterWindowInspector'
 
 export type CharacterWindowProps = { assetId: string }
@@ -77,7 +71,6 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   const nodeId = useScenes(state => sceneOf(state, workshopIdOf(assetId)).nodes[0]?.id)
   const picked = useCharacterView(state => state.pickedBone)
   const mode = useCharacterView(state => state.mode)
-  const lockedLengths = useCharacterView(state => state.lockedLengths)
   const heldAxes = useCharacterView(state => state.heldAxes)
   const editingRest = useCharacterView(state => state.editingRest)
 
@@ -120,11 +113,11 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     engineRef.current?.setMode(mode)
   }, [mode])
 
-  // 🛑 The padlocks reach the DRAG, not just the release: unleashed for the length of a gesture,
-  // a joint leaves the body and drags the skin after it — seen on screen the 2026-09-02.
+  // 🛑 The padlocks reach the DRAG, not just the release: unheld for the length of a gesture, a
+  // joint leaves the axis a hand meant to keep it on — seen on screen the 2026-09-02.
   useEffect(() => {
-    engineRef.current?.setBoneHold({ heldAxes, lockedLengths })
-  }, [heldAxes, lockedLengths])
+    engineRef.current?.setHeldBoneAxes(heldAxes)
+  }, [heldAxes])
 
   // 🛑 The rest is put back BEFORE the engine measures the skins against it: a bone left where a
   // pose placed it would be bound there, and that pose would become the character's own shape.
@@ -223,10 +216,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     renderer.setPoseMode(true)
     renderer.setRestEditing(useCharacterView.getState().editingRest)
     renderer.setMode(useCharacterView.getState().mode)
-    renderer.setBoneHold({
-      heldAxes: useCharacterView.getState().heldAxes,
-      lockedLengths: useCharacterView.getState().lockedLengths,
-    })
+    renderer.setHeldBoneAxes(useCharacterView.getState().heldAxes)
 
     const stage = createCharacterStage({ renderer, assetId })
 
@@ -257,20 +247,17 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
               label={t('character.tools')}
               tools={[
                 ...CHARACTER_TOOLS,
-                // Only while the skeleton is being EDITED: posing articulates, so a bone keeps
-                // its length by construction and the padlock would qualify nothing.
-                ...(editingRest ? [{ ...CHARACTER_LOCK_TOOL, pressed: lockedLengths }] : []),
-                { ...CHARACTER_REST_TOOL, pressed: editingRest },
+                // Exactly one lit, like the verbs above: the two states are exclusive.
+                ...CHARACTER_STATE_TOOLS.map(tool => ({
+                  ...tool,
+                  pressed: (tool.id === CHARACTER_EDIT_REST) === editingRest,
+                })),
               ]}
               activeTool={mode}
               onTool={id => {
                 const view = useCharacterView.getState()
-                if (id === CHARACTER_LOCK_LENGTHS) {
-                  view.lockCharacterLengths(!view.lockedLengths)
-                  return
-                }
-                if (id === CHARACTER_EDIT_REST) {
-                  view.editCharacterRest(!view.editingRest)
+                if (CHARACTER_STATE_TOOLS.some(tool => tool.id === id)) {
+                  view.editCharacterRest(id === CHARACTER_EDIT_REST)
                   return
                 }
 
@@ -332,10 +319,9 @@ async function leaveProject(leaving: Promise<() => void>): Promise<void> {
  * never closed a padlock.
  */
 function boneRestHeld(assetId: string, bone: string, moved: Transform): Transform {
-  const view = useCharacterView.getState()
   const rested = characterOf(useCharacters.getState(), assetId).rig?.bones.find(
     one => one.name === bone,
   )?.rest
 
-  return rested ? restWithin(rested, moved, view) : moved
+  return rested ? restWithin(rested, moved, useCharacterView.getState().heldAxes) : moved
 }

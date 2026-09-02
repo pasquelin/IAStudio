@@ -61,7 +61,6 @@ export function CharacterWindowInspector({
   const character = useCharacters(state => characterOf(state, assetId))
   const picked = useCharacterView(state => state.pickedBone)
   const heldAxes = useCharacterView(state => state.heldAxes)
-  const lockedLengths = useCharacterView(state => state.lockedLengths)
   const holdAxis = useCharacterView(state => state.holdCharacterAxis)
   const run = useCharacters(state => state.runCommand)
   const [renaming, setRenaming] = useState(false)
@@ -77,7 +76,7 @@ export function CharacterWindowInspector({
     if (!picked || !rig) return
 
     const rested = restOf(rig.bones, picked)
-    const within = restWithin(rested, { ...rested, ...next }, { heldAxes, lockedLengths })
+    const within = restWithin(rested, { ...rested, ...next }, heldAxes)
     run(assetId, setCharacterBoneRest(picked, within))
   }
 

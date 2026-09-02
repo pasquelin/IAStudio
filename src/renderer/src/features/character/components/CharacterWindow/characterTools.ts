@@ -3,7 +3,7 @@ import {
   mdiAxisArrow,
   mdiBone,
   mdiCursorDefaultOutline,
-  mdiRulerSquare,
+  mdiHumanHandsup,
 } from '@mdi/js'
 import type { TransformMode } from '@/engines/scene/gizmoTarget'
 import type { ToolbarItem } from '@/components/Toolbar/tools'
@@ -47,35 +47,29 @@ export const CHARACTER_TOOLS: readonly (ToolbarItem & { mode: TransformMode })[]
 ]
 
 /**
- * The one toggle of this bar: a joint dragged keeps its distance to its parent, so the bone TURNS
- * instead of stretching.
+ * The STATE the window is in, and the two are exclusive: one places a skeleton on a model, the
+ * other plays with the model. Drawn like the verbs above — exactly one lit — because two toggles
+ * lit side by side read as two modes at once, which is what a hand saw and what it is not.
  *
- * Not a mode — it qualifies whichever one is armed, exactly as the scene's magnet qualifies its
- * three verbs. A bone stretched to the floor is what a hand asking for a hundred pixels got
- * without it, and almost never what it meant.
+ * 🛑 No padlock on the lengths any more. It was a dressing on a wound now closed: posing turns
+ * the bone arriving at a joint, so no length can change there, and editing a skeleton is where
+ * one shortens a bone that came out too long — holding it forbade the state's only gesture.
  */
-export const CHARACTER_LOCK_LENGTHS = 'lockLengths'
+export const CHARACTER_POSE = 'poseCharacter'
+export const CHARACTER_EDIT_REST = 'editSkeleton'
 
-export const CHARACTER_LOCK_TOOL: ToolbarItem = {
-  id: CHARACTER_LOCK_LENGTHS,
-  labelKey: 'character.lockLengths',
-  descriptionKey: 'character.lockLengthsHint',
-  icon: mdiRulerSquare,
-  separatorBefore: true,
-}
-
-/**
- * The other toggle: whether a joint dragged is being PUT where it belongs, or POSED.
- *
- * Off is posing, and that is the arbitration: the mesh follows a bone the hand moves, which is
- * what one opens this window to do. Editing the rest is the correction of a fit, and there the
- * mesh must stay still — a joint pulled into the elbow it belongs in took the whole arm with it.
- */
-export const CHARACTER_EDIT_REST = 'editRest'
-
-export const CHARACTER_REST_TOOL: ToolbarItem = {
-  id: CHARACTER_EDIT_REST,
-  labelKey: 'character.editRest',
-  descriptionKey: 'character.editRestHint',
-  icon: mdiBone,
-}
+export const CHARACTER_STATE_TOOLS: readonly ToolbarItem[] = [
+  {
+    id: CHARACTER_POSE,
+    labelKey: 'character.manipulate',
+    descriptionKey: 'character.manipulateHint',
+    icon: mdiHumanHandsup,
+    separatorBefore: true,
+  },
+  {
+    id: CHARACTER_EDIT_REST,
+    labelKey: 'character.editRest',
+    descriptionKey: 'character.editRestHint',
+    icon: mdiBone,
+  },
+]

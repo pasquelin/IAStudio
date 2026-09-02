@@ -82,22 +82,10 @@ const armOf = (model: Group): Object3D => {
 }
 
 describe('a joint the gizmo carries', () => {
-  it('keeps its distance to its parent for the whole drag, not only on release', async () => {
-    const { engine, model } = await armOnStage()
-    engine.setRestEditing(true)
-    engine.setBoneHold({ heldAxes: [], lockedLengths: true })
-
-    dragTo(engine, handOf(model), 0, 8, 0)
-
-    expect(handOf(model).position.length()).toBeCloseTo(2, 5)
-    expect(handOf(model).position.y).toBeCloseTo(2, 5)
-    engine.dispose()
-  })
-
   it('stays on the axes a padlock holds while it is dragged', async () => {
     const { engine, model } = await armOnStage()
     engine.setRestEditing(true)
-    engine.setBoneHold({ heldAxes: ['x'], lockedLengths: false })
+    engine.setHeldBoneAxes(['x'])
 
     dragTo(engine, handOf(model), 5, 1, 2)
 
@@ -110,8 +98,6 @@ describe('a joint the gizmo carries', () => {
   // its skin only half followed and stretched after the hand. Seen on screen the 2026-09-02.
   it('turns the bone arriving at it, and lands the joint on the end of that bone', async () => {
     const { engine, model } = await armOnStage()
-    engine.setBoneHold({ heldAxes: [], lockedLengths: true })
-
     // The handle stands OUT of the chain, square to the arm and one hand's length from the elbow.
     const pivot: Object3D = Reflect.get(engine, 'pivot')
     pivot.position.set(2, 1, 0)
@@ -130,6 +116,8 @@ describe('a joint the gizmo carries', () => {
     engine.dispose()
   })
 
+  // Editing a skeleton is where one shortens a bone that came out too long, so nothing holds a
+  // length here — see `restWithin`.
   it('follows the pointer where no hold is asked for', async () => {
     const { engine, model } = await armOnStage()
     engine.setRestEditing(true)

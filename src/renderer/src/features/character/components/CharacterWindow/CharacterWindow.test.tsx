@@ -4,7 +4,6 @@ import { act } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { Rig } from '@shared/domain/rig'
-import type { BoneHold } from '@/engines/character/boneRest'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
@@ -18,8 +17,8 @@ const built = vi.hoisted((): SceneRendererOptions[] => [])
 /** Every bone the engine was asked to POSE, which is the gesture that writes nothing. */
 const posed = vi.hoisted((): string[] => [])
 
-/** Every hold the engine was handed — what a joint is kept within for the whole of a drag. */
-const holds = vi.hoisted((): BoneHold[] => [])
+/** Every set of held axes the engine was handed — what a joint may not leave while dragged. */
+const holds = vi.hoisted((): string[][] => [])
 
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
@@ -36,8 +35,8 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setMode = vi.fn()
     setPickedBone = vi.fn()
     setRestEditing = vi.fn()
-    setBoneHold = (hold: BoneHold) => {
-      holds.push(hold)
+    setHeldBoneAxes = (axes: readonly string[]) => {
+      holds.push([...axes])
     }
     poseBone = (_nodeId: string, bone: string) => {
       posed.push(bone)
@@ -76,7 +75,6 @@ beforeEach(() => {
   // before was what made the next one pass, and the leak showed only when the bar moved.
   useCharacterView.setState({
     editingRest: false,
-    lockedLengths: true,
     heldAxes: [],
     pickedBone: null,
     mode: 'translate',
@@ -95,9 +93,9 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
 
   const bar = screen.getByRole('toolbar')
 
-  // Three verbs and the one toggle that qualifies them: the padlock belongs to editing a
-  // skeleton, and posing articulates, so a bone keeps its length with nothing to ask for.
-  expect(within(bar).getAllByRole('button')).toHaveLength(4)
+  // Three verbs and the two states. No padlock on the lengths: posing turns the bone arriving at
+  // a joint, and editing a skeleton is where one shortens a bone that came out too long.
+  expect(within(bar).getAllByRole('button')).toHaveLength(5)
   expect(within(bar).queryByRole('button', { name: /longueurs/i })).toBeNull()
   // A joint is a point and a length: there is nothing about one to enlarge.
   expect(within(bar).queryByRole('button', { name: /échelle/i })).toBeNull()
@@ -112,22 +110,28 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
   expect(useCharacterView.getState().mode).toBe('rotate')
 })
 
-// Refused on sight: a hand asking for a hundred pixels stretched a bone to the floor.
-it('holds the bone lengths from the first frame, and lets go of them on the bar', async () => {
-  useCharacterView.setState({ editingRest: true })
+/**
+ * 🛑 Exactly one lit, never two: drawn as a pair of free toggles they both took the accent and
+ * read as two modes at once — « soit je place l'articulation, soit je joue avec le modèle ».
+ */
+it('lights one state at a time, and hands the held axes to the engine', async () => {
   render(<CharacterWindow assetId={ASSET} />)
+  const bar = screen.getByRole('toolbar')
+  const pressedIn = () =>
+    within(bar)
+      .getAllByRole('button')
+      .filter(one => one.getAttribute('aria-pressed') === 'true')
+      .map(one => one.getAttribute('aria-label'))
 
-  const lock = within(screen.getByRole('toolbar')).getByRole('button', { name: /longueurs/i })
+  expect(pressedIn()).toEqual(['Déplacer', 'Manipuler'])
+  // 🛑 The engine, not just the store: a padlock applied on release alone lets a joint leave the
+  // axis a hand meant to keep it on for the whole of a gesture.
+  expect(holds.at(-1)).toEqual([])
 
-  expect(useCharacterView.getState().lockedLengths).toBe(true)
-  // 🛑 The engine, not just the store: the leash is what keeps a joint on its parent for the
-  // whole of a drag, and one applied on release alone lets the bone leave the body meanwhile.
-  expect(holds.at(-1)).toEqual({ heldAxes: [], lockedLengths: true })
+  await userEvent.click(within(bar).getByRole('button', { name: /squelette/i }))
 
-  await userEvent.click(lock)
-
-  expect(useCharacterView.getState().lockedLengths).toBe(false)
-  expect(holds.at(-1)).toEqual({ heldAxes: [], lockedLengths: false })
+  expect(pressedIn()).toEqual(['Déplacer', 'Modifier le squelette'])
+  expect(useCharacterView.getState().editingRest).toBe(true)
 })
 
 /**
@@ -136,9 +140,6 @@ it('holds the bone lengths from the first frame, and lets go of them on the bar'
  * Written on both, a joint pulled into the elbow it belongs in took the whole arm with it.
  */
 it('poses the bone the gizmo moved, and writes the skeleton only once the bar asks', async () => {
-  // Open, or the leash would pull a bone whose rest is the identity back onto its parent: this
-  // case is about which door a gesture takes, not about what the padlock holds.
-  useCharacterView.setState({ lockedLengths: false })
   seedCharacter(ASSET, RIG, {})
   render(<CharacterWindow assetId={ASSET} />)
   const move = { id: 'node-1', bone: 'Spine', transform: raised(0.2) }
@@ -148,7 +149,9 @@ it('poses the bone the gizmo moved, and writes the skeleton only once the bar as
   expect(posed).toEqual(['Spine'])
   expect(restOfSpine()?.position.y).toBe(0)
 
-  await userEvent.click(within(screen.getByRole('toolbar')).getByRole('button', { name: /repos/i }))
+  await userEvent.click(
+    within(screen.getByRole('toolbar')).getByRole('button', { name: /squelette/i }),
+  )
   // Emptied on purpose: turning the toggle on puts every bone back on its rest through the very
   // same door, and what this half is about is what the NEXT gesture does.
   posed.length = 0
