@@ -1,0 +1,763 @@
+{
+  "at": "2026-09-02T19:14:38.861Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "mode": "weight",
+      "template": "empty",
+      "nodes": 3,
+      "meshes": 0,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "basic",
+      "nodes": 5,
+      "meshes": 2,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "photoStudio",
+      "nodes": 6,
+      "meshes": 2,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "cinematic",
+      "nodes": 5,
+      "meshes": 1,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "archvis",
+      "nodes": 3,
+      "meshes": 1,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "postProcessing",
+      "nodes": 9,
+      "meshes": 4,
+      "groups": 0
+    },
+    {
+      "mode": "weight",
+      "template": "firstPerson",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "mode": "weight",
+      "template": "thirdPerson",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "mode": "weight",
+      "template": "topDown",
+      "nodes": 38,
+      "meshes": 32,
+      "groups": 3
+    },
+    {
+      "label": "off",
+      "mode": "off",
+      "template": "firstPerson",
+      "nodes": 38,
+      "applyMs": 75.175,
+      "submitMeanMs": 0.229,
+      "submitMedianMs": 0.225,
+      "submitPeakMs": 0.37,
+      "followMeanMs": 0,
+      "gpuMs": 0.349,
+      "calls": 51,
+      "instances": 47,
+      "triangles": 1372,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 0,
+      "submittedInstances": 0,
+      "grouped": 0,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "witness",
+      "mode": "off",
+      "template": "firstPerson",
+      "nodes": 38,
+      "applyMs": 48.525,
+      "submitMeanMs": 0.272,
+      "submitMedianMs": 0.27,
+      "submitPeakMs": 0.3,
+      "followMeanMs": 0,
+      "gpuMs": 0.413,
+      "calls": 51,
+      "instances": 47,
+      "triangles": 1372,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 0,
+      "submittedInstances": 0,
+      "grouped": 0,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "grid",
+      "mode": "grid",
+      "template": "firstPerson",
+      "nodes": 38,
+      "applyMs": 47.605,
+      "submitMeanMs": 0.238,
+      "submitMedianMs": 0.245,
+      "submitPeakMs": 0.28,
+      "followMeanMs": 0.008,
+      "gpuMs": 0.538,
+      "calls": 51,
+      "instances": 47,
+      "triangles": 1372,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 0,
+      "submittedInstances": 0,
+      "grouped": 0,
+      "nodesVisited": 64,
+      "cellsKnown": 0
+    },
+    {
+      "mode": "pixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "pixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "opened",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "added",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "movedOne",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "dragged",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "released",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "removed",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "undone",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "opened",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "added",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "movedOne",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "dragged",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "released",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "removed",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "firstPerson",
+      "step": "undone",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "grid",
+      "template": "firstPerson",
+      "step": "opened",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "grid",
+      "template": "firstPerson",
+      "step": "added",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "firstPerson",
+      "step": "movedOne",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "firstPerson",
+      "step": "dragged",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "firstPerson",
+      "step": "released",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "firstPerson",
+      "step": "removed",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "grid",
+      "template": "firstPerson",
+      "step": "undone",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "step": "opened",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "step": "added",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "step": "movedOne",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "step": "dragged",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "step": "released",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "step": "removed",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "witness",
+      "step": "undone",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "step": "opened",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "step": "added",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "step": "movedOne",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "step": "dragged",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "step": "released",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "step": "removed",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "firstPerson",
+      "against": "grid",
+      "step": "undone",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "label": "off",
+      "mode": "off",
+      "template": "thirdPerson",
+      "nodes": 38,
+      "applyMs": 45.725,
+      "submitMeanMs": 0.254,
+      "submitMedianMs": 0.26,
+      "submitPeakMs": 0.3,
+      "followMeanMs": 0,
+      "gpuMs": 0.539,
+      "calls": 51,
+      "instances": 47,
+      "triangles": 1372,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 0,
+      "submittedInstances": 0,
+      "grouped": 0,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "witness",
+      "mode": "off",
+      "template": "thirdPerson",
+      "nodes": 38,
+      "applyMs": 44.475,
+      "submitMeanMs": 0.216,
+      "submitMedianMs": 0.225,
+      "submitPeakMs": 0.26,
+      "followMeanMs": 0.001,
+      "gpuMs": 0.343,
+      "calls": 51,
+      "instances": 47,
+      "triangles": 1372,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 0,
+      "submittedInstances": 0,
+      "grouped": 0,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "grid",
+      "mode": "grid",
+      "template": "thirdPerson",
+      "nodes": 38,
+      "applyMs": 44.51,
+      "submitMeanMs": 0.205,
+      "submitMedianMs": 0.205,
+      "submitPeakMs": 0.225,
+      "followMeanMs": 0.006,
+      "gpuMs": 0.415,
+      "calls": 51,
+      "instances": 47,
+      "triangles": 1372,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 0,
+      "submittedInstances": 0,
+      "grouped": 0,
+      "nodesVisited": 64,
+      "cellsKnown": 0
+    },
+    {
+      "mode": "pixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "pixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "opened",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "added",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "movedOne",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "dragged",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "released",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "removed",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "undone",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "opened",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "added",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "movedOne",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "dragged",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "released",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "removed",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "off",
+      "template": "thirdPerson",
+      "step": "undone",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "grid",
+      "template": "thirdPerson",
+      "step": "opened",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "grid",
+      "template": "thirdPerson",
+      "step": "added",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "thirdPerson",
+      "step": "movedOne",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "thirdPerson",
+      "step": "dragged",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "thirdPerson",
+      "step": "released",
+      "calls": 52,
+      "instances": 48
+    },
+    {
+      "mode": "grid",
+      "template": "thirdPerson",
+      "step": "removed",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "grid",
+      "template": "thirdPerson",
+      "step": "undone",
+      "calls": 51,
+      "instances": 47
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "step": "opened",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "step": "added",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "step": "movedOne",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "step": "dragged",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "step": "released",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "step": "removed",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "witness",
+      "step": "undone",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "step": "opened",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "step": "added",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "step": "movedOne",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "step": "dragged",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "step": "released",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "step": "removed",
+      "pixels": 0,
+      "worst": 0
+    },
+    {
+      "mode": "editPixels",
+      "template": "thirdPerson",
+      "against": "grid",
+      "step": "undone",
+      "pixels": 0,
+      "worst": 0
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2148,
+      "phase": "off · thirdPerson",
+      "workingSetKb": 539824
+    },
+    {
+      "at": 4150,
+      "phase": "fin",
+      "workingSetKb": 728880
+    }
+  ]
+}
