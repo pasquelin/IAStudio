@@ -7,18 +7,10 @@ import type { ShapeLevel } from './engineScenes'
 /**
  * Le monde du chantier C5 : plat, très grand, et vu depuis DEDANS.
  *
- * `sceneField` de C4 étalait `sceneVaried` sur un carré et s'arrêtait là. Il lui manque les quatre
- * choses sans lesquelles ni une partition ni une carte d'ombre ne se mesurent, et chacune est un
- * besoin, pas un décor :
- *
- * - la DENSITÉ reste constante quand le compte monte, sinon 500 000 mesure une densité et non une
- *   taille de monde, et la question « 500 000 dont 30 000 pertinents » perd son sens ;
- * - un SOL en dalles, parce qu'une ombre ne se lit que sur ce qui la reçoit, et parce qu'un plan
- *   unique resterait dessiné hors champ et fausserait le culling comme la carte d'ombre ;
- * - deux CLASSES de corps, parce qu'un bâtiment reste visible là où un caillou ne l'est plus : sans
- *   elles, un seuil de distance répondrait seul et la mesure ne dirait rien du produit ;
- * - deux RÉPARTITIONS, l'uniforme étant le pire cas d'une grille — la refuser serait se fabriquer
- *   un gain, et C2 a déjà montré qu'un décor mal choisi retourne une conclusion.
+ * Quatre besoins que `sceneField` de C4 ne couvrait pas : densité CONSTANTE (sinon 500 000 mesure
+ * une densité et non une taille de monde) · un SOL, sans quoi aucune ombre ne se lit · deux
+ * CLASSES de corps, un repère restant visible là où un accessoire ne l'est plus · deux
+ * RÉPARTITIONS, l'uniforme étant le pire cas d'une grille.
  */
 
 /** Ce que le monde tient, hors sol et hors soleil. */
@@ -39,17 +31,10 @@ const TILE = 100
 const LANDMARK_SHARE = 0.03
 
 /**
- * À quelle distance le soleil se tient de l'origine — FIXE, et c'est un choix qu'il faut défendre.
- *
- * Une lumière directionnelle n'éclaire que par sa direction, donc sa distance est libre. La faire
- * suivre la taille du monde semblait neutre et ne l'est pas : `DirectionalLightShadow` naît avec
- * `far = 500` et le studio ne l'écrit JAMAIS (`fitShadowCamera` ne touche que les côtés). Un
- * soleil qui s'éloigne emmène donc sa tranche de 500 hors de la scène, et les triangles d'ombre
- * TOMBENT quand le monde grandit — 6,0 M à 50 000, 8,2 M à 100 000, 1,08 M à 200 000, mesuré.
- * Le banc lisait une passe d'ombre de moins en moins chère parce qu'elle disparaissait.
- *
- * 200 unités est ce qu'un utilisateur pose. La troncature à 500 reste, elle est du produit et non
- * du décor, et `worldShot.ts` la met en images.
+ * 🛑 Distance FIXE, et c'est un choix mesuré. `DirectionalLightShadow` naît avec `far = 500` et le
+ * studio ne l'écrit jamais, donc un soleil qui suit la taille du monde emmène sa tranche hors de
+ * la scène : les triangles d'ombre TOMBAIENT quand le monde grandissait — 6,0 M à 50 000, 8,2 M à
+ * 100 000, 1,08 M à 200 000. La troncature à 500 reste, elle est du produit et non du décor.
  */
 const SUN_DISTANCE = 200
 
@@ -67,12 +52,9 @@ const LANDMARK_PAINTS = ['#b9b2a4', '#9aa3ad']
 const GROUND_PAINT = '#4a4f45'
 
 /**
- * Les trois formes d'accessoire, à la résolution que `meshPrimitives.ts` pose vraiment.
- *
- * 🛑 Une seule description par forme, et la taille vient du SCALE : deux boîtes de dimensions
- * différentes sont deux clés de regroupement, donc mille repères aux dimensions tirées au hasard
- * seraient mille appels de dessin et aucune instance. Le monde mesurerait alors la déroute du
- * regroupement, pas la partition.
+ * 🛑 Une seule description par forme, la taille venant du SCALE : deux boîtes de dimensions
+ * différentes sont deux clés de regroupement, donc mille repères tirés au hasard seraient mille
+ * appels de dessin et aucune instance.
  */
 const SPHERES: Record<ShapeLevel, { widthSegments: number; heightSegments: number }> = {
   product: { widthSegments: 32, heightSegments: 16 },
@@ -94,11 +76,8 @@ const UNIT_BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 
 
 export type Point = { x: number; y: number; z: number }
 
-/**
- * Où le soleil se tient, à distance fixe de l'origine. Seule la DIRECTION compte pour une lumière
- * directionnelle, mais c'est elle qui décide de quel côté un caster hors champ doit être posé pour
- * que son ombre entre dans l'image — le cas B de C4.
- */
+/** Où le soleil se tient. Seule sa DIRECTION éclaire, mais elle décide de quel côté poser un
+ * caster hors champ pour que son ombre entre dans l'image — le cas B de C4. */
 export const sunAt = (azimuth: number, elevation: number, reach: number): Point => ({
   x: Math.cos(azimuth) * Math.cos(elevation) * reach,
   y: Math.sin(elevation) * reach,
@@ -131,10 +110,12 @@ function gaussianPair(random: () => number): [number, number] {
   return [radius * Math.cos(angle), radius * Math.sin(angle)]
 }
 
-/** Les centres d'amas, en densité constante : un par carré de `CLUSTER_EVERY`. */
+/** Combien d'amas un monde porte : un par carré de `CLUSTER_EVERY`, à toutes les tailles. */
+const clusterCount = (span: number): number =>
+  Math.max(1, Math.round((2 * span * 2 * span) / (CLUSTER_EVERY * CLUSTER_EVERY)))
+
 function clusterCentres(span: number, random: () => number): Point[] {
-  const many = Math.max(1, Math.round((2 * span * 2 * span) / (CLUSTER_EVERY * CLUSTER_EVERY)))
-  return Array.from({ length: many }, () => ({
+  return Array.from({ length: clusterCount(span) }, () => ({
     x: (random() - 0.5) * 2 * span,
     y: 0,
     z: (random() - 0.5) * 2 * span,
@@ -143,7 +124,7 @@ function clusterCentres(span: number, random: () => number): Point[] {
 
 const inside = (value: number, span: number): number => Math.max(-span, Math.min(span, value))
 
-/** Le sol, en dalles de `TILE` : un plan unique resterait dessiné où que la caméra regarde. */
+/** Le sol, en dalles : un plan unique resterait dessiné où que la caméra regarde. */
 function groundTiles(span: number): MeshNode[] {
   const perAxis = Math.ceil((2 * span) / TILE)
   const nodes: MeshNode[] = []
@@ -171,11 +152,9 @@ function groundTiles(span: number): MeshNode[] {
 }
 
 /**
- * Le monde entier, en ÉTAT du studio : c'est `SceneRenderer.apply` qui bâtit les meshes.
- *
- * `count` ne compte QUE les corps posés — le sol s'y ajoute, et son nombre suit la surface. Les
- * relevés écrivent les deux, sans quoi « 500 000 » nommerait deux choses différentes selon la
- * répartition.
+ * Le monde entier, en ÉTAT du studio : c'est `SceneRenderer.apply` qui bâtit les meshes. `count`
+ * ne compte QUE les corps posés — le sol s'y ajoute et suit la surface, et les relevés écrivent
+ * les deux.
  */
 export function openWorld(plan: WorldPlan): SceneState {
   const span = spanFor(plan.count)
@@ -247,8 +226,8 @@ export function openWorld(plan: WorldPlan): SceneState {
   return { ...EMPTY_SCENE, nodes: [sun, ...nodes] }
 }
 
-/** Ce que le monde tient, lu sur l'état DÉJÀ bâti : le rebâtir pour compter coûterait la moitié
- * du banc à 500 000. Écrit dans chaque relevé plutôt que déduit du seul `count`. */
+/** Ce que le monde tient, lu sur l'état DÉJÀ bâti : le rebâtir pour compter coûterait 5 s à
+ * 500 000. Écrit dans chaque relevé plutôt que déduit du seul `count`. */
 export function worldShape(
   state: SceneState,
   plan: WorldPlan,
@@ -268,9 +247,6 @@ export function worldShape(
     tiles,
     landmarks,
     props,
-    clusters:
-      plan.spread === 'clustered'
-        ? Math.max(1, Math.round((2 * span * 2 * span) / (CLUSTER_EVERY * CLUSTER_EVERY)))
-        : 0,
+    clusters: plan.spread === 'clustered' ? clusterCount(span) : 0,
   }
 }
