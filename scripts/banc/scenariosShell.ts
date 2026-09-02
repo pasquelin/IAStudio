@@ -459,7 +459,7 @@ export const SHELL_SCENARIOS: readonly Scenario[] = [
     name: '57.2 puts the display settings back to their defaults',
     said: ["Remets les réglages d'affichage à leurs valeurs par défaut."],
     passed: run =>
-      read.tried(run, 'settings.triggerSettingAction') || read.tried(run, 'settings.write'),
+      read.tried(run, 'settings.triggerAction') || read.tried(run, 'settings.write'),
   },
   {
     name: '57.3 says what it has remembered about the project',

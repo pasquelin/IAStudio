@@ -85,7 +85,7 @@ export const ASSET_HANDLERS: ActionHandlers = {
   'assets.captionImages': input =>
     withBridge(bridge => bridge.assets.describe(textsOf(input, 'assetIds'))),
 
-  'assets.listMissingProjectAssets': input =>
+  'assets.listMissing': input =>
     withBridge(bridge => bridge.assets.absent(textsOf(input, 'assetIds'))),
 
   'asset.extractTextures': input =>

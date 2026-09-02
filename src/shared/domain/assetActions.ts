@@ -156,9 +156,9 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
     ],
   }),
   action({
-    name: 'assets.listMissingProjectAssets',
-    titleKey: 'assistant.actions.assetsListMissingProjectAssets.title',
-    descriptionKey: 'assistant.actions.assetsListMissingProjectAssets.description',
+    name: 'assets.listMissing',
+    titleKey: 'assistant.actions.assetsListMissing.title',
+    descriptionKey: 'assistant.actions.assetsListMissing.description',
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
