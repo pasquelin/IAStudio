@@ -25,7 +25,7 @@ type Engine = QuickJS.QuickJSWASMModule
 const engine = loadOnce(startEngine)
 
 /**
- * The sandbox, loaded on FIRST PLAY. Imported dynamically for the reason the physer is: the machine
+ * The sandbox, loaded on FIRST PLAY. Imported dynamically for the reason the physics is: the machine
  * carries its WebAssembly inlined and weighs some 3 Mo, which no window that only draws needs.
  */
 export async function loadQuickjsScripts(): Promise<ScriptPort> {

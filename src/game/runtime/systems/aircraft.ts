@@ -7,6 +7,7 @@ import type { BodyForce } from '../../ports/physicsPort'
 import type { Component } from '@shared/domain/component'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
+import type { Transform } from '@shared/domain/transform'
 import { componentOf, type Entity } from '../entity'
 import { keyHeld, keysHeld } from '../keysHeld'
 import { PILOT_RANK, type Pilots } from '../pilots'
@@ -37,7 +38,10 @@ const CHASE_BACK = 30
  * finger lifts is not something anyone can fly. It lives here rather than in the component — a
  * component is what an author wrote, never what a game is doing.
  */
-export function createAircraftSystem(pilots: Pilots): System {
+export function createAircraftSystem(
+  pilots: Pilots,
+  worldOf?: (entity: Entity) => Transform,
+): System {
   const throttles = new WeakMap<Entity, number>()
   const forces: BodyForce[] = []
   const pool: BodyForce[] = []
@@ -95,7 +99,7 @@ export function createAircraftSystem(pilots: Pilots): System {
         aeroForces(
           frame,
           stick,
-          axesOfEuler(entity.transform.rotation, axes),
+          axesOfEuler((worldOf ? worldOf(entity) : entity.transform).rotation, axes),
           motion.linear,
           motion.angular,
           aero,
@@ -110,7 +114,7 @@ export function createAircraftSystem(pilots: Pilots): System {
         push.torque.y = aero.torque.y
         push.torque.z = aero.torque.z
         forces.push(push)
-        pilots.take(entity, 0, CHASE_BACK, PILOT_RANK.machine, world.time.tick)
+        pilots.take(entity, 0, CHASE_BACK, PILOT_RANK.machine)
       }
 
       if (forces.length > 0) world.ports.physics.push(forces)

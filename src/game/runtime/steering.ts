@@ -95,8 +95,14 @@ export function stepTowards(at: Vector3, to: Vector3, most: number): boolean {
 /**
  * Points `rotation` along `direction` — at once when `most` is not positive, and by at most `most`
  * radians otherwise. Rewrites `rotation` in place, in the intrinsic XYZ a document's angles mean.
+ *
+ * 🛑 A direction of NOTHING leaves the rotation alone. `quaternionLookingAt` answers `into`
+ * untouched there, and `into` is a scratch every caller shares: a cart sitting on its own
+ * one-point rail would have been turned to whatever the last unrelated entity computed.
  */
 export function turnTowards(rotation: Vector3, direction: Vector3, most: number): void {
+  if (direction.x === 0 && direction.y === 0 && direction.z === 0) return
+
   quaternionLookingAt(direction, WANTED)
   if (most <= 0) {
     eulerFromQuaternion(WANTED, rotation)

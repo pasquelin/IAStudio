@@ -24,13 +24,21 @@ const AXLE_Y = -0.35
 /** Where the body stands when its wheels touch: the axle's own depth plus a wheel's radius. */
 const RIDE_HEIGHT = WHEEL_RADIUS - AXLE_Y
 
-/** Front is −Z, which is where a node's own forward points: the front pair is what steers. */
+/**
+ * Front is −Z, which is where a node's own forward points: the front pair is what steers.
+ *
+ * 🛑 Named AFTER the car, never `Wheel Front Left` bare: `vehicleOf` resolves a wheel by the
+ * first entity wearing that name, so two cars in one scene both bound to the first one's wheels
+ * and the second drew none of its own.
+ */
 const WHEELS = [
-  { name: 'Wheel Front Left', x: -HALF_WIDTH, z: -AXLE_Z },
-  { name: 'Wheel Front Right', x: HALF_WIDTH, z: -AXLE_Z },
-  { name: 'Wheel Rear Left', x: -HALF_WIDTH, z: AXLE_Z },
-  { name: 'Wheel Rear Right', x: HALF_WIDTH, z: AXLE_Z },
+  { corner: 'Wheel Front Left', x: -HALF_WIDTH, z: -AXLE_Z },
+  { corner: 'Wheel Front Right', x: HALF_WIDTH, z: -AXLE_Z },
+  { corner: 'Wheel Rear Left', x: -HALF_WIDTH, z: AXLE_Z },
+  { corner: 'Wheel Rear Right', x: HALF_WIDTH, z: AXLE_Z },
 ]
+
+const wheelName = (car: string, corner: string): string => `${car} ${corner}`
 
 /** The wheel nodes are drawn where a wheel RESTS; the engine anchors each spring above that. */
 export function carNodes(at: Vector3, name = 'Car'): SceneNode[] {
@@ -46,7 +54,7 @@ export function carNodes(at: Vector3, name = 'Car'): SceneNode[] {
     components: [
       newComponent('Collider'),
       { ...newComponent('RigidBody'), mass: 1500 },
-      { ...newComponent('Vehicle'), wheels: WHEELS.map(wheel => wheel.name).join(', ') },
+      { ...newComponent('Vehicle'), wheels: WHEELS.map(w => wheelName(name, w.corner)).join(', ') },
     ],
   }
 
@@ -60,14 +68,14 @@ export function carNodes(at: Vector3, name = 'Car'): SceneNode[] {
     },
   )
 
-  return [body, cabin, ...WHEELS.map(wheel => wheelNode(wheel, body.id))]
+  return [body, cabin, ...WHEELS.map(wheel => wheelNode(wheel, name, body.id))]
 }
 
 /**
  * A wheel as the physics turns it: a cylinder about its own +Y, which is the axle Jolt is handed.
  * No component of its own — what moves it is the vehicle its body carries.
  */
-function wheelNode(wheel: (typeof WHEELS)[number], parentId: string): SceneNode {
+function wheelNode(wheel: (typeof WHEELS)[number], car: string, parentId: string): SceneNode {
   return meshNode(
     {
       kind: 'cylinder',
@@ -80,7 +88,7 @@ function wheelNode(wheel: (typeof WHEELS)[number], parentId: string): SceneNode 
       transform: transformAt({ x: wheel.x, y: AXLE_Y, z: wheel.z }),
       material: surface('#26282e'),
       parentId,
-      name: wheel.name,
+      name: wheelName(car, wheel.corner),
     },
   )
 }

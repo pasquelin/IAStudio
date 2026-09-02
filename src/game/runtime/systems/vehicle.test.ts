@@ -6,7 +6,7 @@ import { newComponent } from '@shared/domain/componentRegistry'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { restingTransform } from '../entity'
 import { STEP_SECONDS } from '../gameLoop'
-import { createPilots, type Pilots } from '../pilots'
+import { createPilots, PILOT_RANK, type Pilots } from '../pilots'
 import { testPorts, testWorld } from '../world-fixtures'
 import type { World } from '../world'
 import { createVehicleSystem } from './vehicle'
@@ -97,6 +97,35 @@ describe('what a car is driven by', () => {
 
   it('leaves the seat empty for a step nothing claimed', () => {
     expect(createPilots().leader()).toBeNull()
+  })
+
+  /**
+   * 🛑 A car destroyed mid-game stops claiming, and a seat nobody empties would frame a dead
+   * entity for the rest of the session — the two machine templates ship no walker to take it back.
+   */
+  it('empties the seat once the camera has looked, so a destroyed car is not framed for ever', () => {
+    const car = bench()
+    asked(car)
+    expect(car.pilots.leader()?.entity.id).toBe('car')
+
+    // Destroyed at the END of the step it was asked in, so the claim of that step still lands.
+    car.world.destroy('car')
+    asked(car)
+    car.pilots.release()
+    asked(car)
+
+    expect(car.pilots.leader()).toBeNull()
+  })
+
+  /** A walker is what the player IS; a car is what it drives, and loses the seat to one. */
+  it('gives the seat to a walker over a machine, whichever claimed first', () => {
+    const pilots = createPilots()
+    const machine = { id: 'car' } as unknown as Parameters<typeof pilots.take>[0]
+    const walker = { id: 'hero' } as unknown as Parameters<typeof pilots.take>[0]
+    pilots.take(machine, 0.35, 9, PILOT_RANK.machine)
+    pilots.take(walker, 0.9, 5, PILOT_RANK.walker)
+
+    expect(pilots.leader()?.entity).toBe(walker)
   })
 
   it('says nothing at all when the scene holds no vehicle', () => {

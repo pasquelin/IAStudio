@@ -138,8 +138,8 @@ function systemsFor(
     createOrbitSystem(),
     createSpinSystem(),
     createLookAtSystem(),
-    createVehicleSystem(pilots),
-    createAircraftSystem(pilots),
+    createVehicleSystem(pilots, placed),
+    createAircraftSystem(pilots, placed),
     createPhysicsSystem({
       shapeOf,
       characters,

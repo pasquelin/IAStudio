@@ -283,6 +283,7 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
     },
 
     add: descriptors => {
+      const laying = held.size === 0 && descriptors.length > 0
       refused.length = 0
       for (const descriptor of descriptors) {
         forget(descriptor.body)
@@ -290,9 +291,10 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
         // silence, and its name is the only thing that says which object it was.
         if (!build(descriptor)) refused.push(descriptor.body)
       }
-      // 🛑 Jolt builds its broadphase tree INCREMENTALLY as bodies arrive, and a scene laid down
-      // in one call leaves it unbalanced for the rest of the game. Rapier has no such call.
-      if (descriptors.length > 0) system.OptimizeBroadPhase()
+      // 🛑 The LAY-DOWN alone: Jolt builds its tree incrementally, so a scene added in one call
+      // leaves it unbalanced for the whole game. Run on every batch, a game spawning one
+      // projectile a step would rebuild the whole tree sixty times a second.
+      if (laying) system.OptimizeBroadPhase()
       // Copied out: the port reserves the right to reuse `poses` and `contacts`, never this.
       return [...refused]
     },

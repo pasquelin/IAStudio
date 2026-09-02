@@ -12,30 +12,29 @@ type Pilot = { entity: Entity; below: number; back: number }
 export const PILOT_RANK = { walker: 0, machine: 1 }
 
 /**
- * The one seat the camera reads. 🛑 A claim carries the STEP it was made for, and a new step
- * empties the seat — an entity destroyed mid-game would otherwise be framed for ever.
+ * The one seat the camera reads. 🛑 The camera RELEASES it once it has looked, so a seat nobody
+ * claimed on the next frame is empty rather than holding a destroyed entity for ever.
  */
 export type Pilots = {
-  take: (entity: Entity, below: number, back: number, rank: number, tick: number) => void
+  take: (entity: Entity, below: number, back: number, rank: number) => void
   leader: () => Pilot | null
+  release: () => void
 }
 
 export function createPilots(): Pilots {
   let held: Pilot | null = null
   let bestRank = 0
-  let at = -1
 
   return {
-    take: (entity, below, back, rank, tick) => {
-      if (tick !== at) {
-        at = tick
-        held = null
-      }
+    take: (entity, below, back, rank) => {
       if (held && rank >= bestRank) return
 
       held = { entity, below, back }
       bestRank = rank
     },
     leader: () => held,
+    release: () => {
+      held = null
+    },
   }
 }

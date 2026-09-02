@@ -5,6 +5,7 @@ import { axesOfEuler, dot, restingAxes } from '../../physics/quaternion'
 import type { VehicleDrive } from '../../ports/physicsPort'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
+import type { Transform } from '@shared/domain/transform'
 import { componentOf, type Entity } from '../entity'
 import { keyHeld, keysHeld } from '../keysHeld'
 import { PILOT_RANK, type Pilots } from '../pilots'
@@ -29,7 +30,10 @@ const CHASE_BACK = 9
  * stopped. Handed straight through, a car asked to reverse at speed spins its wheels backwards
  * against the road, which reads as a car that will not stop.
  */
-export function createVehicleSystem(pilots: Pilots): System {
+export function createVehicleSystem(
+  pilots: Pilots,
+  worldOf?: (entity: Entity) => Transform,
+): System {
   const wanted: VehicleDrive[] = []
   const pool: VehicleDrive[] = []
   const names: string[] = []
@@ -63,9 +67,10 @@ export function createVehicleSystem(pilots: Pilots): System {
       for (const entity of driving) {
         // `motion` answers in the order it was asked, leaving out what the port does not hold.
         const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
-        const speed = motion
-          ? dot(motion.linear, axesOfEuler(entity.transform.rotation, heading).forward)
-          : 0
+        // 🛑 The WORLD rotation: the forces and the velocity are world-space, and a car hanging
+        // from a rotated group carries a local one — its nose would point in the parent's frame.
+        const turned = (worldOf ? worldOf(entity) : entity.transform).rotation
+        const speed = motion ? dot(motion.linear, axesOfEuler(turned, heading).forward) : 0
         const braking = asked * speed < 0 && Math.abs(speed) > STOPPED
 
         const drive = pooled(pool, wanted.length)
@@ -81,7 +86,7 @@ export function createVehicleSystem(pilots: Pilots): System {
           'wheelRadius',
           VEHICLE.wheelRadius,
         )
-        pilots.take(entity, wheelRadius, CHASE_BACK, PILOT_RANK.machine, world.time.tick)
+        pilots.take(entity, wheelRadius, CHASE_BACK, PILOT_RANK.machine)
       }
 
       world.ports.physics.drive(wanted)

@@ -21,9 +21,9 @@ type Run = { at: number; forward: boolean; done: boolean }
  */
 export function createPathSystem(): System {
   const runs = new WeakMap<Entity, Run>()
-  // Keyed by the WRITTEN rail rather than by the entity: fifty carts on one rail parse it once,
-  // and an author editing the string gets a new key rather than a stale list.
-  const rails = new Map<string, readonly Vector3[]>()
+  // 🛑 By ENTITY, not by the written rail: keyed by the string, an author typing in the field
+  // added one parsed rail per keystroke and the map held them for the life of the system.
+  const rails = new WeakMap<Entity, { said: string; rail: readonly Vector3[] }>()
 
   return {
     name: 'path',
@@ -36,8 +36,9 @@ export function createPathSystem(): System {
         if (!settings) continue
 
         const said = textOf(settings, 'waypoints', PATH.waypoints)
-        const rail = rails.get(said) ?? pointsOf(said)
-        rails.set(said, rail)
+        const kept = rails.get(entity)
+        const rail = kept?.said === said ? kept.rail : pointsOf(said)
+        rails.set(entity, { said, rail })
         if (rail.length === 0) continue
 
         const run = runs.get(entity) ?? { at: 0, forward: true, done: false }

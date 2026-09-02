@@ -53,7 +53,7 @@ export type VehicleWheel = {
 export type VehicleSettings = {
   wheelRadius: number
   wheelWidth: number
-  /** Metres of suspension travel at rest; the wheel hangs that far below `at` when unloaded. */
+  /** Metres of travel: the spring is anchored that far ABOVE `at`, and compresses under load. */
   suspensionLength: number
   /** Degrees, at full lock. */
   maxSteerAngle: number

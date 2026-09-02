@@ -68,7 +68,9 @@ export function notedPhysics(): NotedPhysics {
         ...forces.map(one => ({ ...one, force: { ...one.force }, torque: { ...one.torque } })),
       )
     },
-    motion: bodies => noted.answers.motion.filter(one => bodies.includes(one.body)),
+    // In the ORDER ASKED, as the real port answers: both callers walk a cursor over the result,
+    // and a double answering in its own order would exercise the « port does not hold it » path.
+    motion: bodies => bodies.flatMap(body => noted.answers.motion.filter(one => one.body === body)),
     step: dt => {
       noted.steps.push(dt)
     },
