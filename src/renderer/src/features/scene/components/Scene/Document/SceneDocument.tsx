@@ -287,6 +287,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         ),
       onAddPathPoint: (nodeId, index) => addPathPoint(documentId, nodeId, index),
       onAppendPathPoint: (nodeId, point) => appendPathPoint(documentId, nodeId, point),
+      onClosePath: nodeId => editPath(documentId, nodeId, path => ({ ...path, closed: true })),
       // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it
       // lands as a command — one per gesture, since the engine reports on release.
       onCameraMoved: (nodeId, transform) =>

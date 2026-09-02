@@ -972,6 +972,21 @@ describe('SceneDocument and a point posed on a rail', () => {
     expect(run?.points.map(point => point.x)).toEqual([-4, 5, 10, 20])
   })
 
+  /**
+   * 🛑 Laying a point ON the one a run starts from is what a hand means by « join it up » — the
+   * gesture every drawing tool has. Without it, Alt-Shift there folded the band back on itself.
+   */
+  it('joins a run up rather than folding it back on its own first point', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    installRail()
+
+    await act(async () => built.at(-1)?.onClosePath?.('rail'))
+
+    const node = nodesOf('doc-1').find(candidate => candidate.id === 'rail')
+    expect(node?.type === 'path' ? node.path.closed : false).toBe(true)
+    expect(pointsOf()).toEqual([0, 10, 20])
+  })
+
   it('costs one undo entry, which puts the rail back as it was', async () => {
     render(<SceneDocument documentId="doc-1" />)
     installRail()

@@ -334,6 +334,8 @@ export type SceneRendererOptions = {
   onAddPathPoint?: (nodeId: string, index: number) => void
   /** A point is to be posed at the END of that rail, where the click landed in its own frame. */
   onAppendPathPoint?: (nodeId: string, point: PlainVector3) => void
+  /** That rail is to be joined up: its last point comes back round to its first. */
+  onClosePath?: (nodeId: string) => void
   /** A control point was right-clicked, for whoever raises its menu — this side draws none. */
   onPathPointMenu?: (nodeId: string, index: number) => void
   /**
@@ -4706,6 +4708,15 @@ export class SceneRenderer {
     // The pair is RESERVED, so a click that lays no point lays nothing else either: falling
     // through would insert on the line under it, or toggle the selection mid-trajectory.
     if (event.altKey && event.shiftKey) {
+      // 🛑 The FIRST anchor of an open run closes it, as it does in every drawing tool: laying a
+      // point on top of the one a run starts from is what a hand means by « join it up ».
+      const first = this.pathPointAt(event)
+      const run = first ? railOf(this.applied.get(first.nodeId)) : null
+      if (first && !first.part && first.index === 0 && run && !run.closed) {
+        this.options.onClosePath?.(first.nodeId)
+        return
+      }
+
       const spot = this.railSpotAt(event)
       if (spot) this.options.onAppendPathPoint?.(spot.nodeId, spot.point)
       return
