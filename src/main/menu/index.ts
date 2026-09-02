@@ -1,3 +1,4 @@
+import type { NavigationPreset } from '@shared/domain/navigationPreset'
 import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
@@ -58,6 +59,25 @@ let overrides: BindingOverrides = {}
  * arrive late — File ▸ New file would stay greyed over a project already open.
  */
 let openProject: string | null = null
+/**
+ * Which application the 3D view is driven like, and how the menu writes it back. Told by the
+ * settings store like the shelves are: a fact routed through a renderer arrives late, and the
+ * ticked row would lag a change made from the settings screen.
+ */
+let navigationPreset: NavigationPreset = 'studio'
+let writeNavigationPreset: (preset: NavigationPreset) => void = () => {}
+
+/** Told by the settings store, which owns both halves. Rebuilds only when the answer moved. */
+export function noteNavigationPreset(
+  preset: NavigationPreset,
+  write: (preset: NavigationPreset) => void,
+): void {
+  writeNavigationPreset = write
+  if (preset === navigationPreset) return
+
+  navigationPreset = preset
+  buildMenu()
+}
 let recentProjects: readonly RecentProject[] = []
 let recentDocuments: readonly RecentDocument[] = []
 
@@ -118,6 +138,7 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
     scope: shown?.scope ?? null,
     tools: shown?.tools ?? [],
     checked: shown?.checked ?? [],
+    navigationPreset,
     abilities: shown?.abilities ?? [],
     isMac,
     isDevelopment,
@@ -128,6 +149,7 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
     // the menu would otherwise advertise ⌃⌘F on a machine whose full-screen key is F11.
     overrides: { ...platformDefaults(isMac), ...overrides },
     actions: {
+      setNavigationPreset: preset => writeNavigationPreset(preset),
       openSettings: () => void openSettingsWindow(),
       openLicences: () => void openLicencesWindow(),
       openManual: () => void openManualWindow(),

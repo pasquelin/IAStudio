@@ -1,4 +1,4 @@
-import type { NavigationPreset } from './navigationPreset'
+import type { CustomOrbit, CustomPan, FlyMode, NavigationPreset } from './navigationPreset'
 import type { LanguagePreference } from '../i18n/languages'
 // From the model module rather than from the registry: `shellActions.ts` reads this file, and the
 // registry reads it back — `import-cycles.test.ts` holds that count at zero.
@@ -183,6 +183,10 @@ export type Settings = {
      * — which is what lets the commands the others have no equivalent for survive every preset.
      */
     navigationPreset: NavigationPreset
+    /** The three gestures a person's OWN scheme is made of. Read only under `custom`. */
+    navigationCustomOrbit: CustomOrbit
+    navigationCustomPan: CustomPan
+    navigationCustomFly: FlyMode
     /**
      * Whether the view turns around what is SELECTED — Blender's *Orbit Around Selection* and
      * Unreal's *Orbit camera around selection*, on here where both ship it off. It is the most
@@ -385,6 +389,9 @@ export const DEFAULT_SETTINGS: Settings = {
     showGrid: true,
     gridSize: 20,
     navigationPreset: 'studio',
+    navigationCustomOrbit: 'leftAlt',
+    navigationCustomPan: 'middle',
+    navigationCustomFly: 'anyButton',
     orbitAroundSelection: true,
     orbitUnderCursor: false,
     flySpeed: 4,

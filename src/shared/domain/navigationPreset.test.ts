@@ -1,12 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import { COMMAND_REGISTRY, commandDescriptor } from './command'
 import { DEFAULT_MOTION } from './shortcut'
-import { NAVIGATION_PRESETS, SCHEME_OF, type NavigationPreset } from './navigationPreset'
+import {
+  NAVIGATION_PRESETS,
+  SCHEME_OF,
+  schemeFor,
+  type CustomNavigation,
+  type NavigationPreset,
+} from './navigationPreset'
 
 /** What a command answers to under a preset — the studio's key unless the preset moves it. */
-function keyOf(id: string, preset: NavigationPreset): string | null {
-  return SCHEME_OF[preset].bindings[id as never] ?? commandDescriptor(id)?.defaultBinding ?? null
+function keyOf(
+  id: string,
+  preset: NavigationPreset,
+  custom: CustomNavigation = MILD,
+): string | null {
+  const layer = schemeFor(preset, custom).bindings
+  return layer[id as never] ?? commandDescriptor(id)?.defaultBinding ?? null
 }
+
+/** A scheme of one's own that holds no letter — the shape every case below reads by default. */
+const MILD: CustomNavigation = { orbit: 'leftAlt', pan: 'middle', fly: 'anyButton' }
+
+/** The same, turned permanent: the one setting a person can make that costs two commands. */
+const PERMANENT: CustomNavigation = { orbit: 'leftAlt', pan: 'middle', fly: 'always' }
 
 /**
  * The three letters AZERTY swaps with QWERTY. A binding is signed by the CHARACTER printed on a
@@ -62,6 +79,22 @@ describe('the navigation presets', () => {
       expect(taken).toEqual([])
     },
   )
+
+  /**
+   * The hole `custom` opened and this closes: the cost of a permanent flight follows the MODE,
+   * not the application. A scheme of one's own set to `always` swallowed `scene.scale` before,
+   * because it carried no layer of its own to move it out of the way.
+   */
+  it('moves the same two commands for a scheme of one’s own turned permanent', () => {
+    const taken = COMMAND_REGISTRY.filter(one => one.scope === 'scene')
+      .map(one => keyOf(one.id, 'custom', PERMANENT))
+      .filter((key): key is string => key !== null && !key.includes('+'))
+      .filter(key => FLOWN.has(key) || (AZERTY_AT[key] && FLOWN.has(AZERTY_AT[key])))
+
+    expect(taken).toEqual([])
+    // And it costs nothing while a button is held, which is what the default is.
+    expect(keyOf('scene.scale', 'custom', MILD)).toBe('KeyS')
+  })
 
   it('keeps the studio preset as the one every other falls back to', () => {
     expect(SCHEME_OF.studio.bindings).toEqual({})

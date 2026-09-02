@@ -185,7 +185,29 @@
       "unreal": "Unreal Engine",
       "unity": "Unity",
       "blender": "Blender",
-      "roblox": "Roblox Studio"
+      "roblox": "Roblox Studio",
+      "custom": "Custom"
+    },
+    "navigationCustomOrbit": {
+      "title": "Turn with",
+      "help": "The gesture that rotates the view in your own scheme.",
+      "leftAlt": "Alt + left click",
+      "left": "Left click, with or without Alt",
+      "middle": "Middle button"
+    },
+    "navigationCustomPan": {
+      "title": "Slide sideways with",
+      "help": "The gesture that slides the view without turning it.",
+      "middle": "Middle button",
+      "middleShift": "Shift + middle button",
+      "leftAltShift": "Shift + Alt + left click"
+    },
+    "navigationCustomFly": {
+      "title": "Movement keys",
+      "help": "When WASD belong to the camera. Held always, the letters stop being available to the scene’s commands — which is why Unity and Unreal ask for a button.",
+      "anyButton": "While a button is held",
+      "rightButton": "While the right button is held",
+      "always": "Always"
     },
     "orbitAroundSelection": {
       "title": "Orbit around selection",

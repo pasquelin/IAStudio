@@ -62,7 +62,10 @@ import {
  * `send(channel, payload)`: `shared/ipc.ts` types both ends of every channel, and a generic
  * sender is the one hop where that guarantee would stop.
  */
+import { NAVIGATION_PRESETS, type NavigationPreset } from '@shared/domain/navigationPreset'
+
 export type MenuActions = {
+  setNavigationPreset: (preset: NavigationPreset) => void
   openSettings: () => void
   openLicences: () => void
   openManual: () => void
@@ -109,6 +112,8 @@ export type MenuOptions = {
    * on, and only the window knows: the state belongs to the document in front.
    */
   checked: readonly MenuCheck[]
+  /** Which application's gestures and keys the 3D view answers to — see `navigationPreset`. */
+  navigationPreset: NavigationPreset
   /** The rows the focused window reported as answerable — a row absent from here is drawn greyed. */
   abilities: readonly MenuAbility[]
   /**
@@ -184,6 +189,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     scope,
     tools,
     checked,
+    navigationPreset,
     abilities,
     isMac,
     isDevelopment,
@@ -593,6 +599,18 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     )
 
   /**
+   * The five applications this viewport can be driven like, as alternatives — exactly one is
+   * true at a time, which is what `radio` says and a row of checkboxes would not.
+   */
+  const navigationItems = (): MenuItemConstructorOptions[] =>
+    NAVIGATION_PRESETS.map(preset => ({
+      label: t.settings.navigationPreset[preset],
+      type: 'radio',
+      checked: preset === navigationPreset,
+      click: () => actions.setNavigationPreset(preset),
+    }))
+
+  /**
    * What the viewport does, as opposed to what the scene holds — the 3D counterpart of the
    * canvas rows above, and the reason the 3D bar could go from twenty-three buttons to eight.
    *
@@ -603,6 +621,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     scope === 'scene'
       ? [
           { type: 'separator' },
+          { label: t.menu.sceneNavigation, submenu: navigationItems() },
           { label: t.menu.sceneDisplay, submenu: displayItems() },
           { label: t.menu.sceneView, submenu: viewItems() },
           { label: t.menu.sceneCapture, submenu: captureItems() },

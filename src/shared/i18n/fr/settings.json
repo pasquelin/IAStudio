@@ -185,7 +185,29 @@
       "unreal": "Unreal Engine",
       "unity": "Unity",
       "blender": "Blender",
-      "roblox": "Roblox Studio"
+      "roblox": "Roblox Studio",
+      "custom": "Personnalisé"
+    },
+    "navigationCustomOrbit": {
+      "title": "Tourner avec",
+      "help": "Le geste qui fait pivoter la vue dans votre schéma personnel.",
+      "leftAlt": "Alt + clic gauche",
+      "left": "Clic gauche, avec ou sans Alt",
+      "middle": "Bouton du milieu"
+    },
+    "navigationCustomPan": {
+      "title": "Déplacer latéralement avec",
+      "help": "Le geste qui fait glisser la vue sans la faire tourner.",
+      "middle": "Bouton du milieu",
+      "middleShift": "Maj + bouton du milieu",
+      "leftAltShift": "Maj + Alt + clic gauche"
+    },
+    "navigationCustomFly": {
+      "title": "Touches de déplacement",
+      "help": "Quand ZQSD appartiennent à la caméra. En permanence, les lettres cessent d’être disponibles pour les commandes de la scène — c’est pourquoi Unity et Unreal exigent un bouton.",
+      "anyButton": "Tant qu’un bouton est tenu",
+      "rightButton": "Tant que le bouton droit est tenu",
+      "always": "En permanence"
     },
     "orbitAroundSelection": {
       "title": "Tourner autour de la sélection",

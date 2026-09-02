@@ -10,7 +10,7 @@ import type { BindingOverrides } from './command'
  * Resolution, in order: the studio's default, then the preset, then what the person remapped —
  * which always wins. See `bindingOf`.
  */
-export type NavigationPreset = 'studio' | 'unreal' | 'unity' | 'blender' | 'roblox'
+export type NavigationPreset = 'studio' | 'unreal' | 'unity' | 'blender' | 'roblox' | 'custom'
 
 export const NAVIGATION_PRESETS: readonly NavigationPreset[] = [
   'studio',
@@ -18,6 +18,7 @@ export const NAVIGATION_PRESETS: readonly NavigationPreset[] = [
   'unity',
   'blender',
   'roblox',
+  'custom',
 ]
 
 /**
@@ -43,6 +44,17 @@ export type NavigationScheme = {
   fly: FlyMode
   /** Only what THIS application binds differently. Everything absent keeps the studio's key. */
   bindings: BindingOverrides
+}
+
+/**
+ * What a flight with nothing held has to move out of its way, whichever scheme asks for it.
+ *
+ * `scene.display` is the subtle one: its key is the character `z`, which on AZERTY sits where
+ * `forward` is read by POSITION — a binding is signed by the character, a motion by the place.
+ */
+const DISPLACED_BY_A_PERMANENT_FLIGHT: BindingOverrides = {
+  'scene.scale': 'KeyT',
+  'scene.display': 'KeyK',
 }
 
 /** The three verbs every one of them puts on the same three keys — or does not. */
@@ -95,6 +107,62 @@ export const SCHEME_OF: Record<NavigationPreset, NavigationScheme> = {
     orbit: [{ button: 0, alt: true }],
     pan: [{ button: 1 }],
     fly: 'always',
-    bindings: { 'scene.scale': 'KeyT', 'scene.display': 'KeyK' },
+    bindings: DISPLACED_BY_A_PERMANENT_FLIGHT,
   },
+  /** Never read through this table — `schemeFor` composes it. Here so the record is complete. */
+  custom: {
+    orbit: [{ button: 0, alt: true }],
+    pan: [{ button: 1 }],
+    fly: 'anyButton',
+    bindings: {},
+  },
+}
+
+/**
+ * The three gestures a person may put where they like, each a NAMED chord rather than a free
+ * capture: a choice is a descriptor the settings screen already draws, where recording a chord
+ * would be an interface of its own — and one gesture per row is all any of the five presets uses.
+ */
+export type CustomOrbit = 'leftAlt' | 'left' | 'middle'
+export type CustomPan = 'middle' | 'middleShift' | 'leftAltShift'
+
+export const CUSTOM_ORBITS: readonly CustomOrbit[] = ['leftAlt', 'left', 'middle']
+export const CUSTOM_PANS: readonly CustomPan[] = ['middle', 'middleShift', 'leftAltShift']
+export const FLY_MODES: readonly FlyMode[] = ['anyButton', 'rightButton', 'always']
+
+const ORBIT_CHORD: Record<CustomOrbit, readonly GestureChord[]> = {
+  leftAlt: [{ button: 0, alt: true }],
+  left: [{ button: 0 }, { button: 0, alt: true }],
+  middle: [{ button: 1 }],
+}
+
+const PAN_CHORD: Record<CustomPan, readonly GestureChord[]> = {
+  middle: [{ button: 1 }],
+  middleShift: [{ button: 1, shift: true }],
+  leftAltShift: [{ button: 0, alt: true, shift: true }],
+}
+
+/** What a person's own scheme is made of. Their KEYS need nothing here: `shortcuts.overrides` is
+ * already the layer above every preset, so it is custom whichever one is chosen. */
+export type CustomNavigation = {
+  orbit: CustomOrbit
+  pan: CustomPan
+  fly: FlyMode
+}
+
+/**
+ * The scheme in force. `custom` is composed from what the person chose; every other preset is
+ * the table declared above, and neither carries bindings for `custom` — see `CustomNavigation`.
+ */
+export function schemeFor(preset: NavigationPreset, custom: CustomNavigation): NavigationScheme {
+  if (preset !== 'custom') return SCHEME_OF[preset]
+
+  return {
+    orbit: ORBIT_CHORD[custom.orbit],
+    pan: PAN_CHORD[custom.pan],
+    fly: custom.fly,
+    // The cost of `always` follows the MODE, not the application that asked for it: a scheme of
+    // one's own that hands the letters to the camera swallows the same two commands.
+    bindings: custom.fly === 'always' ? DISPLACED_BY_A_PERMANENT_FLIGHT : {},
+  }
 }

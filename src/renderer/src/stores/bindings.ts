@@ -5,7 +5,11 @@ import {
   type CommandId,
 } from '@shared/domain/command'
 import { DEFAULT_MOTION, type MotionId, type Signature } from '@shared/domain/shortcut'
-import { SCHEME_OF, type NavigationPreset } from '@shared/domain/navigationPreset'
+import {
+  schemeFor,
+  type CustomNavigation,
+  type NavigationPreset,
+} from '@shared/domain/navigationPreset'
 import { IS_MAC } from '@/helpers/platform'
 import { useSettings } from './settings'
 
@@ -20,7 +24,7 @@ const PLATFORM_DEFAULTS = platformDefaults(IS_MAC)
  * written table, the platform's own keys would be saved as though the user had remapped them —
  * which is also why a row asks the stored table whether it is remapped.
  */
-let mergedFrom: { overrides: BindingOverrides; preset: NavigationPreset } | null = null
+let mergedFrom: { overrides: BindingOverrides; scheme: string } | null = null
 let merged: BindingOverrides = PLATFORM_DEFAULTS
 
 /**
@@ -30,12 +34,29 @@ let merged: BindingOverrides = PLATFORM_DEFAULTS
 function withPlatformDefaults(
   overrides: BindingOverrides,
   preset: NavigationPreset,
+  custom: CustomNavigation,
 ): BindingOverrides {
-  if (mergedFrom?.overrides !== overrides || mergedFrom.preset !== preset) {
-    mergedFrom = { overrides, preset }
-    merged = { ...PLATFORM_DEFAULTS, ...SCHEME_OF[preset].bindings, ...overrides }
+  // Keyed on the scheme's own signature, never on the preset alone: a custom flight turned
+  // permanent moves two keys without the preset's name changing at all.
+  const scheme = `${preset}:${custom.fly}`
+  if (mergedFrom?.overrides !== overrides || mergedFrom.scheme !== scheme) {
+    mergedFrom = { overrides, scheme }
+    merged = { ...PLATFORM_DEFAULTS, ...schemeFor(preset, custom).bindings, ...overrides }
   }
   return merged
+}
+
+/** The three choices a person's own scheme is made of, read off the settings they live in. */
+function customOf(three: {
+  navigationCustomOrbit: CustomNavigation['orbit']
+  navigationCustomPan: CustomNavigation['pan']
+  navigationCustomFly: CustomNavigation['fly']
+}): CustomNavigation {
+  return {
+    orbit: three.navigationCustomOrbit,
+    pan: three.navigationCustomPan,
+    fly: three.navigationCustomFly,
+  }
 }
 
 /**
@@ -47,8 +68,9 @@ function withPlatformDefaults(
 export function resolveBindings(
   overrides: BindingOverrides,
   preset: NavigationPreset,
+  custom: CustomNavigation,
 ): BindingOverrides {
-  return { ...PLATFORM_DEFAULTS, ...SCHEME_OF[preset].bindings, ...overrides }
+  return { ...PLATFORM_DEFAULTS, ...schemeFor(preset, custom).bindings, ...overrides }
 }
 
 /**
@@ -60,7 +82,11 @@ export function resolveBindings(
  */
 export function useBindingOverrides(): BindingOverrides {
   return useSettings(state =>
-    withPlatformDefaults(state.settings.shortcuts.overrides, state.settings.three.navigationPreset),
+    withPlatformDefaults(
+      state.settings.shortcuts.overrides,
+      state.settings.three.navigationPreset,
+      customOf(state.settings.three),
+    ),
   )
 }
 
@@ -72,6 +98,7 @@ export function useBinding(id: CommandId): Signature | null {
       withPlatformDefaults(
         state.settings.shortcuts.overrides,
         state.settings.three.navigationPreset,
+        customOf(state.settings.three),
       ),
     ),
   )
@@ -80,7 +107,7 @@ export function useBinding(id: CommandId): Signature | null {
 /** Read outside React, on a keydown: subscribing per event would be a subscription per frame. */
 export function currentOverrides(): BindingOverrides {
   const { shortcuts, three } = useSettings.getState().settings
-  return withPlatformDefaults(shortcuts.overrides, three.navigationPreset)
+  return withPlatformDefaults(shortcuts.overrides, three.navigationPreset, customOf(three))
 }
 
 /**

@@ -1,4 +1,4 @@
-import { NAVIGATION_PRESETS } from './navigationPreset'
+import { CUSTOM_ORBITS, CUSTOM_PANS, FLY_MODES, NAVIGATION_PRESETS } from './navigationPreset'
 import { LANGUAGES } from '../i18n/languages'
 import { ASSISTANT_STEPS_MAX, ASSISTANT_STEPS_MIN } from './assistantSteps'
 import { DICTATION_MODES } from './dictation'
@@ -429,6 +429,39 @@ export const SETTING_REGISTRY = [
       value,
       labelKey: `settings.navigationPreset.${value}`,
     })),
+  }),
+  setting({
+    path: 'three.navigationCustomOrbit',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.navigationCustomOrbit.title',
+    helpKey: 'settings.navigationCustomOrbit.help',
+    options: CUSTOM_ORBITS.map(value => ({
+      value,
+      labelKey: `settings.navigationCustomOrbit.${value}`,
+    })),
+    dependsOn: { path: 'three.navigationPreset', equals: 'custom' },
+  }),
+  setting({
+    path: 'three.navigationCustomPan',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.navigationCustomPan.title',
+    helpKey: 'settings.navigationCustomPan.help',
+    options: CUSTOM_PANS.map(value => ({
+      value,
+      labelKey: `settings.navigationCustomPan.${value}`,
+    })),
+    dependsOn: { path: 'three.navigationPreset', equals: 'custom' },
+  }),
+  setting({
+    path: 'three.navigationCustomFly',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.navigationCustomFly.title',
+    helpKey: 'settings.navigationCustomFly.help',
+    options: FLY_MODES.map(value => ({ value, labelKey: `settings.navigationCustomFly.${value}` })),
+    dependsOn: { path: 'three.navigationPreset', equals: 'custom' },
   }),
   setting({
     path: 'three.orbitAroundSelection',

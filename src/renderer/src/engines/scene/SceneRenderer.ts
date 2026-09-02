@@ -36,7 +36,7 @@ import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
 import { clampFlySpeed, speedAfterWheel } from './flySpeed'
 import { notchesOf } from '../viewport/dolly'
 import { gazeTargetOf, PIVOT_AHEAD } from '../viewport/orbitPivot'
-import { SCHEME_OF } from '@shared/domain/navigationPreset'
+import { schemeFor } from '@shared/domain/navigationPreset'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -626,7 +626,7 @@ export class SceneRenderer {
     // a surface one lands the pivot on.
     pickTargets: () => [...this.objects.values()],
     // Blender's Navigation panel, under the two names it gives them — see `orbitPivot`.
-    scheme: () => SCHEME_OF[this.view.navigationPreset],
+    scheme: () => this.navigationScheme(),
     pivotMode: () => ({
       aroundSelection: this.view.orbitAroundSelection,
       underCursor: this.view.orbitUnderCursor,
@@ -2733,7 +2733,7 @@ export class SceneRenderer {
    * boost-strafe-left, and the held set cannot tell them apart — Shift is down either way.
    */
   get flying(): boolean {
-    if (SCHEME_OF[this.view.navigationPreset].fly === 'always') return true
+    if (this.navigationScheme().fly === 'always') return true
     return this.flownWith !== null || this.navigating
   }
 
@@ -4102,6 +4102,15 @@ export class SceneRenderer {
     return this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
   }
 
+  /** Which application the view is driven like — composed, `custom` being three choices. */
+  private navigationScheme() {
+    return schemeFor(this.view.navigationPreset, {
+      orbit: this.view.navigationCustomOrbit,
+      pan: this.view.navigationCustomPan,
+      fly: this.view.navigationCustomFly,
+    })
+  }
+
   /**
    * Where the view turns when it turns around the selection — the SAME centre `placePivot` puts
    * the gizmo on, computed by the same function, so the two can never name different points.
@@ -4489,7 +4498,7 @@ export class SceneRenderer {
     // ADDED to the left button, never substituted for what it already did: it goes on orbiting
     // and picking on release, and only gains the keys. Unity and Unreal keep their flight on the
     // RIGHT button alone, so under those the left one arms nothing.
-    if (SCHEME_OF[this.view.navigationPreset].fly === 'anyButton') this.startFlight(event)
+    if (this.navigationScheme().fly === 'anyButton') this.startFlight(event)
   }
 
   private readonly onPointerUp = (event: PointerEvent): void => {

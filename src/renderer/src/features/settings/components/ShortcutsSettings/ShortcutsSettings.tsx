@@ -31,8 +31,16 @@ export function ShortcutsSettings() {
   // Resolved once and handed down: a merge per row is 171 of them on every keystroke.
   // The scheme too: it is the middle layer, so a row shows the key the CHOSEN application gives
   // a command, and calls it remapped only where the person themselves moved it.
-  const preset = useSettings(state => state.settings.three.navigationPreset)
-  const resolved = useMemo(() => resolveBindings(overrides, preset), [overrides, preset])
+  const three = useSettings(state => state.settings.three)
+  const resolved = useMemo(
+    () =>
+      resolveBindings(overrides, three.navigationPreset, {
+        orbit: three.navigationCustomOrbit,
+        pan: three.navigationCustomPan,
+        fly: three.navigationCustomFly,
+      }),
+    [overrides, three],
+  )
   /**
    * What is listening, if anything. ONE state rather than one per listener: a row and the
    * search box each holding their own meant a keypress could be recorded as a binding and used
