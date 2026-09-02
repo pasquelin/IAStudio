@@ -34,7 +34,8 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { anglesFromDirection, type SphericalAngles } from '@shared/domain/angles'
 import { aimAlong, DEFAULT_LOOK, turnBy } from '../viewport/lookAround'
 import { clampFlySpeed, speedAfterWheel } from './flySpeed'
-import { notchesOf, PIVOT_AHEAD } from '../viewport/dolly'
+import { notchesOf } from '../viewport/dolly'
+import { PIVOT_AHEAD } from '../viewport/orbitPivot'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -163,7 +164,7 @@ import {
   type ModelCache,
   type ModelSource,
 } from './modelCache'
-import { applyTransform, carry, placePivot, release, transformOf } from './pivot'
+import { applyTransform, carry, centreOf, placePivot, release, transformOf } from './pivot'
 import {
   applyShadowFlags,
   applyShadowQuality,
@@ -615,6 +616,12 @@ export class SceneRenderer {
     // The nodes alone, and the helpers on purpose: a lamp's glyph is a place one looks AT, never
     // a surface one lands the pivot on.
     pickTargets: () => [...this.objects.values()],
+    // Blender's Navigation panel, under the two names it gives them — see `orbitPivot`.
+    pivotMode: () => ({
+      aroundSelection: this.view.orbitAroundSelection,
+      underCursor: this.view.orbitUnderCursor,
+    }),
+    selectionCentre: () => this.selectionCentre(),
     onWheel: event => this.spendWheelOnSpeed(event),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
@@ -4070,6 +4077,18 @@ export class SceneRenderer {
 
   private selectedObjects(): Object3D[] {
     return this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
+  }
+
+  /**
+   * Where the view turns when it turns around the selection — the SAME centre `placePivot` puts
+   * the gizmo on, computed by the same function, so the two can never name different points.
+   *
+   * Recomputed rather than read off `this.pivot`: that one is only placed while a gizmo exists,
+   * and a mode without one still has a selection — the reading `frameSelection` already makes.
+   */
+  private selectionCentre(): ThreeVector3 | null {
+    const objects = this.selectedObjects()
+    return objects.length > 0 ? centreOf(objects, new ThreeVector3()) : null
   }
 
   private attachGizmo(): void {

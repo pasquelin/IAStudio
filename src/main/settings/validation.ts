@@ -173,6 +173,8 @@ const handles = boundsOf('three.gizmoSize')
 const three = z.object({
   showGrid: z.boolean().optional(),
   gridSize: z.number().int().min(grid.min).max(grid.max).optional(),
+  orbitAroundSelection: z.boolean().optional(),
+  orbitUnderCursor: z.boolean().optional(),
   flySpeed: z.number().min(fly.min).max(fly.max).optional(),
   boostFactor: z.number().min(boost.min).max(boost.max).optional(),
   fieldOfView: z.number().min(lens.min).max(lens.max).optional(),

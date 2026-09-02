@@ -174,6 +174,14 @@ export type Settings = {
     showGrid: boolean
     /** Extent of the ground grid, in metres. */
     gridSize: number
+    /**
+     * Whether the view turns around what is SELECTED — Blender's *Orbit Around Selection* and
+     * Unreal's *Orbit camera around selection*, on here where both ship it off. It is the most
+     * contested default of Blender, and every other suite turns around the selection by default.
+     */
+    orbitAroundSelection: boolean
+    /** Whether each orbit re-reads the depth under the pointer — Blender's *Auto Depth*. */
+    orbitUnderCursor: boolean
     /** Metres per second while flying the viewport camera. */
     flySpeed: number
     /** What holding the boost key multiplies the fly speed by. */
@@ -367,6 +375,8 @@ export const DEFAULT_SETTINGS: Settings = {
   three: {
     showGrid: true,
     gridSize: 20,
+    orbitAroundSelection: true,
+    orbitUnderCursor: false,
     flySpeed: 4,
     boostFactor: 3,
     fieldOfView: 60,

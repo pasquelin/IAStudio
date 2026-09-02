@@ -5,6 +5,7 @@ import {
   OrthographicCamera,
   PerspectiveCamera,
   Scene,
+  Vector3 as ThreeVector3,
   type WebGLRenderTarget,
 } from 'three'
 import type * as ThreeModule from 'three'
@@ -694,14 +695,30 @@ describe('a viewport', () => {
       expect(engine.activePane).toBe(3)
     })
 
-    it('leaves every orbit alone while there is one view', () => {
+    /**
+     * Read through a gesture rather than through `OrbitControls.enabled`, which since `armOrbits`
+     * says whether that control owns the pointer — never which pane answers.
+     */
+    it('leaves the one view armed however the pointer moves over it', () => {
       const engine = mounted()
       const canvas = engine.canvas
       if (!canvas) throw new Error('mounted with no canvas')
+      engine.camera.position.set(0, 0, 10)
 
       canvas.dispatchEvent(pointerAt(10, 10))
+      host.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          clientX: 320,
+          clientY: 400,
+          altKey: true,
+          bubbles: true,
+        }),
+      )
+      host.dispatchEvent(
+        new PointerEvent('pointermove', { clientX: 420, clientY: 400, buttons: 1, bubbles: true }),
+      )
 
-      expect(engine.orbit?.enabled).toBe(true)
+      expect(engine.camera.position.x).not.toBeCloseTo(0, 3)
     })
 
     it('reads a pointer against its own pane, not against the canvas', () => {
@@ -1322,6 +1339,139 @@ describe('a viewport', () => {
       engine.drawScene(request(null))
 
       expect(renderTarget).toHaveBeenLastCalledWith(null)
+    })
+  })
+
+  /**
+   * The gestures taken from `OrbitControls` on perspective panes, for the reason `orbit.ts`
+   * carries: its `update()` ends on `lookAt(target)`, so it cannot turn around a point the
+   * pointer named. The arithmetic is measured in `orbit`, `pan` and `orbitPivot`; what is
+   * measured here is that the buttons reach it, and what they leave to the rest of the studio.
+   */
+  describe('navigating the view', () => {
+    const press = (over: PointerEventInit = {}): PointerEvent =>
+      new PointerEvent('pointerdown', {
+        clientX: 320,
+        clientY: 400,
+        button: 0,
+        bubbles: true,
+        ...over,
+      })
+
+    /** `buttons` and not `button`: a move carries what is HELD, and the drag reads that to know
+     * a release it never saw. jsdom defaults it to none, which would end every drag at once. */
+    const dragTo = (x: number, y: number, buttons = 1): PointerEvent =>
+      new PointerEvent('pointermove', { clientX: x, clientY: y, buttons, bubbles: true })
+
+    /** A camera pulled back down −Z, which is where every case below starts. */
+    const backedOff = (options?: ConstructorParameters<typeof ViewportEngine>[0]) => {
+      const engine = atRest(options)
+      engine.camera.position.set(0, 0, 10)
+      engine.camera.quaternion.identity()
+      return engine
+    }
+
+    it('turns the camera on alt and the left button, keeping its distance to the pivot', () => {
+      const engine = backedOff()
+
+      host.dispatchEvent(press({ altKey: true }))
+      host.dispatchEvent(dragTo(420, 400))
+
+      expect(engine.camera.position.x).not.toBeCloseTo(0, 3)
+      expect(engine.camera.position.length()).toBeCloseTo(10, 6)
+    })
+
+    it('slides the camera and its pivot together on the middle button', () => {
+      const engine = backedOff()
+      const pivot = engine.orbit?.target.clone()
+
+      host.dispatchEvent(press({ button: 1 }))
+      host.dispatchEvent(dragTo(420, 400, 4))
+
+      expect(engine.camera.position.x).toBeLessThan(0)
+      expect(engine.orbit?.target.x).toBeCloseTo(engine.camera.position.x, 6)
+      expect(pivot?.x).toBe(0)
+    })
+
+    /**
+     * The one thing a bare drag must not do. Picking decides on RELEASE whether the pointer ever
+     * moved, and a press swallowed here would leave every click in the viewport selecting nothing.
+     */
+    it('leaves a bare press to the rest of the studio, and takes one a modifier named', () => {
+      const heard = vi.fn()
+      host.addEventListener('pointerdown', heard)
+      backedOff()
+
+      host.dispatchEvent(press())
+      expect(heard).toHaveBeenCalledTimes(1)
+
+      host.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+      host.dispatchEvent(press({ altKey: true }))
+      expect(heard).toHaveBeenCalledTimes(1)
+    })
+
+    it('turns around the selection when the preference asks, wherever the pointer is', () => {
+      const engine = backedOff({
+        selectionCentre: () => new ThreeVector3(0, 0, 4),
+        pivotMode: () => ({ aroundSelection: true, underCursor: false }),
+      })
+
+      host.dispatchEvent(press({ altKey: true }))
+
+      expect(engine.orbit?.target.z).toBeCloseTo(4, 6)
+    })
+
+    it('ignores a selection that sits off screen, which is what yanks the view in Unreal', () => {
+      const engine = backedOff({
+        selectionCentre: () => new ThreeVector3(0, 0, 400),
+        pivotMode: () => ({ aroundSelection: true, underCursor: false }),
+      })
+
+      host.dispatchEvent(press({ altKey: true }))
+
+      expect(engine.orbit?.target.z).toBe(0)
+    })
+
+    it('publishes the framing once the hand lets go, and never for a press that never moved', () => {
+      const settled = vi.fn()
+      backedOff({ onCameraSettled: settled })
+
+      host.dispatchEvent(press({ altKey: true }))
+      host.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+      expect(settled).not.toHaveBeenCalled()
+
+      host.dispatchEvent(press({ altKey: true }))
+      host.dispatchEvent(dragTo(420, 460))
+      host.dispatchEvent(new PointerEvent('pointerup', { button: 0, bubbles: true }))
+      expect(settled).toHaveBeenCalledWith(0)
+    })
+
+    /**
+     * `OrbitControls` calls `update()` from its OWN move handlers, so leaving it the pointer on a
+     * perspective pane has it re-aiming at its target between two frames of an orbit — fighting
+     * the very gesture. Refusing it the pointer is the one way, and this flag is that refusal.
+     */
+    it('takes the gestures from `OrbitControls` on perspective, and gives them back on ortho', () => {
+      const engine = backedOff()
+      expect(engine.orbit?.enabled).toBe(false)
+
+      engine.setProjection('orthographic')
+      expect(engine.orbit?.enabled).toBe(true)
+
+      engine.setProjection('perspective')
+      expect(engine.orbit?.enabled).toBe(false)
+    })
+
+    /** An orthographic pane shows the same thing wherever it stands: every gesture stays put. */
+    it('leaves an orthographic view to `OrbitControls`', () => {
+      const engine = backedOff()
+      engine.setProjection('orthographic')
+      const stood = engine.camera.position.clone()
+
+      host.dispatchEvent(press({ altKey: true }))
+      host.dispatchEvent(dragTo(420, 400))
+
+      expect(engine.camera.position.distanceTo(stood)).toBeCloseTo(0, 6)
     })
   })
 })
