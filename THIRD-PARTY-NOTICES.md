@@ -13,7 +13,7 @@ The terms below govern these components. They are not affected by the licence of
 | @mdi/js | 7.4.47 | Apache-2.0 |
 | @mdi/react | 1.6.1 | MIT |
 | @modelcontextprotocol/sdk | 1.30.0 | MIT |
-| @pasquelin/panels | 0.3.0 | MIT |
+| @pasquelin/panels | 0.3.3 | MIT |
 | @scenario-labs/sdk | 3.0.0 | MIT |
 | @tanstack/react-query | 5.101.4 | MIT |
 | @tanstack/react-virtual | 3.14.9 | MIT |
@@ -522,7 +522,7 @@ SOFTWARE.
 ```
 ## @pasquelin/panels
 
-Version: 0.3.0  
+Version: 0.3.3  
 Licence: MIT
 
 ```

@@ -14,7 +14,9 @@ export function resetChassis(): void {
   // A `<Shell>` mounted after another one wrote its arrangement would restore it instead of
   // settling, and the two tests would describe the same window.
   globalThis.localStorage?.removeItem(LAYOUT_KEY)
-  panelsStore.setState(panelsStore.getInitialState())
+  // `defaults` explicitly: `setState` MERGES, and the initial state names no such key — so the
+  // halves one file settled with would settle the next one's, for another surface entirely.
+  panelsStore.setState({ ...panelsStore.getInitialState(), defaults: undefined })
 }
 
 /**
