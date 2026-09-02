@@ -157,7 +157,7 @@ export function cellRect(at: Point, cell: number): Rect {
   return { x: at.x * cell, y: at.y * cell, width: cell, height: cell }
 }
 
-/** The walk below is quadratic: 2048 a side costs 323 ms of the UI thread, 4096 costs 2 415 ms. */
+/** A filled walk is quadratic: 2048 a side costs 323 ms of the UI thread, 4096 costs 2 415 ms. */
 const MAX_RECT_CELLS = 4_194_304
 
 /**
@@ -171,14 +171,21 @@ export function cellsOfRect(from: Point, to: Point, filled: boolean): Point[] {
   const top = Math.min(from.y, to.y)
   const bottom = Math.max(from.y, to.y)
   if (!Number.isFinite(left + right + top + bottom)) return []
-  if ((right - left + 1) * (bottom - top + 1) > MAX_RECT_CELLS) return []
+
+  // An outline costs its PERIMETER, not its area: scanning the inside to throw it away made a
+  // hollow 4096 a side cost the sixteen million steps of a filled one to emit sixteen thousand.
+  const wide = right - left + 1
+  const high = bottom - top + 1
+  if ((filled ? wide * high : 2 * (wide + high)) > MAX_RECT_CELLS) return []
 
   const cells: Point[] = []
   for (let y = top; y <= bottom; y += 1) {
-    const edge = y === top || y === bottom
-    for (let x = left; x <= right; x += 1) {
-      if (filled || edge || x === left || x === right) cells.push({ x, y })
+    if (filled || y === top || y === bottom) {
+      for (let x = left; x <= right; x += 1) cells.push({ x, y })
+      continue
     }
+    cells.push({ x: left, y })
+    if (right !== left) cells.push({ x: right, y })
   }
   return cells
 }

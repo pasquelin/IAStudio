@@ -245,6 +245,35 @@ describe('the pixel-art grid, driven by value', () => {
     expect(laid).toEqual([12, 16, 6, 32 * 32])
   })
 
+  /**
+   * 🛑 A box far larger than the grid is CLIPPED before it is walked, never after: every cell it
+   * drops was going to be dropped anyway, and « fill 0 to 99 999 » cost 264 ms of the UI thread.
+   */
+  it('fills the part of an oversized box that lands on the grid', async () => {
+    onGrid(16)
+    const laid: number[] = []
+    drop = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({
+        paintCells: (_layer, rects) => {
+          laid.push(rects.length)
+          return true
+        },
+      }),
+    )
+
+    await runAction('canvas.drawPixels', {
+      shape: 'rectangle',
+      x: 0,
+      y: 0,
+      toX: 99_999,
+      toY: 99_999,
+      filled: true,
+      color: '#ff0000',
+    })
+
+    expect(laid).toEqual([32 * 32])
+  })
+
   // 🛑 `Number('')` is zero, so a bare "3" used to land on row nought without a word said.
   it('refuses a cell that does not name both of its coordinates', async () => {
     onGrid(16)
@@ -461,6 +490,18 @@ describe('building a stack', () => {
 
     await runAction('layer.ungroup', { layerId: groupId })
     expect(canvas().layers.some(one => one.id === groupId)).toBe(false)
+  })
+
+  /**
+   * 🛑 By NAME as well as by id, as every other layer gesture: a name copied out of `canvas.state`
+   * was answered « not at the top of the stack », which blames the stack for a lookup never made.
+   */
+  it('groups the layers a call names, not only the ones it numbers', async () => {
+    expect(
+      await runAction('layer.group', { layerIds: ['Fond', 'Sujet'], name: 'Décor' }),
+    ).toMatchObject({ ok: true })
+
+    expect(canvas().layers.map(one => one.kind)).toEqual(['group'])
   })
 
   /**

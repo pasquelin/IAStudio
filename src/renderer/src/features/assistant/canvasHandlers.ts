@@ -528,18 +528,30 @@ function group(input: Record<string, unknown>): ActionOutcome {
 
   // Top level only, which is all `groupLayers` gathers: an id that names nothing, or one that sits
   // INSIDE a group, would otherwise be dropped in silence and the group answered for regardless.
+  // By id OR by NAME, as every other layer gesture: a name read out of `canvas.state` was answered
+  // « not at the top of the stack », which blames the stack for a lookup that never happened.
   const top = new Set(open.state.layers.map(layer => layer.id))
-  const outside = layerIds.filter(id => !top.has(id))
+  const aimed = layerIds.map(given => layerAimed(open.state, given))
+  const outside = layerIds.filter((_, at) => {
+    const layer = aimed[at]
+    return layer === undefined || !top.has(layer.id)
+  })
   if (outside.length > 0)
     return refused(
       'notFound',
-      `only layers at the top of the stack can be grouped, and ${outside.join(', ')} is not one — canvas.state answers "layers" with their ids`,
+      `only layers at the top of the stack can be grouped, and ${outside.join(', ')} is not one — canvas.state answers "layers" with their ids and names`,
     )
 
   const groupId = newId()
   const outcome = run(
     open.documentId,
-    [groupLayers(layerIds, groupId, name)],
+    [
+      groupLayers(
+        aimed.flatMap(layer => (layer ? [layer.id] : [])),
+        groupId,
+        name,
+      ),
+    ],
     'those layers built no group',
   )
   return outcome.ok ? { ok: true, data: { layerId: groupId } } : outcome
@@ -737,12 +749,21 @@ function shapeCells(
   const to = { x: numberOf(input, 'toX'), y: numberOf(input, 'toY') }
   if (to.x === null || to.y === null) return null
 
-  const ends = [
-    { x: from.x, y: from.y },
-    { x: to.x, y: to.y },
-  ] as [Point, Point]
-  if (shape === 'line') return cellsOfLine(ends[0], ends[1])
-  return cellsOfRect(ends[0], ends[1], shape === 'fill' || boolOf(input, 'filled'))
+  if (shape === 'line') return cellsOfLine({ x: from.x, y: from.y }, { x: to.x, y: to.y })
+
+  // 🛑 A FILLED box is clipped to the grid before it is walked, never after: every cell it drops
+  // was going to be dropped anyway, and « fill 0 to 99 999 » then costs the document rather than
+  // 264 ms of the UI thread. An OUTLINE cannot be clipped — the border would move onto the edge
+  // of the grid, drawing four sides nobody asked for.
+  const filled = shape === 'fill' || boolOf(input, 'filled')
+  const within = (value: number, last: number): number => Math.min(Math.max(value, 0), last)
+  return filled
+    ? cellsOfRect(
+        { x: within(from.x, columns - 1), y: within(from.y, rows - 1) },
+        { x: within(to.x, columns - 1), y: within(to.y, rows - 1) },
+        true,
+      )
+    : cellsOfRect({ x: from.x, y: from.y }, { x: to.x, y: to.y }, false)
 }
 
 function drawPixels(input: Record<string, unknown>): ActionOutcome {

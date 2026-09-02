@@ -74,11 +74,23 @@ describe('cellsOfRect', () => {
     )
   })
 
-  // 🛑 Measured: 4096 a side is 2 415 ms of the UI thread, and the corners come from a caller —
-  // `canvas.drawPixels` names them, so nothing else stands between a model and a frozen window.
+  // 🛑 Measured: a FILLED 4096 a side is 2 415 ms of the UI thread, and the corners come from a
+  // caller — `canvas.drawPixels` names them, so nothing else stands between a model and a frozen
+  // window. Its clipping to the grid lives in the handler, which is the half that knows the grid.
   it('refuses corners no grid can hold rather than walking them', () => {
     expect(cellsOfRect({ x: 0, y: 0 }, { x: Number.NaN, y: 0 }, true)).toEqual([])
     expect(cellsOfRect({ x: 0, y: 0 }, { x: 99_999, y: 99_999 }, true)).toEqual([])
+  })
+
+  /**
+   * An outline costs its PERIMETER: scanning the inside to throw it away spent the sixteen million
+   * steps of a filled square to emit sixteen thousand cells. 2 415 ms became 1,5 ms.
+   */
+  it('walks the border of a square no filled one could reach', () => {
+    const border = cellsOfRect({ x: 0, y: 0 }, { x: 4095, y: 4095 }, false)
+
+    expect(border).toHaveLength(4096 * 2 + (4096 - 2) * 2)
+    expect(cellsOfRect({ x: 0, y: 0 }, { x: 4095, y: 4095 }, true)).toEqual([])
   })
 })
 
