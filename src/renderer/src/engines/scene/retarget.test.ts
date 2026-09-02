@@ -195,6 +195,23 @@ describe('how well an animation fits a character', () => {
     expect(retargetFitOf(bare, HUMAN).missingInTarget).toContain('Head')
   })
 
+  /**
+   * 🛑 The screen said « this joint stays at rest » about a joint the transfer went on to drive:
+   * the plan read the corrections and the verdict read the names alone.
+   */
+  it('reads the roles put right by hand, exactly as a transfer does', () => {
+    const odd = treeOf(['b0', 'b1'])
+    const corrected = new Map([
+      [
+        skeletonSignatureOf(['b0', 'b1']),
+        { signature: 'ignored', roles: { b0: 'Hips' as HumanoidRole } },
+      ],
+    ])
+
+    expect(retargetFitOf(odd, HUMAN).matched).toEqual([])
+    expect(retargetFitOf(odd, HUMAN, corrected).matched).toEqual(['Hips'])
+  })
+
   // « Compatible » has to be a measurement rather than a hope: two skeletons of one convention
   // leave nothing on either side.
   it('finds nothing missing between two skeletons of the same convention', () => {

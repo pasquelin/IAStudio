@@ -1,3 +1,4 @@
+import { retargetFitOf } from './retarget'
 import {
   AnimationClip,
   Bone,
@@ -985,6 +986,8 @@ describe('SceneRenderer and the animations the app ships with', () => {
         asked.push({ target, clips: clips.map(clip => clip.name) })
         return Promise.resolve([...clips])
       },
+      // Read through the corrections a transfer would use — the double has none to apply.
+      fitOf: (target, source) => retargetFitOf(target, source),
       remember: profile => void learnt.push(profile),
       dispose: () => {},
     }

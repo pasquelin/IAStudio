@@ -195,7 +195,7 @@ import BvhWorker from './bvh.worker?worker'
 import CsgWorker from '../csg/csg.worker?worker'
 import SkinWorker from '../character/skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
-import { createRetarget, retargetFitOf, type Retarget, type RetargetFit } from './retarget'
+import { createRetarget, type Retarget, type RetargetFit } from './retarget'
 import {
   applyRig,
   positionsIn,
@@ -3690,7 +3690,7 @@ export class SceneRenderer {
 
       // Before the retarget and not after: it is the only moment both skeletons are in hand, and
       // it is what lets the screen say WHICH joint the motion has nothing to drive.
-      this.options.onClipFit?.(nodeId, clip.key, retargetFitOf(holder, source))
+      this.options.onClipFit?.(nodeId, clip.key, this.retarget.fitOf(holder, source))
 
       const adapted = (await this.retarget.adapt(holder, source, [first]))?.[0]
       if (!adapted || this.objects.get(nodeId) !== holder) return

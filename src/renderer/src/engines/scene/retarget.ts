@@ -51,6 +51,13 @@ export type Retarget = {
     watch?: { onProgress?: (progress: number) => void; signal?: AbortSignal },
   ) => Promise<AnimationClip[] | null>
   /**
+   * How well a motion fits this character, read through the very corrections a transfer uses.
+   *
+   * On the port and not called free-standing: the recorded roles live here, and a verdict read
+   * without them announced a joint « staying at rest » that the transfer went on to drive.
+   */
+  fitOf: (target: Object3D, source: Object3D) => RetargetFit
+  /**
    * What a skeleton of that signature means, from now on and for every model carrying it.
    *
    * Recognised by SIGNATURE and not by model: a mapping put right on one character is the same
@@ -92,6 +99,8 @@ export function createRetarget(spawn: () => Worker): Retarget {
 
       return adapted && adapted.map(clipFromWire)
     },
+
+    fitOf: (target, source) => retargetFitOf(target, source, profiles),
 
     remember: profile => void profiles.set(profile.signature, profile),
 
@@ -159,9 +168,13 @@ export function bodyFitOf(fit: RetargetFit): Omit<RetargetFit, 'matched'> {
   }
 }
 
-export function retargetFitOf(target: Object3D, source: Object3D): RetargetFit {
-  const targetRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(target)))))
-  const sourceRoles = new Set(Object.values(boneRolesOf(namedBonesOf(wireBonesOf(source)))))
+export function retargetFitOf(
+  target: Object3D,
+  source: Object3D,
+  known?: ReadonlyMap<string, SkeletonProfile>,
+): RetargetFit {
+  const targetRoles = new Set(Object.values(rolesOf(wireBonesOf(target), known)))
+  const sourceRoles = new Set(Object.values(rolesOf(wireBonesOf(source), known)))
 
   return {
     matched: [...targetRoles].filter(role => sourceRoles.has(role)),
