@@ -8,13 +8,9 @@ import {
 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { EDGE_LAYER } from './sceneView'
-import { meshNode } from './scene-fixtures'
-import {
-  DRAWN_BY_INSTANCE,
-  WORTH_INSTANCING,
-  createInstancedGroups,
-  keepsItsGroup,
-} from './instancing'
+import { meshNode, walked } from './scene-fixtures'
+import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
+import { createInstancedGroups, keepsItsGroup } from './instancing'
 import type { SceneNode } from './sceneState'
 
 /** One shape, N nodes of it — a decor someone copied and pasted, which is the case that costs. */
@@ -97,7 +93,8 @@ describe('createInstancedGroups', () => {
     const { nodes, objects } = alike(WORTH_INSTANCING)
     createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
 
-    // What keeps picking alive: they are still in the scene, matrices and all — just not drawn.
+    // What keeps picking alive: they are still in `objects`, matrices and all — just neither
+    // drawn nor walked, which is a layer and a place in the tree, not the same thing.
     for (const mesh of objects.values()) {
       expect(mesh.layers.isEnabled(DRAWN_BY_INSTANCE)).toBe(true)
       expect(mesh.layers.isEnabled(0)).toBe(false)
@@ -370,6 +367,108 @@ describe('keepsItsGroup', () => {
     // them, since the source that stopped casting is the one nothing draws.
     for (const moved of elsewhere) {
       expect(keepsItsGroup(node, { ...node, ...moved })).toBe(false)
+    }
+  })
+})
+
+describe('the sources a group draws for', () => {
+  /** Hung where the engine hangs them: under the scene, which is what a render walks. */
+  const hungIn = (scene: Object3D, objects: Map<string, Mesh>): void => {
+    for (const mesh of objects.values()) scene.add(mesh)
+  }
+
+  it('leave the walk of the scene, which is what a frame pays for them', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    for (const mesh of objects.values()) expect(walked(scene)).not.toContain(mesh)
+  })
+
+  it('go on hanging from the node they belong to, which is what answers upward', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    for (const mesh of objects.values()) expect(mesh.parent).toBe(scene)
+  })
+
+  it('come back to the walk when their group shrinks under the floor', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    groups.rebuild(nodes.slice(0, 4), id => objects.get(id))
+    for (const node of nodes.slice(0, 4)) {
+      expect(walked(scene)).toContain(objects.get(node.id))
+    }
+  })
+
+  it('come back to it when the engine goes', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    groups.dispose()
+    for (const mesh of objects.values()) expect(walked(scene)).toContain(mesh)
+  })
+
+  it('leave it wearing the edges hung under them, which stand for no node', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    const edges = new Object3D()
+    edges.name = 'overlay'
+    objects.get('n0')?.add(edges)
+
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    expect(walked(scene)).not.toContain(objects.get('n0'))
+  })
+
+  it('stay in it when a node of its own hangs from one, which would go off the graph with it', () => {
+    const scene = host()
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    const carrier = objects.get('n0')
+    // Read off the DOCUMENT: the last pass may already have taken that child out of `children`,
+    // and a test on the live array would let its parent go on the second rebuild.
+    const lamp = meshNode('lamp', 'n0')
+    const bulb = new Object3D()
+    bulb.name = 'lamp'
+    carrier?.add(bulb)
+    objects.set('lamp', bulb as Mesh)
+
+    const groups = createInstancedGroups(scene)
+    const count = groups.rebuild([...nodes, lamp], id => objects.get(id))
+    groups.rebuild([...nodes, lamp], id => objects.get(id))
+
+    // Still DRAWN by the instance — only its place in the tree is kept.
+    expect(count).toBe(WORTH_INSTANCING)
+    expect(walked(scene)).toContain(carrier)
+    expect(walked(scene)).not.toContain(objects.get('n1'))
+  })
+
+  it('go back where a caller reads the tree, and out again after', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    hungIn(scene, objects)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    groups.hangSources()
+    const seen = walked(scene)
+    groups.dropSources()
+
+    for (const mesh of objects.values()) {
+      expect(seen).toContain(mesh)
+      expect(walked(scene)).not.toContain(mesh)
     }
   })
 })

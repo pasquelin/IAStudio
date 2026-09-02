@@ -158,6 +158,10 @@ const DOM_BOUND = [
   'src/renderer/src/engines/scene/scene-renderer-loaders.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-reskin.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
+  'src/renderer/src/engines/scene/sceneRendererGroups.test.ts',
+  // Mounts the engine to watch what holds the active zone; `paneMaterials` draws its matcap.
+  'src/renderer/src/engines/scene/sceneRendererZone.test.ts',
+  'src/renderer/src/engines/scene/sceneRendererExportOrder.test.ts',
   'src/renderer/src/engines/scene/threeFactory.test.ts',
   'src/renderer/src/engines/skybox/SkyboxRenderer.test.ts',
   'src/renderer/src/engines/material/MaterialRenderer.test.ts',

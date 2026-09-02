@@ -1,4 +1,5 @@
 import {
+  BatchedMesh,
   BoxGeometry,
   InstancedMesh,
   Matrix4,
@@ -162,5 +163,19 @@ describe('totalStats', () => {
     // thing on screen came out at the coolest step of the density ramp.
     expect(densityOf(many)).toBeGreaterThan(0)
     expect(densityOf(many)).toBeLessThan(lone)
+  })
+
+  it('counts every copy a lot draws, for the same reason', () => {
+    const geometry = new BoxGeometry(1, 1, 1)
+    const lone = densityOf(new Mesh(geometry, new MeshStandardMaterial()))
+
+    const lot = new BatchedMesh(8, 8 * 24, 8 * 36, new MeshStandardMaterial())
+    const shape = lot.addGeometry(geometry)
+    for (let at = 0; at < 8; at += 1) {
+      lot.setMatrixAt(lot.addInstance(shape), new Matrix4().makeTranslation(at * 2, 0, 0))
+    }
+
+    expect(densityOf(lot)).toBeGreaterThan(0)
+    expect(densityOf(lot)).toBeLessThan(lone)
   })
 })

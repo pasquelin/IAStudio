@@ -119,7 +119,7 @@ describe('ownedByAnotherNode', () => {
     const child = new Object3D()
     child.name = 'node-7'
 
-    expect(ownedByAnotherNode(new Map([['node-7', child]]))(child)).toBe(true)
+    expect(ownedByAnotherNode(id => (id === 'node-7' ? child : undefined))(child)).toBe(true)
   })
 
   // An imported file names its own objects, and one of them carrying an id would otherwise keep
@@ -128,11 +128,13 @@ describe('ownedByAnotherNode', () => {
     const impostor = new Object3D()
     impostor.name = 'node-7'
 
-    expect(ownedByAnotherNode(new Map([['node-7', new Object3D()]]))(impostor)).toBe(false)
+    expect(ownedByAnotherNode(id => (id === 'node-7' ? new Object3D() : undefined))(impostor)).toBe(
+      false,
+    )
   })
 
   it('walks through what the file left unnamed', () => {
-    expect(ownedByAnotherNode(new Map())(new Object3D())).toBe(false)
+    expect(ownedByAnotherNode(() => undefined)(new Object3D())).toBe(false)
   })
 })
 

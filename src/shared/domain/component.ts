@@ -21,6 +21,18 @@ export type ComponentType =
 export type Component = { type: ComponentType } & { readonly [key: string]: JsonValue }
 
 /**
+ * The types that say an entity MOVES ON ITS OWN, declared rather than deduced.
+ *
+ * 🛑 No new type for it: a component nothing simulates is a form field that does nothing, and
+ * these three already carry the meaning — a body with any of them is one a system drives. What
+ * reads this is the drawing side, which files a mover apart from the bodies that never budge.
+ */
+const MOVERS: readonly ComponentType[] = ['Movement', 'RigidBody', 'CharacterController']
+
+export const movesOnItsOwn = (components: readonly Component[] | undefined): boolean =>
+  components?.some(component => MOVERS.includes(component.type)) ?? false
+
+/**
  * The list with `component` on it — replacing the one of its type rather than doubling it. One
  * `Health` per entity: two would leave the winner to whichever a system happened to read first.
  */

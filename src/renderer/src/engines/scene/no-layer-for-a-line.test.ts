@@ -24,6 +24,9 @@ const OTHER_SENSES: Record<string, string> = {
   sceneDocument: 'the shot field that no longer exists, sorted once on read',
   gltfDocument: 'a layer of software — the file layer, and what MaterialX had one down',
   instancing: 'three.js `Layers`: the one the camera skips once an instance draws the mesh',
+  batching: 'three.js `Layers`: the same one, once a lot draws the mesh',
+  cellInstancing: 'three.js `Layers`: the same one again, once a cell of the world draws it',
+  grouping: 'three.js `Layers`: the constant itself, which both strategies share',
   SceneRenderer: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
 }
 

@@ -1,3 +1,4 @@
+import type { Object3D } from 'three'
 import { Texture, type ColorSpace } from 'three'
 import {
   DEFAULT_CAMERA,
@@ -21,6 +22,7 @@ import {
   type MeshNode,
   type ModelNode,
   type PathNode,
+  type SceneNode,
   type SpriteNode,
   type TextNode,
 } from './sceneState'
@@ -41,6 +43,26 @@ export function meshNode(id: string, parentId: string | null = null): MeshNode {
     type: 'mesh',
     geometry: { kind: 'box', width: 1, height: 1, depth: 1 },
     material: DEFAULT_MATERIAL,
+  }
+}
+
+/** What a walk of the tree actually meets — a source a group draws for is not in it. */
+export function walked(root: Object3D): Object3D[] {
+  const met: Object3D[] = []
+  root.traverse(child => met.push(child))
+  return met
+}
+
+/** A transform others hang from — what makes a body a CHILD rather than a root of the scene. */
+export function groupNodeFixture(id: string, parentId: string | null = null): SceneNode {
+  return {
+    id,
+    parentId,
+    name: id,
+    visible: true,
+    transform: IDENTITY_TRANSFORM,
+    ...shadowDefaults({ type: 'group' }),
+    type: 'group',
   }
 }
 
@@ -211,4 +233,16 @@ export function scriptedTextureCache() {
       return texture
     },
   }
+}
+
+/** A `.gltf` node as a file lists it — the two fields an export test reads. */
+export type GltfNode = { name?: string; children?: number[] }
+
+/** The nodes of the scene a renderer exports, in the order the file lists them. */
+export async function gltfNodesOf(renderer: {
+  exportTo: (format: 'gltf', scope: 'scene') => Promise<Uint8Array>
+}): Promise<GltfNode[]> {
+  const file = new TextDecoder().decode(await renderer.exportTo('gltf', 'scene'))
+  // `as`: a `.gltf` file holds glTF, and `nodes` is the field this reads.
+  return (JSON.parse(file) as { nodes?: GltfNode[] }).nodes ?? []
 }

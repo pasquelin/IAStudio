@@ -4,8 +4,12 @@
  * Imported for its SIDE EFFECT, by whoever casts a ray or measures one. Held apart because the
  * copy in `scenePicking.bench.ts` had drifted: it patched three prototypes of the four, so the
  * bench timed the slow path while the studio took the fast one, and nothing said so.
+ *
+ * All of them in ONE module: `BatchedMesh` overrides `raycast`, so patching `Mesh.prototype`
+ * alone leaves a lot walking its whole buffer under every instance.
  */
 import {
+  BatchedMesh,
   BufferGeometry,
   Matrix4,
   Mesh,
@@ -13,7 +17,13 @@ import {
   type Intersection,
   type Raycaster,
 } from 'three'
-import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
+import {
+  acceleratedRaycast,
+  computeBatchedBoundsTree,
+  computeBoundsTree,
+  disposeBatchedBoundsTree,
+  disposeBoundsTree,
+} from 'three-mesh-bvh'
 
 // three-mesh-bvh reads a `boundsTree` if the mesh has one and falls back to walking triangles if
 // it has none, so patching the prototypes once is safe for every mesh in the studio — the two
@@ -21,6 +31,9 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-
 BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
 BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
 Mesh.prototype.raycast = acceleratedRaycast
+BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree
+BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree
+BatchedMesh.prototype.raycast = acceleratedRaycast
 
 /** three's own, kept: it is the only one that reads a character where the pose actually put it. */
 const posedRaycast = SkinnedMesh.prototype.raycast
