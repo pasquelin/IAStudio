@@ -203,6 +203,17 @@ async function withRenderer<T>(
   }
 }
 
+/** Draw the pass and encode the frame — the two ports that return a PNG both did this. */
+export async function pngDrawn({
+  renderer,
+  pipeline,
+  material,
+  size,
+}: OffscreenFrame): Promise<PictureSize & { png: Uint8Array }> {
+  pipeline.renderToScreen(material)
+  return { ...size, png: await encodePng(renderer.domElement) }
+}
+
 /** The browser's own encoder — the one place where a per-pixel loop is not ours to write. */
 export async function encodePng(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))

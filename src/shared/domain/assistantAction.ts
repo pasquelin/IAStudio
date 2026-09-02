@@ -434,6 +434,21 @@ export function action(descriptor: AssistantAction): AssistantAction {
   return descriptor
 }
 
+/** The node in front, named the same way in every family that points at one. */
+export const NODE_ID: ActionField = {
+  key: 'nodeId',
+  kind: 'text',
+  labelKey: 'assistant.fields.nodeId',
+  required: true,
+}
+
+/** How one works on a channel or a row — the same three flags, two families. */
+export const MUTE_SOLO_LOCK: readonly ActionField[] = [
+  { key: 'muted', kind: 'boolean', labelKey: 'assistant.fields.muted', required: false },
+  { key: 'solo', kind: 'boolean', labelKey: 'assistant.fields.solo', required: false },
+  { key: 'locked', kind: 'boolean', labelKey: 'assistant.fields.locked', required: false },
+]
+
 /**
  * What lights a surface, as the two registries that ask it both name it: a PICTURE by asset id,
  * a sky DOCUMENT by title. Naming one is enough — a document lit by an asset is `skybox` by that

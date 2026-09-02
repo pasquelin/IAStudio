@@ -1,7 +1,7 @@
 import { mdiBugOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { RuntimeReport } from '@shared/domain/gameRuntime'
+import { faultsOf, type RuntimeReport } from '@shared/domain/gameRuntime'
 import { VIEWPORT_READOUT } from '@/components/styles'
 import { ToolButton } from '@/components/ToolButton'
 import { cn } from '@/helpers/cn'
@@ -16,10 +16,7 @@ export function GameWindowDebug({ report }: { report: RuntimeReport }) {
   const { t, i18n } = useTranslation()
   const [open, setOpen] = useState(false)
 
-  const faults = [
-    ...report.errors.map(one => `${one.script}:${one.line} — ${one.message}`),
-    ...report.logs.filter(entry => entry.level === 'error').map(entry => entry.message),
-  ]
+  const faults = faultsOf(report)
 
   return (
     <div className="absolute bottom-2 left-2 flex flex-col items-start gap-2">

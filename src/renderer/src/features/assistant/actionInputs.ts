@@ -50,6 +50,12 @@ export function maybeBoolOf(input: Record<string, unknown>, key: string): boolea
   return input[key] === undefined ? null : readBoolean(input, key, false)
 }
 
+/** One optional flag of a partial write, or nothing — the difference `boolOf` cannot carry. */
+export function flagNamed(input: Record<string, unknown>, key: string): Record<string, boolean> {
+  const value = maybeBoolOf(input, key)
+  return value === null ? {} : { [key]: value }
+}
+
 /** A closed set, read by value. Numbers as well as words: `1 | 2 | 4` is a choice like any other. */
 export function oneOf<T extends string | number>(
   input: Record<string, unknown>,

@@ -41,7 +41,7 @@ import {
   writeTrack,
 } from '@/stores/sequences'
 import { answered, withAsset, withBridge, type ActionHandlers } from './actionHandler'
-import { boolOf, numberOf, oneOf, textOf } from './actionInputs'
+import { flagNamed, numberOf, oneOf, textOf } from './actionInputs'
 
 /**
  * Clips and tracks, driven by value.
@@ -322,9 +322,9 @@ function adjustTrack(input: Record<string, unknown>): ActionOutcome {
   const height = numberOf(input, 'height')
   writeTrack(open.documentId, track.id, current => ({
     ...current,
-    ...(input.muted === undefined ? {} : { muted: boolOf(input, 'muted') }),
-    ...(input.solo === undefined ? {} : { solo: boolOf(input, 'solo') }),
-    ...(input.locked === undefined ? {} : { locked: boolOf(input, 'locked') }),
+    ...flagNamed(input, 'muted'),
+    ...flagNamed(input, 'solo'),
+    ...flagNamed(input, 'locked'),
     ...(height === null ? {} : { height: clampTrackHeight(height) }),
   }))
   return { ok: true }

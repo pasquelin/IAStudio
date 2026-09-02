@@ -61,6 +61,13 @@ export type DocumentDescriptor = {
   sourceAssetId?: string
 }
 
+/** Last of two same paths wins — the path is the tree's id for a row, not the document id. */
+export function documentsByPath(
+  documents: readonly DocumentDescriptor[],
+): Map<string, DocumentDescriptor> {
+  return new Map(documents.map(document => [document.path, document]))
+}
+
 /**
  * What each space opens, FIRST one first.
  *

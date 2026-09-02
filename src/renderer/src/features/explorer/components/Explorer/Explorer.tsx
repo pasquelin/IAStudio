@@ -11,6 +11,7 @@ import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import {
   documentExtensionOf,
+  documentsByPath,
   documentStemOf,
   kindForExtension,
   type DocumentDescriptor,
@@ -171,11 +172,7 @@ export function Explorer() {
   // used to be the id, which worked only for as long as the id WAS the file name; then the file
   // name, which worked only for as long as every document sat in one folder — two `Niveau.gltf`
   // in two folders handed one document's descriptor to the other one's row.
-  const documentsByFile = useMemo(() => {
-    const found = new Map<string, DocumentDescriptor>()
-    for (const document of stored) found.set(document.path, document)
-    return found
-  }, [stored])
+  const documentsByFile = useMemo(() => documentsByPath(stored), [stored])
 
   /**
    * The descriptor behind an entry, or nothing. Every document is a FILE now, containers

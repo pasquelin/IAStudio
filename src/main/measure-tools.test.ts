@@ -67,6 +67,40 @@ describe('the duplication detector still looking at the tree', () => {
 })
 
 /**
+ * dry-ts sees Type-2/3 clones that jscpd cannot — same shape, names forgotten. It reports, it
+ * does not gate: a fail-on-any-cluster would go red on ipc ↔ main ↔ renderer, which is written
+ * twice on purpose. **What it does not see:** two components of the same role with different JSX.
+ */
+const dryTs = (): Record<string, unknown> => {
+  const config = readJson('.dry-ts.json')
+  if (typeof config !== 'object' || config === null)
+    throw new Error('.dry-ts.json is not an object')
+  return { ...config }
+}
+
+describe('the structural duplicate detector still looking at the tree', () => {
+  it('drops tests and fixtures, not the sources', () => {
+    expect(dryTs()['excludeTests']).toBe(true)
+    expect(dryTs()['exclude']).toEqual([
+      '**/fixtures/**',
+      '**/*-fixtures.ts',
+      '**/*-fixtures.tsx',
+      '**/public/**',
+    ])
+  })
+
+  it('is reachable by a name, not only by remembering the binary', () => {
+    expect(manifest.scripts.dry).toContain('dry-ts')
+    expect(manifest.scripts['duplication:report']).toContain('scripts/duplication-report.mjs')
+  })
+
+  it('is a report, not a link of the gate', () => {
+    expect(manifest.scripts.validate).not.toContain('pnpm dry')
+    expect(manifest.scripts.validate).not.toContain('duplication:report')
+  })
+})
+
+/**
  * **knip reaches `src/main` and nothing else here, and no configuration found so far changes
  * that.** Measured, not assumed: the same unreachable export appended to `src/main/log.ts`, to
  * `src/renderer/src/helpers/cn.ts` and to `src/shared/hash.ts` is reported for the first alone.

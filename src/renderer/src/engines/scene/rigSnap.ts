@@ -11,6 +11,7 @@
  */
 import type { Rig, RigBone } from '@shared/domain/rig'
 import type { Vector3 } from '@shared/domain/transform'
+import { worldPlaces } from '../character/rigWorld'
 import type { Bounds } from './rigFit'
 import type { RigState } from './rigState'
 
@@ -85,7 +86,7 @@ export function rigSnappedTo(rig: Rig, sample: MeshSample): Rig {
   const vertices = Math.floor(sample.points.length / 3)
   if (height <= 0 || vertices < ENOUGH) return rig
 
-  const fitted = worldPositions(rig.bones)
+  const fitted = worldPlaces(rig.bones)
   const across = acrossOf(sample.bounds)
   const centre = (sample.bounds.min[across] + sample.bounds.max[across]) / 2
   const span = { slice: height * SLICE, reach: height * REACH }
@@ -111,30 +112,6 @@ export function rigSnappedTo(rig: Rig, sample: MeshSample): Rig {
 
   const grain = height * GRAIN
   return { ...rig, bones: rig.bones.map(bone => rested(bone, world, fitted, grain)) }
-}
-
-/** Where every bone ends up in the model's space, by walking each one's parents back up. */
-function worldPositions(bones: readonly RigBone[]): Map<string, Vector3> {
-  const byName = new Map(bones.map(bone => [bone.name, bone]))
-  const world = new Map<string, Vector3>()
-
-  const place = (bone: RigBone): Vector3 => {
-    const known = world.get(bone.name)
-    if (known) return known
-
-    const parent = bone.parent === null ? null : byName.get(bone.parent)
-    const base = parent && parent !== bone ? place(parent) : { x: 0, y: 0, z: 0 }
-    const here = {
-      x: base.x + bone.rest.position.x,
-      y: base.y + bone.rest.position.y,
-      z: base.z + bone.rest.position.z,
-    }
-    world.set(bone.name, here)
-    return here
-  }
-
-  for (const bone of bones) place(bone)
-  return world
 }
 
 /** Which horizontal axis the body runs across — the same reading the fit makes. */

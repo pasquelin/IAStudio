@@ -1,6 +1,7 @@
 import {
   action,
   ENVIRONMENT_FIELDS,
+  NODE_ID as NODE,
   RELATIVE_FIELD,
   type ActionField,
   type AssistantAction,
@@ -38,13 +39,6 @@ import {
  *
  * They act on the 3D tab in front, and `studio.state` says which one that is.
  */
-
-const NODE: ActionField = {
-  key: 'nodeId',
-  kind: 'text',
-  labelKey: 'assistant.fields.nodeId',
-  required: true,
-}
 
 /**
  * Everything the Add menu offers, in one list — the primitives, the lights, and the three
@@ -253,7 +247,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [{ key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true }],
+    fields: [NODE],
   }),
   action({
     /** Undoes a fold: the brushes the graph kept come back as meshes, where they stood. */
@@ -610,7 +604,7 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [
-      { key: 'nodeId', kind: 'text', labelKey: 'assistant.fields.nodeId', required: true },
+      NODE,
       {
         key: 'startSeconds',
         kind: 'number',

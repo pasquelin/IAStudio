@@ -95,6 +95,7 @@ export const BUILD_ONLY: string[] = [
   '@types/react-is',
   '@types/three',
   '@vitejs/plugin-react',
+  'dry-ts',
   'electron-builder',
   'electron-vite',
   'eslint',

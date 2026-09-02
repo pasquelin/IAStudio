@@ -93,6 +93,8 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 | `pnpm validate` | the gate: every check a commit must pass, chained. `package.json` names its links, and the CI job runs this very command rather than a copy of it |
 | `pnpm unused:main` | knip — exports, files and dependencies nothing reaches. **`src/main` only**: the same unreachable export is reported there and ignored under `renderer` and `shared`, and no configuration found so far widens it |
 | `pnpm duplication` | jscpd — blocks written twice, from sixty tokens up, over the whole of `src` |
+| `pnpm dry` | dry-ts — same-shape functions, names forgotten, tests excluded |
+| `pnpm duplication:report` | classified jscpd + dry-ts report (production vs tests, same-name first) |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
 
 ---

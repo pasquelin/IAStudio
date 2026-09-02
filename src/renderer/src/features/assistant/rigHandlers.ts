@@ -59,7 +59,7 @@ import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { laySceneClip, sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
 import { NO_SCENE } from './sceneHandlers'
-import { boolOf, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
+import { boolOf, flagNamed, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
 
 /**
@@ -628,10 +628,4 @@ export const RIG_HANDLERS: ActionHandlers = {
       writeAnimationTrack(documentId, track.id, held => ({ ...held, ...flags }))
       return { ok: true }
     }),
-}
-
-/** One flag of a channel, or nothing at all — the difference `boolOf` alone cannot carry. */
-function flagNamed(input: Record<string, unknown>, key: string): Record<string, boolean> {
-  const value = maybeBoolOf(input, key)
-  return value === null ? {} : { [key]: value }
 }

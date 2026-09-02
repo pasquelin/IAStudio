@@ -1,4 +1,10 @@
-import { action, type ActionField, type AssistantAction } from './assistantAction'
+import {
+  action,
+  MUTE_SOLO_LOCK,
+  NODE_ID as NODE,
+  type ActionField,
+  type AssistantAction,
+} from './assistantAction'
 import { DIRECT_PROPERTIES } from './animation'
 import { BODY_PARTS, HUMANOID_ROLES } from './humanoid'
 import { CLIP_SOURCES, CLIP_SPEED, MAX_CLIP_FADE, ROOT_MOTIONS } from './scene'
@@ -16,13 +22,6 @@ import { CLIP_SOURCES, CLIP_SPEED, MAX_CLIP_FADE, ROOT_MOTIONS } from './scene'
  * `rig.*`, `bone.*` and `ik.*` act on the character the skeleton window holds and name no node.
  * What plays WHEN is a property of a scene, so the band's own actions still name one.
  */
-const NODE: ActionField = {
-  key: 'nodeId',
-  kind: 'text',
-  labelKey: 'assistant.fields.nodeId',
-  required: true,
-}
-
 const BONE: ActionField = {
   key: 'bone',
   kind: 'text',
@@ -440,11 +439,6 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: false,
     reach: 'mcp',
-    fields: [
-      TRACK,
-      { key: 'muted', kind: 'boolean', labelKey: 'assistant.fields.muted', required: false },
-      { key: 'solo', kind: 'boolean', labelKey: 'assistant.fields.solo', required: false },
-      { key: 'locked', kind: 'boolean', labelKey: 'assistant.fields.locked', required: false },
-    ],
+    fields: [TRACK, ...MUTE_SOLO_LOCK],
   }),
 ]
