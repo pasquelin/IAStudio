@@ -9,7 +9,6 @@ import {
   type Sphere,
 } from 'three'
 import { cachedOn } from '../core/cachedOn'
-import { ownedByAnotherNode } from './shadows'
 import type { SceneNode } from './sceneState'
 
 /**
@@ -81,6 +80,8 @@ export type InstancedGroups = {
   hangSources: () => void
   /** Back out of the walk, where the last rebuild left them. */
   dropSources: () => void
+  /** Whether this object is one the groups hold out of the walk — see `heldOutOfDraw`. */
+  holdsSource: (object: Object3D) => boolean
   /**
    * Composes the world matrices of the sources held out of the walk, which no longer reaches
    * them. A group COPIES those matrices, so this runs between `updateMatrixWorld` and a rebuild.
@@ -94,6 +95,8 @@ export type InstancedGroups = {
 export type HeldOutOfDraw = {
   /** The sources a rebuild has just settled on. Whatever was held and is not goes back in. */
   hold: (meshes: readonly Mesh[]) => void
+  /** Whether this object is one of them — what a reader of the tree has to put back first. */
+  holds: (object: Object3D) => boolean
   /** Composes the world matrices of what is held: no walk of the scene reaches them. */
   refresh: () => void
   hang: () => void
@@ -117,6 +120,7 @@ export type HeldOutOfDraw = {
  */
 export function heldOutOfDraw(): HeldOutOfDraw {
   let held: readonly Mesh[] = []
+  let ours = new Set<Object3D>()
   /** Out of the walk is the resting state: a rebuild alone takes its sources out of it. */
   let hung = false
 
@@ -141,8 +145,8 @@ export function heldOutOfDraw(): HeldOutOfDraw {
     if (hung === yes) return
     hung = yes
     for (const [parent, meshes] of byParent(held)) {
-      const ours = new Set<Object3D>(meshes)
-      const kept = parent.children.filter(child => !ours.has(child))
+      const moving = new Set<Object3D>(meshes)
+      const kept = parent.children.filter(child => !moving.has(child))
       parent.children = yes ? [...kept, ...meshes] : kept
     }
   }
@@ -155,6 +159,7 @@ export function heldOutOfDraw(): HeldOutOfDraw {
     hold: meshes => {
       if (hung) {
         held = meshes
+        ours = new Set<Object3D>(meshes)
         return
       }
       const out = new Set<Object3D>(meshes)
@@ -171,7 +176,10 @@ export function heldOutOfDraw(): HeldOutOfDraw {
         ]
       }
       held = meshes
+      ours = out
     },
+
+    holds: object => ours.has(object),
 
     // Nothing to compose while they are hung: the walk that just ran did it.
     refresh: () => {
@@ -231,6 +239,9 @@ export function sweep(
   keyOf: (node: SceneNode, mesh: Mesh) => string,
   sources: HeldOutOfDraw,
 ): Grouped[] {
+  const parented = new Set<string>()
+  for (const node of nodes) if (node.parentId) parented.add(node.parentId)
+
   const groups = new Map<string, Grouped>()
   for (const node of nodes) {
     if (node.type !== 'mesh') continue
@@ -257,7 +268,6 @@ export function sweep(
 
   const worth: Grouped[] = []
   const held: Mesh[] = []
-  const ownedByANode = ownedByAnotherNode(objectOf)
   for (const group of groups.values()) {
     // Back to the camera's layer: a group that shrank below the floor since the last pass would
     // otherwise stay invisible with nothing drawing it.
@@ -266,13 +276,16 @@ export function sweep(
       continue
     }
     worth.push(group)
-    for (const mesh of group.meshes) {
+    for (const [at, mesh] of group.meshes.entries()) {
       mesh.layers.set(DRAWN_BY_INSTANCE)
       // A source a NODE hangs from stays in the walk: that child would go off the graph with it,
       // and `hangFromParent` reads `parent`, which the holding leaves alone, so it would find the
       // child already where it belongs and put nothing back. The source is drawn by its group all
       // the same.
-      if (!mesh.children.some(ownedByANode)) held.push(mesh)
+      //
+      // Read off the DOCUMENT and never off `children`: the last pass may already have taken that
+      // child out of it, and the test would then let its parent go too.
+      if (!parented.has(group.ids[at] ?? '')) held.push(mesh)
     }
   }
   sources.hold(held)

@@ -1578,14 +1578,57 @@ export class SceneRenderer {
    */
   private movedWithWhatHangsFromThem(): Iterable<string> {
     if (this.childNodes.size === 0) return this.movedNodes
+    return this.descendantsOf(this.movedNodes)
+  }
 
-    const moved = [...this.movedNodes]
+  /**
+   * These nodes and everything hanging under them, read off the DOCUMENT: since a body a group
+   * draws for is held out of its parent's children, no walk of the objects can answer.
+   *
+   * Each id once, which is also what stops a `parentId` cycle from growing the list for ever.
+   */
+  private descendantsOf(ids: Iterable<string>): string[] {
+    const found = [...new Set(ids)]
+    const seen = new Set(found)
     // Grown while it is walked, so a whole branch is reached without a second structure.
-    for (let at = 0; at < moved.length; at += 1) {
-      const id = moved[at]
-      for (const child of (id && this.childNodes.get(id)) || []) moved.push(child)
+    for (let at = 0; at < found.length; at += 1) {
+      const id = found[at]
+      for (const child of (id && this.childNodes.get(id)) || []) {
+        if (seen.has(child)) continue
+        seen.add(child)
+        found.push(child)
+      }
     }
-    return moved
+    return found
+  }
+
+  /**
+   * Runs something that reads the tree DOWNWARD from these nodes, with the bodies their groups
+   * draw for hung back under them for the length of the call.
+   *
+   * `Box3.setFromObject` and `BoxHelper` walk `children` and nothing else, so without this the box
+   * of a group whose bodies are all drawn by one instance comes back EMPTY — a selection frame
+   * left at the origin, a surface snap that does nothing, handles sized against a degenerate span.
+   * Bounded by what is asked for rather than by the scene: the parents touched are these nodes.
+   */
+  private withHungUnder<T>(ids: Iterable<string>, run: () => T): T {
+    const hung: Object3D[] = []
+    for (const id of this.descendantsOf(ids)) {
+      const object = this.objects.get(id)
+      if (object?.parent && this.instances.holdsSource(object)) {
+        object.parent.children.push(object)
+        hung.push(object)
+      }
+    }
+    try {
+      return run()
+    } finally {
+      const ours = new Set<Object3D>(hung)
+      for (const object of hung) {
+        const parent = object.parent
+        if (parent) parent.children = parent.children.filter(child => !ours.has(child))
+      }
+    }
   }
 
   private readChildNodes(): void {
@@ -2850,11 +2893,16 @@ export class SceneRenderer {
       !this.aids.idle()
     if (!wants) return
 
-    this.aids.apply(this.objects, this.selectedIds, this.view, {
-      box: this.viewport.paletteToken('--color-accent'),
-      origin: this.viewport.paletteToken('--color-muted'),
-      normal: this.viewport.paletteToken('--color-accent'),
-    })
+    // Every node when the boxes are drawn on all of them, the selection alone otherwise: that is
+    // exactly the set `showsAid` reads a box off, and hanging more would be a walk for nothing.
+    const aided = this.view.boundingBoxes === 'all' ? this.objects.keys() : this.selectedIds
+    this.withHungUnder(aided, () =>
+      this.aids.apply(this.objects, this.selectedIds, this.view, {
+        box: this.viewport.paletteToken('--color-accent'),
+        origin: this.viewport.paletteToken('--color-muted'),
+        normal: this.viewport.paletteToken('--color-accent'),
+      }),
+    )
     this.redraw()
   }
 
@@ -2875,7 +2923,7 @@ export class SceneRenderer {
     const aligning = this.view.snapSurfaceAlign
     if (aligning) held.quaternion.copy(this.surfaceHeld)
     held.updateMatrixWorld(true)
-    this.surfaceBox.setFromObject(held)
+    this.withHungUnder(this.selectedIds, () => this.surfaceBox.setFromObject(held))
     if (this.surfaceBox.isEmpty()) return
 
     this.surfaceRay.set(surfaceRayFrom(this.surfaceBox, this.surfaceFrom), DOWNWARD)
@@ -2895,7 +2943,7 @@ export class SceneRenderer {
         held.quaternion,
       )
       held.updateMatrixWorld(true)
-      this.surfaceBox.setFromObject(held)
+      this.withHungUnder(this.selectedIds, () => this.surfaceBox.setFromObject(held))
     }
 
     held.position.y += surfaceLift(this.surfaceBox.min.y, hit.point.y, this.view.snapSurfaceOffset)
@@ -2912,7 +2960,11 @@ export class SceneRenderer {
   private surfaceRoots(): Object3D[] {
     this.surfaceScope.length = 0
     for (const object of this.objects.values()) {
-      if (object.parent === this.viewport.scene) this.surfaceScope.push(object)
+      // A body held out of the walk is reached from no root at all, so it is one: a floor of
+      // sixteen identical tiles inside a group would otherwise stop being a surface to land on.
+      if (object.parent === this.viewport.scene || this.instances.holdsSource(object)) {
+        this.surfaceScope.push(object)
+      }
     }
 
     return this.surfaceScope
@@ -2939,7 +2991,7 @@ export class SceneRenderer {
     if (!this.gizmo || !held) return
 
     held.updateMatrixWorld(true)
-    this.gizmoBox.setFromObject(held)
+    this.withHungUnder(this.selectedIds, () => this.gizmoBox.setFromObject(held))
     // The MODE decides how far the outermost handle stands: a rotation ring reaches further than
     // an arrow, so the same size wraps two different radii.
     if (this.mode === 'select') return
@@ -3788,7 +3840,9 @@ export class SceneRenderer {
       this.shadowBounds = boundsOf(this.framedObjects())
       return this.shadowBounds
     }
-    for (const id of this.movedNodes) {
+    // What hangs under them too: a body a group draws for is out of its parent's children, and a
+    // box that missed it would be a frustum too NARROW — the direction that clips a shadow off.
+    for (const id of this.descendantsOf(this.movedNodes)) {
       const object = this.objects.get(id)
       if (object && isFramed(this.applied.get(id)?.type ?? 'group')) {
         this.shadowBounds.expandByObject(object)

@@ -60,7 +60,9 @@ son parent et ne fait rien. Ce qui lit **vers le bas** ne la voit plus.
 | l'export | `placedCopy` puis `traverse` des copies | **les perdrait** — `asHung` les raccroche le temps de l'appel, et `syncSourceWalk` les ressort |
 | `nodeAt`, `sceneryUnder`, le snap de surface | `intersectObjects([...objects.values()])` | rien : le rayon prend une liste, jamais la scène |
 | `statsOf` | `objects.values()` puis les enfants, dédoublonné par `met` | rien : chaque source y est encore, comptée une fois |
-| `framedObjects`, `sceneHeight`, la boîte d'ombre | `expandByObject` par objet d'`objects` | rien : chacune est étendue pour elle-même |
+| `framedObjects`, `sceneHeight` | `expandByObject` par objet d'`objects` | rien : chacune est étendue pour elle-même |
+| le snap de surface, la taille du gizmo, le cadre de sélection, les axes, l'aide des normales | `setFromObject` **d'UN nœud** | 🛑 **les perdait** — c'est la régression du § 12, corrigée par `withHungUnder` |
+| la boîte d'ombre incrémentale | `expandByObject` des nœuds bougés | les perdait aussi — corrigée par `descendantsOf` |
 | `exportTo`, `nodeAt`, le gizmo, `placedCopy` | par identifiant | rien, comme le disait le brief |
 | `hangFromParent`, `release`, `applyVisibility`, `tuneShadows`, l'isolation | `objects` et `parent` | rien — voir `unhang` au § 8 pour la seule qui mentait |
 | l'aide « normales » d'une sélection | `meshOf` descend du sélectionné | **angle mort assumé** : un groupe dont tous les meshes sont détachés ne lui rend aucun mesh |
@@ -71,12 +73,13 @@ son parent et ne fait rien. Ce qui lit **vers le bas** ne la voit plus.
 |---|---|---|---|---|---|
 | S1 · 544 | 8,3 · 8,3 → 8,3 · 8,3 | 0,22 · 0,25 → **0,17 · 0,19** | 1,72 · 1,21 → 1,33 · 1,99 | 120 → 120 | 122 |
 | S2 · 10 000 | 8,3 · 8,3 → 8,3 · 8,3 | 1,69 · 1,65 → **0,11 · 0,12** | 2,97 · 2,08 → 1,67 · 3,36 | 120 → 120 | 57 |
-| S3 · 50 000 | **22,0 · 25,2 → 8,3 · 8,4** | 16,2 · 18,1 → **0,28 · 0,26** | 6,64 · 12,8 → 4,15 · 6,58 | **45,5 · 39,7 → 120 · 119** | 169 |
+| S3 · 50 000 | **22,0 · 25,2 → 8,3 · 8,2** | 16,2 · 18,1 → **0,28 · 0,30** | 6,64 · 12,8 → 4,74 · 4,18 | **45,5 · 39,7 → 120 · 122** | 169 |
 
 Passe de scène en vue tournée (70 % hors champ) : S3 **16,4 · 15,7 → 0,27 · 0,26**.
 
-Le GPU, lui, ne se compare pas d'un ordre à l'autre — 4,15 en ordre normal contre 6,58 en inversé
-sur la MÊME scène, comme C1 l'écrivait déjà de sa colonne. Seules les passes CPU tranchent.
+Le GPU, lui, ne se compare pas d'un ordre à l'autre — quatre relevés de S3 donnent 4,15 · 6,58 ·
+4,74 · 4,18 sur la MÊME scène, comme C1 l'écrivait déjà de sa colonne. Seules les passes CPU
+tranchent.
 
 Le lot y gagne aussi, mais **en vue tournée seulement** — S3 20,8 · 22,4 → 5,5 · 5,7 ms de passe ;
 plein champ son parcours par instance domine et ne bouge pas (27,7 · 29,6 → 26,5 · 26,0). Le défaut
@@ -190,6 +193,28 @@ avec les groupes, seul moment où un parent peut avoir changé.
 — three splice par index et n'efface `parent` que s'il le trouve. Un nœud relâché serait raccroché
 par le regroupement suivant, géométrie libérée comprise. `unhang` ferme le cas.
 
+## 8 bis. Ce que la revue a trouvé, et ce qui en a été fait
+
+Sept trouvailles d'une revue adverse en lecture seule. **Quatre partagent une cause, et c'était une
+vraie régression** : ma cartographie avait vérifié les lectures qui BOUCLENT sur `this.objects`, pas
+celles qui descendent d'UN nœud. `Box3.setFromObject(nœud)` ne marche que par `children`, donc la
+boîte d'un groupe dont tous les corps sont dessinés par une instance revenait **VIDE**.
+
+| trouvaille | état |
+|---|---|
+| le snap de surface ne faisait plus rien sur un groupe (boîte vide) | corrigée, gardée |
+| un sol de seize tuiles identiques dans un groupe n'était plus une surface où poser | corrigée (`surfaceRoots`), gardée |
+| le cadre de sélection, les axes d'origine et l'aide des normales d'un groupe | corrigées, gardées |
+| la taille du gizmo calculée sur un vide | corrigée |
+| la boîte d'ombre incrémentale manquait les corps tenus | corrigée, **non gardée** : le seul chemin qui l'atteint remet la boîte à zéro, et le cas se noie dans un défaut d'ordre plus ancien — les ombres sont ajustées AVANT que les matrices ne soient rafraîchies |
+| le test « un nœud pend de moi » n'était pas idempotent : il lisait `children`, que la passe précédente avait déjà vidé, donc au second tour le parent partait aussi | corrigée (lecture du DOCUMENT), gardée |
+| la descente des nœuds bougés dupliquait les identifiants et n'avait aucune garde de cycle | corrigée (`descendantsOf` avec un `Set`) |
+
+Le correctif est **borné par ce qu'on demande**, jamais par la scène : `withHungUnder` raccroche
+les corps sous les nœuds dont on lit la boîte — la sélection, ou tout si les boîtes sont dessinées
+sur tout — et les ressort. Relevés rejoués après : S3 passe 0,28 · 0,30, `1 bougé` 3,1 · 3,6,
+`1 ajouté` 110 · 116. Rien n'a bougé.
+
 ## 9. Ce que cette phase ne mesure pas
 
 - **Un niveau PLAT.** Les deux scènes du banc sont des cubes pleins, ce qui est le pire cas pour une
@@ -201,7 +226,11 @@ par le regroupement suivant, géométrie libérée comprise. `unhang` ferme le c
 - **La mémoire.** Le tas JS suit l'ordre de mesure — § 4 — et la VRAM n'est publiée par aucune API.
 - **Windows et Linux** : un seul poste, un seul pilote.
 - **L'écran.** Aucune des trois scènes n'a été regardée en mode arêtes à 50 000 corps ; ce que le
-  § 5 en dit vient de la lecture du code et de deux cas de suite, pas d'un œil.
+  § 5 en dit vient de la lecture du code et de deux cas de suite, pas d'un œil. **Les cinq surfaces
+  du § 8 bis non plus** : elles sont gardées par des cas, jamais vues.
+- **Le coût de `withHungUnder` quand les boîtes sont dessinées sur TOUT** (`boundingBoxes: 'all'`) :
+  une passe sur la scène entière par rafraîchissement des aides. Ce mode bâtit déjà une aide par
+  nœud, donc le rapport est tenu — mais il n'est pas chiffré.
 
 ## 10. Où part le temps, maintenant
 

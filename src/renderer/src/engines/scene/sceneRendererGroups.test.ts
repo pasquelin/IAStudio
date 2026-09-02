@@ -1,9 +1,10 @@
-import { BatchedMesh, Group, InstancedMesh, Matrix4, type Object3D } from 'three'
+import { BatchedMesh, Box3, Group, InstancedMesh, Matrix4, Vector3, type Object3D } from 'three'
 import { byCodeUnit } from '@shared/text'
 import { describe, expect, it } from 'vitest'
 import { SceneRenderer, type GroupingStrategy } from './SceneRenderer'
 import { directionalLight, gltfNodesOf, groupNodeFixture, meshNode, walked } from './scene-fixtures'
 import { WORTH_INSTANCING } from './grouping'
+import type { GeometryDescriptor } from '@shared/domain/geometry'
 import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './sceneState'
 
 /**
@@ -296,5 +297,126 @@ describe.each(STRATEGIES)('the sources a %s group draws for, from outside the en
     renderer.apply({ ...EMPTY_SCENE, nodes: moved })
 
     expect(placedAt(renderer, 3)).toBe(115)
+  })
+})
+
+/** A shape of its own, so the bodies hanging from the bodies form a group of their own. */
+const KNOB_SHAPE: GeometryDescriptor = {
+  kind: 'sphere',
+  radius: 0.5,
+  widthSegments: 8,
+  heightSegments: 6,
+}
+
+/**
+ * What reads the tree DOWNWARD from a node, which a body held out of the walk is no longer part
+ * of. Every one of these came back EMPTY between the holding and its correction.
+ */
+describe.each(STRATEGIES)('a crate whose bodies a %s group draws', grouping => {
+  const inACrate = (): SceneNode[] => [
+    groupNodeFixture('crate'),
+    ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
+      ...meshNode(`c${at}`, 'crate'),
+      transform: {
+        position: { x: at * 5, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 },
+      },
+    })),
+  ]
+
+  const crateOf = (renderer: SceneRenderer): Object3D => {
+    const crate = graphOf(renderer).children.find(child => child.name === 'crate')
+    if (!crate) throw new Error('the crate was never built')
+    return crate
+  }
+
+  const settled = (): SceneRenderer => {
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes: inACrate() })
+    return renderer
+  }
+
+  it('measures as a box for whoever reads the tree downward', () => {
+    const renderer = settled()
+    // `as`: the one door every downward reader goes through, and it is private by design.
+    const engine = renderer as unknown as {
+      withHungUnder: <T>(ids: Iterable<string>, run: () => T) => T
+    }
+
+    const empty = engine.withHungUnder(['crate'], () =>
+      new Box3().setFromObject(crateOf(renderer)).isEmpty(),
+    )
+    // Empty is what a selection frame left at the origin, a snap that does nothing and handles
+    // sized against nothing all read.
+    expect(empty).toBe(false)
+    expect(new Box3().setFromObject(crateOf(renderer)).isEmpty()).toBe(true)
+  })
+
+  it('is a surface the ray can land on, tile by tile', () => {
+    const renderer = settled()
+    // `as`: the roots of the surface ray are what a snap intersects, private by design.
+    const roots = (renderer as unknown as { surfaceRoots: () => Object3D[] }).surfaceRoots()
+
+    expect(roots.map(object => object.name)).toContain('c3')
+  })
+
+  it('leaves the tree exactly as it found it', () => {
+    const renderer = settled()
+    const before = crateOf(renderer).children.length
+    ;(renderer as unknown as { refreshAids: () => void }).refreshAids()
+
+    expect(crateOf(renderer).children).toHaveLength(before)
+  })
+
+  it('holds every body of a crate whose bodies each carry a node', () => {
+    const nodes: SceneNode[] = [
+      groupNodeFixture('crate'),
+      ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
+        ...meshNode(`c${at}`, 'crate'),
+        transform: {
+          position: { x: at * 5, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+      })),
+      // One group of bodies hanging from another, which is what makes the guard read the
+      // document: a second pass finds the parents' `children` already emptied by the first.
+      ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
+        ...meshNode(`k${at}`, `c${at}`),
+        geometry: KNOB_SHAPE,
+      })),
+    ]
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+    renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes] })
+    renderer.apply({ ...EMPTY_SCENE, nodes: [...nodes] })
+
+    const met = walked(graphOf(renderer)).map(object => object.name)
+    // The carriers stay in the walk however many passes run: their own children hang from them.
+    for (let at = 0; at < WORTH_INSTANCING; at += 1) expect(met).toContain(`c${at}`)
+  })
+
+  it('places the body of a body where its own parent stands', () => {
+    const nodes: SceneNode[] = [
+      groupNodeFixture('crate'),
+      ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
+        ...meshNode(`c${at}`, 'crate'),
+        transform: {
+          position: { x: at * 5, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+      })),
+      ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
+        ...meshNode(`k${at}`, `c${at}`),
+        geometry: KNOB_SHAPE,
+      })),
+    ]
+    const renderer = rendererOf(grouping)
+    renderer.apply({ ...EMPTY_SCENE, nodes })
+
+    const knob = (renderer as unknown as { objects: Map<string, Object3D> }).objects.get('k3')
+    expect(knob?.getWorldPosition(new Vector3()).x).toBe(15)
   })
 })

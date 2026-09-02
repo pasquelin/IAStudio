@@ -437,13 +437,17 @@ describe('the sources a group draws for', () => {
     const { nodes, objects } = alike(WORTH_INSTANCING)
     hungIn(scene, objects)
     const carrier = objects.get('n0')
-    const child = new Object3D()
-    child.name = 'lamp'
-    carrier?.add(child)
+    // Read off the DOCUMENT: the last pass may already have taken that child out of `children`,
+    // and a test on the live array would let its parent go on the second rebuild.
+    const lamp = meshNode('lamp', 'n0')
+    const bulb = new Object3D()
+    bulb.name = 'lamp'
+    carrier?.add(bulb)
+    objects.set('lamp', bulb as Mesh)
 
-    const count = createInstancedGroups(scene).rebuild(nodes, id =>
-      id === 'lamp' ? child : objects.get(id),
-    )
+    const groups = createInstancedGroups(scene)
+    const count = groups.rebuild([...nodes, lamp], id => objects.get(id))
+    groups.rebuild([...nodes, lamp], id => objects.get(id))
 
     // Still DRAWN by the instance — only its place in the tree is kept.
     expect(count).toBe(WORTH_INSTANCING)

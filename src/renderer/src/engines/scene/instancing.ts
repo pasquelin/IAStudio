@@ -126,6 +126,8 @@ export function createInstancedGroups(
 
     refreshSources: sources.refresh,
 
+    holdsSource: sources.holds,
+
     // The sources back in the walk with it: nothing draws for them any more.
     dispose: () => {
       clear()
