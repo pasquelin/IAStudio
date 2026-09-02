@@ -15,7 +15,7 @@ import { SceneRenderer, type PartitionMode } from '@/engines/scene/SceneRenderer
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { createGlTimer, type GlTimer } from './glTimer.js'
-import { comparePixels, mean, median, nextFrame, pixelsOf, round, since, tally, top } from './benchShared'
+import { comparePixels, differing, hostOf, mean, median, nextFrame, pixelsOf, round, since, tally, top } from './benchShared'
 import { centresOf, DEFAULT_PLAN, openWorld, spanFor } from './openWorld'
 import { trajectoriesFor } from './trajectories'
 
@@ -38,17 +38,6 @@ const BOX = new Box3()
 const CORNER = new Vector3()
 
 type Numbers = Record<string, number | string | null>
-
-function hostOf(): HTMLDivElement {
-  const stage = document.querySelector('#stage')
-  if (!stage) throw new Error('no #stage')
-  stage.replaceChildren()
-  const host = document.createElement('div')
-  host.style.width = `${WIDTH}px`
-  host.style.height = `${HEIGHT}px`
-  stage.append(host)
-  return host
-}
 
 /** Le milieu des corps, où la caméra se pose : une vue prise DANS le niveau, jamais du dehors. */
 function middleOf(state: SceneState): Point {
@@ -259,36 +248,6 @@ function reaches(mesh: Object3D, scene: Object3D): boolean {
   return false
 }
 
-/**
- * Les pixels qui diffèrent, en COMPTE et en PLACE : une part arrondie à quatre décimales cache
- * 71 pixels, et deux pixels côte à côte sur une couture ne disent pas la même chose que deux
- * pixels au bord d'une silhouette.
- */
-function differing(
-  one: ImageData,
-  other: ImageData,
-): { pixels: number; worst: number; spots: string[] } {
-  let pixels = 0
-  let worst = 0
-  const spots: string[] = []
-  for (let at = 0; at < one.data.length; at += 4) {
-    const delta =
-      Math.abs((one.data[at] ?? 0) - (other.data[at] ?? 0)) +
-      Math.abs((one.data[at + 1] ?? 0) - (other.data[at + 1] ?? 0)) +
-      Math.abs((one.data[at + 2] ?? 0) - (other.data[at + 2] ?? 0))
-    if (delta === 0) continue
-    pixels += 1
-    if (delta > worst) worst = delta
-    if (spots.length < 8) {
-      const pixel = at / 4
-      const here = [...one.data.slice(at, at + 3)].join(',')
-      const there = [...other.data.slice(at, at + 3)].join(',')
-      spots.push(`${pixel % one.width},${Math.floor(pixel / one.width)} ${here} vs ${there}`)
-    }
-  }
-  return { pixels, worst, spots }
-}
-
 type Shot = { numbers: Numbers; pixels: ImageData }
 
 async function measureOne(
@@ -299,7 +258,7 @@ async function measureOne(
   /** Zone OUVERTE : la partition regroupe, mais ne retire aucune cellule. Le contrôle du § pixels. */
   openZone = false,
 ): Promise<Shot> {
-  const host = hostOf()
+  const host = hostOf(WIDTH, HEIGHT)
   const renderer = new SceneRenderer({
     onSelect: () => {},
     onTransform: () => {},

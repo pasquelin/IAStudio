@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-02T19:14:38.861Z",
+  "at": "2026-09-02T19:27:01.404Z",
   "platform": "darwin",
   "electron": "43.4.0",
   "chrome": "150.0.7871.224",
@@ -73,12 +73,12 @@
       "mode": "off",
       "template": "firstPerson",
       "nodes": 38,
-      "applyMs": 75.175,
-      "submitMeanMs": 0.229,
-      "submitMedianMs": 0.225,
-      "submitPeakMs": 0.37,
+      "applyMs": 103.83,
+      "submitMeanMs": 0.337,
+      "submitMedianMs": 0.345,
+      "submitPeakMs": 0.395,
       "followMeanMs": 0,
-      "gpuMs": 0.349,
+      "gpuMs": 1.804,
       "calls": 51,
       "instances": 47,
       "triangles": 1372,
@@ -95,33 +95,11 @@
       "mode": "off",
       "template": "firstPerson",
       "nodes": 38,
-      "applyMs": 48.525,
-      "submitMeanMs": 0.272,
-      "submitMedianMs": 0.27,
-      "submitPeakMs": 0.3,
+      "applyMs": 51.67,
+      "submitMeanMs": 0.43,
+      "submitMedianMs": 0.41,
+      "submitPeakMs": 0.545,
       "followMeanMs": 0,
-      "gpuMs": 0.413,
-      "calls": 51,
-      "instances": 47,
-      "triangles": 1372,
-      "cellsHeld": 1,
-      "cellsDrawn": 1,
-      "instancedMeshes": 0,
-      "submittedInstances": 0,
-      "grouped": 0,
-      "nodesVisited": 0,
-      "cellsKnown": 0
-    },
-    {
-      "label": "grid",
-      "mode": "grid",
-      "template": "firstPerson",
-      "nodes": 38,
-      "applyMs": 47.605,
-      "submitMeanMs": 0.238,
-      "submitMedianMs": 0.245,
-      "submitPeakMs": 0.28,
-      "followMeanMs": 0.008,
       "gpuMs": 0.538,
       "calls": 51,
       "instances": 47,
@@ -131,6 +109,28 @@
       "instancedMeshes": 0,
       "submittedInstances": 0,
       "grouped": 0,
+      "nodesVisited": 0,
+      "cellsKnown": 0
+    },
+    {
+      "label": "grid",
+      "mode": "grid",
+      "template": "firstPerson",
+      "nodes": 38,
+      "applyMs": 50.43,
+      "submitMeanMs": 0.371,
+      "submitMedianMs": 0.365,
+      "submitPeakMs": 0.405,
+      "followMeanMs": 0.019,
+      "gpuMs": 0.281,
+      "calls": 51,
+      "instances": 47,
+      "triangles": 1372,
+      "cellsHeld": 1,
+      "cellsDrawn": 1,
+      "instancedMeshes": 0,
+      "submittedInstances": 0,
+      "grouped": 0,
       "nodesVisited": 64,
       "cellsKnown": 0
     },
@@ -139,14 +139,16 @@
       "template": "firstPerson",
       "against": "witness",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "pixels",
       "template": "firstPerson",
       "against": "grid",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "off",
@@ -301,7 +303,8 @@
       "against": "witness",
       "step": "opened",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -309,7 +312,8 @@
       "against": "witness",
       "step": "added",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -317,7 +321,8 @@
       "against": "witness",
       "step": "movedOne",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -325,7 +330,8 @@
       "against": "witness",
       "step": "dragged",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -333,7 +339,8 @@
       "against": "witness",
       "step": "released",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -341,7 +348,8 @@
       "against": "witness",
       "step": "removed",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -349,7 +357,8 @@
       "against": "witness",
       "step": "undone",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -357,7 +366,8 @@
       "against": "grid",
       "step": "opened",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -365,7 +375,8 @@
       "against": "grid",
       "step": "added",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -373,7 +384,8 @@
       "against": "grid",
       "step": "movedOne",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -381,7 +393,8 @@
       "against": "grid",
       "step": "dragged",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -389,7 +402,8 @@
       "against": "grid",
       "step": "released",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -397,7 +411,8 @@
       "against": "grid",
       "step": "removed",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -405,19 +420,20 @@
       "against": "grid",
       "step": "undone",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "label": "off",
       "mode": "off",
       "template": "thirdPerson",
       "nodes": 38,
-      "applyMs": 45.725,
-      "submitMeanMs": 0.254,
-      "submitMedianMs": 0.26,
-      "submitPeakMs": 0.3,
-      "followMeanMs": 0,
-      "gpuMs": 0.539,
+      "applyMs": 48.7,
+      "submitMeanMs": 0.377,
+      "submitMedianMs": 0.37,
+      "submitPeakMs": 0.42,
+      "followMeanMs": 0.001,
+      "gpuMs": 0.541,
       "calls": 51,
       "instances": 47,
       "triangles": 1372,
@@ -434,12 +450,12 @@
       "mode": "off",
       "template": "thirdPerson",
       "nodes": 38,
-      "applyMs": 44.475,
-      "submitMeanMs": 0.216,
-      "submitMedianMs": 0.225,
-      "submitPeakMs": 0.26,
+      "applyMs": 49.28,
+      "submitMeanMs": 0.417,
+      "submitMedianMs": 0.415,
+      "submitPeakMs": 0.49,
       "followMeanMs": 0.001,
-      "gpuMs": 0.343,
+      "gpuMs": 2.483,
       "calls": 51,
       "instances": 47,
       "triangles": 1372,
@@ -456,12 +472,12 @@
       "mode": "grid",
       "template": "thirdPerson",
       "nodes": 38,
-      "applyMs": 44.51,
-      "submitMeanMs": 0.205,
-      "submitMedianMs": 0.205,
-      "submitPeakMs": 0.225,
-      "followMeanMs": 0.006,
-      "gpuMs": 0.415,
+      "applyMs": 48.555,
+      "submitMeanMs": 0.395,
+      "submitMedianMs": 0.4,
+      "submitPeakMs": 0.455,
+      "followMeanMs": 0.021,
+      "gpuMs": 0.36,
       "calls": 51,
       "instances": 47,
       "triangles": 1372,
@@ -478,14 +494,16 @@
       "template": "thirdPerson",
       "against": "witness",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "pixels",
       "template": "thirdPerson",
       "against": "grid",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "off",
@@ -640,7 +658,8 @@
       "against": "witness",
       "step": "opened",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -648,7 +667,8 @@
       "against": "witness",
       "step": "added",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -656,7 +676,8 @@
       "against": "witness",
       "step": "movedOne",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -664,7 +685,8 @@
       "against": "witness",
       "step": "dragged",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -672,7 +694,8 @@
       "against": "witness",
       "step": "released",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -680,7 +703,8 @@
       "against": "witness",
       "step": "removed",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -688,7 +712,8 @@
       "against": "witness",
       "step": "undone",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -696,7 +721,8 @@
       "against": "grid",
       "step": "opened",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -704,7 +730,8 @@
       "against": "grid",
       "step": "added",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -712,7 +739,8 @@
       "against": "grid",
       "step": "movedOne",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -720,7 +748,8 @@
       "against": "grid",
       "step": "dragged",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -728,7 +757,8 @@
       "against": "grid",
       "step": "released",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -736,7 +766,8 @@
       "against": "grid",
       "step": "removed",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -744,20 +775,21 @@
       "against": "grid",
       "step": "undone",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     }
   ],
   "failures": [],
   "rendererMemory": [
     {
-      "at": 2148,
-      "phase": "off · thirdPerson",
-      "workingSetKb": 539824
+      "at": 2056,
+      "phase": "grid · thirdPerson",
+      "workingSetKb": 563152
     },
     {
-      "at": 4150,
+      "at": 4059,
       "phase": "fin",
-      "workingSetKb": 728880
+      "workingSetKb": 805792
     }
   ]
 }

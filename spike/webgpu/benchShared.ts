@@ -169,3 +169,44 @@ export function comparePixels(
     meanGap: differing > 0 ? Math.round((gap / differing) * 10) / 10 : 0,
   }
 }
+
+/** La toile d'un banc de page, à la taille où toutes ces campagnes se comparent : 1600 × 900. */
+export function hostOf(width = 1600, height = 900): HTMLDivElement {
+  const stage = document.querySelector('#stage')
+  if (!stage) throw new Error('no #stage')
+  stage.replaceChildren()
+  const host = document.createElement('div')
+  host.style.width = `${width}px`
+  host.style.height = `${height}px`
+  stage.append(host)
+  return host
+}
+
+/**
+ * Les pixels qui diffèrent, en COMPTE et en PLACE — une part arrondie à quatre décimales cache
+ * 71 pixels, et les TEINTES disent si un corps manque ou si deux voisines se départagent autrement.
+ */
+export function differing(
+  one: ImageData,
+  other: ImageData,
+): { pixels: number; worst: number; spots: string[] } {
+  let pixels = 0
+  let worst = 0
+  const spots: string[] = []
+  for (let at = 0; at < one.data.length; at += 4) {
+    const delta =
+      Math.abs((one.data[at] ?? 0) - (other.data[at] ?? 0)) +
+      Math.abs((one.data[at + 1] ?? 0) - (other.data[at + 1] ?? 0)) +
+      Math.abs((one.data[at + 2] ?? 0) - (other.data[at + 2] ?? 0))
+    if (delta === 0) continue
+    pixels += 1
+    if (delta > worst) worst = delta
+    if (spots.length < 8) {
+      const pixel = at / 4
+      const here = [...one.data.slice(at, at + 3)].join(',')
+      const there = [...other.data.slice(at, at + 3)].join(',')
+      spots.push(`${pixel % one.width},${Math.floor(pixel / one.width)} ${here} vs ${there}`)
+    }
+  }
+  return { pixels, worst, spots }
+}

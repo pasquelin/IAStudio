@@ -17,11 +17,11 @@ import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './s
 
 const STRATEGIES: GroupingStrategy[] = ['instanced', 'batched']
 
-/** How the engine can be told to draw repeated shapes — the third is what a level gets by default. */
+/** How the engine can be told to draw repeated shapes. The third names nothing: it IS the default. */
 const DRAWINGS: [string, Drawing][] = [
   ['instanced', { grouping: 'instanced' }],
   ['batched', { grouping: 'batched' }],
-  ['partitioned', { partition: 'grid' }],
+  ['partitioned', {}],
 ]
 
 type Drawing = { grouping?: GroupingStrategy; partition?: PartitionMode }

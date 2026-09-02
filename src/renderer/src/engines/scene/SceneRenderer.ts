@@ -338,10 +338,10 @@ export type SceneRendererOptions = {
    */
   onPane?: (pane: number) => void
   /**
-   * How repeated shapes are drawn in fewer calls. `instanced` — the default — opens one
-   * `InstancedMesh` per shape and material, split into regions; `batched` opens one `BatchedMesh`
-   * per material. Measured on this Mac, 2026-09-02, the lot costs MORE CPU on every scene: its
-   * per-instance cull and sort run once per pass, 10.4 ms against 3.1 a frame on 10 000 bodies.
+   * How repeated shapes are drawn in fewer calls, for a caller leaving the cells. `instanced`
+   * opens one `InstancedMesh` per shape and material, split into regions; `batched` opens one
+   * `BatchedMesh` per material — measured on this Mac, 2026-09-02, it costs MORE CPU on every
+   * scene, 10.4 ms against 3.1 a frame on 10 000 bodies. Naming either one turns `partition` off.
    */
   grouping?: GroupingStrategy
   /**
@@ -4795,8 +4795,7 @@ function disposeMaterial(mesh: Mesh): void {
 function groupsFor(
   options: SceneRendererOptions,
 ): (host: Object3D, ownMaterialOf: (mesh: Mesh) => Material | Material[]) => InstancedGroups {
-  const partition = options.partition ?? (options.grouping ? 'off' : 'grid')
-  if (partition === 'grid') return createCellGroups
+  if ((options.partition ?? (options.grouping ? 'off' : 'grid')) === 'grid') return createCellGroups
   return options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups
 }
 

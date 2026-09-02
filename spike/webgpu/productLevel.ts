@@ -3,55 +3,42 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { SceneRenderer, type PartitionMode } from '@/engines/scene/SceneRenderer'
 import { sceneFromTemplate } from '@/engines/scene/sceneTemplates'
-import { addNode, removeNode, setTransform } from '@/engines/scene/commands'
+import { addNode, moveNodes, removeNode, setTransform } from '@/engines/scene/commands'
 import { meshNode, transformAt } from '@/engines/scene/nodeFactory'
 import type { Command } from '@/engines/core/history'
-import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import { nodeById, type NodeMove, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { createGlTimer, type GlTimer } from './glTimer.js'
-import { mean, median, nextFrame, pixelsOf, round, since, tally, top } from './benchShared'
-import { DEFAULT_PLAN, openWorld } from './openWorld'
+import { differing, hostOf, mean, median, nextFrame, pixelsOf, round, since, tally, top } from './benchShared'
+import { DEFAULT_PLAN, openWorld, type Point } from './openWorld'
 
 /**
- * C5-P1 étape 5 : ce que la partition par défaut change sur les scènes que le STUDIO produit —
- * les neuf modèles de `sceneTemplates`, et non un monde synthétique de banc.
- *
- * 🛑 Il monte le vrai `SceneRenderer` des deux côtés du flag et joue les gestes d'édition par
- * les vraies commandes de `engines/scene/commands`, dont l'`undo` est leur propre `revert`.
+ * C5-P1 étape 5 : ce que la partition par défaut change sur les scènes que le STUDIO produit, et
+ * non sur un monde de banc. Les gestes d'édition passent par les vraies commandes du studio, dont
+ * l'`undo` est leur propre `revert`.
  */
 
-const WIDTH = 1600
-const HEIGHT = 900
 const QUERY = new URLSearchParams(location.search)
 const WARMUP = 10
 
 type Numbers = Record<string, number | string | null>
 
-function hostOf(): HTMLDivElement {
-  const stage = document.querySelector('#stage')
-  if (!stage) throw new Error('no #stage')
-  stage.replaceChildren()
-  const host = document.createElement('div')
-  host.style.width = `${WIDTH}px`
-  host.style.height = `${HEIGHT}px`
-  stage.append(host)
-  return host
-}
+type Weight = { template: SceneTemplateId; nodes: number; meshes: number; groups: number }
 
 /** Ce qu'un modèle pèse, avant d'en mesurer aucun : c'est ce compte qui choisit les deux lourdes. */
-function weigh(id: SceneTemplateId): Numbers {
-  const state = sceneFromTemplate(id)
-  return {
-    template: id,
-    nodes: state.nodes.length,
-    meshes: state.nodes.filter(node => node.type === 'mesh').length,
-    groups: state.nodes.filter(node => node.type === 'group').length,
+function weigh(id: SceneTemplateId): Weight {
+  const held = stateOf(id)
+  let meshes = 0
+  let groups = 0
+  for (const node of held.nodes) {
+    if (node.type === 'mesh') meshes += 1
+    else if (node.type === 'group') groups += 1
   }
+  return { template: id, nodes: held.nodes.length, meshes, groups }
 }
 
 type Mounted = {
   renderer: SceneRenderer
   canvas: HTMLCanvasElement
-  camera: PerspectiveCamera
   scene: Object3D
   timer: GlTimer | null
   groups: Groups
@@ -75,13 +62,17 @@ type Frame = {
   triangles: number
 }
 
+/** Au niveau module : nées dans `mount`, elles retiendraient son contexte via le cache du moteur. */
+const NOTHING = (): void => {}
+const NO_MODEL = async (): Promise<Group> => new Group()
+
 function mount(mode: PartitionMode, state: SceneState): Mounted {
   const host = hostOf()
   const renderer = new SceneRenderer({
-    onSelect: () => {},
-    onTransform: () => {},
+    onSelect: NOTHING,
+    onTransform: NOTHING,
     partition: mode,
-    loadModel: async () => new Group(),
+    loadModel: NO_MODEL,
   })
   renderer.prepareOffscreen({ alpha: false, pixelRatio: 1 })
   renderer.mount(host)
@@ -124,7 +115,6 @@ function mount(mode: PartitionMode, state: SceneState): Mounted {
   return {
     renderer,
     canvas,
-    camera,
     scene,
     timer,
     groups,
@@ -154,8 +144,6 @@ function insideOf(state: SceneState): { position: Point; target: Point } {
   return { position: middle, target: { x: middle.x + 1, y: middle.y, z: middle.z } }
 }
 
-type Point = { x: number; y: number; z: number }
-
 /** Ce que la scène TIENT, et ce que la partition en retient. */
 function shapeOf(held: Mounted): Numbers {
   let cellsHeld = 0
@@ -184,35 +172,6 @@ function shapeOf(held: Mounted): Numbers {
   }
 }
 
-/**
- * Les pixels qui diffèrent, en COMPTE et en PLACE — une part arrondie cache soixante-et-onze, et
- * les TEINTES disent si un corps manque ou si deux voisines se départagent autrement.
- */
-function differing(
-  one: ImageData,
-  other: ImageData,
-): { pixels: number; worst: number; spots: string[] } {
-  let pixels = 0
-  let worst = 0
-  const spots: string[] = []
-  for (let at = 0; at < one.data.length; at += 4) {
-    const delta =
-      Math.abs((one.data[at] ?? 0) - (other.data[at] ?? 0)) +
-      Math.abs((one.data[at + 1] ?? 0) - (other.data[at + 1] ?? 0)) +
-      Math.abs((one.data[at + 2] ?? 0) - (other.data[at + 2] ?? 0))
-    if (delta === 0) continue
-    pixels += 1
-    if (delta > worst) worst = delta
-    if (spots.length < 8) {
-      const pixel = at / 4
-      const here = [...one.data.slice(at, at + 3)].join(',')
-      const there = [...other.data.slice(at, at + 3)].join(',')
-      spots.push(`${pixel % one.width},${Math.floor(pixel / one.width)} ${here} vs ${there}`)
-    }
-  }
-  return { pixels, worst, spots }
-}
-
 async function measureOne(mode: PartitionMode, id: string): Promise<Shot> {
   const state = stateOf(id)
   const openedAt = performance.now()
@@ -230,7 +189,7 @@ async function measureOne(mode: PartitionMode, id: string): Promise<Shot> {
   const submits: number[] = []
   const follows: number[] = []
   const gpu: number[] = []
-  let last = held.draw()
+  let last: Frame | undefined
   for (let cycle = 0; cycle < cycles; cycle += 1) {
     last = held.draw()
     submits.push(last.submitMs)
@@ -241,7 +200,7 @@ async function measureOne(mode: PartitionMode, id: string): Promise<Shot> {
 
   // 🛑 Dans la FOULÉE du dessin : sans `preserveDrawingBuffer` une frame qui passe vide le tampon
   // et l'image revient blanche — trois captures blanches ont déjà été lues « 0 pixel ».
-  held.draw()
+  const shown = held.draw()
   const pixels = pixelsOf(held.canvas)
   const shape = shapeOf(held)
   held.dispose()
@@ -258,9 +217,9 @@ async function measureOne(mode: PartitionMode, id: string): Promise<Shot> {
       submitPeakMs: round(top(submits)),
       followMeanMs: round(mean(follows)),
       gpuMs: gpu.length > 0 ? round(median(gpu)) : null,
-      calls: last.calls,
-      instances: last.instances,
-      triangles: last.triangles,
+      calls: (last ?? shown).calls,
+      instances: (last ?? shown).instances,
+      triangles: (last ?? shown).triangles,
       ...shape,
     },
   }
@@ -270,13 +229,19 @@ type Shot = { numbers: Numbers; pixels: ImageData }
 
 /**
  * La scène qu'un nom désigne : un modèle du studio, ou — sous `world:<n>` — le monde du banc, seul
- * endroit du dépôt où un groupe passe le plancher d'instanciation et où la partition a de quoi
- * mordre. Les modèles ne portent que 32 corps tous différents : elle n'y regroupe rien.
+ * endroit du dépôt où un groupe passe le plancher d'instanciation. Tenue : six montages la
+ * demandent, et bâtir 500 000 corps six fois pèse plus lourd que ce que le banc mesure.
  */
+const BUILT = new Map<string, SceneState>()
+
 function stateOf(id: string): SceneState {
-  const world = id.startsWith('world:') ? Number(id.slice('world:'.length)) : null
-  if (world !== null) return openWorld({ ...DEFAULT_PLAN, count: world })
-  return sceneFromTemplate(id as SceneTemplateId)
+  const known = BUILT.get(id)
+  if (known) return known
+  const built = id.startsWith('world:')
+    ? openWorld({ ...DEFAULT_PLAN, count: Number(id.slice('world:'.length)) })
+    : sceneFromTemplate(id as SceneTemplateId)
+  BUILT.set(id, built)
+  return built
 }
 
 /** Le corps qu'un ajout pose : au milieu du niveau, à hauteur d'homme, pour qu'il se VOIE. */
@@ -323,7 +288,12 @@ async function editEvery(mode: PartitionMode, id: string): Promise<Edits> {
   // 🛑 Le glisser MULTI-SÉLECTION passe par `moved`, jamais par un `apply` : entre le début et la
   // fin d'un geste le studio écrit les matrices en place, et c'est ce chemin-là qui décide si un
   // corps est dessiné là où le pointeur l'a laissé.
-  const dragged = state.nodes.filter(node => node.type === 'mesh').slice(0, 6).map(node => node.id)
+  const dragged: string[] = []
+  for (const node of state.nodes) {
+    if (node.type !== 'mesh') continue
+    dragged.push(node.id)
+    if (dragged.length === 6) break
+  }
   for (const nodeId of dragged) {
     const object = held.objects.get(nodeId)
     if (!object) continue
@@ -334,17 +304,22 @@ async function editEvery(mode: PartitionMode, id: string): Promise<Edits> {
   held.groups.moved(dragged, nodeId => held.objects.get(nodeId))
   shoot('dragged')
 
-  // Le glisser rendu au document, comme un relâchement le fait : l'état rattrape les matrices.
+  // 🛑 UNE commande pour tout le glisser, ce que `onTransform` écrit : six `setTransform` feraient
+  // six entrées d'historique et six copies du tableau, ce qu'aucun relâchement du studio ne fait.
+  const moves: NodeMove[] = []
   for (const nodeId of dragged) {
     const object = held.objects.get(nodeId)
-    if (!object) continue
-    state = setTransform(nodeId, {
-      ...(state.nodes.find(node => node.id === nodeId)?.transform ?? transformAt({ x: 0, y: 0, z: 0 })),
-      position: { x: object.position.x, y: object.position.y, z: object.position.z },
-    }).apply(state)
+    const node = nodeById(state, nodeId)
+    if (!object || !node) continue
+    moves.push({
+      id: nodeId,
+      transform: {
+        ...node.transform,
+        position: { x: object.position.x, y: object.position.y, z: object.position.z },
+      },
+    })
   }
-  held.renderer.apply(state)
-  shoot('released')
+  run('released', moveNodes(moves))
 
   run('removed', removeNode(body.id))
 
@@ -361,6 +336,35 @@ type Edits = { shots: Map<string, ImageData>; numbers: Numbers[] }
 
 export type Step = { phase: string }
 
+/** `off` DEUX fois : deux moteurs, deux contextes et deux ordres de dessin donnent déjà un écart,
+ * et sans ce témoin on le mettrait sur le dos de la partition. */
+const RUNS: readonly [string, PartitionMode][] = [
+  ['off', 'off'],
+  ['witness', 'off'],
+  ['grid', 'grid'],
+]
+
+/** Les trois bras d'une campagne, chacun rendu sous son étiquette — un échec est noté, pas jeté. */
+async function eachRun<T>(
+  id: string,
+  phase: string,
+  onProgress: ((step: Step) => void) | undefined,
+  failures: unknown[],
+  take: (mode: PartitionMode) => Promise<T>,
+): Promise<Map<string, T>> {
+  const held = new Map<string, T>()
+  for (const [label, mode] of RUNS) {
+    try {
+      onProgress?.({ phase: `${phase}${label} · ${id}` })
+      held.set(label, await take(mode))
+    } catch (error) {
+      // `as` : ce qu'un `throw` porte n'est typé par personne ; on lit `stack` s'il existe.
+      failures.push({ label, phase, id, error: String((error as { stack?: string }).stack ?? error) })
+    }
+  }
+  return held
+}
+
 export async function runProductLevel(
   onProgress?: (step: Step) => void,
 ): Promise<{ results: unknown[]; failures: unknown[] }> {
@@ -371,29 +375,15 @@ export async function runProductLevel(
   const weights = SCENE_TEMPLATE_IDS.map(weigh)
   for (const one of weights) results.push({ mode: 'weight', ...one })
   const asked = QUERY.get('templates')
-  const heaviest = asked
+  const heaviest: string[] = asked
     ? asked.split(',')
     : [...weights]
-        .sort((one, other) => Number(other['nodes']) - Number(one['nodes']))
+        .sort((one, other) => other.nodes - one.nodes)
         .slice(0, 2)
-        .map(one => String(one['template']))
+        .map(one => one.template)
 
   for (const id of heaviest) {
-    const shots = new Map<string, Shot>()
-    // `off` DEUX fois : deux moteurs, deux contextes et deux ordres de dessin donnent déjà un
-    // écart, et sans ce témoin on le mettrait sur le dos de la partition.
-    for (const [label, mode] of [
-      ['off', 'off'],
-      ['witness', 'off'],
-      ['grid', 'grid'],
-    ] as [string, PartitionMode][]) {
-      try {
-        onProgress?.({ phase: `${label} · ${id}` })
-        shots.set(label, await measureOne(mode, id))
-      } catch (error) {
-        failures.push({ label, id, error: String((error as { stack?: string }).stack ?? error) })
-      }
-    }
+    const shots = await eachRun(id, '', onProgress, failures, mode => measureOne(mode, id))
     for (const [label, shot] of shots) results.push({ label, ...shot.numbers })
     const off = shots.get('off')
     for (const label of ['witness', 'grid']) {
@@ -403,19 +393,7 @@ export async function runProductLevel(
       }
     }
 
-    const edits = new Map<string, Edits>()
-    for (const [label, mode] of [
-      ['off', 'off'],
-      ['witness', 'off'],
-      ['grid', 'grid'],
-    ] as [string, PartitionMode][]) {
-      try {
-        onProgress?.({ phase: `édition ${label} · ${id}` })
-        edits.set(label, await editEvery(mode, id))
-      } catch (error) {
-        failures.push({ label: `edit:${label}`, id, error: String((error as { stack?: string }).stack ?? error) })
-      }
-    }
+    const edits = await eachRun(id, 'édition ', onProgress, failures, mode => editEvery(mode, id))
     const base = edits.get('off')
     for (const one of edits.values()) results.push(...one.numbers)
     for (const label of ['witness', 'grid']) {

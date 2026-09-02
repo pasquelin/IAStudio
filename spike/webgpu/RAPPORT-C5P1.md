@@ -525,3 +525,223 @@ suppression. Écrit ici parce qu'un fichier suivi qui s'efface sans bruit se rev
   redécouper, comme `instancing.ts` le fait déjà pour ses régions. C'est l'étape 4 qui traite les
   mobiles.
 - Ni C3 (LOD), ni l'activation par défaut.
+
+## 17. Étape 5 — la grille par défaut
+
+### État Git
+
+Ouverture : worktree `.claude/worktrees/open-world`, branche `feat/open-world`, `db1b0b6e1`,
+**arbre propre**. Clôture : `18c2ad464`, **arbre propre**, deux commits — le défaut, puis le banc
+des scènes du studio. Aucun fichier suivi n'a disparu du disque cette session (l'incident du § 15
+ne s'est pas reproduit ; `git status` a été lu quatre fois).
+
+### Ce qui a changé
+
+**Un seul endroit lit le flag, et c'est tout ce qu'il a fallu toucher** : `groupsFor`, dans
+`SceneRenderer.ts`. Aucun appelant de production ne passait `partition` — ni `SceneDocument`, ni
+`GameWindow`, ni `sceneStage` — et **rien dans `docs/` ne le mentionne**. Le défaut se décide donc
+là, exactement comme celui de `grouping`.
+
+```ts
+const partition = options.partition ?? (options.grouping ? 'off' : 'grid')
+```
+
+**Nommer un `grouping` est ce qui fait sortir des cellules.** Sans cette moitié, un appelant qui
+demande `batched` recevrait la grille et le mot n'aurait plus de sens ; `partition` explicite bat
+toujours les deux. `off` reste disponible **comme option du moteur**, au même titre que `batched`
+— **il n'y a pas de réglage utilisateur**, ni pour l'un ni pour l'autre, et ce lot n'en crée pas.
+
+### `pnpm validate` dans les deux positions
+
+| position | résultat |
+|---|---|
+| défaut `grid` (le commit) | **vert** — 1 163 fichiers, **15 023 tests**, 78 s |
+| défaut `off` forcé sur place | **vert** — 1 163 fichiers, **15 023 tests** |
+
+**Aucun test du dépôt ne supposait le défaut `off`** : la suite entière passe avec la partition
+active, sans une ligne touchée. **[M]**
+
+### Les images du banc, campagne par taille
+
+`productionPartition`, une taille de monde par campagne (§ 15), `off` joué deux fois.
+
+| | témoin `off`/`off` | `grid` contre `off` | `gridWide` contre `off` |
+|---|---:|---:|---:|
+| 500 000 | **0** | **2** — `1268,808` et `1452,1165`, écart 35 | **2**, mêmes coordonnées |
+| 5 000 | **0** | **0** | **0** |
+| 500 | **0** | **0** | **0** |
+
+**Aucun pixel nouveau.** Les deux acceptés sont aux mêmes coordonnées et de la même valeur qu'à
+l'étape 3. **[M]**
+
+Les chiffres de la campagne, pour mémoire. **Deux passes de 500 000** ont été jouées, avant et
+après les corrections de la revue : **appels, instances et images identiques au chiffre près** des
+deux fois ; seuls les temps bougent avec la charge de la machine, ce qui est le rappel utile —
+ces colonnes-là ne se comparent qu'à leur propre témoin.
+
+| 500 000, passe finale | `off` | témoin | **`grid`** |
+|---|---:|---:|---:|
+| `gl.render` CPU | 0,679 | 0,746 | **0,888** |
+| GPU | 3,542 | 3,440 | **1,286** |
+| appels | 159 | 159 | **246** |
+| instances | 231 397 | 231 397 | **17 848** |
+
+### La scène produit la plus lourde — et ce qu'elle ne mesure pas
+
+**🛑 Le dépôt ne porte aucune scène produit lourde, et c'est le résultat le plus important de ce
+paragraphe.** Les candidates sont les neuf modèles de `sceneTemplates`, seules scènes que le studio
+livre ; il n'y a ni `.gltf` ni projet dans l'arbre. Pesées avant toute mesure :
+
+| modèle | nœuds | meshes |
+|---|---:|---:|
+| `firstPerson` · `thirdPerson` · `topDown` | **38** | 32 |
+| `postProcessing` | 9 | 4 |
+| `photoStudio` | 6 | 2 |
+| `basic` · `cinematic` | 5 | 1 à 2 |
+| `empty` · `archvis` | 3 | 0 à 1 |
+
+Les trois plus lourdes sont ex æquo — elles ouvrent sur le même `playgroundLevel` et ne diffèrent
+que par la caméra. `firstPerson` et `thirdPerson` mesurées :
+
+| 38 nœuds | `off` | témoin `off` | **`grid`** |
+|---|---:|---:|---:|
+| `gl.render` CPU | 0,229 | 0,272 | **0,238** |
+| `follow` | 0,000 | 0,000 | **0,008** |
+| GPU | 0,349 | 0,413 | **0,538** |
+| appels · instances · triangles | 51 · 47 · 1 372 | idem | **51 · 47 · 1 372** |
+| `InstancedMesh` construits | **0** | 0 | **0** |
+| pixels contre `off` | — | **0** | **0** |
+
+**La partition n'y regroupe RIEN et ne peut rien y changer** : les 32 corps du niveau sont tous
+différents, aucun groupe n'atteint `WORTH_INSTANCING` (16), donc les deux côtés dessinent les mêmes
+51 appels. Les écarts de temps sont sous le témoin — qui s'écarte de `off` de 0,043 ms en CPU et de
+0,064 ms en GPU sur `firstPerson`, et de 0,196 ms en GPU sur `thirdPerson`. **Une régression
+annoncée ici serait une lecture de bruit.** Le seul coût réel est la requête de zone sur un index
+vide : **0,006 à 0,008 ms**, 64 macro-chunks visités pour zéro cellule. **[M]**
+
+**Ce relevé est donc vert pour une mauvaise raison**, et l'écrire autrement serait mentir. Les
+gestes d'édition ont été rejoués sur un monde où la partition MORD — `openWorld` à 5 000 corps, le
+seul du dépôt dont un groupe passe le plancher.
+
+### Les cinq gestes d'édition
+
+`spike/webgpu/productLevel.{ts,html}`. Les commandes sont **celles du studio** (`addNode`,
+`setTransform`, `removeNode`) et **l'undo est leur propre `revert`** — rejouer un état mémorisé à
+la main prouverait que le banc sait revenir en arrière, pas que le studio le sait. Le glisser
+multi-sélection passe par `groups.moved`, jamais par un `apply` : c'est le chemin qu'un geste
+emprunte entre son début et son relâchement.
+
+| geste | `firstPerson` · `thirdPerson` (38 nœuds) | `world:5000`, caméra DANS le niveau |
+|---|---:|---:|
+| ouverture | 0 | **0** |
+| ajout d'un corps | 0 | **0** |
+| déplacement d'un objet | 0 | **0** |
+| glisser multi-sélection (6 corps) | 0 | **0** |
+| relâchement rendu au document | 0 | **0** |
+| suppression | 0 | **0** |
+| undo de l'ajout | 0 | **0** |
+
+**Zéro pixel sur les sept étapes, des deux décors**, témoin `off`/`off` à 0 partout. À 5 000 la
+partition travaille vraiment : 51 → 124 appels, 35 → 108 lots, 4 cellules connues. **[M]**
+
+### 🛑 Ce que la vue de DEHORS montre, et que rien n'avait mesuré
+
+**Le même décor à 5 000, cadré par `frameContents` au lieu d'une caméra posée dedans, rend
+412 pixels d'écart entre `off` et `grid`** — témoin `off`/`off` à **0**. C'est le seul résultat
+rouge du lot, et il est expliqué :
+
+| contrôle | pixels | écart max |
+|---|---:|---:|
+| caméra DANS le niveau | **0** | 0 |
+| cadré de dehors, ombres allumées | **412** | 24 sur 765 |
+| cadré de dehors, ombres **éteintes** | **376** | 11 sur 765 |
+
+**Ce n'est pas la zone, et ce n'est pas l'ombre.** Les instances DESSINÉES sont identiques au
+chiffre près des deux côtés — **5 030 contre 5 030**, 5 016 instances soumises contre 5 016 :
+sur cette vue la partition ne retire rien, elle réordonne. Et les teintes le disent : `37,38,35`
+contre `37,39,35`, `69,72,66` contre `70,74,67` — des voisines à un ou deux crans, jamais un corps
+contre du ciel. Éteindre les ombres n'enlève que 36 pixels et fait tomber l'écart max de 24 à 11.
+
+**C'est la cause [H] des deux pixels du § 4, à une autre échelle** : une vue qui met 5 000 corps à
+distance dans un seul cadre multiplie les silhouettes où le tampon de profondeur départage deux
+surfaces autrement selon l'ordre de dessin. **La règle « 0 pixel » du lot ne tient donc pas sur une
+vue qui cadre tout un monde de l'extérieur** — 0,012 % des pixels, 3 % d'écart maximal par canal.
+**[M]** pour tout, sauf la cause, **[H]**.
+
+### Ce que la revue a corrigé, et ce qu'elle a laissé
+
+**Trois corrections de production, toutes trouvées par relecture et aucune par la mesure :**
+
+1. **La JSDoc de `grouping` affirmait encore « `instanced` — the default ».** Elle et celle de
+   `partition` se contredisaient à six lignes d'écart dans le même type, et **aucune garde ne voit
+   ça**. Elle dit désormais ce que la ligne fait : nommer un `grouping` éteint la partition.
+2. **`sceneRendererGroups.test.ts` épinglait encore `{ partition: 'grid' }`** là où son
+   commentaire annonçait le défaut. **Rien n'exerçait donc le nouveau chemin** — le défaut pouvait
+   repasser à `off` sans qu'un cas rougisse. L'entrée est maintenant `{}`, et c'est elle qui tient
+   le défaut.
+3. L'alias `const partition = …` d'un seul usage, portant le nom du champ qu'il ne valait pas, est
+   inliné.
+
+**Trois corrections de banc, dont une qui change ce que le banc PROUVE :** le relâchement d'un
+glisser écrivait **six** `setTransform`, là où le studio écrit **une** commande par geste
+(`moveNodes`, « One drag, one entry, however many nodes moved »). Le banc promettait « les vraies
+commandes » et ce pas-là n'était pas le geste du studio. Corrigé — **et les images sont
+identiques**, avant comme après. Les deux autres : l'état du monde était rebâti **six fois** par
+campagne (mémoïsé), et une frame entière était dessinée puis jetée avant chaque boucle de cycles.
+
+**Laissé, et pourquoi.** Les huit bancs de `spike/webgpu/` partagent un montage de moteur, un
+`draw` et une boucle de cycles quasi identiques ; seuls `hostOf` et `differing` ont été hissés dans
+`benchShared.ts` — un `mountBench` commun est une refonte des huit, hors de ce lot. **`spike/` n'est
+ni linté, ni formaté, ni typechecké, ni mesuré par jscpd** (`.jscpd.json` porte sur `src` seul) :
+aucune de ces duplications ne peut rougir, c'est la relecture ou rien.
+
+### Deux constats de la revue qui ne sont pas des correctifs
+
+**🛑 La couverture s'est déplacée sans que rien le dise.** **33 montages de `SceneRenderer`** dans
+les tests d'`engines/scene/` ne passent aucun flag : ils basculent **tous** sur `createCellGroups`.
+Aucun n'affirme quoi que ce soit sur `InstancedMesh` ou `BatchedMesh`, donc rien ne rougit — mais
+le chemin `instanced`, ci-devant défaut, n'est plus exercé au niveau moteur que par le
+`grouping: 'instanced'` explicite de `sceneRendererGroups.test.ts`. **C'est écrit ici parce que
+personne d'autre ne l'écrit.**
+
+**`follow` n'a aucun plancher.** Tout moteur qui ne nomme pas de `grouping` paie désormais, par
+frame, une requête de zone et une boucle sur les cellules debout — y compris sur une scène qui ne
+regroupe rien. **Mesuré sur les modèles du studio : 0,006 à 0,008 ms**, 64 macro-chunks visités
+pour zéro cellule, soit 0,05 % d'un budget de 16 ms. Une sortie anticipée quand l'index est vide
+est le correctif naturel ; il n'est pas dans ce lot, et 0,008 ms ne le justifie pas seul.
+
+### Défauts hors périmètre trouvés
+
+- **`spike:apply` est rouge et l'était déjà** : `tsc -p spike/webgpu/tsconfig.json` rend **six**
+  erreurs, dans `batchedCells`, `partitionBench`, `spatialGrid`, `submissionProbe`, `worldBench` et
+  `worldBodies` — aucune dans le code de ce lot. Non corrigé : hors du lot, et hors de
+  `pnpm validate`, qui ne lit pas ce tsconfig.
+- Les trois défauts de `SceneRenderer` signalés au § 7 (`withHungUnder`, `onGizmoChange`,
+  `refreshAids`) n'ont pas été touchés — ils ne bloquent pas le défaut, et le glisser
+  multi-sélection du banc passe par `moved`, qui n'est pas leur chemin.
+
+### Ce qu'il faudrait pour merger `feat/open-world`
+
+1. **L'arbitrage sur les 412 pixels de la vue cadrée de dehors.** Le lot a été livré sous la règle
+   « 0 pixel » ; elle ne tient plus sur cette vue-là. Aucun corps n'est perdu et l'écart est de
+   3 % par canal au pire, mais c'est à l'utilisateur de dire si l'ordre de dessin est un prix
+   acceptable — la réponse conditionne le reste.
+2. **La passe d'ombre dessine encore tout le monde.** C'est le lot suivant, annoncé comme tel : le
+   rejet du § 8 ne travaille que sur la passe couleur, et les cartes d'une frame restent tracées
+   pour la zone des PANNEAUX (§ 16) — un aperçu ou un film qui regarde ailleurs voit des ombres
+   manquantes jusqu'à ce qu'elles soient redemandées.
+3. **Le CPU de soumission reste à ×1,3 du témoin** (0,546 → 0,713 sur 500 000), plafonné par les
+   27 lots par cellule du § 10. Ce n'est pas un bloqueur, c'est un chiffre à assumer.
+4. **Rien n'a jamais été mesuré sous Windows ni sous Linux** : la porte ne tourne que sur
+   `ubuntu-latest` et ne joue aucun de ces bancs, qui exigent une fenêtre Electron et un contexte
+   WebGL. Ce que ce lot affirme, il l'affirme sur ce Mac.
+5. Le rebase sur `develop` et un `pnpm validate` vert **après** lui — non fait : `develop` porte
+   **50 commits** que cette branche n'a pas, la base commune étant `04b1b6457`.
+6. **Une décision à prendre, pas un bloqueur : fusionner `partition` et `grouping` en une seule
+   union.** Ce ne sont pas deux axes — les trois fabriques ont la MÊME signature, et
+   `{ partition: 'grid', grouping: 'batched' }` typecheck en jetant `grouping` en silence.
+   `partition: 'off'` ne veut pas dire « pas de partition », il veut dire « instanced » : le flag
+   ment sur son nom. Un `draw?: 'instanced' | 'batched' | 'grid'`, défaut `grid`, plus une table,
+   ferait disparaître le ternaire de couplage et rendrait les états illégaux inécrivables — 2 types,
+   1 test de `src/`, ~6 fichiers de `spike/`. **Le croisement « grille de lots batchés » est déjà
+   mesuré-perdant** (C5-B2 § 3), donc rien d'orthogonal n'est à préserver. Hors de ce lot.

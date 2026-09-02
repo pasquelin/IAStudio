@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-02T19:18:35.675Z",
+  "at": "2026-09-02T19:27:08.001Z",
   "platform": "darwin",
   "electron": "43.4.0",
   "chrome": "150.0.7871.224",
@@ -73,12 +73,12 @@
       "mode": "off",
       "template": "world:5000",
       "nodes": 5017,
-      "applyMs": 162.205,
-      "submitMeanMs": 0.299,
-      "submitMedianMs": 0.34,
-      "submitPeakMs": 0.355,
-      "followMeanMs": 0.001,
-      "gpuMs": 0.826,
+      "applyMs": 144.305,
+      "submitMeanMs": 0.344,
+      "submitMedianMs": 0.33,
+      "submitPeakMs": 0.385,
+      "followMeanMs": 0,
+      "gpuMs": 0.801,
       "calls": 51,
       "instances": 5030,
       "triangles": 1780168,
@@ -95,12 +95,12 @@
       "mode": "off",
       "template": "world:5000",
       "nodes": 5017,
-      "applyMs": 110.4,
-      "submitMeanMs": 0.369,
-      "submitMedianMs": 0.415,
-      "submitPeakMs": 0.42,
-      "followMeanMs": 0,
-      "gpuMs": 0.949,
+      "applyMs": 108.24,
+      "submitMeanMs": 0.415,
+      "submitMedianMs": 0.41,
+      "submitPeakMs": 0.435,
+      "followMeanMs": 0.001,
+      "gpuMs": 0.95,
       "calls": 51,
       "instances": 5030,
       "triangles": 1780168,
@@ -117,12 +117,12 @@
       "mode": "grid",
       "template": "world:5000",
       "nodes": 5017,
-      "applyMs": 115.99,
-      "submitMeanMs": 0.446,
-      "submitMedianMs": 0.485,
-      "submitPeakMs": 0.57,
+      "applyMs": 110.495,
+      "submitMeanMs": 0.489,
+      "submitMedianMs": 0.49,
+      "submitPeakMs": 0.525,
       "followMeanMs": 0.064,
-      "gpuMs": 1.493,
+      "gpuMs": 1.489,
       "calls": 83,
       "instances": 2964,
       "triangles": 992324,
@@ -139,14 +139,16 @@
       "template": "world:5000",
       "against": "witness",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "pixels",
       "template": "world:5000",
       "against": "grid",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "off",
@@ -301,7 +303,8 @@
       "against": "witness",
       "step": "opened",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -309,7 +312,8 @@
       "against": "witness",
       "step": "added",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -317,7 +321,8 @@
       "against": "witness",
       "step": "movedOne",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -325,7 +330,8 @@
       "against": "witness",
       "step": "dragged",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -333,7 +339,8 @@
       "against": "witness",
       "step": "released",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -341,7 +348,8 @@
       "against": "witness",
       "step": "removed",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -349,7 +357,8 @@
       "against": "witness",
       "step": "undone",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -357,7 +366,8 @@
       "against": "grid",
       "step": "opened",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -365,7 +375,8 @@
       "against": "grid",
       "step": "added",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -373,7 +384,8 @@
       "against": "grid",
       "step": "movedOne",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -381,7 +393,8 @@
       "against": "grid",
       "step": "dragged",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -389,7 +402,8 @@
       "against": "grid",
       "step": "released",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -397,7 +411,8 @@
       "against": "grid",
       "step": "removed",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     },
     {
       "mode": "editPixels",
@@ -405,7 +420,8 @@
       "against": "grid",
       "step": "undone",
       "pixels": 0,
-      "worst": 0
+      "worst": 0,
+      "spots": []
     }
   ],
   "failures": [],
@@ -413,7 +429,7 @@
     {
       "at": 2003,
       "phase": "fin",
-      "workingSetKb": 645840
+      "workingSetKb": 640960
     }
   ]
 }

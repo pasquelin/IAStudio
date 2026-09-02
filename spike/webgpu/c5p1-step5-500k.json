@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-02T19:11:11.300Z",
+  "at": "2026-09-02T19:32:50.335Z",
   "platform": "darwin",
   "electron": "43.4.0",
   "chrome": "150.0.7871.224",
@@ -11,13 +11,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 5556.865,
-      "submitMeanMs": 0.546,
-      "submitMedianMs": 0.57,
-      "submitPeakMs": 0.59,
-      "followMeanMs": 0,
-      "matrixMeanMs": 0.212,
-      "gpuMs": 4.028,
+      "applyMs": 5518.51,
+      "submitMeanMs": 0.679,
+      "submitMedianMs": 0.68,
+      "submitPeakMs": 0.745,
+      "followMeanMs": 0.001,
+      "matrixMeanMs": 0.289,
+      "gpuMs": 3.542,
       "calls": 159,
       "instances": 231397,
       "triangles": 19767548,
@@ -42,8 +42,8 @@
       "cellsReturned": 0,
       "cellsKnown": 0,
       "indexBytes": 0,
-      "addMedianMs": 1325.985,
-      "dropMedianMs": 1313.805
+      "addMedianMs": 1393.095,
+      "dropMedianMs": 1404.92
     },
     {
       "label": "witness",
@@ -51,13 +51,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 5365.03,
-      "submitMeanMs": 0.569,
-      "submitMedianMs": 0.58,
-      "submitPeakMs": 0.61,
-      "followMeanMs": 0,
-      "matrixMeanMs": 0.179,
-      "gpuMs": 3.437,
+      "applyMs": 5848.665,
+      "submitMeanMs": 0.746,
+      "submitMedianMs": 0.75,
+      "submitPeakMs": 0.845,
+      "followMeanMs": 0.001,
+      "matrixMeanMs": 0.332,
+      "gpuMs": 3.44,
       "calls": 159,
       "instances": 231397,
       "triangles": 19767548,
@@ -82,8 +82,8 @@
       "cellsReturned": 0,
       "cellsKnown": 0,
       "indexBytes": 0,
-      "addMedianMs": 1177.605,
-      "dropMedianMs": 1199.365
+      "addMedianMs": 1229.085,
+      "dropMedianMs": 1259.44
     },
     {
       "label": "grid",
@@ -91,13 +91,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 5614.41,
-      "submitMeanMs": 0.713,
-      "submitMedianMs": 0.73,
-      "submitPeakMs": 0.835,
-      "followMeanMs": 0.071,
-      "matrixMeanMs": 0.154,
-      "gpuMs": 1.443,
+      "applyMs": 5874.055,
+      "submitMeanMs": 0.888,
+      "submitMedianMs": 0.915,
+      "submitPeakMs": 1.06,
+      "followMeanMs": 0.259,
+      "matrixMeanMs": 0.505,
+      "gpuMs": 1.286,
       "calls": 246,
       "instances": 17848,
       "triangles": 6363376,
@@ -122,8 +122,8 @@
       "cellsReturned": 52,
       "cellsKnown": 256,
       "indexBytes": 6144,
-      "addMedianMs": 1458.44,
-      "dropMedianMs": 1488.245
+      "addMedianMs": 1596.72,
+      "dropMedianMs": 1603.13
     },
     {
       "label": "gridWide",
@@ -131,13 +131,13 @@
       "count": 500000,
       "far": 500,
       "nodes": 501445,
-      "applyMs": 5583.625,
-      "submitMeanMs": 1.971,
-      "submitMedianMs": 1.9,
-      "submitPeakMs": 2.26,
-      "followMeanMs": 0.071,
-      "matrixMeanMs": 1.096,
-      "gpuMs": 2.053,
+      "applyMs": 5665.88,
+      "submitMeanMs": 3.232,
+      "submitMedianMs": 3.345,
+      "submitPeakMs": 3.98,
+      "followMeanMs": 0.179,
+      "matrixMeanMs": 1.855,
+      "gpuMs": 2.487,
       "calls": 432,
       "instances": 34311,
       "triangles": 12402400,
@@ -162,8 +162,8 @@
       "cellsReturned": 52,
       "cellsKnown": 256,
       "indexBytes": 6144,
-      "addMedianMs": 1484.855,
-      "dropMedianMs": 1511.9
+      "addMedianMs": 1600.395,
+      "dropMedianMs": 1633.855
     },
     {
       "mode": "pixels",
@@ -208,24 +208,24 @@
   "failures": [],
   "rendererMemory": [
     {
-      "at": 19589,
+      "at": 21445,
       "phase": "witness · 500000",
-      "workingSetKb": 2938624
+      "workingSetKb": 3013824
     },
     {
-      "at": 38353,
+      "at": 40891,
       "phase": "grid · 500000",
-      "workingSetKb": 3786016
+      "workingSetKb": 3783280
     },
     {
-      "at": 59991,
+      "at": 63541,
       "phase": "gridWide · 500000",
-      "workingSetKb": 3893760
+      "workingSetKb": 3846880
     },
     {
-      "at": 76201,
+      "at": 80504,
       "phase": "fin",
-      "workingSetKb": 3317056
+      "workingSetKb": 3657408
     }
   ]
 }
