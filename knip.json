@@ -10,7 +10,6 @@
     "site/assets/js/*.js"
   ],
   "ignore": [
-    "site/assets/css/**",
-    "spike/**"
+    "site/assets/css/**"
   ]
 }
