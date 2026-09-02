@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import type { Component, JsonValue } from '@shared/domain/component'
 import { DEFAULT_PLAY } from '@shared/domain/scene'
-import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
+import type { PhysicsPort } from '../../ports/physicsPort'
+import { loadJoltPhysics } from '../../host/joltPhysics'
+import {
+  describedBody,
+  notedPhysics,
+  restingAt,
+  type NotedPhysics,
+} from '../../physics/physics-fixtures'
 import { createCharacters } from '../characters'
 import { createPossessions } from '../possessions'
 import { restingTransform, type Entity } from '../entity'
@@ -27,6 +34,7 @@ const armed = (over: Record<string, JsonValue> = {}): Component => {
 function rigged(
   over: Record<string, JsonValue> = {},
   filmable: (entity: Entity) => boolean = () => true,
+  ported: PhysicsPort | null = null,
 ): {
   world: World
   rigs: Rigs
@@ -38,10 +46,10 @@ function rigged(
   const rigs = createRigs(null)
   const world = testWorld({
     play: { ...DEFAULT_PLAY, camera: 'thirdPerson' },
-    ports: testPorts({ physics }),
+    ports: testPorts({ physics: ported ?? physics }),
     systems: [
       createSpringArmSystem({
-        characters: createCharacters(createPossessions()),
+        characters: createCharacters(createPossessions(), entity => entity.transform),
         rigs,
         // Flat: every node of these cases hangs from nothing, so its own frame IS the world's.
         worldOf: (_, own) => own,
@@ -100,7 +108,8 @@ describe('the arm a camera hangs on', () => {
 
     world.lateUpdate(0, FRAME)
 
-    expect(eye.transform.position.z).toBeCloseTo(1, 6)
+    // A quarter of four metres, less the tenth of a metre every arm keeps in hand by default.
+    expect(eye.transform.position.z).toBeCloseTo(0.9, 6)
     // The subject and the camera are both left out, or the arm butts against what it films.
     expect(physics.probes[0]?.ignore).toEqual(['hero', 'eye'])
     expect(physics.probes[0]?.radius).toBe(0.2)
@@ -225,11 +234,207 @@ describe('the arm a camera hangs on', () => {
     expect(rigs.leader()).toBeNull()
   })
 
+  it('stops the camera short of the surface by the safety margin asked for', () => {
+    const { world, physics, eye } = rigged({ length: 4, height: 0, safetyMargin: 0.5 })
+    physics.answers.cast = 0.5
+
+    world.lateUpdate(0, FRAME)
+
+    // Two metres of clear way, half a metre of it left unspent so the near plane keeps out.
+    expect(eye.transform.position.z).toBeCloseTo(1.5, 6)
+  })
+
+  it('never pushes the camera past the pivot to make room for its margin', () => {
+    const { world, physics, eye } = rigged({ length: 4, height: 0, safetyMargin: 2 })
+    physics.answers.cast = 0.25
+
+    world.lateUpdate(0, FRAME)
+
+    expect(eye.transform.position.z).toBe(0)
+  })
+
+  /** 🛑 Both directions in one case: a lag written on the wrong side would else still pass. */
+  it('meets a wall at once and lets go of it slowly', () => {
+    const { world, physics, eye } = rigged({
+      length: 4,
+      height: 0,
+      safetyMargin: 0,
+      hysteresis: 0,
+      positionLag: 0,
+      collisionOutLag: 0.25,
+    })
+    world.lateUpdate(0, FRAME)
+    physics.answers.cast = 0.25
+
+    world.lateUpdate(0, FRAME)
+    const met = eye.transform.position.z
+
+    physics.answers.cast = null
+    world.lateUpdate(0, FRAME)
+
+    expect(met).toBeCloseTo(1, 6)
+    expect(eye.transform.position.z).toBeGreaterThan(1)
+    expect(eye.transform.position.z).toBeLessThan(1.5)
+  })
+
+  it('comes all the way back out once the way has been clear long enough', () => {
+    const { world, physics, eye } = rigged({
+      length: 4,
+      height: 0,
+      safetyMargin: 0,
+      hysteresis: 0,
+      positionLag: 0,
+      collisionOutLag: 0.05,
+    })
+    physics.answers.cast = 0.25
+    world.lateUpdate(0, FRAME)
+
+    physics.answers.cast = null
+    for (let frame = 0; frame < 60; frame++) world.lateUpdate(0, FRAME)
+
+    expect(eye.transform.position.z).toBeCloseTo(4, 4)
+  })
+
+  it('leaves the arm where it is for a clearing smaller than the hysteresis asked for', () => {
+    const { world, physics, eye } = rigged({
+      length: 4,
+      height: 0,
+      safetyMargin: 0,
+      hysteresis: 0.5,
+      positionLag: 0,
+      collisionOutLag: 0,
+    })
+    physics.answers.cast = 0.25
+    world.lateUpdate(0, FRAME)
+
+    // Two centimetres of extra room, well under the half metre asked for: nothing moves.
+    physics.answers.cast = 0.255
+    world.lateUpdate(0, FRAME)
+
+    expect(eye.transform.position.z).toBeCloseTo(1, 6)
+  })
+
+  /** 🛑 A deadband in METRES cannot be cleared by an arm shorter than itself — it stayed pinned. */
+  it('comes back out of an arm shorter than the hysteresis it was given', () => {
+    const { world, physics, eye } = rigged({
+      length: 0.05,
+      height: 0,
+      safetyMargin: 0,
+      hysteresis: 0.5,
+      positionLag: 0,
+      collisionOutLag: 0,
+    })
+    physics.answers.cast = 0.25
+    world.lateUpdate(0, FRAME)
+
+    physics.answers.cast = null
+    world.lateUpdate(0, FRAME)
+
+    expect(eye.transform.position.z).toBeCloseTo(0.05, 6)
+  })
+
+  it('holds the pitch inside the bounds asked for, so the shot never climbs overhead', () => {
+    const { world, eye } = rigged({
+      length: 4,
+      height: 0,
+      pitchMin: -30,
+      rotationLag: 0,
+      positionLag: 0,
+    })
+    world.ports.input.pointer = () => ({ x: 0, y: 0, down: true })
+    world.lateUpdate(0, FRAME)
+    // Dragged far enough to ask for a plunging shot, which is what lifts a camera overhead.
+    world.ports.input.pointer = () => ({ x: 0, y: 400, down: true })
+
+    world.lateUpdate(0, FRAME)
+
+    // Thirty degrees of plunge and no more: four metres of arm lifts the seat by two, not by four.
+    expect(eye.transform.position.y).toBeCloseTo(2, 4)
+  })
+
+  /** 🛑 A node an author pitched is where they put it — the bounds hold the POINTER, not the scene. */
+  it('leaves an arm pointed by its own node outside the pitch bounds it was given', () => {
+    const { world, hero, eye } = rigged({
+      orientation: 'subject',
+      length: 4,
+      height: 0,
+      pitchMin: -10,
+      pitchMax: 10,
+      rotationLag: 0,
+      positionLag: 0,
+      collision: false,
+    })
+    hero.transform.rotation.x = -Math.PI / 4
+
+    world.lateUpdate(0, FRAME)
+
+    // Forty-five degrees of plunge kept whole: ten would have lifted the seat by 0,69 instead.
+    expect(eye.transform.position.y).toBeCloseTo(Math.SQRT2 * 2, 4)
+  })
+
+  it('turns the camera on the subject itself when it is told to look at it', () => {
+    const { world, eye } = rigged({ length: 4, height: 2, lookAt: 'subject', rotationLag: 0 })
+
+    world.lateUpdate(0, FRAME)
+
+    // Standing two metres up and four back, aiming at the feet tips the shot down by a quarter turn.
+    expect(eye.transform.rotation.x).toBeLessThan(0)
+    expect(eye.transform.rotation.x).toBeCloseTo(-Math.atan2(2, 4), 5)
+  })
+
   it('does nothing at all for an arm whose subject or camera nobody wears', () => {
     const { world, eye } = rigged({ subject: 'nobody' })
 
     world.lateUpdate(0, FRAME)
 
     expect(eye.transform.position).toEqual({ x: 0, y: 0, z: 0 })
+  })
+})
+
+/** 🛑 Against the real engine: the fixture only ever answers the fraction a case chose itself. */
+describe('the arm against the physics it will be ridden with', () => {
+  it('meets a real post in one frame and clears it over many', async () => {
+    const physics = await loadJoltPhysics()
+    physics.add([
+      describedBody({
+        body: 'floor',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 20, hy: 0.5, hz: 20 },
+        transform: restingAt(0, -0.5, 0),
+      }),
+      describedBody({
+        body: 'post',
+        kind: 'fixed',
+        shape: { kind: 'cuboid', hx: 0.15, hy: 1.5, hz: 0.15 },
+        transform: restingAt(-1, 1.5, 2),
+      }),
+    ])
+    const { world, hero, eye } = rigged({ length: 4, height: 1.6 }, () => true, physics)
+
+    const reach: number[] = []
+    // Walking left at the scene's own pace, straight past the post.
+    for (let frame = 0; frame < 90; frame++) {
+      hero.transform.position.x -= 4 * FRAME
+      physics.step(FRAME)
+      world.lateUpdate(0, FRAME)
+      reach.push(
+        Math.hypot(
+          eye.transform.position.x - hero.transform.position.x,
+          eye.transform.position.z - hero.transform.position.z,
+        ),
+      )
+    }
+    physics.dispose()
+
+    const cut = reach.findIndex(one => one < 3)
+    const back = reach.findIndex((one, frame) => frame > cut && one > 3.9)
+    // The post really did cut the arm, and really did let it go again.
+    expect(cut).toBeGreaterThan(0)
+    expect(back).toBeGreaterThan(cut)
+    // Met on the frame it is met — one frame from four metres to under two.
+    expect(reach[cut - 1]).toBeGreaterThan(3.9)
+    expect(reach[cut]).toBeLessThan(2)
+    // And cleared over many: the shot used to make the whole way back in that same single frame.
+    expect(back - cut).toBeGreaterThan(20)
   })
 })

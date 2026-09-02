@@ -30,7 +30,7 @@ function watching(
     detach: () => {},
   }
   const views: (CameraView | null)[] = []
-  const characters = createCharacters(createPossessions())
+  const characters = createCharacters(createPossessions(), entity => entity.transform)
   const world = testWorld({
     play: { ...DEFAULT_PLAY, camera },
     ports: testPorts({

@@ -26,7 +26,7 @@ function bench(over: Partial<WorldOptions> = {}): Bench {
 
   // One `possessions` for both: `characters` reads it, and `settle` reads the same answer.
   const possessions = createPossessions()
-  const characters = createCharacters(possessions)
+  const characters = createCharacters(possessions, entity => entity.transform)
   const world = testWorld({
     ports: testPorts({ physics }),
     systems: [createPhysicsSystem({ shapeOf: () => CUBE, characters, possessions })],
@@ -234,7 +234,7 @@ describe('what falls, what blocks and what walks', () => {
    */
   it('asks for a shape once, not once a frame', () => {
     const physics = notedPhysics()
-    const characters = createCharacters(createPossessions())
+    const characters = createCharacters(createPossessions(), entity => entity.transform)
     let asked = 0
     const world = testWorld({
       ports: testPorts({ physics }),

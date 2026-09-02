@@ -102,7 +102,8 @@ type Scratch = {
   rim: JoltVector
 }
 
-type Walker = { character: JoltCharacter; update: JoltUpdate }
+/** `facing` is the last yaw actually sent across, so an unchanged heading costs no crossing. */
+type Walker = { character: JoltCharacter; update: JoltUpdate; facing: number | null }
 
 /** What suspends and drives a `Vehicle`. Reference counted where Jolt counts, and torn down in order. */
 type Ride = {
@@ -365,6 +366,16 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
           one.wanted.z / CHARACTER_STEP,
         )
         walker.character.SetLinearVelocity(scratch.vector)
+        // Set rather than simulated: a walker's body has its rotation locked, so the heading a
+        // system worked out is the only thing that will ever turn it. Sent only when it CHANGED —
+        // a walker holding a straight line would else cross into the WebAssembly twice a step.
+        if (one.facing !== null && one.facing !== walker.facing) {
+          walker.facing = one.facing
+          FACED.y = one.facing
+          quaternionFromEuler(FACED, SPUN)
+          scratch.turn.Set(SPUN.x, SPUN.y, SPUN.z, SPUN.w)
+          walker.character.SetRotation(scratch.turn)
+        }
         walker.character.ExtendedUpdate(
           CHARACTER_STEP,
           scratch.zero,
@@ -583,8 +594,9 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
   }
 }
 
-/** Rewritten in place: a body's rotation is converted at BUILD, never inside a step. */
+/** Rewritten in place: a rotation is converted at BUILD, and once a step for a walker that turns. */
 const SPUN = { x: 0, y: 0, z: 0, w: 1 }
+const FACED = { x: 0, y: 0, z: 0 }
 
 const idOf = (jolt: JoltModule, pointer: number): number =>
   jolt.wrapPointer(pointer, jolt.Body).GetID().GetIndexAndSequenceNumber()
@@ -896,7 +908,7 @@ function walkerOf(
   update.mWalkStairsStepUp = climb
   jolt.destroy(down)
   jolt.destroy(climb)
-  return { character, update }
+  return { character, update, facing: null }
 }
 
 /**
