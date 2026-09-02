@@ -648,9 +648,10 @@ const ALREADY_SETTLED =
 
 /** The same, for a relative change: repeating it would apply it twice, not settle it. */
 const ALREADY_APPLIED =
-  'that exact relative change already ran in this turn, and running it again would apply it ' +
-  'twice. What it answered is written above in this conversation — read the value that stands ' +
-  'there before asking for another change.'
+  'this turn already moved that very field of that very thing, by a relative amount. A second ' +
+  'one lands ON TOP of the first, whatever figure it carries — what it answered is written ' +
+  'above in this conversation: read the value that stands there, and change it absolutely if ' +
+  'it is wrong.'
 
 /** Rewrites one turn in place, leaving the others as they were. */
 function patch(

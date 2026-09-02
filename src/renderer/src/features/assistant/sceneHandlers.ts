@@ -152,6 +152,8 @@ function edit(build: () => Command<SceneState>): ActionOutcome {
 function editNode(
   input: Record<string, unknown>,
   build: (node: SceneNode, documentId: string) => Command<SceneState> | null,
+  /** What the call answers, read off the node AFTER the command — see `movedOf`. */
+  answer?: (node: SceneNode, documentId: string) => unknown,
 ): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_SCENE)
@@ -167,7 +169,36 @@ function editNode(
   if (!command) return refused('badInput', `"${node.name}" has nothing to change here`)
 
   useScenes.getState().runCommand(open.documentId, command)
-  return { ok: true }
+  if (!answer) return { ok: true }
+
+  // Read again rather than computed here: a command may land a KEY rather than a transform, and
+  // what the viewport shows is what the caller has to be told.
+  const after = nodeById(sceneOf(useScenes.getState(), open.documentId), node.id)
+  return after ? { ok: true, data: answer(after, open.documentId) } : { ok: true }
+}
+
+/** The three vectors, as the fields of a call name them. */
+const VECTORS = ['position', 'rotation', 'scale']
+
+/**
+ * 🛑 What a move ANSWERS: the vectors it touched, as they now stand. A bare `ok` left the model
+ * unable to see where a thing had landed, so it sent the change again under another figure —
+ * « 50 cm à droite » went out as 0.5 then as 2.5, three metres from where it was asked for
+ * (measured 2026-09-02). Only what the call wrote: the whole transform is three times the room.
+ */
+function movedOf(
+  input: Record<string, unknown>,
+  node: SceneNode,
+  documentId: string,
+): Record<string, Vector3> {
+  const keying = sceneKeyingAt(documentId)
+  const pose = poseAt(node.transform, keying.state.animation, node.id, keying.at)
+
+  return Object.fromEntries(
+    VECTORS.filter(one => ['X', 'Y', 'Z'].some(axis => input[`${one}${axis}`] !== undefined)).map(
+      one => [one, pose[one as keyof typeof pose]],
+    ),
+  )
 }
 
 /** The nodes a `nodeIds` list names, by id or by name — what the two folding handlers aim at. */
@@ -927,27 +958,31 @@ export const SCENE_HANDLERS: ActionHandlers = {
    * values would write a neutral rotation over the key standing there. Radians, as the state.
    */
   'node.transform': input =>
-    editNode(input, (node, documentId) => {
-      const keying = sceneKeyingAt(documentId)
-      const played = poseAt(node.transform, keying.state.animation, node.id, keying.at)
-      const by = boolOf(input, 'relative')
+    editNode(
+      input,
+      (node, documentId) => {
+        const keying = sceneKeyingAt(documentId)
+        const played = poseAt(node.transform, keying.state.animation, node.id, keying.at)
+        const by = boolOf(input, 'relative')
 
-      return movesToCommand(
-        keying.state,
-        [
-          {
-            id: node.id,
-            transform: {
-              position: vectorOf(input, 'position', played.position, by),
-              rotation: vectorOf(input, 'rotation', played.rotation, by),
-              scale: vectorOf(input, 'scale', played.scale, by),
+        return movesToCommand(
+          keying.state,
+          [
+            {
+              id: node.id,
+              transform: {
+                position: vectorOf(input, 'position', played.position, by),
+                rotation: vectorOf(input, 'rotation', played.rotation, by),
+                scale: vectorOf(input, 'scale', played.scale, by),
+              },
             },
-          },
-        ],
-        keying.at,
-        keying.recording,
-      )
-    }),
+          ],
+          keying.at,
+          keying.recording,
+        )
+      },
+      (node, documentId) => movedOf(input, node, documentId),
+    ),
 
   'node.setMeshMaterial': input =>
     editNode(input, node => {

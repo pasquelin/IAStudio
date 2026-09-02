@@ -204,6 +204,19 @@ describe('placing and dressing an object', () => {
     })
   })
 
+  /**
+   * 🛑 What it ANSWERS, and only the vectors it wrote: a bare `ok` left a model unable to see
+   * where a thing had landed, so it sent the same relative change again under another figure.
+   */
+  it('answers the vectors it moved, as they now stand', async () => {
+    const added = await runAction('node.add', { kind: 'box', name: 'Caisse', positionY: 3 })
+    const nodeId = added.ok ? (added.data as { nodeId: string }).nodeId : ''
+
+    const moved = await runAction('node.transform', { nodeId, positionX: 0.5, relative: true })
+
+    expect(moved).toEqual({ ok: true, data: { position: { x: 0.5, y: 3, z: 0 } } })
+  })
+
   it('paints a mesh, and refuses a node that carries no mesh material', async () => {
     const mesh = await runAction('node.add', { kind: 'box', name: 'Caisse' })
     const meshId = mesh.ok ? (mesh.data as { nodeId: string }).nodeId : ''
