@@ -142,14 +142,48 @@ describe('the player module', () => {
    * so it is the module that SIZES one to the body it fills. A capsule drawn inside a capsule
    * showed nothing the cage does not already draw, which is why it went.
    */
-  it('scales the figure to the body the physics feels, and stands the body on the ground', () => {
+  it('stands the body on the ground, its centre half its own height up', () => {
     const walker = bornWith('Capsule')?.components?.[0]
 
-    const figure = figureByKind('humanoid')?.create()
-    expect(bornWith('Figure')?.transform.scale.y).toBeCloseTo(
-      Number(walker?.height) / Number(figure?.height),
-    )
     expect(bornWith('Capsule')?.transform.position.y).toBe(Number(walker?.height) / 2)
+  })
+
+  /**
+   * 🛑 INSIDE the capsule and not merely as tall as it: a capsule is domed and a part is a box,
+   * so a figure at full height had its shoes 9,6 cm out through the bottom — read on screen as a
+   * body bursting its own cage.
+   */
+  it('sizes the figure so every part of it stands within the body', () => {
+    const walker = bornWith('Capsule')?.components?.[0]
+    const height = Number(walker?.height)
+    const radius = Number(walker?.radius)
+    const worn = bornWith('Figure')?.transform.scale.y ?? 0
+    const straight = height / 2 - radius
+
+    const outside = createNodesOf(PLAYER_KIND)
+      .filter(node => node.type === 'mesh' && node.geometry.kind === 'box')
+      .flatMap(node =>
+        node.type === 'mesh' && node.geometry.kind === 'box'
+          ? [{ at: node.transform.position, size: node.geometry }]
+          : [],
+      )
+      .filter(({ at, size }) =>
+        [-1, 1].some(sx =>
+          [-1, 1].some(sy =>
+            [-1, 1].some(sz => {
+              const x = (at.x + (sx * size.width) / 2) * worn
+              const y = (at.y + (sy * size.height) / 2) * worn
+              const z = (at.z + (sz * size.depth) / 2) * worn
+              const beyond = Math.max(0, Math.abs(y) - straight)
+              return Math.hypot(Math.hypot(x, z), beyond) > radius + 1e-6
+            }),
+          ),
+        ),
+      )
+
+    expect(outside).toEqual([])
+    // And not shrunk to nothing to get there: it still fills the body it stands in.
+    expect(worn).toBeGreaterThan(0.8)
   })
 
   it('gives every module its own ids', () => {

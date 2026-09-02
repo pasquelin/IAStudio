@@ -63,6 +63,49 @@ const HUMANOID: readonly FigurePart[] = [
 /** How tall a walking body stands, and the size every figure of the family is drawn at. */
 export const FIGURE_HEIGHT = 1.8
 
+/**
+ * 🛑 The scale at which a figure fits INSIDE the capsule a controller feels — measured on every
+ * corner of every part, because a capsule is domed and a part is a box: at full height the
+ * shoes stood 9,6 cm outside it, which is what one sees as a body bursting its own cage.
+ *
+ * Answered rather than written down: the two figures come from the component, so retuning a
+ * controller re-sizes what stands in it.
+ */
+export function figureScaleWithin(
+  figure: FigureDescriptor,
+  height: number,
+  radius: number,
+): number {
+  const straight = Math.max(0, height / 2 - radius)
+  const outside = (scale: number): boolean =>
+    figure.parts.some(({ at, size }) =>
+      CORNERS.some(([sx, sy, sz]) => {
+        const x = (at.x + (sx * size.x) / 2) * scale
+        const y = (at.y + (sy * size.y) / 2) * scale
+        const z = (at.z + (sz * size.z) / 2) * scale
+        const across = Math.hypot(x, z)
+        const beyond = Math.max(0, Math.abs(y) - straight)
+        return Math.hypot(across, beyond) > radius
+      }),
+    )
+
+  if (!outside(1)) return 1
+  // Halved on a bisection rather than solved: a dome makes four cases, and this runs once per
+  // module laid down. Twenty rounds settle it to a tenth of a millimetre.
+  let fits = 0
+  let tooBig = 1
+  for (let round = 0; round < 20; round++) {
+    const half = (fits + tooBig) / 2
+    if (outside(half)) tooBig = half
+    else fits = half
+  }
+  return fits
+}
+
+const CORNERS: readonly (readonly [number, number, number])[] = [-1, 1].flatMap(x =>
+  [-1, 1].flatMap(y => [-1, 1].map(z => [x, y, z] as [number, number, number])),
+)
+
 const FIGURE_BUILDERS: Record<FigureKind, { icon: string; create: Figure['create'] }> = {
   humanoid: {
     icon: mdiHumanMale,

@@ -163,6 +163,9 @@ export function helperFor(light: Light): LightHelper | null {
 /** Metres. A camera about the size of a hand, so it neither hides the set nor disappears in it. */
 const CAMERA_BODY = { width: 0.24, height: 0.2, depth: 0.36 }
 
+/** How far the lens hood reaches ahead of a camera's own point — where its shot leaves from. */
+export const CAMERA_LENS_REACH = CAMERA_BODY.depth / 2 + 0.16 + 0.025
+
 /**
  * A film camera: a body, a lens down its line of sight, and a magazine on top. It faces −Z, which
  * is where a `PerspectiveCamera` looks, so the lens says which way the shot goes.

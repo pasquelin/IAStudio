@@ -28,6 +28,7 @@ import {
   type Object3D,
 } from 'three'
 import type { ArmRig } from './springArmRigs'
+import { CAMERA_LENS_REACH } from './threeFactory'
 import { VertexNormalsHelper } from 'three/addons/helpers/VertexNormalsHelper.js'
 import { showsAid, type HelperVisibility } from '@shared/domain/scene'
 import { sameVector3 } from '@shared/domain/transform'
@@ -357,27 +358,36 @@ function poseArms(held: Map<string, { line: Mesh; object: Object3D }>): void {
  */
 function armLine(rig: ArmRig, colour: string): Mesh {
   REACH.set(rig.lift.x + rig.back.x, rig.lift.y + rig.back.y, rig.lift.z + rig.back.z)
-  const length = REACH.length()
+  const full = REACH.length()
+  // Stops at the LENS, never at the camera's own point: the beam leaves where the shot does.
+  const length = Math.max(0, full - CAMERA_LENS_REACH)
   const geometry = new CylinderGeometry(ARM_THICKNESS, ARM_THICKNESS, length, 6)
-  if (length > 0) {
+  if (full > 0) {
     // A cylinder is born standing up its own Y: laid along the reach, then pushed to its middle.
+    REACH.normalize()
     geometry.applyMatrix4(
-      TURN.makeRotationFromQuaternion(ARM_TURN.setFromUnitVectors(UPRIGHT, REACH.normalize())),
+      TURN.makeRotationFromQuaternion(ARM_TURN.setFromUnitVectors(UPRIGHT, REACH)),
     )
+    geometry.translate((REACH.x * length) / 2, (REACH.y * length) / 2, (REACH.z * length) / 2)
   }
-  geometry.translate(
-    (rig.lift.x + rig.back.x) / 2,
-    (rig.lift.y + rig.back.y) / 2,
-    (rig.lift.z + rig.back.z) / 2,
-  )
 
   return asAid(
-    new Mesh(geometry, new MeshBasicMaterial({ color: new Color(colour), depthTest: false })),
+    new Mesh(
+      geometry,
+      // Barely see-through, which is what reads as a beam rather than as a rod.
+      new MeshBasicMaterial({
+        color: new Color(colour),
+        depthTest: false,
+        transparent: true,
+        opacity: BEAM_OPACITY,
+      }),
+    ),
   )
 }
 
 /** Thick enough to read across a set, thin enough not to hide the body it points at. */
 const ARM_THICKNESS = 0.022
+const BEAM_OPACITY = 0.82
 
 const REACH = new Vector3()
 const TURN = new Matrix4()

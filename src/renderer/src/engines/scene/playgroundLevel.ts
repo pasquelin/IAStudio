@@ -468,7 +468,10 @@ function machines(parentId: string, played: string): SceneNode[] {
     {
       ...meshNode(
         { kind: 'sphere', radius: 0.35, widthSegments: 16, heightSegments: 12 },
-        { transform: transformAt({ x: 0, y: 2.5, z: 14 }), parentId, name: 'Drone' },
+        // 🛑 Off the axis a chase camera sits on: it started at (0, 2,5, 14), which is exactly
+        // where a four-metre arm seats the camera of a player standing on the start mark — the
+        // drone swallowed it whole. It follows the player anyway, so only its first place moves.
+        { transform: transformAt({ x: 3.5, y: 3, z: 13 }), parentId, name: 'Drone' },
       ),
       components: [
         {

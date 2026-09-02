@@ -113,6 +113,37 @@ describe('what a module points its arm at', () => {
     expect(camera?.transform.position).toEqual({ x: 0, y: 2.5, z: 4 })
   })
 
+  /**
+   * 🛑 Turned to LOOK at the body, not merely placed behind it. Born unturned, the camera faced
+   * away from the very thing its arm follows — and the arm only acts once the scene plays, so
+   * nothing in the editor would ever have corrected it.
+   */
+  it('turns its camera onto the body its arm follows', () => {
+    const nodes = playerModuleNodes()
+    const camera = nodes.find(node => node.type === 'camera')
+    const body = nodes.find(node => node.name === 'Capsule')
+    if (!camera || !body) throw new Error('no module')
+
+    // Where the camera looks: its own −z, turned by the node's rotation (three's default order).
+    const { x: pitch, y: yaw } = camera.transform.rotation
+    const ahead = {
+      x: -Math.cos(pitch) * Math.sin(yaw),
+      y: Math.sin(pitch),
+      z: -Math.cos(pitch) * Math.cos(yaw),
+    }
+    const to = {
+      x: body.transform.position.x - camera.transform.position.x,
+      y: body.transform.position.y - camera.transform.position.y,
+      z: body.transform.position.z - camera.transform.position.z,
+    }
+    const reach = Math.hypot(to.x, to.y, to.z)
+
+    // Both unit vectors: pointing AT the body means the two agree exactly.
+    expect(ahead.x).toBeCloseTo(to.x / reach, 5)
+    expect(ahead.y).toBeCloseTo(to.y / reach, 5)
+    expect(ahead.z).toBeCloseTo(to.z / reach, 5)
+  })
+
   it('leaves a scene holding no module untouched', () => {
     const nodes = playerModuleNodes().slice(1)
 

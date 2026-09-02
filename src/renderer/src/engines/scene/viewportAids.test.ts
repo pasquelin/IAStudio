@@ -6,11 +6,13 @@ import {
   BufferAttribute,
   BufferGeometry,
   Mesh,
+  MeshBasicMaterial,
   Object3D,
   Raycaster,
   Matrix4,
   Vector3,
 } from 'three'
+import { CAMERA_LENS_REACH } from './threeFactory'
 import {
   createViewportAids,
   type AidBody,
@@ -321,11 +323,11 @@ describe('the arm a camera hangs on', () => {
   }
 
   /**
-   * 🛑 From the BODY to the seat, in one diagonal: an arm drawn from the pivot ran level, four
-   * metres off in mid-air, and read as a stray edge joined to neither end. What one has to see is
-   * which body this camera watches.
+   * 🛑 From the body up to the camera's LENS, not to the camera's own point: the beam leaves
+   * where the shot does. An arm drawn from the pivot ran level, four metres up in mid-air, and
+   * read as a stray edge joined to neither end.
    */
-  it('reaches from the body it watches to where the camera sits', () => {
+  it('reaches from the body it watches to the lens that watches it', () => {
     const walker = new Object3D()
     walker.position.set(0, 0.9, 0)
     const aids = createViewportAids()
@@ -335,8 +337,24 @@ describe('the arm a camera hangs on', () => {
 
     expect(body.z).toBeCloseTo(0, 1)
     expect(body.y).toBeCloseTo(0.9, 1)
-    expect(seat.y).toBeCloseTo(2.5, 1)
-    expect(seat.z).toBeCloseTo(4, 1)
+
+    // The seat is (0, 2.5, 4); the beam stops one lens short of it, along its own line.
+    const reach = Math.hypot(1.6, 4)
+    const short = (reach - CAMERA_LENS_REACH) / reach
+    expect(seat.y).toBeCloseTo(0.9 + 1.6 * short, 1)
+    expect(seat.z).toBeCloseTo(4 * short, 1)
+  })
+
+  it('paints the beam through, which is what tells it from a rod', () => {
+    const walker = new Object3D()
+    const aids = createViewportAids()
+
+    aids.apply(new Map([['a', walker]]), [], OFF, PALETTE, RIG)
+    const beam = aids.object.children[0]
+    const paint = beam instanceof Mesh ? beam.material : null
+
+    expect(paint instanceof MeshBasicMaterial && paint.transparent).toBe(true)
+    expect(paint instanceof MeshBasicMaterial ? paint.opacity : 1).toBeLessThan(1)
   })
 
   /** The same trap the cage fell into: nothing recomposes the chain before an aid is drawn. */

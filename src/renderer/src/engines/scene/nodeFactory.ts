@@ -13,7 +13,7 @@ import { aheadOf } from '@game/runtime/playView'
 import { armPivot, armSeat } from '@game/runtime/systems/springArmRig'
 import { newId } from '@/helpers/ids'
 import { defaultMeshMaterial } from './checkerTextures'
-import { figureByKind, type FigureDescriptor } from './figures'
+import { figureByKind, figureScaleWithin, type FigureDescriptor } from './figures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
 import { isPlayerModule, PLAYER_KIND } from './playerModule'
@@ -273,8 +273,9 @@ export function playerModuleNodes(): readonly SceneNode[] {
   // 🛑 Where the arm will put it on the first frame of play, worked out from the very functions
   // the system uses. Left at its parent's origin, the camera stood at the player's feet, and
   // nothing in the editor moves it: an arm only acts once the scene is playing.
+  const seat = armRestSeat(capsule.transform.position)
   const camera: SceneNode = {
-    ...cameraNode(transformAt(armRestSeat(capsule.transform.position))),
+    ...cameraNode(transformAt(seat, aimedFrom(seat, capsule.transform.position))),
     parentId: arm.id,
   }
 
@@ -294,6 +295,7 @@ export function playerModuleNodes(): readonly SceneNode[] {
 
 /** The controller's own defaults, read rather than copied: tuning one there moves the body here. */
 const WALKER_HEIGHT = Number(COMPONENTS.CharacterController.defaults.height)
+const WALKER_RADIUS = Number(COMPONENTS.CharacterController.defaults.radius)
 
 /**
  * Where a resting arm seats its camera, over a body standing at `body` — in the module's own
@@ -307,6 +309,18 @@ function armRestSeat(body: Vector3): Vector3 {
     y: 0,
     z: 0,
   })
+}
+
+/**
+ * How a camera at `from` is turned to look at `at`. 🛑 Three points a camera down its own −z, so
+ * the yaw is measured from that axis — an editor showing a camera with its back to the body it
+ * follows says nothing about what the arm does.
+ */
+function aimedFrom(from: Vector3, at: Vector3): Vector3 {
+  const dx = at.x - from.x
+  const dy = at.y - from.y
+  const dz = at.z - from.z
+  return { x: Math.atan2(dy, Math.hypot(dx, dz)), y: Math.atan2(dx, dz) + Math.PI, z: 0 }
 }
 
 /** The look a game starts on, which is the one an editor has to show. */
@@ -354,10 +368,14 @@ export function figureNodes(
   ]
 }
 
-/** The default figure, sized to the body it stands in — the module's own stand-in. */
+/** The default figure, sized to fit INSIDE the body it stands in — the module's own stand-in. */
 function figureNodesUnder(bodyId: string): readonly SceneNode[] {
   const figure = figureByKind(DEFAULT_FIGURE)?.create()
-  return figure ? figureNodes(figure, WALKER_HEIGHT / figure.height, bodyId) : []
+  if (!figure) return []
+
+  const worn =
+    (WALKER_HEIGHT / figure.height) * figureScaleWithin(figure, WALKER_HEIGHT, WALKER_RADIUS)
+  return figureNodes(figure, worn, bodyId)
 }
 
 /** Which figure a fresh module stands in. Typed, so dropping it from the family breaks the build. */
