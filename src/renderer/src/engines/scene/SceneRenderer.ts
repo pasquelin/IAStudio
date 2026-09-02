@@ -461,6 +461,14 @@ Mesh.prototype.raycast = acceleratedRaycast
 const BONE_WORLD = new Vector3()
 const BONE_TAIL = new Vector3()
 
+/** Scratch for turning the bone that arrives at a dragged joint. See `articulateTowards`. */
+const JOINT_WANTED = new Vector3()
+const JOINT_RESTED = new Vector3()
+const JOINT_PIVOT = new Vector3()
+const JOINT_TURN = new Quaternion()
+const JOINT_FRAME = new Quaternion()
+const JOINT_LOCAL = new Quaternion()
+
 /** Scratch for placing a rail or one of its knobs, so a click over one allocates nothing. */
 const RAIL_SPOT = new Vector3()
 
@@ -723,6 +731,8 @@ export class SceneRenderer {
   private readonly rigRests = new Map<string, Map<string, Transform>>()
   /** What a joint dragged is held to. Nothing at all until a window asks: a scene poses freely. */
   private boneHold: BoneHold = { heldAxes: [], lockedLengths: false }
+  /** Whether the pivot is standing in for the picked joint. See `articulateTowards`. */
+  private boneHandle = false
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -4032,10 +4042,20 @@ export class SceneRenderer {
     // directly: a bone is inside a model's instance, so the pivot has nothing to carry.
     const boneObject = this.pickedBoneObject()
     if (boneObject) {
+      this.boneHandle = this.articulates(boneObject)
       if (this.mode === 'select') gizmo.detach()
-      else gizmo.attach(boneObject)
+      else if (!this.boneHandle) gizmo.attach(boneObject)
+      else {
+        // 🛑 OUT of the chain: the gizmo attached to the joint itself has the bone it turns for
+        // a parent, so its own frame swung under the hand and the drag ran away.
+        boneObject.getWorldPosition(this.pivot.position)
+        this.pivot.quaternion.identity()
+        this.pivot.scale.set(1, 1, 1)
+        gizmo.attach(this.pivot)
+      }
       return
     }
+    this.boneHandle = false
 
     const knob = this.pickedKnob()
     if (knob) {
@@ -4065,7 +4085,7 @@ export class SceneRenderer {
 
   private readonly onGizmoGrab = (): void => {
     this.dragged = false
-    if (this.gizmo?.object !== this.pivot) return
+    if (this.gizmo?.object !== this.pivot || this.boneHandle) return
     carry(this.pivot, this.selectedObjects(), this.viewport.scene)
   }
 
@@ -4094,7 +4114,49 @@ export class SceneRenderer {
     if (!picked || !bone) return
 
     const rest = this.rigRests.get(picked.nodeId)?.get(picked.bone)
-    if (rest) applyTransform(bone, restWithin(rest, transformOf(bone), this.boneHold))
+    if (!rest) return
+
+    // Posing ARTICULATES; editing a rest PLACES. Translating the joint alone left every bone at
+    // zero rotation, so the limb never turned and its skin stretched after the hand instead.
+    if (this.boneHandle) {
+      this.articulateTowards(bone, rest)
+      return
+    }
+
+    applyTransform(bone, restWithin(rest, transformOf(bone), this.boneHold))
+  }
+
+  /**
+   * The bone ARRIVING at a dragged joint, turned so the joint lands where the hand asked — and
+   * the joint put back on the end of it, which is what keeps the limb rigid and its skin whole.
+   */
+  private articulateTowards(bone: Object3D, rest: Transform): void {
+    const parent = bone.parent
+    if (!parent) return
+
+    JOINT_WANTED.copy(this.pivot.position)
+    bone.position.set(rest.position.x, rest.position.y, rest.position.z)
+    parent.updateMatrixWorld(true)
+    bone.getWorldPosition(JOINT_RESTED)
+    parent.getWorldPosition(JOINT_PIVOT)
+
+    JOINT_RESTED.sub(JOINT_PIVOT)
+    JOINT_WANTED.sub(JOINT_PIVOT)
+    if (JOINT_RESTED.lengthSq() === 0 || JOINT_WANTED.lengthSq() === 0) return
+
+    JOINT_TURN.setFromUnitVectors(JOINT_RESTED.normalize(), JOINT_WANTED.normalize())
+    // The turn was measured in the world; a local quaternion is written in the GRANDPARENT's.
+    if (parent.parent) parent.parent.getWorldQuaternion(JOINT_FRAME)
+    else JOINT_FRAME.identity()
+
+    JOINT_LOCAL.copy(JOINT_FRAME).invert().multiply(JOINT_TURN).multiply(JOINT_FRAME)
+    parent.quaternion.premultiply(JOINT_LOCAL)
+    parent.updateMatrixWorld(true)
+
+    // Back onto the joint before the frame is drawn: a handle left where the pointer went floats
+    // off the body whenever the bone cannot reach that far. `TransformControls` measures the next
+    // move from its own start, so this costs the gesture nothing.
+    bone.getWorldPosition(this.pivot.position)
   }
 
   /**
@@ -4134,11 +4196,18 @@ export class SceneRenderer {
       this.options.onTransform([
         { id: picked.nodeId, bone: picked.bone, rest, transform: transformOf(boneObject) },
       ])
+      // The handle stayed where the pointer let it go, which is not where the joint landed.
+      this.attachGizmo()
       return
     }
 
     const target = this.gizmo?.object
     if (target) this.options.onTransform([{ id: target.name, transform: transformOf(target) }])
+  }
+
+  /** Whether dragging this joint TURNS the bone arriving at it rather than placing the joint. */
+  private articulates(bone: Object3D): boolean {
+    return !this.restEditing && this.boneHold.lockedLengths && bone.parent !== null
   }
 
   /** The three object of the bone the pose mode picked, while one is picked and still on stage. */

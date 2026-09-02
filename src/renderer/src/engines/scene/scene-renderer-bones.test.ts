@@ -1,4 +1,4 @@
-import { Bone, Group } from 'three'
+import { Bone, Group, Quaternion, Vector3 } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
@@ -75,6 +75,12 @@ const handOf = (model: Group): Object3D => {
   return hand
 }
 
+const armOf = (model: Group): Object3D => {
+  const arm = model.getObjectByName('arm')
+  if (!arm) throw new Error('the fixture builds one arm')
+  return arm
+}
+
 describe('a joint the gizmo carries', () => {
   it('keeps its distance to its parent for the whole drag, not only on release', async () => {
     const { engine, model } = await armOnStage()
@@ -95,6 +101,30 @@ describe('a joint the gizmo carries', () => {
 
     expect(handOf(model).position.x).toBe(0)
     expect(handOf(model).position.y).toBe(1)
+    engine.dispose()
+  })
+
+  // 🛑 Translating the joint alone left every bone at zero rotation: the limb never turned, so
+  // its skin only half followed and stretched after the hand. Seen on screen the 2026-09-02.
+  it('turns the bone arriving at it, and lands the joint on the end of that bone', async () => {
+    const { engine, model } = await armOnStage()
+    engine.setBoneHold({ heldAxes: [], lockedLengths: true })
+
+    // The handle stands OUT of the chain, square to the arm and one hand's length from the elbow.
+    const pivot: Object3D = Reflect.get(engine, 'pivot')
+    pivot.position.set(2, 1, 0)
+    Reflect.set(engine, 'boneHandle', true)
+    const held: () => void = Reflect.get(engine, 'holdDraggedBone')
+    held.call(engine)
+
+    const hand = handOf(model)
+    const arm = armOf(model)
+    expect(hand.position.length()).toBeCloseTo(2, 5)
+    expect(arm.quaternion.angleTo(new Quaternion())).toBeGreaterThan(0.1)
+    const landed = hand.getWorldPosition(new Vector3())
+    expect([landed.x, landed.y, landed.z].map(one => Math.round(one * 1000) / 1000)).toEqual([
+      2, 1, 0,
+    ])
     engine.dispose()
   })
 
