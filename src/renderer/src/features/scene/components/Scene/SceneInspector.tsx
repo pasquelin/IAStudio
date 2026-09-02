@@ -194,8 +194,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
       )}
 
       {/* The material section a mesh gets, and only it: a solid's SHAPE is its recipe, which has
-          no descriptor to draw fields from — and the tiling rides on a primitive's UVs, which a
-          cut result does not have. */}
+          no descriptor to draw fields from. Minus the tiling — a solid's grid is written into its
+          UVs from each BRUSH's own density (`brushOf`), so the node's would settle nothing. */}
       {carved && (
         <MaterialSection
           material={carved.material}

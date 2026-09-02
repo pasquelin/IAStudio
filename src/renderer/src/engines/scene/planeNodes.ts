@@ -6,8 +6,8 @@
  */
 import type { Vector3 } from '@shared/domain/scene'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { surface } from './levelParts'
 import { meshNode, transformAt } from './nodeFactory'
-import { surface } from './playgroundLevel'
 import type { SceneNode } from './sceneState'
 
 /** Metres. A light single: nine long, twelve across, twenty square metres of wing. */

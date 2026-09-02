@@ -5,11 +5,10 @@
  * Every piece is written by its EDGES, never its centre — see `slab`: two parts that meet then
  * share the very same constant, which is what stops a stair ending half a step short.
  */
-import type { CheckerTextureId } from '@shared/domain/checkerTexture'
 import type { Component } from '@shared/domain/component'
 import type { MaterialDescriptor, Vector3 } from '@shared/domain/scene'
-import { defaultMeshMaterial } from './checkerTextures'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { climbSurface, groundSurface, markSurface, obstacleSurface, surface } from './levelParts'
 import { groupNode, meshNode, transformAt } from './nodeFactory'
 import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 
@@ -67,21 +66,6 @@ function slab(
     },
   )
 }
-
-/**
- * What a part is made of, by its ROLE — a set of one grey is a set nobody reads at a glance.
- *
- * A fresh descriptor per call, never one shared: two nodes holding the same object would be
- * edited together by accident.
- */
-export function surface(color: string, texture?: CheckerTextureId): MaterialDescriptor {
-  return { ...defaultMeshMaterial(texture), color }
-}
-
-/** The density is left at the studio default of one everywhere: what changes is WHICH grid. */
-const groundSurface = (): MaterialDescriptor => surface('#9aa4b0')
-const climbSurface = (): MaterialDescriptor => surface('#d08c3a', 'checkerLarge')
-const obstacleSurface = (): MaterialDescriptor => surface('#4e5661', 'gridSmall')
 
 /** Metres from the centre of the set, on each horizontal axis. */
 type Extent = { x: number; z: number }
@@ -163,7 +147,7 @@ function floorSlabs(parentId: string): SceneNode[] {
     slab(
       { x0: -1.5, x1: 1.5, y0: 0, y1: 0.05, z0: START_Z - 1.5, z1: START_Z + 1.5 },
       'Start',
-      surface('#3d7ab8', 'checkerSmall'),
+      markSurface(),
       parentId,
     ),
   ]

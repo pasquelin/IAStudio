@@ -25,6 +25,7 @@ import {
 } from '@shared/domain/postProcessing'
 import { SECOND, type Us } from '@shared/domain/time'
 import {
+  DEFAULT_CAMERA,
   DEFAULT_GROUND,
   DEFAULT_WORLD,
   type MaterialDescriptor,
@@ -40,6 +41,9 @@ import {
 import { createDefaultScene } from './defaultScene'
 import { airfieldNodes } from './airfieldLevel'
 import { carNodes } from './carNodes'
+import { CIRCUIT_START, circuitNodes } from './circuitLevel'
+import { LYING_FLAT } from './levelParts'
+import { MOUNTAIN_WORLD, mountainNodes } from './mountainLevel'
 import { presetPatch } from './environmentPresets'
 import { planeNodes } from './planeNodes'
 import { cameraNode, groupNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
@@ -47,9 +51,6 @@ import { playgroundNodes } from './playgroundLevel'
 import type { SceneNode, SceneState } from './sceneState'
 
 const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
-
-/** A `plane` stands upright, and a floor is the one thing that must not. */
-const LYING_FLAT: Vector3 = { x: -Math.PI / 2, y: 0, z: 0 }
 
 /**
  * The pitch that aims a camera standing at `height`, `distance` away on the +Z axis, at a point
@@ -464,16 +465,25 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // so a silhouette left on the pad would frame the car from a pair of feet.
   // 🛑 The arm aims down the CAR's own nose, not where the pointer looks: a car turning under a
   // camera the mouse alone aims reads as a car sliding sideways.
-  car: () =>
-    characterView(
-      [
-        ...carNodes({ x: 0, y: 0, z: START_PAD }, CAR_NAME),
-        aimedCamera(3, 10, 1, START_PAD),
-        cameraRig(CAR_NAME, { orientation: 'subject', length: 8, height: 2.4 }),
-      ],
-      { camera: 'thirdPerson' },
-      CAR_NAME,
-    ),
+  car: () => ({
+    nodes: [
+      ...circuitNodes(),
+      sun(2.4, { x: 60, y: 70, z: 40 }),
+      skyLight(1.3),
+      ...carNodes(CIRCUIT_START, CAR_NAME),
+      aimedCamera(3, 10, 1, CIRCUIT_START.z),
+      cameraRig(CAR_NAME, { orientation: 'subject', length: 8, height: 2.4 }),
+    ],
+    world: {
+      ...presetPatch('outdoor'),
+      background: { kind: 'color', color: '#b6c6d8' },
+      // 🛑 The preset's own haze closes at 140 m and the circuit is 250 m across: the far side of
+      // the loop was solid grey, which is why its shape could not be read at a glance.
+      fog: { kind: 'linear', color: '#b6c6d8', near: 60, far: 420 },
+      ground: { ...DEFAULT_GROUND, visible: true, size: 400, color: '#5c6b4f' },
+    },
+    play: { ...WALKING, camera: 'thirdPerson', played: CAR_NAME },
+  }),
 
   /*
    * Already in the air: a plane born on the ground is a plane whose first minute is a taxi, and
@@ -483,6 +493,7 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   plane: () => ({
     nodes: [
       ...airfieldNodes(),
+      ...mountainNodes(),
       sun(2.6, { x: 40, y: 50, z: 20 }),
       skyLight(1.4),
       ...planeNodes({ x: 0, y: CRUISE_ALTITUDE, z: 60 }),
@@ -491,19 +502,23 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
     world: {
       ...presetPatch('outdoor'),
       background: { kind: 'color', color: '#9fc0e0' },
-      ground: { ...DEFAULT_GROUND, visible: true, size: 1600, color: '#6f7f63' },
+      // 🛑 The preset closes its haze at 140 m and this map is flown at 120: everything but the
+      // wingtips was inside the fog. It now closes just short of the camera's own far plane, so
+      // the horizon fades instead of being cut off.
+      fog: { kind: 'linear', color: '#9fc0e0', near: 250, far: DEFAULT_CAMERA.far - 100 },
+      // 🛑 Catches NO shadow: the map is kilometres across, so one shadow texel covers metres —
+      // on a flat ground that reads as a grey moiré staircase, which made the editor unusable.
+      ground: {
+        ...DEFAULT_GROUND,
+        visible: true,
+        size: MOUNTAIN_WORLD,
+        color: '#6f7f63',
+        receiveShadow: false,
+      },
     },
     play: { ...WALKING, camera: 'thirdPerson' },
   }),
 }
-
-/**
- * Where the car is parked. 🛑 Clear of the TURNSTILE, whose five-metre bar sweeps a circle of
- * radius 2,5 about z = 6 and so reaches z = 8,5: parked on the stand-in's own pad, the car's nose
- * sat inside that sweep and was shoved eleven metres before friction caught it — measured, and
- * with no key ever pressed. A character is not shoved there, being moved by its controller alone.
- */
-const START_PAD = 13
 
 /** Who the set's beacon and drone watch here, the stand-in being nowhere on this template. */
 const CAR_NAME = 'Car'
