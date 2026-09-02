@@ -382,10 +382,7 @@ function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
 }
 
-/**
- * The rail a ribbon is swept along. No spec describes it — a run of points is dragged on the
- * shape, never typed in a row — so `describes` walks past it and this is what checks it.
- */
+/** No spec describes a rail — it is dragged, never typed — so `describes` walks past it. */
 function isGeometryRun(value: unknown): boolean {
   if (!isRecord(value) || value.kind !== 'ribbon') return true
   return isPath(value.path)
@@ -765,8 +762,7 @@ function measures(value: unknown, spec: PropertySpec): boolean {
 
 /**
  * 🛑 Read off the CONTROL, never assumed numeric: falling through to `Number.isFinite` cost the
- * WHOLE node for any field that is not a number. No table read here carries one of the three
- * below today — it is an assurance, and it was a real defect for the hour a ribbon held a flag.
+ * WHOLE node for any field that is not a number. No table read here carries one of the three today.
  */
 function matches(value: unknown, spec: PropertySpec): boolean {
   if (spec.control === 'color') return typeof value === 'string'

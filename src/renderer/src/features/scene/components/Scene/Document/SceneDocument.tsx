@@ -8,8 +8,8 @@ import {
   withPointAfter,
   withPointAppended,
 } from '@/engines/scene/cameraPath'
-import { setGeometry, setPath, setTransform } from '@/engines/scene/commands'
-import { railOf } from '@/engines/scene/nodeRail'
+import { setTransform } from '@/engines/scene/commands'
+import { railCommand, railOf } from '@/engines/scene/nodeRail'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -144,16 +144,11 @@ function editPath(
 ): void {
   const store = useScenes.getState()
   const node = nodeById(sceneOf(store, documentId), nodeId)
-  if (node?.type === 'path') {
-    store.runCommand(documentId, setPath(nodeId, edit(node.path)))
-    return
-  }
+  const rail = railOf(node ?? undefined)
+  if (!node || !rail) return
 
-  // A band holds its rail INSIDE its shape, so the edit lands on the geometry rather than on a
-  // field of the node — the handles being the very same ones.
-  if (node?.type !== 'mesh' || node.geometry.kind !== 'ribbon') return
-  const shape = node.geometry
-  store.runCommand(documentId, setGeometry(nodeId, { ...shape, path: edit(shape.path) }))
+  const command = railCommand(node, edit(rail))
+  if (command) store.runCommand(documentId, command)
 }
 
 /**

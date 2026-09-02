@@ -264,9 +264,7 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
   if (knobs.length !== descriptor.points.length) {
     const worn = knobs[0]?.material
     const through = worn instanceof MeshBasicMaterial && !worn.depthTest
-    // Read off a tangent rather than passed in: the caller knows the mesh colour, and the two
-    // are different tokens — dressing again in one of them would repaint the pair grey.
-    const worn2 = (name: string | null): string | undefined => {
+    const colourNamed = (name: string | null): string | undefined => {
       const child = name
         ? object.getObjectByName(name)
         : object.children.find(one => handlePartOf(one.name))
@@ -276,7 +274,9 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
     }
     // Read off what is already hung rather than passed in: the three colours are three tokens,
     // and dressing again in the anchors' would repaint the pair and the first point grey.
-    const colours = { knob: colour, handle: worn2(null), start: worn2(knobName(0)) }
+    // Read off what is already hung rather than passed in: the three are three tokens, and
+    // dressing again in the anchors' would repaint the pair and the first point grey.
+    const colours = { knob: colour, handle: colourNamed(null), start: colourNamed(knobName(0)) }
     for (const child of [...object.children]) {
       object.remove(child)
       if (child instanceof Mesh || child instanceof Line) child.geometry.dispose()

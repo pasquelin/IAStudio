@@ -59,11 +59,8 @@ const PADDOCK_TILE = 2
 const LINE_AHEAD = 6
 const CAR_BEHIND = 3
 
-/**
- * Where the car is put down, and which way it faces — ON the loop, three metres short of the
- * line, pointing down the track. Left at the mark itself with no turn, it sat across its own
- * straight and had the line off to one side.
- */
+/** ON the loop, three metres short of the line: left at the mark with no turn, the car sat
+ * across its own straight and the line stood off to one side. */
 export const CIRCUIT_START_YAW = startYaw()
 export const CIRCUIT_START: Vector3 = alongStart(CAR_BEHIND)
 
@@ -96,12 +93,7 @@ export function circuitLine(atHeight: number): Vector3[] {
   })
 }
 
-/**
- * A closed band swept along a run — ONE mesh, mitred at every joint.
- *
- * 🛑 This is what a run of boxes could not be. Laid end to end they leave a wedge at every turn;
- * overlapped to close it, their corners stand proud and the band reads as a staircase.
- */
+/** ONE mesh a piece, mitred at every joint — see `GeometryDescriptor` for what boxes could not do. */
 function ribbonNode(band: {
   points: readonly Vector3[]
   width: number
@@ -129,10 +121,7 @@ function ribbonNode(band: {
   )
 }
 
-/**
- * What stands AROUND the track: one field of grass, a paddock, and a ring of marker posts.
- * 🛑 None of it is felt: a car that clips the scenery is not where a lap is decided.
- */
+/** 🛑 None of it is felt: a car that clips the scenery is not where a lap is decided. */
 function surroundings(): SceneNode[] {
   const grounds = groupNode(IDENTITY_TRANSFORM, 'Grounds')
 

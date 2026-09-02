@@ -17,17 +17,10 @@ type Section = {
   along: number
 }
 
-/**
- * A band swept along a run of points, as ONE continuous surface.
- *
- * 🛑 Every joint is cut on the BISECTOR of the two segments meeting there, so two sections share
- * an edge exactly. Boxes laid end to end leave a wedge at every turn, and boxes overlapped to
- * close that wedge leave their corners standing proud — which is the staircase this replaces.
- */
+/** A band swept along a run, as ONE surface — see `GeometryDescriptor` for why boxes cannot. */
 export function ribbonGeometry(ribbon: Ribbon): BufferGeometry {
   const sections = sectionsOf(sampledRun(ribbon.path, ribbon.segments), ribbon)
-  const position: number[] = []
-  const uv: number[] = []
+  const into: Buffers = { position: [], uv: [], index: [] }
   // A run of one point describes no band. Its attributes are still written, empty: a geometry
   // missing `position` throws inside three's own bounds and export passes.
   const links = sections.length < 2 ? 0 : ribbon.path.closed ? sections.length : sections.length - 1
@@ -38,16 +31,17 @@ export function ribbonGeometry(ribbon: Ribbon): BufferGeometry {
     // A closed run comes back to its first section, whose `along` is zero: the length of the last
     // link is measured from the run, not read off a section that already wrapped.
     const ahead = next.along > here.along ? next.along : here.along + spanBetween(here, next)
-    faces(position, uv, here, next, ahead, ribbon.height)
+    faces(into, here, next, ahead, ribbon.height)
   }
 
   if (!ribbon.path.closed && links > 0) {
-    caps(position, uv, sections[0]!, sections[sections.length - 1]!, ribbon.height)
+    caps(into, sections[0]!, sections[sections.length - 1]!, ribbon.height)
   }
 
   const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(position), 3))
-  geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uv), 2))
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(into.position), 3))
+  geometry.setAttribute('uv', new BufferAttribute(new Float32Array(into.uv), 2))
+  geometry.setIndex(into.index)
   geometry.computeVertexNormals()
   return geometry
 }
@@ -61,10 +55,8 @@ function spanBetween(here: Section, next: Section): number {
 }
 
 /**
- * Where the band's edges stand at every point of the run.
- *
- * The offset is the bisector's own normal, lengthened by 1/cos(θ/2) so the two sections meeting
- * there share an edge — capped, since a hairpin of 170° would otherwise raise a spike.
+ * Lengthened by 1/cos(θ/2) so two sections meeting at a joint share an edge exactly — capped,
+ * a hairpin of 170° raising a spike otherwise.
  */
 function sectionsOf(points: readonly Vector3[], ribbon: Ribbon): Section[] {
   const last = points.length - 1
@@ -106,11 +98,8 @@ function normalAt(points: readonly Vector3[], at: number): { x: number; z: numbe
 }
 
 /**
- * The curve cut into sections — what rounds a corner off, and the whole reason a band carries a
- * rail's own descriptor rather than a list of points.
- *
- * 🛑 A closed curve's last sample IS its first: kept, it would make a section of zero length and
- * a normal of nothing at the seam.
+ * 🛑 A closed curve's last sample IS its first: kept, it makes a section of zero length and a
+ * normal of nothing at the seam.
  */
 export function sampledRun(path: PathDescriptor, segments: number): Vector3[] {
   if (path.points.length < 2) return [...path.points]
@@ -121,10 +110,8 @@ export function sampledRun(path: PathDescriptor, segments: number): Vector3[] {
 }
 
 /**
- * The same run, shifted sideways by `distance` — a kerb standing off the road it borders.
- *
  * On the BISECTOR at every point, like the band's own edges: shifted along each segment's normal
- * instead, two neighbouring points would land at different distances from the corner between them.
+ * instead, two neighbours land at different distances from the corner between them.
  */
 export function offsetRun(
   points: readonly Vector3[],
@@ -162,44 +149,33 @@ function bisector(
 }
 
 /** The four faces between two sections: the lid, the floor, and a wall each side. */
-function faces(
-  position: number[],
-  uv: number[],
-  here: Section,
-  next: Section,
-  ahead: number,
-  height: number,
-): void {
+function faces(into: Buffers, here: Section, next: Section, ahead: number, height: number): void {
   const top = (one: Section) => one.y + height
   const across = Math.hypot(here.leftX - here.rightX, here.leftZ - here.rightZ)
 
   quad(
-    position,
-    uv,
+    into,
     [here.leftX, top(here), here.leftZ, here.along, across],
     [next.leftX, top(next), next.leftZ, ahead, across],
     [next.rightX, top(next), next.rightZ, ahead, 0],
     [here.rightX, top(here), here.rightZ, here.along, 0],
   )
   quad(
-    position,
-    uv,
+    into,
     [here.rightX, here.y, here.rightZ, here.along, 0],
     [next.rightX, next.y, next.rightZ, ahead, 0],
     [next.leftX, next.y, next.leftZ, ahead, across],
     [here.leftX, here.y, here.leftZ, here.along, across],
   )
   quad(
-    position,
-    uv,
+    into,
     [here.leftX, here.y, here.leftZ, here.along, 0],
     [next.leftX, next.y, next.leftZ, ahead, 0],
     [next.leftX, top(next), next.leftZ, ahead, height],
     [here.leftX, top(here), here.leftZ, here.along, height],
   )
   quad(
-    position,
-    uv,
+    into,
     [here.rightX, top(here), here.rightZ, here.along, height],
     [next.rightX, top(next), next.rightZ, ahead, height],
     [next.rightX, next.y, next.rightZ, ahead, 0],
@@ -208,24 +184,16 @@ function faces(
 }
 
 /** The two ends of an open run, so the band is a solid rather than a shell. */
-function caps(
-  position: number[],
-  uv: number[],
-  first: Section,
-  last: Section,
-  height: number,
-): void {
+function caps(into: Buffers, first: Section, last: Section, height: number): void {
   quad(
-    position,
-    uv,
+    into,
     [first.rightX, first.y, first.rightZ, 0, 0],
     [first.leftX, first.y, first.leftZ, 0, 0],
     [first.leftX, first.y + height, first.leftZ, 0, height],
     [first.rightX, first.y + height, first.rightZ, 0, height],
   )
   quad(
-    position,
-    uv,
+    into,
     [last.leftX, last.y, last.leftZ, last.along, 0],
     [last.rightX, last.y, last.rightZ, last.along, 0],
     [last.rightX, last.y + height, last.rightZ, last.along, height],
@@ -236,10 +204,18 @@ function caps(
 /** Metres, both of them: `spanOf` hands the ribbon a span of one, so a UV IS a distance. */
 type Corner = [x: number, y: number, z: number, u: number, v: number]
 
-/** Two triangles, wound so the face looks out. Unindexed, which is what keeps an edge crisp. */
-function quad(position: number[], uv: number[], a: Corner, b: Corner, c: Corner, d: Corner): void {
-  for (const corner of [a, b, c, a, c, d]) {
-    position.push(corner[0], corner[1], corner[2])
-    uv.push(corner[3], corner[4])
+/** What a band is built into — the three buffers a face writes to. */
+type Buffers = { position: number[]; uv: number[]; index: number[] }
+
+/**
+ * 🛑 Indexed within a face and never across two: the pair is coplanar, so sharing their corners
+ * changes no normal, where one shared with the next face would round the edge off.
+ */
+function quad(into: Buffers, a: Corner, b: Corner, c: Corner, d: Corner): void {
+  const first = into.position.length / 3
+  for (const corner of [a, b, c, d]) {
+    into.position.push(corner[0], corner[1], corner[2])
+    into.uv.push(corner[3], corner[4])
   }
+  into.index.push(first, first + 1, first + 2, first, first + 2, first + 3)
 }

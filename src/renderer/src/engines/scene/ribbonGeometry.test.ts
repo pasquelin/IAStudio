@@ -99,8 +99,9 @@ describe('a ribbon', () => {
     const square = [at(-5, -5), at(5, -5), at(5, 5), at(-5, 5)]
     const corners = cornersOf(band(square, { closed: true, segments: 40 }))
 
-    // Forty sections, four faces each, two triangles a face: no cap at either end.
-    expect(corners).toHaveLength(40 * 4 * 6)
+    // Forty sections, four faces each, four corners a face — indexed, so a quad's two triangles
+    // share them. No cap at either end.
+    expect(corners).toHaveLength(40 * 4 * 4)
   })
 
   /** Fewer than two points describes no run, and a shape with no surface beats a throw. */

@@ -44,11 +44,7 @@ export type PropertyField = {
   fallback?: FieldValue
 }
 
-/**
- * The fields a panel can actually draw — `listFields` skips every other one at run time, and this
- * says the same rule to the compiler: a ribbon's run of points is edited on the shape, never in a
- * row of the inspector.
- */
+/** What a panel can draw — `listFields` skips the rest: a ribbon's rail is edited on the shape. */
 type EditableKeys<T> = { [K in keyof T]-?: T[K] extends FieldValue ? K : never }[keyof T]
 
 type SpecsOf<D extends { kind: string }> = {

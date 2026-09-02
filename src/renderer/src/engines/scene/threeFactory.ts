@@ -278,11 +278,8 @@ export function buildPath(descriptor: PathDescriptor, colour: string): Object3D 
 export type RailColours = { knob: string; handle?: string; start?: string }
 
 /**
- * The line and the knobs of a rail, hung under whatever carries it — a rail node, or the mesh of
- * a band swept along one. Both are edited through the same handles because both wear these.
- *
  * 🛑 `through` for a band and never for a rail: a rail hangs in the air, but a band's run lies
- * INSIDE the surface it shapes, so its line and its knobs are behind what they pilot.
+ * INSIDE the surface it shapes, so its line and its knobs sit behind what they pilot.
  */
 export function dressWithRail(
   object: Object3D,
@@ -337,10 +334,8 @@ export function barName(part: HandlePart, index: number): string {
 }
 
 /**
- * The two tangents of one anchor, and the bar tying each to it — all four in the rail's frame.
- *
  * 🛑 Called from the BUILD as well as from the sync: left to the sync alone, every tangent sat at
- * the rail's origin until something else changed the shape, which is a green dot in a field.
+ * the rail's origin until something else changed the shape — a dot in the middle of a field.
  */
 export function placeHandles(
   object: Object3D,

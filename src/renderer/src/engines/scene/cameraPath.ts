@@ -1,4 +1,4 @@
-import { CatmullRomCurve3, CubicBezierCurve3, CurvePath, Vector3, type Curve } from 'three'
+import { CatmullRomCurve3, CubicBezierCurve3, CurvePath, Line3, Vector3, type Curve } from 'three'
 import type { PathDescriptor, Vector3 as PlainVector3 } from '@shared/domain/scene'
 import { bezierPathOf, handleAt } from '@shared/domain/scene'
 import { clamp } from '@shared/numeric'
@@ -85,10 +85,8 @@ export function segmentAt(path: PathDescriptor, u: number): number {
 }
 
 /**
- * A run whose anchors changed, with its tangents kept in step.
- *
  * 🛑 The pair of a NEW anchor is smoothed from its neighbours, never left at zero: a zero pair is
- * a corner, and posing a point in the middle of a curve would kink it where a click was made.
+ * a corner, and a point posed mid-curve would kink it where the click was made.
  */
 function withPoints(path: PathDescriptor, points: readonly PlainVector3[]): PathDescriptor {
   if (path.kind !== 'bezier') return { ...path, points }
@@ -113,10 +111,8 @@ export function withMovedPoint(
 }
 
 /**
- * One TANGENT moved, the point handed in being where its handle now stands in the rail's frame.
- *
- * 🛑 Stored RELATIVE to the anchor — the handle is drawn at anchor + tangent, so keeping the
- * absolute place would make every tangent slide the day its anchor moved.
+ * 🛑 Stored RELATIVE to the anchor — a handle is drawn at anchor + tangent, so an absolute place
+ * would make every tangent slide the day its anchor moved.
  */
 export function withMovedHandle(
   path: PathDescriptor,
@@ -191,6 +187,13 @@ export function withPointAppended(path: PathDescriptor, point: PlainVector3): Pa
   return withPoints(path, points)
 }
 
+/** Reused rather than minted per span: this runs once per anchor for every point posed. */
+const SPAN = new Line3()
+const SPAN_FROM = new Vector3()
+const SPAN_TO = new Vector3()
+const SPAN_AT = new Vector3()
+const SPAN_NEAR = new Vector3()
+
 /** Which span of the run a point falls nearest to, by the index of the anchor that opens it. */
 function nearestSpan(path: PathDescriptor, point: PlainVector3): number {
   const spans = path.closed ? path.points.length : path.points.length - 1
@@ -210,29 +213,6 @@ function nearestSpan(path: PathDescriptor, point: PlainVector3): number {
   return nearest
 }
 
-function distanceToSpan(point: PlainVector3, from: PlainVector3, to: PlainVector3): number {
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  const dz = to.z - from.z
-  const length = dx * dx + dy * dy + dz * dz
-  const along =
-    length === 0
-      ? 0
-      : Math.max(
-          0,
-          Math.min(
-            1,
-            ((point.x - from.x) * dx + (point.y - from.y) * dy + (point.z - from.z) * dz) / length,
-          ),
-        )
-
-  return Math.hypot(
-    point.x - (from.x + dx * along),
-    point.y - (from.y + dy * along),
-    point.z - (from.z + dz * along),
-  )
-}
-
 /** One control point taken away. A rail never drops below two: one point is not a line. */
 export function withoutPoint(path: PathDescriptor, index: number): PathDescriptor {
   if (path.points.length <= 2 || index < 0 || index >= path.points.length) return path
@@ -240,4 +220,11 @@ export function withoutPoint(path: PathDescriptor, index: number): PathDescripto
     path,
     path.points.filter((_, at) => at !== index),
   )
+}
+
+/** How far a point stands from one span of a run — `Line3` clamps to the ends, which is the point. */
+export function distanceToSpan(point: PlainVector3, from: PlainVector3, to: PlainVector3): number {
+  return SPAN.set(SPAN_FROM.copy(from), SPAN_TO.copy(to))
+    .closestPointToPoint(SPAN_AT.copy(point), true, SPAN_NEAR)
+    .distanceTo(SPAN_AT)
 }

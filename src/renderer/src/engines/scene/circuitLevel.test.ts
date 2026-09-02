@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Vector3 } from '@shared/domain/scene'
 import type { SceneNode } from './sceneState'
+import { distanceToSpan } from './cameraPath'
 import { CIRCUIT_START, CIRCUIT_START_YAW, circuitLine, circuitNodes } from './circuitLevel'
 
 const named = (nodes: readonly SceneNode[], word: string): SceneNode[] =>
@@ -14,20 +15,11 @@ function runOf(nodes: readonly SceneNode[], name: string): readonly Vector3[] {
   return band?.type === 'mesh' && band.geometry.kind === 'ribbon' ? band.geometry.path.points : []
 }
 
-/** How far a point sits from a closed run — the distance to the nearest of its segments. */
+/** How far a point sits from a closed run — the nearest of its spans. */
 function distanceToRun(run: readonly Vector3[], x: number, z: number): number {
+  const point = { x, y: 0, z }
   return Math.min(
-    ...run.map((from, index) => {
-      const to = run[(index + 1) % run.length]!
-      const dx = to.x - from.x
-      const dz = to.z - from.z
-      const length = dx * dx + dz * dz
-      const along =
-        length === 0
-          ? 0
-          : Math.max(0, Math.min(1, ((x - from.x) * dx + (z - from.z) * dz) / length))
-      return Math.hypot(x - (from.x + dx * along), z - (from.z + dz * along))
-    }),
+    ...run.map((from, index) => distanceToSpan(point, from, run[(index + 1) % run.length]!)),
   )
 }
 

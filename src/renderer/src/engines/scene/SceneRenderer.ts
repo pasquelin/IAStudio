@@ -145,6 +145,7 @@ import {
   applySprite,
   lightFor,
   showPathHandles,
+  tiledGeometry,
   showPathKnobs,
   standardMaterialOf,
 } from './threeSync'
@@ -4761,11 +4762,8 @@ export class SceneRenderer {
   }
 
   /**
-   * The rail redrawn WHILE one of its points is dragged, from where the knob now stands.
-   *
-   * 🛑 The command lands on RELEASE — one drag, one undo — so nothing else would show the curve
-   * following: a band is swept along its rail, and the knob moving alone left the surface behind
-   * until the mouse came up.
+   * 🛑 The command lands on RELEASE — one drag, one undo — so nothing else shows the curve
+   * following: a band is swept along its rail, and the knob alone left the surface behind.
    */
   private previewRail(): void {
     const picked = this.pickedPathPoint
@@ -4783,15 +4781,14 @@ export class SceneRenderer {
     applyPath(object, next, this.meshColor)
     if (node.type !== 'mesh' || node.geometry.kind !== 'ribbon' || !(object instanceof Mesh)) return
 
-    // The shape is REBUILT per pointer move, and the one it wore given straight back: a band of
-    // three hundred sections is some eight thousand vertices, against a surface that would
-    // otherwise not move at all until the gesture ended.
+    // 🛑 Built OUTSIDE the shared cache: the recipe differs at every pointer move, so its key
+    // never hits — the entry is minted and dropped in the same frame, `stableKey` costing 0,075 ms
+    // for nothing. `freeGeometry` tells the three provenances apart and disposes this one.
     const worn = wearGeometry(
       object,
-      this.shapes.acquire({ ...node.geometry, path: next }, node.material.tilesPerMetre),
+      tiledGeometry({ ...node.geometry, path: next }, node.material.tilesPerMetre),
     )
     if (worn) this.freeGeometry(worn)
-    else this.shapes.release(object.geometry)
   }
 
   /**
