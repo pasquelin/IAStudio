@@ -78,6 +78,15 @@ const KINDS_BY_WORKSPACE: Record<WorkspaceId, readonly DocumentKind[]> = {
   code: ['script'],
 }
 
+/**
+ * Everything a space opens, in the order it offers them. Exported so `creatable.ts` can derive
+ * what the studio can make from this table rather than relist it — the second list would be free
+ * to disagree, and it is exactly how `gui` came to be unreachable from every New gesture.
+ */
+export function kindsForWorkspace(workspace: WorkspaceId): readonly DocumentKind[] {
+  return KINDS_BY_WORKSPACE[workspace]
+}
+
 /** `null` for a workspace whose editor does not exist yet — the new-document button disables. */
 export function kindForWorkspace(workspace: WorkspaceId): DocumentKind | null {
   return KINDS_BY_WORKSPACE[workspace][0] ?? null

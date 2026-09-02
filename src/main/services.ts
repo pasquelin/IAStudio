@@ -231,7 +231,7 @@ import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
 import { promptAssistApiOf } from './provider/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
-import { buildMenu } from './menu'
+import { buildMenu, noteProjectOpen, noteRecent } from './menu'
 import { setWindowLanguage, windowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
 
@@ -573,6 +573,9 @@ export function createSettings(): SettingsStore {
       // Every native surface follows this one call, the menu bar included.
       setWindowLanguage(effectiveLanguage(current.general.language, machineLanguages()))
       buildMenu(current.shortcuts.overrides)
+      // After the build above and not before: it rebuilds only when a shelf actually moved, and
+      // most settings writes move neither.
+      noteRecent(current.storage.recentProjects, current.storage.recentDocuments)
       broadcast(EVENTS.settingsChanged, current)
     },
   })
@@ -924,6 +927,8 @@ export function createServices(settings: SettingsStore): Services {
     onChange: current => {
       if (current) settleOpenedProject(current)
       broadcast(EVENTS.projectChanged, current)
+      // File ▸ New file is greyed without one, and this is the only thing that knows.
+      noteProjectOpen(current?.path ?? null)
 
       // Jobs left running by a previous session, picked up here rather than at boot: their
       // outputs land in the project they were generated for, and the catalogue that receives

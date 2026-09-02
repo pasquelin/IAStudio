@@ -973,6 +973,11 @@ describe('the translation bundles', () => {
         'so what shows it is unknown rather than settled. Grepping `explorer.open` finds five ' +
         'sites and none of them is it: they are the `LogScope` of the same name',
     },
+    new: {
+      reads: ['nouveau', 'nouveaux'],
+      separates:
+        'making one thing — a project, a document — and the files git has never seen, which is a plural',
+    },
     pause: {
       reads: ['mettre en pause', 'pause'],
       separates: "the inspector's action, and the transport button, which has room for a word",

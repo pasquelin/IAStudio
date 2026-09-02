@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { NewDocumentAsk } from '@shared/domain/newDocument'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -16,8 +17,12 @@ vi.mock('./dockviewApi', () => ({ openDocument: (...args: unknown[]) => openDocu
  * was never what these cases were about.
  */
 describe('RailNewButton', () => {
+  /** What the window was handed, which is the whole of what this button decides. */
+  const asks: NewDocumentAsk[] = []
+
   beforeEach(() => {
     vi.clearAllMocks()
+    asks.length = 0
     installFakeBridge()
     useDocuments.setState({ documents: {} })
     useLayouts.setState({ activeWorkspace: '3d', home: false, layout: null })
@@ -30,12 +35,23 @@ describe('RailNewButton', () => {
     })
   })
 
-  it('creates a document in the active workspace and opens it', async () => {
-    // The naming window answers, which is what a person in front of it would do: the default
-    // bridge answers `null`, and cancelling makes nothing at all.
+  /** Answers as a person in front of the window would: the default bridge cancels. */
+  const answering = (): void => {
     installFakeBridge({
-      newDocument: { ask: () => Promise.resolve({ title: 'Niveau', folder: 'documents' }) },
+      newDocument: {
+        ask: ask => {
+          asks.push(ask)
+          return Promise.resolve({
+            answer: 'made',
+            place: { kind: 'scene', title: 'Niveau', folder: 'documents' },
+          })
+        },
+      },
     })
+  }
+
+  it('creates what the window answers, and opens it', async () => {
+    answering()
     render(<RailNewButton />)
     await userEvent.click(screen.getByRole('button', { name: 'Nouveau document' }))
 
@@ -47,42 +63,37 @@ describe('RailNewButton', () => {
     expect(openDocument).toHaveBeenCalledWith(documents[0])
   })
 
-  // A document is a file in a project folder: with none open there is nowhere to write it, and
-  // the click would fail after the fact rather than never being offered.
-  it('disables the button while no project is open', () => {
-    useProject.setState({ project: null })
+  /**
+   * It used to make two different things — a project on the home, a document elsewhere — so the
+   * gesture meant one thing on one screen and another on the next. It opens the one window that
+   * offers both now, and only the ORDER of what it offers follows the surface.
+   */
+  it('opens the same window from every surface, ordered by the one it was pressed on', async () => {
+    answering()
+    useLayouts.setState({ home: true })
     render(<RailNewButton />)
 
-    expect(screen.getByRole('button', { name: 'Nouveau document' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Nouveau document' }))
+
+    await waitFor(() => expect(asks).toHaveLength(1))
+    expect(asks[0]).toMatchObject({ kind: null, surface: 'home' })
   })
 
   /**
-   * The button makes what the surface makes. On the home a document would land in the space
-   * behind it, out of sight of the screen that was asked — and the project is what the studio
-   * needs first anyway, which is why the button must not be dead there.
+   * Never dead, which it was: a document needs a project, but a PROJECT does not — and the window
+   * is where one is made. A button that refuses the only gesture that could unblock the studio is
+   * the dead end this lot removes.
    */
-  describe('on the home', () => {
-    beforeEach(() => {
-      useLayouts.setState({ home: true })
-    })
+  it('stays clickable with no project open', async () => {
+    answering()
+    useProject.setState({ project: null })
+    render(<RailNewButton />)
 
-    it('offers a new project instead of a new document', () => {
-      render(<RailNewButton />)
+    const button = screen.getByRole('button', { name: 'Nouveau document' })
+    expect(button).not.toBeDisabled()
 
-      expect(screen.getByRole('button', { name: 'Nouveau projet' })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Nouveau document' })).not.toBeInTheDocument()
-    })
-
-    it('stays clickable with no project open — creating one needs no project', async () => {
-      const createPicked = vi.fn(() => Promise.resolve())
-      useProject.setState({ project: null, createPicked })
-      render(<RailNewButton />)
-
-      const button = screen.getByRole('button', { name: 'Nouveau projet' })
-      expect(button).not.toBeDisabled()
-
-      await userEvent.click(button)
-      expect(createPicked).toHaveBeenCalled()
-    })
+    await userEvent.click(button)
+    await waitFor(() => expect(asks).toHaveLength(1))
+    expect(asks[0]?.projectName).toBeNull()
   })
 })

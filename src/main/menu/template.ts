@@ -2,6 +2,14 @@
 // import of Electron, and this module could no longer be tested under plain Node.
 import type { MenuItemConstructorOptions } from 'electron'
 import { APP_NAME } from '@shared/constants'
+import { CREATABLES } from '@shared/domain/creatable'
+import { pathBaseNameOf, stemOf } from '@shared/domain/fileName'
+import {
+  projectName,
+  projectsByCreation,
+  type RecentDocument,
+  type RecentProject,
+} from '@shared/domain/project'
 import {
   DISPLAY_MODES,
   LIGHT_ENTRIES,
@@ -32,6 +40,8 @@ import { fillHoles, TRANSLATIONS, type Language, type Translations } from '@shar
 import { MATERIAL_EXPORT_TARGETS } from '@shared/domain/materialExport'
 import { FACE_SIZES, SKY_PANORAMAS } from '@shared/domain/skybox'
 import type {
+  NewDocumentRequest,
+  RecentOpenRequest,
   SceneAddRequest,
   SceneCaptureCommand,
   SceneDisplayRequest,
@@ -60,6 +70,8 @@ export type MenuActions = {
   toggleFullScreen: () => void
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void
+  newDocument: (request: NewDocumentRequest) => void
+  openRecent: (request: RecentOpenRequest) => void
   addNode: (request: SceneAddRequest) => void
   viewFrom: (request: SceneViewRequest) => void
   setDisplay: (request: SceneDisplayRequest) => void
@@ -99,6 +111,23 @@ export type MenuOptions = {
   checked: readonly MenuCheck[]
   /** The rows the focused window reported as answerable — a row absent from here is drawn greyed. */
   abilities: readonly MenuAbility[]
+  /**
+   * The folder of the open project, `null` where none is. Read from the main process rather than
+   * reported by the window: the main process OWNS the open project, and a fact it holds travelling
+   * through a renderer is a fact free to arrive late — File ▸ New file would stay greyed over a
+   * project already open.
+   *
+   * The PATH and not a boolean: a recent document says which project it belongs to, and only
+   * where that is not the one in front — two members for one fact would be free to disagree.
+   */
+  openProject: string | null
+  /**
+   * What File ▸ Open recent lists. From the main process for the same reason `hasProject` is: it
+   * is what holds the settings, and the two lists are written by opening things rather than by
+   * any window reporting them.
+   */
+  recentProjects: readonly RecentProject[]
+  recentDocuments: readonly RecentDocument[]
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
   overrides: BindingOverrides
   actions: MenuActions
@@ -158,6 +187,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     abilities,
     isMac,
     isDevelopment,
+    openProject,
+    recentProjects,
+    recentDocuments,
     overrides,
     actions,
   } = options
@@ -669,6 +701,39 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
+  /**
+   * The shelf, in one submenu: the projects first, by the same creation order every other surface
+   * lists them in, then the documents in the order they were last opened — which is what "recent
+   * files" means in every application, and what a project must NOT be ordered by, a shelf that
+   * reshuffles under the click being a shelf one misses.
+   *
+   * Absent altogether when there is nothing to list: an empty submenu is a row that looks broken.
+   */
+  const openRecentMenu = (): MenuItemConstructorOptions[] => {
+    const projects = projectsByCreation([...recentProjects]).map(entry => ({
+      label: projectName(entry.path),
+      click: () => actions.openRecent({ project: entry.path }),
+    }))
+
+    const documents = recentDocuments.map(entry => {
+      const title = stemOf(pathBaseNameOf(entry.path))
+
+      return {
+        // The project named beside it only where it is not the one in front: a row that performs
+        // a project SWITCH has to say so before it is clicked.
+        label: entry.project === openProject ? title : `${title} — ${projectName(entry.project)}`,
+        click: () => actions.openRecent({ project: entry.project, path: entry.path }),
+      }
+    })
+
+    if (projects.length === 0 && documents.length === 0) return []
+
+    const between: MenuItemConstructorOptions[] =
+      projects.length > 0 && documents.length > 0 ? [{ type: 'separator' }] : []
+
+    return [{ label: t.menu.openRecent, submenu: [...projects, ...between, ...documents] }]
+  }
+
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
     scope === 'scene'
@@ -692,16 +757,38 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     {
       label: t.menu.file,
       submenu: [
+        // The window that offers both, and the one row of this menu that is never greyed: with no
+        // project open it is the way to one.
+        {
+          label: t.menu.newDocument,
+          ...keyOf('app.new'),
+          click: () => actions.runCommand('app.new'),
+        },
         {
           label: t.menu.newProject,
           ...keyOf('project.new'),
           click: () => actions.runCommand('project.new'),
         },
         {
+          label: t.menu.newFile,
+          // The rail's own order, and never the surface's: a native menu whose rows move under the
+          // pointer is a menu one has to read again every time. The WINDOW is where the order
+          // follows what one is doing.
+          submenu: CREATABLES.map(({ kind }) => ({
+            label: t.documents.kinds[kind],
+            // A document is a file in a project folder: with none open there is nowhere to write
+            // it, and the row would fail after the click rather than before it.
+            enabled: openProject !== null,
+            click: () => actions.newDocument({ kind }),
+          })),
+        },
+        { type: 'separator' },
+        {
           label: t.menu.openProject,
           ...keyOf('project.open'),
           click: () => actions.runCommand('project.open'),
         },
+        ...openRecentMenu(),
         { type: 'separator' },
         {
           label: t.menu.saveDocument,

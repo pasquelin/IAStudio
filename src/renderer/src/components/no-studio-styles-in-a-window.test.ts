@@ -42,7 +42,7 @@ const FAMILIES: readonly string[] = [
  * equivalent. It carries captions, rows and actions — no field role, no suffix, no gauge at all.
  */
 const ALLOWED: readonly string[] = [
-  './features/document/components/NewDocument/NewDocumentWindow.tsx',
+  './features/document/components/NewDocument/NewDocumentForm.tsx',
   './features/document/components/NewDocument/NewDocumentTemplateTile.tsx',
   './features/settings/components/Ai/AiCandidateRow.tsx',
 ]

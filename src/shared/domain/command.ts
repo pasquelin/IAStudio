@@ -37,6 +37,7 @@ export type CommandScope =
   | 'gui'
 
 export type CommandId =
+  | 'app.new'
   | 'project.new'
   | 'project.open'
   | 'document.save'
@@ -227,9 +228,10 @@ export type CommandDescriptor = {
    */
   defaultBinding: Signature | null
   /**
-   * 🛑 It raises a system dialogue, so `command.runStudioCommand` refuses it: the assistant cannot fill a
-   * native modal, cannot read what was chosen in it, and re-ran the command on its next round —
-   * a second Finder over the first. The action taking a path is what does this deliberately.
+   * 🛑 It raises a dialogue only a PERSON can fill — a native picker, or a window of the studio's
+   * own that asks a question. `command.runStudioCommand` refuses it: the assistant cannot fill
+   * one, cannot read what was chosen in it, and re-ran the command on its next round — a second
+   * Finder over the first. The action taking a path is what does this deliberately.
    */
   raisesDialog?: true
   /**
@@ -251,13 +253,29 @@ function command(descriptor: CommandDescriptor): CommandDescriptor {
 }
 
 export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
+  /**
+   * ⌘N makes a FILE, as it does in every other application — a project moved off it on 2026-09-02.
+   *
+   * `raisesDialog` like the two pickers: the window it opens asks a person what to make and what
+   * to call it, and a model that fired this would leave one standing on someone's screen and run
+   * it again next round. `workspace.open { createDocument }` is what an outside client uses.
+   */
+  command({
+    id: 'app.new',
+    scope: 'global',
+    raisesDialog: true,
+    titleKey: 'commands.appNew.title',
+    helpKey: 'commands.appNew.help',
+    defaultBinding: 'Meta+KeyN',
+  }),
   command({
     id: 'project.new',
     scope: 'global',
     raisesDialog: true,
     titleKey: 'commands.projectNew.title',
     helpKey: 'commands.projectNew.help',
-    defaultBinding: 'Meta+KeyN',
+    // ⌥⌘N and not ⇧⌘N: the Explorer's New folder holds that one, as every Finder-shaped app does.
+    defaultBinding: 'Alt+Meta+KeyN',
   }),
   command({
     id: 'project.open',

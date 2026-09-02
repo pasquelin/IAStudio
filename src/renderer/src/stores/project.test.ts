@@ -561,7 +561,9 @@ describe('dropping a project from the shelf', () => {
 
     await useProject.getState().forget(SUMMER.path)
 
-    expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
+    expect(write).toHaveBeenCalledWith({
+      storage: { recentProjects: [WINTER], recentDocuments: [] },
+    })
   })
 
   /**
@@ -582,7 +584,7 @@ describe('dropping a project from the shelf', () => {
     await useProject.getState().forget(SUMMER.path)
 
     expect(write).toHaveBeenCalledWith({
-      storage: { recentProjects: [WINTER], lastProject: undefined },
+      storage: { recentProjects: [WINTER], recentDocuments: [], lastProject: undefined },
     })
   })
 
@@ -599,7 +601,9 @@ describe('dropping a project from the shelf', () => {
 
     await useProject.getState().forget(SUMMER.path)
 
-    expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
+    expect(write).toHaveBeenCalledWith({
+      storage: { recentProjects: [WINTER], recentDocuments: [] },
+    })
   })
 
   // The row says "removes it from this list only". Nothing may reach the folder itself.
@@ -626,7 +630,9 @@ describe('dropping a project from the shelf', () => {
 
     await expect(useProject.getState().open(SUMMER.path)).resolves.toBe(false)
 
-    expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
+    expect(write).toHaveBeenCalledWith({
+      storage: { recentProjects: [WINTER], recentDocuments: [] },
+    })
   })
 })
 
@@ -825,6 +831,7 @@ describe('putting a project folder in the trash', () => {
     expect(write).toHaveBeenCalledWith({
       storage: {
         recentProjects: [WINTER],
+        recentDocuments: [],
         lastProject: undefined,
         projectAccounts: { [WINTER.path]: 'account-2' },
       },
@@ -847,7 +854,7 @@ describe('putting a project folder in the trash', () => {
     })
 
     expect(write).toHaveBeenCalledWith({
-      storage: { recentProjects: [WINTER], lastProject: undefined },
+      storage: { recentProjects: [WINTER], recentDocuments: [], lastProject: undefined },
     })
   })
 

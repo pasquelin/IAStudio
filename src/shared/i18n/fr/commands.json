@@ -1,5 +1,6 @@
 {
   "commands": {
+    "appNew": { "title": "Nouveau…", "help": "Ouvre la fenêtre qui crée un projet ou un document, quel que soit l’écran" },
     "projectNew": {
       "title": "Nouveau projet",
       "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."

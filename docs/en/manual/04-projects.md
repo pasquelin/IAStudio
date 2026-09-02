@@ -21,12 +21,22 @@ is a project you lose the day that software stops opening.
 
 | Action | Shortcut | Menu |
 |---|---|---|
-| **New project** | `⌘N` / `Ctrl+N` | **File ▸ New project…** |
+| **New…** | `⌘N` / `Ctrl+N` | **File ▸ New…** |
+| **New project** | `⌥⌘N` / `Alt+Ctrl+N` | **File ▸ New project…** |
 | **Open project** | `⌘O` / `Ctrl+O` | **File ▸ Open project…** |
+| **Open a recent project** | — | **File ▸ Open recent** |
+
+**`⌘N` opens a window**, the same one from every screen: it offers to make a project and, below
+that, every kind of document — image, video, scene, interface, script, audio, material, sky. The
+kinds of the workspace you are in come first; all the others stay one click away. **The green `+`
+button**, at the top of the icon column, opens exactly the same window.
+
+**No project open?** The window says so and offers the way out on the spot: your recent projects,
+one click each, or the two buttons that make or open one. The project opens and you carry on —
+without going back to the home.
 
 **Both gestures are in the Explorer panel too**, whenever no project is open: it then shows
-**Open project** and **New project**, in its usual place in the left column. It is there so that
-you never have to go back to the home from a workspace.
+**Open project** and **New project**, in its usual place in the left column.
 
 **Only one project is open at a time.** Opening a second closes the first — losing nothing:
 everything that was saved stayed saved.
