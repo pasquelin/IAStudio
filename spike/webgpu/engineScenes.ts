@@ -182,3 +182,37 @@ export const withoutMaps = (state: SceneState): SceneState => ({
   ...state,
   nodes: state.nodes.map(node => (node.type === 'mesh' ? { ...node, material: { ...node.material, map: null } } : node)),
 })
+
+/**
+ * Une grande map PLATE : mêmes corps que `sceneVaried`, étalés sur un carré horizontal plutôt que
+ * dans un cube.
+ *
+ * C4 ne se mesure pas sur S3 : un cube dense entre entier dans le frustum, donc un volume d'ombre
+ * ajusté sur la vue n'a rien à retrancher — mesuré, la boîte y devient même plus grande. Il faut
+ * un monde qu'une caméra posée dedans ne voit qu'en partie.
+ */
+export function sceneField(count: number, span: number, seed = 11, level: ShapeLevel = 'full'): SceneState {
+  const { next: random } = createRandom(seed)
+  const shapes = threeShapes(level)
+  const nodes: MeshNode[] = []
+  for (let at = 0; at < count; at++) {
+    const base = meshNode(`f${at}`)
+    const scale = 0.6 + random() * 1.6
+    nodes.push({
+      ...base,
+      geometry: shapes[at % shapes.length] ?? shapes[0]!,
+      material: { ...base.material, color: EIGHT_PAINTS[(at * 7) % EIGHT_PAINTS.length] ?? '#ffffff' },
+      transform: {
+        position: {
+          x: (random() - 0.5) * 2 * span,
+          // Posés au sol, à quelques unités près : c'est une map, pas un nuage.
+          y: random() * 3,
+          z: (random() - 0.5) * 2 * span,
+        },
+        rotation: { x: 0, y: random() * Math.PI * 2, z: 0 },
+        scale: { x: scale, y: scale, z: scale },
+      },
+    })
+  }
+  return withState(nodes)
+}

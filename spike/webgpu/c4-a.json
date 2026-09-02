@@ -1,0 +1,247 @@
+{
+  "at": "2026-09-02T11:31:00.221Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "level": "product",
+      "fit": "scene",
+      "shadowFar": 0,
+      "view": "full",
+      "span": 136.047,
+      "gpuMs": 10.236,
+      "gpuNoShadowMs": 5.594,
+      "shadowGpuMs": 4.642,
+      "calls": 345,
+      "shadowCalls": 168,
+      "triangles": 36667216,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "scene",
+      "shadowFar": 0,
+      "view": "turned",
+      "span": 136.047,
+      "gpuMs": 5.263,
+      "gpuNoShadowMs": 2.66,
+      "shadowGpuMs": 2.603,
+      "calls": 297,
+      "shadowCalls": 168,
+      "triangles": 29783376,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "scene",
+      "shadowFar": 0,
+      "view": "inside",
+      "span": 136.047,
+      "gpuMs": 5.622,
+      "gpuNoShadowMs": 3.197,
+      "shadowGpuMs": 2.425,
+      "calls": 294,
+      "shadowCalls": 168,
+      "triangles": 30985936,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "scene",
+      "shadowFar": 0,
+      "view": "ground",
+      "span": 136.047,
+      "gpuMs": 6.522,
+      "gpuNoShadowMs": 3.218,
+      "shadowGpuMs": 3.304,
+      "calls": 295,
+      "shadowCalls": 168,
+      "triangles": 31114576,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "view",
+      "shadowFar": 0,
+      "view": "full",
+      "span": 165.509,
+      "gpuMs": 8.944,
+      "gpuNoShadowMs": 4.681,
+      "shadowGpuMs": 4.263,
+      "calls": 345,
+      "shadowCalls": 168,
+      "triangles": 36667216,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0.007
+    },
+    {
+      "level": "product",
+      "fit": "view",
+      "shadowFar": 0,
+      "view": "turned",
+      "span": 165.509,
+      "gpuMs": 4.952,
+      "gpuNoShadowMs": 2.714,
+      "shadowGpuMs": 2.238,
+      "calls": 288,
+      "shadowCalls": 159,
+      "triangles": 28777296,
+      "shadowTriangles": 17327492,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "view",
+      "shadowFar": 0,
+      "view": "inside",
+      "span": 165.509,
+      "gpuMs": 5.551,
+      "gpuNoShadowMs": 2.577,
+      "shadowGpuMs": 2.974,
+      "calls": 294,
+      "shadowCalls": 168,
+      "triangles": 30985936,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "view",
+      "shadowFar": 0,
+      "view": "ground",
+      "span": 165.509,
+      "gpuMs": 5.917,
+      "gpuNoShadowMs": 2.926,
+      "shadowGpuMs": 2.991,
+      "calls": 295,
+      "shadowCalls": 168,
+      "triangles": 31114576,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "viewCasters",
+      "shadowFar": 0,
+      "view": "full",
+      "span": 165.509,
+      "gpuMs": 8.658,
+      "gpuNoShadowMs": 4.728,
+      "shadowGpuMs": 3.93,
+      "calls": 345,
+      "shadowCalls": 168,
+      "triangles": 36667216,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0.007
+    },
+    {
+      "level": "product",
+      "fit": "viewCasters",
+      "shadowFar": 0,
+      "view": "turned",
+      "span": 165.509,
+      "gpuMs": 5.069,
+      "gpuNoShadowMs": 3.098,
+      "shadowGpuMs": 1.971,
+      "calls": 288,
+      "shadowCalls": 159,
+      "triangles": 28777296,
+      "shadowTriangles": 17327492,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "viewCasters",
+      "shadowFar": 0,
+      "view": "inside",
+      "span": 165.509,
+      "gpuMs": 5.547,
+      "gpuNoShadowMs": 2.642,
+      "shadowGpuMs": 2.905,
+      "calls": 294,
+      "shadowCalls": 168,
+      "triangles": 30985936,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    },
+    {
+      "level": "product",
+      "fit": "viewCasters",
+      "shadowFar": 0,
+      "view": "ground",
+      "span": 165.509,
+      "gpuMs": 5.98,
+      "gpuNoShadowMs": 2.759,
+      "shadowGpuMs": 3.221,
+      "calls": 295,
+      "shadowCalls": 168,
+      "triangles": 31114576,
+      "shadowTriangles": 18333572,
+      "fitCpuMs": 0
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2003,
+      "phase": "product — scene — turned",
+      "workingSetKb": 469216
+    },
+    {
+      "at": 4006,
+      "phase": "product — scene — inside",
+      "workingSetKb": 470192
+    },
+    {
+      "at": 6007,
+      "phase": "product — scene — ground",
+      "workingSetKb": 470656
+    },
+    {
+      "at": 8009,
+      "phase": "product — view — full",
+      "workingSetKb": 672112
+    },
+    {
+      "at": 10011,
+      "phase": "product — view — turned",
+      "workingSetKb": 672816
+    },
+    {
+      "at": 12014,
+      "phase": "product — view — inside",
+      "workingSetKb": 673104
+    },
+    {
+      "at": 14017,
+      "phase": "product — view — ground",
+      "workingSetKb": 661088
+    },
+    {
+      "at": 16020,
+      "phase": "product — viewCasters — full",
+      "workingSetKb": 679456
+    },
+    {
+      "at": 18024,
+      "phase": "product — viewCasters — turned",
+      "workingSetKb": 679408
+    },
+    {
+      "at": 20026,
+      "phase": "product — viewCasters — ground",
+      "workingSetKb": 679408
+    },
+    {
+      "at": 22030,
+      "phase": "fin",
+      "workingSetKb": 663888
+    }
+  ]
+}
