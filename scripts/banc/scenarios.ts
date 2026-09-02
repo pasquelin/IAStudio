@@ -20,6 +20,7 @@ import { SCENES_SCENARIOS } from './scenariosScenes'
 import { EXPORT_SCENARIOS } from './scenariosExport'
 import { CODE_SCENARIOS } from './scenariosCode'
 import { MEMORY_SCENARIOS } from './scenariosMemory'
+import { PIXEL_ART_SCENARIOS } from './scenariosPixelArt'
 
 /**
  * The batterie, as something the bench can run — one scenario per request of `BATTERIE.md`, in
@@ -48,4 +49,5 @@ export const SCENARIOS: readonly Scenario[] = [
   ...EXPORT_SCENARIOS,
   ...CODE_SCENARIOS,
   ...MEMORY_SCENARIOS,
+  ...PIXEL_ART_SCENARIOS,
 ]

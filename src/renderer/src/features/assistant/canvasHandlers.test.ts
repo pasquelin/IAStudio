@@ -105,6 +105,92 @@ describe('what a layer stands at', () => {
   })
 })
 
+describe('the pixel-art grid, driven by value', () => {
+  const onGrid = (cell: number): void =>
+    installIn(
+      canvasStore,
+      DOCUMENT,
+      {
+        ...DEFAULT_CANVAS,
+        width: 512,
+        height: 512,
+        pixelCell: cell,
+        layers: [pixelLayer('l', 'L')],
+      },
+      'image',
+    )
+
+  // Set in CELLS, which is how a person says it — the handler turns them into the document's size.
+  it('sizes the document from a count of cells', async () => {
+    expect(
+      await runAction('canvas.setPixelArt', { enabled: true, columns: 32, rows: 32, cell: 2 }),
+    ).toMatchObject({ ok: true })
+
+    expect([canvas().width, canvas().height, canvas().pixelCell]).toEqual([64, 64, 2])
+  })
+
+  it('reads the grid back in cells, and says nothing of it when there is none', async () => {
+    onGrid(16)
+    const held = await runAction('canvas.state', {})
+    expect(held).toMatchObject({
+      ok: true,
+      data: { pixelArt: { cell: 16, columns: 32, rows: 32 } },
+    })
+
+    await runAction('canvas.setPixelArt', { enabled: false })
+    const gone = await runAction('canvas.state', {})
+    expect(gone.ok && 'pixelArt' in (gone.data as object)).toBe(false)
+  })
+
+  it('refuses to draw on an image that is not on a grid', async () => {
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['1,1'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  // One of the two and never both: a call that named a colour AND asked to erase means neither.
+  it('refuses a colour and an erasure together, and refuses neither', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', {
+        shape: 'points',
+        cells: ['1,1'],
+        color: '#ff0000',
+        erase: true,
+      }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+    expect(await runAction('canvas.drawPixels', { shape: 'points', cells: ['1,1'] })).toMatchObject(
+      {
+        ok: false,
+        refusal: 'badInput',
+      },
+    )
+  })
+
+  /**
+   * Outside the grid is DROPPED, never folded back: a cell at 40 on a grid of 32 is a mistake,
+   * and painting it at 8 would answer a request nobody made.
+   */
+  it('refuses when every cell asked for falls outside the grid', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['99,99'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  // No engine is mounted under a headless run, so the port answers nothing and the refusal names
+  // what a caller can act on rather than reporting a success that painted nothing.
+  it('says so when nothing was painted', async () => {
+    onGrid(16)
+
+    expect(
+      await runAction('canvas.drawPixels', { shape: 'points', cells: ['1,1'], color: '#ff0000' }),
+    ).toMatchObject({ ok: false, refusal: 'notFound' })
+  })
+})
+
 describe('reading the image in front', () => {
   it('answers the frame and the whole stack, groups walked into', async () => {
     const outcome = await runAction('canvas.state', {})

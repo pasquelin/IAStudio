@@ -996,3 +996,23 @@ Ce que la section mesure au-delà de son décor : que le modèle DEMANDE ce qu'i
 - [ ] « Donne-moi le détail de ce que tu sais sur les caméras. »
 - [ ] « Oublie ce que tu as retenu sur les caméras. »
 - [ ] « Relie ce que tu sais des caméras à ce que tu sais du script. »
+
+## 68. Le pixel art
+
+Une grille se règle en CELLULES — « une grille de 32 sur 32 » — et le studio en déduit la taille
+du document. Les coordonnées d'un dessin sont en cellules, jamais en pixels du document : c'est
+la seule chose qu'un modèle ne peut pas déduire, et `canvas.state` la lui rend.
+
+🛑 **Ce que la section ne mesure pas** : ce qu'un modèle d'image REND. Ajouter « pixel art » au
+prompt obtient un 1024 « façon pixel art », pas un vrai 32 × 32. 68.8 mesure les mots envoyés,
+rien d'autre.
+
+- [ ] « Passe ce document en pixel art, avec une grille de 32 sur 32. »
+- [ ] « Le mode pixel art est-il actif, et quelle est la taille de la grille ? »
+- [ ] « Pose un pixel rouge en 3, 4. »
+- [ ] « Trace une ligne noire du coin haut gauche au coin bas droit. »
+- [ ] « Dessine un carré bleu plein de 8 sur 8 au centre de la grille. »
+- [ ] « Remplis tout le calque en blanc. »
+- [ ] « Efface le pixel en 3, 4. »
+- [ ] « Génère un sprite de personnage. »
+- [ ] « Repasse ce document en image normale. »

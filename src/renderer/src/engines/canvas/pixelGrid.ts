@@ -136,6 +136,32 @@ export function cellsOfLine(fromCell: Point, toCell: Point): readonly Point[] {
   return cells
 }
 
+/** One cell of the grid, in document pixels. */
+export function cellRect(at: Point, cell: number): Rect {
+  return { x: at.x * cell, y: at.y * cell, width: cell, height: cell }
+}
+
+/**
+ * The cells of a rectangle between two corners, its outline alone unless `filled`. Ordered by
+ * row, so what a caller reads back is what it would have written.
+ */
+export function cellsOfRect(from: Point, to: Point, filled: boolean): Point[] {
+  const left = Math.min(from.x, to.x)
+  const right = Math.max(from.x, to.x)
+  const top = Math.min(from.y, to.y)
+  const bottom = Math.max(from.y, to.y)
+  if (!Number.isFinite(left + right + top + bottom)) return []
+
+  const cells: Point[] = []
+  for (let y = top; y <= bottom; y += 1) {
+    const edge = y === top || y === bottom
+    for (let x = left; x <= right; x += 1) {
+      if (filled || edge || x === left || x === right) cells.push({ x, y })
+    }
+  }
+  return cells
+}
+
 /** Under this a hairline covers a sixth of the gap, and the grid reads as a grey wash. */
 export const MIN_GRID_PX = 6
 

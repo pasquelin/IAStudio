@@ -245,6 +245,14 @@
         "title": "Redimensionner l’image",
         "description": "Change le cadre de l’image devant. Redimensionne les calques avec lui quand on le demande, et les laisse en place sinon, ce qui est toute la différence entre taille de l’image et taille du canevas."
       },
+      "canvasSetPixelArt": {
+        "title": "Régler le mode pixel art",
+        "description": "Met l’image devant sur une grille de pixel art, ou l’en retire. Avec un nombre de colonnes et de lignes, redimensionne le document pour que l’œuvre mesure exactement cela en cellules. 🛑 Un redimensionnement efface l’historique des pixels — les traits déjà posés restent, mais ⌘Z ne les défait plus."
+      },
+      "canvasDrawPixels": {
+        "title": "Dessiner des pixels",
+        "description": "Pose des cellules sur l’image devant, en une seule fois et une seule annulation — des cellules nommées une à une, une ligne, un rectangle plein ou creux, ou un remplissage. Les coordonnées sont en cellules de la grille, pas en pixels du document."
+      },
       "canvasCrop": {
         "title": "Recadrer l’image",
         "description": "Referme le cadre sur un rectangle donné en coordonnées du document. Les calques gardent leur place, donc ce qui tombe dehors est ce qui est coupé."
@@ -1290,6 +1298,17 @@
       "rotation": "Rotation, en degrés",
       "fontSize": "Corps du texte",
       "colour": "Couleur, en #rrggbb",
+      "color": "Couleur",
+      "pixelArtEnabled": "Mode pixel art",
+      "columns": "Colonnes",
+      "rows": "Lignes",
+      "cell": "Taille de la cellule",
+      "pixelShape": "Forme",
+      "cells": "Cellules",
+      "toX": "X d’arrivée",
+      "toY": "Y d’arrivée",
+      "filled": "Plein",
+      "erase": "Effacer",
       "width": "Largeur",
       "height": "Hauteur",
       "align": "Alignement du texte",

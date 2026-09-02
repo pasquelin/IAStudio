@@ -37,6 +37,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
     '66.1',
     '66.2',
     '66.4',
+    '68.8',
   ],
   'jobs.list': ['44.1'],
   'prompt.suggest': ['45.5'],
@@ -98,8 +99,12 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'asset.extractTextures': ['2.5', '3.4'],
   'assets.removeFromLibrary': ['43.2'],
 
-  'canvas.state': ['39.1'],
+  'canvas.state': ['39.1', '68.2'],
   'canvas.resize': ['39.2'],
+  'canvas.setPixelArt': ['68.1', '68.9'],
+  // 🛑 68.7 is a DECLARED blind spot in one direction: its own decor lays the cell with
+  // `canvas.drawPixels`, so what the oracle reads is the ERASURE, which the decor never does.
+  'canvas.drawPixels': ['68.3', '68.4', '68.5', '68.6', '68.7'],
   'canvas.crop': ['51.7'],
   'canvas.flipOrRotate': ['51.8'],
   'layer.add': ['19.1', '28.4'],
