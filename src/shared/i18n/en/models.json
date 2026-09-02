@@ -40,6 +40,7 @@
     "landingSends": "{{file}} travels with the request: the model rewrites it.",
     "advancedHint": "Show the knobs a generation does not ask for",
     "advancedFewerHint": "Fold these knobs away",
+    "suitsPixelArt": "pixel art",
     "contextApplies": "Apply the project’s context",
     "pixelArtApplies": "Tell the model about the pixel-art grid",
     "contextReferences": "Use these references",

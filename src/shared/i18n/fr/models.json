@@ -40,6 +40,7 @@
     "landingSends": "{{file}} part avec la demande : le modèle le réécrit.",
     "advancedHint": "Montrer les réglages qu’une génération ne demande pas",
     "advancedFewerHint": "Replier ces réglages",
+    "suitsPixelArt": "pixel art",
     "contextApplies": "Appliquer le contexte du projet",
     "pixelArtApplies": "Dire la grille du pixel art au modèle",
     "contextReferences": "Utiliser ces références",

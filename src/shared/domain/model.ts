@@ -407,6 +407,30 @@ export function servesStudioCapability(
 }
 
 /**
+ * The words a pixel-art model wears. 🛑 NO tag is listed here, and that is a measurement that was
+ * NOT made rather than one that came back empty: the Scenario MCP is not connected to the session
+ * that wrote this, so no `models_list` was run and the graphies a real catalogue carries are
+ * unknown. `TAGS_BY_FAMILY.image`, counted over the 640 public models, holds none of them.
+ *
+ * So the name and the description are what answer, which is what a person reads anyway. A tag
+ * list is worth adding the day somebody counts one — and writes the count here, dated.
+ */
+const PIXEL_ART_WORDS: readonly string[] = ['pixel art', 'pixelart', 'pixel-art', '8-bit', '16-bit']
+
+/**
+ * Whether a model says it draws pixel art. Used to PROMOTE, never to filter — a catalogue that
+ * hides what it did not recognise is worse than one that shows everything in a plain order.
+ */
+export function suitsPixelArt(model: {
+  name: string
+  tags: readonly string[]
+  description?: string
+}): boolean {
+  const said = `${model.name} ${model.description ?? ''} ${model.tags.join(' ')}`.toLowerCase()
+  return PIXEL_ART_WORDS.some(word => said.includes(word))
+}
+
+/**
  * Tags worth offering per family, taken from a count over the 640 public models rather than
  * invented. They cannot be read off the API: `GET /tags` answers with the caller's OWN tags —
  * measured: zero on a fresh account — and deriving them from the loaded page would make the

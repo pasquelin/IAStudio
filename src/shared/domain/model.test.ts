@@ -6,10 +6,12 @@ import {
   servesStudioCapability,
   STUDIO_CAPABILITIES,
   studioCapability,
+  suitsPixelArt,
   tagLabel,
   TAGS_BY_FAMILY,
   TAG_LABEL_KEY_LIST,
   TAG_LABEL_KEYS,
+  type ModelSummary,
   tagOfFamily,
 } from './model'
 
@@ -160,5 +162,29 @@ describe('the families that have an employment', () => {
     const empty = MODEL_FAMILIES.filter(family => CAPABILITIES_BY_FAMILY[family].length === 0)
 
     expect(empty).toEqual(['other'])
+  })
+})
+
+describe('what suits pixel art', () => {
+  const model = (over: Partial<ModelSummary>): ModelSummary => ({
+    id: 'm',
+    name: 'A model',
+    family: 'image',
+    runsOn: 'scenario',
+    source: 'scenario',
+    origin: 'official',
+    featured: false,
+    capabilities: [],
+    tags: [],
+    ...over,
+  })
+
+  // The name, the description and the tags alike: a person reads all three, and no catalogue
+  // count says which one a real pixel-art model wears — see `PIXEL_ART_WORDS`.
+  it('answers to the words wherever they are written', () => {
+    expect(suitsPixelArt(model({ name: 'Pixel Art Sprites' }))).toBe(true)
+    expect(suitsPixelArt(model({ description: 'clean 8-bit game assets' }))).toBe(true)
+    expect(suitsPixelArt(model({ tags: ['pixelart'] }))).toBe(true)
+    expect(suitsPixelArt(model({ name: 'Photoreal Portraits' }))).toBe(false)
   })
 })
