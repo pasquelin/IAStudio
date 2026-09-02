@@ -172,6 +172,9 @@ const NOT_PUBLISHED: readonly string[] = [
   'setCanvasDpi',
   'setCanvasColorMode',
   'setCanvasBitDepth',
+  // Taking a filed motion back onto the band. Nothing stands in the way of an action here — the
+  // gesture is `reopenCharacterMotion`, and it names an asset — it is simply not published yet.
+  'loadAnimation',
   // The grip's half of the pair `layer.editTextLayer` and `layer.transform` already publish: it writes a
   // caption's box AND its corner in ONE entry, because a north or west grip pulls both at once.
   // A call names them one after the other and pays two undos, which no hand can do.

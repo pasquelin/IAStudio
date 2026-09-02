@@ -1,5 +1,5 @@
 import { Euler, Matrix4, Quaternion } from 'three'
-import { glbChunksOf, glbFrom } from '@shared/domain/glbContainer'
+import { glbChunksOf, glbFrom, glbJson } from '@shared/domain/glbContainer'
 import { isRecord } from '@shared/guards'
 import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
 import type { CharacterExtras } from '@shared/domain/character'
@@ -33,7 +33,7 @@ export function glbSkinFaultOf(file: Uint8Array, patch: GlbSkinPatch): GlbSkinFa
   const chunks = glbChunksOf(file)
   if (!chunks) return 'not-glb'
 
-  const gltf: unknown = parsed(chunks.json)
+  const gltf: unknown = glbJson(chunks.json)
   if (!isRecord(gltf)) return 'not-glb'
   if (!Array.isArray(gltf.buffers) || gltf.buffers.length === 0) return 'no-buffer'
 
@@ -59,7 +59,7 @@ export function glbSkinFaultOf(file: Uint8Array, patch: GlbSkinPatch): GlbSkinFa
  */
 export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
   const chunks = glbChunksOf(file)
-  const gltf: unknown = chunks && parsed(chunks.json)
+  const gltf: unknown = chunks && glbJson(chunks.json)
   if (!chunks || !isRecord(gltf)) return file
 
   const held = Array.isArray(gltf.skins) ? gltf.skins : []
@@ -315,13 +315,4 @@ function ownExtras(scene: unknown): Record<string, unknown> {
 function firstBuffer(buffers: unknown): Record<string, unknown> {
   const first = Array.isArray(buffers) ? buffers[0] : null
   return isRecord(first) ? first : {}
-}
-
-function parsed(bytes: Uint8Array): unknown {
-  try {
-    return JSON.parse(new TextDecoder().decode(bytes))
-  } catch {
-    // A container whose JSON does not parse is a file this pass leaves exactly as it found it.
-    return null
-  }
 }

@@ -41,7 +41,7 @@ export type CharacterWindowInspectorProps = {
   /** What the engine measured of the mesh, for the rigger that fits itself to it. */
   sample: MeshSample | null
   /** Files what the band plays as a motion of the project — the window holds the engine. */
-  onSaveMotion?: () => Promise<void>
+  onSaveMotion?: (asNew: boolean) => Promise<void>
 }
 
 /**

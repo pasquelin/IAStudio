@@ -27,6 +27,12 @@ export type AnimationView = {
   /** Whether moving an object writes a key rather than its rest pose. */
   autoKey: boolean
   /**
+   * The motion FILE this band is editing, or `null` for one nothing has filed yet. Here rather
+   * than in the document for `autoKey`'s reason, and keyed the same way: two workbenches open at
+   * once edit two motions.
+   */
+  openMotion: string | null
+  /**
    * How the lines have been arranged, by `subjectKey`. Empty leaves the scene's own order.
    *
    * A way of working, never the scene: the objects one is animating are brought together at the
@@ -41,6 +47,7 @@ const DEFAULT_ANIMATION_VIEW: AnimationView = {
   selected: [],
   pickedBlock: null,
   autoKey: false,
+  openMotion: null,
   order: [],
 }
 
@@ -51,6 +58,7 @@ export type AnimationViewState = {
   setSelected: (documentId: string, selected: readonly string[]) => void
   setPickedBlock: (documentId: string, pickedBlock: string | null) => void
   setAutoKey: (documentId: string, autoKey: boolean) => void
+  openMotion: (documentId: string, openMotion: string | null) => void
   /**
    * Moves one line in the sheet's own arrangement, and answers how many places it ACTUALLY
    * travelled — nothing at the ends of the stack, which is what `RowReorder.move` owes its caller.
@@ -99,6 +107,9 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
 
   setAutoKey: (documentId, autoKey) =>
     set(state => write(state, documentId, view => ({ ...view, autoKey }))),
+
+  openMotion: (documentId, openMotion) =>
+    set(state => write(state, documentId, view => ({ ...view, openMotion }))),
 
   moveRow: (documentId, shown, rowId, by) => {
     let travelled = 0

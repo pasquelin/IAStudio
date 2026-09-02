@@ -3,7 +3,13 @@ import { join } from 'node:path'
 import { projectName } from '@shared/domain/project'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbChunksOf } from '@shared/domain/glbContainer'
-import { PICTURES, withoutSourcePath, type Asset, type MediaProbe } from '@shared/domain/asset'
+import {
+  PICTURES,
+  withoutSourcePath,
+  type Asset,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
 import type { FileOutcome } from '@shared/domain/fileOp'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import type { TextureExtraction } from '@main/assets/textureExtraction'
@@ -585,27 +591,32 @@ export function registerProjectHandlers({
     return landPicture(request, bytes, ORA_EXTENSION, probe)
   })
 
+  /**
+   * A `.glb` written over the asset it came from, for `landPicture`'s reason and one harder: the
+   * CATALOGUE says what a row IS, and an id naming a take would write a `.glb` under `audio/<id>`
+   * and take the recording with it.
+   */
+  const replaceGlb = async (assetId: string, glb: Uint8Array, type: AssetType): Promise<Asset> => {
+    const replaced = await project.catalog().find(assetId)
+    if (replaced?.type !== type) throw new Error(`asset ${assetId} is not a ${type} to overwrite`)
+
+    return withoutSourcePath(await assets.replaceBytes(assetId, glb, GLB_EXTENSION))
+  }
+
   handle(CHANNELS.assetsSaveMesh, async (_event, value) => {
     const request = parseSaveMesh(value)
-    // Checked against the CATALOGUE for `landPicture`'s reason, and it bites harder here: an id
-    // naming a take would write a `.glb` under `audio/<id>` and take the recording with it.
-    const replaced = await project.catalog().find(request.replaces)
-    if (replaced?.type !== 'mesh') {
-      throw new Error(`asset ${request.replaces} is not a model to overwrite`)
-    }
-
     // On the BYTES, like every writer here: a container that is not one would open as nothing,
     // and the character it replaced would be gone with nothing said.
     if (!glbChunksOf(request.glb)) throw new Error('expected a binary glTF payload')
 
-    return withoutSourcePath(
-      await assets.replaceBytes(request.replaces, request.glb, GLB_EXTENSION, undefined),
-    )
+    return replaceGlb(request.replaces, request.glb, 'mesh')
   })
 
   handle(CHANNELS.assetsSaveAnimation, async (_event, value) => {
     const request = parseSaveAnimation(value)
     if (!glbChunksOf(request.glb)) throw new Error('expected a binary glTF payload')
+
+    if (request.replaces) return replaceGlb(request.replaces, request.glb, 'animation')
 
     // `animation` and not `mesh`, and that one word is what files it: `roleForAsset` reads the
     // type and lands it in the project's own `animations` folder.

@@ -1674,7 +1674,12 @@ export class SceneRenderer {
    * write it twice. The grid, the trihedron, the gizmo and the light helpers are siblings of the
    * nodes rather than children, so none of them is reachable from here.
    */
-  exportTo(format: ExportFormat, scope: 'scene' | 'selection'): Promise<Uint8Array> {
+  exportTo(
+    format: ExportFormat,
+    scope: 'scene' | 'selection',
+    /** What glTF has no place for, written on the scene — see `ExportOptions.extras`. */
+    extras?: Record<string, unknown>,
+  ): Promise<Uint8Array> {
     const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
     const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
 
@@ -1690,6 +1695,7 @@ export class SceneRenderer {
           // the names the document gave them.
           nameOf: id => this.applied.get(id)?.name,
           clipsFor: copies => this.bakedClips(copies),
+          ...(extras && { extras }),
         },
       ),
     )

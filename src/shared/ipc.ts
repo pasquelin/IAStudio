@@ -651,14 +651,11 @@ export type SaveMeshRequest = {
  * A motion on its way into the project's `animations` folder — see
  * `StudioBridge['assets']['saveAnimation']`.
  *
- * Always a NEW asset: a motion is a file of its own, playable by every character whose bones
- * carry the same names, and overwriting one would take it from the others.
+ * A NEW asset unless `replaces` names one: a motion is a file of its own, playable by every
+ * character whose bones carry the same names. `replaces` is the file a workbench REOPENED and
+ * corrected — without it every pass files a copy beside the last, and none of them is the motion.
  */
-export type SaveAnimationRequest = {
-  name: string
-  derivedFrom?: string
-  glb: Uint8Array
-}
+export type SaveAnimationRequest = SaveRequestBase & { glb: Uint8Array }
 
 /**
  * A layered picture on its way to disk as OpenRaster — see `StudioBridge['assets']['saveLayered']`.
@@ -1767,8 +1764,8 @@ export type StudioBridge = {
      */
     saveMesh: (request: SaveMeshRequest) => Promise<Asset>
     /**
-     * Files a motion in the project's `animations` folder. Always a new asset: what makes a
-     * motion reusable is being a file no character owns.
+     * Files a motion in the project's `animations` folder — a new asset, or the one `replaces`
+     * names: what makes a motion reusable is being a file no character owns.
      */
     saveAnimation: (request: SaveAnimationRequest) => Promise<Asset>
     /**

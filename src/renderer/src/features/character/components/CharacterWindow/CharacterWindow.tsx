@@ -5,6 +5,8 @@ import type { CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { Transform } from '@shared/domain/transform'
 import { EmptyState } from '@/components/EmptyState'
+import { Panel } from '@/components/Panel'
+import { PanelHeader } from '@/components/PanelHeader'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { PANE_TOOLBAR } from '@/components/styles'
 import { TooltipHost } from '@/components/TooltipHost'
@@ -17,7 +19,7 @@ import { createCharacterStage, workshopIdOf } from '@/character/characterStage'
 import { useAccounts } from '@/stores/accounts'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { saveCharacter, type CharacterSkinning } from '@/character/characterSave'
-import { saveCharacterMotion } from '@/character/characterMotion'
+import { motionExtras, saveCharacterMotion } from '@/character/characterMotion'
 import { useConnections } from '@/hooks/useConnections'
 import { reportFailure } from '@/services/diagnostics'
 import { useMenuScope } from '@/hooks/useMenuScope'
@@ -30,7 +32,10 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { nodeById } from '@/engines/scene/sceneState'
 import { renameNode } from '@/engines/scene/commands'
+import { scenePayload } from '@/engines/scene/sceneDocument'
+import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { AnimationActions } from '@/features/animation/components/Animation/Actions/AnimationActions'
 import { AnimationPanel } from '@/features/animation/components/Animation/AnimationPanel'
 import { StudioQueries } from '@/features/shell/components/StudioQueries'
 import { CHARACTER_EDIT_REST, CHARACTER_STATE_TOOLS, CHARACTER_TOOLS } from './characterTools'
@@ -91,19 +96,28 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
   useMenuScope('character', runCommand)
 
   /**
-   * The band's own motion, filed as a project asset: the workshop scene exported with the clip
-   * the timeline bakes. Here rather than in the panel, since only this window holds the engine.
+   * The workshop scene exported with the clip the band bakes, the band itself riding in its
+   * `extras` — one file, and a second save lands on that same one. Here rather than in the
+   * panel, since only this window holds the engine.
    */
-  const saveMotion = async (): Promise<void> => {
+  const saveMotion = async (asNew: boolean): Promise<void> => {
     const engine = engineRef.current
     if (!engine) return
 
+    const documentId = workshopIdOf(assetId)
     try {
-      await saveCharacterMotion(
+      // Through `scenePayload`, as a save of the document is: it purges the sheet of the ids of
+      // objects the scene has lost, which a band written raw would carry into the file for ever.
+      const written = scenePayload(sceneOf(useScenes.getState(), documentId)).animation
+      const saved = await saveCharacterMotion(
         assetId,
         t('character.motionNew'),
-        await engine.exportTo('glb', 'scene'),
+        await engine.exportTo('glb', 'scene', motionExtras(written)),
+        asNew
+          ? undefined
+          : (animationViewOf(useAnimationViews.getState(), documentId).openMotion ?? undefined),
       )
+      if (saved) useAnimationViews.getState().openMotion(documentId, saved)
     } catch (error) {
       reportFailure('assets.copy', assetId, error)
     }
@@ -238,61 +252,65 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
             says it: a bullet after the name, as `setDocumentTitle` writes one. */}
         <WindowTitleBar title={`${t('character.window.titleOf', { name })}${dirty ? ' •' : ''}`} />
 
-        {/* The gutter around the panes and not around the bar, as the studio frames its docks. */}
-        <div className="flex min-h-0 flex-1 gap-(--sc-gutter) p-(--sc-gutter)">
-          <div className="bg-monitor relative min-w-0 flex-1 overflow-hidden rounded-(--radius-sc-lg)">
-            <div ref={hostRef} className="absolute inset-0" />
-            <Toolbar
-              className={PANE_TOOLBAR}
-              label={t('character.tools')}
-              tools={[
-                ...CHARACTER_TOOLS,
-                // Exactly one lit, like the verbs above: the two states are exclusive.
-                ...CHARACTER_STATE_TOOLS.map(tool => ({
-                  ...tool,
-                  pressed: (tool.id === CHARACTER_EDIT_REST) === editingRest,
-                })),
-              ]}
-              activeTool={mode}
-              onTool={id => {
-                const view = useCharacterView.getState()
-                if (CHARACTER_STATE_TOOLS.some(tool => tool.id === id)) {
-                  view.editCharacterRest(id === CHARACTER_EDIT_REST)
-                  return
-                }
+        {/* The gutter around ALL THREE panes and not around the bar, as the studio frames its
+            docks: the band standing outside this box ran flush with three edges of the window. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-(--sc-gutter) p-(--sc-gutter)">
+          <div className="flex min-h-0 flex-1 gap-(--sc-gutter)">
+            <div className="bg-monitor relative min-w-0 flex-1 overflow-hidden rounded-(--radius-sc-lg)">
+              <div ref={hostRef} className="absolute inset-0" />
+              <Toolbar
+                className={PANE_TOOLBAR}
+                label={t('character.tools')}
+                tools={[
+                  ...CHARACTER_TOOLS,
+                  // Exactly one lit, like the verbs above: the two states are exclusive.
+                  ...CHARACTER_STATE_TOOLS.map(tool => ({
+                    ...tool,
+                    pressed: (tool.id === CHARACTER_EDIT_REST) === editingRest,
+                  })),
+                ]}
+                activeTool={mode}
+                onTool={id => {
+                  const view = useCharacterView.getState()
+                  if (CHARACTER_STATE_TOOLS.some(tool => tool.id === id)) {
+                    view.editCharacterRest(id === CHARACTER_EDIT_REST)
+                    return
+                  }
 
-                const chosen = CHARACTER_TOOLS.find(tool => tool.id === id)
-                if (chosen) view.setCharacterMode(chosen.mode)
-              }}
+                  const chosen = CHARACTER_TOOLS.find(tool => tool.id === id)
+                  if (chosen) view.setCharacterMode(chosen.mode)
+                }}
+              />
+              {/* While the FILE is still landing, never while it merely carries no skeleton: a
+                  bare mesh is on screen and animatable from the panel beside it, and the sentence
+                  sat over a character plainly there. `sample` is what the engine measured. */}
+              {!sample && (
+                <div className="pointer-events-none absolute inset-0">
+                  <EmptyState icon={mdiSkull} message={t('character.window.waiting')} />
+                </div>
+              )}
+            </div>
+            <CharacterWindowInspector
+              assetId={assetId}
+              sample={sample}
+              onSaveMotion={saveMotion}
+              documentId={workshopIdOf(assetId)}
+              nodeId={nodeId ?? ''}
             />
-            {/* While the FILE is still landing, never while it merely carries no skeleton: a
-                bare mesh is on screen and animatable from the panel beside it, and the sentence
-                sat over a character plainly there. `sample` is what the engine measured. */}
-            {!sample && (
-              <div className="pointer-events-none absolute inset-0">
-                <EmptyState icon={mdiSkull} message={t('character.window.waiting')} />
-              </div>
-            )}
           </div>
-          <CharacterWindowInspector
-            assetId={assetId}
-            sample={sample}
-            onSaveMotion={saveMotion}
-            documentId={workshopIdOf(assetId)}
-            nodeId={nodeId ?? ''}
-          />
-        </div>
 
-        {/* The studio's own band, on this window's workshop scene: laying a key by hand is the
-            one thing a posed character is for, and a band written again here would be a second
-            copy of every gesture. No lanes and no shots live in a workshop, so what is left of
-            it is exactly the two this window needs — scrubbing, and keying. */}
-        <section
-          aria-label={t('character.band')}
-          className="bg-panel mt-(--sc-gutter) h-64 shrink-0 overflow-hidden rounded-(--radius-sc-lg)"
-        >
-          <AnimationPanel documentId={workshopIdOf(assetId)} />
-        </section>
+          {/* The studio's own band and its own title bar, on this window's workshop scene.
+              🛑 `AnimationActions` and never `TimelineActions`, which reads the STUDIO's active
+              tab — mounted here it would drive the scene open in the window beside. */}
+          <Panel aria-label={t('character.band')} className="h-64">
+            <PanelHeader title={t('character.band')} fillActions>
+              <AnimationActions documentId={workshopIdOf(assetId)} filmable={false} />
+            </PanelHeader>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <AnimationPanel documentId={workshopIdOf(assetId)} />
+            </div>
+          </Panel>
+        </div>
       </div>
 
       {/* Per window, and easy to forget: without it every tooltip attribute in here writes a

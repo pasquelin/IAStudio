@@ -1,5 +1,5 @@
 import { isRecord } from '@shared/guards'
-import { glbChunksOf } from '@shared/domain/glbContainer'
+import { glbChunksOf, glbJson } from '@shared/domain/glbContainer'
 import { textureSlotsOf } from '@shared/domain/gltf'
 import type { PbrChannel } from '@shared/domain/material'
 
@@ -47,7 +47,7 @@ export function embeddedTextures(file: Uint8Array): EmbeddedTexture[] {
   const chunks = glbChunksOf(file)
   if (!chunks) return []
 
-  const gltf: unknown = parseJson(chunks.json)
+  const gltf: unknown = glbJson(chunks.json)
   if (!isRecord(gltf)) return []
 
   const images = Array.isArray(gltf.images) ? gltf.images : []
@@ -95,15 +95,6 @@ function channelWornBy(slots: readonly string[]): PbrChannel | undefined {
   const only = [...claimed]
 
   return claimed.size === 1 ? only[0] : undefined
-}
-
-/** The two chunks a `.glb` is made of, or null when the bytes are not one. */
-function parseJson(bytes: Uint8Array): unknown {
-  try {
-    return JSON.parse(new TextDecoder().decode(bytes))
-  } catch {
-    return null
-  }
 }
 
 /**

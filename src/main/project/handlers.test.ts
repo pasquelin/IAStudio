@@ -1247,6 +1247,81 @@ describe('project handlers', () => {
     })
   })
 
+  describe('a motion the band posed', () => {
+    const backend = () => ({
+      importFromUrl: vi.fn(),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'animation' })),
+      importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'animation' })),
+      replaceBytes: vi.fn(async () => asset({ id: 'asset-walk', type: 'animation' })),
+    })
+
+    /** A binary glTF holding nothing but an empty scene — the shape, which is all this door reads. */
+    const glb = (): Uint8Array => glbFile({ scenes: [{}] })
+
+    it('files a motion of its own under a new identifier', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSaveAnimation, {
+        name: 'Marche',
+        derivedFrom: 'asset-1',
+        glb: glb(),
+      })
+
+      expect(assets.importFromBytes).toHaveBeenCalledWith(
+        {
+          id: 'asset-new',
+          name: 'Marche',
+          type: 'animation',
+          extension: '.glb',
+          derivedFrom: 'asset-1',
+        },
+        glb(),
+      )
+    })
+
+    /**
+     * A motion reopened on the workbench and corrected lands on the file it came from. Without
+     * this every pass files a copy beside the last, and none of them is the motion any more.
+     */
+    it('rewrites the motion it was told to replace', async () => {
+      await catalog.add(asset({ id: 'asset-walk', name: 'Marche', type: 'animation' }))
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSaveAnimation, {
+        name: 'Marche',
+        replaces: 'asset-walk',
+        glb: glb(),
+      })
+
+      expect(assets.replaceBytes).toHaveBeenCalledWith('asset-walk', glb(), '.glb')
+      expect(assets.importFromBytes).not.toHaveBeenCalled()
+    })
+
+    // Checked against the CATALOGUE, as the character's own save is: an id naming a model would
+    // rewrite that model with a motion, and the character would be gone.
+    it('refuses to overwrite anything that is not a motion', async () => {
+      await catalog.add(asset({ id: 'asset-hero', name: 'Héros', type: 'mesh' }))
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSaveAnimation, {
+          name: 'Marche',
+          replaces: 'asset-hero',
+          glb: glb(),
+        }),
+      ).rejects.toThrow()
+      await expect(
+        invoke(CHANNELS.assetsSaveAnimation, {
+          name: 'Marche',
+          replaces: 'asset-gone',
+          glb: glb(),
+        }),
+      ).rejects.toThrow()
+    })
+  })
+
   describe('a channel the renderer computed', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),

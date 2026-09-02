@@ -49,6 +49,18 @@ export function glbChunksOf(file: Uint8Array): GlbChunks | null {
 }
 
 /**
+ * The glTF a JSON chunk describes, or `null` when it does not parse — a container three readers
+ * of this repository leave exactly as they found it rather than opening as nothing.
+ */
+export function glbJson(json: Uint8Array): unknown {
+  try {
+    return JSON.parse(new TextDecoder().decode(json))
+  } catch {
+    return null
+  }
+}
+
+/**
  * The file those two chunks make — the exact inverse of the read.
  *
  * 🛑 Each chunk is padded to four bytes, spaces after the JSON and zeroes after the binary, as

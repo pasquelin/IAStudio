@@ -9,6 +9,11 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
 import { clearCharacters } from '@/stores/character-fixtures'
 import { useCharacterView } from '@/stores/characterView'
+import type { Asset } from '@shared/domain/asset'
+import type { SaveAnimationRequest } from '@shared/ipc'
+import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
+import { useAnimationViews } from '@/stores/animationView'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { CharacterWindow } from './CharacterWindow'
 
 /** Every engine built, so a case can fire the callbacks the real one would. */
@@ -19,6 +24,9 @@ const posed = vi.hoisted((): string[] => [])
 
 /** Every set of held axes the engine was handed — what a joint may not leave while dragged. */
 const holds = vi.hoisted((): string[][] => [])
+
+/** What each export was asked to carry of the studio's own — the band, for a motion. */
+const carried = vi.hoisted((): (Record<string, unknown> | null)[] => [])
 
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
@@ -43,10 +51,22 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     }
     skinModel = vi.fn()
     frameContents = vi.fn()
+    exportTo = (_format: string, _scope: string, extras?: Record<string, unknown>) => {
+      carried.push(extras ?? null)
+      return Promise.resolve(new Uint8Array([1, 2]))
+    }
   },
 }))
 
 const ASSET = 'asset-hero'
+const WORKSHOP = 'character:asset-hero'
+
+/** A band holding one key, which is what makes a motion worth filing at all. */
+const keyed = timelineWith([
+  animationTrack('track-1', 'position', [{ time: 0, value: { x: 0, y: 1, z: 0 } }], {
+    target: { nodeId: 'node-1', bone: 'Spine', property: 'position' },
+  }),
+])
 const SAMPLE = {
   bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
   points: new Float32Array(),
@@ -70,6 +90,7 @@ beforeEach(() => {
   built.length = 0
   posed.length = 0
   holds.length = 0
+  carried.length = 0
   clearCharacters()
   // The whole view, never the one flag a case happens to read: a padlock left closed by the case
   // before was what made the next one pass, and the leak showed only when the bar moved.
@@ -79,6 +100,7 @@ beforeEach(() => {
     pickedBone: null,
     mode: 'translate',
   })
+  useAnimationViews.setState({ views: {} })
   installFakeBridge()
 })
 
@@ -91,7 +113,7 @@ afterEach(() => {
 it('offers the ways of acting on a joint, opens on placing one, and offers no scale', async () => {
   render(<CharacterWindow assetId={ASSET} />)
 
-  const bar = screen.getByRole('toolbar')
+  const bar = screen.getByRole('toolbar', { name: 'Outils du squelette' })
 
   // Three verbs and the two states. No padlock on the lengths: posing turns the bone arriving at
   // a joint, and editing a skeleton is where one shortens a bone that came out too long.
@@ -116,7 +138,7 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
  */
 it('lights one state at a time, and hands the held axes to the engine', async () => {
   render(<CharacterWindow assetId={ASSET} />)
-  const bar = screen.getByRole('toolbar')
+  const bar = screen.getByRole('toolbar', { name: 'Outils du squelette' })
   const pressedIn = () =>
     within(bar)
       .getAllByRole('button')
@@ -150,7 +172,9 @@ it('poses the bone the gizmo moved, and writes the skeleton only once the bar as
   expect(restOfSpine()?.position.y).toBe(0)
 
   await userEvent.click(
-    within(screen.getByRole('toolbar')).getByRole('button', { name: /squelette/i }),
+    within(screen.getByRole('toolbar', { name: 'Outils du squelette' })).getByRole('button', {
+      name: /squelette/i,
+    }),
   )
   // Emptied on purpose: turning the toggle on puts every bone back on its rest through the very
   // same door, and what this half is about is what the NEXT gesture does.
@@ -169,6 +193,22 @@ it('stands a band under the character, on the scene of its workshop', () => {
   expect(screen.getByRole('region', { name: 'Mouvement en cours' })).toBeInTheDocument()
 })
 
+// No film from a workshop, and that is not an oversight: it holds one character and no camera.
+
+it('gives the band its transport and its settings, and offers no film', () => {
+  render(<CharacterWindow assetId={ASSET} />)
+  const band = screen.getByRole('region', { name: 'Mouvement en cours' })
+
+  expect(within(band).getByRole('button', { name: 'Lire' })).toBeInTheDocument()
+  expect(within(band).getByRole('button', { name: 'Retour au début' })).toBeInTheDocument()
+  expect(
+    within(band).getByRole('button', { name: 'Enregistrement automatique' }),
+  ).toBeInTheDocument()
+  expect(within(band).getByLabelText('Durée')).toBeInTheDocument()
+  expect(within(band).getByLabelText('Images/s')).toBeInTheDocument()
+  expect(within(band).queryByRole('button', { name: 'Rendre en vidéo' })).toBeNull()
+})
+
 // The sentence is about the FILE landing, and a mesh with no skeleton is a character plainly on
 // screen — the panel beside it offers to rig it. Shown on « no rig » it stood over the model.
 it('drops the waiting note as soon as the engine has measured the mesh', async () => {
@@ -181,4 +221,45 @@ it('drops the waiting note as soon as the engine has measured the mesh', async (
   })
 
   expect(screen.queryByText('En attente du personnage…')).not.toBeInTheDocument()
+})
+
+/** 🛑 ONE file: the band rides in its `extras`, and the second save lands on that same file. */
+it('files the motion with its band inside, and saves onto that same file afterwards', async () => {
+  const filed: Asset = {
+    id: 'asset-walk',
+    name: 'Nouveau mouvement',
+    type: 'animation',
+    location: 'local',
+    tags: [],
+    createdAt: '2026-09-02T00:00:00.000Z',
+  }
+  const saveAnimation = vi.fn((_request: SaveAnimationRequest) => Promise.resolve(filed))
+  installFakeBridge({ assets: { saveAnimation } })
+  render(<CharacterWindow assetId={ASSET} />)
+
+  act(() => {
+    useScenes.getState().replace(WORKSHOP, {
+      ...sceneOf(useScenes.getState(), WORKSHOP),
+      animation: keyed,
+    })
+  })
+  await userEvent.click(screen.getByText('Enregistrer le mouvement'))
+
+  // The sheet PURGED of what the workshop does not hold: the file would otherwise carry the id
+  // of an object the scene has lost, and gather one more at every save.
+  expect(carried).toEqual([{ iastudio: { animation: { ...keyed, sheet: [] } } }])
+  expect(saveAnimation.mock.calls[0]?.[0]).toEqual({
+    name: 'Nouveau mouvement',
+    derivedFrom: ASSET,
+    glb: new Uint8Array([1, 2]),
+  })
+
+  await userEvent.click(screen.getByText('Mettre à jour le mouvement'))
+
+  expect(saveAnimation.mock.calls[1]?.[0]).toEqual({
+    name: 'Nouveau mouvement',
+    derivedFrom: ASSET,
+    replaces: 'asset-walk',
+    glb: new Uint8Array([1, 2]),
+  })
 })

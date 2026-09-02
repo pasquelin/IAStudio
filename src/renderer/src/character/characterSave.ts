@@ -3,7 +3,7 @@ import type { GlbSkinPatch } from '@/engines/scene/glbSkin'
 import type { CharacterState } from '@/engines/character/characterState'
 import { createGlbWriter, type GlbWriter } from '@/engines/scene/glbWriter'
 import type { StudioBridge } from '@shared/ipc'
-import { fetchAsset } from '@/helpers/assetFetch'
+import { assetBytes } from '@/helpers/assetFetch'
 import { getBridge } from '@/services/bridge'
 import { characterOf, characterStore } from '@/stores/character'
 import GlbWriteWorker from '@/engines/scene/glbWrite.worker?worker'
@@ -48,7 +48,7 @@ async function write(
   state: CharacterState,
   skins: CharacterSkinning,
 ): Promise<boolean> {
-  const file = new Uint8Array(await (await fetchAsset(assetId)).arrayBuffer())
+  const file = await assetBytes(assetId)
   writer ??= createGlbWriter(() => new GlbWriteWorker())
 
   const written = await writer.write(file, {

@@ -497,9 +497,10 @@ function isOptionalDress(value: unknown): boolean {
 /**
  * The timeline a file holds, or an empty one. Read track by track rather than refused whole, on
  * the rule the nodes already follow: a project folder is user territory, and one malformed track
- * must not cost the animation around it.
+ * must not cost the animation around it. Public for the motion files, whose band rides in the
+ * `extras` of a `.glb` scene and is the very same question asked of other bytes.
  */
-function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTimeline {
+export function readTimeline(value: unknown, nodes: readonly SceneNode[]): AnimationTimeline {
   if (!isRecord(value)) return EMPTY_TIMELINE
 
   const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []

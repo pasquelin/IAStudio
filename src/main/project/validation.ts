@@ -382,6 +382,7 @@ export function parseSaveMesh(value: unknown): SaveMeshRequest {
 const saveAnimation = z.object({
   name: z.string().trim().min(1).max(200),
   derivedFrom: assetId.optional(),
+  replaces: assetId.optional(),
   glb: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= MAX_MESH_BYTES),
 })
 

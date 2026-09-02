@@ -591,6 +591,25 @@ const writeSheet = (state: SceneState, sheet: readonly string[]): SceneState => 
   animation: { ...state.animation, sheet },
 })
 
+/**
+ * The whole band, put back to what a motion file carried.
+ *
+ * A command rather than a `replace`: reopening a motion throws away whatever the workbench held,
+ * and one ⌘Z has to give it back — the band is an établi, not a drawer that swallows.
+ */
+export function loadAnimation(timeline: AnimationTimeline): Command<SceneState> {
+  let previous: AnimationTimeline | null = null
+
+  return {
+    id: 'timeline:load',
+    apply: state => {
+      previous = state.animation
+      return { ...state, animation: timeline }
+    },
+    revert: state => (previous === null ? state : { ...state, animation: previous }),
+  }
+}
+
 /** How long the whole thing runs, and how finely it is cut. */
 export function setTimelineSettings(
   settings: Partial<{ duration: Us; fps: number }>,
