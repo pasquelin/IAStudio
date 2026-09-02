@@ -1,0 +1,270 @@
+{
+  "at": "2026-09-02T13:12:41.972Z",
+  "platform": "darwin",
+  "electron": "43.4.0",
+  "chrome": "150.0.7871.224",
+  "crashed": null,
+  "results": [
+    {
+      "count": 500000,
+      "far": 500,
+      "seed": 11,
+      "span": 1897,
+      "boundary": {
+        "at": 347.851,
+        "jump": 23
+      },
+      "bufferWidth": 2400,
+      "paths": [
+        {
+          "name": "rest",
+          "seed": 11,
+          "frames": 240,
+          "warmFrames": 0,
+          "identical": true,
+          "divergesAtFrame": -1,
+          "firstFrame": {
+            "calls": 545,
+            "triangles": 76380152,
+            "instances": 537995
+          },
+          "lastFrame": {
+            "calls": 545,
+            "triangles": 76380152,
+            "instances": 537995
+          },
+          "instancesMin": 537995,
+          "instancesMax": 537995
+        },
+        {
+          "name": "walk",
+          "seed": 11,
+          "frames": 300,
+          "warmFrames": 0,
+          "identical": true,
+          "divergesAtFrame": -1,
+          "firstFrame": {
+            "calls": 545,
+            "triangles": 76380152,
+            "instances": 537995
+          },
+          "lastFrame": {
+            "calls": 536,
+            "triangles": 75091320,
+            "instances": 533958
+          },
+          "instancesMin": 533958,
+          "instancesMax": 537995
+        },
+        {
+          "name": "run",
+          "seed": 11,
+          "frames": 300,
+          "warmFrames": 0,
+          "identical": true,
+          "divergesAtFrame": -1,
+          "firstFrame": {
+            "calls": 557,
+            "triangles": 78483716,
+            "instances": 522194
+          },
+          "lastFrame": {
+            "calls": 570,
+            "triangles": 79889848,
+            "instances": 560923
+          },
+          "instancesMin": 522194,
+          "instancesMax": 562766
+        },
+        {
+          "name": "spin",
+          "seed": 11,
+          "frames": 180,
+          "warmFrames": 0,
+          "identical": true,
+          "divergesAtFrame": -1,
+          "firstFrame": {
+            "calls": 563,
+            "triangles": 79061368,
+            "instances": 545890
+          },
+          "lastFrame": {
+            "calls": 561,
+            "triangles": 78803128,
+            "instances": 545621
+          },
+          "instancesMin": 543977,
+          "instancesMax": 555572
+        },
+        {
+          "name": "boundary",
+          "seed": 11,
+          "frames": 200,
+          "warmFrames": 0,
+          "identical": true,
+          "divergesAtFrame": -1,
+          "firstFrame": {
+            "calls": 565,
+            "triangles": 79226040,
+            "instances": 547924
+          },
+          "lastFrame": {
+            "calls": 578,
+            "triangles": 80988984,
+            "instances": 555938
+          },
+          "instancesMin": 547924,
+          "instancesMax": 556492
+        },
+        {
+          "name": "teleport",
+          "seed": 11,
+          "frames": 180,
+          "warmFrames": 60,
+          "identical": true,
+          "divergesAtFrame": -1,
+          "firstFrame": {
+            "calls": 464,
+            "triangles": 65095656,
+            "instances": 467047
+          },
+          "lastFrame": {
+            "calls": 464,
+            "triangles": 65095656,
+            "instances": 467047
+          },
+          "instancesMin": 467047,
+          "instancesMax": 467047
+        },
+        {
+          "name": "high",
+          "seed": 11,
+          "frames": 240,
+          "warmFrames": 0,
+          "identical": true,
+          "divergesAtFrame": -1,
+          "firstFrame": {
+            "calls": 601,
+            "triangles": 84149496,
+            "instances": 569495
+          },
+          "lastFrame": {
+            "calls": 601,
+            "triangles": 84149496,
+            "instances": 569495
+          },
+          "instancesMin": 569495,
+          "instancesMax": 569495
+        }
+      ]
+    }
+  ],
+  "failures": [],
+  "rendererMemory": [
+    {
+      "at": 2011,
+      "phase": "rest — passe 1",
+      "workingSetKb": 2639840
+    },
+    {
+      "at": 4013,
+      "phase": "rest — passe 1",
+      "workingSetKb": 2640016
+    },
+    {
+      "at": 6015,
+      "phase": "rest — passe 2",
+      "workingSetKb": 2640368
+    },
+    {
+      "at": 8018,
+      "phase": "walk — passe 1",
+      "workingSetKb": 2640576
+    },
+    {
+      "at": 10020,
+      "phase": "walk — passe 1",
+      "workingSetKb": 2640624
+    },
+    {
+      "at": 12022,
+      "phase": "walk — passe 2",
+      "workingSetKb": 2640688
+    },
+    {
+      "at": 14024,
+      "phase": "run — passe 1",
+      "workingSetKb": 2640768
+    },
+    {
+      "at": 16026,
+      "phase": "run — passe 1",
+      "workingSetKb": 2640800
+    },
+    {
+      "at": 18028,
+      "phase": "run — passe 2",
+      "workingSetKb": 2640864
+    },
+    {
+      "at": 20030,
+      "phase": "run — passe 2",
+      "workingSetKb": 2640944
+    },
+    {
+      "at": 22032,
+      "phase": "spin — passe 1",
+      "workingSetKb": 2641120
+    },
+    {
+      "at": 24034,
+      "phase": "spin — passe 2",
+      "workingSetKb": 2635728
+    },
+    {
+      "at": 26060,
+      "phase": "boundary — passe 1",
+      "workingSetKb": 2549760
+    },
+    {
+      "at": 28061,
+      "phase": "boundary — passe 2",
+      "workingSetKb": 2552224
+    },
+    {
+      "at": 30063,
+      "phase": "teleport — passe 1",
+      "workingSetKb": 2553072
+    },
+    {
+      "at": 32069,
+      "phase": "teleport — passe 1",
+      "workingSetKb": 2553088
+    },
+    {
+      "at": 34071,
+      "phase": "teleport — passe 2",
+      "workingSetKb": 2553120
+    },
+    {
+      "at": 36073,
+      "phase": "high — passe 1",
+      "workingSetKb": 2553136
+    },
+    {
+      "at": 38076,
+      "phase": "high — passe 1",
+      "workingSetKb": 2551888
+    },
+    {
+      "at": 40078,
+      "phase": "high — passe 2",
+      "workingSetKb": 2551888
+    },
+    {
+      "at": 42081,
+      "phase": "fin",
+      "workingSetKb": 2570864
+    }
+  ]
+}
