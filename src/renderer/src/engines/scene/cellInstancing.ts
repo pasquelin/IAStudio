@@ -52,8 +52,13 @@ export function createCellGroups(
   const index = buildPartition()
   /** One `Group` per cell, hung under the host: a zone is one flag per cell, not one per body. */
   const cells = new Map<CellKey, Held>()
-  /** What each (group, cell) draws, held so a rebuild that did not touch it pays nothing. */
-  const buckets = new Map<string, Bucket>()
+  /**
+   * What each (group, cell) draws, by group and then by CELL. One flat map under a composed name
+   * spent a third of a rebuild hashing those strings — 2 080 a pass on 5 000 bodies, 40 shapes.
+   */
+  const buckets = new Map<string, Map<CellKey | null, Bucket>>()
+  /** Which pass last settled a bucket, so what nothing settled on is dropped without a set. */
+  let pass = 0
   const placed: Placed = new Map()
   const sources = heldOutOfDraw()
   const keyOf = withFlags(shapeAndPaint())
@@ -80,13 +85,15 @@ export function createCellGroups(
     return group
   }
 
-  const drop = (name: string, bucket: Bucket): void => {
+  const drop = (bucket: Bucket): void => {
     // Only where it still points here: a node this pass moved to another bucket was written
     // before this one was dropped, and deleting by id alone would lose it.
     for (const id of bucket.ids) if (placed.get(id)?.instance === bucket.mesh) placed.delete(id)
     bucket.mesh.removeFromParent()
     bucket.mesh.dispose()
-    buckets.delete(name)
+    const byCell = buckets.get(bucket.key)
+    byCell?.delete(bucket.cell)
+    if (byCell?.size === 0) buckets.delete(bucket.key)
     listStale = true
     if (bucket.cell === null) return
     const held = cells.get(bucket.cell)
@@ -99,8 +106,8 @@ export function createCellGroups(
     index.release(bucket.cell)
   }
 
-  const settle = (name: string, members: Members, worn: Grouped, shape: BufferGeometry): void => {
-    const held = buckets.get(name)
+  const settle = (members: Members, worn: Grouped, shape: BufferGeometry): void => {
+    const held = buckets.get(worn.key)?.get(members.cell)
     // The cell is untouched — the same bodies, whatever their order. A swap-remove reorders a
     // bucket for O(1), so the fast path is element-wise and the set is only built when it fails.
     if (held && held.ids.length === members.ids.length) {
@@ -110,6 +117,7 @@ export function createCellGroups(
           ? rewriteBy(held, members)
           : null
       if (moved !== null) {
+        held.seenAt = pass
         if (moved) {
           boxes.set(held.mesh, boxOf(members.meshes, shape))
           // The cell's own box is their union: left alone it would be the union of where they
@@ -120,7 +128,7 @@ export function createCellGroups(
         return
       }
     }
-    if (held) drop(name, held)
+    if (held) drop(held)
 
     const first = members.meshes[0]
     if (!first) return
@@ -146,6 +154,7 @@ export function createCellGroups(
       mesh,
       key: worn.key,
       paint: worn.material,
+      seenAt: pass,
     }
     bucketOf.set(mesh, bucket)
     const into = groupOf(members.cell)
@@ -154,7 +163,9 @@ export function createCellGroups(
       if (cell) owners.set(mesh, cell)
     }
     into.add(mesh)
-    buckets.set(name, bucket)
+    const byCell = buckets.get(worn.key) ?? new Map<CellKey | null, Bucket>()
+    byCell.set(members.cell, bucket)
+    buckets.set(worn.key, byCell)
     listStale = true
   }
 
@@ -393,7 +404,7 @@ export function createCellGroups(
   }
 
   const clear = (): void => {
-    for (const [name, bucket] of buckets) drop(name, bucket)
+    for (const byCell of buckets.values()) for (const bucket of byCell.values()) drop(bucket)
     // The movers with them: they hang from the host and no bucket names them, so a `dispose`
     // that only walked the cells left their instance buffers on the GPU and their meshes in the
     // scene — the one half of the teardown a test that never promoted anything could not see.
@@ -409,7 +420,7 @@ export function createCellGroups(
 
   return {
     rebuild: (nodes, objectOf) => {
-      const settled = new Set<string>()
+      pass += 1
       /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
       const seen = new Map<string, string>()
       let instanced = 0
@@ -417,23 +428,22 @@ export function createCellGroups(
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { cell: null, ids: [], meshes: [] }
-        for (const [cell, members] of splitByCell(
+        for (const members of splitByCell(
           worn,
           index,
           first.geometry,
           seen,
           movers,
           promoted,
-        )) {
-          const name = bucketName(worn.key, cell)
-          settle(name, members, worn, first.geometry)
-          settled.add(name)
+        ).values()) {
+          settle(members, worn, first.geometry)
         }
         settleMobile(worn.key, movers, first, worn.material)
         instanced += worn.meshes.length
       }
       // What nothing settled on holds bodies that left, were hidden, or changed group.
-      for (const [name, bucket] of buckets) if (!settled.has(name)) drop(name, bucket)
+      for (const byCell of buckets.values())
+        for (const bucket of byCell.values()) if (bucket.seenAt !== pass) drop(bucket)
       // A mover the sweep no longer met is gone from the document — the despawn half of a spawn.
       shed(seen)
       return instanced
@@ -455,7 +465,9 @@ export function createCellGroups(
     // goes on drawing shaded while everything around it wears the stand-in.
     drawn: () => {
       if (listStale) {
-        listed = [...buckets.values()].map(bucket => bucket.mesh)
+        listed = []
+        for (const byCell of buckets.values())
+          for (const bucket of byCell.values()) listed.push(bucket.mesh)
         for (const lot of mobiles.values()) listed.push(lot.mesh)
         listStale = false
       }
@@ -571,6 +583,8 @@ type Bucket = {
   mesh: InstancedMesh
   key: string
   paint: Material | Material[]
+  /** The pass that last settled it — see `buckets`. */
+  seenAt: number
 }
 
 /**
@@ -645,10 +659,6 @@ function splitByCell(
   }
   return held
 }
-
-/** What names a bucket: its group, and the cell of it — the loose lot standing for no cell. */
-const bucketName = (key: string, cell: CellKey | null): string =>
-  `${key}|${cell === null ? 'loose' : cell}`
 
 const FRUSTUM = new Frustum()
 const VIEW = new Matrix4()
