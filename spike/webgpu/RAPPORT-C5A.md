@@ -1,7 +1,16 @@
 # Chantier C5-A — le banc du monde ouvert, et la mesure (a) du grain de région
 
 Branche `feat/open-world`, partie de `feat/shadow-view`. Mesuré le 2026-09-02, **Apple M2 Max**,
-Electron 43 / Chromium 150, three 0.185.1, WebGL, 1600×900, `pixelRatio` 1.
+Electron 43 / Chromium 150, three 0.185.1, WebGL.
+
+🛑 **CORRIGÉ APRÈS COUP — la résolution annoncée ici était fausse.** Ce rapport disait « 1600×900,
+`pixelRatio` 1 » ; le banc demandait bien 1 à `prepareOffscreen`, mais `configure` repose ensuite
+`pixelRatioFor(quality)`, et le produit livre `balanced` — soit **1,5**. Le tampon RELEVÉ sur la
+machine est donc **2400 × 1350** pour une fenêtre de 1600 × 900 CSS. Les rapports C1 à C4 portent
+le même motif et probablement la même erreur. **Les rapports de ce rapport tiennent** — grains,
+tailles et répartitions sont tous mesurés à la même résolution — mais les millisecondes de GPU sont
+celles d'un rendu 2400 × 1350, pas 1600 × 900. Le banc relève désormais `bufferWidth`,
+`bufferHeight` et `pixelRatio` dans chaque ligne : cette valeur ne se déduit plus.
 
 **Aucune ligne de production n'a été modifiée.** `TRIANGLES_PER_REGION` est patché entre deux
 lancements par `sweepRegions.sh`, qui refuse de partir sur un fichier déjà modifié et restaure la
@@ -24,8 +33,16 @@ seraient mille appels de dessin. Le monde mesurerait la déroute du regroupement
 
 Six scénarios, caméra à hauteur d'yeux : repos, marche (0,05 m/frame), course (1 m/frame),
 **rotation sur place**, téléportation, **vue haute**. La rotation est le pire cas d'un culling — la
-vue change entièrement sans qu'un corps ne bouge. La vue haute est la référence honnête, celle où
-une partition n'a presque rien à rejeter.
+vue change entièrement sans qu'un corps ne bouge.
+
+🛑 **DEUX DÉFAUTS TROUVÉS APRÈS COUP par la revue, et corrigés depuis.** La **vue haute** se posait
+à `span × 0,5`, donc à 500 000 la caméra était à 1 341 de l'origine pour un plan lointain de
+1 000 : elle mesurait un CLIPPING pendant que ce rapport la présentait comme la vue qui ne rejette
+rien. Elle se pose désormais à `far × 0,45` — à 50 000 elle dessine 50 144 corps là où elle en
+dessinait 46 134. Et `placeView` finit sur `repaint()`, qui planifiait une frame du viewport : les
+scénarios à caméra mobile dessinaient **deux fois par frame**, la seconde hors de toute mesure. Le
+banc pose maintenant la caméra directement. **Les colonnes `rest` et `teleport` ne sont touchées ni
+par l'un ni par l'autre — ce sont celles sur lesquelles reposent les conclusions ci-dessous.**
 
 ## 2. 🛑 Cinq motifs de mesure essayés et jetés
 

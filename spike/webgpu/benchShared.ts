@@ -28,8 +28,9 @@ export type DrawTally = { calls: number; triangles: number; instances: number }
  * rejet de région se lit là avant de se lire ailleurs.
  *
  * Le module s'évalue une fois, donc le prototype n'est patché qu'une fois quels que soient ses
- * importeurs. `drawArraysInstanced` est compté aussi — une forme sans index passerait par là, et
- * l'omettre fait lire un monde plus léger qu'il n'est.
+ * importeurs. Les QUATRE entrées de dessin sont comptées : `drawArrays` autant que les trois
+ * autres, sans quoi une forme sans index ni instance — ce qu'un `loadModel` peut rendre — pèse
+ * zéro et le banc lit un monde plus léger qu'il n'est.
  */
 export const drawn: DrawTally = { calls: 0, triangles: 0, instances: 0 }
 
@@ -61,6 +62,15 @@ export const since = (before: DrawTally): DrawTally => ({
       drawn.instances += instances
     }
     return drawElementsInstanced.call(this, mode, count, type, offset, instances)
+  }
+  const drawArrays = proto.drawArrays
+  proto.drawArrays = function (mode, first, count) {
+    drawn.calls += 1
+    if (mode === TRIANGLES) {
+      drawn.triangles += count / 3
+      drawn.instances += 1
+    }
+    return drawArrays.call(this, mode, first, count)
   }
   const drawArraysInstanced = proto.drawArraysInstanced
   proto.drawArraysInstanced = function (mode, first, count, instances) {

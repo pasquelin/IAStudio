@@ -226,6 +226,19 @@ export function openWorld(plan: WorldPlan): SceneState {
   return { ...EMPTY_SCENE, nodes: [sun, ...nodes] }
 }
 
+/** Les centres des corps, à plat : trois nombres chacun, dans l'ordre de l'état. C'est sur eux que
+ * la zone active se mesure, jamais sur ce que le moteur en fait. */
+export function centresOf(state: SceneState): Float64Array {
+  const meshes = state.nodes.filter(node => node.type === 'mesh')
+  const at = new Float64Array(meshes.length * 3)
+  for (const [index, node] of meshes.entries()) {
+    at[index * 3] = node.transform.position.x
+    at[index * 3 + 1] = node.transform.position.y
+    at[index * 3 + 2] = node.transform.position.z
+  }
+  return at
+}
+
 /** Ce que le monde tient, lu sur l'état DÉJÀ bâti : le rebâtir pour compter coûterait 5 s à
  * 500 000. Écrit dans chaque relevé plutôt que déduit du seul `count`. */
 export function worldShape(
