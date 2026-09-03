@@ -188,6 +188,8 @@
     "window": {
       "debug": "Débogage",
       "debugHint": "Ce que la partie dit d’elle-même : objets, images par seconde, pas, fautes",
+      "framePerformance": "CPU {{cpu}} ms · rendu {{render}} ms",
+      "renderPerformance": "{{calls, number}} appels de dessin · {{triangles, number}} triangles",
       "noFaults": "Aucune faute",
       "title": "Partie",
       "waiting": "En attente du studio…"

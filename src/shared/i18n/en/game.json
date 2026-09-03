@@ -188,6 +188,8 @@
     "window": {
       "debug": "Debug",
       "debugHint": "What the game says about itself: objects, frames per second, steps, faults",
+      "framePerformance": "CPU {{cpu}} ms · render {{render}} ms",
+      "renderPerformance": "{{calls, number}} draw calls · {{triangles, number}} triangles",
       "noFaults": "No faults",
       "title": "Play mode",
       "waiting": "Waiting for the studio…"

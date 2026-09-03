@@ -26,6 +26,7 @@ import { gazeTargetOf, type PivotMode } from './orbitPivot'
 import { panBy } from './pan'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
+import { createGpuTimer, isGpuTimerContext, type GpuTimer } from './gpuTimer'
 import {
   glRect,
   inRect,
@@ -381,6 +382,7 @@ export class ViewportEngine {
   /** What the last drawn frame cost, and what the context holds. `frames` standing still is a
    * viewport that went back to sleep, which is what the loop is meant to do. */
   readonly stats: GpuStats = emptyGpuStats()
+  private gpuTimer: GpuTimer | null = null
 
   constructor(private readonly options: ViewportEngineOptions = {}) {
     this.perspective = new PerspectiveCamera(
@@ -867,6 +869,8 @@ export class ViewportEngine {
     // `render` a second time — left automatic, a frame would report the trihedron alone.
     renderer.info.autoReset = false
     this.renderer = renderer
+    const context = renderer.getContext()
+    this.gpuTimer = isGpuTimerContext(context) ? createGpuTimer(context) : null
 
     if (this.options.controls !== 'none') {
       this.controls = new OrbitControls(this.camera, canvas)
@@ -949,6 +953,7 @@ export class ViewportEngine {
     this.renderer?.forceContextLoss()
     this.renderer?.dispose()
     this.renderer = null
+    this.gpuTimer = null
 
     // The canvas goes with the engine that made it: left behind, the next mount would stack a
     // second one on top of it and the host would keep growing a dead canvas per remount.
@@ -1798,6 +1803,8 @@ export class ViewportEngine {
       restoreShadows = undefined
     }
     const panesDrawn = !this.insetCoversAll()
+    const renderStarted = performance.now()
+    this.gpuTimer?.begin()
     try {
       if (panesDrawn) this.renderPanes(renderer, refreshAllShadows)
       // After the panes and before the overlay: the preview covers the view it sits on, and the
@@ -1806,7 +1813,6 @@ export class ViewportEngine {
     } finally {
       refreshAllShadows()
     }
-
     const overlay = this.options.onOverlay
     if (overlay) {
       /**
@@ -1824,9 +1830,11 @@ export class ViewportEngine {
         renderer.autoClear = true
       }
     }
+    this.gpuTimer?.end()
 
     // Read per frame, never cached: a context restore replaces `info` and its two counter objects.
-    recordFrame(renderer.info, this.stats)
+    recordFrame(renderer.info, this.stats, performance.now() - renderStarted)
+    this.stats.gpuFrameMs = this.gpuTimer?.read() ?? null
 
     // Armed again for whatever renders BETWEEN two frames — a film being written out, a capture,
     // a scene clip — none of which comes through here and none of which would know to ask. The

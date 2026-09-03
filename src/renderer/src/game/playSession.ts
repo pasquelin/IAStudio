@@ -1,6 +1,11 @@
 import { assetUrl } from '@shared/domain/asset'
 import { clamp } from '@shared/numeric'
-import type { PlayState, RuntimeError, RuntimeReport } from '@shared/domain/gameRuntime'
+import {
+  EMPTY_RUNTIME_PERFORMANCE,
+  type PlayState,
+  type RuntimeError,
+  type RuntimeReport,
+} from '@shared/domain/gameRuntime'
 import type { DomInputTarget } from '@game/host/domInput'
 import { createStudioHost } from '@game/host/studioHost'
 import { refToString } from '@shared/domain/ref'
@@ -100,6 +105,7 @@ export type PlaySessionDeps = {
    * it does not have. Absent holds the game to the scene it opened on.
    */
   sceneNamed?: (scene: string) => SceneLookup
+  compilationMs?: () => number
 }
 
 /**
@@ -217,8 +223,11 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   let last: number | null = null
   let warmed = false
   let said = Number.NEGATIVE_INFINITY
+  let cpuFrameMs = 0
+  let renderMs = 0
 
-  const publish = (): void =>
+  const publish = (): void => {
+    const rendererPerformance = deps.renderer.runtimePerformance?.()
     deps.onReport({
       state,
       tick: world.time.tick,
@@ -228,7 +237,15 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       logs: ports.log.recent(),
       errors: [...errors],
       veil: veiled,
+      performance: {
+        ...EMPTY_RUNTIME_PERFORMANCE,
+        ...rendererPerformance,
+        cpuFrameMs,
+        renderMs: rendererPerformance?.renderMs ?? renderMs,
+        compilationMs: deps.compilationMs?.() ?? 0,
+      },
     })
+  }
 
   /**
    * 🛑 Not on every frame. `onReport` writes into a store the panel subscribes to, so publishing at
@@ -353,6 +370,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   }
 
   deps.frames.start(nowMs => {
+    const frameStarted = performance.now()
     if (state === 'playing') {
       // Smoothed rather than read raw: a figure that jumps every frame is one nobody can read.
       if (last !== null)
@@ -376,7 +394,10 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     // document on any change — a click on a node is one — and a paused game that stopped drawing
     // would snap back to the authored pose. AT the step while paused: the accumulator stops with
     // it, so `alpha` is frozen where the pause fell and would walk a stepped world back to it.
+    const renderStarted = performance.now()
     draw(state === 'playing' ? loop.alpha() : 1)
+    renderMs = smooth(renderMs, performance.now() - renderStarted)
+    cpuFrameMs = smooth(cpuFrameMs, performance.now() - frameStarted)
     publishIfDue(nowMs)
   })
 
@@ -449,4 +470,8 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       publish()
     },
   }
+}
+
+function smooth(previous: number, current: number): number {
+  return previous === 0 ? current : previous * 0.9 + current * 0.1
 }

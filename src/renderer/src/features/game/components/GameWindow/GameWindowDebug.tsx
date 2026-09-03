@@ -30,6 +30,18 @@ export function GameWindowDebug({ report }: { report: RuntimeReport }) {
               tick: report.tick,
             })}
           </div>
+          <div>
+            {t('game.window.framePerformance', {
+              cpu: formatDecimal(report.performance.cpuFrameMs, i18n.language, { digits: 2 }),
+              render: formatDecimal(report.performance.renderMs, i18n.language, { digits: 2 }),
+            })}
+          </div>
+          <div>
+            {t('game.window.renderPerformance', {
+              calls: report.performance.drawCalls,
+              triangles: report.performance.triangles,
+            })}
+          </div>
           <div className={faults.length > 0 ? 'text-warning' : undefined}>
             {faults.length > 0
               ? t('game.play.faults', { count: faults.length })

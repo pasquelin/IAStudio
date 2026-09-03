@@ -23,6 +23,7 @@ export type GameHostDeps = {
   /** Another scene of the project. `reading` is the answer while the studio is being asked. */
   sceneNamed: (scene: string) => SceneLookup
   onReport: (report: RuntimeReport) => void
+  compilationMs?: () => number
 }
 
 /**
@@ -51,5 +52,6 @@ export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
     sceneNamed: deps.sceneNamed,
     onReport: deps.onReport,
     heightmaps,
+    compilationMs: deps.compilationMs,
   })
 }

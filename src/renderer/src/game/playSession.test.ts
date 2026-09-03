@@ -41,6 +41,46 @@ describe('a game running inside the studio', () => {
     expect(reports.at(-1)).toMatchObject({ state: 'playing', tick: 0, entities: 2 })
   })
 
+  it('publishes measured renderer counters and the latest compilation cost', () => {
+    const frames = handDriven()
+    const reports: RuntimeReport[] = []
+    startPlay({
+      documentId: 'doc-1',
+      renderer: drawnBy({
+        runtimePerformance: () => ({
+          renderMs: 1.25,
+          gpuFrameMs: 0.75,
+          drawCalls: 7,
+          triangles: 420,
+          vertices: 240,
+          visibleObjects: 6,
+          culledObjects: 4,
+          instanceCount: 100,
+          batchCount: 2,
+          geometryBufferBytes: 1_024,
+          estimatedTextureBytes: 2_048,
+        }),
+      }),
+      editState: () => scene(),
+      input: new EventTarget(),
+      frames: frames.driver,
+      compilationMs: () => 3.5,
+      onReport: report => reports.push(report),
+    })
+
+    frames.advance(0.2)
+
+    expect(reports.at(-1)?.performance).toMatchObject({
+      drawCalls: 7,
+      triangles: 420,
+      instanceCount: 100,
+      batchCount: 2,
+      compilationMs: 3.5,
+      gpuFrameMs: 0.75,
+      renderMs: 1.25,
+    })
+  })
+
   it('moves an object its component says moves, and leaves the others alone', () => {
     const { frames, apply, state } = playing()
 
