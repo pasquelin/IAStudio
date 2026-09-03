@@ -1,5 +1,6 @@
 {
   "character": {
+    "rigDebug": "Adaptatif · confiance {{confidence}} · {{milliseconds}} ms",
     "window": {
       "title": "Squelette et animation",
       "titleOf": "Squelette et animation — {{name}}",

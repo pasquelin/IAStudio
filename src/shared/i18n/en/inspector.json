@@ -248,6 +248,7 @@
     "rigServiceLocal": "Automatic — the studio",
     "rigNotHumanoid": "The studio only lays a humanoid skeleton — hips, spine, two arms and two legs.",
     "rigCreate": "Create the skeleton",
+    "rigAdaptiveFailed": "The geometric rig analysis could not complete.",
     "boneName": "Name",
     "boneNameHint": "Double-click to rename this joint",
     "rigBinding": "Preparing the character",

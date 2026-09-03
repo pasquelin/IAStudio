@@ -84,6 +84,8 @@ import { createReliefSculptor, type ReliefSculptor } from './reliefSculptor'
 import type { PackedReliefChunk } from '@shared/domain/relief'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
+import type { AdaptiveRigDebug } from './adaptiveGeometricRig'
+import { createAdaptiveRigDebugView, type AdaptiveRigDebugView } from './adaptiveRigDebugView'
 import { springArmRigsOf } from './springArmRigs'
 import { cachedOn } from '../core/cachedOn'
 import { COMPONENT_DEFAULTS } from '@game/runtime/componentDefaults'
@@ -928,6 +930,7 @@ export class SceneRenderer {
   private lit: { dress: EnvironmentDress | null; intensity: number; rotation: number } | null = null
   /** Boxes, origins and normals. Hung beside the nodes for the reason the ground is not. */
   private readonly aids = createViewportAids()
+  private readonly adaptiveRigDebug = new Map<string, AdaptiveRigDebugView>()
 
   /** What the last state asks to be DRAWN off its components, so `refreshAids` knows there is
    * something to draw at all. */
@@ -2530,6 +2533,20 @@ export class SceneRenderer {
     this.refreshSkeletons()
   }
 
+  /** Developer evidence for the experimental fitter, kept outside the model like every aid. */
+  setAdaptiveRigDebug(nodeId: string, debug: AdaptiveRigDebug | null): void {
+    const held = this.adaptiveRigDebug.get(nodeId)
+    held?.group.removeFromParent()
+    held?.dispose()
+    this.adaptiveRigDebug.delete(nodeId)
+    if (debug) {
+      const view = createAdaptiveRigDebugView(debug)
+      this.adaptiveRigDebug.set(nodeId, view)
+      this.viewport.scene.add(view.group)
+    }
+    this.repaint()
+  }
+
   /**
    * Whether the bones on stage are the REST pose being edited rather than a pose being struck.
    *
@@ -3186,6 +3203,7 @@ export class SceneRenderer {
     for (const helper of this.helpers.values()) hide(helper)
     for (const joints of this.joints.values()) hide(joints.points)
     for (const solids of this.boneSolids.values()) hide(solids.mesh)
+    for (const debug of this.adaptiveRigDebug.values()) hide(debug.group)
     for (const frustum of this.frustums.values()) hide(frustum)
     // A body and a bulb are workshop furniture too: they stand where the thing they draw stands,
     // so a camera aimed at a lamp would otherwise film the bulb somebody drew to find it by.
@@ -3538,6 +3556,7 @@ export class SceneRenderer {
     this.environment = null
     this.animations.clear()
     for (const id of [...this.boneSolids.keys()]) this.unbindSkeleton(id)
+    for (const id of [...this.adaptiveRigDebug.keys()]) this.setAdaptiveRigDebug(id, null)
     this.post?.dispose()
     this.post = null
     this.textureCache.dispose()

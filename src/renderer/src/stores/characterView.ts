@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { BoneAxis } from '@/engines/character/boneRest'
 import type { TransformMode } from '@/engines/scene/gizmoTarget'
 import type { MeshSample } from '@/engines/scene/rigSnap'
+import type { AdaptiveRigResult } from '@/engines/scene/adaptiveGeometricRig'
 
 /**
  * What is picked and how it is being handled in one character's tab. Outside the character for
@@ -33,6 +34,8 @@ export type CharacterView = {
    * holding the engine.
    */
   sample: MeshSample | null
+  /** Developer-only evidence from the experimental geometric fitter. */
+  rigAnalysis: AdaptiveRigResult | null
 }
 
 const DEFAULT_CHARACTER_VIEW: CharacterView = {
@@ -41,6 +44,7 @@ const DEFAULT_CHARACTER_VIEW: CharacterView = {
   heldAxes: [],
   editingRest: false,
   sample: null,
+  rigAnalysis: null,
 }
 
 type CharacterViewsState = {
@@ -52,6 +56,7 @@ type CharacterViewsState = {
   holdCharacterAxis: (assetId: string, axis: BoneAxis, held: boolean) => void
   editCharacterRest: (assetId: string, editing: boolean) => void
   noteCharacterSample: (assetId: string, sample: MeshSample | null) => void
+  noteRigAnalysis: (assetId: string, analysis: AdaptiveRigResult | null) => void
   forgetCharacterView: (assetId: string) => void
 }
 
@@ -84,6 +89,9 @@ export const useCharacterView = create<CharacterViewsState>()(set => ({
   noteCharacterSample: (assetId, sample) =>
     set(state => written(state, assetId, () => ({ sample }))),
 
+  noteRigAnalysis: (assetId, rigAnalysis) =>
+    set(state => written(state, assetId, () => ({ rigAnalysis }))),
+
   forgetCharacterView: assetId =>
     set(state => {
       const { [assetId]: gone, ...left } = state.views
@@ -112,4 +120,5 @@ const KEYS: readonly (keyof CharacterView)[] = [
   'heldAxes',
   'editingRest',
   'sample',
+  'rigAnalysis',
 ]

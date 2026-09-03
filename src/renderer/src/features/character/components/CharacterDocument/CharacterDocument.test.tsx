@@ -47,6 +47,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
       configured.push(next)
     }
     setSkeletons = vi.fn()
+    setAdaptiveRigDebug = vi.fn()
     setPoseMode = vi.fn()
     setSculptMode = vi.fn()
     setArmedRelief = vi.fn()

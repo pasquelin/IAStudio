@@ -6,6 +6,8 @@ import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { Transform } from '@shared/domain/transform'
 import { EmptyState } from '@/components/EmptyState'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
+import { QuietNote } from '@/components/QuietNote'
+import { formatDecimal } from '@/helpers/format'
 import { PANE_TOOLBAR, PANE_TOOLBAR_ASIDE } from '@/components/styles'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
@@ -55,7 +57,7 @@ function characterViewport(three: Settings['three']): Settings['three'] {
  * opened on, which ⌘S patches — see `saveCharacterDocument`.
  */
 export function CharacterDocument({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   const assetId = useDocuments(state => characterAssetOf(state, documentId)) ?? ''
   const three = useSettings(state => state.settings.three)
@@ -113,6 +115,11 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engineRef.current?.setMode(view.mode)
   }, [view.mode, live])
+
+  useEffect(() => {
+    if (!nodeId) return
+    engineRef.current?.setAdaptiveRigDebug(nodeId, view.rigAnalysis?.debug ?? null)
+  }, [view.rigAnalysis, nodeId, live])
 
   // 🛑 The padlocks reach the DRAG, not just the release: unheld for the length of a gesture, a
   // joint leaves the axis a hand meant to keep it on — seen on screen the 2026-09-02.
@@ -239,6 +246,22 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
       <Toolbar
         className={PANE_TOOLBAR}
         label={t('character.tools')}
+        extras={
+          view.rigAnalysis ? (
+            <QuietNote>
+              {t('character.rigDebug', {
+                confidence: formatDecimal(view.rigAnalysis.confidence.global, i18n.language, {
+                  digits: 3,
+                  least: 3,
+                }),
+                milliseconds: formatDecimal(view.rigAnalysis.timings.total, i18n.language, {
+                  digits: 2,
+                  least: 2,
+                }),
+              })}
+            </QuietNote>
+          ) : null
+        }
         tools={[
           ...CHARACTER_TOOLS,
           // Exactly one lit, like the verbs above: the two states are exclusive.
