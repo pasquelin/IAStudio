@@ -1,6 +1,4 @@
-type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'skybox' | 'animation'
-type AssetLocation = 'local' | 'cloud'
-type SyncStatus = 'none' | 'synced' | 'local-ahead' | 'remote-ahead' | 'conflict' | 'error'
+import type { AssetLocation, AssetType, SyncStatus } from './assetTypes'
 
 type AssetForUrl = {
   id: string

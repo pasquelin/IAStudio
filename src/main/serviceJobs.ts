@@ -175,18 +175,21 @@ export function createJobServices(deps: JobDeps) {
     newId: () => `job_${randomUUID()}`,
     sleep: deps.delay,
   })
-  return {
-    uploads,
-    estimateCost,
-    promptContext,
-    ownerScope,
-    remoteAssets,
-    cloudAssets,
-    prompts,
-    removeAssetFile,
-    jobStore,
-    jobs,
+  function result() {
+    return {
+      uploads,
+      estimateCost,
+      promptContext,
+      ownerScope,
+      remoteAssets,
+      cloudAssets,
+      prompts,
+      removeAssetFile,
+      jobStore,
+      jobs,
+    }
   }
+  return result()
 }
 
 function createCollector(deps: JobDeps, scenario: Scenario): AssetCollector {

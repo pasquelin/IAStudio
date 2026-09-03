@@ -2,7 +2,9 @@ import { FILE_NAME_MAX_LENGTH } from './fileName'
 import type { FolderRole } from './folderRole'
 import type { PbrChannel } from './material'
 
-export type AssetType = 'image' | 'video' | 'audio' | 'mesh' | 'skybox' | 'animation'
+import type { AssetLocation, AssetType, SyncStatus } from './assetTypes'
+
+export type { AssetLocation, AssetType, SyncStatus } from './assetTypes'
 
 /** The values, beside the type: a validator and a row reader both need to enumerate them. */
 export const ASSET_TYPES: readonly AssetType[] = [
@@ -84,8 +86,6 @@ export function roleForAsset(asset: {
  */
 export const ASSET_ID_PREFIX = 'asset_'
 
-export type AssetLocation = 'local' | 'cloud'
-
 /**
  * How a local asset stands against the twin it has in the library, when it has one.
  *
@@ -99,8 +99,6 @@ export type AssetLocation = 'local' | 'cloud'
  * computed from a full diff rather than from a selection, that is a change of policy in
  * `planSync`, not a migration.
  */
-export type SyncStatus = 'none' | 'synced' | 'local-ahead' | 'remote-ahead' | 'conflict' | 'error'
-
 export const SYNC_STATUSES: readonly SyncStatus[] = [
   'none',
   'synced',

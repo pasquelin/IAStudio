@@ -172,21 +172,24 @@ export function createMediaServices(deps: MediaDeps) {
     (bundleClient ??= openBundleProcess(() => {
       bundleClient = null
     }))
-  return {
-    assets,
-    extractTextures,
-    folder,
-    documents,
-    game,
-    scripts,
-    files,
-    ffmpeg,
-    media,
-    catchUpProject,
-    probeLocalFile,
-    onAssetLanded,
-    bundles,
+  function result() {
+    return {
+      assets,
+      extractTextures,
+      folder,
+      documents,
+      game,
+      scripts,
+      files,
+      ffmpeg,
+      media,
+      catchUpProject,
+      probeLocalFile,
+      onAssetLanded,
+      bundles,
+    }
   }
+  return result()
 }
 
 async function saveFields(deps: MediaDeps, assetId: string, fields: Partial<Asset>): Promise<void> {
