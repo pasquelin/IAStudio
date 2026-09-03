@@ -1,18 +1,15 @@
 import { orElse } from '@shared/promises'
 import { APP_NAME } from '@shared/constants'
-import { app, BrowserWindow, dialog, net, shell, systemPreferences } from 'electron'
-import { spawn } from 'node:child_process'
+import { app, BrowserWindow, dialog, net, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readdirSync } from 'node:fs'
-import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
-import { availableParallelism, totalmem } from 'node:os'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
-import { activeProvidersOf, scenarioAccount, type AccountSummary } from '@shared/domain/account'
+import { scenarioAccount, type AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import { outputExtensionOf } from '@shared/domain/localFields'
-import type { LocalModel } from '@shared/domain/localModel'
-import { needsOwnFolder } from '@shared/domain/localModel'
 import {
   ASSET_ID_PREFIX,
   roleForAsset,
@@ -51,13 +48,11 @@ import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import {
   bundledAnimations,
-  bundledEngine,
   bundledGameRuntime,
   bundledFfmpeg,
   bundledModels,
   bundledTemplates,
   bundledTextures,
-  bundledVad,
   resourcesRoot,
 } from './resources'
 import { bundledFile } from './bundledFile'
@@ -82,54 +77,19 @@ import { providerLimits } from './assistant/providerLimits'
 import { createLocalBrain } from './assistant/brainLocal'
 import { projectPickerFolder } from '@shared/domain/project'
 import { machineFolders } from './assistant/machineFolders'
-import { createHttpChatBrain } from './assistant/brainHttp'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
-import { createSession, type DictationSession } from './dictation/session'
-import { STT_MODEL } from '@shared/domain/dictation'
-import { chatModelOf, CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
+import type { DictationSession } from './dictation/session'
+import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
-import type { WorkspaceId } from '@shared/domain/workspace'
-import { spacesWithNoModel, SPACE_ROLES } from './ai/spacesWithNoModel'
-import { createAiManager, type AiManager } from './ai/manager'
-import { modelWith } from './ai/catalogue'
-import { electronHardwarePort } from './ai/electronHardwarePort'
-import { electronLlamaPort } from './ai/electronLlamaPort'
-import { llamaLocalRuntime } from './ai/llamaRuntime'
-import { ensureOllama, ollamaInstalled } from './ai/ensureOllama'
-import { installEngineLibraries } from './ai/installEngineLibraries'
-import { spawnLines } from './ai/spawnLines'
-import {
-  extractOllamaArchive,
-  fetchOllamaArchive,
-  installOllama,
-  needsZstd,
-  zstdOnPath,
-} from './ai/installOllama'
-import { ollamaHttpPort, ollamaLocalRuntime } from './ai/ollamaRuntime'
-import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
-import { readyCloudsOf } from './ai/cloudReadiness'
+import type { AiManager } from './ai/manager'
 import { createLocalJobRunner } from './ai/localJobRunner'
 import { createRoutedCollector } from './ai/routedCollector'
 import { createLocalCollector } from './assets/localCollector'
-import { createPythonClient } from './ai/pythonClient'
-import { openPythonProcess } from './ai/pythonProcess'
-import { pythonRuntime } from './ai/pythonRuntime'
-import { createPythonSupervisor } from './ai/pythonSupervisor'
-import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
-import { ownModelFrom } from './ai/ownModel'
 import { createCodeJobRunner, isRetryableCloudChat } from './ai/codeJobRunner'
 import { createRoutedJobRunner } from './ai/routedJobRunner'
 import { createRetry, isRetryable } from './provider/retry'
-import { fetchModel, modelIsComplete } from './ai/modelInstall'
-import {
-  createDownloadHost,
-  defaultModelFolder,
-  ensureFolder,
-  migrateSttFolder,
-} from './ai/modelStore'
-import { openMicrophoneSettings, requestMicrophone } from './dictation/permissions'
-import { openSttProcess } from './dictation/sttProcess'
+import { openMicrophoneSettings } from './dictation/permissions'
 import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
 import { importFiles } from './media/importFiles'
@@ -157,7 +117,7 @@ import { createTextureExtraction, type TextureExtraction } from './assets/textur
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
-import { exists, firstBytes, writeAtomic } from './persistence'
+import { exists, writeAtomic } from './persistence'
 import type Scenario from '@scenario-labs/sdk'
 import {
   createJobManager,
@@ -189,11 +149,8 @@ import { createSaid, type Said } from './assistant/said'
 import { createTranscript, type Transcript } from './assistant/transcript'
 import { logsFolder } from './logFile'
 import { openCatalogThread } from './project/catalogThread'
-import { createEmbedder, EMBEDDER_IDLE_MS } from './memory/embedder'
-import { embedModelId, embedWeightsOf, type EmbedChoiceDeps } from './memory/embedChoice'
-import { openEmbedProcess } from './memory/embedProcess'
 import { createMemoryHost, type MemoryHost } from './memory/memoryHost'
-import { createMemoryVectors, type MemoryVectors } from './memory/memoryVectors'
+import type { MemoryVectors } from './memory/memoryVectors'
 import { openMemoryThread } from './memory/memoryThread'
 import { catalogOf } from './provider/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
@@ -223,6 +180,7 @@ import { buildMenu, noteNavigationPreset, noteProjectOpen, noteRecent } from './
 import { setWindowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
 import { ProviderServices } from './serviceProvider'
+import { createLocalAiServices } from './serviceLocalAi'
 
 /**
  * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
@@ -1217,369 +1175,29 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
 
-  /**
-   * 🛑 PROVISIONAL, and named so rather than hidden: ADR-19 lists `appBudgetBytes` and
-   * `headroomBytes` under what it does NOT decide, and nothing has measured them.
-   *
-   * `[M]` Three quarters, not a half. At a half, a 16 GB machine offered 5.5 GB once the headroom
-   * and the window were taken off, and the 7B model — 8 GB reserved — was unusable on a machine
-   * that runs it. The figure is still a policy and not a measurement; what IS measured is that the
-   * previous one refused a model that works.
-   *
-   * On a machine with a dedicated card this is not what decides: the video memory is, and it is
-   * READ rather than budgeted — see `potOf` in `hardwareProbe.ts`.
-   */
-  const PROVISIONAL_BUDGET = {
-    appBudgetBytes: Math.round((totalmem() * 3) / 4),
-    headroomBytes: 2_000_000_000,
-    // What the viewport was measured holding with a 3D scene open, 2026-08-21.
-    rendererReservedBytes: 475_000_000,
-  }
-
-  // Where the user pointed, or beside the settings file. Read on every call rather than kept:
-  // the folder is a setting, and it can change while the studio is open.
-  const modelFolder = (): string =>
-    settings.read().dictation.modelFolder ?? defaultModelFolder(app.getPath('userData'))
-
-  // Nothing waits on it: what it carries is a model already on the disk, and an install that
-  // reaches the new folder first simply downloads what the move would have brought.
-  void migrateSttFolder(modelFolder()).catch((error: unknown) => {
-    log.warn('ai', `moving the previous model folder failed: ${String(error)}`)
-  })
-
-  const downloads = createDownloadHost()
-
-  /**
-   * ADR-21 § C: what thinks for each cloud, keyed by the registry. Whether a key is HELD is not
-   * here — one account listing answers it for every cloud at once (`activeProvidersOf`).
-   * Scenario's brain is a getter because it is built further down.
-   */
-  const clouds: Record<string, { brain: () => AssistantBrain }> = {}
-  for (const cloud of CLOUD_PROVIDERS) {
-    // Captured so the narrowing survives into the closures below, which a property access does not.
-    const chat = cloud.chat
-    // A cloud that answers no conversation gets no brain — it generates, and nothing else.
-    if (chat === undefined) continue
-    if (chat.kind === 'scenario') {
-      clouds[cloud.id] = { brain: () => providerBrain }
-    } else {
-      const http = createHttpChatBrain({
-        chat,
-        cloud: cloud.id,
-        credentials: () => settings.readCredentialsFor(cloud.id),
-        model: () => chatModelOf(settings.read().assistant.cloudModels[cloud.id], chat.model),
-        notReady,
-      })
-      clouds[cloud.id] = { brain: () => http }
-    }
-  }
-
-  /**
-   * Where a model's files land. One folder for the whole catalogue — the manifests name their own
-   * files — EXCEPT for a loader handed a FOLDER: two of those would overwrite each other's index.
-   */
-  const folderFor = (model: LocalModel): string =>
-    needsOwnFolder(model.loader) ? join(modelFolder(), model.id) : modelFolder()
-
-  /**
-   * What each LOADER can do on this machine — the unit ADR-20 writes its whitelist on, and ONE
-   * table: a runtime that installs but cannot converse, or the reverse, would otherwise read as
-   * ready on one side and be unreachable on the other.
-   */
-  const fetchedFiles = fileRuntime({
-    folderFor,
-    isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
-    fetch: async (model, folder, onProgress, signal) => {
-      await ensureFolder(folder)
-      // Nothing sweeps the `.part` files first, and that is the point: an interrupted download
-      // resumes from what already arrived. A leftover that is not a prefix of what is being
-      // fetched cannot survive anyway — it fails its digest and is removed there.
-      await fetchModel(downloads, model, { folder, onProgress, signal })
-    },
-    removeFiles: async (model, folder) => {
-      // The whole folder when it is the model's own, which is what takes its subfolders with it;
-      // file by file when it is shared, where a recursive remove would take the catalogue.
-      if (needsOwnFolder(model.loader)) {
-        await rm(folder, { recursive: true, force: true })
-        return
-      }
-
-      for (const file of model.files) await rm(join(folder, file.name), { force: true })
-    },
-  })
-
-  // One port, held: it owns the addon, so the memory reading and the inference are the same
-  // process's — which is what lets a snapshot say `runtime` rather than `probe`.
-  const llama = electronLlamaPort()
-  let hold =
-    (_modelId: string): (() => void) =>
-    () => {}
-
-  /** A model the person supplied names its own file; everything else lands in the model folder. */
-  const weightsOf = (model: LocalModel): string =>
-    // The FIRST file: a split GGUF names its shards `-00001-of-0000N`, and llama.cpp is handed
-    // the first one and finds the rest beside it.
-    model.weightsPath ?? join(modelFolder(), model.files[0]?.name ?? '')
-
-  let lookup = (modelId: string): LocalModel | null =>
-    modelWith(modelId, settings.read().ai.ownModels)
-  const modelOf = (modelId: string): LocalModel | null => lookup(modelId)
-  const isLocalTarget = (targetId: string): boolean => modelOf(targetId) !== null
-
-  /**
-   * The local AI engine, supervised. Started on the first ask and never at launch: forking Python
-   * to be told nothing is installed would cost a start-up nobody asked for.
-   */
-  const engine = createPythonSupervisor({
-    open: listeners => {
-      const bundled = bundledEngine(resourcesRoot(), process.platform)
-      return createPythonClient(
-        openPythonProcess({
-          command: bundled.python,
-          args: ['-m', 'ia_studio_engine.core.supervisor'],
-          sources: bundled.sources,
-          processName: 'the local AI engine',
-        }),
-        listeners,
-      )
-    },
-    now: Date.now,
-    delay: ms => sleepFor(ms),
-  })
-
-  const engineRuntime = pythonRuntime({
-    folderFor,
-    isComplete: (model, folder) => modelIsComplete(downloads, model, folder),
-    fetch: async (model, folder, onProgress, signal) => {
-      await ensureFolder(folder)
-      await fetchModel(downloads, model, { folder, onProgress, signal })
-    },
-    removeFiles: (_model: LocalModel, folder: string) =>
-      rm(folder, { recursive: true, force: true }),
-    baseOf: model => (model.attaches ? modelOf(model.attaches.model) : null),
-    engine: () => engine.engine(),
-    running: () => engine.current(),
-    log: (level: 'info' | 'warn', message: string) => log[level]('ai', message),
-    onUsed: modelId => hold(modelId),
-  })
-
-  const ollamaPort = ollamaHttpPort()
-  const ollamaDir = join(app.getPath('userData'), 'ollama')
-
-  const OLLAMA_LOOK_MS = 10_000
-  let installedOllama: { at: number; yes: boolean } | null = null
-
-  /**
-   * 🛑 `[M]` Remembered, and only for a window: the search joins the usual locations, a studio copy
-   * and ONE CANDIDATE PER PATH ENTRY — 46 on this machine — and `some` short-circuits on none of
-   * them while Ollama is absent. It sat on every compose, so on every assistant turn.
-   */
-  const ollamaIsInstalled = (): boolean => {
-    if (installedOllama !== null && Date.now() - installedOllama.at < OLLAMA_LOOK_MS) {
-      return installedOllama.yes
-    }
-
-    installedOllama = {
-      at: Date.now(),
-      yes: ollamaInstalled(process.platform, process.env, existsSync, ollamaDir),
-    }
-    return installedOllama.yes
-  }
-  const startOllama = ensureOllama({
-    platform: process.platform,
-    env: process.env,
-    extraDir: ollamaDir,
-    exists: existsSync,
-    // Detached and unref'd: a ChildProcess handle would be a way to kill a service we don't own.
-    spawn: (command, args) => {
-      const child = spawn(command, [...args], {
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true,
-      })
-      child.unref()
-      child.on('error', error => {
-        log.warn('ai', `local chat service did not start: ${String(error)}`)
-      })
-    },
-    ping: () =>
-      ollamaPort.tags().then(
-        () => true,
-        () => false,
-      ),
-  })
-
-  let forgetDiscovered = (): void => {}
-  let refreshOverview = (): Promise<void> => Promise.resolve()
-  const runtimes: LocalRuntimes = {
-    'sherpa-onnx': fetchedFiles,
-    diffusers: engineRuntime,
-    plugin: engineRuntime,
-    llamacpp: llamaLocalRuntime({
-      files: fetchedFiles,
-      weightsOf,
-      port: llama,
-      modelOf,
-      onUsed: modelId => hold(modelId),
-    }),
-    ollama: ollamaLocalRuntime(ollamaPort, {
-      ensure: startOllama,
-      onStale: () => {
-        forgetDiscovered()
-        void refreshOverview().catch((error: unknown) => {
-          log.warn('ai', `overview unpublished after a stale local model: ${String(error)}`)
-        })
-      },
-    }),
-  }
-
-  // Declared before the manager because its `emit` reaches back into it, and `?.` would not save
-  // a `const` from its temporal dead zone — an overview emitted during construction would throw.
-  let dictation: DictationSession | null = null
-
-  const ai = createAiManager({
-    facts: () => hardwareProbe(electronHardwarePort(modelFolder, llama.vram)),
-    snapshotOf: (facts, runtimeBytes) =>
-      memorySnapshotOf(facts, PROVISIONAL_BUDGET, Date.now(), runtimeBytes),
-    settings: () => settings.read(),
-    writeSettings: partial => settings.write(partial),
-    currentProjectPath: () => project.current()?.path ?? null,
-    readyClouds: () => readyCloudsOf(activeProvidersOf(settings.accounts())),
-    runtimes,
-    emit: overview => {
-      broadcast(EVENTS.ai, overview)
-      // 🛑 The speech model is in this catalogue, so it is installed and deleted from a screen
-      // the session never hears about — without this, a model fetched there left the microphone
-      // hidden and the status line offering to download files already on the disk.
-      void dictation?.probeModel()
-    },
-    log: (level, message) => log[level]('ai', message),
-    now: Date.now,
-    ollamaInstalled: ollamaIsInstalled,
-    engineMissing: async () => {
-      // Started on this ask: the core imports no tensor library, so this is the 33 ms hello and
-      // never a door. Answered `null` when it will not start — unknown, which is not "ready".
-      const client = await engine.engine()
-      if (!client) return null
-
-      const needs = await client.requirements()
-      return [...needs.absent.map(one => one.name), ...needs.stale.map(one => one.name)]
-    },
-    installEngine: async (onProgress, signal) => {
-      const client = await engine.engine()
-      if (!client) throw new Error('the local AI engine is not answering')
-
-      await installEngineLibraries({
-        python: bundledEngine(resourcesRoot(), process.platform).python,
-        // The engine's own declaration, never a list written here.
-        declaration: (await client.requirements()).declaration,
-        spawn: spawnLines,
-        onProgress,
-        signal,
-      })
-    },
-    installOllama: async (onProgress, signal) => {
-      // The studio just put one there: the remembered answer would keep saying otherwise.
-      installedOllama = null
-      await installOllama({
-        platform: process.platform,
-        arch: process.arch,
-        env: process.env,
-        extraDir: ollamaDir,
-        exists: existsSync,
-        ensureFolder,
-        download: fetchOllamaArchive,
-        extract: extractOllamaArchive,
-        remove: path => rm(path, { force: true }),
-        chmod: path => chmod(path, 0o755),
-        ensure: startOllama,
-        canUnpack: kind => !needsZstd(kind) || zstdOnPath(),
-        onProgress,
-        signal,
-      })
-      installedOllama = null
-    },
-  })
-  // A declaration, not a const: the cloud brains are wired above `ai`, and hoisting is what lets
-  // them reach this. 🛑 `unservedRoles`, never `overview()` — see its note on the manager.
-  async function notReady(): Promise<readonly WorkspaceId[]> {
-    return spacesWithNoModel(await ai.unservedRoles(SPACE_ROLES))
-  }
-
-  hold = ai.hold
-  lookup = modelId => ai.lookup(modelId)
-  forgetDiscovered = () => ai.forgetDiscovered()
-  refreshOverview = () => ai.refresh()
-  // Filled here rather than captured above: the registry was built first and asks per summary.
-  // 🛑 Both members at once — `fromManager` says what forgetting one costs.
-  Object.assign(fromManager, {
-    installedIds: () => ai.installedIds(),
-    discovered: () => ai.discovered(),
-  } satisfies typeof fromManager)
-
-  /**
-   * What the person chose for the embedding role, and where its weights sit. Split in two on
-   * purpose: `chosenId` is asked on every recall, and resolving a `.gguf` path is what it must
-   * not pay for.
-   */
-  const embedDeps: EmbedChoiceDeps = {
-    choices: () => settings.read().ai.roles,
-    byProject: () => settings.read().ai.projectRoles,
-    projectPath: () => project.current()?.path ?? null,
-    installedIds: () => ai.installedIds(),
-    modelOf,
-  }
-
-  const memoryVectors = createMemoryVectors({
-    host: memory,
-    embedder: createEmbedder({
-      chosenId: () => embedModelId(embedDeps),
-      weightsFor: modelId => embedWeightsOf(embedDeps, modelId, weightsOf),
-      open: openEmbedProcess,
-      onTrouble: why => log.warn('memory', why),
-      idleMs: EMBEDDER_IDLE_MS,
-      schedule: afterDelay,
-    }),
-    onProgress: (scope, progress) => broadcast(EVENTS.memoryIndexed, { scope, ...progress }),
-    onTrouble: why => log.warn('memory', why),
-  })
-
-  /** The whole of rank 3's gesture: a picker, a header, an entry. */
-  const addOwnAiModel = async (): Promise<AiOverview> => {
-    const picked = await pickWeights(language())
-    if (picked === null) return await ai.overview()
-
-    // A window of the head, never the whole file: a manifest is read out of the first pages, and
-    // these files run to gigabytes.
-    return await ai.addOwnModel(
-      await ownModelFrom(picked, {
-        readHead: firstBytes,
-        sizeOf: async path => (await stat(path)).size,
-      }),
-    )
-  }
-
-  dictation = createSession({
-    modelFolder,
-    vadPath: () => bundledVad(resourcesRoot()),
-    settings: () => settings.read().dictation,
-    modelIsReady: () => modelIsComplete(downloads, STT_MODEL, modelFolder()),
-    // Through the manager, which holds the ONE install lock: the status line and the manager
-    // screen fetch the same files into the same folder, and two streams onto one `.part` would
-    // fail a digest rather than a download.
-    download: (onProgress, signal) => ai.installModel(STT_MODEL, onProgress, signal),
-    requestMicrophone: () =>
-      requestMicrophone({
-        platform: process.platform,
-        status: () => systemPreferences.getMediaAccessStatus('microphone'),
-        ask: () => systemPreferences.askForMediaAccess('microphone'),
-      }),
-    openEngine: openSttProcess,
-    emit: event => broadcast(EVENTS.dictation, event),
-    log: (level, message) => log[level]('dictation', message),
-    join,
+  const localAi = createLocalAiServices({
+    settings,
+    project,
+    memory,
+    fromManager,
+    language,
+    pickWeights,
+    providerBrain: () => providerBrain,
     schedule: afterDelay,
   })
+  const {
+    clouds,
+    runtimes,
+    ai,
+    engine: localEngine,
+    llama,
+    modelOf,
+    isLocalTarget,
+    notReady,
+    memoryVectors,
+    addOwnAiModel,
+    dictation,
+  } = localAi
 
   const collectorOf = (scenario: Scenario): AssetCollector =>
     createAssetCollector({
@@ -2126,7 +1744,7 @@ export function createServices(settings: SettingsStore): Services {
     styles,
     disposeAiEngine: async () => {
       ai.dispose()
-      engine.dispose()
+      localEngine.supervisor.dispose()
       await llama.unload()
     },
     client,
