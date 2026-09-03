@@ -10,6 +10,7 @@ import {
 } from './grouping'
 import { markInstanceable, meshesOf } from './instanceableModel'
 import { modelNodeFixture, walked } from './scene-fixtures'
+import type { ModelDressRef } from '@shared/domain/scene'
 import type { SceneNode } from './sceneState'
 
 const bodyIn = (parent: Object3D): Mesh => {
@@ -222,14 +223,10 @@ describe('shapeAndPaint of a model', () => {
 
     expect(keyOf(oak, mesh)).not.toBe(keyOf(pine, mesh))
 
-    const inImage = {
-      ...oak,
-      model: { ...oak.model, dress: { kind: 'image' as const, assetId: 'pic-1' } },
-    }
-    const inPaint = {
-      ...oak,
-      model: { ...oak.model, dress: { kind: 'materials' as const, documentIds: ['mat-1'] } },
-    }
+    const imageDress: ModelDressRef = { kind: 'image', assetId: 'pic-1' }
+    const paintDress: ModelDressRef = { kind: 'materials', documentIds: ['mat-1'] }
+    const inImage = { ...oak, model: { ...oak.model, dress: imageDress } }
+    const inPaint = { ...oak, model: { ...oak.model, dress: paintDress } }
     expect(keyOf(inImage, mesh)).not.toBe(keyOf(inPaint, mesh))
     expect(keyOf(inImage, mesh)).not.toBe(keyOf(oak, mesh))
   })

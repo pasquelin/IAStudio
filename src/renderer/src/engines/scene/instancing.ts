@@ -155,8 +155,7 @@ export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
       previous.visible === node.visible &&
       previous.parentId === node.parentId &&
       previous.castShadow === node.castShadow &&
-      previous.receiveShadow === node.receiveShadow &&
-      previous.negative === node.negative
+      previous.receiveShadow === node.receiveShadow
     )
   }
   return (

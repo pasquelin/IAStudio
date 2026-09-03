@@ -1,9 +1,9 @@
 import {
   BatchedMesh,
-  Mesh,
   type BufferGeometry,
   type DataTexture,
   type Material,
+  type Mesh,
   type Object3D,
 } from 'three'
 import './bvhPatches'
