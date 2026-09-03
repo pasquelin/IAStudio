@@ -1,7 +1,7 @@
 import { Mesh, SkinnedMesh, type BufferGeometry, type Object3D } from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
-import { WORTH_INSTANCING, flagsOf, isDrawn, shapeAndPaint } from './grouping'
+import { DRAWN_BY_INSTANCE, WORTH_INSTANCING, isDrawn, shapeAndPaint, withFlags } from './grouping'
 import { isInstanceable } from './instanceableModel'
 import { statsOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
@@ -61,6 +61,15 @@ export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = {
 
 type CandidateGroup = { ids: Set<string>; meshes: number }
 
+/**
+ * What the camera actually draws. `isDrawn` reads `visible` alone, and `sweep` parks a source it
+ * has ALREADY instanced on `DRAWN_BY_INSTANCE` while leaving it visible: counted as a draw call,
+ * the analysis re-proposed groups the engine had made and overstated what they would save.
+ */
+function isRendered(mesh: Object3D, host: Object3D): boolean {
+  return isDrawn(mesh, host) && !mesh.layers.isEnabled(DRAWN_BY_INSTANCE)
+}
+
 export function analyzeOptimization(
   state: Pick<SceneState, 'nodes' | 'animation'>,
   host: Object3D,
@@ -68,24 +77,30 @@ export function analyzeOptimization(
   policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
 ): OptimizationPlan {
   const animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
-  const meshes = drawnMeshesOf(state.nodes, host, objectOf)
+  // Enumerated ONCE per node: read again for the classification and again for the grouping, a
+  // model of P primitives paid three full `traverse` walks for one pass.
+  const drawn = new Set<Mesh>()
   const candidateGroups = new Map<string, CandidateGroup>()
-  const keyOf = shapeAndPaint()
+  const keyOf = withFlags(shapeAndPaint())
   const classifications: ClassifiedObject[] = []
   const warnings: OptimizationWarning[] = []
 
   for (const node of state.nodes) {
     const object = objectOf(node.id)
-    const nodeClassifications = classificationsOf(node, object, animated.has(node.id))
+    const own = object ? ownMeshesOf(node, object) : []
+    const shown = object && isDrawn(object, host) ? own.filter(mesh => isRendered(mesh, host)) : []
+    for (const mesh of shown) drawn.add(mesh)
+
+    const nodeClassifications = classificationsOf(node, object, animated.has(node.id), own)
     classifications.push({ id: node.id, classifications: nodeClassifications })
 
     const reason = warningOf(nodeClassifications)
     if (reason) warnings.push({ nodeId: node.id, reason })
-    if (!nodeClassifications.includes('INSTANCABLE') || !object || !isDrawn(object, host)) continue
+    if (!nodeClassifications.includes('INSTANCABLE')) continue
 
-    for (const mesh of ownMeshesOf(node, object).filter(mesh => isDrawn(mesh, host))) {
+    for (const mesh of shown) {
       if (Array.isArray(mesh.material)) continue
-      const key = `${keyOf(node, mesh)}|${flagsOf(node, mesh)}`
+      const key = keyOf(node, mesh)
       const group = candidateGroups.get(key)
       if (group) {
         group.ids.add(node.id)
@@ -102,6 +117,7 @@ export function analyzeOptimization(
       meshCount: group.meshes,
     }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
+  const meshes = [...drawn]
   const sceneStats = statsOf(meshes)
   const savedDraws = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
 
@@ -135,9 +151,9 @@ function classificationsOf(
   node: SceneNode,
   object: Object3D | undefined,
   animated: boolean,
+  meshes: readonly Mesh[],
 ): OptimizationClassification[] {
   const classifications: OptimizationClassification[] = []
-  const meshes = object ? ownMeshesOf(node, object) : []
   const skinned = meshes.some(mesh => mesh instanceof SkinnedMesh)
   const dynamic = movesOnItsOwn(node.components)
   const instancable =
@@ -174,20 +190,6 @@ function ownMeshesOf(node: SceneNode, object: Object3D): Mesh[] {
     if (child instanceof Mesh) meshes.push(child)
   })
   return meshes
-}
-
-function drawnMeshesOf(
-  nodes: readonly SceneNode[],
-  host: Object3D,
-  objectOf: (id: string) => Object3D | undefined,
-): Mesh[] {
-  const found = new Set<Mesh>()
-  for (const node of nodes) {
-    const object = objectOf(node.id)
-    if (!object || !isDrawn(object, host)) continue
-    for (const mesh of ownMeshesOf(node, object)) if (isDrawn(mesh, host)) found.add(mesh)
-  }
-  return [...found]
 }
 
 function geometryBytesOf(meshes: readonly Mesh[]): number {

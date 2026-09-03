@@ -51,6 +51,21 @@ describe('external file arrivals', () => {
     expect(ingestPaths).not.toHaveBeenCalled()
   })
 
+  it('releases the paths the main holds when an import fails', async () => {
+    const discard = vi.fn(async () => undefined)
+    installFakeBridge({
+      externalFiles: {
+        take: async () => [{ id: 'request-5', folder: '' }],
+        discard,
+      },
+      media: { ingestPaths: vi.fn().mockRejectedValue(new Error('copy failed')) },
+    })
+
+    await takeExternalFiles()
+
+    await vi.waitFor(() => expect(discard).toHaveBeenCalledWith('request-5'))
+  })
+
   it('continues with the next arrival after an import fails', async () => {
     const ingestPaths = vi
       .fn()

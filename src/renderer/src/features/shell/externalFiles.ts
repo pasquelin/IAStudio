@@ -58,11 +58,8 @@ async function chooseProject(): Promise<boolean> {
 async function importRequest(request: ExternalFileRequest): Promise<void> {
   const bridge = getBridge()
   if (!bridge) return
-  if (request.project && request.project !== useProject.getState().project?.path) {
-    await bridge.externalFiles.discard(request.id)
-    return
-  }
-  if (request.folder === undefined && !(await chooseProject())) {
+  const elsewhere = request.project && request.project !== useProject.getState().project?.path
+  if (elsewhere || (request.folder === undefined && !(await chooseProject()))) {
     await bridge.externalFiles.discard(request.id)
     return
   }
@@ -86,6 +83,13 @@ async function drain(): Promise<void> {
         await importRequest(request)
       } catch (error) {
         reportFailure('assets.copy', request.id, error)
+        // The main holds the authorised paths until the request is claimed or dropped: a failure
+        // that says neither leaves them held for the life of the app.
+        try {
+          await getBridge()?.externalFiles.discard(request.id)
+        } catch {
+          // The bridge is gone, and the entry goes with the process it lived in.
+        }
       }
     }
   } finally {

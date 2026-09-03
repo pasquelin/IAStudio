@@ -349,3 +349,18 @@ describe('moving a panel', () => {
     expect(showing('right').secondary).toBe('explorer')
   })
 })
+
+/**
+ * 🛑 The listener sits on `window`, above the whole tree. Cancelling every drop took the native
+ * insertion away from any editable field a selection was dragged into.
+ */
+describe('a drop that carries no file', () => {
+  it('is left to whatever is under it', () => {
+    renderShell()
+    const drop = new Event('drop', { bubbles: true, cancelable: true })
+
+    window.dispatchEvent(drop)
+
+    expect(drop.defaultPrevented).toBe(false)
+  })
+})

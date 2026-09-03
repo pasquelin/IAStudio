@@ -25,8 +25,9 @@ export function offerExternalFiles(paths: readonly string[]): void {
   broadcast(EVENTS.externalFiles)
 }
 
-export function authoriseExternalFiles(paths: readonly string[]): ExternalFileRequest | null {
-  const acceptedPaths = paths.filter(accepted)
+export function authoriseExternalFiles(paths: unknown): ExternalFileRequest | null {
+  if (!Array.isArray(paths)) return null
+  const acceptedPaths = paths.filter(one => typeof one === 'string' && accepted(one))
   if (acceptedPaths.length === 0) return null
 
   const id = randomUUID()
