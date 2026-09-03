@@ -67,9 +67,8 @@ export type InstancedGroups = {
    */
   drawn: () => readonly Mesh[]
   /**
-   * What a ray must meet BESIDES the sources — which stay on `DRAWN_BY_INSTANCE` and answer by
-   * their own name. Nothing on the instanced path; the lots on the batched one, which name a
-   * hit by its slot through `nodeIdOf`. Built lazily: a click is rarer than a rebuild.
+   * What a ray must meet beside the sources. A grouped mesh names a hit by its slot through
+   * `nodeIdOf`, independently of the representation that draws it.
    */
   pickable: () => readonly Mesh[]
   /** The node a hit on one of `pickable` stands for, or nothing for a hit on anything else. */

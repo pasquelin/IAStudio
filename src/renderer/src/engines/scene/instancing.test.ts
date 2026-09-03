@@ -6,6 +6,8 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  Raycaster,
+  Vector3,
 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { EDGE_LAYER } from './sceneView'
@@ -233,6 +235,41 @@ describe('createInstancedGroups', () => {
 
     groups.dispose()
     expect(scene.children).toHaveLength(0)
+  })
+})
+
+describe('picking a body through the instance that draws it', () => {
+  it('maps the raycast instance slot back to the source node', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    groups.rebuild(nodes, id => objects.get(id))
+    scene.updateMatrixWorld(true)
+    const raycaster = new Raycaster(new Vector3(5, 10, 0), new Vector3(0, -1, 0))
+
+    const instance = groups.pickable()[0]
+    if (!instance) throw new Error('nothing was instanced')
+    const hit = raycaster.intersectObject(instance, false)[0]
+
+    expect(hit?.instanceId).toBe(5)
+    expect(hit ? groups.nodeIdOf(hit) : null).toBe('n5')
+  })
+
+  it('answers nothing for an object or slot no instance owns', () => {
+    const scene = host()
+    const groups = createInstancedGroups(scene)
+    const { nodes, objects } = alike(WORTH_INSTANCING)
+    groups.rebuild(nodes, id => objects.get(id))
+    const instance = groups.pickable()[0]
+    if (!instance) throw new Error('nothing was instanced')
+
+    expect(
+      groups.nodeIdOf({ object: new Mesh(), distance: 1, point: new Vector3(), instanceId: 0 }),
+    ).toBeNull()
+    expect(
+      groups.nodeIdOf({ object: instance, distance: 1, point: new Vector3(), instanceId: 999 }),
+    ).toBeNull()
+    expect(groups.nodeIdOf({ object: instance, distance: 1, point: new Vector3() })).toBeNull()
   })
 })
 

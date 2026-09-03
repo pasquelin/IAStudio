@@ -37,6 +37,7 @@ export function createInstancedGroups(
 ): InstancedGroups {
   const drawn: InstancedMesh[] = []
   const placed: Placed = new Map()
+  const idsByInstance = new WeakMap<InstancedMesh, string[]>()
   const sources = heldOutOfDraw()
   const keyOf = withFlags(shapeAndPaint())
 
@@ -63,6 +64,7 @@ export function createInstancedGroups(
           const from = regions.starts[region] ?? 0
           const to = regions.starts[region + 1] ?? 0
           const instance = new InstancedMesh(first.geometry, worn.material, to - from)
+          const ids: string[] = []
           let written = 0
           for (let slot = from; slot < to; slot += 1) {
             const at = regions.order[slot] ?? -1
@@ -71,6 +73,7 @@ export function createInstancedGroups(
             if (!mesh || id === undefined) continue
             instance.setMatrixAt(written, mesh.matrixWorld)
             pushSlot(placed, id, { instance, slot: written, source: mesh })
+            ids[written] = id
             written += 1
           }
           // What was really written, so a region short of a mesh draws one fewer rather than
@@ -87,6 +90,7 @@ export function createInstancedGroups(
           instance.computeBoundingSphere()
           host.add(instance)
           drawn.push(instance)
+          idsByInstance.set(instance, ids)
         }
 
         instanced += worn.meshes.length
@@ -98,9 +102,12 @@ export function createInstancedGroups(
 
     drawn: () => drawn,
 
-    pickable: () => [],
+    pickable: () => drawn,
 
-    nodeIdOf: () => null,
+    nodeIdOf: hit => {
+      if (!(hit.object instanceof InstancedMesh) || hit.instanceId === undefined) return null
+      return idsByInstance.get(hit.object)?.[hit.instanceId] ?? null
+    },
 
     hangSources: sources.hang,
 
