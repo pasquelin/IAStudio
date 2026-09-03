@@ -19,6 +19,7 @@ const RADIUS = { min: 0.1, max: 50, step: 0.1, value: 2 }
 export function WorldTools({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const armed = useSceneViews(state => sceneViewOf(state, documentId).armedRelief)
+  const sculptMode = useSceneViews(state => sceneViewOf(state, documentId).sculptMode)
   const [falloff, setFalloff] = useState(FALLOFF.value)
   const [radius, setRadius] = useState(RADIUS.value)
 
@@ -38,7 +39,8 @@ export function WorldTools({ documentId }: { documentId: string }) {
           description={t('world.sculptHint')}
           tooltip={TIP_TOP}
           variant="bar"
-          active
+          active={sculptMode}
+          onClick={() => useSceneViews.getState().setSculptMode(documentId, !sculptMode)}
         />
         <ToolButton
           icon={mdiBlur}

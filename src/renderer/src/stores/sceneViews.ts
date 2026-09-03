@@ -37,6 +37,11 @@ export type SceneView = {
   skeletons: boolean
   /** Whether a click picks a bone rather than a mesh. Exclusive on purpose — see the renderer. */
   poseMode: boolean
+  /**
+   * Whether a drag sculpts the armed relief. Exclusive of `poseMode` and of the gizmo — see
+   * `setSculptMode`. Not a `TransformMode`.
+   */
+  sculptMode: boolean
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null
   /**
@@ -121,6 +126,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   displays: ['shaded'],
   skeletons: false,
   poseMode: false,
+  sculptMode: false,
   pickedBone: null,
   armedRelief: null,
   pickedPathPoint: null,
@@ -154,6 +160,7 @@ export type SceneViewsState = {
   setDisplay: (documentId: string, pane: number, display: DisplayMode) => void
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setPoseMode: (documentId: string, poseMode: boolean) => void
+  setSculptMode: (documentId: string, sculptMode: boolean) => void
   setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
   setArmedRelief: (documentId: string, armedRelief: SceneView['armedRelief']) => void
   setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
@@ -207,9 +214,35 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
     })),
 
   setPoseMode: (documentId, poseMode) =>
-    set(state => ({
-      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), poseMode } },
-    })),
+    set(state => {
+      const view = sceneViewOf(state, documentId)
+      return {
+        views: {
+          ...state.views,
+          [documentId]: {
+            ...view,
+            poseMode,
+            sculptMode: poseMode ? false : view.sculptMode,
+          },
+        },
+      }
+    }),
+
+  setSculptMode: (documentId, sculptMode) =>
+    set(state => {
+      const view = sceneViewOf(state, documentId)
+      return {
+        views: {
+          ...state.views,
+          [documentId]: {
+            ...view,
+            sculptMode,
+            poseMode: sculptMode ? false : view.poseMode,
+            pickedBone: sculptMode ? null : view.pickedBone,
+          },
+        },
+      }
+    }),
 
   setPickedBone: (documentId, pickedBone) =>
     set(state => ({
@@ -361,6 +394,7 @@ export function sceneViewChromeOf(state: SceneViewsState, documentId: string) {
     snapping: view.snapping,
     isolation: view.isolation,
     poseMode: view.poseMode,
+    sculptMode: view.sculptMode,
     pickedBone: view.pickedBone,
     pickedPathPoint: view.pickedPathPoint,
     projection: view.projection,

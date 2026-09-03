@@ -848,6 +848,7 @@ export class SceneRenderer {
    * that lands on whichever the ray happens to meet first.
    */
   private poseMode = false
+  private sculptMode = false
   private restEditing = false
   /** Where what is FOLLOWED stood when the last frame drew — `null` while nothing is. */
   private followed: ThreeVector3 | null = null
@@ -2540,8 +2541,26 @@ export class SceneRenderer {
   setPoseMode(on: boolean): void {
     if (on === this.poseMode) return
     this.poseMode = on
+    if (on) this.setSculptMode(false)
 
     this.refreshSkeletons()
+  }
+
+  /**
+   * Whether a drag sculpts the armed relief. Exclusive of pose, the gizmo and the marquee:
+   * a stroke that shares a click with a handle is a stroke nobody can aim.
+   */
+  setSculptMode(on: boolean): void {
+    if (on === this.sculptMode) return
+    this.sculptMode = on
+    if (on) {
+      this.poseMode = false
+      this.refreshSkeletons()
+      this.gizmo?.detach()
+      this.dropMarquee()
+      return
+    }
+    this.attachGizmo()
   }
 
   /**
@@ -4804,6 +4823,10 @@ export class SceneRenderer {
   private attachGizmo(): void {
     const gizmo = this.gizmo
     if (!gizmo) return
+    if (this.sculptMode) {
+      gizmo.detach()
+      return
+    }
     // Nothing is re-aimed mid-gesture. Detaching would swallow the `mouseUp` that hands the
     // selection back to the scene, and re-centring the pivot while it carries that selection
     // would drag it to the origin — a mode key pressed during a drag must not move anything.
@@ -5287,7 +5310,7 @@ export class SceneRenderer {
       // act on. And never through the preview, for the reason the left button gives below: it is
       // drawn through another camera, so a ray cast from the pane underneath names whatever the
       // picture happens to be covering.
-      if (still && !this.poseMode && !this.viewport.insetHasPointer(event)) {
+      if (still && !this.poseMode && !this.sculptMode && !this.viewport.insetHasPointer(event)) {
         // A knob raises the menu of its POINT, and picks it on the way: what the menu acts on is
         // then what the gizmo holds, rather than two different things under one pointer.
         const knob = this.pathPointAt(event)
@@ -5321,6 +5344,8 @@ export class SceneRenderer {
     // A click in the preview picks nothing: it is drawn through another camera, so a ray cast
     // from the pane underneath would select whatever the picture happens to be covering.
     if (this.viewport.insetHasPointer(event)) return
+
+    if (this.sculptMode) return
 
     this.aimGizmo()
 
@@ -5388,6 +5413,7 @@ export class SceneRenderer {
   /** Arms the rectangle on the button the scheme left free and nowhere else: under `custom` the
    * bare left one may still orbit, and the preview picks nothing at all. */
   private armMarquee(event: PointerEvent): void {
+    if (this.sculptMode) return
     // Never on a finger: one of them TURNS the view, whatever the mouse scheme says — see
     // `navigateByTouch`. A rectangle drawn under the turn would take every tap-and-drag.
     if (event.pointerType === 'touch') return

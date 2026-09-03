@@ -30,6 +30,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setSkeletons = vi.fn()
     setIsolation = vi.fn()
     setPoseMode = vi.fn()
+    setSculptMode = vi.fn()
     setPickedBone = vi.fn()
     setPickedPathPoint = vi.fn()
     setCameraPreview = vi.fn()

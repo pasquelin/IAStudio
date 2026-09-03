@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest'
+import source from './SceneRenderer.ts?raw'
+
+/**
+ * Sculpt as an exclusive session, read as text for the reason `sceneRendererMarquee.test.ts`
+ * gives: the engine cannot be built without a WebGL context.
+ */
+describe('SceneRenderer and sculpt mode', () => {
+  const method = (signature: string): string =>
+    source.match(new RegExp(`(?:private |public )?${signature} \\{[\\s\\S]*?\\n {2}\\}`))?.[0] ?? ''
+
+  const handler = (name: string, args: string): string =>
+    source.match(new RegExp(`${name} = \\(${args}\\): void => \\{[\\s\\S]*?\\n {2}\\}`))?.[0] ?? ''
+
+  const attachGizmo = method('attachGizmo\\(\\): void')
+  const armMarquee = method('armMarquee\\(event: PointerEvent\\): void')
+  const pointerUp = handler('onPointerUp', 'event: PointerEvent')
+  const setSculptMode = method('setSculptMode\\(on: boolean\\): void')
+
+  it('finds the paths sculpt exclusivity is written in', () => {
+    expect(
+      [attachGizmo, armMarquee, pointerUp, setSculptMode].map(found => found.length > 0),
+    ).toEqual([true, true, true, true])
+  })
+
+  it('detaches the gizmo while sculpt is on', () => {
+    expect(attachGizmo).toContain('this.sculptMode')
+    expect(attachGizmo).toContain('gizmo.detach()')
+    expect(setSculptMode).toContain('this.gizmo?.detach()')
+  })
+
+  it('does not arm the marquee while sculpt is on', () => {
+    expect(armMarquee.indexOf('if (this.sculptMode) return')).toBeGreaterThan(-1)
+    expect(armMarquee.indexOf('if (this.sculptMode) return')).toBeLessThan(
+      armMarquee.indexOf('this.marquee ='),
+    )
+  })
+
+  it('does not pick a node on click while sculpt is on', () => {
+    expect(pointerUp).toContain('if (this.sculptMode) return')
+  })
+
+  it('reattaches the gizmo once sculpt is off', () => {
+    expect(setSculptMode).toContain('this.attachGizmo()')
+  })
+})

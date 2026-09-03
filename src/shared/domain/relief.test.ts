@@ -303,7 +303,7 @@ describe('containsXZ', () => {
 
 describe('getHeightAt', () => {
   const quad: ReliefHeightLayer = {
-    ...reliefLayer({ assetId: 'h' }, { size: { x: 1, z: 1 } }),
+    ...reliefLayer({ assetId: 'h' }, { id: 'quad', size: { x: 1, z: 1 } }),
     samples: { width: 2, height: 2, values: Float32Array.from([0, 4, 8, 12]) },
   }
 
