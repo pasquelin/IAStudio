@@ -1460,7 +1460,9 @@ describe('a viewport', () => {
      * button by itself, where that button draws the rectangle.
      */
     it('ends a two-button chord when the button that named it is let go', () => {
-      const engine = backedOff({ scheme: () => SCHEME_OF.unreal })
+      const engine = backedOff({
+        scheme: () => ({ ...SCHEME_OF.unreal, pan: [{ button: 2, held: 0 }] }),
+      })
 
       host.dispatchEvent(press({ button: 0, buttons: 1 }))
       host.dispatchEvent(press({ button: 2, buttons: 3 }))
@@ -1722,6 +1724,25 @@ describe('a viewport', () => {
       const pivot = engine.orbit?.target
       if (!pivot) throw new Error('mounted with no orbit')
       expect(pivot.clone().sub(engine.camera.position).z).toBeLessThan(0)
+    })
+
+    it('forgets a settled wheel aim so the next gesture raycasts from its own pointer', () => {
+      const engine = backedOff()
+
+      host.dispatchEvent(
+        new WheelEvent('wheel', {
+          deltaY: -100,
+          clientX: 320,
+          clientY: 400,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+
+      const target = engine['navigationTarget']
+      expect(target['wheelAim']).not.toBeNull()
+      vi.advanceTimersByTime(250)
+      expect(target['wheelAim']).toBeNull()
     })
 
     it('lets a second pointer come and go without ending the one drag under way', () => {

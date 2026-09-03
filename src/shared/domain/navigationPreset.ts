@@ -110,7 +110,10 @@ export const SCHEME_OF: Record<DeclaredPreset, NavigationScheme> = {
   },
   unreal: {
     orbit: ALT_LEFT,
-    pan: [...MIDDLE, ...RIGHT_ONTO_LEFT],
+    // Unreal's standard middle drag and Maya-style Alt+middle are the same pan here: `MIDDLE`
+    // deliberately accepts modifiers it does not name. LMB+RMB moves vertically in Unreal; the
+    // viewport has no vertical-drag gesture, so it must not be mislabeled as a pan.
+    pan: MIDDLE,
     dolly: ALT_RIGHT,
     fly: 'rightButton',
     bindings: UNITY_TOOLS,

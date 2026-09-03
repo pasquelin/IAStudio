@@ -896,6 +896,8 @@ export class SceneRenderer {
    * one picks.
    */
   private flownFrom: PointerPosition | null = null
+  /** Last pointer position while a mouse-button flight owns the view. */
+  private flightPointer: (PointerPosition & { pointerId: number }) | null = null
   /**
    * Which button armed the flight, and so whether one is under way at all. Either arms it —
    * the left one keeps orbiting and picking exactly as before, it only GAINS the keys.
@@ -1171,6 +1173,7 @@ export class SceneRenderer {
     canvas.addEventListener('contextmenu', this.onContextMenu)
     window.addEventListener('pointermove', this.onPointerMove)
     window.addEventListener('pointerup', this.onPointerUp)
+    window.addEventListener('pointercancel', this.onPointerCancel)
   }
 
   unmount(): void {
@@ -3119,9 +3122,9 @@ export class SceneRenderer {
    * still dollies, which is what the manual promises and what the hint — mode-only — could say.
    */
   private spendWheelOnSpeed(event: WheelEvent): boolean {
-    if (!this.navigating) return false
+    if (!this.navigating && this.flownWith !== 2) return false
 
-    this.sessionFlySpeed = speedAfterWheel(this.flySpeed, notchesOf(event.deltaY))
+    this.sessionFlySpeed = speedAfterWheel(this.flySpeed, notchesOf(event.deltaY, event.deltaMode))
     this.options.onFlySpeedChange?.(this.sessionFlySpeed)
     return true
   }
@@ -3196,6 +3199,7 @@ export class SceneRenderer {
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointermove', this.onPointerMove)
     window.removeEventListener('pointerup', this.onPointerUp)
+    window.removeEventListener('pointercancel', this.onPointerCancel)
 
     this.gizmo?.removeEventListener('axis-changed', this.onGizmoAxisChanged)
     this.gizmo?.removeEventListener('dragging-changed', this.onDraggingChanged)
@@ -5034,8 +5038,14 @@ export class SceneRenderer {
 
   private startFlight(event: PointerEvent): void {
     this.flownFrom = { clientX: event.clientX, clientY: event.clientY }
+    this.flightPointer = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pointerId: event.pointerId,
+    }
     this.flownWith = event.button
     this.flew = false
+    this.look = anglesFromDirection(this.viewport.camera.getWorldDirection(flightGaze), this.look)
     // The RIGHT button only. `freezePanes` ends in `armOrbits(null)`, which sets
     // `controls.enabled = false` on the main orbit — freezing under the left button would cost
     // that button the rotation it is held down for.
@@ -5052,6 +5062,7 @@ export class SceneRenderer {
 
     const froze = this.flownWith === 2
     this.flownFrom = null
+    this.flightPointer = null
     this.flownWith = null
     // Not while the mode is armed: it owns the keys with no button down, and a click that ends
     // this button's flight would stop a camera whose `W` is still physically held — `useShortcuts`
@@ -5099,6 +5110,7 @@ export class SceneRenderer {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     if (event.button === 2) {
+      if (this.flightPointer && event.pointerId !== this.flightPointer.pointerId) return
       // A right button that never flew and never moved was a click, not a flight: that is the
       // one gesture left for a menu in this viewport, the button itself being taken by the fly
       // camera.
@@ -5226,6 +5238,30 @@ export class SceneRenderer {
   }
 
   private readonly onPointerMove = (event: PointerEvent): void => {
+    // Unreal, Unity and Roblox all use the right button as mouse-look while it owns their flight.
+    // Client coordinates rather than `movementX`: no pointer lock is active for a held button.
+    if (
+      this.flownWith === 2 &&
+      this.flightPointer &&
+      event.pointerId === this.flightPointer.pointerId
+    ) {
+      // A native menu or the OS can swallow `pointerup`. The next owner move is authoritative:
+      // without the right-button bit the flight is over, and must thaw before it can steer.
+      if ((event.buttons & maskOf(2)) === 0) {
+        this.endFlight(2, event)
+        return
+      }
+      const deltaX = event.clientX - this.flightPointer.clientX
+      const deltaY = event.clientY - this.flightPointer.clientY
+      this.flightPointer = { ...this.flightPointer, clientX: event.clientX, clientY: event.clientY }
+      if (deltaX !== 0 || deltaY !== 0) {
+        this.look = turnBy(this.look, -deltaX, -deltaY)
+        aimAlong(this.viewport.camera, this.look)
+        this.flew = !wasClick(this.flownFrom, event)
+        this.repaint()
+      }
+    }
+
     const marquee = this.marquee
     if (!marquee) return
     // `buttons` is the reading that cannot lie: a release swallowed by a native menu, or a handle
@@ -5562,6 +5598,14 @@ export class SceneRenderer {
 
   // Without this the OS menu opens on the very gesture that starts flying.
   private readonly onContextMenu = (event: Event): void => event.preventDefault()
+
+  /** The platform may cancel a pointer without a matching `pointerup` (edge swipe, pen, OS UI). */
+  private readonly onPointerCancel = (event: PointerEvent): void => {
+    if (this.flightPointer && event.pointerId !== this.flightPointer.pointerId) return
+    this.pressed = null
+    this.dropMarquee()
+    this.endFlight(this.flownWith ?? event.button, event)
+  }
 
   /**
    * On the way IN to an axis, never on the way back to `null`: there is no plane to turn once

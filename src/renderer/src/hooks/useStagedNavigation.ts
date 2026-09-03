@@ -1,5 +1,9 @@
 import { useMemo } from 'react'
-import type { CustomNavigation, NavigationPreset } from '@shared/domain/navigationPreset'
+import {
+  customFrom,
+  type CustomNavigation,
+  type NavigationPreset,
+} from '@shared/domain/navigationPreset'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settingsDraft'
 
@@ -19,12 +23,13 @@ export function useStagedNavigation(): [NavigationPreset, CustomNavigation] {
   // Memoised here rather than at the caller: a fresh object per render is a dependency that
   // never settles, and every consumer of this would recompute its merge on every keystroke.
   const custom = useMemo(
-    () => ({
-      orbit: navigationCustomOrbit,
-      pan: navigationCustomPan,
-      dolly: navigationCustomDolly,
-      fly: navigationCustomFly,
-    }),
+    () =>
+      customFrom({
+        navigationCustomOrbit,
+        navigationCustomPan,
+        navigationCustomDolly,
+        navigationCustomFly,
+      }),
     [navigationCustomOrbit, navigationCustomPan, navigationCustomDolly, navigationCustomFly],
   )
 
