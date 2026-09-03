@@ -419,6 +419,7 @@
     "flattenHint": "Met le relief à niveau sous le pinceau",
     "falloff": "Adoucissement",
     "radius": "Rayon",
+    "amount": "Intensité",
     "alpha": "Opacité",
     "tools": "Outils"
   },

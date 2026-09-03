@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { reliefLayer, terrainEditLayer } from '@shared/domain/scene'
@@ -51,5 +51,13 @@ describe('WorldTools sculpt session', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sculpter' }))
 
     expect(sceneViewOf(useSceneViews.getState(), 'doc-1').sculptMode).toBe(false)
+  })
+
+  it('writes the brush amount onto the session, leaving the document alone', () => {
+    render(<WorldPanel />)
+
+    fireEvent.change(screen.getByLabelText('Intensité'), { target: { value: '0.3' } })
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').sculptAmount).toBe(0.3)
   })
 })

@@ -419,6 +419,7 @@
     "flattenHint": "Levels the relief under the brush",
     "falloff": "Falloff",
     "radius": "Radius",
+    "amount": "Strength",
     "alpha": "Opacity",
     "tools": "Tools"
   },

@@ -8,6 +8,7 @@ import { TIP_TOP } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
+const AMOUNT = { min: 0.01, max: 1, step: 0.01, value: 0.1 }
 const FALLOFF = { min: 0, max: 1, step: 0.05, value: 0 }
 const RADIUS = { min: 0.1, max: 50, step: 0.1, value: 2 }
 
@@ -19,6 +20,7 @@ export function WorldTools({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const armed = useSceneViews(state => sceneViewOf(state, documentId).armedRelief)
   const sculptMode = useSceneViews(state => sceneViewOf(state, documentId).sculptMode)
+  const amount = useSceneViews(state => sceneViewOf(state, documentId).sculptAmount)
   const falloff = useSceneViews(state => sceneViewOf(state, documentId).sculptFalloff)
   const radius = useSceneViews(state => sceneViewOf(state, documentId).sculptRadius)
 
@@ -77,6 +79,16 @@ export function WorldTools({ documentId }: { documentId: string }) {
         step={RADIUS.step}
         onChange={value => useSceneViews.getState().setSculptRadius(documentId, value)}
         onReset={() => useSceneViews.getState().setSculptRadius(documentId, RADIUS.value)}
+      />
+      <SliderField
+        label={t('world.amount')}
+        scId="world.amount"
+        value={amount}
+        min={AMOUNT.min}
+        max={AMOUNT.max}
+        step={AMOUNT.step}
+        onChange={value => useSceneViews.getState().setSculptAmount(documentId, value)}
+        onReset={() => useSceneViews.getState().setSculptAmount(documentId, AMOUNT.value)}
       />
       {edit ? (
         <SliderField
