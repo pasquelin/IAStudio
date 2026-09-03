@@ -130,6 +130,45 @@ describe('the physics as Jolt fills it', () => {
   })
 
   /**
+   * A 4×4 plateau two metres up: a ray from ten metres down through its centre meets it at
+   * y = 2, which is 0,4 of the twenty metres asked for.
+   */
+  it('stops a downward ray on a heightfield at the height the samples name', () => {
+    const plateau: ColliderShape = {
+      kind: 'heightfield',
+      heights: new Float32Array(16).fill(2),
+      width: 4,
+      height: 4,
+      offset: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    }
+
+    expect(port.add([body({ body: 'ground', kind: 'fixed', shape: plateau })])).toEqual([])
+    expect(port.cast({ x: 1.5, y: 10, z: 1.5 }, { x: 1.5, y: -10, z: 1.5 }, 0, [])).toBeCloseTo(
+      0.4,
+      2,
+    )
+  })
+
+  it('refuses a heightfield that would have to move, and takes the same field standing still', () => {
+    const field: ColliderShape = {
+      kind: 'heightfield',
+      heights: new Float32Array(16).fill(0),
+      width: 4,
+      height: 4,
+      offset: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    }
+
+    const refused = port.add([
+      body({ body: 'ground', kind: 'fixed', shape: field }),
+      body({ body: 'flying', kind: 'dynamic', shape: field }),
+    ])
+
+    expect(refused).toEqual(['flying'])
+  })
+
+  /**
    * 🛑 The whole point of the controller: a character walks INTO a wall and stops at it rather
    * than through it.
    */

@@ -247,11 +247,11 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
     // Measured before this line: 16 601 bodies added, NONE refused, and `dispose` threw.
     if (system.GetNumBodies() >= system.GetMaxBodies()) return false
 
-    // 🛑 Refused BEFORE the shape is built: Jolt will not move a mesh, where Rapier would. Named
-    // rather than quietly swapped for its hull — a body felt as something other than what it
-    // draws is the worse lie of the two.
+    // 🛑 Refused BEFORE the shape is built: Jolt will not move a mesh or a heightfield, where
+    // Rapier would. Named rather than quietly swapped for its hull — a body felt as something
+    // other than what it draws is the worse lie of the two.
     if (
-      descriptor.shape.kind === 'trimesh' &&
+      (descriptor.shape.kind === 'trimesh' || descriptor.shape.kind === 'heightfield') &&
       motionOf(jolt, descriptor) !== jolt.EMotionType_Static
     ) {
       return false
@@ -989,9 +989,54 @@ function leafOf(jolt: JoltModule, shape: ColliderShape, scratch: Scratch): JoltS
     return new jolt.TaperedCylinderShapeSettings(shape.halfHeight, 0, shape.radius, 0)
   }
   if (shape.kind === 'trimesh') return meshOf(jolt, shape.vertices, shape.indices)
+  if (shape.kind === 'heightfield') return heightfieldOf(jolt, shape)
   if (shape.kind === 'cuboid') return boxOf(jolt, shape.hx, shape.hy, shape.hz, scratch)
   // `hull` and `convexes` are built above, where their pieces can be refused one by one.
   throw new Error(`no Jolt shape for ${shape.kind}`)
+}
+
+/** Jolt's heightfield is a square; a count below 4 is one block, which Create refuses. */
+const HEIGHTFIELD_FLOOR = 4
+
+/** `HeightFieldShapeConstants::cNoCollisionValue` — float FLT_MAX, not JS Infinity. */
+const HEIGHTFIELD_HOLE = 3.4028234663852886e38
+
+function heightfieldOf(
+  jolt: JoltModule,
+  shape: Extract<ColliderShape, { kind: 'heightfield' }>,
+): JoltShapeSettings {
+  const sampleCount = Math.max(HEIGHTFIELD_FLOOR, shape.width, shape.height)
+  const settings = new jolt.HeightFieldShapeSettings()
+  settings.mSampleCount = sampleCount
+  settings.mBitsPerSample = 16
+  // Own vectors: assigning `scratch.vector` twice would alias offset and scale onto one heap slot.
+  const offset = new jolt.Vec3(shape.offset.x, shape.offset.y, shape.offset.z)
+  const scale = new jolt.Vec3(shape.scale.x, shape.scale.y, shape.scale.z)
+  settings.mOffset = offset
+  settings.mScale = scale
+  jolt.destroy(offset)
+  jolt.destroy(scale)
+
+  const samples = settings.mHeightSamples
+  samples.reserve(sampleCount * sampleCount)
+  let minHeight = Number.POSITIVE_INFINITY
+  let maxHeight = Number.NEGATIVE_INFINITY
+  for (let z = 0; z < sampleCount; z++) {
+    for (let x = 0; x < sampleCount; x++) {
+      const inside = x < shape.width && z < shape.height
+      const height = inside ? (shape.heights[z * shape.width + x] ?? 0) : HEIGHTFIELD_HOLE
+      if (inside && Number.isFinite(height)) {
+        minHeight = Math.min(minHeight, height)
+        maxHeight = Math.max(maxHeight, height)
+      }
+      samples.push_back(inside && Number.isFinite(height) ? height : HEIGHTFIELD_HOLE)
+    }
+  }
+  if (minHeight <= maxHeight) {
+    settings.mMinHeightValue = minHeight
+    settings.mMaxHeightValue = maxHeight
+  }
+  return settings
 }
 
 /** The generated declarations leave the vectors empty; the build carries their own methods. */
