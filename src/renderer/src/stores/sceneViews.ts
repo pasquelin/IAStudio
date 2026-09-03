@@ -46,6 +46,8 @@ export type SceneView = {
   sculptRadius: number
   /** 0 = hard edge. Session. */
   sculptFalloff: number
+  /** Sample-space raise of one dab. Session, like radius and falloff. */
+  sculptAmount: number
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null
   /**
@@ -133,6 +135,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   sculptMode: false,
   sculptRadius: 2,
   sculptFalloff: 0,
+  sculptAmount: 0.1,
   pickedBone: null,
   armedRelief: null,
   pickedPathPoint: null,
@@ -169,6 +172,7 @@ export type SceneViewsState = {
   setSculptMode: (documentId: string, sculptMode: boolean) => void
   setSculptRadius: (documentId: string, sculptRadius: number) => void
   setSculptFalloff: (documentId: string, sculptFalloff: number) => void
+  setSculptAmount: (documentId: string, sculptAmount: number) => void
   setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
   setArmedRelief: (documentId: string, armedRelief: SceneView['armedRelief']) => void
   setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
@@ -260,6 +264,11 @@ const sceneViewsStore = create<SceneViewsState>()(set => ({
   setSculptFalloff: (documentId, sculptFalloff) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), sculptFalloff } },
+    })),
+
+  setSculptAmount: (documentId, sculptAmount) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), sculptAmount } },
     })),
 
   setPickedBone: (documentId, pickedBone) =>
@@ -417,6 +426,7 @@ export function sceneViewChromeOf(state: SceneViewsState, documentId: string) {
     sculptMode: view.sculptMode,
     sculptRadius: view.sculptRadius,
     sculptFalloff: view.sculptFalloff,
+    sculptAmount: view.sculptAmount,
     armedRelief: view.armedRelief,
     pickedBone: view.pickedBone,
     pickedPathPoint: view.pickedPathPoint,
