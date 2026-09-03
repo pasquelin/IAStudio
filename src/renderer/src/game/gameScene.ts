@@ -114,7 +114,7 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
   instances.rebuild(
     state.nodes,
     id => byEntity.get(id),
-    groupingExclusions(state.nodes, drivenNodes(state.animation)),
+    groupingExclusions(state.nodes, drivenNodes(state.animation), 'instance'),
   )
 
   // 🛑 What a game shows of the world, and what it does NOT: the image-based environment is not

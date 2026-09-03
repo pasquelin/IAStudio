@@ -181,6 +181,18 @@ describe('the door onto a game written out of the studio', () => {
   })
 
   it('serializes two exports aimed at the same package', async () => {
+    let picks = 0
+    resetHandlers()
+    registerGameExportHandler({
+      pickFolder: async () => {
+        picks += 1
+        if (picks === 1) await new Promise<void>(resolve => setImmediate(resolve))
+        return chosen
+      },
+      projectPath: () => project,
+      assetsById: () => Promise.resolve([]),
+      runtimeFolder: () => runtime,
+    })
     const first = exporting({ scenes: [{ id: 'first', title: 'First', content: SCENE }] })
     const second = exporting({ scenes: [{ id: 'second', title: 'Second', content: SCENE }] })
 

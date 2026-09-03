@@ -14,6 +14,7 @@ import {
   rootedIn,
   setNodeVisible,
 } from '@/engines/scene/commands'
+import { openOptimizationDialog } from '@/hooks/useOptimizationDialog'
 import { railCommand, railOf } from '@/engines/scene/nodeRail'
 import { withoutPoint } from '@/engines/scene/cameraPath'
 import {
@@ -259,6 +260,10 @@ export function runSceneCommand(documentId: string, command: CommandId): Command
       store.runCommand(documentId, groupNodes(picked, id))
       return { nodeIds: [id] }
     }
+
+    case 'scene.optimizeSelection':
+      if (picked.length > 0 && sceneEngineOf(documentId)) openOptimizationDialog(documentId)
+      return true
 
     // Marks the selection as tools for the next fold — Roblox's Negate. Not a fold itself, so it
     // sits above the three and asks only that something carry a shape.

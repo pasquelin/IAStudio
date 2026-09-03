@@ -25,6 +25,13 @@ import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation
 import { DEFAULT_FONT } from '@shared/domain/font'
 import { cachedOn } from '../core/cachedOn'
 
+export type OptimizationMode = 'auto' | 'individual' | 'instance' | 'batch' | 'exclude'
+
+export type OptimizationSettings = {
+  mode: OptimizationMode
+  groupId?: string
+}
+
 export type SceneNodeBase = {
   id: string
   /** `null` is a direct child of the scene. Reparenting is not offered yet. */
@@ -53,6 +60,8 @@ export type SceneNodeBase = {
    * the character itself, which is where it stood before the socket was named.
    */
   attach?: { socket: string }
+  /** Authoring intent only. The optimized render representation remains a disposable cache. */
+  optimization?: OptimizationSettings
 }
 
 export type SceneNode = SceneNodeBase &

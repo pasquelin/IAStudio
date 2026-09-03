@@ -82,6 +82,8 @@ import { SCULPT_AMOUNT, STROKE_SPACING, sculptEditOf, strokeDabs } from './relie
 import { createReliefBuilder } from './reliefBuilder'
 import { createReliefSculptor, type ReliefSculptor } from './reliefSculptor'
 import type { PackedReliefChunk } from '@shared/domain/relief'
+import { analyzeOptimization, type OptimizationPlan } from './worldAnalyzer'
+import { subtreesOf } from './sceneState'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
 import type { AdaptiveRigDebug } from './adaptiveGeometricRig'
@@ -1352,6 +1354,17 @@ export class SceneRenderer {
     else this.refreshWithoutShadows()
   }
 
+  analyzeOptimization(ids: readonly string[]): OptimizationPlan {
+    const nodes = ids.length === 0 ? this.documentOrder : subtreesOf(this.documentOrder, ids)
+    return analyzeOptimization(
+      { nodes, animation: this.timeline },
+      this.viewport.scene,
+      id => this.objects.get(id),
+      undefined,
+      this.documentOrder,
+    )
+  }
+
   async raiseReliefDisk(
     terrainId: string,
     editId: string,
@@ -2020,7 +2033,11 @@ export class SceneRenderer {
       const instanced = this.instances.rebuild(
         [...this.applied.values()],
         id => this.objects.get(id),
-        groupingExclusions([...this.applied.values()], drivenNodes(this.timeline)),
+        groupingExclusions(
+          [...this.applied.values()],
+          drivenNodes(this.timeline),
+          this.options.grouping === 'batched' ? 'batch' : 'instance',
+        ),
       )
       this.syncSourceWalk()
       // Read before the test, since asking CLEARS it: a lot the rebuild made must not leave the

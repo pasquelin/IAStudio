@@ -12,6 +12,7 @@ import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { runSceneCommand } from './sceneCommands'
+import { useOptimizationDialog } from '@/hooks/useOptimizationDialog'
 
 const DOCUMENT = 'doc-1'
 
@@ -29,6 +30,20 @@ beforeEach(() => {
   useSceneViews.setState({ views: {} })
   useAnimationViews.setState({ views: {} })
   installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [rail()], selectedIds: ['rail'] })
+  useOptimizationDialog.getState().close()
+})
+
+it('opens optimization only after a selection and its live renderer exist', () => {
+  // The command checks engine presence only; constructing WebGL would make this unit test browser-only.
+  registerSceneEngine(DOCUMENT, {} as unknown as SceneRenderer)
+
+  runSceneCommand(DOCUMENT, 'scene.optimizeSelection')
+
+  expect(useOptimizationDialog.getState().request).toEqual({
+    documentId: DOCUMENT,
+    selectedIds: ['rail'],
+  })
+  forgetSceneEngine(DOCUMENT)
 })
 
 /**

@@ -37,6 +37,7 @@ import { useSceneEngineSync } from './hooks/useSceneEngineSync'
 import { useSceneRuntime } from './hooks/useSceneRuntime'
 import { useSceneToolbarTools } from './hooks/useSceneToolbarTools'
 import { openNodeMenu } from './sceneRuntimeActions'
+import { SceneOptimizationDialog } from '../SceneOptimizationDialog'
 
 /** What one of the three visibility gestures does, given the scene and what is already hidden. */
 type IsolationEdit = (
@@ -241,8 +242,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const tools = useSceneToolbarTools(scene, view)
 
   return (
-    // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the
-    // toolbar instead of beside it would be a miss the user cannot see coming.
     <AssetDropTarget
       accepts={MESHES}
       onDrop={asset => addModelTo(documentId, asset)}
@@ -308,6 +307,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         }}
         onMode={runMode}
       />
+      <SceneOptimizationDialog documentId={documentId} />
     </AssetDropTarget>
   )
 }

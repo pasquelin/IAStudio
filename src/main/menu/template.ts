@@ -486,6 +486,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
           commandItem('scene.group', t.commands.sceneGroup.title),
+          commandItem('scene.optimizeSelection', t.commands.sceneOptimizeSelection.title),
           // The solids, under the grouping they read like: both fold a selection into one row
           // of the outliner. Their keys are unbound, so the menu is where a hand finds them.
           { type: 'separator' },

@@ -63,6 +63,7 @@ import {
   withAxisLock,
   withoutLockedAxes,
 } from './sceneState'
+import type { OptimizationSettings } from './sceneState'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).
@@ -168,6 +169,17 @@ export function withAxisHeld(state: SceneState, lock: AxisLock, held: boolean): 
 
 export function setNodeVisible(id: string, visible: boolean): NodeEdit {
   return editNode('visible', id, { visible })
+}
+
+function setNodeOptimization(id: string, optimization: OptimizationSettings | undefined): NodeEdit {
+  return editNode('optimization', id, { optimization })
+}
+
+export function setNodesOptimization(
+  nodes: readonly SceneNode[],
+  optimization: OptimizationSettings | undefined,
+): Command<SceneState> {
+  return batch('optimization', nodes, node => setNodeOptimization(node.id, optimization))
 }
 
 /**
@@ -279,7 +291,14 @@ export function setLight(id: string, light: LightDescriptor): NodeEdit {
 type NodePatch = Partial<
   Pick<
     SceneNode,
-    'name' | 'visible' | 'transform' | 'castShadow' | 'receiveShadow' | 'components' | 'attach'
+    | 'name'
+    | 'visible'
+    | 'transform'
+    | 'castShadow'
+    | 'receiveShadow'
+    | 'components'
+    | 'attach'
+    | 'optimization'
   >
 >
 

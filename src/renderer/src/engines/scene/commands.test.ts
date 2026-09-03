@@ -31,6 +31,7 @@ import {
   dressModel,
   wearMaterialAt,
   setNodeVisible,
+  setNodesOptimization,
   setWorld,
   setSelection,
   setShadowOn,
@@ -73,6 +74,17 @@ describe('addNode', () => {
   it('drops the node and its selection on revert', () => {
     const command = addNode(mesh('a'))
     expect(command.revert(command.apply(EMPTY_SCENE))).toEqual(EMPTY_SCENE)
+  })
+})
+
+describe('setNodesOptimization', () => {
+  it('writes one runtime override and restores the authoring node on undo', () => {
+    const original = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
+    const command = setNodesOptimization(original.nodes, { mode: 'exclude' })
+    const changed = command.apply(original)
+
+    expect(nodeById(changed, 'a')?.optimization).toEqual({ mode: 'exclude' })
+    expect(command.revert(changed)).toEqual(original)
   })
 })
 

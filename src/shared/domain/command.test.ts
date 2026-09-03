@@ -270,7 +270,7 @@ describe('the commands that raise a dialogue only a person can fill', () => {
    * `app.new` is the one that is NOT a native picker: it opens a window of the studio's own that
    * asks what to make. Same refusal, same reason — nothing here can fill it or read it back.
    */
-  it('names the six, so a seventh is a change somebody has to make on purpose', () => {
+  it('names every dialog command, so another is a deliberate change', () => {
     const raising = COMMAND_REGISTRY.filter(one => one.raisesDialog).map(one => one.id)
 
     expect([...raising].sort()).toEqual([
@@ -280,6 +280,7 @@ describe('the commands that raise a dialogue only a person can fill', () => {
       'montage.import',
       'project.new',
       'project.open',
+      'scene.optimizeSelection',
     ])
   })
 })
