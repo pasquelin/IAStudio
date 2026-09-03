@@ -522,7 +522,7 @@ export function flattenReliefDisk(
   )
 }
 
-/** Mixes brush strength into a painted mask. Rim keeps the previous weight so overlapping dabs hold. */
+/** Mixes brush intensity into a painted mask. Rim keeps the previous weight so overlapping dabs hold. */
 export function paintReliefMask(
   samples: HeightmapSamples,
   extent: ReliefExtent,
