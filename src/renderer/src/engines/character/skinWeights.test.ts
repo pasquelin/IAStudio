@@ -61,13 +61,15 @@ function scriptedWorker() {
 
 const POSITIONS = () => new Float32Array([0, 1, 0])
 
-const bindingFor = (id: number): SkinResponse => ({
-  id,
-  done: true,
-  ok: true,
-  skinIndex: new Uint16Array(INFLUENCES),
-  skinWeight: new Float32Array([1, 0, 0, 0]),
-})
+const bindingFor = (id: number, vertices = 1, bone = 0): SkinResponse => {
+  const skinIndex = new Uint16Array(vertices * INFLUENCES)
+  const skinWeight = new Float32Array(vertices * INFLUENCES)
+  for (let vertex = 0; vertex < vertices; vertex += 1) {
+    skinIndex[vertex * INFLUENCES] = bone
+    skinWeight[vertex * INFLUENCES] = 1
+  }
+  return { id, done: true, ok: true, skinIndex, skinWeight }
+}
 
 describe('waiting on the skinning worker', () => {
   it('answers the binding the worker sends back', async () => {
@@ -78,6 +80,32 @@ describe('waiting on the skinning worker', () => {
     fake.answer(bindingFor(1))
 
     expect((await bound)?.skinWeight[0]).toBe(1)
+  })
+
+  it('splits a dense mesh between workers and joins their bindings in vertex order', async () => {
+    const workers = [scriptedWorker(), scriptedWorker()]
+    let nextWorker = 0
+    const port = createSkinWeights(() => {
+      const worker = workers[nextWorker]
+      nextWorker += 1
+      if (!worker) throw new Error('No scripted worker left')
+      return worker.spawn()
+    }, workers.length)
+    const vertices = 100_000
+
+    const bound = port.bind(new Float32Array(vertices * 3), RIG)
+    workers[0]?.answer(bindingFor(1, vertices / 2, 1))
+    workers[1]?.answer(bindingFor(1, vertices / 2, 2))
+    const binding = await bound
+
+    expect(
+      workers
+        .map(worker => worker.sent[0])
+        .map(message => (message && !('cancel' in message) ? message.position.length / 3 : 0)),
+    ).toEqual([vertices / 2, vertices / 2])
+    expect(binding?.skinIndex[0]).toBe(1)
+    expect(binding?.skinIndex[(vertices - 1) * INFLUENCES]).toBe(2)
+    expect(binding?.skinIndex).toHaveLength(vertices * INFLUENCES)
   })
 
   // The one rule the BVH register never needed: its every request answers exactly once, so it
