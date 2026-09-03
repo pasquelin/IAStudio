@@ -448,8 +448,8 @@ function writeChunk(
   writePositions(position.array, samples, extent, layout, read)
   writeNormals(normal.array, samples, extent, layout, read)
   if (ranged) {
-    markChunk(position, layout.width, layout.height)
-    markChunk(normal, layout.width, layout.height)
+    markChunk(position)
+    markChunk(normal)
   }
   position.needsUpdate = true
   normal.needsUpdate = true
@@ -468,13 +468,12 @@ function writeChunkNormals(
   if (!(normal instanceof BufferAttribute) || !(normal.array instanceof Float32Array)) return
 
   writeNormals(normal.array, samples, extent, layout, reliefReader(samples, grain, edits))
-  markChunk(normal, layout.width, layout.height)
+  markChunk(normal)
   normal.needsUpdate = true
 }
 
-function markChunk(attribute: BufferAttribute, width: number, height: number): void {
-  const row = width * 3
-  for (let z = 0; z < height; z++) attribute.addUpdateRange(z * row, row)
+function markChunk(attribute: BufferAttribute): void {
+  attribute.addUpdateRange(0, attribute.count * attribute.itemSize)
 }
 
 function writePositions(
