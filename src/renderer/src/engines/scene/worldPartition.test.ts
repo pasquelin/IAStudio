@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { buildPartition, CELL_SIZE, cellCoords, cellKey, MACRO_SIZE } from './worldPartition'
+import {
+  buildPartition,
+  CELL_SIZE,
+  cellCoords,
+  cellKey,
+  cellSizeForReach,
+  MACRO_SIZE,
+  MAX_CELL_SIZE,
+} from './worldPartition'
 
 const held = (keys: number[]): ReturnType<typeof buildPartition> => {
   const index = buildPartition()
@@ -131,5 +139,13 @@ describe('buildPartition', () => {
     index.query(0, 0, 1, into)
 
     expect(into).toEqual([cellKey(0, 0)])
+  })
+})
+
+describe('cellSizeForReach', () => {
+  it('chooses the smallest bounded deterministic grain that contains a shape', () => {
+    expect(cellSizeForReach(CELL_SIZE / 2)).toBe(CELL_SIZE)
+    expect(cellSizeForReach(CELL_SIZE / 2 + 1)).toBe(CELL_SIZE * 2)
+    expect(cellSizeForReach(MAX_CELL_SIZE)).toBe(MAX_CELL_SIZE)
   })
 })

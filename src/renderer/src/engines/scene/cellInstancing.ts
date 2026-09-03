@@ -32,7 +32,12 @@ import {
 import { sameOrder } from '@shared/collections'
 import { toRadians } from '@shared/domain/angles'
 import { movesOnItsOwn } from '@shared/domain/component'
-import { buildPartition, type CellKey, type WorldPartition } from './worldPartition'
+import {
+  buildPartition,
+  cellSizeForReach,
+  type CellKey,
+  type WorldPartition,
+} from './worldPartition'
 
 /**
  * Draws a repeated shape through one `InstancedMesh` per CELL of the world, and turns off the
@@ -52,7 +57,7 @@ export function createCellGroups(
   host: Object3D,
   ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
 ): InstancedGroups {
-  const index = buildPartition()
+  let index = buildPartition()
   /** One `Group` per cell, hung under the host: a zone is one flag per cell, not one per body. */
   const cells = new Map<CellKey, Held>()
   /**
@@ -439,11 +444,23 @@ export function createCellGroups(
 
   return {
     rebuild: (nodes, objectOf, excluded) => {
+      const groups = sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)
+      let measuredReach = 0
+      for (const worn of groups) {
+        for (const mesh of worn.meshes) {
+          measuredReach = Math.max(measuredReach, worldReach(mesh.geometry, mesh.matrixWorld))
+        }
+      }
+      const cellSize = cellSizeForReach(measuredReach)
+      if (cellSize !== index.cellSize) {
+        clear()
+        index = buildPartition(cellSize, cellSize * 2)
+      }
       pass += 1
       /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
       const seen = new Map<string, string>()
       let instanced = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
+      for (const worn of groups) {
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { ids: [], meshes: [] }

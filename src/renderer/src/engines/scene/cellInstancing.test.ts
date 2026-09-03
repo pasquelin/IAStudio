@@ -196,17 +196,19 @@ describe('createCellGroups', () => {
     expect(instancesIn(scene)[0]?.matrixWorld.equals(new Matrix4())).toBe(true)
   })
 
-  it('draws a body too wide for a cell apart from the cells', () => {
+  it('adapts the grain so repeated wide bodies in distant zones remain spatial', () => {
     const scene = host()
     const wide = new BoxGeometry(4 * CELL_SIZE, 1, 4 * CELL_SIZE)
-    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0), wide)
+    const places = [
+      ...inOneCell(WORTH_INSTANCING / 2, 0),
+      ...inOneCell(WORTH_INSTANCING / 2, 20 * CELL_SIZE),
+    ]
+    const { nodes, objects } = bodies(places, wide)
 
     createCellGroups(scene).rebuild(nodes, id => objects.get(id))
 
-    // Filed in one cell, it would stand across four and go with the first of them to leave the
-    // zone — taking its shadow with it. It hangs from the host instead, which no zone turns off.
-    expect(cellsIn(scene)).toHaveLength(0)
-    expect(scene.children.filter(child => child instanceof InstancedMesh)).toHaveLength(1)
+    expect(cellsIn(scene)).toHaveLength(2)
+    expect(scene.children.filter(child => child instanceof InstancedMesh)).toHaveLength(0)
   })
 })
 
