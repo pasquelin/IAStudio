@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountedConfirmer } from '@/features/assistant/confirm'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installDocument } from '@/stores/document-fixtures'
+import { installCharacterDocument } from '@/stores/character-fixtures'
 import { trackByGit } from '@/stores/git-fixtures'
 import { useProject } from '@/stores/project'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
@@ -269,6 +270,21 @@ describe('the right column with a document in front', () => {
     expect(drawn()).not.toContain('Assistant')
     expect(drawn()).toContain('Inspecteur')
     expect(drawn()).toContain('Calques')
+  })
+})
+
+describe('the tools beside a standalone model', () => {
+  it('keeps scene-only panels out of the column and its rail', () => {
+    useLayouts.setState({ activeWorkspace: '3d' })
+    installCharacterDocument('character-1', 'asset-hero')
+    renderShell()
+
+    for (const name of ['Scène', 'Interface', 'Lumières', 'Mailles']) {
+      expect(drawn()).not.toContain(name)
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+    }
+    expect(screen.getByRole('button', { name: 'Inspecteur' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Timeline' })).toBeInTheDocument()
   })
 })
 

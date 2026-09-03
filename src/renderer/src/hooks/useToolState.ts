@@ -45,9 +45,12 @@ export function useToolState(): ToolState {
   // Whether the centre holds ANY document, never how many: subscribed to the count, opening a
   // second tab would re-render every rail group and the shell around Dockview for nothing.
   const anyDocument = useDocuments(state => Object.keys(state.documents).length > 0)
+  const documentKind = useDocuments(state =>
+    state.activeId ? (state.documents[state.activeId]?.kind ?? null) : null,
+  )
 
   return useMemo(
-    () => ({ hasProject, hasGit, hasCloud, centreTaken: home || anyDocument }),
-    [hasProject, hasGit, hasCloud, home, anyDocument],
+    () => ({ hasProject, hasGit, hasCloud, centreTaken: home || anyDocument, documentKind }),
+    [hasProject, hasGit, hasCloud, home, anyDocument, documentKind],
   )
 }

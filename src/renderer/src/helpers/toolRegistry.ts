@@ -27,6 +27,7 @@ import {
 } from '@shared/domain/tool'
 import { gitHoldsFolder } from '@shared/domain/git'
 import { NODE_KINDS } from '@/engines/scene/nodeKinds'
+import type { DocumentKind } from '@shared/domain/document'
 import { accountsHoldLibrary, useAccounts } from '@/stores/accounts'
 import { useDocuments } from '@/stores/documents'
 import { useGit } from '@/stores/git'
@@ -105,11 +106,16 @@ export function toolIcon(id: ToolId): string {
 
 /** The answers the shared registry cannot give: they depend on state, which `shared/` cannot read. */
 export function toolStateOf(): ToolState {
+  const documents = useDocuments.getState()
+
   return {
     hasProject: useProject.getState().project !== null,
     hasGit: gitHoldsFolder(useGit.getState().repository),
     hasCloud: accountsHoldLibrary(useAccounts.getState()),
-    centreTaken: homeIsVisible() || Object.keys(useDocuments.getState().documents).length > 0,
+    centreTaken: homeIsVisible() || Object.keys(documents.documents).length > 0,
+    documentKind: documents.activeId
+      ? (documents.documents[documents.activeId]?.kind ?? null)
+      : null,
   }
 }
 
@@ -122,6 +128,8 @@ export type ToolState = {
    * no Dockview at all. False means the empty centre is staging the thread itself.
    */
   centreTaken: boolean
+  /** The document tool panels act on, or none while the centre is empty. */
+  documentKind: DocumentKind | null
   /** Git holding the project folder, so there are versions to read. Kept honest by the shell. */
   hasGit: boolean
   /**
@@ -144,6 +152,8 @@ function meets(requires: ToolPlacement['requires'], state: ToolState): boolean {
   if (requires === 'git') return state.hasProject && state.hasGit
   if (requires === 'cloud') return state.hasCloud
   if (requires === 'centreTaken') return state.centreTaken
+  if (requires === 'sceneDocument') return state.documentKind === 'scene'
+  if (requires === 'guiDocument') return state.documentKind === 'gui'
   return true
 }
 
