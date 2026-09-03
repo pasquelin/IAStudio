@@ -63,6 +63,7 @@ import {
   type ExportFormat,
   type HelperVisibility,
   type LightDescriptor,
+  type MaterialDescriptor,
   wornMaterials,
   type ModelDress,
   type EnvironmentRef,
@@ -1241,9 +1242,19 @@ export class SceneRenderer {
     for (const node of state.nodes) {
       const previous = this.applied.get(node.id)
       if (previous === node) continue
-      if (previous?.type !== 'light' || node.type !== 'light') allShadowsChanged = true
+      if (
+        (previous?.type !== 'light' || node.type !== 'light') &&
+        shadowOfNodeMoved(previous, node)
+      ) {
+        allShadowsChanged = true
+      }
       this.syncNode(node)
-      if (!allShadowsChanged && shadowOfLightMoved(previous, node)) {
+      if (
+        !allShadowsChanged &&
+        previous?.type === 'light' &&
+        node.type === 'light' &&
+        shadowOfLightMoved(previous, node)
+      ) {
         const light = this.objects.get(node.id)
         if (light) this.changedShadowLights.add(light)
       }
@@ -3884,7 +3895,7 @@ export class SceneRenderer {
     // `keepsItsGroup` lets nothing they read through.
     if (previous && keepsItsGroup(previous, node)) this.movedNodes.add(node.id)
     else this.markContentChanged()
-    if (previous?.type !== 'light' || node.type !== 'light' || shadowOfLightMoved(previous, node)) {
+    if (shadowOfNodeMoved(previous, node)) {
       this.placementChanged = true
     }
 
@@ -5921,6 +5932,43 @@ function shadowOfLightMoved(previous: SceneNode | undefined, node: SceneNode): b
     )
   }
   return false
+}
+
+function shadowOfNodeMoved(previous: SceneNode | undefined, node: SceneNode): boolean {
+  if (!previous || previous.type !== node.type) return true
+  if (node.type === 'light') return shadowOfLightMoved(previous, node)
+  if (
+    previous.transform !== node.transform ||
+    previous.visible !== node.visible ||
+    previous.castShadow !== node.castShadow ||
+    previous.parentId !== node.parentId ||
+    previous.attach !== node.attach
+  ) {
+    return true
+  }
+
+  if (previous.type === 'mesh' && node.type === 'mesh') {
+    return (
+      previous.geometry !== node.geometry || shadowMaterialMoved(previous.material, node.material)
+    )
+  }
+  if (previous.type === 'text' && node.type === 'text') {
+    return previous.text !== node.text || shadowMaterialMoved(previous.material, node.material)
+  }
+  if (previous.type === 'carved' && node.type === 'carved') {
+    return previous.carved !== node.carved || shadowMaterialMoved(previous.material, node.material)
+  }
+  if (previous.type === 'model' && node.type === 'model') return previous.model !== node.model
+  if (previous.type === 'path' && node.type === 'path') return previous.path !== node.path
+  return false
+}
+
+function shadowMaterialMoved(previous: MaterialDescriptor, material: MaterialDescriptor): boolean {
+  if (previous.displacementMap?.assetId !== material.displacementMap?.assetId) return true
+  return (
+    previous.tilesPerMetre !== material.tilesPerMetre &&
+    (previous.displacementMap !== null || material.displacementMap !== null)
+  )
 }
 
 function disposeMaterial(mesh: Mesh): void {

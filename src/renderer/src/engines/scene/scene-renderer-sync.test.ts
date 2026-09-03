@@ -275,6 +275,39 @@ describe('a scene told what changed', () => {
    * engine answers about itself; where the side views land is the viewport's own suite.
    */
   describe('four views', () => {
+    it('reuses shadow maps when only a mesh surface changes', () => {
+      const original = meshNode('box-1')
+      const renderer = rendererOf(original)
+      const redraw = vi.spyOn(renderer['viewport'], 'requestRender')
+      const selective = vi.spyOn(renderer['viewport'], 'requestShadowRender')
+      const refresh = vi.spyOn(renderer['viewport'], 'requestCameraRender')
+
+      applied(renderer, {
+        ...original,
+        material: { ...original.material, color: '#ff0000', roughness: 0.2, metalness: 0.8 },
+      })
+
+      expect(redraw).not.toHaveBeenCalled()
+      expect(selective).not.toHaveBeenCalled()
+      expect(refresh).toHaveBeenCalledOnce()
+    })
+
+    it('refreshes shadow maps when displacement changes a mesh silhouette', () => {
+      const original = meshNode('box-1')
+      const renderer = rendererOf(original)
+      const redraw = vi.spyOn(renderer['viewport'], 'requestRender')
+
+      applied(renderer, {
+        ...original,
+        material: {
+          ...original.material,
+          displacementMap: { assetId: 'height-1' },
+        },
+      })
+
+      expect(redraw).toHaveBeenCalledOnce()
+    })
+
     it('reuses shadow maps when a light changes only colour and intensity', () => {
       const target = { x: 0, y: 0, z: 0 }
       const original = lightNodeFixture('light-1', {
