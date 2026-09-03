@@ -50,40 +50,46 @@
             (local.set $bone (i32.add (local.get $bone) (i32.const 1)))
             (br $distances)))
         (local.set $region (i32.load8_u (i32.add (local.get $regions) (local.get $nearest))))
-        (i64.store (i32.const 32768) (i64.const -1))
-        (local.set $slot (i32.const 0))
-        (block $slotsDone
-          (loop $slots
-            (br_if $slotsDone (i32.ge_u (local.get $slot) (i32.const 4)))
-            (local.set $nearest (i32.const -1))
-            (local.set $nearestDistance (f64.const inf))
-            (local.set $bone (i32.const 0))
-            (block $candidatesDone
-              (loop $candidates
-                (br_if $candidatesDone (i32.ge_u (local.get $bone) (local.get $bones)))
-                (local.set $boneRegion (i32.load8_u (i32.add (local.get $regions) (local.get $bone))))
-                (if (i32.and
-                      (i32.ne (local.get $boneRegion) (i32.const 6))
-                      (i32.or
-                        (i32.or (i32.eqz (local.get $boneRegion)) (i32.eq (local.get $boneRegion) (local.get $region)))
-                        (i32.or
-                          (i32.and (i32.ge_u (local.get $region) (i32.const 7)) (i32.and (i32.le_u (local.get $region) (i32.const 11)) (i32.eq (local.get $boneRegion) (i32.const 2))))
-                          (i32.and (i32.ge_u (local.get $region) (i32.const 12)) (i32.and (i32.le_u (local.get $region) (i32.const 16)) (i32.eq (local.get $boneRegion) (i32.const 3)))))))
-                  (then
-                    (local.set $distance (f64.load (i32.mul (local.get $bone) (i32.const 8))))
-                    (if (i32.and (f64.lt (local.get $distance) (local.get $nearestDistance))
-                          (i32.and (i32.ne (local.get $bone) (i32.load16_u (i32.const 32768)))
-                            (i32.and (i32.ne (local.get $bone) (i32.load16_u (i32.const 32770)))
-                              (i32.and (i32.ne (local.get $bone) (i32.load16_u (i32.const 32772))) (i32.ne (local.get $bone) (i32.load16_u (i32.const 32774)))))))
-                      (then (local.set $nearestDistance (local.get $distance)) (local.set $nearest (local.get $bone))))))
-                (local.set $bone (i32.add (local.get $bone) (i32.const 1)))
-                (br $candidates)))
-            (br_if $slotsDone (i32.lt_s (local.get $nearest) (i32.const 0)))
-            (i32.store16 (i32.add (i32.const 32768) (i32.mul (local.get $slot) (i32.const 2))) (local.get $nearest))
-            (f64.store (i32.add (i32.const 32776) (i32.mul (local.get $slot) (i32.const 8))) (local.get $nearestDistance))
-            (local.set $held (i32.add (local.get $held) (i32.const 1)))
-            (local.set $slot (i32.add (local.get $slot) (i32.const 1)))
-            (br $slots)))
+        (local.set $held (i32.const 0))
+        (local.set $bone (i32.const 0))
+        (block $candidatesDone
+          (loop $candidates
+            (br_if $candidatesDone (i32.ge_u (local.get $bone) (local.get $bones)))
+            (local.set $boneRegion (i32.load8_u (i32.add (local.get $regions) (local.get $bone))))
+            (block $candidateDone
+              (br_if $candidateDone (i32.eq (local.get $boneRegion) (i32.const 6)))
+              (br_if $candidateDone (i32.eqz
+                (i32.or
+                  (i32.or (i32.eqz (local.get $boneRegion)) (i32.eq (local.get $boneRegion) (local.get $region)))
+                  (i32.or
+                    (i32.and (i32.ge_u (local.get $region) (i32.const 7)) (i32.and (i32.le_u (local.get $region) (i32.const 11)) (i32.eq (local.get $boneRegion) (i32.const 2))))
+                    (i32.and (i32.ge_u (local.get $region) (i32.const 12)) (i32.and (i32.le_u (local.get $region) (i32.const 16)) (i32.eq (local.get $boneRegion) (i32.const 3))))))))
+              (local.set $distance (f64.load (i32.mul (local.get $bone) (i32.const 8))))
+              (br_if $candidateDone
+                (i32.and (i32.eq (local.get $held) (i32.const 4))
+                  (f64.ge (local.get $distance) (f64.load (i32.const 32800)))))
+              (local.set $slot (local.get $held))
+              (if (i32.ge_u (local.get $slot) (i32.const 4)) (then (local.set $slot (i32.const 3))))
+              (block $insertDone
+                (loop $insert
+                  (br_if $insertDone (i32.eqz (local.get $slot)))
+                  (br_if $insertDone (f64.le
+                    (f64.load (i32.add (i32.const 32776) (i32.mul (i32.sub (local.get $slot) (i32.const 1)) (i32.const 8))))
+                    (local.get $distance)))
+                  (i32.store16
+                    (i32.add (i32.const 32768) (i32.mul (local.get $slot) (i32.const 2)))
+                    (i32.load16_u (i32.add (i32.const 32768) (i32.mul (i32.sub (local.get $slot) (i32.const 1)) (i32.const 2)))))
+                  (f64.store
+                    (i32.add (i32.const 32776) (i32.mul (local.get $slot) (i32.const 8)))
+                    (f64.load (i32.add (i32.const 32776) (i32.mul (i32.sub (local.get $slot) (i32.const 1)) (i32.const 8)))))
+                  (local.set $slot (i32.sub (local.get $slot) (i32.const 1)))
+                  (br $insert)))
+              (i32.store16 (i32.add (i32.const 32768) (i32.mul (local.get $slot) (i32.const 2))) (local.get $bone))
+              (f64.store (i32.add (i32.const 32776) (i32.mul (local.get $slot) (i32.const 8))) (local.get $distance))
+              (if (i32.lt_u (local.get $held) (i32.const 4))
+                (then (local.set $held (i32.add (local.get $held) (i32.const 1))))))
+            (local.set $bone (i32.add (local.get $bone) (i32.const 1)))
+            (br $candidates)))
         (local.set $total (f64.const 0))
         (local.set $slot (i32.const 0))
         (block $totalDone (loop $sum
