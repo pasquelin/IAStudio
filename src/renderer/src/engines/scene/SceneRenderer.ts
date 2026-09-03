@@ -1207,6 +1207,12 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
+    let shadowsChanged =
+      state.animation !== this.timeline ||
+      state.nodes.length !== this.applied.size ||
+      state.world.ground !== this.world.ground ||
+      state.world.layers !== this.world.layers ||
+      state.world.environment !== this.world.environment
     // Before the nodes, not after: whether a block travels is decided against what the band
     // already drives, and a model built in this very pass has to read the timeline that arrived
     // with it rather than the previous one.
@@ -1218,7 +1224,9 @@ export class SceneRenderer {
     // The identity test sits HERE rather than only inside `syncNode`: on a pass where nothing
     // changed it is the whole of the work, and a call per node cost 4,6 ms on 50 000.
     for (const node of state.nodes) {
-      if (this.applied.get(node.id) !== node) this.syncNode(node)
+      if (this.applied.get(node.id) === node) continue
+      shadowsChanged = true
+      this.syncNode(node)
     }
 
     // The set of live ids is built only when one can be missing. `applied` holds every node the
@@ -1281,7 +1289,8 @@ export class SceneRenderer {
     // world matrices, which nothing past here moves.
     this.regroupInstances()
     this.reportStats()
-    this.redraw()
+    if (shadowsChanged) this.redraw()
+    else this.refreshWithoutShadows()
   }
 
   async raiseReliefDisk(
@@ -1632,7 +1641,7 @@ export class SceneRenderer {
     // `TransformControls` knows only three modes; `select` is ours, and means no gizmo at all.
     if (mode !== 'select') this.gizmo?.setMode(mode)
     this.attachGizmo()
-    this.redraw()
+    this.repaint()
   }
 
   /** Which snaps a drag obeys: the steps `configure` was given, and the surface under it. */
@@ -1651,7 +1660,7 @@ export class SceneRenderer {
     this.gizmo?.setSpace(space)
     // The pivot carries the frame for a group: re-aimed, or it keeps the last one's orientation.
     this.attachGizmo()
-    this.redraw()
+    this.repaint()
   }
 
   /** Frames whatever is selected, gizmo or not: a mode with no gizmo still has a selection. */
@@ -1667,7 +1676,7 @@ export class SceneRenderer {
     // Moving an orthographic camera changes nothing of what it shows: without this, `F` recentred
     // the orbit and left the screen exactly as it was.
     this.viewport.refit()
-    this.redraw()
+    this.repaint()
   }
 
   /**
@@ -1730,7 +1739,7 @@ export class SceneRenderer {
 
     camera.position.set(x, y, z)
     orbit.update()
-    this.redraw()
+    this.repaint()
   }
 
   /**
@@ -2210,7 +2219,7 @@ export class SceneRenderer {
     const helper = new ViewHelper(this.viewport.camera, canvas)
     tuneViewHelper(helper)
     this.viewHelper = helper
-    this.redraw()
+    this.repaint()
   }
 
   /**
@@ -2237,7 +2246,7 @@ export class SceneRenderer {
     // After the outlines are hung or dropped: whether the sources belong in the walk is exactly
     // whether they carry any.
     this.syncSourceWalk()
-    this.redraw()
+    this.repaint()
   }
 
   /** Whether any view is asking for edges at all — what decides if the geometry is built. */
@@ -2299,7 +2308,7 @@ export class SceneRenderer {
   setPostBypassed(bypassed: boolean): void {
     if (bypassed === this.bypassed) return
     this.bypassed = bypassed
-    this.redraw()
+    this.refreshWithoutShadows()
   }
 
   /**
@@ -2437,7 +2446,7 @@ export class SceneRenderer {
   private refreshSkeletons(): void {
     for (const joints of this.joints.values()) joints.points.visible = this.skeletonsVisible()
     for (const solids of this.boneSolids.values()) solids.mesh.visible = this.skeletonsVisible()
-    this.redraw()
+    this.repaint()
   }
 
   /**
@@ -2856,6 +2865,11 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  private refreshWithoutShadows(): void {
+    this.viewport.invalidateInset()
+    this.viewport.requestCameraRender()
+  }
+
   /**
    * Asks for a frame and says nothing about the preview: the workshop moved, not the scene.
    *
@@ -2865,7 +2879,7 @@ export class SceneRenderer {
    * gizmo, the helpers, the grid. Nothing a camera of the scene can film.
    */
   private repaint(): void {
-    this.viewport.requestRender()
+    this.viewport.requestCameraRender()
   }
 
   /** The camera a node id stands for, or `null` when nothing in the scene answers to it. */
@@ -3429,7 +3443,8 @@ export class SceneRenderer {
     if (aidsMoved(held, next)) this.refreshAids()
     if (helperVisibilityMoved(held, next)) this.showAidsForSelection()
     if (next.stats !== held.stats) this.reportStats()
-    if (gridMoved || lensMoved || shadowsMoved) this.redraw()
+    if (shadowsMoved) this.redraw()
+    else if (gridMoved || lensMoved) this.repaint()
   }
 
   /** How a node is turned, in world — what an arm reading a rotation hangs behind. */
@@ -3487,7 +3502,7 @@ export class SceneRenderer {
     this.withHungUnder(aided, () =>
       this.aids.apply(this.objects, this.selectedIds, this.view, this.aidPalette(), this.rigs),
     )
-    this.redraw()
+    this.repaint()
   }
 
   /**
@@ -4990,7 +5005,7 @@ export class SceneRenderer {
     this.pickedBone = picked
     this.paintPickedJoint()
     this.attachGizmo()
-    this.redraw()
+    this.repaint()
   }
 
   /**
@@ -5027,7 +5042,7 @@ export class SceneRenderer {
     // is what changes that. Without this they were built, placed, and never once shown.
     this.showAidsForSelection()
     this.attachGizmo()
-    this.redraw()
+    this.repaint()
   }
 
   /**
@@ -5102,7 +5117,7 @@ export class SceneRenderer {
     if (event.button === 2) this.viewport.freezePanes(true)
     // Before the first frame of the flight, or its opening step spans the whole idle time.
     this.viewport.resetClock()
-    this.redraw()
+    this.repaint()
   }
 
   /** `buttons === 0` is the reading that cannot lie: pressing both and letting go out of order
