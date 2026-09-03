@@ -1,4 +1,5 @@
 import {
+  type BufferGeometry,
   BatchedMesh,
   Box3,
   InstancedMesh,
@@ -131,24 +132,33 @@ export function textureBytesOf(texture: Texture): number {
   return width * height * BYTES_PER_TEXEL
 }
 
+/**
+ * Every buffer a geometry holds, each once. 🛑 The ONE place that answers it: the optimization
+ * report used to keep its own version without `morphAttributes`, so a morphed mesh weighed less
+ * there than in the runtime profile — two figures for one geometry, shown to the same person.
+ */
+export function geometryArraysOf(geometry: BufferGeometry): ArrayBufferView[] {
+  const arrays = new Set<ArrayBufferView>()
+  if (geometry.index) arrays.add(geometry.index.array)
+  for (const name of Object.keys(geometry.attributes)) arrays.add(geometry.getAttribute(name).array)
+  for (const morphed of Object.values(geometry.morphAttributes))
+    for (const attribute of morphed ?? []) arrays.add(attribute.array)
+  return [...arrays]
+}
+
 export function geometryBytesOf(objects: Iterable<Object3D>): number {
   const geometries = new Set<unknown>()
   const arrays = new Set<unknown>()
   let bytes = 0
-  const count = (array: { byteLength: number }): void => {
-    if (arrays.has(array)) return
-    arrays.add(array)
-    bytes += array.byteLength
-  }
   for (const object of objects) {
     object.traverse(child => {
       if (!(child instanceof Mesh) || geometries.has(child.geometry)) return
       geometries.add(child.geometry)
-      if (child.geometry.index) count(child.geometry.index.array)
-      for (const name of Object.keys(child.geometry.attributes))
-        count(child.geometry.getAttribute(name).array)
-      for (const name of Object.keys(child.geometry.morphAttributes))
-        for (const attribute of child.geometry.morphAttributes[name] ?? []) count(attribute.array)
+      for (const array of geometryArraysOf(child.geometry)) {
+        if (arrays.has(array)) continue
+        arrays.add(array)
+        bytes += array.byteLength
+      }
     })
   }
   return bytes

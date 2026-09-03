@@ -17,7 +17,14 @@ import {
   withFlags,
 } from './grouping'
 import { isInstanceable } from './instanceableModel'
-import { EMPTY_STATS, statsOf, textureBytesOf, texturesOf, type SceneStats } from './sceneStats'
+import {
+  EMPTY_STATS,
+  geometryArraysOf,
+  statsOf,
+  textureBytesOf,
+  texturesOf,
+  type SceneStats,
+} from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
 import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
@@ -261,10 +268,15 @@ function* optimizationSteps(
       .flatMap(group => [...group.units]),
   )
   const instanceSavings = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
-  const batchSavings = [...batchGroups.values()].reduce((saved, group) => {
-    const remaining = [...group.units].filter(unit => !instancedUnits.has(unit)).length
-    return saved + Math.max(0, remaining - 1)
-  }, 0)
+  // 🛑 The FORCED ones alone. `createOptimizedGroups` sends a node to the batcher only when its
+  // mode says `batch`; `auto` — the default — never batches. Counting those here promised a draw
+  // call saving the renderer does not make, on a figure a person reads before deciding.
+  const batchSavings = [...batchGroups.values()]
+    .filter(group => group.forced)
+    .reduce((saved, group) => {
+      const remaining = [...group.units].filter(unit => !instancedUnits.has(unit)).length
+      return saved + Math.max(0, remaining - 1)
+    }, 0)
 
   return {
     classifications,
@@ -384,11 +396,4 @@ function* collectOwnMeshes(node: SceneNode, object: Object3D, meshes: Mesh[]): G
 
 function geometryByteLength(geometry: BufferGeometry): number {
   return geometryArraysOf(geometry).reduce((bytes, array) => bytes + array.byteLength, 0)
-}
-
-function geometryArraysOf(geometry: BufferGeometry): ArrayBufferView[] {
-  const arrays = new Set<ArrayBufferView>()
-  if (geometry.index) arrays.add(geometry.index.array)
-  for (const attribute of Object.values(geometry.attributes)) arrays.add(attribute.array)
-  return [...arrays]
 }
