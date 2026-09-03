@@ -82,6 +82,22 @@ describe('size guard', () => {
     )
   })
 
+  it('keeps full spans for components, hooks, and classes', () => {
+    const nested = block('  const callback = () => {', '  }', 40)
+    const source = [
+      `function Panel() {\n${nested}\n  return <div />\n}`,
+      `function useFeature() {\n${nested}\n  return callback\n}`,
+      `class Controller {\n  method() {\n${nested}\n  }\n}`,
+    ].join('\n')
+    expect(analyseTypeScript(source)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Panel', kind: 'component', lines: 43 }),
+        expect.objectContaining({ name: 'useFeature', kind: 'hook', lines: 43 }),
+        expect.objectContaining({ name: 'Controller', kind: 'class', lines: 44 }),
+      ]),
+    )
+  })
+
   it('analyses Python classes and functions with the same strict bounds', () => {
     const directory = mkdtempSync(join(tmpdir(), 'sizes-'))
     temporary.push(directory)
