@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { shownIn } from '@pasquelin/panels'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mountedConfirmer } from '@/features/assistant/confirm'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -296,5 +297,43 @@ describe('a panel of the band', () => {
     panelsStore.getState().show('history')
 
     expect(screen.getByText('Historique')).not.toHaveClass('pnl-header__title--fixed')
+  })
+})
+
+/**
+ * Panels can be dragged from one half to another since `@pasquelin/panels` 0.4, and two studio
+ * decisions decide what a reader gets. The rails hand their buttons to a drag at all — the
+ * chassis draws none of this unless asked. And the arrangement is kept per SECTION, where what
+ * is OPEN stays shared by the six spaces: `view` is the family, the placement scope the surface.
+ *
+ * 🛑 Left to follow `view`, one panel dragged in Image reordered the rail of all six.
+ */
+describe('moving a panel', () => {
+  it('hands the rail buttons to a drag', () => {
+    renderShell()
+
+    expect(document.body.querySelectorAll('[data-pnl-panel]').length).toBeGreaterThan(0)
+  })
+
+  it('keeps one section’s arrangement out of the others', () => {
+    const { rerender } = renderShell()
+    const showing = (zone: 'left' | 'right') => shownIn(panelsStore.getState(), zone)
+
+    // The Explorer, from the lower left of Image to the lower right — a half every space
+    // declares, so the two sections can disagree about it at all.
+    panelsStore.getState().movePanel('explorer', { zone: 'right', slot: 'secondary' }, 0)
+    expect(showing('right').secondary).toBe('explorer')
+
+    useLayouts.setState({ activeWorkspace: 'video' })
+    rerender(withQueries(<Shell />))
+
+    // Nobody dragged anything in Video: it holds what the registry declares.
+    expect(showing('right').secondary).toBe('inspector')
+    expect(showing('left').secondary).toBe('explorer')
+
+    useLayouts.setState({ activeWorkspace: 'image' })
+    rerender(withQueries(<Shell />))
+
+    expect(showing('right').secondary).toBe('explorer')
   })
 })

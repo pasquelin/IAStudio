@@ -123,6 +123,11 @@ export function Shell() {
       // Image is still there in Video — and the home shares with none, its left column holding
       // the projects where a space holds generation.
       view={familyOf(surface)}
+      // The SURFACE where the view is the family: the rails are arranged per SECTION. Left out,
+      // placement follows `view`, and one panel dragged in Image reorders the rail of all six
+      // spaces — what is OPEN stays shared, which is the whole point of the family above.
+      placementScope={surface}
+      draggablePanels
       components={COMPONENTS}
       // The studio's own key, read through the twenty versions `zustand/persist` wrote under it.
       storage={layoutStorage}

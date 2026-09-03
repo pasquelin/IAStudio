@@ -1,11 +1,5 @@
-import { shownIn } from '@pasquelin/panels'
-import {
-  familyOf,
-  placementIn,
-  type ToolId,
-  type ToolSurface,
-  type ToolZone,
-} from '@shared/domain/tool'
+import { arrangedRegistry, shownIn, specOf, type PanelSpec } from '@pasquelin/panels'
+import { familyOf, type ToolId, type ToolSurface, type ToolZone } from '@shared/domain/tool'
 import { offeredPlacement, toolStateOf } from '@/helpers/toolRegistry'
 import { toolSurface } from '@/stores/layouts'
 import { panelsStore } from '@/stores/panels'
@@ -41,7 +35,21 @@ export function revealTool(tool: ToolId): boolean {
  * spaces — and everything below would then answer about a screen nobody is looking at.
  */
 function chassisFollows(surface: ToolSurface): boolean {
-  return panelsStore.getState().view === familyOf(surface)
+  const state = panelsStore.getState()
+  // The SCOPE as well as the view, now that the rails are arranged per section: the two are set
+  // in the same render, and a placement read against the section being left is the wrong half.
+  return state.view === familyOf(surface) && state.placementScope === surface
+}
+
+/**
+ * Where the panel STANDS in front — the half the reader dragged it to, or the declared one.
+ * 🛑 Not `placementIn`: read on the declaration after a drag, `closeTool` emptied the half the
+ * panel came FROM — one the caller never named — and answered yes.
+ */
+function standsIn(tool: ToolId): PanelSpec<ToolId> | undefined {
+  if (!chassisFollows(toolSurface())) return undefined
+
+  return specOf(arrangedRegistry(panelsStore.getState()), tool)
 }
 
 /**
@@ -52,11 +60,9 @@ function chassisFollows(surface: ToolSurface): boolean {
  * against the registry the shell declared for it. Taking one made the answer look addressable.
  */
 export function toolIsShown(tool: ToolId): boolean {
-  const surface = toolSurface()
-  const placement = placementIn(tool, surface)
-  if (!placement || !chassisFollows(surface)) return false
+  const stands = standsIn(tool)
 
-  return isShown(tool, placement.zone)
+  return stands !== undefined && isShown(tool, stands.zone)
 }
 
 /** What the zone DRAWS, which is not what it holds — the chassis resolves the fallback. */
@@ -73,14 +79,13 @@ function isShown(tool: ToolId, zone: ToolZone): boolean {
  * the models and answered yes.
  */
 export function closeTool(tool: ToolId): boolean {
-  const surface = toolSurface()
-  const placement = placementIn(tool, surface)
-  if (!placement || !chassisFollows(surface) || !isShown(tool, placement.zone)) return false
+  const stands = standsIn(tool)
+  if (!stands || !isShown(tool, stands.zone)) return false
 
-  panelsStore.getState().close(placement.zone, placement.slot)
+  panelsStore.getState().close(stands.zone, stands.slot)
   // Answered on what the zone draws, like the opening above: `close` empties the half it is given
   // whatever the chassis holds there.
-  return !isShown(tool, placement.zone)
+  return !isShown(tool, stands.zone)
 }
 
 /**

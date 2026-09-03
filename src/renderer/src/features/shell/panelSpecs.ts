@@ -48,6 +48,9 @@ export function declarePanelsOf(surface: ToolSurface, state: ToolState = toolSta
   // when it moves: this runs again on every answer a `requires` asks about.
   const defaults = DEFAULT_OPEN[familyOf(surface)]
   if (defaults !== chassis.defaults) panelsStore.setState({ defaults })
+  // Before `setView`, which settles the view it arrives at against WHERE the panels stand, and
+  // a view settles once. The surface and not the family: the rails are arranged per section.
+  chassis.setPlacementScope(surface)
   chassis.setView(familyOf(surface))
   chassis.settle()
 }
