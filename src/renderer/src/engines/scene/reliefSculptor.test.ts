@@ -75,6 +75,7 @@ function answer(fake: ReturnType<typeof fakeWorker>, request: ReliefSculptReques
     request.sculpt,
     request.operation,
     request.grain,
+    request.rows,
   )
   fake.reply({
     id: request.id,
@@ -85,6 +86,45 @@ function answer(fake: ReturnType<typeof fakeWorker>, request: ReliefSculptReques
 }
 
 describe('createReliefSculptor', () => {
+  it('splits a wide stroke by chunk rows and joins the edits in order', async () => {
+    const fakes = [fakeWorker(), fakeWorker()]
+    let next = 0
+    const sculptor = createReliefSculptor(() => {
+      const fake = fakes[next]
+      next += 1
+      if (!fake) throw new Error('No fake worker left')
+      return fake.worker
+    }, fakes.length)
+    const side = 1024
+    const wideSamples = { width: side, height: side, values: new Float32Array(side * side) }
+    const stroke = {
+      samples: wideSamples,
+      extent,
+      grain: RELIEF_CHUNK_TEXELS,
+      sculpt: undefined,
+      disk: {
+        x: extent.origin.x + extent.size.x / 2,
+        z: extent.origin.z + extent.size.z / 2,
+        radius: Math.hypot(extent.size.x, extent.size.z) / 2,
+      },
+      amount: 2,
+    }
+
+    const pending = sculptor.raiseDisk(stroke)
+    for (const fake of fakes) {
+      const request = fake.posted[0]
+      if (!request) throw new Error('parallel stroke was not sent')
+      answer(fake, request)
+    }
+
+    const expected = applyReliefSculpt(wideSamples, extent, undefined, operationOf(stroke))
+    expect(await pending).toEqual(changedChunks(undefined, expected))
+    expect(fakes.map(fake => fake.posted[0]?.rows)).toEqual([
+      { from: 0, to: 8 },
+      { from: 8, to: 16 },
+    ])
+  })
+
   it('queues a second stroke so a drag does not drop the first disk', async () => {
     const fake = fakeWorker()
     const sculptor = createReliefSculptor(() => fake.worker)

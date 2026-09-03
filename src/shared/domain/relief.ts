@@ -306,16 +306,35 @@ export type ReliefSculptOperation = {
   amount: number
 }
 
+export type ReliefChunkRows = { from: number; to: number }
+
+export function reliefChunkRowsInDisk(
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  disk: { x: number; z: number; radius: number },
+  grain: number,
+): ReliefChunkRows {
+  const span = diskSamples(samples, extent, disk)
+  const rows = Array.from({ length: chunkCountAlong(samples.height, grain) }, (_, row) =>
+    chunkLayout(0, row, samples.width, samples.height, grain),
+  ).filter(layout => {
+    const maxZ = layout.sampleZ + layout.height - 1
+    return maxZ >= span.minZ && layout.sampleZ <= span.maxZ
+  })
+  return { from: rows[0]?.row ?? 0, to: (rows.at(-1)?.row ?? 0) + 1 }
+}
+
 export function applyReliefSculpt(
   samples: HeightmapSamples,
   extent: ReliefExtent,
   sculpt: ReliefSculpt | undefined,
   operation: ReliefSculptOperation,
   grain = RELIEF_CHUNK_TEXELS,
+  rows?: ReliefChunkRows,
 ): ReliefSculpt {
   switch (operation.kind) {
     case 'raiseDisk':
-      return raiseReliefDisk(samples, extent, sculpt, operation.disk, operation.amount, grain)
+      return raiseReliefDisk(samples, extent, sculpt, operation.disk, operation.amount, grain, rows)
   }
 }
 
@@ -326,6 +345,7 @@ export function raiseReliefDisk(
   disk: { x: number; z: number; radius: number },
   amount: number,
   grain = RELIEF_CHUNK_TEXELS,
+  rows?: ReliefChunkRows,
 ): ReliefSculpt {
   const span = diskSamples(samples, extent, disk)
   const r2 = disk.radius * disk.radius
@@ -341,7 +361,9 @@ export function raiseReliefDisk(
   const touched = new Set<string>()
   const packed = payloadsOf(sculpt)
 
-  for (let row = 0; row < chunkCountAlong(samples.height, grain); row += 1) {
+  const rowFrom = rows?.from ?? 0
+  const rowTo = rows?.to ?? chunkCountAlong(samples.height, grain)
+  for (let row = rowFrom; row < rowTo; row += 1) {
     for (let column = 0; column < chunkCountAlong(samples.width, grain); column += 1) {
       const layout = chunkLayout(column, row, samples.width, samples.height, grain)
       const maxX = layout.sampleX + layout.width - 1
