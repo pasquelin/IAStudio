@@ -6,14 +6,11 @@ import type {
   NavigationPreset,
 } from './navigationPreset'
 import type { LanguagePreference } from '../i18n/languages'
-// From the model module rather than from the registry: `shellActions.ts` reads this file, and the
-// registry reads it back — `import-cycles.test.ts` holds that count at zero.
 import type { AiRoleId, RoleProvider } from './aiRole'
 import { type AssistantModel, DEFAULT_ASSISTANT_MODEL } from './assistantModel'
 import { ASSISTANT_STEPS_DEFAULT } from './assistantSteps'
 import type { BindingOverrides } from './command'
 import type { DictationMode } from './dictation'
-import type { ApiFailure } from './failure'
 import type { LandingTarget } from './landingTarget'
 import type { LocalModel } from './localModel'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
@@ -27,7 +24,6 @@ import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } fr
  */
 export type Theme = 'dark' | 'light' | 'system'
 
-/** What `system` resolves to. The attribute on the root element carries one of these two. */
 export type ResolvedTheme = 'dark' | 'light'
 
 export type Density = 'compact' | 'comfortable'
@@ -41,7 +37,6 @@ export type LogVerbosity = 'silent' | 'error' | 'warn' | 'info'
 
 export const LOG_VERBOSITIES: readonly LogVerbosity[] = ['silent', 'error', 'warn', 'info']
 
-/** What happens when the application opens with no file to show. */
 export type StartupBehaviour = 'lastProject' | 'nothing'
 
 export const STARTUP_BEHAVIOURS: readonly StartupBehaviour[] = ['lastProject', 'nothing']
@@ -464,7 +459,6 @@ export function defaultSettings(isDevelopment: boolean): Settings {
   return { ...DEFAULT_SETTINGS, mcp: { ...DEFAULT_SETTINGS.mcp, enabled: true } }
 }
 
-/** Derived, so a section added to `Settings` is writable without being restated here. */
 export type PartialSettings = { [K in keyof Settings]?: Partial<Settings[K]> }
 
 /**
@@ -492,119 +486,14 @@ export function mergePartial(base: PartialSettings, next: PartialSettings): Part
   return merged
 }
 
-export type AuthState =
-  | {
-      authenticated: true
-      /**
-       * The project this key opens onto, once the library has named it — there is no endpoint
-       * that would simply say, so it is learned from the first assets that come back.
-       *
-       * Absent means "not known yet", which every reader treats as "do not judge ownership"
-       * rather than as a mismatch.
-       */
-      ownerId?: string
-    }
-  | { authenticated: false; reason: ApiFailure }
-
-/**
- * Sections of the settings window, named so any surface can ask for one of them — a panel that
- * has just said the API key is missing is expected to lead to where it is typed.
- *
- * Sub-sections are part of the union rather than made up by the screen: an id the shared type
- * does not know is refused by the IPC, so `settings.open('generation.image')` would fail on a
- * name the navigation happily displayed.
- */
-export type SettingsSectionId =
-  | 'general'
-  | 'account'
-  | 'appearance'
-  | 'generation'
-  | 'ai'
-  | 'ai.image'
-  | 'ai.video'
-  | 'ai.3d'
-  | 'ai.audio'
-  | 'ai.material'
-  | 'ai.skybox'
-  | 'ai.code'
-  | 'ai.upscale'
-  | 'ai.background-removal'
-  | 'ai.vectorization'
-  | 'spaces'
-  | 'spaces.three'
-  | 'shortcuts'
-  | 'dictation'
-  | 'media'
-  | 'git'
-  | 'mcp'
-  | 'memory'
-  | 'memory.graph'
-  | 'storage'
-  | 'advanced'
-
-export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
-  'general',
-  'account',
-  'appearance',
-  'generation',
-  'ai',
-  'ai.image',
-  'ai.video',
-  'ai.3d',
-  'ai.audio',
-  'ai.material',
-  'ai.skybox',
-  'ai.code',
-  'ai.upscale',
-  'ai.background-removal',
-  'ai.vectorization',
-  'spaces',
-  'spaces.three',
-  'shortcuts',
-  'dictation',
-  'media',
-  'git',
-  'mcp',
-  'memory',
-  'memory.graph',
-  'storage',
-  'advanced',
-]
-
-/**
- * The section travels to the settings window inside the URL fragment its renderer reads, so
- * what a renderer sends is checked against the list rather than trusted — see invariant 1.
- */
-export function isSettingsSection(value: unknown): value is SettingsSectionId {
-  return SETTINGS_SECTION_IDS.some(candidate => candidate === value)
-}
-
-/** URL fragment that tells the shared bundle it is rendering the settings window. */
-export const SETTINGS_ROUTE = 'settings'
-
-/**
- * The route the settings window loads, section included. Written by the main process and read
- * by the renderer, so both sides live here: a fragment built in one place and parsed in
- * another is a contract nothing checks.
- */
-export function settingsRoute(section?: SettingsSectionId): string {
-  return section ? `${SETTINGS_ROUTE}/${section}` : SETTINGS_ROUTE
-}
-
-export function isSettingsRoute(hash: string): boolean {
-  const route = hash.replace(/^#/, '')
-  return route === SETTINGS_ROUTE || route.startsWith(`${SETTINGS_ROUTE}/`)
-}
-
-/** The section named by the fragment, `null` for a route naming none or naming an unknown. */
-export function sectionFromRoute(hash: string): SettingsSectionId | null {
-  const section = hash.split('/')[1]
-  return isSettingsSection(section) ? section : null
-}
-
-/**
- * Where the window opens when nothing names a section — its own ⌘, shortcut included. The top
- * of the list, which is what a settings window is expected to do; a panel that needs the API
- * key names `account` itself.
- */
-export const DEFAULT_SETTINGS_SECTION: SettingsSectionId = 'general'
+export {
+  DEFAULT_SETTINGS_SECTION,
+  SETTINGS_ROUTE,
+  SETTINGS_SECTION_IDS,
+  isSettingsRoute,
+  isSettingsSection,
+  sectionFromRoute,
+  settingsRoute,
+  type AuthState,
+  type SettingsSectionId,
+} from './settingsNavigation'

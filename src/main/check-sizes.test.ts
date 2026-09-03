@@ -71,6 +71,46 @@ describe('size guard', () => {
     )
   })
 
+  it('keeps the complex limit for hooks and JSX components', () => {
+    const branches = Array.from(
+      { length: COMPLEXITY_THRESHOLD - 1 },
+      (_, index) => `  if (value === ${index}) return ${index}`,
+    ).join('\n')
+    const source = [
+      `function useFeature(value) {\n${branches}\n  return value\n}`,
+      `function Panel({ value }) {\n${branches}\n  return <div />\n}`,
+    ].join('\n')
+
+    expect(analyseTypeScript(source)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'complex', name: 'useFeature' }),
+        expect.objectContaining({ kind: 'complex', name: 'Panel' }),
+      ]),
+    )
+  })
+
+  it('counts a non-empty default switch arm', () => {
+    const cases = Array.from(
+      { length: COMPLEXITY_THRESHOLD - 2 },
+      (_, index) => `case ${index}: return ${index}`,
+    ).join('\n')
+    const source = `function choose(value) { switch (value) { ${cases}\ndefault: return -1 } }`
+
+    expect(analyseTypeScript(source)).toEqual([
+      expect.objectContaining({ kind: 'complex', complexity: COMPLEXITY_THRESHOLD }),
+    ])
+  })
+
+  it.each(['fixture.mts', 'fixture.cts', 'fixture.jsx', 'fixture.cjs'])(
+    'analyses maintained module extension %s',
+    filename => {
+      const source = block('function oversized() {', '}', LIMITS.function)
+      expect(violationsFor(filename, source)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ kind: 'function', name: 'oversized' })]),
+      )
+    },
+  )
+
   it('does not charge an ordinary function for nested function lines', () => {
     const nested = block('  const callback = () => {', '  }', LIMITS.function + 20)
     const source = `function compose() {\n${nested}\n  return callback\n}`

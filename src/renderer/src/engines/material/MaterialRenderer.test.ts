@@ -55,31 +55,30 @@ const hung = (named: EnvironmentRef): EnvironmentDress | null =>
     ? { assetId: named.assetId, adjustments: NEUTRAL_ADJUSTMENTS, sun: null, intensity: 0.5 }
     : null
 
+let source: ReturnType<typeof fakeTextureSource>
+let host: HTMLElement
+
+beforeEach(() => {
+  source = fakeTextureSource()
+  vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
+  // The mocked environment never reads the renderer fields.
+  vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
+  host = document.createElement('div')
+})
+
+const mounted = (): MaterialRenderer => {
+  const renderer = new MaterialRenderer({ loadTexture: source.load, environmentDress: hung })
+  renderer.mount(host)
+  return renderer
+}
+
+const applied = async (renderer: MaterialRenderer, state: MaterialState): Promise<void> => {
+  const calls = source.load.mock.calls.length
+  renderer.apply(state)
+  await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(calls + 1))
+}
+
 describe('the texture preview', () => {
-  let source: ReturnType<typeof fakeTextureSource>
-  let host: HTMLElement
-
-  beforeEach(() => {
-    source = fakeTextureSource()
-    vi.spyOn(ViewportEngine.prototype, 'mount').mockImplementation(() => {})
-    // `as`: `mount` only checks that a renderer exists before handing it to `createEnvironment`,
-    // which is mocked above — so nothing ever reads a field of it.
-    vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValue({} as never)
-    host = document.createElement('div')
-  })
-
-  const mounted = (): MaterialRenderer => {
-    const renderer = new MaterialRenderer({ loadTexture: source.load, environmentDress: hung })
-    renderer.mount(host)
-    return renderer
-  }
-
-  const applied = async (renderer: MaterialRenderer, state: MaterialState): Promise<void> => {
-    const calls = source.load.mock.calls.length
-    renderer.apply(state)
-    await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(calls + 1))
-  }
-
   /**
    * The cache takes an asset id and builds the URL itself. Handing it one already built made it
    * encode the whole `ia-studio://` URL as an id, and the sky could never load.
@@ -319,7 +318,9 @@ describe('the texture preview', () => {
       // And the document keeps what its author chose.
       expect(state.material.tiling).toEqual({ x: 3, y: 5 })
     })
+  })
 
+  describe('the placement and lifetime of texture channels', () => {
     /**
      * Half a width and half a height is exactly what brings a wrap edge to the middle of the
      * frame. On every map at once, or the relief stops matching the picture it lifts.

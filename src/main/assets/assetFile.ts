@@ -25,7 +25,7 @@ import { assetFilePath } from './protocol'
  */
 
 /** What a refused rename says. Recognised on the other side, where the field has closed. */
-export const DUPLICATE_NAME: AssetNameFailure = 'duplicate'
+export const ASSET_DUPLICATE_NAME: AssetNameFailure = 'duplicate'
 
 /**
  * The first name in `folder` nobody has taken — `Ruelle bleue`, then `Ruelle bleue 2`.
@@ -95,7 +95,7 @@ export async function freeAssetPath(
  * one that lives in the library alone. Writing into a folder the user merely pointed at is a
  * gesture the studio does not take, so those keep their name in the catalogue and nowhere else.
  *
- * Throws `DUPLICATE_NAME` rather than overwriting: the file it would replace is another asset's,
+ * Throws `ASSET_DUPLICATE_NAME` rather than overwriting: the file it would replace is another asset's,
  * and `rename` takes it without a word on POSIX.
  */
 export async function moveAssetFile(
@@ -121,7 +121,7 @@ export async function moveAssetFile(
 
   // Case alone is not a duplicate — one file, this asset's own, changing how it is spelled.
   const collides = !isSameFileName(target, asset.path) && (await exists(join(root, target)))
-  if (collides) throw new Error(DUPLICATE_NAME)
+  if (collides) throw new Error(ASSET_DUPLICATE_NAME)
 
   await rename(join(root, asset.path), join(root, target))
   return target

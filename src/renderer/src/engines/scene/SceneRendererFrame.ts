@@ -1,0 +1,64 @@
+import './bvhPatches'
+import { forward, right, step } from './sceneRendererSupport2'
+import { SceneRendererPicking } from './SceneRendererPicking'
+export abstract class SceneRendererFrame extends SceneRendererPicking {
+  /** Reports whether the camera is still flying, which is what keeps the loop alive. */
+  protected advance(delta: number): boolean {
+    // Before the panes are drawn and after everything that writes a pose — the head, a clip, a
+    // gizmo on the handle: whatever moved, the chain reaches for where the target stands NOW.
+    for (const chain of this.iks.values()) chain.update()
+    // 🛑 Before the joints are read and after the chains: while a skeleton is being EDITED the
+    // bones ARE the rest pose, so the skin follows them rather than being deformed by them. A
+    // joint would otherwise drag the arm along with it for the whole of the gesture and snap
+    // back only on release — see `restRig`.
+    if (this.restEditing) this.restSkins()
+    // After the chains, never before: the joints have to show where the bones ENDED UP.
+    for (const solids of this.boneSolids.values()) {
+      if (solids.mesh.visible) solids.refresh()
+    }
+    const advanceStep1 = () => {
+      const advanceStep1 = () => {
+        for (const joints of this.joints.values()) {
+          if (joints.points.visible) joints.refresh()
+        }
+        // Before the panes are drawn: the cap reads the distance, and the distance moves on every
+        // notch of the wheel. Read on `configure` alone it was right once, then stayed put.
+        this.applyGizmoSize()
+        const followed = this.followSelection()
+        const advanceStep2 = () => {
+          const moving = this.flying && this.held.size > 0
+          if (moving) {
+            // Only under a button that armed it: a permanent flight moves the camera with no press at
+            // all, and `flew` left set killed every left click for the rest of the session.
+            if (this.flownWith !== null) this.flew = true
+            this.fly(delta)
+          }
+          // The clips do not appear here: they stand where the head put them, and the head is advanced
+          // by `useAnimationPlayback`, which calls `setPlayhead` and asks for a frame of its own.
+          return moving || followed
+        }
+        return advanceStep2()
+      }
+      return advanceStep1()
+    }
+    return advanceStep1()
+  }
+  protected fly(delta: number): void {
+    const camera = this.viewport.camera
+    const boost = this.held.has('boost') ? this.view.boostFactor : 1
+    const speed = this.flySpeed * delta * boost
+    camera.getWorldDirection(forward)
+    right.crossVectors(forward, camera.up).normalize()
+    step.set(0, 0, 0)
+    if (this.held.has('forward')) step.add(forward)
+    if (this.held.has('back')) step.sub(forward)
+    if (this.held.has('right')) step.add(right)
+    if (this.held.has('left')) step.sub(right)
+    if (this.held.has('up')) step.y += 1
+    if (this.held.has('down')) step.y -= 1
+    if (step.lengthSq() === 0) return
+    step.normalize().multiplyScalar(speed)
+    camera.position.add(step)
+    this.viewport.orbit?.target.add(step)
+  }
+}

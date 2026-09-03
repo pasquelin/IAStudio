@@ -130,40 +130,10 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
   const compileRuntimeRegion = (patch: RuntimeWorldPatch): SceneState | null => {
     if (!runtime) return null
     const started = performance.now()
-    let compiledNodes = 0
-    if (invalidated.size > 0) {
-      const changedIds = new Set(patch.changedNodes.map(node => node.id))
-      for (const id of invalidated) {
-        const previous = nodes.get(id)
-        if (!previous || changedIds.has(id)) continue
-        nodes.set(id, structuredClone(previous))
-        compiledNodes += 1
-      }
-    }
-
-    for (const node of patch.changedNodes) {
-      const previous = nodes.get(node.id)
-      if (previous && !invalidated.has(node.id) && stableKey(previous) === stableKey(node)) {
-        continue
-      }
-      nodes.set(node.id, node)
-      compiledNodes += 1
-    }
-    let removedNodes = 0
-    for (const id of patch.removedIds) {
-      if (nodes.delete(id)) removedNodes += 1
-    }
+    const compiledNodes = compileNodes(nodes, invalidated, patch.changedNodes)
+    const removedNodes = removeNodes(nodes, patch.removedIds)
     invalidated.clear()
-
-    const ordered = patch.order
-      ? patch.order.flatMap(id => {
-          const node = nodes.get(id)
-          return node ? [node] : []
-        })
-      : runtime.nodes.flatMap(node => {
-          const current = nodes.get(node.id)
-          return current ? [current] : []
-        })
+    const ordered = orderedNodes(nodes, runtime.nodes, patch.order)
     runtime = runtimeState(
       {
         ...runtime,
@@ -204,6 +174,43 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       })
     },
   }
+}
+
+function compileNodes(
+  cached: Map<string, SceneNode>,
+  invalidated: ReadonlySet<string>,
+  changed: readonly SceneNode[],
+): number {
+  let compiled = 0
+  const changedIds = new Set(changed.map(node => node.id))
+  for (const id of invalidated) {
+    const previous = cached.get(id)
+    if (!previous || changedIds.has(id)) continue
+    cached.set(id, structuredClone(previous))
+    compiled += 1
+  }
+  for (const node of changed) {
+    const previous = cached.get(node.id)
+    if (previous && !invalidated.has(node.id) && stableKey(previous) === stableKey(node)) continue
+    cached.set(node.id, node)
+    compiled += 1
+  }
+  return compiled
+}
+
+function removeNodes(cached: Map<string, SceneNode>, removed: readonly string[]): number {
+  let count = 0
+  for (const id of removed) if (cached.delete(id)) count += 1
+  return count
+}
+
+function orderedNodes(
+  cached: ReadonlyMap<string, SceneNode>,
+  previous: readonly SceneNode[],
+  order: readonly string[] | null,
+): SceneNode[] {
+  const ids = order ?? previous.map(node => node.id)
+  return ids.flatMap(id => cached.get(id) ?? [])
 }
 
 function runtimeState(source: SceneState, nodes: readonly SceneNode[]): SceneState {

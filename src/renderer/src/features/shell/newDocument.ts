@@ -166,6 +166,20 @@ async function made(
   }
 }
 
+async function seedCreated(
+  created: DocumentDescriptor,
+  template: DocumentTemplateId | undefined,
+  textures: Promise<void>,
+): Promise<void> {
+  if (created.kind === 'scene') {
+    await textures
+    seedSceneTemplate(created.id, isSceneTemplateId(template) ? template : DEFAULT_SCENE_TEMPLATE)
+  }
+  if (created.kind === 'gui') {
+    seedGuiTemplate(created.id, isUiTemplateId(template) ? template : DEFAULT_UI_TEMPLATE)
+  }
+}
+
 /** The document itself, once what it is and what it is called have both been settled. */
 async function create(kind: DocumentKind, of: NamedCreation): Promise<DocumentDescriptor | null> {
   const project = useProject.getState().project
@@ -187,22 +201,7 @@ async function create(kind: DocumentKind, of: NamedCreation): Promise<DocumentDe
   const created = await useDocuments.getState().create(workspace, { ...of, kind })
   if (!created) return null
 
-  // Before the tab opens, and that order is the whole mechanism: `restoreDocument` puts the
-  // studio default in a document that holds nothing, and holding the template's scene already is
-  // what stops it.
-  if (created.kind === 'scene') {
-    // AWAITED, and this is the only place it can be: a template lays its shapes down before any
-    // editor mounts, so the hook that installs the working textures has not run — every shape of
-    // the first 3D document of a session was born bare, and saved that way for good.
-    await textures
-    const wanted = of.template
-    seedSceneTemplate(created.id, isSceneTemplateId(wanted) ? wanted : DEFAULT_SCENE_TEMPLATE)
-  }
-
-  if (created.kind === 'gui') {
-    const wanted = of.template
-    seedGuiTemplate(created.id, isUiTemplateId(wanted) ? wanted : DEFAULT_UI_TEMPLATE)
-  }
+  await seedCreated(created, of.template, textures)
 
   openDocument(created)
   return created

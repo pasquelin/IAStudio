@@ -10,94 +10,43 @@ import {
   type SoundScheduler,
 } from './soundSchedule'
 import {
-  clipEnd,
   clipSource,
   EMPTY_SEQUENCE,
   playsThrough,
   sequenceDuration,
   sourceTimeAt,
-  type Clip,
   type SequenceState,
-  type Track,
   type Us,
 } from './timelineState'
 import { followHostSize, mountApplication } from '../core/mount'
 import { tokenAsHex } from '../core/palette'
 import type { Size } from '../core/geometry'
+import {
+  clipAt,
+  fitInside,
+  reusePaintedSource,
+  spritesOffFrame,
+  swapTexture,
+  videoTracksByDepth,
+  type Placement,
+} from './timelinePresentation'
+export {
+  clipAt,
+  fitInside,
+  reusePaintedSource,
+  spritesOffFrame,
+  swapTexture,
+  videoTracksByDepth,
+} from './timelinePresentation'
+export type { Placement } from './timelinePresentation'
 
-/** The clip a track is playing at that instant, or nothing — a gap is a legitimate answer. */
-export function clipAt(track: Track, time: Us): Clip | null {
-  return track.clips.find(clip => time >= clip.start && time < clipEnd(clip)) ?? null
-}
-
-/** A still already on this sprite: skip the decode and the GPU upload. */
-export function reusePaintedSource(
-  source: string | null,
-  trackId: string,
-  stable: (assetId: string) => boolean,
-  painted: ReadonlyMap<string, string>,
-): boolean {
-  return source !== null && stable(source) && painted.get(trackId) === source
-}
-
-/**
- * The sprites whose track LEFT the frame, and which nothing else would ever take down.
- *
- * The paint loop reaches only the tracks still in the list, so a track deleted — or turned into a
- * sound track by a change of selection — would keep the image it last painted on screen while
- * something else plays.
- */
-export function spritesOffFrame<T>(
-  sprites: ReadonlyMap<string, T>,
-  painting: readonly Track[],
-): T[] {
-  const inFrame = new Set(painting.map(track => track.id))
-  return [...sprites].filter(([trackId]) => !inFrame.has(trackId)).map(([, sprite]) => sprite)
-}
-
-/** Under every track: the depths handed to the sprites start at zero — see `seek`. */
+/* Under every track: the depths handed to the sprites start at zero — see `seek`. */
 const BACKDROP_DEPTH = -1
 
 /**
  * Lowest index first, which is the order the sprites are given their depths in: the LAST of this
  * list is the row highest in the column, and the one the eye sees on top.
  */
-export function videoTracksByDepth(state: SequenceState): Track[] {
-  return state.tracks
-    .filter(track => track.kind === 'video')
-    .sort((left, right) => left.index - right.index)
-}
-
-/**
- * Swaps a decoded frame in and disposes of the texture it replaces — never `Texture.EMPTY`,
- * which every sprite starts on and the whole application shares. Pixi 8 happens to no-op its
- * `destroy`, but destroying what one did not create is not something to lean on a library for.
- */
-export function swapTexture(target: { texture: Texture }, next: Texture): void {
-  const previous = target.texture
-  target.texture = next
-  if (previous !== Texture.EMPTY) previous.destroy(true)
-}
-
-/** Where something sized lands once fitted: its top-left corner, and the factor to draw it by. */
-export type Placement = { x: number; y: number; scale: number }
-
-/**
- * Letterboxes `source` inside `frame`, centred, aspect ratio kept. A scale rather than a width
- * and a height: stretching a 4:3 rush to fill a 16:9 sequence is the one thing a monitor judging
- * a picture must never do. Anything unmeasured yields a zero scale — never a NaN on the stage.
- */
-export function fitInside(source: Size, frame: Size): Placement {
-  const usable = source.width > 0 && source.height > 0 && frame.width > 0 && frame.height > 0
-  if (!usable) return { x: 0, y: 0, scale: 0 }
-
-  const scale = Math.min(frame.width / source.width, frame.height / source.height)
-  return {
-    x: (frame.width - source.width * scale) / 2,
-    y: (frame.height - source.height * scale) / 2,
-    scale,
-  }
-}
 
 /** Applies a placement to anything Pixi positions and scales. */
 function place(target: Container, placement: Placement): void {

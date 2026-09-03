@@ -87,6 +87,9 @@ describe('the registry, published as tools', () => {
    * The commitment is checked too: the note REPLACES the one `commitment` would have written, so
    * `asksItself` on anything above the floor would drop the word that a confirmation is coming.
    */
+})
+
+describe('tool execution metadata', () => {
   it('says so when the handler raises the studio’s own question', () => {
     const marked = ACTION_REGISTRY.filter(entry => entry.asksItself)
 
@@ -196,6 +199,9 @@ describe('an action’s inputs, as JSON Schema', () => {
    * nothing else, so a client could neither build the call nor probe for it under
    * `additionalProperties: false`. Its options name the KEYS, hence `propertyNames`.
    */
+})
+
+describe('structured action inputs', () => {
   it('announces a record as an object, and names the keys it takes', () => {
     const schema = schemaOfFields([
       {

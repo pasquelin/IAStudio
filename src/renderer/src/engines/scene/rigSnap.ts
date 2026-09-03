@@ -159,7 +159,6 @@ function centred(
 ): Vector3 {
   const sum = { x: 0, y: 0, z: 0 }
   let held = 0
-
   for (let vertex = 0; vertex < sample.points.length; vertex += 3) {
     const point = {
       x: sample.points[vertex] ?? 0,
@@ -169,7 +168,6 @@ function centred(
     if (Math.abs(point[along] - here[along]) > span.slice) continue
     if (side.half !== 0 && Math.sign(point[side.across] - side.centre) !== side.half) continue
     if (Math.hypot(point.x - here.x, point.y - here.y, point.z - here.z) > span.reach) continue
-
     sum.x += point.x
     sum.y += point.y
     sum.z += point.z
@@ -177,8 +175,6 @@ function centred(
   }
 
   if (held < ENOUGH) return here
-
-  // The coordinate ALONG the limb is the fit's to keep — see the docstring above.
   return { x: sum.x / held, y: sum.y / held, z: sum.z / held, [along]: here[along] }
 }
 

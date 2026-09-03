@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
 
 /**
  * The view that travels with what it was aimed at — Unity's ⇧F.
@@ -13,7 +13,7 @@ describe('SceneRenderer and the selection it follows', () => {
     source.match(new RegExp(`${signature} \\{[\\s\\S]*?\\n {2}\\}`))?.[0] ?? ''
 
   const frameFollow = method('frameFollow\\(\\): void')
-  const follow = method('private followSelection\\(\\): boolean')
+  const follow = method('protected followSelection\\(\\): boolean')
   const apply = source.match(/apply\(state: SceneState\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
 
   // A regex that matched nothing would make every assertion below vacuously true.

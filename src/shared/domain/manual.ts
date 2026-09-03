@@ -140,8 +140,7 @@ export function deadManualLinks(chapters: readonly ManualChapter[], language: La
     return null
   }
 
-  for (const chapter of chapters)
-    dead.push(...deadLinksIn(chapter, language, slugs, missing))
+  for (const chapter of chapters) dead.push(...deadLinksIn(chapter, language, slugs, missing))
 
   return dead
 }

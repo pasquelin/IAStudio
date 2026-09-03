@@ -324,5 +324,4 @@ export class SkyboxRenderer {
     aimAlong(this.viewport.camera, this.look)
     this.viewport.requestRender()
   }
-
 }

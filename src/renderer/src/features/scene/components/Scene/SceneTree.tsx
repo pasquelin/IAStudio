@@ -6,6 +6,7 @@ import { Tree, type TreeNode } from '@/components/Tree'
 import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { foldTreeBranch } from '@/helpers/treeExpansion'
+import { useLatest } from '@/hooks/useLatest'
 import type { Command } from '@/engines/core/history'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/features/scene/components/Scene/SceneNodeRow'
@@ -17,14 +18,11 @@ import { runSceneCommand, toggleNodeVisible } from '@/features/scene/components/
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useTreeFolds } from '@/stores/treeFolds'
-import { useLatest } from '@/hooks/useLatest'
 import { sceneNodeDrag } from '../dragged'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
 const SCENE_ROOT = 'scene-root'
-
-/** The order the scene itself holds — what a drag between two siblings writes. */
-const SCENE_ORDER = 'scene'
+const SCENE_ORDER = 'sceneOrder'
 
 type SceneItem = TreeNode & { node: SceneNode | null }
 
@@ -80,40 +78,30 @@ export function SceneTree({ documentId }: { documentId: string }) {
     }
 
     const shown = items.filter(item => term === '' || kept.has(item.id))
-    // 🛑 The scene's OWN order, and it is the default: `onInsert` writes a `reorderNodes` command
-    // and an undo entry, so an outliner that always sorted by name made the drag a no-op that
-    // left history behind it.
     if (collection.sort === SCENE_ORDER) return shown
-
     const descending = collection.sort === 'nameDesc'
     return shown.sort((one, other) => {
-      if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
-      const order = one.node.name.localeCompare(other.node.name, language)
-      return descending ? -order : order
-    })
+        if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
+        const order = one.node.name.localeCompare(other.node.name, language)
+        return descending ? -order : order
+      })
   }, [collection.search, collection.sort, items, language])
 
   const expandableIds = useMemo(() => {
     const parents = new Set(shownItems.flatMap(item => (item.parentId ? [item.parentId] : [])))
     return new Set(shownItems.filter(item => parents.has(item.id)).map(item => item.id))
   }, [shownItems])
-  // Walked rather than spread: a drag renders this once per frame, and the copy was a fresh array
-  // the size of the outliner's parents each time.
-  const anyExpanded = useMemo(() => {
-    for (const id of expandableIds) if (expandedIds.has(id)) return true
-    return false
-  }, [expandableIds, expandedIds])
-  const latestExpandableIds = useLatest(expandableIds)
+  const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
+  const foldOrder = useTreeFolds(state => state.scene)
+  const initialFoldStamp = useRef(foldOrder.stamp)
+  const foldTargets = useLatest({ expandableIds, setExpandedIds })
   useEffect(() => useTreeFolds.getState().note('scene', anyExpanded), [anyExpanded])
   useEffect(() => {
-    let seenFoldOrder = useTreeFolds.getState().scene.stamp
-    return useTreeFolds.subscribe(state => {
-      const order = state.scene
-      if (seenFoldOrder === order.stamp) return
-      seenFoldOrder = order.stamp
-      setExpandedIds(order.wanted ? new Set(latestExpandableIds.current) : new Set())
-    })
-  }, [latestExpandableIds])
+    if (initialFoldStamp.current === foldOrder.stamp) return
+    foldTargets.current.setExpandedIds(
+      foldOrder.wanted ? new Set(foldTargets.current.expandableIds) : new Set(),
+    )
+  }, [foldOrder.stamp, foldOrder.wanted, foldTargets])
 
   const toggle = useCallback(
     (id: string) => {

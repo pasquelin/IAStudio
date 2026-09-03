@@ -481,7 +481,6 @@ describe('picking a body through the lot that draws it', () => {
     groups.rebuild(settled, id => objects.get(id))
     expect(pick(7)).toBe('n7')
 
-    // Added at the end, then taken out of the middle: the slots behind it all shift.
     groups.rebuild(nodes, id => objects.get(id))
     expect(pick(WORTH_INSTANCING)).toBe(`n${WORTH_INSTANCING}`)
 
@@ -490,7 +489,6 @@ describe('picking a body through the lot that draws it', () => {
     expect(pick(3)).toBeNull()
     expect(pick(7)).toBe('n7')
 
-    // Undone: the node is back, at the end of the list the way the store restores it.
     const restored = nodes[3]
     if (!restored) throw new Error('no node to restore')
     groups.rebuild([...without, restored], id => objects.get(id))

@@ -10,12 +10,10 @@ import type { Region } from '@/engines/audio/edits'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { RULER_HEIGHT } from '@/engines/timeline/timelineGeometry'
 import { SECOND, type Us } from '@/engines/timeline/timelineState'
-import {
-  useWaveSurferAudio,
-  useWaveSurferInstance,
-  useWaveSurferPalette,
-  useWaveSurferWheel,
-} from './waveSurferEffects'
+import { useWaveSurferAudio } from './useWaveSurferAudio'
+import { useWaveSurferInstance } from './useWaveSurferInstance'
+import { useWaveSurferPalette } from './useWaveSurferPalette'
+import { useWaveSurferWheel } from './useWaveSurferWheel'
 
 export type WaveSurferHandle = {
   playing: boolean
@@ -37,7 +35,7 @@ export type UseWaveSurferOptions = {
   onRegionChange: (region: Region | null) => void
 }
 
-/** Bars rather than a continuous line: fewer paths per redraw, and easier to read at a glance. */
+/* Bars rather than a continuous line: fewer paths per redraw, and easier to read at a glance. */
 /**
  * The graduations above the wave — where the strip and the programme monitor both wear
  * `paintRuler`, this one is wavesurfer's own plugin, the take being drawn by wavesurfer.

@@ -26,7 +26,7 @@ import { useDocumentEdit } from '@/hooks/useDocumentEdit'
 import { ChannelsSection } from '../../ChannelsSection/ChannelsSection'
 import { StylesSection } from '../../StylesSection/StylesSection'
 import { MaterialInspectorSeamReading } from './MaterialInspectorSeamReading'
-import { MaterialReliefSection } from './MaterialReliefSection'
+import { MaterialInspectorReliefSection } from './MaterialInspectorReliefSection'
 
 export type TextureInspectorProps = { documentId: string }
 
@@ -149,7 +149,7 @@ export function MaterialInspector({ documentId }: TextureInspectorProps) {
         />
       </PropertySection>
 
-      <MaterialReliefSection
+      <MaterialInspectorReliefSection
         material={material}
         onChange={onMaterial}
         onReset={resetMaterial}

@@ -84,6 +84,14 @@ export type RowsOptions = {
   sceneName: string
 }
 
+type RowContext = {
+  rows: AnimationRow[]
+  grouped: ReadonlyMap<string, readonly AnimationTrack[]>
+  named: ReadonlyMap<string, string>
+  lanesOfNode: ReadonlyMap<string, readonly SheetLane[]>
+  expanded: ReadonlySet<string>
+}
+
 /**
  * The rows to draw, top to bottom.
  *
@@ -93,85 +101,27 @@ export type RowsOptions = {
  */
 export function animationRows(timeline: AnimationTimeline, options: RowsOptions): AnimationRow[] {
   const rows: AnimationRow[] = []
-  const grouped = new Map<string, AnimationTrack[]>()
-
-  for (const track of timeline.tracks) {
-    const key = subjectKey(track.target)
-    const found = grouped.get(key)
-    if (found) found.push(track)
-    else grouped.set(key, [track])
-  }
-
+  const grouped = tracksBySubject(timeline.tracks)
   const named = new Map(options.nodes.map(node => [node.id, node.name]))
   // The scene's composition is a subject with no node behind it. Naming it here rather than
   // branching everywhere below is what gives it a line at all: `shown`, the bone filter and
   // `push` all decide through this map.
   named.set(SCENE_SUBJECT_ID, options.sceneName)
 
-  const lanesOfNode = new Map<string, SheetLane[]>()
-  for (const lane of options.lanes ?? []) {
-    const found = lanesOfNode.get(lane.nodeId)
-    if (found) found.push(lane)
-    else lanesOfNode.set(lane.nodeId, [lane])
+  const context = {
+    rows,
+    grouped,
+    named,
+    lanesOfNode: lanesByNode(options.lanes),
+    expanded: options.expanded,
   }
 
-  /** One line, its channels and its lanes, appended in place — wherever the subject stands. */
-  const push = (key: string, bars?: readonly ShotBar[]): void => {
-    const tracks = grouped.get(key) ?? []
-    const bone = tracks[0]?.target.bone
-    const plain = named.get(bone ? (tracks[0]?.target.nodeId ?? key) : key) ?? key
-
-    const expanded = options.expanded.has(key)
-
-    rows.push({
-      kind: 'subject',
-      id: key,
-      name: bone ? `${plain} · ${bone}` : plain,
-      height: SUBJECT_HEIGHT,
-      expanded,
-      keys: mergedKeys(tracks),
-      tracks,
-      bars,
-    })
-
-    if (!expanded) return
-
-    for (const track of tracks) {
-      rows.push({
-        kind: 'channel',
-        id: track.id,
-        name: track.name,
-        height: CHANNEL_HEIGHT,
-        track,
-      })
-    }
-
-    // The lanes of the object come under its channels, INSIDE the same unfolded track: what a
-    // subject moves and what it plays belong to one thing, and a run of lanes at the foot of the
-    // sheet said the opposite. A bone subject has none — a lane plays a whole rig at once.
-    const lanes = lanesOfNode.get(key) ?? []
-    for (const [rank, lane] of lanes.entries()) {
-      rows.push({
-        kind: 'lane',
-        id: laneKey(lane.nodeId, lane.laneId),
-        name: lane.name,
-        height: CHANNEL_HEIGHT,
-        nodeId: lane.nodeId,
-        laneId: lane.laneId,
-        last: rank === lanes.length - 1,
-        blocks: lane.blocks,
-      })
-    }
-  }
-
-  // A shot whose camera the scene has lost is left out, as `activeShotAt` leaves it out of the
-  // answer: a bar naming nothing would be a line one could drag and never see on screen.
   const onAir = shotCameras(timeline.shots).filter(cameraId => named.has(cameraId))
 
   // The cameras on air open the sheet, in the order the DOCUMENT holds their shots — that order
   // IS the montage's law, so the eye and `activeShotAt` cannot disagree. Which is also why they
   // are left out of the arrangement below.
-  for (const cameraId of onAir) push(cameraId, barsOf(timeline, cameraId, named))
+  for (const cameraId of onAir) pushRows(context, cameraId, barsOf(timeline, cameraId, named))
 
   /*
    * Who gets a line: what the person PUT on the sheet, plus whoever HOLDS a track. A house is
@@ -200,9 +150,75 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
       .map(([key]) => key),
   ]
 
-  for (const key of orderedSubjects(natural, options.order ?? [])) push(key)
+  for (const key of orderedSubjects(natural, options.order ?? [])) pushRows(context, key)
 
   return rows
+}
+
+function tracksBySubject(tracks: readonly AnimationTrack[]): Map<string, AnimationTrack[]> {
+  const grouped = new Map<string, AnimationTrack[]>()
+  for (const track of tracks) {
+    const key = subjectKey(track.target)
+    const found = grouped.get(key)
+    if (found) found.push(track)
+    else grouped.set(key, [track])
+  }
+  return grouped
+}
+
+function lanesByNode(lanes: readonly SheetLane[] = []): Map<string, SheetLane[]> {
+  const grouped = new Map<string, SheetLane[]>()
+  for (const lane of lanes) {
+    const found = grouped.get(lane.nodeId)
+    if (found) found.push(lane)
+    else grouped.set(lane.nodeId, [lane])
+  }
+  return grouped
+}
+
+function pushRows(context: RowContext, key: string, bars?: readonly ShotBar[]): void {
+  const tracks = context.grouped.get(key) ?? []
+  const bone = tracks[0]?.target.bone
+  const nodeId = bone ? (tracks[0]?.target.nodeId ?? key) : key
+  const expanded = context.expanded.has(key)
+  context.rows.push({
+    kind: 'subject',
+    id: key,
+    name: subjectName(context.named, nodeId, bone),
+    height: SUBJECT_HEIGHT,
+    expanded,
+    keys: mergedKeys(tracks),
+    tracks,
+    bars,
+  })
+  if (!expanded) return
+  pushChannels(context.rows, tracks)
+  pushLanes(context.rows, context.lanesOfNode.get(key) ?? [])
+}
+
+function subjectName(named: ReadonlyMap<string, string>, nodeId: string, bone?: string): string {
+  const plain = named.get(nodeId) ?? nodeId
+  return bone ? `${plain} · ${bone}` : plain
+}
+
+function pushChannels(rows: AnimationRow[], tracks: readonly AnimationTrack[]): void {
+  for (const track of tracks)
+    rows.push({ kind: 'channel', id: track.id, name: track.name, height: CHANNEL_HEIGHT, track })
+}
+
+function pushLanes(rows: AnimationRow[], lanes: readonly SheetLane[]): void {
+  for (const [rank, lane] of lanes.entries()) {
+    rows.push({
+      kind: 'lane',
+      id: laneKey(lane.nodeId, lane.laneId),
+      name: lane.name,
+      height: CHANNEL_HEIGHT,
+      nodeId: lane.nodeId,
+      laneId: lane.laneId,
+      last: rank === lanes.length - 1,
+      blocks: lane.blocks,
+    })
+  }
 }
 
 /** The bars one camera's line carries, in the order the document lays its shots down. */

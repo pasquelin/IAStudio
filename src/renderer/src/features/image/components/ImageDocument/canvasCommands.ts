@@ -7,40 +7,30 @@ import { useCanvasViews } from '@/stores/canvasViews'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from '../../canvasView'
 import { turnPort } from '../../turnPort'
 
+const VIEW_COMMANDS: Partial<Record<CommandId, (documentId: string) => void>> = {
+  'canvas.zoomIn': zoomIn,
+  'canvas.zoomOut': zoomOut,
+  'canvas.zoomFit': zoomToFit,
+  'canvas.zoomActual': zoomToActual,
+  'canvas.rulers': id => toggleView(id, 'rulers'),
+  'canvas.guides': id => toggleView(id, 'guides'),
+  'canvas.grid': id => toggleView(id, 'grid'),
+  'canvas.snap': id => toggleView(id, 'snap'),
+  'canvas.clearGuides': clearGuides,
+}
+
 /**
  * The commands of an image that read nothing but its stores, reached the same way from the tab
  * and from a headless run. What needs the engine on screen — a crop, a mask, a merge, an export,
  * the brush — stays with the tab, the only thing that has one.
  */
 export function runCanvasCommand(documentId: string, command: CommandId): CommandAnswer {
+  const viewCommand = VIEW_COMMANDS[command]
+  if (viewCommand) {
+    viewCommand(documentId)
+    return true
+  }
   switch (command) {
-    case 'canvas.zoomIn':
-      zoomIn(documentId)
-      return true
-    case 'canvas.zoomOut':
-      zoomOut(documentId)
-      return true
-    case 'canvas.zoomFit':
-      zoomToFit(documentId)
-      return true
-    case 'canvas.zoomActual':
-      zoomToActual(documentId)
-      return true
-    case 'canvas.rulers':
-      toggleView(documentId, 'rulers')
-      return true
-    case 'canvas.guides':
-      toggleView(documentId, 'guides')
-      return true
-    case 'canvas.grid':
-      toggleView(documentId, 'grid')
-      return true
-    case 'canvas.snap':
-      toggleView(documentId, 'snap')
-      return true
-    case 'canvas.clearGuides':
-      clearGuides(documentId)
-      return true
     case 'canvas.selectAll': {
       const stack = canvasOf(useCanvases.getState(), documentId)
       useCanvasViews.getState().setSelection(documentId, {

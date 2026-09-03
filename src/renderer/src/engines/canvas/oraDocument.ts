@@ -13,7 +13,6 @@ import type { LayerPixels } from './CanvasEngine'
 import { layerPixelPath, layerPixelsNamed } from './layerPixelPath'
 import {
   IDENTITY,
-  deserializeCanvas,
   isGroup,
   layerBase,
   serializeCanvas,
@@ -22,6 +21,7 @@ import {
   type Layer,
   type PixelLayer,
 } from './canvasState'
+import { deserializeCanvas } from './canvasStatePersistence'
 
 const PLAIN = 'svg:src-over'
 

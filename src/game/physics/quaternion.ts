@@ -93,8 +93,23 @@ export function quaternionLookingAt(direction: Vector3, into = restingTurn()): Q
   const upY = nudged * sideX - backX * sideZ
   const upZ = -backY * sideX
 
-  // The basis as a matrix, by column: side, up, back. Named rather than indexed, because the row
-  // and the column are exactly what a sign error in this extraction swaps.
+  return quaternionFromBasis({ backX, backY, sideX, sideZ, upX, upY, upZ, nudged }, into)
+}
+
+type LookBasis = {
+  backX: number
+  backY: number
+  sideX: number
+  sideZ: number
+  upX: number
+  upY: number
+  upZ: number
+  nudged: number
+}
+
+function quaternionFromBasis(basis: LookBasis, into: Quaternion): Quaternion {
+  const { backX, backY, sideX, sideZ, upX, upY, upZ, nudged } = basis
+
   const trace = sideX + upY + nudged
   if (trace > 0) {
     const scale = 0.5 / Math.sqrt(trace + 1)

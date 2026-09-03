@@ -1,71 +1,41 @@
-import type { CommandId } from '@shared/domain/command'
-import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { posterUrl } from '@shared/domain/asset'
+import { mediaExtentOf, type MediaExtent } from '@/engines/timeline/commands'
 import {
-  exportCutAs,
-  exportOtio,
-  exportOtioz,
-  exportStems,
-} from '@/features/shell/components/otioExport'
-import type { Command } from '@/engines/core/history'
-import {
-  addClips,
-  addClipsOnNewTracks,
-  mediaExtentOf,
-  removeClip,
-  splitClip,
-  unlinkClip,
-  type MediaExtent,
-} from '@/engines/timeline/commands'
-import {
-  beginGesture,
   commandForGesture,
   viewportForGesture,
   type Gesture,
 } from '@/engines/timeline/interactions'
-import { newTracksForAsset, opensTrackFor, placementsForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
-import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
+import { cursorAt, xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
 import type { Point, Size } from '@/engines/core/geometry'
 import { paintOn } from '@/engines/core/canvas2d'
 import { createFrameCoalesce } from '@/engines/core/frameCoalesce'
 import {
-  clipById,
-  clipEnd,
   snapToFrame,
   type Clip,
   type SequenceState,
   type Us,
 } from '@/engines/timeline/timelineState'
-import { clampViewport, fitToWidth, zoomAt, ZOOM_STEP } from '@/engines/timeline/viewport'
-import { assetIdFromDrag, carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
+import { clampViewport } from '@/engines/timeline/viewport'
+import { carriesAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
-import { showContextMenu } from '@/helpers/contextMenu'
 import { cachedImage } from '@/helpers/imageCache'
-import { carriesScene, droppedSceneId } from '@/helpers/sceneDrag'
+import { carriesScene } from '@/helpers/sceneDrag'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
-import { useShortcuts } from '@/hooks/useShortcuts'
+import { useTimelineCanvasCommands } from '@/hooks/useTimelineCanvasCommands'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { useViewFollowsHead } from '@/hooks/useViewFollowsHead'
 import { assetsById, useAssets } from '@/stores/assets'
-import { documentExportName, useDocuments } from '@/stores/documents'
-import { runTask } from '@/stores/tasks'
+import { useDocuments } from '@/stores/documents'
 import { peaksOf, usePeaks } from '@/stores/peaks'
-import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { playbackHeadOf, usePlayback } from '@/stores/playback'
-import {
-  addSceneToSequence,
-  selectClipIn,
-  sequenceOf,
-  sequenceStore,
-  useSequences,
-} from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timelineView'
-import { exportSequence } from './sequenceExport'
-import { runSequenceCommand, shownSequence } from './sequenceCommands'
-import type { CommandAnswer } from '@/services/commandBus'
+import { createTimelineDropHandler } from './timelineDrop'
+import { createTimelineContextMenu } from './timelineContextMenu'
+import { createTimelinePointerDown } from './timelinePointerDown'
 import type { VideoToolId } from '../videoTools'
 
 export type TimelineCanvasProps = {
@@ -81,6 +51,16 @@ export type TimelineCanvasProps = {
    * make consistent would be the only one with a dead keyboard.
    */
   history?: boolean
+}
+
+function pointAt(event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>): Point {
+  const bounds = event.currentTarget.getBoundingClientRect()
+  return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
+}
+
+function writePlayhead(documentId: string, base: SequenceState, playhead: Us): void {
+  const store = useSequences.getState()
+  if (sequenceStore.hasState(store, documentId)) store.replace(documentId, { ...base, playhead })
 }
 
 export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
@@ -192,134 +172,39 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     setViewport,
   )
 
-  // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
-  // and the whole window scrolls behind the timeline instead.
   useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
 
-  const run = useCallback(
-    (command: CommandId): CommandAnswer | void => {
-      // Left alone where the host owns the history — see `history`. Not the same as being
-      // absent: the key is still swallowed by this scope, and it is the host that answers it.
-      if (!history && (command === 'sequence.undo' || command === 'sequence.redo')) return
-
-      // What reads nothing but the stores is shared with a headless run — see
-      // `runSequenceCommand`. What is left below knows the strip's width, or writes a file.
-      const shared = runSequenceCommand(documentId, command)
-      if (shared !== false) return shared
-
-      const state = shownSequence(documentId, sequenceOf(useSequences.getState(), documentId))
-      const current = latest.current.viewport
-      const middle = size.current.width / 2
-
-      switch (command) {
-        // `sequence.playPause` is deliberately absent: the programme monitor listens on the
-        // same scope and drives the same transport, and both handling it played then paused.
-        // Both exports name their file after the tab: one writes a film of the montage, the
-        // other the montage itself.
-        // The film of the montage, which reported and stopped long before this — and had nowhere
-        // to say so, so minutes of encoding showed nothing and offered no way out.
-        case 'sequence.export': {
-          const title = documentExportName(useDocuments.getState(), documentId, documentId)
-          void runTask(title, (_id, watch) => exportSequence({ sequence: state, title, ...watch }))
-          return
-        }
-        case 'sequence.exportCut':
-          void exportOtio(documentId)
-          return
-        case 'sequence.exportBundle':
-          void exportOtioz(documentId)
-          return
-        case 'sequence.exportEdl':
-          void exportCutAs(documentId, 'montage.edl')
-          return
-        case 'sequence.exportFcpxml':
-          void exportCutAs(documentId, 'montage.fcpxml')
-          return
-        case 'sequence.exportStems':
-          void exportStems(documentId)
-          return
-        case 'sequence.zoomIn':
-          return setViewport(zoomAt(current, ZOOM_STEP, middle))
-        case 'sequence.zoomOut':
-          return setViewport(zoomAt(current, 1 / ZOOM_STEP, middle))
-        case 'sequence.fit':
-          return setViewport(fitToWidth(state, size.current.width))
-        default:
-          return
-      }
-    },
-    [documentId, history, setViewport],
-  )
-
-  // The strip is only mounted for the document in front, so it always listens while it is there.
-  useShortcuts({ scope: 'sequence', enabled: true, onCommand: run })
-
-  const pointAt = (
-    event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>,
-  ): Point => {
-    const bounds = event.currentTarget.getBoundingClientRect()
-    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top }
-  }
-
-  const writePlayhead = (base: SequenceState, playhead: Us): void => {
-    const store = useSequences.getState()
-    // A frame still owed when the tab closes is flushed on unmount, and `replace` is how a
-    // document ARRIVES: unguarded, it built this montage back for an id already handed back.
-    if (!sequenceStore.hasState(store, documentId)) return
-    store.replace(documentId, { ...base, playhead })
-  }
+  useTimelineCanvasCommands({
+    documentId,
+    history,
+    sequence: () => latest.current.sequence,
+    viewport: () => latest.current.viewport,
+    width: () => size.current.width,
+    setViewport,
+  })
 
   const scrubTo = (base: SequenceState, point: Point, immediate = false): void => {
     const playhead = snapToFrame(xToTime(point.x, viewport), base.settings)
     if (immediate) {
-      writePlayhead(base, playhead)
+      writePlayhead(documentId, base, playhead)
       return
     }
     // One seek per frame: a pointermove is faster than a GOP, and each extra ask was dropped.
-    scrubCoalesce.current.schedule(playhead, next => writePlayhead(base, next))
+    scrubCoalesce.current.schedule(playhead, next => writePlayhead(documentId, base, next))
   }
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
-    // A right press raises the menu and must not start anything else. It arrives here first —
-    // `pointerdown` precedes `contextmenu` — so the clip was picked up: it followed the pointer
-    // while the menu was open, and the drag's own pointer-up then rewound the montage to where
-    // the press began, over whatever the menu had just done. Delete looked like it moved the
-    // clip and deleted nothing.
-    //
-    // `ctrlKey` with it: on macOS a control-click IS the context menu, and it reports button 0.
-    if (event.button !== 0 || event.ctrlKey) return
-
-    const point = pointAt(event)
-
-    if (tool === 'blade') {
-      const target = hitTest(sequence, viewport, point)
-      const clipId = target && 'clipId' in target ? target.clipId : null
-      if (clipId) {
-        const at = xToTime(point.x, viewport)
-        useSequences.getState().runCommand(documentId, splitClip(clipId, at))
-      }
-      return
-    }
-
-    const gesture = beginGesture(sequence, viewport, point, tool === 'hand')
-    if (!gesture) {
-      // The montage's own selection only: what a shelf or an explorer has picked beside it is
-      // not this canvas's to empty, and clearing it took the generator's sources away with it.
-      selectClipIn(documentId, null)
-      return
-    }
-
-    event.currentTarget.setPointerCapture(event.pointerId)
-
-    // Neither moves the montage, so neither selects anything either.
-    if (gesture.kind === 'scrub' || gesture.kind === 'pan') {
-      dragging.current = { gesture, base: sequence }
-      if (gesture.kind === 'scrub') scrubTo(sequence, point, true)
-      return
-    }
-
-    // Selecting is not an edit either, and the clip must highlight before the drag moves it.
-    dragging.current = { gesture, base: selectClipIn(documentId, gesture.clipId) }
+    createTimelinePointerDown({
+      documentId,
+      tool,
+      sequence,
+      viewport,
+      setDragging: next => {
+        dragging.current = next
+      },
+      pointAt,
+      scrubTo,
+    })(event)
   }
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
@@ -385,124 +270,21 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
    * reach them, so a montage offered nothing to a right-click and nothing at all to whoever had
    * not learnt them. The labels are the commands' own, so a row and its key never drift apart.
    */
-  const onContextMenu = (event: PointerEvent<HTMLCanvasElement>): void => {
-    event.preventDefault()
+  const onContextMenu = createTimelineContextMenu({
+    documentId,
+    viewport,
+    pointAt,
+    labels: {
+      split: t('commands.sequenceSplit.title'),
+      splitHelp: t('commands.sequenceSplit.help'),
+      unlink: t('commands.sequenceUnlink.title'),
+      unlinkHelp: t('commands.sequenceUnlink.help'),
+      remove: t('commands.sequenceDelete.title'),
+      removeHelp: t('commands.sequenceDelete.help'),
+    },
+  })
 
-    const store = useSequences.getState()
-    // The head as it is seen here too: the row below cuts at it, and says so.
-    const state = shownSequence(documentId, sequenceOf(store, documentId))
-    const target = hitTest(state, viewport, pointAt(event))
-    if (!target || !('clipId' in target)) return
-
-    const clip = clipById(state, target.clipId)
-    if (!clip) return
-
-    // Selected first: the menu acts on this clip, and a menu whose rows edit something other
-    // than what is highlighted is a menu nobody trusts.
-    selectClipIn(documentId, clip.id)
-
-    const run = (command: Command<SequenceState>) => (): void =>
-      useSequences.getState().runCommand(documentId, command)
-
-    void showContextMenu([
-      {
-        label: t('commands.sequenceSplit.title'),
-        icon: mdiContentCut,
-        tooltip: t('commands.sequenceSplit.help'),
-        // At the playhead, exactly as the key does — the blade tool is what cuts at the pointer.
-        disabled: state.playhead <= clip.start || state.playhead >= clipEnd(clip),
-        onSelect: run(splitClip(clip.id, state.playhead)),
-      },
-      {
-        label: t('commands.sequenceUnlink.title'),
-        icon: mdiLinkVariantOff,
-        tooltip: t('commands.sequenceUnlink.help'),
-        // Greyed rather than dropped: a menu whose length follows the clip cannot be learnt.
-        disabled: !clip.linkId,
-        onSelect: run(unlinkClip(clip.id)),
-      },
-      {
-        label: t('commands.sequenceDelete.title'),
-        icon: mdiDeleteOutline,
-        tooltip: t('commands.sequenceDelete.help'),
-        onSelect: run(removeClip(clip.id)),
-      },
-    ])
-  }
-
-  const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
-    event.preventDefault()
-
-    const sceneId = droppedSceneId(event)
-    if (sceneId) {
-      const dropped = pointAt(event)
-      const onto = hitTest(sequence, viewport, dropped)
-      // The ruler scrubs; it lays nothing down, exactly as it refuses an asset.
-      if (onto?.kind === 'ruler') return
-
-      event.stopPropagation()
-      addSceneToSequence(
-        documentId,
-        sceneId,
-        // The scene's own animation is how long the shot lasts — read from whichever copy the
-        // studio already holds, and left to the five-second default while its file is on its way.
-        montageSceneOf(sceneId)?.animation.duration ?? null,
-        xToTime(dropped.x, viewport),
-        onto?.trackId,
-      )
-      // Asked for now so the clip has something to draw: without a tab holding it, nothing else
-      // would ever read this document off disk.
-      void loadSceneSource(sceneId)
-      return
-    }
-
-    const assetId = assetIdFromDrag(event)
-    if (!assetId) return
-
-    // Where it landed is read HERE and carried into the promise: both the pointer position and
-    // `dataTransfer` are gone once this handler returns, so a library asset fetched first would
-    // otherwise land wherever the cursor happened to be a download later.
-    const point = pointAt(event)
-    const target = hitTest(sequence, viewport, point)
-    // Left to bubble on purpose: the ruler takes no clip, and a drop this surface does not use
-    // is one the shell should still answer by opening the asset. Below the last row the same
-    // holds for a kind no track would be opened for — a rush over a sound montage.
-    if (target?.kind === 'ruler') return
-    if (!target && !opensTrackFor(sequence, draggedAssetType(event))) return
-
-    // Taken from here on — see `AssetDropTarget`, which consumes for the same reason.
-    event.stopPropagation()
-
-    const start = xToTime(point.x, viewport)
-    const trackId = target?.trackId
-
-    void droppedAsset(event).then(asset => {
-      // Nothing to lay down: a library asset whose fetch was refused has no row, and a clip
-      // pointing at one that was never written reads as missing media for good.
-      if (!asset) return
-
-      // `asset.id`, never the id the drag carried: a library drag carries the CLOUD id, and what
-      // the import wrote is a catalogue row under an id of its own. A clip built on the first
-      // names a row the project does not hold.
-      //
-      // Read out of the store rather than from the render's own `sequence`: a library asset is
-      // fetched first, and the montage may have been edited while it came down.
-      const store = useSequences.getState()
-      const current = sequenceOf(store, documentId)
-
-      // Landed below the last row: the drop opens the rows it needs rather than refusing — a
-      // picture row, and the sound row beside it for a take that carries one.
-      if (!trackId) {
-        if (newTracksForAsset(current, asset).length > 0) {
-          store.runCommand(documentId, addClipsOnNewTracks(asset, asset.id, start))
-        }
-        return
-      }
-
-      const placements = placementsForAsset(current, asset, asset.id, start, trackId)
-      if (placements.length > 0) store.runCommand(documentId, addClips(placements))
-    })
-  }
+  const onDrop = createTimelineDropHandler({ documentId, sequence, viewport, pointAt })
 
   return (
     <canvas

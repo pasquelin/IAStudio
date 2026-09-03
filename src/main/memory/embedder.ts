@@ -107,16 +107,11 @@ export function createEmbedder({
   const ready = async (): Promise<Held | null> => {
     const modelId = chosenId()
     if (modelId === null) {
-      // Chosen away, or uninstalled, while a process was up: it holds weights nothing will ask
-      // for again.
       if (held) letGo()
       return null
     }
 
-    // Another model is another SPACE entirely, so the old weights must go: the vectors already
-    // stored are invalidated by their `model` column, not converted.
     if (held && held.modelId !== modelId) letGo()
-    // The same, for a load still in flight — which `held` cannot say anything about yet.
     if (opening !== null && loading !== modelId) {
       opening = null
       loading = null
@@ -128,8 +123,6 @@ export function createEmbedder({
     }
 
     const answered = await opening
-    // Read back rather than assigned blind: a load that started for another model settled while
-    // this one waited, and its client is not the one this caller asked for.
     if (loading !== modelId) return await ready()
 
     held = answered

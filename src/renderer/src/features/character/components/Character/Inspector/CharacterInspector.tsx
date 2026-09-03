@@ -171,22 +171,19 @@ export function CharacterInspector({ assetId }: CharacterInspectorProps) {
 
             {/* A handle the joint reaches for: the bones above it turn to follow, which is what
                   puts a foot on the ground and a hand on a grip. */}
-            {reaching ? (
-              <Button onClick={() => run(assetId, removeCharacterIkChain(reaching.id))}>
-                {t('inspector.removeHandle')}
-              </Button>
-            ) : (
-              <Button onClick={() => run(assetId, addCharacterIkChain(picked))}>
-                {t('inspector.addHandle')}
-              </Button>
+            {characterHandle(
+              reaching?.id ?? null,
+              () => run(assetId, removeCharacterIkChain(reaching?.id ?? '')),
+              () => run(assetId, addCharacterIkChain(picked)),
+              t,
             )}
           </>
         )}
 
-        {rig && rigHandBones(rig.bones) && (
-          <Button onClick={() => run(assetId, addCharacterHands(measured(documentId, nodeId)))}>
-            {t('inspector.addHands')}
-          </Button>
+        {characterHands(
+          rig?.bones,
+          () => run(assetId, addCharacterHands(measured(documentId, nodeId))),
+          t,
         )}
       </PropertySection>
 
@@ -200,6 +197,28 @@ export function CharacterInspector({ assetId }: CharacterInspectorProps) {
       </PropertySection>
     </>
   )
+}
+
+function characterHandle(
+  reachingId: string | null,
+  remove: () => void,
+  add: () => void,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  return reachingId ? (
+    <Button onClick={remove}>{t('inspector.removeHandle')}</Button>
+  ) : (
+    <Button onClick={add}>{t('inspector.addHandle')}</Button>
+  )
+}
+
+function characterHands(
+  bones: Parameters<typeof rigHandBones>[0] | undefined,
+  add: () => void,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  if (!bones || !rigHandBones(bones)) return null
+  return <Button onClick={add}>{t('inspector.addHands')}</Button>
 }
 
 function roleOf(

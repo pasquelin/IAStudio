@@ -1,4 +1,4 @@
-import { refused } from '@shared/domain/assistant'
+import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { GameExportRequest } from '@shared/domain/gameExport'
 import { scenePayloadOf } from '@/features/shell/sceneDocument'
 
@@ -16,71 +16,97 @@ import { runtimeAssetIds } from '@/game/runtimeAssetIds'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
-  'game.export': async (input, wire) => {
-    const project = useProject.getState().project
-    const bridge = getBridge()
-    if (!bridge) return refused('noBridge', 'this window is not connected to the studio process')
-    if (!project)
-      return refused(
-        'noProject',
-        'no project is open, and a game is exported out of one — projects.list answers what there is, and project.open opens one',
-      )
+  'game.export': exportGame,
+}
 
-    // 🛑 Refused BEFORE the scenes are composed: with no folder named, the main process raises a
-    // system picker, which a caller on the wire can neither fill in nor see.
-    const folder = textOf(input, 'folder')
-    if (wire && !folder)
-      return refused(
-        'nativeDialog',
-        'with no "folder" named the studio raises a picker of the operating system, which a caller on the wire can neither fill nor read — name "folder" and send this again',
-      )
+async function exportGame(input: Record<string, unknown>, wire?: unknown): Promise<ActionOutcome> {
+  const project = useProject.getState().project
+  const bridge = getBridge()
+  if (!bridge) return refused('noBridge', 'this window is not connected to the studio process')
+  if (!project)
+    return refused(
+      'noProject',
+      'no project is open, and a game is exported out of one — projects.list answers what there is, and project.open opens one',
+    )
 
-    let scenes: GameExportRequest['scenes']
-    try {
-      scenes = await scenesOfProject()
-    } catch (error) {
-      return refused('failed', messageOf(error))
-    }
-    if (scenes.length === 0) return refused('badInput', 'this project holds no scene to export')
+  const folder = textOf(input, 'folder')
+  if (wire && !folder)
+    return refused(
+      'nativeDialog',
+      'with no "folder" named the studio raises a picker of the operating system, which a caller on the wire can neither fill nor read — name "folder" and send this again',
+    )
 
-    // 🛑 Refused rather than fallen back on: a caller that named a scene and got the FIRST one
-    // exported the wrong game, and the answer said `ok`.
-    const wanted = textOf(input, 'entryScene') ?? ''
-    const named = wanted.length === 0 ? null : sceneDocumentNamed(wanted)
-    const entry = named === null ? scenes[0] : scenes.find(one => one.id === named)
-    if (!entry) return refused('badInput', `no scene named "${wanted}"`)
+  const loaded = await loadScenes()
+  if ('refusal' in loaded) return loaded.refusal
+  const scenes = loaded.scenes
+  if (scenes.length === 0) return refused('badInput', 'this project holds no scene to export')
 
-    const compiled = await compiledScripts()
-    const request: GameExportRequest = {
-      title: textOf(input, 'title') ?? projectName(project.path),
-      entryScene: entry.id,
-      scenes,
-      scripts: compiled.modules.map(one => ({ script: one.script, code: one.code })),
-      ...(folder ? { folder } : {}),
-    }
+  const entry = entrySceneOf(input, scenes)
+  if (typeof entry === 'string') return refused('badInput', entry)
 
-    // 🛑 Caught like the listing above: the main process THROWS `no game runtime is built` — the
-    // ordinary state of a checkout, `resources/gameRuntime` being git-ignored — and an assistant
-    // is a caller that has to be answered, never one a rejection may reach.
-    let outcome: Awaited<ReturnType<typeof bridge.game.export>>
-    try {
-      outcome = await bridge.game.export(request)
-    } catch (error) {
-      return refused('failed', messageOf(error))
-    }
-    // The main process answers `null` for both, and a caller that NAMED a folder has to be told
-    // the name may be what was refused — one folder, inside the project.
-    if (!outcome) {
-      return refused(
-        'declined',
-        'no folder was picked, or the name is not one folder of the project',
-      )
-    }
+  const compiled = await compiledScripts()
+  const scripts = compiled.modules.map(one => ({ script: one.script, code: one.code }))
+  const request = gameRequest(input, project.path, entry.id, scenes, scripts, folder)
+  return writeGame(
+    request,
+    compiled.troubles.map(one => one.script),
+  )
+}
 
-    // 🛑 What would NOT compile, said: a script missing from a game with no word about why is
-    // the defect this whole family exists to make impossible.
-    return { ok: true, data: { ...outcome, troubles: compiled.troubles.map(one => one.script) } }
-  },
+function gameRequest(
+  input: Record<string, unknown>,
+  projectPath: string,
+  entryScene: string,
+  scenes: GameExportRequest['scenes'],
+  scripts: GameExportRequest['scripts'],
+  folder: string | null,
+): GameExportRequest {
+  return {
+    title: textOf(input, 'title') ?? projectName(projectPath),
+    entryScene,
+    scenes,
+    scripts,
+    ...(folder ? { folder } : {}),
+  }
+}
+
+async function loadScenes(): Promise<
+  { scenes: GameExportRequest['scenes'] } | { refusal: ActionOutcome }
+> {
+  try {
+    return { scenes: await scenesOfProject() }
+  } catch (error) {
+    return { refusal: refused('failed', messageOf(error)) }
+  }
+}
+
+function entrySceneOf(
+  input: Record<string, unknown>,
+  scenes: GameExportRequest['scenes'],
+): GameExportRequest['scenes'][number] | string {
+  const wanted = textOf(input, 'entryScene') ?? ''
+  const named = wanted.length === 0 ? null : sceneDocumentNamed(wanted)
+  return (
+    (named === null ? scenes[0] : scenes.find(one => one.id === named)) ??
+    `no scene named "${wanted}"`
+  )
+}
+
+async function writeGame(
+  request: GameExportRequest,
+  troubles: readonly string[],
+): Promise<ActionOutcome> {
+  const bridge = getBridge()
+  if (!bridge) return refused('noBridge', 'this window is not connected to the studio process')
+
+  try {
+    const outcome = await bridge.game.export(request)
+    return outcome
+      ? { ok: true, data: { ...outcome, troubles } }
+      : refused('declined', 'no folder was picked, or the name is not one folder of the project')
+  } catch (error) {
+    return refused('failed', messageOf(error))
+  }
 }
 
 /** Every scene of the project, as the glTF a save writes — the open tab's when there is one. */

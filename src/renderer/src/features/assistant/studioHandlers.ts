@@ -8,6 +8,7 @@ import { mounted, NO_SCENE } from './sceneHandlers'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
+import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 
 /** The handlers of `STUDIO_ACTIONS`, which says why there are three of them. */
 export const STUDIO_HANDLERS: ActionHandlers = {
@@ -36,33 +37,7 @@ export const STUDIO_HANDLERS: ActionHandlers = {
     }
     const node = nodeAimed(scene, ref?.kind === 'entity' ? ref.id : named)
     if (!node) return refused('notFound', `no node "${named}" in the scene in front, by id or name`)
-
-    return {
-      ok: true,
-      data: {
-        id: node.id,
-        name: node.name,
-        type: node.type,
-        transform: node.transform,
-        components: (node.components ?? []).map(component => ({
-          type: component.type,
-          properties: component,
-          // The descriptor, so a model knows what it may WRITE without a second call.
-          fields: isComponentType(component.type)
-            ? descriptorOf(component.type).fields.map(describeField)
-            : [],
-        })),
-        relations: {
-          parent: node.parentId ?? null,
-          children: scene.nodes.filter(one => one.parentId === node.id).map(one => one.id),
-        },
-        available: {
-          components: COMPONENT_TYPES.filter(
-            type => !(node.components ?? []).some(one => one.type === type),
-          ),
-        },
-      },
-    }
+    return { ok: true, data: describedNode(node, scene) }
   },
 
   'studio.docs': input => {
@@ -90,6 +65,31 @@ export const STUDIO_HANDLERS: ActionHandlers = {
       },
     }
   },
+}
+
+function describedNode(node: SceneNode, scene: SceneState): Record<string, unknown> {
+  return {
+    id: node.id,
+    name: node.name,
+    type: node.type,
+    transform: node.transform,
+    components: (node.components ?? []).map(component => ({
+      type: component.type,
+      properties: component,
+      fields: isComponentType(component.type)
+        ? descriptorOf(component.type).fields.map(describeField)
+        : [],
+    })),
+    relations: {
+      parent: node.parentId ?? null,
+      children: scene.nodes.filter(one => one.parentId === node.id).map(one => one.id),
+    },
+    available: {
+      components: COMPONENT_TYPES.filter(
+        type => !(node.components ?? []).some(one => one.type === type),
+      ),
+    },
+  }
 }
 
 /** One field as a model reads it: the label resolved, and the bounds it must respect. */

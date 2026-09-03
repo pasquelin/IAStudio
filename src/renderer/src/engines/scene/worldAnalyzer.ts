@@ -151,142 +151,183 @@ function* optimizationSteps(
   runtimeNodes: readonly SceneNode[],
   includeBakeCandidates: boolean,
 ): Generator<void, OptimizationPlan> {
-  const animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
-  const excluded = behavioralGroupingExclusions(runtimeNodes, animated)
-  // Enumerated ONCE per node: read again for the classification and again for the grouping, a
-  // model of P primitives paid three full `traverse` walks for one pass.
-  const drawn = new Set<Mesh>()
-  const seenStats = { geometries: new Set<unknown>(), textures: new Set<unknown>() }
-  const sceneStats = { ...EMPTY_STATS }
-  const geometryArrays = new Set<ArrayBufferView>()
-  const geometryUses = new Map<BufferGeometry, number>()
-  const materialUses = new Map<Material, number>()
-  const textureUses = new Map<Texture, number>()
-  let geometryBytes = 0
-  let avoidedGeometryBytes = 0
-  let avoidedTextureBytes = 0
-  let sharedMaterials = 0
-  const candidateGroups = new Map<string, CandidateGroup>()
-  const batchGroups = new Map<string, CandidateGroup>()
-  const keyOf = withFlags(shapeAndPaint())
-  const batchKey = batchKeyOf()
-  const classifications: ClassifiedObject[] = []
-  const warnings: OptimizationWarning[] = []
-  let visibleObjects = 0
+  const analysis = new WorldAnalysis(state, host, objectOf, policy, runtimeNodes)
+  yield* analysis.scan()
+  return analysis.plan(includeBakeCandidates)
+}
 
-  for (const node of state.nodes) {
-    const object = objectOf(node.id)
-    const own: Mesh[] = []
-    if (object) yield* collectOwnMeshes(node, object, own)
-    const shown = object && isDrawn(object, host) ? own.filter(mesh => isRendered(mesh, host)) : []
-    if (shown.length > 0) visibleObjects += 1
-    for (const mesh of shown) {
-      drawn.add(mesh)
-      const added = statsOf([mesh], seenStats)
-      sceneStats.triangles += added.triangles
-      sceneStats.vertices += added.vertices
-      sceneStats.draws += added.draws
-      sceneStats.textureBytes += added.textureBytes
+class WorldAnalysis {
+  private readonly animated: Set<string>
+  private readonly excluded: ReadonlySet<string>
+  private readonly drawn = new Set<Mesh>()
+  private readonly seenStats = { geometries: new Set<unknown>(), textures: new Set<unknown>() }
+  private readonly sceneStats = { ...EMPTY_STATS }
+  private readonly geometryArrays = new Set<ArrayBufferView>()
+  private readonly geometryUses = new Map<BufferGeometry, number>()
+  private readonly materialUses = new Map<Material, number>()
+  private readonly textureUses = new Map<Texture, number>()
+  private readonly candidateGroups = new Map<string, CandidateGroup>()
+  private readonly batchGroups = new Map<string, CandidateGroup>()
+  private readonly keyOf = withFlags(shapeAndPaint())
+  private readonly batchKey = batchKeyOf()
+  private readonly classifications: ClassifiedObject[] = []
+  private readonly warnings: OptimizationWarning[] = []
+  private geometryBytes = 0
+  private avoidedGeometryBytes = 0
+  private avoidedTextureBytes = 0
+  private sharedMaterials = 0
+  private visibleObjects = 0
 
-      const geometryUse = geometryUses.get(mesh.geometry) ?? 0
-      geometryUses.set(mesh.geometry, geometryUse + 1)
-      if (geometryUse > 0) avoidedGeometryBytes += geometryByteLength(mesh.geometry)
-      for (const array of geometryArraysOf(mesh.geometry)) {
-        if (geometryArrays.has(array)) continue
-        geometryArrays.add(array)
-        geometryBytes += array.byteLength
+  constructor(
+    private readonly state: Pick<SceneState, 'nodes' | 'animation'>,
+    private readonly host: Object3D,
+    private readonly objectOf: (id: string) => Object3D | undefined,
+    private readonly policy: OptimizationPolicy,
+    private readonly runtimeNodes: readonly SceneNode[],
+  ) {
+    this.animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
+    this.excluded = behavioralGroupingExclusions(runtimeNodes, this.animated)
+  }
+
+  *scan(): Generator<void> {
+    for (const node of this.state.nodes) {
+      const object = this.objectOf(node.id)
+      const own: Mesh[] = []
+      if (object) yield* collectOwnMeshes(node, object, own)
+      const shown =
+        object && isDrawn(object, this.host)
+          ? own.filter(mesh => isRendered(mesh, this.host))
+          : []
+      if (shown.length > 0) this.visibleObjects += 1
+      for (const mesh of shown) {
+        this.recordMesh(mesh)
+        yield
       }
-      const worn = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      for (const material of worn) {
-        const materialUse = materialUses.get(material) ?? 0
-        materialUses.set(material, materialUse + 1)
-        if (materialUse > 0) sharedMaterials += 1
-        for (const texture of texturesOf(material)) {
-          const textureUse = textureUses.get(texture) ?? 0
-          textureUses.set(texture, textureUse + 1)
-          if (textureUse > 0) avoidedTextureBytes += textureBytesOf(texture)
-        }
-      }
-      yield
+      const found = classificationsOf(node, object, this.animated.has(node.id), own)
+      this.classifications.push({ id: node.id, classifications: found })
+      const reason = warningOf(found)
+      if (reason) this.warnings.push({ nodeId: node.id, reason })
+      if (found.includes('INSTANCABLE')) yield* this.recordCandidates(node, shown)
+      else yield
     }
+  }
 
-    const nodeClassifications = classificationsOf(node, object, animated.has(node.id), own)
-    classifications.push({ id: node.id, classifications: nodeClassifications })
-
-    const reason = warningOf(nodeClassifications)
-    if (reason) warnings.push({ nodeId: node.id, reason })
-    if (!nodeClassifications.includes('INSTANCABLE')) {
-      yield
-      continue
+  private recordMesh(mesh: Mesh): void {
+    this.drawn.add(mesh)
+    const added = statsOf([mesh], this.seenStats)
+    this.sceneStats.triangles += added.triangles
+    this.sceneStats.vertices += added.vertices
+    this.sceneStats.draws += added.draws
+    this.sceneStats.textureBytes += added.textureBytes
+    const uses = this.geometryUses.get(mesh.geometry) ?? 0
+    this.geometryUses.set(mesh.geometry, uses + 1)
+    if (uses > 0) this.avoidedGeometryBytes += geometryByteLength(mesh.geometry)
+    for (const array of geometryArraysOf(mesh.geometry)) {
+      if (this.geometryArrays.has(array)) continue
+      this.geometryArrays.add(array)
+      this.geometryBytes += array.byteLength
     }
+    for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      this.recordMaterial(material)
+    }
+  }
 
-    for (const [meshIndex, mesh] of shown.entries()) {
+  private recordMaterial(material: Material): void {
+    const uses = this.materialUses.get(material) ?? 0
+    this.materialUses.set(material, uses + 1)
+    if (uses > 0) this.sharedMaterials += 1
+    for (const texture of texturesOf(material)) {
+      const textureUses = this.textureUses.get(texture) ?? 0
+      this.textureUses.set(texture, textureUses + 1)
+      if (textureUses > 0) this.avoidedTextureBytes += textureBytesOf(texture)
+    }
+  }
+
+  private *recordCandidates(node: SceneNode, meshes: readonly Mesh[]): Generator<void> {
+    for (const [index, mesh] of meshes.entries()) {
       if (Array.isArray(mesh.material)) continue
-      const unit = stableKey([node.id, meshIndex])
-      if (!excluded.has(node.id)) {
-        collectCandidate(candidateGroups, keyOf(node, mesh), node, unit, 'instance')
-      }
-      if (!excluded.has(node.id)) {
-        collectCandidate(batchGroups, batchKey(node, mesh), node, unit, 'batch')
+      const unit = stableKey([node.id, index])
+      if (!this.excluded.has(node.id)) {
+        collectCandidate(this.candidateGroups, this.keyOf(node, mesh), node, unit, 'instance')
+        collectCandidate(this.batchGroups, this.batchKey(node, mesh), node, unit, 'batch')
       }
       yield
     }
   }
 
-  const allInstanceCandidates = [...candidateGroups].map(([key, group]) => ({
+  plan(includeBakeCandidates: boolean): OptimizationPlan {
+    const all = candidateRows(this.candidateGroups)
+    const instances = acceptedCandidates(all, this.policy.minInstancesPerGroup)
+    const batches = acceptedCandidates(candidateRows(this.batchGroups), 2)
+    const instancedUnits = acceptedUnits(all, this.policy.minInstancesPerGroup)
+    const saved = savedDraws(instances, this.batchGroups, instancedUnits)
+    return {
+      classifications: this.classifications,
+      instances,
+      bakeCandidates: includeBakeCandidates
+        ? bakeCandidatesOf(this.state.nodes, this.runtimeNodes, this.animated)
+        : [],
+      batches,
+      warnings: this.warnings,
+      measured: this.metrics(),
+      estimated: this.impact(saved),
+    }
+  }
+
+  private metrics(): OptimizationMetrics {
+    return {
+      ...this.sceneStats,
+      objects: this.state.nodes.length,
+      visibleObjects: this.visibleObjects,
+      meshes: this.drawn.size,
+      geometryBytes: this.geometryBytes,
+      sharedMaterials: this.sharedMaterials,
+    }
+  }
+
+  private impact(saved: number): OptimizationImpact {
+    return {
+      drawCallsBefore: this.sceneStats.draws,
+      drawCallsAfter: Math.max(0, this.sceneStats.draws - saved),
+      avoidedGeometryBytes: this.avoidedGeometryBytes,
+      avoidedTextureBytes: this.avoidedTextureBytes,
+    }
+  }
+}
+
+type CandidateRow = InstanceCandidate & { units: Set<string>; forced: boolean }
+
+function candidateRows(groups: ReadonlyMap<string, CandidateGroup>): CandidateRow[] {
+  return [...groups].map(([key, group]) => ({
     key,
     sourceIds: [...group.ids].sort(byCodeUnit),
     meshCount: group.units.size,
     units: group.units,
     forced: group.forced,
   }))
-  const instances = allInstanceCandidates
-    .filter(group => group.forced || group.meshCount >= policy.minInstancesPerGroup)
-    .map(group => ({ key: group.key, sourceIds: group.sourceIds, meshCount: group.meshCount }))
-    .sort((one, other) => byCodeUnit(one.key, other.key))
-  const bakeCandidates = includeBakeCandidates
-    ? bakeCandidatesOf(state.nodes, runtimeNodes, animated)
-    : []
-  const batches = [...batchGroups]
-    .filter(([, group]) => group.forced || group.units.size >= 2)
-    .map(([key, group]) => ({
-      key,
-      sourceIds: [...group.ids].sort(byCodeUnit),
-      meshCount: group.units.size,
-    }))
-    .sort((one, other) => byCodeUnit(one.key, other.key))
-  const instancedUnits = new Set(
-    allInstanceCandidates
-      .filter(group => group.forced || group.meshCount >= policy.minInstancesPerGroup)
-      .flatMap(group => [...group.units]),
-  )
-  const instanceSavings = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
-  const batchSavings = [...batchGroups.values()].reduce((saved, group) => {
-    const remaining = [...group.units].filter(unit => !instancedUnits.has(unit)).length
-    return saved + Math.max(0, remaining - 1)
-  }, 0)
+}
 
-  return {
-    classifications,
-    instances,
-    bakeCandidates,
-    batches,
-    warnings,
-    measured: {
-      ...sceneStats,
-      objects: state.nodes.length,
-      visibleObjects,
-      meshes: drawn.size,
-      geometryBytes,
-      sharedMaterials,
-    },
-    estimated: {
-      drawCallsBefore: sceneStats.draws,
-      drawCallsAfter: Math.max(0, sceneStats.draws - instanceSavings - batchSavings),
-      avoidedGeometryBytes,
-      avoidedTextureBytes,
-    },
-  }
+function acceptedCandidates(rows: readonly CandidateRow[], minimum: number): InstanceCandidate[] {
+  return rows
+    .filter(row => row.forced || row.meshCount >= minimum)
+    .map(({ key, sourceIds, meshCount }) => ({ key, sourceIds, meshCount }))
+    .sort((one, other) => byCodeUnit(one.key, other.key))
+}
+
+function acceptedUnits(rows: readonly CandidateRow[], minimum: number): Set<string> {
+  return new Set(rows.filter(row => row.forced || row.meshCount >= minimum).flatMap(row => [...row.units]))
+}
+
+function savedDraws(
+  instances: readonly InstanceCandidate[],
+  batches: ReadonlyMap<string, CandidateGroup>,
+  instanced: ReadonlySet<string>,
+): number {
+  const instanceSavings = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
+  return [...batches.values()].reduce((saved, group) => {
+    const remaining = [...group.units].filter(unit => !instanced.has(unit)).length
+    return saved + Math.max(0, remaining - 1)
+  }, instanceSavings)
 }
 
 function nextTask(): Promise<void> {

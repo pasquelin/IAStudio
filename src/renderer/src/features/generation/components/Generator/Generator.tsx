@@ -1,5 +1,5 @@
 import { mdiCreationOutline } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { isFinished, type Job } from '@shared/domain/job'
@@ -57,7 +57,7 @@ export function Generator() {
   )
   const modelId = useModelForCapability(capability.chosen)
   const role = capability.chosen
-  const family = (role && partsOfRole(role)?.family) ?? null
+  const family = familyOf(role)
 
   const authenticated = useSettings(state => state.auth.authenticated)
   const accounts = useAccounts(state => state.accounts)
@@ -89,7 +89,7 @@ export function Generator() {
   )
   const [deviated, setDeviated] = useState<{ from: AiRoleId; to: LandingTarget } | null>(null)
   const offered = choice.derived
-  const landing = role !== null && deviated?.from === role ? deviated.to : offered
+  const landing = landingOf(role, deviated, offered)
 
   // Before the guards below return early: a hook cannot be called conditionally.
   const cost = useCostEstimate(modelId, fields, contextUse)
@@ -202,31 +202,19 @@ export function Generator() {
    * cloud serves. Read on `authenticated` alone, a Tripo key was refused its own 3D and Image
    * forms, with fifty models the picker was listing right beside it.
    */
-  const served = family === null ? [] : cloudsHeldFor(family, authenticated, accounts)
-
-  if (
-    served.length === 0 &&
-    !onThisMachine &&
-    family !== null &&
-    CATALOGUE_FAMILIES.includes(family)
-  ) {
-    if (!catalogueRead) {
-      return <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
-    }
-
-    return <MissingCredentials icon={mdiCreationOutline} />
-  }
-
-  // A job collects into its own project and nowhere else, so generating without one produces
-  // assets that land nowhere. The panel asks for a project rather than drawing a form whose
-  // button is dead — which is what it did, with one muted line to say why.
-  if (!project) return <NoProject icon={mdiCreationOutline} message={t('generation.noProject')} />
-
-  // Said rather than hidden — § 26: what the workspace holds reaches no operation of this
-  // family, and inventing a conversion to reach one is what ADR-23 forbids.
   if (!capability.chosen) {
     return <EmptyState icon={mdiCreationOutline} message={t('generation.noOperation')} />
   }
+  const blocker = generatorBlocker({
+    family,
+    authenticated,
+    accounts,
+    onThisMachine,
+    catalogueRead,
+    project,
+    t,
+  })
+  if (blocker) return blocker
   const chosen = capability.chosen
 
   // Claimed at the click and settled when the job id arrives: which workspace has somewhere to
@@ -260,7 +248,7 @@ export function Generator() {
       model={{ capability: chosen, modelId, name: descriptor.data?.name, plan }}
       descriptor={{
         pending: descriptor.isPending,
-        error: descriptor.isError ? descriptor.error : null,
+        error: descriptorError(descriptor.isError, descriptor.error),
         ready: descriptor.data !== undefined,
       }}
       sourcesInput={{ inputs, onWithdraw: withdraw }}
@@ -284,11 +272,63 @@ export function Generator() {
         fields,
         onSubmit: generate,
         onValuesChange,
-        busy:
-          refusal !== undefined || submitting || (running !== null && !isFinished(running.status)),
+        busy: generationBusy(refusal, submitting, running),
         preset,
         sources,
       }}
     />
   )
+}
+
+function familyOf(role: AiRoleId | null) {
+  if (!role) return null
+  return partsOfRole(role)?.family ?? null
+}
+
+function landingOf(
+  role: AiRoleId | null,
+  deviated: { from: AiRoleId; to: LandingTarget } | null,
+  offered: LandingTarget | null,
+) {
+  if (role !== null && deviated?.from === role) return deviated.to
+  return offered
+}
+
+type BlockerInput = {
+  family: ReturnType<typeof familyOf>
+  authenticated: boolean
+  accounts: ReturnType<typeof useAccounts.getState>['accounts']
+  onThisMachine: boolean
+  catalogueRead: boolean
+  project: ReturnType<typeof useProject.getState>['project']
+  t: ReturnType<typeof useTranslation>['t']
+}
+
+function generatorBlocker(input: BlockerInput): ReactNode {
+  const served =
+    input.family === null ? [] : cloudsHeldFor(input.family, input.authenticated, input.accounts)
+  const needsCredentials =
+    served.length === 0 &&
+    !input.onThisMachine &&
+    input.family !== null &&
+    CATALOGUE_FAMILIES.includes(input.family)
+  if (needsCredentials && !input.catalogueRead)
+    return <EmptyState icon={mdiCreationOutline} message={input.t('collection.loading')} />
+  if (needsCredentials) return <MissingCredentials icon={mdiCreationOutline} />
+  if (!input.project)
+    return <NoProject icon={mdiCreationOutline} message={input.t('generation.noProject')} />
+  return null
+}
+
+function descriptorError(failed: boolean, error: unknown): unknown {
+  return failed ? error : null
+}
+
+function generationBusy(
+  refusal: string | undefined,
+  submitting: boolean,
+  running: Job | null,
+): boolean {
+  if (refusal !== undefined || submitting) return true
+  return running !== null && !isFinished(running.status)
 }

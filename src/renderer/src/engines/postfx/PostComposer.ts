@@ -272,21 +272,15 @@ export class PostComposer {
     float: boolean,
   ): Chain {
     this.evict()
-
     const target = new WebGLRenderTarget(view.width, view.height, {
-      // Half float only where something works above white — see `wantsFloat`. It is twice the
-      // bandwidth on every buffer of every pass, so it is bought rather than taken.
       type: float ? HalfFloatType : UnsignedByteType,
       minFilter: LinearFilter,
       magFilter: LinearFilter,
       depthBuffer: true,
     })
     const composer = new EffectComposer(this.renderer, target)
-    // The sizes above are already in device pixels; left at the renderer's ratio the composer
-    // would multiply them a second time.
     composer.setPixelRatio(1)
     composer.renderToScreen = false
-
     const context: BuildContext = {
       scene: view.scene,
       camera: view.camera,

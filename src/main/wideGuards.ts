@@ -25,7 +25,7 @@ import { join } from 'node:path'
  * Raised whenever `MOST_SLACK` says the gap has grown, never on a whim: 87 against 97 read on
  * 2026-09-03, when `window-ground.test.ts` took it past ten.
  */
-export const LEAST_GUARDS = 87
+export const LEAST_GUARDS = 92
 
 /**
  * How far the floor may sit below the real count before it stops meaning anything.

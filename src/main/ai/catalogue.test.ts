@@ -137,7 +137,9 @@ describe('the shipped catalogue', () => {
 
     expect(closed).toEqual([])
   })
+})
 
+describe('the shipped generation catalogue', () => {
   it('lists the five panorama models under the skybox employments', () => {
     expect(shippedModelsFor(aiRoleId('skybox', 'txt2skybox')).map(model => model.id)).toEqual([
       'panfusion',
@@ -254,7 +256,9 @@ describe('the shipped catalogue', () => {
 
     expect(bare).toEqual([])
   })
+})
 
+describe('models discovered at runtime', () => {
   it('offers a discovered chat model to the assistant and not to drawing', () => {
     const qwen = ollamaModel({ name: 'qwen3:8b', size: 5_000_000_000 })
     expect(qwen).not.toBeNull()

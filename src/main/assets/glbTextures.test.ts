@@ -140,7 +140,9 @@ describe('the pictures a glb carries', () => {
 
     expect(embeddedTextures(file)).toMatchObject([{ channel: 'baseColor' }])
   })
+})
 
+describe('embedded glb pictures', () => {
   /**
    * `mimeType` is optional for a `uri` image because the URI carries it. Defaulting to PNG there
    * wrote JPEG bytes into a file named `.png`, served afterwards as a PNG by a name the bytes do
@@ -193,89 +195,91 @@ describe('the pictures a glb carries', () => {
 
     expect(embeddedTextures(whole.subarray(0, whole.byteLength - 6))).toEqual([])
   })
+})
 
-  /**
-   * Every one of these is a real shape a file off the network can have, and each has its own
-   * way of being wrong. What they share is the answer: nothing extracted, nothing thrown — the
-   * gesture is a menu row, and a model the studio cannot read must not take the window with it.
-   */
-  describe('a file that is not what it claims', () => {
-    const wrongMagic = new Uint8Array(20)
+/**
+ * Every one of these is a real shape a file off the network can have, and each has its own
+ * way of being wrong. What they share is the answer: nothing extracted, nothing thrown — the
+ * gesture is a menu row, and a model the studio cannot read must not take the window with it.
+ */
+const wrongMagic = new Uint8Array(20)
 
-    const cases: [string, Uint8Array][] = [
-      ['four bytes that are not glTF', wrongMagic],
-      ['a document that is not an object', glb('just a string')],
-      ['a document with no material at all', glb({ textures: [{ source: 0 }] })],
-      [
-        'a texture pointing at no source',
-        glb({ materials: [{ normalTexture: { index: 0 } }], textures: [{}] }),
-      ],
-      [
-        'a texture that is not an object',
-        glb({ materials: [{ normalTexture: { index: 0 } }], textures: ['nope'] }),
-      ],
-      [
-        'a source no image answers for',
-        glb({ materials: [{ normalTexture: { index: 0 } }], textures: [{ source: 9 }] }),
-      ],
-      [
-        'an image that names neither a view nor a URI',
-        glb({
-          materials: [{ normalTexture: { index: 0 } }],
-          textures: [{ source: 0 }],
-          images: [{ mimeType: 'image/png' }],
-        }),
-      ],
-      [
-        'a view the document does not hold',
-        glb({
-          materials: [{ normalTexture: { index: 0 } }],
-          textures: [{ source: 0 }],
-          images: [{ bufferView: 4 }],
-          bufferViews: [],
-        }),
-      ],
-      [
-        'a view claiming more bytes than the chunk carries',
-        glb(
-          {
-            materials: [{ normalTexture: { index: 0 } }],
-            textures: [{ source: 0 }],
-            images: [{ bufferView: 0 }],
-            bufferViews: [{ buffer: 0, byteLength: 9_000 }],
-          },
-          PNG,
-        ),
-      ],
-      [
-        'a view that claims no length at all',
-        glb(
-          {
-            materials: [{ normalTexture: { index: 0 } }],
-            textures: [{ source: 0 }],
-            images: [{ bufferView: 0 }],
-            bufferViews: [{ buffer: 0, byteOffset: 0 }],
-          },
-          PNG,
-        ),
-      ],
-      [
-        'a data URI carrying nothing readable',
-        glb({
-          materials: [{ normalTexture: { index: 0 } }],
-          textures: [{ source: 0 }],
-          images: [{ uri: 'data:image/png,not-base64-at-all' }],
-        }),
-      ],
-    ]
+const invalidFiles: [string, Uint8Array][] = [
+  ['four bytes that are not glTF', wrongMagic],
+  ['a document that is not an object', glb('just a string')],
+  ['a document with no material at all', glb({ textures: [{ source: 0 }] })],
+  [
+    'a texture pointing at no source',
+    glb({ materials: [{ normalTexture: { index: 0 } }], textures: [{}] }),
+  ],
+  [
+    'a texture that is not an object',
+    glb({ materials: [{ normalTexture: { index: 0 } }], textures: ['nope'] }),
+  ],
+  [
+    'a source no image answers for',
+    glb({ materials: [{ normalTexture: { index: 0 } }], textures: [{ source: 9 }] }),
+  ],
+  [
+    'an image that names neither a view nor a URI',
+    glb({
+      materials: [{ normalTexture: { index: 0 } }],
+      textures: [{ source: 0 }],
+      images: [{ mimeType: 'image/png' }],
+    }),
+  ],
+  [
+    'a view the document does not hold',
+    glb({
+      materials: [{ normalTexture: { index: 0 } }],
+      textures: [{ source: 0 }],
+      images: [{ bufferView: 4 }],
+      bufferViews: [],
+    }),
+  ],
+  [
+    'a view claiming more bytes than the chunk carries',
+    glb(
+      {
+        materials: [{ normalTexture: { index: 0 } }],
+        textures: [{ source: 0 }],
+        images: [{ bufferView: 0 }],
+        bufferViews: [{ buffer: 0, byteLength: 9_000 }],
+      },
+      PNG,
+    ),
+  ],
+  [
+    'a view that claims no length at all',
+    glb(
+      {
+        materials: [{ normalTexture: { index: 0 } }],
+        textures: [{ source: 0 }],
+        images: [{ bufferView: 0 }],
+        bufferViews: [{ buffer: 0, byteOffset: 0 }],
+      },
+      PNG,
+    ),
+  ],
+  [
+    'a data URI carrying nothing readable',
+    glb({
+      materials: [{ normalTexture: { index: 0 } }],
+      textures: [{ source: 0 }],
+      images: [{ uri: 'data:image/png,not-base64-at-all' }],
+    }),
+  ],
+]
 
-    for (const [what, file] of cases) {
-      it(`yields nothing for ${what}`, () => {
-        expect(embeddedTextures(file)).toEqual([])
-      })
-    }
-  })
+describe('a file that is not what it claims', () => {
+  for (const [what, file] of invalidFiles) {
+    it(`yields nothing for ${what}`, () => {
+      expect(embeddedTextures(file)).toEqual([])
+    })
+  }
+})
 
+describe('glb texture defaults', () => {
   // A file whose JSON chunk is missing entirely — there is nothing to read the pictures FROM.
   it('yields nothing when the document itself is absent', () => {
     const binaryOnly = new Uint8Array(20)

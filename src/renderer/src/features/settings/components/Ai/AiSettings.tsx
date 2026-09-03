@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   CHOICE_SCOPES,
@@ -68,6 +68,10 @@ function rowsOf(roles: readonly RoleRow[], family: ModelFamily | undefined): rea
   return roles.filter(row => partsOfRole(row.role)?.family === family)
 }
 
+function shown(visible: boolean, content: ReactNode): ReactNode {
+  return visible ? content : null
+}
+
 export type AiSettingsProps = {
   /** Absent on the overview: Ollama, the machine, and the roles no space holds. */
   family?: ModelFamily
@@ -110,94 +114,100 @@ export function AiSettings({ family }: AiSettingsProps) {
   // which is true of the whole screen.
   const busy = overview.installing !== null || overview.ollama.progress !== null
 
-  return (
-    <div className={SETTING_COLUMN}>
-      {overviewPane && <p className={WINDOW_CAPTION}>{machine}</p>}
-      {/* The one screen of this window that does not wait for Apply, said rather than discovered:
+  function Content({ overview }: { overview: AiOverview }) {
+    return (
+      <div className={SETTING_COLUMN}>
+        {shown(overviewPane, <p className={WINDOW_CAPTION}>{machine}</p>)}
+        {/* The one screen of this window that does not wait for Apply, said rather than discovered:
           the manager owns the write because it re-judges the candidates — see `SettingsWindow`. */}
-      <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.appliesNow')}</p>
+        <p className={cn(WINDOW_HELP, 'mb-4')}>{t('aiModels.appliesNow')}</p>
 
-      {overviewPane && (
-        <section className="mb-6">
-          <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceOllama')}</h3>
-          <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
-          <AiOllamaOffer offer={overview.ollama} busy={busy} />
-        </section>
-      )}
+        {shown(
+          overviewPane,
+          <section className="mb-6">
+            <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceOllama')}</h3>
+            <p className={WINDOW_CAPTION}>{t('aiModels.sourceOllamaHelp')}</p>
+            <AiOllamaOffer offer={overview.ollama} busy={busy} />
+          </section>,
+        )}
 
-      {overviewPane && (
-        <section className="mb-6">
-          <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceEngine')}</h3>
-          <p className={WINDOW_CAPTION}>{t('aiModels.sourceEngineHelp')}</p>
-          <AiEngineOffer offer={overview.engine} busy={busy} />
-        </section>
-      )}
+        {shown(
+          overviewPane,
+          <section className="mb-6">
+            <h3 className={cn(WINDOW_GROUP_LABEL, 'mb-2')}>{t('aiModels.sourceEngine')}</h3>
+            <p className={WINDOW_CAPTION}>{t('aiModels.sourceEngineHelp')}</p>
+            <AiEngineOffer offer={overview.engine} busy={busy} />
+          </section>,
+        )}
 
-      {overview.projectPath !== null && (
-        <SettingLine title={t('aiModels.scope')} labelFor={SCOPE_FIELD}>
-          <WindowSelect
-            id={SCOPE_FIELD}
-            data-sc="field:ai.scope"
-            className="w-full max-w-xs"
-            value={writesTo}
-            onChange={event => setScope(event.target.value === 'project' ? 'project' : 'app')}
-          >
-            {CHOICE_SCOPES.map(value => (
-              <option key={value} value={value}>
-                {t(`aiModels.scope_${value}`)}
-              </option>
-            ))}
-          </WindowSelect>
-        </SettingLine>
-      )}
-
-      {rows.length === 0 && <p className={WINDOW_HELP}>{t('aiModels.empty')}</p>}
-
-      {overview.installFailure !== null && (
-        <p className={cn(WINDOW_HELP, 'mb-2')} role="status">
-          {t(installFailureKey(overview.installFailure.reason))}
-        </p>
-      )}
-
-      {/* One sentence per branch: only the admission weighed bytes, so only it may name them. */}
-      {overview.loadFailure !== null && (
-        <p className={cn(WINDOW_HELP, 'mb-2')} role="status">
-          {overview.loadFailure.reason === 'beyond-machine'
-            ? t('aiModels.loadBeyondMachine', {
-                needed: bytes(overview.loadFailure.neededBytes),
-                available: bytes(overview.loadFailure.availableBytes),
-              })
-            : t(loadFailureKey(overview.loadFailure.reason))}
-        </p>
-      )}
-
-      {rows.map(row => (
-        <AiRoleRow
-          key={row.role}
-          row={row}
-          // Only the row that owns it: the others then hold their render while a bar moves.
-          loading={heldBy(row, overview.loading)}
-          installing={heldBy(row, overview.installing)}
-          busy={busy}
-          scope={writesTo}
-          fitOf={fitOf}
-        />
-      ))}
-
-      {overviewPane && (
-        <>
-          <SettingLine title={t('aiModels.ownModel')} help={t('aiModels.ownModelHelp')}>
-            <WindowButton data-sc="field:ai.ownModel" onClick={() => void addOwnAiModel()}>
-              {t('aiModels.addOwnModel')}
-            </WindowButton>
+        {overview.projectPath !== null && (
+          <SettingLine title={t('aiModels.scope')} labelFor={SCOPE_FIELD}>
+            <WindowSelect
+              id={SCOPE_FIELD}
+              data-sc="field:ai.scope"
+              className="w-full max-w-xs"
+              value={writesTo}
+              onChange={event => setScope(event.target.value === 'project' ? 'project' : 'app')}
+            >
+              {CHOICE_SCOPES.map(value => (
+                <option key={value} value={value}>
+                  {t(`aiModels.scope_${value}`)}
+                </option>
+              ))}
+            </WindowSelect>
           </SettingLine>
-          {ownModelFailure !== null && (
-            <p className={WINDOW_HELP} role="status">
-              {t('aiModels.ownModelUnreadable')}
-            </p>
-          )}
-        </>
-      )}
-    </div>
-  )
+        )}
+
+        {rows.length === 0 && <p className={WINDOW_HELP}>{t('aiModels.empty')}</p>}
+
+        {overview.installFailure !== null && (
+          <p className={cn(WINDOW_HELP, 'mb-2')} role="status">
+            {t(installFailureKey(overview.installFailure.reason))}
+          </p>
+        )}
+
+        {/* One sentence per branch: only the admission weighed bytes, so only it may name them. */}
+        {overview.loadFailure !== null && (
+          <p className={cn(WINDOW_HELP, 'mb-2')} role="status">
+            {overview.loadFailure.reason === 'beyond-machine'
+              ? t('aiModels.loadBeyondMachine', {
+                  needed: bytes(overview.loadFailure.neededBytes),
+                  available: bytes(overview.loadFailure.availableBytes),
+                })
+              : t(loadFailureKey(overview.loadFailure.reason))}
+          </p>
+        )}
+
+        {rows.map(row => (
+          <AiRoleRow
+            key={row.role}
+            row={row}
+            // Only the row that owns it: the others then hold their render while a bar moves.
+            loading={heldBy(row, overview.loading)}
+            installing={heldBy(row, overview.installing)}
+            busy={busy}
+            scope={writesTo}
+            fitOf={fitOf}
+          />
+        ))}
+
+        {shown(
+          overviewPane,
+          <>
+            <SettingLine title={t('aiModels.ownModel')} help={t('aiModels.ownModelHelp')}>
+              <WindowButton data-sc="field:ai.ownModel" onClick={() => void addOwnAiModel()}>
+                {t('aiModels.addOwnModel')}
+              </WindowButton>
+            </SettingLine>
+            {ownModelFailure !== null && (
+              <p className={WINDOW_HELP} role="status">
+                {t('aiModels.ownModelUnreadable')}
+              </p>
+            )}
+          </>,
+        )}
+      </div>
+    )
+  }
+  return Content({ overview })
 }

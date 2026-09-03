@@ -95,6 +95,36 @@ const fixturesReachedBy = (file: string, code: string): string[] =>
 
 const shippedFiles = (): string[] => sources(SRC).filter(file => !TEST_MATERIAL.test(file))
 
+function runtimeSpecifiers(file: string, code: string): string[] {
+  const tree = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true)
+  const found: string[] = []
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      const clause = node.importClause
+      const named = clause?.namedBindings
+      const onlyNamedTypes =
+        named &&
+        ts.isNamedImports(named) &&
+        !clause?.name &&
+        named.elements.every(element => element.isTypeOnly)
+      if (!clause?.isTypeOnly && !onlyNamedTypes) found.push(node.moduleSpecifier.text)
+    } else if (
+      ts.isExportDeclaration(node) &&
+      !node.isTypeOnly &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      found.push(node.moduleSpecifier.text)
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const [argument] = node.arguments
+      if (argument && ts.isStringLiteral(argument)) found.push(argument.text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(tree)
+  return found
+}
+
 describe('what a shipped file may reach', () => {
   it('reaches no fixture', () => {
     const found = shippedFiles().flatMap(file =>
@@ -140,9 +170,9 @@ describe('the import graph', () => {
     const files = sources(SRC)
     const graph = new Map<string, string[]>(
       files.map(file => {
-        const imports = ts.preProcessFile(readFileSync(file, 'utf8'), true, true).importedFiles
+        const imports = runtimeSpecifiers(file, readFileSync(file, 'utf8'))
         const edges = imports
-          .map(({ fileName }) => resolveSpecifier(fileName, file))
+          .map(fileName => resolveSpecifier(fileName, file))
           .filter((target): target is string => target !== null)
         return [file, edges]
       }),

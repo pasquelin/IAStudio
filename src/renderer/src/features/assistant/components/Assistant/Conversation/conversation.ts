@@ -271,30 +271,7 @@ function blockOf(turn: AssistantTurn): string {
   const lines = [`The person said: ${turn.said}`]
   if (turn.answered !== '') lines.push(`You answered: ${turn.answered}`)
 
-  for (const step of turn.steps) {
-    if (step.refusal !== null) {
-      // 🛑 The refusal's own sentence and nothing more. A repair named here would name an
-      // ACTION, and this history reaches every door — including the ones shown fourteen actions,
-      // where `parseReply` refuses a whole reply for naming a fifteenth. `WIDE_RULES` is where
-      // advice that names an action belongs, because only there is it filtered by door.
-      // The detail names a FIELD, never an action, so it stays inside the rule above: a caller
-      // told only "bad input" sends the same call again, which is what this exists to stop.
-      const why = englishText(refusalKey(step.refusal))
-      lines.push(
-        `You tried ${step.action}, refused: ${why}${step.detail === undefined ? '' : ` — ${step.detail}`}`,
-      )
-      continue
-    }
-
-    // The answer, not just the fact: without it a model that has just searched cannot open what
-    // it found, and asks for the same search again. Written inline rather than bound to a name —
-    // `no-hardcoded-text.test.ts` reads a named sentence as one bound for a screen.
-    lines.push(
-      step.data === undefined
-        ? `You ran ${step.action}.`
-        : `You ran ${step.action}. It answered: ${resultLine(step.data)}`,
-    )
-  }
+  for (const step of turn.steps) lines.push(stepLine(step))
 
   // 🛑 ONE line for the pair: `blockWithin` keeps a contiguous TAIL, so split in two a long
   // question was cut while its answer stayed, and the round read an answer to nothing.
@@ -309,6 +286,17 @@ function blockOf(turn: AssistantTurn): string {
   if (turn.ending === 'stopped') lines.push('The person stopped you there.')
 
   return lines.join('\n')
+}
+
+function stepLine(step: AssistantTurn['steps'][number]): string {
+  if (step.refusal !== null) {
+    const why = englishText(refusalKey(step.refusal))
+    return `You tried ${step.action}, refused: ${why}${step.detail === undefined ? '' : ` — ${step.detail}`}`
+  }
+
+  return step.data === undefined
+    ? `You ran ${step.action}.`
+    : `You ran ${step.action}. It answered: ${resultLine(step.data)}`
 }
 
 /**

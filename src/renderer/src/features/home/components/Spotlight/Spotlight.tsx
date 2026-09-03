@@ -58,47 +58,7 @@ export function Spotlight() {
   // The card holds prose, which follows `appearance.fontScale`; its height has to follow with it.
   const cardHeight = useGauge('--sc-spotlight-card', CARD_HEIGHT)
 
-  const slides: Slide[] = []
-
-  if (project && last) {
-    slides.push({
-      id: 'resume',
-      icon: mdiPlayOutline,
-      title: t('home.spotlight.resume'),
-      body: t('home.spotlight.resumeBody', {
-        project: projectName(project.path),
-        name: last.title,
-      }),
-      action: {
-        label: t('home.spotlight.resumeAction'),
-        hint: t('home.spotlightResumeHint'),
-        onClick: () => openDocument(last),
-      },
-    })
-  }
-
-  if (running > 0) {
-    slides.push({
-      id: 'running',
-      icon: mdiProgressClock,
-      title: t('home.spotlight.running', { count: running }),
-      body: t('home.spotlight.runningBody'),
-    })
-  }
-
-  if (authKnown && !authenticated) {
-    slides.push({
-      id: 'credentials',
-      icon: mdiKeyOutline,
-      title: t('home.spotlight.connect'),
-      body: t('home.spotlight.connectBody'),
-      action: {
-        label: t('home.spotlight.connectAction'),
-        hint: t('home.spotlightConnectHint'),
-        onClick: () => void getBridge()?.settings.open('account'),
-      },
-    })
-  }
+  const slides = spotlightSlides({ project, last, running, authenticated, authKnown, t })
 
   // No card for "start a project": the rail's + makes one, the tools band offers it twice more,
   // and a banner across the top of the page said the same thing a fourth time.
@@ -149,4 +109,58 @@ export function Spotlight() {
       renderCard={slide => <SpotlightCard slide={slide} layout="stacked" />}
     />
   )
+}
+
+type SpotlightState = {
+  project: ReturnType<typeof useProject.getState>['project']
+  last: DocumentDescriptor | undefined
+  running: number
+  authenticated: boolean
+  authKnown: boolean
+  t: ReturnType<typeof useTranslation>['t']
+}
+
+function spotlightSlides(state: SpotlightState): Slide[] {
+  const slides: Slide[] = []
+  if (state.project && state.last) slides.push(resumeSlide(state.project.path, state.last, state.t))
+  if (state.running > 0) slides.push(runningSlide(state.running, state.t))
+  if (state.authKnown && !state.authenticated) slides.push(credentialsSlide(state.t))
+  return slides
+}
+
+function resumeSlide(path: string, last: DocumentDescriptor, t: SpotlightState['t']): Slide {
+  return {
+    id: 'resume',
+    icon: mdiPlayOutline,
+    title: t('home.spotlight.resume'),
+    body: t('home.spotlight.resumeBody', { project: projectName(path), name: last.title }),
+    action: {
+      label: t('home.spotlight.resumeAction'),
+      hint: t('home.spotlightResumeHint'),
+      onClick: () => openDocument(last),
+    },
+  }
+}
+
+function runningSlide(running: number, t: SpotlightState['t']): Slide {
+  return {
+    id: 'running',
+    icon: mdiProgressClock,
+    title: t('home.spotlight.running', { count: running }),
+    body: t('home.spotlight.runningBody'),
+  }
+}
+
+function credentialsSlide(t: SpotlightState['t']): Slide {
+  return {
+    id: 'credentials',
+    icon: mdiKeyOutline,
+    title: t('home.spotlight.connect'),
+    body: t('home.spotlight.connectBody'),
+    action: {
+      label: t('home.spotlight.connectAction'),
+      hint: t('home.spotlightConnectHint'),
+      onClick: () => void getBridge()?.settings.open('account'),
+    },
+  }
 }

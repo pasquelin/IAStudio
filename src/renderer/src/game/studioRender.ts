@@ -17,6 +17,52 @@ export type SceneDraw = Pick<
   runtimePerformance?: () => Omit<RuntimePerformance, 'cpuFrameMs' | 'compilationMs'>
 }
 
+function updateShadow(
+  placements: readonly EntityPlacement[],
+  byId: ReadonlyMap<string, SceneNode>,
+  bakedById: ReadonlyMap<string, string>,
+  shadow: Map<string, SceneNode>,
+): boolean {
+  let changed = false
+  for (const placement of placements) {
+    const bakedId = bakedById.get(placement.entity)
+    const node = byId.get(bakedId ?? placement.entity)
+    if (!node) continue
+    const bakedChanged = bakedId ? updateBakedShadow(placement, bakedId, node, shadow) : null
+    if (bakedChanged !== null) {
+      changed ||= bakedChanged
+      continue
+    }
+    const shown = shadow.get(placement.entity) ?? node
+    if (sameTransform(shown.transform, placement.transform)) continue
+    shadow.set(placement.entity, { ...node, transform: copyTransform(placement.transform) })
+    changed = true
+  }
+  return changed
+}
+
+function updateBakedShadow(
+  placement: EntityPlacement,
+  bakedId: string,
+  node: SceneNode,
+  shadow: Map<string, SceneNode>,
+): boolean | null {
+  if (node.type !== 'mesh' || !node.instances) return null
+  const shown = shadow.get(bakedId) ?? node
+  if (shown.type !== 'mesh' || !shown.instances) return null
+  const instance = shown.instances.find(one => one.sourceId === placement.entity)
+  if (!instance || sameTransform(instance.transform, placement.transform)) return false
+  shadow.set(bakedId, {
+    ...shown,
+    instances: shown.instances.map(one =>
+      one.sourceId === placement.entity
+        ? { ...one, transform: copyTransform(placement.transform) }
+        : one,
+    ),
+  })
+  return true
+}
+
 /**
  * What draws a running game inside the studio: the scene the editor already has, redrawn from a
  * SHADOW state the document knows nothing about.
@@ -74,37 +120,7 @@ export function createStudioRender(
         changed = shadow.size > 0
       }
 
-      for (let index = 0; index < placements.length; index++) {
-        const placement = placements[index]
-        if (!placement) continue
-
-        const bakedId = bakedById.get(placement.entity)
-        const node = byId.get(bakedId ?? placement.entity)
-        if (!node) continue
-
-        if (bakedId && node.type === 'mesh' && node.instances) {
-          const shown = shadow.get(bakedId) ?? node
-          if (shown.type !== 'mesh' || !shown.instances) continue
-          const instance = shown.instances.find(one => one.sourceId === placement.entity)
-          if (!instance || sameTransform(instance.transform, placement.transform)) continue
-          shadow.set(bakedId, {
-            ...shown,
-            instances: shown.instances.map(one =>
-              one.sourceId === placement.entity
-                ? { ...one, transform: copyTransform(placement.transform) }
-                : one,
-            ),
-          })
-          changed = true
-          continue
-        }
-
-        const shown = shadow.get(placement.entity) ?? node
-        if (sameTransform(shown.transform, placement.transform)) continue
-
-        shadow.set(placement.entity, { ...node, transform: copyTransform(placement.transform) })
-        changed = true
-      }
+      changed = updateShadow(placements, byId, bakedById, shadow) || changed
 
       // Nothing rebuilt while nothing moves: a paused game, or one whose systems are all idle,
       // costs the comparison above and not one allocation.

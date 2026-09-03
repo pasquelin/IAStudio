@@ -399,90 +399,86 @@ function machines(parentId: string, played: string): SceneNode[] {
   )
 
   return [
-    driven(
-      meshNode(
-        { kind: 'box', width: 2, height: 0.3, depth: 2 },
-        {
-          transform: transformAt({ x: -4, y: COURT_FLOOR + 0.15, z: 2 }),
-          material: climbSurface(),
-          parentId,
-          name: 'Lift',
-        },
-      ),
-      {
-        ...newComponent('Path'),
-        waypoints: `-4 ${COURT_FLOOR + 0.15} 2, -4 0.15 2`,
-        speed: 1.5,
-        mode: 'pingPong',
-      },
-    ),
-    driven(
-      meshNode(
-        { kind: 'box', width: 2.5, height: 0.3, depth: 2 },
-        {
-          transform: transformAt({ x: -4, y: COURT_FLOOR + 0.15, z: -2 }),
-          material: climbSurface(),
-          parentId,
-          name: 'Ferry',
-        },
-      ),
-      {
-        ...newComponent('Path'),
-        waypoints: `-4 ${COURT_FLOOR + 0.15} -2, 4 ${COURT_FLOOR + 0.15} -2`,
-        speed: 2,
-        mode: 'pingPong',
-      },
+    travellingMachine(parentId, 'Lift', 2, 2, `-4 ${COURT_FLOOR + 0.15} 2, -4 0.15 2`, 1.5),
+    travellingMachine(
+      parentId,
+      'Ferry',
+      -2,
+      2.5,
+      `-4 ${COURT_FLOOR + 0.15} -2, 4 ${COURT_FLOOR + 0.15} -2`,
+      2,
     ),
     driven({ ...bar, name: 'Turnstile' }, { ...newComponent('Spin'), axis: 'y', speed: 40 }),
     post('Post West', { x: -16, y: TERRACE_HEIGHT + 0.3, z: -12 }, parentId),
     post('Post East', { x: -10, y: TERRACE_HEIGHT + 0.3, z: -12 }, parentId),
-    driven(
-      meshNode(
-        { kind: 'box', width: 0.6, height: 0.6, depth: 0.6 },
-        {
-          transform: transformAt({ x: -16, y: TERRACE_HEIGHT + 0.3, z: -12 }),
-          parentId,
-          name: 'Sentry',
-        },
-      ),
-      {
-        ...newComponent('Patrol'),
-        waypoints: 'Post West, Post East',
-        speed: 1.5,
-        waitSeconds: 1,
-        mode: 'pingPong',
-      },
-    ),
+    sentry(parentId),
     // Two components on one node, and they do not fight: `Orbit` writes the place, `LookAt` the
     // turn. The beacon circles the turnstile and keeps facing whoever is walking.
-    {
-      ...meshNode(
-        { kind: 'sphere', radius: 0.3, widthSegments: 16, heightSegments: 12 },
-        { transform: transformAt({ x: 3, y: 1.8, z: 6 }), parentId, name: 'Beacon' },
-      ),
-      components: [
-        { ...newComponent('Orbit'), target: 'Turnstile', radius: 3, speed: 60, height: 1.2 },
-        { ...newComponent('LookAt'), target: played, turnSpeed: 180 },
-      ],
-    },
-    {
-      ...meshNode(
-        { kind: 'sphere', radius: 0.35, widthSegments: 16, heightSegments: 12 },
-        // 🛑 Off the axis a chase camera sits on: it started at (0, 2,5, 14), which is exactly
-        // where a four-metre arm seats the camera of a player standing on the start mark — the
-        // drone swallowed it whole. It follows the player anyway, so only its first place moves.
-        { transform: transformAt({ x: 3.5, y: 3, z: 13 }), parentId, name: 'Drone' },
-      ),
-      components: [
-        {
-          ...newComponent('Follow'),
-          target: played,
-          speed: 2.5,
-          stopDistance: 3,
-          acceleration: 4,
-        },
-        { ...newComponent('LookAt'), target: played, turnSpeed: 120 },
-      ],
-    },
+    beacon(parentId, played),
+    drone(parentId, played),
   ]
+}
+
+function travellingMachine(
+  parentId: string,
+  name: string,
+  z: number,
+  width: number,
+  waypoints: string,
+  speed: number,
+): SceneNode {
+  const node = meshNode(
+    { kind: 'box', width, height: 0.3, depth: 2 },
+    {
+      transform: transformAt({ x: -4, y: COURT_FLOOR + 0.15, z }),
+      material: climbSurface(),
+      parentId,
+      name,
+    },
+  )
+  return driven(node, { ...newComponent('Path'), waypoints, speed, mode: 'pingPong' })
+}
+
+function sentry(parentId: string): SceneNode {
+  const node = meshNode(
+    { kind: 'box', width: 0.6, height: 0.6, depth: 0.6 },
+    {
+      transform: transformAt({ x: -16, y: TERRACE_HEIGHT + 0.3, z: -12 }),
+      parentId,
+      name: 'Sentry',
+    },
+  )
+  return driven(node, {
+    ...newComponent('Patrol'),
+    waypoints: 'Post West, Post East',
+    speed: 1.5,
+    waitSeconds: 1,
+    mode: 'pingPong',
+  })
+}
+
+function beacon(parentId: string, played: string): SceneNode {
+  return {
+    ...meshNode(
+      { kind: 'sphere', radius: 0.3, widthSegments: 16, heightSegments: 12 },
+      { transform: transformAt({ x: 3, y: 1.8, z: 6 }), parentId, name: 'Beacon' },
+    ),
+    components: [
+      { ...newComponent('Orbit'), target: 'Turnstile', radius: 3, speed: 60, height: 1.2 },
+      { ...newComponent('LookAt'), target: played, turnSpeed: 180 },
+    ],
+  }
+}
+
+function drone(parentId: string, played: string): SceneNode {
+  return {
+    ...meshNode(
+      { kind: 'sphere', radius: 0.35, widthSegments: 16, heightSegments: 12 },
+      { transform: transformAt({ x: 3.5, y: 3, z: 13 }), parentId, name: 'Drone' },
+    ),
+    components: [
+      { ...newComponent('Follow'), target: played, speed: 2.5, stopDistance: 3, acceleration: 4 },
+      { ...newComponent('LookAt'), target: played, turnSpeed: 120 },
+    ],
+  }
 }

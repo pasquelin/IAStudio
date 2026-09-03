@@ -139,35 +139,32 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
   >()
   let nextJob = 1
 
-  port.onMessage(frame => {
-    if (!('evt' in frame)) return
-
-    if (isJobProgress(frame)) {
-      jobs.get(frame.job)?.onStep?.(frame.ratio)
-      return
-    }
-
+  function settleJob(frame: EngineFrame): boolean {
     if (isSettledJob(frame)) {
       const waiting = jobs.get(frame.job)
       jobs.delete(frame.job)
-      if (!waiting) return
+      if (!waiting) return true
 
       if (frame.evt === 'job.completed') waiting.resolve(frame)
       else
         waiting.reject(
           new Error(`${frame.code ?? 'failed'}: ${frame.message ?? 'the door refused'}`),
         )
+      return true
+    }
+    return false
+  }
+
+  function receive(frame: EngineFrame): void {
+    if (!('evt' in frame)) return
+    if (isJobProgress(frame)) {
+      jobs.get(frame.job)?.onStep?.(frame.ratio)
       return
     }
-
-    // A door announcing itself. Nothing reads it: admission is answered by the core
-    // (`memory.ledger`), and a device by the frame of the generation that used it. Dropped by NAME
-    // — the fall-through below reads any other event as a `runtime.error` and logs its `message`.
-    if (isWorkerHello(frame)) return
+    if (settleJob(frame) || isWorkerHello(frame)) return
 
     if (!isHello(frame)) {
-      // `runtime.error`: the engine could not read a frame, and there is no run to answer under.
-      log.warn('engine', frame.message)
+      log.warn('engine', frame.message ?? 'engine runtime error')
       return
     }
 
@@ -186,7 +183,9 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
     const waiting = settleReady
     settleReady = null
     waiting?.resolve(frame)
-  })
+  }
+
+  port.onMessage(receive)
 
   port.onFailure(error => {
     // Every job in flight belongs to the process that just died, and nothing will ever settle it.

@@ -30,8 +30,8 @@ import { placeAsset } from '../../placeAsset'
 import { revealAssets } from '@/helpers/revealPanel'
 import { useLivePreview } from '@/hooks/useLivePreview'
 import { useDocuments } from '@/stores/documents'
-import { useImageDocumentEngine } from './useImageDocumentEngine'
-import { useImageDocumentCommands } from './useImageDocumentCommands'
+import { useImageDocumentEngine } from '@/hooks/useImageDocumentEngine'
+import { useImageDocumentCommands } from '@/hooks/useImageDocumentCommands'
 import { ImageDocumentView } from './ImageDocumentView'
 
 export type ImageDocumentProps = { documentId: string }

@@ -90,16 +90,10 @@ async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asse
   const file = deps.fileOf(source)
   if (!file) throw new Error(`asset ${source.id} has no file to read`)
 
-  // `Buffer` IS a `Uint8Array`, and the reader takes it as one: wrapping it would copy the
-  // whole model — several hundred megabytes for a scan, on the process every window waits on.
-  // 🛑 The `try` holds the READ alone: the original handler was `readFile`'s second argument, so
-  // a reader that throws on a corrupt model is not this journal line, and never was.
   let bytes
   try {
     bytes = await readFile(file)
   } catch (error) {
-    // Recorded and rethrown: the window says it too, but a project reopened tomorrow keeps
-    // the line — and a file the disk refuses is exactly what one goes back to the journal for.
     deps.record({
       level: 'error',
       topic: 'import',
@@ -113,14 +107,9 @@ async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asse
 
   const created: Asset[] = []
   for (const texture of found) {
-    // Sequential on purpose: a model can carry half a dozen 2048² pictures, and writing them
-    // all at once is a burst of tens of megabytes at whatever the disk will take.
     created.push(await deps.write(requestFor(source, texture, deps.newAssetId()), texture.bytes))
   }
 
-  // Said either way. A model with no picture inside it is a normal answer, and one the shelf
-  // cannot show on its own: nothing appears, and a gesture that changes nothing without a word
-  // reads as a broken menu row.
   deps.record({
     level: 'info',
     // `import`, like every other line about bytes landing in the project.

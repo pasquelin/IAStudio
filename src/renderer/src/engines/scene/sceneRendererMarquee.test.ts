@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
+
+const handler = (name: string, args: string): string =>
+  source.match(new RegExp(`${name} = \\(${args}\\): void => \\{[\\s\\S]*?\\n {2}\\}`))?.[0] ?? ''
+const method = (signature: string): string =>
+  source.match(new RegExp(`protected ${signature} \\{[\\s\\S]*?\\n {2}\\}`))?.[0] ?? ''
+const pointerDown = handler('onPointerDown', 'event: PointerEvent')
+const pointerUp = handler('onPointerUp', 'event: PointerEvent')
+const pointerMove = handler('onPointerMove', 'event: PointerEvent')
+const armMarquee = method('armMarquee\\(event: PointerEvent\\): void')
+const pickInMarquee = method('pickInMarquee\\(marquee: Marquee, event: PointerEvent\\): void')
+const screenBodies = method('screenBodies\\(camera: Camera\\): ScreenBody\\[\\]')
 
 /**
  * The rectangle a bare left button drags, and what it must not take from the gestures already on
@@ -10,19 +21,6 @@ import source from './SceneRenderer.ts?raw'
  * is arithmetic, and measured for real in `marqueeSelection.test.ts`.
  */
 describe('SceneRenderer and the rectangle', () => {
-  const handler = (name: string, args: string): string =>
-    source.match(new RegExp(`${name} = \\(${args}\\): void => \\{[\\s\\S]*?\\n {2}\\}`))?.[0] ?? ''
-
-  const method = (signature: string): string =>
-    source.match(new RegExp(`private ${signature} \\{[\\s\\S]*?\\n {2}\\}`))?.[0] ?? ''
-
-  const pointerDown = handler('onPointerDown', 'event: PointerEvent')
-  const pointerUp = handler('onPointerUp', 'event: PointerEvent')
-  const pointerMove = handler('onPointerMove', 'event: PointerEvent')
-  const armMarquee = method('armMarquee\\(event: PointerEvent\\): void')
-  const pickInMarquee = method('pickInMarquee\\(marquee: Marquee, event: PointerEvent\\): void')
-  const screenBodies = method('screenBodies\\(camera: Camera\\): ScreenBody\\[\\]')
-
   // A regex that matched nothing would make every assertion below vacuously true.
   it('finds the six paths the rest of this file reads', () => {
     expect(
@@ -61,7 +59,9 @@ describe('SceneRenderer and the rectangle', () => {
   it('gives it up on a button that is no longer down', () => {
     expect(pointerMove).toContain('(event.buttons & maskOf(0)) === 0')
   })
+})
 
+describe('SceneRenderer rectangle selection', () => {
   it('picks what the rectangle crossed on release, and only once it travelled', () => {
     expect(pointerUp).toContain('!wasClick(marquee.from, marquee.to)')
     expect(pointerUp).toContain('this.pickInMarquee(marquee, event)')

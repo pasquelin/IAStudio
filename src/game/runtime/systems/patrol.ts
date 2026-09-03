@@ -22,6 +22,31 @@ export function createPatrolSystem(): System {
   const rounds = new WeakMap<Entity, Round>()
   const marks: Entity[] = []
 
+  const update = (world: World, entity: Entity, dt: number): void => {
+    const settings = componentOf(entity, 'Patrol')
+    if (!settings) return
+    marks.length = 0
+    for (const said of textOf(settings, 'waypoints', PATROL.waypoints).split(',')) {
+      const name = said.trim()
+      const mark = name === '' ? null : entityNamed(world, name)
+      if (mark && mark !== entity) marks.push(mark)
+    }
+    if (marks.length === 0) return
+    const round = rounds.get(entity) ?? { at: 0, forward: true, waited: 0, done: false }
+    rounds.set(entity, round)
+    if (round.done) return
+    if (round.waited > 0) {
+      round.waited = Math.max(0, round.waited - dt)
+      return
+    }
+    const mark = marks[Math.min(round.at, marks.length - 1)]
+    if (!mark) return
+    const reach = numberOf(settings, 'speed', PATROL.speed) * dt
+    if (!stepTowards(entity.transform.position, mark.transform.position, reach)) return
+    round.waited = numberOf(settings, 'waitSeconds', PATROL.waitSeconds)
+    advanced(round, marks.length, choiceOf(settings, 'mode', WAYPOINT_MODES, PATROL.mode))
+  }
+
   return {
     name: 'patrol',
     reads: ['Patrol'],
@@ -29,34 +54,7 @@ export function createPatrolSystem(): System {
 
     fixedUpdate: (world: World, dt: number) => {
       for (const entity of world.entities.withComponent('Patrol')) {
-        const settings = componentOf(entity, 'Patrol')
-        if (!settings) continue
-
-        marks.length = 0
-        for (const said of textOf(settings, 'waypoints', PATROL.waypoints).split(',')) {
-          const name = said.trim()
-          const mark = name === '' ? null : entityNamed(world, name)
-          if (mark && mark !== entity) marks.push(mark)
-        }
-        if (marks.length === 0) continue
-
-        const round = rounds.get(entity) ?? { at: 0, forward: true, waited: 0, done: false }
-        rounds.set(entity, round)
-        if (round.done) continue
-
-        if (round.waited > 0) {
-          round.waited = Math.max(0, round.waited - dt)
-          continue
-        }
-
-        const mark = marks[Math.min(round.at, marks.length - 1)]
-        if (!mark) continue
-
-        const reach = numberOf(settings, 'speed', PATROL.speed) * dt
-        if (!stepTowards(entity.transform.position, mark.transform.position, reach)) continue
-
-        round.waited = numberOf(settings, 'waitSeconds', PATROL.waitSeconds)
-        advanced(round, marks.length, choiceOf(settings, 'mode', WAYPOINT_MODES, PATROL.mode))
+        update(world, entity, dt)
       }
     },
   }

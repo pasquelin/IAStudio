@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, extname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
@@ -16,7 +16,18 @@ export const LIMITS = Object.freeze({
 export const COMPLEXITY_THRESHOLD = 10
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const CODE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.mjs', '.py', '.css', '.html'])
+const TYPESCRIPT_EXTENSIONS = new Set([
+  '.ts',
+  '.tsx',
+  '.mts',
+  '.cts',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+])
+const TS_SYNTAX_EXTENSIONS = new Set(['.ts', '.tsx', '.mts', '.cts'])
+const CODE_EXTENSIONS = new Set([...TYPESCRIPT_EXTENSIONS, '.py', '.css', '.html'])
 const EXCLUDED_PREFIXES = [
   'vendor/', // Sources owned and versioned by upstream projects.
   'engine/src/ia_studio_engine/vendor/', // Python model implementations mirrored from upstream.
@@ -56,6 +67,7 @@ function complexityOf(node) {
       ts.isConditionalExpression(child) ||
       ts.isCatchClause(child) ||
       (ts.isCaseClause(child) && child.statements.length > 0) ||
+      (ts.isDefaultClause(child) && child.statements.length > 0) ||
       (ts.isBinaryExpression(child) && ['&&', '||', '??'].includes(child.operatorToken.getText()))
     )
       complexity += 1
@@ -106,11 +118,12 @@ function containsJsx(node) {
 }
 
 export function analyseTypeScript(source, filename = 'fixture.tsx') {
-  const kind = filename.endsWith('.tsx')
-    ? ts.ScriptKind.TSX
-    : filename.endsWith('.ts')
-      ? ts.ScriptKind.TS
-      : ts.ScriptKind.JS
+  const kind =
+    filename.endsWith('.tsx') || filename.endsWith('.jsx')
+      ? ts.ScriptKind.TSX
+      : TS_SYNTAX_EXTENSIONS.has(extname(filename))
+        ? ts.ScriptKind.TS
+        : ts.ScriptKind.JS
   const tree = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, kind)
   const findings = []
   const visit = node => {
@@ -126,8 +139,9 @@ export function analyseTypeScript(source, filename = 'fixture.tsx') {
       const span = lines(source, node.getStart(tree), node.end)
       const complexity = complexityOf(node)
       let kind = complexity >= COMPLEXITY_THRESHOLD ? 'complex' : 'function'
-      if (/^use[A-Z0-9]/.test(name)) kind = 'hook'
-      else if (/^[A-Z]/.test(name) && containsJsx(node)) kind = 'component'
+      if (complexity < COMPLEXITY_THRESHOLD && /^use[A-Z0-9]/.test(name)) kind = 'hook'
+      else if (complexity < COMPLEXITY_THRESHOLD && /^[A-Z]/.test(name) && containsJsx(node))
+        kind = 'component'
       const size =
         kind === 'function' || kind === 'complex' ? ownFunctionLines(source, node, tree) : span
       findings.push({ kind, name, lines: size, complexity })
@@ -153,7 +167,7 @@ export function violationsFor(filename, source = readFileSync(filename, 'utf8'))
   const structures =
     extension === '.py'
       ? pythonFindings(filename)
-      : ['.ts', '.tsx', '.js', '.mjs'].includes(extension)
+      : TYPESCRIPT_EXTENSIONS.has(extension)
         ? analyseTypeScript(source, filename)
         : []
   for (const finding of structures) {
@@ -163,10 +177,13 @@ export function violationsFor(filename, source = readFileSync(filename, 'utf8'))
 }
 
 export function maintainedFiles() {
-  return execFileSync('git', ['ls-files', '-z'], { cwd: ROOT })
+  return execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+    cwd: ROOT,
+  })
     .toString()
     .split('\0')
     .filter(Boolean)
+    .filter(name => existsSync(resolve(ROOT, name)))
     .filter(name => CODE_EXTENSIONS.has(extname(name)))
     .filter(name => !EXCLUDED_PREFIXES.some(prefix => name.startsWith(prefix)))
 }

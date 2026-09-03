@@ -29,15 +29,15 @@ const ALLOWED = new Map<string, string>([
     'hole: a rewritten animation never reloads — clipSources keys on the bare URL',
   ],
   [
-    'engines/canvas/CanvasEngine.ts | const url = assetUrl(assetId)',
+    'engines/canvas/CanvasViewport.ts | const url = assetUrl(assetId)',
     'the UNLOAD path: it frees exactly the key `loadInto` wrote, so it must not be versioned',
   ],
   [
-    'engines/canvas/CanvasEngine.ts | void this.loadInto(key, assetUrl(layer.source)).catch(error =>',
+    'engines/canvas/CanvasEditing.ts | void this.loadInto(key, assetUrl(layer.source)).catch(error =>',
     'hole: a layer reads its source once, at birth — and ⌘S writes the stale pixels back',
   ],
   [
-    'engines/canvas/CanvasEngine.ts | void this.loadInto(layer.id, assetUrl(layer.source)).catch(error =>',
+    'engines/canvas/CanvasLayerDrawing.ts | await this.loadInto(layerId, assetUrl(source))',
     'hole: same, when the layer is born',
   ],
   [
@@ -53,7 +53,7 @@ const ALLOWED = new Map<string, string>([
     'hole: measures the picture the browser cached, not the file — so the drift notice can lie',
   ],
   [
-    'features/material/deriveChannel.ts | const picture = await derive({ channel, sourceUrl: assetUrl(source.assetId) })',
+    'features/material/deriveChannel.ts | const picture = await derive({ channel, sourceUrl: assetUrl(sourceAssetId) })',
     'hole: derives a channel from whatever the browser already holds',
   ],
   [

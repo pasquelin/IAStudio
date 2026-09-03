@@ -95,38 +95,7 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     }
   }
 
-  for (const node of state.nodes) {
-    const object = objectOf(node, geometries.acquire, dress, carve)
-    if (!object) continue
-
-    object.name = node.name
-    object.visible = node.visible
-    applyTransform(object, node.transform)
-    byEntity.set(node.id, object)
-    placements.set(node.id, transform => applyTransform(object, transform))
-    if (node.type === 'mesh' && node.instances && object instanceof InstancedMesh) {
-      const placement = new Object3D()
-      for (const [slot, instance] of node.instances.entries()) {
-        byEntity.set(instance.sourceId, object)
-        placements.set(instance.sourceId, transform => {
-          applyTransform(placement, transform)
-          placement.updateMatrix()
-          object.setMatrixAt(slot, placement.matrix)
-          object.instanceMatrix.needsUpdate = true
-          object.computeBoundingSphere()
-        })
-      }
-    }
-  }
-
-  // Parents second: a child may be declared before the group it hangs from.
-  for (const node of state.nodes) {
-    const object = byEntity.get(node.id)
-    if (!object) continue
-
-    const parent = node.parentId === null ? null : byEntity.get(node.parentId)
-    ;(parent ?? scene).add(object)
-  }
+  populateScene(state.nodes, scene, byEntity, placements, geometries.acquire, dress, carve)
 
   scene.updateMatrixWorld()
   const instances = createOptimizedGroups(scene)
@@ -166,6 +135,53 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
         if (one.material instanceof MeshStandardMaterial) one.material.dispose()
       })
     },
+  }
+}
+
+function populateScene(
+  nodes: readonly SceneNode[],
+  scene: Scene,
+  byEntity: Map<string, Object3D>,
+  placements: Map<string, (transform: Transform) => void>,
+  acquire: ReturnType<typeof createGeometryCache>['acquire'],
+  dress: (material: MeshStandardMaterial, assetId: string) => void,
+  carve: Carve,
+): void {
+  for (const node of nodes) {
+    const object = objectOf(node, acquire, dress, carve)
+    if (!object) continue
+    object.name = node.name
+    object.visible = node.visible
+    applyTransform(object, node.transform)
+    byEntity.set(node.id, object)
+    placements.set(node.id, transform => applyTransform(object, transform))
+    registerBakedPlacements(node, object, byEntity, placements)
+  }
+  for (const node of nodes) {
+    const object = byEntity.get(node.id)
+    if (!object) continue
+    const parent = node.parentId === null ? null : byEntity.get(node.parentId)
+    ;(parent ?? scene).add(object)
+  }
+}
+
+function registerBakedPlacements(
+  node: SceneNode,
+  object: Object3D,
+  byEntity: Map<string, Object3D>,
+  placements: Map<string, (transform: Transform) => void>,
+): void {
+  if (node.type !== 'mesh' || !node.instances || !(object instanceof InstancedMesh)) return
+  const placement = new Object3D()
+  for (const [slot, instance] of node.instances.entries()) {
+    byEntity.set(instance.sourceId, object)
+    placements.set(instance.sourceId, transform => {
+      applyTransform(placement, transform)
+      placement.updateMatrix()
+      object.setMatrixAt(slot, placement.matrix)
+      object.instanceMatrix.needsUpdate = true
+      object.computeBoundingSphere()
+    })
   }
 }
 

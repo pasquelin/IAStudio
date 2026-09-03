@@ -64,12 +64,8 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
    * Sound blocks only. The tools below rebuild samples, and a picture clip has none to rebuild;
    * an Audio montage holds nothing else today, and this says so rather than relying on it.
    */
-  const holder = sequence.selectedId ? trackOfClip(sequence, sequence.selectedId) : null
-  const clip =
-    holder?.kind === 'audio'
-      ? (holder.clips.find(one => one.id === sequence.selectedId) ?? null)
-      : null
-  const clipId = clip?.id ?? null
+  const clip = selectedTake(sequence)
+  const clipId = clipIdOf(clip)
   const chain = chainOf(edits, clipId)
 
   /**
@@ -85,11 +81,9 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
    * component stops being preservable — `pnpm lint` says so and is right. Inside a memo the
    * mutation is bounded; `inPoint` needs none, being a field read.
    */
-  const inPoint = clip?.inPoint ?? 0
-  const sourceDuration = clip ? takeSliceOf(clip).duration : 0
+  const { inPoint, sourceDuration } = takeBounds(clip)
 
-  const assetId = clip?.assetId ?? null
-  const asset = assetId ? (byId.get(assetId) ?? null) : null
+  const { assetId, asset } = takeAsset(clip, byId)
   const { rendered, unreadable } = useRenderedTake({
     documentId,
     assetId,
@@ -165,7 +159,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
   // What the tools will act on, and what the bar says they will: read through one clamp rather
   // than two, so a range the take no longer holds — a crop having shortened it under a selection
   // laid before — cannot be announced as one and ignored as another.
-  const region = rendered && chain.region ? clampRegion(chain.region, rendered.data) : null
+  const region = selectedRegion(rendered, chain.region)
 
   /**
    * The two tools that CUT, which is a montage gesture wherever it is made from: they land on
@@ -235,39 +229,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
     >
       <MonitorFrame
         role={t('audio.takeRole')}
-        toolbar={
-          <Toolbar
-            orientation="horizontal"
-            tools={[
-              {
-                id: 'transport',
-                labelKey: player.playing ? 'transport.pause' : 'transport.play',
-                icon: player.playing ? mdiPause : mdiPlay,
-              },
-              ...AUDIO_TOOLS,
-            ]}
-            activeTool={chain.bypassed ? 'compare' : undefined}
-            onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && actions[id]())}
-            extras={
-              <>
-                {/* On the bar rather than in the tooltips alone: an area nobody knows how to draw
-                    is not explained by a sentence that appears once a pointer rests on a tool. */}
-                <span className={TOOLBAR_LABEL}>
-                  {region
-                    ? t('audio.selection', {
-                        from: formatDuration(region.from),
-                        to: formatDuration(region.to),
-                      })
-                    : t('audio.noSelection')}
-                </span>
-                <span className={cn(TOOLBAR_LABEL, 'font-mono')}>
-                  {formatDuration(player.currentTime)}
-                  {rendered && ` / ${formatDuration(durationOf(rendered.data))}`}
-                </span>
-              </>
-            }
-          />
-        }
+        toolbar={takeToolbar({ player, chain, actions, region, rendered }, t)}
       >
         {/* `sc-wave` is what paints the selection's edges in the accent, from `index.css`: they
             live in wavesurfer's shadow tree, where only `::part` reaches them. */}
@@ -275,5 +237,79 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
         {!rendered && <EmptyState icon={mdiMusicNoteOutline} message={t('collection.loading')} />}
       </MonitorFrame>
     </AssetDropTarget>
+  )
+}
+
+function selectedTake(sequence: ReturnType<typeof sequenceOf>) {
+  if (!sequence.selectedId) return null
+  const holder = trackOfClip(sequence, sequence.selectedId)
+  if (holder?.kind !== 'audio') return null
+  return holder.clips.find(one => one.id === sequence.selectedId) ?? null
+}
+
+function clipIdOf(clip: ReturnType<typeof selectedTake>): string | null {
+  return clip?.id ?? null
+}
+
+function takeBounds(clip: ReturnType<typeof selectedTake>) {
+  if (!clip) return { inPoint: 0, sourceDuration: 0 }
+  return { inPoint: clip.inPoint, sourceDuration: takeSliceOf(clip).duration }
+}
+
+function takeAsset(clip: ReturnType<typeof selectedTake>, byId: ReadonlyMap<string, Asset>) {
+  if (!clip) return { assetId: null, asset: null }
+  return { assetId: clip.assetId, asset: byId.get(clip.assetId) ?? null }
+}
+
+function selectedRegion(
+  rendered: ReturnType<typeof useRenderedTake>['rendered'],
+  region: Region | null,
+) {
+  if (!rendered || !region) return null
+  return clampRegion(region, rendered.data)
+}
+
+type TakeToolbarProps = {
+  player: ReturnType<typeof useWaveSurfer>
+  chain: ReturnType<typeof chainOf>
+  actions: Record<AudioToolId, () => void>
+  region: Region | null
+  rendered: ReturnType<typeof useRenderedTake>['rendered']
+}
+
+function takeToolbar(
+  { player, chain, actions, region, rendered }: TakeToolbarProps,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  const transport = player.playing
+    ? { id: 'transport', labelKey: 'transport.pause', icon: mdiPause }
+    : { id: 'transport', labelKey: 'transport.play', icon: mdiPlay }
+  return (
+    <Toolbar
+      orientation="horizontal"
+      tools={[transport, ...AUDIO_TOOLS]}
+      activeTool={chain.bypassed ? 'compare' : undefined}
+      onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && actions[id]())}
+      extras={takeToolbarStatus({ player, region, rendered }, t)}
+    />
+  )
+}
+
+function takeToolbarStatus(
+  { player, region, rendered }: Pick<TakeToolbarProps, 'player' | 'region' | 'rendered'>,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  const selection = region
+    ? t('audio.selection', { from: formatDuration(region.from), to: formatDuration(region.to) })
+    : t('audio.noSelection')
+  const duration = rendered ? ` / ${formatDuration(durationOf(rendered.data))}` : ''
+  return (
+    <>
+      <span className={TOOLBAR_LABEL}>{selection}</span>
+      <span className={cn(TOOLBAR_LABEL, 'font-mono')}>
+        {formatDuration(player.currentTime)}
+        {duration}
+      </span>
+    </>
   )
 }

@@ -1,0 +1,216 @@
+import { Object3D } from 'three'
+import { type ClipLane } from '@shared/domain/scene'
+import { type ModelNode } from './sceneState'
+import { createModelTextures } from './modelTextures'
+import { reportFailure } from '@/services/diagnostics'
+import { clipLengthsOf, clipNamesOf, clipsOf, foreignClipsOf, type ForeignClip } from './animation'
+import { rigStateOf } from './rigState'
+import { instanceableOf, markInstanceable } from './instanceableModel'
+import { instanceOf } from './modelCache'
+import { applyShadowFlags } from './shadows'
+import type { Rig } from '@shared/domain/rig'
+import type { HumanoidRole } from '@shared/domain/humanoid'
+import { skeletonSignatureOf } from '@shared/domain/skeletonProfile'
+import { characterOf } from './rigRead'
+import { meshSampleOf } from './rigSnap'
+import './bvhPatches'
+import { receivesShadow } from './sceneRendererSupport2'
+import { SceneRendererGeometry } from './SceneRendererGeometry'
+export abstract class SceneRendererModels extends SceneRendererGeometry {
+  protected abstract tuneShadowsIfMoved(): void
+  protected abstract applyDisplay(object: Object3D): void
+  protected abstract accelerateOrReport(object: Object3D, subject: string): Promise<void>
+  /**
+   * A model arrives long after the frame that asked for it, so what goes into the scene now is
+   * an empty holder the file fills in. The alternative — adding nothing until it lands — leaves
+   * a node the outliner lists, the gizmo cannot find, and a click cannot select.
+   */
+  protected buildModel(node: ModelNode): Object3D {
+    const holder = new Object3D()
+    const { assetId } = node.model
+    void this.loadModelInto(node, holder, assetId)
+    return holder
+  }
+
+  private async loadModelInto(node: ModelNode, holder: Object3D, assetId: string): Promise<void> {
+    const source = await this.modelCache.acquire(assetId)
+    // A freshness test and nothing more: `release` owns the reference, as `clear` does in
+    // `material-textures`. Letting go here too would drop the count twice, and free a source
+    // another node is still cloning.
+    if (this.objects.get(node.id) !== holder || !source) return
+    holder.add(instanceOf(source))
+    // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
+    // and the next one skips an unchanged node — the model would throw nothing until edited.
+    const applied = this.applied.get(node.id) ?? node
+    const sceneTask1Step1 = () => {
+      const sceneTask1Step1 = () => {
+        // The instance, never the cached source: its materials are shared with every other node
+        // built from the same file, and `createModelTextures` is what clones them before writing.
+        const maps = createModelTextures(
+          this.textureCache,
+          holder,
+          () => this.redraw(),
+          () =>
+            reportFailure(
+              'scene.texture',
+              assetId,
+              new Error('this model carries no material a map can be written into'),
+            ),
+        )
+        this.modelMaps.set(node.id, maps)
+        this.options.onMaterials?.(node.id, maps.count())
+        const sceneTask1Step2 = () => {
+          this.dressModel(node.id)
+          // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not
+          // carry them, and a clip addresses its targets by name — so the source's drive any
+          // instance built from it.
+          this.animations.add(node.id, holder, clipsOf(source))
+          if (applied.type === 'model') {
+            this.animations.apply(node.id, applied.model.lanes ?? [])
+            this.ensureBundled(node.id, applied.model.lanes ?? [])
+          }
+          const sceneTask1Step3 = () => {
+            this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
+            // The document's own rig, put back on. Its weights are NOT saved with it — they are derived
+            // from mesh and rig, like a BVH — so they are worked out again on every load. The skeleton
+            // is reported before that finishes: a rig that takes a minute to bind still has bones the
+            // inspector can name at once.
+            // Read once and used twice: whether this model has bones at all is the same question the
+            // helper asks, and answering it in two places is how the two came to disagree. The COUNT
+            // and not the named ones — an export that stripped joint names still has a rig to draw.
+            const clips = clipsOf(source)
+            const rig = rigStateOf(holder, clips)
+            const sceneTask1Step4 = () => {
+              if (applied.type === 'model')
+                markInstanceable(holder, instanceableOf(applied, rig, clips))
+              this.bindSkeleton(node.id, holder, rig.boneCount > 0)
+              this.options.onRig?.(node.id, rig)
+              const sceneTask1Step5 = () => {
+                // Read off the very object that just landed: the skeleton window edits the FILE, and
+                // decoding it a second time to read its bones would pay for a million triangles twice.
+                const { rig: carried, extras } = characterOf(holder)
+                this.options.onCharacter?.(node.id, carried, extras, meshSampleOf(rig))
+                // 🛑 Before anything is retargeted onto it: the FILE is where a bone's role was put right,
+                // and a motion laid on a skeleton nobody has read plays on the wrong joints.
+                if (carried) this.learnRig(carried, extras?.roles)
+                const sceneTask1Step6 = () => {
+                  // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
+                  // on one of them would drive nothing at all until the next edit.
+                  this.applyPoses()
+                  applyShadowFlags(
+                    holder,
+                    applied.castShadow,
+                    receivesShadow(applied),
+                    this.belongsToAnotherNode,
+                  )
+                  // The count is a count of what is really there: a model's triangles arrive with its file,
+                  // which is a tick after the `apply` that asked for it. It is also what the scene now
+                  // OCCUPIES, so the lights are re-cut against a set that just grew by a whole model.
+                  this.markContentChanged()
+                  const sceneTask1Step7 = () => {
+                    this.placementChanged = true
+                    this.tuneShadowsIfMoved()
+                    this.regroupInstances()
+                    const sceneTask1Step8 = () => {
+                      this.reportStats()
+                      // Same reason, same place: what the file brought was not there when the mode was applied,
+                      // and a model landing into a wireframe scene would be the one thing still drawn shaded.
+                      if (this.needsEdges()) this.applyDisplay(holder)
+                      // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
+                      // Off the UI thread, and after the render: the viewport shows the file before the tree.
+                      this.redraw()
+                      const sceneTask1Step9 = () => {
+                        void this.accelerateOrReport(holder, assetId)
+                      }
+                      return sceneTask1Step9()
+                    }
+                    return sceneTask1Step8()
+                  }
+                  return sceneTask1Step7()
+                }
+                return sceneTask1Step6()
+              }
+              return sceneTask1Step5()
+            }
+            return sceneTask1Step4()
+          }
+          return sceneTask1Step3()
+        }
+        return sceneTask1Step2()
+      }
+      return sceneTask1Step1()
+    }
+    return sceneTask1Step1()
+  }
+  /** Told once per skeleton, not per model: it is filed by what its bones ARE. */
+  protected learnRig(rig: Rig, corrected?: Readonly<Record<string, HumanoidRole>>): void {
+    const roles: Record<string, HumanoidRole> = { ...corrected }
+    for (const bone of rig.bones) if (bone.role) roles[bone.name] = bone.role
+    if (Object.keys(roles).length === 0) return
+    const profile = {
+      signature: skeletonSignatureOf(rig.bones.map(bone => bone.name)),
+      roles,
+    }
+    this.retarget.remember(profile)
+    // Out to whoever keeps them: a mapping put right in one document is the same mapping the
+    // next document of this project needs, and the port dies with the viewport.
+    this.options.onProfile?.(profile)
+  }
+  /**
+   * Loads whatever clips a model's blocks name that its own file did not bring, once each, and
+   * lets go of the ones no block names any more. Called wherever lanes are applied: a block can
+   * be dropped long after the file it plays on landed.
+   */
+  protected ensureBundled(nodeId: string, lanes: readonly ClipLane[]): void {
+    const held = this.bundled.get(nodeId) ?? new Map<string, string>()
+    this.bundled.set(nodeId, held)
+    const wanted = new Map(foreignClipsOf(lanes).map(clip => [clip.key, clip]))
+    for (const clip of wanted.values()) {
+      if (held.has(clip.key)) continue
+      // Acquired HERE and not inside the adoption: released while the read is still in flight,
+      // a reference taken afterwards would never be given back.
+      held.set(clip.key, clip.url)
+      void this.adopt(nodeId, clip, this.clipSources.acquire(clip.url))
+    }
+    for (const [key, url] of [...held]) {
+      if (wanted.has(key)) continue
+      held.delete(key)
+      this.clipSources.release(url)
+    }
+  }
+  /**
+   * Replays a clip the model's own file never held on THIS model's skeleton, which is the whole
+   * point: it was authored for a rig nobody here has.
+   */
+  protected async adopt(nodeId: string, clip: ForeignClip, loading: Promise<Object3D | null>) {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return
+    try {
+      // Nothing of the source ever enters the scene: a file dropped for its animation carries a
+      // whole character with it, and only its skeleton is any use here.
+      const source = await loading
+      if (!source) return
+      // The first clip and only it: one file IS one animation, however many it spells.
+      const first = clipsOf(source)[0]
+      if (!first) throw new Error('this file carries no animation')
+      // Before the retarget and not after: it is the only moment both skeletons are in hand, and
+      // it is what lets the screen say WHICH joint the motion has nothing to drive.
+      this.options.onClipFit?.(nodeId, clip.key, this.retarget.fitOf(holder, source))
+      const adapted = (await this.retarget.adapt(holder, source, [first]))?.[0]
+      if (!adapted || this.objects.get(nodeId) !== holder) return
+      // Named by the studio, always: Tripo spells its only clip `NlaTrack` and Uthana's spells
+      // nothing at all, and neither may reach the screen.
+      adapted.name = clip.label
+      this.animations.addClip(nodeId, clip.key, adapted)
+      this.options.onClips?.(
+        nodeId,
+        this.animations.fileNamesOf(nodeId),
+        this.animations.lengthsOf(nodeId),
+      )
+      this.redraw()
+    } catch (error) {
+      // Under a scope of its own: a failing animation must not swallow what a failing model says.
+      reportFailure('scene.animation', clip.url, error)
+    }
+  }
+}

@@ -4,7 +4,6 @@ import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import { memoryAdapter, type MemoryAdapter } from './memoryAdapter'
 import { createSettingsStore, type SettingsStore } from './store'
 
-/** Ids are generated; naming them is what lets a test assert on the stored blob. */
 function countingIds(): () => string {
   let next = 0
   return () => `id-${++next}`
@@ -32,10 +31,6 @@ describe('settings store', () => {
     expect(createSettingsStore(adapter).read()).toEqual(DEFAULT_SETTINGS)
   })
 
-  /**
-   * A read cost a zod pass over the whole file and a rebuild of fifteen sections, and the main
-   * process asks from many hot paths — `services.ts` alone eighteen times.
-   */
   it('reads the stored settings once, and again after a write', () => {
     const store = createSettingsStore(adapter)
     const reads = vi.spyOn(adapter, 'read')
@@ -49,10 +44,6 @@ describe('settings store', () => {
     expect(reads.mock.calls.filter(([key]) => key === 'settings').length).toBeGreaterThan(1)
   })
 
-  /**
-   * Held between reads means SHARED between callers: one of them writing into a section would
-   * change what every other reads, while the file behind it still said the old thing.
-   */
   it('hands back settings nobody can write into', () => {
     const settings = createSettingsStore(adapter).read()
 
@@ -71,11 +62,6 @@ describe('settings store', () => {
     expect(settings.generation).toEqual(DEFAULT_SETTINGS.generation)
   })
 
-  /**
-   * `merge` names its branches by hand, so one added to `Settings` and missed there would drop
-   * every write to it without a word. Read off the defaults rather than listed here, or the
-   * check would need the same edit the merge just missed.
-   */
   it('keeps every branch the settings declare when merging a write', () => {
     const store = createSettingsStore(adapter)
     store.write({ appearance: { density: 'compact' } })

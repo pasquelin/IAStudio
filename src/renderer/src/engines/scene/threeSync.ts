@@ -177,20 +177,17 @@ export function applyLight(light: Light, descriptor: LightDescriptor): void {
     case 'directional':
       if (light instanceof DirectionalLight) applyTarget(light, descriptor.target)
       return
-
     case 'hemisphere':
       if (!(light instanceof HemisphereLight)) return
       light.color.set(descriptor.skyColor)
       light.groundColor.set(descriptor.groundColor)
       return
-
     case 'point':
       if (!(light instanceof PointLight)) return
       light.distance = descriptor.distance
       light.decay = descriptor.decay
       fitPointShadowRange(light)
       return
-
     case 'spot':
       if (!(light instanceof SpotLight)) return
       light.distance = descriptor.distance

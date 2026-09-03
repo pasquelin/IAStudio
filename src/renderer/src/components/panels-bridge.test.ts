@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import chassisStylesheet from '@pasquelin/panels/styles.css?raw'
-import stylesheet from '../index.css?raw'
+import { stylesheet } from '../indexCss-fixtures'
 
 /**
  * The bridge between the chassis' tokens and the studio's, held to what the library actually

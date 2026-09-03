@@ -1,5 +1,5 @@
 import { orElse } from '@shared/promises'
-import { lazy, StrictMode, Suspense } from 'react'
+import { lazy, StrictMode, Suspense, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { isJournalRoute } from '@shared/domain/activity'
 import { isFileInfoRoute } from '@shared/domain/fileInfo'
@@ -101,77 +101,22 @@ const NewDocumentWindow = lazy(async () => ({
  * has its own entry precisely so it never pulls this bundle in.
  */
 function Route({ hash }: { hash: string }) {
-  if (isSettingsRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <SettingsWindow />
-      </Suspense>
-    )
-  }
-  if (isJournalRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <JournalWindow />
-      </Suspense>
-    )
-  }
-  if (isLicencesRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <LicencesWindow />
-      </Suspense>
-    )
-  }
-  if (isUsageRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <UsageWindow />
-      </Suspense>
-    )
-  }
-  if (isGameWindowRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <GameWindow />
-      </Suspense>
-    )
-  }
-  if (isPlayerModuleRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <PlayerModuleWindow />
-      </Suspense>
-    )
-  }
-  if (isMirrorRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <MirrorWindow />
-      </Suspense>
-    )
-  }
-  if (isManualRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <ManualWindow />
-      </Suspense>
-    )
-  }
-  if (isFileInfoRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <FileInfoWindow />
-      </Suspense>
-    )
-  }
-  if (isNewDocumentRoute(hash)) {
-    return (
-      <Suspense fallback={null}>
-        <NewDocumentWindow />
-      </Suspense>
-    )
-  }
-  return <Application />
+  const window = windowFor(hash)
+  return window ? <Suspense fallback={null}>{window}</Suspense> : <Application />
+}
+
+function windowFor(hash: string): ReactNode {
+  if (isSettingsRoute(hash)) return <SettingsWindow />
+  if (isJournalRoute(hash)) return <JournalWindow />
+  if (isLicencesRoute(hash)) return <LicencesWindow />
+  if (isUsageRoute(hash)) return <UsageWindow />
+  if (isGameWindowRoute(hash)) return <GameWindow />
+  if (isPlayerModuleRoute(hash)) return <PlayerModuleWindow />
+  if (isMirrorRoute(hash)) return <MirrorWindow />
+  if (isManualRoute(hash)) return <ManualWindow />
+  if (isFileInfoRoute(hash)) return <FileInfoWindow />
+  if (isNewDocumentRoute(hash)) return <NewDocumentWindow />
+  return null
 }
 
 createRoot(root, ROOT_ERROR_REPORTING).render(

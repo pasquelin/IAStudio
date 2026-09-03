@@ -20,20 +20,20 @@ const THIRD = hung('sky-3')
 /** The procedural studio: a scene naming no sky, and one whose sky has not landed yet. */
 const STUDIO = null
 
-describe('createSkyBinding', () => {
-  let source: ReturnType<typeof fakeTextureSource>
-  let paint: Mock<() => void>
+let source: ReturnType<typeof fakeTextureSource>
+let paint: Mock<() => void>
 
-  beforeEach(() => {
-    source = fakeTextureSource()
-    paint = vi.fn()
-  })
+beforeEach(() => {
+  source = fakeTextureSource()
+  paint = vi.fn()
+})
 
-  /** The failure port: what a cache tells its engine is that engine's business, not this one's. */
-  const silent = () => {}
+/** The failure port: what a cache tells its engine is that engine's business, not this one's. */
+const silent = () => {}
 
-  const binding = () => createSkyBinding(createTextureCache(source.load, silent), paint)
+const binding = () => createSkyBinding(createTextureCache(source.load, silent), paint)
 
+describe('createSkyBinding loading', () => {
   it('asks for the sky by asset id, and prefilters it once it has decoded', async () => {
     const environment = fakeEnvironment()
     await binding().apply(environment, SKY)
@@ -217,7 +217,9 @@ describe('createSkyBinding', () => {
     expect(source.freed[2]).not.toHaveBeenCalled()
     expect(sky.showsSky()).toBe(true)
   })
+})
 
+describe('createSkyBinding ownership', () => {
   /**
    * The ordering rule this module exists for, in the case a losing call can break it: sky-1 is on
    * the background while 2 and 3 decode, and 2 resolves first. Whatever 2 gives back, it must not

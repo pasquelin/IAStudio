@@ -202,10 +202,7 @@ const assistantMemoryState: AssistantMemoryState = {
     await orElse(memoryBridge()?.rebuild(useAssistantMemory.getState().scope), 0),
 
   reset: async () => {
-    await orElse(
-      memoryBridge()?.reset(useAssistantMemory.getState().scope),
-      undefined,
-    )
+    await orElse(memoryBridge()?.reset(useAssistantMemory.getState().scope), undefined)
   },
 
   /** One reload at the end and not one per memory — see `amendedAll`. */

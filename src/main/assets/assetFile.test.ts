@@ -3,7 +3,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { DUPLICATE_NAME, freeAssetPath, moveAssetFile, moveAssetFileToFree } from './assetFile'
+import {
+  ASSET_DUPLICATE_NAME,
+  freeAssetPath,
+  moveAssetFile,
+  moveAssetFileToFree,
+} from './assetFile'
 
 let root = ''
 
@@ -104,7 +109,7 @@ describe('moving an asset file to its new name', () => {
 
     await expect(
       moveAssetFile(root, asset({ path: 'assets/img/asset_1.png' }), 'Ruelle'),
-    ).rejects.toThrow(DUPLICATE_NAME)
+    ).rejects.toThrow(ASSET_DUPLICATE_NAME)
 
     expect((await readdir(join(root, 'assets/img'))).sort()).toEqual(['Ruelle.png', 'asset_1.png'])
   })

@@ -14,6 +14,34 @@ import {
   type AssetIntent,
 } from './assetIntents'
 
+async function openSpecialAsset(asset: Asset, into?: AssetIntent): Promise<boolean | null> {
+  if (into) return null
+  if (opensAsPlayerModule(asset)) {
+    await getBridge()?.playerModuleWindow.open(asset.id)
+    return true
+  }
+  return opensAsCharacter(asset) ? openCharacter(asset.id) : null
+}
+
+function refusalFor(asset: Asset, intent: AssetIntent | null): string | null {
+  if (!intent?.takes(asset)) return 'no destination'
+  if (asset.location !== 'local') return 'not on disk'
+  if (!useProject.getState().project) return 'no project'
+  return null
+}
+
+async function createAssetDocument(asset: Asset, intent: AssetIntent): Promise<boolean> {
+  const created = await useDocuments
+    .getState()
+    .create(intent.workspace, { title: asset.name, sourceAssetId: asset.id })
+  if (!created) {
+    reportFailure('assets.open', asset.name, new Error('no document'))
+    return false
+  }
+  await (intent.become ?? intent.into)(created.id, asset)
+  return true
+}
+
 /**
  * What opening an asset does — double-click or Enter: a tab of its own, in the space that edits
  * its kind. The context menu and the drag keep the destinations of `ASSET_INTENTS`, which serve
@@ -37,11 +65,8 @@ export async function openAsset(asset: Asset, into?: AssetIntent): Promise<boole
   // Both are opened on the FILE and never as one node of a scene — the module in a window of its
   // own, the character on a tab. Only where nobody named a destination: « Send to », the viewport
   // drop and `node.addModel` all pass an intent, and each still puts a model in a scene.
-  if (!into && opensAsPlayerModule(asset)) {
-    await getBridge()?.playerModuleWindow.open(asset.id)
-    return true
-  }
-  if (!into && opensAsCharacter(asset)) return await openCharacter(asset.id)
+  const special = await openSpecialAsset(asset, into)
+  if (special !== null) return special
 
   const intent = into ?? editorIntent(asset)
   const already = documentForAsset(useDocuments.getState(), asset.id, intent?.kind)
@@ -58,42 +83,12 @@ export async function openAsset(asset: Asset, into?: AssetIntent): Promise<boole
     return true
   }
 
-  // `takes` before anything is made: an editor that would refuse the asset must say so rather
-  // than leave an empty tab standing where a refusal belonged.
-  if (!intent?.takes(asset)) {
-    reportFailure('assets.open', asset.name, new Error('no destination'))
+  const refusal = refusalFor(asset, intent)
+  if (refusal || !intent) {
+    reportFailure('assets.open', asset.name, new Error(refusal ?? 'no destination'))
     return false
   }
-
-  // Every editor loads its subject from the file behind it — `assetUrl` resolves an id against
-  // the catalogue, and one the cloud still holds answers 404. `takes` cannot see this for the
-  // kinds whose destination has no picture guard, so the gesture asks it once, for all of them.
-  if (asset.location !== 'local') {
-    reportFailure('assets.open', asset.name, new Error('not on disk'))
-    return false
-  }
-
-  // A document is a file in a project folder, so without one there is nowhere to write it —
-  // `create` alone would post a descriptor for a tab that can never be saved.
-  if (!useProject.getState().project) {
-    reportFailure('assets.open', asset.name, new Error('no project'))
-    return false
-  }
-
-  const created = await useDocuments
-    .getState()
-    .create(intent.workspace, { title: asset.name, sourceAssetId: asset.id })
-
-  if (!created) {
-    reportFailure('assets.open', asset.name, new Error('no document'))
-    return false
-  }
-
-  // `become` where the destination offers one — the document IS the asset, rather than a blank
-  // one the asset was dropped on. It is what leaves the tab unmodified on open, and what makes
-  // ⌘S able to write a faithful flatten back.
-  await (intent.become ?? intent.into)(created.id, asset)
-  return true
+  return createAssetDocument(asset, intent)
 }
 
 /**

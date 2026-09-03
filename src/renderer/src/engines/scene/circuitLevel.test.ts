@@ -84,12 +84,11 @@ function distanceToRun(run: readonly Vector3[], x: number, z: number): number {
   )
 }
 
-describe('the circuit a car opens on', () => {
-  const nodes = circuitNodes()
-  const tarmac = runOf(nodes, 'Tarmac')
-  // Where the bands are actually swept, not the two dozen anchors they are written through.
-  const centre = sampledRun(bandOf(nodes, 'Tarmac')!.path, bandOf(nodes, 'Tarmac')!.segments)
+const nodes = circuitNodes()
+const tarmac = runOf(nodes, 'Tarmac')
+const centre = sampledRun(bandOf(nodes, 'Tarmac')!.path, bandOf(nodes, 'Tarmac')!.segments)
 
+describe('the circuit a car opens on', () => {
   /** A car put beside its own track spends the first corner climbing back onto it. */
   it('puts the car down on the tarmac rather than beside it', () => {
     // Half the track width: dead centre is 0, and the kerbs start at 6.
@@ -208,7 +207,9 @@ describe('the circuit a car opens on', () => {
 
     expect(fidelities).toEqual(['trimesh', 'trimesh'])
   })
+})
 
+describe('the circuit layout', () => {
   /**
    * 🛑 One band a piece and no boolean: it was twenty-four slabs and forty-eight kerb blocks,
    * welded — which kept every corner standing.

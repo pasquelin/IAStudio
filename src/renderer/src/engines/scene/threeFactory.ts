@@ -79,6 +79,24 @@ export function geometryFor(descriptor: GeometryDescriptor): BufferGeometry {
         descriptor.height,
         descriptor.segments,
       )
+    case 'plane':
+      return new PlaneGeometry(descriptor.width, descriptor.height)
+    case 'ribbon':
+      return ribbonGeometry(descriptor)
+    case 'ring':
+      return new RingGeometry(descriptor.innerRadius, descriptor.outerRadius, descriptor.segments)
+    default:
+      return curvedGeometryFor(descriptor)
+  }
+}
+
+function curvedGeometryFor(
+  descriptor: Exclude<
+    GeometryDescriptor,
+    { kind: 'box' | 'capsule' | 'circle' | 'cylinder' | 'plane' | 'ribbon' | 'ring' }
+  >,
+): BufferGeometry {
+  switch (descriptor.kind) {
     case 'dodecahedron':
       return new DodecahedronGeometry(descriptor.radius)
     case 'icosahedron':
@@ -87,12 +105,19 @@ export function geometryFor(descriptor: GeometryDescriptor): BufferGeometry {
       return new LatheGeometry(undefined, descriptor.segments)
     case 'octahedron':
       return new OctahedronGeometry(descriptor.radius)
-    case 'plane':
-      return new PlaneGeometry(descriptor.width, descriptor.height)
-    case 'ribbon':
-      return ribbonGeometry(descriptor)
-    case 'ring':
-      return new RingGeometry(descriptor.innerRadius, descriptor.outerRadius, descriptor.segments)
+    default:
+      return sweptGeometryFor(descriptor)
+  }
+}
+
+function sweptGeometryFor(
+  descriptor: Exclude<
+    GeometryDescriptor,
+    | { kind: 'box' | 'capsule' | 'circle' | 'cylinder' | 'plane' | 'ribbon' | 'ring' }
+    | { kind: 'dodecahedron' | 'icosahedron' | 'lathe' | 'octahedron' }
+  >,
+): BufferGeometry {
+  switch (descriptor.kind) {
     case 'sphere':
       return new SphereGeometry(
         descriptor.radius,

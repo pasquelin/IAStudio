@@ -77,7 +77,7 @@ export function AssetBrowser() {
   const jobs = useJobs(state => state.jobs)
   const busy = useCloud(state => state.busy)
   const moving = useCloud(state => state.moving)
-  const ownType = typeOfWorkspace(workspace) ?? soleTypeOf(workspace)
+  const ownType = workspaceType(workspace)
   useEffect(() => {
     if (ownType) setCollection(setFacetValue(useAssets.getState().collection, TYPE_FACET, ownType))
   }, [ownType, setCollection])
@@ -92,9 +92,7 @@ export function AssetBrowser() {
 
   const cloudScope = useMemo(() => scope.filter(isCloudAssetType), [scope])
 
-  const chosenSources = collection.selections[SOURCE_FACET]
-  const wantsPublished = (chosenSources ?? []).includes(PUBLISHED_SOURCE)
-  const wantsOwn = !wantsPublished || (chosenSources ?? []).length > 1
+  const { wantsPublished, wantsOwn } = wantedSources(collection.selections[SOURCE_FACET])
 
   const library = usePages(
     ['assets', 'library', ownerId, cloudScope, search],
@@ -218,7 +216,7 @@ export function AssetBrowser() {
     key: `${ownerId} ${search} ${scope.join()} ${publishedType}`,
     drawn: shown.length,
     wanted: SURFACE_ROWS,
-    fetching: library.fetching || feed.fetching,
+    fetching: eitherFetching(library.fetching, feed.fetching),
     // A page either of them answers with nothing moves no row on screen, and the panel would
     // stop one pull in with pages still to come.
     answered: `${library.pagesRead} ${feed.pagesRead}`,
@@ -241,25 +239,14 @@ export function AssetBrowser() {
   useEffect(() => () => setPicked([]), [setPicked])
 
   /** No key is asked FIRST: blaming a filter would send someone hunting for one to clear. */
-  const narrowedByHand = isFiltered(
-    chosenTypes?.length === 1 && chosenTypes[0] === ownType
-      ? setFacetValue(collection, TYPE_FACET, null)
-      : collection,
-  )
+  const narrowedByHand = narrowedByUser(collection, chosenTypes, ownType)
   // EITHER source still on its way, not both: a listing nobody asked for is not pending, so
   // reading the record alone said « no match » over a feed whose first page was in flight.
-  const reading = (wantsOwn && library.pending) || (publishedType !== null && feed.pending)
-  const refused = library.refusal !== null || feed.refusal !== null
+  const { reading, refused } = browserStatus(wantsOwn, library, publishedType, feed)
 
   if (authKnown && !authenticated) return <MissingCredentials icon={mdiImageMultipleOutline} />
 
-  const emptyMessage = reading
-    ? t('collection.loading')
-    : refused
-      ? t('assets.libraryRefused')
-      : narrowedByHand
-        ? t('collection.noMatch')
-        : t('assets.noneRemote')
+  const emptyMessage = emptyAssetMessage({ reading, refused, narrowedByHand, t })
   return (
     <AssetBrowserList
       collection={collection}
@@ -306,6 +293,56 @@ export function AssetBrowser() {
       }
     />
   )
+}
+
+function workspaceType(workspace: Parameters<typeof typeOfWorkspace>[0]) {
+  return typeOfWorkspace(workspace) ?? soleTypeOf(workspace)
+}
+
+function eitherFetching(library: boolean, feed: boolean): boolean {
+  return library || feed
+}
+
+function wantedSources(chosen: readonly string[] | undefined) {
+  const selections = chosen ?? []
+  const wantsPublished = selections.includes(PUBLISHED_SOURCE)
+  return { wantsPublished, wantsOwn: !wantsPublished || selections.length > 1 }
+}
+
+function narrowedByUser(
+  collection: Parameters<typeof isFiltered>[0],
+  chosen: readonly string[] | undefined,
+  ownType: AssetType | null,
+): boolean {
+  if (chosen?.length === 1 && chosen[0] === ownType)
+    return isFiltered(setFacetValue(collection, TYPE_FACET, null))
+  return isFiltered(collection)
+}
+
+type PageState = { pending: boolean; refusal: unknown }
+
+function browserStatus(
+  wantsOwn: boolean,
+  library: PageState,
+  publishedType: AssetType | null,
+  feed: PageState,
+) {
+  return {
+    reading: (wantsOwn && library.pending) || (publishedType !== null && feed.pending),
+    refused: library.refusal !== null || feed.refusal !== null,
+  }
+}
+
+function emptyAssetMessage(input: {
+  reading: boolean
+  refused: boolean
+  narrowedByHand: boolean
+  t: ReturnType<typeof useTranslation>['t']
+}) {
+  if (input.reading) return input.t('collection.loading')
+  if (input.refused) return input.t('assets.libraryRefused')
+  if (input.narrowedByHand) return input.t('collection.noMatch')
+  return input.t('assets.noneRemote')
 }
 
 /**

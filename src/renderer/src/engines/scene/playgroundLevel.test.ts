@@ -103,7 +103,9 @@ describe('the playground level', () => {
     expect(overTheCourt).toHaveLength(1)
     expect(named(playgroundNodes(), 'Plank')).toBeDefined()
   })
+})
 
+describe('the playground level traversal', () => {
   it('sinks the court below the floor it is cut into', () => {
     const nodes = playgroundNodes()
     const court = boxOf(named(nodes, 'Court Floor') as SceneNode)
@@ -170,7 +172,9 @@ describe('the playground level', () => {
     const gaps = blocks.slice(1).map((block, index) => block.x0 - (blocks[index]?.x1 ?? 0))
     expect(gaps).toEqual([...gaps].sort((a, b) => a - b))
   })
+})
 
+describe('the playground level structure', () => {
   it('names every part, so the outliner is not a column of « Box »', () => {
     const names = playgroundNodes().map(node => node.name)
 

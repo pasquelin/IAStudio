@@ -33,63 +33,13 @@ export function createAdaptiveRigDebugView(debug: AdaptiveRigDebug): AdaptiveRig
     new Color(rootColour('--color-muted')),
   )
   group.add(box)
-
-  const size = new Vector3().subVectors(
-    vector(debug.robustBounds.max),
-    vector(debug.robustBounds.min),
-  )
-  const planeGeometry = new PlaneGeometry(
-    debug.symmetryPlane.normal.x === 0 ? size.x : size.z,
-    size.y,
-  )
-  const planeMaterial = new MeshBasicMaterial({
-    color: rootColour('--color-accent'),
-    transparent: true,
-    opacity: 0.12,
-    depthWrite: false,
-    side: DoubleSide,
-  })
-  const plane = new Mesh(planeGeometry, planeMaterial)
-  plane.position.copy(vector(debug.symmetryPlane.origin))
-  if (debug.symmetryPlane.normal.x !== 0) plane.rotation.y = Math.PI / 2
-  group.add(plane)
-  geometries.push(planeGeometry)
-  materials.push(planeMaterial)
-
-  const sectionValues: number[] = []
-  for (const section of debug.sections.filter(section => section.points > 0)) {
-    const centre = vector(section.centre)
-    const across = vector(debug.axes.left).multiplyScalar(section.halfWidth)
-    const forward = vector(debug.axes.forward).multiplyScalar(section.halfDepth)
-    sectionValues.push(
-      ...centre.clone().sub(across),
-      ...centre.clone().add(across),
-      ...centre.clone().sub(forward),
-      ...centre.clone().add(forward),
-    )
-  }
-  group.add(lines(sectionValues, '--color-muted', geometries, materials))
-
-  const origin = vector(debug.symmetryPlane.origin)
-  const axisLength = Math.max(size.x, size.y, size.z) * 0.25
-  group.add(
-    lines(
-      [
-        ...origin,
-        ...origin.clone().add(vector(debug.axes.vertical).multiplyScalar(axisLength)),
-        ...origin,
-        ...origin.clone().add(vector(debug.axes.left).multiplyScalar(axisLength)),
-        ...origin,
-        ...origin.clone().add(vector(debug.axes.forward).multiplyScalar(axisLength)),
-      ],
-      '--color-accent',
-      geometries,
-      materials,
-    ),
-  )
+  const size = debugSize(debug)
+  group.add(symmetryPlane(debug, size, geometries, materials))
+  group.add(lines(sectionLines(debug), '--color-muted', geometries, materials))
+  group.add(lines(axisLines(debug, size), '--color-accent', geometries, materials))
   group.add(
     points(
-      debug.candidates.map(candidate => candidate.landmark.position),
+      debug.candidates.map(one => one.landmark.position),
       '--color-warning',
       geometries,
       materials,
@@ -97,7 +47,7 @@ export function createAdaptiveRigDebugView(debug: AdaptiveRigDebug): AdaptiveRig
   )
   group.add(
     points(
-      [...debug.landmarks.values()].map(landmark => landmark.position),
+      [...debug.landmarks.values()].map(one => one.position),
       '--color-accent',
       geometries,
       materials,
@@ -118,6 +68,61 @@ export function createAdaptiveRigDebugView(debug: AdaptiveRigDebug): AdaptiveRig
       for (const material of materials) material.dispose()
     },
   }
+}
+
+function debugSize(debug: AdaptiveRigDebug): Vector3 {
+  return new Vector3().subVectors(vector(debug.robustBounds.max), vector(debug.robustBounds.min))
+}
+
+function symmetryPlane(
+  debug: AdaptiveRigDebug,
+  size: Vector3,
+  geometries: BufferGeometry[],
+  materials: Material[],
+): Mesh {
+  const geometry = new PlaneGeometry(debug.symmetryPlane.normal.x === 0 ? size.x : size.z, size.y)
+  const material = new MeshBasicMaterial({
+    color: rootColour('--color-accent'),
+    transparent: true,
+    opacity: 0.12,
+    depthWrite: false,
+    side: DoubleSide,
+  })
+  const plane = new Mesh(geometry, material)
+  plane.position.copy(vector(debug.symmetryPlane.origin))
+  if (debug.symmetryPlane.normal.x !== 0) plane.rotation.y = Math.PI / 2
+  geometries.push(geometry)
+  materials.push(material)
+  return plane
+}
+
+function sectionLines(debug: AdaptiveRigDebug): number[] {
+  return debug.sections
+    .filter(section => section.points > 0)
+    .flatMap(section => {
+      const centre = vector(section.centre)
+      const across = vector(debug.axes.left).multiplyScalar(section.halfWidth)
+      const forward = vector(debug.axes.forward).multiplyScalar(section.halfDepth)
+      return [
+        ...centre.clone().sub(across),
+        ...centre.clone().add(across),
+        ...centre.clone().sub(forward),
+        ...centre.clone().add(forward),
+      ]
+    })
+}
+
+function axisLines(debug: AdaptiveRigDebug, size: Vector3): number[] {
+  const origin = vector(debug.symmetryPlane.origin)
+  const length = Math.max(size.x, size.y, size.z) * 0.25
+  return [
+    ...origin,
+    ...origin.clone().add(vector(debug.axes.vertical).multiplyScalar(length)),
+    ...origin,
+    ...origin.clone().add(vector(debug.axes.left).multiplyScalar(length)),
+    ...origin,
+    ...origin.clone().add(vector(debug.axes.forward).multiplyScalar(length)),
+  ]
 }
 
 function lines(

@@ -55,13 +55,23 @@ function state(nodes: readonly SceneNode[]): SceneState {
 }
 
 export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
-  const small = Array.from({ length: 50 }, (_unused, index) =>
-    positioned(meshNode(`small-${index}`), index, 10),
+  return [
+    benchmark('S1', 'small-world overhead', repeatedMeshes('small', 50, 10)),
+    benchmark('S2', 'repeated-object instancing', repeatedMeshes('tree', 10_000, 100)),
+    benchmark('S3', 'different static props batching', batchedProps()),
+    benchmark('S4', 'city partitioning and culling', repeatedMeshes('building', 20_000, 200)),
+    benchmark('S5', 'mixed gameplay compatibility', mixedNodes()),
+  ]
+}
+
+function repeatedMeshes(prefix: string, length: number, width: number): MeshNode[] {
+  return Array.from({ length }, (_unused, index) =>
+    positioned(meshNode(`${prefix}-${index}`), index, width),
   )
-  const repetition = Array.from({ length: 10_000 }, (_unused, index) =>
-    positioned(meshNode(`tree-${index}`), index, 100),
-  )
-  const props = Array.from({ length: 10_000 }, (_unused, index): MeshNode => {
+}
+
+function batchedProps(): MeshNode[] {
+  return Array.from({ length: 10_000 }, (_unused, index): MeshNode => {
     const node = positioned(meshNode(`prop-${index}`), index, 100)
     return {
       ...node,
@@ -69,10 +79,10 @@ export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
       optimization: { mode: 'batch' },
     }
   })
-  const city = Array.from({ length: 20_000 }, (_unused, index) =>
-    positioned(meshNode(`building-${index}`), index, 200),
-  )
-  const mixed: SceneNode[] = [
+}
+
+function mixedNodes(): SceneNode[] {
+  return [
     ...Array.from({ length: 300 }, (_unused, index) =>
       positioned(meshNode(`static-${index}`), index, 30),
     ),
@@ -113,12 +123,12 @@ export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
       light: SUN,
     },
   ]
+}
 
-  return [
-    { id: 'S1', purpose: 'small-world overhead', state: state(small) },
-    { id: 'S2', purpose: 'repeated-object instancing', state: state(repetition) },
-    { id: 'S3', purpose: 'different static props batching', state: state(props) },
-    { id: 'S4', purpose: 'city partitioning and culling', state: state(city) },
-    { id: 'S5', purpose: 'mixed gameplay compatibility', state: state(mixed) },
-  ]
+function benchmark(
+  id: WorldBenchmarkId,
+  purpose: string,
+  nodes: readonly SceneNode[],
+): WorldBenchmarkScene {
+  return { id, purpose, state: state(nodes) }
 }

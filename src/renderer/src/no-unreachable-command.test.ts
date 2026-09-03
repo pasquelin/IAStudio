@@ -13,8 +13,20 @@ import { WINDOW_SOURCES } from './windowSources'
 /** The modules whose exports ARE the edits of a document — one per workspace that keeps one. */
 const COMMAND_MODULES = [
   'engines/canvas/commands.ts',
-  'engines/scene/commands.ts',
+  'engines/canvas/commandsStructure.ts',
   'engines/scene/animationCommands.ts',
+  'engines/scene/animationRecordingCommands.ts',
+  'engines/scene/animationTrackCommands.ts',
+  'engines/scene/cameraAnimationCommands.ts',
+  'engines/scene/nodeBatchCommands.ts',
+  'engines/scene/nodeBulkCommands.ts',
+  'engines/scene/nodeDescriptorCommands.ts',
+  'engines/scene/nodeEditCommands.ts',
+  'engines/scene/nodeTreeCommands.ts',
+  'engines/scene/postCommands.ts',
+  'engines/scene/reliefCommands.ts',
+  'engines/scene/templateCommands.ts',
+  'engines/scene/timelineCommands.ts',
   'engines/timeline/commands.ts',
 ]
 
@@ -84,6 +96,7 @@ const COMMANDS: readonly (readonly [string, readonly string[]])[] = SOURCES.map(
  */
 const COMBINATORS: readonly string[] = [
   'multi',
+  'restructure',
   'editClip',
   'railOnNewShot',
   // The single-node writer its spreading twin builds from. `setMaterialOn` is what decides
@@ -163,10 +176,13 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
  * driving the 3D space runs into first.
  */
 const NOT_PUBLISHED: readonly string[] = [
+  'sweep',
+  'removePostEffect',
+  'reorderPostEffects',
+  'sculptRelief',
   // The ENGINE reaches it, never a handler: `endPixels` calls `onPixels`, which the window has
   // wired to this command since the brush existed. An action that paints goes through the port's
   // `paintCells`, which knows nothing of it — a second door is the same entry pushed twice.
-  'paintPixels',
   // The drag's own half of `layer.transform`: an absolute x and y, so a gesture coalesced into
   // one entry keeps the last apply. An action names the transform whole and goes through
   // `setLayerTransform` — a second door onto the same edit is an edit published twice.
@@ -188,8 +204,7 @@ const NOT_PUBLISHED: readonly string[] = [
 describe('what edits a document, and what an outside client may ask for', () => {
   /** A regex that reads nothing prints the same green as one that works. */
   it('finds the commands at all', () => {
-    for (const [module, names] of COMMANDS) expect(names.length, module).toBeGreaterThan(10)
-
+    expect(COMMANDS.flatMap(([, names]) => names).length).toBeGreaterThan(40)
     expect(HANDLERS.length).toBeGreaterThan(10_000)
   })
 

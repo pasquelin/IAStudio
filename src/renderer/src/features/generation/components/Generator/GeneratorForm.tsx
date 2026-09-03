@@ -57,7 +57,6 @@ type GeneratorFormProps = {
 
 export function GeneratorForm(props: GeneratorFormProps) {
   const { t } = useTranslation()
-  const Form = props.Form
   return (
     <>
       {props.asking && (
@@ -67,45 +66,62 @@ export function GeneratorForm(props: GeneratorFormProps) {
         />
       )}
       <div className={cn(PANEL_SCROLL, 'gap-2 pt-2 pl-2')}>
-        <GeneratorOperation capability={props.capability} onForce={props.onForce} />
-        <GeneratorModel {...props.model} />
-        {props.model.modelId !== null && props.descriptor.pending && (
-          <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
-        )}
-        {props.model.modelId !== null && props.descriptor.error !== null && (
-          <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(props.descriptor.error))} />
-        )}
-        <GeneratorSources {...props.sourcesInput} />
-        {props.descriptor.ready && props.model.modelId !== null && (
-          <GeneratorContext {...props.context} />
-        )}
-        <GeneratorPixelArt {...props.pixelArt} />
-        {props.role !== null && props.offered !== null && props.landing !== null && (
-          <GeneratorLanding
-            role={props.role}
-            choice={props.landingChoice}
-            landing={props.landing}
-            onLanding={props.onLanding}
-          />
-        )}
-        <GeneratorRun job={props.running} />
-        {props.refusal && <p className="text-muted text-xs">{props.refusal}</p>}
-        {props.descriptor.ready && (
-          <ErrorBoundary>
-            <Suspense
-              fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
-            >
-              <Form
-                {...props.form}
-                submitNote={props.submitNote}
-                submitLabel={t('actions.generate')}
-                submitHint={t('actions.generateHint')}
-                accessory={dictationAccessory}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        )}
+        {generatorFormSetup(props, t)}
+        {generatorFormRun(props, t)}
       </div>
+    </>
+  )
+}
+
+function generatorFormSetup(props: GeneratorFormProps, t: ReturnType<typeof useTranslation>['t']) {
+  return (
+    <>
+      <GeneratorOperation capability={props.capability} onForce={props.onForce} />
+      <GeneratorModel {...props.model} />
+      {props.model.modelId !== null && props.descriptor.pending && (
+        <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
+      )}
+      {props.model.modelId !== null && props.descriptor.error !== null && (
+        <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(props.descriptor.error))} />
+      )}
+      <GeneratorSources {...props.sourcesInput} />
+      {props.descriptor.ready && props.model.modelId !== null && (
+        <GeneratorContext {...props.context} />
+      )}
+      <GeneratorPixelArt {...props.pixelArt} />
+      {props.role !== null && props.offered !== null && props.landing !== null && (
+        <GeneratorLanding
+          role={props.role}
+          choice={props.landingChoice}
+          landing={props.landing}
+          onLanding={props.onLanding}
+        />
+      )}
+    </>
+  )
+}
+
+function generatorFormRun(props: GeneratorFormProps, t: ReturnType<typeof useTranslation>['t']) {
+  const Form = props.Form
+  return (
+    <>
+      <GeneratorRun job={props.running} />
+      {props.refusal && <p className="text-muted text-xs">{props.refusal}</p>}
+      {props.descriptor.ready && (
+        <ErrorBoundary>
+          <Suspense
+            fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
+          >
+            <Form
+              {...props.form}
+              submitNote={props.submitNote}
+              submitLabel={t('actions.generate')}
+              submitHint={t('actions.generateHint')}
+              accessory={dictationAccessory}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
     </>
   )
 }

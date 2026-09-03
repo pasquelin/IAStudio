@@ -29,6 +29,20 @@ const COMPRESSIONS = ['KHR_draco_mesh_compression', 'EXT_meshopt_compression']
 /** The mark every node this studio wrote carries, so a second save replaces rather than adds. */
 const OURS = { [STUDIO_METADATA_KEY]: { bone: true } }
 
+type SkinWorkspace = {
+  chunks: NonNullable<ReturnType<typeof glbChunksOf>>
+  gltf: Record<string, unknown>
+  held: unknown[]
+  ourSkins: Set<number>
+  nodes: Record<string, unknown>[]
+  scenes: Record<string, unknown>[]
+  meshes: Record<string, unknown>[]
+  accessors: unknown[]
+  views: unknown[]
+  appended: Uint8Array[]
+  length: number
+}
+
 export function glbSkinFaultOf(file: Uint8Array, patch: GlbSkinPatch): GlbSkinFault | null {
   const chunks = glbChunksOf(file)
   if (!chunks) return 'not-glb'
@@ -58,42 +72,12 @@ export function glbSkinFaultOf(file: Uint8Array, patch: GlbSkinPatch): GlbSkinFa
  * would cost the character the sharpness of its maps. Here the container is patched in place.
  */
 export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
-  const chunks = glbChunksOf(file)
-  const gltf: unknown = chunks && glbJson(chunks.json)
-  if (!chunks || !isRecord(gltf)) return file
-
-  const held = Array.isArray(gltf.skins) ? gltf.skins : []
-  // A skin whose joints are bones we wrote is one we wrote: nothing else marks it.
-  const ourSkins = new Set(
-    held.flatMap((skin, index) => (isOurSkin(gltf.nodes, skin) ? [index] : [])),
-  )
-  const nodes = withoutOurs(Array.isArray(gltf.nodes) ? gltf.nodes : [], ourSkins)
-  const scenes = Array.isArray(gltf.scenes) ? gltf.scenes.map(one => ({ ...one })) : []
-  const meshes = Array.isArray(gltf.meshes) ? gltf.meshes.map(cloneMesh) : []
-  const accessors = Array.isArray(gltf.accessors) ? [...gltf.accessors] : []
-  const views = Array.isArray(gltf.bufferViews) ? [...gltf.bufferViews] : []
-  const appended: Uint8Array[] = []
-  let length = chunks.bin.byteLength
-
-  const push = (bytes: Uint8Array, stride: number): number => {
-    // Every view starts on its component's size, which is what the specification asks of an
-    // accessor reading it: an unaligned offset is read as garbage rather than refused.
-    const pad = (stride - (length % stride)) % stride
-    if (pad > 0) {
-      appended.push(new Uint8Array(pad))
-      length += pad
-    }
-
-    views.push({ buffer: 0, byteOffset: length, byteLength: bytes.byteLength })
-    appended.push(bytes)
-    length += bytes.byteLength
-
-    return views.length - 1
-  }
-
-  const first = nodes.length
+  const work = skinWorkspace(file)
+  if (!work) return file
+  const push = (bytes: Uint8Array, stride: number): number => appendView(work, bytes, stride)
+  const first = work.nodes.length
   for (const [index, bone] of patch.bones.entries()) {
-    nodes.push({
+    work.nodes.push({
       name: bone.name,
       ...placement(bone),
       ...childrenOf(patch.bones, index, first),
@@ -103,34 +87,30 @@ export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
 
   const joints = patch.bones.map((_, index) => first + index)
   const inverses = new Float32Array(bindInversesOf(patch.bones))
-  const skin = { joints, inverseBindMatrices: accessorFor(accessors, push, inverses) }
+  const skin = { joints, inverseBindMatrices: accessorFor(work.accessors, push, inverses) }
 
   for (const attributes of patch.skins) {
-    const primitive = primitiveAt(meshes, attributes)
+    const primitive = primitiveAt(work.meshes, attributes)
     if (!primitive) continue
 
     primitive.attributes = {
       ...(isRecord(primitive.attributes) ? primitive.attributes : {}),
-      JOINTS_0: unsignedAccessor(accessors, push, attributes.joints),
-      WEIGHTS_0: accessorFor(accessors, push, attributes.weights, 'VEC4'),
+      JOINTS_0: unsignedAccessor(work.accessors, push, attributes.joints),
+      WEIGHTS_0: accessorFor(work.accessors, push, attributes.weights, 'VEC4'),
     }
   }
 
-  const skins = [...held.filter((_, index) => !ourSkins.has(index)), skin]
+  const skins = [...work.held.filter((_, index) => !work.ourSkins.has(index)), skin]
   const wearing = new Set(patch.skins.map(one => one.mesh))
-  const dressed = nodes.map(node =>
+  const dressed = work.nodes.map(node =>
     isRecord(node) && typeof node.mesh === 'number' && wearing.has(node.mesh)
       ? { ...node, skin: skins.length - 1 }
       : node,
   )
 
-  // 🛑 The joints have to sit in the same scene as the mesh they drive; a reader resolves them
-  // through it, and glTF says so.
   const roots = patch.bones.flatMap((bone, index) => (bone.parent === null ? [first + index] : []))
-  const shown = typeof gltf.scene === 'number' ? gltf.scene : 0
-  // On the SCENE and not at the root of the file: `GLTFLoader` hands back `scenes[i].extras` as
-  // `scene.userData` and reads nothing of the root's — measured, and it is what the studio relits.
-  const withRoots = scenes.map((one, index) =>
+  const shown = typeof work.gltf.scene === 'number' ? work.gltf.scene : 0
+  const withRoots = work.scenes.map((one, index) =>
     index === shown
       ? {
           ...one,
@@ -141,20 +121,57 @@ export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
   )
 
   const written = {
-    ...gltf,
+    ...work.gltf,
     nodes: dressed,
     scenes: withRoots,
-    meshes,
-    accessors,
-    bufferViews: views,
+    meshes: work.meshes,
+    accessors: work.accessors,
+    bufferViews: work.views,
     skins,
-    buffers: [{ ...firstBuffer(gltf.buffers), byteLength: length }],
+    buffers: [{ ...firstBuffer(work.gltf.buffers), byteLength: work.length }],
   }
 
   return glbFrom({
     json: new TextEncoder().encode(JSON.stringify(written)),
-    bin: joined(chunks.bin, appended, length),
+    bin: joined(work.chunks.bin, work.appended, work.length),
   })
+}
+
+function skinWorkspace(file: Uint8Array): SkinWorkspace | null {
+  const chunks = glbChunksOf(file)
+  const gltf: unknown = chunks && glbJson(chunks.json)
+  if (!chunks || !isRecord(gltf)) return null
+  const held = Array.isArray(gltf.skins) ? gltf.skins : []
+  const ourSkins = new Set(
+    held.flatMap((skin, index) => (isOurSkin(gltf.nodes, skin) ? [index] : [])),
+  )
+  return {
+    chunks,
+    gltf,
+    held,
+    ourSkins,
+    nodes: withoutOurs(Array.isArray(gltf.nodes) ? gltf.nodes : [], ourSkins),
+    scenes: Array.isArray(gltf.scenes)
+      ? gltf.scenes.map(one => (isRecord(one) ? { ...one } : {}))
+      : [],
+    meshes: Array.isArray(gltf.meshes) ? gltf.meshes.map(cloneMesh) : [],
+    accessors: Array.isArray(gltf.accessors) ? [...gltf.accessors] : [],
+    views: Array.isArray(gltf.bufferViews) ? [...gltf.bufferViews] : [],
+    appended: [],
+    length: chunks.bin.byteLength,
+  }
+}
+
+function appendView(work: SkinWorkspace, bytes: Uint8Array, stride: number): number {
+  const pad = (stride - (work.length % stride)) % stride
+  if (pad > 0) {
+    work.appended.push(new Uint8Array(pad))
+    work.length += pad
+  }
+  work.views.push({ buffer: 0, byteOffset: work.length, byteLength: bytes.byteLength })
+  work.appended.push(bytes)
+  work.length += bytes.byteLength
+  return work.views.length - 1
 }
 
 /** The bind matrices, as `Skeleton` computes them: the inverse of each bone's world place. */

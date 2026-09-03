@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
 
 /**
  * Sculpt as an exclusive session, read as text for the reason `sceneRendererMarquee.test.ts`
@@ -18,6 +18,7 @@ describe('SceneRenderer and sculpt mode', () => {
   const pointerMove = handler('onPointerMove', 'event: PointerEvent')
   const pointerUp = handler('onPointerUp', 'event: PointerEvent')
   const setSculptMode = method('setSculptMode\\(on: boolean\\): void')
+  const moveSculptPointer = method('moveSculptPointer\\(event: PointerEvent\\): void')
 
   it('finds the paths sculpt exclusivity is written in', () => {
     expect(
@@ -51,7 +52,8 @@ describe('SceneRenderer and sculpt mode', () => {
   it('rays only the relief mesh while sculpting, not the classic nodes', () => {
     expect(source).toContain('this.raycaster.intersectObject(this.relief.object, true)')
     expect(pointerDown).toContain('this.beginReliefStrokeFrom(event)')
-    expect(pointerMove).toContain('this.aimReliefBrush(event)')
-    expect(pointerMove).toContain('this.moveReliefStrokeFrom(event)')
+    expect(pointerMove).toContain('this.moveSculptPointer(event)')
+    expect(moveSculptPointer).toContain('this.aimReliefBrush(event)')
+    expect(moveSculptPointer).toContain('this.moveReliefStrokeFrom(event)')
   })
 })

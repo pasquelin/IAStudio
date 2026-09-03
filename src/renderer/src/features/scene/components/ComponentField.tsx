@@ -53,59 +53,47 @@ export function ComponentField({
   onReset,
 }: ComponentFieldProps) {
   const { t } = useTranslation()
-
-  if (field.kind === 'boolean') {
-    return (
-      <ToggleField
-        label={label}
-        value={held === true}
-        scId={scId}
-        onReset={onReset}
-        onChange={value => onChange(value)}
-      />
-    )
-  }
-
-  // Both selects, written once: one closes on the registry's own options, the other on the nodes
-  // beside it — typing a sibling's name by hand is a spelling test a misspelling fails in silence.
-  if (field.kind === 'choice' || field.picks === 'node') {
-    return (
-      <SelectField
-        label={label}
-        value={typeof held === 'string' && held !== '' ? held : null}
-        options={optionsOf(field, named, held).map(one => ({
-          value: one,
-          label: field.kind === 'choice' ? t(`game.values.${one}`, one) : one,
-        }))}
-        onChange={value => onChange(value)}
-        // A value no option carries reads as the FIRST one otherwise, so the panel would show
-        // `X` while the document held something else — and the next edit would save that reading.
-        unnamedLabel={t('game.values.unknown')}
-        scId={scId}
-        // 🛑 Through `actions` and not a prop of its own: every other select of the app would else
-        // grow an inert reset button it never had.
-        actions={<ResetButton onReset={onReset} />}
-      />
-    )
-  }
-
-  if (field.kind === 'number' || field.kind === 'integer') {
-    return (
-      <NumberField
-        label={label}
-        value={numberShown(held, fallback)}
-        min={field.min}
-        max={field.max}
-        step={field.kind === 'integer' ? 1 : undefined}
-        scId={scId}
-        onReset={onReset}
-        onChange={value => onChange(value)}
-        {...gesture}
-      />
-    )
-  }
-
-  return (
+  const booleanField = () => (
+    <ToggleField
+      label={label}
+      value={held === true}
+      scId={scId}
+      onReset={onReset}
+      onChange={value => onChange(value)}
+    />
+  )
+  const selectField = () => (
+    <SelectField
+      label={label}
+      value={typeof held === 'string' && held !== '' ? held : null}
+      options={optionsOf(field, named, held).map(one => ({
+        value: one,
+        label: field.kind === 'choice' ? t(`game.values.${one}`, one) : one,
+      }))}
+      onChange={value => onChange(value)}
+      // A value no option carries reads as the FIRST one otherwise, so the panel would show
+      // `X` while the document held something else — and the next edit would save that reading.
+      unnamedLabel={t('game.values.unknown')}
+      scId={scId}
+      // 🛑 Through `actions` and not a prop of its own: every other select of the app would else
+      // grow an inert reset button it never had.
+      actions={<ResetButton onReset={onReset} />}
+    />
+  )
+  const numberField = () => (
+    <NumberField
+      label={label}
+      value={numberShown(held, fallback)}
+      min={field.min}
+      max={field.max}
+      step={field.kind === 'integer' ? 1 : undefined}
+      scId={scId}
+      onReset={onReset}
+      onChange={value => onChange(value)}
+      {...gesture}
+    />
+  )
+  const textField = () => (
     <TextField
       label={label}
       value={typeof held === 'string' ? held : ''}
@@ -114,6 +102,10 @@ export function ComponentField({
       onChange={value => onChange(value)}
     />
   )
+  if (field.kind === 'boolean') return booleanField()
+  if (field.kind === 'choice' || field.picks === 'node') return selectField()
+  if (field.kind === 'number' || field.kind === 'integer') return numberField()
+  return textField()
 }
 
 /**

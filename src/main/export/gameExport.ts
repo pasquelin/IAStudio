@@ -12,12 +12,7 @@ import {
 } from '@shared/domain/gameExport'
 
 /** An asset's bytes, and the name to file them under. */
-export type ExportedAsset = {
-  name: string
-  bytes: Uint8Array
-  /** SHA-256 recorded by the catalogue when it ingested the file. */
-  hash?: string
-}
+export type ExportedAsset = { name: string; bytes: Uint8Array; hash?: string }
 
 export type GameExportPorts = {
   /**
@@ -41,70 +36,103 @@ export type GameExportPorts = {
 /** 🛑 What the folder holds, minus its name: only the caller knows where it put it. */
 export type GameExportReport = Omit<GameExportOutcome, 'folder'>
 
-/**
- * Writes a game that runs with no studio: the page, the bundle, the manifest and what they reach.
- *
- * Asset reachability is computed from the typed authoring state before it crosses IPC. The text
- * sweep remains only for callers from an older renderer that did not send that list.
- *
- * 🛑 Neither reads a SCRIPT: an asset a script names by id in its own source is not copied, and
- * 404s in the game. The sweep once caught some of those by accident; a renderer that sends the
- * list — every one of them today — skips it, so nothing catches them at all.
- */
-export async function writeExportedGame(
+type AssetPlan = {
+  assets: Record<string, string>
+  missing: string[]
+  taken: Set<string>
+  writes: Promise<void>[]
+}
+
+async function planAssets(
   ports: GameExportPorts,
-  request: GameExportRequest,
-): Promise<GameExportReport> {
-  const { scenes, scripts } = request
+  scenes: readonly SceneToExport[],
+): Promise<AssetPlan> {
   const missing: string[] = []
   const assets: Record<string, string> = {}
-  const contentPaths = new Map<string, { body: Uint8Array; path: string }[]>()
-  // 🛑 Two rows may name one file — `checker.png` twice, from two folders — and the second would
-  // overwrite the first without a word. The same rule a montage bundle already follows.
   const taken = new Set<string>()
-
   const ids = assetIdsIn(scenes)
   const found = await ports.assetFiles(ids)
-  const assetWrites: Promise<void>[] = []
+  const writes: Promise<void>[] = []
+  const contentPaths = new Map<string, { body: Uint8Array; path: string }[]>()
   for (const id of ids) {
     const file = found.get(id)
     if (!file) {
       missing.push(id)
       continue
     }
-
-    const contentKey = file.hash ?? `bytes:${file.bytes.byteLength}`
-    const candidates = contentPaths.get(contentKey) ?? []
+    const key = file.hash ?? `bytes:${file.bytes.byteLength}`
+    const candidates = contentPaths.get(key) ?? []
     const shared = await matchingContent(candidates, file.bytes)
     if (shared) {
       assets[id] = shared.path
       continue
     }
-
     const name = freeName(safeFileName(file.name, 'asset'), taken)
     taken.add(name)
     assets[id] = `assets/${name}`
     candidates.push({ body: file.bytes, path: assets[id] })
-    contentPaths.set(contentKey, candidates)
-    assetWrites.push(ports.write(assets[id], file.bytes))
+    contentPaths.set(key, candidates)
+    writes.push(ports.write(assets[id], file.bytes))
   }
+  return { assets, missing, taken, writes }
+}
 
-  // 🛑 Through `safeFileName` and deduplicated: an id comes from the WINDOW over IPC, so `../../x`
-  // would be written wherever it pointed, and two ids cleaning to one name would overwrite each
-  // other in silence.
-  const files = new Map<string, string>()
-  for (const scene of scenes) {
-    const name = freeName(`${safeFileName(scene.id, 'scene')}.gltf`, taken)
-    taken.add(name)
-    files.set(scene.id, `scenes/${name}`)
+const COMPARISON_CHUNK_BYTES = 1024 * 1024
+async function matchingContent(
+  candidates: readonly { body: Uint8Array; path: string }[],
+  wanted: Uint8Array,
+) {
+  for (const candidate of candidates) {
+    if (candidate.body.byteLength !== wanted.byteLength) continue
+    if (await sameBytes(candidate.body, wanted)) return candidate
   }
+  return null
+}
+async function sameBytes(left: Uint8Array, right: Uint8Array): Promise<boolean> {
+  for (let start = 0; start < left.byteLength; start += COMPARISON_CHUNK_BYTES) {
+    const end = Math.min(start + COMPARISON_CHUNK_BYTES, left.byteLength)
+    if (Buffer.compare(left.subarray(start, end), right.subarray(start, end)) !== 0) return false
+    await new Promise<void>(resolve => setImmediate(resolve))
+  }
+  return true
+}
 
-  const named = new Map<string, string>()
-  for (const script of scripts) {
-    const name = freeName(fileNameOf(script), taken)
+function namesFor<T>(
+  values: readonly T[],
+  taken: Set<string>,
+  keyOf: (value: T) => string,
+  nameOf: (value: T) => string,
+): Map<string, string> {
+  const names = new Map<string, string>()
+  for (const value of values) {
+    const name = freeName(nameOf(value), taken)
     taken.add(name)
-    named.set(script.script, name)
+    names.set(keyOf(value), name)
   }
+  return names
+}
+
+/**
+ * Writes a game that runs with no studio: the page, the bundle, the manifest and what they reach.
+ *
+ * 🛑 Two known edges of the textual `"assetId"` sweep. It copies a scene's SKYBOX, which
+ * `buildGameScene` does not draw, so an `.exr` ships for nothing. And it does not read a SCRIPT:
+ * an asset a script names by id in its own source is not copied, and 404s in the game.
+ */
+export async function writeExportedGame(
+  ports: GameExportPorts,
+  request: GameExportRequest,
+): Promise<GameExportReport> {
+  const { scenes, scripts } = request
+  const { assets, missing, taken, writes: assetWrites } = await planAssets(ports, scenes)
+  const sceneNames = namesFor(
+    scenes,
+    taken,
+    scene => scene.id,
+    scene => `${safeFileName(scene.id, 'scene')}.gltf`,
+  )
+  const files = new Map([...sceneNames].map(([id, name]) => [id, `scenes/${name}`]))
+  const named = namesFor(scripts, taken, script => script.script, fileNameOf)
 
   const game: ExportedGame = {
     version: EXPORTED_GAME_VERSION,
@@ -133,28 +161,6 @@ export async function writeExportedGame(
     assets: Object.keys(assets).length,
     missing,
   }
-}
-
-const COMPARISON_CHUNK_BYTES = 1024 * 1024
-
-async function matchingContent(
-  candidates: readonly { body: Uint8Array; path: string }[],
-  wanted: Uint8Array,
-): Promise<{ body: Uint8Array; path: string } | null> {
-  for (const candidate of candidates) {
-    if (candidate.body.byteLength !== wanted.byteLength) continue
-    if (await sameBytes(candidate.body, wanted)) return candidate
-  }
-  return null
-}
-
-async function sameBytes(left: Uint8Array, right: Uint8Array): Promise<boolean> {
-  for (let start = 0; start < left.byteLength; start += COMPARISON_CHUNK_BYTES) {
-    const end = Math.min(start + COMPARISON_CHUNK_BYTES, left.byteLength)
-    if (Buffer.compare(left.subarray(start, end), right.subarray(start, end)) !== 0) return false
-    await new Promise<void>(resolve => setImmediate(resolve))
-  }
-  return true
 }
 
 /** Every asset a scene names, once, in the order they were met. */

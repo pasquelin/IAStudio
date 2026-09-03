@@ -19,18 +19,7 @@ import {
 } from '@shared/domain/document'
 import { isPrivatePath } from '@shared/domain/folder'
 import { isFolderRole, type FolderRole } from '@shared/domain/folderRole'
-import { GAME_VERSION, type GameManifest } from '@shared/domain/game'
 import { isOraSurfacePath, type OraStack } from '@shared/domain/openRaster'
-import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
-import {
-  CONTEXT_BODY_MAX,
-  CONTEXT_CARDS_MAX,
-  CONTEXT_PICTURES_MAX,
-  CONTEXT_TITLE_MAX,
-  CONTEXT_VERSION,
-  type ContextCard,
-  type ProjectContext,
-} from '@shared/domain/projectContext'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/material'
 import type {
   SaveAudioRequest,
@@ -46,71 +35,12 @@ import { isPngBytes } from '@main/media/png'
 import { pathSegment, withinCodePoints } from '@main/validation'
 import { base64Payload } from '@main/provider/validation'
 
-const manifest = z.object({
-  // Capped, not merely floored, exactly as `documentEnvelope` below — and for a heavier reason.
-  // A document flattened by a later save is one file; a project is the whole folder.
-  version: z.number().int().min(1).max(MANIFEST_VERSION),
-  createdAt: z.string().min(1),
-  updatedAt: z.string().min(1),
-})
-
-/** A project folder is user territory: its manifest can be edited, truncated or replaced. */
-export function parseManifest(value: unknown): Manifest {
-  return manifest.parse(value)
-}
-
-// Bounds in CODE POINTS, never in UTF-16 units: a card written in emoji or in Japanese is as long
-// as it looks, which is the lesson `checkAssetName` already carries.
-const contextCard = z.object({
-  id: z.string().trim().min(1).refine(withinCodePoints(80)),
-  // May be empty: a card with no title travels as its body alone.
-  title: z.string().trim().refine(withinCodePoints(CONTEXT_TITLE_MAX)),
-  body: z.string().refine(withinCodePoints(CONTEXT_BODY_MAX)),
-  active: z.boolean(),
-  pictures: z.array(assetId).max(CONTEXT_PICTURES_MAX),
-})
-
-const projectContext = z.object({
-  version: z.number().int().min(1).max(CONTEXT_VERSION),
-  cards: z.array(contextCard).max(CONTEXT_CARDS_MAX),
-})
-
-/** The file, which like the manifest is user territory — hand-edited, truncated, or older. */
-export function parseProjectContext(value: unknown): ProjectContext {
-  return projectContext.parse(value)
-}
-
-/** What a window, or a program driving the studio, asks to store. */
-export function parseContextCards(value: unknown): ContextCard[] {
-  return z.array(contextCard).max(CONTEXT_CARDS_MAX).parse(value)
-}
-
-const gameScript = z.object({ id: z.string().min(1), path: z.string().min(1) })
-
-const gamePrefab = z.object({
-  id: z.string().min(1),
-  name: z.string(),
-  document: z.string().min(1),
-})
-
-/**
- * Every member but the version has a default, and that is a decision: `game.json` is written by
- * hand and merged by git, so a manifest naming only its scenes must open rather than read as
- * broken. The version alone is required — it is what tells a file from a later build apart.
- */
-const game = z.object({
-  version: z.number().int().min(1).max(GAME_VERSION),
-  scenes: z.array(z.string().min(1)).default([]),
-  entryScene: z.string().min(1).nullable().default(null),
-  scripts: z.array(gameScript).default([]),
-  prefabs: z.array(gamePrefab).default([]),
-  settings: z.object({ title: z.string().default('') }).default({ title: '' }),
-})
-
-/** The author's file: hand-edited, versioned by git, and merged by a tool that knows no schema. */
-export function parseGame(value: unknown): GameManifest {
-  return game.parse(value)
-}
+export {
+  parseContextCards,
+  parseGame,
+  parseManifest,
+  parseProjectContext,
+} from './manifestValidation'
 
 // Absolute paths only, and enforced rather than merely intended: a relative one would resolve
 // against the main process's working directory, which is wherever Electron happened to be

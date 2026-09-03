@@ -4,6 +4,7 @@ import {
   type ComponentProps,
   type FocusEventHandler,
   type KeyboardEventHandler,
+  type TextareaHTMLAttributes,
 } from 'react'
 import { mdiChatOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
@@ -65,6 +66,7 @@ export function AssistantConversationView(props: Props) {
   const { t } = useTranslation()
   const mirrorRef = useRef<HTMLDivElement>(null)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const tail = ghostTail(props.ghost)
   const setThreadElement = (element: HTMLOListElement | null) => props.setThreadElement(element)
   const setFieldElement = (element: HTMLTextAreaElement | null) => {
     fieldRef.current = element
@@ -73,14 +75,14 @@ export function AssistantConversationView(props: Props) {
   useLayoutEffect(() => {
     if (mirrorRef.current && fieldRef.current)
       mirrorRef.current.scrollTop = fieldRef.current.scrollTop
-  }, [props.ghost?.tail])
+  }, [tail])
   return (
     <div
       onFocus={props.onFocus}
       onBlur={props.onBlur}
       className={cn(PANEL_INSET, 'flex min-h-0 w-full flex-1 flex-col gap-2')}
     >
-      {props.turns.length === 0 && !props.asked && !props.choosing ? (
+      {conversationIsEmpty(props) ? (
         <div className="flex flex-1 flex-col justify-center">
           {!props.unserved && <QuietNote standalone>{t('assistant.empty')}</QuietNote>}
         </div>
@@ -141,7 +143,7 @@ export function AssistantConversationView(props: Props) {
             <GhostText
               ref={mirrorRef}
               typed={props.draft}
-              tail={props.ghost?.tail ?? ''}
+              tail={tail}
               metrics={CONVERSATION_FIELD_TYPE}
             />
             <textarea
@@ -149,21 +151,7 @@ export function AssistantConversationView(props: Props) {
               data-sc={fieldHandle('assistant.draft')}
               rows={3}
               value={props.draft}
-              aria-autocomplete={
-                props.ghost === undefined
-                  ? props.listed.length > 0
-                    ? 'list'
-                    : undefined
-                  : props.listed.length > 0
-                    ? 'both'
-                    : 'inline'
-              }
-              aria-haspopup={props.listed.length > 0 ? 'listbox' : undefined}
-              aria-controls={props.listed.length > 0 ? props.listId : undefined}
-              aria-owns={props.listed.length > 0 ? props.listId : undefined}
-              aria-activedescendant={
-                props.listed.length === 0 ? undefined : suggestionId(props.listId, props.heldRow)
-              }
+              {...suggestionAttributes(props)}
               placeholder={t('assistant.placeholder')}
               {...HINT_TOP(t('assistant.completeHint', { accept: props.keyLabel('Tab') }))}
               disabled={props.busy && !props.typing}
@@ -196,49 +184,89 @@ export function AssistantConversationView(props: Props) {
             />
           </div>
           <p role="status" aria-live="polite" className="sr-only">
-            {[
-              props.ghost === undefined
-                ? ''
-                : t('assistant.completing', {
-                    sentence: props.ghost.sentence,
-                    accept: props.keyLabel('Tab'),
-                    arrow: props.keyLabel('ArrowRight'),
-                  }),
-              props.listed.length > 0
-                ? t('assistant.suggested', { count: props.listed.length })
-                : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
+            {assistantStatus(props, t)}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <AssistantConversationPicker />
             <AssistantConversationGauge />
             <span className="ml-auto flex shrink-0 items-center gap-2">
               <DictationButton variant="header" tooltip={TIP_TOP} />
-              {props.busy && !props.typing ? (
-                <Button
-                  type="button"
-                  onClick={props.stop}
-                  disabled={props.stopping}
-                  {...HINT_TOP(t('assistant.stopHint'))}
-                >
-                  {t('assistant.stop')}
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={props.draft.trim() === ''}
-                  {...HINT_TOP(t('assistant.sendHint'))}
-                >
-                  {t('assistant.send')}
-                </Button>
-              )}
+              {assistantConversationSubmit(props, t)}
             </span>
           </div>
         </form>
       )}
     </div>
+  )
+}
+
+function ghostTail(ghost: Props['ghost']): string {
+  return ghost?.tail ?? ''
+}
+
+function conversationIsEmpty(props: Props): boolean {
+  return props.turns.length === 0 && !props.asked && !props.choosing
+}
+
+function suggestionAttributes(
+  props: Props,
+): Pick<
+  TextareaHTMLAttributes<HTMLTextAreaElement>,
+  'aria-autocomplete' | 'aria-haspopup' | 'aria-controls' | 'aria-owns' | 'aria-activedescendant'
+> {
+  const hasSuggestions = props.listed.length > 0
+  const autocomplete: 'list' | 'both' | 'inline' | undefined =
+    props.ghost === undefined
+      ? hasSuggestions
+        ? 'list'
+        : undefined
+      : hasSuggestions
+        ? 'both'
+        : 'inline'
+  return {
+    'aria-autocomplete': autocomplete,
+    'aria-haspopup': hasSuggestions ? 'listbox' : undefined,
+    'aria-controls': hasSuggestions ? props.listId : undefined,
+    'aria-owns': hasSuggestions ? props.listId : undefined,
+    'aria-activedescendant': hasSuggestions ? suggestionId(props.listId, props.heldRow) : undefined,
+  }
+}
+
+function assistantStatus(props: Props, t: ReturnType<typeof useTranslation>['t']): string {
+  const completing =
+    props.ghost === undefined
+      ? ''
+      : t('assistant.completing', {
+          sentence: props.ghost.sentence,
+          accept: props.keyLabel('Tab'),
+          arrow: props.keyLabel('ArrowRight'),
+        })
+  const suggested =
+    props.listed.length > 0 ? t('assistant.suggested', { count: props.listed.length }) : ''
+  return [completing, suggested].filter(Boolean).join(' ')
+}
+
+function assistantConversationSubmit(props: Props, t: ReturnType<typeof useTranslation>['t']) {
+  if (props.busy && !props.typing) {
+    return (
+      <Button
+        type="button"
+        onClick={props.stop}
+        disabled={props.stopping}
+        {...HINT_TOP(t('assistant.stopHint'))}
+      >
+        {t('assistant.stop')}
+      </Button>
+    )
+  }
+  return (
+    <Button
+      type="submit"
+      variant="primary"
+      disabled={props.draft.trim() === ''}
+      {...HINT_TOP(t('assistant.sendHint'))}
+    >
+      {t('assistant.send')}
+    </Button>
   )
 }

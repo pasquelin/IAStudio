@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
 
 /**
  * What decides whether the repeated shapes are drawn in one call or ten thousand.
@@ -11,7 +11,7 @@ import source from './SceneRenderer.ts?raw'
  */
 describe('SceneRenderer and the grouping of repeated shapes', () => {
   const body = (name: string): string =>
-    new RegExp(`private ${name}\\([^)]*\\): [\\w<>[\\]| ]+ \\{[\\s\\S]*?\\n {2}\\}`).exec(
+    new RegExp(`protected ${name}\\([^)]*\\): [\\w<>[\\]| ]+ \\{[\\s\\S]*?\\n {2}\\}`).exec(
       source,
     )?.[0] ?? ''
 

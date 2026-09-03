@@ -74,35 +74,35 @@ export function hitAnimation(context: HitContext, point: Point): AnimationHit | 
     if (row.kind === 'lane')
       return hitLane(row, viewport, point.x) ?? { kind: 'row', rowId: row.id, time: at }
 
-    const grab = reachOf(row) + GRAB_SLACK
-    for (const time of keysOf(row)) {
-      if (Math.abs(timeToX(time, viewport) - point.x) <= grab) {
-        return { kind: 'key', rowId: row.id, time }
-      }
-    }
-
-    // The bars come after the diamonds because they are painted UNDER them: on a camera's line a
-    // key is what the pointer meets first, and the shot it stands on is what is left.
-    if (row.kind === 'subject' && row.bars) {
-      const on = xToTime(point.x, viewport)
-      const bar = row.bars.find(
-        held => on >= held.shot.start && on <= held.shot.start + held.shot.duration,
-      )
-      if (bar) {
-        return {
-          kind: 'shot',
-          rowId: row.id,
-          shotId: bar.shot.id,
-          edge: edgeOf(bar.shot.start, bar.shot.duration, point.x, viewport),
-          grabbedAt: on - bar.shot.start,
-        }
-      }
-    }
-
-    return { kind: 'row', rowId: row.id, time: at }
+    return hitKeyOrShot(row, viewport, point.x) ?? { kind: 'row', rowId: row.id, time: at }
   }
 
   return null
+}
+
+function hitKeyOrShot(
+  row: Exclude<AnimationRow, LaneRow>,
+  viewport: Viewport,
+  x: number,
+): AnimationHit | null {
+  const grab = reachOf(row) + GRAB_SLACK
+  const key = keysOf(row).find(time => Math.abs(timeToX(time, viewport) - x) <= grab)
+  if (key !== undefined) return { kind: 'key', rowId: row.id, time: key }
+
+  // Bars are painted under diamonds, so a key at the same point wins above.
+  if (row.kind !== 'subject' || !row.bars) return null
+  const on = xToTime(x, viewport)
+  const bar = row.bars.find(
+    held => on >= held.shot.start && on <= held.shot.start + held.shot.duration,
+  )
+  if (!bar) return null
+  return {
+    kind: 'shot',
+    rowId: row.id,
+    shotId: bar.shot.id,
+    edge: edgeOf(bar.shot.start, bar.shot.duration, x, viewport),
+    grabbedAt: on - bar.shot.start,
+  }
 }
 
 /**

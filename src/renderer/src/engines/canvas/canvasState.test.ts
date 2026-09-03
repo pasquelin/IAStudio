@@ -6,7 +6,6 @@ import {
   clampOpacity,
   DEFAULT_CANVAS,
   DEFAULT_TEXT_SIZE,
-  deserializeCanvas,
   IDENTITY,
   layerBelow,
   layerById,
@@ -15,6 +14,7 @@ import {
   textLayer,
   type CanvasState,
 } from './canvasState'
+import { deserializeCanvas } from './canvasStatePersistence'
 
 const populated: CanvasState = {
   ...DEFAULT_CANVAS,
