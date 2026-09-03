@@ -16,14 +16,8 @@ export const CELL_SIZE = 256
 /** What sits above the cells. Two cells a side: a coarser roof visits emptier nodes. */
 export const MACRO_SIZE = 512
 
-export const MAX_CELL_SIZE = 4_096
-
-/** The smallest stable power-of-two grain that can contain the measured reach. */
-export function cellSizeForReach(reach: number): number {
-  let size = CELL_SIZE
-  while (size < MAX_CELL_SIZE && reach > size / 2) size *= 2
-  return size
-}
+/** Largest reach kept spatial; beyond it the conservative global fallback costs less to query. */
+export const MAX_SPATIAL_REACH = 2_048
 
 export type CellKey = number
 

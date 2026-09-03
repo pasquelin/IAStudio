@@ -196,19 +196,33 @@ describe('createCellGroups', () => {
     expect(instancesIn(scene)[0]?.matrixWorld.equals(new Matrix4())).toBe(true)
   })
 
-  it('adapts the grain so repeated wide bodies in distant zones remain spatial', () => {
+  it('keeps repeated wide bodies in distant spatial zones', () => {
     const scene = host()
     const wide = new BoxGeometry(4 * CELL_SIZE, 1, 4 * CELL_SIZE)
     const places = [
-      ...inOneCell(WORTH_INSTANCING / 2, 0),
+      ...inOneCell(WORTH_INSTANCING / 2, 3 * CELL_SIZE),
       ...inOneCell(WORTH_INSTANCING / 2, 20 * CELL_SIZE),
     ]
     const { nodes, objects } = bodies(places, wide)
+    const groups = createCellGroups(scene)
 
-    createCellGroups(scene).rebuild(nodes, id => objects.get(id))
+    groups.rebuild(nodes, id => objects.get(id))
 
     expect(cellsIn(scene)).toHaveLength(2)
     expect(scene.children.filter(child => child instanceof InstancedMesh)).toHaveLength(0)
+    groups.follow?.(looking(0, 500))
+    expect(standingIn(scene)).toEqual([3 * CELL_SIZE])
+  })
+
+  it('keeps an extreme body on the conservative global fallback', () => {
+    const scene = host()
+    const extreme = new BoxGeometry(32 * CELL_SIZE, 1, 32 * CELL_SIZE)
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0), extreme)
+
+    createCellGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    expect(cellsIn(scene)).toHaveLength(0)
+    expect(scene.children.filter(child => child instanceof InstancedMesh)).toHaveLength(1)
   })
 })
 
