@@ -38,7 +38,7 @@ import { familyOf, type ToolId } from '@shared/domain/tool'
 import { panelsStore } from '@/stores/panels'
 import { ShellPanelActions } from './ShellPanelActions'
 import { ShellPanelBody } from './ShellPanelBody'
-import { carriesExternalFiles, externalPaths, queueExternalFiles } from '../../externalFiles'
+import { carriesExternalFiles, offerExternalFiles, queueExternalFiles } from '../../externalFiles'
 import { ShellPanelButton } from './ShellPanelButton'
 import 'dockview-react/dist/styles/dockview.css'
 import '../dockview-theme.css'
@@ -80,19 +80,21 @@ export function Shell() {
     const allowFileDrop = (event: DragEvent): void => {
       if (carriesExternalFiles(event)) event.preventDefault()
     }
-    const takeFileDrop = (event: DragEvent): void => {
+    const takeFileDrop = async (event: DragEvent): Promise<void> => {
       if (event.defaultPrevented && event.cancelBubble) return
-      const paths = event.dataTransfer ? externalPaths(event.dataTransfer.files) : []
-      if (paths.length === 0) return
       event.preventDefault()
-      queueExternalFiles([{ paths }])
+      const request = await offerExternalFiles(event.dataTransfer?.files)
+      if (request) queueExternalFiles([request])
+    }
+    const handleFileDrop = (event: DragEvent): void => {
+      void takeFileDrop(event)
     }
 
     window.addEventListener('dragover', allowFileDrop)
-    window.addEventListener('drop', takeFileDrop)
+    window.addEventListener('drop', handleFileDrop)
     return () => {
       window.removeEventListener('dragover', allowFileDrop)
-      window.removeEventListener('drop', takeFileDrop)
+      window.removeEventListener('drop', handleFileDrop)
     }
   }, [])
   const { t } = useTranslation()

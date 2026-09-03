@@ -377,7 +377,12 @@ const bridge: StudioBridge = {
   },
   externalFiles: {
     take: () => ipcRenderer.invoke(CHANNELS.externalFilesTake),
-    paths: files => files.map(file => webUtils.getPathForFile(file)).filter(Boolean),
+    offer: files =>
+      ipcRenderer.invoke(
+        CHANNELS.externalFilesOffer,
+        files.map(file => webUtils.getPathForFile(file)).filter(Boolean),
+      ),
+    discard: requestId => ipcRenderer.invoke(CHANNELS.externalFilesDiscard, requestId),
     onOpen: callback => subscribe<void>(EVENTS.externalFiles, callback),
   },
   diagnostics: {

@@ -133,6 +133,7 @@ import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
 import { importFiles } from './media/importFiles'
+import { claimExternalFiles } from './externalFiles'
 import { renderThumbnail } from './media/renderThumbnail'
 import { createThumbnailCache } from './project/thumbnailCache'
 import {
@@ -345,6 +346,7 @@ export type Services = {
   /** The same for a file the project already holds, `null` when nothing here opens it. */
   adopt: (relative: string) => Promise<Asset | null>
   importPaths: (paths: readonly string[], folder: string) => Promise<Asset[]>
+  claimExternalFiles: (id: string) => readonly string[]
   capabilities: () => Promise<MediaCapabilities>
   /** The language in force. Injected where it is needed, so no module reads the source itself. */
   language: () => Language
@@ -2332,6 +2334,7 @@ export function createServices(settings: SettingsStore): Services {
         names: folder.names,
         adopt,
       }),
+    claimExternalFiles,
     // Asked, not cached: this is what the settings pane consults after the user installed the
     // binary it just said was missing. Run rather than looked for — a half-written download and
     // a binary built for the other architecture both exist on disk and encode nothing.

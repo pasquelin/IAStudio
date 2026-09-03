@@ -83,7 +83,7 @@ import {
 import { RescanBar } from '../RescanBar'
 import {
   carriesExternalFiles,
-  externalPaths,
+  offerExternalFiles,
   queueExternalFiles,
 } from '@/features/shell/externalFiles'
 import type { DragLike } from '@/helpers/drag'
@@ -381,17 +381,17 @@ export function Explorer() {
 
   const landAsset = useCallback(
     async (event: DragEvent<HTMLElement>, folder: string): Promise<void> => {
-      const paths = externalPaths(event.dataTransfer.files)
-      if (paths.length > 0) {
+      if (carriesExternalFiles(event)) {
         event.preventDefault()
         event.stopPropagation()
-        queueExternalFiles([{ paths, folder }])
+        const request = await offerExternalFiles(event.dataTransfer.files)
+        if (request) queueExternalFiles([{ ...request, folder, project: projectPath ?? undefined }])
         return
       }
       const outcome = await landAssetIn(event, folder)
       if (outcome) settled(outcome)
     },
-    [settled],
+    [projectPath, settled],
   )
 
   // The stack belongs to the project: opening another one leaves nothing to take back, and a

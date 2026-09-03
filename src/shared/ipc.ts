@@ -276,6 +276,8 @@ export type Channels = {
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
   externalFilesTake: 'external:take'
+  externalFilesOffer: 'external:offer'
+  externalFilesDiscard: 'external:discard'
 
   assistantThink: 'assistant:think'
   assistantStop: 'assistant:stop'
@@ -532,6 +534,8 @@ export const CHANNELS: Channels = {
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
   externalFilesTake: 'external:take',
+  externalFilesOffer: 'external:offer',
+  externalFilesDiscard: 'external:discard',
 
   assistantThink: 'assistant:think',
   assistantStop: 'assistant:stop',
@@ -2068,7 +2072,7 @@ export type StudioBridge = {
      */
     ingest: () => Promise<Asset[]>
     /** Copies files already chosen outside the picker into the open project. */
-    ingestPaths: (paths: readonly string[], folder: string) => Promise<Asset[]>
+    ingestPaths: (requestId: string, folder: string) => Promise<Asset[]>
     /**
      * Gives a file the project ALREADY holds a row in the catalogue, so the studio can open it
      * instead of handing it to the system — the explorer's double-click on a `.jpg` somebody
@@ -2346,8 +2350,9 @@ export type StudioBridge = {
   externalFiles: {
     /** Takes arrivals queued before the main window was ready. */
     take: () => Promise<ExternalFileRequest[]>
-    /** Resolves browser File objects without exposing Node to the renderer. */
-    paths: (files: readonly File[]) => string[]
+    /** Authorises files from a desktop drop without revealing their paths to the renderer. */
+    offer: (files: readonly File[]) => Promise<ExternalFileRequest | null>
+    discard: (requestId: string) => Promise<void>
     onOpen: (callback: () => void) => Unsubscribe
   }
   diagnostics: {

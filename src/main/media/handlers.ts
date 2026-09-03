@@ -17,6 +17,7 @@ export type MediaHandlerDeps = {
   pickMedia: () => Promise<string[]>
   capabilities: () => Promise<MediaCapabilities>
   importPaths: (paths: readonly string[], folder: string) => Promise<Asset[]>
+  claimExternalFiles: (id: string) => readonly string[]
 }
 
 export function registerMediaHandlers({
@@ -26,6 +27,7 @@ export function registerMediaHandlers({
   pickMedia,
   capabilities,
   importPaths,
+  claimExternalFiles,
 }: MediaHandlerDeps): void {
   handle(CHANNELS.mediaAdopt, async (_event, relative) => {
     // A row the window never needs the absolute path of, exactly as the ingest answers.
@@ -50,8 +52,10 @@ export function registerMediaHandlers({
     return assets
   })
 
-  handle(CHANNELS.mediaIngestPaths, async (_event, paths, folder) =>
-    (await importPaths(paths, parseFolderPath(folder))).map(withoutSourcePath),
+  handle(CHANNELS.mediaIngestPaths, async (_event, requestId, folder) =>
+    (await importPaths(claimExternalFiles(requestId), parseFolderPath(folder))).map(
+      withoutSourcePath,
+    ),
   )
 
   handle(CHANNELS.mediaCancel, (_event, assetId) => media.cancel(parseAssetId(assetId)))

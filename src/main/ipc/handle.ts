@@ -247,6 +247,10 @@ type ChannelMethod = {
   [CHANNELS.newDocumentAnswer]: StudioBridge['newDocument']['answer']
 
   [CHANNELS.externalFilesTake]: StudioBridge['externalFiles']['take']
+  [CHANNELS.externalFilesOffer]: (
+    paths: readonly string[],
+  ) => ReturnType<StudioBridge['externalFiles']['offer']>
+  [CHANNELS.externalFilesDiscard]: StudioBridge['externalFiles']['discard']
 
   [CHANNELS.menuPopup]: StudioBridge['menu']['popup']
 
