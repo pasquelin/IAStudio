@@ -55,10 +55,13 @@ describe('SceneRenderer and the preview it invalidates', () => {
   it('refreshes texture pixels without shadows unless displacement changes the silhouette', () => {
     const refresh = TEXTURE_REFRESH.exec(source)?.[0] ?? ''
 
-    expect(refresh).toContain("slot === 'displacementMap'")
+    expect(refresh).toContain('SHADOW_TEXTURE_SLOTS.includes(slot)')
     expect(refresh).toContain('this.redraw()')
     expect(refresh).toContain('this.refreshWithoutShadows()')
     expect(source.match(/createMaterialTextures\([\s\S]*?refreshMaterialTexture/g)).toHaveLength(2)
+    // One list, read by the arrival AND by the descriptor sync: naming the slot twice let two
+    // judgements on what a shadow sees drift apart with nothing to say so.
+    expect(source).not.toContain("'displacementMap'")
   })
 
   it('invalidates filmed pixels and only changed shadow maps together', () => {

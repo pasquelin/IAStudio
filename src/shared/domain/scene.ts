@@ -785,6 +785,14 @@ export const TEXTURE_SLOTS: readonly TextureSlot[] = [
   'displacementMap',
 ]
 
+/**
+ * The slots the SHADOW pass reads, and the one place that says so — the viewport asks it when a
+ * texture lands, the sync asks it when a descriptor changes. `map` and `alphaMap` reach the depth
+ * material too but discard nothing without `alphaTest`, which no scene material sets; measured
+ * against `WebGLShadowMap.getDepthMaterial` in three 0.185. Opening `alphaTest` means adding `map`.
+ */
+export const SHADOW_TEXTURE_SLOTS: readonly TextureSlot[] = ['displacementMap']
+
 export type MaterialDescriptor = {
   kind: 'standard'
   /** `null` means the studio's own colour, resolved from the palette when the mesh is built. */

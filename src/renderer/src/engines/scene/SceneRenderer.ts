@@ -69,6 +69,7 @@ import {
   type EnvironmentRef,
   type ModelDressRef,
   type SceneWorld,
+  SHADOW_TEXTURE_SLOTS,
   type TextureSlot,
   type Transform,
   showsAid,
@@ -3118,7 +3119,7 @@ export class SceneRenderer {
   }
 
   private refreshMaterialTexture(slot: TextureSlot): void {
-    if (slot === 'displacementMap') this.redraw()
+    if (SHADOW_TEXTURE_SLOTS.includes(slot)) this.redraw()
     else this.refreshWithoutShadows()
   }
 
@@ -6148,10 +6149,12 @@ function shadowOfNodeMoved(previous: SceneNode | undefined, node: SceneNode): bo
 }
 
 function shadowMaterialMoved(previous: MaterialDescriptor, material: MaterialDescriptor): boolean {
-  if (previous.displacementMap?.assetId !== material.displacementMap?.assetId) return true
+  for (const slot of SHADOW_TEXTURE_SLOTS) {
+    if (previous[slot]?.assetId !== material[slot]?.assetId) return true
+  }
   return (
     previous.tilesPerMetre !== material.tilesPerMetre &&
-    (previous.displacementMap !== null || material.displacementMap !== null)
+    SHADOW_TEXTURE_SLOTS.some(slot => previous[slot] !== null || material[slot] !== null)
   )
 }
 
