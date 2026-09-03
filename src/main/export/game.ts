@@ -92,6 +92,11 @@ async function discard(folder: string): Promise<void> {
   }
 }
 
+/**
+ * NOT `persistence.exists`, which answers `false` for a permission that refuses or a volume that
+ * unmounted: what asks there is deciding whether to go and look. Here an unreadable `.previous`
+ * decides whether to DESTROY a package, and it must raise rather than read as absent.
+ */
 async function exists(path: string): Promise<boolean> {
   try {
     await access(path)

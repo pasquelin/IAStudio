@@ -46,6 +46,10 @@ export type GameExportReport = Omit<GameExportOutcome, 'folder'>
  *
  * Asset reachability is computed from the typed authoring state before it crosses IPC. The text
  * sweep remains only for callers from an older renderer that did not send that list.
+ *
+ * 🛑 Neither reads a SCRIPT: an asset a script names by id in its own source is not copied, and
+ * 404s in the game. The sweep once caught some of those by accident; a renderer that sends the
+ * list — every one of them today — skips it, so nothing catches them at all.
  */
 export async function writeExportedGame(
   ports: GameExportPorts,
@@ -147,7 +151,7 @@ async function matchingContent(
 async function sameBytes(left: Uint8Array, right: Uint8Array): Promise<boolean> {
   for (let start = 0; start < left.byteLength; start += COMPARISON_CHUNK_BYTES) {
     const end = Math.min(start + COMPARISON_CHUNK_BYTES, left.byteLength)
-    for (let at = start; at < end; at += 1) if (left[at] !== right[at]) return false
+    if (Buffer.compare(left.subarray(start, end), right.subarray(start, end)) !== 0) return false
     await new Promise<void>(resolve => setImmediate(resolve))
   }
   return true
