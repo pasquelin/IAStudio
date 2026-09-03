@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CHARACTER_KINDS, HUMANOID_KINDS, type CharacterKind } from '@shared/domain/character'
 import { providersRefusalOf, rigProvidersOf } from '@shared/domain/rigProvider'
@@ -7,14 +7,18 @@ import { Button } from '@/components/Button'
 import { QuietNote } from '@/components/QuietNote'
 import { SelectField } from '@/components/SelectField'
 import { setCharacterRig } from '@/engines/character/characterCommands'
-import { rigFit, rigFitFaultOf } from '@/engines/scene/rigFit'
-import { rigSnappedTo, type MeshSample } from '@/engines/scene/rigSnap'
+import { rigFitFaultOf } from '@/engines/scene/rigFit'
+import type { MeshSample } from '@/engines/scene/rigSnap'
+import { fitHumanoidRig, humanoidAutoRigBackend } from '@/engines/scene/humanoidAutoRig'
+import AdaptiveRigWorker from '@/engines/scene/adaptiveRig.worker?worker'
+import { createAdaptiveRigFitter } from '@/engines/scene/adaptiveRigFitter'
 import { rigServiceNote } from '@/helpers/rigServiceNote'
 import { useFamilyModels } from '@/hooks/useFamilyModels'
 import { useMeshSizeLimit } from '@/hooks/useMeshSizeLimit'
 import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useCharacters } from '@/stores/character'
+import { useCharacterView } from '@/stores/characterView'
 
 export type CharacterInspectorFitProps = {
   assetId: string
@@ -31,6 +35,10 @@ export type CharacterInspectorFitProps = {
 export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFitProps) {
   const { t, i18n } = useTranslation()
   const [kind, setKind] = useState<CharacterKind>('auto')
+  const [fitting, setFitting] = useState(false)
+  const [fittingFailed, setFittingFailed] = useState(false)
+  const adaptive = useMemo(() => createAdaptiveRigFitter(() => new AdaptiveRigWorker()), [])
+  useEffect(() => adaptive.dispose, [adaptive])
   const plan = usePlanAccess()
   const services = rigProvidersOf(useFamilyModels('3d'))
   // The mesh is weighed against the limit of the service that would take it, and that one only:
@@ -39,7 +47,11 @@ export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFit
   const bytes = useAssets(state => assetsById(state).get(assetId)?.bytes ?? 0)
   const refusal = providersRefusalOf(services, plan, { bytes, maxSize })
 
-  const fault = sample && rigFitFaultOf(sample.bounds)
+  const backend = humanoidAutoRigBackend(
+    import.meta.env.DEV,
+    localStorage.getItem('ia-studio:humanoid-rig-backend'),
+  )
+  const fault = backend === 'legacy' && sample ? rigFitFaultOf(sample.bounds) : null
   if (fault) return <QuietNote>{t(`inspector.rigFault_${fault}`)}</QuietNote>
   if (!sample) return null
 
@@ -88,6 +100,8 @@ export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFit
         </QuietNote>
       )}
 
+      {fittingFailed && <QuietNote>{t('inspector.rigAdaptiveFailed')}</QuietNote>}
+
       {/* The studio's own rigger lays a HUMANOID skeleton — hips, spine, four limbs. Saying so
           beats laying one on a horse and letting the person find out. */}
       {!HUMANOID_KINDS.includes(kind) && <QuietNote>{t('inspector.rigNotHumanoid')}</QuietNote>}
@@ -96,12 +110,22 @@ export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFit
           mains » never share a screen, so a blue one and a grey one read as two languages rather
           than as a rank. One style for one kind of action. */}
       <Button
-        disabled={!HUMANOID_KINDS.includes(kind)}
-        onClick={() =>
-          useCharacters
-            .getState()
-            .runCommand(assetId, setCharacterRig(rigSnappedTo(rigFit(sample.bounds), sample)))
-        }
+        disabled={!HUMANOID_KINDS.includes(kind) || fitting}
+        onClick={async () => {
+          setFitting(true)
+          setFittingFailed(false)
+          try {
+            const fitted = await fitHumanoidRig(sample, backend, adaptive)
+            if (!fitted) return
+            useCharacterView.getState().noteRigAnalysis(assetId, fitted.analysis)
+            if (!fitted.rig) return
+            useCharacters.getState().runCommand(assetId, setCharacterRig(fitted.rig))
+          } catch {
+            setFittingFailed(true)
+          } finally {
+            setFitting(false)
+          }
+        }}
       >
         {t('inspector.rigCreate')}
       </Button>

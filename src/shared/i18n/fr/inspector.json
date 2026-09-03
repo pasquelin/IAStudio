@@ -248,6 +248,7 @@
     "rigServiceLocal": "Automatique — le studio",
     "rigNotHumanoid": "Le studio ne sait poser qu’un squelette humanoïde — hanches, colonne, deux bras et deux jambes.",
     "rigCreate": "Créer le squelette",
+    "rigAdaptiveFailed": "L’analyse géométrique du squelette n’a pas pu aboutir.",
     "boneName": "Nom",
     "boneNameHint": "Double-cliquez pour renommer cette articulation",
     "rigBinding": "Préparation du personnage",
