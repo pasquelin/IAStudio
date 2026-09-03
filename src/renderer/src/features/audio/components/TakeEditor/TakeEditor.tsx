@@ -1,5 +1,5 @@
 import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/components/AssetDropTarget'
@@ -8,7 +8,6 @@ import { MonitorFrame } from '@/components/MonitorFrame'
 import { TOOLBAR_LABEL } from '@/components/styles'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { durationOf } from '@/engines/audio/audioData'
-import type { RenderedAudio } from '@/engines/audio/audioRender'
 import {
   chainOf,
   clampRegion,
@@ -26,18 +25,11 @@ import { cn } from '@/helpers/cn'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
 import { audioEditsOf, useAudioEdits } from '@/stores/audioEdits'
-import {
-  flattenTakeClip,
-  sequenceOf,
-  trimTakeClip,
-  useSequences,
-  writeTakeClip,
-} from '@/stores/sequences'
+import { flattenTakeClip, sequenceOf, trimTakeClip, useSequences } from '@/stores/sequences'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audioTools'
-import { decodeAsset } from '@/helpers/audioDecode'
 import { loadTake } from './loadTake'
-import { useAudioRenderer } from '@/hooks/useAudioRenderer'
 import { useWaveSurfer } from '@/hooks/useWaveSurfer'
+import { useRenderedTake } from '@/hooks/useRenderedTake'
 
 export type TakeEditorProps = { documentId: string }
 
@@ -94,126 +86,25 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
    * mutation is bounded; `inPoint` needs none, being a field read.
    */
   const inPoint = clip?.inPoint ?? 0
-  const sourceDuration = useMemo(() => (clip ? takeSliceOf(clip).duration : 0), [clip])
+  const sourceDuration = clip ? takeSliceOf(clip).duration : 0
 
-  const renderer = useAudioRenderer()
-
-  // Both tagged with the asset they belong to rather than reset when that changes: clearing
-  // them would mean writing state from inside an effect, and would show the previous take for
-  // one frame.
-  const [loaded, setLoaded] = useState<{ assetId: string; ok: boolean } | null>(null)
-  /**
-   * Tagged with everything the answer DEPENDS on, and each tag paid for by a defect.
-   *
-   * The BLOCK, because a shape is now the shape of one block's slice: two blocks on the same take
-   * — a split, the same sound laid down twice — read as one another when only the asset is
-   * compared, and selecting the second wrote the first one's bounds onto it. Not transiently
-   * either, the write moving the bounds the next render is asked for.
-   *
-   * The SIDE of A/B, because a bypassed render is asked for an empty chain, so its shape is the
-   * whole untouched take. Read without that tag, the press that comes back OFF bypass writes the
-   * answer of the press that went on.
-   */
-  const [output, setOutput] = useState<{
-    clipId: string
-    assetId: string
-    bypassed: boolean
-    audio: RenderedAudio | null
-  } | null>(null)
   const assetId = clip?.assetId ?? null
   const asset = assetId ? (byId.get(assetId) ?? null) : null
+  const { rendered, unreadable } = useRenderedTake({
+    documentId,
+    assetId,
+    clipId,
+    chain,
+    inPoint,
+    sourceDuration,
+  })
 
-  useEffect(() => {
-    if (!assetId || !renderer) return
-
-    let live = true
-    decodeAsset(assetId)
-      .then(source => {
-        if (!live) return
-        // The samples move into the worker here: nothing on this side reads them again.
-        renderer.load(source)
-        setLoaded({ assetId, ok: true })
-      })
-      .catch(() => {
-        if (live) setLoaded({ assetId, ok: false })
-      })
-
-    // A tab closed mid-decode must not write into a component that is gone.
-    return () => {
-      live = false
-    }
-    // "Apply" writes a NEW asset and repoints the block at it, so the id changing is what asks
-    // for the fresh bytes — where it used to take a counter, the file having been replaced
-    // under an id that never moved.
-  }, [assetId, renderer])
-
-  const settled = loaded?.assetId === assetId ? loaded : null
-  const failed = settled?.ok === false
-
-  // The chain is replayed in the worker, never here: five steps over a three-minute take is
-  // 287 ms, and encoding the result another 206 ms — § 8.8 puts both off this thread.
-  useEffect(() => {
-    if (!renderer || !assetId || !clipId || settled?.ok !== true) return
-
-    const bypassed = chain.bypassed
-    let live = true
-    void renderer.render(bypassed ? [] : chain.edits, inPoint, sourceDuration).then(audio => {
-      // `live` is what tells the two nulls apart. A render overtaken by a newer one was
-      // overtaken because these deps changed, which ran the cleanup below first; a null that
-      // still arrives on a live effect is the worker having died, and it has to be said.
-      if (live) setOutput({ clipId, assetId, bypassed, audio })
-    })
-
-    return () => {
-      live = false
-    }
-  }, [renderer, settled, assetId, clipId, inPoint, sourceDuration, chain.edits, chain.bypassed])
-
-  const answered = output?.clipId === clipId && output.assetId === assetId ? output : null
-  const rendered = answered?.audio ?? null
-
-  /**
-   * What ties the editor to the block it edits: the ramps and the level the chain came to,
-   * written onto it. The bounds ride along untouched — the chain is replayed FROM them.
-   *
-   * Written only once a TOOL has run on this block. What that guards is no longer a length, it
-   * is those two fields: a block nobody has tooled answers an empty chain, an empty chain
-   * projects no ramp and no level, and writing that back would wipe a fade and a gain laid by
-   * hand on the strip. `chain.touched` says so outright where an entry in `chains` was read
-   * before — dragging a REGION writes an entry too, and a region is where one is looking, so one
-   * drag on the wave was enough to flatten the block.
-   *
-   * Bypass is that hazard reached from the other side, which is why it is read off the ANSWER's
-   * own tag rather than off the current state. A bypassed render is asked for an empty chain,
-   * and the press that comes back OFF bypass re-runs this before its own render has landed;
-   * reading `chain.bypassed` here would write the answer of the press that went ON. One press,
-   * and a listening aid would flatten the block on the strip.
-   */
-  const owned = chain.touched
-
-  useEffect(() => {
-    if (!answered || answered.bypassed || !owned) return
-
-    const shape = answered.audio?.shape
-    if (clipId && shape) writeTakeClip(documentId, clipId, shape)
-  }, [documentId, clipId, owned, answered])
-
-  // Either half of the pipeline giving up leaves the same take unplayable, and says so the same
-  // way — the decode, and the chain replayed over it.
-  const unreadable = failed || answered?.audio === null
-
-  const onRegionChange = useCallback(
-    (region: Region | null) => {
-      if (!clipId) return
-
-      const store = useAudioEdits.getState()
-      const current = audioEditsOf(store, documentId)
-      // The region is where one is looking, not an edit: it goes through `replace`, which
-      // skips the history.
-      store.replace(documentId, withChain(current, clipId, { ...chainOf(current, clipId), region }))
-    },
-    [documentId, clipId],
-  )
+  const onRegionChange = (region: Region | null): void => {
+    if (!clipId) return
+    const store = useAudioEdits.getState()
+    const current = audioEditsOf(store, documentId)
+    store.replace(documentId, withChain(current, clipId, { ...chainOf(current, clipId), region }))
+  }
 
   const player = useWaveSurfer({
     container: surface,
@@ -289,54 +180,29 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
     if (clipId) trimTakeClip(documentId, clipId, cropBounds(slice, from, to))
   }
 
-  const act = (id: AudioToolId): void => {
-    switch (id) {
-      case 'crop':
-        // Only with a region: cropping to nothing would silently empty the take.
-        if (region) cutTo(region.from, region.to)
-        return
-      case 'fadeIn':
-        return run({
-          kind: 'fade',
-          edge: 'in',
-          length: region ? region.to - region.from : DEFAULT_FADE,
-        })
-      case 'fadeOut':
-        return run({
-          kind: 'fade',
-          edge: 'out',
-          length: region ? region.to - region.from : DEFAULT_FADE,
-        })
-      case 'normalize':
-        return run({ kind: 'normalize', targetLufs: -14 })
-      case 'trimSilence': {
-        // Measured in the WORKER, and handed over with the render: `edgeSilences` walks frame by
-        // frame until it hears something, so a wholly silent take is a walk of eight million of
-        // them — one to two orders of magnitude over this thread's budget.
-        if (!rendered) return
-
-        const { head, tail } = rendered.silence
-        if (tail > head) cutTo(head, tail)
-        return
-      }
-      case 'compare': {
-        if (!clipId) return
-
-        const store = useAudioEdits.getState()
-        const current = audioEditsOf(store, documentId)
-        const heard = chainOf(current, clipId)
-        return store.replace(
-          documentId,
-          withChain(current, clipId, { ...heard, bypassed: !heard.bypassed }),
-        )
-      }
-      case 'apply':
-        void save(true)
-        return
-      case 'saveAs':
-        void save(false)
-        return
-    }
+  const fade = (edge: 'in' | 'out'): void =>
+    run({ kind: 'fade', edge, length: region ? region.to - region.from : DEFAULT_FADE })
+  const trimSilence = (): void => {
+    if (!rendered) return
+    const { head, tail } = rendered.silence
+    if (tail > head) cutTo(head, tail)
+  }
+  const compare = (): void => {
+    if (!clipId) return
+    const store = useAudioEdits.getState()
+    const current = audioEditsOf(store, documentId)
+    const heard = chainOf(current, clipId)
+    store.replace(documentId, withChain(current, clipId, { ...heard, bypassed: !heard.bypassed }))
+  }
+  const actions: Record<AudioToolId, () => void> = {
+    crop: () => region && cutTo(region.from, region.to),
+    fadeIn: () => fade('in'),
+    fadeOut: () => fade('out'),
+    normalize: () => run({ kind: 'normalize', targetLufs: -14 }),
+    trimSilence,
+    compare,
+    apply: () => void save(true),
+    saveAs: () => void save(false),
   }
 
   // This half takes a drop, empty or not: dropping a take onto the editor lays it on the montage
@@ -381,7 +247,7 @@ export function TakeEditor({ documentId }: TakeEditorProps) {
               ...AUDIO_TOOLS,
             ]}
             activeTool={chain.bypassed ? 'compare' : undefined}
-            onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && act(id))}
+            onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && actions[id]())}
             extras={
               <>
                 {/* On the bar rather than in the tooltips alone: an area nobody knows how to draw
