@@ -7,6 +7,7 @@ import { gameMessageOf, openGameChannel, type GameCommand } from './gameChannel'
 import { startGame } from './gameHost'
 import type { PlaySession, SceneLookup } from './playSession'
 import type { SceneDraw } from './studioRender'
+import { createRuntimeWorldCompiler } from '@/engines/scene/runtimeWorldCompiler'
 
 export type GameStageDeps = {
   /** What draws. The game window's own engine — a WebGL context never crosses a window. */
@@ -26,6 +27,7 @@ export type GameStage = { close: () => void }
  */
 export function createGameStage(deps: GameStageDeps): GameStage {
   const channel = openGameChannel()
+  const compiler = createRuntimeWorldCompiler()
 
   let session: PlaySession | null = null
   let documentId: string | null = null
@@ -58,6 +60,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
     documentId = null
     scene = null
     known.clear()
+    compiler.clearOptimizationCache()
     deps.onReport?.(null)
   }
 
@@ -107,26 +110,28 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       // arriving while the engines land drops this one on the floor rather than installing it.
       drop()
       documentId = message.documentId
-      scene = message.scene
+      scene = compiler.compileRuntimeWorld(message.scene)
       modules = message.modules
       troubles = message.troubles
       // 🛑 Applied whole, and it is what the studio's own viewport does on every edit: the render
       // port only ever moves the nodes a step MOVED, so without this the window holds an engine
       // that was never given the scene — measured, and it drew an empty grey window.
-      deps.renderer.apply(message.scene)
+      deps.renderer.apply(scene)
       void begin(generation)
       return
     }
 
     if (message.kind === 'edit') {
       if (message.documentId !== documentId) return
-      scene = message.scene
-      deps.renderer.apply(message.scene)
+      const compiled = compiler.compileRuntimeRegion(message.patch)
+      if (!compiled) return
+      scene = compiled
+      deps.renderer.apply(scene)
       return
     }
 
     if (message.kind === 'scene') {
-      known.set(message.scene, message.found)
+      known.set(message.scene, compiledLookup(message.found))
       return
     }
 
@@ -148,5 +153,13 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       drop()
       channel.close()
     },
+  }
+}
+
+function compiledLookup(found: SceneLookup): SceneLookup {
+  if (found === 'reading' || found === 'unknown') return found
+  return {
+    ...found,
+    state: createRuntimeWorldCompiler().compileRuntimeWorld(found.state),
   }
 }

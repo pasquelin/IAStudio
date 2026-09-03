@@ -8,6 +8,13 @@ import { gameMessageOf } from './gameChannel'
  */
 describe('what the two windows accept off the wire', () => {
   const scene = { nodes: [], animation: { duration: 5 } }
+  const patch = {
+    changedNodes: [],
+    removedIds: [],
+    order: null,
+    world: null,
+    animation: null,
+  }
 
   it('takes the messages the studio publishes', () => {
     expect(
@@ -19,10 +26,10 @@ describe('what the two windows accept off the wire', () => {
       modules: [],
       troubles: [],
     })
-    expect(gameMessageOf({ kind: 'edit', documentId: 'd', scene })).toEqual({
+    expect(gameMessageOf({ kind: 'edit', documentId: 'd', patch })).toEqual({
       kind: 'edit',
       documentId: 'd',
-      scene,
+      patch,
     })
     expect(gameMessageOf({ kind: 'scene', scene: 'World01', found: 'unknown' })).toEqual({
       kind: 'scene',
@@ -70,6 +77,15 @@ describe('what the two windows accept off the wire', () => {
     expect(gameMessageOf({ kind: 'play', documentId: 'd' })).toBeNull()
     // The shape is read at the depth the runtime reads it at, so a scene-shaped hole is caught.
     expect(gameMessageOf({ kind: 'play', documentId: 'd', scene: { nodes: [] } })).toBeNull()
+    expect(
+      gameMessageOf({ kind: 'edit', documentId: 'd', patch: { ...patch, changedNodes: [null] } }),
+    ).toBeNull()
+    expect(
+      gameMessageOf({ kind: 'edit', documentId: 'd', patch: { ...patch, removedIds: [1] } }),
+    ).toBeNull()
+    expect(
+      gameMessageOf({ kind: 'edit', documentId: 'd', patch: { ...patch, order: [{}] } }),
+    ).toBeNull()
     expect(gameMessageOf({ kind: 'command', id: 1, command: { name: 'explode' } })).toBeNull()
     // A step with no count would run whatever `undefined` steps means to a loop.
     expect(gameMessageOf({ kind: 'command', id: 1, command: { name: 'step' } })).toBeNull()
