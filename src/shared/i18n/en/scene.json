@@ -110,6 +110,7 @@
     "images": "Images {{value}}",
     "drawCallResult": "Draw calls {{before}} → {{after}}",
     "instanceCandidates": "{{value}} instance candidates",
+    "batchCandidates": "{{value}} batch candidates",
     "warning": "{{value}} kept individual — {{reason}}",
     "visualChangesNone": "Visual changes — NONE",
     "mode": "Runtime representation",

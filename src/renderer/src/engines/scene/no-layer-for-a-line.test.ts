@@ -27,6 +27,7 @@ const OTHER_SENSES: Record<string, string> = {
   batching: 'three.js `Layers`: the same one, once a lot draws the mesh',
   cellInstancing: 'three.js `Layers`: the same one again, once a cell of the world draws it',
   grouping: 'three.js `Layers`: the constant itself, which both strategies share',
+  optimizedGrouping: 'three.js render layers used by both runtime grouping strategies',
   modelInstancing: 'three.js `Layers`: the one the camera skips once an instance draws the mesh',
   worldAnalyzer: 'three.js `Layers`: the analyzer excludes a source another representation draws',
   SceneRenderer: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { InstancedMesh, Mesh } from 'three'
+import { BatchedMesh, InstancedMesh, Mesh } from 'three'
 import type { MeshStandardMaterial } from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
@@ -87,6 +87,28 @@ describe('a scene as a game draws it', () => {
 
     expect(instances.reduce((count, instance) => count + instance.count, 0)).toBe(WORTH_INSTANCING)
     expect(built.byEntity.get(moving.id)?.parent).toBe(built.scene)
+  })
+
+  it('draws different compatible shapes through BatchedMesh when the author forces a batch', async () => {
+    const nodes: SceneNode[] = [
+      { ...meshNode(BOX), optimization: { mode: 'batch' } },
+      {
+        ...meshNode({ kind: 'box', width: 2, height: 1, depth: 1 }),
+        optimization: { mode: 'batch' },
+      },
+    ]
+    const built = await buildGameScene(scene(nodes), NOTHING)
+    const batches: BatchedMesh[] = []
+    built.scene.traverse(object => {
+      if (object instanceof BatchedMesh) batches.push(object)
+    })
+
+    expect(batches).toHaveLength(1)
+    expect(batches[0]?.instanceCount).toBe(2)
+    expect(nodes.every(node => built.byEntity.has(node.id))).toBe(true)
+    expect(
+      built.scene.children.some(child => nodes.some(node => built.byEntity.get(node.id) === child)),
+    ).toBe(false)
   })
 
   /** A game has no picture for a texture the project has lost, and draws the shape all the same. */

@@ -110,6 +110,7 @@
     "images": "Images {{value}}",
     "drawCallResult": "Appels de rendu {{before}} → {{after}}",
     "instanceCandidates": "{{value}} candidats à l’instancing",
+    "batchCandidates": "{{value}} candidats au batching",
     "warning": "{{value}} gardés individuels — {{reason}}",
     "visualChangesNone": "Changements visuels — AUCUN",
     "mode": "Représentation runtime",

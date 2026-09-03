@@ -1,0 +1,92 @@
+import {
+  BatchedMesh,
+  BoxGeometry,
+  InstancedMesh,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+} from 'three'
+import { expect, it } from 'vitest'
+import { meshNode } from './scene-fixtures'
+import { createOptimizedGroups } from './optimizedGrouping'
+import type { SceneNode } from './sceneState'
+
+it('draws automatic repetitions as instances and forced batches as BatchedMesh together', () => {
+  const host = new Object3D()
+  const material = new MeshStandardMaterial()
+  const geometry = new BoxGeometry()
+  const nodes: SceneNode[] = []
+  const objects = new Map<string, Mesh>()
+
+  for (let at = 0; at < 16; at += 1) {
+    const node = meshNode(`instance-${at}`)
+    nodes.push(node)
+    objects.set(node.id, new Mesh(geometry, material))
+  }
+  for (let at = 0; at < 2; at += 1) {
+    const node: SceneNode = {
+      ...meshNode(`batch-${at}`),
+      geometry: { kind: 'box', width: at + 2, height: 1, depth: 1 },
+      optimization: { mode: 'batch' },
+    }
+    nodes.push(node)
+    objects.set(node.id, new Mesh(new BoxGeometry(at + 2, 1, 1), material))
+  }
+  for (const object of objects.values()) object.updateMatrixWorld(true)
+
+  const groups = createOptimizedGroups(host)
+  expect(groups.rebuild(nodes, id => objects.get(id))).toBe(18)
+  expect(groups.drawn().filter(mesh => mesh instanceof InstancedMesh)).not.toHaveLength(0)
+  expect(groups.drawn().filter(mesh => mesh instanceof BatchedMesh)).toHaveLength(1)
+})
+
+it('keeps gameplay exclusions individual even when batch is forced', () => {
+  const host = new Object3D()
+  const node: SceneNode = { ...meshNode('door'), optimization: { mode: 'batch' } }
+  const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+  mesh.updateMatrixWorld(true)
+
+  const groups = createOptimizedGroups(host)
+  expect(groups.rebuild([node], () => mesh, new Set([node.id]))).toBe(0)
+  expect(groups.drawn()).toHaveLength(0)
+})
+
+it('keeps individual and excluded overrides out of every optimized representation', () => {
+  const host = new Object3D()
+  const material = new MeshStandardMaterial()
+  const nodes: SceneNode[] = [
+    { ...meshNode('individual'), optimization: { mode: 'individual' } },
+    { ...meshNode('excluded'), optimization: { mode: 'exclude' } },
+  ]
+  const objects = new Map(nodes.map(node => [node.id, new Mesh(new BoxGeometry(), material)]))
+  for (const object of objects.values()) object.updateMatrixWorld(true)
+
+  const groups = createOptimizedGroups(host)
+  expect(groups.rebuild(nodes, id => objects.get(id))).toBe(0)
+  expect(groups.drawn()).toHaveLength(0)
+})
+
+it('restores a grouped source when its override changes to individual', () => {
+  const host = new Object3D()
+  const material = new MeshStandardMaterial()
+  const geometry = new BoxGeometry()
+  const automatic = Array.from({ length: 16 }, (_unused, at) => meshNode(`node-${at}`))
+  const objects = new Map(automatic.map(node => [node.id, new Mesh(geometry, material)]))
+  for (const mesh of objects.values()) {
+    host.add(mesh)
+    mesh.updateMatrixWorld(true)
+  }
+  const groups = createOptimizedGroups(host)
+  groups.rebuild(automatic, id => objects.get(id))
+  const sources = new Set<Object3D>(objects.values())
+  expect(host.children.every(child => !sources.has(child))).toBe(true)
+
+  const individual: SceneNode[] = automatic.map(node => ({
+    ...node,
+    optimization: { mode: 'individual' },
+  }))
+  expect(groups.rebuild(individual, id => objects.get(id))).toBe(0)
+  expect(groups.drawn()).toHaveLength(0)
+  expect(host.children).toEqual([...objects.values()])
+  expect([...objects.values()].every(mesh => mesh.layers.isEnabled(0))).toBe(true)
+})

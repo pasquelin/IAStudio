@@ -323,11 +323,19 @@ export function groupingExclusions(
   driven: ReadonlySet<string>,
   strategy: GroupingStrategy = 'instance',
 ): ReadonlySet<string> {
+  return collectGroupingExclusions(nodes, driven, node => excludesGrouping(node, strategy))
+}
+
+function collectGroupingExclusions(
+  nodes: readonly SceneNode[],
+  driven: ReadonlySet<string>,
+  excludes: (node: SceneNode) => boolean,
+): ReadonlySet<string> {
   const excluded = new Set(driven)
   const children = new Map<string, string[]>()
   for (const node of nodes) {
     if (
-      excludesGrouping(node, strategy) ||
+      excludes(node) ||
       movesOnItsOwn(node.components) ||
       node.components?.some(component => component.type === 'Script')
     ) {
@@ -347,6 +355,14 @@ export function groupingExclusions(
     }
   }
   return excluded
+}
+
+/** Nodes whose animation or gameplay requires their original render representation. */
+export function behavioralGroupingExclusions(
+  nodes: readonly SceneNode[],
+  driven: ReadonlySet<string>,
+): ReadonlySet<string> {
+  return collectGroupingExclusions(nodes, driven, () => false)
 }
 
 /**
@@ -375,7 +391,7 @@ export function sweep(
       return
     }
 
-    const key = keyOf(node, mesh)
+    const key = `${keyOf(node, mesh)}|${node.optimization?.groupId ?? ''}`
     const held = groups.get(key)
     if (held) {
       held.ids.push(node.id)

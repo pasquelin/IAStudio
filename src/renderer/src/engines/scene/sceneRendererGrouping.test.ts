@@ -24,6 +24,12 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     expect(body('regroupInstances')).not.toContain('view.stats')
   })
 
+  it('uses the combined optimizer for the default spatial strategy', () => {
+    expect(source).toContain(
+      "if (!options.grouping && options.partition !== 'off') return createOptimizedGroups",
+    )
+  })
+
   it('groups against the visibility the viewport really shows', () => {
     // `asDocumented` puts an isolation aside for the length of a call. The grouping reads
     // `visible` off the objects, so run under it, an isolated scene would come back drawn.
@@ -31,9 +37,8 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
   })
 
   it('keeps timeline-driven nodes out of a static batch', () => {
-    expect(body('regroupInstances')).toContain(
-      "drivenNodes(this.timeline),\n          this.options.grouping === 'batched' ? 'batch' : 'instance'",
-    )
+    expect(body('regroupInstances')).toContain('drivenNodes(this.timeline)')
+    expect(body('regroupInstances')).toContain('behavioralGroupingExclusions')
   })
 
   it('answers a node that only moved without grouping everything again', () => {
