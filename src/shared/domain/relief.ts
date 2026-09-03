@@ -270,6 +270,11 @@ function slopeDegrees(
   return Math.acos(clamp(1 / length, -1, 1)) * (180 / Math.PI)
 }
 
+/**
+ * Hard 1/0 for height/slope masks — no fade at min/max. Intentional this lot, not a missing
+ * blend: a large edit can crease along the bound (bathtub ring). A configurable edge falloff
+ * is a later lot.
+ */
 function inRange(value: number, min: number, max: number): boolean {
   return value >= Math.min(min, max) && value <= Math.max(min, max)
 }
