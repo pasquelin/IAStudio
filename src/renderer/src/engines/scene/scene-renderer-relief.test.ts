@@ -110,6 +110,34 @@ describe('relief sculpting through the scene renderer', () => {
     renderer.dispose()
   })
 
+  /**
+   * 🛑 Without ends to the drag, `runCommand` had no gesture to merge into and every stroke of a
+   * brush held down became its own history entry — a hundred of them flushed the shared stack.
+   */
+  it('seals a brush drag into one gesture, however many strokes it took', () => {
+    const begun = vi.fn()
+    const ended = vi.fn()
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      relief: reliefStub(),
+      onReliefSculptBegin: begun,
+      onReliefSculptEnd: ended,
+    })
+    renderer.setReliefBrush({ terrainId: 'terrain', editId: 'hills', radius: 2, amount: 0.5 })
+
+    renderer['reliefPointer'] = 7
+    renderer['onPointerUp']({ button: 0, pointerId: 7 } as PointerEvent)
+
+    expect(ended).toHaveBeenCalledOnce()
+    // Released twice — a second up, or a brush change — seals nothing more.
+    renderer['onPointerUp']({ button: 0, pointerId: 7 } as PointerEvent)
+    renderer.setReliefBrush(null)
+    expect(ended).toHaveBeenCalledOnce()
+    expect(begun).not.toHaveBeenCalled()
+    renderer.dispose()
+  })
+
   it('holds one sculptor at a time, so a second edit layer does not add a worker pool', async () => {
     const spies = [sculptorSpy(), sculptorSpy()]
     let next = 0

@@ -192,7 +192,12 @@ function sceneOf(sculpt?: ReliefSculpt): SceneState {
     ...EMPTY_SCENE,
     world: {
       ...DEFAULT_WORLD,
-      layers: [reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ sculpt })] })],
+      layers: [
+        reliefLayer(
+          { assetId: 'asset_height' },
+          { id: 'terrain', edits: [terrainEditLayer({ id: 'sculpt', sculpt })] },
+        ),
+      ],
     },
   }
 }

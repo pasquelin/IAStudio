@@ -610,14 +610,20 @@ export const DEFAULT_RELIEF_ELEVATION: ReliefLayer['elevation'] = Object.freeze(
 export const DEFAULT_RELIEF_NAME = 'Terrain'
 export const DEFAULT_EDIT_NAME = 'Sculpt'
 
-export function terrainEditLayer(patch?: Partial<TerrainEditLayer>): TerrainEditLayer {
+/**
+ * The id is ASKED FOR, never defaulted: two edits built from a literal fallback shared one, and
+ * `terrainOf`, the sculptor cache and the surface map all key on it — they would silently merge.
+ */
+export function terrainEditLayer(
+  patch: Partial<TerrainEditLayer> & { id: string },
+): TerrainEditLayer {
   return {
-    id: patch?.id ?? 'sculpt',
-    name: patch?.name ?? DEFAULT_EDIT_NAME,
-    enabled: patch?.enabled ?? true,
-    locked: patch?.locked ?? false,
-    alpha: patch?.alpha ?? 1,
-    ...(patch?.sculpt && patch.sculpt.chunks.length > 0 ? { sculpt: patch.sculpt } : {}),
+    id: patch.id,
+    name: patch.name ?? DEFAULT_EDIT_NAME,
+    enabled: patch.enabled ?? true,
+    locked: patch.locked ?? false,
+    alpha: patch.alpha ?? 1,
+    ...(patch.sculpt && patch.sculpt.chunks.length > 0 ? { sculpt: patch.sculpt } : {}),
   }
 }
 
@@ -628,11 +634,11 @@ export function enabledTerrains(layers: readonly WorldLayer[]): readonly ReliefL
 
 export function reliefLayer(
   heightmap: TextureRef,
-  patch?: Partial<Omit<ReliefLayer, 'kind' | 'heightmap'>>,
+  patch: Partial<Omit<ReliefLayer, 'kind' | 'heightmap'>> & { id: string },
 ): ReliefLayer {
   return {
     kind: 'relief',
-    id: patch?.id ?? 'terrain',
+    id: patch.id,
     name: patch?.name ?? DEFAULT_RELIEF_NAME,
     enabled: patch?.enabled ?? true,
     locked: patch?.locked ?? UNLOCKED_TERRAIN,

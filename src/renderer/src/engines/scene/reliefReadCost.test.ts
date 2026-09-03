@@ -71,7 +71,10 @@ describe('what one relief rebuild costs to decode', () => {
       {
         ...DEFAULT_WORLD,
         layers: [
-          reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ sculpt })] }),
+          reliefLayer(
+            { assetId: 'asset_height' },
+            { id: 'terrain', edits: [terrainEditLayer({ id: 'sculpt', sculpt })] },
+          ),
         ],
       },
       samplesOf(),

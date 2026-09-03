@@ -31,7 +31,7 @@ function samplesOf() {
 function layerOf(sculpt?: ReliefSculpt): ReliefLayer {
   return reliefLayer(
     { assetId: 'asset_height' },
-    { edits: sculpt ? [terrainEditLayer({ sculpt })] : [] },
+    { id: 'terrain', edits: sculpt ? [terrainEditLayer({ id: 'sculpt', sculpt })] : [] },
   )
 }
 
@@ -57,7 +57,7 @@ describe('relief surface chunks', () => {
     const samples = samplesOf()
     const layer = reliefLayer(
       { assetId: 'asset_height' },
-      { edits: [terrainEditLayer({ id: 'hills' })] },
+      { id: TERRAIN, edits: [terrainEditLayer({ id: 'hills' })] },
     )
 
     surface.sync({ ...DEFAULT_WORLD, layers: [layer] }, samples)
@@ -278,7 +278,10 @@ describe('relief surface chunks', () => {
     const blended = (alpha: number) => ({
       ...DEFAULT_WORLD,
       layers: [
-        reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ sculpt, alpha })] }),
+        reliefLayer(
+          { assetId: 'asset_height' },
+          { id: 'terrain', edits: [terrainEditLayer({ id: 'sculpt', sculpt, alpha })] },
+        ),
       ],
     })
 

@@ -417,6 +417,7 @@ describe('sceneFromPayload', () => {
           reliefLayer(
             { assetId: 'asset_height' },
             {
+              id: 'terrain',
               origin: { x: -16, z: 4 },
               size: { x: 256, z: 128 },
               elevation: { min: -8, max: 32 },

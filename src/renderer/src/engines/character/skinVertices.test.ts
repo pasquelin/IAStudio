@@ -29,6 +29,27 @@ function influences(binding: { skinIndex: Uint16Array; skinWeight: Float32Array 
     .sort((left, right) => right.weight - left.weight)
 }
 
+async function expectWasmAgrees(input: SkinRequest): Promise<void> {
+  const expected = skinVertices(input)
+  if (!expected) throw new Error('the TypeScript walk was not cancelled')
+
+  const wasm = (await loadSkinVerticesWasm())(input)
+  wasm.skinRange(0, vertexCountOf(input))
+  const actual = wasm.binding()
+
+  for (let vertex = 0; vertex < vertexCountOf(input); vertex += 1) {
+    const byBone = (left: { bone: number }, right: { bone: number }) => left.bone - right.bone
+    const actualInfluences = influences(actual, vertex).sort(byBone)
+    const expectedInfluences = influences(expected, vertex).sort(byBone)
+    expect(actualInfluences.map(influence => influence.bone)).toEqual(
+      expectedInfluences.map(influence => influence.bone),
+    )
+    for (const [slot, influence] of actualInfluences.entries()) {
+      expect(influence.weight).toBeCloseTo(expectedInfluences[slot]?.weight ?? 0, 6)
+    }
+  }
+}
+
 const bind = (...args: Parameters<typeof request>) => {
   const binding = skinVertices(request(...args))
   if (!binding) throw new Error('the walk was not cancelled')
@@ -241,27 +262,27 @@ describe('the WebAssembly kernel', () => {
         { head: [0.5, 1.4, 0], tail: [0.5, 1.4, 0], region: 'handle' },
       ],
     )
-    const expected = skinVertices(input)
-    if (!expected) throw new Error('the TypeScript walk was not cancelled')
+    await expectWasmAgrees(input)
+  })
 
-    const wasm = (await loadSkinVerticesWasm())(input)
-    wasm.skinRange(0, vertexCountOf(input))
-    const actual = wasm.binding()
+  /**
+   * 🛑 The kernel holds the region table in its OWN constants — the handle, and the finger ranges
+   * — while the walk derives them from `SKIN_REGIONS`. Five regions exercised left the rest free
+   * to drift, and the binary is a checked-in blob no build step regenerates.
+   */
+  it('agrees on every region of the wire format, not the five a rig usually shows', async () => {
+    const bones: Bone[] = SKIN_REGIONS.map((region, at) => ({
+      head: [at * 0.5, 0, 0],
+      tail: [at * 0.5, 1, 0],
+      region,
+    }))
+    const vertices: [number, number, number][] = SKIN_REGIONS.map((_, at) => [
+      at * 0.5 + 0.2,
+      0.5,
+      0.1,
+    ])
 
-    for (let vertex = 0; vertex < vertexCountOf(input); vertex += 1) {
-      const actualInfluences = influences(actual, vertex).sort(
-        (left, right) => left.bone - right.bone,
-      )
-      const expectedInfluences = influences(expected, vertex).sort(
-        (left, right) => left.bone - right.bone,
-      )
-      expect(actualInfluences.map(influence => influence.bone)).toEqual(
-        expectedInfluences.map(influence => influence.bone),
-      )
-      for (const [slot, influence] of actualInfluences.entries()) {
-        expect(influence.weight).toBeCloseTo(expectedInfluences[slot]?.weight ?? 0, 6)
-      }
-    }
+    await expectWasmAgrees(request(vertices, bones))
   })
 
   it('keeps overlapping requests in separate memories', async () => {

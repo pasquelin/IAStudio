@@ -38,7 +38,12 @@ function sceneOf(sculpt?: ReliefSculpt): SceneState {
     ...EMPTY_SCENE,
     world: {
       ...DEFAULT_WORLD,
-      layers: [reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ sculpt })] })],
+      layers: [
+        reliefLayer(
+          { assetId: 'asset_height' },
+          { id: 'terrain', edits: [terrainEditLayer({ id: 'sculpt', sculpt })] },
+        ),
+      ],
     },
   }
 }
@@ -127,8 +132,9 @@ describe('sculptRelief', () => {
           reliefLayer(
             { assetId: 'asset_height' },
             {
+              id: 'terrain',
               locked: { sculpt: true, placement: false },
-              edits: [terrainEditLayer()],
+              edits: [terrainEditLayer({ id: 'sculpt' })],
             },
           ),
         ],
@@ -139,7 +145,10 @@ describe('sculptRelief', () => {
       world: {
         ...DEFAULT_WORLD,
         layers: [
-          reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ locked: true })] }),
+          reliefLayer(
+            { assetId: 'asset_height' },
+            { id: 'terrain', edits: [terrainEditLayer({ id: 'sculpt', locked: true })] },
+          ),
         ],
       },
     }
@@ -155,7 +164,10 @@ describe('terrain and edit-layer commands', () => {
   it('adds a terrain that names the heightmap, and takes it back', () => {
     const after = addTerrain({ assetId: 'asset_height' }, 'island').apply(empty)
     expect(after.world.layers).toEqual([
-      reliefLayer({ assetId: 'asset_height' }, { id: 'island', edits: [terrainEditLayer()] }),
+      reliefLayer(
+        { assetId: 'asset_height' },
+        { id: 'island', edits: [terrainEditLayer({ id: 'sculpt' })] },
+      ),
     ])
     expect(removeTerrain('island').apply(after).world.layers).toEqual([])
   })
@@ -219,6 +231,7 @@ describe('terrain and edit-layer commands', () => {
           reliefLayer(
             { assetId: 'asset_height' },
             {
+              id: 'terrain',
               edits: [terrainEditLayer({ id: 'a', locked: true }), terrainEditLayer({ id: 'b' })],
             },
           ),
@@ -237,7 +250,10 @@ describe('terrain and edit-layer commands', () => {
       world: {
         ...DEFAULT_WORLD,
         layers: [
-          reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ locked: true })] }),
+          reliefLayer(
+            { assetId: 'asset_height' },
+            { id: 'terrain', edits: [terrainEditLayer({ id: 'sculpt', locked: true })] },
+          ),
         ],
       },
     }

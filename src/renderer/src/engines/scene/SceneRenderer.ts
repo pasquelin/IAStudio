@@ -306,6 +306,12 @@ export type SceneRendererOptions = {
   /** The chunks a relief stroke changed, ready to enter the document as one undoable command. */
   onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   /**
+   * The ends of a brush DRAG, which is one thing the reader did: without them each stroke of it
+   * was its own history entry, and a drag flushed the stack the document shares.
+   */
+  onReliefSculptBegin?: () => void
+  onReliefSculptEnd?: () => void
+  /**
    * The editor's own furniture — trihedron, camera bodies and frustums, light helpers, rails.
    * `false` draws none of it: a window that PLAYS a scene shows the game, and the tools it was
    * built with are the studio talking over it.
@@ -1345,8 +1351,15 @@ export class SceneRenderer {
       return
     }
     this.reliefBrush = brush
+    this.endReliefStroke()
+  }
+
+  /** Closes the drag if one was held, so the history entry it opened is sealed exactly once. */
+  private endReliefStroke(): void {
+    if (this.reliefPointer === null) return
     this.reliefPointer = null
     this.reliefPoint = null
+    this.options.onReliefSculptEnd?.()
   }
 
   private reliefPointAt(event: PointerEvent): Vector3 | null {
