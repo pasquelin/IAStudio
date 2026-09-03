@@ -18,10 +18,11 @@ import {
   changedChunks,
   chunkCountAlong,
   chunkLayout,
-  combinedAt,
+  reliefReader,
   worldY,
   type ReliefChunkLayout,
   type ReliefExtent,
+  type ReliefRead,
   type ReliefSculpt,
 } from '@shared/domain/relief'
 import type { ReliefLayer, SceneWorld } from '@shared/domain/scene'
@@ -247,8 +248,9 @@ function writeChunk(
   const normal = geometry.getAttribute('normal')
   if (!(position instanceof BufferAttribute) || !(normal instanceof BufferAttribute)) return
   if (!(position.array instanceof Float32Array) || !(normal.array instanceof Float32Array)) return
-  writePositions(position.array, samples, extent, layout, sculpt)
-  writeNormals(normal.array, samples, extent, layout, sculpt)
+  const read = reliefReader(samples, sculpt)
+  writePositions(position.array, samples, extent, layout, read)
+  writeNormals(normal.array, samples, extent, layout, read)
   if (ranged) {
     markChunk(position, layout.width, layout.height)
     markChunk(normal, layout.width, layout.height)
@@ -267,7 +269,7 @@ function writePositions(
   samples: HeightmapSamples,
   extent: ReliefExtent,
   layout: ReliefChunkLayout,
-  sculpt: ReliefSculpt | undefined,
+  read: ReliefRead,
 ): void {
   const stepX = extent.size.x / Math.max(1, samples.width - 1)
   const stepZ = extent.size.z / Math.max(1, samples.height - 1)
@@ -277,7 +279,7 @@ function writePositions(
       const sx = layout.sampleX + lx
       const sz = layout.sampleZ + lz
       into[cursor] = extent.origin.x + sx * stepX
-      into[cursor + 1] = worldY(combinedAt(samples, sculpt, sx, sz), extent.elevation)
+      into[cursor + 1] = worldY(read(sx, sz), extent.elevation)
       into[cursor + 2] = extent.origin.z + sz * stepZ
       cursor += 3
     }
@@ -289,7 +291,7 @@ function writeNormals(
   samples: HeightmapSamples,
   extent: ReliefExtent,
   layout: ReliefChunkLayout,
-  sculpt: ReliefSculpt | undefined,
+  read: ReliefRead,
 ): void {
   const stepX = extent.size.x / Math.max(1, samples.width - 1)
   const stepZ = extent.size.z / Math.max(1, samples.height - 1)
@@ -299,12 +301,12 @@ function writeNormals(
       const sx = layout.sampleX + lx
       const sz = layout.sampleZ + lz
       const nx =
-        (heightAt(samples, sculpt, extent, sx - 1, sz) -
-          heightAt(samples, sculpt, extent, sx + 1, sz)) /
+        (heightAt(samples, read, extent, sx - 1, sz) -
+          heightAt(samples, read, extent, sx + 1, sz)) /
         (2 * stepX)
       const nz =
-        (heightAt(samples, sculpt, extent, sx, sz - 1) -
-          heightAt(samples, sculpt, extent, sx, sz + 1)) /
+        (heightAt(samples, read, extent, sx, sz - 1) -
+          heightAt(samples, read, extent, sx, sz + 1)) /
         (2 * stepZ)
       const length = Math.hypot(nx, 1, nz) || 1
       into[cursor] = nx / length
@@ -317,14 +319,14 @@ function writeNormals(
 
 function heightAt(
   samples: HeightmapSamples,
-  sculpt: ReliefSculpt | undefined,
+  read: ReliefRead,
   extent: ReliefExtent,
   sx: number,
   sz: number,
 ): number {
   const x = Math.min(samples.width - 1, Math.max(0, sx))
   const z = Math.min(samples.height - 1, Math.max(0, sz))
-  return worldY(combinedAt(samples, sculpt, x, z), extent.elevation)
+  return worldY(read(x, z), extent.elevation)
 }
 
 function writeUv(uv: BufferAttribute, layout: ReliefChunkLayout, samples: HeightmapSamples): void {

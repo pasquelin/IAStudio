@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HUMANOID_ROLES, isHumanoidRole, type HumanoidRole } from '@shared/domain/humanoid'
 import type { DisplayUnit } from '@shared/domain/scene'
-import { toDegrees, toRadians } from '@shared/domain/angles'
-import { displayStep, fromDisplayLength, toDisplayLength } from '@shared/domain/units'
+import { degreesOf, toRadians } from '@shared/domain/angles'
+import { displayStep, fromDisplayLength, shownLength } from '@shared/domain/units'
 import { IDENTITY_TRANSFORM, type Transform, type Vector3 } from '@shared/domain/transform'
 import { Button } from '@/components/Button'
 import { InlineRename } from '@/components/InlineRename'
@@ -219,24 +219,12 @@ function restOf(bones: readonly { name: string; rest: Transform }[], bone: strin
   return bones.find(one => one.name === bone)?.rest ?? IDENTITY_TRANSFORM
 }
 
-function shownLength(vector: Vector3, unit: DisplayUnit): Vector3 {
-  return {
-    x: toDisplayLength(vector.x, unit),
-    y: toDisplayLength(vector.y, unit),
-    z: toDisplayLength(vector.z, unit),
-  }
-}
-
 function inMetres(vector: Vector3, unit: DisplayUnit): Vector3 {
   return {
     x: fromDisplayLength(vector.x, unit),
     y: fromDisplayLength(vector.y, unit),
     z: fromDisplayLength(vector.z, unit),
   }
-}
-
-function degreesOf(vector: Vector3): Vector3 {
-  return { x: toDegrees(vector.x), y: toDegrees(vector.y), z: toDegrees(vector.z) }
 }
 
 function radiansOf(vector: Vector3): Vector3 {

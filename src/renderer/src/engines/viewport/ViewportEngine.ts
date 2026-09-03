@@ -18,7 +18,7 @@ import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
 import { dollyTo, dragNotchesOf } from './dolly'
-import { fingerGap } from './pinch'
+import { pinchReading, type PinchReading } from './pinch'
 import { gestureOf, type Gesture } from './gestures'
 import { SCHEME_OF, type NavigationScheme } from '@shared/domain/navigationPreset'
 import { orbitAround } from './orbit'
@@ -41,7 +41,7 @@ import { frustumHeight } from './screenScale'
 import { ViewportNavigationTarget } from './ViewportNavigationTarget'
 
 /** A two-finger gesture in flight: its last two readings, and the pane it belongs to. */
-type Pinch = { pane: number; gap: number; middleX: number; middleY: number; moved: boolean }
+type Pinch = PinchReading & { pane: number; moved: boolean }
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
 const ORIGIN = new Vector3()
@@ -1138,13 +1138,7 @@ export class ViewportEngine {
     // The one-finger turn is over the moment a second lands: kept, it would go on turning by
     // whichever finger happened to move, on top of the pan the pair is asking for.
     this.endDrag()
-    this.pinch = {
-      pane,
-      gap: fingerGap(two[0], two[1]),
-      middleX: (two[0].clientX + two[1].clientX) / 2,
-      middleY: (two[0].clientY + two[1].clientY) / 2,
-      moved: false,
-    }
+    this.pinch = { pane, ...pinchReading(two), moved: false }
   }
 
   /** The first two fingers down, handed over as the map holds them — `null` while there is one. */
@@ -1164,9 +1158,7 @@ export class ViewportEngine {
     const height = this.rects[pinch.pane]?.height ?? 0
     if (height === 0) return
 
-    const gap = fingerGap(two[0], two[1])
-    const middleX = (two[0].clientX + two[1].clientX) / 2
-    const middleY = (two[0].clientY + two[1].clientY) / 2
+    const { gap, middleX, middleY } = pinchReading(two)
     pinch.moved = true
 
     if (orbit.enablePan) {
@@ -1207,13 +1199,7 @@ export class ViewportEngine {
     // died and the pan came back only once every finger had left the glass.
     const two = this.twoFingers()
     if (two) {
-      this.pinch = {
-        pane,
-        gap: fingerGap(two[0], two[1]),
-        middleX: (two[0].clientX + two[1].clientX) / 2,
-        middleY: (two[0].clientY + two[1].clientY) / 2,
-        moved: false,
-      }
+      this.pinch = { pane, ...pinchReading(two), moved: false }
       return
     }
 

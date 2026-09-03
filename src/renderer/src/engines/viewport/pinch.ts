@@ -9,3 +9,14 @@ import type { PointerPosition } from './pointer'
 export function fingerGap(one: PointerPosition, other: PointerPosition): number {
   return Math.hypot(other.clientX - one.clientX, other.clientY - one.clientY)
 }
+
+/** What a pair of fingers reads as: the gap that dollies, and the middle that pans. */
+export type PinchReading = { gap: number; middleX: number; middleY: number }
+
+export function pinchReading(two: readonly [PointerPosition, PointerPosition]): PinchReading {
+  return {
+    gap: fingerGap(two[0], two[1]),
+    middleX: (two[0].clientX + two[1].clientX) / 2,
+    middleY: (two[0].clientY + two[1].clientY) / 2,
+  }
+}
