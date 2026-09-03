@@ -57,6 +57,7 @@ export type SceneRendererOptions = {
   onSelect: (ids: readonly string[], mode: SelectionMode) => void
   onTransform: (moves: readonly NodeMove[]) => void
   onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
+  onReliefMask?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   onReliefStrokeStart?: () => void
   onReliefStrokeEnd?: () => void
   /**

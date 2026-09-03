@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { setTransform } from '@/engines/scene/commands'
-import { sculptRelief } from '@/engines/scene/reliefCommands'
+import { paintTerrainEditMask, sculptRelief } from '@/engines/scene/reliefCommands'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { EMPTY_STATS, sameStats, type SceneStats } from '@/engines/scene/sceneStats'
 import { assetVersionOf } from '@/stores/assets'
@@ -31,6 +31,8 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
     onTransform: moves => recordTransform(documentId, moves),
     onReliefSculpt: (terrainId, editId, chunks) =>
       useScenes.getState().runCommand(documentId, sculptRelief(terrainId, editId, chunks)),
+    onReliefMask: (terrainId, editId, chunks) =>
+      useScenes.getState().runCommand(documentId, paintTerrainEditMask(terrainId, editId, chunks)),
     onReliefStrokeStart: () => useScenes.getState().beginGesture(documentId),
     onReliefStrokeEnd: () => useScenes.getState().endGesture(documentId),
     onClips: (id, clips, lengths) =>

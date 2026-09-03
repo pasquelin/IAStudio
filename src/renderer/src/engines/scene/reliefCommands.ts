@@ -7,6 +7,7 @@ import {
   chunkPayload,
   withPackedChunks,
   type PackedReliefChunk,
+  type ReliefMask,
   type ReliefSculpt,
 } from '@shared/domain/relief'
 import {
@@ -148,6 +149,65 @@ export function setTerrainEditAlpha(
   )
 }
 
+export function setTerrainEditMask(
+  terrainId: string,
+  editId: string,
+  mask: ReliefMask | undefined,
+): Command<SceneState> {
+  return patchTerrainEdits(
+    `world:layers:${terrainId}:edits:mask:${editId}`,
+    terrainId,
+    edits => edits.map(edit => (edit.id === editId ? terrainEditLayer({ ...edit, mask }) : edit)),
+    terrain => {
+      const edit = terrain.edits.find(one => one.id === editId)
+      return !edit || edit.locked
+    },
+  )
+}
+
+export function paintTerrainEditMask(
+  terrainId: string,
+  editId: string,
+  edits: readonly PackedReliefChunk[],
+): Command<SceneState> {
+  let previous: PackedReliefChunk[] | null = null
+
+  return {
+    id: `world:layers:${terrainId}:edits:${editId}:mask:paint`,
+    apply: state => {
+      const target = targetedEdit(state, terrainId, editId)
+      if (!target || target.terrain.locked.sculpt || target.edit.locked) return state
+      const weights =
+        target.edit.mask?.kind === 'painted' ? target.edit.mask.weights : { chunks: [] }
+      previous = edits.map(edit => ({
+        column: edit.column,
+        row: edit.row,
+        payload: chunkPayload(weights, edit.column, edit.row),
+      }))
+      return withEditMask(state, terrainId, editId, {
+        kind: 'painted',
+        weights: withPackedChunks(weights, edits),
+      })
+    },
+    revert: state => {
+      const target = targetedEdit(state, terrainId, editId)
+      if (!target || !previous) return state
+      const weights =
+        target.edit.mask?.kind === 'painted' ? target.edit.mask.weights : { chunks: [] }
+      return withEditMask(state, terrainId, editId, {
+        kind: 'painted',
+        weights: withPackedChunks(weights, previous),
+      })
+    },
+    refuses: state => {
+      const target = targetedEdit(state, terrainId, editId)
+      if (!target || target.terrain.locked.sculpt || target.edit.locked) return true
+      const weights = target.edit.mask?.kind === 'painted' ? target.edit.mask.weights : undefined
+      return edits.every(edit => chunkPayload(weights, edit.column, edit.row) === edit.payload)
+    },
+  }
+}
+
 export function sculptRelief(
   terrainId: string,
   editId: string,
@@ -266,6 +326,21 @@ function targetedEdit(
   const terrain = terrainOf(state, terrainId)
   const edit = terrain?.edits.find(one => one.id === editId)
   return terrain && edit ? { terrain, edit } : undefined
+}
+
+function withEditMask(
+  state: SceneState,
+  terrainId: string,
+  editId: string,
+  mask: ReliefMask,
+): SceneState {
+  const layers = mapTerrain(state.world.layers, terrainId, terrain => ({
+    ...terrain,
+    edits: terrain.edits.map(edit =>
+      edit.id === editId ? terrainEditLayer({ ...edit, mask }) : edit,
+    ),
+  }))
+  return { ...state, world: { ...state.world, layers } }
 }
 
 function withEditSculpt(

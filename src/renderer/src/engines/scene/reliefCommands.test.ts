@@ -18,8 +18,10 @@ import {
   renameTerrainEdit,
   reorderTerrainEdits,
   reorderTerrains,
+  paintTerrainEditMask,
   sculptRelief,
   setTerrainEditAlpha,
+  setTerrainEditMask,
   setTerrainEditEnabled,
   setTerrainEditLocked,
   setTerrainEnabled,
@@ -312,5 +314,49 @@ describe('a sculpt-only document opened into edit layers', () => {
     expect(next.edits.find(edit => edit.id === firstId)?.sculpt).toEqual(original)
     expect(combinedAt(samples, next.grain, next.edits, 1, 1)).toBeCloseTo(5)
     expect(next.grain).toBe(RELIEF_CHUNK_TEXELS)
+  })
+})
+
+describe('terrain edit masks', () => {
+  it('stores a height mask on the edit and drops it again', () => {
+    const [masked] = run(
+      sceneOf(),
+      emptyHistory(),
+      setTerrainEditMask('terrain', 'sculpt', { kind: 'height', min: 100, max: 800 }),
+    )
+    const layer = masked.world.layers[0]
+    expect(layer && layer.kind === 'relief' ? layer.edits[0]?.mask : undefined).toEqual({
+      kind: 'height',
+      min: 100,
+      max: 800,
+    })
+
+    const [cleared] = run(
+      masked,
+      emptyHistory(),
+      setTerrainEditMask('terrain', 'sculpt', undefined),
+    )
+    const next = cleared.world.layers[0]
+    expect(next && next.kind === 'relief' ? next.edits[0]?.mask : undefined).toBeUndefined()
+  })
+
+  it('paints packed weights onto a painted mask', () => {
+    const weights = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 1,
+      delta: 1,
+    })
+    const [painted] = run(
+      sceneOf(),
+      emptyHistory(),
+      paintTerrainEditMask('terrain', 'sculpt', weights.chunks),
+    )
+    const layer = painted.world.layers[0]
+    expect(layer && layer.kind === 'relief' ? layer.edits[0]?.mask : undefined).toEqual({
+      kind: 'painted',
+      weights,
+    })
   })
 })

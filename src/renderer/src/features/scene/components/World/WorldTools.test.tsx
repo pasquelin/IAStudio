@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { reliefLayer, terrainEditLayer } from '@shared/domain/scene'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { installScene } from '@/stores/scene-fixtures'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { WorldPanel } from './WorldPanel'
 
@@ -77,5 +78,18 @@ describe('WorldTools sculpt session', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Aplanir' }))
 
     expect(sceneViewOf(useSceneViews.getState(), 'doc-1').sculptMode).toBe(false)
+  })
+
+  it('assigns a height mask to the armed edit', async () => {
+    render(<WorldPanel />)
+    await userEvent.click(screen.getByRole('button', { name: 'Aucun' }))
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Hauteur' }))
+
+    const layer = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
+    expect(layer && layer.kind === 'relief' ? layer.edits[0]?.mask : undefined).toEqual({
+      kind: 'height',
+      min: 0,
+      max: 1,
+    })
   })
 })

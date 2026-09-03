@@ -13,6 +13,7 @@ import {
   flattenReliefDisk,
   getHeightAt,
   packDeltas,
+  paintReliefMask,
   raiseReliefDisk,
   regionUploadBytes,
   smoothReliefDisk,
@@ -604,5 +605,32 @@ describe('overlay masks', () => {
     expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlays, 2, 2)).toBeCloseTo(1)
     expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlays, 4, 2)).toBeCloseTo(1)
     expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlays, 3, 2)).toBeCloseTo(0)
+  })
+
+  it('paints an absolute weight under the disk', () => {
+    const extent = {
+      origin: DEFAULT_RELIEF_ORIGIN,
+      size: DEFAULT_RELIEF_SIZE,
+      elevation: DEFAULT_RELIEF_ELEVATION,
+    }
+    const stepX = extent.size.x / (samples.width - 1)
+    const stepZ = extent.size.z / (samples.height - 1)
+    const empty: ReliefOverlay = {
+      enabled: true,
+      alpha: 1,
+      sculpt: hills,
+      mask: { kind: 'painted', weights: { chunks: [] } },
+    }
+    const weights = paintReliefMask(
+      samples,
+      extent,
+      undefined,
+      { x: extent.origin.x + 2 * stepX, z: extent.origin.z + 2 * stepZ, radius: stepX },
+      1,
+    )
+    const painted: ReliefOverlay = { ...empty, mask: { kind: 'painted', weights } }
+
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, [empty], 2, 2)).toBeCloseTo(0)
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, [painted], 2, 2)).toBeCloseTo(1)
   })
 })

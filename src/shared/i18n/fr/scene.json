@@ -421,7 +421,21 @@
     "radius": "Rayon",
     "amount": "Intensité",
     "alpha": "Opacité",
-    "tools": "Outils"
+    "tools": "Outils",
+    "mask": "Masque",
+    "maskHint": "Limite où cette retouche change le relief",
+    "maskNone": "Aucun",
+    "maskNoneHint": "La retouche s’applique partout",
+    "maskPainted": "Peint",
+    "maskPaintedHint": "Peindre la zone où cette retouche s’applique",
+    "maskHeight": "Hauteur",
+    "maskHeightHint": "S’applique seulement entre deux hauteurs",
+    "maskSlope": "Pente",
+    "maskSlopeHint": "S’applique seulement entre deux angles de pente",
+    "maskMin": "Minimum",
+    "maskMax": "Maximum",
+    "paintMask": "Peindre le masque",
+    "paintMaskHint": "Peint où cette retouche contribue"
   },
   "sceneNavigation": {
     "viewport": "Viewport 3D",

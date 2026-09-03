@@ -421,7 +421,21 @@
     "radius": "Radius",
     "amount": "Intensity",
     "alpha": "Opacity",
-    "tools": "Tools"
+    "tools": "Tools",
+    "mask": "Mask",
+    "maskHint": "Limits where this edit changes the relief",
+    "maskNone": "None",
+    "maskNoneHint": "The edit applies everywhere",
+    "maskPainted": "Painted",
+    "maskPaintedHint": "Paint the area this edit applies to",
+    "maskHeight": "Height",
+    "maskHeightHint": "Applies only between two heights",
+    "maskSlope": "Slope",
+    "maskSlopeHint": "Applies only between two slope angles",
+    "maskMin": "Minimum",
+    "maskMax": "Maximum",
+    "paintMask": "Paint mask",
+    "paintMaskHint": "Paints where this edit contributes"
   },
   "sceneNavigation": {
     "viewport": "3D viewport",

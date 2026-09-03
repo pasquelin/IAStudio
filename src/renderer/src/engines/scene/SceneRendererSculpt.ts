@@ -29,8 +29,12 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     editId: string
     target?: number
   } | null = null
-  private reliefSculptor: { terrainId: string; editId: string; sculptor: ReliefSculptor } | null =
-    null
+  private reliefSculptor: {
+    terrainId: string
+    editId: string
+    paint: boolean
+    sculptor: ReliefSculptor
+  } | null = null
 
   async raiseReliefDisk(
     terrainId: string,
@@ -43,33 +47,39 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   ): Promise<boolean> {
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
-    const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({
+    const operation = kind === 'raise' ? 'raiseDisk' : kind === 'paint' ? 'paintMask' : kind
+    const chunks = await this.sculptorFor(terrainId, editId, kind === 'paint').raiseDisk({
       ...source,
+      sculpt: kind === 'paint' ? source.maskWeights : source.sculpt,
       disk,
       amount,
       falloff,
-      kind: kind === 'raise' ? 'raiseDisk' : kind,
+      kind: operation,
       target,
     })
     if (!chunks) return false
-    this.options.onReliefSculpt?.(terrainId, editId, chunks)
+    if (kind === 'paint') this.options.onReliefMask?.(terrainId, editId, chunks)
+    else this.options.onReliefSculpt?.(terrainId, editId, chunks)
     return true
   }
 
-  private sculptorFor(terrainId: string, editId: string): ReliefSculptor {
+  private sculptorFor(terrainId: string, editId: string, paint = false): ReliefSculptor {
     const held = this.reliefSculptor
-    if (held?.terrainId === terrainId && held.editId === editId) return held.sculptor
+    if (held && held.terrainId === terrainId && held.editId === editId && held.paint === paint) {
+      return held.sculptor
+    }
     held?.sculptor.dispose()
     const sculptor =
       this.options.createReliefSculptor?.() ?? createReliefSculptor(() => new ReliefSculptWorker())
-    this.reliefSculptor = { terrainId, editId, sculptor }
+    this.reliefSculptor = { terrainId, editId, paint, sculptor }
     return sculptor
   }
 
   protected noteReliefSculpt(): void {
     const held = this.reliefSculptor
     if (!held) return
-    held.sculptor.note(this.relief.sculptSource(held.terrainId, held.editId)?.sculpt)
+    const source = this.relief.sculptSource(held.terrainId, held.editId)
+    held.sculptor.note(held.paint ? source?.maskWeights : source?.sculpt)
   }
 
   dispose(): void {

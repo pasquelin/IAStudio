@@ -175,6 +175,9 @@ function operationOf(stroke: ReliefDiskStroke): ReliefSculptOperation {
       target: stroke.target ?? 0,
     }
   }
+  if (stroke.kind === 'paintMask') {
+    return { kind: 'paintMask', disk: stroke.disk, amount: stroke.amount, falloff }
+  }
   return { kind: 'raiseDisk', disk: stroke.disk, amount: stroke.amount, falloff }
 }
 

@@ -60,6 +60,7 @@ export type ReliefSculptSource = {
   extent: ReliefExtent
   grain: number
   sculpt: ReliefSculpt | undefined
+  maskWeights: ReliefSculpt | undefined
   /** Enabled overlays other than the armed edit, so smooth/flatten see combined height. */
   overlays: readonly ReliefOverlay[]
 }
@@ -132,6 +133,7 @@ export function createReliefSurface(
             extent: held.extent,
             grain: held.grain,
             sculpt: edit.sculpt,
+            maskWeights: edit.mask?.kind === 'painted' ? edit.mask.weights : undefined,
             overlays: held.edits
               .filter(candidate => candidate.id !== editId)
               .map(candidate => ({

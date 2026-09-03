@@ -206,7 +206,7 @@ export function reliefReader(
         ? overlayDeltaReader(samples, grain, edit.mask.weights)
         : undefined,
   }))
-  const unmaskedAt = (sx: number, sz: number, except: (typeof readers)[number]): number => {
+  const unmaskedAt = (sx: number, sz: number, except: object): number => {
     const base = samples.values[sz * samples.width + sx] ?? 0
     let added = 0
     for (const one of readers) {
@@ -233,7 +233,7 @@ function maskWeight(
   },
   sx: number,
   sz: number,
-  unmaskedAt: (sx: number, sz: number, except: typeof overlay) => number,
+  unmaskedAt: (sx: number, sz: number, except: object) => number,
   samples: HeightmapSamples,
   extent?: ReliefExtent,
 ): number {
@@ -252,7 +252,7 @@ function maskWeight(
 }
 
 function slopeDegrees(
-  unmaskedAt: (sx: number, sz: number, except: { mask?: ReliefMask }) => number,
+  unmaskedAt: (sx: number, sz: number, except: object) => number,
   overlay: { mask?: ReliefMask },
   samples: HeightmapSamples,
   extent: ReliefExtent,
@@ -364,6 +364,7 @@ export type ReliefSculptOperation =
   | ({ kind: 'raiseDisk' } & ReliefDiskStroke)
   | ({ kind: 'smooth' } & ReliefDiskStroke)
   | ({ kind: 'flatten'; target: number } & ReliefDiskStroke)
+  | ({ kind: 'paintMask' } & ReliefDiskStroke)
 
 export type ReliefChunkRows = { from: number; to: number }
 
@@ -428,6 +429,17 @@ export function applyReliefSculpt(
         grain,
         rows,
         overlays,
+      )
+    case 'paintMask':
+      return paintReliefMask(
+        samples,
+        extent,
+        sculpt,
+        operation.disk,
+        operation.amount,
+        operation.falloff ?? 0,
+        grain,
+        rows,
       )
   }
 }
@@ -505,6 +517,30 @@ export function flattenReliefDisk(
   )
 }
 
+/** Writes brush strength into a painted mask. Absolute, not additive — missing texels stay 0. */
+export function paintReliefMask(
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  weights: ReliefSculpt | undefined,
+  disk: ReliefDisk,
+  amount: number,
+  falloff = 0,
+  grain = RELIEF_CHUNK_TEXELS,
+  rows?: ReliefChunkRows,
+): ReliefSculpt {
+  return addDiskDeltas(
+    samples,
+    extent,
+    weights,
+    disk,
+    falloff,
+    grain,
+    rows,
+    (_sx, _sz, weight) => clamp(amount * weight, 0, 1),
+    'set',
+  )
+}
+
 function combinedRead(
   samples: HeightmapSamples,
   grain: number,
@@ -549,6 +585,7 @@ function addDiskDeltas(
   grain: number,
   rows: ReliefChunkRows | undefined,
   deltaAt: (sx: number, sz: number, weight: number) => number,
+  write: 'add' | 'set' = 'add',
 ): ReliefSculpt {
   const span = diskSamples(samples, extent, disk)
   const distanceX = Float64Array.from({ length: span.maxX - span.minX + 1 }, (_, at) => {
@@ -564,7 +601,18 @@ function addDiskDeltas(
   const packed = payloadsOf(sculpt)
   const rowFrom = rows?.from ?? 0
   const rowTo = rows?.to ?? chunkCountAlong(samples.height, grain)
-  const context = { samples, span, disk, falloff, grain, distanceX, distanceZ, packed, deltaAt }
+  const context = {
+    samples,
+    span,
+    disk,
+    falloff,
+    grain,
+    distanceX,
+    distanceZ,
+    packed,
+    deltaAt,
+    write,
+  }
   for (let row = rowFrom; row < rowTo; row += 1) {
     for (let column = 0; column < chunkCountAlong(samples.width, grain); column += 1) {
       const key = `${column}:${row}`
@@ -594,6 +642,7 @@ type RaiseContext = {
   distanceZ: Float64Array
   packed: ReadonlyMap<string, PackedReliefChunk>
   deltaAt: (sx: number, sz: number, weight: number) => number
+  write: 'add' | 'set'
 }
 
 function raisedChunk(
@@ -628,14 +677,15 @@ function raiseChunkSamples(
   maxX: number,
   maxZ: number,
 ): void {
-  const { span, disk, distanceX, distanceZ, falloff, deltaAt } = context
+  const { span, disk, distanceX, distanceZ, falloff, deltaAt, write } = context
   for (let sz = Math.max(span.minZ, layout.sampleZ); sz <= Math.min(span.maxZ, maxZ); sz += 1) {
     for (let sx = Math.max(span.minX, layout.sampleX); sx <= Math.min(span.maxX, maxX); sx += 1) {
       const d2 = (distanceX[sx - span.minX] ?? Infinity) + (distanceZ[sz - span.minZ] ?? Infinity)
       if (d2 > disk.radius * disk.radius) continue
       const at = (sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)
       const weight = falloff <= 0 ? 1 : diskFalloff(Math.sqrt(d2), disk.radius, falloff)
-      deltas[at] = (deltas[at] ?? 0) + deltaAt(sx, sz, weight)
+      const next = deltaAt(sx, sz, weight)
+      deltas[at] = write === 'set' ? next : (deltas[at] ?? 0) + next
     }
   }
 }
