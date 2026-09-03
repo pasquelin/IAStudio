@@ -3,6 +3,7 @@ import { copiesOf } from './commands'
 import { armRest, cameraNode, groupNode, playerModuleNodes } from './nodeFactory'
 import {
   leavesPlayerModule,
+  nodesByWord,
   playerModuleFileOf,
   playerModuleFrom,
   playerPartsOf,
@@ -260,5 +261,31 @@ describe('a module written as a file of its own', () => {
 
   it('has no trace before it is filed', () => {
     expect(playerModuleFrom(playerModuleNodes())).toBeNull()
+  })
+})
+
+/**
+ * The viewport aid and the playing module BOTH resolve a `subject` through this. They used to
+ * spell it apart — one kept the first homonym, the other the last, and a node's id could be
+ * overwritten by another node's name — so an arm was drawn towards one subject and animated
+ * towards another, with nothing to say so.
+ */
+describe('the node a word names', () => {
+  it('answers the first of two nodes sharing a name', () => {
+    const first = { ...meshNode('node_one'), name: 'Target' }
+    const second = { ...meshNode('node_two'), name: 'Target' }
+
+    expect(nodesByWord([first, second]).get('Target')?.id).toBe('node_one')
+  })
+
+  it('never lets a name take an id', () => {
+    const target = meshNode('Target')
+    const impostor = { ...meshNode('node_two'), name: 'Target' }
+
+    expect(nodesByWord([target, impostor]).get('Target')?.id).toBe('Target')
+  })
+
+  it('answers nothing for a word that names neither', () => {
+    expect(nodesByWord([meshNode('Target')]).get('absent')).toBeUndefined()
   })
 })

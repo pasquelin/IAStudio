@@ -473,20 +473,24 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       // world bounds, so a cast rewritten in place keeps the bounds of the one before. Measured —
       // only what stood on the centre line was ever found, whatever the radius.
       const sweep = new jolt.RShapeCast(probe.ball, probe.scale, probe.at, probe.along)
-      probe.shapeHit.Reset()
-      query.CastShape(
-        sweep,
-        probe.shapeSettings,
-        probe.zero,
-        probe.shapeHit,
-        broadFilter,
-        layerFilter,
-        probe.ignored,
-        shapeFilter,
-      )
-      const fraction = probe.shapeHit.HadHit() ? probe.shapeHit.mHit.mFraction : null
-      jolt.destroy(sweep)
-      return fraction
+      // Freed whatever happens: this runs once per frame and per arm, and WebAssembly memory a
+      // throw walked past is never given back.
+      try {
+        probe.shapeHit.Reset()
+        query.CastShape(
+          sweep,
+          probe.shapeSettings,
+          probe.zero,
+          probe.shapeHit,
+          broadFilter,
+          layerFilter,
+          probe.ignored,
+          shapeFilter,
+        )
+        return probe.shapeHit.HadHit() ? probe.shapeHit.mHit.mFraction : null
+      } finally {
+        jolt.destroy(sweep)
+      }
     },
 
     step: dt => {

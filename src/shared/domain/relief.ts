@@ -224,17 +224,21 @@ export function changedChunks(
   before: ReliefSculpt | undefined,
   after: ReliefSculpt,
 ): PackedReliefChunk[] {
-  const keys = new Map<string, ReliefChunkKey>()
-  for (const chunk of [...(before?.chunks ?? []), ...after.chunks]) {
-    keys.set(`${chunk.column}:${chunk.row}`, { column: chunk.column, row: chunk.row })
-  }
+  // Indexed once rather than searched per key: a `.find` on both sides made this quadratic, which
+  // a 1024² map turns into ~131 000 comparisons for every movement of the brush.
+  const held = payloadsOf(before)
+  const wanted = payloadsOf(after)
   const edits: PackedReliefChunk[] = []
-  for (const { column, row } of keys.values()) {
-    const payload = chunkPayload(after, column, row)
-    if (payload === chunkPayload(before, column, row)) continue
+  for (const [key, { column, row }] of new Map([...held, ...wanted])) {
+    const payload = wanted.get(key)?.payload ?? ''
+    if (payload === (held.get(key)?.payload ?? '')) continue
     edits.push({ column, row, payload })
   }
   return edits
+}
+
+function payloadsOf(sculpt: ReliefSculpt | undefined): Map<string, PackedReliefChunk> {
+  return new Map((sculpt?.chunks ?? []).map(chunk => [`${chunk.column}:${chunk.row}`, chunk]))
 }
 
 export function withPackedChunks(
