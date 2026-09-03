@@ -3,14 +3,6 @@ import type { FieldKind } from './model'
 import { ENVIRONMENT_KINDS } from './scene'
 
 /**
- * What an action IS, apart from which actions there are.
- *
- * Split from `assistant.ts` so a family of actions can be declared in its own module without
- * importing the registry that collects them — the cycle `import-cycles.test.ts` holds at zero.
- * The registry, and everything that reads one particular action, stays there.
- */
-
-/**
  * Every action the studio publishes, in one list.
  *
  * Written out rather than composed from the family modules: the union cannot live beside the
@@ -18,297 +10,9 @@ import { ENVIRONMENT_KINDS } from './scene'
  * `exhaustive.test.ts` holds union → families, and it has to — a name declared here and never
  * built leaves the registry and the handler table in perfect agreement about nothing.
  */
-export type ActionName =
-  | 'command.runStudioCommand'
-  | 'workspace.open'
-  | 'models.search'
-  | 'models.select'
-  | 'generator.prepare'
-  | 'generator.readArmedGeneration'
-  | 'generator.submit'
-  | 'jobs.list'
-  | 'prompt.suggest'
-  | 'prompt.translate'
-  | 'prompt.describeStyle'
-  | 'chat.close'
-  | 'actions.find'
-  | 'target.select'
-  | 'studio.state'
-  | 'documents.list'
-  | 'document.open'
-  | 'document.activate'
-  | 'document.close'
-  | 'document.rename'
-  | 'document.save'
-  | 'document.deleteFromDisk'
-  | 'document.export'
-  | 'activity.recent'
-  | 'projects.list'
-  | 'project.open'
-  | 'project.close'
-  | 'project.create'
-  | 'project.forget'
-  | 'project.trash'
-  | 'file.open'
-  | 'files.list'
-  | 'files.search'
-  | 'files.move'
-  | 'files.copy'
-  | 'files.duplicate'
-  | 'files.trash'
-  | 'files.undoFileOperation'
-  | 'files.redoFileOperation'
-  | 'files.canUndoRedo'
-  | 'file.rename'
-  | 'file.facts'
-  | 'file.reveal'
-  | 'folder.new'
-  | 'project.rename'
-  | 'models.readGenerationModelFields'
-  | 'cost.estimate'
-  | 'job.readCloudGeneration'
-  | 'job.waitForCloudGeneration'
-  | 'job.cancelCloudGeneration'
-  | 'task.cancelLocalTask'
-  | 'usage.report'
-  | 'assets.searchProjectCatalogue'
-  | 'assets.counts'
-  | 'assets.listMissing'
-  | 'assets.captionImages'
-  | 'asset.get'
-  | 'asset.update'
-  | 'asset.reveal'
-  | 'asset.extractTextures'
-  | 'assets.removeFromLibrary'
-  | 'canvas.state'
-  | 'canvas.resize'
-  | 'canvas.setPixelArt'
-  | 'canvas.drawPixels'
-  | 'canvas.crop'
-  | 'canvas.flipOrRotate'
-  | 'layer.add'
-  | 'layer.remove'
-  | 'layer.select'
-  | 'layer.rename'
-  | 'layer.setOpacityBlendAndVisibility'
-  | 'layer.transform'
-  | 'layer.editTextLayer'
-  | 'layer.reorderInStack'
-  | 'layer.duplicate'
-  | 'layer.group'
-  | 'layer.ungroup'
-  | 'layer.mergeDown'
-  | 'layer.lock'
-  | 'layer.editShapeLayer'
-  | 'layer.setAdjustmentAmount'
-  | 'layer.setMaskOptions'
-  | 'guide.add'
-  | 'guide.move'
-  | 'guide.remove'
-  | 'sequence.state'
-  | 'sequence.seek'
-  | 'clip.add'
-  | 'clip.remove'
-  | 'clip.move'
-  | 'clip.trim'
-  | 'clip.split'
-  | 'clip.fade'
-  | 'clip.gain'
-  | 'clip.speed'
-  | 'clip.unlink'
-  | 'clip.select'
-  | 'track.add'
-  | 'track.remove'
-  | 'track.reorderTracks'
-  | 'track.rename'
-  | 'track.setMuteSoloLockHeight'
-  | 'skybox.state'
-  | 'skybox.setViewportOptions'
-  | 'skybox.adjustImage'
-  | 'skybox.resetAdjustments'
-  | 'skybox.setSun'
-  | 'skybox.setPreviewLighting'
-  | 'skybox.setSourceImage'
-  | 'material.state'
-  | 'material.setSurfaceSettings'
-  | 'material.setPreviewEnvironment'
-  | 'material.setPreviewDisplay'
-  | 'material.setChannelImage'
-  | 'styles.list'
-  | 'style.save'
-  | 'style.rename'
-  | 'style.remove'
-  | 'cloud.browseAccountLibrary'
-  | 'cloud.explorePublicFeed'
-  | 'cloud.findSimilarPublished'
-  | 'cloud.previewSync'
-  | 'cloud.pull'
-  | 'cloud.push'
-  | 'auth.state'
-  | 'window.state'
-  | 'window.fullScreen'
-  | 'settings.open'
-  | 'updates.state'
-  | 'updates.install'
-  | 'dictation.state'
-  | 'dictation.start'
-  | 'dictation.stop'
-  | 'panels.list'
-  | 'panel.open'
-  | 'panel.close'
-  | 'media.capabilities'
-  | 'media.indexFileInPlace'
-  | 'fonts.list'
-  | 'favorites.listPinnedRecipes'
-  | 'favorite.pinAssetRecipe'
-  | 'favorite.unpinAssetRecipe'
-  | 'fileInfo.openWindow'
-  | 'mirror.openVideoReturnWindow'
-  | 'help.openStudioWindow'
-  | 'scene.state'
-  | 'node.add'
-  | 'node.addModel'
-  | 'node.markAsCuttingTool'
-  | 'node.combineIntoSolid'
-  | 'node.swapSolidMatterAndTool'
-  | 'node.separate'
-  | 'node.remove'
-  | 'node.attach'
-  | 'node.rename'
-  | 'node.transform'
-  | 'node.setVisible'
-  | 'node.setMeshMaterial'
-  | 'node.setPrimitiveParameters'
-  | 'node.setShadowCastAndReceive'
-  | 'node.setSpriteSettings'
-  | 'node.setTextSettings'
-  | 'node.setPathShape'
-  | 'path.addPoint'
-  | 'path.movePoint'
-  | 'path.removePoint'
-  | 'node.setLightSettings'
-  | 'node.setCameraLens'
-  | 'model.setMaterialDocument'
-  | 'model.setBaseColorImage'
-  | 'camera.addShot'
-  | 'camera.bindPathToShot'
-  | 'camera.createAndBindPath'
-  | 'camera.aimShotAt'
-  | 'camera.reorder'
-  | 'node.reparent'
-  | 'node.select'
-  | 'view.direction'
-  | 'view.setDisplayMode'
-  | 'scene.capture'
-  | 'world.applyPreset'
-  | 'world.setSceneLighting'
-  | 'world.setBackground'
-  | 'world.setFog'
-  | 'world.setGroundPlane'
-  | 'world.setToneMapping'
-  | 'post.state'
-  | 'post.add'
-  | 'post.remove'
-  | 'post.move'
-  | 'post.set'
-  | 'post.setEffectEnabled'
-  | 'post.setWholeStackEnabled'
-  | 'post.applyPreset'
-  | 'post.listPresets'
-  | 'post.duplicate'
-  | 'post.reset'
-  | 'post.addKeyframe'
-  | 'post.removeKeyframe'
-  | 'post.savePreset'
-  | 'post.renamePreset'
-  | 'post.deleteSavedPreset'
-  | 'post.setCameraStackMode'
-  | 'rig.state'
-  | 'rig.fit'
-  | 'rig.clear'
-  | 'rig.configureHands'
-  | 'bone.add'
-  | 'bone.remove'
-  | 'bone.rename'
-  | 'bone.setRole'
-  | 'socket.add'
-  | 'socket.remove'
-  | 'ik.add'
-  | 'ik.remove'
-  | 'animations.list'
-  | 'animation.addBlock'
-  | 'animation.removeBlock'
-  | 'animation.setBlockSettings'
-  | 'animation.setBandLengthAndRate'
-  | 'animation.autoKey'
-  | 'key.writePoseKeys'
-  | 'key.removeSubjectKeys'
-  | 'key.writeKeysOnOpenChannels'
-  | 'key.move'
-  | 'channel.remove'
-  | 'channel.setMuteSoloLock'
-  | 'git.status'
-  | 'git.log'
-  | 'git.listCommitFiles'
-  | 'git.diff'
-  | 'git.branches'
-  | 'git.stashes'
-  | 'git.init'
-  | 'git.stage'
-  | 'git.unstage'
-  | 'git.restore'
-  | 'git.commit'
-  | 'git.createBranch'
-  | 'git.checkout'
-  | 'git.stash'
-  | 'git.stashPop'
-  | 'git.tag'
-  | 'git.stashDrop'
-  | 'git.resolve'
-  | 'git.abortMerge'
-  | 'git.remotes'
-  | 'git.addRemote'
-  | 'git.fetch'
-  | 'git.pull'
-  | 'git.push'
-  | 'component.attach'
-  | 'component.detach'
-  | 'component.setProperties'
-  | 'play.start'
-  | 'play.stop'
-  | 'play.pause'
-  | 'play.resume'
-  | 'play.step'
-  | 'play.loadScene'
-  | 'runtime.report'
-  | 'runtime.errors'
-  | 'script.list'
-  | 'script.read'
-  | 'script.write'
-  | 'studio.describe'
-  | 'studio.docs'
-  | 'studio.batch'
-  | 'timeline.addSceneCue'
-  | 'timeline.removeSceneCue'
-  | 'timeline.setPanelRows'
-  | 'game.applyTemplate'
-  | 'prefab.define'
-  | 'prefab.instantiate'
-  | 'game.export'
-  | 'memory.recall'
-  | 'memory.read'
-  | 'memory.write'
-  | 'memory.forget'
-  | 'memory.link'
-  | 'context.readProjectCards'
-  | 'context.writeProjectCard'
-  | 'context.deleteProjectCard'
-  | 'settings.read'
-  | 'settings.write'
-  | 'settings.triggerAction'
-  | 'accounts.list'
-  | 'accounts.activate'
-  | 'accounts.rename'
+import type { ActionName } from './assistantActionNames'
+
+export type { ActionName } from './assistantActionNames'
 
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
@@ -430,7 +134,6 @@ export type AssistantAction = {
   fields: readonly ActionField[]
 }
 
-/** Identity, for the type annotation it forces on every entry of a family table. */
 export function action(descriptor: AssistantAction): AssistantAction {
   return descriptor
 }
@@ -597,12 +300,10 @@ export function confirmKey(commitment: ActionCommitment): string {
   return `assistant.confirm.${commitment}`
 }
 
-/** Whether running this needs a yes first. Only `credits` quotes a figure. */
 export function needsConfirmation(commitment: ActionCommitment): boolean {
   return commitment !== 'none'
 }
 
-/** A refusal, spelled once for the ten modules that hand one back. */
 export const refused = (refusal: ActionRefusal, detail?: string): ActionOutcome => ({
   ok: false,
   refusal,
@@ -626,52 +327,55 @@ const withinLength = (field: ActionField, value: string): boolean =>
 
 function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
-    // `task` is here for the compiler's sake: its options are composed by the window from what
-    // has run, so no action declares one.
     case 'text':
     case 'longText':
     case 'choice':
     case 'image':
     case 'mesh':
     case 'task':
-      return (
-        typeof value === 'string' &&
-        (!field.required || value.trim() !== '') &&
-        !PLACEHOLDER.test(value) &&
-        (!field.options || field.options.includes(value)) &&
-        // 🛑 A LENGTH on a text field, and it was applied by nobody: an over-long summary reached
-        // the main process, zod threw there, and the client got a refusal naming no field to
-        // repair — so it retried the same call. `tools.ts` publishes it as `maxLength`.
-        withinLength(field, value)
-      )
-    // Apart from the strings, because every reader of a colour falls back SILENTLY on a value it
-    // cannot parse — the paint never took, and the caller was told it did.
+      return fitsText(field, value)
     case 'color':
       return typeof value === 'string' && HEX_COLOR.test(value)
     case 'number':
     case 'integer':
     case 'seed':
-      return (
-        typeof value === 'number' &&
-        Number.isFinite(value) &&
-        (field.kind === 'number' || Number.isInteger(value)) &&
-        (field.min === undefined || value >= field.min) &&
-        (field.max === undefined || value <= field.max)
-      )
+      return fitsNumber(field, value)
     case 'boolean':
       return typeof value === 'boolean'
     case 'raw':
       return value !== undefined
-    // `Object.keys` rather than `in`, which answers true for `__proto__`, `toString` and
-    // `constructor` — names that reached a merge, vanished in it, and were answered `ok`.
     case 'record':
-      return (
-        typeof value === 'object' &&
-        value !== null &&
-        !Array.isArray(value) &&
-        Object.keys(value).every(key => field.options?.includes(key) ?? true)
-      )
+      return fitsRecord(field, value)
   }
+}
+
+function fitsText(field: ActionField, value: unknown): boolean {
+  return (
+    typeof value === 'string' &&
+    (!field.required || value.trim() !== '') &&
+    !PLACEHOLDER.test(value) &&
+    (!field.options || field.options.includes(value)) &&
+    withinLength(field, value)
+  )
+}
+
+function fitsNumber(field: ActionField, value: unknown): boolean {
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    (field.kind === 'number' || Number.isInteger(value)) &&
+    (field.min === undefined || value >= field.min) &&
+    (field.max === undefined || value <= field.max)
+  )
+}
+
+function fitsRecord(field: ActionField, value: unknown): boolean {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value).every(key => field.options?.includes(key) ?? true)
+  )
 }
 
 /**
