@@ -199,6 +199,13 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'help.openStudioWindow': ['55.8', '55.12'],
 
   'scene.state': ['1.5', '1.6', '1.7', '9.6', '12.1', '14.4', '26.1', '26.3', '27.1', '27.4'],
+  'optimization.analyze': ['69.1'],
+  'optimization.selection': ['69.2'],
+  'optimization.world': ['69.3'],
+  'optimization.report': ['69.4'],
+  'optimization.clearCache': ['69.5'],
+  'optimization.exclude': ['69.6'],
+  'optimization.setMode': ['69.7'],
   'node.add': ['6.1', '6.6', '6.8', '8.1', '8.4', '9.1', '25.1', '25.3', '31.1'],
   'node.addModel': ['11.1', '11.5', '22.4', '23.2', '24.2', '31.1'],
   'node.remove': ['25.7', '29.4', '29.5'],

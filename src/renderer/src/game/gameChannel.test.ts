@@ -40,6 +40,10 @@ describe('what the two windows accept off the wire', () => {
       { kind: 'command', id: 3, command: { name: 'step', steps: 10 } },
     )
     expect(gameMessageOf({ kind: 'gone' })).toEqual({ kind: 'gone' })
+    expect(gameMessageOf({ kind: 'clearOptimization', documentId: 'd' })).toEqual({
+      kind: 'clearOptimization',
+      documentId: 'd',
+    })
   })
 
   it('takes the messages the game window answers with', () => {
@@ -87,6 +91,7 @@ describe('what the two windows accept off the wire', () => {
       gameMessageOf({ kind: 'edit', documentId: 'd', patch: { ...patch, order: [{}] } }),
     ).toBeNull()
     expect(gameMessageOf({ kind: 'command', id: 1, command: { name: 'explode' } })).toBeNull()
+    expect(gameMessageOf({ kind: 'clearOptimization', documentId: 1 })).toBeNull()
     // A step with no count would run whatever `undefined` steps means to a loop.
     expect(gameMessageOf({ kind: 'command', id: 1, command: { name: 'step' } })).toBeNull()
     expect(

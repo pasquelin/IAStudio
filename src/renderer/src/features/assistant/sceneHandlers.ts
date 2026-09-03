@@ -28,6 +28,7 @@ import { CAPTURE_QUALITIES, DEFAULT_CAPTURE_QUALITY } from '@shared/domain/scene
 import { SECOND } from '@shared/domain/time'
 import { withinBounds } from '@shared/numeric'
 import { captureSceneView } from '@/helpers/captureSceneView'
+import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { canNegate } from '@/engines/csg/carve'
 import { ENVIRONMENT_PRESETS, presetPatch } from '@/engines/scene/environmentPresets'
 import {
@@ -48,6 +49,7 @@ import {
   setLight,
   setMaterialOn,
   setNodeVisible,
+  setNodesOptimization,
   setNodesNegative,
   setPath,
   setSelection,
@@ -98,6 +100,9 @@ import {
   type SceneNode,
   type SceneState,
 } from '@/engines/scene/sceneState'
+import { OPTIMIZATION_MODES, type OptimizationMode } from '@shared/domain/scene'
+import { optimizationReport } from '@/engines/scene/worldAnalyzer'
+import { clearGameOptimizationCache } from '@/game/gameChannel'
 import { activeSceneId, documentNamedOfKind, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { MAIN_SCENE_PANE, useSceneViews } from '@/stores/sceneViews'
@@ -839,8 +844,82 @@ function socketIdOf(named: string | null | undefined): string | null {
   return open?.sockets.find(one => one.name === named || one.id === named)?.id ?? named
 }
 
+async function optimizationAnalysis(
+  input: Record<string, unknown>,
+  reportOnly: boolean,
+): Promise<ActionOutcome> {
+  const open = mounted()
+  if (!open) return refused('wrongSurface', NO_SCENE)
+  const mountedEngine = sceneEngineOf(open.documentId)
+  const engine = mountedEngine ?? new SceneRenderer({ onSelect: () => {}, onTransform: () => {} })
+  if (!mountedEngine) engine.apply(open.state)
+  const named = textsOf(input, 'nodeIds')
+  const nodes = aimedNodes(open.state, input)
+  if (nodes.length !== named.length)
+    return refused('notFound', 'one or more requested scene nodes do not exist')
+
+  try {
+    const plan =
+      named.length === 0
+        ? await engine.analyzeWorldOptimization()
+        : engine.analyzeOptimization(nodes.map(node => node.id))
+    return { ok: true, data: reportOnly ? optimizationReport(plan) : plan }
+  } finally {
+    if (!mountedEngine) engine.dispose()
+  }
+}
+
+function optimizeNodes(scope: 'selection' | 'world'): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface', NO_SCENE)
+  const candidates =
+    scope === 'world'
+      ? open.state.nodes
+      : open.state.nodes.filter(node => open.state.selectedIds.includes(node.id))
+  const nodes =
+    scope === 'world'
+      ? candidates.filter(node => !node.optimization || node.optimization.mode === 'auto')
+      : candidates
+  if (nodes.length === 0) return refused('badInput', `the ${scope} holds no node to optimize`)
+
+  useScenes.getState().runCommand(open.documentId, setNodesOptimization(nodes, { mode: 'auto' }))
+  return { ok: true, data: { nodeIds: nodes.map(node => node.id), mode: 'auto' } }
+}
+
+function setOptimizationMode(
+  input: Record<string, unknown>,
+  forced?: OptimizationMode,
+): ActionOutcome {
+  const open = mounted()
+  if (!open) return refused('wrongSurface', NO_SCENE)
+  const named = textsOf(input, 'nodeIds')
+  const nodes = aimedNodes(open.state, input)
+  if (nodes.length !== named.length)
+    return refused('notFound', 'one or more requested scene nodes do not exist')
+  const mode = forced ?? oneOf(input, 'mode', OPTIMIZATION_MODES)
+  if (!mode) return refused('badInput', `"mode" wants one of: ${OPTIMIZATION_MODES.join(', ')}`)
+
+  useScenes.getState().runCommand(open.documentId, setNodesOptimization(nodes, { mode }))
+  return { ok: true, data: { nodeIds: nodes.map(node => node.id), mode } }
+}
+
 export const SCENE_HANDLERS: ActionHandlers = {
   'scene.state': readState,
+
+  'optimization.analyze': input => optimizationAnalysis(input, false),
+  'optimization.report': input => optimizationAnalysis(input, true),
+  'optimization.selection': () => optimizeNodes('selection'),
+  'optimization.world': () => optimizeNodes('world'),
+  'optimization.exclude': input => setOptimizationMode(input, 'exclude'),
+  'optimization.setMode': input => setOptimizationMode(input),
+  'optimization.clearCache': () => {
+    const open = mounted()
+    if (!open) return refused('wrongSurface', NO_SCENE)
+    const engine = sceneEngineOf(open.documentId)
+    engine?.clearOptimizationCache()
+    clearGameOptimizationCache(open.documentId)
+    return { ok: true }
+  },
 
   'world.setSceneLighting': worldEnvironment,
   'world.setBackground': worldBackground,

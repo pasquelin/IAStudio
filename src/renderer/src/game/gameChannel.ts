@@ -27,6 +27,8 @@ export type GameMessage =
   | { kind: 'command'; id: number; command: GameCommand }
   /** The studio is going away: whatever is playing has nothing left to play for. */
   | { kind: 'gone' }
+  /** Drops every compiled representation held for this authoring scene. */
+  | { kind: 'clearOptimization'; documentId: string }
   /**
    * The game window asking for the game, which it must: a channel replays nothing, and the window
    * is opened AFTER the studio published. Without it the window sits on an empty scene.
@@ -53,6 +55,12 @@ export function openGameChannel(): BroadcastChannel {
   return new BroadcastChannel(CHANNEL)
 }
 
+export function clearGameOptimizationCache(documentId: string): void {
+  const channel = openGameChannel()
+  channel.postMessage({ kind: 'clearOptimization', documentId } satisfies GameMessage)
+  channel.close()
+}
+
 /**
  * Reads a message off the wire, or nothing. A `BroadcastChannel` is reachable by anything on this
  * origin, so what arrives is checked — a window would else hand a stranger to a game runtime.
@@ -62,6 +70,12 @@ export function gameMessageOf(data: unknown): GameMessage | null {
 
   if (data.kind === 'ask') return { kind: 'ask' }
   if (data.kind === 'gone') return { kind: 'gone' }
+
+  if (data.kind === 'clearOptimization' && 'documentId' in data) {
+    return typeof data.documentId === 'string'
+      ? { kind: 'clearOptimization', documentId: data.documentId }
+      : null
+  }
 
   if (data.kind === 'play' && 'documentId' in data && 'scene' in data) {
     const { documentId, scene } = data

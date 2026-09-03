@@ -4,12 +4,14 @@ import {
   NODE_ID as NODE,
   RELATIVE_FIELD,
   type ActionField,
+  type ActionName,
   type AssistantAction,
 } from './assistantAction'
 import { EASINGS } from './animation'
 import { CSG_OPERATIONS } from './csg'
 import { FONT_SOURCES } from './font'
 import { CAPTURE_QUALITIES } from './sceneCapture'
+import { OPTIMIZATION_MODES } from './scene'
 import {
   BACKGROUND_BLUR,
   BACKGROUND_KINDS,
@@ -150,6 +152,88 @@ export const SCENE_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [],
+  }),
+  ...(
+    [
+      ['optimization.analyze', 'optimizationAnalyze'],
+      ['optimization.report', 'optimizationReport'],
+    ] satisfies readonly (readonly [ActionName, string])[]
+  ).map(([name, key]) =>
+    action({
+      name,
+      titleKey: `assistant.actions.${key}.title`,
+      descriptionKey: `assistant.actions.${key}.description`,
+      commitment: 'none',
+      repeatable: true,
+      reach: 'mcp',
+      fields: [
+        {
+          key: 'nodeIds',
+          kind: 'text',
+          labelKey: 'assistant.fields.nodeIds',
+          required: false,
+          repeated: true,
+        },
+      ],
+    }),
+  ),
+  ...(
+    [
+      ['optimization.selection', 'optimizationSelection'],
+      ['optimization.world', 'optimizationWorld'],
+      ['optimization.clearCache', 'optimizationClearCache'],
+    ] satisfies readonly (readonly [ActionName, string])[]
+  ).map(([name, key]) =>
+    action({
+      name,
+      titleKey: `assistant.actions.${key}.title`,
+      descriptionKey: `assistant.actions.${key}.description`,
+      commitment: 'none',
+      repeatable: true,
+      reach: 'mcp',
+      fields: [],
+    }),
+  ),
+  action({
+    name: 'optimization.exclude',
+    titleKey: 'assistant.actions.optimizationExclude.title',
+    descriptionKey: 'assistant.actions.optimizationExclude.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'nodeIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.nodeIds',
+        required: true,
+        repeated: true,
+      },
+    ],
+  }),
+  action({
+    name: 'optimization.setMode',
+    titleKey: 'assistant.actions.optimizationSetMode.title',
+    descriptionKey: 'assistant.actions.optimizationSetMode.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'nodeIds',
+        kind: 'text',
+        labelKey: 'assistant.fields.nodeIds',
+        required: true,
+        repeated: true,
+      },
+      {
+        key: 'mode',
+        kind: 'choice',
+        labelKey: 'assistant.fields.optimizationMode',
+        required: true,
+        options: OPTIMIZATION_MODES,
+      },
+    ],
   }),
   action({
     name: 'node.add',

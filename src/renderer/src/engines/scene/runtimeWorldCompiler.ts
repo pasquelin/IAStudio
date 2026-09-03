@@ -104,6 +104,29 @@ export function runtimeWorldPatchIsEmpty(patch: RuntimeWorldPatch): boolean {
   )
 }
 
+export function worldWithRuntimePatch(world: SceneState, patch: RuntimeWorldPatch): SceneState {
+  const changed = new Map(patch.changedNodes.map(node => [node.id, node]))
+  const removed = new Set(patch.removedIds)
+  const nodes = world.nodes
+    .filter(node => !removed.has(node.id))
+    .map(node => changed.get(node.id) ?? node)
+  const held = new Set(nodes.map(node => node.id))
+  for (const node of patch.changedNodes) if (!held.has(node.id)) nodes.push(node)
+  const byId = new Map(nodes.map(node => [node.id, node]))
+
+  return {
+    ...world,
+    nodes: patch.order
+      ? patch.order.flatMap(id => {
+          const node = byId.get(id)
+          return node ? [node] : []
+        })
+      : nodes,
+    world: patch.world ?? world.world,
+    animation: patch.animation ?? world.animation,
+  }
+}
+
 /** Owns the disposable runtime state and applies only deltas proven by the authoring store. */
 export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
   const nodes = new Map<string, SceneNode>()

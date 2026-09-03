@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnimationTrack } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
@@ -12,6 +13,7 @@ import { PLAYER_KIND } from '@/engines/scene/playerModule'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { GEOMETRY_SPECS, type PropertySpec } from '@/engines/scene/propertyFields'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
+import type { OptimizationPlan } from '@/engines/scene/worldAnalyzer'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { installDocuments } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
@@ -123,6 +125,99 @@ describe('reading the scene in front', () => {
       ok: false,
       refusal: 'wrongSurface',
     })
+  })
+})
+
+describe('optimizing the scene through the assistant', () => {
+  const plan: OptimizationPlan = {
+    classifications: [],
+    instances: [],
+    bakeCandidates: [],
+    batches: [],
+    warnings: [],
+    measured: {
+      objects: 1,
+      visibleObjects: 1,
+      meshes: 1,
+      draws: 1,
+      triangles: 12,
+      vertices: 24,
+      geometryBytes: 96,
+      textureBytes: 0,
+      sharedMaterials: 0,
+    },
+    estimated: {
+      drawCallsBefore: 1,
+      drawCallsAfter: 1,
+      avoidedGeometryBytes: 0,
+      avoidedTextureBytes: 0,
+    },
+  }
+
+  it('uses the mounted analyzer for plans and measured reports', async () => {
+    const analyzeOptimization = vi.fn(() => plan)
+    const analyzeWorldOptimization = vi.fn(async () => plan)
+    registerSceneEngine(DOCUMENT, {
+      analyzeOptimization,
+      analyzeWorldOptimization,
+    } as unknown as SceneRenderer)
+
+    const analysis = await runAction('optimization.analyze', {})
+    const report = await runAction('optimization.report', {})
+
+    expect(analysis).toEqual({ ok: true, data: plan })
+    expect(report).toMatchObject({ ok: true, data: { visualChanges: 'NONE' } })
+    expect(analyzeWorldOptimization).toHaveBeenCalledTimes(2)
+    forgetSceneEngine(DOCUMENT)
+  })
+
+  it('analyzes authoring state without requiring a mounted viewport', async () => {
+    forgetSceneEngine(DOCUMENT)
+    installScene(DOCUMENT, {
+      ...createDefaultScene(),
+      nodes: [createNodeOf('box')].filter(node => node !== null),
+      selectedIds: [],
+    })
+
+    const outcome = await runAction('optimization.analyze', {})
+    if (!outcome.ok) throw new Error(outcome.detail)
+
+    expect(outcome).toMatchObject({ ok: true, data: { measured: { objects: 1, meshes: 1 } } })
+  })
+
+  it('writes persisted overrides through undoable scene commands', async () => {
+    const first = createNodeOf('box')
+    const second = createNodeOf('sphere')
+    if (!first || !second) throw new Error('optimization fixtures were not created')
+    installScene(DOCUMENT, {
+      ...createDefaultScene(),
+      nodes: [first, second],
+      selectedIds: [first.id],
+    })
+
+    expect(await runAction('optimization.selection', {})).toMatchObject({ ok: true })
+    expect(scene().nodes[0]?.optimization).toEqual({ mode: 'auto' })
+    expect(await runAction('optimization.exclude', { nodeIds: [second.id] })).toMatchObject({
+      ok: true,
+    })
+    expect(scene().nodes[1]?.optimization).toEqual({ mode: 'exclude' })
+    useScenes.getState().undo(DOCUMENT)
+    expect(scene().nodes[1]?.optimization).toBeUndefined()
+
+    expect(
+      await runAction('optimization.setMode', { nodeIds: [first.id], mode: 'batch' }),
+    ).toMatchObject({ ok: true, data: { mode: 'batch' } })
+    expect(await runAction('optimization.world', {})).toMatchObject({ ok: true })
+    expect(scene().nodes.map(node => node.optimization?.mode)).toEqual(['batch', 'auto'])
+  })
+
+  it('clears the disposable viewport cache', async () => {
+    const clearOptimizationCache = vi.fn()
+    registerSceneEngine(DOCUMENT, { clearOptimizationCache } as unknown as SceneRenderer)
+
+    expect(await runAction('optimization.clearCache', {})).toEqual({ ok: true })
+    expect(clearOptimizationCache).toHaveBeenCalledOnce()
+    forgetSceneEngine(DOCUMENT)
   })
 })
 

@@ -63,7 +63,7 @@ import {
   withAxisLock,
   withoutLockedAxes,
 } from './sceneState'
-import type { OptimizationSettings } from './sceneState'
+import type { OptimizationSettings } from '@shared/domain/scene'
 
 /**
  * Scene edits, reimplemented in TypeScript from `mrdoob/three.js/editor/js/commands/` (MIT).

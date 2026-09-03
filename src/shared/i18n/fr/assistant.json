@@ -605,6 +605,34 @@
         "title": "Lire la scène en cours d’édition",
         "description": "Répond chaque objet du document 3D en avant — son identifiant, son nom, son type, son parent, sa visibilité et sa transformation, avec la géométrie, la matière ou la lumière qu’il porte — plus ce qui est sélectionné, les plans de caméra et le réglage de la scène. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : aucun parent, visible, à l’origine sans rotation ni échelle, la couleur du studio, une forme divisée comme sa sorte l’est toujours. Les mesures ne sont jamais omises. Une liste qui ne tient rien est omise entière. Pour décrire UN objet avec ses composants et ce qu’on peut encore lui ajouter, studio.describe."
       },
+      "optimizationAnalyze": {
+        "title": "Analyser l’optimisation de la scène",
+        "description": "Répond l’analyse déterministe des optimisations possibles sur les objets nommés, ou sur toute la scène si aucun n’est nommé. Ne modifie rien."
+      },
+      "optimizationSelection": {
+        "title": "Optimiser la sélection",
+        "description": "Place les objets sélectionnés en optimisation runtime SAFE automatique tout en gardant chaque objet auteur éditable."
+      },
+      "optimizationWorld": {
+        "title": "Optimiser la scène",
+        "description": "Place chaque objet en optimisation runtime SAFE automatique sans modifier la scène auteur."
+      },
+      "optimizationReport": {
+        "title": "Lire le rapport d’optimisation",
+        "description": "Répond les coûts mesurés de la scène séparément des gains runtime SAFE estimés."
+      },
+      "optimizationClearCache": {
+        "title": "Vider le cache d’optimisation",
+        "description": "Jette la représentation optimisée du viewport afin qu’elle soit reconstruite depuis l’état auteur."
+      },
+      "optimizationExclude": {
+        "title": "Exclure des objets de l’optimisation",
+        "description": "Conserve les objets logiques nommés individuellement dans le rendu optimisé."
+      },
+      "optimizationSetMode": {
+        "title": "Régler le mode d’optimisation",
+        "description": "Règle Auto, Forcer individuel, Forcer instance, Forcer batch ou Exclure sur les objets nommés."
+      },
       "nodeAdd": {
         "title": "Ajouter un objet à la scène",
         "description": "Pose une primitive, une lumière, une caméra, un sprite ou un texte dans le document 3D devant, à la position donnée. Répond avec l’identifiant reçu par l’objet à sa naissance. Un modèle du projet, ou celui qu’une génération vient de rendre, entre par node.addModel ; ceci fabrique une primitive."
@@ -1332,6 +1360,7 @@
       "turn": "Sens du retournement ou du quart de tour",
       "nodeId": "Identifiant de l’objet",
       "nodeIds": "Identifiants des objets",
+      "optimizationMode": "Mode d’optimisation runtime",
       "matterId": "Identifiant de la forme à creuser",
       "negative": "Vrai marque l’objet comme outil de découpe, faux retire la marque",
       "nodeKind": "Ce qu’il faut ajouter",
