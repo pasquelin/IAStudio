@@ -107,6 +107,17 @@ describe('what a character is made of', () => {
     expect(held().rig?.ik).toEqual([])
   })
 
+  // A fixed pane of a window, never a dock panel: the row names the surface, and the way out a
+  // dock offers would close nothing here.
+  it('names itself as the inspector, and offers no way to close it', () => {
+    seedCharacter(ASSET, RIG, {})
+    show()
+
+    expect(screen.getByText('Inspecteur')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tout replier' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /[Ff]ermer/ })).not.toBeInTheDocument()
+  })
+
   it('says this character knows no motion yet', () => {
     seedCharacter(ASSET, RIG, {})
     show()
