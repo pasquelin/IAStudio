@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   worldY,
   RELIEF_CHUNK_TEXELS,
+  applyReliefSculpt,
   chunkCountAlong,
   chunkLayout,
   chunkMemoryBytes,
@@ -133,5 +136,19 @@ describe('raiseReliefDisk', () => {
     ])
     expect(combinedAt(samples, sculpt, 64, 0)).toBe(2)
     expect(sculpt.chunks).toHaveLength(2)
+  })
+
+  it('is the same arithmetic a worker calls, with no scene or renderer to mount', () => {
+    const disk = { x: seamX, z: extent.origin.z, radius: stepX * 2 }
+    expect(
+      applyReliefSculpt(samples, extent, undefined, { kind: 'raiseDisk', disk, amount: 3 }),
+    ).toEqual(raiseReliefDisk(samples, extent, undefined, disk, 3))
+  })
+})
+
+describe('relief sculpt arithmetic', () => {
+  it('imports neither three.js nor the DOM', () => {
+    const code = readFileSync(fileURLToPath(new URL('./relief.ts', import.meta.url)), 'utf8')
+    expect(code).not.toMatch(/from ['"]three['"]|document\.|window\./)
   })
 })

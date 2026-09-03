@@ -226,6 +226,28 @@ export function chunksHoldingSample(
   return out
 }
 
+/**
+ * A sculpt stroke the worker can run. New kinds (slope/altitude masks) join this union; they
+ * must not grow a second entry point the worker would not see.
+ */
+export type ReliefSculptOperation = {
+  kind: 'raiseDisk'
+  disk: { x: number; z: number; radius: number }
+  amount: number
+}
+
+export function applyReliefSculpt(
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  sculpt: ReliefSculpt | undefined,
+  operation: ReliefSculptOperation,
+): ReliefSculpt {
+  switch (operation.kind) {
+    case 'raiseDisk':
+      return raiseReliefDisk(samples, extent, sculpt, operation.disk, operation.amount)
+  }
+}
+
 export function raiseReliefDisk(
   samples: HeightmapSamples,
   extent: ReliefExtent,
