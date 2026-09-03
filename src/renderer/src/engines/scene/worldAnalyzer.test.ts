@@ -9,12 +9,13 @@ import {
   SkinnedMesh,
   Texture,
 } from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
-import { groupNodeFixture, meshNode } from './scene-fixtures'
+import { groupNodeFixture, meshNode, modelNodeFixture } from './scene-fixtures'
+import { markInstanceable } from './instanceableModel'
 import type { SceneNode } from './sceneState'
-import { analyzeOptimization, optimizationReport } from './worldAnalyzer'
+import { analyzeOptimization, analyzeOptimizationAsync, optimizationReport } from './worldAnalyzer'
 
 function repeated(count: number): {
   nodes: ReturnType<typeof meshNode>[]
@@ -30,6 +31,28 @@ function repeated(count: number): {
 }
 
 describe('analyzeOptimization', () => {
+  it('yields between bounded chunks while analyzing a whole world', async () => {
+    const node = modelNodeFixture('large-model')
+    const model = new Object3D()
+    const material = new MeshStandardMaterial()
+    for (let index = 0; index < 201; index += 1) {
+      model.add(new Mesh(new BoxGeometry(index + 1, 1, 1), material))
+    }
+    markInstanceable(model, true)
+    const pause = vi.fn(async () => {})
+
+    const plan = await analyzeOptimizationAsync(
+      { nodes: [node], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      () => model,
+      { minInstancesPerGroup: WORTH_INSTANCING, analysisChunkSize: 100 },
+      [node],
+      pause,
+    )
+
+    expect(pause).toHaveBeenCalledTimes(6)
+    expect(plan.measured).toMatchObject({ objects: 1, meshes: 201 })
+  })
   it('reports repeated static meshes without changing their render state', () => {
     const { nodes, objects } = repeated(WORTH_INSTANCING)
     const visibility = [...objects.values()].map(mesh => mesh.visible)
@@ -39,6 +62,7 @@ describe('analyzeOptimization', () => {
     )
 
     expect(plan.instances).toHaveLength(1)
+    expect(plan.measured.visibleObjects).toBe(WORTH_INSTANCING)
     expect(plan.instances[0]?.sourceIds).toHaveLength(WORTH_INSTANCING)
     const geometry = objects.values().next().value?.geometry
     if (!geometry) throw new Error('fixture has no geometry')
@@ -176,7 +200,7 @@ describe('analyzeOptimization', () => {
       { nodes: [moving, animated, skinned], animation },
       new Object3D(),
       id => objects.get(id),
-      { minInstancesPerGroup: 1 },
+      { minInstancesPerGroup: 1, analysisChunkSize: 100 },
     )
 
     expect(plan.instances).toEqual([])
@@ -233,6 +257,44 @@ describe('analyzeOptimization', () => {
     expect(plan.estimated.avoidedGeometryBytes).toBe(interleaved.array.byteLength)
   })
 
+  it('includes compatible batching when estimating the potential submissions', () => {
+    const material = new MeshStandardMaterial()
+    const nodes = ['small', 'medium', 'large'].map(id => meshNode(id))
+    const objects = new Map<string, Mesh>(
+      nodes.map((node, index) => [node.id, new Mesh(new BoxGeometry(index + 1, 1, 1), material)]),
+    )
+
+    const plan = analyzeOptimization({ nodes, animation: EMPTY_TIMELINE }, new Object3D(), id =>
+      objects.get(id),
+    )
+
+    expect(plan.instances).toEqual([])
+    expect(plan.batches).toHaveLength(1)
+    expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 1 })
+  })
+
+  it('counts batchable primitives separately inside one model', () => {
+    const node = modelNodeFixture('building')
+    const model = new Object3D()
+    const material = new MeshStandardMaterial()
+    model.add(
+      new Mesh(new BoxGeometry(1, 1, 1), material),
+      new Mesh(new BoxGeometry(2, 1, 1), material),
+      new Mesh(new BoxGeometry(3, 1, 1), material),
+    )
+    markInstanceable(model, true)
+
+    const plan = analyzeOptimization(
+      { nodes: [node], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      () => model,
+    )
+
+    expect(plan.instances).toEqual([])
+    expect(plan.batches[0]).toMatchObject({ sourceIds: [node.id], meshCount: 3 })
+    expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 1 })
+  })
+
   it('measures memory already avoided by shared textures', () => {
     const texture = new Texture({ width: 16, height: 8 })
     const firstMaterial = new MeshStandardMaterial({ map: texture })
@@ -274,7 +336,13 @@ describe('analyzeOptimization', () => {
       id => objects.get(id),
     )
 
-    expect(plan.measured).toMatchObject({ objects: 2, meshes: 0, draws: 0, geometryBytes: 0 })
+    expect(plan.measured).toMatchObject({
+      objects: 2,
+      visibleObjects: 0,
+      meshes: 0,
+      draws: 0,
+      geometryBytes: 0,
+    })
     expect(plan.classifications[0]).toEqual({ id: 'group', classifications: ['STATIC'] })
   })
 
@@ -287,7 +355,7 @@ describe('analyzeOptimization', () => {
       { nodes: [node], animation: EMPTY_TIMELINE },
       new Object3D(),
       () => mesh,
-      { minInstancesPerGroup: 1 },
+      { minInstancesPerGroup: 1, analysisChunkSize: 100 },
     )
 
     expect(plan.classifications[0]?.classifications).toEqual(['SKINNED', 'UNSAFE'])

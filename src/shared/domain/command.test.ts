@@ -281,6 +281,7 @@ describe('the commands that raise a dialogue only a person can fill', () => {
       'project.new',
       'project.open',
       'scene.optimizeSelection',
+      'scene.worldPerformance',
     ])
   })
 })

@@ -196,6 +196,10 @@
       "title": "Optimise selection…",
       "help": "Measures the selection and previews a SAFE runtime representation before changing its optimisation settings."
     },
+    "sceneWorldPerformance": {
+      "title": "World performance…",
+      "help": "Measures the whole scene and reports SAFE optimisation opportunities without changing the authoring world."
+    },
     "sceneCopy": {
       "title": "Copy",
       "help": "Holds on to the selection so it can be pasted, here or in another scene. This is the studio’s own clipboard: it leaves the system one alone."

@@ -42,6 +42,21 @@ it('opens optimization only after a selection and its live renderer exist', () =
   expect(useOptimizationDialog.getState().request).toEqual({
     documentId: DOCUMENT,
     selectedIds: ['rail'],
+    scope: 'selection',
+  })
+  forgetSceneEngine(DOCUMENT)
+})
+
+it('opens the whole-world performance report without requiring a selection', () => {
+  installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [rail()], selectedIds: [] })
+  registerSceneEngine(DOCUMENT, {} as unknown as SceneRenderer)
+
+  runSceneCommand(DOCUMENT, 'scene.worldPerformance')
+
+  expect(useOptimizationDialog.getState().request).toEqual({
+    documentId: DOCUMENT,
+    selectedIds: [],
+    scope: 'world',
   })
   forgetSceneEngine(DOCUMENT)
 })

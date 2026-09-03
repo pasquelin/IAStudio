@@ -196,6 +196,10 @@
       "title": "Optimiser la sélection…",
       "help": "Mesure la sélection et présente une représentation runtime SAFE avant de modifier ses réglages d’optimisation."
     },
+    "sceneWorldPerformance": {
+      "title": "Performances du monde…",
+      "help": "Mesure toute la scène et présente les possibilités d’optimisation SAFE sans modifier le monde auteur."
+    },
     "sceneCopy": {
       "title": "Copier",
       "help": "Retient ce qui est sélectionné pour le coller ensuite, ici ou dans une autre scène. Ce presse-papiers est celui du studio : il ne touche pas à celui du système."
