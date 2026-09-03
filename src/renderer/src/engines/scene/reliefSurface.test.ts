@@ -136,9 +136,33 @@ describe('relief surface chunks', () => {
     })
     surface.sync(worldOf(sculpt), samples)
 
-    expect(positionOf(surface, 0, 0).updateRanges).toEqual([{ start: 0, count: 65 * HEIGHT * 3 }])
+    expect(positionOf(surface, 0, 0).updateRanges).toEqual([{ start: 3, count: 3 }])
     expect(positionOf(surface, 1, 0).updateRanges).toEqual([])
     expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(4.01)
+  })
+
+  it('matches a fresh build after applying a local patch', () => {
+    const samples = samplesOf()
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 12,
+      localZ: 3,
+      delta: 4,
+    })
+    const patched = createReliefSurface(new Scene())
+    patched.sync(worldOf(), samples)
+    patched.sync(worldOf(sculpt), samples)
+    const rebuilt = createReliefSurface(new Scene())
+    rebuilt.sync(worldOf(sculpt), samples)
+
+    for (const column of [0, 1]) {
+      for (const attribute of ['position', 'normal']) {
+        expect(patched.meshOf(TERRAIN, column, 0)?.geometry.getAttribute(attribute).array).toEqual(
+          rebuilt.meshOf(TERRAIN, column, 0)?.geometry.getAttribute(attribute).array,
+        )
+      }
+    }
   })
 
   it('keeps the shared edge continuous when a disk covers two chunks', () => {

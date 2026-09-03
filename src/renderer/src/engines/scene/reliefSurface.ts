@@ -64,6 +64,8 @@ type Held = {
   edits: readonly TerrainEditLayer[]
 }
 
+type SampleRect = { minX: number; maxX: number; minZ: number; maxZ: number }
+
 type TerrainSurface = {
   group: Group
   meshes: Map<string, Mesh>
@@ -329,13 +331,18 @@ function patchMeshes(
 ): void {
   for (const mesh of terrain.meshes.values()) clearChunkRanges(mesh)
   const edits = dirtiedChunks(before, after)
-  const dirty = new Set(edits.map(edit => keyOf(edit.column, edit.row)))
+  const beforeRead = reliefReader(samples, grain, before)
+  const afterRead = reliefReader(samples, grain, after)
+  const dirty = new Map<string, { layout: ReliefChunkLayout; rect: SampleRect }>()
 
   for (const { column, row } of edits) {
     const mesh = terrain.meshes.get(keyOf(column, row))
     if (!mesh) continue
     const layout = chunkLayout(column, row, samples.width, samples.height, grain)
-    writeChunk(mesh.geometry, samples, extent, layout, grain, after, true)
+    const rect = changedRect(layout, beforeRead, afterRead)
+    if (!rect) continue
+    dirty.set(keyOf(column, row), { layout, rect })
+    writeChunkRegion(mesh.geometry, samples, extent, layout, afterRead, rect)
   }
 
   // 🛑 A normal reads the 1-ring around its vertex, and that ring CROSSES the chunk border: the
@@ -352,7 +359,7 @@ function patchMeshes(
 
 /** The chunks touching a dirtied one, the dirtied ones themselves left out. */
 function borderingChunks(
-  dirty: ReadonlySet<string>,
+  dirty: ReadonlyMap<string, { layout: ReliefChunkLayout; rect: SampleRect }>,
   samples: HeightmapSamples,
   grain: number,
 ): ReliefChunkKey[] {
@@ -360,21 +367,46 @@ function borderingChunks(
   const rows = chunkCountAlong(samples.height, grain)
   const around = new Map<string, ReliefChunkKey>()
 
-  for (const key of dirty) {
+  for (const [key, { layout, rect }] of dirty) {
     const [column, row] = key.split(':').map(Number)
     if (column === undefined || row === undefined) continue
 
-    for (let dz = -1; dz <= 1; dz++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        const near = { column: column + dx, row: row + dz }
-        const outside =
-          near.column < 0 || near.column >= columns || near.row < 0 || near.row >= rows
-        if (outside || dirty.has(keyOf(near.column, near.row))) continue
-        around.set(keyOf(near.column, near.row), near)
-      }
+    const candidates = [
+      ...(rect.minX <= 1 ? [{ column: column - 1, row }] : []),
+      ...(rect.maxX >= layout.width - 2 ? [{ column: column + 1, row }] : []),
+      ...(rect.minZ <= 1 ? [{ column, row: row - 1 }] : []),
+      ...(rect.maxZ >= layout.height - 2 ? [{ column, row: row + 1 }] : []),
+    ]
+    for (const near of candidates) {
+      const outside = near.column < 0 || near.column >= columns || near.row < 0 || near.row >= rows
+      if (outside || dirty.has(keyOf(near.column, near.row))) continue
+      around.set(keyOf(near.column, near.row), near)
     }
   }
   return [...around.values()]
+}
+
+function changedRect(
+  layout: ReliefChunkLayout,
+  before: ReliefRead,
+  after: ReliefRead,
+): SampleRect | null {
+  let rect: SampleRect | null = null
+  for (let z = 0; z < layout.height; z++) {
+    for (let x = 0; x < layout.width; x++) {
+      const sampleX = layout.sampleX + x
+      const sampleZ = layout.sampleZ + z
+      if (before(sampleX, sampleZ) === after(sampleX, sampleZ)) continue
+      if (!rect) rect = { minX: x, maxX: x, minZ: z, maxZ: z }
+      else {
+        rect.minX = Math.min(rect.minX, x)
+        rect.maxX = Math.max(rect.maxX, x)
+        rect.minZ = Math.min(rect.minZ, z)
+        rect.maxZ = Math.max(rect.maxZ, z)
+      }
+    }
+  }
+  return rect
 }
 
 function dirtiedChunks(
@@ -431,31 +463,90 @@ export function reliefGeometryData(
   return { column: layout.column, row: layout.row, position, normal, uv, index: chunkIndex(layout) }
 }
 
-function writeChunk(
+function writeChunkRegion(
   geometry: BufferGeometry,
   samples: HeightmapSamples,
   extent: ReliefExtent,
   layout: ReliefChunkLayout,
-  grain: number,
-  edits: readonly TerrainEditLayer[],
-  ranged: boolean,
+  read: ReliefRead,
+  rect: SampleRect,
 ): void {
   const position = geometry.getAttribute('position')
   const normal = geometry.getAttribute('normal')
   if (!(position instanceof BufferAttribute) || !(normal instanceof BufferAttribute)) return
   if (!(position.array instanceof Float32Array) || !(normal.array instanceof Float32Array)) return
-  const read = reliefReader(samples, grain, edits)
-  writePositions(position.array, samples, extent, layout, read)
-  writeNormals(normal.array, samples, extent, layout, read)
-  if (ranged) {
-    markChunk(position)
-    markChunk(normal)
-  }
+  writeHeights(position.array, extent, layout, read, rect)
+  const normalRect = expandRect(rect, layout, 1)
+  writeNormalRegion(normal.array, samples, extent, layout, read, normalRect)
+  markRegion(position, layout.width, rect)
+  markRegion(normal, layout.width, normalRect)
   position.needsUpdate = true
   normal.needsUpdate = true
 }
 
-/** What `writeChunk` does for a neighbour: its lighting, never its shape. */
+function expandRect(rect: SampleRect, layout: ReliefChunkLayout, amount: number): SampleRect {
+  return {
+    minX: Math.max(0, rect.minX - amount),
+    maxX: Math.min(layout.width - 1, rect.maxX + amount),
+    minZ: Math.max(0, rect.minZ - amount),
+    maxZ: Math.min(layout.height - 1, rect.maxZ + amount),
+  }
+}
+
+function markRegion(attribute: BufferAttribute, width: number, rect: SampleRect): void {
+  const count = (rect.maxX - rect.minX + 1) * 3
+  for (let z = rect.minZ; z <= rect.maxZ; z++) {
+    attribute.addUpdateRange((z * width + rect.minX) * 3, count)
+  }
+}
+
+function writeHeights(
+  into: Float32Array,
+  extent: ReliefExtent,
+  layout: ReliefChunkLayout,
+  read: ReliefRead,
+  rect: SampleRect,
+): void {
+  for (let z = rect.minZ; z <= rect.maxZ; z++) {
+    for (let x = rect.minX; x <= rect.maxX; x++) {
+      const at = (z * layout.width + x) * 3 + 1
+      into[at] = worldY(read(layout.sampleX + x, layout.sampleZ + z), extent.elevation)
+    }
+  }
+}
+
+function writeNormalRegion(
+  into: Float32Array,
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  layout: ReliefChunkLayout,
+  read: ReliefRead,
+  rect: SampleRect,
+): void {
+  const stepX = extent.size.x / Math.max(1, samples.width - 1)
+  const stepZ = extent.size.z / Math.max(1, samples.height - 1)
+  for (let z = rect.minZ; z <= rect.maxZ; z++) {
+    for (let x = rect.minX; x <= rect.maxX; x++) {
+      const sampleX = layout.sampleX + x
+      const sampleZ = layout.sampleZ + z
+      const nx =
+        (heightAt(samples, read, extent, sampleX - 1, sampleZ) -
+          heightAt(samples, read, extent, sampleX + 1, sampleZ)) /
+        (2 * stepX)
+      const nz =
+        (heightAt(samples, read, extent, sampleX, sampleZ - 1) -
+          heightAt(samples, read, extent, sampleX, sampleZ + 1)) /
+        (2 * stepZ)
+      const length = Math.hypot(nx, 1, nz) || 1
+      const at = (z * layout.width + x) * 3
+      into[at] = nx / length
+      into[at + 1] = 1 / length
+      into[at + 2] = nz / length
+    }
+  }
+}
+
+/** Rewrites a neighbour's lighting, never its shape. */
 function writeChunkNormals(
   geometry: BufferGeometry,
   samples: HeightmapSamples,
