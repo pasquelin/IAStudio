@@ -28,11 +28,20 @@ export type TextureRef = { assetId: string }
 
 /**
  * A patch of the world's surface. Relief names a heightmap by `TextureRef`, never the pixels.
- * Bytes are OpenEXR float32 — not PNG-16, not a house binary.
+ * Bytes are OpenEXR float32 — not PNG-16, not a house binary. Texel size lives on the asset.
  */
 export type ReliefLayer = {
   kind: 'relief'
   heightmap: TextureRef
+  /** World position of the min corner (smallest x and z). */
+  origin: { x: number; z: number }
+  /** Width (x) and depth (z) in scene units. A rectangle, unlike the ground's square `size`. */
+  size: { x: number; z: number }
+  /**
+   * World Y that sample 0 and sample 1 map to. The EXR is raw float32, not a 0–1 map;
+   * `{ min: 0, max: 1 }` is the identity the decoder already produced.
+   */
+  elevation: { min: number; max: number }
 }
 
 /** Open union: a later kind does not migrate documents written with only Relief. */
@@ -553,6 +562,30 @@ export const DEFAULT_GROUND: GroundDescriptor = Object.freeze({
   opacity: 1,
   receiveShadow: true,
 })
+
+/** A file that omits the placement: min corner at the world origin, side of the default ground. */
+export const DEFAULT_RELIEF_ORIGIN: ReliefLayer['origin'] = Object.freeze({ x: 0, z: 0 })
+export const DEFAULT_RELIEF_SIZE: ReliefLayer['size'] = Object.freeze({
+  x: DEFAULT_GROUND.size,
+  z: DEFAULT_GROUND.size,
+})
+export const DEFAULT_RELIEF_ELEVATION: ReliefLayer['elevation'] = Object.freeze({
+  min: 0,
+  max: 1,
+})
+
+export function reliefLayer(
+  heightmap: TextureRef,
+  patch?: Partial<Pick<ReliefLayer, 'origin' | 'size' | 'elevation'>>,
+): ReliefLayer {
+  return {
+    kind: 'relief',
+    heightmap,
+    origin: patch?.origin ?? DEFAULT_RELIEF_ORIGIN,
+    size: patch?.size ?? DEFAULT_RELIEF_SIZE,
+    elevation: patch?.elevation ?? DEFAULT_RELIEF_ELEVATION,
+  }
+}
 
 /**
  * How a scene is WALKED rather than watched — what the window that plays a set will fly, and

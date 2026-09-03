@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_WORLD, STUDIO_ENVIRONMENT } from '@shared/domain/scene'
+import { DEFAULT_WORLD, reliefLayer, STUDIO_ENVIRONMENT } from '@shared/domain/scene'
 import { backgroundOfKind, environmentOfKind, fogOfKind, readWorld } from './sceneWorld'
 
 describe('reading a world back', () => {
@@ -89,9 +89,45 @@ describe('reading a world back', () => {
     expect(
       readWorld({ layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] }, undefined)
         .layers,
-    ).toEqual([{ kind: 'relief', heightmap: { assetId: 'asset_height' } }])
+    ).toEqual([
+      {
+        kind: 'relief',
+        heightmap: { assetId: 'asset_height' },
+        origin: { x: 0, z: 0 },
+        size: { x: 20, z: 20 },
+        elevation: { min: 0, max: 1 },
+      },
+    ])
     expect(readWorld({ layers: [{ kind: 'relief', heightmap: {} }] }, undefined).layers).toEqual([])
     expect(readWorld({ layers: [{ kind: 'biome' }] }, undefined).layers).toEqual([])
+  })
+
+  it('keeps the placement a relief wrote', () => {
+    expect(
+      readWorld(
+        {
+          layers: [
+            {
+              kind: 'relief',
+              heightmap: { assetId: 'asset_height' },
+              origin: { x: -40, z: 8 },
+              size: { x: 128, z: 64 },
+              elevation: { min: -12, max: 48 },
+            },
+          ],
+        },
+        undefined,
+      ).layers,
+    ).toEqual([
+      reliefLayer(
+        { assetId: 'asset_height' },
+        {
+          origin: { x: -40, z: 8 },
+          size: { x: 128, z: 64 },
+          elevation: { min: -12, max: 48 },
+        },
+      ),
+    ])
   })
 
   it('gives a ground with no colour the studio one rather than a string', () => {

@@ -11,6 +11,7 @@ import {
   DEFAULT_CAMERA,
   DEFAULT_WORLD,
   MESH_ENTRIES,
+  reliefLayer,
   TEXTURE_SLOTS,
   TILES_PER_METRE,
 } from '@shared/domain/scene'
@@ -407,17 +408,41 @@ describe('sceneFromPayload', () => {
     expect(reread(dressed).world).toEqual(dressed.world)
   })
 
-  it('carries a relief heightmap reference through a round trip', () => {
+  it('carries a relief through a round trip', () => {
     const held: SceneState = {
       ...EMPTY_SCENE,
       world: {
         ...EMPTY_SCENE.world,
-        layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }],
+        layers: [
+          reliefLayer(
+            { assetId: 'asset_height' },
+            {
+              origin: { x: -16, z: 4 },
+              size: { x: 256, z: 128 },
+              elevation: { min: -8, max: 32 },
+            },
+          ),
+        ],
       },
     }
 
-    expect(reread(held).world.layers).toEqual([
-      { kind: 'relief', heightmap: { assetId: 'asset_height' } },
+    expect(reread(held).world.layers).toEqual(held.world.layers)
+  })
+
+  it('reads a relief written before the placement existed', () => {
+    expect(
+      sceneFromPayload({
+        nodes: [],
+        world: { layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] },
+      }).world.layers,
+    ).toEqual([
+      {
+        kind: 'relief',
+        heightmap: { assetId: 'asset_height' },
+        origin: { x: 0, z: 0 },
+        size: { x: 20, z: 20 },
+        elevation: { min: 0, max: 1 },
+      },
     ])
   })
 
