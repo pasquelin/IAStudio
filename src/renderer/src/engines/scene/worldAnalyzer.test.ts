@@ -1,4 +1,14 @@
-import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh } from 'three'
+import {
+  BoxGeometry,
+  BufferGeometry,
+  InterleavedBuffer,
+  InterleavedBufferAttribute,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+  SkinnedMesh,
+  Texture,
+} from 'three'
 import { describe, expect, it } from 'vitest'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
@@ -30,9 +40,17 @@ describe('analyzeOptimization', () => {
 
     expect(plan.instances).toHaveLength(1)
     expect(plan.instances[0]?.sourceIds).toHaveLength(WORTH_INSTANCING)
+    const geometry = objects.values().next().value?.geometry
+    if (!geometry) throw new Error('fixture has no geometry')
+    const geometryBytes = Object.values(geometry.attributes).reduce(
+      (bytes, attribute) => bytes + attribute.array.byteLength,
+      geometry.index?.array.byteLength ?? 0,
+    )
     expect(plan.estimated).toEqual({
       drawCallsBefore: WORTH_INSTANCING,
       drawCallsAfter: 1,
+      avoidedGeometryBytes: geometryBytes * (WORTH_INSTANCING - 1),
+      avoidedTextureBytes: 0,
     })
     expect([...objects.values()].map(mesh => mesh.visible)).toEqual(visibility)
     expect(optimizationReport(plan)).toMatchObject({
@@ -121,7 +139,56 @@ describe('analyzeOptimization', () => {
       (bytes, attribute) => bytes + attribute.array.byteLength,
       geometry.index?.array.byteLength ?? 0,
     )
-    expect(plan.measured).toMatchObject({ objects: 2, meshes: 2, geometryBytes: expectedBytes })
+    expect(plan.measured).toMatchObject({
+      objects: 2,
+      meshes: 2,
+      geometryBytes: expectedBytes,
+      sharedMaterials: 1,
+    })
+    expect(plan.estimated.avoidedGeometryBytes).toBe(expectedBytes)
+  })
+
+  it('counts an interleaved geometry buffer once when estimating avoided memory', () => {
+    const geometry = new BufferGeometry()
+    const interleaved = new InterleavedBuffer(new Float32Array(18), 6)
+    geometry.setAttribute('position', new InterleavedBufferAttribute(interleaved, 3, 0))
+    geometry.setAttribute('normal', new InterleavedBufferAttribute(interleaved, 3, 3))
+    const material = new MeshStandardMaterial()
+    const first = meshNode('first')
+    const second = meshNode('second')
+    const objects = new Map<string, Mesh>([
+      [first.id, new Mesh(geometry, material)],
+      [second.id, new Mesh(geometry, material)],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes: [first, second], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+    )
+
+    expect(plan.estimated.avoidedGeometryBytes).toBe(interleaved.array.byteLength)
+  })
+
+  it('measures memory already avoided by shared textures', () => {
+    const texture = new Texture({ width: 16, height: 8 })
+    const firstMaterial = new MeshStandardMaterial({ map: texture })
+    const secondMaterial = new MeshStandardMaterial({ map: texture })
+    const first = meshNode('first')
+    const second = meshNode('second')
+    const objects = new Map<string, Mesh>([
+      [first.id, new Mesh(new BoxGeometry(), firstMaterial)],
+      [second.id, new Mesh(new BoxGeometry(), secondMaterial)],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes: [first, second], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+    )
+
+    expect(plan.estimated.avoidedTextureBytes).toBe(16 * 8 * 4)
+    expect(plan.measured.sharedMaterials).toBe(0)
   })
 
   it('counts a parented mesh once and leaves hidden branches out of measured render costs', () => {
