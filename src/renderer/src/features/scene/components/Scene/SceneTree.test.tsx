@@ -264,6 +264,14 @@ describe('SceneTree', () => {
     fireEvent.drop(rows[1]!, { dataTransfer: data, clientY: 3 })
 
     expect(order().slice(0, 3)).toEqual([second, third, first])
+    // 🛑 And the SCREEN follows: sorted by name whatever the scene held, the drag wrote a command
+    // and an undo entry for a row that never moved.
+    expect(
+      screen
+        .getAllByRole('treeitem')
+        .slice(1, 4)
+        .map(row => row.textContent),
+    ).toEqual([second, third, first])
   })
 
   it('folds the root away, which is session state and not an edit', async () => {

@@ -79,6 +79,7 @@
   },
   "scene": {
     "root": "Scene",
+    "sortByScene": "Scene order",
     "onAir": "On air",
     "previewFull": "Grow the preview to the whole view",
     "previewInset": "Put the preview back in its corner",
