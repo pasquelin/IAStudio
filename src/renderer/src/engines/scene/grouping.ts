@@ -50,7 +50,11 @@ export type InstancedGroups = {
    *
    * Call it after the world matrices are up to date: the matrices are copied from them.
    */
-  rebuild: (nodes: readonly SceneNode[], objectOf: (id: string) => Object3D | undefined) => number
+  rebuild: (
+    nodes: readonly SceneNode[],
+    objectOf: (id: string) => Object3D | undefined,
+    excluded?: ReadonlySet<string>,
+  ) => number
   /**
    * Writes the matrices of nodes that just moved, without rebuilding a thing — and says whether
    * any of them was drawn by something else.
@@ -308,6 +312,7 @@ export function sweep(
   ownMaterialOf: (mesh: Mesh) => Material | Material[],
   keyOf: (node: SceneNode, mesh: Mesh) => string,
   sources: HeldOutOfDraw,
+  excluded?: ReadonlySet<string>,
 ): Grouped[] {
   const parented = new Set<string>()
   for (const node of nodes) if (node.parentId) parented.add(node.parentId)
@@ -331,6 +336,7 @@ export function sweep(
   }
 
   for (const node of nodes) {
+    if (excluded?.has(node.id)) continue
     const object = objectOf(node.id)
     if (!object || !isDrawn(object, host)) continue
     if (node.type === 'mesh') {

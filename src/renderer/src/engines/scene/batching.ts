@@ -9,6 +9,7 @@ import {
 import './bvhPatches'
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
+import { movesOnItsOwn } from '@shared/domain/component'
 import {
   DRAWN_TRIANGLES,
   heldOutOfDraw,
@@ -71,11 +72,24 @@ export function createBatchedGroups(
   }
 
   return {
-    rebuild: (nodes, objectOf) => {
+    rebuild: (nodes, objectOf, excluded) => {
       clear()
 
       let batched = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
+      const safeNodes = nodes.filter(
+        node =>
+          !movesOnItsOwn(node.components) &&
+          !node.components?.some(component => component.type === 'Script'),
+      )
+      for (const worn of sweep(
+        safeNodes,
+        objectOf,
+        host,
+        ownMaterialOf,
+        keyOf,
+        sources,
+        excluded,
+      )) {
         const first = worn.meshes[0]
         if (!first) continue
 

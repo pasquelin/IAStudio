@@ -28,6 +28,7 @@ const OTHER_SENSES: Record<string, string> = {
   cellInstancing: 'three.js `Layers`: the same one again, once a cell of the world draws it',
   grouping: 'three.js `Layers`: the constant itself, which both strategies share',
   modelInstancing: 'three.js `Layers`: the one the camera skips once an instance draws the mesh',
+  worldAnalyzer: 'three.js `Layers`: the analyzer excludes a source another representation draws',
   SceneRenderer: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
   sceneWorld: 'World relief: a heightmap the scene holds, not a timeline line',
   reliefSurface: 'World relief: a heightmap the scene holds, not a timeline line',
