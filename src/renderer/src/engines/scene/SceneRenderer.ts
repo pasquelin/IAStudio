@@ -7,7 +7,6 @@ import {
   DirectionalLight,
   Euler,
   GridHelper,
-  InstancedMesh,
   type Intersection,
   Light,
   LineBasicMaterial,
@@ -278,7 +277,7 @@ import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
 import { createOptimizedGroups } from './optimizedGrouping'
-import { bakedInstancesOf, bakedSourceIdOf } from './bakedInstances'
+import { bakedInstancesOf } from './bakedInstances'
 import {
   behavioralGroupingExclusions,
   groupingExclusions,
@@ -5952,10 +5951,8 @@ export class SceneRenderer {
     ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
     if (!hit) return null
-    if (hit.object instanceof InstancedMesh && hit.instanceId !== undefined) {
-      const sourceId = bakedSourceIdOf(hit.object, hit.instanceId)
-      if (sourceId) return nodeIdOf(hit.object, name => this.objects.has(name))
-    }
+    // A click on a baked lot names the CONTAINER: its members stopped being nodes when it was
+    // baked, so their ids resolve to nothing an inspector could open.
     return this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name))
   }
 

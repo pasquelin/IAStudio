@@ -5,19 +5,17 @@ import { WindowButton } from '@/components/WindowButton'
 import { fieldHandle } from '@/components/scHandle'
 import { setNodesOptimization } from '@/engines/scene/commands'
 import { bakeOptimization } from '@/engines/scene/bakeOptimization'
-import type { OptimizationMode, SceneNode } from '@/engines/scene/sceneState'
-import type { OptimizationPlan, OptimizationWarning } from '@/engines/scene/worldAnalyzer'
+import { OPTIMIZATION_MODES, type OptimizationMode, type SceneNode } from '@/engines/scene/sceneState'
+import { OPTIMIZATION_WARNING_REASONS, type OptimizationPlan } from '@/engines/scene/worldAnalyzer'
 import { formatBytes, formatDecimal } from '@/helpers/format'
 import { useScenes } from '@/stores/scenes'
 import { useOptimizationDialog } from '@/hooks/useOptimizationDialog'
 
-const MODES: readonly OptimizationMode[] = ['auto', 'individual', 'instance', 'batch', 'exclude']
 const MIXED_MODE = 'mixed'
 type OptimizationChoice = OptimizationMode | typeof MIXED_MODE
-const WARNING_REASONS: readonly OptimizationWarning['reason'][] = ['animated', 'dynamic', 'skinned']
 
 function isOptimizationMode(value: string): value is OptimizationMode {
-  return MODES.some(mode => mode === value)
+  return OPTIMIZATION_MODES.some(mode => mode === value)
 }
 
 function modeOf(nodes: readonly SceneNode[]): OptimizationChoice {
@@ -114,7 +112,7 @@ export function SceneOptimizationDialogBody({
             value: number(plan.batches.reduce((total, group) => total + group.meshCount, 0)),
           })}
         </dd>
-        {WARNING_REASONS.map(reason => {
+        {OPTIMIZATION_WARNING_REASONS.map(reason => {
           const count = plan.warnings.filter(warning => warning.reason === reason).length
           return count > 0 ? (
             <dd key={reason}>
@@ -140,7 +138,7 @@ export function SceneOptimizationDialogBody({
           {mode === MIXED_MODE && (
             <option value={MIXED_MODE}>{t('optimization.modes.mixed')}</option>
           )}
-          {MODES.map(value => (
+          {OPTIMIZATION_MODES.map(value => (
             <option key={value} value={value}>
               {t(`optimization.modes.${value}`)}
             </option>
