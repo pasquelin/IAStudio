@@ -152,6 +152,27 @@ describe('raiseReliefDisk', () => {
     expect(sculpt.chunks).toHaveLength(2)
   })
 
+  it('keeps an existing chunk outside the disk unchanged', () => {
+    const before = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 0,
+      localZ: 0,
+      delta: 7,
+    })
+    const x = extent.origin.x + extent.size.x
+    const after = raiseReliefDisk(
+      samples,
+      extent,
+      before,
+      { x, z: extent.origin.z, radius: stepX },
+      2,
+    )
+
+    expect(heightAt(samples, after, 0, 0)).toBe(7)
+    expect(heightAt(samples, after, 65, 0)).toBe(2)
+  })
+
   it('is the same arithmetic a worker calls, with no scene or renderer to mount', () => {
     const disk = { x: seamX, z: extent.origin.z, radius: stepX * 2 }
     expect(

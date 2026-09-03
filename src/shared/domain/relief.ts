@@ -327,18 +327,68 @@ export function raiseReliefDisk(
   amount: number,
   grain = RELIEF_CHUNK_TEXELS,
 ): ReliefSculpt {
-  const live = liveChunksOf(samples, sculpt, grain)
   const span = diskSamples(samples, extent, disk)
   const r2 = disk.radius * disk.radius
-  for (let sz = span.minZ; sz <= span.maxZ; sz++) {
-    for (let sx = span.minX; sx <= span.maxX; sx++) {
-      const wx = extent.origin.x + sx * span.stepX
-      const wz = extent.origin.z + sz * span.stepZ
-      if ((wx - disk.x) ** 2 + (wz - disk.z) ** 2 > r2) continue
-      raiseSample(live, samples, grain, sx, sz, amount)
+  const distanceX = Float64Array.from({ length: span.maxX - span.minX + 1 }, (_, at) => {
+    const dx = extent.origin.x + (span.minX + at) * span.stepX - disk.x
+    return dx * dx
+  })
+  const distanceZ = Float64Array.from({ length: span.maxZ - span.minZ + 1 }, (_, at) => {
+    const dz = extent.origin.z + (span.minZ + at) * span.stepZ - disk.z
+    return dz * dz
+  })
+  const updated = new Map<string, PackedReliefChunk>()
+  const touched = new Set<string>()
+  const packed = payloadsOf(sculpt)
+
+  for (let row = 0; row < chunkCountAlong(samples.height, grain); row += 1) {
+    for (let column = 0; column < chunkCountAlong(samples.width, grain); column += 1) {
+      const layout = chunkLayout(column, row, samples.width, samples.height, grain)
+      const maxX = layout.sampleX + layout.width - 1
+      const maxZ = layout.sampleZ + layout.height - 1
+      if (
+        maxX < span.minX ||
+        layout.sampleX > span.maxX ||
+        maxZ < span.minZ ||
+        layout.sampleZ > span.maxZ
+      ) {
+        continue
+      }
+
+      const key = `${column}:${row}`
+      touched.add(key)
+      const held = packed.get(key)
+      const deltas = held
+        ? unpackDeltas(held.payload, layout.width * layout.height)
+        : new Float32Array(layout.width * layout.height)
+      for (let sz = Math.max(span.minZ, layout.sampleZ); sz <= Math.min(span.maxZ, maxZ); sz += 1) {
+        for (
+          let sx = Math.max(span.minX, layout.sampleX);
+          sx <= Math.min(span.maxX, maxX);
+          sx += 1
+        ) {
+          if (
+            (distanceX[sx - span.minX] ?? Infinity) + (distanceZ[sz - span.minZ] ?? Infinity) >
+            r2
+          ) {
+            continue
+          }
+          const at = (sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)
+          deltas[at] = (deltas[at] ?? 0) + amount
+        }
+      }
+      const payload = packDeltas(deltas)
+      if (payload !== '') updated.set(key, { column, row, payload })
     }
   }
-  return sculptOfLive(live)
+
+  const chunks = (sculpt?.chunks ?? []).flatMap(chunk => {
+    const key = `${chunk.column}:${chunk.row}`
+    const replacement = updated.get(key)
+    updated.delete(key)
+    return replacement ? [replacement] : touched.has(key) ? [] : [chunk]
+  })
+  return { chunks: [...chunks, ...updated.values()] }
 }
 
 export function readReliefSculpt(value: unknown): ReliefSculpt | undefined {
@@ -371,8 +421,8 @@ function chunkIndexAt(sample: number, samples: number, grain: number): number {
  *
  * 🛑 The two coincide at the far edge: `chunkIndexAt` clamps to the last chunk, which is the very
  * one `sample / grain - 1` names when `(samples - 1) % grain === 0` — every 2ⁿ+1 heightmap. Handed
- * back twice, `raiseSample` added the amount twice to one chunk: a ridge along the far edge and a
- * spike four times too high in the corner.
+ * back twice, the amount was added twice to one chunk: a ridge along the far edge and a spike four
+ * times too high in the corner.
  */
 function axisHolding(sample: number, samples: number, grain: number): number[] {
   const primary = chunkIndexAt(sample, samples, grain)
@@ -383,53 +433,6 @@ function axisHolding(sample: number, samples: number, grain: number): number[] {
 }
 
 type LiveChunk = ReliefChunkLayout & { deltas: Float32Array }
-
-function liveChunksOf(
-  samples: HeightmapSamples,
-  sculpt: ReliefSculpt | undefined,
-  grain: number,
-): Map<string, LiveChunk> {
-  const live = new Map<string, LiveChunk>()
-  for (const packed of sculpt?.chunks ?? []) {
-    const layout = chunkLayout(packed.column, packed.row, samples.width, samples.height, grain)
-    live.set(`${packed.column}:${packed.row}`, {
-      ...layout,
-      deltas: unpackDeltas(packed.payload, layout.width * layout.height),
-    })
-  }
-  return live
-}
-
-function raiseSample(
-  live: Map<string, LiveChunk>,
-  samples: HeightmapSamples,
-  grain: number,
-  sx: number,
-  sz: number,
-  amount: number,
-): void {
-  for (const key of chunksHoldingSample(sx, sz, samples.width, samples.height, grain)) {
-    const id = `${key.column}:${key.row}`
-    const held = live.get(id) ?? emptyLive(key, samples, grain)
-    if (!live.has(id)) live.set(id, held)
-    const index = (sz - held.sampleZ) * held.width + (sx - held.sampleX)
-    held.deltas[index] = (held.deltas[index] ?? 0) + amount
-  }
-}
-
-function emptyLive(key: ReliefChunkKey, samples: HeightmapSamples, grain: number): LiveChunk {
-  const layout = chunkLayout(key.column, key.row, samples.width, samples.height, grain)
-  return { ...layout, deltas: new Float32Array(layout.width * layout.height) }
-}
-
-function sculptOfLive(live: Map<string, LiveChunk>): ReliefSculpt {
-  const chunks: PackedReliefChunk[] = []
-  for (const chunk of live.values()) {
-    const payload = packDeltas(chunk.deltas)
-    if (payload !== '') chunks.push({ column: chunk.column, row: chunk.row, payload })
-  }
-  return { chunks }
-}
 
 function diskSamples(
   samples: HeightmapSamples,
