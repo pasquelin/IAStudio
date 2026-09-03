@@ -279,7 +279,10 @@ describe('analyzeOptimization', () => {
   it('counts the batching saving once someone has actually asked for it', () => {
     const material = new MeshStandardMaterial()
     const batched: OptimizationSettings = { mode: 'batch' }
-    const nodes = ['small', 'medium', 'large'].map(id => ({ ...meshNode(id), optimization: batched }))
+    const nodes = ['small', 'medium', 'large'].map(id => ({
+      ...meshNode(id),
+      optimization: batched,
+    }))
     const objects = new Map<string, Mesh>(
       nodes.map((node, index) => [node.id, new Mesh(new BoxGeometry(index + 1, 1, 1), material)]),
     )
