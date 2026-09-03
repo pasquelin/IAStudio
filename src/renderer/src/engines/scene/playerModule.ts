@@ -47,6 +47,15 @@ export function playerPartsOf(nodes: readonly SceneNode[]): PlayerParts | null {
   return allPartsOf(nodes)[0] ?? null
 }
 
+/**
+ * What a field naming a node may be pointed at, from a node's own point of view: what shares its
+ * MODULE, or the whole scene when it belongs to none — the very order `entityNamed` resolves in.
+ */
+export function pickableNodesOf(nodes: readonly SceneNode[], id: string): readonly SceneNode[] {
+  const owning = allPartsOf(nodes).find(parts => parts.inside.some(node => node.id === id))
+  return owning?.inside ?? nodes
+}
+
 function partsIn(nodes: readonly SceneNode[], module: SceneNode): FoundParts {
   const inside = subtreesOf(nodes, [module.id])
   const arm = inside.find(node => carries(node, 'SpringArm'))

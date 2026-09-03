@@ -3,11 +3,32 @@ import { DEFAULT_CHECKER_TEXTURE } from '@shared/domain/checkerTexture'
 import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
+import { textOf } from '@game/runtime/componentFields'
+import { armRestSeat } from './nodeFactory'
 import { isPlayerModule, playerPartsOf } from './playerModule'
 import { pitchTowards, sceneFromTemplate } from './sceneTemplates'
 import { subtreesOf, type SceneNode } from './sceneState'
 
 const typesIn = (nodes: readonly SceneNode[]): string[] => nodes.map(node => node.type)
+
+/** Where a node rests in world, walking its parents. Translation and yaw — see the guard below. */
+function restingWorld(
+  byId: Map<string, SceneNode>,
+  node: SceneNode,
+): { x: number; y: number; z: number; yaw: number } {
+  const world = { x: 0, y: 0, z: 0, yaw: 0 }
+  for (
+    let held: SceneNode | undefined = node;
+    held;
+    held = held.parentId === null ? undefined : byId.get(held.parentId)
+  ) {
+    world.x += held.transform.position.x
+    world.y += held.transform.position.y
+    world.z += held.transform.position.z
+    world.yaw += held.transform.rotation.y
+  }
+  return world
+}
 
 describe('sceneFromTemplate', () => {
   /**
@@ -28,6 +49,46 @@ describe('sceneFromTemplate', () => {
 
       expect({ id, missing: wanted.filter(name => !names.has(name)) }).toEqual({ id, missing: [] })
     }
+  })
+
+  /**
+   * 🛑 A template poses its camera by hand and its arm names the numbers again; the two drifted in
+   * silence. The circuit opened 11,56 m off and facing backwards — `carNodes` turns its body by
+   * `heading + π` — so the shot a template opens on was thrown away by the first frame of play.
+   *
+   * 🛑 Angle mort ASSUMÉ: `restingWorld` composes a translation and a yaw, which is all any
+   * template hangs today. A parent that TILTS or SCALES would be read wrong, and silently.
+   */
+  it('seats the camera of every armed template where the arm will put it', () => {
+    const checked: string[] = []
+
+    for (const id of SCENE_TEMPLATE_IDS) {
+      const nodes = sceneFromTemplate(id).nodes
+      const byId = new Map(nodes.map(node => [node.id, node]))
+      const byName = new Map(nodes.map(node => [node.name, node]))
+
+      for (const node of nodes) {
+        const arm = node.components?.find(one => one.type === 'SpringArm')
+        if (!arm) continue
+
+        const subject = byName.get(textOf(arm, 'subject', ''))
+        const camera = byName.get(textOf(arm, 'camera', ''))
+        expect({ id, resolves: Boolean(subject && camera) }).toEqual({ id, resolves: true })
+        if (!subject || !camera) continue
+
+        const stands = restingWorld(byId, subject)
+        const seat = armRestSeat(stands, stands.yaw, arm)
+        const at = restingWorld(byId, camera)
+        checked.push(id)
+        expect({
+          id,
+          off: Math.hypot(at.x - seat.x, at.y - seat.y, at.z - seat.z) < 0.001,
+        }).toEqual({ id, off: true })
+      }
+    }
+
+    // 🛑 The guard is worth nothing if every template walked out on a `continue`.
+    expect(checked).toEqual(['thirdPerson', 'car'])
   })
 
   it('opens every template on a lit scene, so none of them looks like a broken viewport', () => {

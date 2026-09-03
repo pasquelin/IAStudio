@@ -53,11 +53,12 @@ const choiceField = (key: string, options: readonly string[]): ActionField => ({
 })
 
 /** A name, a list of names, or a list of points — what no number and no closed list can say. */
-const textField = (key: string): ActionField => ({
+const textField = (key: string, picks?: ActionField['picks']): ActionField => ({
   key,
   kind: 'text',
   labelKey: `game.fields.${key}`,
   required: true,
+  ...(picks === undefined ? {} : { picks }),
 })
 
 const flagField = (key: string): ActionField => ({
@@ -206,10 +207,11 @@ const SPRING_ARM: ComponentDescriptor = {
   descriptionKey: 'game.components.SpringArm.description',
   category: 'gameplay',
   fields: [
-    textField('subject'),
-    textField('camera'),
+    textField('subject', 'node'),
+    textField('camera', 'node'),
     choiceField('orientation', ['pointer', 'subject', 'fixed']),
     numberField('length', 0, 50),
+    numberField('minLength', 0, 50),
     numberField('height', -10, 10),
     numberField('shoulder', -5, 5),
     flagField('collision'),
@@ -218,19 +220,23 @@ const SPRING_ARM: ComponentDescriptor = {
     numberField('hysteresis', 0, 1),
     numberField('positionLag', 0, 2),
     numberField('rotationLag', 0, 2),
+    numberField('collisionInLag', 0, 2),
     numberField('collisionOutLag', 0, 2),
     numberField('pitchMin', -89, 89),
     numberField('pitchMax', -89, 89),
-    choiceField('lookAt', ['pivot', 'subject']),
+    choiceField('lookAt', ['shoulder', 'body']),
   ],
-  // Seconds, the three lags, and zero is what an author writes for a camera welded to its subject.
-  // 🛑 `collisionOutLag` is the way OUT alone: coming in stays immediate, or a wall would let the
-  // shot walk through it and crawl back out. See the comment on the clamp in `springArm.ts`.
+  // Seconds, the four lags, and zero is what an author writes for a camera welded to its subject.
+  // 🛑 `minLength` is what keeps the shot OUT of the head: pulled in against a wide pillar the arm
+  // reached the pivot itself, and a camera sitting on the pivot films forward — the character it
+  // was watching disappears. Measured on screen, 2026-09-03.
+  // 🛑 Coming in is FASTER than going out, never instant: `collisionInLag` 0,04 s is three frames.
   defaults: {
     subject: '',
     camera: '',
     orientation: 'pointer',
     length: 4,
+    minLength: 1.2,
     height: 1.6,
     shoulder: 0,
     collision: true,
@@ -239,10 +245,11 @@ const SPRING_ARM: ComponentDescriptor = {
     hysteresis: 0.1,
     positionLag: 0.08,
     rotationLag: 0.05,
+    collisionInLag: 0.04,
     collisionOutLag: 0.25,
     pitchMin: -60,
     pitchMax: 60,
-    lookAt: 'pivot',
+    lookAt: 'shoulder',
   },
 }
 

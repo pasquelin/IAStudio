@@ -8,6 +8,7 @@ import type {
 } from '@shared/domain/scene'
 import { DEFAULT_CAMERA, DEFAULT_PATH, type FigureKind } from '@shared/domain/scene'
 import type { CsgGraph } from '@shared/domain/csg'
+import type { JsonValue } from '@shared/domain/component'
 import { COMPONENTS, newComponent } from '@shared/domain/componentRegistry'
 import { aheadOf } from '@game/runtime/playView'
 import { armPivot, armSeat } from '@game/runtime/systems/springArmRig'
@@ -298,17 +299,32 @@ const WALKER_HEIGHT = Number(COMPONENTS.CharacterController.defaults.height)
 const WALKER_RADIUS = Number(COMPONENTS.CharacterController.defaults.radius)
 
 /**
- * Where a resting arm seats its camera, over a body standing at `body` — in the module's own
- * frame, the arm hanging at its origin.
+ * Where a resting arm seats its camera, over a body standing at `body` and turned by `yaw`.
+ *
+ * 🛑 Worked out from the very functions the SYSTEM rides, and exported for that reason: a template
+ * that puts its camera anywhere else opens on a shot the first frame of play throws away — the car
+ * circuit stood 11,56 m off, measured 2026-09-03.
  */
-function armRestSeat(body: Vector3): Vector3 {
-  const arm = COMPONENTS.SpringArm.defaults
-  const pivot = armPivot(body, Number(arm.height), Number(arm.shoulder), 0, { x: 0, y: 0, z: 0 })
-  return armSeat(pivot, aheadOf(LEVEL, { x: 0, y: 0, z: 0 }), Number(arm.length), {
+export function armRestSeat(
+  body: Vector3,
+  yaw = 0,
+  arm: Readonly<Record<string, JsonValue>> = COMPONENTS.SpringArm.defaults,
+): Vector3 {
+  const pivot = armPivot(body, Number(arm.height), Number(arm.shoulder), yaw, { x: 0, y: 0, z: 0 })
+  return armSeat(pivot, aheadOf({ yaw, pitch: 0 }, { x: 0, y: 0, z: 0 }), Number(arm.length), {
     x: 0,
     y: 0,
     z: 0,
   })
+}
+
+/** Where that arm's PIVOT stands, which is what the camera it seats is turned towards. */
+export function armRestPivot(
+  body: Vector3,
+  yaw = 0,
+  arm: Readonly<Record<string, JsonValue>> = COMPONENTS.SpringArm.defaults,
+): Vector3 {
+  return armPivot(body, Number(arm.height), Number(arm.shoulder), yaw, { x: 0, y: 0, z: 0 })
 }
 
 /**
@@ -316,15 +332,12 @@ function armRestSeat(body: Vector3): Vector3 {
  * the yaw is measured from that axis — an editor showing a camera with its back to the body it
  * follows says nothing about what the arm does.
  */
-function aimedFrom(from: Vector3, at: Vector3): Vector3 {
+export function aimedFrom(from: Vector3, at: Vector3): Vector3 {
   const dx = at.x - from.x
   const dy = at.y - from.y
   const dz = at.z - from.z
   return { x: Math.atan2(dy, Math.hypot(dx, dz)), y: Math.atan2(dx, dz) + Math.PI, z: 0 }
 }
-
-/** The look a game starts on, which is the one an editor has to show. */
-const LEVEL = { yaw: 0, pitch: 0 }
 
 /**
  * A figure laid down as real nodes: one group, and a painted box per part. The one place a figure

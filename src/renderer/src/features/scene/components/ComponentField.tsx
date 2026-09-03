@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { ActionField } from '@shared/domain/assistantAction'
 import type { JsonValue } from '@shared/domain/component'
 import { NumberField } from '@/components/NumberField'
+import { ResetButton } from '@/components/ResetButton'
 import { SelectField } from '@/components/SelectField'
 import { TextField } from '@/components/TextField'
 import { ToggleField } from '@/components/ToggleField'
@@ -18,6 +19,10 @@ export type ComponentFieldProps = {
   onChange: (value: JsonValue) => void
   gesture: GestureProps
   scId: string
+  /** The nodes a `picks: 'node'` field may be pointed at, already named. Empty elsewhere. */
+  named?: readonly string[]
+  /** Puts the field back to what the registry declares. Absent while it already stands there. */
+  onReset?: () => void
 }
 
 /**
@@ -38,6 +43,8 @@ export function ComponentField({
   onChange,
   gesture,
   scId,
+  named,
+  onReset,
 }: ComponentFieldProps) {
   const { t } = useTranslation()
 
@@ -47,6 +54,7 @@ export function ComponentField({
         label={label}
         value={held === true}
         scId={scId}
+        onReset={onReset}
         onChange={value => onChange(value)}
       />
     )
@@ -66,6 +74,9 @@ export function ComponentField({
         // `X` while the document held something else — and the next edit would save that reading.
         unnamedLabel={t('game.values.unknown')}
         scId={scId}
+        // 🛑 Through `actions` and not a prop of its own: every other select of the app would else
+        // grow an inert reset button it never had.
+        actions={<ResetButton onReset={onReset} />}
       />
     )
   }
@@ -79,8 +90,25 @@ export function ComponentField({
         max={field.max}
         step={field.kind === 'integer' ? 1 : undefined}
         scId={scId}
+        onReset={onReset}
         onChange={value => onChange(value)}
         {...gesture}
+      />
+    )
+  }
+
+  // A field that NAMES a node is offered as a list: typing the name of a sibling by hand is a
+  // spelling test, and a misspelling shows as nothing happening at all.
+  if (field.picks === 'node' && named !== undefined) {
+    return (
+      <SelectField
+        label={label}
+        value={typeof held === 'string' && held !== '' ? held : null}
+        options={named.map(one => ({ value: one, label: one }))}
+        onChange={value => onChange(value)}
+        unnamedLabel={t('game.values.unnamedNode')}
+        scId={scId}
+        actions={<ResetButton onReset={onReset} />}
       />
     )
   }
@@ -90,6 +118,7 @@ export function ComponentField({
       label={label}
       value={typeof held === 'string' ? held : ''}
       scId={scId}
+      onReset={onReset}
       onChange={value => onChange(value)}
     />
   )

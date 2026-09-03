@@ -10,6 +10,7 @@ import { PropertySection } from '@/components/PropertySection'
 import { QuietNote } from '@/components/QuietNote'
 import { ToolButton } from '@/components/ToolButton'
 import { attachComponent, detachComponent, setComponentField } from '@/engines/scene/commands'
+import { pickableNodesOf } from '@/engines/scene/playerModule'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { PANEL_GROUP_LABEL_WIDE } from '@/components/styles'
 import { HINT_RIGHT, TIP_BOTTOM, TIP_LEFT } from '@/helpers/tooltip'
@@ -19,6 +20,8 @@ import { ScriptProps } from './ScriptProps'
 
 export type ComponentsSectionProps = {
   node: SceneNode
+  /** The whole scene: a field that NAMES a node is offered the ones it may actually resolve to. */
+  nodes: readonly SceneNode[]
   edit: SceneEdit
 }
 
@@ -29,9 +32,13 @@ export type ComponentsSectionProps = {
  * a `Health` is. A component added to the registry appears in this panel without a line being
  * written, which is invariant 5 applied to gameplay.
  */
-export function ComponentsSection({ node, edit }: ComponentsSectionProps) {
+export function ComponentsSection({ node, nodes, edit }: ComponentsSectionProps) {
   const { t } = useTranslation()
   const held = node.components ?? []
+  // Its own name left out: an arm filming itself, or hanging behind itself, frames nothing.
+  const named = pickableNodesOf(nodes, node.id)
+    .filter(one => one.id !== node.id)
+    .map(one => one.name)
   const available = COMPONENT_TYPES.filter(type => !held.some(one => one.type === type))
 
   const add = (type: ComponentType): void => edit.run(attachComponent(node.id, type))
@@ -99,19 +106,31 @@ export function ComponentsSection({ node, edit }: ComponentsSectionProps) {
             </span>
           </PropertyLine>
 
-          {descriptorOf(component.type).fields.map(field => (
-            <ComponentField
-              key={field.key}
-              value={component[field.key]}
-              label={t(field.labelKey)}
-              field={field}
-              gesture={edit.gesture}
-              scId={`components.${component.type}.${field.key}`}
-              onChange={value =>
-                edit.run(setComponentField(node.id, component.type, field.key, value))
-              }
-            />
-          ))}
+          {descriptorOf(component.type).fields.map(field => {
+            const fallback = descriptorOf(component.type).defaults[field.key]
+            return (
+              <ComponentField
+                key={field.key}
+                value={component[field.key]}
+                label={t(field.labelKey)}
+                field={field}
+                named={named}
+                gesture={edit.gesture}
+                scId={`components.${component.type}.${field.key}`}
+                // 🛑 Absent while the field already stands at its default, which is what draws the
+                // button inert rather than acting on nothing — see `FieldReset`.
+                onReset={
+                  fallback === undefined || component[field.key] === fallback
+                    ? undefined
+                    : () =>
+                        edit.run(setComponentField(node.id, component.type, field.key, fallback))
+                }
+                onChange={value =>
+                  edit.run(setComponentField(node.id, component.type, field.key, value))
+                }
+              />
+            )
+          })}
 
           {component.type === 'Script' && (
             <ScriptProps
