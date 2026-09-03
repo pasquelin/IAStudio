@@ -11,7 +11,7 @@ import type { BodyPart } from './humanoid'
 import type { Us } from './time'
 import type { GeometryDescriptor } from './geometry'
 import { EMPTY_STACK, type CameraPost, type PostStack } from './postProcessing'
-import type { ReliefExtent, ReliefSculpt } from './relief'
+import type { ReliefSculpt } from './relief'
 import type { Vector3 } from './transform'
 
 /** Re-exported so the fifty-odd files that read a pose from here keep reading it from here. */

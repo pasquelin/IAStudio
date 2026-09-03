@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_RELIEF_EXTENT,
+  worldY,
   RELIEF_CHUNK_TEXELS,
   chunkCountAlong,
   chunkLayout,
@@ -14,6 +14,7 @@ import {
   unpackDeltas,
   withChunkDelta,
 } from './relief'
+import { DEFAULT_RELIEF_ELEVATION, DEFAULT_RELIEF_ORIGIN, DEFAULT_RELIEF_SIZE } from './scene'
 
 describe('relief chunk grain', () => {
   it('is 64 texels, the candidate whose full-chunk fallback is four times lighter', () => {
@@ -84,13 +85,25 @@ describe('relief chunk deltas', () => {
   })
 })
 
+describe('worldY', () => {
+  it('maps sample 0 and 1 onto elevation.min and elevation.max', () => {
+    expect(worldY(0, { min: -8, max: 32 })).toBe(-8)
+    expect(worldY(1, { min: -8, max: 32 })).toBe(32)
+    expect(worldY(0.5, { min: 0, max: 1 })).toBe(0.5)
+  })
+})
+
 describe('raiseReliefDisk', () => {
   const samples = {
     width: 66,
     height: 8,
     values: new Float32Array(66 * 8),
   }
-  const extent = DEFAULT_RELIEF_EXTENT
+  const extent = {
+    origin: DEFAULT_RELIEF_ORIGIN,
+    size: DEFAULT_RELIEF_SIZE,
+    elevation: DEFAULT_RELIEF_ELEVATION,
+  }
   const stepX = extent.size.x / (samples.width - 1)
   const seamX = extent.origin.x + 64 * stepX
 

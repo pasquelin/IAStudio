@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HISTORY_LIMIT, emptyHistory, run, undo } from '../core/history'
-import {
-  DEFAULT_RELIEF_EXTENT,
-  changedChunks,
-  withChunkDelta,
-  type ReliefSculpt,
-} from '@shared/domain/relief'
-import { DEFAULT_WORLD, type ReliefLayer } from '@shared/domain/scene'
+import { changedChunks, withChunkDelta, type ReliefSculpt } from '@shared/domain/relief'
+import { DEFAULT_WORLD, reliefLayer, type ReliefLayer } from '@shared/domain/scene'
 import { sculptRelief } from './reliefCommands'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
@@ -21,14 +16,7 @@ function sceneOf(sculpt?: ReliefLayer['sculpt']): SceneState {
     ...EMPTY_SCENE,
     world: {
       ...DEFAULT_WORLD,
-      layers: [
-        {
-          kind: 'relief',
-          heightmap: { assetId: 'asset_height' },
-          ...DEFAULT_RELIEF_EXTENT,
-          ...(sculpt ? { sculpt } : {}),
-        },
-      ],
+      layers: [reliefLayer({ assetId: 'asset_height' }, sculpt ? { sculpt } : undefined)],
     },
   }
 }

@@ -1,12 +1,7 @@
 import { BufferAttribute, Scene } from 'three'
 import { describe, expect, it } from 'vitest'
-import {
-  DEFAULT_RELIEF_EXTENT,
-  combinedAt,
-  raiseReliefDisk,
-  withChunkDelta,
-} from '@shared/domain/relief'
-import { DEFAULT_WORLD, type ReliefLayer } from '@shared/domain/scene'
+import { combinedAt, raiseReliefDisk, withChunkDelta } from '@shared/domain/relief'
+import { DEFAULT_WORLD, reliefLayer, type ReliefLayer } from '@shared/domain/scene'
 import { createReliefSurface } from './reliefSurface'
 
 const WIDTH = 66
@@ -21,12 +16,7 @@ function samplesOf() {
 }
 
 function layerOf(sculpt?: ReliefLayer['sculpt']): ReliefLayer {
-  return {
-    kind: 'relief',
-    heightmap: { assetId: 'asset_height' },
-    ...DEFAULT_RELIEF_EXTENT,
-    ...(sculpt ? { sculpt } : {}),
-  }
+  return reliefLayer({ assetId: 'asset_height' }, sculpt ? { sculpt } : undefined)
 }
 
 function worldOf(sculpt?: ReliefLayer['sculpt']) {
@@ -81,13 +71,14 @@ describe('relief surface chunks', () => {
     const scene = new Scene()
     const surface = createReliefSurface(scene)
     const samples = samplesOf()
-    const stepX = DEFAULT_RELIEF_EXTENT.size.x / (WIDTH - 1)
-    const seamX = DEFAULT_RELIEF_EXTENT.origin.x + 64 * stepX
+    const layer = layerOf()
+    const stepX = layer.size.x / (WIDTH - 1)
+    const seamX = layer.origin.x + 64 * stepX
     const sculpt = raiseReliefDisk(
       samples,
-      DEFAULT_RELIEF_EXTENT,
+      layer,
       undefined,
-      { x: seamX, z: DEFAULT_RELIEF_EXTENT.origin.z, radius: stepX * 2 },
+      { x: seamX, z: layer.origin.z, radius: stepX * 2 },
       1.5,
     )
     surface.sync(worldOf(sculpt), samples)

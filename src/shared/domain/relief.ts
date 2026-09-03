@@ -59,15 +59,13 @@ export type ReliefSize = { x: number; z: number }
 export type ReliefExtent = {
   origin: ReliefOrigin
   size: ReliefSize
-  elevation: number
+  elevation: { min: number; max: number }
 }
 
-/** Min-corner at the origin of a 100 m patch, height 1:1 with the EXR sample. */
-export const DEFAULT_RELIEF_EXTENT: ReliefExtent = Object.freeze({
-  origin: Object.freeze({ x: -50, z: -50 }),
-  size: Object.freeze({ x: 100, z: 100 }),
-  elevation: 1,
-})
+/** Sample 0 → elevation.min, sample 1 → elevation.max. Identity is `{ min: 0, max: 1 }`. */
+export function worldY(sample: number, elevation: ReliefExtent['elevation']): number {
+  return elevation.min + sample * (elevation.max - elevation.min)
+}
 
 export type ReliefChunkKey = { column: number; row: number }
 
@@ -250,17 +248,6 @@ export function raiseReliefDisk(
   return sculptOfLive(grain, live)
 }
 
-export function readReliefExtent(value: Record<string, unknown>): ReliefExtent {
-  const origin = readXz(value.origin, DEFAULT_RELIEF_EXTENT.origin)
-  const size = readXz(value.size, DEFAULT_RELIEF_EXTENT.size)
-  const elevation = readNumber(value, 'elevation', DEFAULT_RELIEF_EXTENT.elevation)
-  return {
-    origin,
-    size: size.x > 0 && size.z > 0 ? size : DEFAULT_RELIEF_EXTENT.size,
-    elevation: Number.isFinite(elevation) ? elevation : DEFAULT_RELIEF_EXTENT.elevation,
-  }
-}
-
 export function readReliefSculpt(value: unknown): ReliefSculpt | undefined {
   if (!isRecord(value)) return undefined
   const grain = readNumber(value, 'grain', RELIEF_CHUNK_TEXELS)
@@ -277,21 +264,6 @@ function readPackedChunk(value: unknown): readonly PackedReliefChunk[] {
   if (typeof column !== 'number' || typeof row !== 'number') return []
   if (!Number.isInteger(column) || !Number.isInteger(row) || payload === '') return []
   return [{ column, row, payload }]
-}
-
-function readXz(value: unknown, fallback: ReliefOrigin): ReliefOrigin {
-  if (!isRecord(value)) return fallback
-  const x = value.x
-  const z = value.z
-  if (
-    typeof x !== 'number' ||
-    !Number.isFinite(x) ||
-    typeof z !== 'number' ||
-    !Number.isFinite(z)
-  ) {
-    return fallback
-  }
-  return { x, z }
 }
 
 function chunkIndexAt(sample: number, samples: number, grain: number): number {

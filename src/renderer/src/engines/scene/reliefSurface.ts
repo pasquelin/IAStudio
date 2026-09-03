@@ -19,6 +19,7 @@ import {
   chunkCountAlong,
   chunkLayout,
   combinedAt,
+  worldY,
   type ReliefChunkLayout,
   type ReliefExtent,
   type ReliefSculpt,
@@ -129,7 +130,8 @@ function needsRebuild(
     held.extent.origin.z !== extent.origin.z ||
     held.extent.size.x !== extent.size.x ||
     held.extent.size.z !== extent.size.z ||
-    held.extent.elevation !== extent.elevation
+    held.extent.elevation.min !== extent.elevation.min ||
+    held.extent.elevation.max !== extent.elevation.max
   )
 }
 
@@ -275,7 +277,7 @@ function writePositions(
       const sx = layout.sampleX + lx
       const sz = layout.sampleZ + lz
       into[cursor] = extent.origin.x + sx * stepX
-      into[cursor + 1] = combinedAt(samples, sculpt, sx, sz) * extent.elevation
+      into[cursor + 1] = worldY(combinedAt(samples, sculpt, sx, sz), extent.elevation)
       into[cursor + 2] = extent.origin.z + sz * stepZ
       cursor += 3
     }
@@ -322,7 +324,7 @@ function heightAt(
 ): number {
   const x = Math.min(samples.width - 1, Math.max(0, sx))
   const z = Math.min(samples.height - 1, Math.max(0, sz))
-  return combinedAt(samples, sculpt, x, z) * extent.elevation
+  return worldY(combinedAt(samples, sculpt, x, z), extent.elevation)
 }
 
 function writeUv(uv: BufferAttribute, layout: ReliefChunkLayout, samples: HeightmapSamples): void {
