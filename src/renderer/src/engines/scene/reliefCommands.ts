@@ -1,9 +1,14 @@
 /**
  * Terrain and edit-layer history. Sculpt swaps packed deltas of the touched chunks, never a
- * copy of the heightfield. Shares the scene stack — HISTORY_LIMIT = 100 will drop older scene
- * edits.
+ * copy of the heightfield. Shares the scene stack — HISTORY_LIMIT = 100.
  */
-import { chunkPayload, withPackedChunks, type PackedReliefChunk } from '@shared/domain/relief'
+import { inOrder } from '@shared/domain/order'
+import {
+  chunkPayload,
+  withPackedChunks,
+  type PackedReliefChunk,
+  type ReliefSculpt,
+} from '@shared/domain/relief'
 import {
   reliefLayer,
   terrainEditLayer,
@@ -271,7 +276,7 @@ function withEditSculpt(
   state: SceneState,
   terrainId: string,
   editId: string,
-  sculpt: ReturnType<typeof withPackedChunks>,
+  sculpt: ReliefSculpt,
 ): SceneState {
   const layers = state.world.layers.map(layer => {
     if (layer.kind !== 'relief' || layer.id !== terrainId) return layer
@@ -293,16 +298,6 @@ function withEditSculpt(
     }
   })
   return { ...state, world: { ...state.world, layers } }
-}
-
-function inOrder<T extends { id: string }>(items: readonly T[], order: readonly string[]): T[] {
-  const byId = new Map(items.map(one => [one.id, one]))
-  const moved = order.flatMap(id => {
-    const found = byId.get(id)
-    if (found) byId.delete(id)
-    return found ? [found] : []
-  })
-  return [...moved, ...byId.values()]
 }
 
 function idsOf(items: readonly { id: string }[]): string[] {
