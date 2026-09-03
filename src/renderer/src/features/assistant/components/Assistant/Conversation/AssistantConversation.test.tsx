@@ -148,6 +148,36 @@ describe('the assistant conversation', () => {
     expect(screen.getByText(/Bateaux/)).toBeInTheDocument()
   })
 
+  /**
+   * 🛑 Read where the eye already is. Down by the field, it stood a screen below the newest
+   * message of a short thread, and a reader watching that line never saw the studio waiting.
+   */
+  it('stands the confirmation last in the thread, right under the newest message', () => {
+    useAssistant.setState({
+      turns: [
+        {
+          id: 1,
+          said: 'renomme le projet test1 en test2',
+          answered: 'Le projet « test 1 » va être renommé.',
+          steps: [],
+          asks: [],
+          lost: false,
+        },
+      ],
+      asked: {
+        id: 1,
+        request: { action: 'project.create', input: { name: 'test 2' }, commitment: 'studio' },
+        answer: vi.fn(),
+      },
+    })
+    render(<AssistantConversation />)
+
+    const card = screen.getByRole('button', { name: 'Autoriser' }).closest('li')
+    expect(card?.parentElement?.tagName).toBe('OL')
+    expect(card?.nextElementSibling).toBeNull()
+    expect(card?.previousElementSibling?.textContent).toContain('renomme le projet test1 en test2')
+  })
+
   it('quotes what an action will cost before asking, and answers with the buttons', async () => {
     const answered = vi.fn()
     useAssistant.setState({

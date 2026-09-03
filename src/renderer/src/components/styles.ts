@@ -318,6 +318,13 @@ export const FILLED_ROW_HEIGHT = 44
 export const MEDIA_ROW_HEIGHT = 48
 
 /**
+ * The room a panel keeps between its content and its edges. One value for the studio, so prose,
+ * forms and cards all sit on the same line. A list row is the exception: it runs edge to edge for
+ * its fill, and takes `ROW_LINE`'s half-step instead.
+ */
+export const PANEL_INSET = 'p-2'
+
+/**
  * A panel's scrolling body. The right padding is the point: on macOS the scrollbar is drawn
  * OVER the content rather than beside it, and with no room reserved it lands on the last column
  * of every row — which in an inspector is the value one is trying to read.
