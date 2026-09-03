@@ -80,6 +80,8 @@ export type ViewportEngineOptions = {
    * `onPane` has no symmetrical call after a pane is drawn.
    */
   onInset?: (camera: ViewportCamera) => () => void
+  /** Narrows a requested shadow pass, then restores the scene for off-screen renders. */
+  onShadowFrame?: (refreshAll: boolean) => () => void
   /**
    * Filmic tone mapping. Off by default because it changes how every existing colour lands,
    * and the scene editor was built and reviewed without it; a viewport that judges an HDR
@@ -860,6 +862,7 @@ export class ViewportEngine {
     // rather than showing a scene with no shadows until something else moves.
     renderer.shadowMap.autoUpdate = false
     this.shadowsStale = true
+    this.allShadowsStale = true
     // three.js clears the counters at the top of every `render`, and the overlay pass calls
     // `render` a second time — left automatic, a frame would report the trihedron alone.
     renderer.info.autoReset = false
@@ -1345,10 +1348,18 @@ export class ViewportEngine {
 
   /** Whether anything but the camera has moved since the last frame drew its shadow maps. */
   private shadowsStale = true
+  private allShadowsStale = true
 
   readonly requestRender = (): void => {
     // Stale by DEFAULT, and only ever cleared by a frame that drew: whoever forgets to say what
     // moved pays a shadow pass, and whoever forgets the other way shows a shadow of what was.
+    this.shadowsStale = true
+    this.allShadowsStale = true
+    this.schedule()
+  }
+
+  /** Schedules a depth pass that `onShadowFrame` may limit to changed lights. */
+  readonly requestShadowRender = (): void => {
     this.shadowsStale = true
     this.schedule()
   }
@@ -1433,11 +1444,14 @@ export class ViewportEngine {
    * the same scene, and a consumer GPU drops the oldest context when it runs out. The scissor is
    * what keeps a pane from clearing the three beside it.
    */
-  private renderPanes(renderer: WebGLRenderer): void {
+  private renderPanes(renderer: WebGLRenderer, refreshAllShadows: () => void): void {
     const ratio = renderer.getPixelRatio()
 
     if (this.extras.length === 0) {
-      if (this.options.onPane?.(0, this.camera) === true) renderer.shadowMap.needsUpdate = true
+      if (this.options.onPane?.(0, this.camera) === true) {
+        refreshAllShadows()
+        renderer.shadowMap.needsUpdate = true
+      }
       this.drawScene({
         scene: this.scene,
         camera: this.camera,
@@ -1469,7 +1483,10 @@ export class ViewportEngine {
         renderer.setScissor(x, y, width, paneHeight)
         // A pane that put the scene's lights out draws different shadows from the one beside
         // it: what THIS pane wears is what its maps have to be drawn from.
-        if (this.options.onPane?.(index, camera) === true) renderer.shadowMap.needsUpdate = true
+        if (this.options.onPane?.(index, camera) === true) {
+          refreshAllShadows()
+          renderer.shadowMap.needsUpdate = true
+        }
         this.drawScene({
           scene: this.scene,
           camera,
@@ -1768,14 +1785,27 @@ export class ViewportEngine {
     // throw the first one away is the most expensive thing a frame can do.
     // Read by the first pass of the frame alone: three.js turns it back off once it has drawn
     // the maps, and the preview pass behind it reuses what this one left.
-    renderer.shadowMap.needsUpdate = this.shadowsStale
+    const shadowsStale = this.shadowsStale
+    renderer.shadowMap.needsUpdate = shadowsStale
     this.shadowsStale = false
 
+    let restoreShadows = shadowsStale
+      ? this.options.onShadowFrame?.(this.allShadowsStale)
+      : undefined
+    this.allShadowsStale = false
+    const refreshAllShadows = (): void => {
+      restoreShadows?.()
+      restoreShadows = undefined
+    }
     const panesDrawn = !this.insetCoversAll()
-    if (panesDrawn) this.renderPanes(renderer)
-    // After the panes and before the overlay: the preview covers the view it sits on, and the
-    // trihedron stays on top of both.
-    this.renderInset(renderer, panesDrawn)
+    try {
+      if (panesDrawn) this.renderPanes(renderer, refreshAllShadows)
+      // After the panes and before the overlay: the preview covers the view it sits on, and the
+      // trihedron stays on top of both.
+      this.renderInset(renderer, panesDrawn)
+    } finally {
+      refreshAllShadows()
+    }
 
     const overlay = this.options.onOverlay
     if (overlay) {

@@ -102,6 +102,24 @@ export function resizeShadowMap(object: Object3D, size: number): void {
   object.shadow.map = null
 }
 
+/** Leaves unchanged lights out of one viewport shadow pass, then restores export behaviour. */
+export function limitShadowUpdates(
+  lights: Iterable<Object3D>,
+  refreshAll: boolean,
+  changed: ReadonlySet<Object3D>,
+): () => void {
+  const held: { shadow: LightShadow; autoUpdate: boolean }[] = []
+  for (const light of lights) {
+    if (!castsShadow(light)) continue
+    held.push({ shadow: light.shadow, autoUpdate: light.shadow.autoUpdate })
+    light.shadow.autoUpdate = refreshAll || changed.has(light)
+  }
+
+  return () => {
+    for (const { shadow, autoUpdate } of held) shadow.autoUpdate = autoUpdate
+  }
+}
+
 /**
  * How far a directional light's shadow reaches. Its frustum is a box, ten units wide by default
  * — a forty-metre set would have half of it throwing nothing, with no hint as to why. The extent

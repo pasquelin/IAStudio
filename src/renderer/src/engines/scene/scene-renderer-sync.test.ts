@@ -275,6 +275,50 @@ describe('a scene told what changed', () => {
    * engine answers about itself; where the side views land is the viewport's own suite.
    */
   describe('four views', () => {
+    it('reuses shadow maps when a light changes only colour and intensity', () => {
+      const target = { x: 0, y: 0, z: 0 }
+      const original = lightNodeFixture('light-1', {
+        kind: 'directional',
+        color: '#ffffff',
+        intensity: 1,
+        target,
+      })
+      const renderer = rendererOf(original)
+      const redraw = vi.spyOn(renderer['viewport'], 'requestShadowRender')
+      const refresh = vi.spyOn(renderer['viewport'], 'requestCameraRender')
+
+      applied(
+        renderer,
+        lightNodeFixture('light-1', {
+          kind: 'directional',
+          color: '#ff0000',
+          intensity: 0.5,
+          target,
+        }),
+      )
+
+      expect(redraw).not.toHaveBeenCalled()
+      expect(refresh).toHaveBeenCalled()
+    })
+
+    it('requests a shadow pass when a light projection changes', () => {
+      const original = directionalLight('light-1')
+      const renderer = rendererOf(original)
+      const redraw = vi.spyOn(renderer['viewport'], 'requestShadowRender')
+
+      applied(
+        renderer,
+        lightNodeFixture('light-1', {
+          kind: 'directional',
+          color: '#ffffff',
+          intensity: 1,
+          target: { x: 2, y: 0, z: 0 },
+        }),
+      )
+
+      expect(redraw).toHaveBeenCalled()
+    })
+
     it('reuses shadow maps when only the selection changes', () => {
       const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
       const nodes = [meshNode('box-1')]

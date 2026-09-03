@@ -1232,6 +1232,47 @@ describe('a viewport', () => {
   describe('and the shadow maps it reuses', () => {
     const shadowed = (): ViewportEngine => atRest({ shadows: true })
 
+    it('restores selectively held lights after the viewport frame', () => {
+      const restore = vi.fn()
+      const prepare = vi.fn(() => restore)
+      const engine = atRest({ shadows: true, onShadowFrame: prepare })
+      drawFrames()
+      prepare.mockClear()
+      restore.mockClear()
+
+      engine.requestRender()
+      drawFrames()
+
+      expect(prepare).toHaveBeenCalledOnce()
+      expect(prepare).toHaveBeenCalledWith(true)
+      expect(restore).toHaveBeenCalledOnce()
+    })
+
+    it('marks a selective shadow frame without turning it into a full refresh', () => {
+      const prepare = vi.fn(() => vi.fn())
+      const engine = atRest({ shadows: true, onShadowFrame: prepare })
+      drawFrames()
+      prepare.mockClear()
+
+      engine.requestShadowRender()
+      drawFrames()
+
+      expect(prepare).toHaveBeenCalledWith(false)
+    })
+
+    it('keeps a full refresh when it joins an already scheduled selective frame', () => {
+      const prepare = vi.fn(() => vi.fn())
+      const engine = atRest({ shadows: true, onShadowFrame: prepare })
+      drawFrames()
+      prepare.mockClear()
+
+      engine.requestShadowRender()
+      engine.requestRender()
+      drawFrames()
+
+      expect(prepare).toHaveBeenCalledWith(true)
+    })
+
     it('draws them again on a frame anything but the camera asked for', () => {
       const engine = shadowed()
       shadowDraws.length = 0
