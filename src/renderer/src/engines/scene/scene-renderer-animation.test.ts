@@ -441,6 +441,29 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.dispose()
   })
 
+  it('reuses unchanged shadow maps while a camera travels on a rail', () => {
+    const engine = staged()
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+    const refresh = vi.spyOn(engine['viewport'], 'requestCameraRender')
+
+    engine.setPlayhead(SECOND)
+
+    expect(redraw).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
+  it('refreshes shadow maps when a camera shot carries a shadow caster', () => {
+    const scene = stagedScene()
+    const engine = stagedOn({ ...scene, nodes: [...scene.nodes, meshNode('carried', 'cam')] })
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+    engine.setPlayhead(SECOND)
+
+    expect(redraw).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
   /**
    * Placing the head straight there must give the very same STATE as walking to it — where the
    * camera stands, where it aims and what its lens reads, the three at once. That is the whole
@@ -759,6 +782,105 @@ describe('SceneRenderer and a camera on a rail', () => {
     engine.setPlayhead(3 * SECOND)
 
     expect(objectOf(engine, 'cam')?.position.x).toBe(0)
+    engine.dispose()
+  })
+})
+
+describe('SceneRenderer shadow maps during playback', () => {
+  it('reuses unchanged shadow maps when only a camera moves', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const track = animationTrack(
+      'camera-position',
+      'position',
+      [
+        { time: 0, value: { x: 0, y: 0, z: 0 } },
+        { time: SECOND, value: { x: 1, y: 0, z: 0 } },
+      ],
+      { target: { nodeId: 'camera-1', property: 'position' } },
+    )
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('camera-1'), meshNode('cube-1')],
+      animation: { ...EMPTY_TIMELINE, tracks: [track] },
+    })
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+    const refresh = vi.spyOn(engine['viewport'], 'requestCameraRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
+  it('refreshes shadow maps when an animated mesh moves', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const track = animationTrack(
+      'mesh-position',
+      'position',
+      [
+        { time: 0, value: { x: 0, y: 0, z: 0 } },
+        { time: SECOND, value: { x: 1, y: 0, z: 0 } },
+      ],
+      { target: { nodeId: 'cube-1', property: 'position' } },
+    )
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('camera-1'), meshNode('cube-1')],
+      animation: { ...EMPTY_TIMELINE, tracks: [track] },
+    })
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
+  it('refreshes shadow maps when a camera carries a shadow caster', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const track = animationTrack(
+      'camera-position',
+      'position',
+      [
+        { time: 0, value: { x: 0, y: 0, z: 0 } },
+        { time: SECOND, value: { x: 1, y: 0, z: 0 } },
+      ],
+      { target: { nodeId: 'camera-1', property: 'position' } },
+    )
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('camera-1'), meshNode('cube-1', 'camera-1')],
+      animation: { ...EMPTY_TIMELINE, tracks: [track] },
+    })
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
+  it('refreshes shadow maps while a model clip can deform a caster', async () => {
+    const loaded = animatedModel([walk()])
+    const onClips = vi.fn()
+    const engine = new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      onClips,
+      loadModel: () => Promise.resolve(loaded),
+      bvh,
+    })
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes: [modelNode(walkBlock())],
+    })
+    await vi.waitFor(() => expect(onClips).toHaveBeenCalled())
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).toHaveBeenCalledOnce()
     engine.dispose()
   })
 })
