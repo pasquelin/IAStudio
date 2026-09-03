@@ -7,11 +7,13 @@ import { createBundledAssets } from '@game/host/bundledAssets'
 import { createExportHost } from '@game/host/exportHost'
 import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import { loadJoltPhysics } from '@game/host/joltPhysics'
+import type { AssetPort } from '@game/ports/assetPort'
 import type { EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import { placementsOf } from '@game/runtime/placements'
 import { sceneFromGltf } from '@/engines/scene/gltfDocument'
+import { heightmapFromExr } from '@/engines/scene/heightmap'
 import { animationFrames } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
 import { veilLift } from './veilLift'
@@ -72,7 +74,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     ports,
     { modules },
     1,
-    await heightmapsOf(opening.world.layers),
+    await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id)),
   )
   let loop = createGameLoop(world)
   let warmed = false
@@ -117,7 +119,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         ports,
         { modules },
         1,
-        await heightmapsOf(found.world.layers),
+        await heightmapsOf(found.world.layers, id => heightmapFromBundle(assets, id)),
       )
       loop = createGameLoop(world)
       // The first step of the arrived scene derives every collider — not a gap to catch up on.
@@ -201,4 +203,10 @@ async function answering(file: string): Promise<Response> {
   const response = await fetch(file)
   if (!response.ok) throw new Error(`${file}: ${response.status}`)
   return response
+}
+
+async function heightmapFromBundle(assets: AssetPort, assetId: string) {
+  const url = assets.urlOf({ kind: 'asset', id: assetId })
+  if (!url) throw new Error(`no file for ${assetId}`)
+  return heightmapFromExr(await (await answering(url)).arrayBuffer())
 }
