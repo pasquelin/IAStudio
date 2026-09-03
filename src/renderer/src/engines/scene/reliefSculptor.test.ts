@@ -70,12 +70,13 @@ function fakeWorker() {
 
 function answer(fake: ReturnType<typeof fakeWorker>, request: ReliefSculptRequest): void {
   const after = applyReliefSculpt(
-    { width: request.width, height: request.height, values: new Float32Array(0) },
+    { width: request.width, height: request.height, values: request.values ?? new Float32Array(0) },
     request.extent,
     request.sculpt,
     request.operation,
     request.grain,
     request.rows,
+    request.overlays,
   )
   fake.reply({
     id: request.id,
@@ -184,6 +185,20 @@ describe('createReliefSculptor', () => {
 
     expect(edits2).toBeNull()
     expect(sculptOf(state)).toBeUndefined()
+  })
+
+  it('sends a smooth stroke as one worker job, with the heightfield the domain reads', async () => {
+    const fake = fakeWorker()
+    const sculptor = createReliefSculptor(() => fake.worker)
+    const pending = sculptor.raiseDisk({ ...diskAt(1, 0.1), kind: 'smooth' })
+    const request = fake.posted[0]
+    if (!request) throw new Error('smooth stroke was not sent')
+    answer(fake, request)
+
+    expect(request.operation.kind).toBe('smooth')
+    expect(request.values).toBe(samples.values)
+    expect(request.rows).toBeUndefined()
+    expect(await pending).not.toBeNull()
   })
 })
 

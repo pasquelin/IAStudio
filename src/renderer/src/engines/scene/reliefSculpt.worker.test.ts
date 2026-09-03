@@ -81,4 +81,30 @@ describe('the relief sculpt worker', () => {
     expect(message.chunks.every(chunk => typeof chunk.payload === 'string')).toBe(true)
     expect(posted[0]?.[1]).toBeUndefined()
   })
+
+  it('flattens from the values on the request, matching applyReliefSculpt on this thread', () => {
+    const peaked = {
+      width: samples.width,
+      height: samples.height,
+      values: Float32Array.from({ length: samples.width * samples.height }, (_, at) =>
+        at === 64 ? 1 : 0,
+      ),
+    }
+    const data: ReliefSculptRequest = {
+      id: 6,
+      width: peaked.width,
+      height: peaked.height,
+      extent,
+      grain: RELIEF_CHUNK_TEXELS,
+      sculpt: undefined,
+      operation: { kind: 'flatten', disk, amount: 1, target: 0.4 },
+      values: peaked.values,
+    }
+    self.dispatchEvent(new MessageEvent('message', { data }))
+
+    const message = posted[0]?.[0] as ReliefSculptResponse
+    if (!message || !message.ok) throw new Error('worker did not answer')
+    const direct = applyReliefSculpt(peaked, extent, undefined, data.operation)
+    expect(packedOf(message).chunks).toEqual(changedChunks(undefined, direct))
+  })
 })

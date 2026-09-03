@@ -6,6 +6,7 @@ import type {
   PackedReliefChunk,
   ReliefExtent,
   ReliefChunkRows,
+  ReliefOverlay,
   ReliefSculpt,
   ReliefSculptOperation,
 } from '@shared/domain/relief'
@@ -19,6 +20,10 @@ export type ReliefSculptRequest = {
   sculpt: ReliefSculpt | undefined
   operation: ReliefSculptOperation
   rows?: ReliefChunkRows
+  /** Base heightfield. raiseDisk ignores it; smooth and flatten read combined height. */
+  values?: Float32Array
+  /** Enabled overlays other than the armed sculpt, so combined height sees them. */
+  overlays?: readonly ReliefOverlay[]
 }
 
 /**

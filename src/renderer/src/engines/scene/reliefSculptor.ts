@@ -3,7 +3,9 @@ import {
   withPackedChunks,
   type PackedReliefChunk,
   type ReliefExtent,
+  type ReliefOverlay,
   type ReliefSculpt,
+  type ReliefSculptOperation,
 } from '@shared/domain/relief'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { createWorkerSession } from '../core/workerSession'
@@ -19,6 +21,9 @@ export type ReliefDiskStroke = {
   disk: { x: number; z: number; radius: number }
   amount: number
   falloff?: number
+  kind?: ReliefSculptOperation['kind']
+  target?: number
+  overlays?: readonly ReliefOverlay[]
 }
 
 export type ReliefSculptor = {
@@ -137,13 +142,11 @@ async function sculptResponses(
         extent: job.extent,
         grain: job.grain,
         sculpt: ranges.length === 1 ? before : slicedSculpt(before, rows),
-        operation: {
-          kind: 'raiseDisk',
-          disk: job.disk,
-          amount: job.amount,
-          falloff: job.falloff ?? 0,
-        },
+        operation: operationOf(job),
         rows: ranges.length === 1 ? undefined : rows,
+        ...(readsCombined(job.kind)
+          ? { values: job.samples.values, overlays: job.overlays }
+          : {}),
       })
     }),
   )
@@ -158,6 +161,27 @@ function slicedSculpt(
   }
 }
 
+function operationOf(stroke: ReliefDiskStroke): ReliefSculptOperation {
+  const falloff = stroke.falloff ?? 0
+  if (stroke.kind === 'smooth') {
+    return { kind: 'smooth', disk: stroke.disk, amount: stroke.amount, falloff }
+  }
+  if (stroke.kind === 'flatten') {
+    return {
+      kind: 'flatten',
+      disk: stroke.disk,
+      amount: stroke.amount,
+      falloff,
+      target: stroke.target ?? 0,
+    }
+  }
+  return { kind: 'raiseDisk', disk: stroke.disk, amount: stroke.amount, falloff }
+}
+
+function readsCombined(kind: ReliefSculptOperation['kind'] | undefined): boolean {
+  return kind === 'smooth' || kind === 'flatten'
+}
+
 function rowRanges(
   stroke: ReliefDiskStroke,
   maximumWorkers: number,
@@ -168,6 +192,8 @@ function rowRanges(
     stroke.disk,
     stroke.grain,
   )
+  // Smooth reads a 1-ring; splitting by rows would drop the neighbour on the far side of the cut.
+  if (readsCombined(stroke.kind)) return [{ from, to }]
   const workers = Math.min(
     maximumWorkers,
     Math.max(1, Math.ceil((to - from) / CHUNK_ROWS_PER_WORKER)),
