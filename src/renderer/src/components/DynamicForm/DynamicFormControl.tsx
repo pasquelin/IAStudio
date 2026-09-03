@@ -50,7 +50,7 @@ export function DynamicFormControl({
       // scrollbar, which four rows grow as soon as a prompt runs long. `overflow-hidden` is what
       // makes a div resizable at all, and it keeps the text inside the frame's corners.
       return (
-        <div className={cn(FIELD, 'flex h-auto resize-y flex-col overflow-hidden p-0')}>
+        <div className={cn(FIELD, 'focus-frame flex h-auto resize-y flex-col overflow-hidden p-0')}>
           <textarea
             id={id}
             data-sc={handle}
