@@ -36,7 +36,7 @@ import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
 import { defaultSettings, type AuthState } from '@shared/domain/settings'
 import { log } from './log'
-import { textAt, TRANSLATIONS, type Language } from '@shared/i18n'
+import { TRANSLATIONS, type Language } from '@shared/i18n'
 import { effectiveLanguage } from '@shared/i18n/languages'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
@@ -87,12 +87,12 @@ import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
 import { createSession, type DictationSession } from './dictation/session'
 import { STT_MODEL } from '@shared/domain/dictation'
-import { chatModelOf, CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import { chatModelOf, CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { spacesWithNoModel, SPACE_ROLES } from './ai/spacesWithNoModel'
 import { createAiManager, type AiManager } from './ai/manager'
-import { catalogueWith, modelWith } from './ai/catalogue'
+import { modelWith } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
 import { electronLlamaPort } from './ai/electronLlamaPort'
 import { llamaLocalRuntime } from './ai/llamaRuntime'
@@ -205,37 +205,24 @@ import { createOwnerScope, type OwnerScope } from './provider/ownerScope'
 import { accountFingerprint } from './settings/accounts'
 import { createCloudBackend, type CloudBackend } from './assets/cloudBackend'
 import { isRecord } from '@shared/guards'
-import {
-  clientFor,
-  createClientProvider,
-  recordFailuresTo,
-  type ClientProvider,
-} from './provider/client'
+import { clientFor, recordFailuresTo, type ClientProvider } from './provider/client'
 import { costEstimatorOf, type CostEstimator } from './provider/cost'
-import { createUsageReader, type UsageReader } from './provider/usage'
+import type { UsageReader } from './provider/usage'
 import { createJobStore } from './provider/jobStore'
-import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
-import type { ModelDescriptor } from '@shared/domain/model'
-import {
-  isTripoModelId,
-  tripoDescriptorOf,
-  TRIPO_CATALOGUE,
-  TRIPO_CLOUD,
-} from '@shared/domain/tripo'
-import { createCredentialsWatch } from './provider/credentialsWatch'
-import { createModelRegistry, type ModelRegistry } from './provider/modelRegistry'
-import { createPlanReader, teamsOf, type PlanReader } from './provider/plan'
-import { createCreditsReader, type CreditsReader } from './provider/credits'
+import { isTripoModelId, TRIPO_CLOUD } from '@shared/domain/tripo'
+import type { ModelRegistry } from './provider/modelRegistry'
+import type { PlanReader } from './provider/plan'
+import type { CreditsReader } from './provider/credits'
 import { createTripoApi, isRetryableTripo, tripoRetryAfterMs } from './provider/tripoApi'
 import { createTripoRunner, tripoLaneOf } from './provider/tripoRunner'
-import { createAssistQueue } from './provider/assistQueue'
 import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
 import { promptAssistApiOf } from './provider/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu, noteNavigationPreset, noteProjectOpen, noteRecent } from './menu'
-import { setWindowLanguage, windowLanguage } from './window/language'
+import { setWindowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
+import { ProviderServices } from './serviceProvider'
 
 /**
  * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
@@ -243,8 +230,6 @@ import { applyTheme } from './window/theme'
  * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
  * hundred a minute the API allows is `rateLimiter.ts`'s business.
  */
-const USAGE_CONCURRENCY = 4
-
 /**
  * How long rows landing in the catalogue are gathered before the windows are told. Shorter than
  * the shelf's own 200 ms trailing debounce, so a burst still reads once — this only stops fifty
@@ -617,164 +602,23 @@ const afterDelay = (run: () => void, delayMs: number): (() => void) => {
  * refuses before then. The settings are built before it and handed in — see `createSettings`.
  */
 export function createServices(settings: SettingsStore): Services {
-  // Read off the one copy rather than derived a second time: the file picker below is a native
-  // surface too, and a second derivation is what let the menu and the dialogs drift apart.
-  const language = (): Language => windowLanguage()
-
-  // Every cache the API fills belongs to one account. They subscribe where they are built, so
-  // that a cache added later cannot be left out of a purge list nobody thinks to reread.
-  const credentials = createCredentialsWatch()
-
-  // Above the three concurrency bounds the studio already has, none of which decides a rate.
-  // `performance.now` and not `Date.now`: a laptop waking up steps the wall clock backwards, and
-  // a window holding instants from the future would refuse every call until it caught up.
-  const limiters = createRateLimiters({
-    now: () => performance.now(),
-    delay,
-    onSaturated: () => log.info('provider', 'rate limit reached, requests are queueing'),
-  })
-
-  // One transport for every client: the one in force, the one a resumed job needs, and the one
-  // the usage reader builds per key. Two spellings of it would be two behaviours the day a
-  // header is added to one of them.
-  const transport = limitedTransport(limiters, (input, init) => fetch(input, init))
-
-  const client = createClientProvider({
-    resolve: () => settings.readCredentials(),
-    watch: credentials.watch,
+  const provider = new ProviderServices(settings, delay, () =>
+    log.info('provider', 'rate limit reached, requests are queueing'),
+  )
+  const {
+    language,
+    credentials,
     transport,
-  })
-  /**
-   * The merged catalogue, rebuilt only when the supplied list itself moves.
-   *
-   * The registry memoises on the ARRAY it is handed, so a fresh one per call — which a merge is —
-   * defeated it, and the panel recomposed every summary on each keystroke of its search field.
-   */
-  let merged: { of: string; all: readonly LocalModel[] } | null = null
-
-  /** Stable, so an empty answer hands the merge below the same identity every time. */
-  const NOTHING_DISCOVERED: readonly LocalModel[] = []
-
-  /**
-   * What the MANAGER knows and the registry asks for — built after it, so the answers arrive
-   * through a box the registry keeps for the life of the process.
-   *
-   * 🛑 ONE box for both, written in ONE place: two boxes filled at two sites meant one could be
-   * forgotten, and one WAS — the discovered tags never reached the registry, so a model chosen in
-   * the settings had its id asked of Scenario, which answers 404. Nothing reddened; the `satisfies`
-   * at the filling site is what makes a forgotten half fail to compile.
-   */
-  const fromManager: {
-    installedIds: () => ReadonlySet<string>
-    discovered: () => readonly LocalModel[]
-  } = {
-    installedIds: () => new Set<string>(),
-    // "Not here yet", which is the honest answer before the manager has composed once.
-    discovered: () => NOTHING_DISCOVERED,
-  }
-
-  const mergedCatalogue = (): readonly LocalModel[] => {
-    const own = settings.read().ai.ownModels
-    const found = fromManager.discovered()
-    // 🛑 Keyed by the IDS and not by the array: `settings.read()` re-parses, and zod 4 hands back
-    // a fresh array every time — measured — so an identity check never held and the merge was
-    // rebuilt on every keystroke of the panel's search field, which is what it was written to stop.
-    // The discovered ids join the key: a tag that appears must reach the picker, and one deleted
-    // outside must leave it.
-    const key = [...own, ...found].map(one => one.id).join('\u0000')
-    if (merged?.of !== key) merged = { of: key, all: catalogueWith(own, found) }
-
-    return merged.all
-  }
-
-  const holdsTripo = (): boolean => settings.readCredentialsFor(TRIPO_CLOUD) !== null
-
-  /**
-   * Where a generation hands its file over, made once. Both producers write here — the engine on
-   * this machine, and the download of a cloud whose result URLs expire.
-   */
-  let generationFolderMade: Promise<string> | null = null
-
-  const generationFolder = async (): Promise<string> => {
-    const folder = join(app.getPath('temp'), 'ia-studio-generations')
-    generationFolderMade ??= ensureFolder(folder).then(() => folder)
-    return await generationFolderMade
-  }
-
-  /**
-   * Tripo's whole catalogue, described from DATA — their API publishes no listing. Built once
-   * per language: 50 entries and 303 knobs, counted 2026-08-31, and the registry asks on every
-   * search.
-   */
-  let tripoCatalogue: { language: Language; models: ModelDescriptor[] } | null = null
-
-  const describedTripo = (): readonly ModelDescriptor[] => {
-    const spoken = language()
-    if (tripoCatalogue?.language === spoken) return tripoCatalogue.models
-
-    const said = (key: string): string => textAt(TRANSLATIONS[spoken], key)
-    const models = TRIPO_CATALOGUE.map(entry => tripoDescriptorOf(entry, said))
-
-    tripoCatalogue = { language: spoken, models }
-    return models
-  }
-
-  /** What the picker is OFFERED, which is nothing while no key answers for it. */
-  const tripoModels = (): readonly ModelDescriptor[] => (holdsTripo() ? describedTripo() : [])
-
-  const models = createModelRegistry({
-    catalog: () => catalogOf(client.require()),
-    watch: credentials.watch,
-    publishedModels: tripoModels,
-    // Whether or not a key is held: a stored id must be answered from here rather than asked of
-    // a catalogue that has never heard of it.
-    publishedModelOf: modelId => describedTripo().find(model => model.id === modelId) ?? null,
-    // The two catalogues merge in `catalogue.ts` and nowhere else: one panel, one set of filters,
-    // and a model that says where it runs — ADR-21 as amended.
-    localModels: mergedCatalogue,
-    // Deferred: the registry is built before the manager, and what is installed changes
-    // under it — a download landing must ungrey the card it was greying.
-    isInstalled: modelId => fromManager.installedIds().has(modelId),
-    translate: key => textAt(TRANSLATIONS[language()], key),
-  })
-
-  const plan = createPlanReader({
-    catalog: () => teamsOf(client.require()),
-    watch: credentials.watch,
-  })
-
-  // Every stored key, not the active one: both screens list them all.
-  const credits = createCreditsReader({ accounts: () => settings.keyedAccounts() })
-
-  // Bounded and separate from the `JobManager`: none of this produces an asset or has a status
-  // to poll, and a library fetch of three hundred must not become three hundred calls.
-  const assistQueue = createAssistQueue({
-    concurrency: () => settings.read().generation.concurrentJobs,
-    maxRetries: () => settings.read().generation.maxRetries,
-    sleep: delay,
-  })
-
-  // Its own client per account rather than the shared one: reading usage asks every stored key
-  // at once and must leave the active account exactly as it found it. Through the same transport
-  // all the same, so each key spends from its own window rather than around it.
-  const usage = createUsageReader({
-    // Scenario's own keys, and only those: this reader speaks the Scenario SDK, so another
-    // cloud's key would spend a round trip to be told 401 and land in the report as a failure
-    // under an account that never had usage to report.
-    accounts: () =>
-      settings.keyedAccounts().filter(one => (one.providerId ?? SCENARIO_CLOUD) === SCENARIO_CLOUD),
-    clientFor: credentials => clientFor(credentials, transport),
-    queue: createAssistQueue({
-      concurrency: () => USAGE_CONCURRENCY,
-      maxRetries: () => settings.read().generation.maxRetries,
-      sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
-    }),
-    now: () => new Date(),
-  })
-
-  // The two need each other: the journal writes into the open project's catalogue, and the
-  // project must see the journal emptied before that catalogue stops answering. Read at call
-  // time rather than at construction, which is the only order that ties the knot.
+    client,
+    fromManager,
+    holdsTripo,
+    generationFolder,
+    models,
+    plan,
+    credits,
+    assistQueue,
+    usage,
+  } = provider
   let opened: ActivityLog | null = null
 
   /**
