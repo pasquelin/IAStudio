@@ -307,8 +307,7 @@ function joined(head: Uint8Array, tail: readonly Uint8Array[], length: number): 
 
 /** What the scene already carried, so another application's own `extras` survive a save. */
 function ownExtras(scene: unknown): Record<string, unknown> {
-  const held = isRecord(scene) && isRecord(scene.extras) ? scene.extras : {}
-  return held
+  return isRecord(scene) && isRecord(scene.extras) ? scene.extras : {}
 }
 
 /** The buffer the views index into. Its `uri` is kept: a file may name one beside it. */

@@ -50,7 +50,11 @@ export type PortWatch = {
   signal?: AbortSignal
 }
 
-/** @param what names the worker in the two failures no `try` inside it can catch. */
+/**
+ * @param spawn builds the worker on first use and after a recoverable restart.
+ * @param what names the worker in the two failures no `try` inside it can catch.
+ * @param valueOf extracts the value carried by a completed worker answer.
+ */
 export function createWorkerPort<T, R extends PortResponse>(
   spawn: () => Worker,
   what: string,

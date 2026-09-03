@@ -108,14 +108,14 @@ export function quaternionLookingAt(direction: Vector3, into = restingTurn()): Q
     const root = 2 * Math.sqrt(1 + sideX - upY - nudged)
     into.w = (upZ - backY) / root
     into.x = 0.25 * root
-    into.y = (upX + 0) / root
+    into.y = upX / root
     into.z = (backX + sideZ) / root
     return into
   }
   if (upY > nudged) {
     const root = 2 * Math.sqrt(1 + upY - sideX - nudged)
     into.w = (backX - sideZ) / root
-    into.x = (upX + 0) / root
+    into.x = upX / root
     into.y = 0.25 * root
     into.z = (backY + upZ) / root
     return into

@@ -131,20 +131,18 @@ function layersFromNodes(
     }
 
     if (isOraGroup(node)) {
-      const group: GroupLayer = {
+      return {
         ...shared,
         kind: 'group',
         children: layersFromNodes(node.children, pngOf, found, at),
         collapsed: false,
         isolation: node.isolation === 'isolate' ? 'isolate' : 'pass-through',
-      }
-      return group
+      } satisfies GroupLayer
     }
 
     const png = pngOf(node.src)
     if (png?.byteLength) found.push({ layerId: shared.id, mask: false, data: png })
-    const pixel: PixelLayer = { ...shared, kind: 'pixel' }
-    return pixel
+    return { ...shared, kind: 'pixel' } satisfies PixelLayer
   })
 }
 

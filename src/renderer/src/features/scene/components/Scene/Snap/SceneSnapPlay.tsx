@@ -62,7 +62,7 @@ export function SceneSnapPlay({ documentId }: SceneSnapPlayProps) {
           onClick={() => {
             if (!addressable) return
             // Paused first: a game still running scrolls its own errors past the reader.
-            usePlay.getState().pause(documentId)
+            void usePlay.getState().pause(documentId)
             // Opens the script's own tab, which is what brings the Code space up with it: the
             // section follows the document in front — see `DocumentArea.followFront`.
             openScriptAt(addressable.script, addressable.line, addressable.column || 1)
