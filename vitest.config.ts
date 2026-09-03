@@ -144,6 +144,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/scene/paneMaterials.test.ts',
   // Drives the worker by dispatching at `self`, which only a browser global has.
   'src/renderer/src/engines/scene/retarget.worker.test.ts',
+  'src/renderer/src/engines/scene/reliefSculpt.worker.test.ts',
   // Writes a real GLB, and `GLTFExporter` reaches for `FileReader`.
   'src/renderer/src/engines/scene/glbSkin.test.ts',
   'src/renderer/src/engines/scene/rigRead.test.ts',
