@@ -136,7 +136,7 @@ describe('relief surface chunks', () => {
     })
     surface.sync(worldOf(sculpt), samples)
 
-    expect(positionOf(surface, 0, 0).updateRanges.length).toBeGreaterThan(0)
+    expect(positionOf(surface, 0, 0).updateRanges).toEqual([{ start: 0, count: 65 * HEIGHT * 3 }])
     expect(positionOf(surface, 1, 0).updateRanges).toEqual([])
     expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(4.01)
   })
