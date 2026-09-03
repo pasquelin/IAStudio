@@ -41,8 +41,9 @@ function themeBlock(): string {
   return theme
 }
 
-function colorTokenNames(): string[] {
-  return [...themeBlock().matchAll(/--color-([a-z0-9-]+)\s*:/g)].flatMap(([, name]) => name ?? [])
+/** The colour names one stretch of the stylesheet declares — a block, or the whole sheet. */
+function colorNamesIn(css: string): string[] {
+  return [...css.matchAll(/--color-([a-z0-9-]+)\s*:/g)].flatMap(([, name]) => name ?? [])
 }
 
 function textSizeNames(): string[] {
@@ -87,14 +88,70 @@ describe('the tooltip measure', () => {
 
 describe('color tokens', () => {
   it('are found at all, so the rule below cannot pass on an empty list', () => {
-    expect(colorTokenNames()).toContain('panel')
+    expect(colorNamesIn(themeBlock())).toContain('panel')
   })
 
   it('never take a name from a font-size scale', () => {
     const sizes = textSizeNames()
 
     expect(sizes).toContain('tiny')
-    expect(colorTokenNames().filter(name => sizes.includes(name))).toEqual([])
+    expect(colorNamesIn(themeBlock()).filter(name => sizes.includes(name))).toEqual([])
+  })
+})
+
+/**
+ * Whole-sheet rather than block by block: a list of blocks goes quiet the day a third one is
+ * written, and the rule below would then refuse a name that resolves perfectly. **Blind**: a token
+ * declared in one theme alone counts as declared, and paints nothing in the other.
+ */
+const declaredColorNames = (): string[] => colorNamesIn(stylesheet)
+
+/** The `bg-…` utilities Tailwind builds from something other than a colour. */
+const BUILT_IN_BACKGROUNDS =
+  /^(transparent|current|inherit|none|black|white|auto|cover|contain|fixed|local|scroll|top|bottom|left|right|center|no-repeat|(top|bottom)-(left|right)|(clip|origin|blend|gradient|linear|radial|conic|repeat)(-.*)?)$/
+
+/**
+ * 🛑 A fill naming a token that does not exist paints NOTHING, and nothing goes red for it.
+ *
+ * Tailwind 4 builds `bg-<name>` from the colour tokens; asked for a name none of them carries, it
+ * builds no class at all and the element simply keeps whatever is behind it. `CharacterWindow`
+ * wore `bg-chrome` — there has never been a `--color-chrome` — and read as grey only because the
+ * native window it sat in happened to be painted the chassis. Every gate was green on it, this
+ * suite included: the ratios above measure DECLARED tokens against each other and never look at
+ * what a component actually spells.
+ *
+ * **Blind**: a class assembled at runtime, and the `text-`/`border-` families, whose names collide
+ * with the size and width scales — the ground is where the defect was and where it costs most.
+ */
+function unknownFills(sources: readonly (readonly [string, string])[]): string[] {
+  const declared = declaredColorNames()
+
+  return [
+    ...new Set(
+      sources.flatMap(([path, source]) =>
+        [...source.matchAll(/\bbg-([a-z][a-z0-9-]*)/g)]
+          .flatMap(([, name]) => name ?? [])
+          .filter(name => !declared.includes(name) && !BUILT_IN_BACKGROUNDS.test(name))
+          .map(name => `${path} bg-${name}`),
+      ),
+    ),
+  ].sort()
+}
+
+describe('a fill naming a colour', () => {
+  it('finds the tokens at all, so the rule below cannot pass on an empty list', () => {
+    expect(declaredColorNames()).toContain('chassis')
+    expect(declaredColorNames()).toContain('base-200')
+  })
+
+  it('names one the stylesheet declares, or Tailwind builds no class at all', () => {
+    expect(unknownFills(WRITTEN_SOURCES)).toEqual([])
+  })
+
+  /** The exact state the repository shipped in until 2026-09-03, beside the form that resolves. */
+  it('tells a declared token from an invented one, which is what makes it a rule', () => {
+    expect(unknownFills([['./probe.tsx', '"bg-chrome flex"']])).toEqual(['./probe.tsx bg-chrome'])
+    expect(unknownFills([['./probe.tsx', '"flex bg-chassis"']])).toEqual([])
   })
 })
 
@@ -230,7 +287,9 @@ const INKS = ['text', 'muted', 'accent-ink', 'danger', 'warning', 'success', 'cr
  * outright — but `bg-accent/30` would be a shape like any other.
  */
 const SURFACES_OF: Record<string, string[]> = {
-  'base-content': ['base-100', 'base-200', 'base-300'],
+  // `chassis` among them since 2026-09-03: an app window grounds on the studio's chassis — see
+  // `WindowShell` — so DaisyUI's ink now lands on a surface its own ladder never names.
+  'base-content': ['base-100', 'base-200', 'base-300', 'chassis'],
   ...Object.fromEntries([...INKS, 'accent'].map(ink => [ink, READING_SURFACES])),
 }
 
@@ -1026,4 +1085,59 @@ describe('the selection of the take editor', () => {
 
     expect(written).not.toEqual([])
   })
+})
+
+/**
+ * 🛑 What an app window lays ON its ground — the fill of a hovered row, the rule between two —
+ * read against that ground, which became `--color-chassis` on 2026-09-03.
+ *
+ * The pair rule at `HOVER_IS_SEEN` above holds two token PAIRS and nothing else: nothing measured
+ * a fill against the surface it lands on, so `hover:bg-elevated` shipped through every gate at
+ * 1.086:1 on the light chassis.
+ *
+ * **Blind**: an app window that neither is `windowStyles.ts` nor imports it — the sweep is what
+ * ties a file to this vocabulary, and `no-loose-window-button.test.ts` does NOT close the gap, it
+ * reads the `btn` token alone and never sees a hand-written hover.
+ */
+describe('what an app window lays on its ground', () => {
+  const SPEAKS_THE_WINDOW_VOCABULARY = /from '@\/components\/windowStyles'/
+
+  /** `transparent` is the absence of a fill, which no contrast describes. Nothing else may skip. */
+  const NOT_A_FILL = ['transparent']
+
+  const laid = [
+    ...new Set(
+      WRITTEN_SOURCES.filter(
+        ([path, source]) =>
+          path.endsWith('/windowStyles.ts') || SPEAKS_THE_WINDOW_VOCABULARY.test(source),
+      ).flatMap(([, source]) => [
+        ...[...source.matchAll(/hover:bg-([a-z][a-z0-9-]*)/g)].flatMap(([, name]) => name ?? []),
+        // The rule between two rows, and `base-\d00` rather than any name: `border-` is also
+        // Tailwind's width and side scale, where `border-b` and `border-none` name no colour.
+        ...[...source.matchAll(/border-(base-\d00)/g)].flatMap(([, name]) => name ?? []),
+      ]),
+    ),
+  ].filter(name => !NOT_A_FILL.includes(name))
+
+  it('finds what is laid at all, so the rules below cannot pass on an empty list', () => {
+    expect(laid).toContain('base-200')
+    expect(laid).toContain('base-300')
+  })
+
+  for (const theme of THEMES) {
+    /**
+     * An unresolved name fails rather than falling through: `contrastRatio` answers `NaN` for a
+     * token the palette has no hexadecimal for, and `NaN < HOVER_IS_SEEN` is false — a misspelt
+     * fill would have left the one guard written to measure fills green.
+     */
+    it(`is seen on the chassis these windows stand on, ${theme.name}`, () => {
+      const tokens = palette(theme.from)
+      const unseen = laid.filter(name => {
+        const ratio = contrastRatio(tokens[name] ?? '', tokens['chassis'] ?? '')
+        return !(ratio >= HOVER_IS_SEEN)
+      })
+
+      expect(unseen).toEqual([])
+    })
+  }
 })

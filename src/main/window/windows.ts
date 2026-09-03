@@ -67,8 +67,15 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
   void window.loadFile(file, hash ? { hash } : {})
 }
 
-/** What separates one auxiliary window from the next. Everything else about them is identical. */
-type AuxiliarySize = { width: number; height: number; minWidth: number; minHeight: number }
+/** What separates one window of a family from the next. Everything else about them is identical. */
+type WindowSize = { width: number; height: number; minWidth: number; minHeight: number }
+
+/** The tail every factory here shares: follow the window, then show it once it has a first frame. */
+function shown(window: BrowserWindow): BrowserWindow {
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  return window
+}
 
 /**
  * Where macOS floats the three buttons, for every window of the studio that hides its bar.
@@ -85,26 +92,25 @@ const TRAFFIC_LIGHTS = { x: 16, y: 14 }
  * from the screen, and no full screen — macOS would give it a space of its own, hiding the studio
  * behind it.
  *
- * Written once because it was written three times: settings, licences and usage differed only by
- * their four numbers, and a floor added to one of them silently left the other two behind.
+ * Written once because it was written three times, and it now dresses the skeleton window too: a
+ * floor added to one of them silently left the others behind.
  */
-function auxiliaryWindow(size: AuxiliarySize): BrowserWindow {
-  const window = new BrowserWindow({
-    ...size,
-    show: false,
-    backgroundColor: chromeColor(),
-    titleBarStyle: 'hiddenInset',
-    // The studio's own offset, not one per family: `WindowTitleBar` stands as tall as `TitleBar`,
-    // so two windows side by side put their lights on one line.
-    trafficLightPosition: TRAFFIC_LIGHTS,
-    fullscreenable: false,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
-  })
-
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
-  return window
+function auxiliaryWindow(size: WindowSize, title?: string): BrowserWindow {
+  return shown(
+    new BrowserWindow({
+      ...size,
+      show: false,
+      backgroundColor: chromeColor(),
+      titleBarStyle: 'hiddenInset',
+      // The studio's own offset, not one per family: `WindowTitleBar` stands as tall as `TitleBar`,
+      // so two windows side by side put their lights on one line.
+      trafficLightPosition: TRAFFIC_LIGHTS,
+      fullscreenable: false,
+      title,
+      icon: WINDOW_ICON,
+      webPreferences: WEB_PREFERENCES,
+    }),
+  )
 }
 
 /**
@@ -117,7 +123,7 @@ const auxiliaryWindows = new Map<string, BrowserWindow>()
  * Reveals the window a route already has, or builds it. Settings does not come through here: it
  * carries a section to announce and a close it may refuse, neither of which the other two have.
  */
-function openAuxiliaryWindow(hash: string, size: AuxiliarySize): BrowserWindow {
+function openAuxiliaryWindow(hash: string, size: WindowSize): BrowserWindow {
   const held = auxiliaryWindows.get(hash)
   if (held && !held.isDestroyed()) {
     revealWindow(held)
@@ -378,6 +384,23 @@ export function openNewDocumentWindow(): BrowserWindow {
   })
 }
 
+/**
+ * The shape the two windows that show a PICTURE share: full screen allowed, no title bar inset,
+ * and the monitor's own black behind the image so that nothing beside it tints the judgement.
+ */
+function monitorWindow(size: WindowSize, title: string): BrowserWindow {
+  return shown(
+    new BrowserWindow({
+      ...size,
+      show: false,
+      backgroundColor: MIRROR_BACKGROUND,
+      title,
+      icon: WINDOW_ICON,
+      webPreferences: WEB_PREFERENCES,
+    }),
+  )
+}
+
 /** The one video return, held apart from the auxiliary ones — see `openMirrorWindow`. */
 let mirrorWindow: BrowserWindow | null = null
 
@@ -399,20 +422,11 @@ export function openMirrorWindow(): BrowserWindow {
     return mirrorWindow
   }
 
-  const window = new BrowserWindow({
-    width: 960,
-    height: 560,
-    minWidth: 320,
-    minHeight: 200,
-    show: false,
-    backgroundColor: MIRROR_BACKGROUND,
-    title: TRANSLATIONS[windowLanguage()].mirror.title,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
-  })
+  const window = monitorWindow(
+    { width: 960, height: 560, minWidth: 320, minHeight: 200 },
+    TRANSLATIONS[windowLanguage()].mirror.title,
+  )
 
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
   window.on('closed', () => {
     if (mirrorWindow === window) mirrorWindow = null
   })
@@ -436,20 +450,11 @@ export function openGameWindow(): BrowserWindow {
     return gameWindow
   }
 
-  const window = new BrowserWindow({
-    width: 1280,
-    height: 720,
-    minWidth: 480,
-    minHeight: 320,
-    show: false,
-    backgroundColor: MIRROR_BACKGROUND,
-    title: TRANSLATIONS[windowLanguage()].game.window.title,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
-  })
+  const window = monitorWindow(
+    { width: 1280, height: 720, minWidth: 480, minHeight: 320 },
+    TRANSLATIONS[windowLanguage()].game.window.title,
+  )
 
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
   window.on('closed', () => {
     // Identity-checked, as every other slot here is: an older window closing must not clear one
     // a newer game now holds, nor tell the studio that the game it just started is over.
@@ -481,29 +486,13 @@ export function openCharacterWindow(assetId: string): BrowserWindow {
     return characterWindow
   }
 
-  const window = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 720,
-    minHeight: 520,
-    show: false,
-    backgroundColor: chromeColor(),
-    // Framed like the studio and unlike the mirror or the game: this is a place one EDITS, and a
-    // native bar over the studio's own chrome read as another application's window.
-    titleBarStyle: 'hiddenInset',
-    // The studio's own offset, not one per family: `WindowTitleBar` stands as tall as `TitleBar`,
-    // so two windows side by side put their lights on one line.
-    trafficLightPosition: TRAFFIC_LIGHTS,
-    // Like every other window wearing `WindowTitleBar`: that bar's left inset is the room the
-    // traffic lights float in, and macOS takes them away in full screen — see the component.
-    fullscreenable: false,
-    title: TRANSLATIONS[windowLanguage()].character.window.title,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
-  })
+  // Framed like the studio and unlike the mirror or the game: this is a place one EDITS, and a
+  // native bar over the studio's own chrome read as another application's window.
+  const window = auxiliaryWindow(
+    { width: 1280, height: 800, minWidth: 720, minHeight: 520 },
+    TRANSLATIONS[windowLanguage()].character.window.title,
+  )
 
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
   window.on('closed', () => {
     // Identity-checked, like the game's: an older window closing must not clear the slot a newer
     // one now holds, nor tell the studio a character it is still editing has gone.
