@@ -8,6 +8,8 @@ import {
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { createWorkerSession } from '../core/workerSession'
 import type { ReliefSculptRequest, ReliefSculptResponse } from './reliefSculptMessage'
+import { evenRange } from '../core/evenRange'
+import { workerPoolSize } from '../core/workerPoolSize'
 
 export type ReliefDiskStroke = {
   samples: HeightmapSamples
@@ -38,7 +40,7 @@ const CHUNK_ROWS_PER_WORKER = 2
 
 export function createReliefSculptor(
   spawn: () => Worker,
-  maximumWorkers = Math.max(1, (globalThis.navigator?.hardwareConcurrency ?? 3) - 2),
+  maximumWorkers = workerPoolSize(),
 ): ReliefSculptor {
   const sessions = Array.from({ length: Math.max(1, Math.floor(maximumWorkers)) }, () =>
     createWorkerSession<ReliefSculptRequest, ReliefSculptResponse>(spawn),
@@ -152,10 +154,7 @@ function rowRanges(
     maximumWorkers,
     Math.max(1, Math.ceil((to - from) / CHUNK_ROWS_PER_WORKER)),
   )
-  return Array.from({ length: workers }, (_, worker) => ({
-    from: Math.floor(from + ((to - from) * worker) / workers),
-    to: Math.floor(from + ((to - from) * (worker + 1)) / workers),
-  }))
+  return Array.from({ length: workers }, (_, worker) => evenRange(to - from, workers, worker, from))
 }
 
 function sameSculpt(left: ReliefSculpt | undefined, right: ReliefSculpt | undefined): boolean {

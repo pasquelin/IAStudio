@@ -26,6 +26,7 @@ import {
   type RetargetResponse,
   type WireClip,
 } from './retargetMessage'
+import { breathe } from '../core/breathe'
 
 declare const self: DedicatedWorkerGlobalScope
 
@@ -115,10 +116,4 @@ function adaptOne(
 
 function post(response: RetargetResponse): void {
   self.postMessage(response)
-}
-
-function breathe(): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(resolve, 0)
-  })
 }

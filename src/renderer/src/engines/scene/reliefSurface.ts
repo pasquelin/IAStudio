@@ -29,6 +29,7 @@ import {
   type ReliefRead,
   type ReliefSculpt,
 } from '@shared/domain/relief'
+import { enabledTerrains } from '@shared/domain/scene'
 import type { ReliefLayer, SceneWorld, TerrainEditLayer } from '@shared/domain/scene'
 import { loadHeightmap } from './heightmap'
 import type { ReliefBuilder } from './reliefBuilder'
@@ -121,9 +122,7 @@ export function createReliefSurface(
 }
 
 function syncRelief(state: SurfaceState, world: SceneWorld, samples?: HeightmapSamples): void {
-  const wanted = world.layers.filter(
-    (layer): layer is ReliefLayer => layer.kind === 'relief' && layer.enabled,
-  )
+  const wanted = enabledTerrains(world.layers)
   const ids = new Set(wanted.map(layer => layer.id))
   for (const [id, terrain] of [...state.terrains]) {
     if (!ids.has(id)) dropTerrain(state, id, terrain)
@@ -603,28 +602,12 @@ function writeNormals(
   layout: ReliefChunkLayout,
   read: ReliefRead,
 ): void {
-  const stepX = extent.size.x / Math.max(1, samples.width - 1)
-  const stepZ = extent.size.z / Math.max(1, samples.height - 1)
-  let cursor = 0
-  for (let lz = 0; lz < layout.height; lz++) {
-    for (let lx = 0; lx < layout.width; lx++) {
-      const sx = layout.sampleX + lx
-      const sz = layout.sampleZ + lz
-      const nx =
-        (heightAt(samples, read, extent, sx - 1, sz) -
-          heightAt(samples, read, extent, sx + 1, sz)) /
-        (2 * stepX)
-      const nz =
-        (heightAt(samples, read, extent, sx, sz - 1) -
-          heightAt(samples, read, extent, sx, sz + 1)) /
-        (2 * stepZ)
-      const length = Math.hypot(nx, 1, nz) || 1
-      into[cursor] = nx / length
-      into[cursor + 1] = 1 / length
-      into[cursor + 2] = nz / length
-      cursor += 3
-    }
-  }
+  writeNormalRegion(into, samples, extent, layout, read, {
+    minX: 0,
+    maxX: layout.width - 1,
+    minZ: 0,
+    maxZ: layout.height - 1,
+  })
 }
 
 function heightAt(

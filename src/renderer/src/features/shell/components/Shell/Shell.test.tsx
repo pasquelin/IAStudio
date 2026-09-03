@@ -317,12 +317,8 @@ describe('a panel of the band', () => {
 })
 
 /**
- * Panels can be dragged from one half to another since `@pasquelin/panels` 0.4, and two studio
- * decisions decide what a reader gets. The rails hand their buttons to a drag at all — the
- * chassis draws none of this unless asked. And the arrangement is kept per SECTION, where what
- * is OPEN stays shared by the six spaces: `view` is the family, the placement scope the surface.
- *
- * 🛑 Left to follow `view`, one panel dragged in Image reordered the rail of all six.
+ * 🛑 The arrangement is kept per SECTION, `view` naming only the family: left to follow `view`,
+ * one panel dragged in Image reordered the rail of all six spaces.
  */
 describe('moving a panel', () => {
   it('hands the rail buttons to a drag', () => {

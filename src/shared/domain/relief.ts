@@ -282,20 +282,6 @@ export function withPackedChunks(
   return next
 }
 
-export function chunksHoldingSample(
-  sx: number,
-  sz: number,
-  width: number,
-  height: number,
-  grain: number,
-): ReliefChunkKey[] {
-  const out: ReliefChunkKey[] = []
-  for (const column of axisHolding(sx, width, grain)) {
-    for (const row of axisHolding(sz, height, grain)) out.push({ column, row })
-  }
-  return out
-}
-
 /**
  * A sculpt stroke the worker can run. New kinds (slope/altitude masks) join this union; they
  * must not grow a second entry point the worker would not see.
@@ -436,22 +422,6 @@ function readPackedChunk(value: unknown): readonly PackedReliefChunk[] {
 
 function chunkIndexAt(sample: number, samples: number, grain: number): number {
   return Math.min(Math.floor(sample / grain), chunkCountAlong(samples, grain) - 1)
-}
-
-/**
- * A sample on a chunk border belongs to BOTH, so a stroke writes it twice — once per chunk.
- *
- * 🛑 The two coincide at the far edge: `chunkIndexAt` clamps to the last chunk, which is the very
- * one `sample / grain - 1` names when `(samples - 1) % grain === 0` — every 2ⁿ+1 heightmap. Handed
- * back twice, the amount was added twice to one chunk: a ridge along the far edge and a spike four
- * times too high in the corner.
- */
-function axisHolding(sample: number, samples: number, grain: number): number[] {
-  const primary = chunkIndexAt(sample, samples, grain)
-  if (sample === 0 || sample % grain !== 0) return [primary]
-
-  const before = sample / grain - 1
-  return before === primary ? [primary] : [primary, before]
 }
 
 type LiveChunk = ReliefChunkLayout & { deltas: Float32Array }

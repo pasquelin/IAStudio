@@ -7,6 +7,7 @@ import {
   type ReliefBuildIncoming,
   type ReliefBuildResponse,
 } from './reliefBuildMessage'
+import { breathe } from '../core/breathe'
 
 declare const self: DedicatedWorkerGlobalScope
 
@@ -64,8 +65,4 @@ async function build(request: Exclude<ReliefBuildIncoming, { cancel: true }>): P
 
 function post(response: ReliefBuildResponse): void {
   self.postMessage(response)
-}
-
-function breathe(): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, 0))
 }
