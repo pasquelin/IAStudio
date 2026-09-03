@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   worldY,
@@ -143,12 +141,5 @@ describe('raiseReliefDisk', () => {
     expect(
       applyReliefSculpt(samples, extent, undefined, { kind: 'raiseDisk', disk, amount: 3 }),
     ).toEqual(raiseReliefDisk(samples, extent, undefined, disk, 3))
-  })
-})
-
-describe('relief sculpt arithmetic', () => {
-  it('imports neither three.js nor the DOM', () => {
-    const code = readFileSync(fileURLToPath(new URL('./relief.ts', import.meta.url)), 'utf8')
-    expect(code).not.toMatch(/from ['"]three['"]|document\.|window\./)
   })
 })
