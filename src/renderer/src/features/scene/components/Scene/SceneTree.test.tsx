@@ -8,6 +8,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { groupNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
 import { SceneTree } from './SceneTree'
+import { SceneActions } from './SceneActions'
 
 /** jsdom implements no `DataTransfer`; the tree reads exactly these three members of one. */
 function dragData() {
@@ -305,7 +306,12 @@ describe('SceneTree', () => {
   })
 
   it('searches the scene tree and offers the inverse global fold action', async () => {
-    render(<SceneTree documentId="doc-1" />)
+    render(
+      <>
+        <SceneActions />
+        <SceneTree documentId="doc-1" />
+      </>,
+    )
 
     await userEvent.type(screen.getByRole('searchbox'), 'Ambient')
     expect(screen.getByText('AmbientLight')).toBeInTheDocument()

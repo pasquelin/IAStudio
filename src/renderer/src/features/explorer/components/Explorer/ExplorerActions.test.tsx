@@ -4,11 +4,16 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { LIST_ONLY } from '@/helpers/collectionState'
 import { useExplorerView } from '@/stores/explorerView'
 import { useMedia } from '@/stores/media'
+import { useTreeFolds } from '@/stores/treeFolds'
 import { ExplorerActions } from './ExplorerActions'
 
 beforeEach(() => {
   useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' })
   useMedia.setState({ capabilities: { ffmpeg: true } })
+  useTreeFolds.setState({
+    explorer: { stamp: 0, wanted: true, anyExpanded: true },
+    scene: { stamp: 0, wanted: true, anyExpanded: false },
+  })
 })
 
 describe('the explorer title row', () => {
@@ -43,6 +48,14 @@ describe('the explorer title row', () => {
 
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(screen.queryByRole('combobox')).toBeNull()
+  })
+
+  it('carries the tree fold action in the title row', async () => {
+    render(<ExplorerActions />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tout replier' }))
+
+    expect(useTreeFolds.getState().explorer).toMatchObject({ stamp: 1, wanted: false })
   })
 })
 

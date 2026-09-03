@@ -11,6 +11,8 @@ import { UiIcon } from '@/components/UiIcon'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useExplorerView } from '@/stores/explorerView'
 import { useMedia } from '@/stores/media'
+import { useTreeFolds } from '@/stores/treeFolds'
+import { TreeFoldButton } from '@/components/TreeFoldButton'
 
 /**
  * The Explorer's own title row: how the folder is READ, and how much of it is shown.
@@ -28,6 +30,8 @@ export function ExplorerActions() {
   const toggleHidden = useExplorerView(state => state.toggleExplorerHidden)
   const mode = useExplorerView(state => state.mode)
   const setMode = useExplorerView(state => state.setExplorerMode)
+  const expanded = useTreeFolds(state => state.explorer.anyExpanded)
+  const ask = useTreeFolds(state => state.ask)
 
   return (
     <>
@@ -77,6 +81,12 @@ export function ExplorerActions() {
         variant="header"
         active={hidden}
         onClick={toggleHidden}
+      />
+      {/* Last on purpose: the shell follows the actions with its separator and close button. */}
+      <TreeFoldButton
+        expanded={expanded}
+        onFold={() => ask('explorer')}
+        onUnfold={() => ask('explorer')}
       />
     </>
   )

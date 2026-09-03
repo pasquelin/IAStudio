@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Row } from '@/components/Row'
 import { Tree, type TreeNode } from '@/components/Tree'
 import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
-import { TreeFoldButton } from '@/components/TreeFoldButton'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
+import { foldTreeBranch } from '@/helpers/treeExpansion'
 import type { Command } from '@/engines/core/history'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/features/scene/components/Scene/SceneNodeRow'
@@ -16,6 +16,7 @@ import { openSceneNodeMenu } from '@/features/scene/components/Scene/sceneNodeMe
 import { runSceneCommand, toggleNodeVisible } from '@/features/scene/components/sceneCommands'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { useTreeFolds } from '@/stores/treeFolds'
 import { sceneNodeDrag } from '../dragged'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
@@ -89,6 +90,14 @@ export function SceneTree({ documentId }: { documentId: string }) {
     return new Set(shownItems.filter(item => parents.has(item.id)).map(item => item.id))
   }, [shownItems])
   const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
+  const foldOrder = useTreeFolds(state => state.scene)
+  const seenFoldOrder = useRef(foldOrder.stamp)
+  useEffect(() => useTreeFolds.getState().note('scene', anyExpanded), [anyExpanded])
+  useEffect(() => {
+    if (seenFoldOrder.current === foldOrder.stamp) return
+    seenFoldOrder.current = foldOrder.stamp
+    setExpandedIds(foldOrder.wanted ? new Set(expandableIds) : new Set())
+  }, [expandableIds, foldOrder.stamp, foldOrder.wanted])
 
   const toggle = useCallback(
     (id: string) => {
@@ -98,18 +107,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
           next.add(id)
           return next
         }
-
-        // Closing a branch also forgets every open branch below it, like IDE project trees.
-        const parents = new Map(items.map(item => [item.id, item.parentId]))
-        for (const candidate of next) {
-          for (let parent = parents.get(candidate); parent; parent = parents.get(parent)) {
-            if (parent === id) {
-              next.delete(candidate)
-              break
-            }
-          }
-        }
-        return next
+        return foldTreeBranch(items, current, id)
       })
     },
     [items],
@@ -148,14 +146,8 @@ export function SceneTree({ documentId }: { documentId: string }) {
           { value: 'name', label: t('explorer.sort.name') },
           { value: 'nameDesc', label: t('explorer.sort.nameDesc') },
         ]}
+        layout="inline"
         display={false}
-        leading={
-          <TreeFoldButton
-            expanded={anyExpanded}
-            onFold={() => setExpandedIds(new Set())}
-            onUnfold={() => setExpandedIds(new Set(expandableIds))}
-          />
-        }
       />
       <div className="min-h-0 flex-1">
         <Tree

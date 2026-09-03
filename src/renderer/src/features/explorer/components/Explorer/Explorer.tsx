@@ -5,7 +5,7 @@ import {
   mdiMagnify,
   mdiShapeOutline,
 } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -25,7 +25,6 @@ import { Collection } from '@/components/Collection/Collection'
 import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
 import { EmptyState } from '@/components/EmptyState'
 import { Tree } from '@/components/Tree'
-import { TreeFoldButton } from '@/components/TreeFoldButton'
 import { openDocument } from '@/features/shell/components/dockviewApi'
 import { assetAt } from '@/helpers/assetAt'
 import { carriesAsset, landAssetIn } from '@/helpers/assetDrag'
@@ -35,6 +34,7 @@ import { renameAsset, renameDocument } from '@/helpers/rename'
 import { startSceneDrag } from '@/helpers/sceneDrag'
 import { openProjectFile } from '@/helpers/openProjectFile'
 import { applySelection } from '@/helpers/selection'
+import { foldTreeBranch } from '@/helpers/treeExpansion'
 import {
   domainInk,
   roleIcon,
@@ -58,6 +58,7 @@ import { fileClipboardCut, useFileClipboard } from '@/stores/fileClipboard'
 import { explorerSearch, useExplorerView } from '@/stores/explorerView'
 import { useFolderRoles } from '@/stores/folderRoles'
 import { useProject } from '@/stores/project'
+import { useTreeFolds } from '@/stores/treeFolds'
 import { selectedFilePaths, useSelection } from '@/stores/selection'
 import { NoProject } from '@/features/shell/components/NoProject'
 import { runAssetAction } from './assetActions'
@@ -221,21 +222,25 @@ export function Explorer() {
     [nodes, expandable],
   )
   const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
+  const foldOrder = useTreeFolds(state => state.explorer)
+  const seenFoldOrder = useRef(foldOrder.stamp)
+  useEffect(() => useTreeFolds.getState().note('explorer', anyExpanded), [anyExpanded])
+  useEffect(() => {
+    if (seenFoldOrder.current === foldOrder.stamp) return
+    seenFoldOrder.current = foldOrder.stamp
+    if (foldOrder.wanted) {
+      for (const id of expandableIds) if (!expandedIds.has(id)) toggle(id)
+    } else {
+      for (const id of expandedIds) toggle(id)
+    }
+  }, [expandableIds, expandedIds, foldOrder.stamp, foldOrder.wanted, toggle])
   const toggleBranch = useCallback(
     (id: string) => {
       const closing = expandedIds.has(id)
-      toggle(id)
-      if (!closing) return
+      if (!closing) return toggle(id)
 
-      const parentById = new Map(nodes.map(node => [node.id, node.parentId]))
-      for (const candidate of expandedIds) {
-        for (let parent = parentById.get(candidate); parent; parent = parentById.get(parent)) {
-          if (parent === id) {
-            toggle(candidate)
-            break
-          }
-        }
-      }
+      const kept = foldTreeBranch(nodes, expandedIds, id)
+      for (const candidate of expandedIds) if (!kept.has(candidate)) toggle(candidate)
     },
     [expandedIds, nodes, toggle],
   )
@@ -622,17 +627,7 @@ export function Explorer() {
         onChange={setCollection}
         sorts={sorts}
         leading={
-          !grid ? (
-            <TreeFoldButton
-              expanded={anyExpanded}
-              onFold={() => {
-                for (const id of expandedIds) toggle(id)
-              }}
-              onUnfold={() => {
-                for (const id of expandableIds) if (!expandedIds.has(id)) toggle(id)
-              }}
-            />
-          ) : browsable ? (
+          browsable ? (
             <FolderNav
               canBack={canWalkBy(walk, -1)}
               canForward={canWalkBy(walk, 1)}
