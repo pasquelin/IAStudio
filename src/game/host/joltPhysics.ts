@@ -1023,13 +1023,14 @@ function heightfieldOf(
   let maxHeight = Number.NEGATIVE_INFINITY
   for (let z = 0; z < sampleCount; z++) {
     for (let x = 0; x < sampleCount; x++) {
-      const inside = x < shape.width && z < shape.height
-      const height = inside ? (shape.heights[z * shape.width + x] ?? 0) : HEIGHTFIELD_HOLE
-      if (inside && Number.isFinite(height)) {
+      const held =
+        x < shape.width && z < shape.height ? (shape.heights[z * shape.width + x] ?? 0) : NaN
+      const height = Number.isFinite(held) ? held : HEIGHTFIELD_HOLE
+      if (height !== HEIGHTFIELD_HOLE) {
         minHeight = Math.min(minHeight, height)
         maxHeight = Math.max(maxHeight, height)
       }
-      samples.push_back(inside && Number.isFinite(height) ? height : HEIGHTFIELD_HOLE)
+      samples.push_back(height)
     }
   }
   if (minHeight <= maxHeight) {

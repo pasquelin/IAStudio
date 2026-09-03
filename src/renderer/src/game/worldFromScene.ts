@@ -217,9 +217,11 @@ function groundOf(
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
 ): readonly BodyDescriptor[] {
   const relief = state.world.layers.find(layer => layer.kind === 'relief')
-  const samples = relief ? heightmaps?.get(relief.heightmap.assetId) : undefined
-  const shape = relief && samples ? colliderFromRelief(relief, samples) : null
-  if (shape) return [staticBody(RELIEF_BODY, shape)]
+  if (relief) {
+    const samples = heightmaps?.get(relief.heightmap.assetId)
+    const shape = samples ? colliderFromRelief(relief, samples) : null
+    if (shape) return [staticBody(RELIEF_BODY, shape)]
+  }
 
   const ground = state.world.ground
   if (!ground.visible) return []
