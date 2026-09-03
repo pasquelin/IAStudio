@@ -37,7 +37,7 @@ import {
   oraStackOf,
   oraSurfacesOf,
 } from '@/engines/canvas/oraDocument'
-import { bytesToBase64 } from '@/helpers/base64'
+import { bytesToBase64 } from '@shared/base64'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure, reportNotice } from '@/services/diagnostics'

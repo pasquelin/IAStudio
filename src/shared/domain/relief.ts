@@ -2,6 +2,8 @@
  * How a relief heightmap is cut into chunks. Grain 64 rather than 128: a full-chunk fallback
  * uploads four times less — `reliefChunkCost.test.ts`. A 4K map would want 128 instead.
  */
+import { bytesFromBase64, bytesToBase64 } from '../base64'
+import { clamp } from '../numeric'
 import { isRecord, readNumber, readString } from '../guards'
 import type { HeightmapSamples } from './heightmap'
 
@@ -98,8 +100,8 @@ export function chunkLayout(
     row,
     sampleX,
     sampleZ,
-    width: Math.min(grain, Math.max(0, width - 1 - sampleX)) + 1,
-    height: Math.min(grain, Math.max(0, height - 1 - sampleZ)) + 1,
+    width: clamp(width - 1 - sampleX, 0, grain) + 1,
+    height: clamp(height - 1 - sampleZ, 0, grain) + 1,
   }
 }
 
@@ -111,7 +113,7 @@ export function packDeltas(deltas: Float32Array): string {
   let nonzero = 0
   for (let at = 0; at < deltas.length; at++) if (deltas[at] !== 0) nonzero += 1
   if (nonzero === 0) return ''
-  return payloadOf(
+  return bytesToBase64(
     nonzero * 8 + 5 <= deltas.byteLength + 1 ? sparseOf(deltas, nonzero) : denseOf(deltas),
   )
 }
@@ -119,7 +121,7 @@ export function packDeltas(deltas: Float32Array): string {
 export function unpackDeltas(payload: string, length: number): Float32Array {
   const out = new Float32Array(length)
   if (payload === '') return out
-  const bytes = bytesOf(payload)
+  const bytes = bytesFromBase64(payload)
   if (bytes.length < 1) return out
   if (bytes[0] === DENSE) {
     const body = bytes.subarray(1)
@@ -398,7 +400,7 @@ function diskSamples(
 }
 
 function clampIndex(at: number, samples: number): number {
-  return Math.min(samples - 1, Math.max(0, at))
+  return clamp(at, 0, samples - 1)
 }
 
 function replaceChunk(
@@ -437,19 +439,4 @@ function denseOf(deltas: Float32Array): Uint8Array {
   out[0] = DENSE
   out.set(new Uint8Array(deltas.buffer, deltas.byteOffset, deltas.byteLength), 1)
   return out
-}
-
-function payloadOf(bytes: Uint8Array): string {
-  const chunks: string[] = []
-  for (let at = 0; at < bytes.length; at += 0x8000) {
-    chunks.push(String.fromCharCode(...bytes.subarray(at, at + 0x8000)))
-  }
-  return btoa(chunks.join(''))
-}
-
-function bytesOf(payload: string): Uint8Array {
-  const binary = atob(payload)
-  const bytes = new Uint8Array(binary.length)
-  for (let at = 0; at < binary.length; at++) bytes[at] = binary.charCodeAt(at)
-  return bytes
 }

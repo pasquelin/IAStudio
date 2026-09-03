@@ -1,5 +1,5 @@
 import { PNG_HEAD } from '@/game/game-fixtures'
-import { bytesToBase64 } from '@/helpers/base64'
+import { bytesToBase64 } from '@shared/base64'
 import { canvasHostStub } from '@/stores/canvas-fixtures'
 import type { CanvasHost } from './canvasHosts'
 

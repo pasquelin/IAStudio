@@ -1,3 +1,5 @@
+import { hashPayload, hashRoute } from './hashPayload'
+
 /** URL fragment that tells the shared bundle it is rendering a player module. */
 export const PLAYER_MODULE_ROUTE = 'player-module'
 
@@ -6,25 +8,14 @@ export const PLAYER_MODULE_ROUTE = 'player-module'
  * module was opened, the way the character window is: comparing two is not what this is for.
  */
 export function playerModuleRoute(assetId: string): string {
-  return `${PLAYER_MODULE_ROUTE}/${encodeURIComponent(assetId)}`
+  return hashRoute(PLAYER_MODULE_ROUTE, assetId)
 }
 
 export function isPlayerModuleRoute(hash: string): boolean {
   return hash.replace(/^#/, '').startsWith(`${PLAYER_MODULE_ROUTE}/`)
 }
 
-/**
- * The asset the fragment names, `null` for a fragment naming none — a window the system restores
- * finds its subject in its own URL, and a hand-edited one must open empty rather than white.
- */
+/** The asset the fragment names, `null` for a fragment naming none. */
 export function playerModuleAssetOf(hash: string): string | null {
-  if (!isPlayerModuleRoute(hash)) return null
-  const encoded = hash.replace(/^#/, '').slice(`${PLAYER_MODULE_ROUTE}/`.length)
-  if (encoded === '') return null
-
-  try {
-    return decodeURIComponent(encoded)
-  } catch {
-    return null
-  }
+  return hashPayload(hash, PLAYER_MODULE_ROUTE)
 }

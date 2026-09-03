@@ -1,5 +1,5 @@
 import { Container, Graphics, Sprite, Texture, type Application, type TextureSource } from 'pixi.js'
-import { bytesFromBase64 } from '@/helpers/base64'
+import { bytesFromBase64 } from '@shared/base64'
 import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoderPool'
 import { playbackToken } from './playback'

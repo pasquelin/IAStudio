@@ -13,6 +13,7 @@ import {
   type Scene,
 } from 'three'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
+import { clamp } from '@shared/numeric'
 import {
   RELIEF_CHUNK_TEXELS,
   changedChunks,
@@ -324,8 +325,8 @@ function heightAt(
   sx: number,
   sz: number,
 ): number {
-  const x = Math.min(samples.width - 1, Math.max(0, sx))
-  const z = Math.min(samples.height - 1, Math.max(0, sz))
+  const x = clamp(sx, 0, samples.width - 1)
+  const z = clamp(sz, 0, samples.height - 1)
   return worldY(read(x, z), extent.elevation)
 }
 

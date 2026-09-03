@@ -483,20 +483,13 @@ export function openPlayerModuleWindow(assetId: string): BrowserWindow {
     return playerModuleWindow
   }
 
-  const window = new BrowserWindow({
-    width: 1180,
-    height: 720,
-    minWidth: 720,
-    minHeight: 480,
-    show: false,
-    backgroundColor: MIRROR_BACKGROUND,
-    title: TRANSLATIONS[windowLanguage()].playerWindow.title,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
-  })
+  // Framed like the studio and unlike the mirror or the game: this is a place one EDITS, and a
+  // native bar over the studio's own chrome read as another application's window.
+  const window = auxiliaryWindow(
+    { width: 1180, height: 720, minWidth: 720, minHeight: 480 },
+    TRANSLATIONS[windowLanguage()].playerWindow.title,
+  )
 
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
   window.on('closed', () => {
     if (playerModuleWindow === window) playerModuleWindow = null
   })
