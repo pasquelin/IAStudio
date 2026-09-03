@@ -157,12 +157,9 @@ describe('revealing a panel while the chassis is still on the other view', () =>
 })
 
 /**
- * A reader may drag a rail icon into another half since `@pasquelin/panels` 0.4, and everything
- * that answers ABOUT a panel has to read where it stands rather than where it was declared.
- *
- * 🛑 Read on the declaration, `closeTool` emptied the half the panel came FROM — taking a panel
- * nobody named off screen — and answered yes; `toolIsShown` looked in a zone the panel had left.
- * Both are what the assistant and an MCP client are told.
+ * 🛑 What answers ABOUT a panel reads where it STANDS, never where it was declared: on the
+ * declaration, `closeTool` emptied the half it came FROM and `toolIsShown` looked in a zone it
+ * had left — both are what the assistant and an MCP client are told.
  */
 describe('a panel the reader has moved', () => {
   beforeEach(() => {

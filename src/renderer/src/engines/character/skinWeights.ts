@@ -22,6 +22,8 @@ import {
 import type { SkinBinding } from './skinVertices'
 import { createWorkerPort } from '../core/workerPort'
 import { ORIGIN, worldPlaces } from './rigWorld'
+import { evenRange } from '../core/evenRange'
+import { workerPoolSize } from '../core/workerPoolSize'
 
 export type SkinWeights = {
   /**
@@ -40,7 +42,7 @@ const VERTICES_PER_WORKER = 50_000
 
 export function createSkinWeights(
   spawn: () => Worker,
-  maximumWorkers = Math.max(1, (globalThis.navigator?.hardwareConcurrency ?? 3) - 2),
+  maximumWorkers = workerPoolSize(),
 ): SkinWeights {
   const ports = Array.from({ length: Math.max(1, Math.floor(maximumWorkers)) }, () =>
     createWorkerPort<SkinBinding, SkinResponse>(spawn, 'skinning', answer => ({
@@ -77,8 +79,7 @@ async function bindAcross(
   const progress = new Float64Array(workers)
   const sizes = new Uint32Array(workers)
   const requests = ports.slice(0, workers).map((port, worker) => {
-    const from = Math.floor((vertices * worker) / workers)
-    const to = Math.floor((vertices * (worker + 1)) / workers)
+    const { from, to } = evenRange(vertices, workers, worker)
     sizes[worker] = to - from
     return port.send(
       id => {
