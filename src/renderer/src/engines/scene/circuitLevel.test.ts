@@ -23,11 +23,19 @@ const runOf = (nodes: readonly SceneNode[], name: string): readonly Vector3[] =>
 const heightOf = (nodes: readonly SceneNode[], name: string): number | null =>
   bandOf(nodes, name)?.height ?? null
 
+/** How far one point stands from the swept centre line — to the sampled POINTS, see `reachOf`. */
+function spanFrom(centre: readonly Vector3[], x: number, z: number): number {
+  let span = Infinity
+  for (const point of centre) span = Math.min(span, Math.hypot(point.x - x, point.z - z))
+  return span
+}
+
 /**
  * 🛑 How far a band's own SURFACE reaches from the centre line, nearest and furthest — read off the
  * vertices three is given. Control points prove nothing: a band offset by its points bows outward
  * between them, which is how 67 cm of grass opened between a tarmac and a kerb laid edge to edge.
  */
+
 function reachOf(nodes: readonly SceneNode[], name: string, centre: readonly Vector3[]) {
   const band = bandOf(nodes, name)
   if (!band) return null
@@ -38,10 +46,7 @@ function reachOf(nodes: readonly SceneNode[], name: string, centre: readonly Vec
   for (let at = 0; at < corners.count; at += 1) {
     // To the sampled POINTS: the run is dense enough that the chord error stays under a
     // centimetre, and `distanceToSpan` answers the span's own length on a run this fine.
-    let span = Infinity
-    for (const point of centre) {
-      span = Math.min(span, Math.hypot(point.x - corners.getX(at), point.z - corners.getZ(at)))
-    }
+    const span = spanFrom(centre, corners.getX(at), corners.getZ(at))
     nearest = Math.min(nearest, span)
     furthest = Math.max(furthest, span)
   }
@@ -82,7 +87,69 @@ describe('the circuit a car opens on', () => {
     // Ahead of the car, and within a couple of car lengths of it.
     expect(ahead).toBeGreaterThan(0)
     expect(ahead).toBeLessThan(8)
-    expect(line.transform.rotation.y).toBeCloseTo(CIRCUIT_START_YAW, 6)
+  })
+
+  /**
+   * 🛑 A grid belongs on a STRAIGHT: laid at the first anchor it fell in a turn, where a line
+   * drawn square across the track runs out of tarmac on the outside of the bend.
+   */
+  it('puts the grid on the straightest stretch of the loop', () => {
+    // Over a car's length either side, so a single sampled point cannot flatter a corner.
+    const reach = Math.max(2, Math.round((centre.length * 8) / 628))
+    const radii = centre.map((point, at) => {
+      const before = centre[(at - reach + centre.length) % centre.length]!
+      const after = centre[(at + reach) % centre.length]!
+      const area =
+        Math.abs(
+          (point.x - before.x) * (after.z - before.z) - (after.x - before.x) * (point.z - before.z),
+        ) / 2
+      if (area < 1e-9) return Infinity
+      return (
+        (Math.hypot(point.x - before.x, point.z - before.z) *
+          Math.hypot(after.x - point.x, after.z - point.z) *
+          Math.hypot(after.x - before.x, after.z - before.z)) /
+        (4 * area)
+      )
+    })
+
+    const here =
+      radii[
+        centre.reduce(
+          (best, point, at) =>
+            spanFrom([point], CIRCUIT_START.x, CIRCUIT_START.z) <
+            spanFrom([centre[best]!], CIRCUIT_START.x, CIRCUIT_START.z)
+              ? at
+              : best,
+          0,
+        )
+      ]!
+
+    // In the flattest tenth of the loop — a grid in a turn sits far below that.
+    const flattest = [...radii].sort((one, other) => other - one)[Math.floor(radii.length / 10)]!
+    expect(here).toBeGreaterThanOrEqual(flattest)
+  })
+
+  /**
+   * 🛑 ACROSS the track, and the whole way across: sharing the GRID's heading laid it at an angle
+   * six metres further on, hanging over one kerb and stopping short of the other.
+   */
+  it('lays the start line square across the track, inside both kerbs', () => {
+    const line = nodes.find(node => node.name === 'Start Line')!
+    if (line.type !== 'mesh' || line.geometry.kind !== 'box') throw new Error('no start line')
+    const yaw = line.transform.rotation.y
+    const half = { x: line.geometry.width / 2, z: line.geometry.depth / 2 }
+
+    const corners = [-1, 1].flatMap(side =>
+      [-1, 1].map(end => ({
+        x: line.transform.position.x + side * half.x * Math.cos(yaw) + end * half.z * Math.sin(yaw),
+        z: line.transform.position.z - side * half.x * Math.sin(yaw) + end * half.z * Math.cos(yaw),
+      })),
+    )
+
+    // Every corner within the tarmac's own 6,00 m, plus what a 1,5 m depth costs on a 46 m turn.
+    for (const corner of corners) {
+      expect(spanFrom(centre, corner.x, corner.z)).toBeLessThan(6.2)
+    }
   })
 
   // 🛑 A car put down INSIDE a fixed body is catapulted by the first step — 1500 kg resolving an

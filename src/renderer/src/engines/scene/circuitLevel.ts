@@ -16,7 +16,7 @@ import {
   markSurface,
   obstacleSurface,
 } from './levelParts'
-import { offsetRun } from './ribbonGeometry'
+import { offsetRun, sampledRun } from './ribbonGeometry'
 import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 
 /** Metres. Wide enough for two cars and for a mistake, which is what makes a corner worth taking. */
@@ -80,27 +80,77 @@ const BARRIER_TILE = 2
 const GRASS_TILE = 12.5
 const PADDOCK_TILE = 2
 
-/** How far the finish line stands down the track from the first mark, and the car behind it. */
+/** How far the finish line stands down the track from the grid, and the car behind it. */
 const LINE_AHEAD = 6
 const CAR_BEHIND = 3
 
-/** ON the loop, three metres short of the line: left at the mark with no turn, the car sat
- * across its own straight and the line stood off to one side. */
-export const CIRCUIT_START_YAW = startYaw()
-export const CIRCUIT_START: Vector3 = alongStart(CAR_BEHIND)
+/**
+ * 🛑 The centre line as the bands are SWEPT, not the two dozen anchors it is written through: a
+ * chord between two marks is 26 m long, and a heading read off one points where the curve does not.
+ */
+const CENTRE_CURVE = sampledRun(bezierPathOf(circuitLine(0), true), CURVE_SEGMENTS)
 
-function startYaw(): number {
-  const run = circuitLine(0)
-  return Math.atan2(run[1]!.x - run[0]!.x, run[1]!.z - run[0]!.z)
+/** Where a lap starts: the straightest run of the loop, which is where a grid belongs. */
+const GRID_AT = straightestOf(CENTRE_CURVE)
+
+const START = alongCurve(CAR_BEHIND)
+export const CIRCUIT_START_YAW = START.yaw
+export const CIRCUIT_START: Vector3 = START.at
+
+/**
+ * 🛑 The straightest stretch, by the widest turning circle over a car's length: a grid laid at the
+ * first mark fell in a corner, and its line stood across the track at an angle.
+ */
+function straightestOf(curve: readonly Vector3[]): number {
+  const reach = Math.max(2, Math.round((curve.length * 8) / lengthOf(curve)))
+  const radii = curve.map((point, at) => {
+    const before = curve[(at - reach + curve.length) % curve.length]!
+    const after = curve[(at + reach) % curve.length]!
+    const area =
+      Math.abs(
+        (point.x - before.x) * (after.z - before.z) - (after.x - before.x) * (point.z - before.z),
+      ) / 2
+    if (area < 1e-9) return Infinity
+    return (
+      (Math.hypot(point.x - before.x, point.z - before.z) *
+        Math.hypot(after.x - point.x, after.z - point.z) *
+        Math.hypot(after.x - before.x, after.z - before.z)) /
+      (4 * area)
+    )
+  })
+
+  return radii.indexOf(Math.max(...radii))
 }
 
-/** A point `ahead` metres down the track from the first mark, on the centre line. */
-function alongStart(ahead: number): Vector3 {
-  const first = circuitLine(0)[0]!
+function lengthOf(curve: readonly Vector3[]): number {
+  return curve.reduce(
+    (total, point, at) =>
+      total +
+      Math.hypot(
+        curve[(at + 1) % curve.length]!.x - point.x,
+        curve[(at + 1) % curve.length]!.z - point.z,
+      ),
+    0,
+  )
+}
+
+/** A point `ahead` metres ALONG the curve from the grid, and the way the track runs there. */
+function alongCurve(ahead: number): { at: Vector3; yaw: number } {
+  let walked = 0
+  let step = 0
+
+  while (walked < ahead && step < CENTRE_CURVE.length) {
+    const from = CENTRE_CURVE[(GRID_AT + step) % CENTRE_CURVE.length]!
+    const to = CENTRE_CURVE[(GRID_AT + step + 1) % CENTRE_CURVE.length]!
+    walked += Math.hypot(to.x - from.x, to.z - from.z)
+    step += 1
+  }
+
+  const at = CENTRE_CURVE[(GRID_AT + step) % CENTRE_CURVE.length]!
+  const next = CENTRE_CURVE[(GRID_AT + step + 1) % CENTRE_CURVE.length]!
   return {
-    x: first.x + Math.sin(CIRCUIT_START_YAW) * ahead,
-    y: 0,
-    z: first.z + Math.cos(CIRCUIT_START_YAW) * ahead,
+    at: { x: at.x, y: 0, z: at.z },
+    yaw: Math.atan2(next.x - at.x, next.z - at.z),
   }
 }
 
@@ -167,7 +217,7 @@ function surroundings(): SceneNode[] {
   const paddock = meshNode(
     { kind: 'box', width: 46, height: 7, depth: 18 },
     {
-      transform: transformAt({ x: 0, y: 3.5, z: BASE_RADIUS * 1.34 + 58 }),
+      transform: transformAt({ x: 0, y: 3.5, z: BASE_RADIUS * (1 + OVAL_PULL) + 58 }),
       material: dense(obstacleSurface(), PADDOCK_TILE),
       parentId: grounds.id,
       name: 'Paddock',
@@ -267,14 +317,15 @@ export function circuitNodes(): SceneNode[] {
  * thirty-metre slab of chequer. Only the YAW comes from the run.
  */
 function startLine(parentId: string): SceneNode {
-  const at = alongStart(LINE_AHEAD)
+  // Its OWN heading, six metres down the track: the grid's would lay it at an angle across a turn.
+  const line = alongCurve(CAR_BEHIND + LINE_AHEAD)
 
   return meshNode(
     { kind: 'box', width: TRACK_WIDTH, height: LINE_DEPTH, depth: 1.5 },
     {
       transform: transformAt(
-        { x: at.x, y: TARMAC_PROUD + LINE_DEPTH / 2, z: at.z },
-        { x: 0, y: CIRCUIT_START_YAW, z: 0 },
+        { x: line.at.x, y: TARMAC_PROUD + LINE_DEPTH / 2, z: line.at.z },
+        { x: 0, y: line.yaw, z: 0 },
       ),
       material: markSurface(),
       parentId,
