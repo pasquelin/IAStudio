@@ -1272,7 +1272,12 @@ export class SceneRenderer {
         shadowOfLightMoved(previous, node)
       ) {
         const light = this.objects.get(node.id)
-        if (light) this.changedShadowLights.add(light)
+        // A node hung UNDER this light keeps its own entry while this one carries it: nothing in
+        // `state.nodes` says its shadow now falls elsewhere. Its own glyph does not count, and it
+        // is the only thing a lamp carries on its own. Rare enough to pay the whole pass for.
+        const glyph = this.markers.get(node.id)
+        if (light?.children.some(child => child !== glyph)) allShadowsChanged = true
+        else if (light) this.changedShadowLights.add(light)
       }
     }
 
@@ -4043,9 +4048,7 @@ export class SceneRenderer {
     // `keepsItsGroup` lets nothing they read through.
     if (previous && keepsItsGroup(previous, node)) this.movedNodes.add(node.id)
     else this.markContentChanged()
-    if (shadowOfNodeMoved(previous, node)) {
-      this.placementChanged = true
-    }
+    if (shadowOfNodeMoved(previous, node)) this.placementChanged = true
 
     // A model is its file: pointing a node at another asset is a different object, not an edit
     // of this one. Released and rebuilt — patching it would leave the old file on screen and

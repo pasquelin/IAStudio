@@ -352,6 +352,35 @@ describe('a scene told what changed', () => {
       expect(redraw).toHaveBeenCalled()
     })
 
+    it('redraws every shadow map when a light carrying another one moves', () => {
+      const under = {
+        ...lightNodeFixture('light-2', {
+          kind: 'directional',
+          color: '#ffffff',
+          intensity: 1,
+          target: { x: 0, y: 0, z: 0 },
+        }),
+        parentId: 'light-1',
+      }
+      const renderer = rendererOf(directionalLight('light-1'), under)
+      const every = vi.spyOn(renderer['viewport'], 'requestRender')
+      const changed = vi.spyOn(renderer['viewport'], 'requestShadowRender')
+
+      applied(
+        renderer,
+        lightNodeFixture('light-1', {
+          kind: 'directional',
+          color: '#ffffff',
+          intensity: 1,
+          target: { x: 2, y: 0, z: 0 },
+        }),
+        under,
+      )
+
+      expect(changed).not.toHaveBeenCalled()
+      expect(every).toHaveBeenCalled()
+    })
+
     it('reuses shadow maps when only the selection changes', () => {
       const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
       const nodes = [meshNode('box-1')]

@@ -6,6 +6,8 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  Raycaster,
+  Vector3,
 } from 'three'
 import { PerspectiveCamera } from 'three'
 import { describe, expect, it } from 'vitest'
@@ -680,6 +682,26 @@ describe('a body that DECLARES it moves', () => {
     const cell = groups.drawn().find(mesh => mesh instanceof InstancedMesh && mesh.count > 1)
     expect(cell instanceof InstancedMesh && cell.count).toBe(WORTH_INSTANCING)
   })
+
+  it('stays clickable once a rebuild carries it past the sphere a ray cached', () => {
+    const { scene, groups, nodes, objects } = declared()
+    const lot = moverLot(scene)
+    if (!lot) throw new Error('no lot of movers')
+    scene.updateMatrixWorld(true)
+    // The first ray is what makes three compute the sphere, and it never recomputes it after.
+    new Raycaster(new Vector3(2, 10, 0), new Vector3(0, -1, 0)).intersectObject(lot, false)
+
+    const mover = objects.get('n2')
+    if (!mover) throw new Error('no body to move')
+    mover.position.set(400, 0, 0)
+    mover.updateMatrixWorld(true)
+    groups.rebuild(nodes, id => objects.get(id))
+    scene.updateMatrixWorld(true)
+
+    const ray = new Raycaster(new Vector3(400, 10, 0), new Vector3(0, -1, 0))
+    const hit = ray.intersectObjects([...groups.pickable()], false)[0]
+    expect(hit && groups.nodeIdOf(hit)).toBe('n2')
+  })
 })
 
 describe('a body that moves without declaring it', () => {
@@ -889,5 +911,24 @@ describe('a lot of movers born while a pane wears a stand-in', () => {
     // Asked and answered: a pane that has already dressed what was made must not redress on
     // every frame of a drag.
     expect(groups.builtAnew?.()).toBe(false)
+  })
+})
+
+describe('naming the node a click met on a lot', () => {
+  it('answers nothing for an object or slot no lot owns', () => {
+    const scene = host()
+    const groups = createCellGroups(scene)
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    groups.rebuild(nodes, id => objects.get(id))
+    const instance = groups.pickable()[0]
+    if (!instance) throw new Error('nothing was instanced')
+
+    expect(
+      groups.nodeIdOf({ object: new Mesh(), distance: 1, point: new Vector3(), instanceId: 0 }),
+    ).toBeNull()
+    expect(
+      groups.nodeIdOf({ object: instance, distance: 1, point: new Vector3(), instanceId: 999 }),
+    ).toBeNull()
+    expect(groups.nodeIdOf({ object: instance, distance: 1, point: new Vector3() })).toBeNull()
   })
 })

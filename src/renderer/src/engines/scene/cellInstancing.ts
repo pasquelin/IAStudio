@@ -21,6 +21,7 @@ import {
   slotOn,
   withFlags,
   sweep,
+  widen,
   worldReach,
   writeMoved,
   type Grouped,
@@ -302,6 +303,9 @@ export function createCellGroups(
     lot.mesh.count = lot.ids.length
     lot.mesh.setMatrixAt(slot, placement)
     lot.mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
+    // three caches the sphere at the FIRST ray and never invalidates it, and a lot is kept across
+    // rebuilds: without this a body settled beyond it is silently out of every click.
+    widen(lot.mesh.boundingSphere, lot.mesh.geometry, placement)
     pushSlot(placed, id, { instance: lot.mesh, slot, source })
   }
 
@@ -341,6 +345,7 @@ export function createCellGroups(
       if (lot && held) {
         lot.mesh.setMatrixAt(held.slot, source.matrixWorld)
         lot.mesh.instanceMatrix.addUpdateRange(held.slot * 16, 16)
+        widen(lot.mesh.boundingSphere, lot.mesh.geometry, source.matrixWorld)
         continue
       }
       if (!lot || lot.ids.length >= lot.mesh.instanceMatrix.count)
@@ -443,6 +448,17 @@ export function createCellGroups(
     listStale = true
   }
 
+  /** Rebuilt only when a lot was made or dropped: the draw and the ray read the same list. */
+  const listDrawn = (): readonly InstancedMesh[] => {
+    if (listStale) {
+      listed = []
+      for (const bucket of everyBucket()) listed.push(bucket.mesh)
+      for (const lot of mobiles.values()) listed.push(lot.mesh)
+      listStale = false
+    }
+    return listed
+  }
+
   return {
     rebuild: (nodes, objectOf, excluded) => {
       const groups = sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)
@@ -494,19 +510,17 @@ export function createCellGroups(
 
     // The movers among them: a display mode REPLACES a material, and a lot left out of that walk
     // goes on drawing shaded while everything around it wears the stand-in.
-    drawn: () => {
-      if (listStale) {
-        listed = []
-        for (const bucket of everyBucket()) listed.push(bucket.mesh)
-        for (const lot of mobiles.values()) listed.push(lot.mesh)
-        listStale = false
-      }
-      return listed
+    drawn: listDrawn,
+
+    // The same lots. A source is held out of the walk AND out of the ray's targets, so what draws
+    // a grouped body is the only thing left for a click to meet.
+    pickable: listDrawn,
+
+    nodeIdOf: hit => {
+      if (!(hit.object instanceof InstancedMesh) || hit.instanceId === undefined) return null
+      const ids = bucketOf.get(hit.object)?.ids ?? lotOf.get(hit.object)?.ids
+      return ids?.[hit.instanceId] ?? null
     },
-
-    pickable: () => [],
-
-    nodeIdOf: () => null,
 
     // 🛑 A cell out of the zone LEAVES the scene; it is not merely turned off. `visible` stops
     // `projectObject` and nothing else: `updateMatrixWorld` walks every child whatever the flag
