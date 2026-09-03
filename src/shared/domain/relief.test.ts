@@ -183,3 +183,63 @@ describe('raiseReliefDisk', () => {
     })
   })
 })
+
+describe('combined overlays', () => {
+  const samples = {
+    width: 8,
+    height: 8,
+    values: Float32Array.from({ length: 64 }, (_, at) => at * 0.1),
+  }
+
+  function overlay(
+    sculpt: ReliefSculpt,
+    extra: { enabled?: boolean; alpha?: number } = {},
+  ): { enabled: boolean; alpha: number; sculpt: ReliefSculpt } {
+    return { enabled: extra.enabled ?? true, alpha: extra.alpha ?? 1, sculpt }
+  }
+
+  const hills = withChunkDelta(samples, undefined, {
+    column: 0,
+    row: 0,
+    localX: 2,
+    localZ: 1,
+    delta: 3,
+  })
+  const valley = withChunkDelta(samples, undefined, {
+    column: 0,
+    row: 0,
+    localX: 2,
+    localZ: 1,
+    delta: 1,
+  })
+
+  it('sums enabled overlays, each scaled by its alpha', () => {
+    expect(
+      combinedAt(
+        samples,
+        RELIEF_CHUNK_TEXELS,
+        [overlay(hills), overlay(valley, { alpha: 0.5 })],
+        2,
+        1,
+      ),
+    ).toBeCloseTo(1.0 + 3 + 0.5)
+  })
+
+  it('skips a disabled overlay, leaving the others', () => {
+    expect(
+      combinedAt(
+        samples,
+        RELIEF_CHUNK_TEXELS,
+        [overlay(hills, { enabled: false }), overlay(valley)],
+        2,
+        1,
+      ),
+    ).toBeCloseTo(1.0 + 1)
+  })
+
+  it('subtracts when alpha is negative', () => {
+    expect(
+      combinedAt(samples, RELIEF_CHUNK_TEXELS, [overlay(hills, { alpha: -1 })], 2, 1),
+    ).toBeCloseTo(1.0 - 3)
+  })
+})
