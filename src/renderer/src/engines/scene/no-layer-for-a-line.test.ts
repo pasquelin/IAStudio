@@ -30,6 +30,9 @@ const OTHER_SENSES: Record<string, string> = {
   modelInstancing: 'three.js `Layers`: the one the camera skips once an instance draws the mesh',
   SceneRenderer: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
   sceneWorld: 'World relief: a heightmap the scene holds, not a timeline line',
+  reliefSurface: 'World relief: a heightmap the scene holds, not a timeline line',
+  reliefCommands: 'World relief: sculpt deltas on a heightmap, not a timeline line',
+  sceneRendererRelief: 'World relief: applyWorld reads world.layers, not a timeline line',
 }
 
 const stemOf = (path: string): string => (path.split('/').pop() ?? '').split('.')[0] ?? ''
