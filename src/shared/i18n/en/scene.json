@@ -184,8 +184,6 @@
     "rotateHint": "Rotate the selected object",
     "scale": "Scale",
     "scaleHint": "Change the selected object’s scale",
-    "sculpt": "Sculpt relief",
-    "sculptHint": "Drag over the editable relief to raise it — hold Alt to lower it",
     "frame": "Frame selection",
     "frameHint": "Recentre the camera on the selected object",
     "isolateHint": "Leaves only what is chosen on screen",

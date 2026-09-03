@@ -26,7 +26,6 @@ import {
   mdiLightbulbOn70,
   mdiMagnet,
   mdiResize,
-  mdiTerrain,
   mdiSelectionEllipseRemove,
   mdiSphere,
   mdiSquareOpacity,
@@ -179,14 +178,6 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     labelKey: 'sceneTools.space',
     descriptionKey: 'sceneTools.spaceHint',
     icon: mdiAxisArrowLock,
-  },
-  {
-    id: 'sculpt',
-    command: 'scene.sculpt',
-    labelKey: 'sceneTools.sculpt',
-    descriptionKey: 'sceneTools.sculptHint',
-    icon: mdiTerrain,
-    separatorBefore: true,
   },
   // The three verbs of a selection, which every modeller reaches for by the minute — Blender,
   // Maya and Unity all draw them. They were left to the Édition menu alone.

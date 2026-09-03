@@ -275,6 +275,19 @@ describe('a scene told what changed', () => {
    * engine answers about itself; where the side views land is the viewport's own suite.
    */
   describe('four views', () => {
+    it('reuses shadow maps when only the selection changes', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      const nodes = [meshNode('box-1')]
+      renderer.apply({ ...EMPTY_SCENE, nodes })
+      const redraw = vi.spyOn(renderer['viewport'], 'requestRender')
+      const refresh = vi.spyOn(renderer['viewport'], 'requestCameraRender')
+
+      renderer.apply({ ...EMPTY_SCENE, nodes, selectedIds: ['box-1'] })
+
+      expect(redraw).not.toHaveBeenCalled()
+      expect(refresh).toHaveBeenCalled()
+    })
+
     it('opens and closes the layout, and says which it is in', () => {
       const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
 

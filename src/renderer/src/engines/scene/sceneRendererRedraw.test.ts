@@ -16,6 +16,7 @@ import source from './SceneRenderer.ts?raw'
 describe('SceneRenderer and the preview it invalidates', () => {
   const REDRAW = /private redraw\(\): void \{[\s\S]*?\n {2}\}/
   const REPAINT = /private repaint\(\): void \{[\s\S]*?\n {2}\}/
+  const REFRESH = /private refreshWithoutShadows\(\): void \{[\s\S]*?\n {2}\}/
 
   /**
    * The NAME and not the call: `createEnvironment` and the three texture binders are handed
@@ -27,11 +28,22 @@ describe('SceneRenderer and the preview it invalidates', () => {
     const elsewhere = source
       .replace(REDRAW, '')
       .replace(REPAINT, '')
+      .replace(REFRESH, '')
       .split('\n')
       .map((line, at) => ({ line: line.trim(), at: at + 1 }))
-      .filter(({ line }) => line.includes('viewport.requestRender'))
+      .filter(
+        ({ line }) =>
+          line.includes('viewport.requestRender') || line.includes('viewport.requestCameraRender'),
+      )
 
     expect(elsewhere).toEqual([])
+  })
+
+  it('refreshes filmed pixels without invalidating unchanged shadow maps', () => {
+    const refresh = REFRESH.exec(source)?.[0] ?? ''
+
+    expect(refresh).toContain('this.viewport.invalidateInset()')
+    expect(refresh).toContain('this.viewport.requestCameraRender()')
   })
 
   it('invalidates the preview in `redraw`, and leaves it alone in `repaint`', () => {
@@ -40,7 +52,7 @@ describe('SceneRenderer and the preview it invalidates', () => {
 
     expect(redraw).toContain('this.viewport.invalidateInset()')
     expect(redraw).toContain('this.viewport.requestRender()')
-    expect(repaint).toContain('this.viewport.requestRender()')
+    expect(repaint).toContain('this.viewport.requestCameraRender()')
     expect(repaint).not.toContain('invalidateInset')
   })
 })

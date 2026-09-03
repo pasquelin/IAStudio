@@ -39,6 +39,8 @@ import {
 } from './threeFactory'
 import { tileUvs } from './uvTiling'
 
+const UNBOUNDED_POINT_SHADOW_FAR = 500
+
 /*
  * Bringing an existing three.js object in line with an edited descriptor — the other half of
  * `three-factory`, which only ever builds. Out of `SceneRenderer` for the same reason: none of
@@ -186,6 +188,7 @@ export function applyLight(light: Light, descriptor: LightDescriptor): void {
       if (!(light instanceof PointLight)) return
       light.distance = descriptor.distance
       light.decay = descriptor.decay
+      fitPointShadowRange(light)
       return
 
     case 'spot':
@@ -196,6 +199,14 @@ export function applyLight(light: Light, descriptor: LightDescriptor): void {
       light.decay = descriptor.decay
       applyTarget(light, descriptor.target)
   }
+}
+
+function fitPointShadowRange(light: PointLight): void {
+  const far =
+    light.distance > light.shadow.camera.near ? light.distance : UNBOUNDED_POINT_SHADOW_FAR
+  if (light.shadow.camera.far === far) return
+  light.shadow.camera.far = far
+  light.shadow.camera.updateProjectionMatrix()
 }
 
 function applyTarget(light: DirectionalLight | SpotLight, target: Vector3): void {

@@ -22,7 +22,6 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setNavigating = vi.fn()
     configure = vi.fn()
     setMode = vi.fn()
-    setReliefBrush = vi.fn()
     setSnapping = vi.fn()
     setSpace = vi.fn()
     setProjection = vi.fn()

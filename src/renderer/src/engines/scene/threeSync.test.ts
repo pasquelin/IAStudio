@@ -359,6 +359,24 @@ describe('applyLight', () => {
 
     expect(light.distance).toBe(12)
     expect(light.decay).toBe(1.5)
+    expect(light.shadow.camera.far).toBe(12)
+  })
+
+  it('restores the unbounded point light shadow range', () => {
+    const light = new PointLight()
+    applyLight(light, { kind: 'point', color: '#ffffff', intensity: 1, distance: 12, decay: 2 })
+
+    applyLight(light, { kind: 'point', color: '#ffffff', intensity: 1, distance: 0, decay: 2 })
+
+    expect(light.shadow.camera.far).toBe(500)
+  })
+
+  it('keeps a valid shadow range below the point light near plane', () => {
+    const light = new PointLight()
+
+    applyLight(light, { kind: 'point', color: '#ffffff', intensity: 1, distance: 0.1, decay: 2 })
+
+    expect(light.shadow.camera.far).toBe(500)
   })
 
   it('writes the cone of a spot light', () => {

@@ -62,7 +62,6 @@ export type CommandId =
   | 'scene.translate'
   | 'scene.rotate'
   | 'scene.scale'
-  | 'scene.sculpt'
   | 'scene.frame'
   | 'scene.isolate'
   | 'scene.hide'
@@ -513,13 +512,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneScale.title',
     helpKey: 'commands.sceneScale.help',
     defaultBinding: 'KeyS',
-  }),
-  command({
-    id: 'scene.sculpt',
-    scope: 'scene',
-    titleKey: 'commands.sceneSculpt.title',
-    helpKey: 'commands.sceneSculpt.help',
-    defaultBinding: null,
   }),
   command({
     id: 'scene.frame',
