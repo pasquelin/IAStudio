@@ -6,6 +6,7 @@ export const IN_WORKSPACE: ToolState = {
   hasGit: true,
   hasCloud: true,
   centreTaken: true,
+  documentKind: 'scene',
 }
 
 /** The home before anything has been opened, which is where a launch starts. */

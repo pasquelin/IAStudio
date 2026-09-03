@@ -109,7 +109,7 @@ export type ToolPlacement = {
    * The state itself is not answered here — `shared/` holds no runtime dependency — but which
    * question to ask is a property of the panel, and it belongs beside the panel.
    */
-  requires?: 'project' | 'git' | 'cloud' | 'centreTaken'
+  requires?: 'project' | 'git' | 'cloud' | 'centreTaken' | 'sceneDocument' | 'guiDocument'
   /**
    * Whether the panel takes its zone WHOLE: shown, the other half draws nothing. Only a
    * `primary` may ask for it — `tool.test.ts` holds that, the resolver silencing the second half
@@ -191,12 +191,36 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'text', zone: 'right', slot: 'primary', surfaces: ['image'] },
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
   // lists the documents of the project in every space, which is a different question.
-  { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
+  {
+    id: 'scene',
+    zone: 'right',
+    slot: 'primary',
+    surfaces: ['3d'],
+    requires: 'sceneDocument',
+  },
   // The outliner of an interface, beside the scene's rather than folded into it: the 3D
   // space opens two kinds now, and one panel answering for both would answer for neither.
-  { id: 'guiTree', zone: 'right', slot: 'primary', surfaces: ['3d'] },
-  { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
-  { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
+  {
+    id: 'guiTree',
+    zone: 'right',
+    slot: 'primary',
+    surfaces: ['3d'],
+    requires: 'guiDocument',
+  },
+  {
+    id: 'lights',
+    zone: 'right',
+    slot: 'primary',
+    surfaces: ['3d'],
+    requires: 'sceneDocument',
+  },
+  {
+    id: 'meshes',
+    zone: 'right',
+    slot: 'primary',
+    surfaces: ['3d'],
+    requires: 'sceneDocument',
+  },
   // What a character can be made to play, on the right where the panels that steer a document
   // already are. Its rows are dragged onto the band below, which is why the two face each other.
 
