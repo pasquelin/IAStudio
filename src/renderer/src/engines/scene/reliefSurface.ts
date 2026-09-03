@@ -32,7 +32,7 @@ import { loadHeightmap } from './heightmap'
 export type ReliefSurface = {
   object: Object3D
   sync: (world: SceneWorld, samples?: HeightmapSamples) => void
-  meshOf: (column: number, row: number) => Mesh | undefined
+  meshOf: (terrainId: string, column: number, row: number) => Mesh | undefined
   dispose: () => void
 }
 
@@ -52,12 +52,17 @@ type Held = {
   edits: readonly TerrainEditLayer[]
 }
 
-type SurfaceState = {
+type TerrainSurface = {
   group: Group
-  material: MeshStandardMaterial
   meshes: Map<string, Mesh>
   held: Held | null
   generation: number
+}
+
+type SurfaceState = {
+  group: Group
+  material: MeshStandardMaterial
+  terrains: Map<string, TerrainSurface>
   options: ReliefSurfaceOptions
   load: (assetId: string) => Promise<HeightmapSamples>
 }
@@ -69,9 +74,7 @@ export function createReliefSurface(
   const state: SurfaceState = {
     group: new Group(),
     material: new MeshStandardMaterial({ roughness: 0.9, metalness: 0 }),
-    meshes: new Map(),
-    held: null,
-    generation: 0,
+    terrains: new Map(),
     options,
     load: options.load ?? (assetId => loadHeightmap(assetId)),
   }
@@ -80,43 +83,74 @@ export function createReliefSurface(
   return {
     object: state.group,
     sync: (world, samples) => syncRelief(state, world, samples),
-    meshOf: (column, row) => state.meshes.get(keyOf(column, row)),
+    meshOf: (terrainId, column, row) =>
+      state.terrains.get(terrainId)?.meshes.get(keyOf(column, row)),
     dispose: () => disposeRelief(state),
   }
 }
 
 function syncRelief(state: SurfaceState, world: SceneWorld, samples?: HeightmapSamples): void {
-  const layer = world.layers.find(item => item.kind === 'relief' && item.enabled)
-  if (!layer) {
-    state.generation += 1
-    state.held = null
-    clearMeshes(state.meshes)
-    return
+  const wanted = world.layers.filter(
+    (layer): layer is ReliefLayer => layer.kind === 'relief' && layer.enabled,
+  )
+  const ids = new Set(wanted.map(layer => layer.id))
+  for (const [id, terrain] of [...state.terrains]) {
+    if (!ids.has(id)) dropTerrain(state, id, terrain)
   }
-  if (samples) {
-    applyLayer(state, layer, samples)
-    return
+  for (const layer of wanted) {
+    const terrain = terrainSurfaceOf(state, layer)
+    if (samples) {
+      applyLayer(state, terrain, layer, samples)
+      continue
+    }
+    if (terrain.held?.assetId === layer.heightmap.assetId) {
+      applyLayer(state, terrain, layer, terrain.held.samples)
+      continue
+    }
+    void loadLayer(state, terrain, layer)
   }
-  if (state.held?.assetId === layer.heightmap.assetId) {
-    applyLayer(state, layer, state.held.samples)
-    return
-  }
-  void loadLayer(state, layer)
 }
 
-function applyLayer(state: SurfaceState, layer: ReliefLayer, samples: HeightmapSamples): void {
+function terrainSurfaceOf(state: SurfaceState, layer: ReliefLayer): TerrainSurface {
+  const held = state.terrains.get(layer.id)
+  if (held) return held
+  const terrain: TerrainSurface = {
+    group: new Group(),
+    meshes: new Map(),
+    held: null,
+    generation: 0,
+  }
+  terrain.group.name = `relief-${layer.id}`
+  state.group.add(terrain.group)
+  state.terrains.set(layer.id, terrain)
+  return terrain
+}
+
+function dropTerrain(state: SurfaceState, id: string, terrain: TerrainSurface): void {
+  terrain.generation += 1
+  clearMeshes(terrain.meshes)
+  terrain.group.removeFromParent()
+  state.terrains.delete(id)
+}
+
+function applyLayer(
+  state: SurfaceState,
+  terrain: TerrainSurface,
+  layer: ReliefLayer,
+  samples: HeightmapSamples,
+): void {
   const extent: ReliefExtent = {
     origin: layer.origin,
     size: layer.size,
     elevation: layer.elevation,
   }
-  if (needsRebuild(state.held, samples, layer.grain, extent, layer.edits)) {
-    clearMeshes(state.meshes)
-    buildMeshes(state, samples, extent, layer.grain, layer.edits)
+  if (needsRebuild(terrain.held, samples, layer.grain, extent, layer.edits)) {
+    clearMeshes(terrain.meshes)
+    buildMeshes(state, terrain, samples, extent, layer.grain, layer.edits)
   } else {
-    patchMeshes(state, samples, extent, layer.grain, state.held?.edits ?? [], layer.edits)
+    patchMeshes(terrain, samples, extent, layer.grain, terrain.held?.edits ?? [], layer.edits)
   }
-  state.held = {
+  terrain.held = {
     assetId: layer.heightmap.assetId,
     samples,
     extent,
@@ -156,28 +190,32 @@ function blendChanged(
   return false
 }
 
-async function loadLayer(state: SurfaceState, layer: ReliefLayer): Promise<void> {
-  const token = ++state.generation
+async function loadLayer(
+  state: SurfaceState,
+  terrain: TerrainSurface,
+  layer: ReliefLayer,
+): Promise<void> {
+  const token = ++terrain.generation
   try {
     const samples = await state.load(layer.heightmap.assetId)
-    if (token !== state.generation) return
-    applyLayer(state, layer, samples)
+    if (token !== terrain.generation) return
+    applyLayer(state, terrain, layer, samples)
     state.options.onReady?.()
   } catch (error) {
-    if (token !== state.generation) return
+    if (token !== terrain.generation) return
     state.options.onFailure?.(layer.heightmap.assetId, error)
   }
 }
 
 function disposeRelief(state: SurfaceState): void {
-  state.generation += 1
-  clearMeshes(state.meshes)
+  for (const [id, terrain] of [...state.terrains]) dropTerrain(state, id, terrain)
   state.material.dispose()
   state.group.removeFromParent()
 }
 
 function buildMeshes(
   state: SurfaceState,
+  terrain: TerrainSurface,
   samples: HeightmapSamples,
   extent: ReliefExtent,
   grain: number,
@@ -192,26 +230,26 @@ function buildMeshes(
       mesh.name = `relief-chunk-${column}-${row}`
       mesh.castShadow = false
       mesh.receiveShadow = true
-      state.group.add(mesh)
-      state.meshes.set(keyOf(column, row), mesh)
+      terrain.group.add(mesh)
+      terrain.meshes.set(keyOf(column, row), mesh)
     }
   }
 }
 
 function patchMeshes(
-  state: SurfaceState,
+  terrain: TerrainSurface,
   samples: HeightmapSamples,
   extent: ReliefExtent,
   grain: number,
   before: readonly TerrainEditLayer[],
   after: readonly TerrainEditLayer[],
 ): void {
-  for (const mesh of state.meshes.values()) clearChunkRanges(mesh)
+  for (const mesh of terrain.meshes.values()) clearChunkRanges(mesh)
   const edits = dirtiedChunks(before, after)
   const dirty = new Set(edits.map(edit => keyOf(edit.column, edit.row)))
 
   for (const { column, row } of edits) {
-    const mesh = state.meshes.get(keyOf(column, row))
+    const mesh = terrain.meshes.get(keyOf(column, row))
     if (!mesh) continue
     const layout = chunkLayout(column, row, samples.width, samples.height, grain)
     writeChunk(mesh.geometry, samples, extent, layout, grain, after, true)
@@ -222,7 +260,7 @@ function patchMeshes(
   // lighting of before — a crease down every seam a brush came near, and one that never healed.
   // Its normals only: nothing moved on that side, so its positions are already true.
   for (const key of borderingChunks(dirty, samples, grain)) {
-    const mesh = state.meshes.get(keyOf(key.column, key.row))
+    const mesh = terrain.meshes.get(keyOf(key.column, key.row))
     if (!mesh) continue
     const layout = chunkLayout(key.column, key.row, samples.width, samples.height, grain)
     writeChunkNormals(mesh.geometry, samples, extent, layout, grain, after)

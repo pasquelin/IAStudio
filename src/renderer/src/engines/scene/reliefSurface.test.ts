@@ -17,6 +17,7 @@ import { createReliefSurface } from './reliefSurface'
 
 const WIDTH = 66
 const HEIGHT = 8
+const TERRAIN = 'terrain'
 
 function samplesOf() {
   return {
@@ -37,8 +38,13 @@ function worldOf(sculpt?: ReliefSculpt) {
   return { ...DEFAULT_WORLD, layers: [layerOf(sculpt)] }
 }
 
-function positionOf(surface: ReturnType<typeof createReliefSurface>, column: number, row: number) {
-  const mesh = surface.meshOf(column, row)
+function positionOf(
+  surface: ReturnType<typeof createReliefSurface>,
+  column: number,
+  row: number,
+  terrainId = TERRAIN,
+) {
+  const mesh = surface.meshOf(terrainId, column, row)
   const position = mesh?.geometry.getAttribute('position')
   if (!(position instanceof BufferAttribute)) throw new Error('chunk has no position buffer')
   return position
@@ -51,9 +57,10 @@ describe('relief surface chunks', () => {
     const samples = samplesOf()
     surface.sync(worldOf(), samples)
 
-    expect(surface.meshOf(0, 0)).toBeDefined()
-    expect(surface.meshOf(1, 0)).toBeDefined()
-    expect(surface.object.children).toHaveLength(2)
+    expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined()
+    expect(surface.meshOf(TERRAIN, 1, 0)).toBeDefined()
+    expect(surface.object.children).toHaveLength(1)
+    expect(surface.object.children[0]?.children).toHaveLength(2)
 
     const y = positionOf(surface, 0, 0).array[1]
     expect(y).toBeCloseTo(0)
@@ -97,8 +104,8 @@ describe('relief surface chunks', () => {
     )
     surface.sync(worldOf(sculpt), samples)
 
-    const left = surface.meshOf(0, 0)
-    const right = surface.meshOf(1, 0)
+    const left = surface.meshOf(TERRAIN, 0, 0)
+    const right = surface.meshOf(TERRAIN, 1, 0)
     const leftPos = left?.geometry.getAttribute('position')
     const rightPos = right?.geometry.getAttribute('position')
     if (!(leftPos instanceof BufferAttribute) || !(rightPos instanceof BufferAttribute)) {
@@ -142,8 +149,8 @@ describe('relief surface chunks', () => {
     })
     surface.sync(worldOf(sculpt), samples)
 
-    const left = surface.meshOf(0, 0)?.geometry.getAttribute('normal')
-    const right = surface.meshOf(1, 0)?.geometry.getAttribute('normal')
+    const left = surface.meshOf(TERRAIN, 0, 0)?.geometry.getAttribute('normal')
+    const right = surface.meshOf(TERRAIN, 1, 0)?.geometry.getAttribute('normal')
     if (!(left instanceof BufferAttribute) || !(right instanceof BufferAttribute)) {
       throw new Error('seam chunks missing')
     }
@@ -165,6 +172,27 @@ describe('relief surface chunks', () => {
     surface.sync(DEFAULT_WORLD)
 
     expect(surface.object.children).toHaveLength(0)
-    expect(surface.meshOf(0, 0)).toBeUndefined()
+    expect(surface.meshOf(TERRAIN, 0, 0)).toBeUndefined()
+  })
+
+  it('draws two disjoint terrains as two independent meshes, never summed', () => {
+    const scene = new Scene()
+    const surface = createReliefSurface(scene)
+    const samples = samplesOf()
+    const left = reliefLayer(
+      { assetId: 'asset_height' },
+      { id: 'isle', origin: { x: 0, z: 0 }, size: { x: 20, z: 20 } },
+    )
+    const right = reliefLayer(
+      { assetId: 'asset_height' },
+      { id: 'range', origin: { x: 200, z: 0 }, size: { x: 20, z: 20 } },
+    )
+    surface.sync({ ...DEFAULT_WORLD, layers: [left, right] }, samples)
+
+    expect(surface.object.children).toHaveLength(2)
+    expect(surface.meshOf('isle', 0, 0)).toBeDefined()
+    expect(surface.meshOf('range', 0, 0)).toBeDefined()
+    expect(positionOf(surface, 0, 0, 'isle').array[0]).toBeCloseTo(0)
+    expect(positionOf(surface, 0, 0, 'range').array[0]).toBeCloseTo(200)
   })
 })

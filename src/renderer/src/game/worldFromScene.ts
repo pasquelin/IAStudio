@@ -37,7 +37,6 @@ import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
  * nobody stands on is the first thing anyone tries. A dot keeps the name out of reach of a uuid.
  */
 const GROUND_BODY = 'world.ground'
-const RELIEF_BODY = 'world.relief'
 
 /** Deep enough that nothing falls through it in one step at terminal speed. */
 const GROUND_DEPTH = 5
@@ -217,13 +216,18 @@ function groundOf(
   heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
   warn: (message: string) => void,
 ): readonly BodyDescriptor[] {
-  const relief = state.world.layers.find(layer => layer.kind === 'relief')
-  if (relief) {
+  const reliefs = state.world.layers.filter(layer => layer.kind === 'relief' && layer.enabled)
+  const bodies: BodyDescriptor[] = []
+  for (const relief of reliefs) {
     const samples = heightmaps?.get(relief.heightmap.assetId)
     const shape = samples ? colliderFromRelief(relief, samples) : null
-    if (shape) return [staticBody(RELIEF_BODY, shape)]
+    if (shape) {
+      bodies.push(staticBody(`world.relief.${relief.id}`, shape))
+      continue
+    }
     warn(`relief ${relief.heightmap.assetId} has no heightmap the physics can feel`)
   }
+  if (bodies.length > 0) return bodies
 
   const ground = state.world.ground
   if (!ground.visible) return []

@@ -120,7 +120,7 @@ describe('the edit state, translated into something that runs', () => {
     ).step(1 / 60)
 
     const floor = physics.added.find(body => body.body === 'world.ground')
-    const relief = physics.added.find(body => body.body === 'world.relief')
+    const relief = physics.added.find(body => body.body === 'world.relief.terrain')
     expect(floor).toBeUndefined()
     expect(relief?.kind).toBe('fixed')
     expect(relief?.shape.kind).toBe('heightfield')
@@ -142,7 +142,7 @@ describe('the edit state, translated into something that runs', () => {
     worldFromScene('doc-1', state, held).step(1 / 60)
 
     expect(physics.added.find(body => body.body === 'world.ground')?.shape.kind).toBe('cuboid')
-    expect(physics.added.find(body => body.body === 'world.relief')).toBeUndefined()
+    expect(physics.added.find(body => body.body.startsWith('world.relief.'))).toBeUndefined()
     expect(held.log.recent().some(entry => entry.message.includes('no heightmap'))).toBe(true)
   })
 
@@ -155,6 +155,57 @@ describe('the edit state, translated into something that runs', () => {
 
     expect(physics.added.map(body => body.body)).toEqual(['world.ground'])
     expect(physics.added[0]?.shape.kind).toBe('cuboid')
+  })
+
+  it('stands two disjoint terrains on two independent heightfields', () => {
+    const physics = notedPhysics()
+    const samples = {
+      width: 4,
+      height: 4,
+      values: new Float32Array(16).fill(0.5),
+    }
+    const state: SceneState = {
+      ...scene(),
+      world: {
+        ...EMPTY_SCENE.world,
+        ground: { ...EMPTY_SCENE.world.ground, visible: true, size: 40 },
+        layers: [
+          reliefLayer(
+            { assetId: 'asset_height' },
+            { id: 'isle', origin: { x: 0, z: 0 }, size: { x: 9, z: 9 } },
+          ),
+          reliefLayer(
+            { assetId: 'asset_height' },
+            { id: 'range', origin: { x: 200, z: 0 }, size: { x: 9, z: 9 } },
+          ),
+        ],
+      },
+    }
+
+    worldFromScene(
+      'doc-1',
+      state,
+      ports(physics),
+      {},
+      1,
+      new Map([['asset_height', samples]]),
+    ).step(1 / 60)
+
+    const isle = physics.added.find(body => body.body === 'world.relief.isle')
+    const range = physics.added.find(body => body.body === 'world.relief.range')
+    expect(physics.added.find(body => body.body === 'world.ground')).toBeUndefined()
+    expect(isle?.shape.kind).toBe('heightfield')
+    expect(range?.shape.kind).toBe('heightfield')
+    expect(isle?.shape.kind === 'heightfield' ? isle.shape.offset : null).toEqual({
+      x: 0,
+      y: 0,
+      z: 0,
+    })
+    expect(range?.shape.kind === 'heightfield' ? range.shape.offset : null).toEqual({
+      x: 200,
+      y: 0,
+      z: 0,
+    })
   })
 
   /**
