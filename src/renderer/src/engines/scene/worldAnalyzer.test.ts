@@ -2,7 +2,7 @@ import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh } from '
 import { describe, expect, it } from 'vitest'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { WORTH_INSTANCING } from './grouping'
-import { meshNode } from './scene-fixtures'
+import { groupNodeFixture, meshNode } from './scene-fixtures'
 import { analyzeOptimization, optimizationReport } from './worldAnalyzer'
 
 function repeated(count: number): {
@@ -25,6 +25,7 @@ describe('analyzeOptimization', () => {
 
     const plan = analyzeOptimization(
       { nodes, animation: EMPTY_TIMELINE },
+      new Object3D(),
       id => objects.get(id),
     )
 
@@ -44,7 +45,9 @@ describe('analyzeOptimization', () => {
   it('returns the same ordered plan for the same world', () => {
     const { nodes, objects } = repeated(WORTH_INSTANCING)
     const analyze = () =>
-      analyzeOptimization({ nodes, animation: EMPTY_TIMELINE }, id => objects.get(id))
+      analyzeOptimization({ nodes, animation: EMPTY_TIMELINE }, new Object3D(), id =>
+        objects.get(id),
+      )
 
     expect(analyze()).toEqual(analyze())
   })
@@ -76,6 +79,7 @@ describe('analyzeOptimization', () => {
 
     const plan = analyzeOptimization(
       { nodes: [moving, animated, skinned], animation },
+      new Object3D(),
       id => objects.get(id),
       { minInstancesPerGroup: 1 },
     )
@@ -95,6 +99,7 @@ describe('analyzeOptimization', () => {
 
     const plan = analyzeOptimization(
       { nodes, animation: EMPTY_TIMELINE },
+      new Object3D(),
       id => objects.get(id),
     )
 
@@ -103,5 +108,45 @@ describe('analyzeOptimization', () => {
       geometry.index?.array.byteLength ?? 0,
     )
     expect(plan.measured).toMatchObject({ objects: 2, meshes: 2, geometryBytes: expectedBytes })
+  })
+
+  it('counts a parented mesh once and leaves hidden branches out of measured render costs', () => {
+    const host = new Object3D()
+    const group = new Object3D()
+    const mesh = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    const groupNode = groupNodeFixture('group')
+    const childNode = meshNode('child', groupNode.id)
+    group.visible = false
+    group.add(mesh)
+    host.add(group)
+    const objects = new Map<string, Object3D>([
+      [groupNode.id, group],
+      [childNode.id, mesh],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes: [groupNode, childNode], animation: EMPTY_TIMELINE },
+      host,
+      id => objects.get(id),
+    )
+
+    expect(plan.measured).toMatchObject({ objects: 2, meshes: 0, draws: 0, geometryBytes: 0 })
+    expect(plan.classifications[0]).toEqual({ id: 'group', classifications: ['STATIC'] })
+  })
+
+  it('keeps a hidden skinned mesh unsafe', () => {
+    const node = meshNode('skinned')
+    const mesh = new SkinnedMesh(new BoxGeometry(), new MeshStandardMaterial())
+    mesh.visible = false
+
+    const plan = analyzeOptimization(
+      { nodes: [node], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      () => mesh,
+      { minInstancesPerGroup: 1 },
+    )
+
+    expect(plan.classifications[0]?.classifications).toEqual(['SKINNED', 'UNSAFE'])
+    expect(plan.instances).toEqual([])
   })
 })

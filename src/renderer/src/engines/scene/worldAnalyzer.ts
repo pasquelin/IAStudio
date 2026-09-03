@@ -1,7 +1,7 @@
 import { Mesh, SkinnedMesh, type BufferGeometry, type Material, type Object3D } from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
-import { WORTH_INSTANCING, flagsOf, shapeAndPaint } from './grouping'
+import { WORTH_INSTANCING, flagsOf, isDrawn, shapeAndPaint } from './grouping'
 import { isInstanceable, meshesOf } from './instanceableModel'
 import { statsOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
@@ -12,8 +12,6 @@ export type OptimizationClassification =
   | 'SKINNED'
   | 'ANIMATED'
   | 'INSTANCABLE'
-  | 'BATCHABLE'
-  | 'MERGEABLE'
   | 'UNSAFE'
 
 export type ClassifiedObject = {
@@ -70,11 +68,12 @@ type CandidateGroup = { ids: Set<string>; meshes: number }
 
 export function analyzeOptimization(
   state: Pick<SceneState, 'nodes' | 'animation'>,
+  host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
   policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
 ): OptimizationPlan {
   const animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
-  const objects = state.nodes.flatMap(node => objectOf(node.id) ?? [])
+  const meshes = drawnMeshesOf(state.nodes, host, objectOf)
   const candidateGroups = new Map<string, CandidateGroup>()
   const keyOf = shapeAndPaint()
   const classifications: ClassifiedObject[] = []
@@ -87,9 +86,9 @@ export function analyzeOptimization(
 
     const reason = warningOf(nodeClassifications)
     if (reason) warnings.push({ nodeId: node.id, reason })
-    if (!nodeClassifications.includes('INSTANCABLE') || !object) continue
+    if (!nodeClassifications.includes('INSTANCABLE') || !object || !isDrawn(object, host)) continue
 
-    for (const mesh of drawableMeshes(node, object)) {
+    for (const mesh of ownMeshesOf(node, object).filter(mesh => isDrawn(mesh, host))) {
       if (Array.isArray(mesh.material)) continue
       const key = `${keyOf(node, mesh)}|${flagsOf(node, mesh)}`
       const group = candidateGroups.get(key)
@@ -104,7 +103,7 @@ export function analyzeOptimization(
     .filter(([, group]) => group.meshes >= policy.minInstancesPerGroup)
     .map(([key, group]) => ({ key, sourceIds: [...group.ids].sort(), meshCount: group.meshes }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
-  const sceneStats = statsOf(objects)
+  const sceneStats = statsOf(meshes)
   const savedDraws = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
 
   return {
@@ -114,8 +113,8 @@ export function analyzeOptimization(
     measured: {
       ...sceneStats,
       objects: state.nodes.length,
-      meshes: objects.reduce((count, object) => count + visibleMeshesOf(object).length, 0),
-      geometryBytes: geometryBytesOf(objects),
+      meshes: meshes.length,
+      geometryBytes: geometryBytesOf(meshes),
     },
     estimated: {
       drawCallsBefore: sceneStats.draws,
@@ -139,7 +138,7 @@ function classificationsOf(
   animated: boolean,
 ): OptimizationClassification[] {
   const classifications: OptimizationClassification[] = []
-  const meshes = object ? visibleMeshesOf(object) : []
+  const meshes = object ? ownMeshesOf(node, object) : []
   const skinned = meshes.some(mesh => mesh instanceof SkinnedMesh)
   const dynamic = movesOnItsOwn(node.components)
   const instancable =
@@ -147,7 +146,7 @@ function classificationsOf(
     !dynamic &&
     !skinned &&
     object !== undefined &&
-    ((node.type === 'mesh' && object instanceof Mesh) ||
+    ((node.type === 'mesh' && object instanceof Mesh && !(object instanceof SkinnedMesh)) ||
       (node.type === 'model' && isInstanceable(object)))
 
   if (!animated && !dynamic && !skinned) classifications.push('STATIC')
@@ -155,12 +154,6 @@ function classificationsOf(
   if (skinned) classifications.push('SKINNED')
   if (animated) classifications.push('ANIMATED')
   if (instancable) classifications.push('INSTANCABLE')
-  if (!animated && !dynamic && !skinned && meshes.some(hasSingleMaterial)) {
-    classifications.push('BATCHABLE')
-    if (node.components === undefined || node.components.length === 0) {
-      classifications.push('MERGEABLE')
-    }
-  }
   if (animated || dynamic || skinned) classifications.push('UNSAFE')
   return classifications
 }
@@ -174,32 +167,37 @@ function warningOf(
   return null
 }
 
-function drawableMeshes(node: SceneNode, object: Object3D): Mesh[] {
-  if (node.type === 'mesh') return object instanceof Mesh && object.visible ? [object] : []
-  return meshesOf(object).filter(mesh => mesh.visible)
-}
-
-function visibleMeshesOf(object: Object3D): Mesh[] {
+function ownMeshesOf(node: SceneNode, object: Object3D): Mesh[] {
+  if (node.type === 'mesh') return object instanceof Mesh ? [object] : []
+  if (node.type !== 'model') return []
   const meshes: Mesh[] = []
   object.traverse(child => {
-    if (child instanceof Mesh && child.visible) meshes.push(child)
+    if (child instanceof Mesh) meshes.push(child)
   })
   return meshes
 }
 
-function hasSingleMaterial(mesh: Mesh): boolean {
-  return !Array.isArray(mesh.material)
+function drawnMeshesOf(
+  nodes: readonly SceneNode[],
+  host: Object3D,
+  objectOf: (id: string) => Object3D | undefined,
+): Mesh[] {
+  const found = new Set<Mesh>()
+  for (const node of nodes) {
+    const object = objectOf(node.id)
+    if (!object || !isDrawn(object, host)) continue
+    for (const mesh of ownMeshesOf(node, object)) if (isDrawn(mesh, host)) found.add(mesh)
+  }
+  return [...found]
 }
 
-function geometryBytesOf(objects: readonly Object3D[]): number {
+function geometryBytesOf(meshes: readonly Mesh[]): number {
   const geometries = new Set<BufferGeometry>()
-  const buffers = new Set<ArrayBufferLike>()
-  for (const object of objects) {
-    for (const mesh of visibleMeshesOf(object)) geometries.add(mesh.geometry)
-  }
+  const arrays = new Set<ArrayBufferView>()
+  for (const mesh of meshes) geometries.add(mesh.geometry)
   for (const geometry of geometries) {
-    if (geometry.index) buffers.add(geometry.index.array.buffer)
-    for (const attribute of Object.values(geometry.attributes)) buffers.add(attribute.array.buffer)
+    if (geometry.index) arrays.add(geometry.index.array)
+    for (const attribute of Object.values(geometry.attributes)) arrays.add(attribute.array)
   }
-  return [...buffers].reduce((bytes, buffer) => bytes + buffer.byteLength, 0)
+  return [...arrays].reduce((bytes, array) => bytes + array.byteLength, 0)
 }
