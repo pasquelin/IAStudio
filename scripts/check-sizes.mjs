@@ -66,6 +66,25 @@ function complexityOf(node) {
   return complexity
 }
 
+function ownFunctionLines(source, node, tree) {
+  const first = source.slice(0, node.getStart(tree)).split('\n').length
+  const last = source.slice(0, node.end).split('\n').length
+  const nestedLines = new Set()
+  const visit = child => {
+    if (child !== node && isFunction(child)) {
+      const nestedFirst = source.slice(0, child.getStart(tree)).split('\n').length
+      const nestedLast = source.slice(0, child.end).split('\n').length
+      for (let line = nestedFirst; line <= nestedLast; line += 1) nestedLines.add(line)
+      return
+    }
+    ts.forEachChild(child, visit)
+  }
+  ts.forEachChild(node, visit)
+  let own = 0
+  for (let line = first; line <= last; line += 1) if (!nestedLines.has(line)) own += 1
+  return own
+}
+
 const isFunction = node =>
   ts.isFunctionDeclaration(node) ||
   ts.isFunctionExpression(node) ||
@@ -104,11 +123,13 @@ export function analyseTypeScript(source, filename = 'fixture.tsx') {
     }
     if (isFunction(node)) {
       const name = functionName(node)
-      const size = lines(source, node.getStart(tree), node.end)
+      const span = lines(source, node.getStart(tree), node.end)
       const complexity = complexityOf(node)
       let kind = complexity >= COMPLEXITY_THRESHOLD ? 'complex' : 'function'
       if (/^use[A-Z0-9]/.test(name)) kind = 'hook'
       else if (/^[A-Z]/.test(name) && containsJsx(node)) kind = 'component'
+      const size =
+        kind === 'function' || kind === 'complex' ? ownFunctionLines(source, node, tree) : span
       findings.push({ kind, name, lines: size, complexity })
     }
     ts.forEachChild(node, visit)

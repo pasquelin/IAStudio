@@ -3,6 +3,7 @@
 import ast
 import json
 import sys
+from pathlib import Path
 
 COMPLEXITY_THRESHOLD = 10
 
@@ -30,7 +31,7 @@ def complexity(node: ast.AST) -> int:
 
 
 def inspect(path: str) -> list[dict[str, object]]:
-    source = open(path, encoding="utf-8").read()
+    source = Path(path).read_text(encoding="utf-8")
     tree = ast.parse(source, filename=path)
     findings: list[dict[str, object]] = []
     for node in ast.walk(tree):
@@ -40,7 +41,15 @@ def inspect(path: str) -> list[dict[str, object]]:
             findings.append({"kind": "class", "name": node.name, "lines": size})
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             start = min([node.lineno, *(item.lineno for item in node.decorator_list)])
-            size = node.end_lineno - start + 1
+            occupied: set[int] = set()
+            for child in ast.walk(node):
+                if child is node or not isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                    continue
+                nested_start = min(
+                    [child.lineno, *(item.lineno for item in getattr(child, "decorator_list", []))]
+                )
+                occupied.update(range(nested_start, child.end_lineno + 1))
+            size = sum(line not in occupied for line in range(start, node.end_lineno + 1))
             score = complexity(node)
             kind = "complex" if score >= COMPLEXITY_THRESHOLD else "function"
             findings.append({"kind": kind, "name": node.name, "lines": size, "complexity": score})

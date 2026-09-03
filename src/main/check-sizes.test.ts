@@ -71,6 +71,17 @@ describe('size guard', () => {
     )
   })
 
+  it('does not charge an ordinary function for nested function lines', () => {
+    const nested = block('  const callback = () => {', '  }', LIMITS.function + 20)
+    const source = `function compose() {\n${nested}\n  return callback\n}`
+    expect(analyseTypeScript(source)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'compose', lines: 3 }),
+        expect.objectContaining({ name: 'callback', lines: LIMITS.function + 20 }),
+      ]),
+    )
+  })
+
   it('analyses Python classes and functions with the same strict bounds', () => {
     const directory = mkdtempSync(join(tmpdir(), 'sizes-'))
     temporary.push(directory)
@@ -82,5 +93,16 @@ describe('size guard', () => {
     expect(violationsFor(file)).toContainEqual(
       expect.objectContaining({ kind: 'class', lines: LIMITS.class }),
     )
+  })
+
+  it('excludes nested Python function ranges from their parent', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'sizes-'))
+    temporary.push(directory)
+    const file = join(directory, 'nested.py')
+    const nested = ['    def callback():', ...Array.from({ length: 60 }, () => '        pass')]
+    writeFileSync(file, ['def compose():', ...nested, '    return callback'].join('\n'))
+    expect(violationsFor(file)).toEqual([
+      expect.objectContaining({ kind: 'function', name: 'callback', lines: 61 }),
+    ])
   })
 })
