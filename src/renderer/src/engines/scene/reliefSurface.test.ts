@@ -2,6 +2,7 @@ import { BufferAttribute, Scene } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import {
   RELIEF_CHUNK_TEXELS,
+  chunkLayout,
   combinedAt,
   raiseReliefDisk,
   withChunkDelta,
@@ -13,7 +14,7 @@ import {
   terrainEditLayer,
   type ReliefLayer,
 } from '@shared/domain/scene'
-import { createReliefSurface } from './reliefSurface'
+import { createReliefSurface, reliefGeometryData } from './reliefSurface'
 
 const WIDTH = 66
 const HEIGHT = 8
@@ -51,6 +52,39 @@ function positionOf(
 }
 
 describe('relief surface chunks', () => {
+  it('leaves a full build to its builder and installs the answer when it is ready', async () => {
+    const ready = vi.fn()
+    const surface = createReliefSurface(new Scene(), {
+      builder: {
+        build: async (samples, extent, grain, edits) => [
+          reliefGeometryData(
+            samples,
+            extent,
+            chunkLayout(0, 0, WIDTH, HEIGHT, grain),
+            grain,
+            edits,
+          ),
+          reliefGeometryData(
+            samples,
+            extent,
+            chunkLayout(1, 0, WIDTH, HEIGHT, grain),
+            grain,
+            edits,
+          ),
+        ],
+        dispose: vi.fn(),
+      },
+      onReady: ready,
+    })
+
+    surface.sync(worldOf(), samplesOf())
+    expect(surface.object.children).toHaveLength(0)
+
+    await vi.waitFor(() => expect(ready).toHaveBeenCalledOnce())
+    expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined()
+    expect(surface.meshOf(TERRAIN, 1, 0)).toBeDefined()
+  })
+
   it('builds one mesh per chunk and lifts a vertex by the combined height', () => {
     const scene = new Scene()
     const surface = createReliefSurface(scene)

@@ -28,6 +28,8 @@ import {
 } from '@shared/domain/relief'
 import type { ReliefLayer, SceneWorld, TerrainEditLayer } from '@shared/domain/scene'
 import { loadHeightmap } from './heightmap'
+import type { ReliefBuilder } from './reliefBuilder'
+import type { ReliefGeometryData } from './reliefBuildMessage'
 
 export type ReliefSurface = {
   object: Object3D
@@ -38,6 +40,7 @@ export type ReliefSurface = {
 
 export type ReliefSurfaceOptions = {
   load?: (assetId: string) => Promise<HeightmapSamples>
+  builder?: ReliefBuilder
   onReady?: () => void
   onFailure?: (assetId: string, error: unknown) => void
 }
@@ -57,6 +60,7 @@ type TerrainSurface = {
   meshes: Map<string, Mesh>
   held: Held | null
   generation: number
+  buildAbort: AbortController | null
 }
 
 type SurfaceState = {
@@ -65,6 +69,7 @@ type SurfaceState = {
   terrains: Map<string, TerrainSurface>
   options: ReliefSurfaceOptions
   load: (assetId: string) => Promise<HeightmapSamples>
+  builder: ReliefBuilder | undefined
 }
 
 export function createReliefSurface(
@@ -77,6 +82,7 @@ export function createReliefSurface(
     terrains: new Map(),
     options,
     load: options.load ?? (assetId => loadHeightmap(assetId)),
+    builder: options.builder,
   }
   state.group.name = RELIEF_NAME
   scene.add(state.group)
@@ -119,6 +125,7 @@ function terrainSurfaceOf(state: SurfaceState, layer: ReliefLayer): TerrainSurfa
     meshes: new Map(),
     held: null,
     generation: 0,
+    buildAbort: null,
   }
   terrain.group.name = `relief-${layer.id}`
   state.terrains.set(layer.id, terrain)
@@ -127,6 +134,7 @@ function terrainSurfaceOf(state: SurfaceState, layer: ReliefLayer): TerrainSurfa
 
 function dropTerrain(state: SurfaceState, id: string, terrain: TerrainSurface): void {
   terrain.generation += 1
+  terrain.buildAbort?.abort()
   clearMeshes(terrain.meshes)
   terrain.group.removeFromParent()
   state.terrains.delete(id)
@@ -137,13 +145,17 @@ function applyLayer(
   terrain: TerrainSurface,
   layer: ReliefLayer,
   samples: HeightmapSamples,
-): void {
+): boolean {
   const extent: ReliefExtent = {
     origin: layer.origin,
     size: layer.size,
     elevation: layer.elevation,
   }
   if (needsRebuild(terrain.held, samples, layer.grain, extent, layer.edits)) {
+    if (state.builder) {
+      void buildMeshesAway(state, terrain, state.builder, layer, samples, extent)
+      return false
+    }
     clearMeshes(terrain.meshes)
     buildMeshes(state, terrain, samples, extent, layer.grain, layer.edits)
   } else {
@@ -155,6 +167,39 @@ function applyLayer(
     extent,
     grain: layer.grain,
     edits: layer.edits,
+  }
+  return true
+}
+
+async function buildMeshesAway(
+  state: SurfaceState,
+  terrain: TerrainSurface,
+  builder: ReliefBuilder,
+  layer: ReliefLayer,
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+): Promise<void> {
+  terrain.buildAbort?.abort()
+  const abort = new AbortController()
+  terrain.buildAbort = abort
+  const token = ++terrain.generation
+  try {
+    const chunks = await builder.build(samples, extent, layer.grain, layer.edits, abort.signal)
+    if (!chunks || token !== terrain.generation) return
+    clearMeshes(terrain.meshes)
+    buildMeshesFromData(state, terrain, chunks)
+    terrain.held = {
+      assetId: layer.heightmap.assetId,
+      samples,
+      extent,
+      grain: layer.grain,
+      edits: layer.edits,
+    }
+    state.options.onReady?.()
+  } catch (error) {
+    if (token === terrain.generation) state.options.onFailure?.(layer.heightmap.assetId, error)
+  } finally {
+    if (terrain.buildAbort === abort) terrain.buildAbort = null
   }
 }
 
@@ -198,8 +243,7 @@ async function loadLayer(
   try {
     const samples = await state.load(layer.heightmap.assetId)
     if (token !== terrain.generation) return
-    applyLayer(state, terrain, layer, samples)
-    state.options.onReady?.()
+    if (applyLayer(state, terrain, layer, samples)) state.options.onReady?.()
   } catch (error) {
     if (token !== terrain.generation) return
     dropTerrain(state, layer.id, terrain)
@@ -209,6 +253,7 @@ async function loadLayer(
 
 function disposeRelief(state: SurfaceState): void {
   for (const [id, terrain] of [...state.terrains]) dropTerrain(state, id, terrain)
+  state.builder?.dispose()
   state.material.dispose()
   state.group.removeFromParent()
 }
@@ -226,15 +271,36 @@ function buildMeshes(
   for (let row = 0; row < rows; row++) {
     for (let column = 0; column < columns; column++) {
       const layout = chunkLayout(column, row, samples.width, samples.height, grain)
-      const mesh = new Mesh(chunkGeometry(samples, extent, layout, grain, edits), state.material)
-      mesh.name = `relief-chunk-${column}-${row}`
-      mesh.castShadow = false
-      mesh.receiveShadow = true
-      terrain.group.add(mesh)
-      terrain.meshes.set(keyOf(column, row), mesh)
+      addMesh(state, terrain, reliefGeometryData(samples, extent, layout, grain, edits))
     }
   }
   if (terrain.group.parent !== state.group) state.group.add(terrain.group)
+}
+
+function buildMeshesFromData(
+  state: SurfaceState,
+  terrain: TerrainSurface,
+  chunks: readonly ReliefGeometryData[],
+): void {
+  for (const chunk of chunks) addMesh(state, terrain, chunk)
+  if (terrain.group.parent !== state.group) state.group.add(terrain.group)
+}
+
+function addMesh(state: SurfaceState, terrain: TerrainSurface, data: ReliefGeometryData): void {
+  const geometry = new BufferGeometry()
+  geometry.setAttribute(
+    'position',
+    new BufferAttribute(data.position, 3).setUsage(DynamicDrawUsage),
+  )
+  geometry.setAttribute('normal', new BufferAttribute(data.normal, 3).setUsage(DynamicDrawUsage))
+  geometry.setAttribute('uv', new BufferAttribute(data.uv, 2))
+  geometry.setIndex(new BufferAttribute(data.index, 1))
+  const mesh = new Mesh(geometry, state.material)
+  mesh.name = `relief-chunk-${data.column}-${data.row}`
+  mesh.castShadow = false
+  mesh.receiveShadow = true
+  terrain.group.add(mesh)
+  terrain.meshes.set(keyOf(data.column, data.row), mesh)
 }
 
 function patchMeshes(
@@ -331,27 +397,22 @@ function clearMeshes(meshes: Map<string, Mesh>): void {
   meshes.clear()
 }
 
-function chunkGeometry(
+export function reliefGeometryData(
   samples: HeightmapSamples,
   extent: ReliefExtent,
   layout: ReliefChunkLayout,
   grain: number,
   edits: readonly TerrainEditLayer[],
-): BufferGeometry {
+): ReliefGeometryData {
   const vertices = layout.width * layout.height
-  const position = new BufferAttribute(new Float32Array(vertices * 3), 3)
-  position.setUsage(DynamicDrawUsage)
-  const normal = new BufferAttribute(new Float32Array(vertices * 3), 3)
-  normal.setUsage(DynamicDrawUsage)
-  const uv = new BufferAttribute(new Float32Array(vertices * 2), 2)
-  const geometry = new BufferGeometry()
-  geometry.setAttribute('position', position)
-  geometry.setAttribute('normal', normal)
-  geometry.setAttribute('uv', uv)
-  geometry.setIndex(chunkIndex(layout))
-  writeChunk(geometry, samples, extent, layout, grain, edits, false)
+  const position = new Float32Array(vertices * 3)
+  const normal = new Float32Array(vertices * 3)
+  const uv = new Float32Array(vertices * 2)
+  const read = reliefReader(samples, grain, edits)
+  writePositions(position, samples, extent, layout, read)
+  writeNormals(normal, samples, extent, layout, read)
   writeUv(uv, layout, samples)
-  return geometry
+  return { column: layout.column, row: layout.row, position, normal, uv, index: chunkIndex(layout) }
 }
 
 function writeChunk(
@@ -465,9 +526,7 @@ function heightAt(
   return worldY(read(x, z), extent.elevation)
 }
 
-function writeUv(uv: BufferAttribute, layout: ReliefChunkLayout, samples: HeightmapSamples): void {
-  if (!(uv.array instanceof Float32Array)) return
-  const into = uv.array
+function writeUv(into: Float32Array, layout: ReliefChunkLayout, samples: HeightmapSamples): void {
   const spanX = Math.max(1, samples.width - 1)
   const spanZ = Math.max(1, samples.height - 1)
   let cursor = 0
@@ -480,7 +539,7 @@ function writeUv(uv: BufferAttribute, layout: ReliefChunkLayout, samples: Height
   }
 }
 
-function chunkIndex(layout: ReliefChunkLayout): BufferAttribute {
+function chunkIndex(layout: ReliefChunkLayout): Uint16Array {
   const quadsX = Math.max(0, layout.width - 1)
   const quadsZ = Math.max(0, layout.height - 1)
   const indices = new Uint16Array(quadsX * quadsZ * 6)
@@ -497,5 +556,5 @@ function chunkIndex(layout: ReliefChunkLayout): BufferAttribute {
       cursor += 6
     }
   }
-  return new BufferAttribute(indices, 1)
+  return indices
 }
