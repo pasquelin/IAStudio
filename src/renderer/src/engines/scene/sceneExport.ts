@@ -90,6 +90,12 @@ export type ExportOptions = {
    */
   clipsFor?: (copies: readonly Object3D[]) => AnimationClip[]
   /**
+   * Where a node stands in the DOCUMENT, read by the id its object carries. A node rebuilt after
+   * an undo hangs last under its parent, so without this a file lists it out of order — a noisy
+   * diff for whoever versions their scenes. What it does not rank comes after, in its own order.
+   */
+  rankOf?: (id: string) => number | undefined
+  /**
    * What the file carries of the studio's own, written on the SCENE — `GLTFLoader` hands
    * `scenes[i].extras` back as `scene.userData`, and reads nothing of the root's.
    *
@@ -109,7 +115,7 @@ function clipsIn(roots: readonly Object3D[]): AnimationClip[] {
 export async function exportObjects(
   objects: readonly Object3D[],
   format: ExportFormat,
-  { nameOf, decoder, clipsFor, extras }: ExportOptions = {},
+  { nameOf, decoder, clipsFor, rankOf, extras }: ExportOptions = {},
 ): Promise<Uint8Array> {
   // Said rather than written: both exporters default to `onlyVisible`, so a hidden node used to
   // produce a valid, empty file — and nothing on screen distinguished that from a success.
@@ -121,6 +127,10 @@ export async function exportObjects(
 
   try {
     const roots = objects.map(object => placedCopy(object))
+    if (rankOf) {
+      roots.sort(byRank(rankOf))
+      for (const root of roots) root.traverse(child => child.children.sort(byRank(rankOf)))
+    }
     // BEFORE the rename, which is what lets a caller find a node by the id it still wears. The
     // baked clips name their objects by uuid, so renaming afterwards cannot unbind them.
     const animations = [...clipsIn(roots), ...(clipsFor?.(roots) ?? [])]
@@ -227,6 +237,12 @@ function aimAtTarget(object: Object3D, copy: Object3D): void {
   copy.target.position.set(0, 0, -1)
   copy.add(copy.target)
 }
+
+/** Document order for what is ranked; what is not keeps its own order, after. Stable. */
+const byRank =
+  (rankOf: (id: string) => number | undefined) =>
+  (one: Object3D, other: Object3D): number =>
+    (rankOf(one.name) ?? Infinity) - (rankOf(other.name) ?? Infinity)
 
 /**
  * The name the document gave a node, in place of the id its object wears. That id is the picking

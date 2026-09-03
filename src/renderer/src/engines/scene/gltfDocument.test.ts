@@ -8,6 +8,8 @@ import {
   sceneHoldsMore,
   type GltfDocumentOptions,
 } from './gltfDocument'
+import { loadHeightmap } from './heightmap'
+import { openExrFloatY } from './openExr-fixtures'
 import { cameraNodeFixture, lightNodeFixture, meshNode } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
@@ -23,6 +25,15 @@ function write(state: SceneState): Record<string, unknown> {
 function nodesOf(document: Record<string, unknown>): Record<string, unknown>[] {
   const nodes = document.nodes
   return Array.isArray(nodes) ? nodes.filter(isRecord) : []
+}
+
+/** `EXRLoader` writes scanline 0 at the bottom. Domain samples follow that orientation. */
+function flippedExr(values: Float32Array, width: number, height: number): Float32Array {
+  const out = new Float32Array(values.length)
+  for (let y = 0; y < height; y++) {
+    out.set(values.subarray(y * width, (y + 1) * width), (height - 1 - y) * width)
+  }
+  return out
 }
 
 describe('gltfDocumentOf', () => {
@@ -121,6 +132,31 @@ describe('gltfDocumentOf', () => {
 })
 
 describe('sceneFromGltf', () => {
+  it('round-trips a relief heightmap reference, and the samples that asset holds', async () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      world: {
+        ...EMPTY_SCENE.world,
+        layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }],
+      },
+    }
+    const document = JSON.parse(JSON.stringify(write(state)))
+
+    expect(sceneHoldsMore(document)).toEqual([])
+    const back = sceneFromGltf(document)
+    expect(back.world.layers).toEqual([{ kind: 'relief', heightmap: { assetId: 'asset_height' } }])
+
+    const values = Float32Array.from({ length: 16 }, (_, at) => at + 0.25)
+    const bytes = openExrFloatY(4, 4, values)
+    const body = new ArrayBuffer(bytes.byteLength)
+    new Uint8Array(body).set(bytes)
+    const assetId = back.world.layers[0]?.heightmap.assetId ?? ''
+    const samples = await loadHeightmap(assetId, async () => body)
+    expect(samples.width).toBe(4)
+    expect(samples.height).toBe(4)
+    expect(samples.values).toEqual(flippedExr(values, 4, 4))
+  })
+
   it('gives back the scene that was written, node for node', () => {
     const state: SceneState = {
       ...EMPTY_SCENE,

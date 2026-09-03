@@ -1,0 +1,548 @@
+import {
+  Mesh,
+  Vector3,
+  type BufferGeometry,
+  type Camera,
+  type InstancedMesh,
+  type Intersection,
+  type Material,
+  type Matrix4,
+  type Object3D,
+  type Sphere,
+} from 'three'
+import { stableKey } from '@shared/hash'
+import { cachedOn } from '../core/cachedOn'
+import type { SceneNode } from './sceneState'
+import { isInstanceable, meshesOf, modelShapeKey } from './instanceableModel'
+
+/**
+ * The layer a mesh goes to once something else draws it in its place.
+ *
+ * TWO, and never one: `EDGE_LAYER` is one, and a view that shows edges enables it on the camera.
+ * Sharing the number put every hidden mesh back on screen beside the instance drawing it —
+ * measured, a tight view of 10 000 went from 3.7 ms and 40 calls to 12.6 ms and 9 605.
+ *
+ * The camera renders layer 0 alone, so nothing on this one costs a draw call — but the mesh stays
+ * in the scene with its matrix up to date, which is what keeps picking, the gizmo and the
+ * selection working untouched. A raycaster must enable it explicitly: `withEveryLayer` in `SceneRenderer` does.
+ */
+export const DRAWN_BY_INSTANCE = 2
+
+/**
+ * Past this many nodes of one group, drawing them one by one stops being free.
+ *
+ * Measured on this Mac at 1600×900, 10 000 bodies, group size the only variable: a group of 16
+ * already gives back 90 % of the CPU a frame spends in `render` (8.62 ms against 0.86), and 4
+ * gives back 59 %. The curve is flat well before the old floor of 64 — 95 % at 32, 96 % at 64.
+ * The GPU never moves, 1.25 to 1.76 ms whatever the grouping.
+ *
+ * 🛑 The floor does NOT defend against a rebuild that grows as groups shrink: measured over three
+ * series, that cost is 10 to 30 ms with no trend against group size at all. What it did instead
+ * was pay the sweep and group nothing — below the old floor, the count of grouped nodes was zero.
+ */
+export const WORTH_INSTANCING = 16
+
+/** What both strategies — one `InstancedMesh` per shape, one `BatchedMesh` per material — answer to. */
+export type InstancedGroups = {
+  /**
+   * Recomposes the groups from what the scene now holds. Answers how many nodes are drawn by
+   * something other than themselves — zero when nothing reached the floor, the ordinary scene.
+   *
+   * Call it after the world matrices are up to date: the matrices are copied from them.
+   */
+  rebuild: (nodes: readonly SceneNode[], objectOf: (id: string) => Object3D | undefined) => number
+  /**
+   * Writes the matrices of nodes that just moved, without rebuilding a thing — and says whether
+   * any of them was drawn by something else.
+   *
+   * A gesture reports its move only when it ends, so between the two a grouped node would stand
+   * where the last rebuild left it. Ten nodes cost 0.95 µs at 10 000 and 1.35 µs at 40 000,
+   * against 7.2 and 47.5 ms to group again. Read the world matrices before calling: they are
+   * what is copied.
+   */
+  moved: (ids: Iterable<string>, objectOf: (id: string) => Object3D | undefined) => boolean
+  /**
+   * The meshes it draws with, for the passes that dress the scene: a display mode REPLACES a
+   * mesh's material, and one left out of that walk keeps the one it was built with.
+   */
+  drawn: () => readonly Mesh[]
+  /**
+   * What a ray must meet BESIDES the sources — which stay on `DRAWN_BY_INSTANCE` and answer by
+   * their own name. Nothing on the instanced path; the lots on the batched one, which name a
+   * hit by its slot through `nodeIdOf`. Built lazily: a click is rarer than a rebuild.
+   */
+  pickable: () => readonly Mesh[]
+  /** The node a hit on one of `pickable` stands for, or nothing for a hit on anything else. */
+  nodeIdOf: (hit: Intersection) => string | null
+  /**
+   * Hangs every source back under the node it belongs to, for whoever reads the tree DOWNWARD.
+   *
+   * A source is drawn by something else, so it is kept out of the array three walks — see
+   * `heldOutOfDraw`. Reading the scene BY ID needs nothing of this; walking a parent's children
+   * does, and so does `updateMatrixWorld`, which composes through them.
+   */
+  hangSources: () => void
+  /** Back out of the walk, where the last rebuild left them. */
+  dropSources: () => void
+  /** Whether this object is one the groups hold out of the walk — see `heldOutOfDraw`. */
+  holdsSource: (object: Object3D) => boolean
+  /**
+   * Composes the world matrices of the sources held out of the walk, which no longer reaches
+   * them. A group COPIES those matrices, so this runs between `updateMatrixWorld` and a rebuild.
+   */
+  refreshSources: () => void
+  /**
+   * Where the camera now stands, before the pane it is about to draw — the one call of this
+   * contract a FRAME makes, and the only one a strategy may leave out.
+   *
+   * A strategy that holds a zone answers whether what it draws moved, so the caller knows the
+   * shadow maps have to be drawn again. Nothing else implements it: the groups of a whole level
+   * are the same wherever one looks from.
+   */
+  follow?: (camera: Camera | null, cast?: ShadowThrow | null) => boolean
+  /**
+   * Whether this strategy BUILT a mesh since the question was last asked — read and cleared.
+   *
+   * A promotion makes a lot mid-drag, outside any rebuild, and a fresh mesh wears the document's
+   * own material: a pane that believed the scene already dressed would leave it undressed. Only a
+   * strategy that builds outside `rebuild` answers.
+   */
+  builtAnew?: () => boolean
+  /**
+   * What the last `follow` walked, for whoever measures the strategy from outside — the studio's
+   * counters, a bench, a probe. Only a strategy that holds a spatial index answers.
+   */
+  stats?: () => GroupingStats
+  /** The engine is going away, and so are the meshes it built. */
+  dispose: () => void
+}
+
+/**
+ * Where a shadow falls, and how far down it can travel before it lands.
+ *
+ * 🛑 What a strategy that hides by the CAMERA's frustum has to be told. `WebGLShadowMap` returns
+ * on `object.visible === false` and tests `object.layers` against the VIEW camera, so nothing
+ * hidden for the colour pass reaches the shadow pass either — measured, a body just out of frame
+ * took its shadow off the ground with it, over 2.0 % of the pixels.
+ */
+export type ShadowThrow = {
+  /**
+   * Where a shadow travels, one normalised direction per light with an ORTHOGRAPHIC shadow camera
+   * — the directionals. A set lit from two sides throws two ways, and reading only the first hides
+   * a caster whose other shadow is on screen.
+   *
+   * 🛑 The blind spot, written rather than hidden: a SPOT projects through a perspective shadow
+   * camera, so it contributes nothing here. A set lit by spots alone answers no direction at all,
+   * and a caster just out of frame takes its shadow off the ground with it — the very defect this
+   * type exists to prevent. Shadows are the lot after this one.
+   */
+  along: readonly { x: number; y: number; z: number }[]
+  /** The lowest thing a shadow can land on. */
+  floor: number
+  /**
+   * How far a shadow can travel before the map that draws it runs out — `fitShadowCamera` bounds
+   * every shadow camera to this. Without it a sun near the horizon divides by a vanishing slope
+   * and sweeps a box to infinity: every cell passes the test, and the partition quietly stops
+   * partitioning, with statistics that read perfectly normal.
+   */
+  reach: number
+}
+
+/** What a spatial strategy can say of the last frame it followed. */
+export type GroupingStats = {
+  /** Index nodes the last query opened — macro-chunks, plus the cells of those it looked into. */
+  nodesVisited: number
+  cellsReturned: number
+  /** Cells the scene holds right now; the rest are out of the walk entirely. */
+  cellsStanding: number
+  /** Cells the index knows of, empty ones excluded. */
+  cells: number
+  bytes: number
+}
+
+/** What holds the sources out of the walk, and hands them back on demand. */
+export type HeldOutOfDraw = {
+  /** The sources a rebuild has just settled on. Whatever was held and is not goes back in. */
+  hold: (meshes: readonly Mesh[]) => void
+  /** Whether this object is one of them — what a reader of the tree has to put back first. */
+  holds: (object: Object3D) => boolean
+  /** Composes the world matrices of what is held: no walk of the scene reaches them. */
+  refresh: () => void
+  hang: () => void
+  drop: () => void
+}
+
+/**
+ * The sources of the groups, held OUT of the array three walks.
+ *
+ * A source keeps its `parent`: everything that reads the tree UPWARD goes on answering as it did
+ * — `isDrawn` below, `updateWorldMatrix` when a node moves, and `hangFromParent`, which finds it
+ * already under its parent and does nothing. What it leaves is `parent.children`, the one array
+ * `updateMatrixWorld`, `projectObject` and every shadow pass walk.
+ *
+ * Measured on this Mac, 50 000 shadowed sources beside what draws them: 11.07 ms of a render
+ * spent in that walk, 0.07 once they are out of it. An invisible container spares `projectObject`
+ * alone and lands at 5.63 — half, for the same bookkeeping.
+ *
+ * 🛑 A reader that walks a parent's children sees nothing of them. The exporter is the one such
+ * reader here, and `hangSources` is what it calls first.
+ */
+export function heldOutOfDraw(): HeldOutOfDraw {
+  let held: readonly Mesh[] = []
+  let ours = new Set<Object3D>()
+  /** Out of the walk is the resting state: a rebuild alone takes its sources out of it. */
+  let hung = false
+
+  /** By the parent each one hangs from NOW: a drag carries a source under the pivot mid-gesture. */
+  const byParent = (meshes: readonly Mesh[]): Map<Object3D, Mesh[]> => {
+    const parents = new Map<Object3D, Mesh[]>()
+    for (const mesh of meshes) {
+      if (!mesh.parent) continue
+      const kept = parents.get(mesh.parent)
+      if (kept) kept.push(mesh)
+      else parents.set(mesh.parent, [mesh])
+    }
+    return parents
+  }
+
+  /**
+   * The array rebuilt in one pass rather than spliced mesh by mesh: a source leaves a list of
+   * fifty thousand siblings, and one splice each is quadratic. Filtered first, so a source a
+   * gesture already put back is not held twice.
+   */
+  const walkThem = (yes: boolean): void => {
+    if (hung === yes) return
+    hung = yes
+    for (const [parent, meshes] of byParent(held)) {
+      const moving = new Set<Object3D>(meshes)
+      const kept = parent.children.filter(child => !moving.has(child))
+      parent.children = yes ? [...kept, ...meshes] : kept
+    }
+  }
+
+  return {
+    // Nothing to move while they are hung: whichever set the rebuild settled on is in the walk
+    // already, since a source only ever leaves it here. Otherwise ONE pass over each parent's
+    // children — a hang then a drop cost 20 ms of a change of content on 50 000 bodies, and all
+    // the second undid was the first.
+    hold: meshes => {
+      if (hung) {
+        held = meshes
+        ours = new Set<Object3D>(meshes)
+        return
+      }
+      const out = new Set<Object3D>(meshes)
+      const back = byParent(held.filter(mesh => !out.has(mesh)))
+      const parents = new Set<Object3D>(back.keys())
+      for (const mesh of meshes) if (mesh.parent) parents.add(mesh.parent)
+
+      for (const parent of parents) {
+        const returning = back.get(parent)
+        const known = returning ? new Set<Object3D>(returning) : null
+        parent.children = [
+          ...parent.children.filter(child => !out.has(child) && !known?.has(child)),
+          ...(returning ?? []),
+        ]
+      }
+      held = meshes
+      ours = out
+    },
+
+    holds: object => ours.has(object),
+
+    // Nothing to compose while they are hung: the walk that just ran did it.
+    refresh: () => {
+      if (hung) return
+      for (const mesh of held) {
+        const parent = mesh.parent
+        if (!parent) continue
+        if (mesh.matrixAutoUpdate) mesh.updateMatrix()
+        mesh.matrixWorld.multiplyMatrices(parent.matrixWorld, mesh.matrix)
+      }
+    },
+
+    hang: () => walkThem(true),
+    drop: () => walkThem(false),
+  }
+}
+
+/**
+ * Takes an object out of the tree for good, held out of the walk or not.
+ *
+ * `removeFromParent` does nothing at all to a source a group holds out of its parent's children:
+ * three splices by index and clears `parent` only when it finds one. A released node would keep
+ * its parent and be hung back by the next rebuild, disposed geometry and all.
+ */
+export function unhang(object: Object3D): void {
+  object.removeFromParent()
+  object.parent = null
+}
+
+/**
+ * What a lot really draws, written on it by whoever built it and read by the density view.
+ *
+ * A `BatchedMesh` holds ONE copy of each distinct shape in a buffer sized for what was reserved,
+ * so counting its triangles off that buffer answers neither what it draws nor what it holds.
+ * Only the builder knows, and three keeps the per-instance shape private.
+ */
+export const DRAWN_TRIANGLES = 'drawnTriangles'
+
+/** The meshes of one group and the nodes they stand for, index for index. */
+export type Grouped = {
+  key: string
+  ids: string[]
+  meshes: Mesh[]
+  /** The nodes themselves: what a body DECLARES is on them, and nowhere else. */
+  nodes: SceneNode[]
+  material: Material
+}
+
+/**
+ * What both strategies share of a rebuild: which meshes are drawn at all, what a group is keyed
+ * by, which groups fall under the floor — those go straight back to the camera's layer — and
+ * which sources may leave the walk of the scene. The key comes from `keyOf` whole — see `flagsOf`.
+ */
+export function sweep(
+  nodes: readonly SceneNode[],
+  objectOf: (id: string) => Object3D | undefined,
+  host: Object3D,
+  ownMaterialOf: (mesh: Mesh) => Material | Material[],
+  keyOf: (node: SceneNode, mesh: Mesh) => string,
+  sources: HeldOutOfDraw,
+): Grouped[] {
+  const parented = new Set<string>()
+  for (const node of nodes) if (node.parentId) parented.add(node.parentId)
+
+  const groups = new Map<string, Grouped>()
+  const take = (node: SceneNode, mesh: Mesh): void => {
+    const material = ownMaterialOf(mesh)
+    // A group draws ONE material. A mesh wearing an array of them is left to be drawn alone.
+    if (Array.isArray(material)) {
+      mesh.layers.set(0)
+      return
+    }
+
+    const key = keyOf(node, mesh)
+    const held = groups.get(key)
+    if (held) {
+      held.ids.push(node.id)
+      held.meshes.push(mesh)
+      held.nodes.push(node)
+    } else groups.set(key, { key, ids: [node.id], meshes: [mesh], nodes: [node], material })
+  }
+
+  for (const node of nodes) {
+    const object = objectOf(node.id)
+    if (!object || !isDrawn(object, host)) continue
+    if (node.type === 'mesh') {
+      if (!(object instanceof Mesh)) continue
+      take(node, object)
+      continue
+    }
+    if (node.type !== 'model' || !isInstanceable(object)) continue
+    for (const mesh of meshesOf(object)) {
+      if (isDrawn(mesh, host)) take(node, mesh)
+    }
+  }
+
+  const worth: Grouped[] = []
+  const held: Mesh[] = []
+  for (const group of groups.values()) {
+    // Back to the camera's layer: a group that shrank below the floor since the last pass would
+    // otherwise stay invisible with nothing drawing it.
+    if (group.meshes.length < WORTH_INSTANCING) {
+      for (const mesh of group.meshes) mesh.layers.set(0)
+      continue
+    }
+    worth.push(group)
+    for (const [at, mesh] of group.meshes.entries()) {
+      mesh.layers.set(DRAWN_BY_INSTANCE)
+      // A source a NODE hangs from stays in the walk: that child would go off the graph with it,
+      // and `hangFromParent` reads `parent`, which the holding leaves alone, so it would find the
+      // child already where it belongs and put nothing back. The source is drawn by its group all
+      // the same.
+      //
+      // Read off the DOCUMENT and never off `children`: the last pass may already have taken that
+      // child out of it, and the test would then let its parent go too.
+      if (!parented.has(group.ids[at] ?? '')) held.push(mesh)
+    }
+  }
+  sources.hold(held)
+  return worth
+}
+
+/**
+ * The spelling of a part of a node, held against the node itself.
+ *
+ * A rebuild runs on every change of content, and spelling 10 000 nodes again each time cost
+ * 53.6 ms against 7.2 held. A node is replaced when it is edited and kept when it is not —
+ * `syncNode` already leans on that — so a node still here is still spelled the same way.
+ */
+export function spellingOf(spell: (node: SceneNode) => string): (node: SceneNode) => string {
+  const spelled = new WeakMap<SceneNode, string>()
+  return node => cachedOn(spelled, node, () => spell(node))
+}
+
+/** Everything a draw call would have to change: the shape, and what it is painted with. */
+export const shapeAndPaint = (): ((node: SceneNode, mesh: Mesh) => string) => {
+  const meshKey = spellingOf(node =>
+    node.type === 'mesh' ? stableKey([node.geometry, node.material]) : '',
+  )
+  return (node, mesh) => {
+    if (node.type === 'mesh') return meshKey(node)
+    if (node.type === 'model') return modelShapeKey(node, mesh)
+    return ''
+  }
+}
+
+/**
+ * The three things a draw call cannot share, as one small number. A group carries ONE of each, so
+ * one that mixed them would answer for every node in it — and one negated brick among sixty-four
+ * would turn the whole wall red, a group drawing the first member's material.
+ */
+export const flagsOf = (node: SceneNode, mesh: Mesh): number =>
+  (mesh.castShadow ? 4 : 0) +
+  (mesh.receiveShadow ? 2 : 0) +
+  (node.type === 'mesh' && node.negative === true ? 1 : 0)
+
+/**
+ * A key held so flags are compared rather than respelled — the sweep composed one string per body
+ * per pass, 5 000 on a rebuild of 5 000. Held on the mesh: a model yields one key per primitive,
+ * and holding it on the node would merge them.
+ */
+export function withFlags(
+  spell: (node: SceneNode, mesh: Mesh) => string,
+): (node: SceneNode, mesh: Mesh) => string {
+  const held = new WeakMap<Mesh, { node: SceneNode; flags: number; key: string }>()
+  return (node, mesh) => {
+    const flags = flagsOf(node, mesh)
+    const known = held.get(mesh)
+    if (known?.node === node && known.flags === flags) return known.key
+    const key = `${spell(node, mesh)}|${flags}`
+    held.set(mesh, { node, flags, key })
+    return key
+  }
+}
+
+/** One slot of a lot. `source` is the mesh whose world matrix the slot copies. */
+export type PlacedSlot = { instance: InstancedMesh; slot: number; source: Mesh }
+
+/**
+ * Where a node's matrices sit. A model with several primitives holds one slot per primitive,
+ * so a single `node.id` can land more than once.
+ */
+export type Placed = Map<string, PlacedSlot[]>
+
+export function pushSlot(placed: Placed, id: string, slot: PlacedSlot): void {
+  const held = placed.get(id)
+  if (held) held.push(slot)
+  else placed.set(id, [slot])
+}
+
+export function dropSlotsOf(placed: Placed, id: string, instance: InstancedMesh): void {
+  const held = placed.get(id)
+  if (!held) return
+  const kept = held.filter(at => at.instance !== instance)
+  if (kept.length) placed.set(id, kept)
+  else placed.delete(id)
+}
+
+export function slotOn(
+  placed: Placed,
+  id: string,
+  instance: InstancedMesh,
+): PlacedSlot | undefined {
+  return placed.get(id)?.find(at => at.instance === instance)
+}
+
+/**
+ * Writes the matrices of the nodes that just moved, into the slots they already hold.
+ *
+ * The slot alone rather than the whole buffer: forty thousand matrices re-uploaded per pointer
+ * move is the cost this exists to give back. The bounds are widened rather than recut, so the
+ * culling stays conservative until the next change of content puts them back exact.
+ */
+export function writeMoved(
+  placed: Placed,
+  ids: Iterable<string>,
+  objectOf: (id: string) => Object3D | undefined,
+): boolean {
+  let touched = false
+  for (const id of ids) {
+    const slots = placed.get(id)
+    if (!slots || !objectOf(id)) continue
+    for (const at of slots) {
+      // The primitive's world pose, not the holder's: a sub-mesh sits in local space under the
+      // holder, and copying the holder would drop that offset.
+      const placement = at.source.matrixWorld
+      at.instance.setMatrixAt(at.slot, placement)
+      at.instance.instanceMatrix.addUpdateRange(at.slot * 16, 16)
+      at.instance.instanceMatrix.needsUpdate = true
+      widen(at.instance.boundingSphere, at.instance.geometry, placement)
+      touched = true
+    }
+  }
+  return touched
+}
+
+/**
+ * How far what this shape draws reaches from where it stands, once placed. Measured on first use:
+ * only a drawn mesh has had three measure it.
+ *
+ * The centre COUNTS: every caller lays the reach around the node's placement, and a shape modelled
+ * beside its own origin — an imported part whose pivot is off the mesh — would be measured short,
+ * which rejects a body that is on screen. The norm below already leaves ×1.73 of slack on an
+ * untransformed shape, so no primitive of the studio was ever short; this stops that being luck.
+ */
+export function worldReach(geometry: BufferGeometry, placement: Matrix4): number {
+  if (!geometry.boundingSphere) geometry.computeBoundingSphere()
+  const sphere = geometry.boundingSphere
+  if (!sphere) return 0
+  return (sphere.center.length() + sphere.radius) * stretchOf(placement)
+}
+
+/**
+ * The most a placement can stretch a direction — never LESS, which is the whole point.
+ *
+ * `getMaxScaleOnAxis` measures the three columns and misses a shear: a child rotated an eighth of
+ * a turn under a parent scaled (1, 1, 3) stretches by 3 and answers 2.236. A bound read off it
+ * culls geometry that is on screen. This norm is never below the true one, for nine squares.
+ */
+function stretchOf(placement: Matrix4): number {
+  const at = placement.elements
+  let squared = 0
+  for (const column of [0, 4, 8]) {
+    for (let row = 0; row < 3; row += 1) squared += (at[column + row] ?? 0) ** 2
+  }
+  return Math.sqrt(squared)
+}
+
+const REACHED = new Vector3()
+
+/**
+ * Grows a group's bounds to hold a member that just moved.
+ *
+ * Only ever grows: a predicate that shrank under a moving object would cull geometry that is on
+ * screen, and the next rebuild recomputes the bounds exactly anyway. Conservative is the only
+ * safe direction here.
+ */
+export function widen(bounds: Sphere | null, geometry: BufferGeometry, placement: Matrix4): void {
+  if (!bounds) return
+  const reach =
+    worldReach(geometry, placement) +
+    bounds.center.distanceTo(REACHED.setFromMatrixPosition(placement))
+  if (reach > bounds.radius) bounds.radius = reach
+}
+
+/** What three.js would draw: this object visible, and every one it hangs from up to the host. */
+export function isDrawn(mesh: Object3D, host: Object3D): boolean {
+  for (let at: Object3D | null = mesh; at && at !== host; at = at.parent) {
+    if (!at.visible) return false
+  }
+  return true
+}
+
+/** How many triangles a shape draws — an indexed geometry counts its index, the rest its points. */
+export function trianglesOf(geometry: BufferGeometry): number {
+  return (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3
+}

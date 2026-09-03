@@ -1,4 +1,5 @@
 import {
+  CUSTOM_DOLLIES,
   CUSTOM_ORBITS,
   CUSTOM_PANS,
   FLY_MODES,
@@ -194,6 +195,7 @@ const three = z.object({
   navigationPreset: z.enum(NAVIGATION_PRESETS).optional(),
   navigationCustomOrbit: z.enum(CUSTOM_ORBITS).optional(),
   navigationCustomPan: z.enum(CUSTOM_PANS).optional(),
+  navigationCustomDolly: z.enum(CUSTOM_DOLLIES).optional(),
   navigationCustomFly: z.enum(FLY_MODES).optional(),
   orbitAroundSelection: z.boolean().optional(),
   orbitUnderCursor: z.boolean().optional(),

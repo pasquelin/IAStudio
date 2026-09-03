@@ -52,10 +52,12 @@ Three ways to move, which coexist.
 | Gesture | Effect |
 |---|---|
 | **Alt + left-click + drag** | turns the view |
-| **Left-click + drag** in empty space | the same, holding nothing else |
+| **Left-click + drag** | draws a **selection rectangle** — see *Selecting more than one object* |
 | **Middle button + drag** | slides the view sideways |
 | **Shift + Alt + left-click + drag** | the same, for a trackpad with no middle button |
 | **Wheel** | moves forward and back, **towards whatever the pointer aims at** |
+| **Alt + right-click + drag** | moves forward and back, towards the point the view turns around |
+| **Two fingers** on a touch screen | pinching moves in and out, dragging slides sideways |
 | **Right-click + drag** *(see below)* | flies |
 
 This is the default mode. You turn **around** the scene, as if walking round it. These are the
@@ -83,6 +85,55 @@ point of rotation: the view would set off to find it.
 > **<kbd>F</kbd> frames the selection**, and puts the point of rotation back on it. That is the
 > gesture to remember when you no longer know where you are — it is the same in Blender, Unity,
 > Unreal and Maya.
+
+> **<kbd>⇧F</kbd> frames it AND follows it.** While the follow holds, whatever moves takes the
+> view along with it, at the angle and the distance you chose: enough to watch a character walk
+> without running after them. A second press lets go, and so does an emptied selection.
+
+### Driving the view like another application
+
+Coming from Unreal, Unity, Blender or Roblox Studio, there is nothing to relearn: **View ▸
+Navigation** in the menu, or **Settings ▸ Workspaces ▸ Modelling**, changes the scheme of
+gestures AND of shortcuts in one go.
+
+| Scheme | Turn | Slide sideways | Move in and out | WASD | Move / Rotate / Scale |
+|---|---|---|---|---|---|
+| **IA Studio** | Alt + left | middle | Alt + right | a button held | `G` `R` `S` |
+| **Unreal** | Alt + left | middle, or **right added to left** | Alt + right | **right button held** | `W` `E` `R` |
+| **Unity** | Alt + left | middle | Alt + right | **right button held** | `W` `E` `R` |
+| **Blender** | **middle** | **Shift + middle** | **Ctrl + middle** | Walk/Fly mode, on <kbd>Shift</kbd>+<kbd>`</kbd> | `G` `R` `S` |
+| **Roblox Studio** | Alt + left | middle | Alt + right | **always** | `G` `R` `T` |
+| **Custom** | your choice | your choice | your choice | your choice | yours |
+
+**The bare left button no longer turns the view, under any scheme**: it draws the selection
+rectangle, as it does in Unity and Blender. Turning is Alt + left — the gesture three of the five
+already give.
+
+**Unreal's two-button pan**: press the **left** button first, then add the **right** one. In that
+order and no other — here the right button flies the camera, and a flight already armed does not
+hand the view back to a sideways slide.
+
+> **A scheme only replaces what its own application does differently.** Everything it says
+> nothing about keeps IA Studio's keys — including the commands the others have no equivalent
+> for. And your own remaps, made in **Settings ▸ Shortcuts**, always win over the scheme.
+
+> **Going back to "IA Studio" resets the shortcuts.** It is the scheme every other one falls back
+> to: choosing it gives each command the key the software declares.
+
+**Roblox moves two shortcuts, and it cannot be helped.** There the letters belong to the camera
+with nothing held, so `S` can no longer scale: it moves to `T`, and *Add* moves from <kbd>⇧A</kbd>
+to <kbd>⇧N</kbd>. Avoiding exactly this is why Unity and Unreal ask for the right button. The
+arrow keys stay with the interface in every case.
+
+**Blender brings its keypad too.** Under that scheme alone: <kbd>1</kbd> front, <kbd>3</kbd>
+right, <kbd>7</kbd> top, each with <kbd>Ctrl</kbd> for the opposite side; <kbd>5</kbd> switches
+between perspective and orthographic, <kbd>0</kbd> draws the view through the chosen camera and
+steps back out on a second press, and <kbd>.</kbd> frames the selection. These are the keys **of
+the keypad**, told apart from the digits of the top row whether the number lock is on or not.
+
+**The custom scheme** opens four more choices in the settings — what to turn with, what to slide
+with, what to move in and out with, and when the letters belong to the camera. The keyboard
+itself is customised from the shortcuts screen, whichever scheme is chosen.
 
 ### Flying through the scene — a button held
 
@@ -483,6 +534,13 @@ clicking an already-chosen object again takes it out of the selection.
 | **`⇧`/`⌘`/`Ctrl` + click** | it joins the selection, or leaves it if it was in |
 | **Click in the void** | everything is deselected |
 | **`⇧`/`⌘`/`Ctrl` + click in the void** | **nothing changes** — a miss must not undo patient sorting |
+| **Left-click + drag** | draws a rectangle: everything it touches is chosen |
+| **`⇧`/`⌘`/`Ctrl` + drag** | the rectangle **adds** to the selection instead of replacing it |
+
+**The rectangle takes what it touches**, not only what it encloses whole: a floor is always
+larger than the rectangle drawn on it. A drag that crosses nothing empties the selection, as a
+click in the void does. In pose mode it names a **bone** — the one nearest the camera among those
+it crosses — and never an object.
 
 Everything that follows — moving, turning, deleting, grouping, duplicating, adjusting in the
 Inspector — acts on the **whole** selection, not only on the last object clicked.

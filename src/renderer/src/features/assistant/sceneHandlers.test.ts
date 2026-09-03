@@ -867,6 +867,8 @@ describe('the world of the scene', () => {
       // How a set is WALKED. Nothing reads it yet either — see `ScenePlay`, whose own note says
       // it is written by templates and by nothing else.
       play: false,
+      // A heightmap reference, written by nothing yet — no sculpt tool, no world action.
+      layers: false,
     }
 
     expect(
@@ -874,9 +876,9 @@ describe('the world of the scene', () => {
         .filter(([, held]) => !held)
         .map(([member]) => member),
       // `post` is written by the composition's own actions — `post.add`, `post.set`, `post.applyPreset`
-      // — which name an effect and a parameter rather than a field of the world. `play` is
-      // written by nothing at all; see `ScenePlay`, whose own note says why.
-    ).toEqual(['post', 'play'])
+      // — which name an effect and a parameter rather than a field of the world. `play` and
+      // `layers` are written by nothing at all yet.
+    ).toEqual(['post', 'play', 'layers'])
   })
 })
 

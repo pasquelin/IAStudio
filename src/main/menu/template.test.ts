@@ -30,7 +30,6 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   newDocument: () => {},
   openRecent: () => {},
   addNode: () => {},
-  viewFrom: () => {},
   setDisplay: () => {},
   exportScene: () => {},
   captureScene: () => {},
@@ -171,19 +170,21 @@ describe('the 3D View rows', () => {
   })
 
   it('offers one row per side, and per way of drawing', () => {
-    expect(submenuOf(viewOf(), 'Point de vue')).toHaveLength(VIEW_DIRECTIONS.length)
+    // The six, a separator, and the camera the seventh looks through.
+    expect(submenuOf(viewOf(), 'Point de vue')).toHaveLength(VIEW_DIRECTIONS.length + 2)
     expect(submenuOf(viewOf(), 'Mode de rendu')).toHaveLength(DISPLAY_MODES.length)
   })
 
-  it('asks the scene to look from the side the row names', () => {
-    const viewFrom = vi.fn()
+  /** A command rather than an action of its own: the keypad reaches these too, under Blender. */
+  it('fires the command of the side the row names', () => {
+    const runCommand = vi.fn()
     const rows = submenuOf(
-      submenuOf(menuTemplate(options({ actions: actions({ viewFrom }) })), 'Affichage'),
+      submenuOf(menuTemplate(options({ actions: actions({ runCommand }) })), 'Affichage'),
       'Point de vue',
     )
 
     activate(rows.find(row => row.label === 'De dessus'))
-    expect(viewFrom).toHaveBeenCalledWith({ direction: 'top' })
+    expect(runCommand).toHaveBeenCalledWith('scene.viewTop')
   })
 
   it('asks the scene to draw the way the row names', () => {

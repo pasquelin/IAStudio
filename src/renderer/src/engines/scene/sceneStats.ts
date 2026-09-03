@@ -1,4 +1,5 @@
 import {
+  BatchedMesh,
   Box3,
   InstancedMesh,
   Mesh,
@@ -7,6 +8,7 @@ import {
   type Object3D,
   type Texture,
 } from 'three'
+import { DRAWN_TRIANGLES } from './grouping'
 import { MARKER_NAME } from './markerPaint'
 
 /**
@@ -137,13 +139,15 @@ function textureBytes(texture: Texture): number {
  * an absolute: what it answers is "which of these is the heavy one".
  */
 export function densityOf(object: Object3D): number {
-  const stats = statsOf([object])
   // An instance holds ONE geometry and draws it `count` times, while its box spans every copy:
   // counted once against that box, a thousand cubes read as empty space and the density view
   // painted the most crowded thing on screen at the coolest step of its ramp.
-  const triangles =
-    object instanceof InstancedMesh ? stats.triangles * object.count : stats.triangles
+  const triangles = drawnTrianglesOf(object)
   if (triangles === 0) return 0
+
+  // A lot places its copies by matrix, so the box below reads one shape unless the lot has
+  // measured itself. Measured once, then held.
+  if (object instanceof BatchedMesh && !object.boundingBox) object.computeBoundingBox()
 
   const size = new Box3().setFromObject(object).getSize(new Vector3())
   const area = 2 * (size.x * size.y + size.y * size.z + size.z * size.x)
@@ -175,4 +179,17 @@ export function sameStats(one: SceneStats, other: SceneStats): boolean {
     one.draws === other.draws &&
     one.textureBytes === other.textureBytes
   )
+}
+
+/**
+ * The triangles an object actually DRAWS. An instance draws its one shape `count` times; a lot
+ * says what it draws, its buffer holding one copy of each shape and reserved room besides.
+ */
+function drawnTrianglesOf(object: Object3D): number {
+  if (object instanceof BatchedMesh) {
+    const written = object.userData[DRAWN_TRIANGLES]
+    return typeof written === 'number' ? written : statsOf([object]).triangles
+  }
+  const stats = statsOf([object])
+  return object instanceof InstancedMesh ? stats.triangles * object.count : stats.triangles
 }

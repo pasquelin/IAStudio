@@ -457,6 +457,14 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     // road — the same one the grid takes above.
     passed: run => read.wrote(run, 'three', 'navigationPreset'),
   },
+  {
+    name: '10.9 keeps the selection framed while it moves',
+    said: ['Cadre le cube et garde-le dans la vue même s’il bouge.'],
+    setup: cubeScene,
+    // No action of its own: a follow is a menu COMMAND, so the road is `command.runStudioCommand`
+    // — and the oracle reads WHICH command, « any call » passing on a model that framed once.
+    passed: run => read.ranStudioCommand(run, 'scene.frameFollow'),
+  },
 
   // ——— 11. Import d'assets dans une scène ———
   {

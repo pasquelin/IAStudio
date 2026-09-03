@@ -31,6 +31,7 @@ import {
   type GroundDescriptor,
   type ScenePlay,
   type SceneWorld,
+  type WorldLayer,
 } from '@shared/domain/scene'
 import { readStack } from '@shared/domain/postProcessing'
 import { isRecord, oneOf, readBoolean, readNumber, readString } from '@shared/guards'
@@ -63,6 +64,7 @@ export function readWorld(value: unknown, legacyEnvironment: unknown): SceneWorl
     // Effects the build has no code for are dropped rather than kept as dead entries — see
     // `readStack`. A composition written by a newer studio opens with what this one can draw.
     post: readStack(held.post, newId),
+    layers: readWorldLayers(held.layers),
   }
 }
 
@@ -124,6 +126,19 @@ function readPlay(value: unknown): ScenePlay {
     moveSpeed: readBounded(value, 'moveSpeed', DEFAULT_PLAY.moveSpeed, MOVE_SPEED),
     gravity: readBounded(value, 'gravity', DEFAULT_PLAY.gravity, GRAVITY),
   }
+}
+
+/** Missing `layers` is none. A relief without an asset, or an unknown kind, is dropped. */
+function readWorldLayers(value: unknown): readonly WorldLayer[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap(readWorldLayer)
+}
+
+function readWorldLayer(value: unknown): readonly WorldLayer[] {
+  if (!isRecord(value) || value.kind !== 'relief' || !isRecord(value.heightmap)) return []
+  const assetId = value.heightmap.assetId
+  if (typeof assetId !== 'string' || assetId === '') return []
+  return [{ kind: 'relief', heightmap: { assetId } }]
 }
 
 function readGround(value: unknown): GroundDescriptor {

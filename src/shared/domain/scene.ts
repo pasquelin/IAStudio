@@ -27,6 +27,18 @@ export type { GeometryDescriptor } from './geometry'
 export type TextureRef = { assetId: string }
 
 /**
+ * A patch of the world's surface. Relief names a heightmap by `TextureRef`, never the pixels.
+ * Bytes are OpenEXR float32 — not PNG-16, not a house binary.
+ */
+export type ReliefLayer = {
+  kind: 'relief'
+  heightmap: TextureRef
+}
+
+/** Open union: a later kind does not migrate documents written with only Relief. */
+export type WorldLayer = ReliefLayer
+
+/**
  * A camera the scene holds, as opposed to the one the viewport looks through. It is a node like
  * any other — pickable, movable, animatable by a track — and glTF carries one, so it survives an
  * export where a viewport setting never could.
@@ -606,6 +618,8 @@ export type SceneWorld = {
    * through unless it says otherwise. Part of the document like the fog, and belonging to no node.
    */
   post: PostStack
+  /** Surface patches. World opens with the scene; a file that omits them reads as none. */
+  layers: readonly WorldLayer[]
 }
 
 export const DEFAULT_WORLD: SceneWorld = Object.freeze({
@@ -623,6 +637,7 @@ export const DEFAULT_WORLD: SceneWorld = Object.freeze({
   // Empty and ON: a scene opens composing nothing, and the switch is already where a first
   // effect will be compared from.
   post: EMPTY_STACK,
+  layers: Object.freeze([]),
 })
 
 /** Bounds a slider and a stored value are both held to. */

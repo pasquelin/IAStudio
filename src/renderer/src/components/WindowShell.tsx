@@ -49,6 +49,10 @@ type WindowColumn =
  *
  * `TooltipHost` is mounted here rather than by each window. It is per-window and easy to forget:
  * without it, tooltip attributes write a sentence nobody ever sees.
+ *
+ * 🛑 The ground is `bg-chassis`: the main process paints the window with that very value before the
+ * first frame — `WINDOW_CHROME_COLOR` restates `--color-chassis` — so a DaisyUI ground opened on
+ * one colour and settled on another. `window-ground.test.ts` holds the two together.
  */
 export function WindowShell({
   title,
@@ -59,7 +63,7 @@ export function WindowShell({
   children,
 }: WindowShellProps) {
   return (
-    <div className="bg-base-200 text-base-content flex h-full flex-col">
+    <div className="bg-chassis text-base-content flex h-full flex-col">
       <WindowTitleBar title={title} actions={headerActions} />
 
       <div className="flex min-h-0 flex-1">

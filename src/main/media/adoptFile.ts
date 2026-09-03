@@ -42,7 +42,7 @@ export type AdoptFileDeps = {
 async function domainOf(fileName: string, absolute: string): Promise<Asset['type'] | null> {
   if (fileName.includes('.')) {
     const source = sourceNatureOf(fileName)
-    return source.openable && source.domain !== 'other' ? source.domain : null
+    return source.catalogable && source.domain !== 'other' ? source.domain : null
   }
 
   const handle = await open(absolute)

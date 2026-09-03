@@ -202,6 +202,13 @@
       "middleShift": "Maj + bouton du milieu",
       "leftAltShift": "Maj + Alt + clic gauche"
     },
+    "navigationCustomDolly": {
+      "title": "Avancer et reculer avec",
+      "help": "Le geste qui rapproche la vue de ce qu’elle vise, en plus de la molette.",
+      "altRight": "Alt + clic droit",
+      "ctrlMiddle": "Ctrl + bouton du milieu",
+      "rightOntoLeft": "Clic droit, gauche déjà tenu"
+    },
     "navigationCustomFly": {
       "title": "Touches de déplacement",
       "help": "Quand ZQSD appartiennent à la caméra. En permanence, les lettres cessent d’être disponibles pour les commandes de la scène — c’est pourquoi Unity et Unreal exigent un bouton.",

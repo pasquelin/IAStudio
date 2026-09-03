@@ -1,5 +1,5 @@
 import type { DocumentKind } from './document'
-import type { DisplayMode } from './scene'
+import type { DisplayMode, ViewDirection } from './scene'
 import { reservedByPlatform, type Signature } from './shortcut'
 import { HOME_SURFACE, type ToolSurface } from './tool'
 import type { WorkspaceId } from './workspace'
@@ -83,6 +83,14 @@ export type CommandId =
   | 'scene.snap'
   | 'scene.space'
   | 'scene.projection'
+  | 'scene.viewFront'
+  | 'scene.viewBack'
+  | 'scene.viewRight'
+  | 'scene.viewLeft'
+  | 'scene.viewTop'
+  | 'scene.viewBottom'
+  | 'scene.viewCamera'
+  | 'scene.frameFollow'
   | 'scene.quad'
   | 'scene.quadEdges'
   | 'scene.display'
@@ -252,6 +260,35 @@ export type CommandDescriptor = {
    * therefore has to carry a modifier, or it would swallow a letter.
    */
   held?: boolean
+}
+
+/** The six that name a side, which is what makes both tables total rather than partial. */
+export type SideViewCommand = Extract<
+  CommandId,
+  `scene.view${'Front' | 'Back' | 'Right' | 'Left' | 'Top' | 'Bottom'}`
+>
+
+/**
+ * The command each side of the scene is reached by. One table for the two readers: the native
+ * menu builds its rows from it, and the scene reads the side back off the command it was given.
+ */
+export const SIDE_VIEW_COMMAND: Record<ViewDirection, SideViewCommand> = {
+  front: 'scene.viewFront',
+  back: 'scene.viewBack',
+  right: 'scene.viewRight',
+  left: 'scene.viewLeft',
+  top: 'scene.viewTop',
+  bottom: 'scene.viewBottom',
+}
+
+/** The same pairing read the other way, for whoever holds the command and wants the side. */
+export const VIEW_SIDE_OF: Record<SideViewCommand, ViewDirection> = {
+  'scene.viewFront': 'front',
+  'scene.viewBack': 'back',
+  'scene.viewRight': 'right',
+  'scene.viewLeft': 'left',
+  'scene.viewTop': 'top',
+  'scene.viewBottom': 'bottom',
 }
 
 function command(descriptor: CommandDescriptor): CommandDescriptor {
@@ -486,6 +523,17 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   // The three that hide, and the one that gives everything back. `scene.isolate` toggles: the
   // hand that pressed it to get in is the hand that presses it to get out, which is what every
   // 3D package does with this key.
+  /**
+   * Unity's ⇧F. The studio had nothing of the sort: framing was a move, and what was framed then
+   * walked out of the view — see `frameFollow`, which keeps the angle and the distance.
+   */
+  command({
+    id: 'scene.frameFollow',
+    scope: 'scene',
+    titleKey: 'commands.sceneFrameFollow.title',
+    helpKey: 'commands.sceneFrameFollow.help',
+    defaultBinding: 'Shift+KeyF',
+  }),
   command({
     id: 'scene.isolate',
     scope: 'scene',
@@ -532,6 +580,57 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
   }),
   // `Q` as in Blender's own quad view, but shifted: bare `Q` is flight's "down", and the one
   // overlap this scope tolerates is already spent on `KeyS` — see `shortcut.test.ts`.
+  // The six sides and the camera. No key of their own: they are the numbered views of the
+  // keypad, which only the Blender scheme spells — every other one reaches them by a menu row.
+  command({
+    id: 'scene.viewFront',
+    scope: 'scene',
+    titleKey: 'commands.sceneViewFront.title',
+    helpKey: 'commands.sceneViewFront.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.viewBack',
+    scope: 'scene',
+    titleKey: 'commands.sceneViewBack.title',
+    helpKey: 'commands.sceneViewBack.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.viewRight',
+    scope: 'scene',
+    titleKey: 'commands.sceneViewRight.title',
+    helpKey: 'commands.sceneViewRight.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.viewLeft',
+    scope: 'scene',
+    titleKey: 'commands.sceneViewLeft.title',
+    helpKey: 'commands.sceneViewLeft.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.viewTop',
+    scope: 'scene',
+    titleKey: 'commands.sceneViewTop.title',
+    helpKey: 'commands.sceneViewTop.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.viewBottom',
+    scope: 'scene',
+    titleKey: 'commands.sceneViewBottom.title',
+    helpKey: 'commands.sceneViewBottom.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.viewCamera',
+    scope: 'scene',
+    titleKey: 'commands.sceneViewCamera.title',
+    helpKey: 'commands.sceneViewCamera.help',
+    defaultBinding: null,
+  }),
   command({
     id: 'scene.quad',
     scope: 'scene',

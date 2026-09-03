@@ -73,7 +73,6 @@ import type {
   LightKind,
   MeshKind,
   ObjectKind,
-  ViewDirection,
 } from './domain/scene'
 import type { CaptureQuality } from './domain/sceneCapture'
 import type { InstalledCheckerTexture } from './domain/checkerTexture'
@@ -1068,7 +1067,6 @@ export const EVENTS = {
   documentNew: 'evt:document-new',
   openRecent: 'evt:open-recent',
   sceneAdd: 'evt:scene-add',
-  sceneView: 'evt:scene-view',
   sceneDisplay: 'evt:scene-display',
   sceneExport: 'evt:scene-export',
   sceneCapture: 'evt:scene-capture',
@@ -1106,9 +1104,6 @@ export type RecentOpenRequest = { project: string; path?: string }
 
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind | FigureKind | ObjectKind }
-
-/** Which of the six sides the menu asks the scene in front to look from. */
-export type SceneViewRequest = { direction: ViewDirection }
 
 /** Which of the seven ways of drawing the menu asks the scene in front to switch to. */
 export type SceneDisplayRequest = { mode: DisplayMode }
@@ -2350,7 +2345,6 @@ export type StudioBridge = {
     onDocumentNew: (callback: (request: NewDocumentRequest) => void) => Unsubscribe
     onOpenRecent: (callback: (request: RecentOpenRequest) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
-    onSceneView: (callback: (request: SceneViewRequest) => void) => Unsubscribe
     onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
     onSceneCapture: (callback: (command: SceneCaptureCommand) => void) => Unsubscribe

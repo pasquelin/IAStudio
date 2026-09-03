@@ -69,6 +69,8 @@ import { EMPTY_STATS, sameStats, type SceneStats } from '@/engines/scene/sceneSt
 import { CameraPreview } from '../../Camera/CameraPreview'
 import { SceneCounters } from '../SceneCounters'
 import { SceneNavigationHint } from '../SceneNavigationHint'
+import { SceneDocumentMarquee } from './SceneDocumentMarquee'
+import type { ScreenBox } from '@/engines/scene/marqueeSelection'
 import { openSceneAddMenu } from './sceneAddMenu'
 import { openSceneNodeMenu } from '../sceneNodeMenu'
 import { openPathPointMenu } from './pathPointMenu'
@@ -227,6 +229,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const [localFrame, setLocalFrame] = useState(false)
   /** Armed navigation. Not a `TransformMode`: that one aims the gizmo, and this aims the camera. */
   const [navigating, setNavigating] = useState(false)
+  /** The rectangle being dragged, in the canvas' own pixels — `null` when there is none. */
+  const [marquee, setMarquee] = useState<ScreenBox | null>(null)
   /** What the wheel left the flight at. Kept across armings, as the engine keeps the speed. */
   const [flySpeed, setFlySpeed] = useState<number | null>(null)
   /** What the scene costs, as the engine counts it — see `SceneRendererOptions.onStats`. */
@@ -236,6 +240,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   })
 
   const scene = useScenes(state => sceneOf(state, documentId))
+  // Held rather than filtered in the rendering: the rectangle publishes a box a frame, and a walk
+  // of every node per publication is work proportional to the scene on a gesture's hot path.
+  const cameras = useMemo(() => scene.nodes.filter(node => node.type === 'camera'), [scene.nodes])
   const modified = useScenes(state => isSceneDirty(state, documentId))
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
@@ -313,6 +320,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         ),
       // Escape and a lost window release the capture without passing through the button, and the
       // armed state has to follow or the bar would stay lit over a mode that is over.
+      onMarquee: setMarquee,
       onNavigatingChange: setNavigating,
       onFlySpeedChange: setFlySpeed,
       // Published so a montage can look through this very view: a scene with no camera of its
@@ -615,6 +623,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.cut': nothingSelected,
       'scene.paste': nothingHeld,
       'scene.frame': nothingSelected,
+      'scene.frameFollow': nothingSelected,
       // Leaving one needs no selection, which is the whole point of a toggle that can be armed
       // with nothing picked.
       'scene.isolate': nothingSelected && !isolated,
@@ -698,6 +707,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         it, and a tab stop on a picture would be one nobody could act on.
       */}
       <div ref={host} tabIndex={-1} className="absolute inset-0 outline-none" />
+      <SceneDocumentMarquee box={marquee} />
       <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
       <SceneSnapBar
@@ -710,7 +720,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       {view.quad && (
         <ScenePaneGrid
           views={view.panes}
-          cameras={scene.nodes.filter(node => node.type === 'camera')}
+          cameras={cameras}
           onView={(pane, chosen) => useSceneViews.getState().setPaneView(documentId, pane, chosen)}
         />
       )}

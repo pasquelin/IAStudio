@@ -36,6 +36,11 @@ export type DeclaredPreset = Exclude<NavigationPreset, 'custom'>
 export type GestureChord = {
   /** 0 left, 1 middle, 2 right — as `PointerEvent.button` numbers them. */
   button: number
+  /**
+   * Another button that must already be DOWN. Read off `buttons`, the only field that names a
+   * button nobody just pressed — `button` carries the one that changed and nothing else.
+   */
+  held?: number
   alt?: boolean
   shift?: boolean
   ctrl?: boolean
@@ -44,6 +49,8 @@ export type GestureChord = {
 export type NavigationScheme = {
   orbit: readonly GestureChord[]
   pan: readonly GestureChord[]
+  /** Read BEFORE the two above: a chord that adds a button or a modifier to one of theirs. */
+  dolly: readonly GestureChord[]
   fly: FlyMode
   /** Only what THIS application binds differently. Everything absent keeps the studio's key. */
   bindings: BindingOverrides
@@ -72,6 +79,13 @@ const MIDDLE: readonly GestureChord[] = [{ button: 1 }]
 const SHIFT_MIDDLE: readonly GestureChord[] = [{ button: 1, shift: true }]
 const ALT_MIDDLE: readonly GestureChord[] = [{ button: 1 }, { button: 1, alt: true }]
 const SHIFT_ALT_LEFT: readonly GestureChord[] = [{ button: 0, alt: true, shift: true }]
+const ALT_RIGHT: readonly GestureChord[] = [{ button: 2, alt: true }]
+const CTRL_MIDDLE: readonly GestureChord[] = [{ button: 1, ctrl: true }]
+/**
+ * Unreal's pan: the right button pressed while the left is held. THAT order and no other — the
+ * right button flies, and a flight freezes the panes the pan would have needed.
+ */
+const RIGHT_ONTO_LEFT: readonly GestureChord[] = [{ button: 2, held: 0 }]
 
 /** The three verbs every one of them puts on the same three keys — or does not. */
 const UNITY_TOOLS: BindingOverrides = {
@@ -86,20 +100,25 @@ export const SCHEME_OF: Record<DeclaredPreset, NavigationScheme> = {
    * every other preset falls back to, so choosing it resets the keys to what the repo declares.
    */
   studio: {
-    orbit: ANY_LEFT,
+    // The left button draws the marquee, here as under the four others. Its orbit was the one
+    // gesture no other application gives it, and it cost the selection every drag.
+    orbit: ALT_LEFT,
     pan: [...MIDDLE, ...SHIFT_ALT_LEFT],
+    dolly: ALT_RIGHT,
     fly: 'anyButton',
     bindings: {},
   },
   unreal: {
     orbit: ALT_LEFT,
-    pan: MIDDLE,
+    pan: [...MIDDLE, ...RIGHT_ONTO_LEFT],
+    dolly: ALT_RIGHT,
     fly: 'rightButton',
     bindings: UNITY_TOOLS,
   },
   unity: {
     orbit: ALT_LEFT,
     pan: ALT_MIDDLE,
+    dolly: ALT_RIGHT,
     fly: 'rightButton',
     bindings: UNITY_TOOLS,
   },
@@ -111,8 +130,22 @@ export const SCHEME_OF: Record<DeclaredPreset, NavigationScheme> = {
   blender: {
     orbit: MIDDLE,
     pan: SHIFT_MIDDLE,
+    dolly: CTRL_MIDDLE,
     fly: 'anyButton',
-    bindings: { 'scene.navigate': 'Shift+Backquote' },
+    bindings: {
+      'scene.navigate': 'Shift+Backquote',
+      // The numbered views of the keypad, which is a POSITION of its own — see `codeOf`, which
+      // named these by the digit they print until this scheme asked for them.
+      'scene.viewFront': 'Numpad1',
+      'scene.viewBack': 'Ctrl+Numpad1',
+      'scene.viewRight': 'Numpad3',
+      'scene.viewLeft': 'Ctrl+Numpad3',
+      'scene.viewTop': 'Numpad7',
+      'scene.viewBottom': 'Ctrl+Numpad7',
+      'scene.viewCamera': 'Numpad0',
+      'scene.projection': 'Numpad5',
+      'scene.frame': 'NumpadDecimal',
+    },
   },
   /**
    * The only one where the letters are the camera's with nothing held — and so the only one that
@@ -122,6 +155,7 @@ export const SCHEME_OF: Record<DeclaredPreset, NavigationScheme> = {
   roblox: {
     orbit: ALT_LEFT,
     pan: MIDDLE,
+    dolly: ALT_RIGHT,
     fly: 'always',
     bindings: DISPLACED_BY_A_PERMANENT_FLIGHT,
   },
@@ -134,9 +168,11 @@ export const SCHEME_OF: Record<DeclaredPreset, NavigationScheme> = {
  */
 export type CustomOrbit = 'leftAlt' | 'left' | 'middle'
 export type CustomPan = 'middle' | 'middleShift' | 'leftAltShift'
+export type CustomDolly = 'altRight' | 'ctrlMiddle' | 'rightOntoLeft'
 
 export const CUSTOM_ORBITS: readonly CustomOrbit[] = ['leftAlt', 'left', 'middle']
 export const CUSTOM_PANS: readonly CustomPan[] = ['middle', 'middleShift', 'leftAltShift']
+export const CUSTOM_DOLLIES: readonly CustomDolly[] = ['altRight', 'ctrlMiddle', 'rightOntoLeft']
 export const FLY_MODES: readonly FlyMode[] = ['anyButton', 'rightButton', 'always']
 
 const ORBIT_CHORD: Record<CustomOrbit, readonly GestureChord[]> = {
@@ -151,11 +187,18 @@ const PAN_CHORD: Record<CustomPan, readonly GestureChord[]> = {
   leftAltShift: SHIFT_ALT_LEFT,
 }
 
+const DOLLY_CHORD: Record<CustomDolly, readonly GestureChord[]> = {
+  altRight: ALT_RIGHT,
+  ctrlMiddle: CTRL_MIDDLE,
+  rightOntoLeft: RIGHT_ONTO_LEFT,
+}
+
 /** What a person's own scheme is made of. Their KEYS need nothing here: `shortcuts.overrides` is
  * already the layer above every preset, so it is custom whichever one is chosen. */
 export type CustomNavigation = {
   orbit: CustomOrbit
   pan: CustomPan
+  dolly: CustomDolly
   fly: FlyMode
 }
 
@@ -166,19 +209,16 @@ export type CustomNavigation = {
 export function customFrom(three: {
   navigationCustomOrbit: CustomOrbit
   navigationCustomPan: CustomPan
+  navigationCustomDolly: CustomDolly
   navigationCustomFly: FlyMode
 }): CustomNavigation {
   return {
     orbit: three.navigationCustomOrbit,
     pan: three.navigationCustomPan,
+    dolly: three.navigationCustomDolly,
     fly: three.navigationCustomFly,
   }
 }
-
-/**
- * The scheme in force. `custom` is composed from what the person chose; every other preset is
- * the table declared above, and neither carries bindings for `custom` — see `CustomNavigation`.
- */
 
 function sameChord(one: GestureChord, other: GestureChord): boolean {
   return (
@@ -189,17 +229,30 @@ function sameChord(one: GestureChord, other: GestureChord): boolean {
   )
 }
 
+/** What a pan keeps once the orbit has taken what they share — Blender's chord where nothing. */
+function panApartFrom(
+  pan: readonly GestureChord[],
+  orbit: readonly GestureChord[],
+): readonly GestureChord[] {
+  const kept = pan.filter(chord => !orbit.some(other => sameChord(chord, other)))
+  return kept.length > 0 ? kept : SHIFT_MIDDLE
+}
+
+/**
+ * The scheme in force. `custom` is composed from what the person chose; every other preset is
+ * the table declared above, and neither carries bindings for `custom` — see `CustomNavigation`.
+ */
 export function schemeFor(preset: NavigationPreset, custom: CustomNavigation): NavigationScheme {
   if (preset !== 'custom') return SCHEME_OF[preset]
 
   return {
     orbit: ORBIT_CHORD[custom.orbit],
-    // Orbit wins a chord both name: the two are chosen on separate rows, and `gestureOf` reads
-    // pan first — picked alike, a viewport would simply stop turning, with nothing saying why.
-    // By VALUE, never by identity: it held only while the two tables aliased the same array.
-    pan: PAN_CHORD[custom.pan].filter(
-      chord => !ORBIT_CHORD[custom.orbit].some(other => sameChord(chord, other)),
-    ),
+    // Orbit wins a chord both name, and the pan falls back rather than emptying: naming the
+    // middle button for both is two clicks from the default, and it took panning away in silence.
+    pan: panApartFrom(PAN_CHORD[custom.pan], ORBIT_CHORD[custom.orbit]),
+    // Kept whole where the pan is pared down: a dolly is read BEFORE both, so a chord it shares
+    // with either is one it wins rather than one that empties it.
+    dolly: DOLLY_CHORD[custom.dolly],
     fly: custom.fly,
     // The cost of `always` follows the MODE, not the application that asked for it: a scheme of
     // one's own that hands the letters to the camera swallows the same commands.

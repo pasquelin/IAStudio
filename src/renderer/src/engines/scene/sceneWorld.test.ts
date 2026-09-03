@@ -80,6 +80,20 @@ describe('reading a world back', () => {
     expect(readWorld({ toneMapping: 'agx' }, undefined).toneMapping).toBe('none')
   })
 
+  it('opens a document written before layers existed on none', () => {
+    expect(readWorld({ envIntensity: 1 }, undefined).layers).toEqual([])
+    expect(readWorld(undefined, undefined).layers).toEqual([])
+  })
+
+  it('keeps a relief that names a heightmap, and drops one that does not', () => {
+    expect(
+      readWorld({ layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] }, undefined)
+        .layers,
+    ).toEqual([{ kind: 'relief', heightmap: { assetId: 'asset_height' } }])
+    expect(readWorld({ layers: [{ kind: 'relief', heightmap: {} }] }, undefined).layers).toEqual([])
+    expect(readWorld({ layers: [{ kind: 'biome' }] }, undefined).layers).toEqual([])
+  })
+
   it('gives a ground with no colour the studio one rather than a string', () => {
     expect(readWorld({ ground: { visible: true } }, undefined).ground).toEqual({
       visible: true,

@@ -10,6 +10,7 @@ import {
   type Intersection,
   Light,
   LineBasicMaterial,
+  type Material,
   Matrix3,
   Mesh,
   MeshStandardMaterial,
@@ -43,6 +44,18 @@ import {
   SCHEME_OF,
   type NavigationScheme,
 } from '@shared/domain/navigationPreset'
+import { gestureOf, maskOf } from '../viewport/gestures'
+import type { Modifiers } from '@/helpers/selection'
+import type { Point } from '../core/geometry'
+import type { PointerPosition } from '../viewport/pointer'
+import {
+  boxBetween,
+  frontmostSegmentIn,
+  idsTouching,
+  boxAround,
+  type ScreenBody,
+  type ScreenBox,
+} from './marqueeSelection'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -169,6 +182,7 @@ import {
   type ProjectedSegment,
 } from './bonePicking'
 import { type RigState, isBoneObject, measuredMeshOf, rigStateOf } from './rigState'
+import { instanceableOf, markInstanceable } from './instanceableModel'
 import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
 import { PostComposer } from '../postfx/PostComposer'
@@ -240,7 +254,10 @@ import { createBvhBuilder, type BvhBuilder } from './bvhBuilder'
 import './bvhPatches'
 import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
-import { createInstancedGroups, keepsItsGroup, type InstancedGroups } from './instancing'
+import { createBatchedGroups } from './batching'
+import { createCellGroups } from './cellInstancing'
+import { unhang, worldReach, type InstancedGroups, type ShadowThrow } from './grouping'
+import { createInstancedGroups, keepsItsGroup } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmoTarget'
@@ -257,6 +274,17 @@ import {
 } from './textureCache'
 
 export type { TransformMode, TransformSpace } from './gizmoTarget'
+
+export type GroupingStrategy = 'instanced' | 'batched'
+
+/**
+ * Whether the world is cut into cells the camera turns off, or drawn whole.
+ *
+ * `grid` — the default — files every body under a cell of 256 and draws only the cells its view
+ * can reach: measured on a level of 500 000, 17 848 instances against 231 397 and 1.43 ms of GPU
+ * against 3.52. `off` is the studio as it drew before it. See `cellInstancing`.
+ */
+export type PartitionMode = 'off' | 'grid'
 
 export type SceneRendererOptions = {
   /**
@@ -334,6 +362,11 @@ export type SceneRendererOptions = {
    * reason a bone is: a point has no id in the document, and no row in the tree.
    */
   onSelectPathPoint?: (picked: PickedPathPoint | null) => void
+  /**
+   * The rectangle being dragged, in CSS pixels from the canvas' top-left corner, or `null` once
+   * it is over. Drawn by whoever hosts the canvas: an outline through WebGL costs a pass a frame.
+   */
+  onMarquee?: (box: ScreenBox | null) => void
   /** Where a picked control point or tangent was dragged to, in the frame of the rail. */
   onPathPoint?: (picked: PickedPathPoint, point: PlainVector3) => void
   /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
@@ -382,6 +415,18 @@ export type SceneRendererOptions = {
    * into the pane the hand had already left.
    */
   onPane?: (pane: number) => void
+  /**
+   * How repeated shapes are drawn in fewer calls, for a caller leaving the cells. `instanced`
+   * opens one `InstancedMesh` per shape and material, split into regions; `batched` opens one
+   * `BatchedMesh` per material — measured on this Mac, 2026-09-02, it costs MORE CPU on every
+   * scene, 10.4 ms against 3.1 a frame on 10 000 bodies. Naming either one turns `partition` off.
+   */
+  grouping?: GroupingStrategy
+  /**
+   * Whether the level is cut into cells only the ones a view reaches are drawn from. `grid` by
+   * default; `off` groups the whole world as the studio did before the cells.
+   */
+  partition?: PartitionMode
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for a file read for its animation alone — which may be an FBX. See `GltfSource`. */
@@ -447,6 +492,17 @@ const STUDIO_INTENSITY = 0.4
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
 
+/** Either modifier adds and removes: a viewport draws no rows, so it has no range to extend. */
+function extendsSelection(event: Modifiers): boolean {
+  return event.shiftKey || event.metaKey || event.ctrlKey
+}
+
+/**
+ * The rectangle a bare left button drags, pinned to the pane it started in and to the canvas'
+ * place on screen: neither can move mid-drag, and reading them per move is a forced reflow.
+ */
+type Marquee = { pane: number; corner: Point; from: PointerPosition; to: PointerPosition }
+
 /** How far a camera's frustum is OUTLINED, in metres. Never how far that camera sees. */
 const FRUSTUM_REACH = 2
 
@@ -455,8 +511,18 @@ const FRUSTUM_REACH = 2
  * pick from an orbit, the right one to tell a menu from a flight — and a slop written twice is a
  * slop that stops agreeing the day it learns about pointer type or DPI.
  */
-function wasClick(from: { x: number; y: number } | null, event: PointerEvent): boolean {
-  return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
+function wasClick(from: PointerPosition | null, to: PointerPosition): boolean {
+  return (
+    from !== null && Math.hypot(to.clientX - from.clientX, to.clientY - from.clientY) <= CLICK_SLOP
+  )
+}
+
+/**
+ * What a body covers around its origin, in metres. A mesh by `worldReach`, which the grouping
+ * already measures with; anything else by nothing — a group's box is a walk of its subtree.
+ */
+function worldRadiusOf(object: Object3D): number {
+  return object instanceof Mesh ? worldReach(object.geometry, object.matrixWorld) : 0
 }
 
 /**
@@ -481,6 +547,12 @@ const flightGaze = new ThreeVector3()
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
 const BONE_TAIL = new Vector3()
+/** Reused by the marquee, which measures every node of the scene in one pass — see `screenBodies`. */
+const BODY_CENTRE = new Vector3()
+const BODY_EDGE = new Vector3()
+const BODY_RIGHT = new Vector3()
+const BODY_UP = new Vector3()
+const BODY_ABOVE = new Vector3()
 
 /** Scratch for turning the bone that arrives at a dragged joint. See `articulateTowards`. */
 const JOINT_WANTED = new Vector3()
@@ -647,7 +719,7 @@ export class SceneRenderer {
     // viewport owns this call rather than a listener of this file.
     onPaneArmed: event => this.onPointerAim(event),
     // A preview shows what the camera FILMS: the same pass the film and the montage take.
-    onInset: () => this.hideWorkshop(),
+    onInset: camera => this.hideWorkshop(camera),
     // Every surface — the panes, the preview, the film — reaches ONE composer through here, so
     // an effect cannot differ between the editor and the render. See § 26 of the specification.
     onDraw: request => this.compose(request),
@@ -709,7 +781,7 @@ export class SceneRenderer {
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
-  private readonly belongsToAnotherNode = ownedByAnotherNode(this.objects)
+  private readonly belongsToAnotherNode = ownedByAnotherNode(id => this.objects.get(id))
   private readonly helpers = new Map<string, LightHelper>()
   /** The frustum drawn under each camera of the scene — what makes one clickable. */
   private readonly frustums = new Map<string, CameraHelper>()
@@ -744,6 +816,11 @@ export class SceneRenderer {
    */
   private poseMode = false
   private restEditing = false
+  /** Where what is FOLLOWED stood when the last frame drew — `null` while nothing is. */
+  private followed: ThreeVector3 | null = null
+  /** Whose centre that was. A selection that CHANGED re-seats it; moving to the new one would
+   * carry the view the whole way between two bodies in a single frame. */
+  private followedIds: readonly string[] = []
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
   /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
@@ -805,13 +882,13 @@ export class SceneRenderer {
   /** Whether the gesture in progress has moved anything at all. A bare click has not. */
   private dragged = false
   /** Where the left button went down, so the release can tell a click from an orbit. */
-  private pressed: { x: number; y: number } | null = null
+  private pressed: PointerPosition | null = null
   /**
    * Where the button that flies went down, or nothing while none is held. A flight that never
    * left the pixel it started on is a click: the right button raises the node menu, the left
    * one picks.
    */
-  private flownFrom: { x: number; y: number } | null = null
+  private flownFrom: PointerPosition | null = null
   /**
    * Which button armed the flight, and so whether one is under way at all. Either arms it —
    * the left one keeps orbiting and picking exactly as before, it only GAINS the keys.
@@ -857,10 +934,27 @@ export class SceneRenderer {
   /** Nodes that only MOVED since the last grouping — their slots are still theirs. */
   private readonly movedNodes = new Set<string>()
   /**
+   * What hangs from each node, by id. Read off the DOCUMENT rather than the graph: a body drawn
+   * by a group is held out of its parent's children, so a walk of the objects cannot answer.
+   * Rebuilt with the groups, which is the one moment a parent can have changed.
+   */
+  private readonly childNodes = new Map<string, string[]>()
+  /**
    * The box the shadow frusta are cut from, held across passes. A move only ever GROWS it; it is
    * dropped when the content changes, which is the one thing that can make it shrink.
    */
   private shadowBounds: Box3 | null = null
+  /**
+   * Where a shadow falls, for a grouping that hides by the CAMERA's frustum: what it takes off
+   * screen it takes out of the shadow pass too. `null` when no light throws one.
+   */
+  private shadowThrow: ShadowThrow | null = null
+  /**
+   * The camera the zone was last narrowed to. A preview narrows it to ITS own on every frame it
+   * is shown, and a zone left there makes the next pane widen it again — which reads as « cells
+   * moved » and redraws every shadow map, on a scene where nothing moved at all.
+   */
+  private zonedTo: ViewportCamera | null = null
   /**
    * Whether the parent pass has anything to walk. Only content can change where a node hangs —
    * `keepsItsGroup` reads `parentId`, so a node that merely MOVED kept the parent it had.
@@ -873,6 +967,15 @@ export class SceneRenderer {
   private space: TransformSpace = 'world'
   /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
   private selectedIds: readonly string[] = []
+  /**
+   * The rectangle a bare left button is dragging, pinned to the pane it STARTED in: re-reading
+   * the pane per move measures the second half of it against another camera.
+   */
+  private marquee: Marquee | null = null
+  /** The frame that will publish the outline, so a pointer faster than the screen posts once. */
+  private marqueePending: number | null = null
+  /** The nodes as the document orders them — what an export lists them by, see `exportTo`. */
+  private documentOrder: readonly SceneNode[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
   /** What a camera body and a bulb's cap are FILLED with, read off the palette beside `meshColor`. */
@@ -964,7 +1067,7 @@ export class SceneRenderer {
       onFailure: (url, error) => reportFailure('scene.animation', url, error),
     })
     this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
-    this.instances = createInstancedGroups(
+    this.instances = groupsFor(options)(
       this.viewport.scene,
       mesh =>
         // What the document dresses it in, never what a view left on it: an instance born during
@@ -1057,6 +1160,7 @@ export class SceneRenderer {
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
+    window.addEventListener('pointermove', this.onPointerMove)
     window.addEventListener('pointerup', this.onPointerUp)
   }
 
@@ -1071,6 +1175,7 @@ export class SceneRenderer {
     this.timeline = state.animation
     this.animations.setTimeline(state.animation)
     this.sweepCompositions(state)
+    this.documentOrder = state.nodes
 
     // The identity test sits HERE rather than only inside `syncNode`: on a pass where nothing
     // changed it is the whole of the work, and a call per node cost 4,6 ms on 50 000.
@@ -1101,6 +1206,9 @@ export class SceneRenderer {
     this.poseMarkers(state.nodes)
 
     this.selectedIds = state.selectedIds
+    // The document's own answer on whether anything is left to follow: an emptied selection lets
+    // the view go, where an object map caught mid-rebuild says nothing at all.
+    if (state.selectedIds.length === 0) this.followed = null
     // After the transforms are written, never before: a pose is what the tracks ADD to the one
     // the node holds, so it has to be laid over a rest pose that is already up to date.
     //
@@ -1499,6 +1607,52 @@ export class SceneRenderer {
     this.redraw()
   }
 
+  /**
+   * Frames the selection AND keeps it framed, at the angle and the distance the hand chose —
+   * Unity's ⇧F. Called again it lets go, the same press that took hold.
+   */
+  frameFollow(): void {
+    if (this.followed) {
+      this.followed = null
+      return
+    }
+
+    this.frameSelection()
+    this.followed = this.selectionCentre()
+    this.followedIds = this.selectedIds
+  }
+
+  /** Carries the view along with what it follows, answering whether anything moved: reporting
+   * motion every frame would keep the render loop awake over a still scene. */
+  private followSelection(): boolean {
+    const held = this.followed
+    const orbit = this.viewport.orbit
+    if (!held || !orbit) return false
+
+    // A frame drawn while the graph is being rebuilt reads no object for a node that is still
+    // selected. Skipped, never taken as a reason to let go — `apply` alone decides that.
+    const centre = this.selectionCentre()
+    if (!centre) return false
+
+    // Another body picked is another thing to follow, not a leap to it: seated afresh, the view
+    // stays where the hand left it and travels only with what moves from now on.
+    if (this.selectedIds !== this.followedIds) {
+      this.followed = centre
+      this.followedIds = this.selectedIds
+      return false
+    }
+
+    const shift = centre.sub(held)
+    if (shift.lengthSq() === 0) return false
+
+    // Both by the same amount: the angle and the distance are the hand's, and only what is
+    // looked AT has moved. `OrbitControls` reads its own spherical off the pair, so it holds.
+    this.viewport.camera.position.add(shift)
+    orbit.target.add(shift)
+    held.add(shift)
+    return true
+  }
+
   /** Looks at the scene from one of the six sides, keeping the distance the view already had. */
   viewFrom(direction: ViewDirection): void {
     const orbit = this.viewport.orbit
@@ -1606,16 +1760,23 @@ export class SceneRenderer {
     // What the MODEL costs, so an isolation does not make the triangle count drop — `statsOf`
     // skips an invisible mesh, and hiding something to look past it is not making it cheaper.
     this.asDocumented(() => {
-      // Only when the set moved. `apply` runs on every state change, a selection included, and
-      // walking every geometry of the scene again for a number no selection can move was 12 % of
-      // the CPU of one click on 8 000 nodes — measured 20/08. The selected side is walked every
-      // time on purpose: it is bounded by what is selected, which is usually one thing.
-      if (this.contentChanged) {
-        this.modelStats = statsOf(this.objects.values())
-        this.contentChanged = false
+      // Sources of a grouped MODEL sit out of `holder.children`. Hung for the walk, then put
+      // back: counting the lots as well would double the draws.
+      this.instances.hangSources()
+      try {
+        // Only when the set moved. `apply` runs on every state change, a selection included, and
+        // walking every geometry of the scene again for a number no selection can move was 12 % of
+        // the CPU of one click on 8 000 nodes — measured 20/08. The selected side is walked every
+        // time on purpose: it is bounded by what is selected, which is usually one thing.
+        if (this.contentChanged) {
+          this.modelStats = statsOf(this.objects.values())
+          this.contentChanged = false
+        }
+        const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
+        report(this.modelStats, statsOf(selected))
+      } finally {
+        this.syncSourceWalk()
       }
-      const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
-      report(this.modelStats, statsOf(selected))
     })
   }
 
@@ -1663,21 +1824,130 @@ export class SceneRenderer {
     if (this.groupingStale) {
       this.groupingStale = false
       this.movedNodes.clear()
+      // The world matrices are what a group COPIES, and nothing before here refreshes them: the
+      // one pass that did is `tuneShadows`, which only runs when a light casts. Without this a
+      // body of a fresh group was drawn at the origin.
+      this.viewport.scene.updateMatrixWorld()
+      // The sources that walk no longer reaches, composed against the parents it just wrote.
+      this.instances.refreshSources()
+      this.readChildNodes()
       const instanced = this.instances.rebuild([...this.applied.values()], id =>
         this.objects.get(id),
       )
+      this.syncSourceWalk()
+      // Read before the test, since asking CLEARS it: a lot the rebuild made must not leave the
+      // flag standing for the next move to find.
+      const built = this.instances.builtAnew?.() === true
       // Only when there are instances to dress: they are new objects wearing what their sources
       // wore, so a pane that believed the scene already dressed would leave them out of a solid
       // or a material view. An ordinary scene reaches no group and must pay nothing.
-      if (instanced > 0) forgetDress(this.paneMemory)
+      if (instanced > 0 || built) forgetDress(this.paneMemory)
       return
     }
     if (this.movedNodes.size === 0) return
 
+    // The moved nodes and what hangs from them, never the whole scene: refreshing all of it costs
+    // the traversal of every source — 15 ms against 3 on 50 000 nodes, per typed placement,
+    // measured 02/09.
+    const moved = this.movedWithWhatHangsFromThem()
+    for (const id of moved) this.objects.get(id)?.updateWorldMatrix(true, false)
+
     // Only the slots that moved. Their region's bounds are widened rather than recut, so the
     // culling stays conservative until the next real change of content puts them back exact.
-    this.instances.moved(this.movedNodes, id => this.objects.get(id))
+    this.writeMovedSlots(moved)
     this.movedNodes.clear()
+  }
+
+  /**
+   * Writes the slots of what moved, and dresses again if a promotion BUILT a lot doing it.
+   *
+   * 🛑 Both paths go through here, and the gizmo's is the one that matters: a drag never reaches
+   * `regroupInstances`, so a lot born mid-gesture wore the document's material in a solid view
+   * for the whole drag.
+   */
+  private writeMovedSlots(ids: Iterable<string>): void {
+    this.instances.moved(ids, id => this.objects.get(id))
+    if (this.instances.builtAnew?.() === true) forgetDress(this.paneMemory)
+  }
+
+  /**
+   * Every node whose place in the world the move changed — the moved ones, and their offspring.
+   * `subtreesOf` answers the same question over the document; this one holds its index between
+   * two moves, which is what a drag pays for at every pointer event.
+   */
+  private movedWithWhatHangsFromThem(): Iterable<string> {
+    if (this.childNodes.size === 0) return this.movedNodes
+    return this.descendantsOf(this.movedNodes)
+  }
+
+  /**
+   * These nodes and everything hanging under them, read off the DOCUMENT: since a body a group
+   * draws for is held out of its parent's children, no walk of the objects can answer.
+   *
+   * Each id once, which is also what stops a `parentId` cycle from growing the list for ever.
+   */
+  private descendantsOf(ids: Iterable<string>): string[] {
+    const found = [...new Set(ids)]
+    const seen = new Set(found)
+    // Grown while it is walked, so a whole branch is reached without a second structure.
+    for (let at = 0; at < found.length; at += 1) {
+      const id = found[at]
+      for (const child of (id && this.childNodes.get(id)) || []) {
+        if (seen.has(child)) continue
+        seen.add(child)
+        found.push(child)
+      }
+    }
+    return found
+  }
+
+  /**
+   * Runs something that reads the tree DOWNWARD from these nodes, with the bodies their groups
+   * draw for hung back under them for the length of the call.
+   *
+   * `Box3.setFromObject` and `BoxHelper` walk `children` and nothing else, so without this the box
+   * of a group whose bodies are all drawn by one instance comes back EMPTY — a selection frame
+   * left at the origin, a surface snap that does nothing, handles sized against a degenerate span.
+   * Bounded by what is asked for rather than by the scene: the parents touched are these nodes.
+   */
+  private withHungUnder<T>(ids: Iterable<string>, run: () => T): T {
+    /** By PARENT, so hanging and dropping are each one pass over a `children` array, never one
+     * per body — a floor of fifty thousand tiles makes that difference quadratic. */
+    const added = new Map<Object3D, Set<Object3D>>()
+    for (const id of this.descendantsOf(ids)) {
+      const object = this.objects.get(id)
+      const parent = object?.parent
+      if (!object || !parent || !this.instances.holdsSource(object)) continue
+      const mine = added.get(parent)
+      if (mine) mine.add(object)
+      else added.set(parent, new Set([object]))
+    }
+
+    for (const [parent, mine] of added) {
+      // 🛑 MEMBERSHIP, never a proxy for it. A source is already in the walk while a pane shows
+      // edges, and a drag carries one under the pivot through `Object3D.attach`, which pushes
+      // whatever it is given. A second copy pushed here leaves WITH the first, and the body is
+      // out of the walk for good — its matrix stops being composed, and the drag reports nothing.
+      for (const child of parent.children) mine.delete(child)
+      parent.children.push(...mine)
+    }
+    try {
+      return run()
+    } finally {
+      for (const [parent, mine] of added) {
+        if (mine.size > 0) parent.children = parent.children.filter(child => !mine.has(child))
+      }
+    }
+  }
+
+  private readChildNodes(): void {
+    this.childNodes.clear()
+    for (const node of this.applied.values()) {
+      if (!node.parentId) continue
+      const kept = this.childNodes.get(node.parentId)
+      if (kept) kept.push(node.id)
+      else this.childNodes.set(node.parentId, [node.id])
+    }
   }
 
   /** Which view the pointer is over — what a display command acts on. */
@@ -1765,23 +2035,56 @@ export class SceneRenderer {
   ): Promise<Uint8Array> {
     const wanted = new Set(scope === 'selection' ? this.selectedIds : this.objects.keys())
     const roots = [...wanted].filter(id => !this.hasExportedAncestor(id, wanted))
+    // In DOCUMENT order, not in the order the objects were built: a node rebuilt after an undo
+    // is the newest object of the map, and a file that listed it last diffed on every undo.
+    const rank = new Map(this.documentOrder.map((node, at) => [node.id, at]))
 
     // The copies are taken synchronously inside `exportObjects`, so putting the document's own
     // visibility back for the length of this call is enough — an isolation running while somebody
     // exports must not write a file missing whatever they were not looking at.
-    return this.asDocumented(() =>
-      exportObjects(
-        roots.flatMap(id => this.objects.get(id) ?? []),
-        format,
-        {
-          // The objects wear node ids, which is what picking reads back off a hit. A file wears
-          // the names the document gave them.
-          nameOf: id => this.applied.get(id)?.name,
-          clipsFor: copies => this.bakedClips(copies),
-          ...(extras && { extras }),
-        },
+    return this.asHung(() =>
+      this.asDocumented(() =>
+        exportObjects(
+          roots.flatMap(id => this.objects.get(id) ?? []),
+          format,
+          {
+            // The objects wear node ids, which is what picking reads back off a hit. A file wears
+            // the names the document gave them.
+            nameOf: id => this.applied.get(id)?.name,
+            clipsFor: copies => this.bakedClips(copies),
+            rankOf: id => rank.get(id),
+            ...(extras && { extras }),
+          },
+        ),
       ),
     )
+  }
+
+  /**
+   * Runs something against the scene as a TREE, with every body a group draws for back under the
+   * node it hangs from: `Object3D.children` is what an exporter writes a parent's contents from,
+   * and a source drawn by a group is held out of it — see `heldOutOfDraw`.
+   */
+  private asHung<T>(run: () => T): T {
+    this.instances.hangSources()
+    try {
+      return run()
+    } finally {
+      this.syncSourceWalk()
+    }
+  }
+
+  /**
+   * Whether the bodies a group draws for belong in the walk of the scene.
+   *
+   * They are what carries the EDGES: `applyWireOverlay` hangs a `LineSegments` under each mesh,
+   * and a source out of the walk takes its outline with it. So the edge modes pay the traversal
+   * the grouping exists to give back — 16.2 ms of scene pass against 0.29 on 50 000 bodies,
+   * measured 02/09 — and every other mode does not.
+   */
+  private syncSourceWalk(): void {
+    if (this.needsEdges()) this.instances.hangSources()
+    else this.instances.dropSources()
   }
 
   /**
@@ -1868,6 +2171,9 @@ export class SceneRenderer {
     for (const object of this.objects.values()) {
       applyWireOverlay(object, anyEdges, this.wireMaterial, quads)
     }
+    // After the outlines are hung or dropped: whether the sources belong in the walk is exactly
+    // whether they carry any.
+    this.syncSourceWalk()
     this.redraw()
   }
 
@@ -1898,8 +2204,13 @@ export class SceneRenderer {
       this.gizmo.getHelper().visible = index === this.viewport.activePane
     }
 
+    // Before the dressing, and both answers kept: a cell that just came into the zone is a body
+    // the shadow maps were drawn without.
+    const zoned = this.instances.follow?.(camera, this.shadowThrow) ?? false
+    this.zonedTo = camera
+
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
-    return dressForPane(
+    const dressed = dressForPane(
       // The instances too: a display mode replaces a mesh's material, and one left out of this
       // walk goes on drawing shaded while everything around it wears the stand-in. Walked
       // LAZILY: `dressForPane` declines the work when the dress already holds, and an array
@@ -1912,6 +2223,7 @@ export class SceneRenderer {
       camera,
       studio => this.environment?.borrowStudio(studio),
     )
+    return dressed || zoned
   }
 
   /**
@@ -2512,7 +2824,7 @@ export class SceneRenderer {
    * An isolation is one of those tools, and it is put back the same way: what a camera films is
    * the scene, never the part of it somebody happened to be working on.
    */
-  private hideWorkshop(): () => void {
+  private hideWorkshop(camera?: ViewportCamera): () => void {
     const hidden: Object3D[] = []
     const hide = (object: Object3D | null | undefined): void => {
       if (!object?.visible) return
@@ -2533,6 +2845,13 @@ export class SceneRenderer {
     // film and a capture never go through, since they render the scene directly. Left alone, the
     // whole film comes out lit by the room instead of by the document's own sky.
     this.environment?.borrowStudio(false)
+
+    // For the same reason, and it is the whole of what a zone has to be told. The preview names
+    // ITS camera, and comes here on every frame it is shown: opening the zone in full for it put
+    // the whole level back in the scene, twice a frame. A film and a capture name none, and every
+    // cell is drawn for them.
+    const zonedTo = this.zonedTo
+    this.instances.follow?.(camera ?? null, this.shadowThrow)
 
     for (const helper of this.helpers.values()) hide(helper)
     for (const joints of this.joints.values()) hide(joints.points)
@@ -2557,6 +2876,11 @@ export class SceneRenderer {
     return () => {
       for (const object of hidden) object.visible = true
       if (masked) this.applyVisibility()
+      // 🛑 The zone back where it was found. Left on the preview's own, the next pane widens it
+      // again and answers « moved », which redraws every shadow map — every frame a preview is
+      // shown, on a scene nothing touched.
+      if (zonedTo) this.instances.follow?.(zonedTo, this.shadowThrow)
+      this.zonedTo = zonedTo
     }
   }
 
@@ -2855,8 +3179,11 @@ export class SceneRenderer {
     const canvas = this.viewport.canvas
     this.setNavigating(false)
 
+    // Or the frame it left pending publishes an outline into a host that has already gone.
+    this.dropMarquee()
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
+    window.removeEventListener('pointermove', this.onPointerMove)
     window.removeEventListener('pointerup', this.onPointerUp)
 
     this.gizmo?.removeEventListener('axis-changed', this.onGizmoAxisChanged)
@@ -2926,6 +3253,14 @@ export class SceneRenderer {
       maps.apply(slot, worn?.textures ?? {})
       // After the maps, always: the tiling rides ON the textures — see `dress`.
       maps.dress(slot, worn?.material)
+    }
+
+    const holder = this.objects.get(nodeId)
+    if (holder) {
+      markInstanceable(
+        holder,
+        instanceableOf(node, rigStateOf(holder), this.animations.clipsOf(nodeId)),
+      )
     }
   }
 
@@ -3079,7 +3414,12 @@ export class SceneRenderer {
       !this.aids.idle()
     if (!wants) return
 
-    this.aids.apply(this.objects, this.selectedIds, this.view, this.aidPalette(), this.rigs)
+    // Every node when the boxes are drawn on all of them, the selection alone otherwise: that is
+    // exactly the set `showsAid` reads a box off, and hanging more would be a walk for nothing.
+    const aided = this.view.boundingBoxes === 'all' ? this.objects.keys() : this.selectedIds
+    this.withHungUnder(aided, () =>
+      this.aids.apply(this.objects, this.selectedIds, this.view, this.aidPalette(), this.rigs),
+    )
     this.redraw()
   }
 
@@ -3100,7 +3440,7 @@ export class SceneRenderer {
     const aligning = this.view.snapSurfaceAlign
     if (aligning) held.quaternion.copy(this.surfaceHeld)
     held.updateMatrixWorld(true)
-    this.surfaceBox.setFromObject(held)
+    this.withHungUnder(this.selectedIds, () => this.surfaceBox.setFromObject(held))
     if (this.surfaceBox.isEmpty()) return
 
     this.surfaceRay.set(surfaceRayFrom(this.surfaceBox, this.surfaceFrom), DOWNWARD)
@@ -3120,7 +3460,7 @@ export class SceneRenderer {
         held.quaternion,
       )
       held.updateMatrixWorld(true)
-      this.surfaceBox.setFromObject(held)
+      this.withHungUnder(this.selectedIds, () => this.surfaceBox.setFromObject(held))
     }
 
     held.position.y += surfaceLift(this.surfaceBox.min.y, hit.point.y, this.view.snapSurfaceOffset)
@@ -3137,7 +3477,11 @@ export class SceneRenderer {
   private surfaceRoots(): Object3D[] {
     this.surfaceScope.length = 0
     for (const object of this.objects.values()) {
-      if (object.parent === this.viewport.scene) this.surfaceScope.push(object)
+      // A body held out of the walk is reached from no root at all, so it is one: a floor of
+      // sixteen identical tiles inside a group would otherwise stop being a surface to land on.
+      if (object.parent === this.viewport.scene || this.instances.holdsSource(object)) {
+        this.surfaceScope.push(object)
+      }
     }
 
     return this.surfaceScope
@@ -3164,7 +3508,7 @@ export class SceneRenderer {
     if (!this.gizmo || !held) return
 
     held.updateMatrixWorld(true)
-    this.gizmoBox.setFromObject(held)
+    this.withHungUnder(this.selectedIds, () => this.gizmoBox.setFromObject(held))
     // The MODE decides how far the outermost handle stands: a rotation ring reaches further than
     // an arrow, so the same size wraps two different radii.
     if (this.mode === 'select') return
@@ -3813,7 +4157,9 @@ export class SceneRenderer {
       // Read once and used twice: whether this model has bones at all is the same question the
       // helper asks, and answering it in two places is how the two came to disagree. The COUNT
       // and not the named ones — an export that stripped joint names still has a rig to draw.
-      const rig = rigStateOf(holder, clipsOf(source))
+      const clips = clipsOf(source)
+      const rig = rigStateOf(holder, clips)
+      if (applied.type === 'model') markInstanceable(holder, instanceableOf(applied, rig, clips))
       this.bindSkeleton(node.id, holder, rig.boneCount > 0)
       this.options.onRig?.(node.id, rig)
       // Read off the very object that just landed: the skeleton window edits the FILE, and
@@ -3999,10 +4345,14 @@ export class SceneRenderer {
     }
     // The scene is walked only if some light would read the answer: a set lit by a hemisphere
     // and a point light has no box to size, and measuring it would be a pass for nothing.
-    if (framed.length === 0) return
+    if (framed.length === 0) {
+      this.shadowThrow = null
+      return
+    }
 
     const reach = this.measureShadowReach()
     for (const light of framed) fitShadowCamera(light, reach)
+    this.shadowThrow = throwsOf(framed, this.heldShadowBounds(), reach)
   }
 
   /**
@@ -4034,7 +4384,9 @@ export class SceneRenderer {
       this.shadowBounds = boundsOf(this.framedObjects())
       return this.shadowBounds
     }
-    for (const id of this.movedNodes) {
+    // What hangs under them too: a body a group draws for is out of its parent's children, and a
+    // box that missed it would be a frustum too NARROW — the direction that clips a shadow off.
+    for (const id of this.descendantsOf(this.movedNodes)) {
       const object = this.objects.get(id)
       if (object && isFramed(this.applied.get(id)?.type ?? 'group')) {
         this.shadowBounds.expandByObject(object)
@@ -4211,8 +4563,8 @@ export class SceneRenderer {
       // Its own buffer, and a child of the mesh rather than the mesh: nothing else frees it.
       applyWireOverlay(object, false, this.wireMaterial)
       // Not `scene.remove`: mid-drag the object hangs off the pivot, and the scene would not
-      // find it to remove.
-      object.removeFromParent()
+      // find it to remove. And `unhang` rather than `removeFromParent`: see there.
+      unhang(object)
       if (object instanceof Mesh) {
         this.freeGeometry(object.geometry)
         disposeMaterial(object)
@@ -4341,7 +4693,7 @@ export class SceneRenderer {
     // grouping left it for the whole gesture. `TransformControls` has already written the world
     // matrices this reads. The moved slots alone, never a regrouping: that costs 47.5 ms on
     // 40 000 nodes, which per pointer move is three dropped frames.
-    this.instances.moved(this.selectedIds, id => this.objects.get(id))
+    this.writeMovedSlots(this.selectedIds)
     this.previewRail()
     this.redraw()
   }
@@ -4645,7 +4997,7 @@ export class SceneRenderer {
   }
 
   private startFlight(event: PointerEvent): void {
-    this.flownFrom = { x: event.clientX, y: event.clientY }
+    this.flownFrom = { clientX: event.clientX, clientY: event.clientY }
     this.flownWith = event.button
     this.flew = false
     // The RIGHT button only. `freezePanes` ends in `armOrbits(null)`, which sets
@@ -4678,7 +5030,17 @@ export class SceneRenderer {
 
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
-      this.startFlight(event)
+      // Not a flight when the scheme spends this press on a gesture: three of the six dolly on
+      // Alt+right, and one pans on the right button added to a left already down. The viewport
+      // took it in the capture phase, and a flight here would freeze the panes under it.
+      if (gestureOf(event, this.scheme) === null) this.startFlight(event)
+      else {
+        // Remembered all the same: a chord that never TRAVELS is a click, and the node menu is
+        // the one gesture left to this button. A rectangle is not that gesture — it goes.
+        this.flownFrom = { clientX: event.clientX, clientY: event.clientY }
+        this.flew = false
+        this.dropMarquee()
+      }
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return
@@ -4688,13 +5050,14 @@ export class SceneRenderer {
     // Held, not acted on: `OrbitControls` pans on left-drag with any of the three modifiers, and
     // those are the very keys that add to a selection. Picking on release, and only if the
     // pointer never moved, is what stops a recentring gesture from unpicking what it passes over.
-    this.pressed = { x: event.clientX, y: event.clientY }
+    this.pressed = { clientX: event.clientX, clientY: event.clientY }
     // Cleared here and not only in `startFlight`, which a scheme flying on the right button
     // alone never calls for this press.
     this.flew = false
-    // ADDED to the left button, never substituted for what it already did: it goes on orbiting
-    // and picking on release, and only gains the keys. Unity and Unreal keep their flight on the
-    // RIGHT button alone, so under those the left one arms nothing.
+    this.armMarquee(event)
+    // ADDED to the left button, never substituted for what it already did: it goes on drawing its
+    // rectangle and picking on release, and only gains the keys. Unity and Unreal keep their
+    // flight on the RIGHT button alone, so under those the left one arms nothing.
     if (this.scheme.fly === 'anyButton') this.startFlight(event)
   }
 
@@ -4729,8 +5092,16 @@ export class SceneRenderer {
 
     const pressed = this.pressed
     const flew = this.flew
+    const marquee = this.marquee
     this.pressed = null
+    this.dropMarquee()
     this.endFlight(0, event)
+    // A rectangle that travelled takes what it crossed, and publishes even when it crossed
+    // nothing: that is how a sweep through the void clears a selection.
+    if (marquee && !flew && !wasClick(marquee.from, marquee.to)) {
+      this.pickInMarquee(marquee, event)
+      return
+    }
     // A flight that moved the camera is not a click, even when the pointer never left its pixel:
     // the keyboard did the moving. The same reading the right button already makes for its menu.
     if (flew || !wasClick(pressed, event)) return
@@ -4795,12 +5166,130 @@ export class SceneRenderer {
       }
     }
 
-    // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
-    const extending = event.shiftKey || event.metaKey || event.ctrlKey
     const id = this.nodeAt(event)
-    this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+    this.options.onSelect(id ? [id] : [], extendsSelection(event) ? 'toggle' : 'replace')
     // Whatever was picked before belongs to a rail that may no longer be the selection.
     if (this.pickedPathPoint) this.options.onSelectPathPoint?.(null)
+  }
+
+  /** Arms the rectangle on the button the scheme left free and nowhere else: under `custom` the
+   * bare left one may still orbit, and the preview picks nothing at all. */
+  private armMarquee(event: PointerEvent): void {
+    // Never on a finger: one of them TURNS the view, whatever the mouse scheme says — see
+    // `navigateByTouch`. A rectangle drawn under the turn would take every tap-and-drag.
+    if (event.pointerType === 'touch') return
+
+    const pane = this.viewport.paneAtPointer(event)
+    if (pane === null || gestureOf(event, this.scheme) !== null) return
+
+    const corner = this.viewport.canvasPointOf({ clientX: 0, clientY: 0 })
+    if (!corner) return
+
+    const at = { clientX: event.clientX, clientY: event.clientY }
+    this.marquee = { pane, corner, from: at, to: at }
+  }
+
+  private readonly onPointerMove = (event: PointerEvent): void => {
+    const marquee = this.marquee
+    if (!marquee) return
+    // `buttons` is the reading that cannot lie: a release swallowed by a native menu, or a handle
+    // that took the drag, both leave the rectangle hanging otherwise.
+    if (this.gizmo?.dragging || (event.buttons & maskOf(0)) === 0) return this.dropMarquee()
+
+    marquee.to = { clientX: event.clientX, clientY: event.clientY }
+    // One publication a frame: the host re-renders on each of them, and a pointer reports faster
+    // than the screen refreshes.
+    if (this.marqueePending !== null) return
+    this.marqueePending = requestAnimationFrame(() => {
+      this.marqueePending = null
+      if (this.marquee) this.options.onMarquee?.(this.drawnMarquee(this.marquee))
+    })
+  }
+
+  /** The outline to draw, in the canvas' own pixels — `null` while the drag is still short
+   * enough to be a click, so a pick never flashes a rectangle. */
+  private drawnMarquee(marquee: Marquee): ScreenBox | null {
+    if (wasClick(marquee.from, marquee.to)) return null
+
+    return boxBetween(
+      { x: marquee.from.clientX + marquee.corner.x, y: marquee.from.clientY + marquee.corner.y },
+      { x: marquee.to.clientX + marquee.corner.x, y: marquee.to.clientY + marquee.corner.y },
+    )
+  }
+
+  /** Gives the rectangle up without picking anything. Silent when there was none to give. */
+  private dropMarquee(): void {
+    if (!this.marquee) return
+
+    this.marquee = null
+    if (this.marqueePending !== null) cancelAnimationFrame(this.marqueePending)
+    this.marqueePending = null
+    this.options.onMarquee?.(null)
+  }
+
+  /** What the rectangle took, against the camera of the pane it was DRAWN in — a hand that ended
+   * up in another pane is still selecting in the first. */
+  private pickInMarquee(marquee: Marquee, event: PointerEvent): void {
+    const from = this.viewport.pointerNdcOf(marquee.from, marquee.pane)
+    const to = this.viewport.pointerNdcOf(marquee.to, marquee.pane)
+    if (!from || !to) return
+
+    const camera = this.viewport.paneCameras[marquee.pane] ?? this.viewport.camera
+    const box = boxBetween(from, to)
+
+    // In pose mode the rectangle names a BONE and never a node, exactly as a click does there.
+    if (this.poseMode) {
+      const picked = frontmostSegmentIn(this.projectedSegments(camera), box)
+      this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
+      return
+    }
+
+    const taken = idsTouching(box, this.screenBodies(camera))
+    // ADDS where a click toggles: a rectangle drawn over what is already picked must not take it
+    // back off, or a second sweep would undo the first.
+    const kept = extendsSelection(event) ? this.selectedIds : []
+    this.options.onSelect([...kept, ...taken], 'replace')
+    // Whatever was picked before belongs to a rail that may no longer be the selection.
+    if (this.pickedPathPoint) this.options.onSelectPathPoint?.(null)
+  }
+
+  /** Every node as one pane's camera sees it, in device coordinates: its origin plus whatever
+   * its own geometry spans — see `worldRadiusOf`, and why a group spans nothing. */
+  private screenBodies(camera: Camera): ScreenBody[] {
+    // Both readings below go through the camera's world matrix, and a pane whose view moved since
+    // the last frame drew still carries that frame's — the same reading `pivotAt` makes.
+    camera.updateMatrixWorld()
+    BODY_RIGHT.setFromMatrixColumn(camera.matrixWorld, 0)
+    BODY_UP.setFromMatrixColumn(camera.matrixWorld, 1)
+
+    const bodies: ScreenBody[] = []
+    for (const [id, object] of this.objects) {
+      if (!object.visible) continue
+
+      object.getWorldPosition(BODY_CENTRE)
+      // `project` flips the sign behind the camera, so a body at one's back would fall in the box
+      // as surely as one in front of it.
+      if (BODY_EDGE.copy(BODY_CENTRE).applyMatrix4(camera.matrixWorldInverse).z >= 0) continue
+
+      const reach = worldRadiusOf(object)
+      BODY_EDGE.copy(BODY_CENTRE).addScaledVector(BODY_RIGHT, reach)
+      BODY_ABOVE.copy(BODY_CENTRE).addScaledVector(BODY_UP, reach)
+      BODY_CENTRE.project(camera)
+      BODY_EDGE.project(camera)
+      BODY_ABOVE.project(camera)
+      // Both axes: a pane is wider than it is tall, and the same reach spans more of the height
+      // than of the width — one radius for both missed the top third of every cube on a 16:9.
+      bodies.push({
+        id,
+        box: boxAround(
+          BODY_CENTRE,
+          Math.abs(BODY_EDGE.x - BODY_CENTRE.x),
+          Math.abs(BODY_ABOVE.y - BODY_CENTRE.y),
+        ),
+      })
+    }
+
+    return bodies
   }
 
   /**
@@ -4980,12 +5469,17 @@ export class SceneRenderer {
     // that the ray actually meets. Both they and the light carry the node's id. Only the ones on
     // SCREEN: three's raycaster does not read `visible`, so a hidden helper would go on catching
     // clicks over empty space and selecting a lamp nobody could see.
+    // And what draws the grouped bodies, where that names a hit by its slot: the lots. Their
+    // sources are met as well, on the layer instancing keeps them on, and answer the same.
     const targets = [
       ...this.objects.values(),
       ...[...this.helpers.values()].filter(helper => helper.visible),
+      ...this.instances.pickable(),
     ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    return hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
+    return hit
+      ? (this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name)))
+      : null
   }
 
   /**
@@ -5084,6 +5578,7 @@ export class SceneRenderer {
     // notch of the wheel. Read on `configure` alone it was right once, then stayed put.
     this.applyGizmoSize()
 
+    const followed = this.followSelection()
     const moving = this.flying && this.held.size > 0
     if (moving) {
       // Only under a button that armed it: a permanent flight moves the camera with no press at
@@ -5093,7 +5588,7 @@ export class SceneRenderer {
     }
     // The clips do not appear here: they stand where the head put them, and the head is advanced
     // by `useAnimationPlayback`, which calls `setPlayhead` and asks for a frame of its own.
-    return moving
+    return moving || followed
   }
 
   private fly(delta: number): void {
@@ -5209,3 +5704,33 @@ const FACED = new Quaternion()
 
 /** Nothing drawn off a component — what a window that plays the scene is handed. */
 const NO_RIGS: AidRigs = { bodies: new Map(), arms: new Map() }
+
+/**
+ * Which of the three strategies draws the repeated shapes — the cells unless something says
+ * otherwise. Naming a `grouping` is asking to leave them: the other two hold no zone at all.
+ */
+function groupsFor(
+  options: SceneRendererOptions,
+): (host: Object3D, ownMaterialOf: (mesh: Mesh) => Material | Material[]) => InstancedGroups {
+  if ((options.partition ?? (options.grouping ? 'off' : 'grid')) === 'grid') return createCellGroups
+  return options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups
+}
+
+/**
+ * Which ways the shadows fall, and how low they can land — one direction per CASTING light, read
+ * off each light's own target. An empty set answers the origin, and the floor comes from the box
+ * the shadow cameras were just fitted to.
+ */
+function throwsOf(lights: readonly Object3D[], bounds: Box3, reach: number): ShadowThrow | null {
+  const along: { x: number; y: number; z: number }[] = []
+  for (const light of lights) {
+    const target = Reflect.get(light, 'target')
+    const at = new ThreeVector3()
+    if (target instanceof Object3D) target.getWorldPosition(at)
+    const direction = at.sub(light.getWorldPosition(new ThreeVector3())).normalize()
+    if (direction.lengthSq() === 0) continue
+    along.push({ x: direction.x, y: direction.y, z: direction.z })
+  }
+  if (along.length === 0) return null
+  return { along, floor: bounds.isEmpty() ? 0 : bounds.min.y, reach }
+}

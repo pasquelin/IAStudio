@@ -28,8 +28,12 @@ export const WINDOW_GROUP_LABEL = 'text-base-content/70 text-tiny mb-1 tracking-
 /** A line of a list here: a setting, a search hit, a chapter. The direction stays at the call. */
 export const WINDOW_ROW = 'border-base-300 flex gap-2 border-b py-3 last:border-b-0'
 
-/** The same line when the whole of it is the button. */
-export const WINDOW_ROW_BUTTON = cn(WINDOW_ROW, 'hover:bg-base-300 w-full text-left')
+/**
+ * The same line when the whole of it is the button. `base-200` since the ground of these windows
+ * became the chassis: `base-300` is the divider now, and `elevated` reads 1.086:1 on a light
+ * chassis — under the 1.1 of `HOVER_IS_SEEN`. `tokens.test.ts` measures it.
+ */
+export const WINDOW_ROW_BUTTON = cn(WINDOW_ROW, 'hover:bg-base-200 w-full text-left')
 
 /**
  * A control of one of these windows: a section of the column, a period, a refresh.
@@ -52,7 +56,7 @@ const WINDOW_CONTROL_BASE = cn(
 export function windowControl(active: boolean): string {
   return cn(
     WINDOW_CONTROL_BASE,
-    active ? 'bg-primary text-primary-content' : 'hover:bg-base-300 bg-transparent',
+    active ? 'bg-primary text-primary-content' : 'hover:bg-base-200 bg-transparent',
   )
 }
 
@@ -65,7 +69,7 @@ export function windowControl(active: boolean): string {
  * vocabulary.
  */
 export function windowChoice(chosen: boolean): string {
-  return cn(WINDOW_CONTROL_BASE, chosen ? 'bg-accent-soft' : 'hover:bg-base-300 bg-transparent')
+  return cn(WINDOW_CONTROL_BASE, chosen ? 'bg-accent-soft' : 'hover:bg-base-200 bg-transparent')
 }
 
 /**

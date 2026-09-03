@@ -29,6 +29,16 @@ describe('the tokens handed to the chassis', () => {
     expect(bridged()).toEqual(consumed())
   })
 
+  /**
+   * 🛑 BOTH selectors. `:root` is what a `Surface` mounted outside `<Panels>` needs — the skeleton
+   * window mounts two, and they fell to no background at all. `.pnl-root` is still needed: the
+   * library declares its own palette ON that element, and a declaration there beats an inherited
+   * one whatever the specificity. Dropping either is invisible above and silent below.
+   */
+  it('reach a Surface outside the docks, and still win inside them', () => {
+    expect(stylesheet).toContain(':root,\n.pnl-root {\n  --pnl-rail:')
+  })
+
   // Referenced, never copied: a hex or a pixel written here is a second source of truth for a
   // value `index.css` already holds, and the two drift the day one of them moves.
   it('reference a studio token rather than restating its value', () => {

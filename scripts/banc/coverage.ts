@@ -18,7 +18,7 @@ import type { ActionName } from '@shared/domain/assistant'
  * are fixed; the rule for the next one is to read the oracle, not the decor.
  */
 export const COVERAGE: Record<ActionName, readonly string[]> = {
-  'command.runStudioCommand': ['45.1'],
+  'command.runStudioCommand': ['45.1', '10.9'],
   'workspace.open': ['5.1', '5.2', '5.3'],
   'models.search': ['20.1'],
   'models.select': ['20.1'],

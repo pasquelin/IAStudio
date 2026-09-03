@@ -13,13 +13,19 @@ export function useStagedNavigation(): [NavigationPreset, CustomNavigation] {
   const staged = useSettingsDraft(state => state.pending.three)
   const three = { ...stored, ...staged }
   const preset = three.navigationPreset
-  const { navigationCustomOrbit, navigationCustomPan, navigationCustomFly } = three
+  const { navigationCustomOrbit, navigationCustomPan, navigationCustomDolly, navigationCustomFly } =
+    three
 
   // Memoised here rather than at the caller: a fresh object per render is a dependency that
   // never settles, and every consumer of this would recompute its merge on every keystroke.
   const custom = useMemo(
-    () => ({ orbit: navigationCustomOrbit, pan: navigationCustomPan, fly: navigationCustomFly }),
-    [navigationCustomOrbit, navigationCustomPan, navigationCustomFly],
+    () => ({
+      orbit: navigationCustomOrbit,
+      pan: navigationCustomPan,
+      dolly: navigationCustomDolly,
+      fly: navigationCustomFly,
+    }),
+    [navigationCustomOrbit, navigationCustomPan, navigationCustomDolly, navigationCustomFly],
   )
 
   return [preset, custom]

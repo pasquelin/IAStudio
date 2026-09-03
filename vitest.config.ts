@@ -152,12 +152,18 @@ const DOM_BOUND = [
   // A stage opens an off-screen host before anything else, and a host is a div in a document.
   'src/renderer/src/engines/scene/sceneStage.test.ts',
   'src/renderer/src/engines/scene/scene-models.test.ts',
+  // Constructs SceneRenderer, which draws a matcap on a canvas.
+  'src/renderer/src/engines/scene/instanceableModel.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-animation.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-bones.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-export.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-loaders.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-reskin.test.ts',
   'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
+  'src/renderer/src/engines/scene/sceneRendererGroups.test.ts',
+  // Mounts the engine to watch what holds the active zone; `paneMaterials` draws its matcap.
+  'src/renderer/src/engines/scene/sceneRendererZone.test.ts',
+  'src/renderer/src/engines/scene/sceneRendererExportOrder.test.ts',
   'src/renderer/src/engines/scene/threeFactory.test.ts',
   'src/renderer/src/engines/skybox/SkyboxRenderer.test.ts',
   'src/renderer/src/engines/material/MaterialRenderer.test.ts',

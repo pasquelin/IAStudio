@@ -1,4 +1,10 @@
-import { CUSTOM_ORBITS, CUSTOM_PANS, FLY_MODES, NAVIGATION_PRESETS } from './navigationPreset'
+import {
+  CUSTOM_DOLLIES,
+  CUSTOM_ORBITS,
+  CUSTOM_PANS,
+  FLY_MODES,
+  NAVIGATION_PRESETS,
+} from './navigationPreset'
 import { LANGUAGES } from '../i18n/languages'
 import { ASSISTANT_STEPS_MAX, ASSISTANT_STEPS_MIN } from './assistantSteps'
 import { DICTATION_MODES } from './dictation'
@@ -451,6 +457,18 @@ export const SETTING_REGISTRY = [
     options: CUSTOM_PANS.map(value => ({
       value,
       labelKey: `settings.navigationCustomPan.${value}`,
+    })),
+    dependsOn: { path: 'three.navigationPreset', equals: 'custom' },
+  }),
+  setting({
+    path: 'three.navigationCustomDolly',
+    kind: 'choice',
+    section: 'spaces.three',
+    titleKey: 'settings.navigationCustomDolly.title',
+    helpKey: 'settings.navigationCustomDolly.help',
+    options: CUSTOM_DOLLIES.map(value => ({
+      value,
+      labelKey: `settings.navigationCustomDolly.${value}`,
     })),
     dependsOn: { path: 'three.navigationPreset', equals: 'custom' },
   }),

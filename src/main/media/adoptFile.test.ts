@@ -91,6 +91,16 @@ describe('adoptFile', () => {
     expect(lines).toEqual([])
   })
 
+  it('adopts an OpenEXR as an image, which is how a heightmap enters the catalogue', async () => {
+    await put('World/height.exr')
+
+    expect(await adoptFile('World/height.exr', deps())).toMatchObject({
+      name: 'height',
+      type: 'image',
+      path: 'World/height.exr',
+    })
+  })
+
   /**
    * A document wears the extension of an open format now, so the spelling of a picture painted
    * in another application is also the spelling of one of ours. Asked as MATERIAL, `.ora` is a

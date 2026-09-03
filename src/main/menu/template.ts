@@ -31,6 +31,7 @@ import {
   bindingOf,
   commandDescriptor,
   commandIn,
+  SIDE_VIEW_COMMAND,
   type BindingOverrides,
   type CommandId,
   type CommandScope,
@@ -48,7 +49,6 @@ import type {
   SceneCaptureCommand,
   SceneDisplayRequest,
   SceneExportCommand,
-  SceneViewRequest,
   SkyboxExportCommand,
   MaterialExportCommand,
   ToolRequest,
@@ -78,7 +78,6 @@ export type MenuActions = {
   newDocument: (request: NewDocumentRequest) => void
   openRecent: (request: RecentOpenRequest) => void
   addNode: (request: SceneAddRequest) => void
-  viewFrom: (request: SceneViewRequest) => void
   setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
   captureScene: (command: SceneCaptureCommand) => void
@@ -562,12 +561,17 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     checked: checked.includes(command),
   })
 
-  /** The six sides. An action, not a state: looking from the front leaves nothing turned on. */
-  const viewItems = (): MenuItemConstructorOptions[] =>
-    VIEW_DIRECTIONS.map((direction: ViewDirection) => ({
-      label: t.sceneViews[direction],
-      click: () => actions.viewFrom({ direction }),
-    }))
+  /**
+   * The six sides and the camera. Actions, not states: looking from the front leaves nothing
+   * turned on, and stepping back out of a camera is the same row pressed twice.
+   */
+  const viewItems = (): MenuItemConstructorOptions[] => [
+    ...VIEW_DIRECTIONS.map((direction: ViewDirection) =>
+      commandItem(SIDE_VIEW_COMMAND[direction], t.sceneViews[direction]),
+    ),
+    { type: 'separator' },
+    commandItem('scene.viewCamera', t.commands.sceneViewCamera.title),
+  ]
 
   /**
    * The seven ways of drawing, as alternatives — exactly one is true at a time, which is what

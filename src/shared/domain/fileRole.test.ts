@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXTENSIONS_BY_KIND } from './document'
-import { FILE_DOMAINS, natureOf, opensInStudio } from './fileRole'
+import { FILE_DOMAINS, natureOf, opensInStudio, sourceNatureOf } from './fileRole'
 
 describe('natureOf', () => {
   /**
@@ -84,6 +84,14 @@ describe('opensInStudio', () => {
       expect(natureOf(name).domain).toBe('image')
       expect(opensInStudio(name)).toBe(false)
     }
+  })
+
+  it('catalogues an OpenEXR as an image, without opening it as a tab', () => {
+    expect(sourceNatureOf('height.exr')).toEqual({
+      domain: 'image',
+      openable: false,
+      catalogable: true,
+    })
   })
 
   // A montage IS a document now, whichever application wrote it — the studio reads the standard

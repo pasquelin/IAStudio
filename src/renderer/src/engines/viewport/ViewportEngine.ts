@@ -20,7 +20,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
-import { dollyTo, notchesOf } from './dolly'
+import { dollyTo, dragNotchesOf, notchesOf } from './dolly'
+import { fingerGap } from './pinch'
 import { gestureOf, type Gesture } from './gestures'
 import { SCHEME_OF, type NavigationScheme } from '@shared/domain/navigationPreset'
 import { orbitAround } from './orbit'
@@ -40,6 +41,9 @@ import {
 } from './panes'
 import { pointerNdc, type PointerPosition } from './pointer'
 import { frustumHeight } from './screenScale'
+
+/** A two-finger gesture in flight: its last two readings, and the pane it belongs to. */
+type Pinch = { pane: number; gap: number; middleX: number; middleY: number; moved: boolean }
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
 const ORIGIN = new Vector3()
@@ -83,7 +87,7 @@ export type ViewportEngineOptions = {
    * the grid and the helpers have to be hidden for that pass and put back for the next — and
    * `onPane` has no symmetrical call after a pane is drawn.
    */
-  onInset?: () => () => void
+  onInset?: (camera: ViewportCamera) => () => void
   /**
    * Filmic tone mapping. Off by default because it changes how every existing colour lands,
    * and the scene editor was built and reviewed without it; a viewport that judges an HDR
@@ -277,11 +281,18 @@ const WHEEL_SETTLES_MS = 250
 /**
  * Whether `OrbitControls` still owns the gestures of the camera it holds — see `armOrbits`.
  *
- * 🛑 The declared hole: disabled, its TOUCH handlers go with it, so pinch-zoom and two-finger pan
- * are dead on a perspective pane. `dragBy` follows ONE `pointerId`, so a second finger is dropped.
+ * Disabled, its TOUCH handlers go with it: what a perspective pane does with fingers is read by
+ * `navigateByTouch` instead — one turns, two pan and dolly.
  */
 function ownsGestures(controls: OrbitControls): boolean {
   return controls.object instanceof OrthographicCamera
+}
+
+/** The same three flags a caller already sets to lock a view down — see `viewFrom`. */
+function allows(orbit: OrbitControls, kind: Gesture): boolean {
+  if (kind === 'orbit') return orbit.enableRotate
+  if (kind === 'pan') return orbit.enablePan
+  return orbit.enableZoom
 }
 
 /**
@@ -323,6 +334,8 @@ export class ViewportEngine {
     readonly kind: Gesture
     readonly pane: number
     readonly pointerId: number
+    /** The button that NAMED the gesture. A mouse gives every button one `pointerId`. */
+    readonly button: number
     clientX: number
     clientY: number
     /** Where the press was, the pivot being decided from THERE at the first move — see `onNavigate`. */
@@ -330,6 +343,11 @@ export class ViewportEngine {
     /** Whether a pixel was actually travelled, so a click that never moved publishes nothing. */
     moved: boolean
   } | null = null
+  /** The fingers on the surface, written in place: a touch move arrives as often as a mouse one,
+   * and a fresh object per move is garbage per move. */
+  private readonly touches = new Map<number, PointerPosition>()
+  /** Apart from `drag`, which follows ONE `pointerId` and would steer by whichever hand moved. */
+  private pinch: Pinch | null = null
   /** Pending « the wheel has stopped ». One gesture reports once — see `reportWheelSettled`. */
   private wheelSettling: ReturnType<typeof setTimeout> | null = null
   private output: ViewportOutput = {}
@@ -599,19 +617,27 @@ export class ViewportEngine {
     return intoGlRect(rect, canvas.clientHeight, this.activeRegion)
   }
 
-  /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
-  paneAtPointer(pointer: PointerPosition): number | null {
+  /**
+   * Where a pointer sits ON the canvas, in CSS pixels from its top-left corner — the frame a DOM
+   * overlay laid over the same box measures in. `null` while there is no surface.
+   */
+  canvasPointOf(pointer: PointerPosition): { x: number; y: number } | null {
     const canvas = this.renderer?.domElement
     if (!canvas) return null
 
     const bounds = canvas.getBoundingClientRect()
-    const x = pointer.clientX - bounds.left
-    const y = pointer.clientY - bounds.top
+    return { x: pointer.clientX - bounds.left, y: pointer.clientY - bounds.top }
+  }
+
+  /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
+  paneAtPointer(pointer: PointerPosition): number | null {
+    const at = this.canvasPointOf(pointer)
+    if (!at) return null
 
     // The inset first, and it answers for nobody: it covers a pane rather than dividing the
     // surface, so without this a drag inside the preview would orbit the view underneath it.
     if (this.insetHasPointer(pointer)) return null
-    return paneAt(this.rects, x, y)
+    return paneAt(this.rects, at.x, at.y)
   }
 
   /**
@@ -620,11 +646,11 @@ export class ViewportEngine {
    * whatever stands behind the picture rather than what is in it.
    */
   insetHasPointer(pointer: PointerPosition): boolean {
-    const canvas = this.renderer?.domElement
-    if (!canvas || !this.inset) return false
+    const inset = this.inset
+    if (!inset) return false
 
-    const bounds = canvas.getBoundingClientRect()
-    return inRect(this.inset.rect, pointer.clientX - bounds.left, pointer.clientY - bounds.top)
+    const at = this.canvasPointOf(pointer)
+    return at !== null && inRect(inset.rect, at.x, at.y)
   }
 
   /**
@@ -879,6 +905,8 @@ export class ViewportEngine {
     // capture taken here is one taken from IT, and released under a handle still being pulled.
     window.addEventListener('pointermove', this.onNavigate, true)
     window.addEventListener('pointerup', this.onNavigateRelease, true)
+    // A finger the browser takes back — a scroll gesture, a system edge swipe — sends this and
+    // never a `pointerup`, and the pair it belonged to would go on steering the view.
     window.addEventListener('pointercancel', this.onNavigateRelease, true)
     // Not passive: the dolly cancels the event, and a passive listener may not. On the host for
     // the reason above — `OrbitControls` posts its own wheel listener on the canvas.
@@ -919,6 +947,8 @@ export class ViewportEngine {
     // Cleared like the wheel's own registers: a drag left set is one the next mount resumes
     // from coordinates a panel ago, and the camera jumps on the first move.
     this.drag = null
+    this.pinch = null
+    this.touches.clear()
     this.host?.removeEventListener('wheel', this.onWheelCapture, true)
     this.host = null
 
@@ -1000,14 +1030,15 @@ export class ViewportEngine {
    * Where a pointer sits in device coordinates, or `null` if the canvas has no surface yet.
    *
    * Relative to the PANE under it, not to the canvas: a ray cast from a quarter-sized view with
-   * whole-canvas coordinates lands somewhere the pointer never was.
+   * whole-canvas coordinates lands somewhere the pointer never was. `inPane` pins that pane —
+   * what a gesture that started in one and travelled out of it has to measure against.
    */
-  pointerNdcOf(pointer: PointerPosition): { x: number; y: number } | null {
+  pointerNdcOf(pointer: PointerPosition, inPane?: number): { x: number; y: number } | null {
     const canvas = this.renderer?.domElement
     if (!canvas) return null
 
     const bounds = canvas.getBoundingClientRect()
-    const pane = this.rects[this.paneAtPointer(pointer) ?? 0]
+    const pane = this.rects[inPane ?? this.paneAtPointer(pointer) ?? 0]
     if (!pane) return pointerNdc(pointer, bounds)
 
     return pointerNdc(pointer, {
@@ -1166,6 +1197,7 @@ export class ViewportEngine {
    * `armPaneUnderPointer`, which settles which pane is worked in before this reads it.
    */
   private readonly onNavigate = (event: PointerEvent): void => {
+    if (event.pointerType === 'touch') return this.navigateByTouch(event)
     if (this.drag) return this.dragBy(event)
     if (event.type !== 'pointerdown') return
 
@@ -1173,26 +1205,154 @@ export class ViewportEngine {
     if (kind === null) return
 
     const index = this.paneAtPointer(event)
-    if (index === null) return
+    if (index === null || !this.takesDrag(kind, index)) return
 
-    const camera = this.cameraOfPane(index)
-    const orbit = this.orbitOfPane(index)
-    // Perspective only, exactly as the wheel: an orthographic pane shows the same thing wherever
-    // it stands, so every gesture it has stays with `OrbitControls`.
-    if (!(camera instanceof PerspectiveCamera) || !orbit || this.armedPane !== index) return
-    // The same two flags a caller already sets to lock a view down — see `viewFrom`.
-    if (!(kind === 'orbit' ? orbit.enableRotate : orbit.enablePan)) return
+    this.startDrag(kind, index, event.pointerId, event.button, event)
+  }
 
-    // The pivot is NOT laid here: this capture listener runs ahead of the gizmo, which may grab
-    // its handle on this very press. It is decided at the first move, once that is known.
+  /** Whether that pane answers that gesture at all. Perspective only, exactly as the wheel: an
+   * orthographic pane keeps every gesture `OrbitControls` gives it. */
+  private takesDrag(kind: Gesture, pane: number): boolean {
+    const camera = this.cameraOfPane(pane)
+    const orbit = this.orbitOfPane(pane)
+    if (!(camera instanceof PerspectiveCamera) || !orbit || this.armedPane !== pane) return false
+
+    return allows(orbit, kind)
+  }
+
+  /** The pivot is NOT laid here: the capture listener that calls this runs ahead of the gizmo,
+   * which may grab its handle on this very press — it is decided at the first move. */
+  private startDrag(
+    kind: Gesture,
+    pane: number,
+    pointerId: number,
+    button: number,
+    at: PointerPosition,
+  ): void {
     this.drag = {
       kind,
-      pane: index,
-      pointerId: event.pointerId,
-      clientX: event.clientX,
-      clientY: event.clientY,
-      pressedAt: { clientX: event.clientX, clientY: event.clientY },
+      pane,
+      pointerId,
+      button,
+      clientX: at.clientX,
+      clientY: at.clientY,
+      pressedAt: { clientX: at.clientX, clientY: at.clientY },
       moved: false,
+    }
+  }
+
+  /** What fingers do, which no scheme spells: a touch surface has no buttons to build a chord
+   * from, so one turns the view and two pan and dolly it. */
+  private navigateByTouch(event: PointerEvent): void {
+    if (event.type === 'pointerdown') return this.addFinger(event)
+
+    const held = this.touches.get(event.pointerId)
+    if (!held) return
+    held.clientX = event.clientX
+    held.clientY = event.clientY
+
+    if (this.pinch) this.pinchBy(this.pinch)
+    else this.dragBy(event)
+  }
+
+  private addFinger(event: PointerEvent): void {
+    const pane = this.paneAtPointer(event)
+    if (pane === null) return
+
+    this.touches.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY })
+    const two = this.twoFingers()
+    if (!two) {
+      if (this.takesDrag('orbit', pane)) this.startDrag('orbit', pane, event.pointerId, 0, event)
+      return
+    }
+
+    // The one-finger turn is over the moment a second lands: kept, it would go on turning by
+    // whichever finger happened to move, on top of the pan the pair is asking for.
+    this.endDrag()
+    this.pinch = {
+      pane,
+      gap: fingerGap(two[0], two[1]),
+      middleX: (two[0].clientX + two[1].clientX) / 2,
+      middleY: (two[0].clientY + two[1].clientY) / 2,
+      moved: false,
+    }
+  }
+
+  /** The first two fingers down, handed over as the map holds them — `null` while there is one. */
+  private twoFingers(): [PointerPosition, PointerPosition] | null {
+    const [first, second] = this.touches.values()
+    return first && second ? [first, second] : null
+  }
+
+  /** Both at once, as every touch surface does them: the middle pans, the gap dollies. */
+  private pinchBy(pinch: Pinch): void {
+    const two = this.twoFingers()
+    const camera = this.cameraOfPane(pinch.pane)
+    const orbit = this.orbitOfPane(pinch.pane)
+    if (!two || !(camera instanceof PerspectiveCamera) || !orbit) return
+    if (this.armedPane !== pinch.pane) return this.endPinch()
+
+    const height = this.rects[pinch.pane]?.height ?? 0
+    if (height === 0) return
+
+    const gap = fingerGap(two[0], two[1])
+    const middleX = (two[0].clientX + two[1].clientX) / 2
+    const middleY = (two[0].clientY + two[1].clientY) / 2
+    pinch.moved = true
+
+    if (orbit.enablePan) {
+      this.applyGesture(
+        'pan',
+        camera,
+        orbit,
+        middleX - pinch.middleX,
+        middleY - pinch.middleY,
+        height,
+      )
+    }
+    // Spreading closes in, as it does everywhere: a gap that grew is a positive delta, which is
+    // what `dragNotchesOf` reads as travelling right.
+    if (orbit.enableZoom) this.applyGesture('dolly', camera, orbit, gap - pinch.gap, 0, height)
+
+    pinch.gap = gap
+    pinch.middleX = middleX
+    pinch.middleY = middleY
+  }
+
+  private endPinch(): void {
+    const pinch = this.pinch
+    this.pinch = null
+    if (pinch?.moved) this.options.onCameraSettled?.(pinch.pane)
+  }
+
+  private releaseTouch(event: PointerEvent): void {
+    this.touches.delete(event.pointerId)
+    if (!this.pinch) {
+      if (this.drag?.pointerId === event.pointerId) this.endDrag()
+      return
+    }
+
+    const pane = this.pinch.pane
+    this.endPinch()
+    // Three fingers down and one lifted still leaves a PAIR: read as a single finger, the pinch
+    // died and the pan came back only once every finger had left the glass.
+    const two = this.twoFingers()
+    if (two) {
+      this.pinch = {
+        pane,
+        gap: fingerGap(two[0], two[1]),
+        middleX: (two[0].clientX + two[1].clientX) / 2,
+        middleY: (two[0].clientY + two[1].clientY) / 2,
+        moved: false,
+      }
+      return
+    }
+
+    // The finger still down takes the view back, anchored where it IS: resumed from where the
+    // pair began, the view would jump the whole way the two of them travelled.
+    const [id, at] = this.touches.entries().next().value ?? []
+    if (id !== undefined && at && this.takesDrag('orbit', pane)) {
+      this.startDrag('orbit', pane, id, 0, at)
     }
   }
 
@@ -1232,33 +1392,76 @@ export class ViewportEngine {
       if (drag.kind === 'orbit') orbit.target.copy(this.pivotAt(drag.pressedAt, camera, orbit))
       drag.pressedAt = null
     }
-    const common = {
-      position: camera.position,
-      quaternion: camera.quaternion,
-      pivot: orbit.target,
-      deltaX,
-      deltaY,
-      height,
-    }
+    this.applyGesture(drag.kind, camera, orbit, deltaX, deltaY, height)
+  }
 
-    if (drag.kind === 'orbit') {
-      const move = orbitAround(common)
-      camera.position.copy(move.position)
-      camera.quaternion.copy(move.quaternion)
-    } else {
-      const move = panBy({ ...common, fieldOfView: camera.fov })
-      camera.position.copy(move.position)
-      orbit.target.copy(move.pivot)
+  /** What a gesture DOES to a view, whatever named it — a chord of buttons or a pair of fingers. */
+  private applyGesture(
+    kind: Gesture,
+    camera: PerspectiveCamera,
+    orbit: OrbitControls,
+    deltaX: number,
+    deltaY: number,
+    height: number,
+  ): void {
+    if (kind === 'dolly') this.dollyDrag(camera, orbit, deltaX, deltaY)
+    else {
+      const common = {
+        position: camera.position,
+        quaternion: camera.quaternion,
+        pivot: orbit.target,
+        deltaX,
+        deltaY,
+        height,
+      }
+
+      if (kind === 'orbit') {
+        const move = orbitAround(common)
+        camera.position.copy(move.position)
+        camera.quaternion.copy(move.quaternion)
+      } else {
+        const move = panBy({ ...common, fieldOfView: camera.fov })
+        camera.position.copy(move.position)
+        orbit.target.copy(move.pivot)
+      }
     }
 
     this.requestCameraRender()
   }
 
+  /** The chord dolly: along the line of sight, towards the pivot rather than towards a pointer
+   * that is itself travelling — see `dolly.ts`. */
+  private dollyDrag(
+    camera: PerspectiveCamera,
+    orbit: OrbitControls,
+    deltaX: number,
+    deltaY: number,
+  ): void {
+    // A camera orbited earlier in this very frame still carries the last frame's world matrix,
+    // and the direction below is read out of it — the same reading `pivotAt` makes.
+    camera.updateMatrixWorld()
+    const move = dollyTo({
+      position: camera.position,
+      aim: camera.getWorldDirection(borrowedAim),
+      aimed: orbit.target,
+      notches: dragNotchesOf(deltaX, deltaY),
+    })
+
+    camera.position.copy(move.position)
+    // Exactly what the wheel does when it crosses what it aimed at — see `onWheelCapture`.
+    if (move.pivot) orbit.target.copy(move.pivot)
+    else aimPivotAhead(camera, orbit.target)
+  }
+
   /** `buttons === 0` is the reading that cannot lie: two buttons released out of order. */
   private readonly onNavigateRelease = (event: PointerEvent): void => {
+    if (event.pointerType === 'touch') return this.releaseTouch(event)
     // The same reading `dragBy` makes: a second pointer going up must not end a mouse's orbit.
-    if (event.pointerId !== this.drag?.pointerId) return
-    if (event.type === 'pointerup' && event.buttons !== 0) return
+    const drag = this.drag
+    if (event.pointerId !== drag?.pointerId) return
+    // The button that NAMED the gesture ends it, even with another still down: Unreal pans on the
+    // right added to the left, and reading `buttons` alone kept panning under the left alone.
+    if (event.type === 'pointerup' && event.buttons !== 0 && event.button !== drag.button) return
     this.endDrag()
   }
 
@@ -1508,7 +1711,7 @@ export class ViewportEngine {
     target: WebGLRenderTarget,
     panesDrawn: boolean,
   ): void {
-    const restore = this.options.onInset?.()
+    const restore = this.options.onInset?.(inset.camera)
     renderer.getClearColor(this.insetClear)
     const heldAlpha = renderer.getClearAlpha()
     const heldAutoClear = renderer.autoClear

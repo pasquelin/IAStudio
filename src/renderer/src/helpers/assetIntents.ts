@@ -14,8 +14,9 @@ import { restoreDocument } from '@/features/shell/documentIo'
 import { loadTake } from '@/features/audio/components/TakeEditor/loadTake'
 import { becomeAsset, placeAsset } from '@/features/image/placeAsset'
 import { placeMaterialChannel } from '@/features/material/components/placeChannel'
-import { documentOfKind, useDocuments } from '@/stores/documents'
 import { extensionOf } from '@shared/domain/fileName'
+import { sourceNatureOf } from '@shared/domain/fileRole'
+import { documentOfKind, useDocuments } from '@/stores/documents'
 import { addAnimationTo, addModelTo } from '@/stores/scenes'
 import { addAssetToSequence, sequenceTakes } from '@/stores/sequences'
 import { setSkyboxSource } from '@/stores/skyboxes'
@@ -221,7 +222,7 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
       const { reportAssetDrift } = await import('@/features/image/assetFidelity')
       await reportAssetDrift(documentId, asset.id, asset.name)
     },
-    ...inDocument('image', placeAsset, isLocalPicture, becomeAsset),
+    ...inDocument('image', placeAsset, isPaintablePicture, becomeAsset),
   },
   {
     id: 'video.clip',
@@ -315,7 +316,14 @@ export function editorIntent(asset: Asset): AssetIntent | null {
  * all. `null` for a picture not on disk — `assetUrl` answers 404 for a cloud row.
  */
 export function pixelEditorIntent(asset: Asset): AssetIntent | null {
-  return isLocalPicture(asset) ? IMAGE_INTENT : null
+  return isPaintablePicture(asset) ? IMAGE_INTENT : null
+}
+
+/** A picture the image editor can actually decode — not an OpenEXR heightmap. */
+function isPaintablePicture(asset: Asset): boolean {
+  if (!isLocalPicture(asset)) return false
+  const nature = sourceNatureOf(asset.path ?? asset.name)
+  return nature.domain === 'other' ? true : nature.openable
 }
 
 const IMAGE_INTENT = ASSET_INTENTS.find(intent => intent.workspace === 'image') ?? null

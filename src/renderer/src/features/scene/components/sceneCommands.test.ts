@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import { cameraNodeFixture, meshNode, pathNodeFixture } from '@/engines/scene/scene-fixtures'
 import { playerModuleNodes } from '@/engines/scene/nodeFactory'
@@ -8,7 +8,9 @@ import { useAnimationViews } from '@/stores/animationView'
 import { clearScenes, installScene, sceneNodeNow } from '@/stores/scene-fixtures'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
-import { useSceneViews } from '@/stores/sceneViews'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
+import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { runSceneCommand } from './sceneCommands'
 
 const DOCUMENT = 'doc-1'
@@ -318,5 +320,79 @@ describe('the gestures a player module refuses', () => {
     runSceneCommand(DOCUMENT, 'scene.duplicate')
 
     expect(nodesNow().filter(node => node.name === 'Player_Module')).toHaveLength(1)
+  })
+})
+
+/**
+ * The six sides and the camera. Commands rather than an action of the native menu's own: the
+ * Blender scheme reaches them from the keypad, which only a command can be bound to.
+ */
+describe('the numbered views', () => {
+  it('stands the camera at the side the command names', () => {
+    const viewFrom = vi.fn()
+    // Only the one method the command reaches for: the rest of `SceneRenderer` is another suite's.
+    registerSceneEngine(DOCUMENT, { viewFrom } as unknown as SceneRenderer)
+
+    expect(runSceneCommand(DOCUMENT, 'scene.viewTop')).toBe(true)
+    expect(viewFrom).toHaveBeenCalledWith('top')
+
+    runSceneCommand(DOCUMENT, 'scene.viewBack')
+    expect(viewFrom).toHaveBeenLastCalledWith('back')
+    forgetSceneEngine(DOCUMENT)
+  })
+
+  /** A tab whose viewport is not mounted has no engine, and the command must not throw on it. */
+  it('says nothing to a scene whose viewport is not mounted', () => {
+    expect(() => runSceneCommand(DOCUMENT, 'scene.viewTop')).not.toThrow()
+    expect(() => runSceneCommand(DOCUMENT, 'scene.frameFollow')).not.toThrow()
+  })
+
+  /** Unity's ⇧F, which the engine holds: the view travels with what moves — see `frameFollow`. */
+  it('asks the engine to follow the selection', () => {
+    const frameFollow = vi.fn()
+    registerSceneEngine(DOCUMENT, { frameFollow } as unknown as SceneRenderer)
+
+    expect(runSceneCommand(DOCUMENT, 'scene.frameFollow')).toBe(true)
+    expect(frameFollow).toHaveBeenCalledTimes(1)
+    forgetSceneEngine(DOCUMENT)
+  })
+
+  it('looks through the chosen camera, and steps back out on a second call', () => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [cameraNodeFixture('cam-a')],
+      selectedIds: ['cam-a'],
+    })
+
+    runSceneCommand(DOCUMENT, 'scene.viewCamera')
+    expect(sceneViewOf(useSceneViews.getState(), DOCUMENT).panes[0]).toEqual({
+      kind: 'camera',
+      nodeId: 'cam-a',
+    })
+
+    runSceneCommand(DOCUMENT, 'scene.viewCamera')
+    expect(sceneViewOf(useSceneViews.getState(), DOCUMENT).panes[0]).toBe('free')
+  })
+
+  /** Nothing chosen takes the first camera of the scene, which is what Blender's `Numpad0` does. */
+  it('takes the first camera of the scene when none is chosen', () => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('cube'), cameraNodeFixture('cam-b')],
+    })
+
+    runSceneCommand(DOCUMENT, 'scene.viewCamera')
+
+    expect(sceneViewOf(useSceneViews.getState(), DOCUMENT).panes[0]).toEqual({
+      kind: 'camera',
+      nodeId: 'cam-b',
+    })
+  })
+
+  it('looks through nothing at all in a scene that has no camera', () => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube')] })
+
+    expect(runSceneCommand(DOCUMENT, 'scene.viewCamera')).toBe(true)
+    expect(sceneViewOf(useSceneViews.getState(), DOCUMENT).panes[0]).toBe('free')
   })
 })
