@@ -91,9 +91,9 @@ export function createCellGroups(
     for (const id of bucket.ids) if (placed.get(id)?.instance === bucket.mesh) placed.delete(id)
     bucket.mesh.removeFromParent()
     bucket.mesh.dispose()
-    const byCell = buckets.get(bucket.key)
-    byCell?.delete(bucket.cell)
-    if (byCell?.size === 0) buckets.delete(bucket.key)
+    // NOT the group's key with it: `settle` drops the bucket it replaces, and unhooking the map
+    // there orphans the one `rebuild` just hung — the fresh bucket lands where nothing lists it.
+    bucket.owner.delete(bucket.cell)
     listStale = true
     if (bucket.cell === null) return
     const held = cells.get(bucket.cell)
@@ -106,13 +106,23 @@ export function createCellGroups(
     index.release(bucket.cell)
   }
 
-  const settle = (members: Members, worn: Grouped, shape: BufferGeometry): void => {
-    const held = buckets.get(worn.key)?.get(members.cell)
+  function* everyBucket(): Generator<Bucket> {
+    for (const byCell of buckets.values()) yield* byCell.values()
+  }
+
+  const settle = (
+    into: Map<CellKey | null, Bucket>,
+    cell: CellKey | null,
+    members: Members,
+    worn: Grouped,
+    shape: BufferGeometry,
+  ): void => {
+    const held = into.get(cell)
     // The cell is untouched — the same bodies, whatever their order. A swap-remove reorders a
     // bucket for O(1), so the fast path is element-wise and the set is only built when it fails.
     if (held && held.ids.length === members.ids.length) {
       const moved = sameOrder(held.ids, members.ids)
-        ? rewrite(held.mesh, members.meshes.length, slot => members.meshes[slot])
+        ? rewrite(held.mesh, members.meshes)
         : sameSet(held.ids, members.ids)
           ? rewriteBy(held, members)
           : null
@@ -122,8 +132,8 @@ export function createCellGroups(
           boxes.set(held.mesh, boxOf(members.meshes, shape))
           // The cell's own box is their union: left alone it would be the union of where they
           // STOOD, and a body carried back into view would stay hidden with its cell.
-          const cell = members.cell === null ? undefined : cells.get(members.cell)
-          if (cell) cell.stale = true
+          const itsCell = cell === null ? undefined : cells.get(cell)
+          if (itsCell) itsCell.stale = true
         }
         return
       }
@@ -149,23 +159,20 @@ export function createCellGroups(
     mesh.computeBoundingSphere()
     boxes.set(mesh, boxOf(members.meshes, shape))
     const bucket: Bucket = {
-      cell: members.cell,
+      cell,
       ids: members.ids,
       mesh,
       key: worn.key,
       paint: worn.material,
       seenAt: pass,
+      owner: into,
     }
     bucketOf.set(mesh, bucket)
-    const into = groupOf(members.cell)
-    if (members.cell !== null) {
-      const cell = cells.get(members.cell)
-      if (cell) owners.set(mesh, cell)
-    }
-    into.add(mesh)
-    const byCell = buckets.get(worn.key) ?? new Map<CellKey | null, Bucket>()
-    byCell.set(members.cell, bucket)
-    buckets.set(worn.key, byCell)
+    const cellGroup = groupOf(cell)
+    const standingCell = cell === null ? undefined : cells.get(cell)
+    if (standingCell) owners.set(mesh, standingCell)
+    cellGroup.add(mesh)
+    into.set(cell, bucket)
     listStale = true
   }
 
@@ -404,7 +411,7 @@ export function createCellGroups(
   }
 
   const clear = (): void => {
-    for (const byCell of buckets.values()) for (const bucket of byCell.values()) drop(bucket)
+    for (const bucket of everyBucket()) drop(bucket)
     // The movers with them: they hang from the host and no bucket names them, so a `dispose`
     // that only walked the cells left their instance buffers on the GPU and their meshes in the
     // scene — the one half of the teardown a test that never promoted anything could not see.
@@ -427,23 +434,21 @@ export function createCellGroups(
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
         const first = worn.meshes[0]
         if (!first) continue
-        const movers: Members = { cell: null, ids: [], meshes: [] }
-        for (const members of splitByCell(
-          worn,
-          index,
-          first.geometry,
-          seen,
-          movers,
-          promoted,
-        ).values()) {
-          settle(members, worn, first.geometry)
+        const movers: Members = { ids: [], meshes: [] }
+        const split = splitByCell(worn, index, first.geometry, seen, movers, promoted)
+        // Only once the group HAS a cell: a group whose bodies all move leaves no bucket, and an
+        // empty map left here would never be dropped — `drop` only clears one it just emptied.
+        if (split.size > 0) {
+          const into = buckets.get(worn.key) ?? new Map<CellKey | null, Bucket>()
+          buckets.set(worn.key, into)
+          for (const [cell, members] of split) settle(into, cell, members, worn, first.geometry)
         }
         settleMobile(worn.key, movers, first, worn.material)
         instanced += worn.meshes.length
       }
       // What nothing settled on holds bodies that left, were hidden, or changed group.
-      for (const byCell of buckets.values())
-        for (const bucket of byCell.values()) if (bucket.seenAt !== pass) drop(bucket)
+      for (const bucket of everyBucket()) if (bucket.seenAt !== pass) drop(bucket)
+      for (const [key, byCell] of buckets) if (byCell.size === 0) buckets.delete(key)
       // A mover the sweep no longer met is gone from the document — the despawn half of a spawn.
       shed(seen)
       return instanced
@@ -466,8 +471,7 @@ export function createCellGroups(
     drawn: () => {
       if (listStale) {
         listed = []
-        for (const byCell of buckets.values())
-          for (const bucket of byCell.values()) listed.push(bucket.mesh)
+        for (const bucket of everyBucket()) listed.push(bucket.mesh)
         for (const lot of mobiles.values()) listed.push(lot.mesh)
         listStale = false
       }
@@ -578,6 +582,8 @@ export function createCellGroups(
  * group's own material, held because a promotion happens outside a rebuild and has no group left.
  */
 type Bucket = {
+  /** The map it hangs in — its group's own, so dropping it needs no lookup by name. */
+  owner: Map<CellKey | null, Bucket>
   cell: CellKey | null
   ids: string[]
   mesh: InstancedMesh
@@ -617,7 +623,7 @@ const NOWHERE = new Box3(
   new Vector3(Infinity, Infinity, Infinity),
 )
 
-type Members = { cell: CellKey | null; ids: string[]; meshes: Mesh[] }
+type Members = { ids: string[]; meshes: Mesh[] }
 
 /**
  * The bodies of one group, filed under the cell each stands in — and under one loose lot for
@@ -647,15 +653,14 @@ function splitByCell(
     // inside a rotated parent shears, and a decomposed translation of a sheared matrix drifts.
     const stands = mesh.matrixWorld.elements
     const spills = !index.fitsACell(worldReach(shape, mesh.matrixWorld))
-    // Filed under the cell ITSELF, never under its name: naming here spelled one string per body
-    // and hashed it, 5 000 of them a rebuild on 5 000 bodies. The name is composed once per
-    // bucket, by the caller that settles it.
+    // Filed under the cell ITSELF, never under a name: naming here spelled and hashed one string
+    // per body, 5 000 of them a rebuild on 5 000 bodies.
     const cell = spills ? null : index.cellAt(stands[12] ?? 0, stands[14] ?? 0)
     const inside = held.get(cell)
     if (inside) {
       inside.ids.push(id)
       inside.meshes.push(mesh)
-    } else held.set(cell, { cell, ids: [id], meshes: [mesh] })
+    } else held.set(cell, { ids: [id], meshes: [mesh] })
   }
   return held
 }
@@ -714,15 +719,11 @@ function sameSet(held: readonly string[], now: readonly string[]): boolean {
  * A node carried under another parent moves without leaving its cell, so the matrices cannot be
  * trusted; comparing costs the read that writing costs anyway, and saves a whole cell's upload.
  */
-function rewrite(
-  instance: InstancedMesh,
-  count: number,
-  sourceAt: (slot: number) => Mesh | undefined,
-): boolean {
+function rewrite(instance: InstancedMesh, sources: readonly (Mesh | undefined)[]): boolean {
   const held = instance.instanceMatrix.array
   let moved = false
-  for (let slot = 0; slot < count; slot += 1) {
-    const source = sourceAt(slot)
+  for (let slot = 0; slot < sources.length; slot += 1) {
+    const source = sources[slot]
     if (!source || samePlace(held, slot * 16, source.matrixWorld.elements)) continue
     instance.setMatrixAt(slot, source.matrixWorld)
     moved = true
@@ -743,7 +744,10 @@ function rewriteBy(bucket: Bucket, members: Members): boolean {
     const mesh = members.meshes[at]
     if (mesh) byId.set(id, mesh)
   }
-  return rewrite(bucket.mesh, bucket.ids.length, slot => byId.get(bucket.ids[slot] ?? ''))
+  return rewrite(
+    bucket.mesh,
+    bucket.ids.map(id => byId.get(id)),
+  )
 }
 
 /** `fround` because the buffer holds singles: a double compared raw is never equal to its copy. */

@@ -299,12 +299,7 @@ export type Grouped = {
 /**
  * What both strategies share of a rebuild: which meshes are drawn at all, what a group is keyed
  * by, which groups fall under the floor — those go straight back to the camera's layer — and
- * which sources may leave the walk of the scene.
- *
- * The shadow flags and the tool mark belong to every key: a group carries ONE of each, and the
- * shadow camera reads only the layer the sources have left, so a group that mixed them would
- * give its own answer to every node in it. The mark is louder still — a group draws the first
- * member's own material, so one negated brick among sixty-four would turn the whole wall red.
+ * which sources may leave the walk of the scene. The key comes from `keyOf` whole — see `flagsOf`.
  */
 export function sweep(
   nodes: readonly SceneNode[],
@@ -382,19 +377,20 @@ export function spellingOf(spell: (node: SceneNode) => string): (node: SceneNode
 export const shapeAndPaint = (): ((node: SceneNode) => string) =>
   spellingOf(node => (node.type === 'mesh' ? stableKey([node.geometry, node.material]) : ''))
 
-/** The three things a draw call cannot share, as one small number: shadows both ways, negative. */
+/**
+ * The three things a draw call cannot share, as one small number. A group carries ONE of each, so
+ * one that mixed them would answer for every node in it — and one negated brick among sixty-four
+ * would turn the whole wall red, a group drawing the first member's material.
+ */
 export const flagsOf = (node: SceneNode, mesh: Mesh): number =>
   (mesh.castShadow ? 4 : 0) +
   (mesh.receiveShadow ? 2 : 0) +
   (node.type === 'mesh' && node.negative === true ? 1 : 0)
 
 /**
- * A spelling that reads the NODE alone, completed by the flags and held on that node.
- *
- * The sweep used to compose this string itself, once per body per pass — 5 000 of them on a
- * rebuild of 5 000, hashed straight into a map. The flags are compared instead of respelled, and
- * a node that kept them keeps its key. Only for a `spell` that reads nothing off the mesh: what
- * is held is keyed by the node, and a mesh that changed alone would keep a stale key.
+ * A key held on the node, its flags compared rather than respelled — the sweep composed one string
+ * per body per pass, 5 000 on a rebuild of 5 000. Only for a `spell` reading nothing off the mesh:
+ * what is held is keyed by the node, so a mesh that changed alone would keep a stale key.
  */
 export function withFlags(
   spell: (node: SceneNode) => string,

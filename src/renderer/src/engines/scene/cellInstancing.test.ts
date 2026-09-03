@@ -167,6 +167,23 @@ describe('createCellGroups', () => {
     })
   })
 
+  it('splits one cell in two when the bodies of a group answer differently to a shadow', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(2 * WORTH_INSTANCING, 0))
+    // Same shape, same paint, same cell: the flags are the ONLY thing telling the two apart.
+    for (const [at, mesh] of [...objects.values()].entries()) mesh.castShadow = at % 2 === 0
+
+    createCellGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    // An `InstancedMesh` carries ONE `castShadow` for every body in it: fused, half of them would
+    // throw a shadow they do not have, or lose the one they do.
+    expect(
+      instancesIn(scene)
+        .map(mesh => mesh.castShadow)
+        .toSorted(),
+    ).toEqual([false, true])
+  })
+
   it('leaves the matrices of what it draws at identity, which is where they belong', () => {
     const scene = host()
     const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
