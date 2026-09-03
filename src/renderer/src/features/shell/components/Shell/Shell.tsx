@@ -82,6 +82,9 @@ export function Shell() {
     }
     const takeFileDrop = async (event: DragEvent): Promise<void> => {
       if (event.defaultPrevented && event.cancelBubble) return
+      // Only a file drop is ours. Cancelled unconditionally, a text selection dragged into the
+      // composer or a textarea was never inserted — the listener sits above the whole tree.
+      if (!carriesExternalFiles(event)) return
       event.preventDefault()
       const request = await offerExternalFiles(event.dataTransfer?.files)
       if (request) queueExternalFiles([request])

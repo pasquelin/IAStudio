@@ -1,7 +1,7 @@
 import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh } from 'three'
 import { describe, expect, it } from 'vitest'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
-import { WORTH_INSTANCING } from './grouping'
+import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
 import { groupNodeFixture, meshNode } from './scene-fixtures'
 import type { SceneNode } from './sceneState'
 import { analyzeOptimization, optimizationReport } from './worldAnalyzer'
@@ -39,6 +39,23 @@ describe('analyzeOptimization', () => {
       instanceCandidates: WORTH_INSTANCING,
       visualChanges: 'NONE',
     })
+  })
+
+  /**
+   * 🛑 `sweep` parks a source it has already instanced on `DRAWN_BY_INSTANCE` and leaves it
+   * VISIBLE. Counted as a draw call, the analysis re-proposed a group the engine had made.
+   */
+  it('leaves out the sources an instance already draws for', () => {
+    const { nodes, objects } = repeated(WORTH_INSTANCING)
+    for (const mesh of objects.values()) mesh.layers.set(DRAWN_BY_INSTANCE)
+
+    const plan = analyzeOptimization({ nodes, animation: EMPTY_TIMELINE }, new Object3D(), id =>
+      objects.get(id),
+    )
+
+    expect(plan.instances).toEqual([])
+    expect(plan.measured.meshes).toBe(0)
+    expect(plan.estimated.drawCallsBefore).toBe(0)
   })
 
   it('returns the same ordered plan for the same world', () => {
