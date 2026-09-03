@@ -1,18 +1,13 @@
-import { Mesh, SkinnedMesh, type BufferGeometry, type Material, type Object3D } from 'three'
+import { Mesh, SkinnedMesh, type BufferGeometry, type Object3D } from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
 import { WORTH_INSTANCING, flagsOf, isDrawn, shapeAndPaint } from './grouping'
-import { isInstanceable, meshesOf } from './instanceableModel'
+import { isInstanceable } from './instanceableModel'
 import { statsOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
 
 export type OptimizationClassification =
-  | 'STATIC'
-  | 'DYNAMIC'
-  | 'SKINNED'
-  | 'ANIMATED'
-  | 'INSTANCABLE'
-  | 'UNSAFE'
+  'STATIC' | 'DYNAMIC' | 'SKINNED' | 'ANIMATED' | 'INSTANCABLE' | 'UNSAFE'
 
 export type ClassifiedObject = {
   id: string
@@ -101,7 +96,11 @@ export function analyzeOptimization(
 
   const instances = [...candidateGroups]
     .filter(([, group]) => group.meshes >= policy.minInstancesPerGroup)
-    .map(([key, group]) => ({ key, sourceIds: [...group.ids].sort(), meshCount: group.meshes }))
+    .map(([key, group]) => ({
+      key,
+      sourceIds: [...group.ids].sort(byCodeUnit),
+      meshCount: group.meshes,
+    }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
   const sceneStats = statsOf(meshes)
   const savedDraws = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)

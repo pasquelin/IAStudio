@@ -1,8 +1,9 @@
 import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh } from 'three'
 import { describe, expect, it } from 'vitest'
-import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { WORTH_INSTANCING } from './grouping'
 import { groupNodeFixture, meshNode } from './scene-fixtures'
+import type { SceneNode } from './sceneState'
 import { analyzeOptimization, optimizationReport } from './worldAnalyzer'
 
 function repeated(count: number): {
@@ -21,12 +22,10 @@ function repeated(count: number): {
 describe('analyzeOptimization', () => {
   it('reports repeated static meshes without changing their render state', () => {
     const { nodes, objects } = repeated(WORTH_INSTANCING)
-    const layers = [...objects.values()].map(mesh => mesh.layers.mask)
+    const visibility = [...objects.values()].map(mesh => mesh.visible)
 
-    const plan = analyzeOptimization(
-      { nodes, animation: EMPTY_TIMELINE },
-      new Object3D(),
-      id => objects.get(id),
+    const plan = analyzeOptimization({ nodes, animation: EMPTY_TIMELINE }, new Object3D(), id =>
+      objects.get(id),
     )
 
     expect(plan.instances).toHaveLength(1)
@@ -35,7 +34,7 @@ describe('analyzeOptimization', () => {
       drawCallsBefore: WORTH_INSTANCING,
       drawCallsAfter: 1,
     })
-    expect([...objects.values()].map(mesh => mesh.layers.mask)).toEqual(layers)
+    expect([...objects.values()].map(mesh => mesh.visible)).toEqual(visibility)
     expect(optimizationReport(plan)).toMatchObject({
       instanceCandidates: WORTH_INSTANCING,
       visualChanges: 'NONE',
@@ -53,7 +52,7 @@ describe('analyzeOptimization', () => {
   })
 
   it('classifies moving, animated, and skinned objects as unsafe candidates', () => {
-    const moving = { ...meshNode('moving'), components: [{ type: 'Movement' }] }
+    const moving: SceneNode = { ...meshNode('moving'), components: [{ type: 'Movement' }] }
     const animated = meshNode('animated')
     const skinned = meshNode('skinned')
     const objects = new Map<string, Object3D>([
@@ -61,7 +60,7 @@ describe('analyzeOptimization', () => {
       [animated.id, new Mesh(new BoxGeometry(), new MeshStandardMaterial())],
       [skinned.id, new SkinnedMesh(new BoxGeometry(), new MeshStandardMaterial())],
     ])
-    const animation = {
+    const animation: AnimationTimeline = {
       ...EMPTY_TIMELINE,
       tracks: [
         {
@@ -97,10 +96,8 @@ describe('analyzeOptimization', () => {
     const geometry = objects.get(nodes[0]?.id ?? '')?.geometry
     if (!geometry) throw new Error('fixture has no geometry')
 
-    const plan = analyzeOptimization(
-      { nodes, animation: EMPTY_TIMELINE },
-      new Object3D(),
-      id => objects.get(id),
+    const plan = analyzeOptimization({ nodes, animation: EMPTY_TIMELINE }, new Object3D(), id =>
+      objects.get(id),
     )
 
     const expectedBytes = Object.values(geometry.attributes).reduce(
