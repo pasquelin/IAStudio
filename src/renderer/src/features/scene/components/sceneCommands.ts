@@ -1,4 +1,4 @@
-import type { CommandId } from '@shared/domain/command'
+import { VIEW_SIDE_OF, type CommandId } from '@shared/domain/command'
 import type { CsgOperation } from '@shared/domain/csg'
 import { canInvertCarve, canNegate, canSeparate } from '@/engines/csg/carve'
 import {
@@ -29,6 +29,7 @@ import type { CommandAnswer } from '@/services/commandBus'
 import { runHistoryCommand } from '@/services/historyCommand'
 import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { isCameraView } from '@/engines/scene/sceneView'
 
 /**
  * The commands that act on what a scene has selected, and on nothing else — no mode, no view
@@ -123,6 +124,22 @@ const madeOf = (copies: readonly SceneNode[]): CommandAnswer => ({
   nodeIds: rootsOf(copies).map(node => node.id),
 })
 
+/** Through the chosen camera, and back out on a second call — Blender's `Numpad0`. The pane in
+ * FRONT, never all four: locking the other three onto a camera is nothing anybody asked for. */
+function lookThroughCamera(
+  documentId: string,
+  nodes: readonly SceneNode[],
+  picked: readonly SceneNode[],
+): void {
+  const views = useSceneViews.getState()
+  const view = sceneViewOf(views, documentId)
+  const pane = view.activePane
+  if (isCameraView(view.panes[pane])) return views.setPaneView(documentId, pane, 'free')
+
+  const camera = picked.find(node => node.type === 'camera') ?? nodes.find(n => n.type === 'camera')
+  if (camera) views.setPaneView(documentId, pane, { kind: 'camera', nodeId: camera.id })
+}
+
 export function runSceneCommand(documentId: string, command: CommandId): CommandAnswer {
   const store = useScenes.getState()
   const { nodes, selectedIds } = sceneOf(store, documentId)
@@ -131,6 +148,25 @@ export function runSceneCommand(documentId: string, command: CommandId): Command
   switch (command) {
     case 'scene.frame':
       sceneEngineOf(documentId)?.frameSelection()
+      return true
+
+    case 'scene.frameFollow':
+      sceneEngineOf(documentId)?.frameFollow()
+      return true
+
+    case 'scene.viewFront':
+    case 'scene.viewBack':
+    case 'scene.viewRight':
+    case 'scene.viewLeft':
+    case 'scene.viewTop':
+    case 'scene.viewBottom':
+      // The camera is MOVED to that side and left free to turn away from it again, which is what
+      // the keypad does in Blender — a pane LOCKED to a side is another gesture, see `PaneView`.
+      sceneEngineOf(documentId)?.viewFrom(VIEW_SIDE_OF[command])
+      return true
+
+    case 'scene.viewCamera':
+      lookThroughCamera(documentId, nodes, picked)
       return true
 
     // Who is on the band. The selection, never a list to pick from: a map of thousands of

@@ -20,10 +20,18 @@ function keyOf(
 }
 
 /** A scheme of one's own that holds no letter — the shape every case below reads by default. */
-const MILD: CustomNavigation = { orbit: 'leftAlt', pan: 'middle', fly: 'anyButton' }
+const MILD: CustomNavigation = {
+  orbit: 'leftAlt',
+  pan: 'middle',
+  dolly: 'altRight',
+  fly: 'anyButton',
+}
 
 /** The same, turned permanent: the one setting a person can make that costs two commands. */
-const PERMANENT: CustomNavigation = { orbit: 'leftAlt', pan: 'middle', fly: 'always' }
+const PERMANENT: CustomNavigation = { ...MILD, fly: 'always' }
+
+/** Every scheme but Blender's: the keypad means nothing under them, and binds nothing. */
+const NO_KEYPAD: readonly NavigationPreset[] = ['studio', 'unreal', 'unity', 'roblox']
 
 /**
  * The three letters AZERTY swaps with QWERTY. A binding is signed by the CHARACTER printed on a
@@ -105,6 +113,28 @@ describe('the navigation presets', () => {
     expect(keyOf('scene.scale', 'custom', MILD)).toBe('KeyS')
   })
 
+  /**
+   * The keypad, which `codeOf` named by the digit it PRINTS until this scheme asked for it — so
+   * every one of these fired the main row's number, which is to say nothing at all on a Mac.
+   */
+  it('puts the numbered views of Blender on the keypad, and the opposite side under ctrl', () => {
+    expect(keyOf('scene.viewFront', 'blender')).toBe('Numpad1')
+    expect(keyOf('scene.viewBack', 'blender')).toBe('Ctrl+Numpad1')
+    expect(keyOf('scene.viewTop', 'blender')).toBe('Numpad7')
+    expect(keyOf('scene.viewCamera', 'blender')).toBe('Numpad0')
+    expect(keyOf('scene.projection', 'blender')).toBe('Numpad5')
+    expect(keyOf('scene.frame', 'blender')).toBe('NumpadDecimal')
+  })
+
+  /** Blender's alone: under every other scheme they wait for a key somebody gives them. */
+  it.each(NO_KEYPAD)(
+    'leaves the six sides unbound under %s, where the keypad means nothing',
+    preset => {
+      expect(keyOf('scene.viewFront', preset)).toBeNull()
+      expect(keyOf('scene.viewCamera', preset)).toBeNull()
+    },
+  )
+
   it('keeps the studio preset as the one every other falls back to', () => {
     expect(SCHEME_OF.studio.bindings).toEqual({})
   })
@@ -116,7 +146,7 @@ describe('a scheme of one’s own', () => {
    * viewport simply stopped turning, with nothing anywhere saying why.
    */
   it('keeps its orbit when the same chord is named for both, and still pans', () => {
-    const both = schemeFor('custom', { orbit: 'middle', pan: 'middle', fly: 'anyButton' })
+    const both = schemeFor('custom', { ...MILD, orbit: 'middle', pan: 'middle' })
 
     expect(both.orbit).not.toEqual([])
     // Emptied, it took panning away in silence — and naming the middle button for both is two
@@ -126,7 +156,7 @@ describe('a scheme of one’s own', () => {
   })
 
   it('leaves the two apart when they are different', () => {
-    const apart = schemeFor('custom', { orbit: 'leftAlt', pan: 'middle', fly: 'anyButton' })
+    const apart = schemeFor('custom', MILD)
 
     expect(apart.orbit).not.toEqual([])
     expect(apart.pan).not.toEqual([])

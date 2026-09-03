@@ -477,6 +477,19 @@ export const wrote = (run: Run, section: string, key: string): boolean =>
     return isRecord(written) && Object.keys(written).some(n => n.toLowerCase().includes(wanted))
   })
 
+/**
+ * A menu command actually run, and the RIGHT one: `command.runStudioCommand` carries the whole
+ * registry, so « any call to it » passes on a model that opened the preferences instead.
+ */
+export const ranStudioCommand = (run: Run, command: string): boolean =>
+  run.called.some(
+    one =>
+      one.action === 'command.runStudioCommand' &&
+      // Both sides folded, as `wrote` folds its own: the ids are camelCase, and a model that
+      // echoes one back in another case would fail the scenario whatever it did.
+      String(one.input['command']).toLowerCase() === command.toLowerCase(),
+  )
+
 /** Whether a search was actually run, and on a word the sentence carries. */
 export const searched = (run: Run, word: string): boolean =>
   run.called.some(

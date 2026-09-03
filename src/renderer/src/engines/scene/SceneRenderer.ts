@@ -43,6 +43,18 @@ import {
   SCHEME_OF,
   type NavigationScheme,
 } from '@shared/domain/navigationPreset'
+import { gestureOf, maskOf } from '../viewport/gestures'
+import type { Modifiers } from '@/helpers/selection'
+import type { Point } from '../core/geometry'
+import type { PointerPosition } from '../viewport/pointer'
+import {
+  boxBetween,
+  frontmostSegmentIn,
+  idsTouching,
+  boxAround,
+  type ScreenBody,
+  type ScreenBox,
+} from './marqueeSelection'
 import { onPaletteChange } from '../core/palette'
 import {
   DEFAULT_WORLD,
@@ -231,7 +243,7 @@ import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
-import { unhang, type InstancedGroups, type ShadowThrow } from './grouping'
+import { unhang, worldReach, type InstancedGroups, type ShadowThrow } from './grouping'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
@@ -337,6 +349,11 @@ export type SceneRendererOptions = {
    * reason a bone is: a point has no id in the document, and no row in the tree.
    */
   onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
+  /**
+   * The rectangle being dragged, in CSS pixels from the canvas' top-left corner, or `null` once
+   * it is over. Drawn by whoever hosts the canvas: an outline through WebGL costs a pass a frame.
+   */
+  onMarquee?: (box: ScreenBox | null) => void
   /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
   onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
   /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
@@ -460,6 +477,17 @@ const STUDIO_INTENSITY = 0.4
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
 
+/** Either modifier adds and removes: a viewport draws no rows, so it has no range to extend. */
+function extendsSelection(event: Modifiers): boolean {
+  return event.shiftKey || event.metaKey || event.ctrlKey
+}
+
+/**
+ * The rectangle a bare left button drags, pinned to the pane it started in and to the canvas'
+ * place on screen: neither can move mid-drag, and reading them per move is a forced reflow.
+ */
+type Marquee = { pane: number; corner: Point; from: PointerPosition; to: PointerPosition }
+
 /** How far a camera's frustum is OUTLINED, in metres. Never how far that camera sees. */
 const FRUSTUM_REACH = 2
 
@@ -468,8 +496,18 @@ const FRUSTUM_REACH = 2
  * pick from an orbit, the right one to tell a menu from a flight — and a slop written twice is a
  * slop that stops agreeing the day it learns about pointer type or DPI.
  */
-function wasClick(from: { x: number; y: number } | null, event: PointerEvent): boolean {
-  return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
+function wasClick(from: PointerPosition | null, to: PointerPosition): boolean {
+  return (
+    from !== null && Math.hypot(to.clientX - from.clientX, to.clientY - from.clientY) <= CLICK_SLOP
+  )
+}
+
+/**
+ * What a body covers around its origin, in metres. A mesh by `worldReach`, which the grouping
+ * already measures with; anything else by nothing — a group's box is a walk of its subtree.
+ */
+function worldRadiusOf(object: Object3D): number {
+  return object instanceof Mesh ? worldReach(object.geometry, object.matrixWorld) : 0
 }
 
 /**
@@ -494,6 +532,12 @@ const flightGaze = new ThreeVector3()
 /** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
 const BONE_WORLD = new Vector3()
 const BONE_TAIL = new Vector3()
+/** Reused by the marquee, which measures every node of the scene in one pass — see `screenBodies`. */
+const BODY_CENTRE = new Vector3()
+const BODY_EDGE = new Vector3()
+const BODY_RIGHT = new Vector3()
+const BODY_UP = new Vector3()
+const BODY_ABOVE = new Vector3()
 
 /** Scratch for turning the bone that arrives at a dragged joint. See `articulateTowards`. */
 const JOINT_WANTED = new Vector3()
@@ -745,6 +789,11 @@ export class SceneRenderer {
    */
   private poseMode = false
   private restEditing = false
+  /** Where what is FOLLOWED stood when the last frame drew — `null` while nothing is. */
+  private followed: ThreeVector3 | null = null
+  /** Whose centre that was. A selection that CHANGED re-seats it; moving to the new one would
+   * carry the view the whole way between two bodies in a single frame. */
+  private followedIds: readonly string[] = []
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
   /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
@@ -802,13 +851,13 @@ export class SceneRenderer {
   /** Whether the gesture in progress has moved anything at all. A bare click has not. */
   private dragged = false
   /** Where the left button went down, so the release can tell a click from an orbit. */
-  private pressed: { x: number; y: number } | null = null
+  private pressed: PointerPosition | null = null
   /**
    * Where the button that flies went down, or nothing while none is held. A flight that never
    * left the pixel it started on is a click: the right button raises the node menu, the left
    * one picks.
    */
-  private flownFrom: { x: number; y: number } | null = null
+  private flownFrom: PointerPosition | null = null
   /**
    * Which button armed the flight, and so whether one is under way at all. Either arms it —
    * the left one keeps orbiting and picking exactly as before, it only GAINS the keys.
@@ -885,6 +934,13 @@ export class SceneRenderer {
   private space: TransformSpace = 'world'
   /** Held so leaving `select` can re-arm the gizmo without waiting for the next `apply`. */
   private selectedIds: readonly string[] = []
+  /**
+   * The rectangle a bare left button is dragging, pinned to the pane it STARTED in: re-reading
+   * the pane per move measures the second half of it against another camera.
+   */
+  private marquee: Marquee | null = null
+  /** The frame that will publish the outline, so a pointer faster than the screen posts once. */
+  private marqueePending: number | null = null
   /** The nodes as the document orders them — what an export lists them by, see `exportTo`. */
   private documentOrder: readonly SceneNode[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
@@ -1067,6 +1123,7 @@ export class SceneRenderer {
 
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
+    window.addEventListener('pointermove', this.onPointerMove)
     window.addEventListener('pointerup', this.onPointerUp)
   }
 
@@ -1112,6 +1169,9 @@ export class SceneRenderer {
     this.poseMarkers(state.nodes)
 
     this.selectedIds = state.selectedIds
+    // The document's own answer on whether anything is left to follow: an emptied selection lets
+    // the view go, where an object map caught mid-rebuild says nothing at all.
+    if (state.selectedIds.length === 0) this.followed = null
     // After the transforms are written, never before: a pose is what the tracks ADD to the one
     // the node holds, so it has to be laid over a rest pose that is already up to date.
     //
@@ -1488,6 +1548,52 @@ export class SceneRenderer {
     // the orbit and left the screen exactly as it was.
     this.viewport.refit()
     this.redraw()
+  }
+
+  /**
+   * Frames the selection AND keeps it framed, at the angle and the distance the hand chose —
+   * Unity's ⇧F. Called again it lets go, the same press that took hold.
+   */
+  frameFollow(): void {
+    if (this.followed) {
+      this.followed = null
+      return
+    }
+
+    this.frameSelection()
+    this.followed = this.selectionCentre()
+    this.followedIds = this.selectedIds
+  }
+
+  /** Carries the view along with what it follows, answering whether anything moved: reporting
+   * motion every frame would keep the render loop awake over a still scene. */
+  private followSelection(): boolean {
+    const held = this.followed
+    const orbit = this.viewport.orbit
+    if (!held || !orbit) return false
+
+    // A frame drawn while the graph is being rebuilt reads no object for a node that is still
+    // selected. Skipped, never taken as a reason to let go — `apply` alone decides that.
+    const centre = this.selectionCentre()
+    if (!centre) return false
+
+    // Another body picked is another thing to follow, not a leap to it: seated afresh, the view
+    // stays where the hand left it and travels only with what moves from now on.
+    if (this.selectedIds !== this.followedIds) {
+      this.followed = centre
+      this.followedIds = this.selectedIds
+      return false
+    }
+
+    const shift = centre.sub(held)
+    if (shift.lengthSq() === 0) return false
+
+    // Both by the same amount: the angle and the distance are the hand's, and only what is
+    // looked AT has moved. `OrbitControls` reads its own spherical off the pair, so it holds.
+    this.viewport.camera.position.add(shift)
+    orbit.target.add(shift)
+    held.add(shift)
+    return true
   }
 
   /** Looks at the scene from one of the six sides, keeping the distance the view already had. */
@@ -2989,8 +3095,11 @@ export class SceneRenderer {
     const canvas = this.viewport.canvas
     this.setNavigating(false)
 
+    // Or the frame it left pending publishes an outline into a host that has already gone.
+    this.dropMarquee()
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
+    window.removeEventListener('pointermove', this.onPointerMove)
     window.removeEventListener('pointerup', this.onPointerUp)
 
     this.gizmo?.removeEventListener('axis-changed', this.onGizmoAxisChanged)
@@ -4698,7 +4807,7 @@ export class SceneRenderer {
   }
 
   private startFlight(event: PointerEvent): void {
-    this.flownFrom = { x: event.clientX, y: event.clientY }
+    this.flownFrom = { clientX: event.clientX, clientY: event.clientY }
     this.flownWith = event.button
     this.flew = false
     // The RIGHT button only. `freezePanes` ends in `armOrbits(null)`, which sets
@@ -4731,7 +4840,17 @@ export class SceneRenderer {
 
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
-      this.startFlight(event)
+      // Not a flight when the scheme spends this press on a gesture: three of the six dolly on
+      // Alt+right, and one pans on the right button added to a left already down. The viewport
+      // took it in the capture phase, and a flight here would freeze the panes under it.
+      if (gestureOf(event, this.scheme) === null) this.startFlight(event)
+      else {
+        // Remembered all the same: a chord that never TRAVELS is a click, and the node menu is
+        // the one gesture left to this button. A rectangle is not that gesture — it goes.
+        this.flownFrom = { clientX: event.clientX, clientY: event.clientY }
+        this.flew = false
+        this.dropMarquee()
+      }
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return
@@ -4741,13 +4860,14 @@ export class SceneRenderer {
     // Held, not acted on: `OrbitControls` pans on left-drag with any of the three modifiers, and
     // those are the very keys that add to a selection. Picking on release, and only if the
     // pointer never moved, is what stops a recentring gesture from unpicking what it passes over.
-    this.pressed = { x: event.clientX, y: event.clientY }
+    this.pressed = { clientX: event.clientX, clientY: event.clientY }
     // Cleared here and not only in `startFlight`, which a scheme flying on the right button
     // alone never calls for this press.
     this.flew = false
-    // ADDED to the left button, never substituted for what it already did: it goes on orbiting
-    // and picking on release, and only gains the keys. Unity and Unreal keep their flight on the
-    // RIGHT button alone, so under those the left one arms nothing.
+    this.armMarquee(event)
+    // ADDED to the left button, never substituted for what it already did: it goes on drawing its
+    // rectangle and picking on release, and only gains the keys. Unity and Unreal keep their
+    // flight on the RIGHT button alone, so under those the left one arms nothing.
     if (this.scheme.fly === 'anyButton') this.startFlight(event)
   }
 
@@ -4782,8 +4902,16 @@ export class SceneRenderer {
 
     const pressed = this.pressed
     const flew = this.flew
+    const marquee = this.marquee
     this.pressed = null
+    this.dropMarquee()
     this.endFlight(0, event)
+    // A rectangle that travelled takes what it crossed, and publishes even when it crossed
+    // nothing: that is how a sweep through the void clears a selection.
+    if (marquee && !flew && !wasClick(marquee.from, marquee.to)) {
+      this.pickInMarquee(marquee, event)
+      return
+    }
     // A flight that moved the camera is not a click, even when the pointer never left its pixel:
     // the keyboard did the moving. The same reading the right button already makes for its menu.
     if (flew || !wasClick(pressed, event)) return
@@ -4839,12 +4967,130 @@ export class SceneRenderer {
       }
     }
 
-    // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
-    const extending = event.shiftKey || event.metaKey || event.ctrlKey
     const id = this.nodeAt(event)
-    this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+    this.options.onSelect(id ? [id] : [], extendsSelection(event) ? 'toggle' : 'replace')
     // Whatever was picked before belongs to a rail that may no longer be the selection.
     if (this.pickedPathPoint) this.options.onSelectPathPoint?.(null)
+  }
+
+  /** Arms the rectangle on the button the scheme left free and nowhere else: under `custom` the
+   * bare left one may still orbit, and the preview picks nothing at all. */
+  private armMarquee(event: PointerEvent): void {
+    // Never on a finger: one of them TURNS the view, whatever the mouse scheme says — see
+    // `navigateByTouch`. A rectangle drawn under the turn would take every tap-and-drag.
+    if (event.pointerType === 'touch') return
+
+    const pane = this.viewport.paneAtPointer(event)
+    if (pane === null || gestureOf(event, this.scheme) !== null) return
+
+    const corner = this.viewport.canvasPointOf({ clientX: 0, clientY: 0 })
+    if (!corner) return
+
+    const at = { clientX: event.clientX, clientY: event.clientY }
+    this.marquee = { pane, corner, from: at, to: at }
+  }
+
+  private readonly onPointerMove = (event: PointerEvent): void => {
+    const marquee = this.marquee
+    if (!marquee) return
+    // `buttons` is the reading that cannot lie: a release swallowed by a native menu, or a handle
+    // that took the drag, both leave the rectangle hanging otherwise.
+    if (this.gizmo?.dragging || (event.buttons & maskOf(0)) === 0) return this.dropMarquee()
+
+    marquee.to = { clientX: event.clientX, clientY: event.clientY }
+    // One publication a frame: the host re-renders on each of them, and a pointer reports faster
+    // than the screen refreshes.
+    if (this.marqueePending !== null) return
+    this.marqueePending = requestAnimationFrame(() => {
+      this.marqueePending = null
+      if (this.marquee) this.options.onMarquee?.(this.drawnMarquee(this.marquee))
+    })
+  }
+
+  /** The outline to draw, in the canvas' own pixels — `null` while the drag is still short
+   * enough to be a click, so a pick never flashes a rectangle. */
+  private drawnMarquee(marquee: Marquee): ScreenBox | null {
+    if (wasClick(marquee.from, marquee.to)) return null
+
+    return boxBetween(
+      { x: marquee.from.clientX + marquee.corner.x, y: marquee.from.clientY + marquee.corner.y },
+      { x: marquee.to.clientX + marquee.corner.x, y: marquee.to.clientY + marquee.corner.y },
+    )
+  }
+
+  /** Gives the rectangle up without picking anything. Silent when there was none to give. */
+  private dropMarquee(): void {
+    if (!this.marquee) return
+
+    this.marquee = null
+    if (this.marqueePending !== null) cancelAnimationFrame(this.marqueePending)
+    this.marqueePending = null
+    this.options.onMarquee?.(null)
+  }
+
+  /** What the rectangle took, against the camera of the pane it was DRAWN in — a hand that ended
+   * up in another pane is still selecting in the first. */
+  private pickInMarquee(marquee: Marquee, event: PointerEvent): void {
+    const from = this.viewport.pointerNdcOf(marquee.from, marquee.pane)
+    const to = this.viewport.pointerNdcOf(marquee.to, marquee.pane)
+    if (!from || !to) return
+
+    const camera = this.viewport.paneCameras[marquee.pane] ?? this.viewport.camera
+    const box = boxBetween(from, to)
+
+    // In pose mode the rectangle names a BONE and never a node, exactly as a click does there.
+    if (this.poseMode) {
+      const picked = frontmostSegmentIn(this.projectedSegments(camera), box)
+      this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
+      return
+    }
+
+    const taken = idsTouching(box, this.screenBodies(camera))
+    // ADDS where a click toggles: a rectangle drawn over what is already picked must not take it
+    // back off, or a second sweep would undo the first.
+    const kept = extendsSelection(event) ? this.selectedIds : []
+    this.options.onSelect([...kept, ...taken], 'replace')
+    // Whatever was picked before belongs to a rail that may no longer be the selection.
+    if (this.pickedPathPoint) this.options.onSelectPathPoint?.(null)
+  }
+
+  /** Every node as one pane's camera sees it, in device coordinates: its origin plus whatever
+   * its own geometry spans — see `worldRadiusOf`, and why a group spans nothing. */
+  private screenBodies(camera: Camera): ScreenBody[] {
+    // Both readings below go through the camera's world matrix, and a pane whose view moved since
+    // the last frame drew still carries that frame's — the same reading `pivotAt` makes.
+    camera.updateMatrixWorld()
+    BODY_RIGHT.setFromMatrixColumn(camera.matrixWorld, 0)
+    BODY_UP.setFromMatrixColumn(camera.matrixWorld, 1)
+
+    const bodies: ScreenBody[] = []
+    for (const [id, object] of this.objects) {
+      if (!object.visible) continue
+
+      object.getWorldPosition(BODY_CENTRE)
+      // `project` flips the sign behind the camera, so a body at one's back would fall in the box
+      // as surely as one in front of it.
+      if (BODY_EDGE.copy(BODY_CENTRE).applyMatrix4(camera.matrixWorldInverse).z >= 0) continue
+
+      const reach = worldRadiusOf(object)
+      BODY_EDGE.copy(BODY_CENTRE).addScaledVector(BODY_RIGHT, reach)
+      BODY_ABOVE.copy(BODY_CENTRE).addScaledVector(BODY_UP, reach)
+      BODY_CENTRE.project(camera)
+      BODY_EDGE.project(camera)
+      BODY_ABOVE.project(camera)
+      // Both axes: a pane is wider than it is tall, and the same reach spans more of the height
+      // than of the width — one radius for both missed the top third of every cube on a 16:9.
+      bodies.push({
+        id,
+        box: boxAround(
+          BODY_CENTRE,
+          Math.abs(BODY_EDGE.x - BODY_CENTRE.x),
+          Math.abs(BODY_ABOVE.y - BODY_CENTRE.y),
+        ),
+      })
+    }
+
+    return bodies
   }
 
   /**
@@ -5122,6 +5368,7 @@ export class SceneRenderer {
     // notch of the wheel. Read on `configure` alone it was right once, then stayed put.
     this.applyGizmoSize()
 
+    const followed = this.followSelection()
     const moving = this.flying && this.held.size > 0
     if (moving) {
       // Only under a button that armed it: a permanent flight moves the camera with no press at
@@ -5131,7 +5378,7 @@ export class SceneRenderer {
     }
     // The clips do not appear here: they stand where the head put them, and the head is advanced
     // by `useAnimationPlayback`, which calls `setPlayhead` and asks for a frame of its own.
-    return moving
+    return moving || followed
   }
 
   private fly(delta: number): void {

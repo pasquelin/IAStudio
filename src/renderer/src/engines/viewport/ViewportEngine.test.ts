@@ -10,6 +10,7 @@ import {
 } from 'three'
 import type * as ThreeModule from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SCHEME_OF } from '@shared/domain/navigationPreset'
 import { INSET_CADENCE_MS, ViewportEngine, type DrawRequest } from './ViewportEngine'
 
 /**
@@ -1393,6 +1394,27 @@ describe('a viewport', () => {
       expect(pivot?.x).toBe(0)
     })
 
+    /** The chord three of the five spend on a dolly, and the wheel's only rival — see `dolly.ts`. */
+    it('closes the camera in on its pivot on alt and the right button', () => {
+      const engine = backedOff()
+
+      host.dispatchEvent(press({ button: 2, altKey: true }))
+      host.dispatchEvent(dragTo(420, 400, 2))
+
+      expect(engine.camera.position.length()).toBeLessThan(10)
+      // The pivot stays where it was: a dolly closes IN on it, where a pan carries it along.
+      expect(engine.orbit?.target.length()).toBeCloseTo(0, 6)
+    })
+
+    it('pulls it back out the other way', () => {
+      const engine = backedOff()
+
+      host.dispatchEvent(press({ button: 2, altKey: true }))
+      host.dispatchEvent(dragTo(220, 400, 2))
+
+      expect(engine.camera.position.length()).toBeGreaterThan(10)
+    })
+
     /**
      * Swallowed, a press takes `⌥`-click and `⌥⇧`-click on a rail with it — both decided on
      * RELEASE, from a press the picking has to have seen. What tells a click from a drag is the
@@ -1410,6 +1432,123 @@ describe('a viewport', () => {
       host.dispatchEvent(press({ button: 1 }))
 
       expect(heard).toHaveBeenCalledTimes(3)
+    })
+
+    /**
+     * 🛑 A mouse gives every button ONE `pointerId`, and a release read off `buttons` alone is
+     * never zero while another button is still down: Unreal's pan went on panning under the left
+     * button by itself, where that button draws the rectangle.
+     */
+    it('ends a two-button chord when the button that named it is let go', () => {
+      const engine = backedOff({ scheme: () => SCHEME_OF.unreal })
+
+      host.dispatchEvent(press({ button: 0, buttons: 1 }))
+      host.dispatchEvent(press({ button: 2, buttons: 3 }))
+      host.dispatchEvent(dragTo(420, 400, 3))
+      const panned = engine.orbit?.target.clone()
+      // The right button up, the left still down — and the pan is over.
+      host.dispatchEvent(new PointerEvent('pointerup', { button: 2, buttons: 1, bubbles: true }))
+      host.dispatchEvent(dragTo(200, 400, 1))
+
+      expect(panned?.x).not.toBeCloseTo(0, 3)
+      expect(engine.orbit?.target.x).toBeCloseTo(panned?.x ?? 0, 6)
+    })
+
+    /**
+     * The touch gestures went with `OrbitControls` the day `enabled` came to mean « owns the
+     * gestures »: pinch and two-finger pan were dead on every perspective pane. A finger spells
+     * no chord, so what they do is read by their COUNT rather than by any scheme.
+     */
+    describe('with fingers', () => {
+      const finger = (type: string, id: number, x: number, y: number): PointerEvent =>
+        new PointerEvent(type, {
+          pointerId: id,
+          pointerType: 'touch',
+          clientX: x,
+          clientY: y,
+          buttons: type === 'pointerup' ? 0 : 1,
+          bubbles: true,
+        })
+
+      const twoDown = (engine: ViewportEngine): ViewportEngine => {
+        host.dispatchEvent(finger('pointerdown', 1, 300, 400))
+        host.dispatchEvent(finger('pointerdown', 2, 340, 400))
+        return engine
+      }
+
+      it('turns the view on one finger, which no mouse scheme spells', () => {
+        const engine = backedOff()
+
+        host.dispatchEvent(finger('pointerdown', 1, 320, 400))
+        window.dispatchEvent(finger('pointermove', 1, 420, 400))
+
+        expect(engine.camera.position.x).not.toBeCloseTo(0, 3)
+        expect(engine.camera.position.length()).toBeCloseTo(10, 6)
+      })
+
+      it('closes in as two fingers spread, and pulls back as they close', () => {
+        const engine = twoDown(backedOff())
+
+        window.dispatchEvent(finger('pointermove', 2, 460, 400))
+        const closed = engine.camera.position.length()
+        window.dispatchEvent(finger('pointermove', 2, 340, 400))
+
+        expect(closed).toBeLessThan(10)
+        expect(engine.camera.position.length()).toBeGreaterThan(closed)
+      })
+
+      it('slides the view and its pivot together as the pair travels', () => {
+        const engine = twoDown(backedOff())
+
+        // Both fingers the same way: the gap holds, so nothing but the middle moved.
+        window.dispatchEvent(finger('pointermove', 1, 400, 400))
+        window.dispatchEvent(finger('pointermove', 2, 440, 400))
+
+        expect(engine.camera.position.x).toBeLessThan(0)
+        expect(engine.orbit?.target.x).toBeCloseTo(engine.camera.position.x, 6)
+      })
+
+      /** Resumed from where the pair began, the view would jump the whole way they travelled. */
+      it('hands the view back to the finger still down, anchored where it now is', () => {
+        const engine = twoDown(backedOff())
+
+        window.dispatchEvent(finger('pointermove', 1, 500, 400))
+        host.dispatchEvent(finger('pointerup', 2, 340, 400))
+        const settled = engine.camera.position.clone()
+        window.dispatchEvent(finger('pointermove', 1, 502, 400))
+
+        expect(engine.camera.position.distanceTo(settled)).toBeLessThan(1)
+      })
+
+      /**
+       * 🛑 Read as « one finger left », a third finger lifted killed the pinch and armed a turn:
+       * two fingers were still on the glass, and pan and zoom stayed dead until every one left.
+       */
+      it('keeps the pair when a third finger lifts and two are still down', () => {
+        const engine = backedOff()
+        host.dispatchEvent(finger('pointerdown', 1, 300, 400))
+        host.dispatchEvent(finger('pointerdown', 2, 340, 400))
+        host.dispatchEvent(finger('pointerdown', 3, 380, 400))
+
+        host.dispatchEvent(finger('pointerup', 3, 380, 400))
+        const settled = engine.camera.position.length()
+        // The two still down spread: a pair, so it closes in rather than turning.
+        window.dispatchEvent(finger('pointermove', 2, 460, 400))
+
+        expect(engine.camera.position.length()).toBeLessThan(settled)
+      })
+
+      /** A finger the browser takes back sends this and never a `pointerup`. */
+      it('lets the pair go on a cancelled finger, the survivor turning rather than sliding', () => {
+        const engine = twoDown(backedOff())
+
+        window.dispatchEvent(finger('pointercancel', 2, 340, 400))
+        window.dispatchEvent(finger('pointermove', 1, 400, 400))
+
+        // A turn keeps its distance where a pinch spends it, and carries no pivot where a pan does.
+        expect(engine.camera.position.length()).toBeCloseTo(10, 6)
+        expect(engine.orbit?.target.length()).toBeCloseTo(0, 6)
+      })
     })
 
     /**

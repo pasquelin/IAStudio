@@ -120,7 +120,8 @@ export function nearestSegment(
   return best
 }
 
-function offScreen(point: Projected): boolean {
+/** Behind the camera or past its far plane — the window `project` maps everything else into. */
+export function offScreen(point: Projected): boolean {
   return point.z < -1 || point.z > 1
 }
 
