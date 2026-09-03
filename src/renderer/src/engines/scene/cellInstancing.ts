@@ -412,6 +412,7 @@ export function createCellGroups(
 
   const clear = (): void => {
     for (const bucket of everyBucket()) drop(bucket)
+    buckets.clear()
     // The movers with them: they hang from the host and no bucket names them, so a `dispose`
     // that only walked the cells left their instance buffers on the GPU and their meshes in the
     // scene — the one half of the teardown a test that never promoted anything could not see.
@@ -436,8 +437,8 @@ export function createCellGroups(
         if (!first) continue
         const movers: Members = { ids: [], meshes: [] }
         const split = splitByCell(worn, index, first.geometry, seen, movers, promoted)
-        // Only once the group HAS a cell: a group whose bodies all move leaves no bucket, and an
-        // empty map left here would never be dropped — `drop` only clears one it just emptied.
+        // Only once the group HAS a cell: a group whose bodies all move leaves no bucket, and
+        // hanging an empty map for it would allocate one the sweep below drops the same pass.
         if (split.size > 0) {
           const into = buckets.get(worn.key) ?? new Map<CellKey | null, Bucket>()
           buckets.set(worn.key, into)
