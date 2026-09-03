@@ -16,6 +16,7 @@ const DOCUMENT = 'optimization-document'
 const PLAN: OptimizationPlan = {
   classifications: [],
   instances: [],
+  batches: [{ key: 'paint', sourceIds: ['group', 'child'], meshCount: 2 }],
   warnings: [],
   measured: {
     triangles: 12,
@@ -29,7 +30,7 @@ const PLAN: OptimizationPlan = {
   },
   estimated: {
     drawCallsBefore: 2,
-    drawCallsAfter: 1,
+    drawCallsAfter: 2,
     avoidedGeometryBytes: 0,
     avoidedTextureBytes: 0,
   },
@@ -58,8 +59,9 @@ it('shows the current override and applies Auto to the whole selected subtree as
   render(<SceneOptimizationDialog documentId={DOCUMENT} />)
 
   expect(screen.getByRole('combobox')).toHaveValue('exclude')
-  expect(screen.getByText('Appels de rendu 2 → 1')).toBeInTheDocument()
+  expect(screen.getByText('Appels de rendu 2 → 2')).toBeInTheDocument()
   await user.selectOptions(screen.getByRole('combobox'), 'auto')
+  expect(screen.getByText('Appels de rendu 2 → 2')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Optimiser' }))
 
   const changed = sceneOf(useScenes.getState(), DOCUMENT)
@@ -89,4 +91,17 @@ it('does not erase mixed overrides until a mode is explicitly chosen', () => {
 
   expect(screen.getByRole('combobox')).toHaveValue('mixed')
   expect(screen.getByRole('button', { name: 'Optimiser' })).toBeDisabled()
+})
+
+it('offers the batch override and applies it to the selected subtree', async () => {
+  const user = userEvent.setup()
+  render(<SceneOptimizationDialog documentId={DOCUMENT} />)
+
+  await user.selectOptions(screen.getByRole('combobox'), 'batch')
+  expect(screen.getByText('Appels de rendu 2 → 1')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Optimiser' }))
+
+  expect(nodeById(sceneOf(useScenes.getState(), DOCUMENT), 'child')?.optimization?.mode).toBe(
+    'batch',
+  )
 })

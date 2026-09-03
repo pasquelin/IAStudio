@@ -20,7 +20,6 @@ import {
   type InstancedGroups,
 } from './grouping'
 import type { SceneNode } from './sceneState'
-import { modelShapeKey } from './instanceableModel'
 
 /**
  * Draws every shape wearing one material in one call, whatever the shapes are.
@@ -48,14 +47,7 @@ export function createBatchedGroups(
   /** Whether the lots have trees for a ray to walk. Built on the first pick, not per rebuild. */
   let treesStale = true
   const sources = heldOutOfDraw()
-  const paintOf = spellingOf(node => (node.type === 'mesh' ? stableKey(node.material) : ''))
-  // The buffer LAYOUT is part of the key: three refuses to put an unindexed shape beside an
-  // indexed one, or two attribute sets in one buffer.
-  // Spelled here rather than held by `withFlags`: this key reads the MESH, not the node alone.
-  const keyOf = (node: SceneNode, mesh: Mesh): string =>
-    `${node.type === 'model' ? modelShapeKey(node, mesh) : paintOf(node)}|${layoutOf(
-      mesh.geometry,
-    )}|${flagsOf(node, mesh)}`
+  const keyOf = batchKeyOf(ownMaterialOf)
 
   const clear = (): void => {
     for (const lot of drawn) {
@@ -175,6 +167,32 @@ export function createBatchedGroups(
       clear()
       sources.hang()
     },
+  }
+}
+
+export function batchKeyOf(
+  ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
+): (node: SceneNode, mesh: Mesh) => string {
+  const paintOf = spellingOf(node => (node.type === 'mesh' ? stableKey(node.material) : ''))
+  const signatures = new WeakMap<Material, string>()
+  const signatureOf = (material: Material): string => {
+    const known = signatures.get(material)
+    if (known) return known
+    const signature = JSON.stringify(material.toJSON(), (key, value: unknown) =>
+      key === 'uuid' || key === 'metadata' ? undefined : value,
+    )
+    signatures.set(material, signature)
+    return signature
+  }
+  return (node, mesh) => {
+    const material = ownMaterialOf(mesh)
+    const paint =
+      node.type === 'mesh'
+        ? paintOf(node)
+        : Array.isArray(material)
+          ? ''
+          : `material:${signatureOf(material)}`
+    return `${paint}|${layoutOf(mesh.geometry)}|${flagsOf(node, mesh)}`
   }
 }
 

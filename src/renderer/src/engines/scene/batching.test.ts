@@ -13,11 +13,12 @@ import {
   type Material,
 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { groupNodeFixture, meshNode } from './scene-fixtures'
+import { groupNodeFixture, meshNode, modelNodeFixture } from './scene-fixtures'
 import { createBatchedGroups } from './batching'
 import { acceleratedRaycast } from 'three-mesh-bvh'
 import { DRAWN_BY_INSTANCE, groupingExclusions, WORTH_INSTANCING } from './grouping'
 import type { MeshNode, SceneNode } from './sceneState'
+import { markInstanceable } from './instanceableModel'
 
 type Built = { nodes: SceneNode[]; objects: Map<string, Mesh> }
 
@@ -251,6 +252,57 @@ describe('createBatchedGroups', () => {
         groupingExclusions([forced], new Set(), 'batch'),
       ),
     ).toBe(1)
+  })
+
+  it('batches compatible primitives from different model assets when they share a material', () => {
+    const scene = host()
+    const nodes: SceneNode[] = []
+    const objects = new Map<string, Object3D>()
+    for (let at = 0; at < 2; at += 1) {
+      const node: SceneNode = {
+        ...modelNodeFixture(`model-${at}`, `asset-${at}`),
+        optimization: { mode: 'batch' },
+      }
+      const holder = new Object3D()
+      holder.add(new Mesh(new BoxGeometry(at + 1, 1, 1), new MeshStandardMaterial()))
+      markInstanceable(holder, true)
+      scene.add(holder)
+      holder.updateMatrixWorld(true)
+      nodes.push(node)
+      objects.set(node.id, holder)
+    }
+
+    const groups = createBatchedGroups(scene)
+    expect(groups.rebuild(nodes, id => objects.get(id))).toBe(2)
+    expect(batchesIn(scene)).toHaveLength(1)
+  })
+
+  it('keeps visually different model materials in separate forced batches', () => {
+    const scene = host()
+    const nodes: SceneNode[] = []
+    const objects = new Map<string, Object3D>()
+    for (let at = 0; at < 2; at += 1) {
+      const node: SceneNode = {
+        ...modelNodeFixture(`model-${at}`, `asset-${at}`),
+        optimization: { mode: 'batch' },
+      }
+      const holder = new Object3D()
+      holder.add(
+        new Mesh(
+          new BoxGeometry(at + 1, 1, 1),
+          new MeshStandardMaterial({ color: at === 0 ? '#ffffff' : '#000000' }),
+        ),
+      )
+      markInstanceable(holder, true)
+      scene.add(holder)
+      holder.updateMatrixWorld(true)
+      nodes.push(node)
+      objects.set(node.id, holder)
+    }
+
+    const groups = createBatchedGroups(scene)
+    expect(groups.rebuild(nodes, id => objects.get(id))).toBe(2)
+    expect(batchesIn(scene)).toHaveLength(2)
   })
 
   it('restores a grouped source when an animated ancestor excludes it', () => {

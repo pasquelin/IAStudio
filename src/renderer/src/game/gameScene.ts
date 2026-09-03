@@ -20,8 +20,8 @@ import { loadTexture } from '@/engines/scene/textureCache'
 import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
 import { applyTransform } from '@/engines/scene/pivot'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
-import { createCellGroups } from '@/engines/scene/cellInstancing'
-import { groupingExclusions } from '@/engines/scene/grouping'
+import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
+import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 
 /**
@@ -110,11 +110,11 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
   }
 
   scene.updateMatrixWorld()
-  const instances = createCellGroups(scene)
+  const instances = createOptimizedGroups(scene)
   instances.rebuild(
     state.nodes,
     id => byEntity.get(id),
-    groupingExclusions(state.nodes, drivenNodes(state.animation), 'instance'),
+    behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)),
   )
 
   // 🛑 What a game shows of the world, and what it does NOT: the image-based environment is not

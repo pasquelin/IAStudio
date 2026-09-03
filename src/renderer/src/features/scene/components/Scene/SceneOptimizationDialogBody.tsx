@@ -10,7 +10,7 @@ import { formatBytes, formatDecimal } from '@/helpers/format'
 import { useScenes } from '@/stores/scenes'
 import { useOptimizationDialog } from '@/hooks/useOptimizationDialog'
 
-const MODES: readonly OptimizationMode[] = ['auto', 'individual', 'instance', 'exclude']
+const MODES: readonly OptimizationMode[] = ['auto', 'individual', 'instance', 'batch', 'exclude']
 const MIXED_MODE = 'mixed'
 type OptimizationChoice = OptimizationMode | typeof MIXED_MODE
 const WARNING_REASONS: readonly OptimizationWarning['reason'][] = ['animated', 'dynamic', 'skinned']
@@ -39,6 +39,13 @@ export function SceneOptimizationDialogBody({
   const number = (value: number): string => formatDecimal(value, i18n.language, { digits: 0 })
   const bytes = (value: number): string =>
     formatBytes(value, unit => t(`units.${unit}`), i18n.language)
+  const batchSavings = plan.batches.reduce((saved, group) => saved + group.meshCount - 1, 0)
+  const drawCallsAfter =
+    mode === 'batch'
+      ? Math.max(0, plan.measured.draws - batchSavings)
+      : mode === 'individual' || mode === 'exclude'
+        ? plan.measured.draws
+        : plan.estimated.drawCallsAfter
   const apply = (): void => {
     if (target.length > 0 && mode !== MIXED_MODE) {
       useScenes
@@ -81,12 +88,17 @@ export function SceneOptimizationDialogBody({
         <dd>
           {t('optimization.drawCallResult', {
             before: number(plan.estimated.drawCallsBefore),
-            after: number(plan.estimated.drawCallsAfter),
+            after: number(drawCallsAfter),
           })}
         </dd>
         <dd>
           {t('optimization.instanceCandidates', {
             value: number(plan.instances.reduce((total, group) => total + group.meshCount, 0)),
+          })}
+        </dd>
+        <dd>
+          {t('optimization.batchCandidates', {
+            value: number(plan.batches.reduce((total, group) => total + group.meshCount, 0)),
           })}
         </dd>
         {WARNING_REASONS.map(reason => {

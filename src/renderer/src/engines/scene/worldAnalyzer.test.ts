@@ -123,6 +123,30 @@ describe('analyzeOptimization', () => {
     expect(analyze()).toEqual(analyze())
   })
 
+  it('reports compatible different shapes as batch candidates before Force Batch is applied', () => {
+    const first: SceneNode = { ...meshNode('first'), optimization: { mode: 'exclude' } }
+    const second: SceneNode = {
+      ...meshNode('second'),
+      geometry: { kind: 'box', width: 2, height: 1, depth: 1 },
+      optimization: { mode: 'individual' },
+    }
+    const material = new MeshStandardMaterial()
+    const objects = new Map<string, Mesh>([
+      [first.id, new Mesh(new BoxGeometry(), material)],
+      [second.id, new Mesh(new BoxGeometry(2, 1, 1), material)],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes: [first, second], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+    )
+
+    expect(plan.instances).toEqual([])
+    expect(plan.batches).toHaveLength(1)
+    expect(plan.batches[0]?.sourceIds).toEqual(['first', 'second'])
+  })
+
   it('classifies moving, animated, and skinned objects as unsafe candidates', () => {
     const moving: SceneNode = { ...meshNode('moving'), components: [{ type: 'Movement' }] }
     const animated = meshNode('animated')

@@ -8,10 +8,17 @@ import {
 } from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
-import { WORTH_INSTANCING, groupingExclusions, isDrawn, shapeAndPaint, withFlags } from './grouping'
+import {
+  WORTH_INSTANCING,
+  behavioralGroupingExclusions,
+  isDrawn,
+  shapeAndPaint,
+  withFlags,
+} from './grouping'
 import { isInstanceable } from './instanceableModel'
 import { statsOf, textureBytesOf, texturesOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
+import { batchKeyOf } from './batching'
 
 export type OptimizationClassification =
   'STATIC' | 'DYNAMIC' | 'SKINNED' | 'ANIMATED' | 'INSTANCABLE' | 'UNSAFE'
@@ -26,6 +33,8 @@ export type InstanceCandidate = {
   sourceIds: readonly string[]
   meshCount: number
 }
+
+export type BatchCandidate = InstanceCandidate
 
 export type OptimizationWarning = {
   nodeId: string
@@ -49,6 +58,7 @@ export type OptimizationImpact = {
 export type OptimizationPlan = {
   classifications: readonly ClassifiedObject[]
   instances: readonly InstanceCandidate[]
+  batches: readonly BatchCandidate[]
   warnings: readonly OptimizationWarning[]
   measured: OptimizationMetrics
   estimated: OptimizationImpact
@@ -58,6 +68,7 @@ export type OptimizationReport = {
   measured: OptimizationMetrics
   estimated: OptimizationImpact
   instanceCandidates: number
+  batchCandidates: number
   visualChanges: 'NONE'
 }
 
@@ -87,12 +98,14 @@ export function analyzeOptimization(
   runtimeNodes: readonly SceneNode[] = state.nodes,
 ): OptimizationPlan {
   const animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
-  const excluded = groupingExclusions(runtimeNodes, animated, 'instance')
+  const excluded = behavioralGroupingExclusions(runtimeNodes, animated)
   // Enumerated ONCE per node: read again for the classification and again for the grouping, a
   // model of P primitives paid three full `traverse` walks for one pass.
   const drawn = new Set<Mesh>()
   const candidateGroups = new Map<string, CandidateGroup>()
+  const batchGroups = new Map<string, CandidateGroup>()
   const keyOf = withFlags(shapeAndPaint())
+  const batchKey = batchKeyOf()
   const classifications: ClassifiedObject[] = []
   const warnings: OptimizationWarning[] = []
 
@@ -107,28 +120,26 @@ export function analyzeOptimization(
 
     const reason = warningOf(nodeClassifications)
     if (reason) warnings.push({ nodeId: node.id, reason })
-    if (excluded.has(node.id) || !nodeClassifications.includes('INSTANCABLE')) continue
+    if (!nodeClassifications.includes('INSTANCABLE')) continue
 
     for (const mesh of shown) {
       if (Array.isArray(mesh.material)) continue
-      const key = keyOf(node, mesh)
-      const group = candidateGroups.get(key)
-      if (group) {
-        group.ids.add(node.id)
-        group.meshes += 1
-        group.forced ||= node.optimization?.mode === 'instance'
-      } else {
-        candidateGroups.set(key, {
-          ids: new Set([node.id]),
-          meshes: 1,
-          forced: node.optimization?.mode === 'instance',
-        })
-      }
+      if (!excluded.has(node.id))
+        collectCandidate(candidateGroups, keyOf(node, mesh), node, 'instance')
+      if (!excluded.has(node.id)) collectCandidate(batchGroups, batchKey(node, mesh), node, 'batch')
     }
   }
 
   const instances = [...candidateGroups]
     .filter(([, group]) => group.forced || group.meshes >= policy.minInstancesPerGroup)
+    .map(([key, group]) => ({
+      key,
+      sourceIds: [...group.ids].sort(byCodeUnit),
+      meshCount: group.meshes,
+    }))
+    .sort((one, other) => byCodeUnit(one.key, other.key))
+  const batches = [...batchGroups]
+    .filter(([, group]) => group.forced || group.meshes >= 2)
     .map(([key, group]) => ({
       key,
       sourceIds: [...group.ids].sort(byCodeUnit),
@@ -143,6 +154,7 @@ export function analyzeOptimization(
   return {
     classifications,
     instances,
+    batches,
     warnings,
     measured: {
       ...sceneStats,
@@ -165,7 +177,28 @@ export function optimizationReport(plan: OptimizationPlan): OptimizationReport {
     measured: plan.measured,
     estimated: plan.estimated,
     instanceCandidates: plan.instances.reduce((count, group) => count + group.meshCount, 0),
+    batchCandidates: plan.batches.reduce((count, group) => count + group.meshCount, 0),
     visualChanges: 'NONE',
+  }
+}
+
+function collectCandidate(
+  groups: Map<string, CandidateGroup>,
+  key: string,
+  node: SceneNode,
+  forcedMode: 'instance' | 'batch',
+): void {
+  const group = groups.get(key)
+  if (group) {
+    group.ids.add(node.id)
+    group.meshes += 1
+    group.forced ||= node.optimization?.mode === forcedMode
+  } else {
+    groups.set(key, {
+      ids: new Set([node.id]),
+      meshes: 1,
+      forced: node.optimization?.mode === forcedMode,
+    })
   }
 }
 

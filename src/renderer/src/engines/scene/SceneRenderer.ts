@@ -276,7 +276,9 @@ import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
+import { createOptimizedGroups } from './optimizedGrouping'
 import {
+  behavioralGroupingExclusions,
   groupingExclusions,
   unhang,
   worldReach,
@@ -450,7 +452,8 @@ export type SceneRendererOptions = {
    * How repeated shapes are drawn in fewer calls, for a caller leaving the cells. `instanced`
    * opens one `InstancedMesh` per shape and material, split into regions; `batched` opens one
    * `BatchedMesh` per material — measured on this Mac, 2026-09-02, it costs MORE CPU on every
-   * scene, 10.4 ms against 3.1 a frame on 10 000 bodies. Naming either one turns `partition` off.
+   * scene, 10.4 ms against 3.1 a frame on 10 000 bodies. A benchmark override: naming either one
+   * turns `partition` off and deliberately bypasses authoring overrides.
    */
   grouping?: GroupingStrategy
   /**
@@ -2033,11 +2036,13 @@ export class SceneRenderer {
       const instanced = this.instances.rebuild(
         [...this.applied.values()],
         id => this.objects.get(id),
-        groupingExclusions(
-          [...this.applied.values()],
-          drivenNodes(this.timeline),
-          this.options.grouping === 'batched' ? 'batch' : 'instance',
-        ),
+        this.options.grouping
+          ? groupingExclusions(
+              [...this.applied.values()],
+              drivenNodes(this.timeline),
+              this.options.grouping === 'batched' ? 'batch' : 'instance',
+            )
+          : behavioralGroupingExclusions([...this.applied.values()], drivenNodes(this.timeline)),
       )
       this.syncSourceWalk()
       // Read before the test, since asking CLEARS it: a lot the rebuild made must not leave the
@@ -6246,7 +6251,8 @@ const NO_RIGS: AidRigs = { bodies: new Map(), arms: new Map() }
 function groupsFor(
   options: SceneRendererOptions,
 ): (host: Object3D, ownMaterialOf: (mesh: Mesh) => Material | Material[]) => InstancedGroups {
-  if ((options.partition ?? (options.grouping ? 'off' : 'grid')) === 'grid') return createCellGroups
+  if (!options.grouping && options.partition !== 'off') return createOptimizedGroups
+  if (options.partition === 'grid') return createCellGroups
   return options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups
 }
 
