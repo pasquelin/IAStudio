@@ -7,6 +7,8 @@ import { notedPhysics, type NotedPhysics } from '@game/physics/physics-fixtures'
 import type { GameApi } from '@game/api/gameApi'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
+import type { World } from '@game/runtime/world'
+import { playerModuleNodes } from '@/engines/scene/nodeFactory'
 import { worldFromScene } from './worldFromScene'
 
 const ports = (physics?: NotedPhysics): GameApi => ({
@@ -147,5 +149,120 @@ describe('the edit state, translated into something that runs', () => {
       kind: 'document',
       id: 'doc-1',
     })
+  })
+})
+
+/**
+ * 🛑 `createHierarchy` reads the DOCUMENT's nodes while the entities hold copies, so a parent the
+ * game moves is composed from where it stood when Play began.
+ */
+describe('a body hanging from a parent the game moves', () => {
+  it('is placed where the parent stands NOW, not where the scene left it', () => {
+    const lift = {
+      ...meshNode('lift'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0, z: 0 } },
+      components: [
+        { ...newComponent('Movement'), axis: 'y', distance: 10, speed: 10, loop: 'pingPong' },
+      ],
+    }
+    const rider = {
+      ...meshNode('rider'),
+      parentId: lift.id,
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 1, z: 0 } },
+      components: [newComponent('Collider'), { ...newComponent('RigidBody'), kind: 'kinematic' }],
+    }
+    const state: SceneState = { ...EMPTY_SCENE, nodes: [lift, rider] }
+    const physics = notedPhysics()
+    const world = worldFromScene('doc-1', state, ports(physics))
+
+    for (let step = 0; step < 30; step++) world.step(1 / 60)
+
+    const lifted = world.entities.get(lift.id)?.transform.position.y ?? 0
+    const placed = physics.placed.at(-1)?.position.y ?? 0
+    expect(lifted).toBeGreaterThan(1)
+    // One metre above whatever the lift has reached — the whole of what composing a parent means.
+    expect(placed).toBeCloseTo(lifted + 1, 6)
+  })
+})
+
+/**
+ * The window answers what the tree says, because the runtime holds no tree: the arm reads two
+ * fields, and what fills them is the structure the module stands in.
+ */
+describe('a scene holding a player module', () => {
+  const armAt = (state: SceneState, world: World) =>
+    world.entities.get(state.nodes.find(node => node.name === 'SpringArm')?.id ?? '')?.components[0]
+
+  const idOf = (state: SceneState, name: string) => state.nodes.find(node => node.name === name)?.id
+
+  it('hands the arm the body and the eye it hangs with', () => {
+    const state: SceneState = { ...EMPTY_SCENE, nodes: [...playerModuleNodes()] }
+
+    const arm = armAt(state, worldFromScene('doc-1', state, ports()))
+
+    expect(arm?.subject).toBe(idOf(state, 'Capsule'))
+    expect(arm?.camera).toBe(idOf(state, 'Camera'))
+  })
+
+  /** 🛑 The point of resolving it here: what the fields SAY stopped being what the arm follows. */
+  it('binds an arm whose two fields were emptied', () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: playerModuleNodes().map(node =>
+        node.name === 'SpringArm'
+          ? { ...node, components: [{ ...newComponent('SpringArm'), subject: '', camera: '' }] }
+          : node,
+      ),
+    }
+
+    const arm = armAt(state, worldFromScene('doc-1', state, ports()))
+
+    expect(arm?.subject).toBe(idOf(state, 'Capsule'))
+    expect(arm?.camera).toBe(idOf(state, 'Camera'))
+  })
+})
+
+/**
+ * 🛑 What the whole design turns on: nothing here touches the ARM. The body is carried onto what
+ * the player rides, and the arm — which watches the body — follows for free. An arm rewritten at
+ * runtime, or a body reparented, would both have been ways of saying the same thing worse.
+ */
+describe('a player module that possesses something', () => {
+  const drivable = (possesses: string): SceneState => ({
+    ...EMPTY_SCENE,
+    nodes: [
+      {
+        ...meshNode('car'),
+        name: 'Car',
+        transform: { ...IDENTITY_TRANSFORM, position: { x: 12, y: 0, z: -5 } },
+      },
+      ...playerModuleNodes().map(node =>
+        node.components?.some(one => one.type === 'Player')
+          ? {
+              ...node,
+              components: [withComponentField(newComponent('Player'), 'possesses', possesses)],
+            }
+          : node,
+      ),
+    ],
+  })
+
+  const bodyAt = (state: SceneState, world: World) => {
+    world.step(1 / 60)
+    world.lateUpdate(1, 1 / 60)
+    const body = state.nodes.find(node => node.name === 'Capsule')?.id ?? ''
+    return world.entities.get(body)?.transform.position
+  }
+
+  it('stands its body on what it rides, without an arm being rewritten', () => {
+    const state = drivable('Car')
+
+    expect(bodyAt(state, worldFromScene('doc-1', state, ports()))).toMatchObject({ x: 12, z: -5 })
+  })
+
+  it('leaves its body where the module put it when it rides nothing', () => {
+    const state = drivable('')
+
+    expect(bodyAt(state, worldFromScene('doc-1', state, ports()))).toMatchObject({ x: 0, z: 0 })
   })
 })

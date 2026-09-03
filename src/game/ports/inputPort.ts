@@ -22,6 +22,12 @@ export type InputState = {
 export type InputPort = {
   state: () => InputState
   /**
+   * Where the pointer is RIGHT NOW, for what is read once a frame rather than once a step. Live,
+   * and rewritten in place: copy it to keep it. `state` allocates five objects, three of them key
+   * lists the look never reads.
+   */
+  pointer: () => Pointer
+  /**
    * Closes the step: `pressed` and `released` answer for what happened since the last call. The
    * runtime calls it, never a script.
    */

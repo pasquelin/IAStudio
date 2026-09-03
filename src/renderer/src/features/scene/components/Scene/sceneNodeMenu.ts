@@ -4,6 +4,7 @@ import {
   mdiEyeOffOutline,
   mdiEyeOutline,
   mdiFolderPlusOutline,
+  mdiContentSaveMoveOutline,
   mdiPlaylistPlus,
   mdiPlaylistRemove,
   mdiRenameOutline,
@@ -33,6 +34,8 @@ export type SceneNodeMenuProps = {
    * never the length of the menu — the same shape the eye row takes, and the rule above.
    */
   onSheet: boolean
+  /** Files a player module. Absent on every other node, like the two carve rows above. */
+  onFileAsModule?: () => void
   /**
    * Opens the name for typing. Absent in the viewport, which draws no name to type over: there
    * the node is renamed from the outliner or from the inspector's own field. The one row that
@@ -66,6 +69,7 @@ export function openSceneNodeMenu({
   onToggleVisible,
   onSheet,
   onRename,
+  onFileAsModule,
 }: SceneNodeMenuProps): void {
   // Named by the registry rather than by keys written again here: the row then says exactly what
   // the toolbar's tooltip and the native menu's entry say, and a renamed command cannot leave one
@@ -81,6 +85,16 @@ export function openSceneNodeMenu({
   }
 
   void showContextMenu([
+    ...(onFileAsModule
+      ? [
+          {
+            label: t('playerWindow.file'),
+            icon: mdiContentSaveMoveOutline,
+            tooltip: t('playerWindow.fileHint'),
+            onSelect: onFileAsModule,
+          },
+        ]
+      : []),
     ...(onRename
       ? [
           {

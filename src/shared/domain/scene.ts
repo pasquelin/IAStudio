@@ -57,34 +57,16 @@ export type CameraDescriptor = {
 
 export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
 
-/**
- * A rail: the line a camera runs along during a shot.
- *
- * A node of the scene like any other, so it inherits the outliner row, the selection, the gizmo,
- * the rename, the visibility, undo, copy and paste — everything `SceneNode` already gives.
- *
- * `kind` is an open union: a Bézier one would be another value here, and no document written
- * before it would have to be migrated.
- */
-export type PathDescriptor = {
-  kind: 'catmullrom'
-  /** In the node's OWN frame, so moving the rail moves the trajectory. Two at the very least. */
-  points: readonly Vector3[]
-  closed: boolean
-  /** Catmull-Rom tension: 0 is angular, 0.5 is three.js's own default. */
-  tension: number
-}
-
-export const DEFAULT_PATH: PathDescriptor = Object.freeze({
-  kind: 'catmullrom',
-  // Five units apart along Z, which is the axis a camera born from the Add menu looks down.
-  points: Object.freeze([
-    Object.freeze({ x: 0, y: 0, z: 0 }),
-    Object.freeze({ x: 0, y: 0, z: -5 }),
-  ]),
-  closed: false,
-  tension: 0.5,
-})
+/** Re-exported for the same reason as the transform above: a scene is read from here. */
+export {
+  bezierPathOf,
+  DEFAULT_PATH,
+  handleAt,
+  handlesMatch,
+  type PathDescriptor,
+  type PathHandle,
+  type SmoothPath,
+} from './path'
 
 /**
  * An imported model, for the same reason and in the same shape as a texture: what a document
@@ -820,6 +802,7 @@ export const MESH_ENTRIES: readonly SceneEntry<MeshKind>[] = [
   { kind: 'lathe' },
   { kind: 'octahedron' },
   { kind: 'plane' },
+  { kind: 'ribbon' },
   { kind: 'ring' },
   { kind: 'sphere' },
   { kind: 'tetrahedron' },
@@ -837,14 +820,24 @@ export type ExportFormat = 'glb' | 'gltf' | 'usdz' | 'obj' | 'ply' | 'stl'
 export const EXPORT_FORMATS: readonly ExportFormat[] = ['glb', 'gltf', 'usdz', 'obj', 'ply', 'stl']
 
 /** What is picked from the Add menu without being a mesh or a light. */
-export type ObjectKind = 'sprite' | 'text' | 'camera' | 'path'
+export type ObjectKind = 'sprite' | 'text' | 'camera' | 'path' | 'player'
 
 export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
   { kind: 'sprite' },
   { kind: 'text' },
   { kind: 'camera' },
   { kind: 'path' },
+  { kind: 'player' },
 ]
+
+/**
+ * A figure is a SET of meshes, never one shape: a silhouette wearing clothes needs a colour per
+ * part, and a node carries a single material. What the studio lays down is real mesh nodes an
+ * author can then edit one by one — see `figures.ts`.
+ */
+export type FigureKind = 'humanoid'
+
+export const FIGURE_ENTRIES: readonly SceneEntry<FigureKind>[] = [{ kind: 'humanoid' }]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [
   { kind: 'ambient' },

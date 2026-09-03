@@ -88,6 +88,7 @@ export function createDomInput(target: DomInputTarget): InputPort {
       released: [...released],
       pointer: { ...pointer },
     }),
+    pointer: () => pointer,
     endStep: () => {
       pressed.clear()
       released.clear()

@@ -1,4 +1,5 @@
 import { VIEW_SIDE_OF, type CommandId } from '@shared/domain/command'
+import type { LogScope } from '@shared/ipc'
 import type { CsgOperation } from '@shared/domain/csg'
 import { canInvertCarve, canNegate, canSeparate } from '@/engines/csg/carve'
 import {
@@ -11,17 +12,21 @@ import {
   separateNode,
   removeNodes,
   rootedIn,
+  setGeometry,
   setNodeVisible,
   setPath,
 } from '@/engines/scene/commands'
+import { railOf } from '@/engines/scene/nodeRail'
 import { withoutPoint } from '@/engines/scene/cameraPath'
 import {
   putOnAnimationSheet,
   removeCameraShot,
   takeOffAnimationSheet,
 } from '@/engines/scene/animationCommands'
+import { bringsSecondPlayer, playerPartsOf, tearsPlayerApart } from '@/engines/scene/playerModule'
 import { nodeById, rootsOf, selectedNodes, type SceneNode } from '@/engines/scene/sceneState'
 import { newId } from '@/helpers/ids'
+import { reportFailure } from '@/services/diagnostics'
 import { animationViewOf, useAnimationViews } from '@/stores/animationView'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
@@ -59,6 +64,31 @@ export function toggleNodeVisible(documentId: string, nodeId: string): void {
 }
 
 /**
+ * The commands refuse on their own; this is what SAYS so, since a gesture that quietly does
+ * nothing reads as a studio that ignored the key. Answers true so a caller can stop there.
+ */
+function saysRefusal(nodes: readonly SceneNode[], scope: LogScope, why: string): boolean {
+  reportFailure(scope, playerPartsOf(nodes)?.module.name ?? '', new Error(why))
+  return true
+}
+
+/** A removal that would leave a module standing without its body or its eye. */
+function refusesRemoval(nodes: readonly SceneNode[], ids: readonly string[]): boolean {
+  return (
+    tearsPlayerApart(nodes, ids) &&
+    saysRefusal(nodes, 'scene.playerParts', 'a player module keeps its body and its camera')
+  )
+}
+
+/** The same for what comes IN: a scene arbitrating between two modules is what the module ended. */
+function refusesArrival(nodes: readonly SceneNode[], copies: readonly SceneNode[]): boolean {
+  return (
+    bringsSecondPlayer(nodes, copies) &&
+    saysRefusal(nodes, 'scene.player', 'this scene already holds a player module')
+  )
+}
+
+/**
  * The picked control point of a rail, taken away. Answers whether there was one, so a caller can
  * go on to what it would otherwise have deleted.
  *
@@ -80,12 +110,17 @@ export function removePickedPathPoint(documentId: string): boolean {
   if (!scene.selectedIds.includes(picked.nodeId)) return false
 
   const node = nodeById(scene, picked.nodeId)
-  if (node?.type !== 'path') return false
+  const rail = railOf(node ?? undefined)
+  if (!node || !rail) return false
 
-  const path = withoutPoint(node.path, picked.index)
-  if (path === node.path) return true
+  const path = withoutPoint(rail, picked.index)
+  if (path === rail) return true
 
-  store.runCommand(documentId, setPath(picked.nodeId, path))
+  // A band holds its rail inside its shape — see `railOf`: the edit lands on the geometry.
+  if (node.type === 'path') store.runCommand(documentId, setPath(picked.nodeId, path))
+  else if (node.type === 'mesh' && node.geometry.kind === 'ribbon') {
+    store.runCommand(documentId, setGeometry(picked.nodeId, { ...node.geometry, path }))
+  }
   useSceneViews.getState().setPickedPathPoint(documentId, null)
   return true
 }
@@ -188,12 +223,15 @@ export function runSceneCommand(documentId: string, command: CommandId): Command
       // depths, and Delete on a point that took the whole rail would be a rail nobody meant.
       if (removePickedPathPoint(documentId)) return true
       if (removePickedShot(documentId)) return true
-      if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
+      if (selectedIds.length === 0 || refusesRemoval(nodes, selectedIds)) return true
+      store.runCommand(documentId, removeNodes(nodes, selectedIds))
       return true
 
     case 'scene.duplicate': {
       if (picked.length === 0) return true
       const copies = copiesOf(nodes, picked)
+      if (refusesArrival(nodes, copies)) return true
+
       store.runCommand(documentId, addNodes(copies))
       return madeOf(copies)
     }
@@ -203,7 +241,8 @@ export function runSceneCommand(documentId: string, command: CommandId): Command
       return true
 
     case 'scene.cut':
-      if (picked.length === 0) return true
+      // Checked BEFORE the clipboard is written: a cut that cannot remove must not look copied.
+      if (picked.length === 0 || refusesRemoval(nodes, selectedIds)) return true
       useSceneClipboard.getState().copy(copiesOf(nodes, picked))
       store.runCommand(documentId, removeNodes(nodes, selectedIds))
       return true
@@ -213,6 +252,8 @@ export function runSceneCommand(documentId: string, command: CommandId): Command
       const held = useSceneClipboard.getState().nodes
       if (held.length === 0) return true
       const pasted = rootedIn(copiesOf(held, held), nodes)
+      if (refusesArrival(nodes, pasted)) return true
+
       store.runCommand(documentId, addNodes(pasted))
       return madeOf(pasted)
     }

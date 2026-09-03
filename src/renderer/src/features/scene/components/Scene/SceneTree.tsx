@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { Row } from '@/components/Row'
 import { Tree, type TreeNode } from '@/components/Tree'
 import type { Command } from '@/engines/core/history'
-import { canReparent, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
+import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/features/scene/components/Scene/SceneNodeRow'
 import { VisibilityToggle } from '@/features/scene/components/VisibilityToggle'
-import { multi, reorderNodes, reparentNode } from '@/engines/scene/commands'
+import { canMoveNode, multi, reorderNodes, reparentNode } from '@/engines/scene/commands'
 import { commandId } from '@/engines/core/history'
 import { openSceneNodeMenu } from '@/features/scene/components/Scene/sceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/features/scene/components/sceneCommands'
@@ -68,7 +68,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
     build: (batch: readonly string[], wanted: string | null) => Command<SceneState> | null,
   ): void => {
     const wanted = parentId === SCENE_ROOT ? null : parentId
-    const allowed = ids.filter(id => canReparent(nodes, id, wanted))
+    const allowed = ids.filter(id => canMoveNode(nodes, id, wanted))
     const command = allowed.length === 0 ? null : build(allowed, wanted)
     if (!command) return
 

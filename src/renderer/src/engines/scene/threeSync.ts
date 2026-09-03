@@ -4,6 +4,7 @@ import {
   HemisphereLight,
   Line,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PointLight,
   SpotLight,
@@ -23,7 +24,18 @@ import type {
   Vector3,
 } from '@shared/domain/scene'
 import { pathPoints } from './cameraPath'
-import { bareLight, geometryFor, pathKnob, PATH_CURVE_NAME, PATH_KNOB_PREFIX } from './threeFactory'
+import {
+  bareLight,
+  dressWithRail,
+  geometryFor,
+  HANDLE_BAR_PREFIX,
+  handlePartOf,
+  knobIndexOf,
+  knobName,
+  placeHandles,
+  PATH_CURVE_NAME,
+  PATH_KNOB_PREFIX,
+} from './threeFactory'
 import { tileUvs } from './uvTiling'
 
 /*
@@ -244,18 +256,55 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
   if (line instanceof Line) line.geometry.setFromPoints(pathPoints(descriptor))
 
   const knobs = object.children.filter(
-    (child): child is Mesh => child.name.startsWith(PATH_KNOB_PREFIX) && child instanceof Mesh,
+    (child): child is Mesh => knobIndexOf(child.name) !== null && child instanceof Mesh,
   )
 
-  for (const extra of knobs.slice(descriptor.points.length)) {
-    object.remove(extra)
-    extra.geometry.dispose()
+  // A run that gained or lost an anchor is dressed again whole: every anchor carries three more
+  // objects now, and threading an insertion through four parallel lists is where a leak lives.
+  if (knobs.length !== descriptor.points.length) {
+    const worn = knobs[0]?.material
+    const through = worn instanceof MeshBasicMaterial && !worn.depthTest
+    // Read off a tangent rather than passed in: the caller knows the mesh colour, and the two
+    // are different tokens — dressing again in one of them would repaint the pair grey.
+    const worn2 = (name: string | null): string | undefined => {
+      const child = name
+        ? object.getObjectByName(name)
+        : object.children.find(one => handlePartOf(one.name))
+      return child instanceof Mesh && child.material instanceof MeshBasicMaterial
+        ? `#${child.material.color.getHexString()}`
+        : undefined
+    }
+    // Read off what is already hung rather than passed in: the three colours are three tokens,
+    // and dressing again in the anchors' would repaint the pair and the first point grey.
+    const colours = { knob: colour, handle: worn2(null), start: worn2(knobName(0)) }
+    for (const child of [...object.children]) {
+      object.remove(child)
+      if (child instanceof Mesh || child instanceof Line) child.geometry.dispose()
+    }
+    dressWithRail(object, descriptor, colours, through)
+    return
   }
 
   for (const [index, point] of descriptor.points.entries()) {
-    const knob = knobs[index] ?? pathKnob(index, colour)
-    if (!knobs[index]) object.add(knob)
-    knob.position.set(point.x, point.y, point.z)
+    knobs[index]?.position.set(point.x, point.y, point.z)
+    placeHandles(object, descriptor, index, point)
+  }
+}
+
+/**
+ * The tangents shown on ONE anchor — the one being worked on — and on no other.
+ *
+ * 🛑 Every anchor at once is what makes a run of twenty-four unreadable: Photoshop shows the pair
+ * of the point one clicked, and that is the gesture this follows.
+ */
+export function showPathHandles(object: Object3D, index: number | null): void {
+  for (const child of object.children) {
+    const part = handlePartOf(child.name)
+    const bar = child.name.startsWith(HANDLE_BAR_PREFIX)
+      ? Number(child.name.split('-').at(-1))
+      : null
+    if (part) child.visible = part.index === index
+    else if (bar !== null) child.visible = bar === index
   }
 }
 

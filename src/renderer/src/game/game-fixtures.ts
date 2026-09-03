@@ -18,9 +18,15 @@ const FROM: Record<ViewDirection, { x: number; y: number; z: number }> = {
   right: { x: 5, y: 0, z: 0 },
 }
 
-/** The three methods a running game asks a viewport for — see `SceneDraw`. */
+/** The four methods a running game asks a viewport for — see `SceneDraw`. */
 export function drawnBy(over: Partial<SceneDraw> = {}): SceneDraw {
-  return { apply: () => {}, placeView: () => {}, viewPlacement: () => AT_REST, ...over }
+  return {
+    apply: () => {},
+    placeView: () => {},
+    releaseView: () => {},
+    viewPlacement: () => AT_REST,
+    ...over,
+  }
 }
 
 /**
@@ -34,7 +40,7 @@ export function drawnBy(over: Partial<SceneDraw> = {}): SceneDraw {
 export const PNG_HEAD = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
 /**
- * The registry holds a whole `SceneRenderer`, and a game asks it for three methods. Standing in
+ * The registry holds a whole `SceneRenderer`, and a game asks it for four methods. Standing in
  * for the rest would mean a WebGL context no suite has got — apart from the two that only have to
  * hand BYTES back, which is what `PNG_HEAD` is for.
  */

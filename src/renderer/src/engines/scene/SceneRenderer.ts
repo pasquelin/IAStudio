@@ -5,6 +5,7 @@ import {
   Color,
   type AnimationClip,
   DirectionalLight,
+  Euler,
   GridHelper,
   type Intersection,
   Light,
@@ -72,7 +73,12 @@ import {
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
 import { applyFog, applyToneMapping } from './worldBinding'
-import { createViewportAids } from './viewportAids'
+import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
+import { springArmRigsOf } from './springArmRigs'
+import { cachedOn } from '../core/cachedOn'
+import { COMPONENT_DEFAULTS } from '@game/runtime/componentDefaults'
+import { numberOf } from '@game/runtime/componentFields'
+import type { Vector3 as TurnedVector } from '@shared/domain/transform'
 import { drawsNode, isolating, NOTHING_ISOLATED, type Isolation } from './isolation'
 import { pixelRatioFor, shadowMapSizeFor } from './viewportQuality'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
@@ -107,16 +113,21 @@ import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { createAnimatedStacks } from './animatedStack'
 import type { CameraMotion, CameraShot, CameraTarget } from '@shared/domain/animation'
 import { postOf, stackDraws, type PostStack } from '@shared/domain/postProcessing'
-import { curveOf, PATH_SAMPLES, segmentAt } from './cameraPath'
+import { curveOf, PATH_SAMPLES, segmentAt, withMovedHandle, withMovedPoint } from './cameraPath'
+import { railOf } from './nodeRail'
 import { spotOnRay } from './railSpot'
 import { clampUnit, progressAt } from './cameraMotion'
 import { railsInUse, shotCameras, shotOfCameraAt } from './cameraShots'
 import {
-  buildPath,
+  dressWithRail,
+  type RailColours,
   cameraBody,
   helperFor,
+  handleName,
+  handlePartOf,
   knobIndexOf,
   knobName,
+  type HandlePart,
   PATH_CURVE_NAME,
   tuneViewHelper,
   type LightHelper,
@@ -133,6 +144,7 @@ import {
   applyPath,
   applySprite,
   lightFor,
+  showPathHandles,
   showPathKnobs,
   standardMaterialOf,
 } from './threeSync'
@@ -349,18 +361,20 @@ export type SceneRendererOptions = {
    * A control point of a rail was picked, or let go of. Apart from `onSelect` for the same
    * reason a bone is: a point has no id in the document, and no row in the tree.
    */
-  onSelectPathPoint?: (picked: { nodeId: string; index: number } | null) => void
+  onSelectPathPoint?: (picked: PickedPathPoint | null) => void
   /**
    * The rectangle being dragged, in CSS pixels from the canvas' top-left corner, or `null` once
    * it is over. Drawn by whoever hosts the canvas: an outline through WebGL costs a pass a frame.
    */
   onMarquee?: (box: ScreenBox | null) => void
-  /** Where a picked control point was dragged to, in the frame of the rail that holds it. */
-  onPathPoint?: (nodeId: string, index: number, point: PlainVector3) => void
+  /** Where a picked control point or tangent was dragged to, in the frame of the rail. */
+  onPathPoint?: (picked: PickedPathPoint, point: PlainVector3) => void
   /** A point is to be posed on that rail, right after the stretch of it that was clicked. */
   onAddPathPoint?: (nodeId: string, index: number) => void
   /** A point is to be posed at the END of that rail, where the click landed in its own frame. */
   onAppendPathPoint?: (nodeId: string, point: PlainVector3) => void
+  /** That rail is to be joined up: its last point comes back round to its first. */
+  onClosePath?: (nodeId: string) => void
   /** A control point was right-clicked, for whoever raises its menu — this side draws none. */
   onPathPointMenu?: (nodeId: string, index: number) => void
   /**
@@ -597,16 +611,28 @@ function withHeldFuzz<T>(raycaster: Raycaster, pick: () => T): T {
 function isScenery(object: Object3D, isRail: (nodeId: string) => boolean): boolean {
   for (let node: Object3D | null = object; node; node = node.parent) {
     if (!node.visible || node.name === MARKER_NAME || isRail(node.name)) return false
+    // 🛑 The AIDS of a rail, by name: a band IS scenery a point may be written onto, but its own
+    // line and knobs hang under it and were taking the clicks meant for the surface.
+    if (node.name.startsWith(RAIL_AID_PREFIX)) return false
   }
 
   return true
 }
 
+/** What every helper of a rail is named after — the line, the knobs, the tangents and their bars. */
+const RAIL_AID_PREFIX = 'path-'
+
 /** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
 const LINE_GRAB = 1 / 150
 
 /** A control point, as the screen sees it. */
-type ProjectedKnob = Projected & { nodeId: string; index: number }
+type ProjectedKnob = Projected & PickedPathPoint
+
+/**
+ * What the gizmo holds on a rail: an anchor, or one of the two tangents that set the angle at it.
+ * `part` absent is the anchor itself — a document written before tangents existed says nothing.
+ */
+export type PickedPathPoint = { nodeId: string; index: number; part?: HandlePart }
 
 /** What the panel asks the engine to show in the corner — see `setCameraPreview`. */
 export type CameraPreviewRequest = {
@@ -798,7 +824,7 @@ export class SceneRenderer {
   /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
   private pickedBone: { nodeId: string; bone: string } | null = null
   /** The control point of a rail the gizmo holds. Never a node — see `setPickedPathPoint`. */
-  private pickedPathPoint: { nodeId: string; index: number } | null = null
+  private pickedPathPoint: PickedPathPoint | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
 
@@ -844,6 +870,10 @@ export class SceneRenderer {
   private lit: { dress: EnvironmentDress | null; intensity: number; rotation: number } | null = null
   /** Boxes, origins and normals. Hung beside the nodes for the reason the ground is not. */
   private readonly aids = createViewportAids()
+
+  /** What the last state asks to be DRAWN off its components, so `refreshAids` knows there is
+   * something to draw at all. */
+  private rigs: AidRigs = NO_RIGS
   /** What the VIEWPORT hides, which is never what the document hides — see `isolation.ts`. */
   private isolation: Isolation = NOTHING_ISOLATED
 
@@ -874,6 +904,8 @@ export class SceneRenderer {
   private navigating = false
   /** Whether the capture was actually granted. A refused mode must not move anybody's pivot. */
   private captured = false
+  /** Whether a running game is writing the camera — a third gesture that owns it, see `placeView`. */
+  private viewDriven = false
   /** Where the head looks while the pointer is captured. Read off the camera when the mode opens. */
   private look: SphericalAngles = DEFAULT_LOOK
   /** What the wheel left this session at. `configure` drops it, so an edited preference wins. */
@@ -952,6 +984,10 @@ export class SceneRenderer {
   private markerEdge = ''
   /** What a shape marked as a TOOL is painted in — see `applyNegative`. */
   private negativeColor = ''
+  /** What a rail's TANGENTS are painted in, apart from its anchors — see `dressWithRail`. */
+  private handleColor = ''
+  /** What its FIRST anchor is painted in: which end a run starts from is what says its direction. */
+  private startColor = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
   private displays: DisplayMode[] = ['shaded']
   /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
@@ -1185,6 +1221,20 @@ export class SceneRenderer {
     this.tuneShadowsIfMoved()
     this.applyCameraShots()
     this.showAidsForSelection()
+    // 🛑 What the renderer reads off a COMPONENT, drawn rather than rendered: a walking body and
+    // the arm a camera hangs on are volumes no geometry carries, and nothing else would show
+    // them. Here and not at the top of the pass: an arm is measured off where its body stands.
+    //
+    // 🛑 A window that PLAYS the scene draws neither, whatever the settings say — the same cut
+    // `showAidsForSelection` makes for frustums, lamps, markers and rails. Answering to no
+    // setting, these two showed the player a cage around their own character.
+    this.rigs =
+      this.options.chrome === false
+        ? NO_RIGS
+        : {
+            bodies: capsuleBodiesOf(state.nodes),
+            arms: springArmRigsOf(state.nodes, id => this.facingOf(id)),
+          }
     // After the transforms and the poses: a box is read off where an object actually stands.
     this.refreshAids()
     this.applyWorld(state.world)
@@ -1239,11 +1289,17 @@ export class SceneRenderer {
 
     const rails = this.workedRailIds()
     for (const [id, node] of this.applied) {
-      if (node.type !== 'path') continue
+      if (!railOf(node)) continue
       const rail = this.objects.get(id)
       if (!rail) continue
-      if (!chrome) rail.visible = false
+      // A rail node is nothing BUT its line, so hiding the chrome hides it whole. A band is a
+      // surface of the scene: only its handles go.
+      if (!chrome && node.type === 'path') rail.visible = false
       showPathKnobs(rail, chrome && rails.has(id))
+      // The pair of the ANCHOR being worked on, and of no other — see `showPathHandles`. The
+      // index whichever of the three is held: taking a tangent must not put its own pair away.
+      const held = this.pickedPathPoint
+      showPathHandles(rail, chrome && held?.nodeId === id ? held.index : null)
     }
   }
 
@@ -1256,7 +1312,7 @@ export class SceneRenderer {
     const rails = new Set<string>()
 
     for (const id of railsInUse(this.selectedIds, this.timeline.shots)) {
-      if (this.applied.get(id)?.type === 'path') rails.add(id)
+      if (railOf(this.applied.get(id))) rails.add(id)
     }
 
     return rails
@@ -2579,13 +2635,33 @@ export class SceneRenderer {
    * Where a running game puts the free camera. Moved directly rather than through the orbit, for
    * the reason `frameContents` gives — and asking for a frame through `repaint`, since what a
    * camera OF THE SCENE films has not changed.
+   *
+   * 🛑 It FREEZES the orbits, like a gizmo drag and a flight: damped, `OrbitControls` settles
+   * towards a spherical state of its own for a dozen frames after a drag, so a camera written
+   * every frame was eased back left by that residue. `releaseView` gives them back.
+   *
+   * 🛑 Its blind spot: the other three freeze for a GESTURE, this one for the whole game. In a quad
+   * layout `armPaneUnderPointer` then returns early throughout, so the working pane sticks and a
+   * pick runs against the camera of a pane one has left. A single view — every game window — is
+   * untouched: nothing arms an orbit there anyway.
    */
   placeView(placement: CameraPlacement): void {
     const camera = this.viewport.perspective
     camera.position.set(placement.position.x, placement.position.y, placement.position.z)
     camera.lookAt(placement.target.x, placement.target.y, placement.target.z)
     this.viewport.orbit?.target.set(placement.target.x, placement.target.y, placement.target.z)
+    // On the TRANSITION: this runs every frame of a game, for a value that changes twice a session.
+    if (!this.viewDriven) {
+      this.viewDriven = true
+      this.syncPaneFreeze()
+    }
     this.repaint()
+  }
+
+  /** Gives the camera back to the hand. What a STOP calls once it has put the framing back. */
+  releaseView(): void {
+    this.viewDriven = false
+    this.syncPaneFreeze()
   }
 
   /** What a framing and a shadow frustum are both measured against — see `UNFRAMED_NODES`. */
@@ -3289,18 +3365,52 @@ export class SceneRenderer {
     if (gridMoved || lensMoved || shadowsMoved) this.redraw()
   }
 
+  /** How a node is turned, in world — what an arm reading a rotation hangs behind. */
+  private facingOf(id: string): TurnedVector | null {
+    const object = this.objects.get(id)
+    if (!object) return null
+
+    object.updateWorldMatrix(true, false)
+    FACING.setFromQuaternion(object.getWorldQuaternion(FACED))
+    return { x: FACING.x, y: FACING.y, z: FACING.z }
+  }
+
+  /**
+   * 🛑 Five `getComputedStyle` calls, kept until the theme moves. `refreshAids` runs on every
+   * state change — a selection, a frame of a slider drag — and no longer bows out early once a
+   * scene holds a walking body, so reading them per call forced five style recalcs per frame.
+   *
+   * Off the CANVAS and never `cachedToken`, which reads the main document's root: a detached
+   * panel paints from a window of its own.
+   */
+  private aidPaletteHeld: AidPalette | null = null
+
+  private aidPalette(): AidPalette {
+    const accent = this.viewport.paletteToken('--color-accent')
+    return (this.aidPaletteHeld ??= {
+      box: accent,
+      origin: this.viewport.paletteToken('--color-muted'),
+      normal: accent,
+      body: accent,
+      // 🛑 The one aid with a colour of its OWN, and Alban's call: an arm painted like the rest
+      // was read as scenery. Red says « this camera watches THAT body », and nothing else does.
+      arm: this.viewport.paletteToken('--color-danger'),
+    })
+  }
+
   /**
    * The boxes, origins and normals, rebuilt from what is on stage and what the settings ask for.
    *
    * Called from `apply`, which runs on every state change — a selection, a frame of a slider
-   * drag. Nothing asked for and nothing drawn is the ordinary case and has to cost nothing: the
-   * three palette reads below are `getComputedStyle` calls, on a DOM React has just touched.
+   * drag. Nothing asked for and nothing drawn is the ordinary case and has to cost nothing.
    */
   private refreshAids(): void {
     const wants =
       this.view.boundingBoxes !== 'off' ||
       this.view.origins ||
       this.view.normals ||
+      this.rigs.bodies.size > 0 ||
+      this.rigs.arms.size > 0 ||
       !this.aids.idle()
     if (!wants) return
 
@@ -3308,11 +3418,7 @@ export class SceneRenderer {
     // exactly the set `showsAid` reads a box off, and hanging more would be a walk for nothing.
     const aided = this.view.boundingBoxes === 'all' ? this.objects.keys() : this.selectedIds
     this.withHungUnder(aided, () =>
-      this.aids.apply(this.objects, this.selectedIds, this.view, {
-        box: this.viewport.paletteToken('--color-accent'),
-        origin: this.viewport.paletteToken('--color-muted'),
-        normal: this.viewport.paletteToken('--color-accent'),
-      }),
+      this.aids.apply(this.objects, this.selectedIds, this.view, this.aidPalette(), this.rigs),
     )
     this.redraw()
   }
@@ -3437,6 +3543,7 @@ export class SceneRenderer {
   private readonly onPaletteChanged = (): void => {
     if (!this.viewport.canvas) return
 
+    this.aidPaletteHeld = null
     this.applyPalette()
     // A ground with no colour of its own reads the palette like a mesh does, and `applyPalette`
     // does not reach it: it is not a node, so the loop below never walks it.
@@ -3562,6 +3669,10 @@ export class SceneRenderer {
     this.markerColor = this.viewport.paletteToken('--color-elevated')
     this.markerEdge = this.viewport.paletteToken('--color-muted')
     this.negativeColor = this.viewport.paletteToken('--color-danger')
+    // Apart from the anchors', which wear the mesh colour: two things one drags for different
+    // reasons must not read as one.
+    this.handleColor = this.viewport.paletteToken('--color-warning')
+    this.startColor = this.viewport.paletteToken('--color-accent')
     this.paintBackground()
 
     if (this.grid) {
@@ -3747,6 +3858,11 @@ export class SceneRenderer {
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
         if (this.needsEdges()) this.applyDisplay(object)
+
+        // The knobs stand where the rail says, and the rail lives IN the shape: rebuilt without
+        // this, a band redrew itself around handles left at the places they had before.
+        const rail = railOf(node)
+        if (rail) applyPath(object, rail, this.meshColor)
       }
 
       this.paintShape(object, node, before)
@@ -3848,7 +3964,9 @@ export class SceneRenderer {
     if (node.type === 'sprite') return this.buildSprite(node)
     if (node.type === 'text') return this.buildText(node)
     if (node.type === 'camera') return this.buildCamera(node)
-    if (node.type === 'path') return buildPath(node.path, this.meshColor)
+    if (node.type === 'path') {
+      return dressWithRail(new Object3D(), node.path, this.railColours(), false)
+    }
     if (node.type === 'carved') return this.buildCarved(node)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
@@ -4289,6 +4407,11 @@ export class SceneRenderer {
     textures.apply(node.material)
     this.textures.set(node.id, textures)
 
+    // A band wears the very handles a rail does — see `railOf`. Hung on the mesh itself, so they
+    // travel with it and a pick reads their index out of the same names.
+    const rail = railOf(node)
+    if (rail) dressWithRail(mesh, rail, this.railColours(), true)
+
     return mesh
   }
 
@@ -4524,12 +4647,17 @@ export class SceneRenderer {
 
     const knob = this.pickedKnob()
     if (knob) {
-      // Translate only: a control point is a position, and rotating or scaling one would ask
-      // the gizmo to write something the descriptor has no room for.
-      if (this.mode === 'translate') gizmo.attach(knob)
-      else gizmo.detach()
+      // 🛑 A point is a POSITION, so holding one IS a translation whatever tool is armed: rotating
+      // or scaling would ask the gizmo to write what the descriptor has no room for, and leaving
+      // it detached made a handle one takes and cannot move — which reads as a dead handle.
+      gizmo.setMode('translate')
+      gizmo.attach(knob)
       return
     }
+
+    // Back to the armed tool: holding a point forced translation, and a rotate left behind would
+    // outlive the point that asked for it.
+    if (this.mode !== 'select') gizmo.setMode(this.mode)
 
     const target = gizmoTargetFor(this.mode, this.space, this.selectedObjects(), object =>
       this.applied.get(object.name),
@@ -4566,7 +4694,13 @@ export class SceneRenderer {
     // matrices this reads. The moved slots alone, never a regrouping: that costs 47.5 ms on
     // 40 000 nodes, which per pointer move is three dropped frames.
     this.writeMovedSlots(this.selectedIds)
+    this.previewRail()
     this.redraw()
+  }
+
+  /** The three tokens a rail is dressed in — see `RailColours`. */
+  private railColours(): RailColours {
+    return { knob: this.meshColor, handle: this.handleColor, start: this.startColor }
   }
 
   /**
@@ -4627,6 +4761,40 @@ export class SceneRenderer {
   }
 
   /**
+   * The rail redrawn WHILE one of its points is dragged, from where the knob now stands.
+   *
+   * 🛑 The command lands on RELEASE — one drag, one undo — so nothing else would show the curve
+   * following: a band is swept along its rail, and the knob moving alone left the surface behind
+   * until the mouse came up.
+   */
+  private previewRail(): void {
+    const picked = this.pickedPathPoint
+    const knob = this.pickedKnob()
+    const node = picked ? this.applied.get(picked.nodeId) : undefined
+    const rail = railOf(node)
+    const object = picked ? this.objects.get(picked.nodeId) : undefined
+    if (!picked || !knob || !node || !rail || !object) return
+
+    const at = plainVector(knob.position)
+    const next = picked.part
+      ? withMovedHandle(rail, picked.index, picked.part, at)
+      : withMovedPoint(rail, picked.index, at)
+
+    applyPath(object, next, this.meshColor)
+    if (node.type !== 'mesh' || node.geometry.kind !== 'ribbon' || !(object instanceof Mesh)) return
+
+    // The shape is REBUILT per pointer move, and the one it wore given straight back: a band of
+    // three hundred sections is some eight thousand vertices, against a surface that would
+    // otherwise not move at all until the gesture ended.
+    const worn = wearGeometry(
+      object,
+      this.shapes.acquire({ ...node.geometry, path: next }, node.material.tilesPerMetre),
+    )
+    if (worn) this.freeGeometry(worn)
+    else this.shapes.release(object.geometry)
+  }
+
+  /**
    * The move is reported once the gesture ends, not on every frame of it: one drag must cost one
    * undo, and the meshes already show the truth while the gizmo holds them.
    */
@@ -4652,7 +4820,7 @@ export class SceneRenderer {
     const knob = this.pickedKnob()
     if (point && knob) {
       // The knob's own position IS the control point: both live in the rail's frame.
-      this.options.onPathPoint?.(point.nodeId, point.index, plainVector(knob.position))
+      this.options.onPathPoint?.(point, plainVector(knob.position))
       return
     }
 
@@ -4763,8 +4931,11 @@ export class SceneRenderer {
    * renamed, hidden or deleted on its own. `LightDescriptor` says why that matters — a node
    * nobody can rename is a property that leaked into the tree.
    */
-  setPickedPathPoint(picked: { nodeId: string; index: number } | null): void {
+  setPickedPathPoint(picked: PickedPathPoint | null): void {
     this.pickedPathPoint = picked
+    // 🛑 The aids too: the tangents of an anchor show on the one being WORKED ON, and picking one
+    // is what changes that. Without this they were built, placed, and never once shown.
+    this.showAidsForSelection()
     this.attachGizmo()
     this.redraw()
   }
@@ -4779,7 +4950,8 @@ export class SceneRenderer {
   private pickedKnob(): Object3D | null {
     const picked = this.pickedPathPoint
     if (!picked || !this.workedRailIds().has(picked.nodeId)) return null
-    return this.objects.get(picked.nodeId)?.getObjectByName(knobName(picked.index)) ?? null
+    const name = picked.part ? handleName(picked.part, picked.index) : knobName(picked.index)
+    return this.objects.get(picked.nodeId)?.getObjectByName(name) ?? null
   }
 
   /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
@@ -4806,7 +4978,7 @@ export class SceneRenderer {
     // time, and freezing would take that orbit away — see `startFlight`. The armed mode DOES
     // freeze: `OrbitControls.update()` ends on `lookAt(target)` and would undo every turn.
     this.viewport.freezePanes(
-      this.gizmo?.dragging === true || this.flownWith === 2 || this.navigating,
+      this.gizmo?.dragging === true || this.flownWith === 2 || this.navigating || this.viewDriven,
     )
   }
 
@@ -4962,6 +5134,15 @@ export class SceneRenderer {
     // The pair is RESERVED, so a click that lays no point lays nothing else either: falling
     // through would insert on the line under it, or toggle the selection mid-trajectory.
     if (event.altKey && event.shiftKey) {
+      // 🛑 The FIRST anchor of an open run closes it, as it does in every drawing tool: laying a
+      // point on top of the one a run starts from is what a hand means by « join it up ».
+      const first = this.pathPointAt(event)
+      const run = first ? railOf(this.applied.get(first.nodeId)) : null
+      if (first && !first.part && first.index === 0 && run && !run.closed) {
+        this.options.onClosePath?.(first.nodeId)
+        return
+      }
+
       const spot = this.railSpotAt(event)
       if (spot) this.options.onAppendPathPoint?.(spot.nodeId, spot.point)
       return
@@ -5121,7 +5302,7 @@ export class SceneRenderer {
    * was plainly visible. It also settles what a ray never could — the curve lies right across
    * its own control points, so the nearest INTERSECTION was often the line.
    */
-  private pathPointAt(event: PointerEvent): { nodeId: string; index: number } | null {
+  private pathPointAt(event: PointerEvent): PickedPathPoint | null {
     const ndc = this.viewport.pointerNdcOf(event)
     if (!ndc) return null
 
@@ -5130,7 +5311,7 @@ export class SceneRenderer {
       { x: ndc.x, y: ndc.y },
       KNOB_REACH,
     )
-    return picked ? { nodeId: picked.nodeId, index: picked.index } : null
+    return picked ? { nodeId: picked.nodeId, index: picked.index, part: picked.part } : null
   }
 
   /** Every knob of every rail being worked on, as the screen sees it. */
@@ -5139,12 +5320,22 @@ export class SceneRenderer {
 
     for (const rail of this.workedRails()) {
       for (const knob of rail.children) {
-        const index = knobIndexOf(knob.name)
+        // A tangent is only pickable while it SHOWS, which is while its anchor is the one held:
+        // hidden ones would take clicks meant for the surface behind them.
+        const handle = knob.visible ? handlePartOf(knob.name) : null
+        const index = handle?.index ?? knobIndexOf(knob.name)
         if (index === null) continue
 
         knob.getWorldPosition(RAIL_SPOT)
         RAIL_SPOT.project(camera)
-        projected.push({ nodeId: rail.name, index, x: RAIL_SPOT.x, y: RAIL_SPOT.y, z: RAIL_SPOT.z })
+        projected.push({
+          nodeId: rail.name,
+          index,
+          part: handle?.part,
+          x: RAIL_SPOT.x,
+          y: RAIL_SPOT.y,
+          z: RAIL_SPOT.z,
+        })
       }
     }
 
@@ -5194,13 +5385,13 @@ export class SceneRenderer {
     if (!nearest || nearest.index === undefined) return null
 
     const nodeId = nearest.object.parent?.name
-    const node = nodeId ? this.applied.get(nodeId) : null
-    if (!nodeId || node?.type !== 'path') return null
+    const rail = nodeId ? railOf(this.applied.get(nodeId)) : null
+    if (!nodeId || !rail) return null
 
     // The MIDDLE of the sample three hands back: `index` names where the segment starts, so
     // reading it straight puts a click in the last sixty-fourth before a control point into the
     // stretch before it.
-    return { nodeId, index: segmentAt(node.path, (nearest.index + 0.5) / PATH_SAMPLES) }
+    return { nodeId, index: segmentAt(rail, (nearest.index + 0.5) / PATH_SAMPLES) }
   }
 
   /**
@@ -5218,8 +5409,9 @@ export class SceneRenderer {
     if (!nodeId || !ndc) return null
 
     const rail = this.objects.get(nodeId)
-    const node = this.applied.get(nodeId)
-    const anchor = node?.type === 'path' ? node.path.points.at(-1) : null
+    // The LAST anchor is only where the plane stands: on a closed run the point still lands in
+    // the span it falls in — see `withPointAppended`.
+    const anchor = railOf(this.applied.get(nodeId))?.points.at(-1)
     if (!rail || !anchor) return null
 
     const camera = this.cameraInHand()
@@ -5473,6 +5665,45 @@ function disposeMaterial(mesh: Mesh): void {
   if (Array.isArray(material)) for (const entry of material) entry.dispose()
   else material.dispose()
 }
+
+/**
+ * What each walking node FEELS, read off its controller. The physics reads the same two fields —
+ * `characters.capsuleOf` — so what is drawn is what is felt, never a node's own geometry.
+ */
+function capsuleBodiesOf(nodes: readonly SceneNode[]): ReadonlyMap<string, AidBody> {
+  // Cached on the LIST, as `allPartsOf` is: `apply` runs on every selection and every frame of a
+  // slider drag, and neither changes the identity of `nodes` — this was a third walk of it.
+  return cachedOn(bodiesByNodes, nodes, () => walkCapsuleBodies(nodes))
+}
+
+const bodiesByNodes = new WeakMap<readonly SceneNode[], ReadonlyMap<string, AidBody>>()
+
+function walkCapsuleBodies(nodes: readonly SceneNode[]): ReadonlyMap<string, AidBody> {
+  const found = new Map<string, AidBody>()
+  for (const node of nodes) {
+    const walker = node.components?.find(one => one.type === 'CharacterController')
+    if (!walker) continue
+
+    // 🛑 Through `numberOf` and the runtime's OWN defaults, as `characters.capsuleOf` reads them:
+    // a controller tuned to nothing is felt at 1,8 by the physics, and read raw it gave `NaN` —
+    // so the one body a cage exists for was outlined by nothing at all.
+    found.set(node.id, {
+      height: numberOf(walker, 'height', WALKER.height),
+      radius: numberOf(walker, 'radius', WALKER.radius),
+    })
+  }
+  return found
+}
+
+/** The runtime's own defaults, so what is DRAWN is what is FELT — see `characters.capsuleOf`. */
+const WALKER = COMPONENT_DEFAULTS.CharacterController
+
+// Rewritten in place: `facingOf` answers once per arm per apply.
+const FACING = new Euler()
+const FACED = new Quaternion()
+
+/** Nothing drawn off a component — what a window that plays the scene is handed. */
+const NO_RIGS: AidRigs = { bodies: new Map(), arms: new Map() }
 
 /**
  * Which of the three strategies draws the repeated shapes — the cells unless something says

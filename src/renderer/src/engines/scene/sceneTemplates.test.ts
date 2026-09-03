@@ -3,12 +3,76 @@ import { DEFAULT_CHECKER_TEXTURE } from '@shared/domain/checkerTexture'
 import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
+import { textOf } from '@game/runtime/componentFields'
+import { createHierarchy } from '@/game/hierarchy'
+import { aimedFrom, armRest } from './nodeFactory'
+import { isPlayerModule, playerPartsOf } from './playerModule'
 import { pitchTowards, sceneFromTemplate } from './sceneTemplates'
-import type { SceneNode } from './sceneState'
+import { subtreesOf, type SceneNode } from './sceneState'
 
 const typesIn = (nodes: readonly SceneNode[]): string[] => nodes.map(node => node.type)
 
 describe('sceneFromTemplate', () => {
+  /**
+   * 🛑 What a machine points at, held against what the template actually carries. A name nobody
+   * wears is a beacon that never turns and a drone that never follows — in silence, since the
+   * systems answer nothing for a name they cannot resolve. Renaming the stand-in is what this
+   * catches, and only a template can: the level names `Character`, which the level does not hold.
+   */
+  it('points every component at a name its own template carries', () => {
+    for (const id of SCENE_TEMPLATE_IDS) {
+      const nodes = sceneFromTemplate(id).nodes
+      const names = new Set(nodes.map(node => node.name))
+      const wanted = nodes.flatMap(node =>
+        (node.components ?? []).flatMap(component =>
+          typeof component.target === 'string' && component.target !== '' ? [component.target] : [],
+        ),
+      )
+
+      expect({ id, missing: wanted.filter(name => !names.has(name)) }).toEqual({ id, missing: [] })
+    }
+  })
+
+  /**
+   * 🛑 A template poses its camera by hand while its arm names the numbers again, and the two
+   * drifted: the circuit opened 11,56 m off and backwards, the module 21,8° off in PITCH — which
+   * is why the rotation is held here too, and not the seat alone.
+   */
+  it('seats and aims the camera of every armed template where the arm will put it', () => {
+    const seated: Record<string, unknown> = {}
+
+    for (const id of SCENE_TEMPLATE_IDS) {
+      const nodes = sceneFromTemplate(id).nodes
+      const byId = new Map(nodes.map(node => [node.id, node]))
+      const byName = new Map(nodes.map(node => [node.name, node]))
+      const hierarchy = createHierarchy(byId, () => null)
+      const worldOf = (node: SceneNode) => hierarchy.worldOf(node.id, node.transform)
+
+      for (const node of nodes) {
+        const arm = node.components?.find(one => one.type === 'SpringArm')
+        if (!arm) continue
+
+        const subject = byName.get(textOf(arm, 'subject', ''))
+        const camera = byName.get(textOf(arm, 'camera', ''))
+        if (!subject || !camera) {
+          seated[id] = 'unresolved'
+          continue
+        }
+
+        const stands = worldOf(subject)
+        const { pivot, seat } = armRest(stands.position, stands.rotation.y, arm)
+        const at = worldOf(camera)
+        const turned = aimedFrom(seat, pivot)
+        seated[id] =
+          Math.hypot(at.position.x - seat.x, at.position.y - seat.y, at.position.z - seat.z) <
+            0.001 && Math.abs(at.rotation.x - turned.x) < 0.001
+      }
+    }
+
+    // The keys ARE the coverage: a template that stops being checked shows up as a missing one.
+    expect(seated).toEqual({ thirdPerson: true, car: true })
+  })
+
   it('opens every template on a lit scene, so none of them looks like a broken viewport', () => {
     for (const id of SCENE_TEMPLATE_IDS) {
       expect(typesIn(sceneFromTemplate(id).nodes)).toContain('light')
@@ -45,14 +109,22 @@ describe('sceneFromTemplate', () => {
     expect(typesIn(sceneFromTemplate('cinematic').nodes)).toContain('path')
   })
 
-  it('stands a person-sized stand-in in the two templates that frame one', () => {
-    const framed: SceneTemplateId[] = ['thirdPerson', 'topDown']
-    for (const id of framed) {
-      const capsule = sceneFromTemplate(id).nodes.find(
-        node => node.type === 'mesh' && node.geometry.kind === 'capsule',
-      )
-      expect(capsule?.transform.position.y).toBeCloseTo(0.9)
-    }
+  it('stands a person-sized stand-in in the template that frames one', () => {
+    const capsule = sceneFromTemplate('topDown').nodes.find(
+      node => node.type === 'mesh' && node.geometry.kind === 'capsule',
+    )
+
+    expect(capsule?.transform.position.y).toBeCloseTo(0.9)
+  })
+
+  /** The module carries its own body: what stands is its `Capsule`, and the mesh hangs under it. */
+  it('opens the third person on a player module rather than a loose stand-in', () => {
+    const { nodes } = sceneFromTemplate('thirdPerson')
+    const parts = playerPartsOf(nodes)
+
+    expect(parts?.module.name).toBe('Player_Module')
+    expect(parts?.body?.transform.position.y).toBeCloseTo(0.9)
+    expect(nodes.filter(node => node.type === 'camera')).toHaveLength(1)
   })
 
   it('gives the character templates feet on the ground, which nothing reads yet', () => {
@@ -79,11 +151,23 @@ describe('sceneFromTemplate', () => {
   // Three cadrages over an empty floor proved nothing: what makes them worth picking is a set
   // one can climb, fall off and bump into — the same one for the three.
   it('opens the three character views on the same level, moving only the camera', () => {
-    const shapesOf = (id: SceneTemplateId): string =>
-      sceneFromTemplate(id)
-        .nodes.filter(node => node.type === 'mesh')
+    // The LEVEL alone, and it has to be said in two ways: `thirdPerson` stands a player MODULE
+    // on it — a figure of a dozen meshes — while the other two still carry the old `Character`
+    // capsule. Whoever walks the set is not the set, in either shape; the second line goes the
+    // day the last template is migrated.
+    const shapesOf = (id: SceneTemplateId): string => {
+      const { nodes } = sceneFromTemplate(id)
+      const walker = new Set(
+        subtreesOf(
+          nodes,
+          nodes.filter(isPlayerModule).map(node => node.id),
+        ).map(node => node.id),
+      )
+      return nodes
+        .filter(node => node.type === 'mesh' && !walker.has(node.id) && node.name !== 'Character')
         .map(node => (node.type === 'mesh' ? node.geometry.kind : ''))
         .join()
+    }
 
     expect(shapesOf('topDown')).toBe(shapesOf('thirdPerson'))
     expect(shapesOf('firstPerson').split(',').length).toBeGreaterThan(15)
@@ -169,4 +253,27 @@ describe('the template the composition is judged on', () => {
     expect(demo.animation.sheet).toContain(SCENE_SUBJECT_ID)
     expect(demo.animation.sheet).toContain(demo.animation.shots[0]?.cameraId)
   })
+})
+
+/**
+ * 🛑 An arm is a COMPONENT, so no menu of node types can offer one — a template shipping without
+ * it is a feature nobody reaches. What is left here is the MACHINE, which has no module yet:
+ * `thirdPerson` left this list the day its arm stopped naming anything.
+ */
+describe('the arm the playable templates hang their camera on', () => {
+  const wired: readonly { template: SceneTemplateId; subject: string }[] = [
+    { template: 'car', subject: 'Car' },
+  ]
+
+  for (const { template, subject } of wired) {
+    it(`wires ${template} to a subject and a camera the scene really holds`, () => {
+      const { nodes } = sceneFromTemplate(template)
+      const arm = nodes.flatMap(node => node.components ?? []).find(one => one.type === 'SpringArm')
+      const named = nodes.map(node => node.name)
+
+      expect(arm?.subject).toBe(subject)
+      expect(named).toContain(arm?.camera)
+      expect(named).toContain(subject)
+    })
+  }
 })

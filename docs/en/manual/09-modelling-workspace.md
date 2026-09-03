@@ -10,7 +10,7 @@ The workspace where you build a scene with volume: objects, lights, a camera tha
 
 The **+** button on the left rail creates a fresh scene. A project must be open.
 
-The window that opens asks for a name, then **what the scene opens on**: eight templates, under
+The window that opens asks for a name, then **what the scene opens on**: ten templates, under
 the name. The choice applies at creation only — an open scene does not change template.
 
 | Template | What it lays down |
@@ -21,6 +21,8 @@ the name. The choice applies at creation only — an open scene does not change 
 | **Cinematic** | a wide floor, a raking light, a camera and its **rail** — the shot is already a move |
 | **Architecture** | a very wide floor, a low sun, a sky, and a camera at eye height |
 | **First person**, **Third person**, **Top down** | all three open on the **test level** below, and differ only in where the camera stands |
+| **Car** | the same test level, with a car parked at the start — four suspended wheels, an engine, steering. `W` `S` accelerate and brake, `A` `D` steer, `Space` is the hand brake |
+| **Aircraft** | an airfield, a runway, and a plane **already flying** at 120 m. `W` `S` pitch down and up, `A` `D` roll, `Q` `E` yaw, `⇧ Shift` and `Ctrl` open and close the throttle |
 
 A scene is black until a light is placed: that is normal, and the Lights panel says so. Only the
 **Empty** template can take you there, by deleting its lights.

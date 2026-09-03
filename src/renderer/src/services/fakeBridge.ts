@@ -231,6 +231,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       absent: () => Promise.resolve([]),
       saveAudio: () => Promise.reject(new Error('no project')),
       savePicture: () => Promise.reject(new Error('no project')),
+      savePlayerModule: () => Promise.reject(new Error('no project')),
       saveLayered: () => Promise.reject(new Error('no project')),
       saveMesh: () => Promise.reject(new Error('no project')),
       saveAnimation: () => Promise.reject(new Error('no project')),
@@ -378,6 +379,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onClosed: () => () => {},
       ...overrides.characterWindow,
     },
+    playerModuleWindow: { open: () => Promise.resolve() },
     gameWindow: {
       open: () => Promise.resolve(),
       close: () => Promise.resolve(),

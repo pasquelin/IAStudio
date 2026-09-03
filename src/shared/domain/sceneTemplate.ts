@@ -17,19 +17,27 @@ export type SceneTemplateId =
   | 'firstPerson'
   | 'thirdPerson'
   | 'topDown'
+  | 'car'
+  | 'plane'
 
 /**
- * Which shelf a template is drawn on. The three character ones differ from the five above by
- * what the camera is FOR, not by what the scene holds, and a flat list of eight hides that.
+ * Which shelf a template is drawn on. The three character ones differ from the six above by
+ * what the camera is FOR, not by what the scene holds, and a flat list of eleven hides that. The
+ * two machine ones are neither: what changes there is what the player IS.
  */
-export type SceneTemplateGroup = 'general' | 'character'
+export type SceneTemplateGroup = 'general' | 'character' | 'machine'
 
-export const SCENE_TEMPLATE_GROUPS: readonly SceneTemplateGroup[] = ['general', 'character']
+export const SCENE_TEMPLATE_GROUPS: readonly SceneTemplateGroup[] = [
+  'general',
+  'character',
+  'machine',
+]
 
 /** Ordered, and the order is what the window draws: `Record` makes a new id a compile error. */
 export const TEMPLATES_BY_GROUP: Record<SceneTemplateGroup, readonly SceneTemplateId[]> = {
   general: ['empty', 'basic', 'photoStudio', 'cinematic', 'archvis', 'postProcessing'],
   character: ['firstPerson', 'thirdPerson', 'topDown'],
+  machine: ['car', 'plane'],
 }
 
 export const SCENE_TEMPLATE_IDS: readonly SceneTemplateId[] = SCENE_TEMPLATE_GROUPS.flatMap(

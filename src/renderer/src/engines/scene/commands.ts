@@ -1,4 +1,5 @@
 import { commandId, composed, type Command } from '../core/history'
+import { bringsSecondPlayer, leavesPlayerModule, tearsPlayerApart } from './playerModule'
 import {
   clipLane,
   isVector3,
@@ -82,6 +83,9 @@ export function removeNode(id: string): Command<SceneState> {
 
   return {
     id: `remove:${id}`,
+    // Through `refuses` like its plural twin, never by handing the state back: a refusal pushed
+    // as a step is a ⌘Z that does nothing, and a redo stack emptied for an edit that never ran.
+    refuses: state => tearsPlayerApart(state.nodes, [id]),
     apply: state => {
       index = state.nodes.findIndex(node => node.id === id)
       if (index < 0) return state
@@ -635,12 +639,25 @@ export function setSpriteOn(
 }
 
 /**
+ * Whether a drag may land: no loop closed, and no player module left without its body or its eye.
+ * The one predicate every door reads — `canReparent` alone let a module be taken apart.
+ */
+export function canMoveNode(
+  nodes: readonly SceneNode[],
+  id: string,
+  parentId: string | null,
+): boolean {
+  return canReparent(nodes, id, parentId) && !leavesPlayerModule(nodes, id, parentId)
+}
+
+/**
  * Hangs a node from another, or from the scene when the parent is `null`.
  *
  * The old parent is captured **as the command runs**, like every other edit here: what a node
  * hung from before is only known once the move actually happens, and a redo has to re-capture.
  *
- * A move that would close the tree on itself is refused rather than applied — see `canReparent`.
+ * A move that would close the tree on itself, or take a required part out of a player module, is
+ * refused rather than applied — see `canMoveNode`.
  */
 export function reparentNode(id: string, parentId: string | null): Command<SceneState> {
   let previous: string | null = null
@@ -650,7 +667,7 @@ export function reparentNode(id: string, parentId: string | null): Command<Scene
     id: `reparent:${id}`,
     apply: state => {
       const node = nodeById(state, id)
-      if (!node || node.parentId === parentId || !canReparent(state.nodes, id, parentId)) {
+      if (!node || node.parentId === parentId || !canMoveNode(state.nodes, id, parentId)) {
         moved = false
         return state
       }
@@ -685,7 +702,7 @@ export function reorderNodes(
       const moving = ids
         .map(id => nodeById(state, id))
         .filter(node => node !== null)
-        .filter(node => canReparent(state.nodes, node.id, parentId))
+        .filter(node => canMoveNode(state.nodes, node.id, parentId))
       if (moving.length === 0) return state
 
       const placeOf = new Map(state.nodes.map((node, at) => [node.id, at]))
@@ -964,6 +981,9 @@ export function addNodes(copies: readonly SceneNode[]): Command<SceneState> {
       'add',
       copies.map(node => node.id),
     ),
+    // 🛑 Here and not at each door: a paste, a ⌘D, a prefab and a template all arrive through
+    // this one, and three of them never knew to ask. Which module plays would go back to order.
+    refuses: state => copies.length > 0 && bringsSecondPlayer(state.nodes, copies),
     // Nothing to put down clears no selection: an empty add is a no-op, not a deselect.
     apply: state =>
       copies.length === 0
@@ -1001,7 +1021,9 @@ export function removeNodes(
     // What `multi` of one command per node gave for free: `[].every()` is true, so a delete that
     // reaches nothing refused. Without it ⌘Z gains a step that does nothing, and the redo stack
     // is cleared for an edit that never happened.
-    refuses: () => doomed.size === 0,
+    // 🛑 A module standing without its body or its eye is a scene whose camera falls back on the
+    // sweep — the arbitration the module exists to replace, reintroduced by a plain Delete.
+    refuses: state => doomed.size === 0 || tearsPlayerApart(state.nodes, ids),
     // ONE sweep, not one `removeNode` per doomed node — each of those scans the scene twice.
     apply: state => {
       taken = []

@@ -6,18 +6,24 @@ import type {
   Transform,
   Vector3,
 } from '@shared/domain/scene'
-import { DEFAULT_CAMERA, DEFAULT_PATH } from '@shared/domain/scene'
+import { DEFAULT_CAMERA, DEFAULT_PATH, type FigureKind } from '@shared/domain/scene'
 import type { CsgGraph } from '@shared/domain/csg'
+import type { Component } from '@shared/domain/component'
+import { COMPONENTS, newComponent } from '@shared/domain/componentRegistry'
+import { armRestOffsets } from '@game/runtime/systems/springArmRig'
 import { newId } from '@/helpers/ids'
 import { defaultMeshMaterial } from './checkerTextures'
+import { figureByKind, figureScaleWithin, type FigureDescriptor } from './figures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
+import { isPlayerModule, PLAYER_KIND } from './playerModule'
 import {
   CAMERA_ICON,
   CARVED_ICON,
   GROUP_ICON,
   MODEL_ICON,
   PATH_ICON,
+  PLAYER_ICON,
   SPRITE_ICON,
   TEXT_ICON,
 } from './nodeKinds'
@@ -244,8 +250,144 @@ export function groupNode(transform = IDENTITY_TRANSFORM, name = 'Group'): Scene
   }
 }
 
+/**
+ * The capsule draws nothing of its own: `CharacterController` carries the height and radius the
+ * physics feels, and what is SEEN is the figure under it — which a model replaces.
+ */
+export function playerModuleNodes(): readonly SceneNode[] {
+  const module: SceneNode = {
+    ...groupNode(IDENTITY_TRANSFORM, 'Player_Module'),
+    components: [newComponent('Player')],
+  }
+  const capsule: SceneNode = {
+    // Half the controller's own height: a capsule stands ON the ground, and its node is its centre.
+    ...groupNode(transformAt({ x: 0, y: WALKER_HEIGHT / 2, z: 0 }), 'Capsule'),
+    parentId: module.id,
+    components: [newComponent('CharacterController')],
+  }
+  // 🛑 A figure and not a capsule: what stands in a walking body is a BODY, and a capsule inside
+  // a capsule showed nothing a cage does not already draw. Every part of it stays an editable
+  // mesh — see `figures.ts` — so replacing the look of a player is replacing these nodes.
+  const figure = figureNodesUnder(capsule.id)
+  const arm: SceneNode = { ...groupNode(IDENTITY_TRANSFORM, 'SpringArm'), parentId: module.id }
+  // 🛑 Where the arm will put it on the first frame of play, worked out from the very functions
+  // the system uses. Left at its parent's origin, the camera stood at the player's feet, and
+  // nothing in the editor moves it: an arm only acts once the scene is playing.
+  // 🛑 Aimed at the PIVOT and not at the body: `lookAt` defaults to the pivot, so a node turned on
+  // the feet made pressing Play tip the shot by 21,8° — measured 2026-09-03.
+  const { pivot, seat } = armRest(capsule.transform.position)
+  const camera: SceneNode = {
+    ...cameraNode(transformAt(seat, aimedFrom(seat, pivot))),
+    parentId: arm.id,
+  }
+
+  // 🛑 The NAMES its own children wear, never their ids: a uuid is a field nobody can read, and
+  // the tree resolves these two inside the module at every world build — see `withBoundPlayerArm`.
+  return [
+    module,
+    capsule,
+    ...figure,
+    {
+      ...arm,
+      components: [{ ...newComponent('SpringArm'), subject: capsule.name, camera: camera.name }],
+    },
+    camera,
+  ]
+}
+
+/** The controller's own defaults, read rather than copied: tuning one there moves the body here. */
+const WALKER_HEIGHT = Number(COMPONENTS.CharacterController.defaults.height)
+const WALKER_RADIUS = Number(COMPONENTS.CharacterController.defaults.radius)
+
+/**
+ * Where a resting arm hangs, over a body standing at `body` and turned by `yaw` — its `pivot` and
+ * the `seat` it puts a camera at. 🛑 Off the very functions the SYSTEM rides: a template posing
+ * its camera anywhere else opens on a shot the first frame throws away — 11,56 m, 2026-09-03.
+ */
+export function armRest(
+  body: Vector3,
+  yaw = 0,
+  arm: Component = newComponent('SpringArm'),
+): { pivot: Vector3; seat: Vector3 } {
+  const lift = { ...ORIGIN }
+  const back = { ...ORIGIN }
+  armRestOffsets(arm, { yaw, pitch: 0 }, lift, back)
+  const pivot = { x: body.x + lift.x, y: body.y + lift.y, z: body.z + lift.z }
+  return { pivot, seat: { x: pivot.x + back.x, y: pivot.y + back.y, z: pivot.z + back.z } }
+}
+
+/**
+ * How a camera at `from` is turned to look at `at`. 🛑 Three points a camera down its own −z, so
+ * the yaw is measured from that axis — an editor showing a camera with its back to the body it
+ * follows says nothing about what the arm does.
+ */
+export function aimedFrom(from: Vector3, at: Vector3): Vector3 {
+  const dx = at.x - from.x
+  const dy = at.y - from.y
+  const dz = at.z - from.z
+  return { x: Math.atan2(dy, Math.hypot(dx, dz)), y: Math.atan2(dx, dz) + Math.PI, z: 0 }
+}
+
+/**
+ * A figure laid down as real nodes: one group, and a painted box per part. The one place a figure
+ * becomes a scene, as `meshNode` is the one place a mesh does.
+ *
+ * `scale` sizes the whole thing without touching a part: a figure is a family of its own and
+ * knows nothing of a controller, so it is the caller that fits one to the body it fills.
+ */
+export function figureNodes(
+  figure: FigureDescriptor,
+  scale = 1,
+  parentId: string | null = null,
+): readonly SceneNode[] {
+  const root = {
+    ...groupNode(transformAt({ x: 0, y: 0, z: 0 }), 'Figure'),
+    parentId,
+    transform: {
+      ...transformAt({ x: 0, y: 0, z: 0 }),
+      scale: { x: scale, y: scale, z: scale },
+    },
+  }
+  return [
+    root,
+    ...figure.parts.map(part =>
+      meshNode(
+        { kind: 'box', width: part.size.x, height: part.size.y, depth: part.size.z },
+        {
+          // A fresh vector per part: `transformAt` KEEPS what it is handed, and the parts are a
+          // module-level table — two figures shared one position each, and moving a leg on one
+          // moved it on the other.
+          transform: transformAt({ ...part.at }),
+          // Composed here rather than through `levelParts.surface`, which would close an import
+          // cycle back onto this module. A descriptor PER part: two nodes holding one object
+          // would be recoloured together.
+          material: { ...defaultMeshMaterial(), color: part.colour },
+          name: part.name,
+          parentId: root.id,
+        },
+      ),
+    ),
+  ]
+}
+
+/** The default figure, sized to fit INSIDE the body it stands in — the module's own stand-in. */
+function figureNodesUnder(bodyId: string): readonly SceneNode[] {
+  const figure = figureByKind(DEFAULT_FIGURE)?.create()
+  if (!figure) return []
+
+  const worn =
+    (WALKER_HEIGHT / figure.height) * figureScaleWithin(figure, WALKER_HEIGHT, WALKER_RADIUS)
+  return figureNodes(figure, worn, bodyId)
+}
+
+/** Which figure a fresh module stands in. Typed, so dropping it from the family breaks the build. */
+const DEFAULT_FIGURE: FigureKind = 'humanoid'
+
 /** The glyph belongs to the registry entry, not to whichever panel happens to draw the node. */
 export function iconOf(node: SceneNode): string {
+  // Before the type, and it is the only glyph read off a component: a module wearing a folder is
+  // a module nobody finds in an outliner of thirty rows.
+  if (isPlayerModule(node)) return PLAYER_ICON
   if (node.type === 'model') return MODEL_ICON
   if (node.type === 'group') return GROUP_ICON
   if (node.type === 'sprite') return SPRITE_ICON
@@ -263,13 +405,21 @@ export function iconOf(node: SceneNode): string {
 }
 
 /**
- * One node from one registry entry, whichever registry knows the kind. The toolbar, the panels
- * and the native menu all add through here: three call sites building a node their own way is
- * three ways for a mesh to arrive without a material.
- *
- * A kind no registry claims, or one declared but not buildable yet, yields `null` rather than a
- * node with nothing in it.
+ * What one Add gives the scene, and the door the toolbar, the panels and the native menu share —
+ * three call sites building a node their own way is three ways for a mesh to arrive without a
+ * material. A LIST, because a module is several nodes born parented.
  */
+export function createNodesOf(kind: string): readonly SceneNode[] {
+  if (kind === PLAYER_KIND) return playerModuleNodes()
+
+  const figure = figureByKind(kind)
+  if (figure) return figureNodes(figure.create())
+
+  const node = createNodeOf(kind)
+  return node ? [node] : []
+}
+
+/** The single-node half of the door above. Nothing adds through this one — see `createNodesOf`. */
 export function createNodeOf(kind: string): SceneNode | null {
   const primitive = primitiveByKind(kind)
   if (primitive) return meshNode(primitive.create())

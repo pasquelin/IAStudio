@@ -1,11 +1,11 @@
 import type { Object3D } from 'three'
+import type { SmoothPath } from '@shared/domain/scene'
 import { Texture, type ColorSpace } from 'three'
 import {
   DEFAULT_CAMERA,
   DEFAULT_PATH,
   type CameraDescriptor,
   type LightDescriptor,
-  type PathDescriptor,
   type TextDescriptor,
 } from '@shared/domain/scene'
 import type { Bounds } from './rigFit'
@@ -137,7 +137,8 @@ export function cameraNodeFixture(id: string, camera: Partial<CameraDescriptor> 
   }
 }
 
-export function pathNodeFixture(id: string, path: Partial<PathDescriptor> = {}): PathNode {
+/** Typed on the smooth rail alone: a Bézier one is handed in whole, `bezierPathOf` making it. */
+export function pathNodeFixture(id: string, path: Partial<SmoothPath> = {}): PathNode {
   return {
     id,
     parentId: null,

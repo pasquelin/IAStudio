@@ -37,6 +37,7 @@
     "stt:fetch": "node scripts/fetch-stt.mjs",
     "engine:fetch": "node scripts/fetch-engine.mjs",
     "textures:make": "node scripts/make-checker-textures.mjs",
+    "jolt:build": "node scripts/build-jolt.mjs",
     "licences:collect": "node scripts/collect-licences.mjs",
     "engine:licences": "node scripts/collect-python-licences.mjs",
     "manual:collect": "node scripts/collect-manual.ts",
@@ -54,7 +55,6 @@
     "preview:site": "node scripts/serve.mjs _site --base=/IAStudio/"
   },
   "dependencies": {
-    "@dimforge/rapier3d-compat": "^0.20.0",
     "@jitl/quickjs-singlefile-browser-release-sync": "^0.32.0",
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
@@ -66,6 +66,7 @@
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
     "fflate": "^0.8.3",
+    "jolt-physics": "file:vendor/jolt-physics",
     "mediabunny": "^1.53.1",
     "node-llama-cpp": "^3.20.0",
     "opentype.js": "^2.0.0",

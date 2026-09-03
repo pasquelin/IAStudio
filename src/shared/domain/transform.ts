@@ -38,10 +38,14 @@ export function movedParts(transform: Transform): Partial<Transform> {
   for (const part of PARTS) {
     const rest = IDENTITY_TRANSFORM[part]
     const value = transform[part]
-    if (value.x !== rest.x || value.y !== rest.y || value.z !== rest.z) moved[part] = value
+    if (!sameVector3(value, rest)) moved[part] = value
   }
   return moved
 }
+
+/** Whether two points stand at the same place. Written out at four sites before it lived here. */
+export const sameVector3 = (one: Vector3, other: Vector3): boolean =>
+  one.x === other.x && one.y === other.y && one.z === other.z
 
 /** A transform nothing else holds a reference into — what a runtime copies out of a document. */
 export function copyTransform(transform: Transform): Transform {

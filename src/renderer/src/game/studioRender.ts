@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import { copyTransform, type Transform, type Vector3 } from '@shared/domain/transform'
+import { copyTransform, sameVector3, type Transform } from '@shared/domain/transform'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
@@ -9,7 +9,7 @@ import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
  * engine: a test then drives this without a WebGL context, and nothing here can reach for the
  * rest of a 4 300-line class by accident.
  */
-export type SceneDraw = Pick<SceneRenderer, 'apply' | 'placeView' | 'viewPlacement'>
+export type SceneDraw = Pick<SceneRenderer, 'apply' | 'placeView' | 'releaseView' | 'viewPlacement'>
 
 /**
  * What draws a running game inside the studio: the scene the editor already has, redrawn from a
@@ -20,8 +20,9 @@ export type SceneDraw = Pick<SceneRenderer, 'apply' | 'placeView' | 'viewPlaceme
  *
  * 🛑 That is not the whole cost, and saying so would be a comfortable lie: `apply` is the engine's
  * FULL pass — every node walked twice, poses laid, shadows re-cut, instances regrouped — so one
- * moving platform in a large scene pays all of it, sixty times a second. A `SceneRenderer` of its
- * own for Play is what fixes that, and it is not this lot.
+ * moving platform in a large scene pays all of it. Since the poses are INTERPOLATED it is paid at
+ * the rate of the SCREEN, not of the step: 120 a second on a fast display, not 60. A
+ * `SceneRenderer` of its own for Play is what fixes that, and it is not this lot.
  *
  * 🛑 It never writes to the store. That is the whole of why STOP restores nothing: one `apply` of
  * the untouched edit state puts the viewport back where it was.
@@ -108,10 +109,7 @@ export function createStudioRender(
 const NOWHERE = { x: Number.NaN, y: Number.NaN, z: Number.NaN }
 
 const sameView = (one: CameraView, other: CameraView): boolean =>
-  samePoint(one.position, other.position) && samePoint(one.target, other.target)
-
-const samePoint = (one: Vector3, other: Vector3): boolean =>
-  one.x === other.x && one.y === other.y && one.z === other.z
+  sameVector3(one.position, other.position) && sameVector3(one.target, other.target)
 
 const sameTransform = (one: Transform, other: Transform): boolean =>
   one.position.x === other.position.x &&

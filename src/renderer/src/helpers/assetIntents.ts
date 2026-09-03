@@ -5,6 +5,7 @@ import {
   type Asset,
   type AssetType,
 } from '@shared/domain/asset'
+import { isPlayerModulePath } from '@shared/domain/playerModuleFile'
 import { workspaceOfType } from '@shared/domain/assetKind'
 import type { DocumentDescriptor, DocumentKind } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
@@ -244,6 +245,18 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     ...inDocument('material', placeMaterialChannel, isLocalPicture),
   },
 ]
+
+/**
+ * Whether a file is a player MODULE rather than a mesh — the one thing that tells the two
+ * double-clicks apart, since both are glTF and both live on the mesh shelf.
+ */
+export function opensAsPlayerModule(asset: Asset): boolean {
+  return (
+    asset.type === 'mesh' &&
+    asset.location === 'local' &&
+    isPlayerModulePath(asset.path ?? asset.name)
+  )
+}
 
 /** Every destination that would take this kind, whether or not its space is open right now. */
 export function intentsFor(type: AssetType): readonly AssetIntent[] {

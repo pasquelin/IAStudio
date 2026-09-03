@@ -375,13 +375,14 @@ export type ActionField = {
    */
   options?: readonly string[]
   /**
-   * This value names a FOLDER of the machine, so the question can offer to point at one — the
-   * model guesses a name where only the person knows where their work lives.
+   * What this value NAMES, so a surface can offer to point at one instead of asking for the word.
+   * `folder` is a folder of the machine — the model guesses a name where only the person knows
+   * where their work lives; `node` is a node of the scene, which the inspector offers as a list.
    *
    * 🛑 Not `PathKind`: the button's label says « dossier », and nothing would rougir on a field
    * that asked for a FILE under it. A second kind comes with a second label.
    */
-  picks?: 'folder'
+  picks?: 'folder' | 'node'
   min?: number
   max?: number
   /** A list of `kind` rather than one of it. `raw` stays a single value — it is already open. */

@@ -257,6 +257,8 @@ describe('the lists that stand for a union', () => {
       'scene.model': true,
       'scene.bvh': true,
       'scene.carved': true,
+      'scene.player': true,
+      'scene.playerParts': true,
       'scene.texture': true,
       'scene.animation': true,
       'scene.export': true,

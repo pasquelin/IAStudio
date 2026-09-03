@@ -4,7 +4,9 @@ import {
   CameraHelper,
   DirectionalLight,
   HemisphereLight,
+  Line,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   type Object3D,
   PerspectiveCamera,
@@ -13,9 +15,21 @@ import {
   SpriteMaterial,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
+import { bezierPathOf, DEFAULT_PATH, type PathDescriptor } from '@shared/domain/scene'
 import { LIGHT_TYPES } from './lightTypes'
-import { buildPath, geometryFor, PATH_CURVE_NAME, sizeKnobFor } from './threeFactory'
+import {
+  buildPath,
+  dressWithRail,
+  geometryFor,
+  barName,
+  handleName,
+  handlePartOf,
+  knobIndexOf,
+  knobName,
+  PATH_CURVE_NAME,
+  PATH_KNOB_PREFIX,
+  sizeKnobFor,
+} from './threeFactory'
 import { DEFAULT_MATERIAL } from './sceneState'
 import {
   applyCamera,
@@ -27,6 +41,7 @@ import {
   applyPath,
   applySprite,
   giveSecondUvSet,
+  showPathHandles,
   showPathKnobs,
   standardMaterialOf,
   tiledGeometry,
@@ -486,6 +501,46 @@ describe('applyCamera', () => {
   })
 })
 
+describe('dressWithRail', () => {
+  const rail = {
+    ...DEFAULT_PATH,
+    points: [
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 },
+    ],
+  }
+
+  /** A band wears the handles of the rail it is swept along — the mesh itself carries them. */
+  it('hangs a line and a knob per point on whatever carries the rail', () => {
+    const mesh = dressWithRail(new Mesh(), rail, { knob: '#ffffff' }, true)
+    const knobs = mesh.children.filter(child => child.name.startsWith(PATH_KNOB_PREFIX))
+
+    expect(knobs).toHaveLength(3)
+    expect(mesh.getObjectByName(PATH_CURVE_NAME)).toBeDefined()
+  })
+
+  /**
+   * 🛑 Drawn THROUGH the matter for a BAND: a rail hangs in the air, but a band's run lies inside
+   * the very surface it shapes — its handles were behind it, and one cannot grab those.
+   */
+  it('draws a banded rail in front of every surface, and a bare one in its place', () => {
+    const depthOf = (object: Object3D | undefined): boolean =>
+      object instanceof Mesh && object.material instanceof MeshBasicMaterial
+        ? object.material.depthTest
+        : true
+    const knobOf = (through: boolean): Object3D | undefined =>
+      dressWithRail(new Mesh(), rail, { knob: '#ffffff' }, through).children.find(child =>
+        child.name.startsWith(PATH_KNOB_PREFIX),
+      )
+
+    expect(depthOf(knobOf(true))).toBe(false)
+    expect(knobOf(true)?.renderOrder).toBeGreaterThan(0)
+    // A rail of its own hangs in the air: seen through everything it would cross the whole set.
+    expect(depthOf(knobOf(false))).toBe(true)
+  })
+})
+
 describe('showPathKnobs', () => {
   /**
    * Only a selected rail hands its points to the gizmo, and a knob per point on every rail is
@@ -500,14 +555,101 @@ describe('showPathKnobs', () => {
 
     showPathKnobs(object, false)
     expect(
-      object.children.filter(child => child instanceof Mesh).map(knob => knob.visible),
+      object.children.filter(child => knobIndexOf(child.name) !== null).map(knob => knob.visible),
     ).toEqual([false, false])
     expect(object.getObjectByName(PATH_CURVE_NAME)?.visible).toBe(true)
 
     showPathKnobs(object, true)
     expect(
-      object.children.filter(child => child instanceof Mesh).map(knob => knob.visible),
+      object.children.filter(child => knobIndexOf(child.name) !== null).map(knob => knob.visible),
     ).toEqual([true, true])
+  })
+})
+
+describe('showPathHandles', () => {
+  const rail = bezierPathOf(
+    [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 },
+      { x: 10, y: 0, z: 10 },
+    ],
+    false,
+  )
+
+  /**
+   * 🛑 The pair of the anchor being worked on, and of no other: twenty-four anchors showing their
+   * tangents at once is a run nobody can read, and Photoshop shows the one clicked.
+   */
+  it('shows the tangents of one anchor and hides every other', () => {
+    const object = buildPath(rail, '#ffffff')
+
+    showPathHandles(object, 1)
+    const shown = object.children.filter(child => child.visible && handlePartOf(child.name))
+
+    expect(shown.map(child => child.name).sort()).toEqual([
+      handleName('in', 1),
+      handleName('out', 1),
+    ])
+  })
+
+  /**
+   * 🛑 A COLOUR OF ITS OWN, handed in: the anchors wear the mesh token and the tangents another,
+   * two things one drags for different reasons not reading as one. Written here as a hex, it
+   * would be the one surface of the studio that never follows its palette.
+   */
+  it('paints the tangents in the colour it is handed, apart from the anchors', () => {
+    const object = dressWithRail(
+      new Mesh(),
+      rail,
+      { knob: '#111111', handle: '#e0a350', start: '#3d7ab8' },
+      false,
+    )
+    const colourOf = (name: string): string => {
+      const child = object.getObjectByName(name)
+      return child instanceof Mesh && child.material instanceof MeshBasicMaterial
+        ? `#${child.material.color.getHexString()}`
+        : ''
+    }
+
+    expect(colourOf(handleName('out', 1))).toBe('#e0a350')
+    expect(colourOf(knobName(1))).toBe('#111111')
+    // 🛑 And the FIRST anchor apart from the rest: a run of identical dots says nothing about
+    // which end it starts from, and a band swept along it has a direction to read.
+    expect(colourOf(knobName(0))).toBe('#3d7ab8')
+  })
+
+  /** The bar is what makes a tangent readable as a lever: without it, a lone dot in a field. */
+  it('ties each tangent to its anchor with a bar', () => {
+    const object = buildPath(rail, '#ffffff')
+    const bar = object.getObjectByName(barName('out', 1))
+    const drawn = bar instanceof Line ? bar.geometry.getAttribute('position') : null
+
+    expect(drawn?.count).toBe(2)
+    expect(drawn?.getX(0)).toBeCloseTo(rail.points[1]!.x, 6)
+  })
+
+  it('hides them all when no anchor is held', () => {
+    const object = buildPath(rail, '#ffffff')
+
+    showPathHandles(object, 1)
+    showPathHandles(object, null)
+
+    expect(object.children.filter(child => child.visible && handlePartOf(child.name))).toEqual([])
+  })
+
+  /**
+   * 🛑 Placed by the BUILD, not only by a later sync: left to the sync, every tangent sat at the
+   * rail's own origin until something else changed the shape — a green dot in the middle of a
+   * field, and no bar anywhere.
+   */
+  it('stands each tangent off its own anchor from the moment it is built', () => {
+    const object = buildPath(rail, '#ffffff')
+    const anchor = rail.points[1]!
+    const out = object.getObjectByName(handleName('out', 1))
+    const reach = rail.kind === 'bezier' ? rail.handles[1]!.out : { x: 0, y: 0, z: 0 }
+
+    expect(out?.position.x).toBeCloseTo(anchor.x + reach.x, 6)
+    expect(out?.position.z).toBeCloseTo(anchor.z + reach.z, 6)
   })
 })
 
@@ -581,18 +723,19 @@ describe('applyPath', () => {
   it('draws the line and one knob per control point', () => {
     const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
 
-    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(2)
+    expect(object.children.filter(child => knobIndexOf(child.name) !== null)).toHaveLength(2)
     expect(object.getObjectByName(PATH_CURVE_NAME)).toBeDefined()
   })
 
   it('follows a point that moved without building a knob for it', () => {
     const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
-    // Child 0 is the line, so the knob of the point that moves is the second one after it.
-    const knob = object.children[2]
+    // By NAME rather than by position: an anchor carries its two tangents and their bars, so what
+    // stands where among the children is not what this is about.
+    const knob = object.getObjectByName(knobName(1))
 
     applyPath(object, pathOf([at(0), at(4)]), '#ffffff')
 
-    expect(object.children[2]).toBe(knob)
+    expect(object.getObjectByName(knobName(1))).toBe(knob)
     expect(knob?.position.x).toBe(4)
   })
 
@@ -600,10 +743,10 @@ describe('applyPath', () => {
     const object = buildPath(pathOf([at(0), at(10)]), '#ffffff')
 
     applyPath(object, pathOf([at(0), at(5), at(10)]), '#ffffff')
-    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(3)
+    expect(object.children.filter(child => knobIndexOf(child.name) !== null)).toHaveLength(3)
 
     applyPath(object, pathOf([at(0), at(10)]), '#ffffff')
-    expect(object.children.filter(child => child instanceof Mesh)).toHaveLength(2)
+    expect(object.children.filter(child => knobIndexOf(child.name) !== null)).toHaveLength(2)
   })
 })
 

@@ -3,11 +3,24 @@ import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domai
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
+import { createPossessions } from '@game/runtime/possessions'
+import { createPossessionSystem } from '@game/runtime/systems/possession'
 import type { Entity } from '@game/runtime/entity'
 import { STEP_SECONDS } from '@game/runtime/gameLoop'
+import { createFollowSystem } from '@game/runtime/systems/follow'
+import { createLookAtSystem } from '@game/runtime/systems/lookAt'
 import { createMovementSystem } from '@game/runtime/systems/movement'
+import { createOrbitSystem } from '@game/runtime/systems/orbit'
+import { createPathSystem } from '@game/runtime/systems/path'
+import { createPatrolSystem } from '@game/runtime/systems/patrol'
+import { createSpinSystem } from '@game/runtime/systems/spin'
 import { createPhysicsSystem } from '@game/runtime/systems/physics'
+import { createPilots } from '@game/runtime/pilots'
+import { createRigs } from '@game/runtime/rigs'
+import { createAircraftSystem } from '@game/runtime/systems/aircraft'
 import { createPlayCameraSystem } from '@game/runtime/systems/playCamera'
+import { createSpringArmSystem } from '@game/runtime/systems/springArm'
+import { createVehicleSystem } from '@game/runtime/systems/vehicle'
 import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
 import { createTimelineSystem } from '@game/runtime/systems/timeline'
 import { createWorld, type System, type World } from '@game/runtime/world'
@@ -15,6 +28,7 @@ import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
 import { createHierarchy } from './hierarchy'
+import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
 
 /**
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
@@ -38,11 +52,15 @@ const GROUND_DEPTH = 5
  */
 export function worldFromScene(
   documentId: string,
-  state: SceneState,
+  given: SceneState,
   ports: GameApi,
   scripts: Partial<ScriptSystemOptions> = {},
   seed = 1,
 ): World {
+  // A module's arm reads the TREE rather than its two written names. It rewrites the STATE where
+  // `filmable` and the seat stay closure arguments: `springArm` reads its two fields off the
+  // ENTITY, so what the tree says has to be in the components an entity is built from.
+  const state: SceneState = { ...given, nodes: withBoundPlayerArm(given.nodes) }
   const told: ScriptSystemOptions = {
     modules: scripts.modules ?? [],
     // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
@@ -52,14 +70,18 @@ export function worldFromScene(
       scripts.onFault ??
       (fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`)),
   }
+  // Filled the line after the world stands, and read only once a step runs: what lets the
+  // hierarchy compose a parent where the game has MOVED it — see `createHierarchy`.
+  let living: World | null = null
   const world = createWorld({
     scene: { kind: 'document', id: documentId },
     ports,
-    systems: systemsFor(state, ports, told),
+    systems: systemsFor(state, ports, told, id => living?.entities.get(id)?.transform ?? null),
     seed,
     step: STEP_SECONDS,
     play: state.world.play,
   })
+  living = world
 
   for (const node of state.nodes) {
     world.entities.add({
@@ -82,11 +104,19 @@ function systemsFor(
   state: SceneState,
   ports: GameApi,
   scripts: ScriptSystemOptions,
+  liveOf: (nodeId: string) => Transform | null,
 ): readonly System[] {
   const byId = new Map(state.nodes.map(node => [node.id, node]))
-  const hierarchy = createHierarchy(byId)
-  const placed = (entity: Entity): Transform => hierarchy.worldOf(entity.id, entity.transform)
-  const characters = createCharacters()
+  const hierarchy = createHierarchy(byId, liveOf)
+  const placedAt = (entity: Entity, own: Transform): Transform => hierarchy.worldOf(entity.id, own)
+  const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
+  const possessions = createPossessions()
+  const characters = createCharacters(possessions, placed)
+  const pilots = createPilots()
+  // The module's own eye takes the shot, where the sweep would have handed it to whichever arm
+  // it met first — a choice no outliner shows.
+  const player = playerPartsOf(state.nodes)
+  const rigs = createRigs(player?.eye?.id ?? null)
 
   /**
    * 🛑 A node hanging from another is FELT now, and that closed the hole this carried since the
@@ -122,14 +152,48 @@ function systemsFor(
       assetRef: id => ({ kind: 'asset', id }),
     }),
     createMovementSystem(),
+    createPathSystem(),
+    createPatrolSystem(),
+    createFollowSystem(),
+    createOrbitSystem(),
+    createSpinSystem(),
+    createLookAtSystem(),
+    createVehicleSystem(pilots, placed),
+    createAircraftSystem(pilots, placed),
+    // Resolved here like `filmable` below: which node is a module's BODY is a question about the
+    // tree, which the window holds and the runtime does not.
+    createPossessionSystem({
+      possessions,
+      bodyIdOf: moduleId => (moduleId === player?.module.id ? (player.body?.id ?? null) : null),
+      worldOf: placedAt,
+      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
+    }),
     createPhysicsSystem({
       shapeOf,
       characters,
+      possessions,
       statics: groundOf(state),
       worldOf: placed,
       localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
     }),
-    createPlayCameraSystem(characters, placed),
+    createSpringArmSystem({
+      characters,
+      rigs,
+      worldOf: placedAt,
+      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
+      // The runtime holds no node TYPE, so what a camera is comes from the window — the same way
+      // the shape and the frame of a body do.
+      filmable: entity => byId.get(entity.id)?.type === 'camera',
+    }),
+    // Resolved here and not in the runtime, like `filmable` above: who hangs under what is a
+    // question about the TREE, which the window holds and the runtime does not.
+    createPlayCameraSystem({
+      characters,
+      worldOf: placedAt,
+      pilots,
+      rigs,
+      playerBodyId: player?.body?.id ?? null,
+    }),
   ]
 }
 
@@ -157,6 +221,7 @@ function groundOf(state: SceneState): readonly BodyDescriptor[] {
       lockRotation: false,
       sensor: false,
       character: null,
+      vehicle: null,
     },
   ]
 }

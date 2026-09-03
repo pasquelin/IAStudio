@@ -75,6 +75,26 @@ describe('sceneFromPayload', () => {
     )
   })
 
+  /** No spec describes a run of points, so nothing else would refuse a file that wrote rubbish. */
+  it('drops a band whose run is not a run', () => {
+    const nodes: unknown[] = [
+      nodeWith({
+        geometry: { kind: 'ribbon', points: 'a lot', width: 1, height: 0.2, closed: false },
+      }),
+      nodeWith({
+        geometry: {
+          kind: 'ribbon',
+          points: [{ x: 0, y: 0, z: 0 }],
+          width: 1,
+          height: 0.2,
+          closed: false,
+        },
+      }),
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes).toEqual([])
+  })
+
   it('round-trips every kind of light', () => {
     const nodes = LIGHT_TYPES.map((type, index) => light(`light-${index}`, type.create()))
     expect(reread({ ...EMPTY_SCENE, nodes }).nodes).toHaveLength(nodes.length)

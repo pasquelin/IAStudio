@@ -189,7 +189,8 @@
     "templateField": "Starting template",
     "templateGroups": {
       "general": "General",
-      "character": "Character"
+      "character": "Character",
+      "machine": "Machine"
     },
     "templates": {
       "empty": "Empty",
@@ -200,7 +201,9 @@
       "firstPerson": "First person",
       "thirdPerson": "Third person",
       "topDown": "Top down",
-      "postProcessing": "Post-processing"
+      "postProcessing": "Post-processing",
+      "car": "Car",
+      "plane": "Aircraft"
     },
     "templateHints": {
       "empty": "Three lights, and nothing else to take away",
@@ -211,7 +214,9 @@
       "firstPerson": "The camera at eye height, ready to walk",
       "thirdPerson": "The camera behind a stand-in’s shoulder",
       "topDown": "The camera looking down on the scene",
-      "postProcessing": "A camera move, a rack focus and an animated bloom — the whole chain, judged at once"
+      "postProcessing": "A camera move, a rack focus and an animated bloom — the whole chain, judged at once",
+      "car": "A car on four wheels, to drive around the course",
+      "plane": "A plane already flying, on the stick and the throttle"
     },
     "uiTemplates": {
       "empty": "Empty",

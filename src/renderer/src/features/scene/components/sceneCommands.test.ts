@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cameraShot, timelineWith } from '@/engines/scene/animation-fixtures'
 import { cameraNodeFixture, meshNode, pathNodeFixture } from '@/engines/scene/scene-fixtures'
+import { playerModuleNodes } from '@/engines/scene/nodeFactory'
+import { bezierPathOf, type GeometryDescriptor } from '@shared/domain/scene'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { useAnimationViews } from '@/stores/animationView'
 import { clearScenes, installScene, sceneNodeNow } from '@/stores/scene-fixtures'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { useSceneClipboard } from '@/stores/sceneClipboard'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
@@ -215,6 +218,108 @@ describe('an undo with nothing behind it', () => {
 
     runSceneCommand(DOCUMENT, 'scene.delete')
     expect(runSceneCommand(DOCUMENT, 'scene.undo')).toBe(true)
+  })
+})
+
+describe('deleting the control point a rail or a band holds', () => {
+  const runOf = (id: string): number[] => {
+    const node = sceneNodeNow(DOCUMENT, id)
+    if (node?.type === 'path') return node.path.points.map(point => point.x)
+    return node?.type === 'mesh' && node.geometry.kind === 'ribbon'
+      ? node.geometry.path.points.map(point => point.x)
+      : []
+  }
+
+  it('takes the point away from a rail', () => {
+    useSceneViews.getState().setPickedPathPoint(DOCUMENT, { nodeId: 'rail', index: 1 })
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(runOf('rail')).toEqual([0, 20])
+  })
+
+  /**
+   * 🛑 A band holds its rail INSIDE its shape, and the refusal read the node's type: Delete on a
+   * point of a band fell straight through to the selection and took the band away whole.
+   */
+  it('takes the point away from a band, and leaves the band standing', () => {
+    const shape: GeometryDescriptor = {
+      kind: 'ribbon',
+      path: bezierPathOf([at(0), at(10), at(20)], false),
+      width: 1,
+      height: 0.2,
+      segments: 16,
+    }
+    const band = { ...meshNode('band'), geometry: shape }
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [band], selectedIds: ['band'] })
+    useSceneViews.getState().setPickedPathPoint(DOCUMENT, { nodeId: 'band', index: 1 })
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(runOf('band')).toEqual([0, 20])
+    expect(sceneNodeNow(DOCUMENT, 'band')).not.toBeNull()
+  })
+})
+
+describe('the gestures a player module refuses', () => {
+  const nodesNow = () => sceneOf(useScenes.getState(), DOCUMENT).nodes
+  const idOf = (name: string) => nodesNow().find(node => node.name === name)?.id ?? ''
+
+  const pick = (name: string) => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [...playerModuleNodes()] })
+    selectIn(DOCUMENT, [idOf(name)])
+  }
+
+  // 🛑 The clipboard as well as the scenes: it is a module-level store that outlives a case, so
+  // what a neighbouring one cut was still sitting in it when this file gained a second describe.
+  beforeEach(() => {
+    clearScenes()
+    useSceneClipboard.getState().copy([])
+  })
+
+  it('keeps its camera through a Delete that named it', () => {
+    pick('Camera')
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(nodesNow().some(node => node.name === 'Camera')).toBe(true)
+  })
+
+  /** A cut that cannot remove must not look copied either — hence the check before the write. */
+  it('keeps its body through a Cut that named it, and copies nothing', () => {
+    pick('Capsule')
+
+    runSceneCommand(DOCUMENT, 'scene.cut')
+
+    expect(nodesNow().some(node => node.name === 'Capsule')).toBe(true)
+    expect(useSceneClipboard.getState().nodes).toEqual([])
+  })
+
+  /** 🛑 Held BEFORE as well as after: a name the module no longer wears selects nothing, deletes
+   * nothing, and passes this case without exercising a single refusal. */
+  it('lets go of what it does not require', () => {
+    pick('Figure')
+    expect(nodesNow().some(node => node.name === 'Figure')).toBe(true)
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(nodesNow().some(node => node.name === 'Figure')).toBe(false)
+  })
+
+  it('goes away whole when the module itself is named', () => {
+    pick('Player_Module')
+
+    runSceneCommand(DOCUMENT, 'scene.delete')
+
+    expect(nodesNow()).toEqual([])
+  })
+
+  it('refuses to be duplicated into a second one', () => {
+    pick('Player_Module')
+
+    runSceneCommand(DOCUMENT, 'scene.duplicate')
+
+    expect(nodesNow().filter(node => node.name === 'Player_Module')).toHaveLength(1)
   })
 })
 

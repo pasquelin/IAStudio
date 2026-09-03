@@ -6,7 +6,7 @@ import {
 import { createBundledAssets } from '@game/host/bundledAssets'
 import { createExportHost } from '@game/host/exportHost'
 import { loadQuickjsScripts } from '@game/host/quickjsScripts'
-import { loadRapierPhysics } from '@game/host/rapierPhysics'
+import { loadJoltPhysics } from '@game/host/joltPhysics'
 import type { EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
@@ -43,7 +43,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   const swap = createSceneSwap()
 
   const [physics, script, modules] = await Promise.all([
-    loadRapierPhysics(),
+    loadJoltPhysics(),
     loadQuickjsScripts(),
     modulesOf(game),
   ])
@@ -136,7 +136,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     // when there IS one: two promises a frame, for a request that is almost never there.
     if (swap.pending()) void asked()
 
-    render.place(placementsOf(world, placements))
+    render.place(placementsOf(world, placements, loop.alpha()))
     // The veil the arrived scene came in under, on ITS clock, which a swap restarts at zero.
     if (fading > 0) {
       const lift = veilLift(world.time.elapsed, fading, veiled)

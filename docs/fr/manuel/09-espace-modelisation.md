@@ -11,7 +11,7 @@ promène.
 
 Le bouton **+** du rail gauche crée une scène neuve. Un projet doit être ouvert.
 
-La fenêtre qui s’ouvre demande un nom, puis **sur quoi la scène ouvre** : huit modèles, sous le
+La fenêtre qui s’ouvre demande un nom, puis **sur quoi la scène ouvre** : dix modèles, sous le
 nom. Le choix ne s’applique qu’à la création — une scène déjà ouverte ne change pas de modèle.
 
 | Modèle | Ce qu’il pose |
@@ -22,6 +22,8 @@ nom. Le choix ne s’applique qu’à la création — une scène déjà ouverte
 | **Cinéma** | un grand sol, une lumière rasante, une caméra et son **rail** — le plan est déjà un mouvement |
 | **Architecture** | un sol très large, un soleil bas, un ciel, et une caméra à hauteur d’œil |
 | **1re personne**, **3e personne**, **Vue de dessus** | les trois ouvrent sur le **niveau de test** ci-dessous, et ne diffèrent que par où se place la caméra |
+| **Voiture** | le même niveau de test, avec une voiture posée au départ — quatre roues suspendues, un moteur, une direction. `W` `S` accélèrent et freinent, `A` `D` braquent, `Espace` est le frein à main |
+| **Avion** | un terrain, une piste, et un avion **déjà en vol** à 120 m. `W` `S` piquent et cabrent, `A` `D` inclinent, `Q` `E` lacent, `⇧ Maj` et `Ctrl` ouvrent et ferment les gaz |
 
 Une scène est noire tant qu’aucune lumière n’y est posée : c’est normal, et le panneau Lumières
 le dit. Seul le modèle **Vide** peut vous y amener, en supprimant ses lumières.

@@ -213,6 +213,7 @@ const bridge: StudioBridge = {
     absent: assetIds => ipcRenderer.invoke(CHANNELS.assetsAbsent, assetIds),
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
     savePicture: request => ipcRenderer.invoke(CHANNELS.assetsSavePicture, request),
+    savePlayerModule: request => ipcRenderer.invoke(CHANNELS.assetsSavePlayerModule, request),
     saveLayered: request => ipcRenderer.invoke(CHANNELS.assetsSaveLayered, request),
     saveMesh: request => ipcRenderer.invoke(CHANNELS.assetsSaveMesh, request),
     saveAnimation: request => ipcRenderer.invoke(CHANNELS.assetsSaveAnimation, request),
@@ -331,6 +332,9 @@ const bridge: StudioBridge = {
   },
   mirror: {
     open: () => ipcRenderer.invoke(CHANNELS.mirrorOpen),
+  },
+  playerModuleWindow: {
+    open: assetId => ipcRenderer.invoke(CHANNELS.playerModuleWindowOpen, assetId),
   },
   characterWindow: {
     open: assetId => ipcRenderer.invoke(CHANNELS.characterWindowOpen, assetId),

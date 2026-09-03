@@ -25,7 +25,7 @@ export type GameExportPorts = {
   /**
    * Every file of the runtime bundle, `runtime.js` first among them.
    *
-   * 🛑 A FOLDER, not one file: the bundle splits — Rapier and the sandbox are chunks `runtime.js`
+   * 🛑 A FOLDER, not one file: the bundle splits — the physics and the sandbox are chunks `runtime.js`
    * imports by name — and a page shipped with the entry alone is a page that loads nothing.
    */
   runtime: () => Promise<readonly { name: string; body: Uint8Array }[]>

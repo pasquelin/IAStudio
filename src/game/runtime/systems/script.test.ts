@@ -7,6 +7,7 @@ import { loadQuickjsScripts } from '../../host/quickjsScripts'
 import type { ScriptFault } from '../../script/frame'
 import type { ScriptPort } from '../../ports/scriptPort'
 import { restingTransform } from '../entity'
+import { STEP_SECONDS } from '../gameLoop'
 import { testPorts, testWorld } from '../world-fixtures'
 import type { World } from '../world'
 import { createScriptSystem } from './script'
@@ -25,7 +26,7 @@ const scripted = (body: string): string => `exports.default = defineScript({ ${b
  */
 const frame = (world: World): void => {
   world.step(STEP)
-  world.lateUpdate(0)
+  world.lateUpdate(0, STEP_SECONDS)
 }
 
 /** A real sandbox: what this measures is the SYSTEM, and a fake one would prove nothing of it. */

@@ -7,14 +7,15 @@ import type { Transform } from '@shared/domain/transform'
 import type { GameApi } from '../api/gameApi'
 import { createEventBus, type EventBus } from '../events/eventBus'
 import type { InputState } from '../ports/inputPort'
-import { restingTransform, type Entity } from './entity'
+import { clonedTransform, copyTransformInto, restingTransform, type Entity } from './entity'
 import { createEntityStore, type EntityStore } from './entityStore'
 import { createRandom, type Random } from './random'
 import { orderedByDeclaration, writeConflicts, type SystemShape } from './systemOrder'
 
 export type System = SystemShape & {
   fixedUpdate?: (world: World, dt: number) => void
-  lateUpdate?: (world: World, alpha: number) => void
+  /** `dt` is the FRAME's seconds, not the step's: what smoothing must be written against. */
+  lateUpdate?: (world: World, alpha: number, dt: number) => void
   /** Gives back what the system took from a PORT it does not own — bodies, voices, handles. */
   dispose?: (world: World) => void
 }
@@ -55,9 +56,12 @@ export type World = {
   destroy: (id: string) => void
   attach: (entity: Entity, component: Component) => void
   detach: (entity: Entity, type: ComponentType) => void
-  /** One fixed step: input snapshot, systems in order, births and deaths, then the events. */
+  /**
+   * One fixed step: the pose to interpolate FROM, the input snapshot, the systems in order, then
+   * the births, the deaths and the events.
+   */
   step: (dt: number) => void
-  lateUpdate: (alpha: number) => void
+  lateUpdate: (alpha: number, dt: number) => void
   /** Drops every subscription and gives every system's port holdings back. Idempotent. */
   dispose: () => void
 }
@@ -138,6 +142,9 @@ export function createWorld(options: WorldOptions): World {
     },
 
     step: dt => {
+      // 🛑 Here and not in `createGameLoop`: `world.step` is what DEFINES a step, and a second
+      // caller — a hand-driven step, a replay — would otherwise draw with no pose to come from.
+      for (const entity of world.entities.all()) keepPose(entity)
       world.input = world.ports.input.state()
 
       for (let index = 0; index < systems.length; index++) {
@@ -185,12 +192,12 @@ export function createWorld(options: WorldOptions): World {
       world.time.elapsed += dt
     },
 
-    lateUpdate: alpha => {
+    lateUpdate: (alpha, dt) => {
       for (let index = 0; index < systems.length; index++) {
         const system = systems[index]
         if (!system?.lateUpdate) continue
         try {
-          system.lateUpdate(world, alpha)
+          system.lateUpdate(world, alpha, dt)
         } catch (error) {
           world.ports.log.write('error', `system ${system.name} threw: ${said(error)}`)
         }
@@ -217,4 +224,10 @@ export function createWorld(options: WorldOptions): World {
   }
 
   return world
+}
+
+function keepPose(entity: Entity): void {
+  const held = entity.previous
+  if (held) copyTransformInto(held, entity.transform)
+  else entity.previous = clonedTransform(entity.transform)
 }

@@ -2,8 +2,14 @@ import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat, PathDescriptor, Vector3 as PlainVector3 } from '@shared/domain/scene'
-import { withMovedPoint, withPointAfter, withPointAppended } from '@/engines/scene/cameraPath'
-import { setPath, setTransform } from '@/engines/scene/commands'
+import {
+  withMovedHandle,
+  withMovedPoint,
+  withPointAfter,
+  withPointAppended,
+} from '@/engines/scene/cameraPath'
+import { setGeometry, setPath, setTransform } from '@/engines/scene/commands'
+import { railOf } from '@/engines/scene/nodeRail'
 import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -12,6 +18,8 @@ import { isSnapping } from '@shared/domain/snap'
 import { SceneSnapBar } from '../Snap/SceneSnapBar'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { nodeById, selectedNodes } from '@/engines/scene/sceneState'
+import { isPlayerModule } from '@/engines/scene/playerModule'
+import { fileModuleOf } from '@/features/player/fileModule'
 import { movesToCommand } from '@/engines/scene/animationCommands'
 import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
@@ -136,9 +144,16 @@ function editPath(
 ): void {
   const store = useScenes.getState()
   const node = nodeById(sceneOf(store, documentId), nodeId)
-  if (node?.type !== 'path') return
+  if (node?.type === 'path') {
+    store.runCommand(documentId, setPath(nodeId, edit(node.path)))
+    return
+  }
 
-  store.runCommand(documentId, setPath(nodeId, edit(node.path)))
+  // A band holds its rail INSIDE its shape, so the edit lands on the geometry rather than on a
+  // field of the node — the handles being the very same ones.
+  if (node?.type !== 'mesh' || node.geometry.kind !== 'ribbon') return
+  const shape = node.geometry
+  store.runCommand(documentId, setGeometry(nodeId, { ...shape, path: edit(shape.path) }))
 }
 
 /**
@@ -155,12 +170,12 @@ function addPathPoint(documentId: string, nodeId: string, index: number): void {
  * a run of clicks lays a trajectory and the gizmo sits on the last one laid.
  */
 function appendPathPoint(documentId: string, nodeId: string, point: PlainVector3): void {
-  const node = nodeById(sceneOf(useScenes.getState(), documentId), nodeId)
-  if (node?.type !== 'path') return
+  const rail = railOf(nodeById(sceneOf(useScenes.getState(), documentId), nodeId) ?? undefined)
+  if (!rail) return
 
   // Where the point WILL land, read before the edit: appending puts it at the length the rail
   // holds now. Read after, it would rest on `runCommand` having already applied.
-  const index = node.path.points.length
+  const index = rail.points.length
   editPath(documentId, nodeId, path => withPointAppended(path, point))
   useSceneViews.getState().setPickedPathPoint(documentId, { nodeId, index })
 }
@@ -199,6 +214,8 @@ function openNodeMenu(documentId: string, nodeId: string | null): void {
     run: command => runSceneCommand(documentId, command),
     onToggleVisible: () => toggleNodeVisible(documentId, node.id),
     onSheet: scene.animation.sheet.includes(nodeId),
+    // Only on the module itself: the row acts on what this node IS, like the two carve ones.
+    ...(isPlayerModule(node) ? { onFileAsModule: () => void fileModuleOf(documentId) } : {}),
   })
 }
 
@@ -273,10 +290,15 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         useModelFiles.getState().reportClipFit(documentId, nodeId, clipKey, fit),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onSelectPathPoint: picked => useSceneViews.getState().setPickedPathPoint(documentId, picked),
-      onPathPoint: (nodeId, index, point) =>
-        editPath(documentId, nodeId, path => withMovedPoint(path, index, point)),
+      onPathPoint: (picked, point) =>
+        editPath(documentId, picked.nodeId, path =>
+          picked.part
+            ? withMovedHandle(path, picked.index, picked.part, point)
+            : withMovedPoint(path, picked.index, point),
+        ),
       onAddPathPoint: (nodeId, index) => addPathPoint(documentId, nodeId, index),
       onAppendPathPoint: (nodeId, point) => appendPathPoint(documentId, nodeId, point),
+      onClosePath: nodeId => editPath(documentId, nodeId, path => ({ ...path, closed: true })),
       // Orbiting a pane locked onto a camera MOVES that camera: an edit of the document, so it
       // lands as a command — one per gesture, since the engine reports on release.
       onCameraMoved: (nodeId, transform) =>

@@ -9,6 +9,7 @@ import { isLicencesRoute } from '@shared/domain/licence'
 import { isManualRoute } from '@shared/domain/manual'
 import { isMirrorRoute } from '@shared/domain/mirror'
 import { isNewDocumentRoute } from '@shared/domain/newDocument'
+import { isPlayerModuleRoute } from '@shared/domain/playerModuleWindow'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
 import { UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
@@ -67,6 +68,12 @@ const CharacterWindow = lazy(async () => ({
 /** Lazy for a harder reason than size: it drags a `SceneRenderer`, and with it all of three.js. */
 const GameWindow = lazy(async () => ({
   default: (await import('@/features/game/components/GameWindow/GameWindow')).GameWindow,
+}))
+
+/** Lazy for the same reason as the game window: it drags a `SceneRenderer`, and three.js with it. */
+const PlayerModuleWindow = lazy(async () => ({
+  default: (await import('@/features/player/components/PlayerModuleWindow/PlayerModuleWindow'))
+    .PlayerModuleWindow,
 }))
 
 /** Lazy for a harder reason than size: the charting library must stay out of the first frame. */
@@ -141,6 +148,13 @@ function Route({ hash }: { hash: string }) {
     return (
       <Suspense fallback={null}>
         <GameWindow />
+      </Suspense>
+    )
+  }
+  if (isPlayerModuleRoute(hash)) {
+    return (
+      <Suspense fallback={null}>
+        <PlayerModuleWindow />
       </Suspense>
     )
   }

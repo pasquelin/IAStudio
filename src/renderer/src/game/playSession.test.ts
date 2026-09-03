@@ -52,6 +52,43 @@ describe('a game running inside the studio', () => {
     expect(drawn?.nodes[1]).toBe(state.nodes[1])
   })
 
+  /** 🛑 The judder at 120 Hz against a 60 Hz step — see `placementsOf`. */
+  it('draws a moving object further on every frame, steps run or not', () => {
+    const { frames, apply } = playing()
+    // Past the warm-up, which forgets its clock once — see `warmed`.
+    frames.advance(0)
+    frames.advance(1 / 60)
+    frames.advance(2 / 60)
+
+    const drawn: number[] = []
+    for (let frame = 6; frame <= 12; frame += 1) {
+      frames.advance(frame / 120)
+      drawn.push(lastDrawn(apply)?.nodes[0]?.transform.position.y ?? 0)
+    }
+
+    // Strictly rising, frame by frame: a flat pair is a frame that drew the step it was between.
+    expect(drawn.every((at, index) => index === 0 || at > (drawn[index - 1] ?? 0))).toBe(true)
+  })
+
+  /**
+   * 🛑 A paused game keeps drawing, but the accumulator stops — so `alpha` stays wherever the
+   * pause caught it. Redrawing there walks a hand-stepped world BACK to a fraction of the step
+   * before, on every frame, for as long as the pause lasts.
+   */
+  it('holds a hand-stepped world where the step left it, frame after frame', () => {
+    const { session, frames, apply } = playing()
+    frames.advance(0)
+    // A frame that leaves the accumulator part-way between two steps, which is what freezes.
+    frames.advance(3.5 / 60)
+    session.pause()
+    session.step(1)
+    const stepped = lastDrawn(apply)?.nodes[0]?.transform.position.y ?? 0
+
+    frames.advance(4 / 60)
+
+    expect(lastDrawn(apply)?.nodes[0]?.transform.position.y ?? 0).toBeCloseTo(stepped, 6)
+  })
+
   /**
    * 🛑 The criterion of the whole lot. The world holds no reference to the store, so this is not
    * a restore — there is nothing to restore, and that is what the comparison BY VALUE says.
@@ -67,6 +104,24 @@ describe('a game running inside the studio', () => {
     expect(JSON.stringify(state)).toBe(before)
     expect(lastDrawn(apply)).toBe(state)
     expect(session.state()).toBe('edit')
+  })
+
+  /** Frozen while the game writes the camera, or a damped orbit eases it back — see `placeView`. */
+  it('gives the camera back to the hand when it stops', () => {
+    const releaseView = vi.fn()
+    const frames = handDriven()
+    const session = startPlay({
+      documentId: 'doc-1',
+      renderer: drawnBy({ releaseView }),
+      editState: () => scene(),
+      input: new EventTarget(),
+      frames: frames.driver,
+      onReport: () => {},
+    })
+
+    session.stop()
+
+    expect(releaseView).toHaveBeenCalled()
   })
 
   it('lets go of the frames when it stops', () => {

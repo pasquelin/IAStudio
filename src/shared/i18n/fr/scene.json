@@ -21,6 +21,7 @@
     "lathe": "Révolution",
     "octahedron": "Octaèdre",
     "plane": "Plan",
+    "ribbon": "Ruban",
     "ring": "Anneau",
     "sphere": "Sphère",
     "tetrahedron": "Tétraèdre",
@@ -43,6 +44,7 @@
     "latheHint": "Un profil tourné autour de l’axe vertical",
     "octahedronHint": "Huit faces triangulaires — deux pyramides base contre base",
     "planeHint": "Un rectangle plat, visible d’un seul côté",
+    "ribbonHint": "Une bande qui suit un tracé — un vibreur, une route, une berge",
     "ringHint": "Un disque plat percé en son centre",
     "sphereHint": "Une boule lisse, 32 segments sur 16",
     "tetrahedronHint": "Quatre faces triangulaires — une pyramide",
@@ -69,6 +71,12 @@
     "pointHint": "Rayonne dans toutes les directions depuis un point",
     "spotHint": "Un cône de lumière, avec son angle et son bord adouci"
   },
+  "figures": {
+    "add": "Ajouter une figure",
+    "addHint": "Poser une silhouette en volume, dont chaque partie s’édite ensuite comme une maille",
+    "humanoid": "Humanoïde",
+    "humanoidHint": "Une silhouette humaine en polygones, habillée de couleurs, à la taille d’un corps qui marche"
+  },
   "scene": {
     "root": "Scène",
     "onAir": "À l’antenne",
@@ -85,17 +93,26 @@
     "removePathPoint": "Retirer ce point",
     "removePathPointHint": "Retire le point du chemin. Un chemin garde toujours ses deux derniers points"
   },
+  "playerWindow": {
+    "title": "Module joueur",
+    "file": "Enregistrer comme module",
+    "fileHint": "Écrit ce module dans un fichier du projet, que la scène retiendra",
+    "reading": "Lecture du module…",
+    "unreadable": "Ce module n’a pas pu être lu"
+  },
   "objects": {
     "add": "Ajouter un objet",
-    "addHint": "Poser une caméra, un rail, un sprite ou du texte dans la scène",
+    "addHint": "Poser un joueur, une caméra, un rail, un sprite ou du texte dans la scène",
     "sprite": "Sprite",
     "text": "Texte",
     "camera": "Caméra",
     "path": "Chemin",
+    "player": "Joueur",
     "spriteHint": "Une image plane qui fait toujours face à la caméra",
     "textHint": "Du texte posé dans la scène, en volume",
     "cameraHint": "Un point de vue enregistré, en plus de celui qu’on manœuvre",
-    "pathHint": "Un rail le long duquel une caméra peut courir pendant un plan"
+    "pathHint": "Un rail le long duquel une caméra peut courir pendant un plan",
+    "playerHint": "Celui qu’on joue : un corps qui marche et une caméra sur sa perche, posés ensemble"
   },
   "transport": {
     "play": "Lire",

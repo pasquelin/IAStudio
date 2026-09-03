@@ -8,6 +8,7 @@ import { LICENCES_ROUTE } from '@shared/domain/licence'
 import { MANUAL_ROUTE } from '@shared/domain/manual'
 import { characterWindowRoute } from '@shared/domain/characterWindow'
 import { GAME_WINDOW_ROUTE } from '@shared/domain/gameWindow'
+import { playerModuleRoute } from '@shared/domain/playerModuleWindow'
 import { MIRROR_ROUTE } from '@shared/domain/mirror'
 import { NEW_DOCUMENT_ROUTE } from '@shared/domain/newDocument'
 import { settingsRoute, type SettingsSectionId } from '@shared/domain/settings'
@@ -503,6 +504,44 @@ export function openCharacterWindow(assetId: string): BrowserWindow {
 
   load(window, { hash })
   characterWindow = window
+  return window
+}
+
+/** The one module window — one module at a time, as `openPlayerModuleWindow` explains. */
+let playerModuleWindow: BrowserWindow | null = null
+
+/**
+ * ONE window, turned towards whichever module is opened. It reloads rather than messaging the
+ * fragment across, so a window the system restores finds its subject in its own URL.
+ */
+export function openPlayerModuleWindow(assetId: string): BrowserWindow {
+  const hash = playerModuleRoute(assetId)
+  if (playerModuleWindow && !playerModuleWindow.isDestroyed()) {
+    revealWindow(playerModuleWindow)
+    load(playerModuleWindow, { hash })
+    return playerModuleWindow
+  }
+
+  const window = new BrowserWindow({
+    width: 1180,
+    height: 720,
+    minWidth: 720,
+    minHeight: 480,
+    show: false,
+    backgroundColor: MIRROR_BACKGROUND,
+    title: TRANSLATIONS[windowLanguage()].playerWindow.title,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  window.on('closed', () => {
+    if (playerModuleWindow === window) playerModuleWindow = null
+  })
+
+  load(window, { hash })
+  playerModuleWindow = window
   return window
 }
 

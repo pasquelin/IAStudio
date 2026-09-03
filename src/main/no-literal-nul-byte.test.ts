@@ -19,6 +19,14 @@ const BINARY =
   /\.(png|webp|jpe?g|gif|ico|icns|mp4|mov|webm|mp3|wav|ogg|glb|ttf|otf|woff2?|wasm|zip|pdf)$/i
 
 /**
+ * 🛑 The one tracked file that is a BINARY wearing a text name: the physics engine the studio
+ * compiles for itself inlines its WebAssembly into a JavaScript wrapper, raw bytes and all. Named
+ * by PATH and not added to the pattern above — `.js` is the most reviewed extension there is, and
+ * excusing all of it to excuse one artefact would be the silence this guard exists against.
+ */
+const VENDORED_ENGINE = 'vendor/jolt-physics/dist/jolt-physics.wasm-compat.js'
+
+/**
  * Where a file carries the byte itself rather than an escape for it, as `path:line`.
  *
  * Bytes and not text: decoded as UTF-8 the byte becomes one character of the string, which no
@@ -41,7 +49,7 @@ function nulSitesIn(path: string, bytes: Buffer): string[] {
 const sweptFiles = (): string[] =>
   execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n')
-    .filter(path => path && !BINARY.test(path))
+    .filter(path => path && !BINARY.test(path) && path !== VENDORED_ENGINE)
 
 /**
  * A literal NUL makes git call the file BINARY, and a binary file is one nobody reviews.
@@ -85,6 +93,12 @@ describe('no tracked file spells the NUL byte as the byte itself', () => {
     expect(sweptFiles().some(path => BINARY.test(path))).toBe(false)
     expect(BINARY.test('build/icon.png')).toBe(true)
     expect(BINARY.test('src/shared/manual.json')).toBe(false)
+  })
+
+  /** And the one binary the pattern cannot name, which is tracked and does hold the byte. */
+  it('leaves the vendored engine out, its bytes being a compiled module and not a source', () => {
+    expect(sweptFiles()).not.toContain(VENDORED_ENGINE)
+    expect(readFileSync(join(ROOT, VENDORED_ENGINE)).includes(NUL)).toBe(true)
   })
 
   it('names the line the byte sits on, and every line that carries one', () => {

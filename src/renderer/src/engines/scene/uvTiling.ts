@@ -47,6 +47,11 @@ function spanOf(descriptor: GeometryDescriptor, geometry: BufferGeometry): UvSpa
     case 'tetrahedron':
       return null
 
+    // Already in METRES, both ways: `ribbonGeometry` writes the distance along the band and the
+    // distance across it, so a span of one leaves `tilesPerMetre` meaning exactly what it says.
+    case 'ribbon':
+      return { u: 1, v: 1 }
+
     // Round the side, then down it. The wider end when the two differ: a cone's squares narrow
     // towards its point whatever is done here, and the wide end is the one a person reads.
     case 'cylinder':

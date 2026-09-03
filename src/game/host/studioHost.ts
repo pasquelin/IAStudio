@@ -24,7 +24,7 @@ export type StudioHostDeps = {
   player: Player
   /** What draws. Absent while a host has no viewport to give — see `createInertRender`. */
   render?: RenderPort
-  /** What simulates. Absent until the engine's WebAssembly has landed — see `loadRapierPhysics`. */
+  /** What simulates. Absent until the engine's WebAssembly has landed — see `loadJoltPhysics`. */
   physics?: PhysicsPort
   /** Where a game's own code runs. Absent leaves every script silent — see `loadQuickjsScripts`. */
   script?: ScriptPort

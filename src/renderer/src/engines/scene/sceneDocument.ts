@@ -307,6 +307,7 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'mesh') {
     return (
       describes(value.geometry, GEOMETRY_SPECS) &&
+      isGeometryRun(value.geometry) &&
       isMaterial(value.material) &&
       isOptionalFlag(value.negative)
     )
@@ -381,12 +382,30 @@ function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
 }
 
+/**
+ * The rail a ribbon is swept along. No spec describes it — a run of points is dragged on the
+ * shape, never typed in a row — so `describes` walks past it and this is what checks it.
+ */
+function isGeometryRun(value: unknown): boolean {
+  if (!isRecord(value) || value.kind !== 'ribbon') return true
+  return isPath(value.path)
+}
+
 /** Its points and its shape. `closed` and `tension` absent mean the defaults `revived` lays in. */
 function isPath(value: unknown): boolean {
   if (!isRecord(value) || !Array.isArray(value.points)) return false
   if (value.points.length < 2 || !value.points.every(isVector3)) return false
+  if (!isOptionalFlag(value.closed)) return false
+  if (value.tension != null && !Number.isFinite(value.tension)) return false
 
-  return isOptionalFlag(value.closed) && (value.tension == null || Number.isFinite(value.tension))
+  // 🛑 One pair of tangents per anchor: a run holding fewer would draw a curve past the end of
+  // its own handles, and `handleAt` would hand back a corner where the file said otherwise.
+  if (value.kind !== 'bezier') return true
+  return (
+    Array.isArray(value.handles) &&
+    value.handles.length === value.points.length &&
+    value.handles.every(one => isRecord(one) && isVector3(one.in) && isVector3(one.out))
+  )
 }
 
 /**
@@ -744,9 +763,17 @@ function measures(value: unknown, spec: PropertySpec): boolean {
   return value === undefined || matches(value, spec)
 }
 
+/**
+ * 🛑 Read off the CONTROL, never assumed numeric: falling through to `Number.isFinite` cost the
+ * WHOLE node for any field that is not a number. No table read here carries one of the three
+ * below today — it is an assurance, and it was a real defect for the hour a ribbon held a flag.
+ */
 function matches(value: unknown, spec: PropertySpec): boolean {
   if (spec.control === 'color') return typeof value === 'string'
   if (spec.control === 'vector3') return isVector3(value)
+  if (spec.control === 'toggle') return typeof value === 'boolean'
+  if (spec.control === 'choice') return spec.options.some(one => one === value)
+  if (spec.control === 'asset') return typeof value === 'string'
   // `Number.isFinite`, not `typeof`: JSON has no NaN, but `1e999` parses to Infinity, and a
   // geometry built from one produces vertices the raycaster then never hits.
   return Number.isFinite(value)

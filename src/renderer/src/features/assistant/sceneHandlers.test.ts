@@ -7,11 +7,12 @@ import { TEXTURE_SLOTS, type SceneWorld } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
-import { createNodeOf } from '@/engines/scene/nodeFactory'
+import { createNodeOf, playerModuleNodes } from '@/engines/scene/nodeFactory'
+import { PLAYER_KIND } from '@/engines/scene/playerModule'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { GEOMETRY_SPECS, type PropertySpec } from '@/engines/scene/propertyFields'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
-import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import { EMPTY_SCENE, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { installDocuments } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
@@ -127,7 +128,7 @@ describe('reading the scene in front', () => {
 
 describe('building a scene', () => {
   /**
-   * Through `createNodeOf`, the factory the Add menu and the native menu already go through: a
+   * Through `createNodesOf`, the factory the Add menu and the native menu already go through: a
    * second way of building a box would be a second set of defaults to keep in step.
    */
   it('adds any kind the Add menu offers, at the position given', async () => {
@@ -1435,5 +1436,37 @@ describe('what a refused aim tells the caller', () => {
 
     expect(outcome).toMatchObject({ ok: false, refusal: 'wrongSurface' })
     expect(detailOf(outcome)).toContain('document.activate')
+  })
+})
+
+/**
+ * 🛑 `removeNode` always answers a command, so a refusal that lived only inside it came back as
+ * « removed » to a client that had lost nothing — the one shape `refused` exists to prevent.
+ */
+describe('a player module an outside client acts on', () => {
+  const nodesNow = () => sceneOf(useScenes.getState(), 'doc-1').nodes
+  const idOf = (name: string) => nodesNow().find(node => node.name === name)?.id ?? ''
+
+  beforeEach(() => {
+    installScene('doc-1', { ...EMPTY_SCENE, nodes: [...playerModuleNodes()] })
+  })
+
+  it('refuses a second module rather than letting document order decide', async () => {
+    expect(await runAction('node.add', { kind: PLAYER_KIND })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
+    expect(nodesNow().filter(node => node.name === 'Player_Module')).toHaveLength(1)
+  })
+
+  it('refuses to remove the eye it films through, and says so', async () => {
+    expect(await runAction('node.remove', { nodeId: idOf('Camera') })).toMatchObject({ ok: false })
+    expect(nodesNow().some(node => node.name === 'Camera')).toBe(true)
+  })
+
+  /** The figure is what the module SHOWS, never one of the three parts it cannot lose. */
+  it('still removes what the module does not require', async () => {
+    expect(await runAction('node.remove', { nodeId: idOf('Figure') })).toMatchObject({ ok: true })
+    expect(nodesNow().some(node => node.name === 'Figure')).toBe(false)
   })
 })

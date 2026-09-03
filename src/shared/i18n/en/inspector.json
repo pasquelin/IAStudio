@@ -107,6 +107,7 @@
       "size": "Size",
       "curveSegments": "Curve segments",
       "fov": "Field of view",
+      "handles": "Handles",
       "tension": "Tension",
       "closed": "Closed",
       "near": "Near distance",

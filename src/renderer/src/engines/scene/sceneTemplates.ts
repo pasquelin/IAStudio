@@ -16,7 +16,7 @@ import {
   type AnimationTimeline,
   type AnimationTrack,
 } from '@shared/domain/animation'
-import { newComponent } from '@shared/domain/componentRegistry'
+import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import {
   postEffect,
   readParams,
@@ -25,6 +25,8 @@ import {
 } from '@shared/domain/postProcessing'
 import { SECOND, type Us } from '@shared/domain/time'
 import {
+  DEFAULT_CAMERA,
+  DEFAULT_GROUND,
   DEFAULT_WORLD,
   type MaterialDescriptor,
   type ScenePlay,
@@ -37,15 +39,28 @@ import {
   type SceneTemplateId,
 } from '@shared/domain/sceneTemplate'
 import { createDefaultScene } from './defaultScene'
+import { airfieldNodes } from './airfieldLevel'
+import { carNodes } from './carNodes'
+import { CIRCUIT_START, CIRCUIT_START_YAW, circuitNodes } from './circuitLevel'
+import { LYING_FLAT } from './levelParts'
+import { MOUNTAIN_WORLD, mountainNodes } from './mountainLevel'
 import { presetPatch } from './environmentPresets'
-import { cameraNode, lightNode, meshNode, pathNode, transformAt } from './nodeFactory'
+import { planeNodes } from './planeNodes'
+import {
+  aimedFrom,
+  armRest,
+  cameraNode,
+  groupNode,
+  lightNode,
+  meshNode,
+  pathNode,
+  playerModuleNodes,
+  transformAt,
+} from './nodeFactory'
 import { playgroundNodes } from './playgroundLevel'
 import type { SceneNode, SceneState } from './sceneState'
 
 const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
-
-/** A `plane` stands upright, and a floor is the one thing that must not. */
-const LYING_FLAT: Vector3 = { x: -Math.PI / 2, y: 0, z: 0 }
 
 /**
  * The pitch that aims a camera standing at `height`, `distance` away on the +Z axis, at a point
@@ -68,6 +83,35 @@ function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ
   const rotation = { x: pitchTowards(height, distance, targetHeight), y: 0, z: 0 }
   return cameraNode(transformAt({ x: 0, y: height, z: targetZ + distance }, rotation))
 }
+
+/**
+ * A camera on an arm, wired to what it films, and SEATED where the arm will put it — see
+ * `armRest`. Named parts, so an author can read the pair in the outliner and retune it.
+ */
+function cameraRig(
+  machine: readonly [SceneNode, ...SceneNode[]],
+  over: Record<string, string | number> = {},
+): readonly SceneNode[] {
+  const subject = machine[0]
+  let arm = newComponent('SpringArm')
+  for (const [key, value] of Object.entries({
+    subject: subject.name,
+    camera: CAMERA_NAME,
+    ...over,
+  })) {
+    arm = withComponentField(arm, key, value)
+  }
+  // 🛑 The NODE's own pose, never the numbers it was built from: `carNodes` turns its body by
+  // `heading + π` and lifts it by the ride height.
+  const { pivot, seat } = armRest(subject.transform.position, subject.transform.rotation.y, arm)
+  return [
+    ...machine,
+    { ...groupNode(transformAt(ORIGIN), 'Camera Rig'), components: [arm] },
+    cameraNode(transformAt(seat, aimedFrom(seat, pivot))),
+  ]
+}
+
+const CAMERA_NAME = 'Camera'
 
 /**
  * The working floor: wearing the checker, catching shadows, throwing none. Its tiling is the
@@ -93,8 +137,17 @@ function standIn(): SceneNode {
       { kind: 'capsule', radius: 0.3, height: 1.2, capSegments: 8, radialSegments: 16 },
       { transform: transformAt({ x: 0, y: 0.9, z: STAND_IN_Z }), name: 'Character' },
     ),
-    components: [newComponent('CharacterController'), newComponent('Health')],
+    components: [newComponent('CharacterController')],
   }
+}
+
+/**
+ * The player module, put down where the stand-in stands. It brings its own body, its own arm and
+ * the eye it films through — nothing here names a camera, which is the whole of what it replaces.
+ */
+function playerModuleAt(z: number): readonly SceneNode[] {
+  const [root, ...rest] = playerModuleNodes()
+  return root ? [{ ...root, transform: transformAt({ x: 0, y: 0, z }) }, ...rest] : []
 }
 
 /** Clear of the pit, on the floor band the two framed views open on. */
@@ -170,9 +223,13 @@ const WALKING: Partial<ScenePlay> = { eyeHeight: EYE_HEIGHT, moveSpeed: 4, gravi
  * The level, its light, and what the view adds on top — the three character templates differ by
  * that last part alone, which is the whole claim they make.
  */
-function characterView(view: readonly SceneNode[], play: Partial<ScenePlay>): Template {
+function characterView(
+  view: readonly SceneNode[],
+  play: Partial<ScenePlay>,
+  played?: string,
+): Template {
   return {
-    nodes: [...playgroundNodes(), sun(2.2, { x: 22, y: 26, z: 16 }), skyLight(1.3), ...view],
+    nodes: [...playgroundNodes(played), sun(2.2, { x: 22, y: 26, z: 16 }), skyLight(1.3), ...view],
     // The outdoor preset for its haze and its grading, but a PLAIN SKY behind rather than the
     // procedural studio: that one is nearly black, and a wall turned away from the sun landed on
     // the same value as the background — which reads as a wall that vanishes when one turns.
@@ -426,15 +483,78 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
 
   // The camera stands back BEHIND the stand-in, which stands at z = 10 — over the shoulder means
   // both on the same axis, and the aim is at chest height.
+  // 🛑 The module and nothing else: it carries the body, the arm and the camera, bound by the
+  // TREE. The trio it replaces bound them by name, and a second `Camera` captured the arm.
   thirdPerson: () =>
-    characterView([standIn(), aimedCamera(2.4, 5, 1, STAND_IN_Z)], { camera: 'thirdPerson' }),
+    characterView([...playerModuleAt(STAND_IN_Z)], { camera: 'thirdPerson' }, 'Capsule'),
 
   topDown: () =>
     characterView([standIn(), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
       camera: 'topDown',
       moveSpeed: 6,
     }),
+
+  // 🛑 No stand-in, and that is not an omission: a walker wins the camera seat over a machine,
+  // so a silhouette left on the pad would frame the car from a pair of feet.
+  // 🛑 The arm aims down the CAR's own nose, not where the pointer looks: a car turning under a
+  // camera the mouse alone aims reads as a car sliding sideways.
+  car: () => ({
+    nodes: [
+      ...circuitNodes(),
+      sun(2.4, { x: 60, y: 70, z: 40 }),
+      skyLight(1.3),
+      ...cameraRig(carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW), {
+        orientation: 'subject',
+        length: 8,
+        height: 2.4,
+      }),
+    ],
+    world: {
+      ...presetPatch('outdoor'),
+      background: { kind: 'color', color: '#b6c6d8' },
+      // 🛑 The preset's own haze closes at 140 m and the circuit is 250 m across: the far side of
+      // the loop was solid grey, which is why its shape could not be read at a glance.
+      fog: { kind: 'linear', color: '#b6c6d8', near: 60, far: 420 },
+      ground: { ...DEFAULT_GROUND, visible: true, size: 400, color: '#5c6b4f' },
+    },
+    play: { ...WALKING, camera: 'thirdPerson', played: CAR_NAME },
+  }),
+
+  plane: () => ({
+    nodes: [
+      ...airfieldNodes(),
+      ...mountainNodes(),
+      sun(2.6, { x: 40, y: 50, z: 20 }),
+      skyLight(1.4),
+      ...planeNodes({ x: 0, y: CRUISE_ALTITUDE, z: 60 }),
+      aimedCamera(CRUISE_ALTITUDE + 6, 30, CRUISE_ALTITUDE, 60),
+    ],
+    world: {
+      ...presetPatch('outdoor'),
+      background: { kind: 'color', color: '#9fc0e0' },
+      // 🛑 The preset closes its haze at 140 m and this map is flown at 120: everything but the
+      // wingtips was inside the fog. It now closes just short of the camera's own far plane, so
+      // the horizon fades instead of being cut off.
+      fog: { kind: 'linear', color: '#9fc0e0', near: 250, far: DEFAULT_CAMERA.far - 100 },
+      // 🛑 Catches NO shadow: the map is kilometres across, so one shadow texel covers metres —
+      // on a flat ground that reads as a grey moiré staircase, which made the editor unusable.
+      ground: {
+        ...DEFAULT_GROUND,
+        visible: true,
+        size: MOUNTAIN_WORLD,
+        color: '#6f7f63',
+        receiveShadow: false,
+      },
+    },
+    play: { ...WALKING, camera: 'thirdPerson' },
+  }),
 }
+
+/** Who the set's beacon and drone watch here, the stand-in being nowhere on this template. */
+const CAR_NAME = 'Car'
+
+/** Metres. High enough that a plane finding its speed has room to dip while it does. */
+const CRUISE_ALTITUDE = 120
 
 /**
  * The scene a template opens on. A fresh state on every call, ids included — two documents made

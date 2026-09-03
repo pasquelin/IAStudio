@@ -697,6 +697,26 @@ describe('a viewport', () => {
     })
 
     /**
+     * `autoRotate` stands in for the damping residue a drag leaves: both are `update()` moving a
+     * camera on a frame nobody touched, and it is the one a suite can arm without a synthetic
+     * drag — `OrbitControls` reads `clientHeight` off a canvas jsdom lays out at zero.
+     */
+    it('leaves a camera written by hand where it was put, once the orbits are frozen', () => {
+      const engine = atRest()
+      const orbit = engine.orbit
+      if (!orbit) throw new Error('mounted with no orbit')
+
+      orbit.autoRotate = true
+      orbit.target.set(0, 0, 0)
+      engine.camera.position.set(3, 4, 5)
+      engine.freezePanes(true)
+      engine.requestRender()
+      drawFrames()
+
+      expect(engine.camera.position.toArray()).toEqual([3, 4, 5])
+    })
+
+    /**
      * Read through a gesture rather than through `OrbitControls.enabled`, which since `armOrbits`
      * says whether that control owns the pointer — never which pane answers.
      */

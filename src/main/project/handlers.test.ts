@@ -1119,6 +1119,37 @@ describe('project handlers', () => {
   const png = (width: number, height: number): Buffer => Buffer.from(pngBytes({ width, height }))
 
   /**
+   * 🛑 The link back to what a take was edited FROM, which nothing else keeps: a "Save as" that
+   * drops it leaves the new file untraceable, and `assets.search({ derivedFrom })` stops finding
+   * it. It was silently deleted from this one handler and no case rougissait.
+   */
+  describe('an edited take saved beside its source', () => {
+    it('keeps the asset it was derived from', async () => {
+      const root = await mkdtemp(join(tmpdir(), 'scenario-take-'))
+      onTestFinished(async () => await rm(root, { recursive: true, force: true }))
+      const assets = {
+        importFromUrl: vi.fn(),
+        importFromBytes: vi.fn(async (request: unknown, _bytes: Uint8Array) => {
+          void request
+          return asset({ id: 'asset-new', type: 'audio' })
+        }),
+        importFromFile: vi.fn(),
+        replaceBytes: vi.fn(),
+      }
+      registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
+
+      await invoke(CHANNELS.assetsSaveAudio, {
+        name: 'Take 2',
+        wav: new Uint8Array([0x52, 0x49, 0x46, 0x46]),
+        derivedFrom: 'asset-1',
+      })
+
+      const [written] = assets.importFromBytes.mock.calls
+      expect(written?.[0]).toMatchObject({ derivedFrom: 'asset-1' })
+    })
+  })
+
+  /**
    * A downloaded model keeps its pictures inside its own file, where nothing in the studio can
    * open them. Taking them out is what makes them assets — and what lets the maps of a model
    * fetched from the library be painted on at all.

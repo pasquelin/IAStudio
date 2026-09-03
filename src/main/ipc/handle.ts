@@ -137,6 +137,7 @@ type ChannelMethod = {
   [CHANNELS.assetsAbsent]: StudioBridge['assets']['absent']
   [CHANNELS.assetsSaveAudio]: StudioBridge['assets']['saveAudio']
   [CHANNELS.assetsSavePicture]: StudioBridge['assets']['savePicture']
+  [CHANNELS.assetsSavePlayerModule]: StudioBridge['assets']['savePlayerModule']
   [CHANNELS.assetsSaveLayered]: StudioBridge['assets']['saveLayered']
   [CHANNELS.assetsSaveMesh]: StudioBridge['assets']['saveMesh']
   [CHANNELS.assetsSaveAnimation]: StudioBridge['assets']['saveAnimation']
@@ -234,6 +235,7 @@ type ChannelMethod = {
   [CHANNELS.mirrorOpen]: StudioBridge['mirror']['open']
   [CHANNELS.characterWindowOpen]: StudioBridge['characterWindow']['open']
   [CHANNELS.gameWindowOpen]: StudioBridge['gameWindow']['open']
+  [CHANNELS.playerModuleWindowOpen]: StudioBridge['playerModuleWindow']['open']
   [CHANNELS.gameWindowClose]: StudioBridge['gameWindow']['close']
 
   [CHANNELS.helpOpen]: StudioBridge['help']['open']
