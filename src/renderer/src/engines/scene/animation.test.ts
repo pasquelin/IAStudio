@@ -1,5 +1,5 @@
-import { AnimationClip, Bone, Object3D, VectorKeyframeTrack } from 'three'
-import { describe, expect, it } from 'vitest'
+import { AnimationClip, AnimationMixer, Bone, Object3D, VectorKeyframeTrack } from 'three'
+import { describe, expect, it, vi } from 'vitest'
 import {
   assetClip,
   bundledClip,
@@ -108,14 +108,24 @@ describe('SceneAnimations', () => {
     expect(animations.clipsOf('node-1')).toEqual([])
   })
 
+  it('does not evaluate a mixer that has no block to place', () => {
+    const animations = new SceneAnimations()
+    animations.add('node-1', scene(), [walkClip()])
+    const update = vi.spyOn(AnimationMixer.prototype, 'update')
+
+    animations.seek(0.5 * SECOND)
+
+    expect(update).not.toHaveBeenCalled()
+    update.mockRestore()
+  })
+
   it('plays a clip filed after the file landed, at the width that clip really runs', () => {
     const animations = new SceneAnimations()
     const root = scene()
     animations.add('node-1', root, [])
-    animations.addClip('node-1', 'bundled:Capoeira', walkClip())
-
     applyTo(animations, [bundledClip('block-1', 'Capoeira')])
     animations.seek(0.5 * SECOND)
+    animations.addClip('node-1', 'bundled:Capoeira', walkClip())
 
     expect(animations.lengthsOf('node-1')['bundled:Capoeira']).toBe(1)
     expect(cubeOf(root).position.x).toBeCloseTo(0.5)
@@ -180,6 +190,7 @@ describe('SceneAnimations', () => {
     applyTo(animations, [ref()])
     animations.seek(0.5 * SECOND)
     applyTo(animations, [])
+    animations.seek(0.75 * SECOND)
 
     // Without an action driving them, three restores the values the file was loaded with — and
     // it has to reach the objects on the spot, since nothing will advance afterwards.
