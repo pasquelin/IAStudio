@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { emptyHistory, run, undo } from '../core/history'
 import {
   applyReliefSculpt,
   changedChunks,
@@ -11,7 +12,11 @@ import {
   DEFAULT_RELIEF_ELEVATION,
   DEFAULT_RELIEF_ORIGIN,
   DEFAULT_RELIEF_SIZE,
+  DEFAULT_WORLD,
+  reliefLayer,
 } from '@shared/domain/scene'
+import { sculptRelief } from './reliefCommands'
+import { EMPTY_SCENE, type SceneState } from './sceneState'
 import { createReliefSculptor } from './reliefSculptor'
 import type { ReliefSculptRequest, ReliefSculptResponse } from './reliefSculptMessage'
 
@@ -116,7 +121,54 @@ describe('createReliefSculptor', () => {
     expect(edits2).toEqual(changedChunks(afterFirst, afterSecond))
     expect(edits2).not.toEqual(edits1)
   })
+
+  it('drops an in-flight stroke when undo restores another sculpt', async () => {
+    const fake = fakeWorker()
+    const sculptor = createReliefSculptor(() => fake.worker)
+    const first = diskAt(1, 2)
+    const second = diskAt(2, 5)
+
+    const pendingFirst = sculptor.raiseDisk(first)
+    const request1 = fake.posted[0]
+    if (!request1) throw new Error('first stroke was not sent')
+    answer(fake, request1)
+    const edits1 = await pendingFirst
+    if (!edits1) throw new Error('first stroke was dropped')
+
+    let state = sceneOf()
+    let history = emptyHistory<SceneState>()
+    ;[state, history] = run(state, history, sculptRelief(0, edits1))
+    sculptor.note(sculptOf(state))
+
+    const pendingSecond = sculptor.raiseDisk(second)
+    ;[state, history] = undo(state, history)
+    sculptor.note(sculptOf(state))
+
+    const request2 = fake.posted[1]
+    if (!request2) throw new Error('second stroke was not sent')
+    answer(fake, request2)
+    const edits2 = await pendingSecond
+    if (edits2) state = run(state, history, sculptRelief(0, edits2))[0]
+
+    expect(edits2).toBeNull()
+    expect(sculptOf(state)).toBeUndefined()
+  })
 })
+
+function sceneOf(sculpt?: ReliefSculpt): SceneState {
+  return {
+    ...EMPTY_SCENE,
+    world: {
+      ...DEFAULT_WORLD,
+      layers: [reliefLayer({ assetId: 'asset_height' }, sculpt ? { sculpt } : undefined)],
+    },
+  }
+}
+
+function sculptOf(state: SceneState): ReliefSculpt | undefined {
+  const layer = state.world.layers[0]
+  return layer?.kind === 'relief' ? layer.sculpt : undefined
+}
 
 function operationOf(stroke: ReturnType<typeof diskAt>): ReliefSculptOperation {
   return { kind: 'raiseDisk', disk: stroke.disk, amount: stroke.amount }

@@ -83,6 +83,7 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
       }
       const edits = packedOf(response.chunks)
       heldAfter = withPackedChunks(before, response.grain, edits)
+      bound = heldAfter
       job.resolve(edits)
     } catch (error) {
       if (token !== generation) job.resolve(null)
@@ -100,7 +101,11 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
         void pump()
       }),
     note: sculpt => {
-      if (sameSculpt(sculpt, heldAfter) || sameSculpt(sculpt, bound)) return
+      if (sameSculpt(sculpt, heldAfter)) {
+        bound = sculpt
+        return
+      }
+      if (sameSculpt(sculpt, bound)) return
       invalidate()
       bound = sculpt
     },
