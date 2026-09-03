@@ -320,6 +320,40 @@ describe('relief surface chunks', () => {
     await vi.waitFor(() => expect(reads).toBe(2))
   })
 
+  it('applies the layer asked for LAST when a load that started before it lands', async () => {
+    const settle: ((samples: ReturnType<typeof samplesOf>) => void)[] = []
+    const surface = createReliefSurface(new Scene(), {
+      load: () =>
+        new Promise(resolve => {
+          settle.push(resolve)
+        }),
+    })
+    const samples = samplesOf()
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 0,
+      delta: 4,
+    })
+    const blended = (alpha: number) => ({
+      ...DEFAULT_WORLD,
+      layers: [
+        reliefLayer(
+          { assetId: 'asset_height' },
+          { id: TERRAIN, edits: [terrainEditLayer({ id: 'sculpt', sculpt, alpha })] },
+        ),
+      ],
+    })
+
+    surface.sync(blended(1))
+    surface.sync(blended(0.5))
+    settle.shift()?.(samples)
+    await vi.waitFor(() => expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined())
+
+    expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(2.01)
+  })
+
   it('lets a load in flight finish rather than reading the heightmap again', async () => {
     let reads = 0
     const surface = createReliefSurface(new Scene(), {
