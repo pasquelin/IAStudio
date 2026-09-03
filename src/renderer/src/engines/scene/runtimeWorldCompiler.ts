@@ -2,6 +2,12 @@ import { stableKey } from '@shared/hash'
 import type { AnimationTimeline } from '@shared/domain/animation'
 import type { SceneWorld } from '@shared/domain/scene'
 import type { SceneNode, SceneState } from './sceneState'
+import {
+  validateSafeRuntime,
+  type SafeRuntimeValidationInput,
+  type SafeRuntimeValidationReport,
+} from './safeRuntimeValidation'
+import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
 
 export type OptimizationSignature = string
 
@@ -27,6 +33,10 @@ export type RuntimeWorldCompiler = {
   invalidateOptimization: (entityIds: readonly string[]) => void
   getOptimizationReport: () => RuntimeCompilationReport
   clearOptimizationCache: () => void
+  validateSafeWorld: (
+    world: SceneState,
+    input: Omit<SafeRuntimeValidationInput, 'observeOriginal' | 'observeOptimized'>,
+  ) => Promise<SafeRuntimeValidationReport>
 }
 
 const EMPTY_REPORT: RuntimeCompilationReport = {
@@ -184,6 +194,14 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       invalidated.clear()
       runtime = null
       report = EMPTY_REPORT
+    },
+    validateSafeWorld: async (world, input) => {
+      const compiled = compileRuntimeWorld(world)
+      return await validateSafeRuntime({
+        ...input,
+        observeOriginal: async () => sceneRuntimeSnapshot(world),
+        observeOptimized: async () => sceneRuntimeSnapshot(compiled),
+      })
     },
   }
 }

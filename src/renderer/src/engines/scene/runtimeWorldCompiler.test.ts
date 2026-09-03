@@ -43,6 +43,31 @@ describe('runtimeWorldPatch', () => {
 })
 
 describe('createRuntimeWorldCompiler', () => {
+  it('validates compiled worlds through concrete scene observations and rendered frames', async () => {
+    const compiler = createRuntimeWorldCompiler()
+    const source = stateOf(meshNode('a'))
+    const pixels = new Uint8Array([10, 20, 30, 255])
+    const rendered: string[] = []
+
+    const report = await compiler.validateSafeWorld(source, {
+      cameras: [{ id: 'main' }],
+      renderOriginal: async camera => {
+        rendered.push(`original:${camera.id}`)
+        return { width: 1, height: 1, pixels }
+      },
+      renderOptimized: async camera => {
+        rendered.push(`optimized:${camera.id}`)
+        return { width: 1, height: 1, pixels: pixels.slice() }
+      },
+      visualOptions: { channelTolerance: 0, maximumChangedPixelRatio: 0 },
+    })
+
+    expect(rendered).toEqual(['original:main', 'optimized:main'])
+    expect(report.equivalent).toBe(true)
+    expect(report.functional.every(result => result.equivalent)).toBe(true)
+    expect(compiler.getOptimizationReport().cachedNodes).toBe(1)
+  })
+
   it('reuses unchanged runtime nodes and recompiles only a transported delta', () => {
     const compiler = createRuntimeWorldCompiler()
     const a = meshNode('a')
