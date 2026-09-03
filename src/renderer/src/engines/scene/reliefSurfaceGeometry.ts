@@ -24,7 +24,7 @@ export function reliefGeometryData(
   const position = new Float32Array(vertices * 3)
   const normal = new Float32Array(vertices * 3)
   const uv = new Float32Array(vertices * 2)
-  const read = reliefReader(samples, grain, edits)
+  const read = reliefReader(samples, grain, edits, extent)
   writePositions(position, samples, extent, layout, read)
   writeNormals(normal, samples, extent, layout, read)
   writeUv(uv, layout, samples)
@@ -126,7 +126,7 @@ export function writeChunkNormals(
   const normal = geometry.getAttribute('normal')
   if (!(normal instanceof BufferAttribute) || !(normal.array instanceof Float32Array)) return
 
-  writeNormals(normal.array, samples, extent, layout, reliefReader(samples, grain, edits))
+  writeNormals(normal.array, samples, extent, layout, reliefReader(samples, grain, edits, extent))
   markChunk(normal)
   normal.needsUpdate = true
 }

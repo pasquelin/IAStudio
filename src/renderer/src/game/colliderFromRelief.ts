@@ -13,7 +13,7 @@ export function colliderFromRelief(
 ): ColliderShape | null {
   if (samples.width < 2 || samples.height < 2) return null
 
-  const read = reliefReader(samples, layer.grain, layer.edits)
+  const read = reliefReader(samples, layer.grain, layer.edits, layer)
   const heights = new Float32Array(samples.width * samples.height)
   for (let z = 0; z < samples.height; z++) {
     for (let x = 0; x < samples.width; x++) {

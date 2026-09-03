@@ -19,6 +19,7 @@ import {
   unpackDeltas,
   withChunkDelta,
   type ReliefHeightLayer,
+  type ReliefOverlay,
   type ReliefSculpt,
 } from './relief'
 import {
@@ -496,5 +497,112 @@ describe('flattenReliefDisk', () => {
         target,
       }),
     ).toEqual(flattenReliefDisk(samples, extent, undefined, disk, target, 1))
+  })
+})
+
+describe('overlay masks', () => {
+  const samples = {
+    width: 8,
+    height: 8,
+    values: new Float32Array(64),
+  }
+  const extent = {
+    origin: { x: 0, z: 0 },
+    size: { x: 7, z: 7 },
+    elevation: { min: 0, max: 1000 },
+  }
+  const hills = withChunkDelta(samples, undefined, {
+    column: 0,
+    row: 0,
+    localX: 2,
+    localZ: 2,
+    delta: 1,
+  })
+  const valley = withChunkDelta(samples, undefined, {
+    column: 0,
+    row: 0,
+    localX: 4,
+    localZ: 2,
+    delta: 1,
+  })
+
+  it('leaves an overlay without a mask as alpha times delta', () => {
+    expect(
+      combinedAt(
+        samples,
+        RELIEF_CHUNK_TEXELS,
+        [{ enabled: true, alpha: 0.5, sculpt: hills }],
+        2,
+        2,
+      ),
+    ).toBeCloseTo(0.5)
+  })
+
+  it('zeroes a height-masked overlay outside the range and keeps it inside', () => {
+    const overlay: ReliefOverlay = {
+      enabled: true,
+      alpha: 1,
+      sculpt: hills,
+      mask: { kind: 'height', min: 100, max: 800 },
+    }
+    const low = {
+      ...samples,
+      values: Float32Array.from({ length: 64 }, () => 0.05),
+    }
+    const mid = {
+      ...samples,
+      values: Float32Array.from({ length: 64 }, () => 0.4),
+    }
+
+    expect(combinedAt(low, RELIEF_CHUNK_TEXELS, [overlay], 2, 2, extent)).toBeCloseTo(0.05)
+    expect(combinedAt(mid, RELIEF_CHUNK_TEXELS, [overlay], 2, 2, extent)).toBeCloseTo(1.4)
+  })
+
+  it('zeroes a slope-masked overlay on the flat and keeps it on a ramp', () => {
+    const ramp = {
+      width: 8,
+      height: 8,
+      values: Float32Array.from({ length: 64 }, (_, at) => (at % 8) * 0.2),
+    }
+    const overlay: ReliefOverlay = {
+      enabled: true,
+      alpha: 1,
+      sculpt: withChunkDelta(ramp, undefined, {
+        column: 0,
+        row: 0,
+        localX: 3,
+        localZ: 3,
+        delta: 1,
+      }),
+      mask: { kind: 'slope', min: 20, max: 90 },
+    }
+
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, [overlay], 3, 3, extent)).toBeCloseTo(0)
+    expect(combinedAt(ramp, RELIEF_CHUNK_TEXELS, [overlay], 3, 3, extent)).toBeGreaterThan(
+      ramp.values[3 * 8 + 3] ?? 0,
+    )
+  })
+
+  it('modulates only the painted overlay, not its neighbour', () => {
+    const paint = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 2,
+      localZ: 2,
+      delta: 1,
+    })
+    const overlays: ReliefOverlay[] = [
+      {
+        enabled: true,
+        alpha: 1,
+        sculpt: hills,
+        mask: { kind: 'painted', weights: paint },
+      },
+      { enabled: true, alpha: 1, sculpt: valley },
+    ]
+
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlays, 2, 2)).toBeCloseTo(1)
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlays, 4, 2)).toBeCloseTo(1)
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlays, 3, 2)).toBeCloseTo(0)
   })
 })

@@ -45,7 +45,7 @@ import {
   UNLOCKED_TERRAIN,
 } from '@shared/domain/scene'
 import { readStack } from '@shared/domain/postProcessing'
-import { readReliefGrain, readReliefSculpt } from '@shared/domain/relief'
+import { readReliefGrain, readReliefMask, readReliefSculpt } from '@shared/domain/relief'
 import { isRecord, oneOf, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 import { newId } from '@/helpers/ids'
 import { bound, type NumericBounds } from '@shared/numeric'
@@ -195,6 +195,7 @@ function readTerrainEditLayer(value: unknown): readonly TerrainEditLayer[] {
       locked: readBoolean(value, 'locked', false),
       alpha: readNumber(value, 'alpha', 1),
       sculpt,
+      mask: readReliefMask(value.mask),
     }),
   ]
 }

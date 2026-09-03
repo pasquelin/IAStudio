@@ -9,7 +9,7 @@ import { readReliefGrain as readGrain } from './reliefParsing'
 import { chunkCountAlong, RELIEF_CHUNK_TEXELS } from './reliefMetrics'
 
 export { packDeltas, unpackDeltas } from './reliefPacking'
-export { readReliefSculpt } from './reliefParsing'
+export { readReliefSculpt, readReliefMask } from './reliefParsing'
 export * from './reliefMetrics'
 
 export type ReliefOrigin = { x: number; z: number }
@@ -77,7 +77,17 @@ export type ReliefOverlay = {
   enabled: boolean
   alpha: number
   sculpt?: ReliefSculpt
+  mask?: ReliefMask
 }
+
+/**
+ * Per-texel weight on an overlay. Absent mask = 1 everywhere. Painted missing chunks = 0
+ * (paint-in). Height and slope are procedural on the incoming unmasked combined of the others.
+ */
+export type ReliefMask =
+  | { kind: 'painted'; weights: ReliefSculpt }
+  | { kind: 'height'; min: number; max: number }
+  | { kind: 'slope'; min: number; max: number }
 
 /**
  * A height query: the spatial half of a relief plus the samples the heightmap asset holds.
@@ -112,7 +122,7 @@ export function getHeightAt(
   const z0 = clamp(Math.floor(tz), 0, lastZ)
   const x1 = Math.min(x0 + 1, lastX)
   const z1 = Math.min(z0 + 1, lastZ)
-  const read = reliefReader(samples, layer.grain, layer.edits)
+  const read = reliefReader(samples, layer.grain, layer.edits, layer)
   const sample = mix(
     mix(read(x0, z0), read(x1, z0), tx - x0),
     mix(read(x0, z1), read(x1, z1), tx - x0),
@@ -166,21 +176,23 @@ export function combinedAt(
   overlays: readonly ReliefOverlay[],
   sx: number,
   sz: number,
+  extent?: ReliefExtent,
 ): number {
-  return reliefReader(samples, grain, overlays)(sx, sz)
+  return reliefReader(samples, grain, overlays, extent)(sx, sz)
 }
 
 export type ReliefRead = (sx: number, sz: number) => number
 
 /**
- * Reads base + Σ(enabled ? alpha * delta) over many samples, each overlay's chunk decoded once
- * and held. A sculpt stroke rebuilds 4 225 vertices from one chunk, five reads apiece —
- * `reliefReadCost.test.ts`.
+ * Reads base + Σ(enabled ? alpha * mask * delta) over many samples, each overlay's chunk
+ * decoded once and held. A sculpt stroke rebuilds 4 225 vertices from one chunk, five reads
+ * apiece — `reliefReadCost.test.ts`.
  */
 export function reliefReader(
   samples: HeightmapSamples,
   grain: number,
   overlays: readonly ReliefOverlay[],
+  extent?: ReliefExtent,
 ): ReliefRead {
   const active = overlays.filter(edit => edit.enabled && edit.alpha !== 0 && edit.sculpt)
   if (active.length === 0) return (sx, sz) => samples.values[sz * samples.width + sx] ?? 0
@@ -188,13 +200,78 @@ export function reliefReader(
   const readers = active.map(edit => ({
     alpha: edit.alpha,
     deltaAt: overlayDeltaReader(samples, grain, edit.sculpt),
+    mask: edit.mask,
+    paintedAt:
+      edit.mask?.kind === 'painted'
+        ? overlayDeltaReader(samples, grain, edit.mask.weights)
+        : undefined,
   }))
+  const unmaskedAt = (sx: number, sz: number, except: (typeof readers)[number]): number => {
+    const base = samples.values[sz * samples.width + sx] ?? 0
+    let added = 0
+    for (const one of readers) {
+      if (one === except) continue
+      added += one.alpha * one.deltaAt(sx, sz)
+    }
+    return base + added
+  }
   return (sx, sz) => {
     const base = samples.values[sz * samples.width + sx] ?? 0
     let added = 0
-    for (const one of readers) added += one.alpha * one.deltaAt(sx, sz)
+    for (const one of readers) {
+      added +=
+        one.alpha * maskWeight(one, sx, sz, unmaskedAt, samples, extent) * one.deltaAt(sx, sz)
+    }
     return base + added
   }
+}
+
+function maskWeight(
+  overlay: {
+    mask?: ReliefMask
+    paintedAt?: (sx: number, sz: number) => number
+  },
+  sx: number,
+  sz: number,
+  unmaskedAt: (sx: number, sz: number, except: typeof overlay) => number,
+  samples: HeightmapSamples,
+  extent?: ReliefExtent,
+): number {
+  const mask = overlay.mask
+  if (!mask) return 1
+  if (mask.kind === 'painted') return clamp(overlay.paintedAt?.(sx, sz) ?? 0, 0, 1)
+  if (!extent) return 1
+  if (mask.kind === 'height') {
+    return inRange(worldY(unmaskedAt(sx, sz, overlay), extent.elevation), mask.min, mask.max)
+      ? 1
+      : 0
+  }
+  return inRange(slopeDegrees(unmaskedAt, overlay, samples, extent, sx, sz), mask.min, mask.max)
+    ? 1
+    : 0
+}
+
+function slopeDegrees(
+  unmaskedAt: (sx: number, sz: number, except: { mask?: ReliefMask }) => number,
+  overlay: { mask?: ReliefMask },
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  sx: number,
+  sz: number,
+): number {
+  const step = texelStep(extent.size, samples)
+  const lastX = samples.width - 1
+  const lastZ = samples.height - 1
+  const height = (x: number, z: number): number =>
+    worldY(unmaskedAt(clamp(x, 0, lastX), clamp(z, 0, lastZ), overlay), extent.elevation)
+  const nx = (height(sx - 1, sz) - height(sx + 1, sz)) / (2 * step.x)
+  const nz = (height(sx, sz - 1) - height(sx, sz + 1)) / (2 * step.z)
+  const length = Math.hypot(nx, 1, nz) || 1
+  return Math.acos(clamp(1 / length, -1, 1)) * (180 / Math.PI)
+}
+
+function inRange(value: number, min: number, max: number): boolean {
+  return value >= Math.min(min, max) && value <= Math.max(min, max)
 }
 
 function overlayDeltaReader(
@@ -392,7 +469,7 @@ export function smoothReliefDisk(
   rows?: ReliefChunkRows,
   overlays: readonly ReliefOverlay[] = [],
 ): ReliefSculpt {
-  const read = combinedRead(samples, grain, overlays, sculpt)
+  const read = combinedRead(samples, grain, overlays, sculpt, extent)
   return addDiskDeltas(samples, extent, sculpt, disk, falloff, grain, rows, (sx, sz, weight) => {
     const combined = read(sx, sz)
     return (neighbourMean(read, samples, sx, sz) - combined) * amount * weight
@@ -415,7 +492,7 @@ export function flattenReliefDisk(
   rows?: ReliefChunkRows,
   overlays: readonly ReliefOverlay[] = [],
 ): ReliefSculpt {
-  const read = combinedRead(samples, grain, overlays, sculpt)
+  const read = combinedRead(samples, grain, overlays, sculpt, extent)
   return addDiskDeltas(
     samples,
     extent,
@@ -433,11 +510,14 @@ function combinedRead(
   grain: number,
   overlays: readonly ReliefOverlay[],
   sculpt: ReliefSculpt | undefined,
+  extent?: ReliefExtent,
 ): ReliefRead {
-  return reliefReader(samples, grain, [
-    ...overlays,
-    ...(sculpt ? [{ enabled: true, alpha: 1, sculpt }] : []),
-  ])
+  return reliefReader(
+    samples,
+    grain,
+    [...overlays, ...(sculpt ? [{ enabled: true, alpha: 1, sculpt }] : [])],
+    extent,
+  )
 }
 
 function neighbourMean(

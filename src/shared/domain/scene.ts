@@ -1,12 +1,13 @@
 import type { FontRef } from './font'
 import { EMPTY_STACK, type PostStack } from './postProcessing'
-import { RELIEF_CHUNK_TEXELS, type ReliefSculpt } from './relief'
+import { RELIEF_CHUNK_TEXELS, type ReliefMask, type ReliefSculpt } from './relief'
 import type { Vector3 } from './transform'
 import type { GeometryDescriptor } from './geometry'
 import type { TextureSlot } from './sceneTexture'
 
 export * from './sceneModel'
 export * from './sceneTexture'
+export type { ReliefMask } from './relief'
 
 export type TextureRef = { assetId: string }
 
@@ -21,6 +22,7 @@ export type TerrainEditLayer = {
   locked: boolean
   alpha: number
   sculpt?: ReliefSculpt
+  mask?: ReliefMask
 }
 
 export type ReliefLayer = {
@@ -198,6 +200,7 @@ export function terrainEditLayer(
     locked: patch.locked ?? false,
     alpha: patch.alpha ?? 1,
     ...(patch.sculpt && patch.sculpt.chunks.length > 0 ? { sculpt: patch.sculpt } : {}),
+    ...(patch.mask ? { mask: patch.mask } : {}),
   }
 }
 

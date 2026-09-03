@@ -237,6 +237,22 @@ describe('reading a world back', () => {
     expect(held.layers).toEqual([written])
   })
 
+  it('round-trips an edit mask', () => {
+    const written = reliefLayer(
+      { assetId: 'asset_height' },
+      {
+        id: 'island',
+        edits: [
+          terrainEditLayer({
+            id: 'hills',
+            mask: { kind: 'height', min: 100, max: 800 },
+          }),
+        ],
+      },
+    )
+    expect(readWorld({ layers: [written] }, undefined).layers).toEqual([written])
+  })
+
   it('gives a ground with no colour the studio one rather than a string', () => {
     expect(readWorld({ ground: { visible: true } }, undefined).ground).toEqual({
       visible: true,

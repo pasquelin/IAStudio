@@ -388,8 +388,8 @@ function patchMeshes(
 ): void {
   for (const mesh of terrain.meshes.values()) clearChunkRanges(mesh)
   const edits = dirtiedChunks(before, after)
-  const beforeRead = reliefReader(samples, grain, before)
-  const afterRead = reliefReader(samples, grain, after)
+  const beforeRead = reliefReader(samples, grain, before, extent)
+  const afterRead = reliefReader(samples, grain, after, extent)
   const dirty = new Map<string, { layout: ReliefChunkLayout; rect: SampleRect }>()
 
   for (const { column, row } of edits) {

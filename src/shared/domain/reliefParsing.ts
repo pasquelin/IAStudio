@@ -1,9 +1,24 @@
 import { isRecord, readString } from '../guards'
-import type { PackedReliefChunk, ReliefSculpt } from './relief'
+import type { PackedReliefChunk, ReliefMask, ReliefSculpt } from './relief'
 
 export function readReliefSculpt(value: unknown): ReliefSculpt | undefined {
   if (!isRecord(value) || !Array.isArray(value.chunks)) return undefined
   return { chunks: value.chunks.flatMap(readPackedChunk) }
+}
+
+export function readReliefMask(value: unknown): ReliefMask | undefined {
+  if (!isRecord(value) || typeof value.kind !== 'string') return undefined
+  if (value.kind === 'painted') {
+    const weights = readReliefSculpt(value.weights)
+    return weights ? { kind: 'painted', weights } : { kind: 'painted', weights: { chunks: [] } }
+  }
+  if (value.kind === 'height' || value.kind === 'slope') {
+    const min = value.min
+    const max = value.max
+    if (typeof min !== 'number' || typeof max !== 'number') return undefined
+    return { kind: value.kind, min, max }
+  }
+  return undefined
 }
 
 export function readReliefGrain(value: unknown, fallback: number): number {
