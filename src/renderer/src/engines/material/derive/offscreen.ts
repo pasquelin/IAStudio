@@ -108,7 +108,7 @@ async function loadSources(load: TextureSource, urls: readonly string[]): Promis
   const loaded: Source[] = []
   // The settled result itself, not its reason: it is what tells "nothing failed" apart from
   // "something failed with an undefined reason", and it is a type the platform already has.
-  let failure: PromiseRejectedResult | undefined
+  let failure: PromiseRejectedResult | undefined = undefined
   for (const result of settled) {
     if (result.status === 'fulfilled') loaded.push(result.value)
     else failure ??= result
