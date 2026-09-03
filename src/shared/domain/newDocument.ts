@@ -14,7 +14,7 @@ export function isNewDocumentRoute(hash: string): boolean {
 /** What the studio hands the window that names a document about to be made. */
 export type NewDocumentAsk = {
   /** A file arrival only asks where it belongs; it never asks for a document kind or name. */
-  purpose?: 'document' | 'externalFiles'
+  purpose?: 'externalFiles'
   /**
    * What is being made, or `null` to ask that first — the plus button and ⌘N send nothing,
    * a File ▸ New row sends its own kind. A window that already knows opens on the form.

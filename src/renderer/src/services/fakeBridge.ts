@@ -433,7 +433,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     externalFiles: {
       take: () => Promise.resolve([]),
-      paths: () => [],
+      offer: () => Promise.resolve(null),
+      discard: () => Promise.resolve(),
       onOpen: noSubscription,
       ...overrides.externalFiles,
     },

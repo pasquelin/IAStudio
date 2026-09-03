@@ -26,6 +26,7 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
     pickMedia: vi.fn(async () => ['/Volumes/Rushes/A001.mov']),
     capabilities: async () => ({ ffmpeg: true }),
     importPaths: async () => [],
+    claimExternalFiles: () => [],
     ...overrides,
   }
 }
@@ -99,9 +100,9 @@ describe('media handlers', () => {
       now: '2026-09-03T10:00:00.000Z',
     })
     const importPaths = vi.fn(async () => [imported])
-    registerMediaHandlers(deps({ importPaths }))
+    registerMediaHandlers(deps({ importPaths, claimExternalFiles: () => ['/outside/model.glb'] }))
 
-    const assets = await invoke(CHANNELS.mediaIngestPaths, ['/outside/model.glb'], 'Models')
+    const assets = await invoke(CHANNELS.mediaIngestPaths, 'request-1', 'Models')
 
     expect(importPaths).toHaveBeenCalledWith(['/outside/model.glb'], 'Models')
     expect(assets).toEqual([expect.not.objectContaining({ sourcePath: expect.anything() })])

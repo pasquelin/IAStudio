@@ -1,6 +1,7 @@
 import type { ExternalFileRequest } from '@shared/domain/externalFile'
 import { projectName, type RecentProject } from '@shared/domain/project'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -55,9 +56,18 @@ async function chooseProject(): Promise<boolean> {
 }
 
 async function importRequest(request: ExternalFileRequest): Promise<void> {
-  if (request.folder === undefined && !(await chooseProject())) return
+  const bridge = getBridge()
+  if (!bridge) return
+  if (request.project && request.project !== useProject.getState().project?.path) {
+    await bridge.externalFiles.discard(request.id)
+    return
+  }
+  if (request.folder === undefined && !(await chooseProject())) {
+    await bridge.externalFiles.discard(request.id)
+    return
+  }
 
-  const imported = await getBridge()?.media.ingestPaths(request.paths, request.folder ?? '')
+  const imported = await bridge.media.ingestPaths(request.id, request.folder ?? '')
   if (!imported?.length) return
 
   await useAssets.getState().refresh()
@@ -71,7 +81,12 @@ async function drain(): Promise<void> {
   try {
     while (waiting.length > 0) {
       const request = waiting.shift()
-      if (request) await importRequest(request)
+      if (!request) continue
+      try {
+        await importRequest(request)
+      } catch (error) {
+        reportFailure('assets.copy', request.id, error)
+      }
     }
   } finally {
     importing = false
@@ -88,8 +103,17 @@ export async function takeExternalFiles(): Promise<void> {
   if (requests) queueExternalFiles(requests)
 }
 
-export function externalPaths(files: FileList | undefined): string[] {
-  return files ? (getBridge()?.externalFiles?.paths([...files]) ?? []) : []
+export async function offerExternalFiles(
+  files: FileList | undefined,
+): Promise<ExternalFileRequest | null> {
+  const bridge = getBridge()
+  if (!bridge || !files) return null
+  try {
+    return await bridge.externalFiles.offer([...files])
+  } catch (error) {
+    reportFailure('assets.copy', 'external-file-drop', error)
+    return null
+  }
 }
 
 export function carriesExternalFiles(event: DragLike): boolean {
