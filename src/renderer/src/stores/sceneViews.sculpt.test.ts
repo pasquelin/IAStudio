@@ -22,4 +22,14 @@ describe('sculpt and pose as exclusive sessions', () => {
     expect(view.poseMode).toBe(true)
     expect(view.sculptMode).toBe(false)
   })
+
+  it('holds brush radius and falloff on the session, not the document', () => {
+    useSceneViews.setState({ views: {} })
+    useSceneViews.getState().setSculptRadius('doc-1', 8)
+    useSceneViews.getState().setSculptFalloff('doc-1', 0.4)
+
+    const view = sceneViewOf(useSceneViews.getState(), 'doc-1')
+    expect(view.sculptRadius).toBe(8)
+    expect(view.sculptFalloff).toBe(0.4)
+  })
 })

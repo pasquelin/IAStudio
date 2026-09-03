@@ -80,7 +80,7 @@ describe('relief sculpting through the scene renderer', () => {
 
     await expect(renderer.raiseReliefDisk('terrain', 'hills', disk, 0.1)).resolves.toBe(true)
 
-    expect(strokes).toEqual([{ ...source, disk, amount: 0.1 }])
+    expect(strokes).toEqual([{ ...source, disk, amount: 0.1, falloff: 0 }])
     expect(published).toHaveBeenCalledWith('terrain', 'hills', changed)
     renderer.dispose()
   })

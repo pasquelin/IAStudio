@@ -38,6 +38,8 @@ const OTHER_SENSES: Record<string, string> = {
   sceneRendererRelief: 'World relief: applyWorld reads world.layers, not a timeline line',
   'scene-renderer-relief':
     'World relief: the edit layers a sculptor is held for, not a timeline line',
+  reliefStroke: 'World relief: which heightmap a stroke writes, not a timeline line',
+  sceneRendererStroke: 'World relief: the terrain a drag paints, not a timeline line',
 }
 
 const stemOf = (path: string): string => (path.split('/').pop() ?? '').split('.')[0] ?? ''

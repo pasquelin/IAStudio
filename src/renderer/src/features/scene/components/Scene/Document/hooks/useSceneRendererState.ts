@@ -28,6 +28,11 @@ export function useSceneRendererState(
     }
   }, [documentId, engine, view.poseMode])
   useEffect(() => engine.current?.setSculptMode(view.sculptMode), [engine, view.sculptMode])
+  useEffect(() => engine.current?.setArmedRelief(view.armedRelief), [engine, view.armedRelief])
+  useEffect(
+    () => engine.current?.setSculptBrush(view.sculptRadius, view.sculptFalloff),
+    [engine, view.sculptRadius, view.sculptFalloff],
+  )
   useEffect(() => engine.current?.setPickedBone(view.pickedBone), [engine, view.pickedBone])
   useEffect(
     () => engine.current?.setPickedPathPoint(view.pickedPathPoint),

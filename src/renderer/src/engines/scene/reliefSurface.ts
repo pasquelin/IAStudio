@@ -41,6 +41,18 @@ export type ReliefSurface = {
   dispose: () => void
 }
 
+/** Group name of one terrain, which a ray walks up from a chunk mesh. */
+export function terrainIdOfObject(object: Object3D): string | null {
+  let current: Object3D | null = object
+  while (current) {
+    if (current.name.startsWith('relief-') && !current.name.startsWith('relief-chunk-')) {
+      return current.name.slice('relief-'.length)
+    }
+    current = current.parent
+  }
+  return null
+}
+
 export type ReliefSculptSource = {
   samples: HeightmapSamples
   extent: ReliefExtent

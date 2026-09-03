@@ -31,6 +31,8 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
     onTransform: moves => recordTransform(documentId, moves),
     onReliefSculpt: (terrainId, editId, chunks) =>
       useScenes.getState().runCommand(documentId, sculptRelief(terrainId, editId, chunks)),
+    onReliefStrokeStart: () => useScenes.getState().beginGesture(documentId),
+    onReliefStrokeEnd: () => useScenes.getState().endGesture(documentId),
     onClips: (id, clips, lengths) =>
       useModelFiles.getState().report(documentId, id, clips, lengths),
     onRig: (id, rig) => useModelFiles.getState().reportRig(documentId, id, rig),

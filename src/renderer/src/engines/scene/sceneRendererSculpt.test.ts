@@ -14,13 +14,17 @@ describe('SceneRenderer and sculpt mode', () => {
 
   const attachGizmo = method('attachGizmo\\(\\): void')
   const armMarquee = method('armMarquee\\(event: PointerEvent\\): void')
+  const pointerDown = handler('onPointerDown', 'event: PointerEvent')
+  const pointerMove = handler('onPointerMove', 'event: PointerEvent')
   const pointerUp = handler('onPointerUp', 'event: PointerEvent')
   const setSculptMode = method('setSculptMode\\(on: boolean\\): void')
 
   it('finds the paths sculpt exclusivity is written in', () => {
     expect(
-      [attachGizmo, armMarquee, pointerUp, setSculptMode].map(found => found.length > 0),
-    ).toEqual([true, true, true, true])
+      [attachGizmo, armMarquee, pointerDown, pointerMove, pointerUp, setSculptMode].map(
+        found => found.length > 0,
+      ),
+    ).toEqual([true, true, true, true, true, true])
   })
 
   it('detaches the gizmo while sculpt is on', () => {
@@ -42,5 +46,12 @@ describe('SceneRenderer and sculpt mode', () => {
 
   it('reattaches the gizmo once sculpt is off', () => {
     expect(setSculptMode).toContain('this.attachGizmo()')
+  })
+
+  it('rays only the relief mesh while sculpting, not the classic nodes', () => {
+    expect(source).toContain('this.raycaster.intersectObject(this.relief.object, true)')
+    expect(pointerDown).toContain('this.beginReliefStrokeFrom(event)')
+    expect(pointerMove).toContain('this.aimReliefBrush(event)')
+    expect(pointerMove).toContain('this.moveReliefStrokeFrom(event)')
   })
 })

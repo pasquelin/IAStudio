@@ -1,4 +1,4 @@
-import { BufferAttribute, Scene } from 'three'
+import { BufferAttribute, Group, Object3D, Scene } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import {
   RELIEF_CHUNK_TEXELS,
@@ -14,7 +14,7 @@ import {
   terrainEditLayer,
   type ReliefLayer,
 } from '@shared/domain/scene'
-import { createReliefSurface, reliefGeometryData } from './reliefSurface'
+import { createReliefSurface, reliefGeometryData, terrainIdOfObject } from './reliefSurface'
 
 const WIDTH = 66
 const HEIGHT = 8
@@ -52,6 +52,16 @@ function positionOf(
 }
 
 describe('relief surface chunks', () => {
+  it('names a chunk mesh by walking up to its terrain group', () => {
+    const terrain = new Group()
+    terrain.name = 'relief-island'
+    const chunk = new Object3D()
+    chunk.name = 'relief-chunk-0-0'
+    terrain.add(chunk)
+    expect(terrainIdOfObject(chunk)).toBe('island')
+    expect(terrainIdOfObject(new Object3D())).toBeNull()
+  })
+
   it('exposes the loaded source of one sculpt edit', () => {
     const surface = createReliefSurface(new Scene())
     const samples = samplesOf()

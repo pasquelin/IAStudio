@@ -1,5 +1,4 @@
 import { mdiBrush, mdiBlur, mdiArrowCollapseDown } from '@mdi/js'
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PropertySection } from '@/components/PropertySection'
 import { SliderField } from '@/components/SliderField'
@@ -20,8 +19,8 @@ export function WorldTools({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const armed = useSceneViews(state => sceneViewOf(state, documentId).armedRelief)
   const sculptMode = useSceneViews(state => sceneViewOf(state, documentId).sculptMode)
-  const [falloff, setFalloff] = useState(FALLOFF.value)
-  const [radius, setRadius] = useState(RADIUS.value)
+  const falloff = useSceneViews(state => sceneViewOf(state, documentId).sculptFalloff)
+  const radius = useSceneViews(state => sceneViewOf(state, documentId).sculptRadius)
 
   const layers = useScenes(state => sceneOf(state, documentId).world.layers)
   const terrain = layers.find(layer => layer.kind === 'relief' && layer.id === armed?.terrainId)
@@ -66,8 +65,8 @@ export function WorldTools({ documentId }: { documentId: string }) {
         min={FALLOFF.min}
         max={FALLOFF.max}
         step={FALLOFF.step}
-        onChange={setFalloff}
-        onReset={() => setFalloff(FALLOFF.value)}
+        onChange={value => useSceneViews.getState().setSculptFalloff(documentId, value)}
+        onReset={() => useSceneViews.getState().setSculptFalloff(documentId, FALLOFF.value)}
       />
       <SliderField
         label={t('world.radius')}
@@ -76,8 +75,8 @@ export function WorldTools({ documentId }: { documentId: string }) {
         min={RADIUS.min}
         max={RADIUS.max}
         step={RADIUS.step}
-        onChange={setRadius}
-        onReset={() => setRadius(RADIUS.value)}
+        onChange={value => useSceneViews.getState().setSculptRadius(documentId, value)}
+        onReset={() => useSceneViews.getState().setSculptRadius(documentId, RADIUS.value)}
       />
       {edit ? (
         <SliderField

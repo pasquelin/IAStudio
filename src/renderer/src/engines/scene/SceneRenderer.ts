@@ -74,7 +74,9 @@ import {
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
 import { loadHeightmap } from './heightmap'
-import { createReliefSurface, type ReliefSurface } from './reliefSurface'
+import { createReliefSurface, terrainIdOfObject, type ReliefSurface } from './reliefSurface'
+import { createReliefBrushCursor } from './reliefBrushCursor'
+import { SCULPT_AMOUNT, STROKE_SPACING, sculptEditOf, strokeDabs } from './reliefStroke'
 import { createReliefBuilder } from './reliefBuilder'
 import { createReliefSculptor, type ReliefSculptor } from './reliefSculptor'
 import type { PackedReliefChunk } from '@shared/domain/relief'
@@ -313,6 +315,9 @@ export type SceneRendererOptions = {
   onTransform: (moves: readonly NodeMove[]) => void
   /** The chunks a relief stroke changed, ready to enter the document as one undoable command. */
   onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
+  /** Opens the history gesture so the dabs of one drag collapse into a single undo. */
+  onReliefStrokeStart?: () => void
+  onReliefStrokeEnd?: () => void
   /**
    * The editor's own furniture — trihedron, camera bodies and frustums, light helpers, rails.
    * `false` draws none of it: a window that PLAYS a scene shows the game, and the tools it was
@@ -849,6 +854,15 @@ export class SceneRenderer {
    */
   private poseMode = false
   private sculptMode = false
+  private armedRelief: { terrainId: string; editId: string | null } | null = null
+  private sculptRadius = 2
+  private sculptFalloff = 0
+  private sculptStroke: {
+    last: { x: number; z: number }
+    terrainId: string
+    editId: string
+  } | null = null
+  private readonly brushCursor = createReliefBrushCursor()
   private restEditing = false
   /** Where what is FOLLOWED stood when the last frame drew — `null` while nothing is. */
   private followed: ThreeVector3 | null = null
@@ -1090,6 +1104,7 @@ export class SceneRenderer {
         onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
         onReady: () => this.redraw(),
       })
+    this.viewport.scene.add(this.brushCursor.object)
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.
@@ -1332,10 +1347,16 @@ export class SceneRenderer {
     editId: string,
     disk: { x: number; z: number; radius: number },
     amount: number,
+    falloff = 0,
   ): Promise<boolean> {
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
-    const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({ ...source, disk, amount })
+    const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({
+      ...source,
+      disk,
+      amount,
+      falloff,
+    })
     if (!chunks) return false
     this.options.onReliefSculpt?.(terrainId, editId, chunks)
     return true
@@ -2560,7 +2581,113 @@ export class SceneRenderer {
       this.dropMarquee()
       return
     }
+    this.endReliefStroke()
+    this.brushCursor.set({
+      x: 0,
+      y: 0,
+      z: 0,
+      radius: this.sculptRadius,
+      falloff: this.sculptFalloff,
+      visible: false,
+    })
     this.attachGizmo()
+  }
+
+  setArmedRelief(armed: { terrainId: string; editId: string | null } | null): void {
+    this.armedRelief = armed
+  }
+
+  setSculptBrush(radius: number, falloff: number): void {
+    this.sculptRadius = radius
+    this.sculptFalloff = falloff
+  }
+
+  /**
+   * First dab of a drag. History opens here so the rest of the stroke coalesces — see
+   * `onReliefStrokeStart`.
+   */
+  async startReliefStroke(x: number, z: number): Promise<boolean> {
+    const target = sculptEditOf(this.world.layers, this.armedRelief)
+    if (!target) return false
+    this.endReliefStroke()
+    this.sculptStroke = { last: { x, z }, terrainId: target.terrainId, editId: target.editId }
+    this.options.onReliefStrokeStart?.()
+    return this.paintReliefDab(x, z)
+  }
+
+  async moveReliefStroke(x: number, z: number): Promise<void> {
+    const stroke = this.sculptStroke
+    if (!stroke) return
+    const spacing = Math.max(this.sculptRadius * STROKE_SPACING, 0.01)
+    const dabs = strokeDabs(stroke.last, { x, z }, spacing)
+    for (const dab of dabs) {
+      stroke.last = dab
+      await this.paintReliefDab(dab.x, dab.z)
+    }
+  }
+
+  endReliefStroke(): void {
+    if (!this.sculptStroke) return
+    this.sculptStroke = null
+    this.options.onReliefStrokeEnd?.()
+  }
+
+  private paintReliefDab(x: number, z: number): Promise<boolean> {
+    const stroke = this.sculptStroke
+    if (!stroke) return Promise.resolve(false)
+    return this.raiseReliefDisk(
+      stroke.terrainId,
+      stroke.editId,
+      { x, z, radius: this.sculptRadius },
+      SCULPT_AMOUNT,
+      this.sculptFalloff,
+    )
+  }
+
+  /**
+   * Ray on the relief meshes only — classic nodes stay out of the way of the brush, which is
+   * the exclusive-tool rule for the pick.
+   */
+  private reliefHitAt(
+    event: PointerEvent,
+  ): { terrainId: string; x: number; y: number; z: number } | null {
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!ndc) return null
+    this.pointer.set(ndc.x, ndc.y)
+    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
+    const hit = this.raycaster.intersectObject(this.relief.object, true)[0]
+    if (!hit) return null
+    const terrainId = terrainIdOfObject(hit.object)
+    if (!terrainId) return null
+    return { terrainId, x: hit.point.x, y: hit.point.y, z: hit.point.z }
+  }
+
+  private aimReliefBrush(event: PointerEvent): void {
+    const hit = this.reliefHitAt(event)
+    this.brushCursor.set({
+      x: hit?.x ?? 0,
+      y: hit?.y ?? 0,
+      z: hit?.z ?? 0,
+      radius: this.sculptRadius,
+      falloff: this.sculptFalloff,
+      visible: hit !== null,
+      color: this.startColor,
+    })
+  }
+
+  private beginReliefStrokeFrom(event: PointerEvent): boolean {
+    const hit = this.reliefHitAt(event)
+    if (!hit) return false
+    const target = sculptEditOf(this.world.layers, this.armedRelief)
+    if (!target || target.terrainId !== hit.terrainId) return false
+    void this.startReliefStroke(hit.x, hit.z)
+    return true
+  }
+
+  private moveReliefStrokeFrom(event: PointerEvent): void {
+    const hit = this.reliefHitAt(event)
+    if (!hit) return
+    void this.moveReliefStroke(hit.x, hit.z)
   }
 
   /**
@@ -3412,6 +3539,8 @@ export class SceneRenderer {
     this.bvh.dispose()
     this.skin.dispose()
     this.retarget.dispose()
+    this.endReliefStroke()
+    this.brushCursor.dispose()
     this.reliefSculptor?.sculptor.dispose()
     this.reliefSculptor = null
     this.clipSources.dispose()
@@ -5289,7 +5418,11 @@ export class SceneRenderer {
     // Cleared here and not only in `startFlight`, which a scheme flying on the right button
     // alone never calls for this press.
     this.flew = false
-    this.armMarquee(event)
+    if (this.sculptMode) {
+      if (this.beginReliefStrokeFrom(event)) return
+    } else {
+      this.armMarquee(event)
+    }
     // ADDED to the left button, never substituted for what it already did: it goes on drawing its
     // rectangle and picking on release, and only gains the keys. Unity and Unreal keep their
     // flight on the RIGHT button alone, so under those the left one arms nothing.
@@ -5325,6 +5458,8 @@ export class SceneRenderer {
       return
     }
     if (event.button !== 0) return
+    const stroking = this.sculptStroke !== null
+    if (stroking) this.endReliefStroke()
 
     const pressed = this.pressed
     const flew = this.flew
@@ -5332,6 +5467,7 @@ export class SceneRenderer {
     this.pressed = null
     this.dropMarquee()
     this.endFlight(0, event)
+    if (stroking) return
     // A rectangle that travelled takes what it crossed, and publishes even when it crossed
     // nothing: that is how a sweep through the void clears a selection.
     if (marquee && !flew && !wasClick(marquee.from, marquee.to)) {
@@ -5450,6 +5586,14 @@ export class SceneRenderer {
         aimAlong(this.viewport.camera, this.look)
         this.flew = !wasClick(this.flownFrom, event)
         this.repaint()
+      }
+    }
+
+    if (this.sculptMode) {
+      this.aimReliefBrush(event)
+      if (this.sculptStroke) {
+        if ((event.buttons & maskOf(0)) === 0) this.endReliefStroke()
+        else this.moveReliefStrokeFrom(event)
       }
     }
 
@@ -5795,6 +5939,7 @@ export class SceneRenderer {
     if (this.flightPointer && event.pointerId !== this.flightPointer.pointerId) return
     this.pressed = null
     this.dropMarquee()
+    this.endReliefStroke()
     this.endFlight(this.flownWith ?? event.button, event)
   }
 
