@@ -183,6 +183,29 @@ describe('raiseReliefDisk', () => {
     ).toEqual(raiseReliefDisk(samples, extent, undefined, disk, 3))
   })
 
+  it('keeps a hard edge when falloff is 0, matching the disk without a falloff', () => {
+    const disk = { x: seamX, z: extent.origin.z, radius: stepX * 2 }
+    expect(raiseReliefDisk(samples, extent, undefined, disk, 3, 0)).toEqual(
+      raiseReliefDisk(samples, extent, undefined, disk, 3),
+    )
+    expect(
+      applyReliefSculpt(samples, extent, undefined, {
+        kind: 'raiseDisk',
+        disk,
+        amount: 3,
+        falloff: 0,
+      }),
+    ).toEqual(raiseReliefDisk(samples, extent, undefined, disk, 3))
+  })
+
+  it('tapers the delta toward the rim when falloff is greater than 0', () => {
+    const disk = { x: extent.origin.x, z: extent.origin.z, radius: stepX * 4 }
+    const sculpt = raiseReliefDisk(samples, extent, undefined, disk, 4, 1)
+
+    expect(heightAt(samples, sculpt, 0, 0)).toBeCloseTo(4)
+    expect(heightAt(samples, sculpt, 2, 0)).toBeCloseTo(2)
+  })
+
   /**
    * 🛑 A map of 2ⁿ+1 samples, which is what every classic heightmap is. Its last sample sits on a
    * border whose two chunks are the SAME one, the index being clamped to the last — so the amount

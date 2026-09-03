@@ -18,6 +18,7 @@ export type ReliefDiskStroke = {
   sculpt: ReliefSculpt | undefined
   disk: { x: number; z: number; radius: number }
   amount: number
+  falloff?: number
 }
 
 export type ReliefSculptor = {
@@ -91,7 +92,12 @@ export function createReliefSculptor(
                         chunk => chunk.row >= rows.from && chunk.row < rows.to,
                       ) ?? [],
                   },
-            operation: { kind: 'raiseDisk', disk: job.disk, amount: job.amount },
+            operation: {
+              kind: 'raiseDisk',
+              disk: job.disk,
+              amount: job.amount,
+              falloff: job.falloff ?? 0,
+            },
             rows: ranges.length === 1 ? undefined : rows,
           })
         }),

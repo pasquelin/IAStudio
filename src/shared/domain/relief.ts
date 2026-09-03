@@ -353,6 +353,8 @@ export type ReliefSculptOperation = {
   kind: 'raiseDisk'
   disk: { x: number; z: number; radius: number }
   amount: number
+  /** 0 = hard edge (the historical disk). 1 = linear from full at the centre to none at the rim. */
+  falloff?: number
 }
 
 export type ReliefChunkRows = { from: number; to: number }
@@ -383,7 +385,16 @@ export function applyReliefSculpt(
 ): ReliefSculpt {
   switch (operation.kind) {
     case 'raiseDisk':
-      return raiseReliefDisk(samples, extent, sculpt, operation.disk, operation.amount, grain, rows)
+      return raiseReliefDisk(
+        samples,
+        extent,
+        sculpt,
+        operation.disk,
+        operation.amount,
+        operation.falloff ?? 0,
+        grain,
+        rows,
+      )
   }
 }
 
@@ -393,6 +404,7 @@ export function raiseReliefDisk(
   sculpt: ReliefSculpt | undefined,
   disk: { x: number; z: number; radius: number },
   amount: number,
+  falloff = 0,
   grain = RELIEF_CHUNK_TEXELS,
   rows?: ReliefChunkRows,
 ): ReliefSculpt {
@@ -438,14 +450,13 @@ export function raiseReliefDisk(
           sx <= Math.min(span.maxX, maxX);
           sx += 1
         ) {
-          if (
-            (distanceX[sx - span.minX] ?? Infinity) + (distanceZ[sz - span.minZ] ?? Infinity) >
-            r2
-          ) {
-            continue
-          }
+          const d2 =
+            (distanceX[sx - span.minX] ?? Infinity) + (distanceZ[sz - span.minZ] ?? Infinity)
+          if (d2 > r2) continue
           const at = (sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)
-          deltas[at] = (deltas[at] ?? 0) + amount
+          deltas[at] =
+            (deltas[at] ?? 0) +
+            (falloff <= 0 ? amount : amount * diskFalloff(Math.sqrt(d2), disk.radius, falloff))
         }
       }
       const payload = packDeltas(deltas)
@@ -511,6 +522,14 @@ function clampIndex(at: number, samples: number): number {
 
 function mix(a: number, b: number, t: number): number {
   return a + (b - a) * t
+}
+
+function diskFalloff(distance: number, radius: number, falloff: number): number {
+  if (falloff <= 0 || radius <= 0) return 1
+  const t = distance / radius
+  const start = 1 - clamp(falloff, 0, 1)
+  if (t <= start) return 1
+  return 1 - (t - start) / (1 - start)
 }
 
 function replaceChunk(
