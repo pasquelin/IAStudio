@@ -78,6 +78,7 @@ export type CommandId =
   | 'scene.group'
   | 'scene.duplicate'
   | 'scene.optimizeSelection'
+  | 'scene.worldPerformance'
   | 'scene.copy'
   | 'scene.cut'
   | 'scene.paste'
@@ -779,6 +780,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     raisesDialog: true,
     titleKey: 'commands.sceneOptimizeSelection.title',
     helpKey: 'commands.sceneOptimizeSelection.help',
+    defaultBinding: null,
+  }),
+  command({
+    id: 'scene.worldPerformance',
+    scope: 'scene',
+    raisesDialog: true,
+    titleKey: 'commands.sceneWorldPerformance.title',
+    helpKey: 'commands.sceneWorldPerformance.help',
     defaultBinding: null,
   }),
   command({

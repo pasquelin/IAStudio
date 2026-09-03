@@ -82,7 +82,11 @@ import { SCULPT_AMOUNT, STROKE_SPACING, sculptEditOf, strokeDabs } from './relie
 import { createReliefBuilder } from './reliefBuilder'
 import { createReliefSculptor, type ReliefSculptor } from './reliefSculptor'
 import type { PackedReliefChunk } from '@shared/domain/relief'
-import { analyzeOptimization, type OptimizationPlan } from './worldAnalyzer'
+import {
+  analyzeOptimization,
+  analyzeOptimizationAsync,
+  type OptimizationPlan,
+} from './worldAnalyzer'
 import { subtreesOf } from './sceneState'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
@@ -1362,6 +1366,16 @@ export class SceneRenderer {
     const nodes = ids.length === 0 ? this.documentOrder : subtreesOf(this.documentOrder, ids)
     return analyzeOptimization(
       { nodes, animation: this.timeline },
+      this.viewport.scene,
+      id => this.objects.get(id),
+      undefined,
+      this.documentOrder,
+    )
+  }
+
+  async analyzeWorldOptimization(): Promise<OptimizationPlan> {
+    return await analyzeOptimizationAsync(
+      { nodes: this.documentOrder, animation: this.timeline },
       this.viewport.scene,
       id => this.objects.get(id),
       undefined,

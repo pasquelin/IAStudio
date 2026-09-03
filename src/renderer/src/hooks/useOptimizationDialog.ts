@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
-type OptimizationDialogRequest = {
+export type OptimizationDialogRequest = {
   documentId: string
   selectedIds: readonly string[]
+  scope: 'selection' | 'world'
 }
 
 type OptimizationDialogState = {
@@ -23,5 +24,10 @@ export function openOptimizationDialog(documentId: string): void {
   useOptimizationDialog.getState().open({
     documentId,
     selectedIds: sceneOf(scene, documentId).selectedIds,
+    scope: 'selection',
   })
+}
+
+export function openWorldPerformanceDialog(documentId: string): void {
+  useOptimizationDialog.getState().open({ documentId, selectedIds: [], scope: 'world' })
 }

@@ -8,6 +8,7 @@ import {
 } from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
+import { stableKey } from '@shared/hash'
 import {
   WORTH_INSTANCING,
   behavioralGroupingExclusions,
@@ -16,7 +17,7 @@ import {
   withFlags,
 } from './grouping'
 import { isInstanceable } from './instanceableModel'
-import { statsOf, textureBytesOf, texturesOf, type SceneStats } from './sceneStats'
+import { EMPTY_STATS, statsOf, textureBytesOf, texturesOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
 import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
@@ -53,6 +54,7 @@ export type OptimizationWarning = {
 
 export type OptimizationMetrics = SceneStats & {
   objects: number
+  visibleObjects: number
   meshes: number
   geometryBytes: number
   sharedMaterials: number
@@ -85,13 +87,15 @@ export type OptimizationReport = {
 
 export type OptimizationPolicy = {
   minInstancesPerGroup: number
+  analysisChunkSize: number
 }
 
 export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = {
   minInstancesPerGroup: WORTH_INSTANCING,
+  analysisChunkSize: 100,
 }
 
-type CandidateGroup = { ids: Set<string>; meshes: number; forced: boolean }
+type CandidateGroup = { ids: Set<string>; units: Set<string>; forced: boolean }
 
 /**
  * What the authoring world would draw. A runtime group parks its sources on another layer but
@@ -108,63 +112,159 @@ export function analyzeOptimization(
   policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
   runtimeNodes: readonly SceneNode[] = state.nodes,
 ): OptimizationPlan {
+  return complete(optimizationSteps(state, host, objectOf, policy, runtimeNodes, true))
+}
+
+export async function analyzeOptimizationAsync(
+  state: Pick<SceneState, 'nodes' | 'animation'>,
+  host: Object3D,
+  objectOf: (id: string) => Object3D | undefined,
+  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+  runtimeNodes: readonly SceneNode[] = state.nodes,
+  pause: () => Promise<void> = nextTask,
+): Promise<OptimizationPlan> {
+  const steps = optimizationSteps(state, host, objectOf, policy, runtimeNodes, false)
+  let worked = 0
+  while (true) {
+    const step = steps.next()
+    if (step.done) return step.value
+    worked += 1
+    if (worked >= policy.analysisChunkSize) {
+      worked = 0
+      await pause()
+    }
+  }
+}
+
+function complete(steps: Generator<void, OptimizationPlan>): OptimizationPlan {
+  while (true) {
+    const step = steps.next()
+    if (step.done) return step.value
+  }
+}
+
+function* optimizationSteps(
+  state: Pick<SceneState, 'nodes' | 'animation'>,
+  host: Object3D,
+  objectOf: (id: string) => Object3D | undefined,
+  policy: OptimizationPolicy,
+  runtimeNodes: readonly SceneNode[],
+  includeBakeCandidates: boolean,
+): Generator<void, OptimizationPlan> {
   const animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
   const excluded = behavioralGroupingExclusions(runtimeNodes, animated)
   // Enumerated ONCE per node: read again for the classification and again for the grouping, a
   // model of P primitives paid three full `traverse` walks for one pass.
   const drawn = new Set<Mesh>()
+  const seenStats = { geometries: new Set<unknown>(), textures: new Set<unknown>() }
+  const sceneStats = { ...EMPTY_STATS }
+  const geometryArrays = new Set<ArrayBufferView>()
+  const geometryUses = new Map<BufferGeometry, number>()
+  const materialUses = new Map<Material, number>()
+  const textureUses = new Map<Texture, number>()
+  let geometryBytes = 0
+  let avoidedGeometryBytes = 0
+  let avoidedTextureBytes = 0
+  let sharedMaterials = 0
   const candidateGroups = new Map<string, CandidateGroup>()
   const batchGroups = new Map<string, CandidateGroup>()
   const keyOf = withFlags(shapeAndPaint())
   const batchKey = batchKeyOf()
   const classifications: ClassifiedObject[] = []
   const warnings: OptimizationWarning[] = []
+  let visibleObjects = 0
 
   for (const node of state.nodes) {
     const object = objectOf(node.id)
-    const own = object ? ownMeshesOf(node, object) : []
+    const own: Mesh[] = []
+    if (object) yield* collectOwnMeshes(node, object, own)
     const shown = object && isDrawn(object, host) ? own.filter(mesh => isRendered(mesh, host)) : []
-    for (const mesh of shown) drawn.add(mesh)
+    if (shown.length > 0) visibleObjects += 1
+    for (const mesh of shown) {
+      drawn.add(mesh)
+      const added = statsOf([mesh], seenStats)
+      sceneStats.triangles += added.triangles
+      sceneStats.vertices += added.vertices
+      sceneStats.draws += added.draws
+      sceneStats.textureBytes += added.textureBytes
+
+      const geometryUse = geometryUses.get(mesh.geometry) ?? 0
+      geometryUses.set(mesh.geometry, geometryUse + 1)
+      if (geometryUse > 0) avoidedGeometryBytes += geometryByteLength(mesh.geometry)
+      for (const array of geometryArraysOf(mesh.geometry)) {
+        if (geometryArrays.has(array)) continue
+        geometryArrays.add(array)
+        geometryBytes += array.byteLength
+      }
+      const worn = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const material of worn) {
+        const materialUse = materialUses.get(material) ?? 0
+        materialUses.set(material, materialUse + 1)
+        if (materialUse > 0) sharedMaterials += 1
+        for (const texture of texturesOf(material)) {
+          const textureUse = textureUses.get(texture) ?? 0
+          textureUses.set(texture, textureUse + 1)
+          if (textureUse > 0) avoidedTextureBytes += textureBytesOf(texture)
+        }
+      }
+      yield
+    }
 
     const nodeClassifications = classificationsOf(node, object, animated.has(node.id), own)
     classifications.push({ id: node.id, classifications: nodeClassifications })
 
     const reason = warningOf(nodeClassifications)
     if (reason) warnings.push({ nodeId: node.id, reason })
-    if (!nodeClassifications.includes('INSTANCABLE')) continue
+    if (!nodeClassifications.includes('INSTANCABLE')) {
+      yield
+      continue
+    }
 
-    for (const mesh of shown) {
+    for (const [meshIndex, mesh] of shown.entries()) {
       if (Array.isArray(mesh.material)) continue
+      const unit = stableKey([node.id, meshIndex])
       if (!excluded.has(node.id)) {
-        collectCandidate(candidateGroups, keyOf(node, mesh), node, 'instance')
+        collectCandidate(candidateGroups, keyOf(node, mesh), node, unit, 'instance')
       }
-      if (!excluded.has(node.id)) collectCandidate(batchGroups, batchKey(node, mesh), node, 'batch')
+      if (!excluded.has(node.id)) {
+        collectCandidate(batchGroups, batchKey(node, mesh), node, unit, 'batch')
+      }
+      yield
     }
   }
 
   const allInstanceCandidates = [...candidateGroups].map(([key, group]) => ({
     key,
     sourceIds: [...group.ids].sort(byCodeUnit),
-    meshCount: group.meshes,
+    meshCount: group.units.size,
+    units: group.units,
     forced: group.forced,
   }))
   const instances = allInstanceCandidates
     .filter(group => group.forced || group.meshCount >= policy.minInstancesPerGroup)
     .map(group => ({ key: group.key, sourceIds: group.sourceIds, meshCount: group.meshCount }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
-  const bakeCandidates = bakeCandidatesOf(state.nodes, runtimeNodes, animated)
+  const bakeCandidates = includeBakeCandidates
+    ? bakeCandidatesOf(state.nodes, runtimeNodes, animated)
+    : []
   const batches = [...batchGroups]
-    .filter(([, group]) => group.forced || group.meshes >= 2)
+    .filter(([, group]) => group.forced || group.units.size >= 2)
     .map(([key, group]) => ({
       key,
       sourceIds: [...group.ids].sort(byCodeUnit),
-      meshCount: group.meshes,
+      meshCount: group.units.size,
     }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
-  const meshes = [...drawn]
-  const sceneStats = statsOf(meshes)
-  const sharing = sharingOf(meshes)
-  const savedDraws = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
+  const instancedUnits = new Set(
+    allInstanceCandidates
+      .filter(group => group.forced || group.meshCount >= policy.minInstancesPerGroup)
+      .flatMap(group => [...group.units]),
+  )
+  const instanceSavings = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
+  const batchSavings = [...batchGroups.values()].reduce((saved, group) => {
+    const remaining = [...group.units].filter(unit => !instancedUnits.has(unit)).length
+    return saved + Math.max(0, remaining - 1)
+  }, 0)
 
   return {
     classifications,
@@ -175,17 +275,22 @@ export function analyzeOptimization(
     measured: {
       ...sceneStats,
       objects: state.nodes.length,
-      meshes: meshes.length,
-      geometryBytes: geometryBytesOf(meshes),
-      sharedMaterials: sharing.sharedMaterials,
+      visibleObjects,
+      meshes: drawn.size,
+      geometryBytes,
+      sharedMaterials,
     },
     estimated: {
       drawCallsBefore: sceneStats.draws,
-      drawCallsAfter: Math.max(0, sceneStats.draws - savedDraws),
-      avoidedGeometryBytes: sharing.avoidedGeometryBytes,
-      avoidedTextureBytes: sharing.avoidedTextureBytes,
+      drawCallsAfter: Math.max(0, sceneStats.draws - instanceSavings - batchSavings),
+      avoidedGeometryBytes,
+      avoidedTextureBytes,
     },
   }
+}
+
+function nextTask(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, 0))
 }
 
 export function optimizationReport(plan: OptimizationPlan): OptimizationReport {
@@ -202,17 +307,18 @@ function collectCandidate(
   groups: Map<string, CandidateGroup>,
   key: string,
   node: SceneNode,
+  unit: string,
   forcedMode: 'instance' | 'batch',
 ): void {
   const group = groups.get(key)
   if (group) {
     group.ids.add(node.id)
-    group.meshes += 1
+    group.units.add(unit)
     group.forced ||= node.optimization?.mode === forcedMode
   } else {
     groups.set(key, {
       ids: new Set([node.id]),
-      meshes: 1,
+      units: new Set([unit]),
       forced: node.optimization?.mode === forcedMode,
     })
   }
@@ -255,70 +361,34 @@ function warningOf(
   return null
 }
 
-function ownMeshesOf(node: SceneNode, object: Object3D): Mesh[] {
-  if (node.type === 'mesh') return object instanceof Mesh ? [object] : []
-  if (node.type !== 'model') return []
-  const meshes: Mesh[] = []
-  object.traverse(child => {
+function* collectOwnMeshes(node: SceneNode, object: Object3D, meshes: Mesh[]): Generator<void> {
+  if (node.type === 'mesh') {
+    if (object instanceof Mesh) meshes.push(object)
+    yield
+    return
+  }
+  if (node.type !== 'model') return
+
+  const pending = [object]
+  while (pending.length > 0) {
+    const child = pending.pop()
+    if (!child) continue
     if (child instanceof Mesh) meshes.push(child)
-  })
-  return meshes
-}
-
-function geometryBytesOf(meshes: readonly Mesh[]): number {
-  const geometries = new Set<BufferGeometry>()
-  const arrays = new Set<ArrayBufferView>()
-  for (const mesh of meshes) geometries.add(mesh.geometry)
-  for (const geometry of geometries) {
-    if (geometry.index) arrays.add(geometry.index.array)
-    for (const attribute of Object.values(geometry.attributes)) arrays.add(attribute.array)
-  }
-  return [...arrays].reduce((bytes, array) => bytes + array.byteLength, 0)
-}
-
-function sharingOf(
-  meshes: readonly Mesh[],
-): Pick<OptimizationImpact, 'avoidedGeometryBytes' | 'avoidedTextureBytes'> &
-  Pick<OptimizationMetrics, 'sharedMaterials'> {
-  const geometries = new Map<BufferGeometry, number>()
-  const materials = new Map<Material, number>()
-  const textures = new Map<Texture, number>()
-  for (const mesh of meshes) {
-    geometries.set(mesh.geometry, (geometries.get(mesh.geometry) ?? 0) + 1)
-    const worn = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    for (const material of worn) {
-      materials.set(material, (materials.get(material) ?? 0) + 1)
-      for (const texture of texturesOf(material)) {
-        textures.set(texture, (textures.get(texture) ?? 0) + 1)
-      }
+    for (let index = child.children.length - 1; index >= 0; index -= 1) {
+      const descendant = child.children[index]
+      if (descendant) pending.push(descendant)
     }
+    yield
   }
-
-  return {
-    avoidedGeometryBytes: avoidedBytes(geometries, geometryByteLength),
-    avoidedTextureBytes: avoidedBytes(textures, textureBytesOf),
-    sharedMaterials: sharedReferences(materials),
-  }
-}
-
-function avoidedBytes<T>(
-  references: ReadonlyMap<T, number>,
-  bytesOf: (value: T) => number,
-): number {
-  let bytes = 0
-  for (const [value, count] of references) bytes += Math.max(0, count - 1) * bytesOf(value)
-  return bytes
-}
-
-function sharedReferences<T>(references: ReadonlyMap<T, number>): number {
-  let count = 0
-  for (const uses of references.values()) count += Math.max(0, uses - 1)
-  return count
 }
 
 function geometryByteLength(geometry: BufferGeometry): number {
+  return geometryArraysOf(geometry).reduce((bytes, array) => bytes + array.byteLength, 0)
+}
+
+function geometryArraysOf(geometry: BufferGeometry): ArrayBufferView[] {
   const arrays = new Set<ArrayBufferView>()
   if (geometry.index) arrays.add(geometry.index.array)
   for (const attribute of Object.values(geometry.attributes)) arrays.add(attribute.array)
-  return [...arrays].reduce((bytes, array) => bytes + array.byteLength, 0)
+  return [...arrays]
 }

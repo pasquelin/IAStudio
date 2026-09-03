@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { EMPTY_SCENE, nodeById, type SceneNode } from '@/engines/scene/sceneState'
 import { groupNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
@@ -25,6 +25,7 @@ const PLAN: OptimizationPlan = {
     draws: 2,
     textureBytes: 0,
     objects: 2,
+    visibleObjects: 1,
     meshes: 1,
     geometryBytes: 96,
     sharedMaterials: 0,
@@ -53,7 +54,9 @@ beforeEach(() => {
   installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [group, child], selectedIds: [group.id] })
   // Only the public analyzer is relevant; constructing WebGL would make this DOM test browser-only.
   registerSceneEngine(DOCUMENT, { analyzeOptimization: () => PLAN } as unknown as SceneRenderer)
-  useOptimizationDialog.getState().open({ documentId: DOCUMENT, selectedIds: [group.id] })
+  useOptimizationDialog
+    .getState()
+    .open({ documentId: DOCUMENT, selectedIds: [group.id], scope: 'selection' })
 })
 
 afterEach(() => {
@@ -92,12 +95,30 @@ it('does not erase mixed overrides until a mode is explicitly chosen', () => {
   useOptimizationDialog.getState().open({
     documentId: DOCUMENT,
     selectedIds: [first.id, second.id],
+    scope: 'selection',
   })
 
   render(<SceneOptimizationDialog documentId={DOCUMENT} />)
 
   expect(screen.getByRole('combobox')).toHaveValue('mixed')
   expect(screen.getByRole('button', { name: 'Optimiser' })).toBeDisabled()
+})
+
+it('shows a read-only whole-world report with inventory and estimated values', async () => {
+  const analyzeWorldOptimization = vi.fn(async () => PLAN)
+  registerSceneEngine(DOCUMENT, { analyzeWorldOptimization } as unknown as SceneRenderer)
+  useOptimizationDialog.getState().open({ documentId: DOCUMENT, selectedIds: [], scope: 'world' })
+
+  render(<SceneOptimizationDialog documentId={DOCUMENT} />)
+
+  expect(screen.getByRole('dialog', { name: 'Performances du monde' })).toBeInTheDocument()
+  expect(screen.getByRole('status', { name: 'Analyse du monde…' })).toBeInTheDocument()
+  expect(await screen.findByText('1 objet affichable')).toBeInTheDocument()
+  expect(screen.getByText('Mémoire géométrique déjà partagée 0 o')).toBeInTheDocument()
+  expect(screen.getByText('Appels de rendu 2 → 2')).toBeInTheDocument()
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Optimiser' })).not.toBeInTheDocument()
+  expect(analyzeWorldOptimization).toHaveBeenCalledWith()
 })
 
 it('offers the batch override and applies it to the selected subtree', async () => {
@@ -127,6 +148,7 @@ it('bakes compatible meshes into one authoring node and restores them with undo'
   useOptimizationDialog.getState().open({
     documentId: DOCUMENT,
     selectedIds: [first.id, second.id],
+    scope: 'selection',
   })
   const user = userEvent.setup()
   render(<SceneOptimizationDialog documentId={DOCUMENT} />)

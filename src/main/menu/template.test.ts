@@ -351,6 +351,18 @@ describe('the Edit menu', () => {
       activate(rows.find(row => row.label === 'Grouper'))
       expect(runCommand).toHaveBeenCalledWith('scene.group')
     })
+
+    it('opens whole-world performance from the scene menu', () => {
+      const runCommand = vi.fn()
+      const rows = submenuOf(
+        menuTemplate(options({ workspace: '3d', actions: actions({ runCommand }) })),
+        'Édition',
+      )
+
+      activate(rows.find(row => row.label === 'Performances du monde…'))
+
+      expect(runCommand).toHaveBeenCalledWith('scene.worldPerformance')
+    })
   })
 
   // The skeleton window: no space, no document, a history all the same.

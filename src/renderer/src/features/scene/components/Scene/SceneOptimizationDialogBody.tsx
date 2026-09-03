@@ -31,10 +31,12 @@ export function SceneOptimizationDialogBody({
   documentId,
   target,
   plan,
+  readOnly = false,
 }: {
   documentId: string
   target: readonly SceneNode[]
   plan: OptimizationPlan
+  readOnly?: boolean
 }) {
   const { t, i18n } = useTranslation()
   const close = useOptimizationDialog(state => state.close)
@@ -66,24 +68,30 @@ export function SceneOptimizationDialogBody({
   }
   return (
     <Dialog
-      title={t('optimization.title')}
+      title={t(readOnly ? 'optimization.performanceTitle' : 'optimization.title')}
       actions={
-        <>
-          <WindowButton size="dialog" variant="secondary" onClick={close}>
-            {t('actions.cancel')}
+        readOnly ? (
+          <WindowButton size="dialog" onClick={close}>
+            {t('actions.close')}
           </WindowButton>
-          <WindowButton size="dialog" disabled={mode === MIXED_MODE} onClick={apply}>
-            {t('optimization.optimize')}
-          </WindowButton>
-          <WindowButton
-            size="dialog"
-            variant="secondary"
-            disabled={plan.bakeCandidates.length === 0}
-            onClick={bake}
-          >
-            {t('optimization.bake')}
-          </WindowButton>
-        </>
+        ) : (
+          <>
+            <WindowButton size="dialog" variant="secondary" onClick={close}>
+              {t('actions.cancel')}
+            </WindowButton>
+            <WindowButton size="dialog" disabled={mode === MIXED_MODE} onClick={apply}>
+              {t('optimization.optimize')}
+            </WindowButton>
+            <WindowButton
+              size="dialog"
+              variant="secondary"
+              disabled={plan.bakeCandidates.length === 0}
+              onClick={bake}
+            >
+              {t('optimization.bake')}
+            </WindowButton>
+          </>
+        )
       }
     >
       <dl>
@@ -94,11 +102,32 @@ export function SceneOptimizationDialogBody({
             value: number(plan.measured.objects),
           })}
         </dd>
+        <dd>
+          {t('optimization.visibleObjects', {
+            count: plan.measured.visibleObjects,
+            value: number(plan.measured.visibleObjects),
+          })}
+        </dd>
         <dd>{t('optimization.meshes', { value: number(plan.measured.meshes) })}</dd>
         <dd>{t('optimization.drawCalls', { value: number(plan.measured.draws) })}</dd>
         <dd>{t('optimization.triangles', { value: number(plan.measured.triangles) })}</dd>
         <dd>{t('optimization.geometry', { value: bytes(plan.measured.geometryBytes) })}</dd>
         <dd>{t('optimization.images', { value: bytes(plan.measured.textureBytes) })}</dd>
+        <dt>{t('optimization.opportunities')}</dt>
+        <dd>{t('optimization.instanceGroups', { value: number(plan.instances.length) })}</dd>
+        <dd>
+          {t('optimization.sharedMaterials', { value: number(plan.measured.sharedMaterials) })}
+        </dd>
+        <dd>
+          {t('optimization.duplicateGeometry', {
+            value: bytes(plan.estimated.avoidedGeometryBytes),
+          })}
+        </dd>
+        <dd>
+          {t('optimization.duplicateImages', {
+            value: bytes(plan.estimated.avoidedTextureBytes),
+          })}
+        </dd>
         <dt>{t('optimization.estimated')}</dt>
         <dd>
           {t('optimization.drawCallResult', {
@@ -129,26 +158,28 @@ export function SceneOptimizationDialogBody({
         })}
         <dd>{t('optimization.visualChangesNone')}</dd>
       </dl>
-      <label className="form-control">
-        <span className="label-text">{t('optimization.mode')}</span>
-        <select
-          className="select select-bordered"
-          data-sc={fieldHandle('optimization.mode')}
-          value={mode}
-          onChange={event => {
-            if (isOptimizationMode(event.target.value)) setMode(event.target.value)
-          }}
-        >
-          {mode === MIXED_MODE && (
-            <option value={MIXED_MODE}>{t('optimization.modes.mixed')}</option>
-          )}
-          {OPTIMIZATION_MODES.map(value => (
-            <option key={value} value={value}>
-              {t(`optimization.modes.${value}`)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {!readOnly && (
+        <label className="form-control">
+          <span className="label-text">{t('optimization.mode')}</span>
+          <select
+            className="select select-bordered"
+            data-sc={fieldHandle('optimization.mode')}
+            value={mode}
+            onChange={event => {
+              if (isOptimizationMode(event.target.value)) setMode(event.target.value)
+            }}
+          >
+            {mode === MIXED_MODE && (
+              <option value={MIXED_MODE}>{t('optimization.modes.mixed')}</option>
+            )}
+            {OPTIMIZATION_MODES.map(value => (
+              <option key={value} value={value}>
+                {t(`optimization.modes.${value}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
     </Dialog>
   )
 }
