@@ -74,7 +74,7 @@ export function statsOf(
         for (const texture of texturesOf(material)) {
           if (textures.has(texture)) continue
           textures.add(texture)
-          stats.textureBytes += textureBytes(texture)
+          stats.textureBytes += textureBytesOf(texture)
         }
       }
     }
@@ -120,7 +120,7 @@ function isTexture(value: unknown): value is Texture {
   return typeof value === 'object' && value !== null && Reflect.get(value, 'isTexture') === true
 }
 
-function textureBytes(texture: Texture): number {
+export function textureBytesOf(texture: Texture): number {
   const image: unknown = texture.image
   if (typeof image !== 'object' || image === null) return 0
 

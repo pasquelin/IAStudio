@@ -1,9 +1,16 @@
-import { Mesh, SkinnedMesh, type BufferGeometry, type Object3D } from 'three'
+import {
+  Mesh,
+  SkinnedMesh,
+  type BufferGeometry,
+  type Material,
+  type Object3D,
+  type Texture,
+} from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING, isDrawn, shapeAndPaint, withFlags } from './grouping'
 import { isInstanceable } from './instanceableModel'
-import { statsOf, type SceneStats } from './sceneStats'
+import { statsOf, textureBytesOf, texturesOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
 
 export type OptimizationClassification =
@@ -29,11 +36,14 @@ export type OptimizationMetrics = SceneStats & {
   objects: number
   meshes: number
   geometryBytes: number
+  sharedMaterials: number
 }
 
 export type OptimizationImpact = {
   drawCallsBefore: number
   drawCallsAfter: number
+  avoidedGeometryBytes: number
+  avoidedTextureBytes: number
 }
 
 export type OptimizationPlan = {
@@ -119,6 +129,7 @@ export function analyzeOptimization(
     .sort((one, other) => byCodeUnit(one.key, other.key))
   const meshes = [...drawn]
   const sceneStats = statsOf(meshes)
+  const sharing = sharingOf(meshes)
   const savedDraws = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
 
   return {
@@ -130,10 +141,13 @@ export function analyzeOptimization(
       objects: state.nodes.length,
       meshes: meshes.length,
       geometryBytes: geometryBytesOf(meshes),
+      sharedMaterials: sharing.sharedMaterials,
     },
     estimated: {
       drawCallsBefore: sceneStats.draws,
       drawCallsAfter: Math.max(0, sceneStats.draws - savedDraws),
+      avoidedGeometryBytes: sharing.avoidedGeometryBytes,
+      avoidedTextureBytes: sharing.avoidedTextureBytes,
     },
   }
 }
@@ -200,5 +214,52 @@ function geometryBytesOf(meshes: readonly Mesh[]): number {
     if (geometry.index) arrays.add(geometry.index.array)
     for (const attribute of Object.values(geometry.attributes)) arrays.add(attribute.array)
   }
+  return [...arrays].reduce((bytes, array) => bytes + array.byteLength, 0)
+}
+
+function sharingOf(
+  meshes: readonly Mesh[],
+): Pick<OptimizationImpact, 'avoidedGeometryBytes' | 'avoidedTextureBytes'> &
+  Pick<OptimizationMetrics, 'sharedMaterials'> {
+  const geometries = new Map<BufferGeometry, number>()
+  const materials = new Map<Material, number>()
+  const textures = new Map<Texture, number>()
+  for (const mesh of meshes) {
+    geometries.set(mesh.geometry, (geometries.get(mesh.geometry) ?? 0) + 1)
+    const worn = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const material of worn) {
+      materials.set(material, (materials.get(material) ?? 0) + 1)
+      for (const texture of texturesOf(material)) {
+        textures.set(texture, (textures.get(texture) ?? 0) + 1)
+      }
+    }
+  }
+
+  return {
+    avoidedGeometryBytes: avoidedBytes(geometries, geometryByteLength),
+    avoidedTextureBytes: avoidedBytes(textures, textureBytesOf),
+    sharedMaterials: sharedReferences(materials),
+  }
+}
+
+function avoidedBytes<T>(
+  references: ReadonlyMap<T, number>,
+  bytesOf: (value: T) => number,
+): number {
+  let bytes = 0
+  for (const [value, count] of references) bytes += Math.max(0, count - 1) * bytesOf(value)
+  return bytes
+}
+
+function sharedReferences<T>(references: ReadonlyMap<T, number>): number {
+  let count = 0
+  for (const uses of references.values()) count += Math.max(0, uses - 1)
+  return count
+}
+
+function geometryByteLength(geometry: BufferGeometry): number {
+  const arrays = new Set<ArrayBufferView>()
+  if (geometry.index) arrays.add(geometry.index.array)
+  for (const attribute of Object.values(geometry.attributes)) arrays.add(attribute.array)
   return [...arrays].reduce((bytes, array) => bytes + array.byteLength, 0)
 }
