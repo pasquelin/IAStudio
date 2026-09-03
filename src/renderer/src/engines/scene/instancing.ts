@@ -5,6 +5,7 @@ import {
   shapeAndPaint,
   withFlags,
   trianglesOf,
+  pushSlot,
   sweep,
   writeMoved,
   type Grouped,
@@ -69,7 +70,7 @@ export function createInstancedGroups(
             const id = worn.ids[at]
             if (!mesh || id === undefined) continue
             instance.setMatrixAt(written, mesh.matrixWorld)
-            placed.set(id, { instance, slot: written })
+            pushSlot(placed, id, { instance, slot: written, source: mesh })
             written += 1
           }
           // What was really written, so a region short of a mesh draws one fewer rather than
@@ -147,6 +148,17 @@ function splitOf({ meshes }: Grouped, geometry: BufferGeometry): SpatialRegions 
  * edited. A move that rebuilt the groups cost 32.7 ms on 40 000 nodes, per pointer move.
  */
 export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
+  if (previous.type === 'model' && node.type === 'model') {
+    return (
+      previous.model.assetId === node.model.assetId &&
+      previous.model.dress === node.model.dress &&
+      previous.visible === node.visible &&
+      previous.parentId === node.parentId &&
+      previous.castShadow === node.castShadow &&
+      previous.receiveShadow === node.receiveShadow &&
+      previous.negative === node.negative
+    )
+  }
   return (
     previous.type === 'mesh' &&
     node.type === 'mesh' &&

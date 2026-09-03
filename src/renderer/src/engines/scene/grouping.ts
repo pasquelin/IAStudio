@@ -13,6 +13,7 @@ import {
 import { stableKey } from '@shared/hash'
 import { cachedOn } from '../core/cachedOn'
 import type { SceneNode } from './sceneState'
+import { isInstanceable, meshesOf, modelShapeKey } from './instanceableModel'
 
 /**
  * The layer a mesh goes to once something else draws it in its place.
@@ -313,17 +314,12 @@ export function sweep(
   for (const node of nodes) if (node.parentId) parented.add(node.parentId)
 
   const groups = new Map<string, Grouped>()
-  for (const node of nodes) {
-    if (node.type !== 'mesh') continue
-    const mesh = objectOf(node.id)
-    // Read off the OBJECT, never the node: `visible` is the flag three.js draws through, so it
-    // already carries what the viewport isolates on top of what the document hides.
-    if (!(mesh instanceof Mesh) || !isDrawn(mesh, host)) continue
+  const take = (node: SceneNode, mesh: Mesh): void => {
     const material = ownMaterialOf(mesh)
     // A group draws ONE material. A mesh wearing an array of them is left to be drawn alone.
     if (Array.isArray(material)) {
       mesh.layers.set(0)
-      continue
+      return
     }
 
     const key = keyOf(node, mesh)
@@ -333,6 +329,20 @@ export function sweep(
       held.meshes.push(mesh)
       held.nodes.push(node)
     } else groups.set(key, { key, ids: [node.id], meshes: [mesh], nodes: [node], material })
+  }
+
+  for (const node of nodes) {
+    const object = objectOf(node.id)
+    if (!object || !isDrawn(object, host)) continue
+    if (node.type === 'mesh') {
+      if (!(object instanceof Mesh)) continue
+      take(node, object)
+      continue
+    }
+    if (node.type !== 'model' || !isInstanceable(object)) continue
+    for (const mesh of meshesOf(object)) {
+      if (isDrawn(mesh, host)) take(node, mesh)
+    }
   }
 
   const worth: Grouped[] = []
@@ -374,8 +384,16 @@ export function spellingOf(spell: (node: SceneNode) => string): (node: SceneNode
 }
 
 /** Everything a draw call would have to change: the shape, and what it is painted with. */
-export const shapeAndPaint = (): ((node: SceneNode) => string) =>
-  spellingOf(node => (node.type === 'mesh' ? stableKey([node.geometry, node.material]) : ''))
+export const shapeAndPaint = (): ((node: SceneNode, mesh: Mesh) => string) => {
+  const meshKey = spellingOf(node =>
+    node.type === 'mesh' ? stableKey([node.geometry, node.material]) : '',
+  )
+  return (node, mesh) => {
+    if (node.type === 'mesh') return meshKey(node)
+    if (node.type === 'model') return modelShapeKey(node, mesh)
+    return ''
+  }
+}
 
 /**
  * The three things a draw call cannot share, as one small number. A group carries ONE of each, so
@@ -388,26 +406,54 @@ export const flagsOf = (node: SceneNode, mesh: Mesh): number =>
   (node.type === 'mesh' && node.negative === true ? 1 : 0)
 
 /**
- * A key held on the node, its flags compared rather than respelled — the sweep composed one string
- * per body per pass, 5 000 on a rebuild of 5 000. Only for a `spell` reading nothing off the mesh:
- * what is held is keyed by the node, so a mesh that changed alone would keep a stale key.
+ * A key held so flags are compared rather than respelled — the sweep composed one string per body
+ * per pass, 5 000 on a rebuild of 5 000. Held on the mesh: a model yields one key per primitive,
+ * and holding it on the node would merge them.
  */
 export function withFlags(
-  spell: (node: SceneNode) => string,
+  spell: (node: SceneNode, mesh: Mesh) => string,
 ): (node: SceneNode, mesh: Mesh) => string {
-  const held = new WeakMap<SceneNode, { flags: number; key: string }>()
+  const held = new WeakMap<Mesh, { node: SceneNode; flags: number; key: string }>()
   return (node, mesh) => {
     const flags = flagsOf(node, mesh)
-    const known = held.get(node)
-    if (known?.flags === flags) return known.key
-    const key = `${spell(node)}|${flags}`
-    held.set(node, { flags, key })
+    const known = held.get(mesh)
+    if (known?.node === node && known.flags === flags) return known.key
+    const key = `${spell(node, mesh)}|${flags}`
+    held.set(mesh, { node, flags, key })
     return key
   }
 }
 
-/** Where a node's matrix sits, so a move can be written without walking the scene again. */
-export type Placed = Map<string, { instance: InstancedMesh; slot: number }>
+/** One slot of a lot. `source` is the mesh whose world matrix the slot copies. */
+export type PlacedSlot = { instance: InstancedMesh; slot: number; source: Mesh }
+
+/**
+ * Where a node's matrices sit. A model with several primitives holds one slot per primitive,
+ * so a single `node.id` can land more than once.
+ */
+export type Placed = Map<string, PlacedSlot[]>
+
+export function pushSlot(placed: Placed, id: string, slot: PlacedSlot): void {
+  const held = placed.get(id)
+  if (held) held.push(slot)
+  else placed.set(id, [slot])
+}
+
+export function dropSlotsOf(placed: Placed, id: string, instance: InstancedMesh): void {
+  const held = placed.get(id)
+  if (!held) return
+  const kept = held.filter(at => at.instance !== instance)
+  if (kept.length) placed.set(id, kept)
+  else placed.delete(id)
+}
+
+export function slotOn(
+  placed: Placed,
+  id: string,
+  instance: InstancedMesh,
+): PlacedSlot | undefined {
+  return placed.get(id)?.find(at => at.instance === instance)
+}
 
 /**
  * Writes the matrices of the nodes that just moved, into the slots they already hold.
@@ -423,15 +469,18 @@ export function writeMoved(
 ): boolean {
   let touched = false
   for (const id of ids) {
-    const at = placed.get(id)
-    const mesh = objectOf(id)
-    if (!at || !(mesh instanceof Mesh)) continue
-
-    at.instance.setMatrixAt(at.slot, mesh.matrixWorld)
-    at.instance.instanceMatrix.addUpdateRange(at.slot * 16, 16)
-    at.instance.instanceMatrix.needsUpdate = true
-    widen(at.instance.boundingSphere, at.instance.geometry, mesh.matrixWorld)
-    touched = true
+    const slots = placed.get(id)
+    if (!slots || !objectOf(id)) continue
+    for (const at of slots) {
+      // The primitive's world pose, not the holder's: a sub-mesh sits in local space under the
+      // holder, and copying the holder would drop that offset.
+      const placement = at.source.matrixWorld
+      at.instance.setMatrixAt(at.slot, placement)
+      at.instance.instanceMatrix.addUpdateRange(at.slot * 16, 16)
+      at.instance.instanceMatrix.needsUpdate = true
+      widen(at.instance.boundingSphere, at.instance.geometry, placement)
+      touched = true
+    }
   }
   return touched
 }

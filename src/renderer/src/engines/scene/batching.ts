@@ -20,6 +20,7 @@ import {
   type InstancedGroups,
 } from './grouping'
 import type { SceneNode } from './sceneState'
+import { modelShapeKey } from './instanceableModel'
 
 /**
  * Draws every shape wearing one material in one call, whatever the shapes are.
@@ -41,7 +42,7 @@ export function createBatchedGroups(
 ): InstancedGroups {
   const drawn: BatchedMesh[] = []
   /** Where a node's matrix sits, so a move can be written without walking the scene again. */
-  const placed = new Map<string, { lot: BatchedMesh; slot: number }>()
+  const placed = new Map<string, { lot: BatchedMesh; slot: number; source: Mesh }[]>()
   /** The node each slot of each lot stands for — what a hit on the lot resolves to. */
   const members = new WeakMap<BatchedMesh, string[]>()
   /** Whether the lots have trees for a ray to walk. Built on the first pick, not per rebuild. */
@@ -52,7 +53,9 @@ export function createBatchedGroups(
   // indexed one, or two attribute sets in one buffer.
   // Spelled here rather than held by `withFlags`: this key reads the MESH, not the node alone.
   const keyOf = (node: SceneNode, mesh: Mesh): string =>
-    `${paintOf(node)}|${layoutOf(mesh.geometry)}|${flagsOf(node, mesh)}`
+    `${node.type === 'model' ? modelShapeKey(node, mesh) : paintOf(node)}|${layoutOf(
+      mesh.geometry,
+    )}|${flagsOf(node, mesh)}`
 
   const clear = (): void => {
     for (const lot of drawn) {
@@ -100,7 +103,10 @@ export function createBatchedGroups(
           if (!mesh || id === undefined) continue
           const slot = lot.addInstance(slotOf.get(mesh.geometry) ?? 0)
           lot.setMatrixAt(slot, mesh.matrixWorld)
-          placed.set(id, { lot, slot })
+          const held = placed.get(id)
+          const entry = { lot, slot, source: mesh }
+          if (held) held.push(entry)
+          else placed.set(id, [entry])
           ids[slot] = id
         }
         members.set(lot, ids)
@@ -124,18 +130,18 @@ export function createBatchedGroups(
     moved: (ids, objectOf) => {
       let touched = false
       for (const id of ids) {
-        const at = placed.get(id)
-        const mesh = objectOf(id)
-        if (!at || !(mesh instanceof Mesh)) continue
-
-        at.lot.setMatrixAt(at.slot, mesh.matrixWorld)
-        // The slot alone rather than the whole texture: `setMatrixAt` flags every matrix of the
-        // lot, which is 2.5 MB re-uploaded per pointer move on 40 000 bodies.
-        matricesOf(at.lot)?.addUpdateRange(at.slot * 16, 16)
-        // Its own bounds, computed if the source never had them: a mesh the camera skipped is a
-        // mesh three never measured, and a radius read as 0 lets a dragged lot be culled whole.
-        widen(at.lot.boundingSphere, boundedBy(mesh.geometry), mesh.matrixWorld)
-        touched = true
+        const slots = placed.get(id)
+        if (!slots || !objectOf(id)) continue
+        for (const at of slots) {
+          at.lot.setMatrixAt(at.slot, at.source.matrixWorld)
+          // The slot alone rather than the whole texture: `setMatrixAt` flags every matrix of the
+          // lot, which is 2.5 MB re-uploaded per pointer move on 40 000 bodies.
+          matricesOf(at.lot)?.addUpdateRange(at.slot * 16, 16)
+          // Its own bounds, computed if the source never had them: a mesh the camera skipped is a
+          // mesh three never measured, and a radius read as 0 lets a dragged lot be culled whole.
+          widen(at.lot.boundingSphere, boundedBy(at.source.geometry), at.source.matrixWorld)
+          touched = true
+        }
       }
       return touched
     },

@@ -14,8 +14,11 @@ import {
   type Object3D,
 } from 'three'
 import {
+  dropSlotsOf,
   heldOutOfDraw,
+  pushSlot,
   shapeAndPaint,
+  slotOn,
   withFlags,
   sweep,
   worldReach,
@@ -88,7 +91,7 @@ export function createCellGroups(
   const drop = (bucket: Bucket): void => {
     // Only where it still points here: a node this pass moved to another bucket was written
     // before this one was dropped, and deleting by id alone would lose it.
-    for (const id of bucket.ids) if (placed.get(id)?.instance === bucket.mesh) placed.delete(id)
+    for (const id of bucket.ids) dropSlotsOf(placed, id, bucket.mesh)
     bucket.mesh.removeFromParent()
     bucket.mesh.dispose()
     // NOT the group's key with it: `settle` drops the bucket it replaces, and unhooking the map
@@ -151,7 +154,8 @@ export function createCellGroups(
     mesh.receiveShadow = first.receiveShadow
     for (const [slot, source] of members.meshes.entries()) {
       mesh.setMatrixAt(slot, source.matrixWorld)
-      placed.set(members.ids[slot] ?? '', { instance: mesh, slot })
+      const id = members.ids[slot]
+      if (id) pushSlot(placed, id, { instance: mesh, slot, source })
     }
     mesh.instanceMatrix.needsUpdate = true
     // Its own bounds are what the frustum tests: without this a whole cell is culled by the box
@@ -196,6 +200,7 @@ export function createCellGroups(
    * which is the whole cost this exists to avoid.
    */
   const takeOut = (mesh: InstancedMesh, ids: string[], slot: number): void => {
+    const removed = ids[slot]
     const last = ids.length - 1
     const swapped = ids[last]
     if (slot !== last && swapped !== undefined) {
@@ -203,11 +208,13 @@ export function createCellGroups(
       mesh.setMatrixAt(slot, AT)
       mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
       ids[slot] = swapped
-      placed.set(swapped, { instance: mesh, slot })
+      const moved = slotOn(placed, swapped, mesh)
+      if (moved) moved.slot = slot
     }
     ids.pop()
     mesh.count = ids.length
     mesh.instanceMatrix.needsUpdate = true
+    if (removed) dropSlotsOf(placed, removed, mesh)
   }
 
   /**
@@ -235,7 +242,9 @@ export function createCellGroups(
     for (const [slot, id] of ids.entries()) {
       held?.mesh.getMatrixAt(slot, AT)
       mesh.setMatrixAt(slot, AT)
-      placed.set(id, { instance: mesh, slot })
+      const previous = held ? slotOn(placed, id, held.mesh) : undefined
+      if (held) dropSlotsOf(placed, id, held.mesh)
+      if (previous) pushSlot(placed, id, { instance: mesh, slot, source: previous.source })
     }
     mesh.count = ids.length
     mesh.instanceMatrix.needsUpdate = true
@@ -262,32 +271,32 @@ export function createCellGroups(
    * — and no change of content ever rebuilds a static cell for it again.
    */
   const promote = (id: string, objectOf: (id: string) => Object3D | undefined): void => {
-    const at = placed.get(id)
-    const source = objectOf(id)
-    if (!at || !source) return
-    const bucket = bucketOf.get(at.instance)
-    if (!bucket) return
-
-    takeOut(at.instance, bucket.ids, at.slot)
+    const slots = [...(placed.get(id) ?? [])]
+    if (!objectOf(id) || slots.length === 0) return
+    for (const at of slots) {
+      if (lotOf.has(at.instance)) continue
+      const bucket = bucketOf.get(at.instance)
+      if (!bucket) continue
+      takeOut(at.instance, bucket.ids, at.slot)
+      const held = mobiles.get(bucket.key)
+      const lot =
+        !held || held.ids.length >= held.mesh.instanceMatrix.count
+          ? growLot(bucket.key, at.instance, held, held?.paint ?? bucket.paint)
+          : held
+      pushOnto(lot, id, at.source.matrixWorld, at.source)
+      lot.mesh.instanceMatrix.needsUpdate = true
+    }
     promoted.add(id)
-
-    const held = mobiles.get(bucket.key)
-    const lot =
-      !held || held.ids.length >= held.mesh.instanceMatrix.count
-        ? growLot(bucket.key, at.instance, held, held?.paint ?? bucket.paint)
-        : held
-    pushOnto(lot, id, source.matrixWorld)
-    lot.mesh.instanceMatrix.needsUpdate = true
   }
 
   /** Takes a body onto the end of a lot, at a slot that is now its own. */
-  const pushOnto = (lot: Mobile, id: string, placement: Matrix4): void => {
+  const pushOnto = (lot: Mobile, id: string, placement: Matrix4, source: Mesh): void => {
     const slot = lot.ids.length
     lot.ids.push(id)
     lot.mesh.count = lot.ids.length
     lot.mesh.setMatrixAt(slot, placement)
     lot.mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
-    placed.set(id, { instance: lot.mesh, slot })
+    pushSlot(placed, id, { instance: lot.mesh, slot, source })
   }
 
   /** Which lot a mesh IS, so neither a move nor a despawn has to walk them all to find out. */
@@ -295,8 +304,8 @@ export function createCellGroups(
 
   /** Whether a body is already drawn by a lot of movers rather than by a cell. */
   const onLot = (id: string): boolean => {
-    const at = placed.get(id)
-    return at !== undefined && lotOf.has(at.instance)
+    const slots = placed.get(id)
+    return !!slots && slots.length > 0 && slots.every(at => lotOf.has(at.instance))
   }
 
   /**
@@ -322,15 +331,15 @@ export function createCellGroups(
     for (const [at, id] of members.ids.entries()) {
       const source = members.meshes[at]
       if (!source) continue
-      const held = placed.get(id)
-      if (lot && held && held.instance === lot.mesh) {
+      const held = lot ? slotOn(placed, id, lot.mesh) : undefined
+      if (lot && held) {
         lot.mesh.setMatrixAt(held.slot, source.matrixWorld)
         lot.mesh.instanceMatrix.addUpdateRange(held.slot * 16, 16)
         continue
       }
       if (!lot || lot.ids.length >= lot.mesh.instanceMatrix.count)
         lot = growLot(key, like, lot, paint)
-      pushOnto(lot, id, source.matrixWorld)
+      pushOnto(lot, id, source.matrixWorld, source)
     }
     if (lot) lot.mesh.instanceMatrix.needsUpdate = true
   }
@@ -350,9 +359,9 @@ export function createCellGroups(
         // 🛑 Only when nothing else claimed it. A body that changed group is on ANOTHER lot as of
         // this pass, and it is still a mover: forgetting that put it back in a static cell, which
         // every change of content then rebuilt for it.
-        if (placed.get(id)?.instance === lot.mesh) {
-          placed.delete(id)
-          promoted.delete(id)
+        if (slotOn(placed, id, lot.mesh)) {
+          dropSlotsOf(placed, id, lot.mesh)
+          if (!placed.has(id)) promoted.delete(id)
         }
       }
       // 🛑 Emptied is not gone. Left here the lot stays hung from the host, listed by `drawn()` —
@@ -377,17 +386,19 @@ export function createCellGroups(
    * for the length of a drag — `moved` never marks a cell for remeasuring.
    */
   const growBoxes = (id: string, objectOf: (id: string) => Object3D | undefined): void => {
-    const at = placed.get(id)
-    if (!at) return
-    const box = boxes.get(at.instance)
-    const cell = owners.get(at.instance)
-    // A mover has neither, and asking for its reach first cost 1.0 ms a frame on 5 015 of them.
-    if (!box && !cell) return
+    const slots = placed.get(id)
+    if (!slots) return
     const object = objectOf(id)
     if (!object) return
-    const reach = worldReach(at.instance.geometry, object.matrixWorld)
-    if (box) grow(box, object.matrixWorld, reach)
-    if (cell) grow(cell.box, object.matrixWorld, reach)
+    for (const at of slots) {
+      const box = boxes.get(at.instance)
+      const cell = owners.get(at.instance)
+      // A mover has neither, and asking for its reach first cost 1.0 ms a frame on 5 015 of them.
+      if (!box && !cell) continue
+      const reach = worldReach(at.instance.geometry, at.source.matrixWorld)
+      if (box) grow(box, at.source.matrixWorld, reach)
+      if (cell) grow(cell.box, at.source.matrixWorld, reach)
+    }
   }
 
   const drawEvery = (): boolean => {
@@ -417,7 +428,7 @@ export function createCellGroups(
     // that only walked the cells left their instance buffers on the GPU and their meshes in the
     // scene — the one half of the teardown a test that never promoted anything could not see.
     for (const lot of mobiles.values()) {
-      for (const id of lot.ids) placed.delete(id)
+      for (const id of lot.ids) dropSlotsOf(placed, id, lot.mesh)
       lot.mesh.removeFromParent()
       lot.mesh.dispose()
     }

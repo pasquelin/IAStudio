@@ -1,7 +1,16 @@
 import { BoxGeometry, Matrix4, Mesh, MeshStandardMaterial, Object3D, SphereGeometry } from 'three'
 import { describe, expect, it } from 'vitest'
-import { heldOutOfDraw, unhang, worldReach } from './grouping'
-import { walked } from './scene-fixtures'
+import {
+  heldOutOfDraw,
+  shapeAndPaint,
+  sweep,
+  unhang,
+  worldReach,
+  WORTH_INSTANCING,
+} from './grouping'
+import { markInstanceable, meshesOf } from './instanceableModel'
+import { modelNodeFixture, walked } from './scene-fixtures'
+import type { SceneNode } from './sceneState'
 
 const bodyIn = (parent: Object3D): Mesh => {
   const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial())
@@ -175,5 +184,114 @@ describe('how far a placed shape reaches', () => {
       (centred.boundingSphere?.radius ?? 0) * Math.sqrt(3),
       6,
     )
+  })
+})
+
+function glb(primitives: number, paint: string): Object3D {
+  const root = new Object3D()
+  for (let at = 0; at < primitives; at += 1) {
+    root.add(new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial({ color: paint })))
+  }
+  markInstanceable(root, true)
+  return root
+}
+
+describe('shapeAndPaint of a model', () => {
+  const keyOf = shapeAndPaint()
+
+  it('gives matching keys to the same primitive of two copies of one asset', () => {
+    const node = modelNodeFixture('a', 'trees')
+    const other = modelNodeFixture('b', 'trees')
+    const first = glb(2, '#336633')
+    const second = glb(2, '#336633')
+    const [trunk, leaves] = meshesOf(first)
+    const [trunkCopy, leavesCopy] = meshesOf(second)
+    if (!trunk || !leaves || !trunkCopy || !leavesCopy) throw new Error('expected two primitives')
+
+    expect(keyOf(node, trunk)).toBe(keyOf(other, trunkCopy))
+    expect(keyOf(node, leaves)).toBe(keyOf(other, leavesCopy))
+    expect(keyOf(node, trunk)).not.toBe(keyOf(node, leaves))
+  })
+
+  it('gives distinct keys to two assets, and to two dresses', () => {
+    const oak = modelNodeFixture('a', 'oak')
+    const pine = modelNodeFixture('b', 'pine')
+    const tree = glb(1, '#336633')
+    const [mesh] = meshesOf(tree)
+    if (!mesh) throw new Error('expected a primitive')
+
+    expect(keyOf(oak, mesh)).not.toBe(keyOf(pine, mesh))
+
+    const inImage = {
+      ...oak,
+      model: { ...oak.model, dress: { kind: 'image' as const, assetId: 'pic-1' } },
+    }
+    const inPaint = {
+      ...oak,
+      model: { ...oak.model, dress: { kind: 'materials' as const, documentIds: ['mat-1'] } },
+    }
+    expect(keyOf(inImage, mesh)).not.toBe(keyOf(inPaint, mesh))
+    expect(keyOf(inImage, mesh)).not.toBe(keyOf(oak, mesh))
+  })
+})
+
+function modelCopies(count: number, primitives: number) {
+  const nodes: SceneNode[] = []
+  const objects = new Map<string, Object3D>()
+  const shapes = [new BoxGeometry(1, 1, 1), new BoxGeometry(0.4, 2, 0.4)]
+  const paints = [new MeshStandardMaterial(), new MeshStandardMaterial({ color: '#226622' })]
+  for (let at = 0; at < count; at += 1) {
+    const node = modelNodeFixture(`m${at}`, 'tree')
+    const holder = new Object3D()
+    holder.position.set(at, 0, 0)
+    for (let primitive = 0; primitive < primitives; primitive += 1) {
+      const mesh = new Mesh(shapes[primitive], paints[primitive])
+      if (primitive === 1) mesh.position.set(0, 1.5, 0)
+      holder.add(mesh)
+    }
+    holder.updateMatrixWorld(true)
+    markInstanceable(holder, true)
+    nodes.push(node)
+    objects.set(node.id, holder)
+  }
+  return { nodes, objects }
+}
+
+describe('sweep of an instanceable model', () => {
+  it('places two primitives of one node into two groups, sharing the node id', () => {
+    const host = new Object3D()
+    const { nodes, objects } = modelCopies(WORTH_INSTANCING, 2)
+    for (const holder of objects.values()) host.add(holder)
+    const groups = sweep(
+      nodes,
+      id => objects.get(id),
+      host,
+      mesh => mesh.material,
+      shapeAndPaint(),
+      heldOutOfDraw(),
+    )
+
+    expect(groups).toHaveLength(2)
+    expect(groups.map(group => group.ids.length)).toEqual([WORTH_INSTANCING, WORTH_INSTANCING])
+    expect(groups[0]?.ids[0]).toBe(groups[1]?.ids[0])
+    expect(groups[0]?.meshes[0]).not.toBe(groups[1]?.meshes[0])
+  })
+
+  it('writes each primitive at its own world pose, not the holder origin', () => {
+    const host = new Object3D()
+    const { nodes, objects } = modelCopies(WORTH_INSTANCING, 2)
+    for (const holder of objects.values()) host.add(holder)
+    const groups = sweep(
+      nodes,
+      id => objects.get(id),
+      host,
+      mesh => mesh.material,
+      shapeAndPaint(),
+      heldOutOfDraw(),
+    )
+    const trunk = groups.find(group => (group.meshes[0]?.position.y ?? -1) === 0)
+    const crown = groups.find(group => (group.meshes[0]?.position.y ?? 0) === 1.5)
+    expect(trunk?.meshes[0]?.matrixWorld.elements[12]).toBe(0)
+    expect(crown?.meshes[0]?.matrixWorld.elements[13]).toBe(1.5)
   })
 })

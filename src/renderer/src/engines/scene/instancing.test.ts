@@ -2,14 +2,16 @@ import {
   BoxGeometry,
   IcosahedronGeometry,
   InstancedMesh,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   Object3D,
 } from 'three'
 import { describe, expect, it } from 'vitest'
 import { EDGE_LAYER } from './sceneView'
-import { meshNode, walked } from './scene-fixtures'
+import { meshNode, modelNodeFixture, walked } from './scene-fixtures'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
+import { markInstanceable } from './instanceableModel'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
 import type { SceneNode } from './sceneState'
 
@@ -368,6 +370,75 @@ describe('keepsItsGroup', () => {
     for (const moved of elsewhere) {
       expect(keepsItsGroup(node, { ...node, ...moved })).toBe(false)
     }
+  })
+
+  it('keeps a model whose placement is all that moved', () => {
+    const node = modelNodeFixture('tree')
+    const moved = { ...node.transform, position: { x: 4, y: 0, z: 0 } }
+    expect(keepsItsGroup(node, { ...node, transform: moved })).toBe(true)
+  })
+
+  it('lets go of a model whose asset, dress or shadow changed', () => {
+    const node = modelNodeFixture('tree')
+    expect(keepsItsGroup(node, { ...node, model: { assetId: 'other' } })).toBe(false)
+    expect(
+      keepsItsGroup(node, {
+        ...node,
+        model: { ...node.model, dress: { kind: 'image', assetId: 'pic-1' } },
+      }),
+    ).toBe(false)
+    expect(keepsItsGroup(node, { ...node, castShadow: !node.castShadow })).toBe(false)
+  })
+})
+
+describe('instancing a model of two primitives', () => {
+  function copies(count: number) {
+    const nodes: SceneNode[] = []
+    const objects = new Map<string, Object3D>()
+    const trunkGeom = new BoxGeometry(1, 1, 1)
+    const crownGeom = new BoxGeometry(0.4, 2, 0.4)
+    const trunkPaint = new MeshStandardMaterial()
+    const crownPaint = new MeshStandardMaterial({ color: '#226622' })
+    for (let at = 0; at < count; at += 1) {
+      const node = modelNodeFixture(`m${at}`, 'tree')
+      const holder = new Object3D()
+      holder.position.set(at, 0, 0)
+      const trunk = new Mesh(trunkGeom, trunkPaint)
+      const crown = new Mesh(crownGeom, crownPaint)
+      crown.position.set(0, 1.5, 0)
+      holder.add(trunk, crown)
+      holder.updateMatrixWorld(true)
+      markInstanceable(holder, true)
+      nodes.push(node)
+      objects.set(node.id, holder)
+    }
+    return { nodes, objects }
+  }
+
+  it('draws two lots for one node id, each holding every copy', () => {
+    const scene = host()
+    const { nodes, objects } = copies(WORTH_INSTANCING)
+    for (const holder of objects.values()) scene.add(holder)
+    const count = createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    expect(count).toBe(WORTH_INSTANCING * 2)
+    const lots = instancesIn(scene)
+    expect(lots).toHaveLength(2)
+    expect(lots.map(lot => lot.count)).toEqual([WORTH_INSTANCING, WORTH_INSTANCING])
+  })
+
+  it('stores both primitives of one node at their world poses', () => {
+    const scene = host()
+    const { nodes, objects } = copies(WORTH_INSTANCING)
+    for (const holder of objects.values()) scene.add(holder)
+    createInstancedGroups(scene).rebuild(nodes, id => objects.get(id))
+
+    const held = new Matrix4()
+    const ys = instancesIn(scene).map(lot => {
+      lot.getMatrixAt(0, held)
+      return held.elements[13] ?? -1
+    })
+    expect(ys.toSorted()).toEqual([0, 1.5])
   })
 })
 

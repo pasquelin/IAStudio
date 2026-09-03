@@ -1,4 +1,5 @@
-import type { AnimationClip, Object3D } from 'three'
+import { Mesh, SkinnedMesh, type AnimationClip, type Object3D } from 'three'
+import { stableKey } from '@shared/hash'
 import type { RigStatus } from './rigState'
 import type { SceneNode } from './sceneState'
 
@@ -27,4 +28,27 @@ export function markInstanceable(holder: Object3D, eligible: boolean): void {
 
 export function isInstanceable(holder: Object3D): boolean {
   return INSTANCEABLE.has(holder)
+}
+
+/** The drawable primitives of a holder, in tree order, skinned meshes left out. */
+export function meshesOf(holder: Object3D): Mesh[] {
+  const meshes: Mesh[] = []
+  holder.traverse(child => {
+    if (child instanceof Mesh && !(child instanceof SkinnedMesh)) meshes.push(child)
+  })
+  return meshes
+}
+
+/**
+ * One key per primitive of an instanceable model: the asset and which sub-mesh, never the
+ * cloned material object. A dress is named so two dressed nodes do not collide with a bare one.
+ */
+export function modelShapeKey(node: SceneNode, mesh: Mesh): string {
+  if (node.type !== 'model') return ''
+  if (node.model.dress) return `dress:${stableKey(node.model.dress)}`
+  let holder: Object3D | null = mesh
+  while (holder && !isInstanceable(holder)) holder = holder.parent
+  if (!holder) return ''
+  const index = meshesOf(holder).indexOf(mesh)
+  return index < 0 ? '' : `model:${node.model.assetId}|${index}`
 }
