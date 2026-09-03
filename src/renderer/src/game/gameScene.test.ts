@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Mesh } from 'three'
+import { InstancedMesh, Mesh } from 'three'
 import type { MeshStandardMaterial } from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
@@ -14,6 +14,7 @@ import {
 } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
 import { buildGameScene } from './gameScene'
+import { WORTH_INSTANCING } from '@/engines/scene/grouping'
 
 const NOTHING: AssetPort = { urlOf: () => null }
 const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
@@ -51,6 +52,41 @@ describe('a scene as a game draws it', () => {
     const built = await buildGameScene(scene([node]), NOTHING)
 
     expect(built.byEntity.get(node.id)?.position.toArray()).toEqual([3, 2, -1])
+  })
+
+  it('draws repeated static shapes as spatial instances while keeping every logical entity', async () => {
+    const nodes = Array.from({ length: WORTH_INSTANCING }, (_unused, index) =>
+      meshNode(BOX, { name: `Crate ${index}` }),
+    )
+
+    const built = await buildGameScene(scene(nodes), NOTHING)
+    const instances: InstancedMesh[] = []
+    built.scene.traverse(object => {
+      if (object instanceof InstancedMesh) instances.push(object)
+    })
+
+    expect(instances.reduce((count, instance) => count + instance.count, 0)).toBe(WORTH_INSTANCING)
+    expect(instances.length).toBeLessThan(WORTH_INSTANCING)
+    expect(nodes.every(node => built.byEntity.has(node.id))).toBe(true)
+  })
+
+  it('keeps a gameplay-driven repetition individual', async () => {
+    const staticNodes = Array.from({ length: WORTH_INSTANCING }, (_unused, index) =>
+      meshNode(BOX, { name: `Static crate ${index}` }),
+    )
+    const moving: SceneNode = {
+      ...meshNode(BOX, { name: 'Moving crate' }),
+      components: [{ type: 'Spin' }],
+    }
+
+    const built = await buildGameScene(scene([...staticNodes, moving]), NOTHING)
+    const instances: InstancedMesh[] = []
+    built.scene.traverse(object => {
+      if (object instanceof InstancedMesh) instances.push(object)
+    })
+
+    expect(instances.reduce((count, instance) => count + instance.count, 0)).toBe(WORTH_INSTANCING)
+    expect(built.byEntity.get(moving.id)?.parent).toBe(built.scene)
   })
 
   /** A game has no picture for a texture the project has lost, and draws the shape all the same. */

@@ -20,6 +20,9 @@ import { loadTexture } from '@/engines/scene/textureCache'
 import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
 import { applyTransform } from '@/engines/scene/pivot'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import { createCellGroups } from '@/engines/scene/cellInstancing'
+import { groupingExclusions } from '@/engines/scene/grouping'
+import { drivenNodes } from '@/engines/scene/animationEval'
 
 /**
  * A scene as three.js draws it in a GAME — no gizmo, no helper, no selection, no grid.
@@ -106,6 +109,14 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     ;(parent ?? scene).add(object)
   }
 
+  scene.updateMatrixWorld()
+  const instances = createCellGroups(scene)
+  instances.rebuild(
+    state.nodes,
+    id => byEntity.get(id),
+    groupingExclusions(state.nodes, drivenNodes(state.animation)),
+  )
+
   // 🛑 What a game shows of the world, and what it does NOT: the image-based environment is not
   // shipped, so `environment` falls back to a plain sky rather than to black. Written rather than
   // hidden — an exported scene lit only by its environment is a scene lit by nothing.
@@ -123,6 +134,7 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     world: state.world,
     byEntity,
     dispose: () => {
+      instances.dispose()
       ground.dispose()
       for (const held of textures.values()) void disposeWhenLoaded(held)
       scene.traverse(one => {
