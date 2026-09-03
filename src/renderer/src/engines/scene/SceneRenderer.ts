@@ -180,7 +180,7 @@ import {
   type ForeignClip,
 } from './animation'
 import { createRefCache, type RefCache } from '../core/refCache'
-import { drivenNodes, lensAt, poseAt, postAt } from './animationEval'
+import { anySoloed, drivenNodes, lensAt, playsThrough, poseAt, postAt } from './animationEval'
 import { timelineClip, type ClipTarget } from './animationClips'
 import { SECOND, type Us } from '@shared/domain/time'
 import {
@@ -853,6 +853,7 @@ export class SceneRenderer {
   private pickedPathPoint: PickedPathPoint | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
+  private playheadMovesShadows = false
 
   /** Built at mount, when there is a renderer to build passes with. */
   private post: PostComposer | null = null
@@ -1301,6 +1302,7 @@ export class SceneRenderer {
     // Before the counters and after every placement: the instance matrices are copied from the
     // world matrices, which nothing past here moves.
     this.regroupInstances()
+    this.playheadMovesShadows = this.canPlayheadMoveShadows(state.nodes)
     this.reportStats()
     if (allShadowsChanged) this.redraw()
     else if (this.changedShadowLights.size > 0) this.refreshChangedShadows()
@@ -1433,7 +1435,44 @@ export class SceneRenderer {
     // The clips of every imported model follow the head too, which is what puts them on the band
     // rather than on real time — and what stops a render from writing a frozen character.
     this.animations.seek(time)
-    this.redraw()
+    if (this.playheadMovesShadows) this.redraw()
+    else this.refreshWithoutShadows()
+  }
+
+  private canPlayheadMoveShadows(nodes: readonly SceneNode[]): boolean {
+    if (
+      nodes.some(
+        node =>
+          node.type === 'model' && (node.model.lanes ?? []).some(lane => lane.clips.length > 0),
+      )
+    ) {
+      return true
+    }
+
+    const soloed = anySoloed(this.timeline)
+    for (const track of this.timeline.tracks) {
+      if (!playsThrough(track, soloed)) continue
+      if (track.target.property === 'fov' || track.target.property === 'post') continue
+      if (track.target.bone) return true
+
+      const node = this.applied.get(track.target.nodeId)
+      if (node?.type !== 'camera' || this.nodeCarriesShadowCaster(track.target.nodeId)) return true
+    }
+    for (const shot of this.timeline.shots) {
+      if (this.nodeCarriesShadowCaster(shot.cameraId)) return true
+    }
+    return false
+  }
+
+  private nodeCarriesShadowCaster(nodeId: string): boolean {
+    const object = this.objects.get(nodeId)
+    if (!object) return true
+
+    let castsShadow = false
+    object.traverse(descendant => {
+      castsShadow ||= descendant.castShadow
+    })
+    return castsShadow
   }
 
   /**
