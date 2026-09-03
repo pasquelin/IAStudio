@@ -1,14 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { setTransform } from '@/engines/scene/commands'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { EMPTY_STATS, sameStats, type SceneStats } from '@/engines/scene/sceneStats'
 import { assetVersionOf } from '@/stores/assets'
 import { livePreviewOf } from '@/stores/livePreviews'
 import { useModelFiles } from '@/stores/modelFiles'
-import { usePlay } from '@/stores/play'
 import { useProject } from '@/stores/project'
-import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { skeletonProfilesOf, useSkeletonProfiles } from '@/stores/skeletonProfiles'
@@ -24,13 +21,7 @@ import {
   openPointMenu,
   recordTransform,
 } from '../sceneRuntimeActions'
-
-type RuntimeSetters = {
-  stats: Dispatch<SetStateAction<{ scene: SceneStats; selected: SceneStats }>>
-  marquee: Dispatch<SetStateAction<ScreenBox | null>>
-  navigating: Dispatch<SetStateAction<boolean>>
-  flySpeed: Dispatch<SetStateAction<number | null>>
-}
+import { useMountedSceneRenderer, type RuntimeSetters } from './useMountedSceneRenderer'
 
 function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRenderer {
   const projectPath = useProject.getState().project?.path ?? null
@@ -75,32 +66,6 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
   })
 }
 
-function useMountedSceneRenderer(
-  documentId: string,
-  hostRef: MutableRefObject<HTMLDivElement | null>,
-  engineRef: MutableRefObject<SceneRenderer | null>,
-  setLive: Dispatch<SetStateAction<SceneRenderer | null>>,
-  setters: RuntimeSetters,
-): void {
-  useEffect(() => {
-    const element = hostRef.current
-    if (!element) return
-    const renderer = sceneRendererFor(documentId, setters)
-    renderer.mount(element)
-    engineRef.current = renderer
-    setLive(renderer)
-    registerSceneEngine(documentId, renderer)
-    return () => {
-      usePlay.getState().stop(documentId)
-      renderer.dispose()
-      engineRef.current = null
-      setLive(null)
-      forgetSceneEngine(documentId)
-      useModelFiles.getState().forget(documentId)
-    }
-  }, [documentId, engineRef, hostRef, setLive, setters])
-}
-
 /** Owns the imperative renderer and translates its callbacks into document/view stores. */
 export function useSceneRuntime(documentId: string) {
   const host = useRef<HTMLDivElement>(null)
@@ -123,7 +88,7 @@ export function useSceneRuntime(documentId: string) {
     }),
     [],
   )
-  useMountedSceneRenderer(documentId, host, engine, setLive, setters)
+  useMountedSceneRenderer(documentId, host, engine, setLive, setters, sceneRendererFor)
 
   const paneInHand = useCallback(() => engine.current?.activePane() ?? 0, [])
   const canAdd = useCallback(() => !engine.current?.flightHeld, [])
