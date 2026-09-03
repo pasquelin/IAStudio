@@ -38,6 +38,7 @@ import { familyOf, type ToolId } from '@shared/domain/tool'
 import { panelsStore } from '@/stores/panels'
 import { ShellPanelActions } from './ShellPanelActions'
 import { ShellPanelBody } from './ShellPanelBody'
+import { carriesExternalFiles, externalPaths, queueExternalFiles } from '../../externalFiles'
 import { ShellPanelButton } from './ShellPanelButton'
 import 'dockview-react/dist/styles/dockview.css'
 import '../dockview-theme.css'
@@ -75,6 +76,25 @@ function iconOf(id: ToolId): ReactElement {
  * this surface does declare, and takes it back when the panel returns.
  */
 export function Shell() {
+  useEffect(() => {
+    const allowFileDrop = (event: DragEvent): void => {
+      if (carriesExternalFiles(event)) event.preventDefault()
+    }
+    const takeFileDrop = (event: DragEvent): void => {
+      if (event.defaultPrevented && event.cancelBubble) return
+      const paths = event.dataTransfer ? externalPaths(event.dataTransfer.files) : []
+      if (paths.length === 0) return
+      event.preventDefault()
+      queueExternalFiles([{ paths }])
+    }
+
+    window.addEventListener('dragover', allowFileDrop)
+    window.addEventListener('drop', takeFileDrop)
+    return () => {
+      window.removeEventListener('dragover', allowFileDrop)
+      window.removeEventListener('drop', takeFileDrop)
+    }
+  }, [])
   const { t } = useTranslation()
   const activeWorkspace = useLayouts(state => state.activeWorkspace)
   const setHome = useLayouts(state => state.setHome)

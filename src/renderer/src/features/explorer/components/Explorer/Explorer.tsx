@@ -81,6 +81,12 @@ import {
   type FolderWalk,
 } from './folderWalk'
 import { RescanBar } from '../RescanBar'
+import {
+  carriesExternalFiles,
+  externalPaths,
+  queueExternalFiles,
+} from '@/features/shell/externalFiles'
+import type { DragLike } from '@/helpers/drag'
 
 /** Nothing held, nothing to take back — the state the panel starts in and falls back to. */
 const NO_HISTORY: FileHistory = { undo: false, redo: false }
@@ -370,9 +376,20 @@ export function Explorer() {
   const acceptsAsset = (node: ExplorerNode): boolean =>
     !isDomainHeading(node) && node.kind === 'folder' && !isPrivatePath(node.path)
 
+  const carriesIntoExplorer = (event: DragLike): boolean =>
+    carriesAsset(event) || carriesExternalFiles(event)
+
   const landAsset = useCallback(
-    (event: DragEvent<HTMLElement>, folder: string): void => {
-      void landAssetIn(event, folder).then(outcome => outcome && settled(outcome))
+    async (event: DragEvent<HTMLElement>, folder: string): Promise<void> => {
+      const paths = externalPaths(event.dataTransfer.files)
+      if (paths.length > 0) {
+        event.preventDefault()
+        event.stopPropagation()
+        queueExternalFiles([{ paths, folder }])
+        return
+      }
+      const outcome = await landAssetIn(event, folder)
+      if (outcome) settled(outcome)
     },
     [settled],
   )
@@ -677,7 +694,10 @@ export function Explorer() {
             }}
             // The blank of the grid means the folder on screen, as it does for every other
             // gesture here — a new folder, a paste, a drop of the panel's own rows.
-            foreign={{ carries: carriesAsset, onDrop: event => landAsset(event, browsed) }}
+            foreign={{
+              carries: carriesIntoExplorer,
+              onDrop: event => void landAsset(event, browsed),
+            }}
             onContextMenuRoot={() => raiseRootMenu(browsed)}
             // A message is not a card, so `onBlank` counts it as blank and an empty folder still
             // offers the one gesture that gets you out of it.
@@ -715,8 +735,8 @@ export function Explorer() {
                 }
                 foreign={{
                   accepts: acceptsAsset(node),
-                  carries: carriesAsset,
-                  onDrop: event => landAsset(event, node.path),
+                  carries: carriesIntoExplorer,
+                  onDrop: event => void landAsset(event, node.path),
                 }}
                 onPickUp={setCarried}
                 onRelease={() => setCarried(null)}
@@ -779,10 +799,10 @@ export function Explorer() {
             }
             // The same object the grid takes: one predicate, one landing, two views.
             foreign={{
-              carries: carriesAsset,
+              carries: carriesIntoExplorer,
               accepts: acceptsAsset,
               onDrop: (event, node) =>
-                landAsset(event, node && !isDomainHeading(node) ? node.path : FOLDER_ROOT),
+                void landAsset(event, node && !isDomainHeading(node) ? node.path : FOLDER_ROOT),
             }}
             // The blank aims at the project folder, as the drop above does: the tree shows the
             // whole of it, so there is only ever one place its blank could mean.

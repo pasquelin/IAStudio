@@ -56,6 +56,7 @@ import type {
 import type { GitDiff } from './domain/gitDiff'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
+import type { ExternalFileRequest } from './domain/externalFile'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { PlanAccess } from './domain/plan'
 import type { Project, RescanState } from './domain/project'
@@ -271,8 +272,10 @@ export type Channels = {
 
   mediaAdopt: 'media:adopt'
   mediaIngest: 'media:ingest'
+  mediaIngestPaths: 'media:ingest-paths'
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
+  externalFilesTake: 'external:take'
 
   assistantThink: 'assistant:think'
   assistantStop: 'assistant:stop'
@@ -525,8 +528,10 @@ export const CHANNELS: Channels = {
 
   mediaAdopt: 'media:adopt',
   mediaIngest: 'media:ingest',
+  mediaIngestPaths: 'media:ingest-paths',
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
+  externalFilesTake: 'external:take',
 
   assistantThink: 'assistant:think',
   assistantStop: 'assistant:stop',
@@ -1070,6 +1075,7 @@ export const EVENTS = {
   materialExport: 'evt:material-export',
   skyboxExport: 'evt:skybox-export',
   taskProgress: 'evt:task-progress',
+  externalFiles: 'evt:external-files',
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   gameWindowClosed: 'evt:game-window-closed',
@@ -2061,6 +2067,8 @@ export type StudioBridge = {
      * ingest runs on and reports through `onProgress`.
      */
     ingest: () => Promise<Asset[]>
+    /** Copies files already chosen outside the picker into the open project. */
+    ingestPaths: (paths: readonly string[], folder: string) => Promise<Asset[]>
     /**
      * Gives a file the project ALREADY holds a row in the catalogue, so the studio can open it
      * instead of handing it to the system — the explorer's double-click on a `.jpg` somebody
@@ -2334,6 +2342,13 @@ export type StudioBridge = {
     onSceneCapture: (callback: (command: SceneCaptureCommand) => void) => Unsubscribe
     onMaterialExport: (callback: (command: MaterialExportCommand) => void) => Unsubscribe
     onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe
+  }
+  externalFiles: {
+    /** Takes arrivals queued before the main window was ready. */
+    take: () => Promise<ExternalFileRequest[]>
+    /** Resolves browser File objects without exposing Node to the renderer. */
+    paths: (files: readonly File[]) => string[]
+    onOpen: (callback: () => void) => Unsubscribe
   }
   diagnostics: {
     onLog: (callback: (entry: LogEntry) => void) => Unsubscribe

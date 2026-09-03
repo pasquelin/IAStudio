@@ -192,6 +192,7 @@ type ChannelMethod = {
 
   [CHANNELS.mediaAdopt]: StudioBridge['media']['adopt']
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
+  [CHANNELS.mediaIngestPaths]: StudioBridge['media']['ingestPaths']
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
 
@@ -244,6 +245,8 @@ type ChannelMethod = {
   [CHANNELS.newDocumentAsk]: StudioBridge['newDocument']['ask']
   [CHANNELS.newDocumentRequest]: StudioBridge['newDocument']['request']
   [CHANNELS.newDocumentAnswer]: StudioBridge['newDocument']['answer']
+
+  [CHANNELS.externalFilesTake]: StudioBridge['externalFiles']['take']
 
   [CHANNELS.menuPopup]: StudioBridge['menu']['popup']
 

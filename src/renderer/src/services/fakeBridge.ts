@@ -322,6 +322,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     media: {
       ingest: () => Promise.resolve([]),
+      ingestPaths: () => Promise.resolve([]),
       adopt: () => Promise.resolve(null),
       cancel: () => Promise.resolve(),
       capabilities: () => Promise.resolve({ ffmpeg: true }),
@@ -429,6 +430,12 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onMaterialExport: noSubscription,
       onSkyboxExport: noSubscription,
       ...overrides.menu,
+    },
+    externalFiles: {
+      take: () => Promise.resolve([]),
+      paths: () => [],
+      onOpen: noSubscription,
+      ...overrides.externalFiles,
     },
     news: {
       read: topic => Promise.resolve({ topic, items: [], readAt: '2026-08-24T00:00:00.000Z' }),

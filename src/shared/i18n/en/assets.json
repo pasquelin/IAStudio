@@ -127,6 +127,9 @@
     "newKinds": "Document kinds",
     "noProjectBody": "A document is a file inside a project. Open one, or make one, to begin.",
     "recentProjects": "Recent projects",
+    "importFiles": "Import files",
+    "importProjectTitle": "Choose a destination project",
+    "importProjectBody": "The files will be copied into the selected project, then opened in the studio.",
     "newByKind": {
       "image": "New image",
       "scene": "New scene",

@@ -69,6 +69,21 @@ export function NewDocumentWindow() {
 
   const project = ask.projectName
 
+  if (ask.purpose === 'externalFiles') {
+    return (
+      <WindowShell title={t('documents.importFiles')}>
+        <NewDocumentNoProject
+          recent={ask.recentProjects}
+          title={t('documents.importProjectTitle')}
+          body={t('documents.importProjectBody')}
+          onNewProject={() => settle({ answer: 'newProject' })}
+          onOpenProject={() => settle({ answer: 'openProject' })}
+          onOpenRecent={path => settle({ answer: 'recentProject', path })}
+        />
+      </WindowShell>
+    )
+  }
+
   return (
     <WindowShell
       title={t('documents.new')}
