@@ -7,6 +7,7 @@ import {
   DirectionalLight,
   Euler,
   GridHelper,
+  InstancedMesh,
   type Intersection,
   Light,
   LineBasicMaterial,
@@ -277,6 +278,7 @@ import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
 import { createOptimizedGroups } from './optimizedGrouping'
+import { bakedInstancesOf, bakedSourceIdOf } from './bakedInstances'
 import {
   behavioralGroupingExclusions,
   groupingExclusions,
@@ -4104,6 +4106,13 @@ export class SceneRenderer {
     if (previous?.type === 'model' && (node.type !== 'model' || pointsElsewhere(previous, node))) {
       this.release(node.id)
     }
+    if (
+      previous?.type === 'mesh' &&
+      node.type === 'mesh' &&
+      previous.instances !== node.instances
+    ) {
+      this.release(node.id)
+    }
 
     this.applied.set(node.id, node)
 
@@ -4784,7 +4793,10 @@ export class SceneRenderer {
     applyMaterial(material, node.material, this.meshColor)
     applyNegative(material, this.negativeColor, isNegative(node))
 
-    const mesh = new Mesh(this.shapes.acquire(node.geometry, node.material.tilesPerMetre), material)
+    const geometry = this.shapes.acquire(node.geometry, node.material.tilesPerMetre)
+    const mesh = node.instances
+      ? bakedInstancesOf(geometry, material, node.instances)
+      : new Mesh(geometry, material)
     // A texture arrives long after the frame that asked for it: the render is requested again
     // when it lands, or the viewport would show the mesh untextured until something else moved.
     const textures = createMaterialTextures(this.textureCache, mesh, material, slot =>
@@ -5939,9 +5951,12 @@ export class SceneRenderer {
       ...this.instances.pickable(),
     ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    return hit
-      ? (this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name)))
-      : null
+    if (!hit) return null
+    if (hit.object instanceof InstancedMesh && hit.instanceId !== undefined) {
+      const sourceId = bakedSourceIdOf(hit.object, hit.instanceId)
+      if (sourceId) return nodeIdOf(hit.object, name => this.objects.has(name))
+    }
+    return this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name))
   }
 
   /**

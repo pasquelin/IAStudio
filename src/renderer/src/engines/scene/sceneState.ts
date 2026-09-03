@@ -32,6 +32,12 @@ export type OptimizationSettings = {
   groupId?: string
 }
 
+export type BakedInstance = {
+  sourceId: string
+  name: string
+  transform: Transform
+}
+
 export type SceneNodeBase = {
   id: string
   /** `null` is a direct child of the scene. Reparenting is not offered yet. */
@@ -70,6 +76,7 @@ export type SceneNode = SceneNodeBase &
         type: 'mesh'
         geometry: GeometryDescriptor
         material: MaterialDescriptor
+        instances?: readonly BakedInstance[]
         /**
          * Marked as a TOOL for the next boolean — Roblox's Negate, and the only explicit way to
          * say which way a cut runs. Absent on every node ever written so far, and absent means

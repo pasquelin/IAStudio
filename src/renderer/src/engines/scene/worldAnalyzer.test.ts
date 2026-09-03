@@ -206,6 +206,8 @@ describe('analyzeOptimization', () => {
       geometryBytes: expectedBytes,
       sharedMaterials: 1,
     })
+    expect(plan.instances).toEqual([])
+    expect(plan.bakeCandidates).toHaveLength(1)
     expect(plan.estimated.avoidedGeometryBytes).toBe(expectedBytes)
   })
 

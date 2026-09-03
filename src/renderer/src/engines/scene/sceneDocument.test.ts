@@ -468,6 +468,45 @@ describe('sceneFromPayload', () => {
     ).toEqual([])
   })
 
+  it('round-trips the source identities and transforms of a baked instance node', () => {
+    const node: SceneNode = {
+      ...mesh('baked'),
+      instances: [{ sourceId: 'source', name: 'Source', transform: IDENTITY_TRANSFORM }],
+    }
+
+    expect(reread({ ...EMPTY_SCENE, nodes: [node] }).nodes).toEqual([node])
+    expect(
+      sceneFromPayload({
+        nodes: [{ ...node, instances: [{ sourceId: 'source', transform: IDENTITY_TRANSFORM }] }],
+      }).nodes,
+    ).toEqual([])
+  })
+
+  it('drops baked groups whose source identities are empty, repeated, or already nodes', () => {
+    const source = mesh('source')
+    const baked = (id: string, sourceIds: readonly string[]): SceneNode => ({
+      ...mesh(id),
+      instances: sourceIds.map(sourceId => ({
+        sourceId,
+        name: sourceId,
+        transform: IDENTITY_TRANSFORM,
+      })),
+    })
+
+    expect(
+      sceneFromPayload({
+        nodes: [
+          source,
+          baked('empty', ['']),
+          baked('local-duplicate', ['twice', 'twice']),
+          baked('node-collision', ['source']),
+          baked('first-valid', ['shared']),
+          baked('cross-group-duplicate', ['shared']),
+        ],
+      }).nodes.map(node => node.id),
+    ).toEqual(['source', 'first-valid'])
+  })
+
   // Same trap as the group's: a node type the loader has never heard of is dropped, and a scene
   // saved with sprites would reopen without them.
   it('carries a sprite and the picture it wears through a round trip', () => {

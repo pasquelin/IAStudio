@@ -965,11 +965,19 @@ export function copiesOf(nodes: readonly SceneNode[], picked: readonly SceneNode
   const fresh = carried.map(node => ({ node, id: newId() }))
   const renamed = new Map(fresh.map(({ node, id }) => [node.id, id]))
 
-  return fresh.map(({ node, id }) => ({
-    ...node,
-    id,
-    parentId: node.parentId === null ? null : (renamed.get(node.parentId) ?? node.parentId),
-  }))
+  return fresh.map(({ node, id }) => {
+    const copy = {
+      ...node,
+      id,
+      parentId: node.parentId === null ? null : (renamed.get(node.parentId) ?? node.parentId),
+    }
+    return node.type === 'mesh' && node.instances
+      ? {
+          ...copy,
+          instances: node.instances.map(instance => ({ ...instance, sourceId: newId() })),
+        }
+      : copy
+  })
 }
 
 /**

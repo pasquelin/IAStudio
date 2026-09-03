@@ -118,7 +118,7 @@ export function sceneFromPayload(payload: unknown): SceneState {
    * shadows, and requiring the flags would have emptied each of them at load, silently, since a
    * dropped node looks exactly like one that was never there.
    */
-  const kept = nodes.filter(isSceneNode).map(revived)
+  const kept = withoutAmbiguousBakedSources(nodes.filter(isSceneNode).map(revived))
 
   return {
     nodes: kept,
@@ -127,6 +127,25 @@ export function sceneFromPayload(payload: unknown): SceneState {
     world: readWorld(payload.world, payload.environment),
     animation: readTimeline(payload.animation, kept),
   }
+}
+
+function withoutAmbiguousBakedSources(nodes: readonly SceneNode[]): SceneNode[] {
+  const nodeIds = new Set(nodes.map(node => node.id))
+  const sourceIds = new Set<string>()
+  return nodes.filter(node => {
+    if (node.type !== 'mesh' || !node.instances) return true
+
+    const local = new Set<string>()
+    const ambiguous = node.instances.some(instance => {
+      const id = instance.sourceId
+      if (id === '' || nodeIds.has(id) || sourceIds.has(id) || local.has(id)) return true
+      local.add(id)
+      return false
+    })
+    if (ambiguous) return false
+    for (const id of local) sourceIds.add(id)
+    return true
+  })
 }
 
 /** The models whose lane actually carries a clip — see `sheetFromAnimated`. */
@@ -310,6 +329,7 @@ function isSceneNode(value: unknown): value is SceneNode {
       describes(value.geometry, GEOMETRY_SPECS) &&
       isGeometryRun(value.geometry) &&
       isMaterial(value.material) &&
+      isOptionalBakedInstances(value.instances) &&
       isOptionalFlag(value.negative)
     )
   }
@@ -350,6 +370,21 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'path') return isPath(value.path)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
+}
+
+function isOptionalBakedInstances(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (Array.isArray(value) &&
+      value.length > 0 &&
+      value.every(
+        instance =>
+          isRecord(instance) &&
+          typeof instance.sourceId === 'string' &&
+          typeof instance.name === 'string' &&
+          isTransform(instance.transform),
+      ))
+  )
 }
 
 function isOptionalOptimization(value: unknown): boolean {

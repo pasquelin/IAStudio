@@ -16,6 +16,7 @@ const DOCUMENT = 'optimization-document'
 const PLAN: OptimizationPlan = {
   classifications: [],
   instances: [],
+  bakeCandidates: [],
   batches: [{ key: 'paint', sourceIds: ['group', 'child'], meshCount: 2 }],
   warnings: [],
   measured: {
@@ -34,6 +35,12 @@ const PLAN: OptimizationPlan = {
     avoidedGeometryBytes: 0,
     avoidedTextureBytes: 0,
   },
+}
+
+const BAKE_PLAN: OptimizationPlan = {
+  ...PLAN,
+  instances: [{ key: 'box', sourceIds: ['first', 'second'], meshCount: 2 }],
+  bakeCandidates: [{ key: 'box', sourceIds: ['first', 'second'], meshCount: 2 }],
 }
 
 beforeEach(() => {
@@ -104,4 +111,31 @@ it('offers the batch override and applies it to the selected subtree', async () 
   expect(nodeById(sceneOf(useScenes.getState(), DOCUMENT), 'child')?.optimization?.mode).toBe(
     'batch',
   )
+})
+
+it('bakes compatible meshes into one authoring node and restores them with undo', async () => {
+  const first = meshNode('first')
+  const second = meshNode('second')
+  installScene(DOCUMENT, {
+    ...EMPTY_SCENE,
+    nodes: [first, second],
+    selectedIds: [first.id, second.id],
+  })
+  registerSceneEngine(DOCUMENT, {
+    analyzeOptimization: () => BAKE_PLAN,
+  } as unknown as SceneRenderer)
+  useOptimizationDialog.getState().open({
+    documentId: DOCUMENT,
+    selectedIds: [first.id, second.id],
+  })
+  const user = userEvent.setup()
+  render(<SceneOptimizationDialog documentId={DOCUMENT} />)
+
+  await user.click(screen.getByRole('button', { name: 'Appliquer l’optimisation' }))
+  const baked = sceneOf(useScenes.getState(), DOCUMENT).nodes[0]
+  expect(baked?.type).toBe('mesh')
+  expect(baked?.type === 'mesh' ? baked.instances : []).toHaveLength(2)
+
+  runSceneCommand(DOCUMENT, 'scene.undo')
+  expect(sceneOf(useScenes.getState(), DOCUMENT).nodes).toEqual([first, second])
 })

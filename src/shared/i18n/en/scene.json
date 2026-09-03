@@ -95,6 +95,7 @@
     "removePathPointHint": "Takes the point off the path. A path always keeps its last two points"
   },
   "optimization": {
+    "bake": "Bake optimisation",
     "title": "Optimise selection…",
     "hint": "Analyzes the selection before choosing its runtime representation",
     "optimize": "Optimise",
