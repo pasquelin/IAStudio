@@ -3,6 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Row } from '@/components/Row'
 import { Tree, type TreeNode } from '@/components/Tree'
+import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
+import { TreeFoldButton } from '@/components/TreeFoldButton'
+import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import type { Command } from '@/engines/core/history'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { SceneNodeRow } from '@/features/scene/components/Scene/SceneNodeRow'
@@ -21,11 +24,13 @@ const SCENE_ROOT = 'scene-root'
 type SceneItem = TreeNode & { node: SceneNode | null }
 
 export function SceneTree({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const language = i18n.language
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   // Folding is session state: nobody wants Cmd-Z to give them back a collapsed branch.
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set([SCENE_ROOT]))
+  const [collection, setCollection] = useState<CollectionState>({ ...LIST_ONLY, sort: 'name' })
   // Which row has its name open, held here rather than in the row: the menu that opens one sits
   // at this level, and a memoized row cannot be told to open itself from outside.
   const [renaming, setRenaming] = useState<string | null>(null)
@@ -54,6 +59,62 @@ export function SceneTree({ documentId }: { documentId: string }) {
     [nodes],
   )
 
+  const shownItems = useMemo<SceneItem[]>(() => {
+    const term = collection.search.trim().toLocaleLowerCase(language)
+    const kept = new Set<string>([SCENE_ROOT])
+    const byId = new Map(items.map(item => [item.id, item]))
+
+    for (const item of items) {
+      if (!item.node || (term && !item.node.name.toLocaleLowerCase(language).includes(term))) {
+        continue
+      }
+      for (let current: SceneItem | undefined = item; current;) {
+        kept.add(current.id)
+        current = current.parentId ? byId.get(current.parentId) : undefined
+      }
+    }
+
+    const descending = collection.sort === 'nameDesc'
+    return items
+      .filter(item => term === '' || kept.has(item.id))
+      .sort((one, other) => {
+        if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
+        const order = one.node.name.localeCompare(other.node.name, language)
+        return descending ? -order : order
+      })
+  }, [collection.search, collection.sort, items, language])
+
+  const expandableIds = useMemo(() => {
+    const parents = new Set(shownItems.flatMap(item => (item.parentId ? [item.parentId] : [])))
+    return new Set(shownItems.filter(item => parents.has(item.id)).map(item => item.id))
+  }, [shownItems])
+  const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
+
+  const toggle = useCallback(
+    (id: string) => {
+      setExpandedIds(current => {
+        const next = new Set(current)
+        if (!next.delete(id)) {
+          next.add(id)
+          return next
+        }
+
+        // Closing a branch also forgets every open branch below it, like IDE project trees.
+        const parents = new Map(items.map(item => [item.id, item.parentId]))
+        for (const candidate of next) {
+          for (let parent = parents.get(candidate); parent; parent = parents.get(parent)) {
+            if (parent === id) {
+              next.delete(candidate)
+              break
+            }
+          }
+        }
+        return next
+      })
+    },
+    [items],
+  )
+
   /**
    * What the two halves of the drag share: where the batch aims, and opening what it lands in.
    * ONE entry in the history for the whole of it — six objects filed into a group cost one ⌘Z.
@@ -78,104 +139,121 @@ export function SceneTree({ documentId }: { documentId: string }) {
   }
 
   return (
-    <Tree
-      nodes={items}
-      label={t('panels.scene')}
-      selectedIds={selectedIds}
-      expandedIds={expandedIds}
-      // The root is a row but not a node: clicking it selects nothing, and a range that spans
-      // it steps over it rather than selecting a thing the scene has never heard of.
-      selectable={item => item.node !== null}
-      // Taking hold of a row already picked takes the whole selection with it: six objects filed
-      // into a group in one gesture, which is the reason anyone selects six. A row OUTSIDE the
-      // selection travels alone and leaves it whole — see `batchFrom`.
-      dragMultiple
-      // Dropped ONTO a row, which hangs the batch from it — the root standing for the scene, so
-      // that is also how a node comes back out of a group.
-      onDrop={(ids, parentId) =>
-        move(ids, parentId, (batch, wanted) => {
-          // Refused here rather than by the command: a row dropped back where it came from is the
-          // commonest gesture of the drag, and it would leave a dead entry in the history.
-          const moving = batch.filter(id => nodes.find(one => one.id === id)?.parentId !== wanted)
-          return moving.length === 0
-            ? null
-            : multi(
-                commandId('reparent', moving),
-                moving.map(id => reparentNode(id, wanted)),
+    <div className="flex h-full min-h-0 flex-col">
+      <CollectionBar
+        scId="scene"
+        state={collection}
+        onChange={setCollection}
+        sorts={[
+          { value: 'name', label: t('explorer.sort.name') },
+          { value: 'nameDesc', label: t('explorer.sort.nameDesc') },
+        ]}
+        display={false}
+        leading={
+          <TreeFoldButton
+            expanded={anyExpanded}
+            onFold={() => setExpandedIds(new Set())}
+            onUnfold={() => setExpandedIds(new Set(expandableIds))}
+          />
+        }
+      />
+      <div className="min-h-0 flex-1">
+        <Tree
+          nodes={shownItems}
+          label={t('panels.scene')}
+          selectedIds={selectedIds}
+          expandedIds={expandedIds}
+          // The root is a row but not a node: clicking it selects nothing, and a range that spans
+          // it steps over it rather than selecting a thing the scene has never heard of.
+          selectable={item => item.node !== null}
+          // Taking hold of a row already picked takes the whole selection with it: six objects filed
+          // into a group in one gesture, which is the reason anyone selects six. A row OUTSIDE the
+          // selection travels alone and leaves it whole — see `batchFrom`.
+          dragMultiple
+          // Dropped ONTO a row, which hangs the batch from it — the root standing for the scene, so
+          // that is also how a node comes back out of a group.
+          onDrop={(ids, parentId) =>
+            move(ids, parentId, (batch, wanted) => {
+              // Refused here rather than by the command: a row dropped back where it came from is the
+              // commonest gesture of the drag, and it would leave a dead entry in the history.
+              const moving = batch.filter(
+                id => nodes.find(one => one.id === id)?.parentId !== wanted,
               )
-        })
-      }
-      // Dropped BETWEEN two rows, which gives the node a PLACE in a level — what every 3D
-      // outliner does and what the middle of a row cannot say. `Tree` offers none beside the
-      // root: that row stands for the scene, which has no siblings.
-      onInsert={(ids, parentId, index) =>
-        move(ids, parentId, (batch, wanted) => reorderNodes(batch, wanted, index))
-      }
-      // A second channel beside the tree's own, which reparents: this one is what the animation
-      // band reads to put an object on itself. The tree knows nothing of it, and it knows nothing
-      // of the tree — see `onDragStart` on `Tree`.
-      onDragStart={(item, event) => {
-        if (!item.node) return
-        // The whole selection when the row dragged is part of it, so six objects land in one
-        // gesture; the row alone otherwise, which is what dragging an unselected row means.
-        sceneNodeDrag.start(
-          event,
-          selectedIds.includes(item.node.id) ? selectedIds : [item.node.id],
-        )
-      }}
-      onSelect={(ids, mode) => selectIn(documentId, ids, mode)}
-      onToggle={id =>
-        setExpandedIds(current => {
-          const next = new Set(current)
-          if (!next.delete(id)) next.add(id)
-          return next
-        })
-      }
-      // Through the tree rather than from the row, as the layer stack does: it holds the
-      // `preventDefault` a right-click needs — without it the system raises its clipboard menu
-      // over ours — and the guard that leaves a right-click inside the rename field to that one.
-      // The root answers nothing: it stands for the scene, which has no name and no delete.
-      // The row is already armed here: `Tree` picks on pointer down, which fires before this.
-      onContextMenu={item => {
-        if (!item.node) return
-        const node = item.node
-        openSceneNodeMenu({
-          node,
-          canFrame: sceneEngineOf(documentId) !== undefined,
-          t,
-          run: command => runSceneCommand(documentId, command),
-          onToggleVisible: () => toggleNodeVisible(documentId, node.id),
-          onSheet: sceneOf(useScenes.getState(), documentId).animation.sheet.includes(node.id),
-          onRename: () => openRename(node.id),
-        })
-      }}
-      // Pinned to the RIGHT edge, outside the indentation, as the layer stack pins its own: the
-      // eyes read as one straight column, and the left of the panel is left to the shape of the
-      // tree. The synthetic root answers nothing — it stands for the scene, which cannot be
-      // hidden — and `Tree` holds the column open at one width for every row.
-      renderTrailing={({ node: item }) =>
-        item.node && (
-          <VisibilityToggle
-            visible={item.node.visible}
-            label={t('scene.visible')}
-            onToggle={() => toggleNodeVisible(documentId, item.id)}
-          />
-        )
-      }
-      renderRow={({ node: item }) =>
-        item.node ? (
-          <SceneNodeRow
-            documentId={documentId}
-            node={item.node}
-            renameLabel={t('scene.rename')}
-            renaming={renaming === item.id}
-            onRename={openRename}
-            onRenamed={closeRename}
-          />
-        ) : (
-          <Row icon={mdiCubeOutline} title={t('scene.root')} />
-        )
-      }
-    />
+              return moving.length === 0
+                ? null
+                : multi(
+                    commandId('reparent', moving),
+                    moving.map(id => reparentNode(id, wanted)),
+                  )
+            })
+          }
+          // Dropped BETWEEN two rows, which gives the node a PLACE in a level — what every 3D
+          // outliner does and what the middle of a row cannot say. `Tree` offers none beside the
+          // root: that row stands for the scene, which has no siblings.
+          onInsert={(ids, parentId, index) =>
+            move(ids, parentId, (batch, wanted) => reorderNodes(batch, wanted, index))
+          }
+          // A second channel beside the tree's own, which reparents: this one is what the animation
+          // band reads to put an object on itself. The tree knows nothing of it, and it knows nothing
+          // of the tree — see `onDragStart` on `Tree`.
+          onDragStart={(item, event) => {
+            if (!item.node) return
+            // The whole selection when the row dragged is part of it, so six objects land in one
+            // gesture; the row alone otherwise, which is what dragging an unselected row means.
+            sceneNodeDrag.start(
+              event,
+              selectedIds.includes(item.node.id) ? selectedIds : [item.node.id],
+            )
+          }}
+          onSelect={(ids, mode) => selectIn(documentId, ids, mode)}
+          onToggle={toggle}
+          // Through the tree rather than from the row, as the layer stack does: it holds the
+          // `preventDefault` a right-click needs — without it the system raises its clipboard menu
+          // over ours — and the guard that leaves a right-click inside the rename field to that one.
+          // The root answers nothing: it stands for the scene, which has no name and no delete.
+          // The row is already armed here: `Tree` picks on pointer down, which fires before this.
+          onContextMenu={item => {
+            if (!item.node) return
+            const node = item.node
+            openSceneNodeMenu({
+              node,
+              canFrame: sceneEngineOf(documentId) !== undefined,
+              t,
+              run: command => runSceneCommand(documentId, command),
+              onToggleVisible: () => toggleNodeVisible(documentId, node.id),
+              onSheet: sceneOf(useScenes.getState(), documentId).animation.sheet.includes(node.id),
+              onRename: () => openRename(node.id),
+            })
+          }}
+          // Pinned to the RIGHT edge, outside the indentation, as the layer stack pins its own: the
+          // eyes read as one straight column, and the left of the panel is left to the shape of the
+          // tree. The synthetic root answers nothing — it stands for the scene, which cannot be
+          // hidden — and `Tree` holds the column open at one width for every row.
+          renderTrailing={({ node: item }) =>
+            item.node && (
+              <VisibilityToggle
+                visible={item.node.visible}
+                label={t('scene.visible')}
+                onToggle={() => toggleNodeVisible(documentId, item.id)}
+              />
+            )
+          }
+          renderRow={({ node: item }) =>
+            item.node ? (
+              <SceneNodeRow
+                documentId={documentId}
+                node={item.node}
+                renameLabel={t('scene.rename')}
+                renaming={renaming === item.id}
+                onRename={openRename}
+                onRenamed={closeRename}
+              />
+            ) : (
+              <Row icon={mdiCubeOutline} title={t('scene.root')} />
+            )
+          }
+        />
+      </div>
+    </div>
   )
 }

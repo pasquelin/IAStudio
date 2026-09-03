@@ -25,6 +25,7 @@ import { Collection } from '@/components/Collection/Collection'
 import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
 import { EmptyState } from '@/components/EmptyState'
 import { Tree } from '@/components/Tree'
+import { TreeFoldButton } from '@/components/TreeFoldButton'
 import { openDocument } from '@/features/shell/components/dockviewApi'
 import { assetAt } from '@/helpers/assetAt'
 import { carriesAsset, landAssetIn } from '@/helpers/assetDrag'
@@ -213,6 +214,30 @@ export function Explorer() {
       isDomainHeading(node) ||
       (node.kind === 'folder' && !documentOf(node) && (!searching || withChildren.has(node.id))),
     [documentOf, searching, withChildren],
+  )
+
+  const expandableIds = useMemo(
+    () => new Set(nodes.filter(expandable).map(node => node.id)),
+    [nodes, expandable],
+  )
+  const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
+  const toggleBranch = useCallback(
+    (id: string) => {
+      const closing = expandedIds.has(id)
+      toggle(id)
+      if (!closing) return
+
+      const parentById = new Map(nodes.map(node => [node.id, node.parentId]))
+      for (const candidate of expandedIds) {
+        for (let parent = parentById.get(candidate); parent; parent = parentById.get(parent)) {
+          if (parent === id) {
+            toggle(candidate)
+            break
+          }
+        }
+      }
+    },
+    [expandedIds, nodes, toggle],
   )
 
   /**
@@ -597,7 +622,17 @@ export function Explorer() {
         onChange={setCollection}
         sorts={sorts}
         leading={
-          browsable ? (
+          !grid ? (
+            <TreeFoldButton
+              expanded={anyExpanded}
+              onFold={() => {
+                for (const id of expandedIds) toggle(id)
+              }}
+              onUnfold={() => {
+                for (const id of expandableIds) if (!expandedIds.has(id)) toggle(id)
+              }}
+            />
+          ) : browsable ? (
             <FolderNav
               canBack={canWalkBy(walk, -1)}
               canForward={canWalkBy(walk, 1)}
@@ -708,7 +743,7 @@ export function Explorer() {
             // adding to it: `pickFrom` resolves what the click ASKED for against the rows on screen,
             // and composing it with what is already held is the caller's half of the gesture.
             onSelect={(ids, mode) => pick(applySelection(selectedIds, ids, mode))}
-            onToggle={toggle}
+            onToggle={toggleBranch}
             // A heading names files rather than holding them: it is not a thing to pick, and a
             // selection that gathered one would hand the disk a domain where it expects a path.
             selectable={node => !isDomainHeading(node)}

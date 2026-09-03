@@ -454,6 +454,25 @@ describe('the project explorer', () => {
       )
     })
 
+    it('keeps nested folders closed when their parent is reopened', async () => {
+      withProject()
+      install({
+        '': [folder('assets')],
+        assets: [folder('images', 'assets')],
+        'assets/images': [file('one.png', 'assets/images')],
+      })
+
+      render(<Explorer />)
+      await userEvent.dblClick(await within(await listing()).findByText('assets'))
+      await userEvent.dblClick(await within(await listing()).findByText('images'))
+      await within(await listing()).findByText('one.png')
+      await userEvent.dblClick(within(await listing()).getByText('assets'))
+      await userEvent.dblClick(within(await listing()).getByText('assets'))
+
+      expect(await within(await listing()).findByText('images')).toBeInTheDocument()
+      expect(within(await listing()).queryByText('one.png')).not.toBeInTheDocument()
+    })
+
     // Every path in the tree named the folder just left: kept a frame longer, its rows are
     // clickable and lead nowhere.
     it('drops the whole tree when another project opens', async () => {

@@ -5,6 +5,8 @@ import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { groupNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
 import { SceneTree } from './SceneTree'
 
 /** jsdom implements no `DataTransfer`; the tree reads exactly these three members of one. */
@@ -271,6 +273,47 @@ describe('SceneTree', () => {
     )
 
     expect(screen.queryByText('AmbientLight')).not.toBeInTheDocument()
+  })
+
+  it('forgets the open descendants when their parent is folded', async () => {
+    installScene('doc-1', {
+      ...EMPTY_SCENE,
+      nodes: [
+        groupNodeFixture('parent'),
+        groupNodeFixture('child', 'parent'),
+        meshNode('leaf', 'child'),
+      ],
+    })
+    render(<SceneTree documentId="doc-1" />)
+
+    expect(screen.getByText('leaf')).toBeInTheDocument()
+    await userEvent.click(
+      screen
+        .getByText('parent')
+        .closest('[role="treeitem"]')
+        ?.querySelector('[data-chevron]') as HTMLElement,
+    )
+    await userEvent.click(
+      screen
+        .getByText('parent')
+        .closest('[role="treeitem"]')
+        ?.querySelector('[data-chevron]') as HTMLElement,
+    )
+
+    expect(screen.getByText('child')).toBeInTheDocument()
+    expect(screen.queryByText('leaf')).not.toBeInTheDocument()
+  })
+
+  it('searches the scene tree and offers the inverse global fold action', async () => {
+    render(<SceneTree documentId="doc-1" />)
+
+    await userEvent.type(screen.getByRole('searchbox'), 'Ambient')
+    expect(screen.getByText('AmbientLight')).toBeInTheDocument()
+    expect(screen.queryByText('DirectionalLight')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Tout replier' }))
+    expect(screen.queryByText('AmbientLight')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tout déplier' })).toBeInTheDocument()
   })
 
   it('raises the node menu on a right-click, and nothing on the root', () => {
