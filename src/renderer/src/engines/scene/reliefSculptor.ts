@@ -1,4 +1,5 @@
 import {
+  reliefChunkRowsInDisk,
   withPackedChunks,
   type PackedReliefChunk,
   type ReliefExtent,
@@ -33,8 +34,15 @@ type Job = ReliefDiskStroke & {
   reject: (error: Error) => void
 }
 
-export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
-  const session = createWorkerSession<ReliefSculptRequest, ReliefSculptResponse>(spawn)
+const CHUNK_ROWS_PER_WORKER = 2
+
+export function createReliefSculptor(
+  spawn: () => Worker,
+  maximumWorkers = Math.max(1, (globalThis.navigator?.hardwareConcurrency ?? 3) - 2),
+): ReliefSculptor {
+  const sessions = Array.from({ length: Math.max(1, Math.floor(maximumWorkers)) }, () =>
+    createWorkerSession<ReliefSculptRequest, ReliefSculptResponse>(spawn),
+  )
   const queue: Job[] = []
   let generation = 0
   let bound: ReliefSculpt | undefined
@@ -61,24 +69,41 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
     const token = generation
     const before = heldAfter ?? job.sculpt
     try {
-      const response = await session.send({
-        id: session.nextId(),
-        width: job.samples.width,
-        height: job.samples.height,
-        extent: job.extent,
-        grain: job.grain,
-        sculpt: before,
-        operation: { kind: 'raiseDisk', disk: job.disk, amount: job.amount },
-      })
+      const ranges = rowRanges(job, sessions.length)
+      const responses = await Promise.all(
+        ranges.map((rows, index) => {
+          const session = sessions[index]
+          if (!session) throw new Error('Relief sculpt worker is unavailable')
+          return session.send({
+            id: session.nextId(),
+            width: job.samples.width,
+            height: job.samples.height,
+            extent: job.extent,
+            grain: job.grain,
+            sculpt:
+              ranges.length === 1
+                ? before
+                : {
+                    chunks:
+                      before?.chunks.filter(
+                        chunk => chunk.row >= rows.from && chunk.row < rows.to,
+                      ) ?? [],
+                  },
+            operation: { kind: 'raiseDisk', disk: job.disk, amount: job.amount },
+            rows: ranges.length === 1 ? undefined : rows,
+          })
+        }),
+      )
       if (token !== generation) {
         job.resolve(null)
         return
       }
-      if (!response.ok) {
-        job.reject(new Error(response.error))
+      const failed = responses.find(response => !response.ok)
+      if (failed && !failed.ok) {
+        job.reject(new Error(failed.error))
         return
       }
-      const edits = response.chunks
+      const edits = responses.flatMap(response => (response.ok ? response.chunks : []))
       heldAfter = withPackedChunks(before, edits)
       bound = heldAfter
       job.resolve(edits)
@@ -108,9 +133,29 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
     },
     dispose: () => {
       invalidate()
-      session.dispose()
+      sessions.forEach(session => session.dispose())
     },
   }
+}
+
+function rowRanges(
+  stroke: ReliefDiskStroke,
+  maximumWorkers: number,
+): { from: number; to: number }[] {
+  const { from, to } = reliefChunkRowsInDisk(
+    stroke.samples,
+    stroke.extent,
+    stroke.disk,
+    stroke.grain,
+  )
+  const workers = Math.min(
+    maximumWorkers,
+    Math.max(1, Math.ceil((to - from) / CHUNK_ROWS_PER_WORKER)),
+  )
+  return Array.from({ length: workers }, (_, worker) => ({
+    from: Math.floor(from + ((to - from) * worker) / workers),
+    to: Math.floor(from + ((to - from) * (worker + 1)) / workers),
+  }))
 }
 
 function sameSculpt(left: ReliefSculpt | undefined, right: ReliefSculpt | undefined): boolean {

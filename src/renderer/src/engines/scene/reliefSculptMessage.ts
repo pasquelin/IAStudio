@@ -5,6 +5,7 @@
 import type {
   PackedReliefChunk,
   ReliefExtent,
+  ReliefChunkRows,
   ReliefSculpt,
   ReliefSculptOperation,
 } from '@shared/domain/relief'
@@ -17,6 +18,7 @@ export type ReliefSculptRequest = {
   grain: number
   sculpt: ReliefSculpt | undefined
   operation: ReliefSculptOperation
+  rows?: ReliefChunkRows
 }
 
 /**
