@@ -9,6 +9,8 @@ import {
   Group,
   Mesh,
   MeshStandardMaterial,
+  type Raycaster,
+  type Vector3,
   type Object3D,
   type Scene,
 } from 'three'
@@ -37,6 +39,7 @@ export type ReliefSurface = {
   sync: (world: SceneWorld, samples?: HeightmapSamples) => void
   meshOf: (terrainId: string, column: number, row: number) => Mesh | undefined
   sculptSource: (terrainId: string, editId: string) => ReliefSculptSource | null
+  pointAt: (terrainId: string, raycaster: Raycaster) => Vector3 | null
   dispose: () => void
 }
 
@@ -108,6 +111,10 @@ export function createReliefSurface(
       return held && edit
         ? { samples: held.samples, extent: held.extent, grain: held.grain, sculpt: edit.sculpt }
         : null
+    },
+    pointAt: (terrainId, raycaster) => {
+      const terrain = state.terrains.get(terrainId)
+      return terrain ? (raycaster.intersectObject(terrain.group, true)[0]?.point ?? null) : null
     },
     dispose: () => disposeRelief(state),
   }

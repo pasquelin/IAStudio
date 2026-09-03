@@ -1,6 +1,9 @@
 {
   "commands": {
-    "appNew": { "title": "New…", "help": "Opens the window that makes a project or a document, from any screen" },
+    "appNew": {
+      "title": "New…",
+      "help": "Opens the window that makes a project or a document, from any screen"
+    },
     "projectNew": {
       "title": "New project",
       "help": "Creates an empty project and opens it. A project is the folder holding everything you make: the images, the videos, the sounds, and how they are arranged."
@@ -92,6 +95,10 @@
     "sceneScale": {
       "title": "Scale",
       "help": "Makes the chosen object bigger or smaller, by pulling its handles. Holding Shift keeps its proportions."
+    },
+    "sceneSculpt": {
+      "title": "Sculpt relief",
+      "help": "Raises the editable relief under the brush. Hold Alt while dragging to lower it."
     },
     "sceneFrame": {
       "title": "Frame selection",

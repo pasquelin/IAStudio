@@ -7,6 +7,17 @@ import type { ReliefDiskStroke, ReliefSculptor } from './reliefSculptor'
 import { SceneRenderer } from './SceneRenderer'
 
 describe('relief sculpting through the scene renderer', () => {
+  it('keeps an active stroke when the document publishes the same brush again', () => {
+    const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+    const brush = { terrainId: 'terrain', editId: 'detail', radius: 2, amount: 0.5 }
+
+    renderer.setReliefBrush(brush)
+    renderer['reliefPointer'] = 7
+    renderer.setReliefBrush({ ...brush })
+
+    expect(renderer['reliefPointer']).toBe(7)
+  })
+
   it('sends a loaded stroke to the sculpt worker and publishes its changed chunks', async () => {
     const source = {
       samples: { width: 2, height: 2, values: new Float32Array(4) },
@@ -25,6 +36,7 @@ describe('relief sculpting through the scene renderer', () => {
       sync: vi.fn(),
       meshOf: vi.fn(),
       sculptSource: vi.fn(() => source),
+      pointAt: vi.fn(() => null),
       dispose: vi.fn(),
     }
     const sculptor: ReliefSculptor = {

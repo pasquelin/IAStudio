@@ -11,6 +11,7 @@ import { PANE_TOOLBAR } from '@/components/styles'
 import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { hideIn, NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
 import { nextDisplayMode } from '@/engines/scene/sceneView'
+import { reliefBrushOf } from '@/engines/scene/reliefSculptTarget'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import type { TransformMode } from '@/engines/scene/SceneRenderer'
 import { toggledIsolation } from '@/engines/scene/sceneVisibility'
@@ -58,13 +59,15 @@ const UNHANDLED = Symbol('unhandled scene document command')
 
 type DocumentCommandContext = {
   documentId: string
-  armTool: (mode: TransformMode) => void
+  armTool: (mode: SceneToolMode) => void
   active: boolean
   setNavigating: Dispatch<SetStateAction<boolean>>
   cycleDisplay: () => void
   canAdd: () => boolean
   view: ReturnType<typeof sceneViewChromeOf>
 }
+
+type SceneToolMode = TransformMode | 'sculpt'
 
 function runToolCommand(command: CommandId, context: DocumentCommandContext) {
   const { documentId, armTool, view } = context
@@ -77,6 +80,8 @@ function runToolCommand(command: CommandId, context: DocumentCommandContext) {
       return armTool('rotate')
     case 'scene.scale':
       return armTool('scale')
+    case 'scene.sculpt':
+      return armTool('sculpt')
     case 'scene.snap':
       return useSceneViews.getState().toggleSceneSnapping(documentId)
     case 'scene.isolate':
@@ -134,7 +139,7 @@ function runViewToggleCommand(command: CommandId, context: DocumentCommandContex
 
 export function SceneDocument({ documentId }: { documentId: string }) {
   const { t, i18n } = useTranslation()
-  const [mode, setMode] = useState<TransformMode>('select')
+  const [mode, setMode] = useState<SceneToolMode>('select')
   const {
     host,
     engine,
@@ -162,7 +167,19 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useRestoredDocument(documentId)
 
   useDocumentTitle(documentId, modified)
-  useSceneEngineSync({ engine, scene, viewport, view, mode, documentId, active })
+  const reliefBrush = useMemo(() => reliefBrushOf(scene.world), [scene.world])
+  useSceneEngineSync({
+    engine,
+    scene,
+    viewport,
+    view,
+    mode: mode === 'sculpt' ? 'select' : mode,
+    documentId,
+    active,
+  })
+  useEffect(() => {
+    engine.current?.setReliefBrush(mode === 'sculpt' ? reliefBrush : null)
+  }, [engine, live, mode, reliefBrush])
 
   /**
    * Which view a display command lands on: the one the pointer is over, as every modelling
@@ -180,7 +197,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.
   const armTool = useCallback(
-    (tool: TransformMode) => {
+    (tool: SceneToolMode) => {
       setNavigating(false)
       setMode(tool)
     },
@@ -238,7 +255,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     onCommand: run,
   })
 
-  const tools = useSceneToolbarTools(scene, view)
+  const tools = useSceneToolbarTools(scene, view, reliefBrush !== null)
 
   return (
     // The whole surface, not the canvas: the renderer owns that one, and a drop landing on the

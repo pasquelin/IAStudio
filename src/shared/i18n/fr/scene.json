@@ -184,6 +184,8 @@
     "rotateHint": "Faire pivoter l’objet sélectionné",
     "scale": "Redimensionner",
     "scaleHint": "Changer l’échelle de l’objet sélectionné",
+    "sculpt": "Sculpter le relief",
+    "sculptHint": "Glisser sur le relief éditable pour le relever — maintenir Alt pour le creuser",
     "frame": "Cadrer la sélection",
     "frameHint": "Recentrer la caméra sur l’objet sélectionné",
     "isolateHint": "Ne laisse à l’écran que ce qui est choisi",

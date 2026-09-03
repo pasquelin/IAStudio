@@ -28,11 +28,13 @@ export type ToolbarFacts = {
   cannotSeparate: boolean
   isolated: boolean
   view: ReturnType<typeof sceneViewChromeOf>
+  canSculpt: boolean
 }
 
 export function useToolbarFacts(
   scene: ReturnType<typeof sceneOf>,
   view: ReturnType<typeof sceneViewChromeOf>,
+  canSculpt: boolean,
 ): ToolbarFacts {
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
@@ -63,7 +65,8 @@ export function useToolbarFacts(
       cannotSeparate: !canSeparate(foldable),
       isolated: isolating(view.isolation),
       view,
+      canSculpt,
     }),
-    [bindings, label, nothingHeld, nothingSelected, foldable, matterName, view],
+    [bindings, label, nothingHeld, nothingSelected, foldable, matterName, view, canSculpt],
   )
 }

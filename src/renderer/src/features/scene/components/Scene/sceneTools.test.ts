@@ -71,6 +71,7 @@ describe('SCENE_TOOLS', () => {
       'scale',
       'snap',
       'space',
+      'sculpt',
       'duplicate',
       'group',
       'delete',
@@ -118,6 +119,7 @@ describe('SCENE_TOOLS', () => {
     expect(SCENE_TOOLS.filter(tool => tool.separatorBefore).map(tool => tool.id)).toEqual([
       'select',
       'snap',
+      'sculpt',
       'duplicate',
       'negate',
       'display',

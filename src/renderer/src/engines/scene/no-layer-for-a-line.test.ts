@@ -34,6 +34,7 @@ const OTHER_SENSES: Record<string, string> = {
   reliefCommands: 'World relief: sculpt deltas on a heightmap, not a timeline line',
   reliefSculptor: 'World relief: sculpt deltas on a heightmap, not a timeline line',
   reliefReadCost: 'World relief: the heightmap layer a surface is built from, not a timeline line',
+  reliefSculptTarget: 'World relief: chooses one editable heightmap layer, not a timeline line',
   sceneRendererRelief: 'World relief: applyWorld reads world.layers, not a timeline line',
 }
 
