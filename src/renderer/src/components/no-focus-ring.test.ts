@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import stylesheet from '../index.css?raw'
-import dynamicFormControl from './DynamicForm/DynamicFormControl.tsx?raw'
 import { WRITTEN_SOURCES } from './testHarness'
 
 /**
@@ -16,11 +15,8 @@ import { WRITTEN_SOURCES } from './testHarness'
  * one at all, and this rule has nothing to say about it.
  */
 describe('keyboard focus', () => {
-  it('is visible globally and drawn inward so clipped controls keep the indicator', () => {
-    expect(stylesheet).toMatch(
-      /:focus-visible[^{]*\{\s*outline: 2px solid var\(--color-accent\) !important;/,
-    )
-    expect(stylesheet).toMatch(/outline-offset: -2px/)
+  it('draws no browser outline on focused elements', () => {
+    expect(stylesheet).toMatch(/:focus\s*\{\s*outline: none !important;/)
   })
 
   it('is not overridden one component at a time', () => {
@@ -31,13 +27,5 @@ describe('keyboard focus', () => {
 
     expect(offenders).toEqual([])
     expect(overrides.test("'focus-visible:outline-none'")).toBe(true)
-  })
-
-  it('moves a composite field indicator to its frame', () => {
-    expect(dynamicFormControl).toContain("'focus-frame flex h-auto resize-y")
-    expect(stylesheet).toMatch(
-      /\.focus-frame:focus-within\s*\{\s*outline: 1px solid var\(--color-accent\);\s*outline-offset: -1px;/,
-    )
-    expect(stylesheet).toMatch(/\.focus-frame > :focus-visible\s*\{\s*outline: none !important;/)
   })
 })

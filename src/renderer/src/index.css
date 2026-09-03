@@ -868,23 +868,7 @@ body,
   font-size: var(--text-mini) !important;
 }
 
-/* Drawn inside the control so focus remains visible even in clipped title bars and dock rows. */
-:focus-visible {
-  outline: 2px solid var(--color-accent) !important;
-  outline-offset: -2px;
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* A composite control keeps one indicator on its frame instead of one around each inner input. */
-.focus-frame:focus-within {
-  outline: 1px solid var(--color-accent);
-  outline-offset: -1px;
-}
-
-.focus-frame > :focus-visible {
+:focus {
   outline: none !important;
 }
 
