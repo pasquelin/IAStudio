@@ -7,7 +7,7 @@ import { displayStep, fromDisplayLength, toDisplayLength } from '@shared/domain/
 import { IDENTITY_TRANSFORM, type Transform, type Vector3 } from '@shared/domain/transform'
 import { Button } from '@/components/Button'
 import { InlineRename } from '@/components/InlineRename'
-import { Surface } from '@pasquelin/panels'
+import { PanelHeader, Surface } from '@pasquelin/panels'
 import { PropertyRow } from '@/components/PropertyRow'
 import { PropertySection } from '@/components/PropertySection'
 import { QuietNote } from '@/components/QuietNote'
@@ -26,6 +26,7 @@ import {
 import { restWithin } from '@/engines/character/boneRest'
 import { rigHandBones } from '@/engines/scene/rigHandBones'
 import type { MeshSample } from '@/engines/scene/rigSnap'
+import { InspectorActions } from '@/features/inspector/components/Inspector/InspectorActions'
 import { CharacterMotionList } from '../Character/Motion/CharacterMotionList'
 import { CharacterWindowFit } from './CharacterWindowFit'
 import { characterOf, useCharacters } from '@/stores/character'
@@ -91,6 +92,11 @@ export function CharacterWindowInspector({
     // row that decides it: three axis fields, their letters and the end column. At 320 px a
     // joint's offset read `-0` — the value cut, not the field.
     <Surface className="w-96 shrink-0">
+      {/* The studio's own inspector title row, minus its way out: this is a fixed pane of a
+          window, not a dock panel, and there is nothing here to close. */}
+      <PanelHeader title={t('panels.inspector')}>
+        <InspectorActions />
+      </PanelHeader>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <PropertySection title={t('character.skeleton')} scId="character.skeleton">
           {!rig && (
