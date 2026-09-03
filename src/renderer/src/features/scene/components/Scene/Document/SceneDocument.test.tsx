@@ -6,6 +6,7 @@ import { EVERYTHING_SNAPPED, NOTHING_SNAPPED } from '@shared/domain/snap'
 import type { SceneExportCommand } from '@shared/ipc'
 import { PANE_TOOLBAR } from '@/components/styles'
 import { forgetReportedFailures } from '@/services/diagnostics'
+import { publishCommand } from '@/services/commandBus'
 import { fakeMenu } from '@/helpers/menu-fixtures'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import { addNode } from '@/engines/scene/commands'
@@ -148,6 +149,17 @@ beforeEach(() => {
 })
 
 describe('SceneDocument', () => {
+  it('exposes the viewport as a named keyboard-focusable region', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    const viewport = screen.getByRole('region', { name: 'Viewport 3D' })
+    await userEvent.tab()
+
+    expect(viewport).toHaveAttribute('tabindex', '0')
+    expect(viewport).toHaveFocus()
+    expect(viewport).not.toHaveClass('outline-none')
+  })
+
   it('renders the shared toolbar with the scene tools', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()
@@ -342,6 +354,39 @@ describe('snapping and the coordinate frame', () => {
     rerender(<SceneDocument documentId="doc-1" />)
 
     expect(setNavigating).toHaveBeenLastCalledWith(false)
+  })
+
+  it('does not pre-arm navigation addressed to a hidden document', () => {
+    useDocuments.setState({ activeId: 'doc-2' })
+    const { rerender } = render(<SceneDocument documentId="doc-1" />)
+
+    expect(publishCommand('scene.navigate', 'doc-1')).toBe(false)
+
+    act(() => useDocuments.setState({ activeId: 'doc-1' }))
+    rerender(<SceneDocument documentId="doc-1" />)
+    expect(setNavigating).not.toHaveBeenCalledWith(true)
+  })
+
+  it('announces navigation state and speed without exposing the visual hint twice', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Navigation désactivée')
+
+    await userEvent.click(screen.getByRole('button', { name: /Naviguer/ }))
+    act(() => built[0]?.onFlySpeedChange?.(4.5))
+
+    expect(screen.getByRole('status')).toHaveTextContent(/Navigation activée.*4,5 m\/s.*Échap/)
+    expect(screen.getByText('déplacer').closest('[aria-hidden="true"]')).toBeInTheDocument()
+  })
+
+  it('keeps the local transform frame when the same document remounts', async () => {
+    const first = render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Repère local/ }))
+    expect(setSpace).toHaveBeenLastCalledWith('local')
+
+    first.unmount()
+    render(<SceneDocument documentId="doc-1" />)
+
+    expect(setSpace).toHaveBeenLastCalledWith('local')
   })
 
   // The magnet of the vertical bar is a master switch since the snap bar split the four apart:
