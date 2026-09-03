@@ -12,6 +12,7 @@ import { gameMessageOf, openGameChannel, type GameCommand } from '@/game/gameCha
 import type { SceneLookup } from '@/game/playSession'
 import { getBridge } from '@/services/bridge'
 import type { SceneState } from '@/engines/scene/sceneState'
+import { runtimeWorldPatch, runtimeWorldPatchIsEmpty } from '@/engines/scene/runtimeWorldCompiler'
 import { codeFilesOf, useCode } from './code'
 import { documentById, sceneDocumentNamed, useDocuments } from './documents'
 import { sceneEngineOf } from './sceneEngines'
@@ -161,12 +162,13 @@ function publishGame(): void {
 /** Every edit under a running game: `createStudioRender` reads the edit state on every frame. */
 function watchTheScene(documentId: string): void {
   stopWatchingScene?.()
-  let shown: SceneState | null = null
+  let shown: SceneState = sceneOf(useScenes.getState(), documentId)
   stopWatchingScene = useScenes.subscribe(state => {
     const scene = sceneOf(state, documentId)
     if (scene === shown) return
+    const patch = runtimeWorldPatch(shown, scene)
     shown = scene
-    wire().postMessage({ kind: 'edit', documentId, scene })
+    if (!runtimeWorldPatchIsEmpty(patch)) wire().postMessage({ kind: 'edit', documentId, patch })
   })
 }
 

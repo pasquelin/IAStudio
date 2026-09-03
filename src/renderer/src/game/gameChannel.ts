@@ -2,6 +2,7 @@ import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
 import type { SceneState } from '@/engines/scene/sceneState'
+import type { RuntimeWorldPatch } from '@/engines/scene/runtimeWorldCompiler'
 import type { SceneLookup } from './playSession'
 
 /**
@@ -19,7 +20,7 @@ export type GameMessage =
       troubles: readonly ScriptTrouble[]
     }
   /** The document was edited under a running game — `createStudioRender` follows it per frame. */
-  | { kind: 'edit'; documentId: string; scene: SceneState }
+  | { kind: 'edit'; documentId: string; patch: RuntimeWorldPatch }
   /** The studio answering a `want`: what that name resolved to, in the game's own three values. */
   | { kind: 'scene'; scene: string; found: SceneLookup }
   /** Something to do to a running game, carrying the id its answer must quote. */
@@ -71,10 +72,10 @@ export function gameMessageOf(data: unknown): GameMessage | null {
     return { kind: 'play', documentId, scene, modules, troubles }
   }
 
-  if (data.kind === 'edit' && 'documentId' in data && 'scene' in data) {
-    const { documentId, scene } = data
-    return typeof documentId === 'string' && isScene(scene)
-      ? { kind: 'edit', documentId, scene }
+  if (data.kind === 'edit' && 'documentId' in data && 'patch' in data) {
+    const { documentId, patch } = data
+    return typeof documentId === 'string' && isRuntimePatch(patch)
+      ? { kind: 'edit', documentId, patch }
       : null
   }
 
@@ -121,6 +122,35 @@ export function gameMessageOf(data: unknown): GameMessage | null {
   }
 
   return null
+}
+
+function isRuntimePatch(value: unknown): value is RuntimeWorldPatch {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as {
+    changedNodes?: unknown
+    removedIds?: unknown
+    order?: unknown
+    world?: unknown
+    animation?: unknown
+  }
+  return (
+    Array.isArray(candidate.changedNodes) &&
+    candidate.changedNodes.every(isNode) &&
+    Array.isArray(candidate.removedIds) &&
+    candidate.removedIds.every(id => typeof id === 'string') &&
+    (candidate.order === null ||
+      (Array.isArray(candidate.order) && candidate.order.every(id => typeof id === 'string'))) &&
+    (candidate.world === null || isRecord(candidate.world)) &&
+    (candidate.animation === null || isRecord(candidate.animation))
+  )
+}
+
+function isNode(value: unknown): boolean {
+  return isRecord(value) && typeof Reflect.get(value, 'id') === 'string'
+}
+
+function isRecord(value: unknown): value is object {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function commandOf(value: unknown): GameCommand | null {

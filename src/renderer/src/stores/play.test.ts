@@ -6,9 +6,11 @@ import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { drawing } from '@/game/game-fixtures'
 import { createGameStage, type GameStage } from '@/game/gameStage'
 import { meshNode } from '@/engines/scene/scene-fixtures'
+import type { SceneState } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installScene } from './scene-fixtures'
 import { playReportOf, usePlay } from './play'
+import { sceneOf, useScenes } from './scenes'
 import { forgetSceneEngine, registerSceneEngine } from './sceneEngines'
 
 /**
@@ -102,6 +104,37 @@ describe('a game played in a window of its own', () => {
     usePlay.getState().start(DOCUMENT)
 
     expect(report()).toBe(first)
+  })
+
+  it('hands unchanged runtime nodes back to the renderer by identity after a local edit', async () => {
+    const applied: SceneState[] = []
+    stage?.close()
+    stage = createGameStage({
+      renderer: drawing({ apply: state => applied.push(state) }),
+      input: new EventTarget(),
+    })
+    const a = meshNode('a')
+    const b = meshNode('b')
+    installScene(DOCUMENT, { ...createDefaultScene(), nodes: [a, b], selectedIds: [] })
+    registerSceneEngine(DOCUMENT, drawing())
+
+    usePlay.getState().start(DOCUMENT)
+    await vi.waitFor(() => expect(report().state).toBe('playing'))
+    const first = applied.at(-1)
+    if (!first) throw new Error('runtime scene was not applied')
+    const beforeEdit = applied.length
+
+    const current = sceneOf(useScenes.getState(), DOCUMENT)
+    useScenes.getState().replace(DOCUMENT, {
+      ...current,
+      nodes: [current.nodes[0] ?? a, { ...(current.nodes[1] ?? b), visible: false }],
+    })
+    await vi.waitFor(() => expect(applied.length).toBeGreaterThan(beforeEdit))
+    const edited = applied.at(-1)
+    if (!edited) throw new Error('edited runtime scene was not applied')
+
+    expect(edited.nodes[0]).toBe(first.nodes[0])
+    expect(edited.nodes[1]).not.toBe(first.nodes[1])
   })
 
   /**
