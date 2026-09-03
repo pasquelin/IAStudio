@@ -45,7 +45,7 @@ const wheelName = (car: string, corner: string): string => `${car} ${corner}`
  * there — so the half turn is what makes a heading of zero drive down +Z rather than back up it.
  * The wheels are drawn where one RESTS; the engine anchors each spring above that.
  */
-export function carNodes(at: Vector3, name = 'Car', heading = 0): SceneNode[] {
+export function carNodes(at: Vector3, name = 'Car', heading = 0): [SceneNode, ...SceneNode[]] {
   const body = {
     ...meshNode(
       { kind: 'box', width: HALF_WIDTH * 2, height: HALF_HEIGHT * 2, depth: HALF_LENGTH * 2 },

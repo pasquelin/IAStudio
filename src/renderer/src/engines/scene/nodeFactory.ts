@@ -8,10 +8,9 @@ import type {
 } from '@shared/domain/scene'
 import { DEFAULT_CAMERA, DEFAULT_PATH, type FigureKind } from '@shared/domain/scene'
 import type { CsgGraph } from '@shared/domain/csg'
-import type { JsonValue } from '@shared/domain/component'
+import type { Component } from '@shared/domain/component'
 import { COMPONENTS, newComponent } from '@shared/domain/componentRegistry'
-import { aheadOf } from '@game/runtime/playView'
-import { armPivot, armSeat } from '@game/runtime/systems/springArmRig'
+import { armRestOffsets } from '@game/runtime/systems/springArmRig'
 import { newId } from '@/helpers/ids'
 import { defaultMeshMaterial } from './checkerTextures'
 import { figureByKind, figureScaleWithin, type FigureDescriptor } from './figures'
@@ -308,13 +307,13 @@ const WALKER_RADIUS = Number(COMPONENTS.CharacterController.defaults.radius)
 export function armRest(
   body: Vector3,
   yaw = 0,
-  arm: Readonly<Record<string, JsonValue>> = COMPONENTS.SpringArm.defaults,
+  arm: Component = newComponent('SpringArm'),
 ): { pivot: Vector3; seat: Vector3 } {
-  const pivot = armPivot(body, Number(arm.height), Number(arm.shoulder), yaw, { ...ORIGIN })
-  const seat = armSeat(pivot, aheadOf({ yaw, pitch: 0 }, { ...ORIGIN }), Number(arm.length), {
-    ...ORIGIN,
-  })
-  return { pivot, seat }
+  const lift = { ...ORIGIN }
+  const back = { ...ORIGIN }
+  armRestOffsets(arm, { yaw, pitch: 0 }, lift, back)
+  const pivot = { x: body.x + lift.x, y: body.y + lift.y, z: body.z + lift.z }
+  return { pivot, seat: { x: pivot.x + back.x, y: pivot.y + back.y, z: pivot.z + back.z } }
 }
 
 /**

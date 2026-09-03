@@ -1,8 +1,8 @@
 import type { Vector3 } from '@shared/domain/transform'
 import { COMPONENT_DEFAULTS } from '@game/runtime/componentDefaults'
-import { numberOf, textOf } from '@game/runtime/componentFields'
-import { lookOf, aheadOf, type Look } from '@game/runtime/playView'
-import { armPivot, armSeat } from '@game/runtime/systems/springArmRig'
+import { textOf } from '@game/runtime/componentFields'
+import { lookOf, type Look } from '@game/runtime/playView'
+import { armRestOffsets } from '@game/runtime/systems/springArmRig'
 import { restingAxes } from '@game/physics/quaternion'
 import { withBoundPlayerArm } from './playerModule'
 import type { SceneNode } from './sceneState'
@@ -56,18 +56,9 @@ export function springArmRigsOf(
           : null
     const look = turned ? lookOf(turned, AXES, LOOK) : LEVEL
 
-    const lift = armPivot(
-      ORIGIN,
-      numberOf(arm, 'height', ARM.height),
-      numberOf(arm, 'shoulder', ARM.shoulder),
-      look.yaw,
-      { x: 0, y: 0, z: 0 },
-    )
-    const back = armSeat(ORIGIN, aheadOf(look, AHEAD), numberOf(arm, 'length', ARM.length), {
-      x: 0,
-      y: 0,
-      z: 0,
-    })
+    const lift = { x: 0, y: 0, z: 0 }
+    const back = { x: 0, y: 0, z: 0 }
+    armRestOffsets(arm, look, lift, back)
     found.set(node.id, { subjectId, lift, back })
   }
   return found
@@ -83,6 +74,4 @@ function namesAndIds(nodes: readonly SceneNode[]): Map<string, string> {
 const AXES = restingAxes()
 const LOOK: Look = { yaw: 0, pitch: 0 }
 const LEVEL: Look = { yaw: 0, pitch: 0 }
-const AHEAD: Vector3 = { x: 0, y: 0, z: 0 }
 /** Both offsets are worked out from nothing, which is what makes them offsets. */
-const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }

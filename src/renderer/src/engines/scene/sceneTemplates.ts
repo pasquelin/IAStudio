@@ -89,9 +89,10 @@ function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ
  * `armRest`. Named parts, so an author can read the pair in the outliner and retune it.
  */
 function cameraRig(
-  subject: SceneNode,
+  machine: readonly [SceneNode, ...SceneNode[]],
   over: Record<string, string | number> = {},
 ): readonly SceneNode[] {
+  const subject = machine[0]
   let arm = newComponent('SpringArm')
   for (const [key, value] of Object.entries({
     subject: subject.name,
@@ -104,6 +105,7 @@ function cameraRig(
   // `heading + π` and lifts it by the ride height.
   const { pivot, seat } = armRest(subject.transform.position, subject.transform.rotation.y, arm)
   return [
+    ...machine,
     { ...groupNode(transformAt(ORIGIN), 'Camera Rig'), components: [arm] },
     cameraNode(transformAt(seat, aimedFrom(seat, pivot))),
   ]
@@ -496,36 +498,28 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // so a silhouette left on the pad would frame the car from a pair of feet.
   // 🛑 The arm aims down the CAR's own nose, not where the pointer looks: a car turning under a
   // camera the mouse alone aims reads as a car sliding sideways.
-  car: () => {
-    const machine = carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW)
-    const body = machine.find(node => node.name === CAR_NAME)
-    if (!body) throw new Error('the car template built no car')
+  car: () => ({
+    nodes: [
+      ...circuitNodes(),
+      sun(2.4, { x: 60, y: 70, z: 40 }),
+      skyLight(1.3),
+      ...cameraRig(carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW), {
+        orientation: 'subject',
+        length: 8,
+        height: 2.4,
+      }),
+    ],
+    world: {
+      ...presetPatch('outdoor'),
+      background: { kind: 'color', color: '#b6c6d8' },
+      // 🛑 The preset's own haze closes at 140 m and the circuit is 250 m across: the far side of
+      // the loop was solid grey, which is why its shape could not be read at a glance.
+      fog: { kind: 'linear', color: '#b6c6d8', near: 60, far: 420 },
+      ground: { ...DEFAULT_GROUND, visible: true, size: 400, color: '#5c6b4f' },
+    },
+    play: { ...WALKING, camera: 'thirdPerson', played: CAR_NAME },
+  }),
 
-    return {
-      nodes: [
-        ...circuitNodes(),
-        sun(2.4, { x: 60, y: 70, z: 40 }),
-        skyLight(1.3),
-        ...machine,
-        ...cameraRig(body, { orientation: 'subject', length: 8, height: 2.4 }),
-      ],
-      world: {
-        ...presetPatch('outdoor'),
-        background: { kind: 'color', color: '#b6c6d8' },
-        // 🛑 The preset's own haze closes at 140 m and the circuit is 250 m across: the far side of
-        // the loop was solid grey, which is why its shape could not be read at a glance.
-        fog: { kind: 'linear', color: '#b6c6d8', near: 60, far: 420 },
-        ground: { ...DEFAULT_GROUND, visible: true, size: 400, color: '#5c6b4f' },
-      },
-      play: { ...WALKING, camera: 'thirdPerson', played: CAR_NAME },
-    }
-  },
-
-  /*
-   * Already in the air: a plane born on the ground is a plane whose first minute is a taxi, and
-   * there is nothing here to taxi to. The ground is the SCENE's own rather than a floor mesh —
-   * five metres thick, where a plane meets a centimetre of one at sixty metres a second.
-   */
   plane: () => ({
     nodes: [
       ...airfieldNodes(),

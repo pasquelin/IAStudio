@@ -91,69 +91,70 @@ export function ComponentsSection({ node, nodes, edit }: ComponentsSectionProps)
         </>
       )}
 
-      {held.map(component => (
-        <Fragment key={component.type}>
-          {/* The end column every other line of the panel keeps, so the detach button stands
+      {held.map(component => {
+        const descriptor = descriptorOf(component.type)
+        return (
+          <Fragment key={component.type}>
+            {/* The end column every other line of the panel keeps, so the detach button stands
               where a reset stands rather than wherever the name happens to end. */}
-          <PropertyLine
-            label={t(descriptorOf(component.type).titleKey)}
-            root="div"
-            name="none"
-            className="mt-1"
-            actions={
-              <ToolButton
-                icon={mdiTrashCanOutline}
-                label={t('game.section.remove')}
-                description={t('game.section.removeHint')}
-                tooltip={TIP_LEFT}
-                variant="row"
-                onClick={() => edit.run(detachComponent(node.id, component.type))}
-              />
-            }
-          >
-            <span className={PANEL_GROUP_LABEL_WIDE}>
-              {t(descriptorOf(component.type).titleKey)}
-            </span>
-          </PropertyLine>
+            <PropertyLine
+              label={t(descriptor.titleKey)}
+              root="div"
+              name="none"
+              className="mt-1"
+              actions={
+                <ToolButton
+                  icon={mdiTrashCanOutline}
+                  label={t('game.section.remove')}
+                  description={t('game.section.removeHint')}
+                  tooltip={TIP_LEFT}
+                  variant="row"
+                  onClick={() => edit.run(detachComponent(node.id, component.type))}
+                />
+              }
+            >
+              <span className={PANEL_GROUP_LABEL_WIDE}>{t(descriptor.titleKey)}</span>
+            </PropertyLine>
 
-          {descriptorOf(component.type).fields.map(field => {
-            const fallback = descriptorOf(component.type).defaults[field.key]
-            return (
-              <ComponentField
-                key={field.key}
-                value={component[field.key]}
-                label={t(field.labelKey)}
-                field={field}
-                named={named}
-                fallback={fallback}
-                gesture={edit.gesture}
-                scId={`components.${component.type}.${field.key}`}
-                onReset={resetTo<JsonValue | undefined>(component[field.key], fallback, value =>
-                  edit.run(
-                    setComponentField(
-                      node.id,
-                      component.type,
-                      field.key,
-                      value ?? fallback ?? null,
+            {descriptor.fields.map(field => {
+              const fallback = descriptor.defaults[field.key]
+              return (
+                <ComponentField
+                  key={field.key}
+                  value={component[field.key]}
+                  label={t(field.labelKey)}
+                  field={field}
+                  named={named}
+                  fallback={fallback}
+                  gesture={edit.gesture}
+                  scId={`components.${component.type}.${field.key}`}
+                  onReset={resetTo<JsonValue | undefined>(component[field.key], fallback, value =>
+                    edit.run(
+                      setComponentField(
+                        node.id,
+                        component.type,
+                        field.key,
+                        value ?? fallback ?? null,
+                      ),
                     ),
-                  ),
-                )}
-                onChange={value =>
-                  edit.run(setComponentField(node.id, component.type, field.key, value))
-                }
-              />
-            )
-          })}
+                  )}
+                  onChange={value =>
+                    edit.run(setComponentField(node.id, component.type, field.key, value))
+                  }
+                />
+              )
+            })}
 
-          {component.type === 'Script' && (
-            <ScriptProps
-              component={component}
-              gesture={edit.gesture}
-              onChange={props => edit.run(setComponentField(node.id, 'Script', 'props', props))}
-            />
-          )}
-        </Fragment>
-      ))}
+            {component.type === 'Script' && (
+              <ScriptProps
+                component={component}
+                gesture={edit.gesture}
+                onChange={props => edit.run(setComponentField(node.id, 'Script', 'props', props))}
+              />
+            )}
+          </Fragment>
+        )
+      })}
     </PropertySection>
   )
 }
