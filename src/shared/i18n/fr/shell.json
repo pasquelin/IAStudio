@@ -27,6 +27,7 @@
   "panels": {
     "assistant": "Assistant",
     "layers": "Calques",
+    "world": "Relief",
     "meshes": "Mailles",
     "lights": "Lumières",
     "timeline": "Timeline",

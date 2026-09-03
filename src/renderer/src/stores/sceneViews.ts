@@ -39,6 +39,11 @@ export type SceneView = {
   poseMode: boolean
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null
+  /**
+   * The terrain (and optional edit) the World panel has armed. Session, like `pickedBone`:
+   * it is not the document, and ⌘Z must not move it.
+   */
+  armedRelief: { terrainId: string; editId: string | null } | null
   /** The control point or tangent of a rail the gizmo holds. Never a node — see `PathDescriptor`. */
   pickedPathPoint: PickedPathPoint | null
   /** Four views instead of one — top, front, left, and the one being flown. */
@@ -117,6 +122,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   skeletons: false,
   poseMode: false,
   pickedBone: null,
+  armedRelief: null,
   pickedPathPoint: null,
   quad: false,
   quadEdges: false,
@@ -149,6 +155,7 @@ export type SceneViewsState = {
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setPoseMode: (documentId: string, poseMode: boolean) => void
   setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
+  setArmedRelief: (documentId: string, armedRelief: SceneView['armedRelief']) => void
   setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
@@ -207,6 +214,11 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setPickedBone: (documentId, pickedBone) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), pickedBone } },
+    })),
+
+  setArmedRelief: (documentId, armedRelief) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), armedRelief } },
     })),
 
   setPickedPathPoint: (documentId, pickedPathPoint) =>

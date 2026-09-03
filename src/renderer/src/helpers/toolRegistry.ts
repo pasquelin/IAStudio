@@ -10,6 +10,7 @@ import {
   mdiHistory,
   mdiImageMultipleOutline,
   mdiLayersOutline,
+  mdiTerrain,
   mdiSourceBranch,
   mdiTuneVariant,
   mdiVideoVintage,
@@ -51,6 +52,7 @@ const ICONS: Record<ToolId, string> = {
   // The same glyph the title bar wore until the assistant became a panel of its own.
   assistant: mdiChatOutline,
   layers: mdiLayersOutline,
+  world: mdiTerrain,
   // From the scene registry: the rail icon and the panel's own empty state must not drift.
   meshes: NODE_KINDS.mesh.icon,
   lights: NODE_KINDS.light.icon,

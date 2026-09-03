@@ -28,6 +28,7 @@ type ToolEntry = {
 export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   assistant: { load: () => import('@/features/assistant/tools/assistant'), role: 'actions' },
   layers: { load: () => import('@/features/image/tools/layers'), role: 'actions' },
+  world: { load: () => import('@/features/scene/tools/world'), role: 'actions' },
   meshes: { load: () => import('@/features/scene/tools/meshes'), role: 'actions' },
   lights: { load: () => import('@/features/scene/tools/lights'), role: 'actions' },
   timeline: { load: () => import('@/features/timeline/tools/timeline'), role: 'fill-actions' },

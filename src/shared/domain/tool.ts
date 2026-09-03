@@ -48,6 +48,7 @@ export type ToolZone = Zone
 export type ToolId =
   | 'assistant'
   | 'layers'
+  | 'world'
   | 'meshes'
   | 'lights'
   | 'timeline'
@@ -216,6 +217,13 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   },
   {
     id: 'meshes',
+    zone: 'right',
+    slot: 'primary',
+    surfaces: ['3d'],
+    requires: 'sceneDocument',
+  },
+  {
+    id: 'world',
     zone: 'right',
     slot: 'primary',
     surfaces: ['3d'],

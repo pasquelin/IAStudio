@@ -27,6 +27,7 @@
   "panels": {
     "assistant": "Assistant",
     "layers": "Layers",
+    "world": "Relief",
     "meshes": "Meshes",
     "lights": "Lights",
     "timeline": "Timeline",

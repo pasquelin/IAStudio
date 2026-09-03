@@ -10,6 +10,7 @@ import { definition as context } from '@/features/context/tools/context'
 import { definition as generator } from '@/features/generation/tools/generator'
 import { definition as inspector } from '@/features/shell/tools/inspector'
 import { definition as layers } from '@/features/image/tools/layers'
+import { definition as world } from '@/features/scene/tools/world'
 import { definition as lights } from '@/features/scene/tools/lights'
 import { definition as meshes } from '@/features/scene/tools/meshes'
 import { definition as problems } from '@/features/code/tools/problems'
@@ -31,6 +32,7 @@ import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './toolComponents'
 const PANELS: Record<ToolId, ToolDefinition> = {
   assistant,
   layers,
+  world,
   meshes,
   lights,
   timeline,
