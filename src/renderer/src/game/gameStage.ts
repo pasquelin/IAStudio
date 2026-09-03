@@ -135,12 +135,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
     }
 
     if (message.kind === 'scene') {
-      known.set(
-        message.scene,
-        compiledLookup(message.found, measured => {
-          compilationMs = measured
-        }),
-      )
+      known.set(message.scene, compiledLookup(message.found))
       return
     }
 
@@ -165,16 +160,12 @@ export function createGameStage(deps: GameStageDeps): GameStage {
   }
 }
 
-function compiledLookup(
-  found: SceneLookup,
-  onCompilation: (milliseconds: number) => void,
-): SceneLookup {
+/**
+ * A scene looked up for a REFERENCE, never the one being played. Its own compilation time is not
+ * reported: `compilationMs` names what the player is standing in, and writing another scene's
+ * figure there made the panel read a number from somewhere nobody was.
+ */
+function compiledLookup(found: SceneLookup): SceneLookup {
   if (found === 'reading' || found === 'unknown') return found
-  const compiler = createRuntimeWorldCompiler()
-  const state = compiler.compileRuntimeWorld(found.state)
-  onCompilation(compiler.getOptimizationReport().compilationMs)
-  return {
-    ...found,
-    state,
-  }
+  return { ...found, state: createRuntimeWorldCompiler().compileRuntimeWorld(found.state) }
 }

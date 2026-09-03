@@ -199,6 +199,9 @@ export type ViewportOutput = {
 }
 
 /** Seconds. Longer than this and a background tab would fly the camera across the scene. */
+/** Frames measured after one read: enough to cover a reader polling a few times a second. */
+const GPU_TIMED_FRAMES = 30
+
 const MAX_DELTA = 0.1
 
 /**
@@ -383,6 +386,16 @@ export class ViewportEngine {
    * viewport that went back to sleep, which is what the loop is meant to do. */
   readonly stats: GpuStats = emptyGpuStats()
   private gpuTimer: GpuTimer | null = null
+  /**
+   * Frames still owed a GPU measurement. A timer query is not free — it is asked for only while
+   * somebody reads the figure, and `wantsGpuTiming` re-arms it on every read.
+   */
+  private gpuFramesWanted = 0
+
+  /** Asks for the GPU time of the next few frames. Called by whoever is about to show it. */
+  readonly wantsGpuTiming = (): void => {
+    this.gpuFramesWanted = GPU_TIMED_FRAMES
+  }
 
   constructor(private readonly options: ViewportEngineOptions = {}) {
     this.perspective = new PerspectiveCamera(
@@ -1804,7 +1817,11 @@ export class ViewportEngine {
     }
     const panesDrawn = !this.insetCoversAll()
     const renderStarted = performance.now()
-    this.gpuTimer?.begin()
+    const timesGpu = this.gpuFramesWanted > 0
+    if (timesGpu) {
+      this.gpuFramesWanted -= 1
+      this.gpuTimer?.begin()
+    }
     try {
       if (panesDrawn) this.renderPanes(renderer, refreshAllShadows)
       // After the panes and before the overlay: the preview covers the view it sits on, and the
@@ -1830,11 +1847,11 @@ export class ViewportEngine {
         renderer.autoClear = true
       }
     }
-    this.gpuTimer?.end()
+    if (timesGpu) this.gpuTimer?.end()
 
     // Read per frame, never cached: a context restore replaces `info` and its two counter objects.
     recordFrame(renderer.info, this.stats, performance.now() - renderStarted)
-    this.stats.gpuFrameMs = this.gpuTimer?.read() ?? null
+    this.stats.gpuFrameMs = timesGpu ? (this.gpuTimer?.read() ?? null) : null
 
     // Armed again for whatever renders BETWEEN two frames — a film being written out, a capture,
     // a scene clip — none of which comes through here and none of which would know to ask. The

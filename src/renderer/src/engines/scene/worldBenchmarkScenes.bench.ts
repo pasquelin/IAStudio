@@ -7,7 +7,6 @@ import { drawnBy, handDriven } from '@/game/game-fixtures'
 import { startPlay } from '@/game/playSession'
 import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, PerspectiveCamera } from 'three'
 import { createCellGroups } from './cellInstancing'
-import { geometryBytesOf, statsOf } from './sceneStats'
 
 const NO_ASSETS: AssetPort = { urlOf: () => null }
 
@@ -17,10 +16,11 @@ for (const scenario of worldBenchmarkScenes()) {
       createRuntimeWorldCompiler().compileRuntimeWorld(scenario.state)
     })
 
-    bench('builds the optimized render representation', async () => {
+    // Named for everything it holds. `buildGameScene` hands back nothing narrower to time, and
+    // `dispose` walks the whole tree releasing geometries and materials — measuring the build
+    // alone would leave one scene per iteration behind.
+    bench('builds and releases the optimized render representation', async () => {
       const runtime = await buildGameScene(scenario.state, NO_ASSETS)
-      void geometryBytesOf([runtime.scene])
-      void statsOf([runtime.scene])
       runtime.dispose()
     })
   })

@@ -15,6 +15,7 @@ import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
 import { groupNodeFixture, meshNode, modelNodeFixture } from './scene-fixtures'
 import { markInstanceable } from './instanceableModel'
 import type { SceneNode } from './sceneState'
+import type { OptimizationSettings } from './sceneState'
 import { analyzeOptimization, analyzeOptimizationAsync, optimizationReport } from './worldAnalyzer'
 
 function repeated(count: number): {
@@ -270,6 +271,23 @@ describe('analyzeOptimization', () => {
 
     expect(plan.instances).toEqual([])
     expect(plan.batches).toHaveLength(1)
+    // Proposed, not delivered: `auto` never reaches the batcher, so the estimate promises nothing
+    // until someone answers `batch`.
+    expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 3 })
+  })
+
+  it('counts the batching saving once someone has actually asked for it', () => {
+    const material = new MeshStandardMaterial()
+    const batched: OptimizationSettings = { mode: 'batch' }
+    const nodes = ['small', 'medium', 'large'].map(id => ({ ...meshNode(id), optimization: batched }))
+    const objects = new Map<string, Mesh>(
+      nodes.map((node, index) => [node.id, new Mesh(new BoxGeometry(index + 1, 1, 1), material)]),
+    )
+
+    const plan = analyzeOptimization({ nodes, animation: EMPTY_TIMELINE }, new Object3D(), id =>
+      objects.get(id),
+    )
+
     expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 1 })
   })
 
@@ -292,7 +310,7 @@ describe('analyzeOptimization', () => {
 
     expect(plan.instances).toEqual([])
     expect(plan.batches[0]).toMatchObject({ sourceIds: [node.id], meshCount: 3 })
-    expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 1 })
+    expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 3 })
   })
 
   it('measures memory already avoided by shared textures', () => {
