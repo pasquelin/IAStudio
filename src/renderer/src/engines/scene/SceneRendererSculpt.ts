@@ -227,9 +227,18 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     return combinedAt(
       source.samples,
       source.grain,
-      [...source.overlays, { enabled: true, alpha: 1, sculpt: source.sculpt }],
+      [
+        ...source.overlays,
+        {
+          enabled: true,
+          alpha: source.overlayAlpha,
+          sculpt: source.sculpt,
+          mask: source.overlayMask,
+        },
+      ],
       sx,
       sz,
+      source.extent,
     )
   }
 }

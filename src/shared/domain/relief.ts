@@ -392,6 +392,7 @@ export function applyReliefSculpt(
   grain = RELIEF_CHUNK_TEXELS,
   rows?: ReliefChunkRows,
   overlays: readonly ReliefOverlay[] = [],
+  armed?: { alpha: number; mask?: ReliefMask },
 ): ReliefSculpt {
   switch (operation.kind) {
     case 'raiseDisk':
@@ -416,6 +417,7 @@ export function applyReliefSculpt(
         grain,
         rows,
         overlays,
+        armed,
       )
     case 'flatten':
       return flattenReliefDisk(
@@ -429,6 +431,7 @@ export function applyReliefSculpt(
         grain,
         rows,
         overlays,
+        armed,
       )
     case 'paintMask':
       return paintReliefMask(
@@ -480,8 +483,9 @@ export function smoothReliefDisk(
   grain = RELIEF_CHUNK_TEXELS,
   rows?: ReliefChunkRows,
   overlays: readonly ReliefOverlay[] = [],
+  armed?: { alpha: number; mask?: ReliefMask },
 ): ReliefSculpt {
-  const read = combinedRead(samples, grain, overlays, sculpt, extent)
+  const read = combinedRead(samples, grain, overlays, sculpt, extent, armed)
   return addDiskDeltas(samples, extent, sculpt, disk, falloff, grain, rows, (sx, sz, weight) => {
     const combined = read(sx, sz)
     return (neighbourMean(read, samples, sx, sz) - combined) * amount * weight
@@ -503,8 +507,9 @@ export function flattenReliefDisk(
   grain = RELIEF_CHUNK_TEXELS,
   rows?: ReliefChunkRows,
   overlays: readonly ReliefOverlay[] = [],
+  armed?: { alpha: number; mask?: ReliefMask },
 ): ReliefSculpt {
-  const read = combinedRead(samples, grain, overlays, sculpt, extent)
+  const read = combinedRead(samples, grain, overlays, sculpt, extent, armed)
   return addDiskDeltas(
     samples,
     extent,
@@ -517,7 +522,7 @@ export function flattenReliefDisk(
   )
 }
 
-/** Writes brush strength into a painted mask. Absolute, not additive — missing texels stay 0. */
+/** Mixes brush strength into a painted mask. Rim keeps the previous weight so overlapping dabs hold. */
 export function paintReliefMask(
   samples: HeightmapSamples,
   extent: ReliefExtent,
@@ -536,8 +541,8 @@ export function paintReliefMask(
     falloff,
     grain,
     rows,
-    (_sx, _sz, weight) => clamp(amount * weight, 0, 1),
-    'set',
+    () => clamp(amount, 0, 1),
+    'mix',
   )
 }
 
@@ -547,11 +552,15 @@ function combinedRead(
   overlays: readonly ReliefOverlay[],
   sculpt: ReliefSculpt | undefined,
   extent?: ReliefExtent,
+  armed?: { alpha: number; mask?: ReliefMask },
 ): ReliefRead {
   return reliefReader(
     samples,
     grain,
-    [...overlays, ...(sculpt ? [{ enabled: true, alpha: 1, sculpt }] : [])],
+    [
+      ...overlays,
+      ...(sculpt ? [{ enabled: true, alpha: armed?.alpha ?? 1, sculpt, mask: armed?.mask }] : []),
+    ],
     extent,
   )
 }
@@ -585,7 +594,7 @@ function addDiskDeltas(
   grain: number,
   rows: ReliefChunkRows | undefined,
   deltaAt: (sx: number, sz: number, weight: number) => number,
-  write: 'add' | 'set' = 'add',
+  write: 'add' | 'set' | 'mix' = 'add',
 ): ReliefSculpt {
   const span = diskSamples(samples, extent, disk)
   const distanceX = Float64Array.from({ length: span.maxX - span.minX + 1 }, (_, at) => {
@@ -642,7 +651,7 @@ type RaiseContext = {
   distanceZ: Float64Array
   packed: ReadonlyMap<string, PackedReliefChunk>
   deltaAt: (sx: number, sz: number, weight: number) => number
-  write: 'add' | 'set'
+  write: 'add' | 'set' | 'mix'
 }
 
 function raisedChunk(
@@ -685,7 +694,9 @@ function raiseChunkSamples(
       const at = (sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)
       const weight = falloff <= 0 ? 1 : diskFalloff(Math.sqrt(d2), disk.radius, falloff)
       const next = deltaAt(sx, sz, weight)
-      deltas[at] = write === 'set' ? next : (deltas[at] ?? 0) + next
+      const held = deltas[at] ?? 0
+      deltas[at] =
+        write === 'mix' ? held + (next - held) * weight : write === 'set' ? next : held + next
     }
   }
 }

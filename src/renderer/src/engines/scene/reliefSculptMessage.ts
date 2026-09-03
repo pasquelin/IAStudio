@@ -6,6 +6,7 @@ import type {
   PackedReliefChunk,
   ReliefExtent,
   ReliefChunkRows,
+  ReliefMask,
   ReliefOverlay,
   ReliefSculpt,
   ReliefSculptOperation,
@@ -24,6 +25,8 @@ export type ReliefSculptRequest = {
   values?: Float32Array
   /** Enabled overlays other than the armed sculpt, so combined height sees them. */
   overlays?: readonly ReliefOverlay[]
+  overlayAlpha?: number
+  overlayMask?: ReliefMask
 }
 
 /**

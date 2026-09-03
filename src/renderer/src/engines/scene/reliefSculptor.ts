@@ -3,6 +3,7 @@ import {
   withPackedChunks,
   type PackedReliefChunk,
   type ReliefExtent,
+  type ReliefMask,
   type ReliefOverlay,
   type ReliefSculpt,
   type ReliefSculptOperation,
@@ -24,6 +25,8 @@ export type ReliefDiskStroke = {
   kind?: ReliefSculptOperation['kind']
   target?: number
   overlays?: readonly ReliefOverlay[]
+  overlayAlpha?: number
+  overlayMask?: ReliefMask
 }
 
 export type ReliefSculptor = {
@@ -145,7 +148,12 @@ async function sculptResponses(
         operation: operationOf(job),
         rows: ranges.length === 1 ? undefined : rows,
         ...(readsCombined(job.kind)
-          ? { values: job.samples.values, overlays: job.overlays }
+          ? {
+              values: job.samples.values,
+              overlays: job.overlays,
+              overlayAlpha: job.overlayAlpha,
+              overlayMask: job.overlayMask,
+            }
           : {}),
       })
     }),

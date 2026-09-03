@@ -78,6 +78,7 @@ describe('relief surface chunks', () => {
       grain: layer.grain,
       sculpt: undefined,
       maskWeights: undefined,
+      overlayAlpha: 1,
       overlays: [],
     })
     expect(surface.sculptSource(layer.id, 'missing')).toBeNull()

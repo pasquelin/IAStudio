@@ -77,6 +77,9 @@ function answer(fake: ReturnType<typeof fakeWorker>, request: ReliefSculptReques
     request.grain,
     request.rows,
     request.overlays,
+    request.overlayAlpha === undefined
+      ? undefined
+      : { alpha: request.overlayAlpha, mask: request.overlayMask },
   )
   fake.reply({
     id: request.id,

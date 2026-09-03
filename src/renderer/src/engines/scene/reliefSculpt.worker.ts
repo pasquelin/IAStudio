@@ -12,7 +12,20 @@ declare const self: DedicatedWorkerGlobalScope
 const NO_VALUES = new Float32Array(0)
 
 self.addEventListener('message', (event: MessageEvent<ReliefSculptRequest>) => {
-  const { id, width, height, extent, grain, sculpt, operation, rows, values, overlays } = event.data
+  const {
+    id,
+    width,
+    height,
+    extent,
+    grain,
+    sculpt,
+    operation,
+    rows,
+    values,
+    overlays,
+    overlayAlpha,
+    overlayMask,
+  } = event.data
 
   try {
     const after = applyReliefSculpt(
@@ -23,6 +36,7 @@ self.addEventListener('message', (event: MessageEvent<ReliefSculptRequest>) => {
       grain,
       rows,
       overlays,
+      overlayAlpha === undefined ? undefined : { alpha: overlayAlpha, mask: overlayMask },
     )
     const chunks = changedChunks(sculpt, after)
     self.postMessage({ id, ok: true, grain, chunks } satisfies ReliefSculptResponse)

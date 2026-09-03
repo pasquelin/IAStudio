@@ -22,6 +22,7 @@ import {
   type ReliefChunkKey,
   type ReliefChunkLayout,
   type ReliefExtent,
+  type ReliefMask,
   type ReliefOverlay,
   type ReliefRead,
   type ReliefSculpt,
@@ -61,6 +62,8 @@ export type ReliefSculptSource = {
   grain: number
   sculpt: ReliefSculpt | undefined
   maskWeights: ReliefSculpt | undefined
+  overlayAlpha: number
+  overlayMask?: ReliefMask
   /** Enabled overlays other than the armed edit, so smooth/flatten see combined height. */
   overlays: readonly ReliefOverlay[]
 }
@@ -134,12 +137,15 @@ export function createReliefSurface(
             grain: held.grain,
             sculpt: edit.sculpt,
             maskWeights: edit.mask?.kind === 'painted' ? edit.mask.weights : undefined,
+            overlayAlpha: edit.alpha,
+            overlayMask: edit.mask,
             overlays: held.edits
               .filter(candidate => candidate.id !== editId)
               .map(candidate => ({
                 enabled: candidate.enabled,
                 alpha: candidate.alpha,
                 sculpt: candidate.sculpt,
+                mask: candidate.mask,
               })),
           }
         : null

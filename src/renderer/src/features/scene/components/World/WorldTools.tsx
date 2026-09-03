@@ -45,6 +45,11 @@ export function WorldTools({ documentId }: { documentId: string }) {
   const run = useScenes.getState().runCommand
   const setMask = (mask: ReliefMask | undefined): void => {
     if (!edit) return
+    if (mask?.kind !== 'painted' && sculptTool === 'paint') {
+      const views = useSceneViews.getState()
+      views.setSculptTool(documentId, 'raise')
+      views.setSculptMode(documentId, false)
+    }
     run(documentId, setTerrainEditMask(terrain.id, edit.id, mask))
   }
   const heightMask = edit?.mask?.kind === 'height' ? edit.mask : undefined
@@ -162,7 +167,9 @@ export function WorldTools({ documentId }: { documentId: string }) {
                   tick="on-off"
                   tip={HINT_RIGHT(t('world.maskPaintedHint'))}
                   onSelect={() => {
-                    setMask({ kind: 'painted', weights: { chunks: [] } })
+                    if (edit.mask?.kind !== 'painted') {
+                      setMask({ kind: 'painted', weights: { chunks: [] } })
+                    }
                     close()
                   }}
                 />
@@ -212,7 +219,7 @@ export function WorldTools({ documentId }: { documentId: string }) {
                 value={heightMask.min}
                 min={terrain.elevation.min}
                 max={terrain.elevation.max}
-                step={1}
+                step={0.01}
                 onChange={min => setMask({ kind: 'height', min, max: heightMask.max })}
                 onReset={() =>
                   setMask({ kind: 'height', min: terrain.elevation.min, max: heightMask.max })
@@ -224,7 +231,7 @@ export function WorldTools({ documentId }: { documentId: string }) {
                 value={heightMask.max}
                 min={terrain.elevation.min}
                 max={terrain.elevation.max}
-                step={1}
+                step={0.01}
                 onChange={max => setMask({ kind: 'height', min: heightMask.min, max })}
                 onReset={() =>
                   setMask({ kind: 'height', min: heightMask.min, max: terrain.elevation.max })

@@ -22,6 +22,7 @@ function reliefStub(): ReliefSurface {
       grain: 1,
       sculpt: SCULPT,
       maskWeights: undefined,
+      overlayAlpha: 1,
       overlays: [],
     })),
     dispose: vi.fn(),
@@ -53,6 +54,7 @@ describe('relief sculpting through the scene renderer', () => {
       grain: 1,
       sculpt: undefined,
       maskWeights: undefined,
+      overlayAlpha: 1,
       overlays: [],
     }
     const changed: PackedReliefChunk[] = [{ column: 0, row: 0, payload: 'AAAAAA==' }]
