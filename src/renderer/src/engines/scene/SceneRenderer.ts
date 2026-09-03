@@ -267,7 +267,13 @@ import { createCsgEvaluator, type CsgEvaluator } from '../csg/csgEvaluator'
 import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
-import { unhang, worldReach, type InstancedGroups, type ShadowThrow } from './grouping'
+import {
+  groupingExclusions,
+  unhang,
+  worldReach,
+  type InstancedGroups,
+  type ShadowThrow,
+} from './grouping'
 import { createInstancedGroups, keepsItsGroup } from './instancing'
 import { uncutGeometry } from '../csg/uncutGeometry'
 import { isCarvable, isNegative } from '../csg/carve'
@@ -1968,8 +1974,10 @@ export class SceneRenderer {
       // The sources that walk no longer reaches, composed against the parents it just wrote.
       this.instances.refreshSources()
       this.readChildNodes()
-      const instanced = this.instances.rebuild([...this.applied.values()], id =>
-        this.objects.get(id),
+      const instanced = this.instances.rebuild(
+        [...this.applied.values()],
+        id => this.objects.get(id),
+        groupingExclusions([...this.applied.values()], drivenNodes(this.timeline)),
       )
       this.syncSourceWalk()
       // Read before the test, since asking CLEARS it: a lot the rebuild made must not leave the

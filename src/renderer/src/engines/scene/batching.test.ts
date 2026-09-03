@@ -13,10 +13,10 @@ import {
   type Material,
 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { meshNode } from './scene-fixtures'
+import { groupNodeFixture, meshNode } from './scene-fixtures'
 import { createBatchedGroups } from './batching'
 import { acceleratedRaycast } from 'three-mesh-bvh'
-import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
+import { DRAWN_BY_INSTANCE, groupingExclusions, WORTH_INSTANCING } from './grouping'
 import type { MeshNode, SceneNode } from './sceneState'
 
 type Built = { nodes: SceneNode[]; objects: Map<string, Mesh> }
@@ -196,6 +196,44 @@ describe('createBatchedGroups', () => {
     for (const mesh of objects.values()) mesh.visible = false
 
     expect(createBatchedGroups(scene).rebuild(nodes, id => objects.get(id))).toBe(0)
+  })
+
+  it('leaves gameplay and timeline driven meshes individually addressable', () => {
+    const scene = host()
+    const { nodes, objects } = laidOut(WORTH_INSTANCING + 3)
+    const movement = nodes[0]
+    const script = nodes[1]
+    const animated = nodes[2]
+    if (!movement || !script || !animated) throw new Error('missing driven fixtures')
+    nodes[0] = { ...movement, components: [{ type: 'Movement' }] }
+    nodes[1] = { ...script, components: [{ type: 'Script' }] }
+
+    const exclusions = groupingExclusions(nodes, new Set([animated.id]))
+    expect(createBatchedGroups(scene).rebuild(nodes, id => objects.get(id), exclusions)).toBe(
+      WORTH_INSTANCING,
+    )
+    for (const id of [movement.id, script.id, animated.id]) {
+      expect(objects.get(id)?.layers.isEnabled(0)).toBe(true)
+    }
+  })
+
+  it('restores a grouped source when an animated ancestor excludes it', () => {
+    const scene = host()
+    const { nodes, objects } = laidOut(WORTH_INSTANCING)
+    const groups = createBatchedGroups(scene)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    const parent = groupNodeFixture('parent')
+    const middle = groupNodeFixture('middle', parent.id)
+    const drivenNodes = [parent, middle, ...nodes.map(node => ({ ...node, parentId: middle.id }))]
+    groups.rebuild(
+      drivenNodes,
+      id => objects.get(id),
+      groupingExclusions(drivenNodes, new Set([parent.id])),
+    )
+
+    expect(scene.children).toHaveLength(0)
+    expect([...objects.values()].every(mesh => mesh.layers.isEnabled(0))).toBe(true)
   })
 
   it('gives a shrunken group back to the camera, rather than leaving it invisible', () => {

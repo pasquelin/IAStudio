@@ -11,6 +11,7 @@ import {
   type Sphere,
 } from 'three'
 import { stableKey } from '@shared/hash'
+import { movesOnItsOwn } from '@shared/domain/component'
 import { cachedOn } from '../core/cachedOn'
 import type { SceneNode } from './sceneState'
 import { isInstanceable, meshesOf, modelShapeKey } from './instanceableModel'
@@ -50,7 +51,11 @@ export type InstancedGroups = {
    *
    * Call it after the world matrices are up to date: the matrices are copied from them.
    */
-  rebuild: (nodes: readonly SceneNode[], objectOf: (id: string) => Object3D | undefined) => number
+  rebuild: (
+    nodes: readonly SceneNode[],
+    objectOf: (id: string) => Object3D | undefined,
+    excluded?: ReadonlySet<string>,
+  ) => number
   /**
    * Writes the matrices of nodes that just moved, without rebuilding a thing — and says whether
    * any of them was drawn by something else.
@@ -296,6 +301,36 @@ export type Grouped = {
   material: Material
 }
 
+/** Nodes whose runtime behaviour requires their original render representation. */
+export function groupingExclusions(
+  nodes: readonly SceneNode[],
+  driven: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const excluded = new Set(driven)
+  const children = new Map<string, string[]>()
+  for (const node of nodes) {
+    if (
+      movesOnItsOwn(node.components) ||
+      node.components?.some(component => component.type === 'Script')
+    ) {
+      excluded.add(node.id)
+    }
+    if (!node.parentId) continue
+    const siblings = children.get(node.parentId)
+    if (siblings) siblings.push(node.id)
+    else children.set(node.parentId, [node.id])
+  }
+  const roots = [...excluded]
+  for (let at = 0; at < roots.length; at += 1) {
+    for (const child of children.get(roots[at] ?? '') ?? []) {
+      if (excluded.has(child)) continue
+      excluded.add(child)
+      roots.push(child)
+    }
+  }
+  return excluded
+}
+
 /**
  * What both strategies share of a rebuild: which meshes are drawn at all, what a group is keyed
  * by, which groups fall under the floor — those go straight back to the camera's layer — and
@@ -308,6 +343,7 @@ export function sweep(
   ownMaterialOf: (mesh: Mesh) => Material | Material[],
   keyOf: (node: SceneNode, mesh: Mesh) => string,
   sources: HeldOutOfDraw,
+  excluded?: ReadonlySet<string>,
 ): Grouped[] {
   const parented = new Set<string>()
   for (const node of nodes) if (node.parentId) parented.add(node.parentId)
@@ -332,6 +368,11 @@ export function sweep(
 
   for (const node of nodes) {
     const object = objectOf(node.id)
+    if (excluded?.has(node.id)) {
+      if (object instanceof Mesh) object.layers.set(0)
+      else if (object) for (const mesh of meshesOf(object)) mesh.layers.set(0)
+      continue
+    }
     if (!object || !isDrawn(object, host)) continue
     if (node.type === 'mesh') {
       if (!(object instanceof Mesh)) continue

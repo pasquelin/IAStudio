@@ -30,6 +30,12 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     expect(body('regroupInstances')).not.toContain('asDocumented')
   })
 
+  it('keeps timeline-driven nodes out of a static batch', () => {
+    expect(body('regroupInstances')).toContain(
+      'groupingExclusions([...this.applied.values()], drivenNodes(this.timeline))',
+    )
+  })
+
   it('answers a node that only moved without grouping everything again', () => {
     // A rebuild of 40 000 nodes costs 32.7 ms; rewriting the slots that moved costs 3.5 µs. Both
     // paths live here, and a `regroupInstances` that lost one would silently take the other.

@@ -438,12 +438,12 @@ export function createCellGroups(
   }
 
   return {
-    rebuild: (nodes, objectOf) => {
+    rebuild: (nodes, objectOf, excluded) => {
       pass += 1
       /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
       const seen = new Map<string, string>()
       let instanced = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
+      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { ids: [], meshes: [] }

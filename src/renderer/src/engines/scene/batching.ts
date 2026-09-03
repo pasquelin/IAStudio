@@ -71,11 +71,11 @@ export function createBatchedGroups(
   }
 
   return {
-    rebuild: (nodes, objectOf) => {
+    rebuild: (nodes, objectOf, excluded) => {
       clear()
 
       let batched = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources)) {
+      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
         const first = worn.meshes[0]
         if (!first) continue
 
