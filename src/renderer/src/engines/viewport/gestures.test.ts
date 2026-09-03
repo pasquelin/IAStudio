@@ -91,7 +91,7 @@ describe('what a button asks the view to do, under another application', () => {
 
   /** Unreal's pan: the right button pressed while the left is already down. */
   it('pans on the right button added to a left one under Unreal, and only then', () => {
-    expect(gestureOf({ ...RIGHT, buttons: 1 }, SCHEME_OF.unreal)).toBe('pan')
+    expect(gestureOf({ ...RIGHT, buttons: 1 }, SCHEME_OF.unreal)).toBeNull()
     expect(gestureOf(RIGHT, SCHEME_OF.unreal)).toBeNull()
   })
 

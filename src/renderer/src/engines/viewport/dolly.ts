@@ -18,8 +18,15 @@ export const DOLLY_FLOOR = 0.05
  * reports many small deltas — dividing by 100 serves both, and the cap keeps one violent flick
  * from throwing the camera across the scene.
  */
-export function notchesOf(deltaY: number): number {
-  return clamp(-deltaY / 100, -MAX_NOTCHES, MAX_NOTCHES)
+export function notchesOf(deltaY: number, deltaMode = 0): number {
+  return clamp(-wheelPixels(deltaY, deltaMode) / 100, -MAX_NOTCHES, MAX_NOTCHES)
+}
+
+/** DOM wheel units normalised to the pixels Chromium reports for ordinary wheels and trackpads. */
+function wheelPixels(delta: number, mode: number): number {
+  if (mode === 1) return delta * 16
+  if (mode === 2) return delta * 800
+  return delta
 }
 
 const MAX_NOTCHES = 5

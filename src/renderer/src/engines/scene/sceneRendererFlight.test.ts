@@ -103,13 +103,13 @@ describe('SceneRenderer and the buttons that fly', () => {
    * The wheel means speed in the MODE alone. Gated on `flying` it would change meaning under a
    * held button, where the manual promises a dolly and no hint is on screen to say otherwise.
    */
-  it('spends the wheel on speed for the mode, never under a held button', () => {
+  it('spends the wheel on speed in pointer-lock mode and under the right flight button', () => {
     const spend =
       source.match(
         /private spendWheelOnSpeed\(event: WheelEvent\): boolean \{[\s\S]*?\n {2}\}/,
       )?.[0] ?? ''
 
-    expect(spend).toContain('if (!this.navigating) return false')
+    expect(spend).toContain('if (!this.navigating && this.flownWith !== 2) return false')
   })
 
   // The same trap `turnToViewHelper` guards the trihedron against.

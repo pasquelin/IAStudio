@@ -123,6 +123,11 @@ describe('reading the wheel', () => {
     expect(notchesOf(-8)).toBeCloseTo(0.08, 6)
   })
 
+  it('normalises line and page wheel events before measuring their travel', () => {
+    expect(notchesOf(-1, 1)).toBeCloseTo(0.16, 6)
+    expect(notchesOf(-1, 2)).toBe(5)
+  })
+
   it('caps one violent flick, which would otherwise cross the whole scene at once', () => {
     expect(notchesOf(-100000)).toBe(notchesOf(-1000))
   })

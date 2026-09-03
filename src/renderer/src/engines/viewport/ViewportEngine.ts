@@ -7,11 +7,8 @@ import {
   type Object3D,
   OrthographicCamera,
   PerspectiveCamera,
-  Plane,
-  Raycaster,
   Scene,
   SRGBColorSpace,
-  Vector2,
   Vector3,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -20,12 +17,12 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/gpuPipeline'
 import { token } from '../core/palette'
 import { aspectLoan } from './aspectLoan'
-import { dollyTo, dragNotchesOf, notchesOf } from './dolly'
+import { dollyTo, dragNotchesOf } from './dolly'
 import { fingerGap } from './pinch'
 import { gestureOf, type Gesture } from './gestures'
 import { SCHEME_OF, type NavigationScheme } from '@shared/domain/navigationPreset'
 import { orbitAround } from './orbit'
-import { gazeTargetOf, onScreen, pivotFor, type PivotMode } from './orbitPivot'
+import { gazeTargetOf, type PivotMode } from './orbitPivot'
 import { panBy } from './pan'
 import { frameDelta } from './frameClock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpuStats'
@@ -41,6 +38,7 @@ import {
 } from './panes'
 import { pointerNdc, type PointerPosition } from './pointer'
 import { frustumHeight } from './screenScale'
+import { ViewportNavigationTarget } from './ViewportNavigationTarget'
 
 /** A two-finger gesture in flight: its last two readings, and the pane it belongs to. */
 type Pinch = { pane: number; gap: number; middleX: number; middleY: number; moved: boolean }
@@ -49,11 +47,6 @@ type Pinch = { pane: number; gap: number; middleX: number; middleY: number; move
 const ORIGIN = new Vector3()
 
 /** The ground the studio is built on. What a ray that met no object falls back to. */
-const GROUND = new Plane(new Vector3(0, 1, 0), 0)
-
-/** No preference set: the view turns around the point it last settled on, and nothing else. */
-const SETTLED_ONLY: PivotMode = { aroundSelection: false, underCursor: false }
-
 /**
  * The parts of a viewport every workspace repeats: a canvas it owns, a renderer, a camera that
  * follows the element's aspect, orbit controls, and a loop that only runs while something
@@ -272,12 +265,6 @@ const EXTRA_PANE_HEIGHT = 6
 /** Reused, so lending allocates nothing. How FAR ahead is `PIVOT_AHEAD`, the one such distance. */
 const borrowedAim = new Vector3()
 
-/** Metres. What a wheel over nothing at all scales its step by — see `aimWheel`. */
-const DEFAULT_REACH = 10
-
-/** How long a wheel must be still before the framing it left is published. */
-const WHEEL_SETTLES_MS = 250
-
 /**
  * Whether `OrbitControls` still owns the gestures of the camera it holds — see `armOrbits`.
  *
@@ -317,15 +304,7 @@ export class ViewportEngine {
   private projection: ProjectionKind = 'perspective'
 
   private renderer: WebGLRenderer | null = null
-  /** Only the wheel casts from here; picking is the caller's, which knows what a hit means. */
-  private readonly raycaster = new Raycaster()
-  /** `setFromCamera` takes a `Vector2` and nothing else. */
-  private readonly wheelNdc = new Vector2()
-  /**
-   * Where the wheel last aimed, held until the pointer moves. Re-picking per notch runs a
-   * full-scene raycast at trackpad rates — 8 to 32 ms a notch on a scene with no BVH tree.
-   */
-  private wheelAim: { readonly aim: Vector3; readonly aimed: Vector3 } | null = null
+  private readonly navigationTarget: ViewportNavigationTarget
   /**
    * The navigation gesture the pointer holds, or `null`. One at a time, and only ever started on
    * a perspective pane — an orthographic one keeps every gesture `OrbitControls` gives it.
@@ -348,8 +327,6 @@ export class ViewportEngine {
   private readonly touches = new Map<number, PointerPosition>()
   /** Apart from `drag`, which follows ONE `pointerId` and would steer by whichever hand moved. */
   private pinch: Pinch | null = null
-  /** Pending « the wheel has stopped ». One gesture reports once — see `reportWheelSettled`. */
-  private wheelSettling: ReturnType<typeof setTimeout> | null = null
   private output: ViewportOutput = {}
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
@@ -413,6 +390,14 @@ export class ViewportEngine {
     )
     this.orthographic.near = options.near ?? 0.1
     this.orthographic.far = options.far ?? 1000
+    this.navigationTarget = new ViewportNavigationTarget({
+      pointerNdc: at => this.pointerNdcOf(at),
+      pickTargets: () => this.options.pickTargets?.() ?? [],
+      selectionCentre: () => this.options.selectionCentre?.() ?? null,
+      pivotMode: () => this.options.pivotMode?.(),
+      requestRender: this.requestCameraRender,
+      onSettled: pane => this.options.onCameraSettled?.(pane),
+    })
   }
 
   /** What the viewport draws with, and what a raycast has to be set from. */
@@ -784,7 +769,7 @@ export class ViewportEngine {
    */
   private readonly armPaneUnderPointer = (event: PointerEvent): void => {
     // A pointer that moved aims somewhere else, whatever else this call decides.
-    this.wheelAim = null
+    this.navigationTarget.invalidate()
 
     // Kept before the early return, never after: the move that lifts a freeze is one this
     // returns on, and `freezePanes` has nothing to re-arm from unless that move was recorded.
@@ -952,8 +937,7 @@ export class ViewportEngine {
     this.host?.removeEventListener('wheel', this.onWheelCapture, true)
     this.host = null
 
-    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
-    this.wheelSettling = null
+    this.navigationTarget.dispose()
 
     if (this.insetCatchUp !== null) clearTimeout(this.insetCatchUp)
     this.insetCatchUp = null
@@ -1072,124 +1056,10 @@ export class ViewportEngine {
     // anchor it — that one reads the whole canvas, so it drifts in every pane of a quad layout.
     if (!(camera instanceof PerspectiveCamera) || !orbit || this.armedPane !== index) return
 
-    const held = this.wheelAim ?? this.aimWheel(event, camera, orbit)
-    if (!held) return
-    this.wheelAim = held
-
-    const move = dollyTo({
-      position: camera.position,
-      aim: held.aim,
-      aimed: held.aimed,
-      notches: notchesOf(event.deltaY),
-    })
-
-    camera.position.copy(move.position)
-    // Crossing leaves what was aimed at BEHIND: the pivot it had is kept while it is still in
-    // front, and only a pivot the camera has passed rests ahead — the next notch re-aims anyway.
-    if (move.pivot) orbit.target.copy(move.pivot)
-    else aimPivotAhead(camera, orbit.target)
-    this.requestRender()
-    this.reportWheelSettled(index)
-    // Held past a crossing, the aimed point sits BEHIND the camera and the distance to it grows
-    // again — every further notch of one flick would be larger than the last.
-    if (move.crossed) this.wheelAim = null
+    if (!this.navigationTarget.wheel(event, index, camera, orbit)) return
 
     event.preventDefault()
     event.stopPropagation()
-  }
-
-  /**
-   * The end of a zoom, once the notches stop. `OrbitControls` dispatched `end` around every notch
-   * of the wheel it used to own; taking the wheel took that with it, and whoever listens publishes
-   * where the view now stands — a montage reads that framing back.
-   */
-  private reportWheelSettled(pane: number): void {
-    const settled = this.options.onCameraSettled
-    if (!settled) return
-
-    if (this.wheelSettling !== null) clearTimeout(this.wheelSettling)
-    this.wheelSettling = setTimeout(() => {
-      this.wheelSettling = null
-      settled(pane)
-    }, WHEEL_SETTLES_MS)
-  }
-
-  /**
-   * What the pointer names, in world space. Both halves stay true while the camera only travels:
-   * a ray through an unmoved screen point keeps its world direction, and meets the same surface.
-   */
-  private aimWheel(
-    event: WheelEvent,
-    camera: PerspectiveCamera,
-    orbit: OrbitControls,
-  ): { readonly aim: Vector3; readonly aimed: Vector3 } | null {
-    const ndc = this.pointerNdcOf(event)
-    if (!ndc) return null
-
-    this.raycaster.setFromCamera(this.wheelNdc.set(ndc.x, ndc.y), camera)
-    // Nothing under the pointer still deserves a distance: without one, a wheel over empty sky
-    // would have nothing to scale its step by. The pivot's own distance is what the view implies.
-    const reach = camera.position.distanceTo(orbit.target) || DEFAULT_REACH
-
-    return {
-      aim: this.raycaster.ray.direction.clone(),
-      aimed: this.metByRay(reach) ?? this.raycaster.ray.at(reach, new Vector3()),
-    }
-  }
-
-  /**
-   * What the ray already set on `raycaster` meets: an object first, then the GROUND — without
-   * which every gesture over the floor met nothing, `pickTargets` naming the nodes alone.
-   */
-  private metByRay(limit: number): Vector3 | null {
-    const hit = this.raycaster.intersectObjects(this.options.pickTargets?.() ?? [], true)[0]
-    if (hit) return hit.point
-
-    // Refused beyond what the view already implies: the plane is INFINITE, so a pointer a hair
-    // under the horizon meets it kilometres away, and the wheel spends 12% of that in one notch.
-    const ground = this.raycaster.ray.intersectPlane(GROUND, new Vector3())
-    return ground && this.raycaster.ray.origin.distanceTo(ground) <= limit ? ground : null
-  }
-
-  /** The same, from a pointer rather than from a ray already cast. */
-  private metByPointer(
-    event: PointerPosition,
-    camera: PerspectiveCamera,
-    limit: number,
-  ): Vector3 | null {
-    const ndc = this.pointerNdcOf(event)
-    if (!ndc) return null
-
-    this.raycaster.setFromCamera(this.wheelNdc.set(ndc.x, ndc.y), camera)
-    return this.metByRay(limit)
-  }
-
-  /**
-   * The selection's centre, and only while it is on SCREEN — the known complaint about the same
-   * setting in Unreal being that a distant selection yanks the view across the level.
-   */
-  private visibleSelection(camera: PerspectiveCamera): Vector3 | null {
-    const centre = this.options.selectionCentre?.()
-    return centre && onScreen(centre.clone().project(camera)) ? centre : null
-  }
-
-  /** Where a gesture about to start will turn — decided once, at the press. */
-  private pivotAt(at: PointerPosition, camera: PerspectiveCamera, orbit: OrbitControls): Vector3 {
-    // A camera moved since the last frame drew still carries that frame's world matrix, and both
-    // readings below go through it — a projection and a ray. `F` then a drag is exactly that.
-    camera.updateMatrixWorld()
-
-    return pivotFor(
-      {
-        selection: () => this.visibleSelection(camera),
-        // Bounded by what the camera SEES, never by the distance to the pivot: that one bounds
-        // the wheel, which spends 12% of what it aims at and has a fallback. Here there is none —
-        // refusing the ground leaves the pivot where it was, and the preference seems inert.
-        underCursor: () => this.metByPointer(at, camera, camera.far),
-        settled: orbit.target.clone(),
-      },
-      this.options.pivotMode?.() ?? SETTLED_ONLY,
-    )
   }
 
   /**
@@ -1389,7 +1259,8 @@ export class ViewportEngine {
 
     // Now that the gizmo has NOT taken the press — it would have frozen the panes above.
     if (drag.pressedAt) {
-      if (drag.kind === 'orbit') orbit.target.copy(this.pivotAt(drag.pressedAt, camera, orbit))
+      if (drag.kind === 'orbit')
+        orbit.target.copy(this.navigationTarget.pivotAt(drag.pressedAt, camera, orbit))
       drag.pressedAt = null
     }
     this.applyGesture(drag.kind, camera, orbit, deltaX, deltaY, height)
