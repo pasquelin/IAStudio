@@ -147,6 +147,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
           { value: 'nameDesc', label: t('explorer.sort.nameDesc') },
         ]}
         layout="inline"
+        growSearch
         display={false}
       />
       <div className="min-h-0 flex-1">

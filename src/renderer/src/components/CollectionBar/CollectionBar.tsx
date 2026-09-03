@@ -54,6 +54,8 @@ export type CollectionBarProps = {
    * WITH, and which would otherwise cost a row of its own in a side dock.
    */
   leading?: ReactNode
+  /** Lets one horizontal collection give every spare pixel to its search field. */
+  growSearch?: boolean
   className?: string
 }
 
@@ -67,6 +69,7 @@ export function CollectionBar({
   layout = 'stacked',
   display = true,
   leading,
+  growSearch = false,
   className,
 }: CollectionBarProps) {
   const { t } = useTranslation()
@@ -82,7 +85,15 @@ export function CollectionBar({
       scId={`${scId}.search`}
       // In a header the row is shared with the panel's name and its way out, so the field is
       // what gives ground — a narrow search box still searches, a clipped one is unreachable.
-      className={layout === 'header' ? 'w-56 min-w-16 shrink' : inline ? 'w-56 shrink-0' : 'w-full'}
+      className={
+        growSearch
+          ? 'min-w-16 flex-1'
+          : layout === 'header'
+            ? 'w-56 min-w-16 shrink'
+            : inline
+              ? 'w-56 shrink-0'
+              : 'w-full'
+      }
       // The placeholder says it, but only until the field is typed in.
       hint={TIP_BOTTOM(t('collection.search'), undefined, t('collection.searchHint'))}
     />
