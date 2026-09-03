@@ -73,8 +73,10 @@ import {
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
 import { loadHeightmap } from './heightmap'
-import { createReliefSurface } from './reliefSurface'
+import { createReliefSurface, type ReliefSurface } from './reliefSurface'
 import { createReliefBuilder } from './reliefBuilder'
+import { createReliefSculptor, type ReliefSculptor } from './reliefSculptor'
+import type { PackedReliefChunk } from '@shared/domain/relief'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
 import { springArmRigsOf } from './springArmRigs'
@@ -234,6 +236,7 @@ import CsgWorker from '../csg/csg.worker?worker'
 import SkinWorker from '../character/skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
 import ReliefBuildWorker from './reliefBuild.worker?worker'
+import ReliefSculptWorker from './reliefSculpt.worker?worker'
 import { createRetarget, type Retarget, type RetargetFit } from './retarget'
 import {
   applyRig,
@@ -300,6 +303,8 @@ export type SceneRendererOptions = {
    */
   onSelect: (ids: readonly string[], mode: SelectionMode) => void
   onTransform: (moves: readonly NodeMove[]) => void
+  /** The chunks a relief stroke changed, ready to enter the document as one undoable command. */
+  onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   /**
    * The editor's own furniture — trihedron, camera bodies and frustums, light helpers, rails.
    * `false` draws none of it: a window that PLAYS a scene shows the game, and the tools it was
@@ -469,6 +474,9 @@ export type SceneRendererOptions = {
   bvh?: BvhBuilder
   /** And again, for the skinning weights a local rig is bound with. */
   skin?: SkinWeights
+  /** The live relief surface and worker port are injectable so their boundary is testable. */
+  relief?: ReliefSurface
+  createReliefSculptor?: () => ReliefSculptor
   /**
    * How far along binding a model's rig is, 0 to 1. Reported because it is the one operation of
    * this engine that can take a minute — and it is free, so nothing else warns the user it began.
@@ -879,12 +887,8 @@ export class SceneRenderer {
   private world: SceneWorld = DEFAULT_WORLD
   /** The document's own ground. Beside the nodes like the grid, and never one of them. */
   private readonly ground = createGroundPlane()
-  private readonly relief = createReliefSurface(this.viewport.scene, {
-    load: assetId => loadHeightmap(assetId, undefined, this.options.assetVersion?.(assetId)),
-    builder: createReliefBuilder(() => new ReliefBuildWorker()),
-    onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
-    onReady: () => this.redraw(),
-  })
+  private readonly relief: ReliefSurface
+  private readonly reliefSculptors = new Map<string, ReliefSculptor>()
   /** The sun the sky it names describes. A node of the scene, so it is born with the renderer. */
   private readonly sun: SkySun = createSkySun(this.viewport.scene)
   /** What the scene was last lit ON, so a pass that changes nothing costs nothing. */
@@ -1061,6 +1065,14 @@ export class SceneRenderer {
   private transparent = false
 
   constructor(private readonly options: SceneRendererOptions) {
+    this.relief =
+      options.relief ??
+      createReliefSurface(this.viewport.scene, {
+        load: assetId => loadHeightmap(assetId, undefined, this.options.assetVersion?.(assetId)),
+        builder: createReliefBuilder(() => new ReliefBuildWorker()),
+        onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
+        onReady: () => this.redraw(),
+      })
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.
@@ -1270,6 +1282,29 @@ export class SceneRenderer {
     this.regroupInstances()
     this.reportStats()
     this.redraw()
+  }
+
+  async raiseReliefDisk(
+    terrainId: string,
+    editId: string,
+    disk: { x: number; z: number; radius: number },
+    amount: number,
+  ): Promise<boolean> {
+    const source = this.relief.sculptSource(terrainId, editId)
+    if (!source) return false
+    const key = JSON.stringify([terrainId, editId])
+    let sculptor = this.reliefSculptors.get(key)
+    if (!sculptor) {
+      sculptor =
+        this.options.createReliefSculptor?.() ??
+        createReliefSculptor(() => new ReliefSculptWorker())
+      this.reliefSculptors.set(key, sculptor)
+    }
+    sculptor.note(source.sculpt)
+    const chunks = await sculptor.raiseDisk({ ...source, disk, amount })
+    if (!chunks) return false
+    this.options.onReliefSculpt?.(terrainId, editId, chunks)
+    return true
   }
 
   /**
@@ -3249,6 +3284,8 @@ export class SceneRenderer {
     this.bvh.dispose()
     this.skin.dispose()
     this.retarget.dispose()
+    for (const sculptor of this.reliefSculptors.values()) sculptor.dispose()
+    this.reliefSculptors.clear()
     this.clipSources.dispose()
     this.bundled.clear()
     this.iks.clear()

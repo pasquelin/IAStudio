@@ -25,6 +25,7 @@ import {
   type ReliefChunkLayout,
   type ReliefExtent,
   type ReliefRead,
+  type ReliefSculpt,
 } from '@shared/domain/relief'
 import type { ReliefLayer, SceneWorld, TerrainEditLayer } from '@shared/domain/scene'
 import { loadHeightmap } from './heightmap'
@@ -35,7 +36,15 @@ export type ReliefSurface = {
   object: Object3D
   sync: (world: SceneWorld, samples?: HeightmapSamples) => void
   meshOf: (terrainId: string, column: number, row: number) => Mesh | undefined
+  sculptSource: (terrainId: string, editId: string) => ReliefSculptSource | null
   dispose: () => void
+}
+
+export type ReliefSculptSource = {
+  samples: HeightmapSamples
+  extent: ReliefExtent
+  grain: number
+  sculpt: ReliefSculpt | undefined
 }
 
 export type ReliefSurfaceOptions = {
@@ -91,6 +100,13 @@ export function createReliefSurface(
     sync: (world, samples) => syncRelief(state, world, samples),
     meshOf: (terrainId, column, row) =>
       state.terrains.get(terrainId)?.meshes.get(keyOf(column, row)),
+    sculptSource: (terrainId, editId) => {
+      const held = state.terrains.get(terrainId)?.held
+      const edit = held?.edits.find(candidate => candidate.id === editId)
+      return held && edit
+        ? { samples: held.samples, extent: held.extent, grain: held.grain, sculpt: edit.sculpt }
+        : null
+    },
     dispose: () => disposeRelief(state),
   }
 }

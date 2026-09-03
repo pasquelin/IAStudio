@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { setTransform } from '@/engines/scene/commands'
+import { sculptRelief } from '@/engines/scene/reliefCommands'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { EMPTY_STATS, sameStats, type SceneStats } from '@/engines/scene/sceneStats'
 import { assetVersionOf } from '@/stores/assets'
@@ -28,6 +29,8 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
   return new SceneRenderer({
     onSelect: (ids, mode) => selectIn(documentId, ids, mode),
     onTransform: moves => recordTransform(documentId, moves),
+    onReliefSculpt: (terrainId, editId, chunks) =>
+      useScenes.getState().runCommand(documentId, sculptRelief(terrainId, editId, chunks)),
     onClips: (id, clips, lengths) =>
       useModelFiles.getState().report(documentId, id, clips, lengths),
     onRig: (id, rig) => useModelFiles.getState().reportRig(documentId, id, rig),
