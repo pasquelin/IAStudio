@@ -1,13 +1,14 @@
 import { Scene } from 'three'
 import { bench, describe } from 'vitest'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
-import { chunkCountAlong, chunkLayout } from '@shared/domain/relief'
+import { applyReliefSculpt, chunkCountAlong, chunkLayout } from '@shared/domain/relief'
 import {
   DEFAULT_RELIEF_ELEVATION,
   DEFAULT_RELIEF_ORIGIN,
   DEFAULT_RELIEF_SIZE,
   DEFAULT_WORLD,
   reliefLayer,
+  terrainEditLayer,
 } from '@shared/domain/scene'
 import type { ReliefGeometryData } from './reliefBuildMessage'
 import { createReliefSurface, reliefGeometryData } from './reliefSurface'
@@ -104,4 +105,27 @@ describe('copying samples for the worker and installing the geometry it built', 
       warmupIterations: 1,
     })
   }
+})
+
+describe('patching a sculpted relief on the UI thread', () => {
+  const samples = samplesOf(1024)
+  const layer = WORLD.layers[0]
+  if (!layer) throw new Error('missing relief layer')
+  const sculpt = applyReliefSculpt(samples, EXTENT, undefined, {
+    kind: 'raiseDisk',
+    disk: { x: 0, z: 0, radius: EXTENT.size.x / 32 },
+    amount: 0.1,
+  })
+  const sculpted = {
+    ...WORLD,
+    layers: [{ ...layer, edits: [terrainEditLayer({ sculpt })] }],
+  }
+  const surface = createReliefSurface(new Scene())
+  surface.sync(WORLD, samples)
+  let raised = false
+
+  bench('32-texel brush', () => {
+    surface.sync(raised ? WORLD : sculpted, samples)
+    raised = !raised
+  })
 })
