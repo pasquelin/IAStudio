@@ -30,6 +30,16 @@ describe('humanoid auto-rig backends', () => {
     ).toBe('local')
   })
 
+  it('refuses a mesh with no height to stand a body on, whichever fitter is asked', async () => {
+    const flat = {
+      bounds: { min: { x: -1, y: 0, z: -1 }, max: { x: 1, y: 0, z: 1 } },
+      points: SAMPLE.points,
+    }
+
+    expect(await fitHumanoidRig(flat, 'legacy', ADAPTIVE)).toBeNull()
+    expect(await fitHumanoidRig(flat, 'adaptive-geometric', ADAPTIVE)).toBeNull()
+  })
+
   it('returns rejected evidence without handing its rig to the caller', async () => {
     const rejected: AdaptiveRigFitter = {
       fit: async sample => ({

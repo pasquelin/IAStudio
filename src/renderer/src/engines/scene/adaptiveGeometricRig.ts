@@ -207,35 +207,14 @@ function robustBoundsOf(
   fallback: MeshSample['bounds'],
 ): MeshSample['bounds'] {
   if (points.length < MIN_POINTS) return fallback
+  // One pass per axis, read by both ends: mapping again for the second quantile copied thirty
+  // thousand points a second time for an answer the first copy already held.
+  const xs = points.map(point => point.x)
+  const ys = points.map(point => point.y)
+  const zs = points.map(point => point.z)
   return {
-    min: {
-      x: quantile(
-        points.map(point => point.x),
-        0.01,
-      ),
-      y: quantile(
-        points.map(point => point.y),
-        0.005,
-      ),
-      z: quantile(
-        points.map(point => point.z),
-        0.01,
-      ),
-    },
-    max: {
-      x: quantile(
-        points.map(point => point.x),
-        0.99,
-      ),
-      y: quantile(
-        points.map(point => point.y),
-        0.995,
-      ),
-      z: quantile(
-        points.map(point => point.z),
-        0.99,
-      ),
-    },
+    min: { x: quantile(xs, 0.01), y: quantile(ys, 0.005), z: quantile(zs, 0.01) },
+    max: { x: quantile(xs, 0.99), y: quantile(ys, 0.995), z: quantile(zs, 0.99) },
   }
 }
 
