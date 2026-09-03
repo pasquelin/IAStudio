@@ -9,6 +9,8 @@ import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { ROOT_MOTIONS } from '@shared/domain/scene'
 import { EASINGS } from '@shared/domain/animation'
+import { OPTIMIZATION_MODES } from '@/engines/scene/sceneState'
+import { OPTIMIZATION_WARNING_REASONS } from '@/engines/scene/worldAnalyzer'
 import { UI_ELEMENT_TYPES } from '@shared/domain/ui'
 import { UI_RESOLUTION_IDS } from '@shared/domain/uiResolution'
 import { UI_TEMPLATE_IDS } from '@shared/domain/uiTemplates'
@@ -72,6 +74,10 @@ function explained(prefix: string, values: readonly string[]): string[] {
  * `inspector.layerKind_text` where a word belongs.
  */
 const COMPOSED_KEYS: readonly string[] = [
+  // Every optimization mode a person can choose, and every reason a node is left out of one.
+  // Both are template literals, which `known-keys.i18n.test.ts` writes off as a blind spot.
+  ...OPTIMIZATION_MODES.map(mode => `optimization.modes.${mode}`),
+  ...OPTIMIZATION_WARNING_REASONS.map(reason => `optimization.warningReasons.${reason}`),
   // How a chain ended when it did not end by itself — composed from the turn's own field. Lost
   // from a bundle, the raw key lands where the one sentence saying a job was cut short belongs.
   'assistant.ending.halted',
