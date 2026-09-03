@@ -129,7 +129,7 @@ describe('what a held body asks the physics for', () => {
       components: [{ type: 'CharacterController', height: 1.8, radius: 0.3 }],
     })
 
-    const characters = createCharacters(possessions)
+    const characters = createCharacters(possessions, entity => entity.transform)
     expect(characters.intents(world, STEP_SECONDS)).toHaveLength(1)
 
     possessions.hold('body')
@@ -153,7 +153,7 @@ describe('a held body against the physics', () => {
       systems: [
         createPhysicsSystem({
           shapeOf: () => null,
-          characters: createCharacters(possessions),
+          characters: createCharacters(possessions, entity => entity.transform),
           possessions,
         }),
       ],

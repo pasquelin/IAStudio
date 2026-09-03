@@ -2,11 +2,14 @@
 
 import type { InputState, Pointer } from '../ports/inputPort'
 import type { CharacterMove, CharacterMoved, CharacterSettings } from '../ports/physicsPort'
-import { clamp, FULL_TURN } from '../numeric'
+import type { Component } from '@shared/domain/component'
+import type { ScenePlay } from '@shared/domain/scene'
+import { clamp, DEGREES, FULL_TURN, shortWay } from '../numeric'
 import { numberOf } from './componentFields'
 import { keysHeld } from './keysHeld'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
+import type { Transform } from '@shared/domain/transform'
 import type { Look } from './playView'
 import type { Possessions } from './possessions'
 import type { World } from './world'
@@ -19,6 +22,7 @@ const BACK = ['KeyS', 'ArrowDown']
 const LEFT = ['KeyA', 'ArrowLeft']
 const RIGHT = ['KeyD', 'ArrowRight']
 const JUMP = 'Space'
+const RUN = ['ShiftLeft', 'ShiftRight']
 
 /** Metres a second a fall stops getting faster at: past it a step tunnels through a thin floor. */
 const TERMINAL_FALL = 50
@@ -27,7 +31,7 @@ const TERMINAL_FALL = 50
 const LOOK_PER_PIXEL = 0.005
 
 /** A hair under straight up, where yaw and pitch would turn about the same axis. */
-const PITCH_LIMIT = Math.PI / 2 - 0.01
+export const PITCH_LIMIT = Math.PI / 2 - 0.01
 
 /**
  * Kept pressing into the floor while standing. Zero would let `snapToGround` lose a character
@@ -35,8 +39,33 @@ const PITCH_LIMIT = Math.PI / 2 - 0.01
  */
 const GROUNDED_PULL = -1
 
-/** What one character remembers between steps. Its pose belongs to the entity, not here. */
-type Walker = { velocityY: number; wantedY: number; grounded: boolean }
+/** Where a node hanging from another actually stands, which is the frame a heading is sent in. */
+export type Placed = (entity: Entity) => Transform
+
+/**
+ * What one character remembers between steps. Its pose belongs to the entity, not here.
+ * `airborne` and `asked` are SECONDS since the ground was left and since a jump was asked for.
+ */
+type Walker = {
+  velocityY: number
+  wantedY: number
+  grounded: boolean
+  paceX: number
+  paceZ: number
+  facing: number
+  airborne: number
+  asked: number
+}
+
+const FRESH_WALKER: Omit<Walker, 'facing'> = {
+  velocityY: 0,
+  wantedY: 0,
+  grounded: false,
+  paceX: 0,
+  paceZ: 0,
+  airborne: Infinity,
+  asked: Infinity,
+}
 
 export type Characters = {
   /**
@@ -69,7 +98,7 @@ export type Characters = {
  * 🛑 One look for the whole world: there is one pointer, so a second controller walks the same
  * heading.
  */
-export function createCharacters(possessions: Possessions): Characters {
+export function createCharacters(possessions: Possessions, worldOf: Placed): Characters {
   const walkers = new WeakMap<Entity, Walker>()
   const byBody = new Map<string, Walker>()
   // `pool` HOLDS the moves and never shrinks; `moves` is the list handed to the port.
@@ -104,6 +133,8 @@ export function createCharacters(possessions: Possessions): Characters {
       moves.length = 0
       byBody.clear()
       first = null
+      // One key, one answer: read per walker, this asked the same question of the same array again.
+      const jumped = world.input.pressed.includes(JUMP)
 
       for (const entity of world.entities.withComponent('CharacterController')) {
         const settings = componentOf(entity, 'CharacterController')
@@ -115,25 +146,30 @@ export function createCharacters(possessions: Possessions): Characters {
         // falling sinks through whatever carries it.
         if (possessions.holds(entity.id)) continue
 
-        const walker = walkers.get(entity) ?? { velocityY: 0, wantedY: 0, grounded: false }
-        walkers.set(entity, walker)
-
-        if (walker.grounded && world.input.pressed.includes(JUMP)) {
-          walker.velocityY = numberOf(settings, 'jumpSpeed', WALKER.jumpSpeed)
+        let walker = walkers.get(entity)
+        if (!walker) {
+          // 🛑 Seeded from the WORLD yaw the author put the body at: a heading is sent to the port
+          // in world, and a walker starting at zero snapped a turned body straight on frame one.
+          walker = { ...FRESH_WALKER, facing: worldOf(entity).rotation.y }
+          walkers.set(entity, walker)
         }
-        walker.velocityY = Math.max(walker.velocityY - world.play.gravity * dt, -TERMINAL_FALL)
-        walker.wantedY = walker.velocityY * dt
 
-        paceInto(pace, world.input, world.play.moveSpeed * dt, look.yaw)
+        fallInto(walker, settings, jumped, world.play.gravity, dt)
+
+        paceInto(pace, world.input, paceOf(settings, world.play, world.input), look.yaw)
+        const steered = pace.x !== 0 || pace.z !== 0
+        leanInto(walker, pace, rateOf(settings, walker, steered) * dt)
+
         let move = pool[moves.length]
         if (!move) {
-          move = { body: '', wanted: { x: 0, y: 0, z: 0 } }
+          move = { body: '', wanted: { x: 0, y: 0, z: 0 }, facing: null }
           pool.push(move)
         }
         move.body = entity.id
-        move.wanted.x = pace.x
+        move.wanted.x = walker.paceX * dt
         move.wanted.y = walker.wantedY
-        move.wanted.z = pace.z
+        move.wanted.z = walker.paceZ * dt
+        move.facing = facedTowards(walker, settings, pace, steered, dt)
         moves.push(move)
         byBody.set(entity.id, walker)
       }
@@ -180,14 +216,89 @@ export function createCharacters(possessions: Possessions): Characters {
 function paceInto(
   into: { x: number; z: number },
   input: InputState,
-  step: number,
+  speed: number,
   yaw: number,
 ): void {
   const ahead = keysHeld(input, FORWARD) - keysHeld(input, BACK)
   const side = keysHeld(input, RIGHT) - keysHeld(input, LEFT)
   const length = Math.hypot(ahead, side)
-  const walk = length === 0 ? 0 : step / length
+  const walk = length === 0 ? 0 : speed / length
 
   into.x = (-Math.sin(yaw) * ahead + Math.cos(yaw) * side) * walk
   into.z = (-Math.cos(yaw) * ahead - Math.sin(yaw) * side) * walk
+}
+
+/** Metres a second. 🛑 Zero is « what the SCENE says » for the walk and « no running » for the run. */
+function paceOf(settings: Component | null, play: ScenePlay, input: InputState): number {
+  const run = numberOf(settings, 'runSpeed', WALKER.runSpeed)
+  if (run > 0 && keysHeld(input, RUN) === 1) return run
+  return numberOf(settings, 'moveSpeed', WALKER.moveSpeed) || play.moveSpeed
+}
+
+/** The whole VECTOR, never each axis apart: a walker turning a corner would take it as two legs. */
+function leanInto(walker: Walker, wanted: { x: number; z: number }, step: number): void {
+  const gapX = wanted.x - walker.paceX
+  const gapZ = wanted.z - walker.paceZ
+  const gap = Math.sqrt(gapX * gapX + gapZ * gapZ)
+  if (step <= 0 || gap <= step) {
+    walker.paceX = wanted.x
+    walker.paceZ = wanted.z
+    return
+  }
+  walker.paceX += (gapX / gap) * step
+  walker.paceZ += (gapZ / gap) * step
+}
+
+/** How fast the pace is worked towards what the keys ask, which the air holds a walker back from. */
+function rateOf(settings: Component | null, walker: Walker, steered: boolean): number {
+  const rate = steered
+    ? numberOf(settings, 'acceleration', WALKER.acceleration)
+    : numberOf(settings, 'deceleration', WALKER.deceleration)
+  if (walker.grounded) return rate
+  return rate * numberOf(settings, 'airControl', WALKER.airControl)
+}
+
+/**
+ * Gravity, and the jump the two tolerances allow. Coyote and buffer are one tolerance read from
+ * both sides: a jump counts while the ground has only just gone, and an early press is kept.
+ */
+function fallInto(
+  walker: Walker,
+  settings: Component,
+  jumped: boolean,
+  gravity: number,
+  dt: number,
+): void {
+  walker.airborne = walker.grounded ? 0 : walker.airborne + dt
+  walker.asked = jumped ? 0 : walker.asked + dt
+  if (
+    walker.airborne <= numberOf(settings, 'coyoteTime', WALKER.coyoteTime) &&
+    walker.asked <= numberOf(settings, 'jumpBuffer', WALKER.jumpBuffer)
+  ) {
+    walker.velocityY = numberOf(settings, 'jumpSpeed', WALKER.jumpSpeed)
+    walker.airborne = Infinity
+    walker.asked = Infinity
+  }
+  walker.velocityY = Math.max(walker.velocityY - gravity * dt, -TERMINAL_FALL)
+  walker.wantedY = walker.velocityY * dt
+}
+
+/**
+ * The heading the body is sent to, or nothing when its author asked for no turn at all. Towards
+ * where it is ASKED to walk: a body slowing to a stop would keep turning on a heading nobody holds.
+ */
+function facedTowards(
+  walker: Walker,
+  settings: Component,
+  pace: { x: number; z: number },
+  steered: boolean,
+  dt: number,
+): number | null {
+  const turn = numberOf(settings, 'bodyTurnSpeed', WALKER.bodyTurnSpeed)
+  if (turn <= 0) return null
+  if (steered) {
+    const step = turn * DEGREES * dt
+    walker.facing += clamp(shortWay(walker.facing, Math.atan2(-pace.x, -pace.z)), -step, step)
+  }
+  return walker.facing
 }

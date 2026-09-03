@@ -47,6 +47,8 @@ import { MOUNTAIN_WORLD, mountainNodes } from './mountainLevel'
 import { presetPatch } from './environmentPresets'
 import { planeNodes } from './planeNodes'
 import {
+  aimedFrom,
+  armRest,
   cameraNode,
   groupNode,
   lightNode,
@@ -83,15 +85,28 @@ function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ
 }
 
 /**
- * A camera on an arm, wired to what it films. Named parts, so an author can read the pair in the
- * outliner and retune it — which is the whole of what makes an arm worth having.
+ * A camera on an arm, wired to what it films, and SEATED where the arm will put it — see
+ * `armRest`. Named parts, so an author can read the pair in the outliner and retune it.
  */
-function cameraRig(subject: string, over: Record<string, string | number> = {}): SceneNode {
+function cameraRig(
+  subject: SceneNode,
+  over: Record<string, string | number> = {},
+): readonly SceneNode[] {
   let arm = newComponent('SpringArm')
-  for (const [key, value] of Object.entries({ subject, camera: CAMERA_NAME, ...over })) {
+  for (const [key, value] of Object.entries({
+    subject: subject.name,
+    camera: CAMERA_NAME,
+    ...over,
+  })) {
     arm = withComponentField(arm, key, value)
   }
-  return { ...groupNode(transformAt(ORIGIN), 'Camera Rig'), components: [arm] }
+  // 🛑 The NODE's own pose, never the numbers it was built from: `carNodes` turns its body by
+  // `heading + π` and lifts it by the ride height.
+  const { pivot, seat } = armRest(subject.transform.position, subject.transform.rotation.y, arm)
+  return [
+    { ...groupNode(transformAt(ORIGIN), 'Camera Rig'), components: [arm] },
+    cameraNode(transformAt(seat, aimedFrom(seat, pivot))),
+  ]
 }
 
 const CAMERA_NAME = 'Camera'
@@ -481,25 +496,30 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // so a silhouette left on the pad would frame the car from a pair of feet.
   // 🛑 The arm aims down the CAR's own nose, not where the pointer looks: a car turning under a
   // camera the mouse alone aims reads as a car sliding sideways.
-  car: () => ({
-    nodes: [
-      ...circuitNodes(),
-      sun(2.4, { x: 60, y: 70, z: 40 }),
-      skyLight(1.3),
-      ...carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW),
-      aimedCamera(3, 10, 1, CIRCUIT_START.z),
-      cameraRig(CAR_NAME, { orientation: 'subject', length: 8, height: 2.4 }),
-    ],
-    world: {
-      ...presetPatch('outdoor'),
-      background: { kind: 'color', color: '#b6c6d8' },
-      // 🛑 The preset's own haze closes at 140 m and the circuit is 250 m across: the far side of
-      // the loop was solid grey, which is why its shape could not be read at a glance.
-      fog: { kind: 'linear', color: '#b6c6d8', near: 60, far: 420 },
-      ground: { ...DEFAULT_GROUND, visible: true, size: 400, color: '#5c6b4f' },
-    },
-    play: { ...WALKING, camera: 'thirdPerson', played: CAR_NAME },
-  }),
+  car: () => {
+    const machine = carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW)
+    const body = machine.find(node => node.name === CAR_NAME)
+    if (!body) throw new Error('the car template built no car')
+
+    return {
+      nodes: [
+        ...circuitNodes(),
+        sun(2.4, { x: 60, y: 70, z: 40 }),
+        skyLight(1.3),
+        ...machine,
+        ...cameraRig(body, { orientation: 'subject', length: 8, height: 2.4 }),
+      ],
+      world: {
+        ...presetPatch('outdoor'),
+        background: { kind: 'color', color: '#b6c6d8' },
+        // 🛑 The preset's own haze closes at 140 m and the circuit is 250 m across: the far side of
+        // the loop was solid grey, which is why its shape could not be read at a glance.
+        fog: { kind: 'linear', color: '#b6c6d8', near: 60, far: 420 },
+        ground: { ...DEFAULT_GROUND, visible: true, size: 400, color: '#5c6b4f' },
+      },
+      play: { ...WALKING, camera: 'thirdPerson', played: CAR_NAME },
+    }
+  },
 
   /*
    * Already in the air: a plane born on the ground is a plane whose first minute is a taxi, and

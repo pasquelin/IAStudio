@@ -53,11 +53,12 @@ const choiceField = (key: string, options: readonly string[]): ActionField => ({
 })
 
 /** A name, a list of names, or a list of points — what no number and no closed list can say. */
-const textField = (key: string): ActionField => ({
+const textField = (key: string, picks?: ActionField['picks']): ActionField => ({
   key,
   kind: 'text',
   labelKey: `game.fields.${key}`,
   required: true,
+  ...(picks === undefined ? {} : { picks }),
 })
 
 const flagField = (key: string): ActionField => ({
@@ -206,18 +207,28 @@ const SPRING_ARM: ComponentDescriptor = {
   descriptionKey: 'game.components.SpringArm.description',
   category: 'gameplay',
   fields: [
-    textField('subject'),
-    textField('camera'),
+    textField('subject', 'node'),
+    textField('camera', 'node'),
     choiceField('orientation', ['pointer', 'subject', 'fixed']),
     numberField('length', 0, 50),
     numberField('height', -10, 10),
     numberField('shoulder', -5, 5),
     flagField('collision'),
     numberField('probeRadius', 0, 2),
+    numberField('safetyMargin', 0, 1),
+    numberField('hysteresis', 0, 1),
     numberField('positionLag', 0, 2),
     numberField('rotationLag', 0, 2),
+    numberField('collisionInLag', 0, 2),
+    numberField('collisionOutLag', 0, 2),
+    numberField('pitchMin', -89, 89),
+    numberField('pitchMax', -89, 89),
+    choiceField('lookAt', ['pivot', 'subject']),
   ],
-  // Seconds, both lags, and zero is what an author writes for a camera welded to its subject.
+  // Seconds, the four lags, and zero is what an author writes for a camera welded to its subject.
+  // 🛑 Coming in is FASTER than going out, never instant: a snap read as a cut. What keeps the
+  // shot off the subject is `probeRadius` plus `safetyMargin` — measured 1,25 m against a 0,90 m
+  // pillar — and never a floor on the length, which would seat the camera INSIDE what it met.
   defaults: {
     subject: '',
     camera: '',
@@ -227,8 +238,15 @@ const SPRING_ARM: ComponentDescriptor = {
     shoulder: 0,
     collision: true,
     probeRadius: 0.2,
+    safetyMargin: 0.1,
+    hysteresis: 0.1,
     positionLag: 0.08,
     rotationLag: 0.05,
+    collisionInLag: 0.04,
+    collisionOutLag: 0.25,
+    pitchMin: -60,
+    pitchMax: 60,
+    lookAt: 'pivot',
   },
 }
 
@@ -283,12 +301,25 @@ const CHARACTER_CONTROLLER: ComponentDescriptor = {
   titleKey: 'game.components.CharacterController.title',
   descriptionKey: 'game.components.CharacterController.description',
   category: 'physics',
-  // The pace, the pull and the eye height are NOT here: they are the scene's, in `world.play`,
-  // so that a template meaning « first person, feet on the ground » says it once for the set.
+  // The pull and the eye height stay the scene's, in `world.play`. The PACE falls back instead, so
+  // that two characters in one scene can walk at two paces:
+  // 🛑 `moveSpeed` at zero is « the scene's » and `runSpeed` at zero is « no running » — never
+  // « standing still ». Both labels say so, because `main/mcp/tools.ts` publishes the label as the
+  // schema's description and a model reading `minimum: 0` would otherwise write it to freeze a walker.
+  // 🛑 `acceleration` and `deceleration` start at 0,1 and NOT at zero, which `Follow` already spends
+  // on « never moves »: one key cannot mean « instant » here and « frozen » there.
   fields: [
     numberField('height', 0.2, 10),
     numberField('radius', 0.05, 5),
+    numberField('moveSpeed', 0, 50),
+    numberField('runSpeed', 0, 50),
+    numberField('acceleration', 0.1, 200),
+    numberField('deceleration', 0.1, 200),
+    numberField('bodyTurnSpeed', 0, 1440),
     numberField('jumpSpeed', 0, 50),
+    numberField('airControl', 0, 1),
+    numberField('coyoteTime', 0, 1),
+    numberField('jumpBuffer', 0, 1),
     numberField('stepHeight', 0, 2),
     numberField('slopeLimit', 0, 89),
     numberField('snapDistance', 0, 2),
@@ -296,7 +327,15 @@ const CHARACTER_CONTROLLER: ComponentDescriptor = {
   defaults: {
     height: 1.8,
     radius: 0.3,
+    moveSpeed: 0,
+    runSpeed: 0,
+    acceleration: 40,
+    deceleration: 60,
+    bodyTurnSpeed: 0,
     jumpSpeed: 2.8,
+    airControl: 0.35,
+    coyoteTime: 0.12,
+    jumpBuffer: 0.12,
     stepHeight: 0.5,
     slopeLimit: 45,
     snapDistance: 0.5,

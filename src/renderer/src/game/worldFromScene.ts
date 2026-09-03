@@ -111,7 +111,7 @@ function systemsFor(
   const placedAt = (entity: Entity, own: Transform): Transform => hierarchy.worldOf(entity.id, own)
   const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
   const possessions = createPossessions()
-  const characters = createCharacters(possessions)
+  const characters = createCharacters(possessions, placed)
   const pilots = createPilots()
   // The module's own eye takes the shot, where the sweep would have handed it to whichever arm
   // it met first — a choice no outliner shows.

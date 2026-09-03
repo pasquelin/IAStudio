@@ -266,7 +266,7 @@ export const CHARACTER_SCENE: BenchScene = {
 }
 
 /** Small and steady: what the controller costs is not what a walk goes anywhere. */
-const WALK = [{ body: 'walker', wanted: { x: 0.05, y: -0.02, z: 0 } }]
+const WALK = [{ body: 'walker', wanted: { x: 0.05, y: -0.02, z: 0 }, facing: null }]
 
 export type BenchRun = {
   /** The filled port, for a bench that times one CALL rather than a whole frame. */

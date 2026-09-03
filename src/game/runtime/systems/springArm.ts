@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 
+import type { Component } from '@shared/domain/component'
 import type { Transform, Vector3 } from '@shared/domain/transform'
-import { lerpAngle } from '../../numeric'
+import { clamp, DEGREES, lerpAngle } from '../../numeric'
 import { restingAxes } from '../../physics/quaternion'
-import type { Characters } from '../characters'
+import { PITCH_LIMIT, type Characters } from '../characters'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { flagOf, numberOf, textOf } from '../componentFields'
 import { copyAxes, componentOf, restingTransform, type Entity } from '../entity'
@@ -31,8 +32,11 @@ export type SpringArmOptions = {
   filmable: (entity: Entity) => boolean
 }
 
-/** What one arm remembers between frames: where it had got to, so it can lag behind. */
-type Held = { look: Look; at: Vector3 }
+/**
+ * What one arm remembers between frames. `aim` is the share the probe leaves it once the
+ * hysteresis has had its say, `free` the share actually played, which crawls back up to `aim`.
+ */
+type Held = { look: Look; at: Vector3; aim: number; free: number }
 
 /**
  * A camera on an arm, the way Unreal hangs one: it writes the camera NODE, so the outliner shows
@@ -83,18 +87,23 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
         if (!subject || !camera || camera === subject) continue
 
         const anchor = worldOf(subject, poseAt(subject, alpha, DRAWN))
-        const wanted = aimedAt(textOf(settings, 'orientation', ARM.orientation), anchor, entity)
+        const orientation = textOf(settings, 'orientation', ARM.orientation)
+        const wanted = aimedAt(orientation, anchor, entity)
 
         let kept = held.get(entity)
         // A first frame snaps: there is nowhere to have lagged from, so no seconds to lag over.
         const over = kept ? dt : 0
         if (!kept) {
-          kept = { look: { yaw: 0, pitch: 0 }, at: { x: 0, y: 0, z: 0 } }
+          kept = { look: { yaw: 0, pitch: 0 }, at: { x: 0, y: 0, z: 0 }, aim: 1, free: 1 }
           held.set(entity, kept)
         }
         const turn = approach(numberOf(settings, 'rotationLag', ARM.rotationLag), over)
         kept.look.yaw = lerpAngle(kept.look.yaw, wanted.yaw, turn)
-        kept.look.pitch += (wanted.pitch - kept.look.pitch) * turn
+        // 🛑 The POINTER's look alone, and bounded here rather than on `wanted`, which every arm
+        // shares: an authored node is where its author put it, and clamping `fixed` would re-aim a
+        // top-down shot saved before these fields existed.
+        const asked = orientation === 'pointer' ? tipped(settings, wanted.pitch) : wanted.pitch
+        kept.look.pitch += (asked - kept.look.pitch) * turn
 
         // The pivot: the anchor lifted to the height asked for, and pushed off the centre line.
         aheadOf(kept.look, AHEAD)
@@ -118,22 +127,48 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
         if (flagOf(settings, 'collision', ARM.collision)) {
           IGNORED[0] = subject.id
           IGNORED[1] = camera.id
-          const free = world.ports.physics.cast(
+          const dx = PLACED.x - PIVOT.x
+          const dy = PLACED.y - PIVOT.y
+          const dz = PLACED.z - PIVOT.z
+          const reach = Math.sqrt(dx * dx + dy * dy + dz * dz)
+          const met = world.ports.physics.cast(
             PIVOT,
             PLACED,
             numberOf(settings, 'probeRadius', ARM.probeRadius),
             IGNORED,
           )
-          if (free !== null) {
-            PLACED.x = PIVOT.x + (PLACED.x - PIVOT.x) * free
-            PLACED.y = PIVOT.y + (PLACED.y - PIVOT.y) * free
-            PLACED.z = PIVOT.z + (PLACED.z - PIVOT.z) * free
+          const share = shortened(met, numberOf(settings, 'safetyMargin', ARM.safetyMargin), reach)
+
+          // Going out has to clear the hysteresis before it is even aimed at, or an obstacle
+          // sitting right on the edge flickers free and blocked.
+          // 🛑 `share >= 1` on its own line: an arm shorter than its own hysteresis could never
+          // clear the deadband in metres, and stayed pinned for the rest of the session.
+          if (
+            share < kept.aim ||
+            share >= 1 ||
+            (share - kept.aim) * reach > numberOf(settings, 'hysteresis', ARM.hysteresis)
+          ) {
+            kept.aim = share
           }
+          // 🛑 Faster IN than out, and never instant either way: a snap read as a cut. The guard
+          // spares the read and the exponential, not the addition, which would be a plain zero.
+          if (kept.free !== kept.aim) {
+            const lag =
+              kept.aim < kept.free
+                ? numberOf(settings, 'collisionInLag', ARM.collisionInLag)
+                : numberOf(settings, 'collisionOutLag', ARM.collisionOutLag)
+            kept.free += (kept.aim - kept.free) * approach(lag, over)
+          }
+
+          PLACED.x = PIVOT.x + dx * kept.free
+          PLACED.y = PIVOT.y + dy * kept.free
+          PLACED.z = PIVOT.z + dz * kept.free
         }
 
-        BACK.x = PIVOT.x - PLACED.x
-        BACK.y = PIVOT.y - PLACED.y
-        BACK.z = PIVOT.z - PLACED.z
+        const aimed = textOf(settings, 'lookAt', ARM.lookAt) === 'subject' ? anchor.position : PIVOT
+        BACK.x = aimed.x - PLACED.x
+        BACK.y = aimed.y - PLACED.y
+        BACK.z = aimed.z - PLACED.z
         // 🛑 The look itself when the camera sits ON the pivot — a probe that left no room, or an
         // arm of no length. `turnTowards` leaves a rotation alone for a direction of nothing, and
         // the camera would keep the one the frame before wrote.
@@ -153,6 +188,30 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
 function approach(lag: number, dt: number): number {
   if (lag <= 0 || dt <= 0) return 1
   return 1 - Math.exp(-dt / lag)
+}
+
+/** The margin is METRES and the probe answers a fraction: it means nothing without the reach. */
+function shortened(met: number | null, margin: number, reach: number): number {
+  if (met === null || reach <= 0) return 1
+  return clamp(met - margin / reach, 0, 1)
+}
+
+/**
+ * The pitch an arm is allowed, in the degrees an author reads. Held inside `PITCH_LIMIT` as well:
+ * `numberOf` does not enforce the field's bounds, and a hand-written 120 would tip past vertical.
+ */
+function tipped(settings: Component, pitch: number): number {
+  const low = clamp(
+    numberOf(settings, 'pitchMin', ARM.pitchMin) * DEGREES,
+    -PITCH_LIMIT,
+    PITCH_LIMIT,
+  )
+  const high = clamp(
+    numberOf(settings, 'pitchMax', ARM.pitchMax) * DEGREES,
+    -PITCH_LIMIT,
+    PITCH_LIMIT,
+  )
+  return clamp(pitch, Math.min(low, high), Math.max(low, high))
 }
 
 // Rewritten in place: an arm is worked out once a frame and allocates nothing doing it.

@@ -89,7 +89,11 @@ export type PhysicsContact = {
   sensed: boolean
 }
 
-export type CharacterMove = { body: string; wanted: Vector3 }
+/**
+ * 🛑 `facing` is a yaw in radians, and `null` means « leave the body turned as it is » — a walker
+ * whose author asked for no turn speed keeps the heading the scene put it at.
+ */
+export type CharacterMove = { body: string; wanted: Vector3; facing: number | null }
 
 export type CharacterMoved = { body: string; moved: Vector3; grounded: boolean }
 

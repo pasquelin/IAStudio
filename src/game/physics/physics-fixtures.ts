@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import type { Vector3 } from '@shared/domain/transform'
+import { IDENTITY_TRANSFORM, type Transform, type Vector3 } from '@shared/domain/transform'
 import type {
   BodyDescriptor,
   BodyForce,
@@ -12,6 +12,33 @@ import type {
   PhysicsPort,
   VehicleDrive,
 } from '../ports/physicsPort'
+
+/**
+ * A body at rest where it is put. 🛑 Its axes are its OWN: spread from `IDENTITY_TRANSFORM`, a
+ * case writing `transform.rotation.y` would turn the identity every later case reads.
+ */
+export const restingAt = (x: number, y: number, z: number): Transform => ({
+  position: { x, y, z },
+  rotation: { ...IDENTITY_TRANSFORM.rotation },
+  scale: { ...IDENTITY_TRANSFORM.scale },
+})
+
+/** A body at the defaults every suite writes out: only its name, its shape and its kind differ. */
+export const describedBody = (
+  over: Partial<BodyDescriptor> & Pick<BodyDescriptor, 'body' | 'shape'>,
+): BodyDescriptor => ({
+  kind: 'dynamic',
+  transform: restingAt(0, 0, 0),
+  friction: 0.6,
+  restitution: 0,
+  mass: 0,
+  gravityScale: 1,
+  lockRotation: false,
+  sensor: false,
+  character: null,
+  vehicle: null,
+  ...over,
+})
 
 export type NotedPhysics = PhysicsPort & {
   added: BodyDescriptor[]

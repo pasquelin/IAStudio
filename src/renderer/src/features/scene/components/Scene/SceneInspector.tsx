@@ -173,7 +173,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           <AttachSection node={node} documentId={documentId} edit={edit} />
           {/* The anchor alone, unlike the sections above: a component carries values of its own,
               and writing one onto every selected object would overwrite what each was given. */}
-          <ComponentsSection node={node} edit={edit} />
+          <ComponentsSection node={node} nodes={nodes} edit={edit} />
         </>
       )}
 

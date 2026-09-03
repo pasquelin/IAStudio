@@ -3,6 +3,9 @@ import { DEFAULT_CHECKER_TEXTURE } from '@shared/domain/checkerTexture'
 import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
+import { textOf } from '@game/runtime/componentFields'
+import { createHierarchy } from '@/game/hierarchy'
+import { aimedFrom, armRest } from './nodeFactory'
 import { isPlayerModule, playerPartsOf } from './playerModule'
 import { pitchTowards, sceneFromTemplate } from './sceneTemplates'
 import { subtreesOf, type SceneNode } from './sceneState'
@@ -28,6 +31,46 @@ describe('sceneFromTemplate', () => {
 
       expect({ id, missing: wanted.filter(name => !names.has(name)) }).toEqual({ id, missing: [] })
     }
+  })
+
+  /**
+   * 🛑 A template poses its camera by hand while its arm names the numbers again, and the two
+   * drifted: the circuit opened 11,56 m off and backwards, the module 21,8° off in PITCH — which
+   * is why the rotation is held here too, and not the seat alone.
+   */
+  it('seats and aims the camera of every armed template where the arm will put it', () => {
+    const seated: Record<string, unknown> = {}
+
+    for (const id of SCENE_TEMPLATE_IDS) {
+      const nodes = sceneFromTemplate(id).nodes
+      const byId = new Map(nodes.map(node => [node.id, node]))
+      const byName = new Map(nodes.map(node => [node.name, node]))
+      const hierarchy = createHierarchy(byId, () => null)
+      const worldOf = (node: SceneNode) => hierarchy.worldOf(node.id, node.transform)
+
+      for (const node of nodes) {
+        const arm = node.components?.find(one => one.type === 'SpringArm')
+        if (!arm) continue
+
+        const subject = byName.get(textOf(arm, 'subject', ''))
+        const camera = byName.get(textOf(arm, 'camera', ''))
+        if (!subject || !camera) {
+          seated[id] = 'unresolved'
+          continue
+        }
+
+        const stands = worldOf(subject)
+        const { pivot, seat } = armRest(stands.position, stands.rotation.y, arm)
+        const at = worldOf(camera)
+        const turned = aimedFrom(seat, pivot)
+        seated[id] =
+          Math.hypot(at.position.x - seat.x, at.position.y - seat.y, at.position.z - seat.z) <
+            0.001 && Math.abs(at.rotation.x - turned.x) < 0.001
+      }
+    }
+
+    // The keys ARE the coverage: a template that stops being checked shows up as a missing one.
+    expect(seated).toEqual({ thirdPerson: true, car: true })
   })
 
   it('opens every template on a lit scene, so none of them looks like a broken viewport', () => {

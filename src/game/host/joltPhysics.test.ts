@@ -1,33 +1,12 @@
 // SPDX-License-Identifier: MIT
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { BodyDescriptor, PhysicsPort, VehicleSettings } from '../ports/physicsPort'
 import type { ColliderShape } from '../physics/shape'
+import { describedBody as body, restingAt as at } from '../physics/physics-fixtures'
 import { joltFreeBytes, loadJoltPhysics } from './joltPhysics'
 
 const STEP = 1 / 60
-
-const at = (x: number, y: number, z: number): Transform => ({
-  ...IDENTITY_TRANSFORM,
-  position: { x, y, z },
-})
-
-const body = (
-  over: Partial<BodyDescriptor> & Pick<BodyDescriptor, 'body' | 'shape'>,
-): BodyDescriptor => ({
-  kind: 'dynamic',
-  transform: IDENTITY_TRANSFORM,
-  friction: 0.6,
-  restitution: 0,
-  mass: 0,
-  gravityScale: 1,
-  lockRotation: false,
-  sensor: false,
-  character: null,
-  vehicle: null,
-  ...over,
-})
 
 const FLOOR: ColliderShape = { kind: 'cuboid', hx: 20, hy: 0.5, hz: 20 }
 
@@ -173,7 +152,7 @@ describe('the physics as Jolt fills it', () => {
     ])
 
     for (let step = 0; step < 300; step++) {
-      port.moveCharacters([{ body: 'walker', wanted: { x: 0, y: -0.05, z: -0.05 } }])
+      port.moveCharacters([{ body: 'walker', wanted: { x: 0, y: -0.05, z: -0.05 }, facing: null }])
       port.step(STEP)
     }
 
@@ -302,7 +281,9 @@ describe('the physics as Jolt fills it', () => {
     // the constant press into the floor `GROUNDED_PULL` holds a standing character at. Two seconds,
     // which is the flight and a stride onto the landing — a longer walk falls off the far end.
     for (let step = 0; step < 120; step++) {
-      port.moveCharacters([{ body: 'walker', wanted: { x: WALK_PACE, y: GROUND_PRESS, z: 0 } }])
+      port.moveCharacters([
+        { body: 'walker', wanted: { x: WALK_PACE, y: GROUND_PRESS, z: 0 }, facing: null },
+      ])
       port.step(STEP)
     }
 
@@ -333,8 +314,8 @@ describe('the physics as Jolt fills it', () => {
 
     port.step(STEP)
     const moved = port.moveCharacters([
-      { body: 'walker', wanted: { x: 0, y: -0.02, z: 0 } },
-      { body: 'flyer', wanted: { x: 0, y: -0.02, z: 0 } },
+      { body: 'walker', wanted: { x: 0, y: -0.02, z: 0 }, facing: null },
+      { body: 'flyer', wanted: { x: 0, y: -0.02, z: 0 }, facing: null },
     ])
 
     expect(moved.find(one => one.body === 'walker')?.grounded).toBe(true)
@@ -520,7 +501,7 @@ describe('the physics as Jolt fills it', () => {
           rotation: { x: 0, y: 0, z: 0, w: 1 },
         },
       ])
-      port.moveCharacters([{ body: 'walker', wanted: { x: 0.01, y: -0.02, z: 0 } }])
+      port.moveCharacters([{ body: 'walker', wanted: { x: 0.01, y: -0.02, z: 0 }, facing: null }])
       port.step(STEP)
       port.poses()
       port.contacts()

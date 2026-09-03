@@ -76,7 +76,9 @@ describe('the court stair of the set a character template opens on', () => {
     ])
 
     for (let step = 0; step < 240; step++) {
-      port.moveCharacters([{ body: 'walker', wanted: { x: 4 / 60, y: -1 / 60, z: 0 } }])
+      port.moveCharacters([
+        { body: 'walker', wanted: { x: 4 / 60, y: -1 / 60, z: 0 }, facing: null },
+      ])
       port.step(STEP)
     }
 
