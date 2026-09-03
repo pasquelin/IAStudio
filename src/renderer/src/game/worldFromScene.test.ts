@@ -40,6 +40,25 @@ describe('the edit state, translated into something that runs', () => {
     expect([...world.entities.withComponent('Movement')].map(one => one.id)).toEqual(['a'])
   })
 
+  it('restores every baked source as a logical runtime entity', () => {
+    const baked = {
+      ...meshNode('baked'),
+      instances: [
+        { sourceId: 'tree-a', name: 'Tree A', transform: IDENTITY_TRANSFORM },
+        { sourceId: 'tree-b', name: 'Tree B', transform: IDENTITY_TRANSFORM },
+      ],
+    }
+    const world = worldFromScene('doc-1', { ...EMPTY_SCENE, nodes: [baked] }, ports())
+
+    expect([...world.entities.all()].map(entity => entity.id)).toEqual([
+      'baked',
+      'tree-a',
+      'tree-b',
+    ])
+    expect(world.entities.get('tree-a')?.name).toBe('Tree A')
+    expect(world.entities.get('tree-b')?.name).toBe('Tree B')
+  })
+
   /**
    * 🛑 The whole safety of Play Mode. A world writing positions in place would edit the scene the
    * user is editing, and STOP would have something to restore — which is exactly what it must not.

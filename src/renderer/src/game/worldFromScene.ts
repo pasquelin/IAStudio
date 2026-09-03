@@ -32,6 +32,7 @@ import { colliderFromNode } from './colliderFromNode'
 import { colliderFromRelief } from './colliderFromRelief'
 import { createHierarchy } from './hierarchy'
 import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
+import { bakedRuntimeNodes } from '@/engines/scene/bakedRuntimeNodes'
 
 /**
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
@@ -64,7 +65,10 @@ export function worldFromScene(
   // A module's arm reads the TREE rather than its two written names. It rewrites the STATE where
   // `filmable` and the seat stay closure arguments: `springArm` reads its two fields off the
   // ENTITY, so what the tree says has to be in the components an entity is built from.
-  const state: SceneState = { ...given, nodes: withBoundPlayerArm(given.nodes) }
+  const state: SceneState = {
+    ...given,
+    nodes: bakedRuntimeNodes(withBoundPlayerArm(given.nodes)),
+  }
   const told: ScriptSystemOptions = {
     modules: scripts.modules ?? [],
     // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes

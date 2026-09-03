@@ -71,6 +71,23 @@ describe('what draws a running game inside the studio', () => {
 
     expect(apply).not.toHaveBeenCalled()
   })
+
+  it('redraws the baked slot addressed by its source identity', () => {
+    const baked = {
+      ...meshNode('baked'),
+      instances: [
+        { sourceId: 'first', name: 'First', transform: IDENTITY_TRANSFORM },
+        { sourceId: 'second', name: 'Second', transform: IDENTITY_TRANSFORM },
+      ],
+    }
+    const { apply, render } = drawing({ ...EMPTY_SCENE, nodes: [baked] })
+
+    render.place([{ entity: 'second', transform: raised }])
+
+    const drawn: SceneState = apply.mock.calls[0]?.[0]
+    const node = drawn.nodes[0]
+    expect(node?.type === 'mesh' ? node.instances?.[1]?.transform : null).toEqual(raised)
+  })
 })
 
 /**

@@ -30,7 +30,7 @@ export function colliderFromNode(node: SceneNode): NodeCollider | null {
   const scale = node.transform.scale
 
   if (node.type === 'carved') return carvedCollider(node.carved, scale, said)
-  if (node.type === 'mesh') return meshCollider(node.geometry, scale, said)
+  if (node.type === 'mesh' && !node.instances) return meshCollider(node.geometry, scale, said)
   return null
 }
 

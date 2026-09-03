@@ -4,6 +4,7 @@ import { Dialog } from '@/features/shell/components/Dialog'
 import { WindowButton } from '@/components/WindowButton'
 import { fieldHandle } from '@/components/scHandle'
 import { setNodesOptimization } from '@/engines/scene/commands'
+import { bakeOptimization } from '@/engines/scene/bakeOptimization'
 import type { OptimizationMode, SceneNode } from '@/engines/scene/sceneState'
 import type { OptimizationPlan, OptimizationWarning } from '@/engines/scene/worldAnalyzer'
 import { formatBytes, formatDecimal } from '@/helpers/format'
@@ -57,6 +58,10 @@ export function SceneOptimizationDialogBody({
     }
     close()
   }
+  const bake = (): void => {
+    useScenes.getState().runCommand(documentId, bakeOptimization(target))
+    close()
+  }
   return (
     <Dialog
       title={t('optimization.title')}
@@ -67,6 +72,14 @@ export function SceneOptimizationDialogBody({
           </WindowButton>
           <WindowButton size="dialog" disabled={mode === MIXED_MODE} onClick={apply}>
             {t('optimization.optimize')}
+          </WindowButton>
+          <WindowButton
+            size="dialog"
+            variant="secondary"
+            disabled={plan.bakeCandidates.length === 0}
+            onClick={bake}
+          >
+            {t('optimization.bake')}
           </WindowButton>
         </>
       }

@@ -171,6 +171,7 @@ export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
     node.type === 'mesh' &&
     previous.geometry === node.geometry &&
     previous.material === node.material &&
+    previous.instances === node.instances &&
     previous.visible === node.visible &&
     previous.parentId === node.parentId &&
     previous.optimization === node.optimization &&

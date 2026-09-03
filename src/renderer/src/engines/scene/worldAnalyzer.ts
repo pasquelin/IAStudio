@@ -19,6 +19,7 @@ import { isInstanceable } from './instanceableModel'
 import { statsOf, textureBytesOf, texturesOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
 import { batchKeyOf } from './batching'
+import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
 
 export type OptimizationClassification =
   'STATIC' | 'DYNAMIC' | 'SKINNED' | 'ANIMATED' | 'INSTANCABLE' | 'UNSAFE'
@@ -58,6 +59,7 @@ export type OptimizationImpact = {
 export type OptimizationPlan = {
   classifications: readonly ClassifiedObject[]
   instances: readonly InstanceCandidate[]
+  bakeCandidates: readonly BakeCandidate[]
   batches: readonly BatchCandidate[]
   warnings: readonly OptimizationWarning[]
   measured: OptimizationMetrics
@@ -124,20 +126,24 @@ export function analyzeOptimization(
 
     for (const mesh of shown) {
       if (Array.isArray(mesh.material)) continue
-      if (!excluded.has(node.id))
+      if (!excluded.has(node.id)) {
         collectCandidate(candidateGroups, keyOf(node, mesh), node, 'instance')
+      }
       if (!excluded.has(node.id)) collectCandidate(batchGroups, batchKey(node, mesh), node, 'batch')
     }
   }
 
-  const instances = [...candidateGroups]
-    .filter(([, group]) => group.forced || group.meshes >= policy.minInstancesPerGroup)
-    .map(([key, group]) => ({
-      key,
-      sourceIds: [...group.ids].sort(byCodeUnit),
-      meshCount: group.meshes,
-    }))
+  const allInstanceCandidates = [...candidateGroups].map(([key, group]) => ({
+    key,
+    sourceIds: [...group.ids].sort(byCodeUnit),
+    meshCount: group.meshes,
+    forced: group.forced,
+  }))
+  const instances = allInstanceCandidates
+    .filter(group => group.forced || group.meshCount >= policy.minInstancesPerGroup)
+    .map(group => ({ key: group.key, sourceIds: group.sourceIds, meshCount: group.meshCount }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
+  const bakeCandidates = bakeCandidatesOf(state.nodes, runtimeNodes, animated)
   const batches = [...batchGroups]
     .filter(([, group]) => group.forced || group.meshes >= 2)
     .map(([key, group]) => ({
@@ -154,6 +160,7 @@ export function analyzeOptimization(
   return {
     classifications,
     instances,
+    bakeCandidates,
     batches,
     warnings,
     measured: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BatchedMesh, InstancedMesh, Mesh } from 'three'
+import { BatchedMesh, InstancedMesh, Matrix4, Mesh } from 'three'
 import type { MeshStandardMaterial } from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
@@ -109,6 +109,36 @@ describe('a scene as a game draws it', () => {
     expect(
       built.scene.children.some(child => nodes.some(node => built.byEntity.get(node.id) === child)),
     ).toBe(false)
+  })
+
+  it('draws a baked authoring group as one InstancedMesh', async () => {
+    const base = meshNode(BOX, { name: 'Baked crates' })
+    if (base.type !== 'mesh') throw new Error('expected a mesh fixture')
+    const node: SceneNode = {
+      ...base,
+      optimization: { mode: 'exclude' },
+      instances: [
+        { sourceId: 'first', name: 'First', transform: IDENTITY_TRANSFORM },
+        {
+          sourceId: 'second',
+          name: 'Second',
+          transform: { ...IDENTITY_TRANSFORM, position: { x: 3, y: 0, z: 0 } },
+        },
+      ],
+    }
+    const built = await buildGameScene(scene([node]), NOTHING)
+    const rendered = built.byEntity.get(node.id)
+
+    expect(rendered).toBeInstanceOf(InstancedMesh)
+    expect(rendered instanceof InstancedMesh ? rendered.count : 0).toBe(2)
+    expect(built.byEntity.get('first')).toBe(rendered)
+    built.place('second', {
+      ...IDENTITY_TRANSFORM,
+      position: { x: 7, y: 1, z: -2 },
+    })
+    const matrix = new Matrix4()
+    if (rendered instanceof InstancedMesh) rendered.getMatrixAt(1, matrix)
+    expect(matrix.elements.slice(12, 15)).toEqual([7, 1, -2])
   })
 
   /** A game has no picture for a texture the project has lost, and draws the shape all the same. */

@@ -1,5 +1,6 @@
 import {
   Color,
+  InstancedMesh,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -11,6 +12,7 @@ import {
 } from 'three'
 import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
+import type { Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
 import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import { createGeometryCache } from '@/engines/scene/geometryCache'
@@ -23,6 +25,7 @@ import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
 import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
+import { bakedInstancesOf } from '@/engines/scene/bakedInstances'
 
 /**
  * A scene as three.js draws it in a GAME — no gizmo, no helper, no selection, no grid.
@@ -36,6 +39,7 @@ export type GameScene = {
   world: SceneWorld
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
+  place: (entityId: string, transform: Transform) => void
   dispose: () => void
 }
 
@@ -55,6 +59,7 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
   const carve = state.nodes.some(node => node.type === 'carved') ? await carver() : uncutGeometry
   const scene = new Scene()
   const byEntity = new Map<string, Object3D>()
+  const placements = new Map<string, (transform: Transform) => void>()
   const geometries = createGeometryCache()
   // The PROMISE, not the texture: two nodes wearing one picture must decode it once.
   const textures = new Map<string, Promise<Texture>>()
@@ -98,6 +103,20 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     object.visible = node.visible
     applyTransform(object, node.transform)
     byEntity.set(node.id, object)
+    placements.set(node.id, transform => applyTransform(object, transform))
+    if (node.type === 'mesh' && node.instances && object instanceof InstancedMesh) {
+      const placement = new Object3D()
+      for (const [slot, instance] of node.instances.entries()) {
+        byEntity.set(instance.sourceId, object)
+        placements.set(instance.sourceId, transform => {
+          applyTransform(placement, transform)
+          placement.updateMatrix()
+          object.setMatrixAt(slot, placement.matrix)
+          object.instanceMatrix.needsUpdate = true
+          object.computeBoundingSphere()
+        })
+      }
+    }
   }
 
   // Parents second: a child may be declared before the group it hangs from.
@@ -133,6 +152,7 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     scene,
     world: state.world,
     byEntity,
+    place: (entityId, transform) => placements.get(entityId)?.(transform),
     dispose: () => {
       instances.dispose()
       ground.dispose()
@@ -165,10 +185,11 @@ function objectOf(
   carve: Carve,
 ): Object3D | null {
   if (node.type === 'mesh') {
-    const mesh = new Mesh(
-      acquire(node.geometry, node.material.tilesPerMetre),
-      materialOf(node.material, dress),
-    )
+    const geometry = acquire(node.geometry, node.material.tilesPerMetre)
+    const material = materialOf(node.material, dress)
+    const mesh = node.instances
+      ? bakedInstancesOf(geometry, material, node.instances)
+      : new Mesh(geometry, material)
     mesh.castShadow = node.castShadow
     mesh.receiveShadow = node.receiveShadow
     return mesh

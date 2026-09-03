@@ -36,6 +36,7 @@ export function createStudioRender(
   const shadow = new Map<string, SceneNode>()
   const watched: CameraView = { position: NOWHERE, target: NOWHERE }
   let byId = new Map<string, SceneNode>()
+  let bakedById = new Map<string, string>()
   let source: SceneState | null = null
   let veiled = 0
 
@@ -52,6 +53,13 @@ export function createStudioRender(
         // there, since nothing moves to trigger a redraw.
         source = state
         byId = new Map(state.nodes.map(node => [node.id, node]))
+        bakedById = new Map(
+          state.nodes.flatMap(node =>
+            node.type === 'mesh' && node.instances
+              ? node.instances.map(instance => [instance.sourceId, node.id])
+              : [],
+          ),
+        )
         for (const [id, held] of shadow) {
           const fresh = byId.get(id)
           if (fresh) shadow.set(id, { ...fresh, transform: held.transform })
@@ -64,8 +72,26 @@ export function createStudioRender(
         const placement = placements[index]
         if (!placement) continue
 
-        const node = byId.get(placement.entity)
+        const bakedId = bakedById.get(placement.entity)
+        const node = byId.get(bakedId ?? placement.entity)
         if (!node) continue
+
+        if (bakedId && node.type === 'mesh' && node.instances) {
+          const shown = shadow.get(bakedId) ?? node
+          if (shown.type !== 'mesh' || !shown.instances) continue
+          const instance = shown.instances.find(one => one.sourceId === placement.entity)
+          if (!instance || sameTransform(instance.transform, placement.transform)) continue
+          shadow.set(bakedId, {
+            ...shown,
+            instances: shown.instances.map(one =>
+              one.sourceId === placement.entity
+                ? { ...one, transform: copyTransform(placement.transform) }
+                : one,
+            ),
+          })
+          changed = true
+          continue
+        }
 
         const shown = shadow.get(placement.entity) ?? node
         if (sameTransform(shown.transform, placement.transform)) continue

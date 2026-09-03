@@ -13,7 +13,6 @@ import { clamp } from '@shared/numeric'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
-import { applyTransform } from '@/engines/scene/pivot'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { buildGameScene, type GameScene } from './gameScene'
 
@@ -65,10 +64,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
 
     place: (placements: readonly EntityPlacement[]) => {
       for (const placement of placements) {
-        const object = held?.byEntity.get(placement.entity)
-        if (!object) continue
-
-        applyTransform(object, placement.transform)
+        held?.place(placement.entity, placement.transform)
       }
     },
 

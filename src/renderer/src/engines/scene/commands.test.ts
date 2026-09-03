@@ -54,6 +54,7 @@ import {
   EMPTY_SCENE,
   IDENTITY_TRANSFORM,
   nodeById,
+  type SceneNode,
   type SceneState,
 } from './sceneState'
 import type { EnvironmentRef, GeometryDescriptor, Transform } from '@shared/domain/scene'
@@ -768,6 +769,16 @@ describe('copiesOf', () => {
     const [copy] = copiesOf([dressed], [dressed])
 
     expect(copy).toMatchObject({ name: 'Socle', visible: false, type: 'mesh' })
+  })
+
+  it('gives duplicated baked instances fresh source identities', () => {
+    const baked: SceneNode = {
+      ...mesh('baked'),
+      instances: [{ sourceId: 'source', name: 'Source', transform: IDENTITY_TRANSFORM }],
+    }
+    const copy = copiesOf([baked], [baked])[0]
+
+    expect(copy?.type === 'mesh' ? copy.instances?.[0]?.sourceId : null).not.toBe('source')
   })
 })
 
