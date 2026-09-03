@@ -21,6 +21,7 @@ function reliefStub(): ReliefSurface {
       extent: { origin: { x: 0, z: 0 }, size: { x: 1, z: 1 }, elevation: { min: 0, max: 1 } },
       grain: 1,
       sculpt: SCULPT,
+      overlays: [],
     })),
     dispose: vi.fn(),
   }
@@ -109,6 +110,48 @@ describe('a sculpt drag through the scene renderer', () => {
 
     expect(strokes[0]?.amount).toBe(0.3)
     expect(strokes[0]?.amount).not.toBe(SCULPT_AMOUNT)
+    renderer.dispose()
+  })
+
+  it('forwards a flatten stroke with the combined height at pointerdown as the target', async () => {
+    const strokes: ReliefDiskStroke[] = []
+    const values = Float32Array.from([0.4, 0.8, 0.1, 0.9])
+    const sculptor: ReliefSculptor = {
+      raiseDisk: async stroke => {
+        strokes.push(stroke)
+        return CHANGED
+      },
+      note: vi.fn(),
+      dispose: vi.fn(),
+    }
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      relief: {
+        ...reliefStub(),
+        sculptSource: vi.fn(() => ({
+          samples: { width: 2, height: 2, values },
+          extent: { origin: { x: 0, z: 0 }, size: { x: 1, z: 1 }, elevation: { min: 0, max: 1 } },
+          grain: 1,
+          sculpt: undefined,
+          overlays: [],
+        })),
+      },
+      createReliefSculptor: () => sculptor,
+    })
+    renderer['applyWorld'](worldWithTerrain())
+    renderer.setArmedRelief({ terrainId: 'terrain', editId: 'hills' })
+    renderer.setSculptTool('flatten')
+    renderer.setSculptBrush(1, 0, 1)
+
+    await renderer.startReliefStroke(0, 0)
+    await renderer.moveReliefStroke(1, 0)
+    renderer.endReliefStroke()
+
+    expect(strokes.length).toBeGreaterThan(0)
+    expect(strokes.every(stroke => stroke.kind === 'flatten')).toBe(true)
+    expect(strokes[0]?.target).toBeCloseTo(0.4)
+    expect(strokes.every(stroke => stroke.target === strokes[0]?.target)).toBe(true)
     renderer.dispose()
   })
 })

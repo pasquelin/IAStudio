@@ -21,6 +21,7 @@ function reliefStub(): ReliefSurface {
       extent: { origin: { x: 0, z: 0 }, size: { x: 1, z: 1 }, elevation: { min: 0, max: 1 } },
       grain: 1,
       sculpt: SCULPT,
+      overlays: [],
     })),
     dispose: vi.fn(),
   }
@@ -50,6 +51,7 @@ describe('relief sculpting through the scene renderer', () => {
       },
       grain: 1,
       sculpt: undefined,
+      overlays: [],
     }
     const changed: PackedReliefChunk[] = [{ column: 0, row: 0, payload: 'AAAAAA==' }]
     const strokes: ReliefDiskStroke[] = []
@@ -80,7 +82,9 @@ describe('relief sculpting through the scene renderer', () => {
 
     await expect(renderer.raiseReliefDisk('terrain', 'hills', disk, 0.1)).resolves.toBe(true)
 
-    expect(strokes).toEqual([{ ...source, disk, amount: 0.1, falloff: 0 }])
+    expect(strokes).toEqual([
+      { ...source, disk, amount: 0.1, falloff: 0, kind: 'raiseDisk', target: undefined },
+    ])
     expect(published).toHaveBeenCalledWith('terrain', 'hills', changed)
     renderer.dispose()
   })

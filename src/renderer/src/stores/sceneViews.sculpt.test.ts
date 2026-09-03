@@ -24,6 +24,13 @@ describe('sculpt and pose as exclusive sessions', () => {
     expect(view.sculptMode).toBe(false)
   })
 
+  it('holds the active disk tool on the session', () => {
+    useSceneViews.setState({ views: {} })
+    useSceneViews.getState().setSculptTool('doc-1', 'smooth')
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').sculptTool).toBe('smooth')
+  })
+
   it('holds brush radius, falloff and amount on the session, not the document', () => {
     useSceneViews.setState({ views: {} })
     useSceneViews.getState().setSculptRadius('doc-1', 8)

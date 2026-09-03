@@ -31,8 +31,10 @@ export function strokeDabs(
 /** How far apart consecutive dabs sit, as a fraction of the brush radius. */
 export const STROKE_SPACING = 0.25
 
-/** Sample-space raise of one dab. The session default; the panel exposes it as strength. */
+/** Sample-space raise of one dab. The session default; the panel exposes it as intensity. */
 export const SCULPT_AMOUNT = 0.1
+
+export type SculptTool = 'raise' | 'smooth' | 'flatten'
 
 /**
  * The edit a stroke writes into. An armed terrain with no edit of its own takes the first

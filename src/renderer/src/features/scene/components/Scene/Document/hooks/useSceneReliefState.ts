@@ -7,6 +7,7 @@ export function useSceneReliefState(
   view: ReturnType<typeof sceneViewChromeOf>,
 ): void {
   useEffect(() => engine.current?.setSculptMode?.(view.sculptMode), [engine, view.sculptMode])
+  useEffect(() => engine.current?.setSculptTool?.(view.sculptTool), [engine, view.sculptTool])
   useEffect(() => engine.current?.setArmedRelief?.(view.armedRelief), [engine, view.armedRelief])
   useEffect(
     () => engine.current?.setSculptBrush?.(view.sculptRadius, view.sculptFalloff, view.sculptAmount),

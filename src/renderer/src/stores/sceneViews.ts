@@ -1,4 +1,7 @@
 import type { PickedPathPoint } from '@/engines/scene/SceneRenderer'
+import type { SculptTool } from '@/engines/scene/reliefStroke'
+
+export type { SculptTool }
 import { create } from 'zustand'
 import { snapToFrame, type Us } from '@shared/domain/time'
 import {
@@ -42,6 +45,8 @@ export type SceneView = {
    * `setSculptMode`. Not a `TransformMode`.
    */
   sculptMode: boolean
+  /** Which disk operation a sculpt drag runs. Session, with `sculptMode`. */
+  sculptTool: SculptTool
   /** World units. Session, like the canvas brush diameter. */
   sculptRadius: number
   /** 0 = hard edge. Session. */
@@ -133,6 +138,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   skeletons: false,
   poseMode: false,
   sculptMode: false,
+  sculptTool: 'raise',
   sculptRadius: 2,
   sculptFalloff: 0,
   sculptAmount: 0.1,
@@ -170,6 +176,7 @@ export type SceneViewsState = {
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setPoseMode: (documentId: string, poseMode: boolean) => void
   setSculptMode: (documentId: string, sculptMode: boolean) => void
+  setSculptTool: (documentId: string, sculptTool: SculptTool) => void
   setSculptRadius: (documentId: string, sculptRadius: number) => void
   setSculptFalloff: (documentId: string, sculptFalloff: number) => void
   setSculptAmount: (documentId: string, sculptAmount: number) => void
@@ -255,6 +262,11 @@ const sceneViewsStore = create<SceneViewsState>()(set => ({
         },
       }
     }),
+
+  setSculptTool: (documentId, sculptTool) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), sculptTool } },
+    })),
 
   setSculptRadius: (documentId, sculptRadius) =>
     set(state => ({
@@ -424,6 +436,7 @@ export function sceneViewChromeOf(state: SceneViewsState, documentId: string) {
     isolation: view.isolation,
     poseMode: view.poseMode,
     sculptMode: view.sculptMode,
+    sculptTool: view.sculptTool,
     sculptRadius: view.sculptRadius,
     sculptFalloff: view.sculptFalloff,
     sculptAmount: view.sculptAmount,

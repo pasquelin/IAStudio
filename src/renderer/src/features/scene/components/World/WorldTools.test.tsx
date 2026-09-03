@@ -60,4 +60,22 @@ describe('WorldTools sculpt session', () => {
 
     expect(sceneViewOf(useSceneViews.getState(), 'doc-1').sculptAmount).toBe(0.3)
   })
+
+  it('arms smooth as the exclusive disk tool', async () => {
+    render(<WorldPanel />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Lisser' }))
+
+    const view = sceneViewOf(useSceneViews.getState(), 'doc-1')
+    expect(view.sculptMode).toBe(true)
+    expect(view.sculptTool).toBe('smooth')
+  })
+
+  it('turns flatten off again on the next press', async () => {
+    render(<WorldPanel />)
+    await userEvent.click(screen.getByRole('button', { name: 'Aplanir' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Aplanir' }))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').sculptMode).toBe(false)
+  })
 })

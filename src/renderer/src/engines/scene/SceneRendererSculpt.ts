@@ -1,14 +1,23 @@
 import ReliefSculptWorker from './reliefSculpt.worker?worker'
 import { createReliefSculptor, type ReliefSculptor } from './reliefSculptor'
-import { sculptEditOf, SCULPT_AMOUNT, STROKE_SPACING, strokeDabs } from './reliefStroke'
+import {
+  sculptEditOf,
+  SCULPT_AMOUNT,
+  STROKE_SPACING,
+  strokeDabs,
+  type SculptTool,
+} from './reliefStroke'
 import { SceneRendererMaterials } from './SceneRendererMaterials'
 import { terrainIdOfObject } from './reliefSurface'
 import { createReliefBrushCursor } from './reliefBrushCursor'
+import { combinedAt, texelStep } from '@shared/domain/relief'
+import { clamp } from '@shared/numeric'
 
 export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   protected abstract dropMarquee(): void
   protected abstract attachGizmo(): void
   protected sculptMode = false
+  protected sculptTool: SculptTool = 'raise'
   protected armedRelief: { terrainId: string; editId: string | null } | null = null
   protected sculptRadius = 2
   protected sculptFalloff = 0
@@ -18,6 +27,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     last: { x: number; z: number }
     terrainId: string
     editId: string
+    target?: number
   } | null = null
   private reliefSculptor: { terrainId: string; editId: string; sculptor: ReliefSculptor } | null =
     null
@@ -28,6 +38,8 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     disk: { x: number; z: number; radius: number },
     amount: number,
     falloff = 0,
+    kind: SculptTool = 'raise',
+    target?: number,
   ): Promise<boolean> {
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
@@ -36,6 +48,8 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
       disk,
       amount,
       falloff,
+      kind: kind === 'raise' ? 'raiseDisk' : kind,
+      target,
     })
     if (!chunks) return false
     this.options.onReliefSculpt?.(terrainId, editId, chunks)
@@ -90,6 +104,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     this.sculptAmount = amount
   }
 
+  setSculptTool(tool: SculptTool): void {
+    this.sculptTool = tool
+  }
+
   protected reliefHitAt(event: PointerEvent) {
     const ndc = this.viewport.pointerNdcOf(event)
     if (!ndc) return null
@@ -139,7 +157,12 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     const target = sculptEditOf(this.world.layers, this.armedRelief)
     if (!target) return false
     this.endReliefStroke()
-    this.sculptStroke = { last: { x, z }, ...target }
+    this.sculptStroke = {
+      last: { x, z },
+      terrainId: target.terrainId,
+      editId: target.editId,
+      target: this.sculptTool === 'flatten' ? this.flattenTargetAt(target, x, z) : undefined,
+    }
     this.options.onReliefStrokeStart?.()
     return this.paintReliefDab(x, z)
   }
@@ -172,6 +195,31 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
       { x, z, radius: this.sculptRadius },
       this.sculptAmount,
       this.sculptFalloff,
+      this.sculptTool,
+      stroke.target,
+    )
+  }
+
+  private flattenTargetAt(
+    target: { terrainId: string; editId: string },
+    x: number,
+    z: number,
+  ): number | undefined {
+    const source = this.relief.sculptSource(target.terrainId, target.editId)
+    if (!source) return undefined
+    const step = texelStep(source.extent.size, source.samples)
+    const sx = clamp(Math.round((x - source.extent.origin.x) / step.x), 0, source.samples.width - 1)
+    const sz = clamp(
+      Math.round((z - source.extent.origin.z) / step.z),
+      0,
+      source.samples.height - 1,
+    )
+    return combinedAt(
+      source.samples,
+      source.grain,
+      [...source.overlays, { enabled: true, alpha: 1, sculpt: source.sculpt }],
+      sx,
+      sz,
     )
   }
 }

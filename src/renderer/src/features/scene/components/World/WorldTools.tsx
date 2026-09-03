@@ -6,23 +6,31 @@ import { ToolButton } from '@/components/ToolButton'
 import { setTerrainEditAlpha } from '@/engines/scene/reliefCommands'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { sceneViewOf, useSceneViews, type SculptTool } from '@/stores/sceneViews'
 
 const AMOUNT = { min: 0.01, max: 1, step: 0.01, value: 0.1 }
 const FALLOFF = { min: 0, max: 1, step: 0.05, value: 0 }
 const RADIUS = { min: 0.1, max: 50, step: 0.1, value: 2 }
 
-/**
- * Contextual sculpt tools for the armed terrain or edit. Smooth and Flatten are structure
- * only — their operations do not exist on the domain yet.
- */
+/** Contextual sculpt tools for the armed terrain or edit. */
 export function WorldTools({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const armed = useSceneViews(state => sceneViewOf(state, documentId).armedRelief)
   const sculptMode = useSceneViews(state => sceneViewOf(state, documentId).sculptMode)
+  const sculptTool = useSceneViews(state => sceneViewOf(state, documentId).sculptTool)
   const amount = useSceneViews(state => sceneViewOf(state, documentId).sculptAmount)
   const falloff = useSceneViews(state => sceneViewOf(state, documentId).sculptFalloff)
   const radius = useSceneViews(state => sceneViewOf(state, documentId).sculptRadius)
+
+  const armTool = (tool: SculptTool): void => {
+    const views = useSceneViews.getState()
+    if (sculptMode && sculptTool === tool) {
+      views.setSculptMode(documentId, false)
+      return
+    }
+    views.setSculptTool(documentId, tool)
+    views.setSculptMode(documentId, true)
+  }
 
   const layers = useScenes(state => sceneOf(state, documentId).world.layers)
   const terrain = layers.find(layer => layer.kind === 'relief' && layer.id === armed?.terrainId)
@@ -40,8 +48,8 @@ export function WorldTools({ documentId }: { documentId: string }) {
           description={t('world.sculptHint')}
           tooltip={TIP_TOP}
           variant="bar"
-          active={sculptMode}
-          onClick={() => useSceneViews.getState().setSculptMode(documentId, !sculptMode)}
+          active={sculptMode && sculptTool === 'raise'}
+          onClick={() => armTool('raise')}
         />
         <ToolButton
           icon={mdiBlur}
@@ -49,7 +57,8 @@ export function WorldTools({ documentId }: { documentId: string }) {
           description={t('world.smoothHint')}
           tooltip={TIP_TOP}
           variant="bar"
-          disabled
+          active={sculptMode && sculptTool === 'smooth'}
+          onClick={() => armTool('smooth')}
         />
         <ToolButton
           icon={mdiArrowCollapseDown}
@@ -57,7 +66,8 @@ export function WorldTools({ documentId }: { documentId: string }) {
           description={t('world.flattenHint')}
           tooltip={TIP_TOP}
           variant="bar"
-          disabled
+          active={sculptMode && sculptTool === 'flatten'}
+          onClick={() => armTool('flatten')}
         />
       </div>
       <SliderField

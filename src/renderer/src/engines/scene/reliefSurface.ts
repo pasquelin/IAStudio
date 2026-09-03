@@ -22,6 +22,7 @@ import {
   type ReliefChunkKey,
   type ReliefChunkLayout,
   type ReliefExtent,
+  type ReliefOverlay,
   type ReliefRead,
   type ReliefSculpt,
 } from '@shared/domain/relief'
@@ -59,6 +60,8 @@ export type ReliefSculptSource = {
   extent: ReliefExtent
   grain: number
   sculpt: ReliefSculpt | undefined
+  /** Enabled overlays other than the armed edit, so smooth/flatten see combined height. */
+  overlays: readonly ReliefOverlay[]
 }
 
 export type ReliefSurfaceOptions = {
@@ -124,7 +127,19 @@ export function createReliefSurface(
       const held = state.terrains.get(terrainId)?.held
       const edit = held?.edits.find(candidate => candidate.id === editId)
       return held && edit
-        ? { samples: held.samples, extent: held.extent, grain: held.grain, sculpt: edit.sculpt }
+        ? {
+            samples: held.samples,
+            extent: held.extent,
+            grain: held.grain,
+            sculpt: edit.sculpt,
+            overlays: held.edits
+              .filter(candidate => candidate.id !== editId)
+              .map(candidate => ({
+                enabled: candidate.enabled,
+                alpha: candidate.alpha,
+                sculpt: candidate.sculpt,
+              })),
+          }
         : null
     },
     dispose: () => disposeRelief(state),
