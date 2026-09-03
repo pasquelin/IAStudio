@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
 import type { GameExportOutcome } from '@shared/domain/gameExport'
+import type { Asset } from '@shared/domain/asset'
 import { invoke, resetHandlers } from '@main/ipc/testHarness'
 import { registerGameExportHandler } from './game'
 
@@ -138,7 +139,28 @@ describe('the door onto a game written out of the studio', () => {
     await exporting()
 
     expect(await readdir(join(chosen, 'Demo/scenes'))).toEqual(['doc-1.gltf'])
-    expect((await readdir(chosen)).filter(name => name.startsWith('.Demo.'))).toEqual([])
+    expect((await readdir(chosen)).filter(name => name.startsWith('Demo.'))).toEqual([])
+  })
+
+  // The other half of the sweep above: what a game still reaches has to SURVIVE the swap. Only
+  // the disappearance of the unreachable was covered, and that half alone protects nobody.
+  it('keeps an asset the new game still reaches across a replacement', async () => {
+    await writeFile(join(project, 'tex.png'), 'pixels')
+    registerGameExportHandler({
+      pickFolder: () => Promise.resolve<string | null>(chosen),
+      projectPath: () => project,
+      assetsById: () => Promise.resolve([{ id: 'tex-1', path: 'tex.png' } as Asset]),
+      runtimeFolder: () => runtime,
+    })
+    const wearing = JSON.stringify({ nodes: [{ material: { map: { assetId: 'tex-1' } } }] })
+    const scenes = [{ id: 'doc-1', title: 'Menu', content: wearing }]
+
+    await exporting({ scenes })
+    const first = await readdir(join(chosen, 'Demo/assets'))
+    await exporting({ scenes })
+
+    expect(first).toHaveLength(1)
+    expect(await readdir(join(chosen, 'Demo/assets'))).toEqual(first)
   })
 
   it('keeps the previous complete package when building its replacement fails', async () => {
@@ -155,7 +177,7 @@ describe('the door onto a game written out of the studio', () => {
     await expect(exporting()).rejects.toThrow(/pnpm game:runtime/)
 
     expect(await readFile(join(chosen, 'Demo/kept.txt'), 'utf8')).toBe('previous')
-    expect((await readdir(chosen)).filter(name => name.startsWith('.Demo.'))).toEqual([])
+    expect((await readdir(chosen)).filter(name => name.startsWith('Demo.'))).toEqual([])
   })
 
   it('serializes two exports aimed at the same package', async () => {
