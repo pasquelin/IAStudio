@@ -5,17 +5,19 @@
  * hangs, steers and drives. Everything is a primitive of the studio, so every part stays editable.
  */
 import type { Vector3 } from '@shared/domain/scene'
-import { newComponent } from '@shared/domain/componentRegistry'
+import { COMPONENTS, newComponent } from '@shared/domain/componentRegistry'
 import { surface } from './levelParts'
 import { meshNode, transformAt } from './nodeFactory'
 import type { SceneNode } from './sceneState'
 
-/** Metres. A hatchback: 1,8 across, four long, on 35 cm wheels. */
+/** Metres. A hatchback: 1,8 across, four long, on the wheels the `Vehicle` component simulates. */
 const HALF_WIDTH = 0.9
 const HALF_HEIGHT = 0.3
 const HALF_LENGTH = 2
-const WHEEL_RADIUS = 0.35
-const WHEEL_WIDTH = 0.25
+
+/** The component's own defaults, read rather than copied: a wheel is DRAWN with what is SIMULATED. */
+const WHEEL_RADIUS = Number(COMPONENTS.Vehicle.defaults.wheelRadius)
+const WHEEL_WIDTH = Number(COMPONENTS.Vehicle.defaults.wheelWidth)
 
 /** Where the axles stand, measured from the body's own centre. */
 const AXLE_Z = 1.35
