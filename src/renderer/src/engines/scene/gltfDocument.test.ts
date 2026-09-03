@@ -27,6 +27,15 @@ function nodesOf(document: Record<string, unknown>): Record<string, unknown>[] {
   return Array.isArray(nodes) ? nodes.filter(isRecord) : []
 }
 
+/** `EXRLoader` writes scanline 0 at the bottom. Domain samples follow that orientation. */
+function flippedExr(values: Float32Array, width: number, height: number): Float32Array {
+  const out = new Float32Array(values.length)
+  for (let y = 0; y < height; y++) {
+    out.set(values.subarray(y * width, (y + 1) * width), (height - 1 - y) * width)
+  }
+  return out
+}
+
 describe('gltfDocumentOf', () => {
   it('writes a file another application reads as glTF', () => {
     const document = write(EMPTY_SCENE)
@@ -123,7 +132,7 @@ describe('gltfDocumentOf', () => {
 })
 
 describe('sceneFromGltf', () => {
-  it('carries a relief heightmap reference, and does not refuse the file', async () => {
+  it('round-trips a relief heightmap reference, and the samples that asset holds', async () => {
     const state: SceneState = {
       ...EMPTY_SCENE,
       world: {
@@ -131,11 +140,11 @@ describe('sceneFromGltf', () => {
         layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }],
       },
     }
-    const document = write(state)
+    const document = JSON.parse(JSON.stringify(write(state)))
 
     expect(sceneHoldsMore(document)).toEqual([])
     const back = sceneFromGltf(document)
-    expect(back.world.layers).toEqual(state.world.layers)
+    expect(back.world.layers).toEqual([{ kind: 'relief', heightmap: { assetId: 'asset_height' } }])
 
     const values = Float32Array.from({ length: 16 }, (_, at) => at + 0.25)
     const bytes = openExrFloatY(4, 4, values)
@@ -144,7 +153,8 @@ describe('sceneFromGltf', () => {
     const assetId = back.world.layers[0]?.heightmap.assetId ?? ''
     const samples = await loadHeightmap(assetId, async () => body)
     expect(samples.width).toBe(4)
-    expect(samples.values).toHaveLength(16)
+    expect(samples.height).toBe(4)
+    expect(samples.values).toEqual(flippedExr(values, 4, 4))
   })
 
   it('gives back the scene that was written, node for node', () => {
