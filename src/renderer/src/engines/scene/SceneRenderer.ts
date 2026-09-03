@@ -74,6 +74,7 @@ import {
 import { createGroundPlane } from './groundPlane'
 import { loadHeightmap } from './heightmap'
 import { createReliefSurface } from './reliefSurface'
+import { createReliefBuilder } from './reliefBuilder'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
 import { springArmRigsOf } from './springArmRigs'
@@ -232,6 +233,7 @@ import BvhWorker from './bvh.worker?worker'
 import CsgWorker from '../csg/csg.worker?worker'
 import SkinWorker from '../character/skinWeights.worker?worker'
 import RetargetWorker from './retarget.worker?worker'
+import ReliefBuildWorker from './reliefBuild.worker?worker'
 import { createRetarget, type Retarget, type RetargetFit } from './retarget'
 import {
   applyRig,
@@ -879,6 +881,7 @@ export class SceneRenderer {
   private readonly ground = createGroundPlane()
   private readonly relief = createReliefSurface(this.viewport.scene, {
     load: assetId => loadHeightmap(assetId, undefined, this.options.assetVersion?.(assetId)),
+    builder: createReliefBuilder(() => new ReliefBuildWorker()),
     onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
     onReady: () => this.redraw(),
   })

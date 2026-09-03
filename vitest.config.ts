@@ -139,6 +139,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/scene/boneJoints.test.ts',
   'src/renderer/src/engines/scene/bvhBuilder.test.ts',
   'src/renderer/src/engines/scene/bvh.worker.test.ts',
+  'src/renderer/src/engines/scene/reliefBuild.worker.test.ts',
   'src/renderer/src/engines/scene/nodeKinds.test.ts',
   'src/renderer/src/engines/scene/paneDress.test.ts',
   'src/renderer/src/engines/scene/paneMaterials.test.ts',
