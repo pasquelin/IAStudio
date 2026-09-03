@@ -2,15 +2,10 @@ import { mdiFolderOpenOutline, mdiFolderOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { projectName, projectsByCreation, type RecentProject } from '@shared/domain/project'
 import { UiIcon } from '@/components/UiIcon'
-import {
-  WINDOW_ACTION,
-  WINDOW_ACTION_SECONDARY,
-  WINDOW_CAPTION,
-  WINDOW_GROUP_LABEL,
-  WINDOW_ROW_BUTTON,
-} from '@/components/windowStyles'
+import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_ROW_BUTTON } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
+import { WindowButton } from '@/components/WindowButton'
 
 export type NewDocumentNoProjectProps = {
   recent: readonly RecentProject[]
@@ -41,23 +36,17 @@ export function NewDocumentNoProject({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className={WINDOW_ACTION}
-          {...HINT_TOP(t('project.createHint'))}
-          onClick={onNewProject}
-        >
+        <WindowButton {...HINT_TOP(t('project.createHint'))} onClick={onNewProject}>
           {t('project.create')}
-        </button>
-        <button
-          type="button"
-          className={WINDOW_ACTION_SECONDARY}
+        </WindowButton>
+        <WindowButton
+          variant="secondary"
           {...HINT_TOP(t('project.openHint'))}
           onClick={onOpenProject}
         >
           <UiIcon path={mdiFolderOpenOutline} size={14} className="shrink-0" />
           {t('project.open')}
-        </button>
+        </WindowButton>
       </div>
 
       {recent.length > 0 && (

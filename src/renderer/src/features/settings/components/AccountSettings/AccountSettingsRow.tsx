@@ -7,9 +7,11 @@ import { cn } from '@/helpers/cn'
 import { HINT_LEFT, HINT_TOP } from '@/helpers/tooltip'
 import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
 import { useCredits } from '@/stores/credits'
-import { WINDOW_ACTION, WINDOW_ACTION_SECONDARY, WINDOW_CAPTION } from '@/components/windowStyles'
+import { WINDOW_CAPTION } from '@/components/windowStyles'
 import { describeCredit } from '@/helpers/describeCredit'
 import { FAILURE_KEYS } from './failureKeys'
+import { WindowButton } from '@/components/WindowButton'
+import { WindowInput } from '@/components/WindowInput'
 
 type AccountSettingsRowProps = {
   account: AccountSummary
@@ -50,30 +52,28 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
     return (
       <li>
         <form className="flex items-center gap-2" onSubmit={submit}>
-          <input
+          <WindowInput
             data-sc="field:account.name"
-            className="input input-sm flex-1"
+            className="flex-1"
             aria-label={t('accounts.name')}
             autoFocus
             value={draft}
             onChange={event => setDraft(event.target.value)}
           />
-          <button
+          <WindowButton
             type="submit"
-            className={WINDOW_ACTION}
             {...HINT_TOP(t('accounts.saveHint'))}
             disabled={checkAccountName(draft, accounts, account.id) !== null}
           >
             {t('accounts.save')}
-          </button>
-          <button
-            type="button"
-            className={WINDOW_ACTION_SECONDARY}
+          </WindowButton>
+          <WindowButton
+            variant="secondary"
             {...HINT_TOP(t('accounts.cancelHint'))}
             onClick={stopEditing}
           >
             {t('accounts.cancel')}
-          </button>
+          </WindowButton>
         </form>
         {failure && <WindowFailure className="mt-1">{t(FAILURE_KEYS[failure])}</WindowFailure>}
       </li>
@@ -93,32 +93,29 @@ export function AccountSettingsRow({ account, authenticated }: AccountSettingsRo
         </span>
 
         {!account.active && (
-          <button
-            type="button"
-            className={WINDOW_ACTION}
+          <WindowButton
             {...HINT_LEFT(t('accounts.useHint'))}
             onClick={() => void activate(account.id)}
           >
             {t('accounts.use')}
-          </button>
+          </WindowButton>
         )}
 
-        <button
-          type="button"
-          className={WINDOW_ACTION_SECONDARY}
+        <WindowButton
+          variant="secondary"
           {...HINT_LEFT(t('accounts.renameHint'))}
           onClick={() => setDraft(account.name)}
         >
           {t('accounts.rename')}
-        </button>
-        <button
-          type="button"
-          className={cn(WINDOW_ACTION_SECONDARY, 'text-error')}
+        </WindowButton>
+        <WindowButton
+          variant="secondary"
+          className="text-error"
           {...HINT_LEFT(t('accounts.removeHint'))}
           onClick={() => void remove(account.id)}
         >
           {t('accounts.remove')}
-        </button>
+        </WindowButton>
       </div>
 
       {/* Said in full here: the menu has a column for a figure, not for why there is none. */}
