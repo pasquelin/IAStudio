@@ -144,10 +144,8 @@ async function main(since) {
   const guarded = touched.some(path => /^engine\/.*\.py$/.test(path))
 
   if (sources.length === 0 && !wholeSuite && !guarded) {
-    process.stdout.write(
-      `\nNothing under src/ or engine/ has changed against ${since}. There is nothing to check.\n\n`,
-    )
-    return 0
+    process.stdout.write(`\nNothing under src/ or engine/ has changed against ${since}.\n`)
+    return report([await run('size guard', 'node', ['scripts/check-sizes.mjs'])])
   }
 
   process.stdout.write(
@@ -184,6 +182,7 @@ async function main(since) {
   const formattable = present.filter(path => /\.(tsx?|css)$/.test(path))
   const lintable = formattable.filter(path => !path.endsWith('.css'))
   const results = await Promise.all([
+    run('size guard', 'node', ['scripts/check-sizes.mjs']),
     ...suites,
     run('typecheck', 'pnpm', ['typecheck']),
     ...(lintable.length > 0
