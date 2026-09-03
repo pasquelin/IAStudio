@@ -14,25 +14,21 @@ import { WRITTEN_SOURCES } from './testHarness'
  * A FILL is not a ring: `MenuRow` lights the focused row of a menu, which is how a keyboard walks
  * one at all, and this rule has nothing to say about it.
  */
-const RING = /\b(?:focus|focus-visible|focus-within)[^\s'"`]*:(?:ring|outline)-(?!none)/
-
-describe('no focus ring', () => {
-  it('is stated once, in the stylesheet, where it also reaches daisyUI and Chromium', () => {
-    expect(stylesheet).toMatch(/:focus-visible[^{]*\{\s*outline: none !important/)
+describe('keyboard focus', () => {
+  it('is visible globally and drawn inward so clipped controls keep the indicator', () => {
+    expect(stylesheet).toMatch(
+      /:focus-visible[^{]*\{\s*outline: 2px solid var\(--color-accent\) !important;/,
+    )
+    expect(stylesheet).toMatch(/outline-offset: -2px/)
   })
 
-  it('is not written back one component at a time', () => {
-    const offenders = WRITTEN_SOURCES.filter(([, source]) => RING.test(source)).map(
+  it('is not overridden one component at a time', () => {
+    const overrides = /\b(?:focus|focus-visible|focus-within)[^\s'"`]*:outline-none/
+    const offenders = WRITTEN_SOURCES.filter(([, source]) => overrides.test(source)).map(
       ([path]) => path,
     )
 
     expect(offenders).toEqual([])
-    // The rule refuses something, which a sweep that only ever returns nothing cannot show.
-    expect(RING.test("'focus-visible:ring-accent'")).toBe(true)
-    expect(RING.test("'focus:outline-2'")).toBe(true)
-    expect(RING.test("'group-data-selected/row:focus-visible:ring-accent-content'")).toBe(true)
-    // The drop target of the title bar draws a ring that no focus brings up.
-    expect(RING.test("'ring-accent ring-2'")).toBe(false)
-    expect(RING.test("'focus-visible:bg-accent'")).toBe(false)
+    expect(overrides.test("'focus-visible:outline-none'")).toBe(true)
   })
 })

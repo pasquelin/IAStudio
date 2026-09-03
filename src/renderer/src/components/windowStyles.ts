@@ -71,24 +71,3 @@ export function windowControl(active: boolean): string {
 export function windowChoice(chosen: boolean): string {
   return cn(WINDOW_CONTROL_BASE, chosen ? 'bg-accent-soft' : 'hover:bg-base-200 bg-transparent')
 }
-
-/**
- * 🛑 The buttons of these windows, by ROLE — never a class string written by hand.
- * `no-loose-window-button.test.ts` holds every site to one of them, which nothing did before.
- *
- * This one is what the row or the section EXISTS for: the commonest, and the default in doubt.
- */
-export const WINDOW_ACTION = 'btn btn-sm btn-primary'
-
-/** Beside a primary one, or on its own where nothing is being urged: cancel, rename, sign out. */
-export const WINDOW_ACTION_SECONDARY = 'btn btn-sm btn-ghost'
-
-/** Stops what is RUNNING. It takes the primary's place, which is why it is not a ghost. */
-export const WINDOW_ACTION_QUIET = 'btn btn-sm'
-
-/** What cannot be undone. Outlined rather than filled: this is not what a window is FOR. */
-export const WINDOW_ACTION_DANGER = 'btn btn-sm btn-error btn-outline'
-
-/** The foot of a `Dialog` — the one place these windows go larger. Deliberately not `…-sm`. */
-export const DIALOG_ACTION = 'btn btn-primary'
-export const DIALOG_ACTION_SECONDARY = 'btn'

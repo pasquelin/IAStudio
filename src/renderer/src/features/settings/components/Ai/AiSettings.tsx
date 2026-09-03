@@ -11,19 +11,16 @@ import {
 } from '@shared/domain/aiOverview'
 import { isGenerationRole, partsOfRole } from '@shared/domain/aiRole'
 import type { ModelFamily } from '@shared/domain/model'
-import {
-  WINDOW_ACTION,
-  WINDOW_CAPTION,
-  WINDOW_GROUP_LABEL,
-  WINDOW_HELP,
-} from '@/components/windowStyles'
+import { WINDOW_CAPTION, WINDOW_GROUP_LABEL, WINDOW_HELP } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { useBytes } from '@/hooks/useBytes'
 import { useModelFit } from '@/hooks/useModelFit'
 import { machineSummary } from '@/helpers/machineSummary'
 import { useAiModels } from '@/stores/aiModels'
 import { SettingLine } from '../Setting/SettingLine'
-import { SETTING_COLUMN, SETTING_SELECT } from '../settingStyles'
+import { SETTING_COLUMN } from '../settingStyles'
+import { WindowButton } from '@/components/WindowButton'
+import { WindowSelect } from '@/components/WindowSelect'
 import { AiEngineOffer } from './AiEngineOffer'
 import { AiOllamaOffer } from './AiOllamaOffer'
 import { AiRoleRow } from './AiRoleRow'
@@ -138,10 +135,10 @@ export function AiSettings({ family }: AiSettingsProps) {
 
       {overview.projectPath !== null && (
         <SettingLine title={t('aiModels.scope')} labelFor={SCOPE_FIELD}>
-          <select
+          <WindowSelect
             id={SCOPE_FIELD}
             data-sc="field:ai.scope"
-            className={SETTING_SELECT}
+            className="w-full max-w-xs"
             value={writesTo}
             onChange={event => setScope(event.target.value === 'project' ? 'project' : 'app')}
           >
@@ -150,7 +147,7 @@ export function AiSettings({ family }: AiSettingsProps) {
                 {t(`aiModels.scope_${value}`)}
               </option>
             ))}
-          </select>
+          </WindowSelect>
         </SettingLine>
       )}
 
@@ -190,14 +187,9 @@ export function AiSettings({ family }: AiSettingsProps) {
       {overviewPane && (
         <>
           <SettingLine title={t('aiModels.ownModel')} help={t('aiModels.ownModelHelp')}>
-            <button
-              type="button"
-              data-sc="field:ai.ownModel"
-              className={WINDOW_ACTION}
-              onClick={() => void addOwnAiModel()}
-            >
+            <WindowButton data-sc="field:ai.ownModel" onClick={() => void addOwnAiModel()}>
               {t('aiModels.addOwnModel')}
-            </button>
+            </WindowButton>
           </SettingLine>
           {ownModelFailure !== null && (
             <p className={WINDOW_HELP} role="status">

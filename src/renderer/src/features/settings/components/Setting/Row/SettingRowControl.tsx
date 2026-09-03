@@ -11,11 +11,13 @@ import { cn } from '@/helpers/cn'
 import { formatDecimal } from '@/helpers/format'
 import { Slider } from '@/components/Slider'
 import { WINDOW_CAPTION } from '@/components/windowStyles'
-import { SETTING_SELECT } from '../../settingStyles'
 import type { Labelled } from './controls'
 import { SettingRowColorControl } from './SettingRowColorControl'
 import { SettingRowPathControl } from './SettingRowPathControl'
 import { SettingRowTextControl } from './SettingRowTextControl'
+import { WindowInput } from '@/components/WindowInput'
+import { WindowSelect } from '@/components/WindowSelect'
+import { WindowToggle } from '@/components/WindowToggle'
 
 /**
  * What a numeric field may hand over. An emptied field is mid-edit, and a value zod would
@@ -59,11 +61,11 @@ export function SettingRowControl({
   switch (descriptor.kind) {
     case 'choice':
       return (
-        <select
+        <WindowSelect
           id={id}
           data-sc={fieldHandle(scId)}
           aria-describedby={describedBy}
-          className={SETTING_SELECT}
+          className="w-full max-w-xs"
           value={String(value ?? '')}
           // Handed back as the option declared it, not as the string the DOM carries: a
           // numeric choice would otherwise be stored as `'3'` and refused by zod.
@@ -79,16 +81,16 @@ export function SettingRowControl({
               {optionLabel(option, t)}
             </option>
           ))}
-        </select>
+        </WindowSelect>
       )
 
     case 'number':
       return (
-        <input
+        <WindowInput
           id={id}
           data-sc={fieldHandle(scId)}
           aria-describedby={describedBy}
-          className="input input-sm w-24"
+          className="w-24"
           type="number"
           min={descriptor.min}
           max={descriptor.max}
@@ -127,12 +129,10 @@ export function SettingRowControl({
 
     case 'boolean':
       return (
-        <input
+        <WindowToggle
           id={id}
           data-sc={fieldHandle(scId)}
           aria-describedby={describedBy}
-          className="toggle toggle-sm"
-          type="checkbox"
           checked={value === true}
           onChange={event => onChange(event.target.checked)}
         />

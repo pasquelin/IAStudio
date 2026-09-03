@@ -5,10 +5,10 @@ import { roleForKind, type DocumentKind } from '@shared/domain/document'
 import { UiIcon } from '@/components/UiIcon'
 import { WindowNav } from '@/components/WindowNav/WindowNav'
 import { WindowNavItem } from '@/components/WindowNav/WindowNavItem'
-import { WINDOW_ACTION } from '@/components/windowStyles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { roleIcon, roleInk } from '@/helpers/workspaces'
+import { WindowButton } from '@/components/WindowButton'
 
 export type NewDocumentKindsProps = {
   /** Already ordered by the surface the window was opened from — nearest work first. */
@@ -37,15 +37,14 @@ export function NewDocumentKinds({
 
   return (
     <>
-      <button
-        type="button"
-        className={cn(WINDOW_ACTION, 'justify-start')}
+      <WindowButton
+        className="justify-start"
         {...HINT_RIGHT(t('project.createHint'))}
         onClick={onNewProject}
       >
         <UiIcon path={mdiFolderPlusOutline} size={14} className="shrink-0" />
         {t('project.create')}
-      </button>
+      </WindowButton>
 
       <WindowNav>
         {creatables.map(({ kind }) => {

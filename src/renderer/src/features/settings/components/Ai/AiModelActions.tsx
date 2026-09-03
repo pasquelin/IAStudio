@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { WINDOW_ACTION } from '@/components/windowStyles'
+import { WindowButton } from '@/components/WindowButton'
 import { useTranslation } from 'react-i18next'
 import type { ModelCandidate } from '@shared/domain/aiOverview'
 import type { DownloadProgress } from '@shared/domain/localModel'
@@ -67,30 +67,26 @@ export const AiModelActions = memo(function AiModelActions({
     return (
       // Offered whatever the machine thinks of it: hiding the button decided for the person, and
       // a download that will not fit says so when it fails rather than never being offered.
-      <button
-        type="button"
+      <WindowButton
         {...HINT_LEFT(t('aiModels.installHint', { size: bytes(candidate.model.diskBytes) }))}
-        className={WINDOW_ACTION}
         disabled={busy}
         onClick={() => void installAiModel(candidate.model.id)}
       >
         {t('aiModels.install')}
-      </button>
+      </WindowButton>
     )
   }
 
   return (
     <span className="flex items-center gap-2">
-      <button
-        type="button"
+      <WindowButton
         // The WORD follows the EFFECT, both off `supplied`: their file stays where they put it,
         // and the studio only ever drops the entry that pointed at it.
         {...HINT_LEFT(candidate.supplied ? t('aiModels.forgetHint') : t('aiModels.removeHint'))}
-        className={WINDOW_ACTION}
         onClick={() => void removeAiModel(candidate.model.id)}
       >
         {candidate.supplied ? t('aiModels.forget') : t('aiModels.remove')}
-      </button>
+      </WindowButton>
     </span>
   )
 })

@@ -857,22 +857,14 @@ body,
   font-size: var(--text-mini) !important;
 }
 
-/*
- * NO focus ring anywhere in the studio — the owner's call, taken on 2026-08-15 after the one on
- * the title bar was seen clipped by the bar's own `overflow-hidden`.
- *
- * Here and not in `design/styles.ts` because "anywhere" includes what no constant of ours dresses:
- * Chromium's native outline, daisyUI's on the preference surfaces, and every component written
- * after this line. A `FOCUS_RING` each caller had to remember to carry could not hold that.
- *
- * `!important` for the same reason: daisyUI states its own with two class names, and this rule
- * has one. What it costs is stated plainly — WCAG 2.4.7 asks for a visible focus indicator, and
- * the studio no longer has one; keyboard focus moves without anything on screen following it.
- * `design/no-focus-ring.test.ts` keeps a ring from creeping back in one component at a time.
- */
-:focus,
+/* Drawn inside the control so focus remains visible even in clipped title bars and dock rows. */
 :focus-visible {
-  outline: none !important;
+  outline: 2px solid var(--color-accent) !important;
+  outline-offset: -2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /*
