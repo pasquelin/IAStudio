@@ -121,7 +121,6 @@ function terrainSurfaceOf(state: SurfaceState, layer: ReliefLayer): TerrainSurfa
     generation: 0,
   }
   terrain.group.name = `relief-${layer.id}`
-  state.group.add(terrain.group)
   state.terrains.set(layer.id, terrain)
   return terrain
 }
@@ -203,6 +202,7 @@ async function loadLayer(
     state.options.onReady?.()
   } catch (error) {
     if (token !== terrain.generation) return
+    dropTerrain(state, layer.id, terrain)
     state.options.onFailure?.(layer.heightmap.assetId, error)
   }
 }
@@ -234,6 +234,7 @@ function buildMeshes(
       terrain.meshes.set(keyOf(column, row), mesh)
     }
   }
+  if (terrain.group.parent !== state.group) state.group.add(terrain.group)
 }
 
 function patchMeshes(

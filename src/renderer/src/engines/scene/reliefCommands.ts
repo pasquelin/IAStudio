@@ -23,7 +23,7 @@ import type { Command } from '../core/history'
 import type { SceneState } from './sceneState'
 
 export function addTerrain(heightmap: TextureRef, id = newId()): Command<SceneState> {
-  const layer = reliefLayer(heightmap, { id })
+  const layer = reliefLayer(heightmap, { id, edits: [terrainEditLayer()] })
   return editLayers(
     `world:layers:add:${id}`,
     layers => [...layers, layer],

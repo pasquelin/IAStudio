@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { emptyHistory, run, undo } from '../core/history'
 import {
+  RELIEF_CHUNK_TEXELS,
   applyReliefSculpt,
   changedChunks,
   type ReliefSculpt,
@@ -31,6 +32,7 @@ function diskAt(sampleX: number, amount: number) {
   return {
     samples,
     extent,
+    grain: RELIEF_CHUNK_TEXELS,
     sculpt: undefined as ReliefSculpt | undefined,
     disk: {
       x: extent.origin.x + sampleX * stepX,

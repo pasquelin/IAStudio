@@ -1,5 +1,4 @@
 import {
-  RELIEF_CHUNK_TEXELS,
   withPackedChunks,
   type PackedReliefChunk,
   type ReliefExtent,
@@ -12,7 +11,7 @@ import type { ReliefSculptRequest, ReliefSculptResponse } from './reliefSculptMe
 export type ReliefDiskStroke = {
   samples: HeightmapSamples
   extent: ReliefExtent
-  grain?: number
+  grain: number
   sculpt: ReliefSculpt | undefined
   disk: { x: number; z: number; radius: number }
   amount: number
@@ -62,13 +61,12 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
     const token = generation
     const before = heldAfter ?? job.sculpt
     try {
-      const grain = job.grain ?? RELIEF_CHUNK_TEXELS
       const response = await session.send({
         id: session.nextId(),
         width: job.samples.width,
         height: job.samples.height,
         extent: job.extent,
-        grain,
+        grain: job.grain,
         sculpt: before,
         operation: { kind: 'raiseDisk', disk: job.disk, amount: job.amount },
       })

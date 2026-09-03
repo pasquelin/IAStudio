@@ -1,5 +1,5 @@
 import { BufferAttribute, Scene } from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   RELIEF_CHUNK_TEXELS,
   combinedAt,
@@ -163,6 +163,24 @@ describe('relief surface chunks', () => {
     // The neighbour's shape is untouched, so only its lighting is sent again.
     expect(positionOf(surface, 1, 0).updateRanges).toEqual([])
     expect(right.updateRanges.length).toBeGreaterThan(0)
+  })
+
+  it('leaves the root empty when a heightmap will not load, so the ground stays drawn', async () => {
+    const scene = new Scene()
+    let failed = false
+    const surface = createReliefSurface(scene, {
+      load: async () => {
+        throw new Error('dead EXR')
+      },
+      onFailure: () => {
+        failed = true
+      },
+    })
+    surface.sync(worldOf())
+    await vi.waitFor(() => expect(failed).toBe(true))
+
+    expect(surface.object.children).toHaveLength(0)
+    expect(surface.meshOf(TERRAIN, 0, 0)).toBeUndefined()
   })
 
   it('clears the meshes when the world holds no relief', () => {

@@ -154,7 +154,9 @@ describe('terrain and edit-layer commands', () => {
 
   it('adds a terrain that names the heightmap, and takes it back', () => {
     const after = addTerrain({ assetId: 'asset_height' }, 'island').apply(empty)
-    expect(after.world.layers).toEqual([reliefLayer({ assetId: 'asset_height' }, { id: 'island' })])
+    expect(after.world.layers).toEqual([
+      reliefLayer({ assetId: 'asset_height' }, { id: 'island', edits: [terrainEditLayer()] }),
+    ])
     expect(removeTerrain('island').apply(after).world.layers).toEqual([])
   })
 
