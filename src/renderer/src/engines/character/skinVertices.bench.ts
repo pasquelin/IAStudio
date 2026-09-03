@@ -1,6 +1,7 @@
 import { bench, describe } from 'vitest'
 import { SKIN_REGIONS, type SkinRequest } from './skinMessage'
 import { skinVertices } from './skinVertices'
+import { loadSkinVerticesWasm } from './skinVerticesWasm'
 
 const BONES = 52
 
@@ -27,14 +28,26 @@ function request(vertices: number): SkinRequest {
   }
 }
 
+const bindWithWasm = await loadSkinVerticesWasm()
+
 describe('binding a dense character to 52 bones', () => {
   for (const vertices of [50_000, 250_000, 500_000]) {
     const input = request(vertices)
-    bench(`${vertices} vertices`, () => void skinVertices(input), {
+    const options = {
       time: 200,
       iterations: 1,
       warmupTime: 0,
       warmupIterations: 1,
-    })
+    }
+    bench(`TypeScript · ${vertices} vertices`, () => void skinVertices(input), options)
+    bench(
+      `WebAssembly · ${vertices} vertices`,
+      () => {
+        const binding = bindWithWasm(input)
+        binding.skinRange(0, vertices)
+        binding.binding()
+      },
+      options,
+    )
   }
 })

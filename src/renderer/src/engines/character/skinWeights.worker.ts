@@ -10,6 +10,7 @@
 import { messageOf } from '@shared/guards'
 import { isCancel, type SkinIncoming, type SkinRequest, type SkinResponse } from './skinMessage'
 import { emptyBinding, skinRange, vertexCountOf } from './skinVertices'
+import { loadSkinVerticesWasm } from './skinVerticesWasm'
 
 declare const self: DedicatedWorkerGlobalScope
 
@@ -17,6 +18,7 @@ declare const self: DedicatedWorkerGlobalScope
 const SLICE = 4096
 
 const cancelled = new Set<number>()
+const wasmBinding = loadSkinVerticesWasm()
 
 self.addEventListener('message', (event: MessageEvent<SkinIncoming>) => {
   const message = event.data
@@ -30,12 +32,21 @@ self.addEventListener('message', (event: MessageEvent<SkinIncoming>) => {
 async function run(request: SkinRequest): Promise<void> {
   try {
     const vertices = vertexCountOf(request)
-    const binding = emptyBinding(vertices)
+    let wasm
+    try {
+      wasm = (await wasmBinding)(request)
+    } catch {
+      // WebAssembly is an optimisation; unsupported runtimes and inputs keep the reference path.
+      wasm = undefined
+    }
+    const fallback = wasm ? undefined : emptyBinding(vertices)
 
     for (let from = 0; from < vertices; from += SLICE) {
       if (cancelled.delete(request.id)) return
 
-      skinRange(request, binding, from, Math.min(from + SLICE, vertices))
+      const to = Math.min(from + SLICE, vertices)
+      if (wasm) wasm.skinRange(from, to)
+      else if (fallback) skinRange(request, fallback, from, to)
       post({ id: request.id, done: false, progress: from / Math.max(vertices, 1) })
       // Yields the queue: without it every cancel and every progress message would be delivered
       // in one burst once the whole walk was already over.
@@ -45,6 +56,8 @@ async function run(request: SkinRequest): Promise<void> {
     // Checked once more: the last slice may have run while a cancel was on its way.
     if (cancelled.delete(request.id)) return
 
+    const binding = wasm ? wasm.binding() : fallback
+    if (!binding) throw new Error('Skinning produced no binding')
     self.postMessage({ id: request.id, done: true, ok: true, ...binding } satisfies SkinResponse, {
       transfer: [binding.skinIndex.buffer, binding.skinWeight.buffer],
     })

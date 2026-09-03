@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { INFLUENCES, SKIN_REGIONS, type SkinRegion, type SkinRequest } from './skinMessage'
-import { skinVertices } from './skinVertices'
+import { skinVertices, vertexCountOf } from './skinVertices'
+import { loadSkinVerticesWasm } from './skinVerticesWasm'
 
 const regionIndex = (region: SkinRegion): number => SKIN_REGIONS.indexOf(region)
 
@@ -221,6 +222,62 @@ describe('a walk that takes a while', () => {
     ]
 
     expect(bind(vertices, bones).skinWeight).toEqual(bind(vertices, bones).skinWeight)
+  })
+})
+
+describe('the WebAssembly kernel', () => {
+  it('produces the same indices and weights as the TypeScript fallback', async () => {
+    const input = request(
+      [
+        [0.1, 0.4, 0],
+        [0.8, 0.7, 0.2],
+        [0.4, 1.2, 0],
+      ],
+      [
+        { head: [0, 0, 0], tail: [0, 1, 0], region: 'trunk' },
+        { head: [1, 0, 0], tail: [1, 1, 0], region: 'armLeft' },
+        { head: [0.5, 1, 0], tail: [0.5, 1.4, 0], region: 'indexLeft' },
+        { head: [0.6, 1, 0], tail: [0.6, 1.4, 0], region: 'middleLeft' },
+        { head: [0.5, 1.4, 0], tail: [0.5, 1.4, 0], region: 'handle' },
+      ],
+    )
+    const expected = skinVertices(input)
+    if (!expected) throw new Error('the TypeScript walk was not cancelled')
+
+    const wasm = (await loadSkinVerticesWasm())(input)
+    wasm.skinRange(0, vertexCountOf(input))
+    const actual = wasm.binding()
+
+    for (let vertex = 0; vertex < vertexCountOf(input); vertex += 1) {
+      const actualInfluences = influences(actual, vertex).sort(
+        (left, right) => left.bone - right.bone,
+      )
+      const expectedInfluences = influences(expected, vertex).sort(
+        (left, right) => left.bone - right.bone,
+      )
+      expect(actualInfluences.map(influence => influence.bone)).toEqual(
+        expectedInfluences.map(influence => influence.bone),
+      )
+      for (const [slot, influence] of actualInfluences.entries()) {
+        expect(influence.weight).toBeCloseTo(expectedInfluences[slot]?.weight ?? 0, 6)
+      }
+    }
+  })
+
+  it('keeps overlapping requests in separate memories', async () => {
+    const createBinding = await loadSkinVerticesWasm()
+    const first = createBinding(
+      request([[0, 0, 0]], [{ head: [0, 0, 0], tail: [0, 1, 0], region: 'trunk' }]),
+    )
+    const second = createBinding(
+      request([[10, 0, 0]], [{ head: [10, 0, 0], tail: [10, 1, 0], region: 'trunk' }]),
+    )
+
+    first.skinRange(0, 1)
+    second.skinRange(0, 1)
+
+    expect(influences(first.binding())[0]).toMatchObject({ bone: 0, weight: 1 })
+    expect(influences(second.binding())[0]).toMatchObject({ bone: 0, weight: 1 })
   })
 })
 
