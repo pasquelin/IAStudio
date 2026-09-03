@@ -18,15 +18,24 @@ declare const self: DedicatedWorkerGlobalScope
 /** Vertices per slice. Small enough that a cancellation lands promptly on a slow machine. */
 const SLICE = 4096
 
+const running = new Set<number>()
 const cancelled = new Set<number>()
-const wasmBinding = loadSkinVerticesWasm()
+
+/**
+ * Compiled on the first request, never at module load: nothing awaits it until then, so a
+ * rejection would reach `unhandledrejection` before any `try` existed to swallow it.
+ */
+let wasmBinding: ReturnType<typeof loadSkinVerticesWasm> | null = null
 
 self.addEventListener('message', (event: MessageEvent<SkinIncoming>) => {
   const message = event.data
   if (isCancel(message)) {
-    cancelled.add(message.id)
+    // A cancel that lost the race against `done` names a request that is over: kept, it would
+    // sit in the set for the life of the worker.
+    if (running.has(message.id)) cancelled.add(message.id)
     return
   }
+  running.add(message.id)
   void run(message)
 })
 
@@ -35,7 +44,7 @@ async function run(request: SkinRequest): Promise<void> {
     const vertices = vertexCountOf(request)
     let wasm
     try {
-      wasm = (await wasmBinding)(request)
+      wasm = (await (wasmBinding ??= loadSkinVerticesWasm()))(request)
     } catch {
       // WebAssembly is an optimisation; unsupported runtimes and inputs keep the reference path.
       wasm = undefined
@@ -64,6 +73,9 @@ async function run(request: SkinRequest): Promise<void> {
     })
   } catch (error) {
     post({ id: request.id, done: true, ok: false, error: messageOf(error) })
+  } finally {
+    running.delete(request.id)
+    cancelled.delete(request.id)
   }
 }
 

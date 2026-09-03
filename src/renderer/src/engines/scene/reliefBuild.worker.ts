@@ -11,13 +11,17 @@ import { breathe } from '../core/breathe'
 
 declare const self: DedicatedWorkerGlobalScope
 
+const running = new Set<number>()
 const cancelled = new Set<number>()
 
 self.addEventListener('message', (event: MessageEvent<ReliefBuildIncoming>) => {
   if (isReliefBuildCancel(event.data)) {
-    cancelled.add(event.data.id)
+    // A cancel that lost the race against `done` names a request that is over: kept, it would
+    // sit in the set for the life of the worker.
+    if (running.has(event.data.id)) cancelled.add(event.data.id)
     return
   }
+  running.add(event.data.id)
   void build(event.data)
 })
 
@@ -60,6 +64,9 @@ async function build(request: Exclude<ReliefBuildIncoming, { cancel: true }>): P
     )
   } catch (error) {
     post({ id: request.id, done: true, ok: false, error: messageOf(error) })
+  } finally {
+    running.delete(request.id)
+    cancelled.delete(request.id)
   }
 }
 

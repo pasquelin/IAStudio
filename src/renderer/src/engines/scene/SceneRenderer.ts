@@ -888,7 +888,12 @@ export class SceneRenderer {
   /** The document's own ground. Beside the nodes like the grid, and never one of them. */
   private readonly ground = createGroundPlane()
   private readonly relief: ReliefSurface
-  private readonly reliefSculptors = new Map<string, ReliefSculptor>()
+  /**
+   * One pool at a time. Each sculptor holds `hardwareConcurrency - 2` workers, and keeping one
+   * per edit layer left a document that had touched five of them with five pools alive.
+   */
+  private reliefSculptor: { terrainId: string; editId: string; sculptor: ReliefSculptor } | null =
+    null
   /** The sun the sky it names describes. A node of the scene, so it is born with the renderer. */
   private readonly sun: SkySun = createSkySun(this.viewport.scene)
   /** What the scene was last lit ON, so a pass that changes nothing costs nothing. */
@@ -1301,19 +1306,86 @@ export class SceneRenderer {
   ): Promise<boolean> {
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
-    const key = JSON.stringify([terrainId, editId])
-    let sculptor = this.reliefSculptors.get(key)
-    if (!sculptor) {
-      sculptor =
-        this.options.createReliefSculptor?.() ??
-        createReliefSculptor(() => new ReliefSculptWorker())
-      this.reliefSculptors.set(key, sculptor)
-    }
-    sculptor.note(source.sculpt)
-    const chunks = await sculptor.raiseDisk({ ...source, disk, amount })
+    const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({ ...source, disk, amount })
     if (!chunks) return false
     this.options.onReliefSculpt?.(terrainId, editId, chunks)
     return true
+  }
+
+  private sculptorFor(terrainId: string, editId: string): ReliefSculptor {
+    const held = this.reliefSculptor
+    if (held && held.terrainId === terrainId && held.editId === editId) return held.sculptor
+    held?.sculptor.dispose()
+    const sculptor =
+      this.options.createReliefSculptor?.() ?? createReliefSculptor(() => new ReliefSculptWorker())
+    this.reliefSculptor = { terrainId, editId, sculptor }
+    return sculptor
+  }
+
+  /**
+   * Where the sculptor learns of an outside write — an undo, a reload — the store having already
+   * landed. Read back on every stroke instead, it was one render BEHIND: indistinguishable from
+   * an undo, so the sculptor dropped its chaining and the next stroke rebased on the sculpt from
+   * before the last one, erasing it inside the chunks they shared.
+   */
+  private noteSculpt(): void {
+    const held = this.reliefSculptor
+    if (!held) return
+    held.sculptor.note(this.relief.sculptSource(held.terrainId, held.editId)?.sculpt)
+  }
+
+  setReliefBrush(brush: ReliefBrush | null): void {
+    if (
+      brush &&
+      this.reliefBrush?.terrainId === brush.terrainId &&
+      this.reliefBrush.editId === brush.editId &&
+      this.reliefBrush.radius === brush.radius &&
+      this.reliefBrush.amount === brush.amount
+    ) {
+      return
+    }
+    this.reliefBrush = brush
+    this.reliefPointer = null
+    this.reliefPoint = null
+  }
+
+  private reliefPointAt(event: PointerEvent): Vector3 | null {
+    const brush = this.reliefBrush
+    const ndc = this.viewport.pointerNdcOf(event)
+    if (!brush || !ndc) return null
+    this.pointer.set(ndc.x, ndc.y)
+    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
+    return this.relief.pointAt(brush.terrainId, this.raycaster)
+  }
+
+  private applyReliefBrush(event: PointerEvent): boolean {
+    const brush = this.reliefBrush
+    const point = this.reliefPointAt(event)
+    if (!brush || !point) return false
+    if (this.reliefPoint && this.reliefPoint.distanceToSquared(point) < brush.radius ** 2 / 16) {
+      return true
+    }
+    this.reliefPoint = point.clone()
+    void this.commitReliefBrush(brush, point, event.altKey ? -brush.amount : brush.amount)
+    return true
+  }
+
+  private async commitReliefBrush(
+    brush: ReliefBrush,
+    point: Vector3,
+    amount: number,
+  ): Promise<void> {
+    try {
+      await this.raiseReliefDisk(
+        brush.terrainId,
+        brush.editId,
+        { x: point.x, z: point.z, radius: brush.radius },
+        amount,
+      )
+    } catch {
+      this.reliefPointer = null
+      this.reliefPoint = null
+    }
   }
 
   /**
@@ -3298,8 +3370,8 @@ export class SceneRenderer {
     this.bvh.dispose()
     this.skin.dispose()
     this.retarget.dispose()
-    for (const sculptor of this.reliefSculptors.values()) sculptor.dispose()
-    this.reliefSculptors.clear()
+    this.reliefSculptor?.sculptor.dispose()
+    this.reliefSculptor = null
     this.clipSources.dispose()
     this.bundled.clear()
     this.iks.clear()
@@ -3660,7 +3732,10 @@ export class SceneRenderer {
     }
 
     if (wanted.ground !== held.ground || wanted.layers !== held.layers) this.applyGround()
-    if (wanted.layers !== held.layers) this.relief.sync(wanted)
+    if (wanted.layers !== held.layers) {
+      this.relief.sync(wanted)
+      this.noteSculpt()
+    }
     if (this.relief.object.children.length > 0) this.ground.object.visible = false
     if (wanted.background !== held.background) this.paintBackground()
   }

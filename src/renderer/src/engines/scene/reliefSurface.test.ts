@@ -242,6 +242,76 @@ describe('relief surface chunks', () => {
     expect(right.updateRanges.length).toBeGreaterThan(0)
   })
 
+  /**
+   * 🛑 The patch path never touched `generation`, so a build started for an alpha the reader has
+   * since moved back landed with a token still current and painted its older surface on top.
+   */
+  it('drops a build in flight when a later sync draws the terrain itself', async () => {
+    const pending: (() => void)[] = []
+    const surface = createReliefSurface(new Scene(), {
+      builder: {
+        build: (samples, extent, grain, edits) =>
+          new Promise(resolve => {
+            pending.push(() =>
+              resolve([
+                reliefGeometryData(
+                  samples,
+                  extent,
+                  chunkLayout(0, 0, WIDTH, HEIGHT, grain),
+                  grain,
+                  edits,
+                ),
+              ]),
+            )
+          }),
+        dispose: vi.fn(),
+      },
+    })
+    const samples = samplesOf()
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 0,
+      delta: 4,
+    })
+    const blended = (alpha: number) => ({
+      ...DEFAULT_WORLD,
+      layers: [
+        reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ sculpt, alpha })] }),
+      ],
+    })
+
+    surface.sync(blended(1), samples)
+    pending.shift()?.()
+    await vi.waitFor(() => expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined())
+    const held = surface.meshOf(TERRAIN, 0, 0)
+
+    // A build for alpha 0.5 starts; the reader undoes back to 1, which the patch path draws.
+    surface.sync(blended(0.5), samples)
+    surface.sync(blended(1), samples)
+    pending.shift()?.()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(surface.meshOf(TERRAIN, 0, 0)).toBe(held)
+  })
+
+  it('lets a load in flight finish rather than reading the heightmap again', async () => {
+    let reads = 0
+    const surface = createReliefSurface(new Scene(), {
+      load: async () => {
+        reads += 1
+        return samplesOf()
+      },
+    })
+
+    surface.sync(worldOf())
+    surface.sync(worldOf())
+    await vi.waitFor(() => expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined())
+
+    expect(reads).toBe(1)
+  })
+
   it('leaves the root empty when a heightmap will not load, so the ground stays drawn', async () => {
     const scene = new Scene()
     let failed = false

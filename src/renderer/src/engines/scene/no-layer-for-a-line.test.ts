@@ -35,6 +35,8 @@ const OTHER_SENSES: Record<string, string> = {
   reliefSculptor: 'World relief: sculpt deltas on a heightmap, not a timeline line',
   reliefReadCost: 'World relief: the heightmap layer a surface is built from, not a timeline line',
   sceneRendererRelief: 'World relief: applyWorld reads world.layers, not a timeline line',
+  'scene-renderer-relief':
+    'World relief: the edit layers a sculptor is held for, not a timeline line',
 }
 
 const stemOf = (path: string): string => (path.split('/').pop() ?? '').split('.')[0] ?? ''
