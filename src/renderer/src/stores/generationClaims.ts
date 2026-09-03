@@ -35,6 +35,9 @@ const CLAIMS: Record<DocumentKind, Claim | null> = {
   // Nothing generates an interface: it is drawn, and what it SHOWS is claimed by the space the
   // picture belongs to.
   gui: null,
+  // A generated model lands in the library, and a double-click on it opens a tab of its own:
+  // nothing is ever poured INTO the character already open.
+  character: null,
 }
 
 /**

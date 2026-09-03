@@ -233,7 +233,6 @@ type ChannelMethod = {
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']
 
   [CHANNELS.mirrorOpen]: StudioBridge['mirror']['open']
-  [CHANNELS.characterWindowOpen]: StudioBridge['characterWindow']['open']
   [CHANNELS.gameWindowOpen]: StudioBridge['gameWindow']['open']
   [CHANNELS.playerModuleWindowOpen]: StudioBridge['playerModuleWindow']['open']
   [CHANNELS.gameWindowClose]: StudioBridge['gameWindow']['close']

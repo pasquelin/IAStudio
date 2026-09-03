@@ -1,5 +1,4 @@
 import type { CharacterExtras } from '@shared/domain/character'
-import type { GlbSkinPatch } from '@/engines/scene/glbSkin'
 import type { CharacterState } from '@/engines/character/characterState'
 import { createGlbWriter, type GlbWriter } from '@/engines/scene/glbWriter'
 import type { StudioBridge } from '@shared/ipc'
@@ -7,10 +6,9 @@ import { orElse } from '@shared/promises'
 import { assetBytes } from '@/helpers/assetFetch'
 import { getBridge } from '@/services/bridge'
 import { characterOf, characterStore } from '@/stores/character'
+import { characterAssetOf, useDocuments } from '@/stores/documents'
+import { characterSkinsOf, type CharacterSkinning } from './characterSkins'
 import GlbWriteWorker from '@/engines/scene/glbWrite.worker?worker'
-
-/** What the weights of one mesh are, once the engine has worked them out. */
-export type CharacterSkinning = GlbSkinPatch['skins']
 
 /**
  * Writing a character back: its own file, patched with the skeleton it now carries.
@@ -112,4 +110,17 @@ export function extrasOf(state: CharacterState): CharacterExtras {
     ...(state.sockets.length > 0 && { sockets: state.sockets }),
     ...(state.motions.length > 0 && { motions: state.motions }),
   }
+}
+
+/**
+ * ⌘S on a character tab: the model's own container, patched with the skeleton the tab now holds.
+ *
+ * Here rather than in `documentIo`, which knows documents and not characters — and it is the
+ * whole of what saving one means: there is no file in the project to write beside it.
+ */
+export async function saveCharacterDocument(documentId: string): Promise<boolean> {
+  const assetId = characterAssetOf(useDocuments.getState(), documentId)
+  if (!assetId) return false
+
+  return await saveCharacter(assetId, () => characterSkinsOf(assetId))
 }

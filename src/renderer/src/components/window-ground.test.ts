@@ -31,7 +31,7 @@ describe('the ground under a window', () => {
 
   it('finds the windows at all, so the rules below cannot pass on an empty list', () => {
     expect(Object.keys(WINDOW_SOURCES).length).toBeGreaterThan(400)
-    expect(framed.length).toBeGreaterThan(1)
+    expect(framed.length).toBeGreaterThan(0)
   })
 
   it('is the chassis, in every window that wears the bar', () => {

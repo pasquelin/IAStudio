@@ -7,8 +7,8 @@ import { withQueries } from '@/features/shell/components/query-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
 import { clearCharacters } from '@/stores/character-fixtures'
-import { useCharacterView } from '@/stores/characterView'
-import { CharacterWindowInspector } from './CharacterWindowInspector'
+import { characterViewOf, useCharacterView } from '@/stores/characterView'
+import { CharacterInspector } from './CharacterInspector'
 
 const ASSET = 'asset-hero'
 const SAMPLE = {
@@ -25,23 +25,17 @@ const RIG: Rig = {
 }
 
 const show = (): void => {
-  render(
-    withQueries(
-      <CharacterWindowInspector
-        assetId={ASSET}
-        sample={SAMPLE}
-        documentId="character:asset-hero"
-        nodeId="node-1"
-      />,
-    ),
-  )
+  // What the engine measured, where the tab puts it: this panel is mounted by the DOCK, outside
+  // the surface holding the engine.
+  useCharacterView.getState().noteCharacterSample(ASSET, SAMPLE)
+  render(withQueries(<CharacterInspector assetId={ASSET} />))
 }
 
 const held = () => characterOf(useCharacters.getState(), ASSET)
 
 beforeEach(() => {
   clearCharacters()
-  useCharacterView.getState().pickBone(null)
+  useCharacterView.setState({ views: {} })
   installFakeBridge({})
 })
 
@@ -59,7 +53,7 @@ describe('what a character is made of', () => {
     show()
     expect(screen.queryByLabelText('Articulation')).not.toBeInTheDocument()
 
-    useCharacterView.getState().pickBone('Spine')
+    useCharacterView.getState().pickBone(ASSET, 'Spine')
     show()
 
     expect(screen.getAllByLabelText('Articulation')[0]).toBeInTheDocument()
@@ -68,7 +62,7 @@ describe('what a character is made of', () => {
   // A rig arrives with the names its file spells, and `mixamorigHips` is not one anybody chose.
   it('renames the picked bone, and the rest of the skeleton follows', async () => {
     seedCharacter(ASSET, RIG, {})
-    useCharacterView.getState().pickBone('Hips')
+    useCharacterView.getState().pickBone(ASSET, 'Hips')
     show()
 
     // Opened by a double-click, as every other name of the studio is — see `AssetInspector`.
@@ -86,7 +80,7 @@ describe('what a character is made of', () => {
 
   it('ties a bone to a joint of the standard, taking the role from whoever held it', async () => {
     seedCharacter(ASSET, RIG, {})
-    useCharacterView.getState().pickBone('Spine')
+    useCharacterView.getState().pickBone(ASSET, 'Spine')
     show()
 
     await userEvent.selectOptions(screen.getByLabelText('Articulation'), 'Hips')
@@ -97,7 +91,7 @@ describe('what a character is made of', () => {
 
   it('adds a handle the joint reaches for, and takes it back', async () => {
     seedCharacter(ASSET, RIG, {})
-    useCharacterView.getState().pickBone('Spine')
+    useCharacterView.getState().pickBone(ASSET, 'Spine')
     show()
 
     await userEvent.click(screen.getByRole('button', { name: 'Ajouter une poignée à suivre' }))
@@ -105,17 +99,6 @@ describe('what a character is made of', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Retirer la poignée' }))
     expect(held().rig?.ik).toEqual([])
-  })
-
-  // A fixed pane of a window, never a dock panel: the row names the surface, and the way out a
-  // dock offers would close nothing here.
-  it('names itself as the inspector, and offers no way to close it', () => {
-    seedCharacter(ASSET, RIG, {})
-    show()
-
-    expect(screen.getByText('Inspecteur')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Tout replier' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /[Ff]ermer/ })).not.toBeInTheDocument()
   })
 
   it('says this character knows no motion yet', () => {
@@ -129,7 +112,7 @@ describe('what a character is made of', () => {
   // was no way at all to hold one axis while another moved.
   it('gives a picked joint the fields a scene gives a node, padlock included', async () => {
     seedCharacter(ASSET, RIG, {})
-    useCharacterView.getState().pickBone('Spine')
+    useCharacterView.getState().pickBone(ASSET, 'Spine')
     show()
 
     // Folded, the three axes share one line and there is no room for three padlocks — the same
@@ -139,6 +122,6 @@ describe('what a character is made of', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Figer l’axe X' }))
 
-    expect(useCharacterView.getState().heldAxes).toEqual(['x'])
+    expect(characterViewOf(useCharacterView.getState(), ASSET).heldAxes).toEqual(['x'])
   })
 })

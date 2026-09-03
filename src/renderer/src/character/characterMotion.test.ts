@@ -1,12 +1,37 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EMPTY_TIMELINE, SCENE_SUBJECT_ID, type AnimationTimeline } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
+import type { SaveAnimationRequest } from '@shared/ipc'
+import i18next from 'i18next'
+import { TRANSLATIONS } from '@shared/i18n'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { clearCharacters } from '@/stores/character-fixtures'
 import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
 import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
 import { motionFile } from './characterMotion-fixtures'
-import { hasMotion, motionExtras, motionTimelineOf, saveCharacterMotion } from './characterMotion'
+import {
+  hasMotion,
+  motionExtras,
+  motionTimelineOf,
+  saveCharacterMotion,
+  saveWorkshopMotion,
+} from './characterMotion'
+import { workshopIdOf } from './characterStage'
+import { createDefaultScene } from '@/engines/scene/defaultScene'
+import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
+import { clearScenes } from '@/stores/scene-fixtures'
+import { useScenes } from '@/stores/scenes'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
+
+/** The asset a filed motion comes back as. */
+const FILED: Asset = {
+  id: 'asset-walk',
+  name: 'Nouveau mouvement',
+  type: 'animation',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-09-02T00:00:00.000Z',
+}
 
 const ASSET = 'asset-hero'
 
@@ -25,6 +50,20 @@ const keyed: AnimationTimeline = {
     },
   ],
 }
+
+/**
+ * The name a filed motion is born with is a SENTENCE, so the bundles have to be loaded for it to
+ * be one. Straight into i18next rather than through `initI18n`, which reads `localStorage` and
+ * writes on the document — neither of which a suite outside a browser has.
+ */
+beforeAll(async () => {
+  await i18next.init({
+    lng: 'fr',
+    defaultNS: 'studio',
+    resources: { fr: { studio: TRANSLATIONS.fr } },
+    interpolation: { escapeValue: false },
+  })
+})
 
 beforeEach(() => {
   clearCharacters()
@@ -97,5 +136,66 @@ describe('a motion taken back onto the band', () => {
     expect(motionTimelineOf(motionFile({}), 'node-9')).toBeNull()
     expect(motionTimelineOf(motionFile({ [STUDIO_METADATA_KEY]: {} }), 'node-9')).toBeNull()
     expect(motionTimelineOf(new Uint8Array([1, 2, 3]), 'node-9')).toBeNull()
+  })
+})
+
+/**
+ * 🛑 ONE file: the band rides in the `extras` of the very glb the workshop exports, and a second
+ * save lands on that same file. Read off the engine registry — the inspector that offers this
+ * sits in a DOCK, outside the tab holding the engine.
+ */
+describe('the motion a workshop bakes', () => {
+  const WORKSHOP = workshopIdOf(ASSET)
+  const carried: (Record<string, unknown> | null)[] = []
+
+  const engine = () =>
+    ({
+      exportTo: (_format: string, _scope: string, extras?: Record<string, unknown>) => {
+        carried.push(extras ?? null)
+        return Promise.resolve(new Uint8Array([1, 2]))
+      },
+    }) as unknown as SceneRenderer
+
+  beforeEach(() => {
+    carried.length = 0
+    clearScenes()
+    forgetSceneEngine(WORKSHOP)
+  })
+
+  it('writes nothing at all while no engine holds the workshop', async () => {
+    const saveAnimation = vi.fn(() => Promise.resolve(FILED))
+    installFakeBridge({ assets: { saveAnimation } })
+
+    await saveWorkshopMotion(ASSET, true)
+
+    expect(saveAnimation).not.toHaveBeenCalled()
+  })
+
+  it('files the band inside the glb, and saves onto that same file afterwards', async () => {
+    const saveAnimation = vi.fn((_request: SaveAnimationRequest) => Promise.resolve(FILED))
+    installFakeBridge({ assets: { saveAnimation } })
+    seedCharacter(ASSET, null, {})
+    registerSceneEngine(WORKSHOP, engine())
+    useScenes.getState().replace(WORKSHOP, { ...createDefaultScene(), animation: keyed })
+
+    await saveWorkshopMotion(ASSET, true)
+
+    // The sheet PURGED of what the workshop does not hold: the file would otherwise carry the id
+    // of an object the scene has lost, and gather one more at every save.
+    expect(carried).toEqual([{ iastudio: { animation: { ...keyed, sheet: [] } } }])
+    expect(saveAnimation.mock.calls[0]?.[0]).toEqual({
+      name: 'Nouveau mouvement',
+      derivedFrom: ASSET,
+      glb: new Uint8Array([1, 2]),
+    })
+
+    await saveWorkshopMotion(ASSET, false)
+
+    expect(saveAnimation.mock.calls[1]?.[0]).toEqual({
+      name: 'Nouveau mouvement',
+      derivedFrom: ASSET,
+      replaces: FILED.id,
+      glb: new Uint8Array([1, 2]),
+    })
   })
 })

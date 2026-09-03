@@ -1,48 +1,115 @@
 import { create } from 'zustand'
 import type { BoneAxis } from '@/engines/character/boneRest'
 import type { TransformMode } from '@/engines/scene/gizmoTarget'
+import type { MeshSample } from '@/engines/scene/rigSnap'
 
 /**
- * Which bone is picked in the skeleton window. Outside the character for the reason a scene's
- * view is outside its document: picking is not an edit, and has no business on the undo stack.
+ * What is picked and how it is being handled in one character's tab. Outside the character for
+ * the reason a scene's view is outside its document: picking is not an edit, and has no business
+ * on the undo stack.
  */
-type CharacterViewState = {
+export type CharacterView = {
   /** A bone has no id — it is addressed by name, like every track that drives one. */
   pickedBone: string | null
-  pickBone: (bone: string | null) => void
   /**
    * What the gizmo does to the joint that is picked. Opens on `translate`: a skeleton read off a
    * bounding box lands each joint near enough, and placing them is the first thing a hand does.
    */
   mode: TransformMode
-  setCharacterMode: (mode: TransformMode) => void
   /**
    * The axes a joint is held still on, while one is being placed. Session state like the pick:
    * a hold is how a hand moves a knee straight down without letting it drift forward, and it is
    * not a property of the skeleton.
    */
   heldAxes: readonly BoneAxis[]
-  holdCharacterAxis: (axis: BoneAxis, held: boolean) => void
   /**
    * Whether the gizmo edits the SKELETON rather than manipulating the character. Off by default:
-   * the window is opened to make a character move, and the mesh follows a bone that is posed.
+   * a character is opened to be made to move, and the mesh follows a bone that is posed.
    */
   editingRest: boolean
-  editCharacterRest: (editing: boolean) => void
+  /**
+   * What the engine measured of the mesh, for the rigger that fits itself to it — and `null`
+   * until the file has landed. Read by the inspector, which the dock mounts OUTSIDE the tab
+   * holding the engine.
+   */
+  sample: MeshSample | null
 }
 
-export const useCharacterView = create<CharacterViewState>()(set => ({
+const DEFAULT_CHARACTER_VIEW: CharacterView = {
   pickedBone: null,
-  pickBone: pickedBone => set(state => (state.pickedBone === pickedBone ? state : { pickedBone })),
   mode: 'translate',
-  setCharacterMode: mode => set({ mode }),
-  editingRest: false,
-  editCharacterRest: editingRest => set({ editingRest }),
   heldAxes: [],
-  holdCharacterAxis: (axis, held) =>
-    set(state => ({
-      heldAxes: held
-        ? [...new Set([...state.heldAxes, axis])]
-        : state.heldAxes.filter(one => one !== axis),
-    })),
+  editingRest: false,
+  sample: null,
+}
+
+type CharacterViewsState = {
+  /** Keyed by ASSET and not by document: the tab edits a model's own file, and two tabs on one
+   * model would be two answers about the joint in hand. */
+  views: Record<string, CharacterView>
+  pickBone: (assetId: string, bone: string | null) => void
+  setCharacterMode: (assetId: string, mode: TransformMode) => void
+  holdCharacterAxis: (assetId: string, axis: BoneAxis, held: boolean) => void
+  editCharacterRest: (assetId: string, editing: boolean) => void
+  noteCharacterSample: (assetId: string, sample: MeshSample | null) => void
+  forgetCharacterView: (assetId: string) => void
+}
+
+export function characterViewOf(
+  state: Pick<CharacterViewsState, 'views'>,
+  assetId: string,
+): CharacterView {
+  return state.views[assetId] ?? DEFAULT_CHARACTER_VIEW
+}
+
+export const useCharacterView = create<CharacterViewsState>()(set => ({
+  views: {},
+
+  pickBone: (assetId, pickedBone) => set(state => written(state, assetId, () => ({ pickedBone }))),
+
+  setCharacterMode: (assetId, mode) => set(state => written(state, assetId, () => ({ mode }))),
+
+  editCharacterRest: (assetId, editingRest) =>
+    set(state => written(state, assetId, () => ({ editingRest }))),
+
+  holdCharacterAxis: (assetId, axis, held) =>
+    set(state =>
+      written(state, assetId, view => ({
+        heldAxes: held
+          ? [...new Set([...view.heldAxes, axis])]
+          : view.heldAxes.filter(one => one !== axis),
+      })),
+    ),
+
+  noteCharacterSample: (assetId, sample) =>
+    set(state => written(state, assetId, () => ({ sample }))),
+
+  forgetCharacterView: assetId =>
+    set(state => {
+      const { [assetId]: gone, ...left } = state.views
+      return gone ? { views: left } : state
+    }),
 }))
+
+/**
+ * One view rewritten, the rest of the map left alone — and the state itself left alone when the
+ * edit changed nothing: a pick repeated on the bone already held redrew every panel reading it.
+ */
+function written(
+  state: Pick<CharacterViewsState, 'views'>,
+  assetId: string,
+  edit: (view: CharacterView) => Partial<CharacterView>,
+): Pick<CharacterViewsState, 'views'> {
+  const held = characterViewOf(state, assetId)
+  const next = { ...held, ...edit(held) }
+  const settled = KEYS.every(key => next[key] === held[key])
+  return settled && state.views[assetId] ? state : { views: { ...state.views, [assetId]: next } }
+}
+
+const KEYS: readonly (keyof CharacterView)[] = [
+  'pickedBone',
+  'mode',
+  'heldAxes',
+  'editingRest',
+  'sample',
+]

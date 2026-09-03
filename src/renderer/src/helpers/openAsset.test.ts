@@ -140,28 +140,32 @@ describe('opening an asset', () => {
 
   // A container the studio writes a skeleton back into: it opens on the FILE, and every other
   // mesh still lands in a scene.
-  it('opens a mesh in a scene, and a `.glb` in the skeleton window instead', async () => {
-    const opens: string[] = []
-    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
-
+  it('opens a mesh in a scene, and a `.glb` on a character tab instead', async () => {
     await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.fbx' }))
     const nodes = sceneOf(useScenes.getState(), opened().id).nodes
     expect(nodes.filter(node => node.type === 'model')).toHaveLength(1)
     expect(useLayouts.getState().activeWorkspace).toBe('3d')
 
-    const before = openedCount()
     await openAsset(asset({ id: 'mesh-2', type: 'mesh', name: 'knight.glb' }))
 
-    expect(opens).toEqual(['mesh-2'])
+    expect(opened().kind).toBe('character')
+    expect(opened().sourceAssetId).toBe('mesh-2')
+  })
+
+  // Two tabs on one model are two skeletons of it, and the second ⌘S writes over the first.
+  it('comes back to the character already open rather than opening a second', async () => {
+    const model = asset({ id: 'mesh-5', type: 'mesh', name: 'knight.glb' })
+    await openAsset(model)
+    const before = openedCount()
+
+    await openAsset(model)
+
     expect(openedCount()).toBe(before)
   })
 
   // MEASURED on a real project: a catalogued row is named `tripo-character`, and only the path
   // behind it carries `.glb`. Reading the name alone left the double-click doing nothing at all.
-  it('opens the window for a row whose extension lives on its path alone', async () => {
-    const opens: string[] = []
-    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
-
+  it('opens the tab for a row whose extension lives on its path alone', async () => {
     await openAsset(
       asset({
         id: 'mesh-4',
@@ -171,17 +175,17 @@ describe('opening an asset', () => {
       }),
     )
 
-    expect(opens).toEqual(['mesh-4'])
+    expect(opened().kind).toBe('character')
+    expect(opened().sourceAssetId).toBe('mesh-4')
   })
 
-  // The file behind it is what the window reads, and a row the cloud holds has none.
-  it('opens nothing for a character this disk does not hold', async () => {
-    const opens: string[] = []
-    installFakeBridge({ characterWindow: { open: id => (opens.push(id), Promise.resolve()) } })
-
+  // The file behind it is what the tab reads, and a row the cloud holds has none.
+  it('opens no character tab for one this disk does not hold', async () => {
     await openAsset(asset({ id: 'mesh-3', type: 'mesh', name: 'knight.glb', location: 'cloud' }))
 
-    expect(opens).toEqual([])
+    expect(Object.values(useDocuments.getState().documents).map(one => one.kind)).not.toContain(
+      'character',
+    )
   })
 
   it('opens a sky in the skybox space, not in the image one it also decodes for', async () => {

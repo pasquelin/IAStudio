@@ -2,6 +2,7 @@ import { designatedIn } from '@/engines/timeline/timelineState'
 import { layerById } from '@/engines/canvas/canvasState'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import {
+  activeCharacterAssetId,
   activeImageId,
   activeSceneId,
   activeMontageId,
@@ -14,6 +15,7 @@ import { ClipInspector } from '../../../timeline/components/ClipInspector'
 import { CanvasInspector } from '../../../image/components/Canvas/CanvasInspector'
 import { LayerInspector } from '../../../image/components/Layer/LayerInspector'
 import { SceneInspector } from '../../../scene/components/Scene/SceneInspector'
+import { CharacterInspector } from '../../../character/components/Character/Inspector/CharacterInspector'
 import { SkyboxInspector } from '../../../skybox/components/Skybox/Inspector/SkyboxInspector'
 import { MaterialInspector } from '../../../material/components/Material/Inspector/MaterialInspector'
 import { TrackInspector } from '../../../timeline/components/Track/TrackInspector'
@@ -35,6 +37,9 @@ export function InspectorFace() {
   const sequence = useSequences(state => (sequenceId ? sequenceOf(state, sequenceId) : null))
   const textureId = useDocuments(activeMaterialId)
   const skyboxId = useDocuments(activeSkyboxId)
+  // The ASSET and not the document: a character tab edits a model of the library, and everything
+  // this face reads — the skeleton, its motions — is filed under it.
+  const characterAssetId = useDocuments(activeCharacterAssetId)
   const imageId = useDocuments(activeImageId)
   // `hasState` first: `canvasOf` falls back to the default canvas, and a document still being
   // read would offer its fields to edit — an entry ⌘Z would then swap the loaded file for.
@@ -71,6 +76,10 @@ export function InspectorFace() {
 
   // Which node is the scene's own state, read by `SceneInspector` there.
   if (sceneId) return <SceneInspector documentId={sceneId} />
+
+  // The bones of the model this tab rigs — nothing of a scene, which is the whole reason a
+  // character opens on a tab of its own.
+  if (characterAssetId) return <CharacterInspector assetId={characterAssetId} />
 
   // A sky has no node to pick: everything on it belongs to the document.
   if (skyboxId) return <SkyboxInspector documentId={skyboxId} />

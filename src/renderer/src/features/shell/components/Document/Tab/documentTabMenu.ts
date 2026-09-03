@@ -1,6 +1,8 @@
 import { mdiClose, mdiCloseBoxMultipleOutline, mdiRenameOutline, mdiTrashCanOutline } from '@mdi/js'
 import type { TFunction } from 'i18next'
+import { isFiledKind } from '@shared/domain/document'
 import { showContextMenu } from '@/helpers/contextMenu'
+import { useDocuments } from '@/stores/documents'
 import { reportFailure } from '@/services/diagnostics'
 import { closeTab } from './closeTab'
 import { closeDocument, deleteDocument } from '../../../documentIo'
@@ -24,11 +26,17 @@ export type DocumentTabMenuProps = {
  * The menu is gone by the time any of these fails, so the journal is where a failure lands.
  */
 export function openDocumentTabMenu({ documentId, t, onRename }: DocumentTabMenuProps): void {
+  // 🛑 A tab with no file in the project is named and removed in the LIBRARY: a character rigs a
+  // model that lives there, so both gestures belong to the shelf and neither would land here.
+  const kind = useDocuments.getState().documents[documentId]?.kind
+  const filed = kind !== undefined && isFiledKind(kind)
+
   void showContextMenu([
     {
       label: t('documents.rename'),
       icon: mdiRenameOutline,
       tooltip: t('documents.renameHint'),
+      disabled: !filed,
       onSelect: onRename,
     },
     {
@@ -51,6 +59,7 @@ export function openDocumentTabMenu({ documentId, t, onRename }: DocumentTabMenu
       label: t('documents.delete'),
       icon: mdiTrashCanOutline,
       tooltip: t('documents.deleteHint'),
+      disabled: !filed,
       onSelect: () =>
         void deleteDocument(documentId).catch(error =>
           reportFailure('document.delete', documentId, error),

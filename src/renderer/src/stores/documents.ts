@@ -1,6 +1,8 @@
 import {
   roleForKind,
+  isFiledKind,
   kindForWorkspace,
+  kindsForWorkspace,
   type DocumentDescriptor,
   type DocumentKind,
 } from '@shared/domain/document'
@@ -83,7 +85,14 @@ type DocumentsState = {
    */
   create: (
     workspace: WorkspaceId,
-    of?: { title: string; sourceAssetId?: string; folder?: string },
+    of?: {
+      title: string
+      sourceAssetId?: string
+      folder?: string
+      kind?: DocumentKind
+      /** The file this document IS, for a kind that has none of its own — see `EXTENSIONS_BY_KIND`. */
+      path?: string
+    },
   ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   /**
@@ -243,6 +252,26 @@ export const activeSceneId = (state: DocumentsSlice): string | null =>
 
 /** The interface in front, as a selector. Same reason as `activeSceneId`, for its outliner. */
 export const activeGuiId = (state: DocumentsSlice): string | null => activeIdOfKind(state, 'gui')
+
+export const activeCharacterId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'character')
+
+/**
+ * The model a character tab was opened on, and `null` for any other document.
+ *
+ * The one way to ask, because three ask: the docks that draw the skeleton and the band from
+ * outside the tab, and the ⌘S that patches the container.
+ */
+export function characterAssetOf(state: DocumentsSlice, documentId: string): string | null {
+  const document = state.documents[documentId]
+  return document?.kind === 'character' ? (document.sourceAssetId ?? null) : null
+}
+
+/** The same, for whichever tab is in front — what a dock reads, having no id of its own. */
+export function activeCharacterAssetId(state: DocumentsSlice): string | null {
+  const id = activeCharacterId(state)
+  return id === null ? null : characterAssetOf(state, id)
+}
 
 /** The image in front, as a selector. Same reason as `activeSceneId`, for the layer stack. */
 export const activeImageId = (state: DocumentsSlice): string | null =>
@@ -405,7 +434,12 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   },
 
   create: async (workspace, of) => {
-    const kind = kindForWorkspace(workspace)
+    // 🛑 The asked-for kind when the space opens it, its head otherwise: a space holds SEVERAL —
+    // 3D opens a scene, an interface and a character — and deriving it from the space alone made
+    // « New interface » write a scene, with every gate green.
+    const wanted = of?.kind
+    const kind =
+      wanted && kindsForWorkspace(workspace).includes(wanted) ? wanted : kindForWorkspace(workspace)
     if (!kind) return null
 
     // The listing FIRST, so that reading the store and writing to it happen in one synchronous
@@ -433,7 +467,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
       // (there is no file to disagree with), and the first save answers for good: it may land on
       // a suffixed name if the folder meanwhile took this one, and `relist` reads back what the
       // folder holds.
-      path: documentPathFor(title, kind, of?.folder),
+      path: of?.path ?? documentPathFor(title, kind, of?.folder),
       ...(of?.sourceAssetId ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
@@ -454,6 +488,9 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   rename: async (id, title) => {
     const document = documentById(get(), id)
     if (!document) return 'invalid'
+    // A tab with no file of its own is named by what it edits: renaming a character means
+    // renaming the model in the library, which is the shelf's own gesture and not this one.
+    if (!isFiledKind(document.kind)) return 'invalid'
 
     // Asked here as well as in the main process, and neither is the redundant one: this spares a
     // round trip for what the window can already see, and the main process is what makes the

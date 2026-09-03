@@ -338,8 +338,6 @@ export type Channels = {
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
 
-  /** Opens the skeleton window on one character, or turns the open one towards it. */
-  characterWindowOpen: 'character:open-window'
   /** Opens the game window, or reveals the one already open. See `GAME_ROUTE`. */
   gameWindowOpen: 'game:open-window'
   playerModuleWindowOpen: 'player:open-module-window'
@@ -592,7 +590,6 @@ export const CHANNELS: Channels = {
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
   mirrorOpen: 'mirror:open',
-  characterWindowOpen: 'character:open-window',
   gameWindowOpen: 'game:open-window',
   playerModuleWindowOpen: 'player:open-module-window',
   gameWindowClose: 'game:close-window',
@@ -1076,7 +1073,6 @@ export const EVENTS = {
   settingsSection: 'evt:settings-section',
   updateState: 'evt:update-state',
   gameWindowClosed: 'evt:game-window-closed',
-  characterWindowClosed: 'evt:character-window-closed',
   activity: 'evt:activity',
 }
 
@@ -2272,18 +2268,6 @@ export type StudioBridge = {
    */
   playerModuleWindow: {
     open: (assetId: string) => Promise<void>
-  }
-  /**
-   * The skeleton window. Same line as `gameWindow`: what it EDITS travels between the windows on
-   * a channel they both share, and the only thing this side owns is opening one.
-   */
-  characterWindow: {
-    open: (assetId: string) => Promise<void>
-    /**
-     * It went away — closed by its own traffic lights, or by anything the studio did not ask
-     * for. 🛑 A renderer being torn down has no turn left in which to say so.
-     */
-    onClosed: (callback: () => void) => Unsubscribe
   }
   /**
    * The game window. Same line as `mirror`: what it PLAYS it reads for itself off a channel both

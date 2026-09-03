@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { orElse } from '@shared/promises'
 import {
-  EXTENSIONS_BY_KIND,
+  extensionOfKind,
   roleForKind,
   type DocumentDescriptor,
   type DocumentKind,
@@ -166,7 +166,7 @@ export function NewDocumentForm({
           {/* Read off the kind, and shown rather than offered: one format per kind is the whole
               of the open-format decision, so there is nothing here to pick between. */}
           <span id={extensionId} className={cn(FILE_EXTENSION, 'shrink-0 text-xs')}>
-            {EXTENSIONS_BY_KIND[kind]}
+            {extensionOfKind(kind)}
           </span>
         </div>
       </div>

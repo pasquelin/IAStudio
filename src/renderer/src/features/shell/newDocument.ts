@@ -183,7 +183,8 @@ async function create(kind: DocumentKind, of: NamedCreation): Promise<DocumentDe
   // below — the shapes of a template are laid down before any editor mounts.
   const textures = kind === 'scene' ? ensureCheckerTextures(project.path) : Promise.resolve()
 
-  const created = await useDocuments.getState().create(workspace, of)
+  // The KIND travels: a space opens several, and its head is not always the one asked for.
+  const created = await useDocuments.getState().create(workspace, { ...of, kind })
   if (!created) return null
 
   // Before the tab opens, and that order is the whole mechanism: `restoreDocument` puts the

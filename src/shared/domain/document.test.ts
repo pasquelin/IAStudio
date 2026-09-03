@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DOCUMENT_KINDS,
+  FILED_KINDS,
   documentPath,
   documentsByPath,
   EXTENSIONS_BY_KIND,
@@ -94,7 +95,7 @@ describe('kindForExtension', () => {
    * a document of this build.
    */
   it('holds every kind in an open format, and reads no spelling of the studio’s own', () => {
-    expect([...DOCUMENT_KINDS].map(kind => EXTENSIONS_BY_KIND[kind])).toEqual([
+    expect([...FILED_KINDS].map(kind => EXTENSIONS_BY_KIND[kind])).toEqual([
       '.ora',
       '.gltf',
       '.otio',
@@ -153,8 +154,11 @@ describe('documentPath', () => {
 
   // The compiler keeps `EXTENSIONS_BY_KIND` complete; nothing keeps `DOCUMENT_KINDS` complete,
   // and a kind missing from it is refused at the IPC boundary without a word.
-  it('lists every kind the extension table knows', () => {
-    expect([...DOCUMENT_KINDS].sort()).toEqual(Object.keys(EXTENSIONS_BY_KIND).sort())
+  // Every FILED kind, and only those: a character has no file in the project, so an extension
+  // for it would make every model of every library read as a document of this build.
+  it('lists every filed kind the extension table knows', () => {
+    expect([...FILED_KINDS].sort()).toEqual(Object.keys(EXTENSIONS_BY_KIND).sort())
+    expect(FILED_KINDS).not.toContain('character')
   })
 
   // What a file's own head is allowed to claim. A pair here is a container serving two editors;

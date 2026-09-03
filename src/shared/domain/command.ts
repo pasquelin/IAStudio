@@ -1495,6 +1495,9 @@ const SCOPE_BY_KIND: Record<DocumentKind, CommandScope | null> = {
   material: null,
   script: null,
   gui: 'gui',
+  // Its own history, on the FILE of a model: the scene scope beside it would undo the workshop
+  // instead of the skeleton.
+  character: 'character',
 }
 
 /**

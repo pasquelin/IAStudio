@@ -58,7 +58,7 @@ import {
   skyRefusesToSave,
 } from './skyboxDocument'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useDocuments } from '@/stores/documents'
+import { characterAssetOf, useDocuments } from '@/stores/documents'
 import { useLivePreviews } from '@/stores/livePreviews'
 import { audioEditStore } from '@/stores/audioEdits'
 import { sceneStore } from '@/stores/scenes'
@@ -89,6 +89,11 @@ import { useMaterialViews } from '@/stores/materialViews'
 import { guiStore } from '@/stores/gui'
 import { materialStore } from '@/stores/materials'
 import { createSkyboxContent } from '@shared/domain/skybox'
+import { characterStore, isCharacterDirty, useCharacters } from '@/stores/character'
+import { useCharacterView } from '@/stores/characterView'
+import { forgetCharacterSkins } from '@/character/characterSkins'
+import { workshopIdOf } from '@/character/characterStage'
+import { saveCharacterDocument } from '@/character/characterSave'
 
 /** What an editor produces to be saved. The title is the tab's, not the editor's. */
 type CapturedDraft = Omit<DocumentDraft, 'title'>
@@ -118,72 +123,69 @@ export type AssetTarget = {
 }
 
 /**
+ * Whether the kind has a file in the project at all.
+ *
+ * A character does not: its tab edits a model of the library, so ⌘S patches that container and
+ * the project folder gains nothing. The two fields travel together, and the compiler is what
+ * keeps them together — an `assetOnly` without a writer would be a tab ⌘S answered nothing on.
+ */
+type DocumentFile =
+  | {
+      assetOnly?: undefined
+      saveOwn?: undefined
+      capture: (
+        documentId: string,
+      ) => Promise<{ draft: CapturedDraft; commit: () => void; wasEdited: boolean }>
+      install: (documentId: string, content: string, parts?: readonly OraSurface[]) => void
+      createDefault: (documentId: string) => void
+      rehydrate?: (documentId: string, content: string, parts: readonly OraSurface[]) => void
+      rehydrateFromAsset?: (documentId: string, assetId: string) => Promise<void>
+    }
+  | {
+      assetOnly: true
+      /** Writes what this tab edits, and answers whether anything was written. */
+      saveOwn: (documentId: string) => Promise<boolean>
+      capture?: undefined
+      install?: undefined
+      createDefault?: undefined
+      rehydrate?: undefined
+      rehydrateFromAsset?: undefined
+    }
+
+/**
  * How a kind reaches the disk and comes back. One entry per space that has a serialized form; a
  * kind absent from the table cannot be saved yet, and Save does nothing for it rather than
  * writing a document with an empty body.
  */
-type DocumentIo = AssetWriting & {
-  /**
-   * What to write, how to record that it was written, and whether there was anything to write.
-   *
-   * Asynchronous because an image's pixels live on the GPU and only come back through a promise.
-   * **The mark is read synchronously, before the first `await`** — that is the whole property:
-   * an edit made while the file is on its way to disk must not be counted as saved.
-   *
-   * `wasEdited` is read at that same instant, and it is here rather than at the caller for the
-   * same reason: `commit` clears the mark, so a caller asking afterwards always hears "no". It
-   * is what stops ⌘S on an untouched tab from rewriting the asset behind it.
-   */
-  capture: (
-    documentId: string,
-  ) => Promise<{ draft: CapturedDraft; commit: () => void; wasEdited: boolean }>
-  install: (documentId: string, content: string, parts?: readonly OraSurface[]) => void
-  /**
-   * Hands a FRESH engine the pixels the document already has on disk, leaving the state alone.
-   *
-   * Only a kind whose pixels live outside its state needs one, which is the image alone. It
-   * exists because a remount does not lose the state: `DocumentArea` is keyed on the workspace,
-   * so switching space and back rebuilds every engine — and `restoreDocument` reads the file
-   * only when the state is MISSING. The new engine therefore came up with the whole stack and
-   * none of the pixels: every layer blank, except the ones carrying `source`, which redrew from
-   * their asset — and once ⌘S writes the flattened stack into that asset, redrawing from it
-   * folds the whole picture into the one layer it came from.
-   */
-  rehydrate?: (documentId: string, content: string, parts: readonly OraSurface[]) => void
-  /**
-   * The same, for a tab whose pixels are still in the ASSET it was opened from — a container
-   * opened and not yet saved has no document file to read them out of.
-   */
-  rehydrateFromAsset?: (documentId: string, assetId: string) => Promise<void>
-  /** What an unsaved document holds until something is done to it. */
-  createDefault: (documentId: string) => void
-  /**
-   * Whether a pass on a timer may write this kind. Absent means yes.
-   *
-   * A property of the kind rather than a list beside the table: what makes autosave unsafe is
-   * what `capture` costs, and that is known here and nowhere else.
-   */
-  autosaves?: false
-  /** Whether the document is already filled — a remount must not read over what is open. */
-  holds: (documentId: string) => boolean
-  /**
-   * The sentence to refuse a save with, or `null` — for a document that opened holding LESS than
-   * its file did: a montage whose media the project has none of, a sky whose glTF holds a scene.
-   * Absent means the kind cannot open partly.
-   *
-   * The SENTENCE rather than a yes: what to import, and what would be erased, differ per kind, and
-   * one message for both told the owner of a sky to go and find some missing clips.
-   *
-   * Writing one back deletes what could not be read, and nothing on screen says so: `install`
-   * marks the document clean whatever it managed to restore.
-   */
-  incomplete?: (documentId: string) => string | null
-  /** Whether closing the document would throw work away — never true for an untouched tab. */
-  dirty: (documentId: string) => boolean
-  /** Drops the state and the history a closed document was holding. The DESCRIPTOR, because a
-   * script is keyed by its path, which no lookup answers once the document has left the store. */
-  forget: (document: DocumentDescriptor) => void
-}
+type DocumentIo = AssetWriting &
+  DocumentFile & {
+    /**
+     * Whether a pass on a timer may write this kind. Absent means yes.
+     *
+     * A property of the kind rather than a list beside the table: what makes autosave unsafe is
+     * what `capture` costs, and that is known here and nowhere else.
+     */
+    autosaves?: false
+    /** Whether the document is already filled — a remount must not read over what is open. */
+    holds: (documentId: string) => boolean
+    /**
+     * The sentence to refuse a save with, or `null` — for a document that opened holding LESS than
+     * its file did: a montage whose media the project has none of, a sky whose glTF holds a scene.
+     * Absent means the kind cannot open partly.
+     *
+     * The SENTENCE rather than a yes: what to import, and what would be erased, differ per kind, and
+     * one message for both told the owner of a sky to go and find some missing clips.
+     *
+     * Writing one back deletes what could not be read, and nothing on screen says so: `install`
+     * marks the document clean whatever it managed to restore.
+     */
+    incomplete?: (documentId: string) => string | null
+    /** Whether closing the document would throw work away — never true for an untouched tab. */
+    dirty: (documentId: string) => boolean
+    /** Drops the state and the history a closed document was holding. The DESCRIPTOR, because a
+     * script is keyed by its path, which no lookup answers once the document has left the store. */
+    forget: (document: DocumentDescriptor) => void
+  }
 
 /**
  * Whether a kind writes back over the file it was opened from — and if it does, what it holds.
@@ -604,6 +606,25 @@ const SCRIPT_IO: DocumentIo = {
  */
 const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
+  // The one kind with no file in the project: this tab rigs a model of the library, and ⌘S
+  // patches that very container — see `saveCharacterDocument`.
+  character: {
+    assetOnly: true,
+    saveOwn: saveCharacterDocument,
+    // A patch of a container is tens of megabytes rebuilt off the UI thread: no timer runs that.
+    autosaves: false,
+    holds: documentId => characterStore.hasState(useCharacters.getState(), modelOf(documentId)),
+    dirty: documentId => isCharacterDirty(useCharacters.getState(), modelOf(documentId)),
+    forget: document => {
+      const assetId = modelOf(document.id)
+      useCharacters.getState().drop(assetId)
+      useCharacterView.getState().forgetCharacterView(assetId)
+      forgetCharacterSkins(assetId)
+      // The workshop with them: it is a scene of this window's own store, and a tab closed on a
+      // motion nobody filed would leave that band standing for the rest of the session.
+      sceneStore.use.getState().drop(workshopIdOf(assetId))
+    },
+  },
   // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
   // opened from is one node of it.
   scene: {
@@ -804,6 +825,9 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
   if (!savable) return false
   const { bridge, document, io } = savable
 
+  // No file of its own to write: what this tab edits IS an asset, and the kind patches it.
+  if (io.assetOnly) return await io.saveOwn(documentId)
+
   const { draft, commit, wasEdited } = await io.capture(documentId)
   const payload = {
     ...draft,
@@ -846,6 +870,10 @@ export async function saveDocument(documentId: string, byHand = true): Promise<b
   void useDocuments.getState().relist('own-write')
   return true
 }
+
+/** The model a character tab rigs — empty for a descriptor that has lost its asset. */
+const modelOf = (documentId: string): string =>
+  characterAssetOf(useDocuments.getState(), documentId) ?? ''
 
 /**
  * Which format overwriting the source means writing, and what it would destroy.
@@ -962,9 +990,10 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   const { bridge, document, io } = savable
 
   const source = document.sourceAssetId
-  // No asset to derive from, or a kind that bakes to nothing one could hold: both are "there is
-  // no copy to make", and both are said out loud rather than doing nothing quietly.
-  if (!source || !io.writeAsset) {
+  // No asset to derive from, a kind that bakes to nothing one could hold, or one whose subject
+  // IS the asset — three ways of « there is no copy to make », each said out loud rather than
+  // doing nothing quietly.
+  if (!source || !io.writeAsset || io.assetOnly) {
     reportFailure('assets.copy', document.title, new Error('nothing to copy'))
     return false
   }
@@ -1063,6 +1092,8 @@ export function restoreDocument(documentId: string): Promise<void> {
   const document = useDocuments.getState().documents[documentId]
   const io = ioOf(documentId)
   if (!io || io.holds(documentId)) return Promise.resolve()
+  // Its state comes from the asset the engine reads, never from a document file — there is none.
+  if (io.assetOnly) return Promise.resolve()
 
   if (!bridge || !document) {
     io.createDefault(documentId)
