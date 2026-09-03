@@ -18,10 +18,7 @@ export function surface(color: string, texture?: CheckerTextureId): MaterialDesc
   return { ...defaultMeshMaterial(texture), color }
 }
 
-/**
- * The playground's own colours, to the digit — the character templates are the reference.
- * 🛑 A role is a COLOUR AND A GRID together: the grid says what the colour is for.
- */
+/** 🛑 A role is a COLOUR AND A GRID together, and the colours are the playground's to the digit. */
 export const groundSurface = (): MaterialDescriptor => surface('#9aa4b0', 'gridLarge')
 export const climbSurface = (): MaterialDescriptor => surface('#d08c3a', 'checkerLarge')
 export const obstacleSurface = (): MaterialDescriptor => surface('#4e5661', 'gridSmall')
@@ -43,10 +40,8 @@ export const LEAST_TILES = 2
 export const WIDE_SURFACE = 40
 export const WIDE_SURFACE_TILE = 2
 
-/**
- * 🛑 Neither throws a shadow nor catches one: the shadow map is stretched over the whole scene, so
- * on a large level a texel covers metres and a flat field wearing it reads as a moiré.
- */
+/** 🛑 Neither throws a shadow nor catches one: on a large level a texel covers metres, and a flat
+ * field wearing that reads as a moiré. */
 export function fieldNode(patch: {
   at: Vector3
   width: number
@@ -71,10 +66,8 @@ export function fieldNode(patch: {
   }
 }
 
-/**
- * 🛑 Named `fixedBody` rather than `solid`: `playgroundLevel` exports a `solid` handing back a
- * Collider ALONE, and two `solid` in one folder is the bare word the auto import picks at random.
- */
+/** 🛑 Named apart from `playgroundLevel`'s `solid`, which hands back a Collider ALONE: two
+ * `solid` in one folder is the bare word the auto import picks at random. */
 export function fixedBody(fidelity: CollisionFidelity | 'auto' = 'auto'): Component[] {
   return [
     { ...newComponent('Collider'), fidelity },

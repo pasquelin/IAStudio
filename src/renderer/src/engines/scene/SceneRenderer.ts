@@ -125,6 +125,7 @@ import {
   helperFor,
   handleName,
   handlePartOf,
+  isRailAid,
   knobIndexOf,
   knobName,
   type HandlePart,
@@ -145,7 +146,9 @@ import {
   applySprite,
   lightFor,
   showPathHandles,
+  tiledGeometry,
   showPathKnobs,
+  showRailLine,
   standardMaterialOf,
 } from './threeSync'
 import {
@@ -611,16 +614,13 @@ function withHeldFuzz<T>(raycaster: Raycaster, pick: () => T): T {
 function isScenery(object: Object3D, isRail: (nodeId: string) => boolean): boolean {
   for (let node: Object3D | null = object; node; node = node.parent) {
     if (!node.visible || node.name === MARKER_NAME || isRail(node.name)) return false
-    // 🛑 The AIDS of a rail, by name: a band IS scenery a point may be written onto, but its own
-    // line and knobs hang under it and were taking the clicks meant for the surface.
-    if (node.name.startsWith(RAIL_AID_PREFIX)) return false
+    // 🛑 The AIDS of a rail: a band IS scenery a point may be written onto, but its own line and
+    // knobs hang under it and were taking the clicks meant for the surface.
+    if (isRailAid(node.name)) return false
   }
 
   return true
 }
-
-/** What every helper of a rail is named after — the line, the knobs, the tangents and their bars. */
-const RAIL_AID_PREFIX = 'path-'
 
 /** How wide a rail's line is grabbed, as a share of the visible height: about six pixels. */
 const LINE_GRAB = 1 / 150
@@ -986,6 +986,8 @@ export class SceneRenderer {
   private negativeColor = ''
   /** What a rail's TANGENTS are painted in, apart from its anchors — see `dressWithRail`. */
   private handleColor = ''
+  /** The band wearing a shape built for a DRAG rather than read from the document, if any. */
+  private previewedRail: string | null = null
   /** What its FIRST anchor is painted in: which end a run starts from is what says its direction. */
   private startColor = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
@@ -1293,9 +1295,11 @@ export class SceneRenderer {
       const rail = this.objects.get(id)
       if (!rail) continue
       // A rail node is nothing BUT its line, so hiding the chrome hides it whole. A band is a
-      // surface of the scene: only its handles go.
+      // surface of the scene: only its aids go.
       if (!chrome && node.type === 'path') rail.visible = false
-      showPathKnobs(rail, chrome && rails.has(id))
+      const worked = chrome && rails.has(id)
+      showPathKnobs(rail, worked)
+      if (node.type !== 'path') showRailLine(rail, worked)
       // The pair of the ANCHOR being worked on, and of no other — see `showPathHandles`. The
       // index whichever of the three is held: taking a tangent must not put its own pair away.
       const held = this.pickedPathPoint
@@ -4761,11 +4765,8 @@ export class SceneRenderer {
   }
 
   /**
-   * The rail redrawn WHILE one of its points is dragged, from where the knob now stands.
-   *
-   * 🛑 The command lands on RELEASE — one drag, one undo — so nothing else would show the curve
-   * following: a band is swept along its rail, and the knob moving alone left the surface behind
-   * until the mouse came up.
+   * 🛑 The command lands on RELEASE — one drag, one undo — so nothing else shows the curve
+   * following: a band is swept along its rail, and the knob alone left the surface behind.
    */
   private previewRail(): void {
     const picked = this.pickedPathPoint
@@ -4783,15 +4784,36 @@ export class SceneRenderer {
     applyPath(object, next, this.meshColor)
     if (node.type !== 'mesh' || node.geometry.kind !== 'ribbon' || !(object instanceof Mesh)) return
 
-    // The shape is REBUILT per pointer move, and the one it wore given straight back: a band of
-    // three hundred sections is some eight thousand vertices, against a surface that would
-    // otherwise not move at all until the gesture ended.
+    // 🛑 Built OUTSIDE the shared cache: the recipe differs at every pointer move, so its key
+    // never hits — the entry is minted and dropped in the same frame, `stableKey` costing 0,075 ms
+    // for nothing. `freeGeometry` tells the three provenances apart and disposes this one.
     const worn = wearGeometry(
       object,
-      this.shapes.acquire({ ...node.geometry, path: next }, node.material.tilesPerMetre),
+      tiledGeometry({ ...node.geometry, path: next }, node.material.tilesPerMetre),
     )
     if (worn) this.freeGeometry(worn)
-    else this.shapes.release(object.geometry)
+    this.previewedRail = node.id
+  }
+
+  /**
+   * 🛑 The shape a drag built handed back to the one the DOCUMENT says. A gesture that ends
+   * without reporting — a point let go of, a key pressed mid-drag — would otherwise leave the
+   * band wearing a preview nothing ever replaces, and the screen would quietly lie.
+   */
+  private restorePreviewedRail(): void {
+    const id = this.previewedRail
+    this.previewedRail = null
+    if (!id) return
+
+    const node = this.applied.get(id)
+    const object = this.objects.get(id)
+    if (node?.type !== 'mesh' || !(object instanceof Mesh)) return
+
+    const worn = wearGeometry(
+      object,
+      this.shapes.acquire(node.geometry, node.material.tilesPerMetre),
+    )
+    if (worn) this.freeGeometry(worn)
   }
 
   /**
@@ -4818,6 +4840,9 @@ export class SceneRenderer {
 
     const point = this.pickedPathPoint
     const knob = this.pickedKnob()
+    // Before the report: the command that follows re-reads the document, and a preview left
+    // mounted would be what the next comparison finds instead of what the document holds.
+    this.restorePreviewedRail()
     if (point && knob) {
       // The knob's own position IS the control point: both live in the rail's frame.
       this.options.onPathPoint?.(point, plainVector(knob.position))
@@ -4932,6 +4957,7 @@ export class SceneRenderer {
    * nobody can rename is a property that leaked into the tree.
    */
   setPickedPathPoint(picked: PickedPathPoint | null): void {
+    this.restorePreviewedRail()
     this.pickedPathPoint = picked
     // 🛑 The aids too: the tangents of an anchor show on the one being WORKED ON, and picking one
     // is what changes that. Without this they were built, placed, and never once shown.

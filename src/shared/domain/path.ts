@@ -64,9 +64,17 @@ const SMOOTH_REACH = 1 / 6
  * tangent, which is what makes the conversion invisible rather than a curve that jumps.
  */
 export function bezierPathOf(points: readonly Vector3[], closed: boolean): PathDescriptor {
+  const last = points.length - 1
+  // 🛑 An OPEN run has no neighbour past its ends: wrapped round, the first anchor took its
+  // tangent from the last one and the curve jumped away from the very shape it was to keep.
+  const neighbour = (at: number): Vector3 =>
+    closed
+      ? points[(at + points.length) % points.length]!
+      : points[Math.min(Math.max(at, 0), last)]!
+
   const handles = points.map((_, at) => {
-    const before = points[(at - 1 + points.length) % points.length]!
-    const after = points[(at + 1) % points.length]!
+    const before = neighbour(at - 1)
+    const after = neighbour(at + 1)
     const reach = {
       x: (after.x - before.x) * SMOOTH_REACH,
       y: (after.y - before.y) * SMOOTH_REACH,

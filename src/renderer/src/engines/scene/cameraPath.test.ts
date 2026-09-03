@@ -227,3 +227,23 @@ describe('a closed run', () => {
     expect(withPointAfter(loop(), 0).points.map(point => point.x)).toEqual([0, 5, 10, 20])
   })
 })
+
+describe('turning an OPEN run into a Bézier one', () => {
+  const at = (x: number, z: number) => ({ x, y: 0, z })
+  const bend = [at(0, 0), at(5, 0), at(5, 5)]
+
+  /**
+   * 🛑 An open run has no neighbour past its ends: wrapped round, the first anchor took its
+   * tangent from the LAST one and the curve left the shape it was meant to keep — measured at
+   * 0,34 unit off, right after the anchor.
+   */
+  it('keeps the shape a smooth open rail already had', () => {
+    const smooth: PathDescriptor = { ...DEFAULT_PATH, points: bend, closed: false }
+
+    for (const along of [0.05, 0.2, 0.5, 0.8]) {
+      const one = curveOf(smooth).getPointAt(along)
+      const other = curveOf(bezierPathOf(bend, false)).getPointAt(along)
+      expect(one.distanceTo(other)).toBeLessThan(0.1)
+    }
+  })
+})

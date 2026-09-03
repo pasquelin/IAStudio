@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-/**
- * What an aeroplane flies over. 🛑 An empty plain gives a machine no way to tell a hundred knots
- * from a hover — measured on a first pass where the ground was one flat colour.
- */
+/** 🛑 An empty plain gives a machine no way to tell a hundred knots from a hover — measured on a
+ * first pass where the ground was one flat colour. */
 import {
   climbSurface,
   dense,

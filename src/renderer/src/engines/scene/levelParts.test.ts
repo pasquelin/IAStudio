@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 
+import { Box3, Vector3, type BufferAttribute } from 'three'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { CHECKER_TEXTURE_IDS } from '@shared/domain/checkerTexture'
 import { TILES_PER_METRE } from '@shared/domain/scene'
@@ -9,6 +10,7 @@ import { rememberCheckerTextures } from './checkerTextures'
 import { circuitNodes } from './circuitLevel'
 import { LEAST_TILES, WIDE_SURFACE, WIDE_SURFACE_TILE } from './levelParts'
 import { mountainNodes } from './mountainLevel'
+import { geometryFor } from './threeFactory'
 import type { SceneNode } from './sceneState'
 
 /** What a surface draws, and at what density — the two halves of « wearing a grid ». */
@@ -16,9 +18,11 @@ type Drawn = { name: string; map: boolean; span: number; tilesPerMetre: number }
 
 const OPEN_PROJECT = CHECKER_TEXTURE_IDS.map(id => ({ id, assetId: `asset-${id}` }))
 
-/** How far a shape reaches, in metres, on its longest axis. */
+/**
+ * How far a shape reaches, in metres, on its longest axis — measured on the shape three.js
+ * BUILDS, so a kind added to the union is measured without this being touched.
+ */
 function spanOfShape(shape: CsgPart['geometry']): number {
-  // A brush may itself be a recipe: what one reads the grid on is then its largest PIECE.
   if (!('kind' in shape)) {
     return Math.max(
       ...[shape.base, ...shape.steps.map(step => step.part)].map(part =>
@@ -26,24 +30,11 @@ function spanOfShape(shape: CsgPart['geometry']): number {
       ),
     )
   }
-  if (shape.kind === 'box') return Math.max(shape.width, shape.height, shape.depth)
-  if (shape.kind === 'plane') return Math.max(shape.width, shape.height)
-  if (shape.kind === 'cylinder') {
-    return Math.max(shape.radiusTop * 2, shape.radiusBottom * 2, shape.height)
-  }
-  if (shape.kind === 'sphere') return shape.radius * 2
-  // A band is read ALONG its run: a kerb of six hundred metres shows its grid over that, not
-  // over the metre it is wide.
-  if (shape.kind === 'ribbon') {
-    const run = shape.path.points
-    const around = run.reduce((total: number, from, index) => {
-      const to = run[(index + 1) % run.length]!
-      const last = index === run.length - 1
-      return last && !shape.path.closed ? total : total + Math.hypot(to.x - from.x, to.z - from.z)
-    }, 0)
-    return Math.max(around, shape.width)
-  }
-  return 1
+
+  const size = new Box3()
+    .setFromBufferAttribute(geometryFor(shape).getAttribute('position') as BufferAttribute)
+    .getSize(new Vector3())
+  return Math.max(size.x, size.y, size.z)
 }
 
 function drawnOf(nodes: readonly SceneNode[]): Drawn[] {

@@ -4,6 +4,7 @@ import {
   CameraHelper,
   DirectionalLight,
   HemisphereLight,
+  BoxGeometry,
   Line,
   Mesh,
   MeshBasicMaterial,
@@ -43,6 +44,7 @@ import {
   giveSecondUvSet,
   showPathHandles,
   showPathKnobs,
+  showRailLine,
   standardMaterialOf,
   tiledGeometry,
 } from './threeSync'
@@ -566,6 +568,34 @@ describe('showPathKnobs', () => {
   })
 })
 
+describe('applyPath when a run gains an anchor', () => {
+  const rail = bezierPathOf(
+    [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 },
+    ],
+    false,
+  )
+
+  /**
+   * 🛑 A band hangs its aids off its OWN mesh, and any node of the document may be reparented
+   * under that mesh from the outliner. Swept whole, the rebuild took the reparented node out of
+   * the scene and disposed a geometry the shared cache still counted as alive.
+   */
+  it('sweeps its own aids away and leaves what the document hung there', () => {
+    const band = dressWithRail(new Mesh(), rail, { knob: '#ffffff' }, true)
+    const child = new Mesh(new BoxGeometry(1, 1, 1))
+    child.name = 'a-node-of-the-document'
+    band.add(child)
+
+    applyPath(band, bezierPathOf([...rail.points, { x: 20, y: 0, z: 0 }], false), '#ffffff')
+
+    expect(band.getObjectByName('a-node-of-the-document')).toBe(child)
+    expect(child.geometry.getAttribute('position')).toBeDefined()
+    expect(band.children.filter(one => knobIndexOf(one.name) !== null)).toHaveLength(3)
+  })
+})
+
 describe('showPathHandles', () => {
   const rail = bezierPathOf(
     [
@@ -650,6 +680,30 @@ describe('showPathHandles', () => {
 
     expect(out?.position.x).toBeCloseTo(anchor.x + reach.x, 6)
     expect(out?.position.z).toBeCloseTo(anchor.z + reach.z, 6)
+  })
+})
+
+describe('showRailLine', () => {
+  const rail = bezierPathOf(
+    [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 },
+    ],
+    false,
+  )
+
+  /**
+   * 🛑 A band is a surface one clicks directly, so its line is an AID: left on, it drew a
+   * permanent stripe down the middle of the tarmac, seen through the very cars it was under.
+   */
+  it('puts a band line away and brings it back', () => {
+    const band = dressWithRail(new Mesh(), rail, { knob: '#ffffff' }, true)
+
+    showRailLine(band, false)
+    expect(band.getObjectByName(PATH_CURVE_NAME)?.visible).toBe(false)
+
+    showRailLine(band, true)
+    expect(band.getObjectByName(PATH_CURVE_NAME)?.visible).toBe(true)
   })
 })
 

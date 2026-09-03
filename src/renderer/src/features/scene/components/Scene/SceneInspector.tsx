@@ -2,9 +2,7 @@ import { useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useTranslation } from 'react-i18next'
 import {
-  setGeometry,
   setGeometryOn,
-  setPath,
   setLightOn,
   setMaterialOn,
   dressModel,
@@ -13,6 +11,7 @@ import {
   setTextOn,
 } from '@/engines/scene/commands'
 import { ownedStackOf } from '@shared/domain/postProcessing'
+import { railCommand } from '@/engines/scene/nodeRail'
 import type { FieldValue } from '@/engines/scene/propertyFields'
 import { cameraFields, geometryFields, lightFields } from '@/engines/scene/propertyFields'
 import { lensToCommand } from '@/engines/scene/animationCommands'
@@ -267,13 +266,10 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
       {rail && (
         <PathSection
           path={rail}
-          onChange={next =>
-            edit.run(
-              band
-                ? setGeometry(band.id, { ...band.shape, path: next })
-                : setPath(path?.id ?? '', next),
-            )
-          }
+          onChange={next => {
+            const command = node ? railCommand(node, next) : null
+            if (command) edit.run(command)
+          }}
           gesture={edit.gesture}
         />
       )}

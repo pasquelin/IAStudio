@@ -94,13 +94,55 @@ describe('a ribbon', () => {
     expect(Math.hypot(shifted[1]!.x, shifted[1]!.z)).toBeCloseTo(Math.SQRT2, 5)
   })
 
+  /**
+   * 🛑 The mitre is bounded by the RUN, not only by the width: measured, a one-unit offset on
+   * segments of 1 and 0,11 reached 3,03 and folded the band across its own next section.
+   */
+  it('holds a joint back to the offset itself where the run is tighter than the band', () => {
+    const tight = [at(0, 0), at(1, 0), at(0.9, 0.05)]
+    const shifted = offsetRun(tight, 1, false)
+    const reach = Math.hypot(shifted[1]!.x - tight[1]!.x, shifted[1]!.z - tight[1]!.z)
+
+    // Held all the way down to the offset — never PAST it, which would narrow the band instead.
+    expect(reach).toBeCloseTo(1, 5)
+  })
+
+  /**
+   * 🛑 A band is its declared width, whatever the run: bounding the mitre by `span / offset` let
+   * that ratio fall under one, and a 12 m tarmac sampled every 1,74 m came out 3,50 m across.
+   */
+  it('keeps a band its full width on a run sampled finer than the band is wide', () => {
+    // A CLOSED ring: on an open run the two ends have no bisector to bound, and their full width
+    // fills the bounding box whatever happens between them.
+    const ring = Array.from({ length: 60 }, (_, at) => {
+      const angle = (at / 60) * Math.PI * 2
+      return { x: Math.sin(angle) * 20, y: 0, z: Math.cos(angle) * 20 }
+    })
+    const geometry = ribbonGeometry({
+      kind: 'ribbon',
+      path: { kind: 'catmullrom', points: ring, closed: true, tension: 0.5 },
+      width: 12,
+      height: 0.2,
+      segments: 360,
+    })
+
+    // Spans of 0,35 m against a half-width of 6: the ratio the mitre is bounded by is 0,058.
+    const corners = geometry.getAttribute('position')
+    const radii = Array.from({ length: corners.count }, (_, at) =>
+      Math.hypot(corners.getX(at), corners.getZ(at)),
+    )
+
+    expect(Math.max(...radii) - Math.min(...radii)).toBeCloseTo(12, 1)
+  })
+
   /** A closed run has no end to cap, and no seam where the last section meets the first. */
   it('closes on itself without a seam', () => {
     const square = [at(-5, -5), at(5, -5), at(5, 5), at(-5, 5)]
     const corners = cornersOf(band(square, { closed: true, segments: 40 }))
 
-    // Forty sections, four faces each, two triangles a face: no cap at either end.
-    expect(corners).toHaveLength(40 * 4 * 6)
+    // Forty sections, four faces each, four corners a face — indexed, so a quad's two triangles
+    // share them. No cap at either end.
+    expect(corners).toHaveLength(40 * 4 * 4)
   })
 
   /** Fewer than two points describes no run, and a shape with no surface beats a throw. */

@@ -30,6 +30,7 @@ import {
   geometryFor,
   HANDLE_BAR_PREFIX,
   handlePartOf,
+  isRailAid,
   knobIndexOf,
   knobName,
   placeHandles,
@@ -245,6 +246,17 @@ export function showPathKnobs(object: Object3D, shown: boolean): void {
 }
 
 /**
+ * 🛑 The line of a BAND, shown only while it is worked on. A rail node keeps its own either way —
+ * it is nothing but that line, and hiding it would leave nothing to click. A band is a surface
+ * one clicks directly, so its line drew a permanent stripe down the middle, seen THROUGH the very
+ * cars it was under.
+ */
+export function showRailLine(object: Object3D, shown: boolean): void {
+  const line = object.getObjectByName(PATH_CURVE_NAME)
+  if (line) line.visible = shown
+}
+
+/**
  * A rail brought in line with its descriptor: the sampled line, and one knob per control point.
  *
  * Knobs are added and removed rather than rebuilt whole: a drag of one point emits a descriptor
@@ -264,9 +276,7 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
   if (knobs.length !== descriptor.points.length) {
     const worn = knobs[0]?.material
     const through = worn instanceof MeshBasicMaterial && !worn.depthTest
-    // Read off a tangent rather than passed in: the caller knows the mesh colour, and the two
-    // are different tokens — dressing again in one of them would repaint the pair grey.
-    const worn2 = (name: string | null): string | undefined => {
+    const colourNamed = (name: string | null): string | undefined => {
       const child = name
         ? object.getObjectByName(name)
         : object.children.find(one => handlePartOf(one.name))
@@ -276,8 +286,13 @@ export function applyPath(object: Object3D, descriptor: PathDescriptor, colour: 
     }
     // Read off what is already hung rather than passed in: the three colours are three tokens,
     // and dressing again in the anchors' would repaint the pair and the first point grey.
-    const colours = { knob: colour, handle: worn2(null), start: worn2(knobName(0)) }
-    for (const child of [...object.children]) {
+    // Read off what is already hung rather than passed in: the three are three tokens, and
+    // dressing again in the anchors' would repaint the pair and the first point grey.
+    const colours = { knob: colour, handle: colourNamed(null), start: colourNamed(knobName(0)) }
+    // 🛑 The AIDS alone, by name: a band hangs them off its own mesh, and any node of the document
+    // may be reparented under that mesh from the outliner. Swept whole, this took the reparented
+    // node out of the scene and disposed a geometry the shared cache still counted as alive.
+    for (const child of [...object.children].filter(one => isRailAid(one.name))) {
       object.remove(child)
       if (child instanceof Mesh || child instanceof Line) child.geometry.dispose()
     }

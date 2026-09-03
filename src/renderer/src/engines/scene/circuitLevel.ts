@@ -16,7 +16,8 @@ import {
   markSurface,
   obstacleSurface,
 } from './levelParts'
-import { offsetRun } from './ribbonGeometry'
+import { curveOf, turnRadiusAt } from './cameraPath'
+import { offsetRun, sampledRun } from './ribbonGeometry'
 import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 
 /** Metres. Wide enough for two cars and for a mistake, which is what makes a corner worth taking. */
@@ -29,9 +30,28 @@ const TARMAC_PROUD = 0.03
 /** The line is LAID on the tarmac, so its own thickness sits above it rather than half inside. */
 const LINE_DEPTH = 0.04
 
-/** Tall enough to stop a car rather than launch it, and thick enough not to be tunnelled through. */
-const KERB_HEIGHT = 0.9
-const KERB_THICKNESS = 1
+/**
+ * 🛑 A kerb SHAKES a car, it does not stop one. At ninety centimetres it was a wall painted like a
+ * kerb, and one object carried both roles — where the track ends, and what a car that leaves it meets.
+ */
+const KERB_HEIGHT = 0.07
+const KERB_THICKNESS = 2
+
+/**
+ * 🛑 How far a kerb sits ON the tarmac, and it is not decoration: a band offset by its own points
+ * bows OUTWARD between them, and laid edge to edge it opened up to 67 cm of grass down the straight.
+ */
+const KERB_BITE = 0.75
+
+/** Where a kerb's inner edge lands: on the tarmac, by `KERB_BITE`. */
+const KERB_INNER = TRACK_WIDTH / 2 - KERB_BITE
+
+/** The other half of that split: what stops a car, held back in the grass past the kerb. */
+const BARRIER_HEIGHT = 0.9
+const BARRIER_THICKNESS = 0.6
+
+/** Metres of grass between the outer edge of a kerb and the barrier — the room to gather a slide. */
+const BARRIER_CLEARANCE = 3
 
 /**
  * How many points the loop is drawn through, and how wide it is before the harmonics stretch it.
@@ -39,6 +59,13 @@ const KERB_THICKNESS = 1
  */
 const MARKS = 24
 const BASE_RADIUS = 95
+
+/**
+ * 🛑 At 0,34 and 0,16 the tightest radius was 10 m for a track 12 m wide, and a barrier held
+ * 10,3 m out folded through itself. These leave 46 m.
+ */
+const OVAL_PULL = 0.2
+const SYMMETRY_BREAK = 0.08
 
 /**
  * Fifteen cross-sections per mark. Measured on the loop: the tightest turn goes from 50,4° a
@@ -52,34 +79,48 @@ const CURVE_SEGMENTS = MARKS * 15
  */
 const TARMAC_TILE = 5
 const KERB_TILE = 3
+const BARRIER_TILE = 2
 const GRASS_TILE = 12.5
 const PADDOCK_TILE = 2
 
-/** How far the finish line stands down the track from the first mark, and the car behind it. */
+/** How far the finish line stands down the track from the grid, and the car behind it. */
 const LINE_AHEAD = 6
 const CAR_BEHIND = 3
 
 /**
- * Where the car is put down, and which way it faces — ON the loop, three metres short of the
- * line, pointing down the track. Left at the mark itself with no turn, it sat across its own
- * straight and had the line off to one side.
+ * 🛑 The centre line as the bands are SWEPT, not the two dozen anchors it is written through: a
+ * chord between two marks is 26 m long, and a heading read off one points where the curve does not.
  */
-export const CIRCUIT_START_YAW = startYaw()
-export const CIRCUIT_START: Vector3 = alongStart(CAR_BEHIND)
+const CENTRE_PATH = bezierPathOf(circuitLine(0), true)
+const CENTRE_CURVE = sampledRun(CENTRE_PATH, CURVE_SEGMENTS)
 
-function startYaw(): number {
-  const run = circuitLine(0)
-  return Math.atan2(run[1]!.x - run[0]!.x, run[1]!.z - run[0]!.z)
+/** Where a lap starts, as an abscissa: the straightest run of the loop, where a grid belongs. */
+const GRID_U = straightestOf(CENTRE_CURVE) / CENTRE_CURVE.length
+
+const START = alongCurve(CAR_BEHIND)
+export const CIRCUIT_START_YAW = START.yaw
+export const CIRCUIT_START: Vector3 = START.at
+
+/**
+ * 🛑 The straightest stretch, measured over a car's length either side: a grid laid at the first
+ * mark fell in a corner, and its line stood across the track at an angle.
+ */
+function straightestOf(curve: readonly Vector3[]): number {
+  const reach = Math.max(2, Math.round((curve.length * 8) / curveOf(CENTRE_PATH).getLength()))
+  const radii = curve.map((_, at) => turnRadiusAt(curve, at, reach))
+  return radii.indexOf(Math.max(...radii))
 }
 
-/** A point `ahead` metres down the track from the first mark, on the centre line. */
-function alongStart(ahead: number): Vector3 {
-  const first = circuitLine(0)[0]!
-  return {
-    x: first.x + Math.sin(CIRCUIT_START_YAW) * ahead,
-    y: 0,
-    z: first.z + Math.cos(CIRCUIT_START_YAW) * ahead,
-  }
+/** A point `ahead` metres ALONG the curve from the grid, and the way the track runs there. */
+function alongCurve(ahead: number): { at: Vector3; yaw: number } {
+  const curve = curveOf(CENTRE_PATH)
+  const wrap = (u: number): number => ((u % 1) + 1) % 1
+  const step = ahead / curve.getLength()
+  const at = curve.getPointAt(wrap(GRID_U + step))
+  // A metre further on names the heading; the tangent itself would need the curve's derivative.
+  const next = curve.getPointAt(wrap(GRID_U + step + 1 / curve.getLength()))
+
+  return { at: { x: at.x, y: 0, z: at.z }, yaw: Math.atan2(next.x - at.x, next.z - at.z) }
 }
 
 /**
@@ -91,17 +132,13 @@ export function circuitLine(atHeight: number): Vector3[] {
     const angle = (index / MARKS) * Math.PI * 2
     // Two harmonics: the second stretches the loop into a long oval, the third breaks its
     // symmetry so no two corners of the lap are taken the same way.
-    const radius = BASE_RADIUS * (1 + 0.34 * Math.cos(2 * angle) + 0.16 * Math.sin(3 * angle))
+    const radius =
+      BASE_RADIUS * (1 + OVAL_PULL * Math.cos(2 * angle) + SYMMETRY_BREAK * Math.sin(3 * angle))
     return { x: Math.sin(angle) * radius, y: atHeight, z: Math.cos(angle) * radius }
   })
 }
 
-/**
- * A closed band swept along a run — ONE mesh, mitred at every joint.
- *
- * 🛑 This is what a run of boxes could not be. Laid end to end they leave a wedge at every turn;
- * overlapped to close it, their corners stand proud and the band reads as a staircase.
- */
+/** ONE mesh a piece, mitred at every joint — see `GeometryDescriptor` for what boxes could not do. */
 function ribbonNode(band: {
   points: readonly Vector3[]
   width: number
@@ -129,10 +166,7 @@ function ribbonNode(band: {
   )
 }
 
-/**
- * What stands AROUND the track: one field of grass, a paddock, and a ring of marker posts.
- * 🛑 None of it is felt: a car that clips the scenery is not where a lap is decided.
- */
+/** 🛑 None of it is felt: a car that clips the scenery is not where a lap is decided. */
 function surroundings(): SceneNode[] {
   const grounds = groupNode(IDENTITY_TRANSFORM, 'Grounds')
 
@@ -152,7 +186,7 @@ function surroundings(): SceneNode[] {
   const paddock = meshNode(
     { kind: 'box', width: 46, height: 7, depth: 18 },
     {
-      transform: transformAt({ x: 0, y: 3.5, z: BASE_RADIUS * 1.34 + 58 }),
+      transform: transformAt({ x: 0, y: 3.5, z: BASE_RADIUS * (1 + OVAL_PULL) + 58 }),
       material: dense(obstacleSurface(), PADDOCK_TILE),
       parentId: grounds.id,
       name: 'Paddock',
@@ -175,24 +209,53 @@ function surroundings(): SceneNode[] {
   return [grounds, grass, paddock, ...posts]
 }
 
+/** The pair a track wears on both sides, swept along the same centre line. */
+function sideBands(
+  parentId: string,
+  centre: readonly Vector3[],
+  band: {
+    offset: number
+    width: number
+    height: number
+    material: MaterialDescriptor
+    name: string
+  },
+): SceneNode[] {
+  return [-1, 1].map(side =>
+    ribbonNode({
+      points: offsetRun(centre, side * band.offset, true),
+      width: band.width,
+      height: band.height,
+      material: band.material,
+      parentId,
+      name: `${band.name} ${side < 0 ? 'Left' : 'Right'}`,
+    }),
+  )
+}
+
 export function circuitNodes(): SceneNode[] {
   const circuit = groupNode(IDENTITY_TRANSFORM, 'Circuit')
-  const edge = TRACK_WIDTH / 2 + KERB_THICKNESS / 2
+  const centre = circuitLine(0)
 
   // 🛑 Nearly SUNK: laid on the ground the car rests on, 57 % of each wheel sat inside the slab;
   // sunk to it exactly, the tarmac could not be seen at all. Three centimetres is both.
   const road = circuitLine(TARMAC_PROUD - TARMAC_DEPTH)
 
-  const kerbs = [-1, 1].map(side =>
-    ribbonNode({
-      points: offsetRun(circuitLine(0), side * edge, true),
-      width: KERB_THICKNESS,
-      height: KERB_HEIGHT,
-      material: dense(climbSurface(), KERB_TILE),
-      parentId: circuit.id,
-      name: `Kerb ${side < 0 ? 'Left' : 'Right'}`,
-    }),
-  )
+  const kerbs = sideBands(circuit.id, centre, {
+    offset: KERB_INNER + KERB_THICKNESS / 2,
+    width: KERB_THICKNESS,
+    height: KERB_HEIGHT,
+    material: dense(climbSurface(), KERB_TILE),
+    name: 'Kerb',
+  })
+
+  const barriers = sideBands(circuit.id, centre, {
+    offset: KERB_INNER + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2,
+    width: BARRIER_THICKNESS,
+    height: BARRIER_HEIGHT,
+    material: dense(obstacleSurface(), BARRIER_TILE),
+    name: 'Barrier',
+  })
 
   return [
     circuit,
@@ -212,7 +275,7 @@ export function circuitNodes(): SceneNode[] {
     },
     // 🛑 `trimesh`: a closed band is not convex, and its hull is the whole infield — a car would
     // meet a wall the moment it left the grid.
-    ...kerbs.map(kerb => ({ ...kerb, components: fixedBody('trimesh') })),
+    ...[...kerbs, ...barriers].map(band => ({ ...band, components: fixedBody('trimesh') })),
     startLine(circuit.id),
   ]
 }
@@ -222,14 +285,17 @@ export function circuitNodes(): SceneNode[] {
  * thirty-metre slab of chequer. Only the YAW comes from the run.
  */
 function startLine(parentId: string): SceneNode {
-  const at = alongStart(LINE_AHEAD)
+  // Its OWN heading, six metres down the track: the grid's would lay it at an angle across a turn.
+  const line = alongCurve(CAR_BEHIND + LINE_AHEAD)
 
   return meshNode(
-    { kind: 'box', width: TRACK_WIDTH, height: LINE_DEPTH, depth: 1.5 },
+    // 🛑 To the kerbs' inner edge, not the track's full width: a 12 m line buried 0,80 m of each
+    // end inside a kerb, and the two top faces sit at the same 0,07 m — coplanar, so they fought.
+    { kind: 'box', width: KERB_INNER * 2, height: LINE_DEPTH, depth: 1.5 },
     {
       transform: transformAt(
-        { x: at.x, y: TARMAC_PROUD + LINE_DEPTH / 2, z: at.z },
-        { x: 0, y: CIRCUIT_START_YAW, z: 0 },
+        { x: line.at.x, y: TARMAC_PROUD + LINE_DEPTH / 2, z: line.at.z },
+        { x: 0, y: line.yaw, z: 0 },
       ),
       material: markSurface(),
       parentId,

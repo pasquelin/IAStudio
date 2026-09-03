@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-/**
- * 🛑 DECOR, and nothing here is solid: the plane meets the scene's own five-metre ground instead —
- * a strip 0,4 m thick is what a machine at sixty metres a second tunnels straight through.
- */
+/** 🛑 DECOR: the plane meets the scene's own five-metre ground, a strip 0,4 m thick being what a
+ * machine at sixty metres a second tunnels straight through. */
 import type { MaterialDescriptor } from '@shared/domain/scene'
 import { dense, groundSurface, obstacleSurface } from './levelParts'
 import { groupNode, meshNode, transformAt } from './nodeFactory'
