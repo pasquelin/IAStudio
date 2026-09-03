@@ -72,14 +72,14 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     expect(body('markContentChanged')).toContain('this.groupingStale = true')
   })
 
-  it('picks through runtime lots and resolves baked slots to their editable container', () => {
-    // A lot names the body a ray met by `batchId`; its source, kept where the camera never looks, is met
-    // too and names itself. Left out of the targets, the tree built for the lot serves nobody.
+  it('picks through runtime lots and names a baked hit by its container', () => {
+    // A lot names the body a ray met by `batchId`; its source, kept where the camera never looks,
+    // is met too and names itself. A baked member is NOT a node any more, so nothing tries to
+    // resolve one — the container is what an inspector can open.
     expect(body('nodeAt')).toContain('this.instances.pickable()')
     expect(body('nodeAt')).toContain('this.instances.nodeIdOf(hit) ??')
-    expect(body('nodeAt')).toContain('bakedSourceIdOf(hit.object, hit.instanceId)')
-    expect(body('nodeAt')).toContain('if (sourceId) return nodeIdOf(hit.object')
     expect(body('nodeAt')).toContain('!this.instances.holdsSource(object)')
+    expect(body('nodeAt')).not.toContain('bakedSourceIdOf')
   })
 
   it('tells the zone where the camera stands before the pane it is about to draw', () => {

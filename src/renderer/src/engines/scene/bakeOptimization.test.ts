@@ -70,3 +70,25 @@ it('refuses to bake a transform driven by the timeline', () => {
 
   expect(bakeOptimization([first, second]).refuses?.(state)).toBe(true)
 })
+
+// The render already leaves `individual` and `exclude` out of every group: a bake that merged
+// them anyway would make one document read two opposite ways.
+it('leaves out a node whose owner asked for it to stay on its own', () => {
+  const first = meshNode('first')
+  const spared: SceneNode = { ...meshNode('spared'), optimization: { mode: 'exclude' } }
+  const before = { ...EMPTY_SCENE, nodes: [first, spared], selectedIds: ['first', 'spared'] }
+
+  const after = bakeOptimization([first, spared]).apply(before)
+
+  expect(after.nodes.map(node => node.id)).toEqual(['first', 'spared'])
+})
+
+it('never merges across two sockets, which would carry one body to the other', () => {
+  const left: SceneNode = { ...meshNode('left'), attach: { socket: 'HandL' } }
+  const right: SceneNode = { ...meshNode('right'), attach: { socket: 'HandR' } }
+  const before = { ...EMPTY_SCENE, nodes: [left, right], selectedIds: ['left', 'right'] }
+
+  const after = bakeOptimization([left, right]).apply(before)
+
+  expect(after.nodes.map(node => node.attach?.socket)).toEqual(['HandL', 'HandR'])
+})

@@ -1,7 +1,7 @@
 import { BoxGeometry, Matrix4, MeshStandardMaterial } from 'three'
 import { expect, it } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
-import { bakedInstancesOf, bakedSourceIdOf } from './bakedInstances'
+import { bakedInstancesOf } from './bakedInstances'
 
 it('draws every baked source at its authored transform and keeps its identity mapping', () => {
   const mesh = bakedInstancesOf(new BoxGeometry(), new MeshStandardMaterial(), [
@@ -17,5 +17,4 @@ it('draws every baked source at its authored transform and keeps its identity ma
 
   expect(mesh.count).toBe(2)
   expect(placement.elements.slice(12, 15)).toEqual([4, 2, -1])
-  expect(bakedSourceIdOf(mesh, 1)).toBe('second')
 })

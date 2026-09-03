@@ -27,6 +27,15 @@ import { cachedOn } from '../core/cachedOn'
 
 export type OptimizationMode = 'auto' | 'individual' | 'instance' | 'batch' | 'exclude'
 
+/** Read by the dialog that offers them and by the guard that checks each one is translated. */
+export const OPTIMIZATION_MODES: readonly OptimizationMode[] = [
+  'auto',
+  'individual',
+  'instance',
+  'batch',
+  'exclude',
+]
+
 export type OptimizationSettings = {
   mode: OptimizationMode
   groupId?: string
@@ -66,7 +75,11 @@ export type SceneNodeBase = {
    * the character itself, which is where it stood before the socket was named.
    */
   attach?: { socket: string }
-  /** Authoring intent only. The optimized render representation remains a disposable cache. */
+  /**
+   * How a person answered « how should this be drawn » — read by the grouping, which keeps its own
+   * representation as a disposable cache. `instances` is NOT that cache: it is written and read
+   * back verbatim, so once baked it IS the document.
+   */
   optimization?: OptimizationSettings
 }
 
