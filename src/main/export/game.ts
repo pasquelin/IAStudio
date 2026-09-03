@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import { safeFileName } from '@shared/domain/fileName'
@@ -6,6 +6,7 @@ import { nameOf } from '@shared/domain/folder'
 import type { GameExportOutcome, GameExportRequest } from '@shared/domain/gameExport'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { isMissing, writeQueue } from '@main/persistence'
 import { folderInsideProject } from '@main/project/folderInsideProject'
 import { pathSegment } from '@main/validation'
 import { writeExportedGame, type ExportedAsset, type GameExportPorts } from './gameExport'
@@ -23,6 +24,7 @@ export type GameExportDeps = {
 
 /** Writing a game that runs with no studio. The split is written on the channel, in `ipc.ts`. */
 export function registerGameExportHandler(deps: GameExportDeps): void {
+  const writes = new Map<string, ReturnType<typeof writeQueue>>()
   handle(CHANNELS.gameExport, async (_event, request: GameExportRequest) => {
     // The project FIRST: asked the other way round, a person with none picked a folder and got
     // back the same `null` a cancel gives.
@@ -32,12 +34,72 @@ export function registerGameExportHandler(deps: GameExportDeps): void {
     const chosen = await folderFor(request.folder, project, deps.pickFolder)
     if (!chosen) return null
 
-    const root = join(chosen, safeFileName(request.title, 'game'))
-    const report = await writeExportedGame(portsFor(deps, project, root), request)
-
-    // The NAME, never the path: where a folder sits is this side's business, as everywhere else.
-    return { folder: basename(root), ...report } satisfies GameExportOutcome
+    const name = safeFileName(request.title, 'game')
+    const root = join(chosen, name)
+    await mkdir(chosen, { recursive: true })
+    const queue = writes.get(root) ?? writeQueue()
+    writes.set(root, queue)
+    return await queue.next(async () => await exportInto(deps, project, root, request))
   })
+}
+
+async function exportInto(
+  deps: GameExportDeps,
+  project: string,
+  root: string,
+  request: GameExportRequest,
+): Promise<GameExportOutcome> {
+  const staging = `${root}.staging`
+  const previous = `${root}.previous`
+  await recoverExport(root, staging, previous)
+  try {
+    const report = await writeExportedGame(portsFor(deps, project, staging), request)
+    await replaceExport(staging, root, previous)
+    return { folder: basename(root), ...report }
+  } catch (error) {
+    await discard(staging)
+    throw error
+  }
+}
+
+/** Lands a complete export; cleanup after publication cannot turn success into failure. */
+async function replaceExport(staging: string, target: string, previous: string): Promise<void> {
+  const heldPrevious = await exists(target)
+  if (heldPrevious) await rename(target, previous)
+
+  try {
+    await rename(staging, target)
+  } catch (error) {
+    if (heldPrevious) await rename(previous, target)
+    throw error
+  }
+
+  if (heldPrevious) await discard(previous)
+}
+
+/** Repairs a process stopped between the two directory renames, then clears orphaned staging. */
+async function recoverExport(target: string, staging: string, previous: string): Promise<void> {
+  await discard(staging)
+  if (!(await exists(target)) && (await exists(previous))) await rename(previous, target)
+  else await discard(previous)
+}
+
+async function discard(folder: string): Promise<void> {
+  try {
+    await rm(folder, { recursive: true, force: true })
+  } catch {
+    // The export failure is the useful one; cleanup cannot replace it with a second error.
+  }
+}
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path)
+    return true
+  } catch (error) {
+    if (isMissing(error)) return false
+    throw error
+  }
 }
 
 /**
@@ -66,7 +128,11 @@ function portsFor(deps: GameExportDeps, project: string, root: string): GameExpo
 
           try {
             const bytes = await readFile(join(project, row.path))
-            found.set(row.id, { name: nameOf(row.path), bytes })
+            found.set(row.id, {
+              name: nameOf(row.path),
+              bytes,
+              ...(row.hash ? { hash: row.hash } : {}),
+            })
           } catch {
             // The row is in the catalogue and the file has gone: left out, and listed as missing.
           }

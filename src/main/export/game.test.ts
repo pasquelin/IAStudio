@@ -126,4 +126,62 @@ describe('the door onto a game written out of the studio', () => {
 
     expect(await readFile(join(chosen, 'Demo/scenes/doc-1.gltf'), 'utf8')).toBe(SCENE)
   })
+
+  it('replaces a previous package without keeping files the new game cannot reach', async () => {
+    await exporting({
+      scenes: [
+        { id: 'doc-1', title: 'Menu', content: SCENE },
+        { id: 'old', title: 'Old level', content: SCENE },
+      ],
+    })
+
+    await exporting()
+
+    expect(await readdir(join(chosen, 'Demo/scenes'))).toEqual(['doc-1.gltf'])
+    expect((await readdir(chosen)).filter(name => name.startsWith('.Demo.'))).toEqual([])
+  })
+
+  it('keeps the previous complete package when building its replacement fails', async () => {
+    await exporting()
+    await writeFile(join(chosen, 'Demo/kept.txt'), 'previous')
+    resetHandlers()
+    registerGameExportHandler({
+      pickFolder: () => Promise.resolve<string | null>(chosen),
+      projectPath: () => project,
+      assetsById: () => Promise.resolve([]),
+      runtimeFolder: () => join(project, 'missing-runtime'),
+    })
+
+    await expect(exporting()).rejects.toThrow(/pnpm game:runtime/)
+
+    expect(await readFile(join(chosen, 'Demo/kept.txt'), 'utf8')).toBe('previous')
+    expect((await readdir(chosen)).filter(name => name.startsWith('.Demo.'))).toEqual([])
+  })
+
+  it('serializes two exports aimed at the same package', async () => {
+    const first = exporting({ scenes: [{ id: 'first', title: 'First', content: SCENE }] })
+    const second = exporting({ scenes: [{ id: 'second', title: 'Second', content: SCENE }] })
+
+    await Promise.all([first, second])
+
+    expect(await readdir(join(chosen, 'Demo/scenes'))).toEqual(['second.gltf'])
+    expect((await readdir(chosen)).filter(name => name.startsWith('Demo.'))).toEqual([])
+  })
+
+  it('recovers a complete package left behind between directory renames', async () => {
+    await mkdir(join(chosen, 'Demo.previous'))
+    await writeFile(join(chosen, 'Demo.previous/kept.txt'), 'previous')
+    resetHandlers()
+    registerGameExportHandler({
+      pickFolder: () => Promise.resolve<string | null>(chosen),
+      projectPath: () => project,
+      assetsById: () => Promise.resolve([]),
+      runtimeFolder: () => join(project, 'missing-runtime'),
+    })
+
+    await expect(exporting()).rejects.toThrow(/pnpm game:runtime/)
+
+    expect(await readFile(join(chosen, 'Demo/kept.txt'), 'utf8')).toBe('previous')
+    expect((await readdir(chosen)).filter(name => name.startsWith('Demo.'))).toEqual([])
+  })
 })

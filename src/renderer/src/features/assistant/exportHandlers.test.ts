@@ -42,6 +42,7 @@ describe('a game written out of the studio', () => {
     expect(outcome).toMatchObject({ ok: true, data: { folder: 'Demo' } })
     expect(asked[0]?.scenes.map(one => one.id)).toEqual([DOCUMENT])
     expect(String(asked[0]?.scenes[0]?.content)).toContain('asset')
+    expect(asked[0]?.scenes[0]?.assetIds).toEqual([])
   })
 
   /** 🛑 A caller that named a scene and got the FIRST one exported the wrong game, saying `ok`. */

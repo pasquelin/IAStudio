@@ -12,6 +12,7 @@ import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { messageOf } from '@shared/guards'
 import { projectName } from '@shared/domain/project'
+import { runtimeAssetIds } from '@/game/runtimeAssetIds'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
@@ -92,7 +93,12 @@ async function scenesOfProject(): Promise<GameExportRequest['scenes']> {
     if (!state) return []
 
     return [
-      { id: one.id, title: one.title, content: JSON.stringify(scenePayloadOf(state, one.id)) },
+      {
+        id: one.id,
+        title: one.title,
+        content: JSON.stringify(scenePayloadOf(state, one.id)),
+        assetIds: runtimeAssetIds(state),
+      },
     ]
   })
 }
