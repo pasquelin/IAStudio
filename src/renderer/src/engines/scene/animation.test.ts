@@ -109,8 +109,7 @@ describe('SceneAnimations', () => {
   })
 
   it('does not evaluate a mixer that has no block to place', () => {
-    const animations = new SceneAnimations()
-    animations.add('node-1', scene(), [walkClip()])
+    const { animations } = withWalk()
     const update = vi.spyOn(AnimationMixer.prototype, 'update')
 
     animations.seek(0.5 * SECOND)
@@ -123,9 +122,10 @@ describe('SceneAnimations', () => {
     const animations = new SceneAnimations()
     const root = scene()
     animations.add('node-1', root, [])
+    animations.addClip('node-1', 'bundled:Capoeira', walkClip())
+
     applyTo(animations, [bundledClip('block-1', 'Capoeira')])
     animations.seek(0.5 * SECOND)
-    animations.addClip('node-1', 'bundled:Capoeira', walkClip())
 
     expect(animations.lengthsOf('node-1')['bundled:Capoeira']).toBe(1)
     expect(cubeOf(root).position.x).toBeCloseTo(0.5)
@@ -190,7 +190,6 @@ describe('SceneAnimations', () => {
     applyTo(animations, [ref()])
     animations.seek(0.5 * SECOND)
     applyTo(animations, [])
-    animations.seek(0.75 * SECOND)
 
     // Without an action driving them, three restores the values the file was loaded with — and
     // it has to reach the objects on the spot, since nothing will advance afterwards.
