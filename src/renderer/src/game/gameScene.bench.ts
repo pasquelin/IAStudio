@@ -19,8 +19,11 @@ const state = {
   })),
 }
 
+// The WHOLE build, grouping included — ten thousand meshes and materials are allocated inside the
+// measure, and they dominate it. `buildGameScene` hands back nothing narrower to time, so the name
+// says what the number holds rather than promising the grouping alone.
 describe('an exported game with 10,000 repeated objects', () => {
-  bench('builds its spatial runtime representation', async () => {
+  bench('builds it whole, grouping and disposal included', async () => {
     const built = await buildGameScene(state, NOTHING)
     built.dispose()
   })
