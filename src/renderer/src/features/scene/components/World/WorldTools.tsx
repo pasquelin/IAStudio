@@ -129,11 +129,7 @@ export function WorldTools({ documentId }: { documentId: string }) {
             min={-1}
             max={1}
             step={0.05}
-            onChange={alpha =>
-              useScenes
-                .getState()
-                .runCommand(documentId, setTerrainEditAlpha(terrain.id, edit.id, alpha))
-            }
+            onChange={alpha => run(documentId, setTerrainEditAlpha(terrain.id, edit.id, alpha))}
             onReset={() => run(documentId, setTerrainEditAlpha(terrain.id, edit.id, 1))}
           />
         ) : null}
