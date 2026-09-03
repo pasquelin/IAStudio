@@ -98,13 +98,34 @@ describe('a ribbon', () => {
    * 🛑 The mitre is bounded by the RUN, not only by the width: measured, a one-unit offset on
    * segments of 1 and 0,11 reached 3,03 and folded the band across its own next section.
    */
-  it('never reaches a joint further than the segments meeting there', () => {
+  it('holds a joint back to the offset itself where the run is tighter than the band', () => {
     const tight = [at(0, 0), at(1, 0), at(0.9, 0.05)]
     const shifted = offsetRun(tight, 1, false)
     const reach = Math.hypot(shifted[1]!.x - tight[1]!.x, shifted[1]!.z - tight[1]!.z)
 
-    // The shorter of the two spans is 0,11: a joint reaching past it crosses what follows.
-    expect(reach).toBeLessThanOrEqual(Math.hypot(0.9 - 1, 0.05) + 1e-6)
+    // Held all the way down to the offset — never PAST it, which would narrow the band instead.
+    expect(reach).toBeCloseTo(1, 5)
+  })
+
+  /**
+   * 🛑 A band is its declared width, whatever the run: bounding the mitre by `span / offset` let
+   * that ratio fall under one, and a 12 m tarmac sampled every 1,74 m came out 3,5 m across.
+   */
+  it('keeps a band its full width on a run sampled finer than the band is wide', () => {
+    const fine = Array.from({ length: 40 }, (_, at) => ({ x: at * 0.5, y: 0, z: 0 }))
+    const geometry = ribbonGeometry({
+      kind: 'ribbon',
+      path: { kind: 'catmullrom', points: fine, closed: false, tension: 0.5 },
+      width: 12,
+      height: 0.2,
+      segments: fine.length,
+    })
+
+    const size = new Box3()
+      .setFromBufferAttribute(geometry.getAttribute('position') as BufferAttribute)
+      .getSize(new Vector3())
+
+    expect(size.z).toBeCloseTo(12, 5)
   })
 
   /** A closed run has no end to cap, and no seam where the last section meets the first. */

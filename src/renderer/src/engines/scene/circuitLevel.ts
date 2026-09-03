@@ -34,7 +34,13 @@ const LINE_DEPTH = 0.04
  * kerb, and one object carried both roles — where the track ends, and what a car that leaves it meets.
  */
 const KERB_HEIGHT = 0.07
-const KERB_THICKNESS = 1
+const KERB_THICKNESS = 2
+
+/**
+ * 🛑 How far a kerb sits ON the tarmac, and it is not decoration: a band offset by its own points
+ * bows OUTWARD between them, and laid edge to edge it opened up to 67 cm of grass down the straight.
+ */
+const KERB_BITE = 0.75
 
 /** The other half of that split: what stops a car, held back in the grass past the kerb. */
 const BARRIER_HEIGHT = 0.9
@@ -49,6 +55,14 @@ const BARRIER_CLEARANCE = 3
  */
 const MARKS = 24
 const BASE_RADIUS = 95
+
+/**
+ * 🛑 How hard the two harmonics bend the loop, and a corner is only a corner while a car can take
+ * it: at 0,34 and 0,16 the tightest radius was 10 m for a track 12 m WIDE — the turn was narrower
+ * than the road, and a barrier held 10,3 m out folded through itself. These leave 46 m.
+ */
+const OVAL_PULL = 0.2
+const SYMMETRY_BREAK = 0.08
 
 /**
  * Fifteen cross-sections per mark. Measured on the loop: the tightest turn goes from 50,4° a
@@ -99,7 +113,8 @@ export function circuitLine(atHeight: number): Vector3[] {
     const angle = (index / MARKS) * Math.PI * 2
     // Two harmonics: the second stretches the loop into a long oval, the third breaks its
     // symmetry so no two corners of the lap are taken the same way.
-    const radius = BASE_RADIUS * (1 + 0.34 * Math.cos(2 * angle) + 0.16 * Math.sin(3 * angle))
+    const radius =
+      BASE_RADIUS * (1 + OVAL_PULL * Math.cos(2 * angle) + SYMMETRY_BREAK * Math.sin(3 * angle))
     return { x: Math.sin(angle) * radius, y: atHeight, z: Math.cos(angle) * radius }
   })
 }
@@ -208,7 +223,7 @@ export function circuitNodes(): SceneNode[] {
   const road = circuitLine(TARMAC_PROUD - TARMAC_DEPTH)
 
   const kerbs = sideBands(circuit.id, centre, {
-    offset: TRACK_WIDTH / 2 + KERB_THICKNESS / 2,
+    offset: TRACK_WIDTH / 2 - KERB_BITE + KERB_THICKNESS / 2,
     width: KERB_THICKNESS,
     height: KERB_HEIGHT,
     material: dense(climbSurface(), KERB_TILE),
@@ -216,7 +231,8 @@ export function circuitNodes(): SceneNode[] {
   })
 
   const barriers = sideBands(circuit.id, centre, {
-    offset: TRACK_WIDTH / 2 + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2,
+    offset:
+      TRACK_WIDTH / 2 - KERB_BITE + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2,
     width: BARRIER_THICKNESS,
     height: BARRIER_HEIGHT,
     material: dense(obstacleSurface(), BARRIER_TILE),

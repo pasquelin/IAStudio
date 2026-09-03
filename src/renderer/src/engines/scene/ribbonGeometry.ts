@@ -146,7 +146,9 @@ function bisector(
 
   const unitX = sumX / length
   const unitZ = sumZ / length
-  const stretch = Math.min(1 / (unitX * after.x + unitZ * after.z), MITER_LIMIT, limit)
+  // 🛑 NEVER under one: the three above bound how far a joint STRETCHES, and a stretch below one
+  // narrows the band instead. A 12 m tarmac on 1,74 m spans came out 3,5 m across — 29 % of it.
+  const stretch = Math.max(1, Math.min(1 / (unitX * after.x + unitZ * after.z), MITER_LIMIT, limit))
   return { x: unitX * stretch, z: unitZ * stretch }
 }
 
