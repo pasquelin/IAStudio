@@ -18,6 +18,7 @@ describe('SceneRenderer and the preview it invalidates', () => {
   const REPAINT = /private repaint\(\): void \{[\s\S]*?\n {2}\}/
   const REFRESH = /private refreshWithoutShadows\(\): void \{[\s\S]*?\n {2}\}/
   const SELECTIVE = /private refreshChangedShadows\(\): void \{[\s\S]*?\n {2}\}/
+  const TEXTURE_REFRESH = /private refreshMaterialTexture\([\s\S]*?\n {2}\}/
 
   /**
    * The NAME and not the call: `createEnvironment` and the three texture binders are handed
@@ -31,6 +32,7 @@ describe('SceneRenderer and the preview it invalidates', () => {
       .replace(REPAINT, '')
       .replace(REFRESH, '')
       .replace(SELECTIVE, '')
+      .replace(TEXTURE_REFRESH, '')
       .split('\n')
       .map((line, at) => ({ line: line.trim(), at: at + 1 }))
       .filter(
@@ -48,6 +50,15 @@ describe('SceneRenderer and the preview it invalidates', () => {
 
     expect(refresh).toContain('this.viewport.invalidateInset()')
     expect(refresh).toContain('this.viewport.requestCameraRender()')
+  })
+
+  it('refreshes texture pixels without shadows unless displacement changes the silhouette', () => {
+    const refresh = TEXTURE_REFRESH.exec(source)?.[0] ?? ''
+
+    expect(refresh).toContain("slot === 'displacementMap'")
+    expect(refresh).toContain('this.redraw()')
+    expect(refresh).toContain('this.refreshWithoutShadows()')
+    expect(source.match(/createMaterialTextures\([\s\S]*?refreshMaterialTexture/g)).toHaveLength(2)
   })
 
   it('invalidates filmed pixels and only changed shadow maps together', () => {
