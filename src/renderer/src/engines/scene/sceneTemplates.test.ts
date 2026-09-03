@@ -261,6 +261,28 @@ describe('the template the composition is judged on', () => {
  * `thirdPerson` left this list the day its arm stopped naming anything.
  */
 describe('the arm the playable templates hang their camera on', () => {
+  /**
+   * 🛑 `aimedCamera` stands on the +Z axis at x = 0, which framed a subject only while it sat near
+   * the origin. The car moved onto the loop's straight and the camera stayed 71 m to the side.
+   */
+  it('stands the car template camera behind the car rather than on the Z axis', () => {
+    const { nodes } = sceneFromTemplate('car')
+    const camera = nodes.find(node => node.type === 'camera')!
+    const car = nodes.find(node => node.name === 'Car')!
+    const away = {
+      x: car.transform.position.x - camera.transform.position.x,
+      z: car.transform.position.z - camera.transform.position.z,
+    }
+
+    const yaw = camera.transform.rotation.y
+    // A camera looks down its own -Z, which is why this is not the subject's own forward vector.
+    const sight = { x: -Math.sin(yaw), z: -Math.cos(yaw) }
+
+    // The car stands AHEAD of the camera, in its axis — not off to the side of a fixed Z view.
+    expect(away.x * sight.x + away.z * sight.z).toBeGreaterThan(5)
+    expect(Math.abs(away.x * sight.z - away.z * sight.x)).toBeLessThan(0.5)
+  })
+
   const wired: readonly { template: SceneTemplateId; subject: string }[] = [
     { template: 'car', subject: 'Car' },
   ]

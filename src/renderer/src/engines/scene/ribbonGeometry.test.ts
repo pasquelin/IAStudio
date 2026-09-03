@@ -109,23 +109,30 @@ describe('a ribbon', () => {
 
   /**
    * 🛑 A band is its declared width, whatever the run: bounding the mitre by `span / offset` let
-   * that ratio fall under one, and a 12 m tarmac sampled every 1,74 m came out 3,5 m across.
+   * that ratio fall under one, and a 12 m tarmac sampled every 1,74 m came out 3,50 m across.
    */
   it('keeps a band its full width on a run sampled finer than the band is wide', () => {
-    const fine = Array.from({ length: 40 }, (_, at) => ({ x: at * 0.5, y: 0, z: 0 }))
+    // A CLOSED ring: on an open run the two ends have no bisector to bound, and their full width
+    // fills the bounding box whatever happens between them.
+    const ring = Array.from({ length: 60 }, (_, at) => {
+      const angle = (at / 60) * Math.PI * 2
+      return { x: Math.sin(angle) * 20, y: 0, z: Math.cos(angle) * 20 }
+    })
     const geometry = ribbonGeometry({
       kind: 'ribbon',
-      path: { kind: 'catmullrom', points: fine, closed: false, tension: 0.5 },
+      path: { kind: 'catmullrom', points: ring, closed: true, tension: 0.5 },
       width: 12,
       height: 0.2,
-      segments: fine.length,
+      segments: 360,
     })
 
-    const size = new Box3()
-      .setFromBufferAttribute(geometry.getAttribute('position') as BufferAttribute)
-      .getSize(new Vector3())
+    // Spans of 0,35 m against a half-width of 6: the ratio the mitre is bounded by is 0,058.
+    const corners = geometry.getAttribute('position')
+    const radii = Array.from({ length: corners.count }, (_, at) =>
+      Math.hypot(corners.getX(at), corners.getZ(at)),
+    )
 
-    expect(size.z).toBeCloseTo(12, 5)
+    expect(Math.max(...radii) - Math.min(...radii)).toBeCloseTo(12, 1)
   })
 
   /** A closed run has no end to cap, and no seam where the last section meets the first. */

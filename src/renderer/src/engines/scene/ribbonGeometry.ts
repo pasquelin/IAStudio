@@ -146,9 +146,7 @@ function bisector(
 
   const unitX = sumX / length
   const unitZ = sumZ / length
-  // 🛑 NEVER under one: the three above bound how far a joint STRETCHES, and a stretch below one
-  // narrows the band instead. A 12 m tarmac on 1,74 m spans came out 3,5 m across — 29 % of it.
-  const stretch = Math.max(1, Math.min(1 / (unitX * after.x + unitZ * after.z), MITER_LIMIT, limit))
+  const stretch = Math.min(1 / (unitX * after.x + unitZ * after.z), MITER_LIMIT, limit)
   return { x: unitX * stretch, z: unitZ * stretch }
 }
 
@@ -157,6 +155,10 @@ function bisector(
  * over that offset. `MITER_LIMIT` alone bounds the stretch against the width and not against the
  * run: measured, a one-unit offset on segments of 1 and 0,11 reached 3,03 and folded the band
  * across its own next section.
+ *
+ * 🛑 NEVER under one, which is why this floors rather than returning the raw ratio: it bounds how
+ * far a joint STRETCHES, and below one it narrows the band instead. Sampled every 1,74 m, a 12 m
+ * tarmac came out 3,50 m across — 29 % of what it declared.
  */
 function reachAt(points: readonly Vector3[], at: number, offset: number, closed: boolean): number {
   if (offset === 0) return MITER_LIMIT
@@ -169,7 +171,7 @@ function reachAt(points: readonly Vector3[], at: number, offset: number, closed:
     return Math.hypot(to.x - from.x, to.z - from.z)
   }
 
-  return Math.min(spanTo(at - 1, at), spanTo(at, at + 1)) / Math.abs(offset)
+  return Math.max(1, Math.min(spanTo(at - 1, at), spanTo(at, at + 1)) / Math.abs(offset))
 }
 
 /** The four faces between two sections: the lid, the floor, and a wall each side. */

@@ -3,12 +3,41 @@
 import { describe, expect, it } from 'vitest'
 import type { Vector3 } from '@shared/domain/scene'
 import type { SceneNode } from './sceneState'
-import { distanceToSpan } from './cameraPath'
+import { distanceToSpan, turnRadiusAt } from './cameraPath'
 import { ribbonGeometry, sampledRun } from './ribbonGeometry'
 import { CIRCUIT_START, CIRCUIT_START_YAW, circuitLine, circuitNodes } from './circuitLevel'
 
 const named = (nodes: readonly SceneNode[], word: string): SceneNode[] =>
   nodes.filter(node => node.name.startsWith(word))
+
+/** Which way the run heads at the sample nearest a point — a unit vector in the XZ plane. */
+function nearestSpan(curve: readonly Vector3[], x: number, z: number): { x: number; z: number } {
+  const at = curve.reduce(
+    (best, point, index) =>
+      Math.hypot(point.x - x, point.z - z) < Math.hypot(curve[best]!.x - x, curve[best]!.z - z)
+        ? index
+        : best,
+    0,
+  )
+  const here = curve[at]!
+  const next = curve[(at + 1) % curve.length]!
+  const span = Math.hypot(next.x - here.x, next.z - here.z)
+  return { x: (next.x - here.x) / span, z: (next.z - here.z) / span }
+}
+
+/** Samples spanning eight metres — a car's length, so one point cannot flatter a corner. */
+function carLengths(curve: readonly Vector3[]): number {
+  const lap = curve.reduce(
+    (total, point, at) =>
+      total +
+      Math.hypot(
+        curve[(at + 1) % curve.length]!.x - point.x,
+        curve[(at + 1) % curve.length]!.z - point.z,
+      ),
+    0,
+  )
+  return Math.max(2, Math.round((curve.length * 8) / lap))
+}
 
 const bandOf = (nodes: readonly SceneNode[], name: string) => {
   const band = nodes.find(node => node.name === name)
@@ -22,13 +51,6 @@ const runOf = (nodes: readonly SceneNode[], name: string): readonly Vector3[] =>
 /** How tall a band stands — what tells a strip a car crosses from a wall that stops it. */
 const heightOf = (nodes: readonly SceneNode[], name: string): number | null =>
   bandOf(nodes, name)?.height ?? null
-
-/** How far one point stands from the swept centre line — to the sampled POINTS, see `reachOf`. */
-function spanFrom(centre: readonly Vector3[], x: number, z: number): number {
-  let span = Infinity
-  for (const point of centre) span = Math.min(span, Math.hypot(point.x - x, point.z - z))
-  return span
-}
 
 /**
  * 🛑 How far a band's own SURFACE reaches from the centre line, nearest and furthest — read off the
@@ -46,7 +68,7 @@ function reachOf(nodes: readonly SceneNode[], name: string, centre: readonly Vec
   for (let at = 0; at < corners.count; at += 1) {
     // To the sampled POINTS: the run is dense enough that the chord error stays under a
     // centimetre, and `distanceToSpan` answers the span's own length on a run this fine.
-    const span = spanFrom(centre, corners.getX(at), corners.getZ(at))
+    const span = distanceToRun(centre, corners.getX(at), corners.getZ(at))
     nearest = Math.min(nearest, span)
     furthest = Math.max(furthest, span)
   }
@@ -95,34 +117,12 @@ describe('the circuit a car opens on', () => {
    */
   it('puts the grid on the straightest stretch of the loop', () => {
     // Over a car's length either side, so a single sampled point cannot flatter a corner.
-    const reach = Math.max(2, Math.round((centre.length * 8) / 628))
-    const radii = centre.map((point, at) => {
-      const before = centre[(at - reach + centre.length) % centre.length]!
-      const after = centre[(at + reach) % centre.length]!
-      const area =
-        Math.abs(
-          (point.x - before.x) * (after.z - before.z) - (after.x - before.x) * (point.z - before.z),
-        ) / 2
-      if (area < 1e-9) return Infinity
-      return (
-        (Math.hypot(point.x - before.x, point.z - before.z) *
-          Math.hypot(after.x - point.x, after.z - point.z) *
-          Math.hypot(after.x - before.x, after.z - before.z)) /
-        (4 * area)
-      )
-    })
+    const radii = centre.map((_, at) => turnRadiusAt(centre, at, carLengths(centre)))
 
+    const away = (point: Vector3): number =>
+      Math.hypot(point.x - CIRCUIT_START.x, point.z - CIRCUIT_START.z)
     const here =
-      radii[
-        centre.reduce(
-          (best, point, at) =>
-            spanFrom([point], CIRCUIT_START.x, CIRCUIT_START.z) <
-            spanFrom([centre[best]!], CIRCUIT_START.x, CIRCUIT_START.z)
-              ? at
-              : best,
-          0,
-        )
-      ]!
+      radii[centre.reduce((best, point, at) => (away(point) < away(centre[best]!) ? at : best), 0)]!
 
     // In the flattest tenth of the loop — a grid in a turn sits far below that.
     const flattest = [...radii].sort((one, other) => other - one)[Math.floor(radii.length / 10)]!
@@ -146,9 +146,15 @@ describe('the circuit a car opens on', () => {
       })),
     )
 
-    // Every corner within the tarmac's own 6,00 m, plus what a 1,5 m depth costs on a 46 m turn.
+    // 🛑 ACROSS: turned along the track instead, every corner still sat near the centre line, so a
+    // bound on their distance proves nothing. The line's own width runs at a right angle to the run.
+    const ahead = nearestSpan(centre, line.transform.position.x, line.transform.position.z)
+    expect(Math.abs(Math.cos(yaw) * ahead.x - Math.sin(yaw) * ahead.z)).toBeLessThan(0.05)
+
     for (const corner of corners) {
-      expect(spanFrom(centre, corner.x, corner.z)).toBeLessThan(6.2)
+      expect(distanceToRun(centre, corner.x, corner.z)).toBeLessThan(
+        bandOf(nodes, 'Tarmac')!.width / 2,
+      )
     }
   })
 
@@ -159,9 +165,13 @@ describe('the circuit a car opens on', () => {
       .filter(node => (node.components ?? []).some(one => one.type === 'RigidBody'))
       .map(node => node.name)
 
+    // 🛑 Against the SURFACE, not the anchors: a kerb's control points run a metre outside the band
+    // they sweep. A felt body this cannot measure fails the case rather than passing it in silence.
     const touched = felt.filter(name => {
-      // Half a kerb is 0,5 m across and half a car 0,9: under that, the two overlap.
-      return distanceToRun(runOf(nodes, name), CIRCUIT_START.x, CIRCUIT_START.z) < 1.4
+      const reach = reachOf(nodes, name, centre)
+      if (!reach) return true
+      // Half a car is 0,9 m: the spawn must clear the nearest surface of every solid by more.
+      return reach.nearest < distanceToRun(centre, CIRCUIT_START.x, CIRCUIT_START.z) + 0.9
     })
 
     expect(touched).toEqual([])
@@ -188,25 +198,6 @@ describe('the circuit a car opens on', () => {
     )
 
     expect(fidelities).toEqual(['trimesh', 'trimesh'])
-  })
-
-  // A wheel goes over it and the throttle stays down — the why is written on `KERB_HEIGHT`.
-  it('makes the kerbs a strip a car crosses rather than a wall', () => {
-    for (const name of ['Kerb Left', 'Kerb Right']) {
-      expect(heightOf(nodes, name)).toBeLessThanOrEqual(0.1)
-    }
-  })
-
-  /** What stops a car, and it is NOT the kerb: held back in the grass, so leaving the track
-   * costs a run through it before anything is met. */
-  it('holds a barrier back in the grass, well clear of the kerbs', () => {
-    const kerb = reachOf(nodes, 'Kerb Left', centre)!
-
-    for (const side of ['Left', 'Right']) {
-      // Two metres of grass at the very least, past the furthest the kerb's own surface reaches.
-      expect(reachOf(nodes, `Barrier ${side}`, centre)!.nearest).toBeGreaterThan(kerb.furthest + 2)
-      expect(heightOf(nodes, `Barrier ${side}`)).toBeGreaterThanOrEqual(0.8)
-    }
   })
 
   // A barrier a car drives through is scenery. Felt as the band it is, for the reason the kerbs are.
@@ -237,21 +228,27 @@ describe('the circuit a car opens on', () => {
   })
 
   /**
-   * The kerbs run PARALLEL to the tarmac all the way round — the one thing a hand-placed kerb
-   * never manages. Measured on the middle of each segment: a mitred point sits further out by
-   * construction, and reading the points would measure the mitre rather than the gap.
+   * 🛑 The one the lot exists for, and it reads the SURFACES: laid edge to edge, a kerb bowed
+   * outward between its own anchors and opened up to 67 cm of grass down the straight.
    */
-  it('keeps both kerbs parallel to the tarmac, all the way round', () => {
-    const road = reachOf(nodes, 'Tarmac', centre)!
+  it('leaves no grass between the tarmac and either kerb, all the way round', () => {
+    const road = bandOf(nodes, 'Tarmac')!
+    const kerbs = ['Kerb Left', 'Kerb Right'].map(name =>
+      sampledRun(bandOf(nodes, name)!.path, bandOf(nodes, name)!.segments),
+    )
+    const corners = ribbonGeometry(road).getAttribute('position')
+    let worst = 0
 
-    for (const name of ['Kerb Left', 'Kerb Right']) {
-      const kerb = reachOf(nodes, name, centre)!
-
-      // 🛑 The one that matters: the kerb's INNER edge stays under the tarmac everywhere on the
-      // loop. Laid edge to edge it was 5,98 to 6,67 against a tarmac ending at 6,00 — grass.
-      expect(kerb.nearest).toBeLessThan(road.furthest)
-      expect(kerb.furthest).toBeGreaterThan(road.furthest)
+    for (let at = 0; at < corners.count; at += 1) {
+      const x = corners.getX(at)
+      const z = corners.getZ(at)
+      // The tarmac's own EDGE, which is what a kerb has to cover: its middle proves nothing.
+      if (distanceToRun(centre, x, z) < road.width / 2 - 0.01) continue
+      worst = Math.max(worst, Math.min(...kerbs.map(kerb => distanceToRun(kerb, x, z))))
     }
+
+    // Inside the nearer kerb's own band — measured at 0,47 m against a half-width of 1,00.
+    expect(worst).toBeLessThan(bandOf(nodes, 'Kerb Left')!.width / 2)
   })
 
   /**
@@ -259,31 +256,28 @@ describe('the circuit a car opens on', () => {
    * track 12 m WIDE, and a barrier held 10,3 m out folded through itself.
    */
   it('never turns tighter than the track is wide', () => {
-    const radii = centre.map((point, at) => {
-      const before = centre[(at - 1 + centre.length) % centre.length]!
-      const after = centre[(at + 1) % centre.length]!
-      const area =
-        Math.abs(
-          (point.x - before.x) * (after.z - before.z) - (after.x - before.x) * (point.z - before.z),
-        ) / 2
-      // The circumradius of the three: abc / 4A, which is the turn's own radius at that point.
-      const legs =
-        Math.hypot(point.x - before.x, point.z - before.z) *
-        Math.hypot(after.x - point.x, after.z - point.z) *
-        Math.hypot(after.x - before.x, after.z - before.z)
-      return area > 1e-9 ? legs / (4 * area) : Infinity
-    })
+    const radii = centre.map((_, at) => turnRadiusAt(centre, at, 1))
 
     // Three times the track's own width, which is what makes the tightest turn worth taking.
     expect(Math.min(...radii)).toBeGreaterThan(36)
   })
 
-  // A band that folds through itself has no inside left: its own surface would cross the loop.
-  it('never folds a barrier through the middle of the track', () => {
-    for (const name of ['Barrier Left', 'Barrier Right']) {
-      expect(reachOf(nodes, name, centre)!.nearest).toBeGreaterThan(
-        reachOf(nodes, 'Kerb Left', centre)!.furthest,
-      )
+  // A wheel goes over it and the throttle stays down — the why is written on `KERB_HEIGHT`.
+  it('makes the kerbs a strip a car crosses rather than a wall', () => {
+    for (const name of ['Kerb Left', 'Kerb Right']) {
+      expect(heightOf(nodes, name)).toBeLessThanOrEqual(0.1)
+    }
+  })
+
+  /** What stops a car, and it is NOT the kerb: held back in the grass, so leaving the track
+   * costs a run through it before anything is met. */
+  it('holds a barrier back in the grass, well clear of the kerbs', () => {
+    const kerb = reachOf(nodes, 'Kerb Left', centre)!
+
+    for (const side of ['Left', 'Right']) {
+      // Two metres of grass at the very least, past the furthest the kerb's own surface reaches.
+      expect(reachOf(nodes, `Barrier ${side}`, centre)!.nearest).toBeGreaterThan(kerb.furthest + 2)
+      expect(heightOf(nodes, `Barrier ${side}`)).toBeGreaterThanOrEqual(0.8)
     }
   })
 

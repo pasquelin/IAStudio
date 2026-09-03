@@ -16,6 +16,7 @@ import {
   markSurface,
   obstacleSurface,
 } from './levelParts'
+import { curveOf, turnRadiusAt } from './cameraPath'
 import { offsetRun, sampledRun } from './ribbonGeometry'
 import { IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
 
@@ -42,6 +43,9 @@ const KERB_THICKNESS = 2
  */
 const KERB_BITE = 0.75
 
+/** Where a kerb's inner edge lands: on the tarmac, by `KERB_BITE`. */
+const KERB_INNER = TRACK_WIDTH / 2 - KERB_BITE
+
 /** The other half of that split: what stops a car, held back in the grass past the kerb. */
 const BARRIER_HEIGHT = 0.9
 const BARRIER_THICKNESS = 0.6
@@ -57,9 +61,8 @@ const MARKS = 24
 const BASE_RADIUS = 95
 
 /**
- * 🛑 How hard the two harmonics bend the loop, and a corner is only a corner while a car can take
- * it: at 0,34 and 0,16 the tightest radius was 10 m for a track 12 m WIDE — the turn was narrower
- * than the road, and a barrier held 10,3 m out folded through itself. These leave 46 m.
+ * 🛑 At 0,34 and 0,16 the tightest radius was 10 m for a track 12 m wide, and a barrier held
+ * 10,3 m out folded through itself. These leave 46 m.
  */
 const OVAL_PULL = 0.2
 const SYMMETRY_BREAK = 0.08
@@ -88,70 +91,36 @@ const CAR_BEHIND = 3
  * 🛑 The centre line as the bands are SWEPT, not the two dozen anchors it is written through: a
  * chord between two marks is 26 m long, and a heading read off one points where the curve does not.
  */
-const CENTRE_CURVE = sampledRun(bezierPathOf(circuitLine(0), true), CURVE_SEGMENTS)
+const CENTRE_PATH = bezierPathOf(circuitLine(0), true)
+const CENTRE_CURVE = sampledRun(CENTRE_PATH, CURVE_SEGMENTS)
 
-/** Where a lap starts: the straightest run of the loop, which is where a grid belongs. */
-const GRID_AT = straightestOf(CENTRE_CURVE)
+/** Where a lap starts, as an abscissa: the straightest run of the loop, where a grid belongs. */
+const GRID_U = straightestOf(CENTRE_CURVE) / CENTRE_CURVE.length
 
 const START = alongCurve(CAR_BEHIND)
 export const CIRCUIT_START_YAW = START.yaw
 export const CIRCUIT_START: Vector3 = START.at
 
 /**
- * 🛑 The straightest stretch, by the widest turning circle over a car's length: a grid laid at the
- * first mark fell in a corner, and its line stood across the track at an angle.
+ * 🛑 The straightest stretch, measured over a car's length either side: a grid laid at the first
+ * mark fell in a corner, and its line stood across the track at an angle.
  */
 function straightestOf(curve: readonly Vector3[]): number {
-  const reach = Math.max(2, Math.round((curve.length * 8) / lengthOf(curve)))
-  const radii = curve.map((point, at) => {
-    const before = curve[(at - reach + curve.length) % curve.length]!
-    const after = curve[(at + reach) % curve.length]!
-    const area =
-      Math.abs(
-        (point.x - before.x) * (after.z - before.z) - (after.x - before.x) * (point.z - before.z),
-      ) / 2
-    if (area < 1e-9) return Infinity
-    return (
-      (Math.hypot(point.x - before.x, point.z - before.z) *
-        Math.hypot(after.x - point.x, after.z - point.z) *
-        Math.hypot(after.x - before.x, after.z - before.z)) /
-      (4 * area)
-    )
-  })
-
+  const reach = Math.max(2, Math.round((curve.length * 8) / curveOf(CENTRE_PATH).getLength()))
+  const radii = curve.map((_, at) => turnRadiusAt(curve, at, reach))
   return radii.indexOf(Math.max(...radii))
-}
-
-function lengthOf(curve: readonly Vector3[]): number {
-  return curve.reduce(
-    (total, point, at) =>
-      total +
-      Math.hypot(
-        curve[(at + 1) % curve.length]!.x - point.x,
-        curve[(at + 1) % curve.length]!.z - point.z,
-      ),
-    0,
-  )
 }
 
 /** A point `ahead` metres ALONG the curve from the grid, and the way the track runs there. */
 function alongCurve(ahead: number): { at: Vector3; yaw: number } {
-  let walked = 0
-  let step = 0
+  const curve = curveOf(CENTRE_PATH)
+  const wrap = (u: number): number => ((u % 1) + 1) % 1
+  const step = ahead / curve.getLength()
+  const at = curve.getPointAt(wrap(GRID_U + step))
+  // A metre further on names the heading; the tangent itself would need the curve's derivative.
+  const next = curve.getPointAt(wrap(GRID_U + step + 1 / curve.getLength()))
 
-  while (walked < ahead && step < CENTRE_CURVE.length) {
-    const from = CENTRE_CURVE[(GRID_AT + step) % CENTRE_CURVE.length]!
-    const to = CENTRE_CURVE[(GRID_AT + step + 1) % CENTRE_CURVE.length]!
-    walked += Math.hypot(to.x - from.x, to.z - from.z)
-    step += 1
-  }
-
-  const at = CENTRE_CURVE[(GRID_AT + step) % CENTRE_CURVE.length]!
-  const next = CENTRE_CURVE[(GRID_AT + step + 1) % CENTRE_CURVE.length]!
-  return {
-    at: { x: at.x, y: 0, z: at.z },
-    yaw: Math.atan2(next.x - at.x, next.z - at.z),
-  }
+  return { at: { x: at.x, y: 0, z: at.z }, yaw: Math.atan2(next.x - at.x, next.z - at.z) }
 }
 
 /**
@@ -273,7 +242,7 @@ export function circuitNodes(): SceneNode[] {
   const road = circuitLine(TARMAC_PROUD - TARMAC_DEPTH)
 
   const kerbs = sideBands(circuit.id, centre, {
-    offset: TRACK_WIDTH / 2 - KERB_BITE + KERB_THICKNESS / 2,
+    offset: KERB_INNER + KERB_THICKNESS / 2,
     width: KERB_THICKNESS,
     height: KERB_HEIGHT,
     material: dense(climbSurface(), KERB_TILE),
@@ -281,8 +250,7 @@ export function circuitNodes(): SceneNode[] {
   })
 
   const barriers = sideBands(circuit.id, centre, {
-    offset:
-      TRACK_WIDTH / 2 - KERB_BITE + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2,
+    offset: KERB_INNER + KERB_THICKNESS + BARRIER_CLEARANCE + BARRIER_THICKNESS / 2,
     width: BARRIER_THICKNESS,
     height: BARRIER_HEIGHT,
     material: dense(obstacleSurface(), BARRIER_TILE),
@@ -321,7 +289,9 @@ function startLine(parentId: string): SceneNode {
   const line = alongCurve(CAR_BEHIND + LINE_AHEAD)
 
   return meshNode(
-    { kind: 'box', width: TRACK_WIDTH, height: LINE_DEPTH, depth: 1.5 },
+    // 🛑 To the kerbs' inner edge, not the track's full width: a 12 m line buried 0,80 m of each
+    // end inside a kerb, and the two top faces sit at the same 0,07 m — coplanar, so they fought.
+    { kind: 'box', width: KERB_INNER * 2, height: LINE_DEPTH, depth: 1.5 },
     {
       transform: transformAt(
         { x: line.at.x, y: TARMAC_PROUD + LINE_DEPTH / 2, z: line.at.z },

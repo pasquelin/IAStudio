@@ -228,3 +228,25 @@ export function distanceToSpan(point: PlainVector3, from: PlainVector3, to: Plai
     .closestPointToPoint(SPAN_AT.copy(point), true, SPAN_NEAR)
     .distanceTo(SPAN_AT)
 }
+
+/**
+ * 🛑 How tightly a run turns at one of its points — the circumscribed circle of the point and its
+ * two neighbours `reach` samples away. `Infinity` where the three are collinear, which is straight.
+ */
+export function turnRadiusAt(run: readonly PlainVector3[], at: number, reach: number): number {
+  const before = run[(at - reach + run.length) % run.length]!
+  const here = run[at]!
+  const after = run[(at + reach) % run.length]!
+  const area =
+    Math.abs(
+      (here.x - before.x) * (after.z - before.z) - (after.x - before.x) * (here.z - before.z),
+    ) / 2
+
+  if (area < 1e-9) return Infinity
+  return (
+    (Math.hypot(here.x - before.x, here.z - before.z) *
+      Math.hypot(after.x - here.x, after.z - here.z) *
+      Math.hypot(after.x - before.x, after.z - before.z)) /
+    (4 * area)
+  )
+}
