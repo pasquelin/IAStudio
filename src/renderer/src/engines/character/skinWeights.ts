@@ -12,7 +12,13 @@ import {
   type HumanoidSide,
 } from '@shared/domain/humanoid'
 import type { Vector3 } from '@shared/domain/transform'
-import { SKIN_REGIONS, type SkinRegion, type SkinRequest, type SkinResponse } from './skinMessage'
+import {
+  INFLUENCES,
+  SKIN_REGIONS,
+  type SkinRegion,
+  type SkinRequest,
+  type SkinResponse,
+} from './skinMessage'
 import type { SkinBinding } from './skinVertices'
 import { createWorkerPort } from '../core/workerPort'
 import { ORIGIN, worldPlaces } from './rigWorld'
@@ -30,21 +36,85 @@ export type SkinWeights = {
   dispose: () => void
 }
 
-export function createSkinWeights(spawn: () => Worker): SkinWeights {
-  const port = createWorkerPort<SkinBinding, SkinResponse>(spawn, 'skinning', answer => ({
-    skinIndex: answer.skinIndex,
-    skinWeight: answer.skinWeight,
-  }))
+const VERTICES_PER_WORKER = 50_000
+
+export function createSkinWeights(
+  spawn: () => Worker,
+  maximumWorkers = Math.max(1, (globalThis.navigator?.hardwareConcurrency ?? 3) - 2),
+): SkinWeights {
+  const ports = Array.from({ length: Math.max(1, Math.floor(maximumWorkers)) }, () =>
+    createWorkerPort<SkinBinding, SkinResponse>(spawn, 'skinning', answer => ({
+      skinIndex: answer.skinIndex,
+      skinWeight: answer.skinWeight,
+    })),
+  )
 
   return {
-    bind: (positions, rig, watch) =>
-      port.send(id => {
-        const request: SkinRequest = { id, ...wireOf(positions, rig) }
-        return { message: request, transfer: [request.position.buffer, request.segments.buffer] }
-      }, watch),
+    bind: (positions, rig, watch) => bindAcross(ports, positions, rig, watch),
 
-    dispose: port.dispose,
+    dispose: () => ports.forEach(port => port.dispose()),
   }
+}
+
+async function bindAcross(
+  ports: ReturnType<typeof createWorkerPort<SkinBinding, SkinResponse>>[],
+  positions: Float32Array,
+  rig: Rig,
+  watch?: { onProgress?: (progress: number) => void; signal?: AbortSignal },
+): Promise<SkinBinding | null> {
+  const wire = wireOf(positions, rig)
+  const vertices = Math.floor(positions.length / 3)
+  const workers = Math.min(ports.length, Math.max(1, Math.floor(vertices / VERTICES_PER_WORKER)))
+  if (workers === 1) {
+    return (
+      ports[0]?.send(id => {
+        const request: SkinRequest = { id, ...wire }
+        return { message: request, transfer: [request.position.buffer, request.segments.buffer] }
+      }, watch) ?? null
+    )
+  }
+
+  const progress = new Float64Array(workers)
+  const sizes = new Uint32Array(workers)
+  const requests = ports.slice(0, workers).map((port, worker) => {
+    const from = Math.floor((vertices * worker) / workers)
+    const to = Math.floor((vertices * (worker + 1)) / workers)
+    sizes[worker] = to - from
+    return port.send(
+      id => {
+        const request: SkinRequest = {
+          id,
+          position: positions.slice(from * 3, to * 3),
+          segments: wire.segments.slice(),
+          regions: wire.regions,
+        }
+        return { message: request, transfer: [request.position.buffer, request.segments.buffer] }
+      },
+      {
+        signal: watch?.signal,
+        onProgress: value => {
+          progress[worker] = value
+          watch?.onProgress?.(
+            progress.reduce((total, part, index) => total + part * (sizes[index] ?? 0), 0) /
+              vertices,
+          )
+        },
+      },
+    )
+  })
+  const bindings = await Promise.all(requests)
+  if (bindings.some(binding => binding === null)) return null
+
+  const skinIndex = new Uint16Array(vertices * INFLUENCES)
+  const skinWeight = new Float32Array(vertices * INFLUENCES)
+  let offset = 0
+  for (const binding of bindings) {
+    if (!binding) return null
+    skinIndex.set(binding.skinIndex, offset)
+    skinWeight.set(binding.skinWeight, offset)
+    offset += binding.skinIndex.length
+  }
+  return { skinIndex, skinWeight }
 }
 
 /**
