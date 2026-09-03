@@ -878,6 +878,16 @@ body,
   outline: none;
 }
 
+/* A composite control keeps one indicator on its frame instead of one around each inner input. */
+.focus-frame:focus-within {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.focus-frame > :focus-visible {
+  outline: none !important;
+}
+
 /*
  * What a picture sits on once it fills the screen — the video return put on a second display and
  * filled from the window menu, and anything else a viewer takes full screen later.
