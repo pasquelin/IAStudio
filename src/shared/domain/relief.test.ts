@@ -206,6 +206,15 @@ describe('raiseReliefDisk', () => {
     expect(heightAt(samples, sculpt, 2, 0)).toBeCloseTo(2)
   })
 
+  it('scales the written delta with the amount, so 0.2 raises twice 0.1', () => {
+    const disk = { x: extent.origin.x, z: extent.origin.z, radius: stepX }
+    const mild = raiseReliefDisk(samples, extent, undefined, disk, 0.1)
+    const strong = raiseReliefDisk(samples, extent, undefined, disk, 0.2)
+
+    expect(heightAt(samples, strong, 0, 0)).toBeCloseTo(2 * heightAt(samples, mild, 0, 0))
+    expect(heightAt(samples, mild, 0, 0)).toBeCloseTo(0.1)
+  })
+
   /**
    * 🛑 A map of 2ⁿ+1 samples, which is what every classic heightmap is. Its last sample sits on a
    * border whose two chunks are the SAME one, the index being clamped to the last — so the amount

@@ -83,4 +83,32 @@ describe('a sculpt drag through the scene renderer', () => {
     expect(published).toHaveBeenCalledTimes(strokes.length)
     renderer.dispose()
   })
+
+  it('forwards a session amount other than the historical constant', async () => {
+    const strokes: ReliefDiskStroke[] = []
+    const sculptor: ReliefSculptor = {
+      raiseDisk: async stroke => {
+        strokes.push(stroke)
+        return CHANGED
+      },
+      note: vi.fn(),
+      dispose: vi.fn(),
+    }
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      relief: reliefStub(),
+      createReliefSculptor: () => sculptor,
+    })
+    renderer['applyWorld'](worldWithTerrain())
+    renderer.setArmedRelief({ terrainId: 'terrain', editId: 'hills' })
+    renderer.setSculptBrush(1, 0, 0.3)
+
+    await renderer.startReliefStroke(0, 0)
+    renderer.endReliefStroke()
+
+    expect(strokes[0]?.amount).toBe(0.3)
+    expect(strokes[0]?.amount).not.toBe(SCULPT_AMOUNT)
+    renderer.dispose()
+  })
 })

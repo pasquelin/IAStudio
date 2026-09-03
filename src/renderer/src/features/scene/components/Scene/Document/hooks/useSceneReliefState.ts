@@ -9,7 +9,7 @@ export function useSceneReliefState(
   useEffect(() => engine.current?.setSculptMode?.(view.sculptMode), [engine, view.sculptMode])
   useEffect(() => engine.current?.setArmedRelief?.(view.armedRelief), [engine, view.armedRelief])
   useEffect(
-    () => engine.current?.setSculptBrush?.(view.sculptRadius, view.sculptFalloff),
-    [engine, view.sculptRadius, view.sculptFalloff],
+    () => engine.current?.setSculptBrush?.(view.sculptRadius, view.sculptFalloff, view.sculptAmount),
+    [engine, view.sculptRadius, view.sculptFalloff, view.sculptAmount],
   )
 }

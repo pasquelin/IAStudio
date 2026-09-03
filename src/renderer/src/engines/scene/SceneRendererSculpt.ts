@@ -12,6 +12,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   protected armedRelief: { terrainId: string; editId: string | null } | null = null
   protected sculptRadius = 2
   protected sculptFalloff = 0
+  protected sculptAmount = SCULPT_AMOUNT
   protected readonly brushCursor = createReliefBrushCursor()
   protected sculptStroke: {
     last: { x: number; z: number }
@@ -83,9 +84,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     this.armedRelief = armed
   }
 
-  setSculptBrush(radius: number, falloff: number): void {
+  setSculptBrush(radius: number, falloff: number, amount = SCULPT_AMOUNT): void {
     this.sculptRadius = radius
     this.sculptFalloff = falloff
+    this.sculptAmount = amount
   }
 
   protected reliefHitAt(event: PointerEvent) {
@@ -168,7 +170,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
       stroke.terrainId,
       stroke.editId,
       { x, z, radius: this.sculptRadius },
-      SCULPT_AMOUNT,
+      this.sculptAmount,
       this.sculptFalloff,
     )
   }

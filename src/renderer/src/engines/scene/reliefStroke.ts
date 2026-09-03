@@ -31,7 +31,7 @@ export function strokeDabs(
 /** How far apart consecutive dabs sit, as a fraction of the brush radius. */
 export const STROKE_SPACING = 0.25
 
-/** World-Y raise of one dab. Session radius and falloff are the two the panel exposes. */
+/** Sample-space raise of one dab. The session default; the panel exposes it as strength. */
 export const SCULPT_AMOUNT = 0.1
 
 /**
