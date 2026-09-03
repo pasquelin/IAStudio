@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   worldY,
+  sampleOfWorldY,
   RELIEF_CHUNK_TEXELS,
   applyReliefSculpt,
   chunkCountAlong,
@@ -9,10 +10,12 @@ import {
   chunkVerticesPerSide,
   combinedAt,
   containsXZ,
+  flattenReliefDisk,
   getHeightAt,
   packDeltas,
   raiseReliefDisk,
   regionUploadBytes,
+  smoothReliefDisk,
   unpackDeltas,
   withChunkDelta,
   type ReliefHeightLayer,
@@ -114,6 +117,12 @@ describe('worldY', () => {
     expect(worldY(0, { min: -8, max: 32 })).toBe(-8)
     expect(worldY(1, { min: -8, max: 32 })).toBe(32)
     expect(worldY(0.5, { min: 0, max: 1 })).toBe(0.5)
+  })
+
+  it('inverts through sampleOfWorldY', () => {
+    const elevation = { min: -8, max: 32 }
+    expect(sampleOfWorldY(worldY(0.25, elevation), elevation)).toBeCloseTo(0.25)
+    expect(sampleOfWorldY(10, { min: 10, max: 10 })).toBe(0)
   })
 })
 
@@ -363,5 +372,129 @@ describe('getHeightAt', () => {
 
     expect(getHeightAt([low, high], 5, 5)).toBeCloseTo(0.2)
     expect(getHeightAt([high, low], 5, 5)).toBeCloseTo(0.8)
+  })
+})
+
+describe('smoothReliefDisk', () => {
+  const width = 8
+  const values = new Float32Array(width * width)
+  values[3 * width + 3] = 1
+  const samples = { width, height: width, values }
+  const extent = {
+    origin: DEFAULT_RELIEF_ORIGIN,
+    size: DEFAULT_RELIEF_SIZE,
+    elevation: DEFAULT_RELIEF_ELEVATION,
+  }
+  const stepX = extent.size.x / (width - 1)
+  const disk = {
+    x: extent.origin.x + 3 * stepX,
+    z: extent.origin.z + 3 * (extent.size.z / (width - 1)),
+    radius: stepX * 3,
+  }
+
+  it('reduces an isolated peak toward its neighbours without erasing it in one stroke', () => {
+    const sculpt = smoothReliefDisk(samples, extent, undefined, disk, 0.1)
+    const peak = heightAt(samples, sculpt, 3, 3)
+    const neighbour = heightAt(samples, sculpt, 3, 2)
+
+    expect(peak).toBeGreaterThan(0.8)
+    expect(peak).toBeLessThan(1)
+    expect(neighbour).toBeGreaterThan(0)
+    expect(peak).toBeGreaterThan(neighbour)
+  })
+
+  it('is the same arithmetic applyReliefSculpt runs for kind smooth', () => {
+    expect(
+      applyReliefSculpt(samples, extent, undefined, { kind: 'smooth', disk, amount: 1 }),
+    ).toEqual(smoothReliefDisk(samples, extent, undefined, disk, 1))
+  })
+
+  it('writes the correction into the armed overlay, so disabling it restores the others', () => {
+    const flat = { width, height: width, values: new Float32Array(width * width) }
+    const hills = withChunkDelta(flat, undefined, {
+      column: 0,
+      row: 0,
+      localX: 3,
+      localZ: 3,
+      delta: 1,
+    })
+    const overlays = [{ enabled: true, alpha: 1, sculpt: hills }]
+    const sculpt = smoothReliefDisk(
+      flat,
+      extent,
+      undefined,
+      disk,
+      1,
+      0,
+      RELIEF_CHUNK_TEXELS,
+      undefined,
+      overlays,
+    )
+
+    expect(
+      combinedAt(
+        flat,
+        RELIEF_CHUNK_TEXELS,
+        [...overlays, { enabled: true, alpha: 1, sculpt }],
+        3,
+        3,
+      ),
+    ).toBeLessThan(1)
+    expect(
+      combinedAt(
+        flat,
+        RELIEF_CHUNK_TEXELS,
+        [...overlays, { enabled: false, alpha: 1, sculpt }],
+        3,
+        3,
+      ),
+    ).toBeCloseTo(1)
+  })
+})
+
+describe('flattenReliefDisk', () => {
+  const width = 8
+  const values = Float32Array.from({ length: width * width }, (_, at) => (at % width) * 0.1)
+  const samples = { width, height: width, values }
+  const extent = {
+    origin: DEFAULT_RELIEF_ORIGIN,
+    size: DEFAULT_RELIEF_SIZE,
+    elevation: DEFAULT_RELIEF_ELEVATION,
+  }
+  const stepX = extent.size.x / (width - 1)
+  const disk = {
+    x: extent.origin.x + 3 * stepX,
+    z: extent.origin.z + 3 * (extent.size.z / (width - 1)),
+    radius: stepX * 2,
+  }
+  const target = heightAt(samples, undefined, 3, 3)
+
+  it('pulls every texel in the disk toward the reference height', () => {
+    const sculpt = flattenReliefDisk(samples, extent, undefined, disk, target, 1)
+
+    expect(heightAt(samples, sculpt, 3, 3)).toBeCloseTo(target)
+    expect(heightAt(samples, sculpt, 2, 3)).toBeCloseTo(target)
+    expect(heightAt(samples, sculpt, 4, 3)).toBeCloseTo(target)
+    expect(heightAt(samples, sculpt, 0, 0)).toBeCloseTo(0)
+  })
+
+  it('restores the surface when the overlay that holds the correction is disabled', () => {
+    const sculpt = flattenReliefDisk(samples, extent, undefined, disk, target, 1)
+    const before = heightAt(samples, undefined, 2, 3)
+
+    expect(
+      combinedAt(samples, RELIEF_CHUNK_TEXELS, [{ enabled: false, alpha: 1, sculpt }], 2, 3),
+    ).toBeCloseTo(before)
+  })
+
+  it('is the same arithmetic applyReliefSculpt runs for kind flatten', () => {
+    expect(
+      applyReliefSculpt(samples, extent, undefined, {
+        kind: 'flatten',
+        disk,
+        amount: 1,
+        target,
+      }),
+    ).toEqual(flattenReliefDisk(samples, extent, undefined, disk, target, 1))
   })
 })

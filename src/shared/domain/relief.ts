@@ -26,6 +26,12 @@ export function worldY(sample: number, elevation: ReliefExtent['elevation']): nu
   return elevation.min + sample * (elevation.max - elevation.min)
 }
 
+/** Inverse of `worldY`. A zero span maps every world Y to sample 0. */
+export function sampleOfWorldY(y: number, elevation: ReliefExtent['elevation']): number {
+  const span = elevation.max - elevation.min
+  return span === 0 ? 0 : (y - elevation.min) / span
+}
+
 /** World units from one texel to the next along X and Z. */
 export function texelStep(
   size: ReliefSize,
@@ -264,17 +270,23 @@ export function withPackedChunks(
   return next
 }
 
-/**
- * A sculpt stroke the worker can run. New kinds (slope/altitude masks) join this union; they
- * must not grow a second entry point the worker would not see.
- */
-export type ReliefSculptOperation = {
-  kind: 'raiseDisk'
-  disk: { x: number; z: number; radius: number }
+export type ReliefDisk = { x: number; z: number; radius: number }
+
+type ReliefDiskStroke = {
+  disk: ReliefDisk
   amount: number
   /** 0 = hard edge (the historical disk). 1 = linear from full at the centre to none at the rim. */
   falloff?: number
 }
+
+/**
+ * A sculpt stroke the worker can run. New kinds join this union; they must not grow a second
+ * entry point the worker would not see.
+ */
+export type ReliefSculptOperation =
+  | ({ kind: 'raiseDisk' } & ReliefDiskStroke)
+  | ({ kind: 'smooth' } & ReliefDiskStroke)
+  | ({ kind: 'flatten'; target: number } & ReliefDiskStroke)
 
 export type ReliefChunkRows = { from: number; to: number }
 
@@ -301,6 +313,7 @@ export function applyReliefSculpt(
   operation: ReliefSculptOperation,
   grain = RELIEF_CHUNK_TEXELS,
   rows?: ReliefChunkRows,
+  overlays: readonly ReliefOverlay[] = [],
 ): ReliefSculpt {
   switch (operation.kind) {
     case 'raiseDisk':
@@ -314,6 +327,31 @@ export function applyReliefSculpt(
         grain,
         rows,
       )
+    case 'smooth':
+      return smoothReliefDisk(
+        samples,
+        extent,
+        sculpt,
+        operation.disk,
+        operation.amount,
+        operation.falloff ?? 0,
+        grain,
+        rows,
+        overlays,
+      )
+    case 'flatten':
+      return flattenReliefDisk(
+        samples,
+        extent,
+        sculpt,
+        operation.disk,
+        operation.target,
+        operation.amount,
+        operation.falloff ?? 0,
+        grain,
+        rows,
+        overlays,
+      )
   }
 }
 
@@ -321,11 +359,116 @@ export function raiseReliefDisk(
   samples: HeightmapSamples,
   extent: ReliefExtent,
   sculpt: ReliefSculpt | undefined,
-  disk: { x: number; z: number; radius: number },
+  disk: ReliefDisk,
   amount: number,
   falloff = 0,
   grain = RELIEF_CHUNK_TEXELS,
   rows?: ReliefChunkRows,
+): ReliefSculpt {
+  return addDiskDeltas(
+    samples,
+    extent,
+    sculpt,
+    disk,
+    falloff,
+    grain,
+    rows,
+    (_sx, _sz, weight) => amount * weight,
+  )
+}
+
+/**
+ * Pulls combined height toward the 3×3 neighbourhood mean. The correction is written into
+ * `sculpt` so disabling that overlay restores the surface — never mutates the base or others.
+ */
+export function smoothReliefDisk(
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  sculpt: ReliefSculpt | undefined,
+  disk: ReliefDisk,
+  amount: number,
+  falloff = 0,
+  grain = RELIEF_CHUNK_TEXELS,
+  rows?: ReliefChunkRows,
+  overlays: readonly ReliefOverlay[] = [],
+): ReliefSculpt {
+  const read = combinedRead(samples, grain, overlays, sculpt)
+  return addDiskDeltas(samples, extent, sculpt, disk, falloff, grain, rows, (sx, sz, weight) => {
+    const combined = read(sx, sz)
+    return (neighbourMean(read, samples, sx, sz) - combined) * amount * weight
+  })
+}
+
+/**
+ * Pulls combined height toward `target` (sample space). Same write rule as smooth: the
+ * armed overlay holds the correction.
+ */
+export function flattenReliefDisk(
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  sculpt: ReliefSculpt | undefined,
+  disk: ReliefDisk,
+  target: number,
+  amount: number,
+  falloff = 0,
+  grain = RELIEF_CHUNK_TEXELS,
+  rows?: ReliefChunkRows,
+  overlays: readonly ReliefOverlay[] = [],
+): ReliefSculpt {
+  const read = combinedRead(samples, grain, overlays, sculpt)
+  return addDiskDeltas(
+    samples,
+    extent,
+    sculpt,
+    disk,
+    falloff,
+    grain,
+    rows,
+    (sx, sz, weight) => (target - read(sx, sz)) * amount * weight,
+  )
+}
+
+function combinedRead(
+  samples: HeightmapSamples,
+  grain: number,
+  overlays: readonly ReliefOverlay[],
+  sculpt: ReliefSculpt | undefined,
+): ReliefRead {
+  return reliefReader(samples, grain, [
+    ...overlays,
+    ...(sculpt ? [{ enabled: true, alpha: 1, sculpt }] : []),
+  ])
+}
+
+function neighbourMean(
+  read: ReliefRead,
+  samples: HeightmapSamples,
+  sx: number,
+  sz: number,
+): number {
+  let sum = 0
+  let count = 0
+  for (let dz = -1; dz <= 1; dz += 1) {
+    for (let dx = -1; dx <= 1; dx += 1) {
+      const x = sx + dx
+      const z = sz + dz
+      if (x < 0 || z < 0 || x >= samples.width || z >= samples.height) continue
+      sum += read(x, z)
+      count += 1
+    }
+  }
+  return count === 0 ? 0 : sum / count
+}
+
+function addDiskDeltas(
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  sculpt: ReliefSculpt | undefined,
+  disk: ReliefDisk,
+  falloff: number,
+  grain: number,
+  rows: ReliefChunkRows | undefined,
+  deltaAt: (sx: number, sz: number, weight: number) => number,
 ): ReliefSculpt {
   const span = diskSamples(samples, extent, disk)
   const distanceX = Float64Array.from({ length: span.maxX - span.minX + 1 }, (_, at) => {
@@ -341,7 +484,7 @@ export function raiseReliefDisk(
   const packed = payloadsOf(sculpt)
   const rowFrom = rows?.from ?? 0
   const rowTo = rows?.to ?? chunkCountAlong(samples.height, grain)
-  const context = { samples, span, disk, amount, falloff, grain, distanceX, distanceZ, packed }
+  const context = { samples, span, disk, falloff, grain, distanceX, distanceZ, packed, deltaAt }
   for (let row = rowFrom; row < rowTo; row += 1) {
     for (let column = 0; column < chunkCountAlong(samples.width, grain); column += 1) {
       const key = `${column}:${row}`
@@ -364,13 +507,13 @@ export function raiseReliefDisk(
 type RaiseContext = {
   samples: HeightmapSamples
   span: ReturnType<typeof diskSamples>
-  disk: { x: number; z: number; radius: number }
-  amount: number
+  disk: ReliefDisk
   falloff: number
   grain: number
   distanceX: Float64Array
   distanceZ: Float64Array
   packed: ReadonlyMap<string, PackedReliefChunk>
+  deltaAt: (sx: number, sz: number, weight: number) => number
 }
 
 function raisedChunk(
@@ -405,15 +548,14 @@ function raiseChunkSamples(
   maxX: number,
   maxZ: number,
 ): void {
-  const { span, disk, distanceX, distanceZ, amount, falloff } = context
+  const { span, disk, distanceX, distanceZ, falloff, deltaAt } = context
   for (let sz = Math.max(span.minZ, layout.sampleZ); sz <= Math.min(span.maxZ, maxZ); sz += 1) {
     for (let sx = Math.max(span.minX, layout.sampleX); sx <= Math.min(span.maxX, maxX); sx += 1) {
       const d2 = (distanceX[sx - span.minX] ?? Infinity) + (distanceZ[sz - span.minZ] ?? Infinity)
       if (d2 > disk.radius * disk.radius) continue
       const at = (sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)
-      const strength =
-        falloff <= 0 ? amount : amount * diskFalloff(Math.sqrt(d2), disk.radius, falloff)
-      deltas[at] = (deltas[at] ?? 0) + strength
+      const weight = falloff <= 0 ? 1 : diskFalloff(Math.sqrt(d2), disk.radius, falloff)
+      deltas[at] = (deltas[at] ?? 0) + deltaAt(sx, sz, weight)
     }
   }
 }
