@@ -170,6 +170,7 @@ import {
   type ProjectedSegment,
 } from './bonePicking'
 import { type RigState, isBoneObject, measuredMeshOf, rigStateOf } from './rigState'
+import { instanceableOf, markInstanceable } from './instanceableModel'
 import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
 import { PostComposer } from '../postfx/PostComposer'
@@ -3170,6 +3171,14 @@ export class SceneRenderer {
       // After the maps, always: the tiling rides ON the textures — see `dress`.
       maps.dress(slot, worn?.material)
     }
+
+    const holder = this.objects.get(nodeId)
+    if (holder) {
+      markInstanceable(
+        holder,
+        instanceableOf(node, rigStateOf(holder), this.animations.clipsOf(nodeId)),
+      )
+    }
   }
 
   /**
@@ -4023,7 +4032,9 @@ export class SceneRenderer {
       // Read once and used twice: whether this model has bones at all is the same question the
       // helper asks, and answering it in two places is how the two came to disagree. The COUNT
       // and not the named ones — an export that stripped joint names still has a rig to draw.
-      const rig = rigStateOf(holder, clipsOf(source))
+      const clips = clipsOf(source)
+      const rig = rigStateOf(holder, clips)
+      if (applied.type === 'model') markInstanceable(holder, instanceableOf(applied, rig, clips))
       this.bindSkeleton(node.id, holder, rig.boneCount > 0)
       this.options.onRig?.(node.id, rig)
       // Read off the very object that just landed: the skeleton window edits the FILE, and
