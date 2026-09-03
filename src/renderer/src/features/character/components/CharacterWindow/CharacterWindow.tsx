@@ -296,7 +296,7 @@ export function CharacterWindow({ assetId }: CharacterWindowProps) {
     // The rigging services come from the model registry, which every window reads through the
     // same cache: without a client of its own this window is an error screen, not a character.
     <StudioQueries>
-      <div className="bg-chrome flex h-full w-full flex-col">
+      <div className="bg-chassis flex h-full w-full flex-col">
         {/* Flush with the top like every other window's, so the title lands on the traffic
             lights — padded by the gutter it sat 6px off them. Unsaved is said the way every tab
             says it: a bullet after the name, as `setDocumentTitle` writes one. */}

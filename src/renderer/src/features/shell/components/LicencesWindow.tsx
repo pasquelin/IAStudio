@@ -34,7 +34,7 @@ export function LicencesWindow() {
               aria-expanded={openName === entry.name}
               {...HINT_BOTTOM(openName === entry.name ? t('licences.fold') : t('licences.unfold'))}
               onClick={() => setOpenName(current => (current === entry.name ? null : entry.name))}
-              className="hover:bg-base-300 flex w-full cursor-pointer items-baseline gap-2 py-2 text-left"
+              className="hover:bg-base-200 flex w-full cursor-pointer items-baseline gap-2 py-2 text-left"
             >
               <span className="text-body">{entry.name}</span>
               <span className={WINDOW_CAPTION}>{entry.version ?? t('licences.bundled')}</span>

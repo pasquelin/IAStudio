@@ -22,13 +22,10 @@ import { join } from 'node:path'
  * thirty-eight guards would have passed. Never RAISE it to the count; `MOST_SLACK` below is what
  * now says when it has drifted too far, so this no longer rests on anyone remembering.
  *
- * Raised to 84 on 2026-08-31, against 94 read: `component-prefixes.test.ts` then
- * `mock-paths.test.ts` each took the gap past ten, which is the suite asking for this line rather
- * than anyone remembering to write it. Raised again to 85 the same day, against 95, when
- * `no-bare-checkbox.test.ts` took it past ten once more — and to 86 on 2026-09-01, against 96,
- * when `one-window-title-bar.test.ts` did it again.
+ * Raised whenever `MOST_SLACK` says the gap has grown, never on a whim: 87 against 97 read on
+ * 2026-09-03, when `window-ground.test.ts` took it past ten.
  */
-export const LEAST_GUARDS = 86
+export const LEAST_GUARDS = 87
 
 /**
  * How far the floor may sit below the real count before it stops meaning anything.

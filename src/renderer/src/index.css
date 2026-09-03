@@ -366,7 +366,10 @@
 
   --color-base-100: #202124;
   --color-base-200: #191a1c;
-  --color-base-300: #2b2d30;
+  /* The DIVIDER, moved off the chassis on 2026-09-03: these windows now stand on the chassis
+     itself, so a rule painted in it read 1.000:1. `--color-elevated`'s value, which reads 1.306
+     there where `--color-border` read 1.141 — the studio rules its own panels at 1.439. */
+  --color-base-300: #3c3f44;
   --color-base-content: #dfe1e5;
   --color-primary: #346ef2;
   --color-primary-content: #ffffff;
@@ -419,7 +422,9 @@
 
   --color-base-100: #f5f6f8;
   --color-base-200: #ffffff;
-  --color-base-300: #dcdde1;
+  /* The divider, off the chassis for the reason the dark theme gives — but DARKER here, where
+     the dark theme goes lighter: on a light chassis every lighter step reads under 1.1. */
+  --color-base-300: #c9cbd1;
   --color-base-content: #1f2124;
   --color-primary: #346ef2;
   --color-primary-content: #ffffff;
@@ -739,7 +744,13 @@ body,
  *
  * `--pnl-surface` has no counterpart here and takes the panel's own colour: it exists for a tab
  * strip, which the studio draws with Dockview rather than with the chassis.
+ *
+ * 🛑 BOTH selectors. `:root` is what a `Surface` mounted outside `<Panels>` needs — the skeleton
+ * window mounts two, and they fell to no background at all. `.pnl-root` is what the docks still
+ * need: the library declares its own palette ON that element, and a declaration there beats an
+ * inherited one whatever the specificity says.
  */
+:root,
 .pnl-root {
   --pnl-rail: var(--sc-rail);
   --pnl-rail-button: var(--sc-rail-button);
