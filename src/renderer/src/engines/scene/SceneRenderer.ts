@@ -799,6 +799,8 @@ export class SceneRenderer {
   })
 
   runtimePerformance(): Omit<RuntimePerformance, 'cpuFrameMs' | 'compilationMs'> {
+    // Asking IS what arms the GPU timer: a query per frame is paid only while a panel reads it.
+    this.viewport.wantsGpuTiming()
     if (this.runtimeProfileStale) {
       this.runtimeModelStats = statsOf(this.objects.values())
       this.runtimeGeometryBytes = geometryBytesOf(this.objects.values())

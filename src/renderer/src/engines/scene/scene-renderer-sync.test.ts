@@ -274,6 +274,17 @@ describe('a scene told what changed', () => {
    * context, so the cameras exist but nothing draws through them. What is checked is what the
    * engine answers about itself; where the side views land is the viewport's own suite.
    */
+  it('arms the GPU timer only for whoever reads the runtime profile', () => {
+    const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+    const wants = vi.spyOn(renderer['viewport'], 'wantsGpuTiming')
+
+    renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1')] })
+    expect(wants).not.toHaveBeenCalled()
+
+    renderer.runtimePerformance()
+    expect(wants).toHaveBeenCalled()
+  })
+
   describe('four views', () => {
     it('reuses shadow maps when only a mesh surface changes', () => {
       const original = meshNode('box-1')
