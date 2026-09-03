@@ -88,4 +88,25 @@ describe('aeroForces', () => {
   it('resists a spin, so a plane let go of settles rather than tumbling', () => {
     expect(flying(40, {}, { x: 1, y: 0, z: 0 }).torque.x).toBeLessThan(0)
   })
+
+  /**
+   * 🛑 A damping torque that grows with v² outruns what a fixed step can absorb: it removes more
+   * than the whole rotation in one step, so the spin flips sign and doubles, until Jolt clamps it
+   * at 47,12 rad/s — measured, and the aeroplane then strobes and answers no stick at all.
+   * Real damping grows with v, not v²: it is `ω·b/2v` that sets the local incidence.
+   */
+  it('damps a roll no harder than a step can absorb, however fast the air', () => {
+    // A light airframe's roll inertia: 900 kg on a two-metre span is about 150 kg·m².
+    const inertia = 150
+    const step = 1 / 60
+    const rolling = { x: 0, y: 0, z: -1 }
+
+    const shrink = [40, 60, 90, 140].map(speed => {
+      const torque = flying(speed, {}, rolling).torque
+      // What the step does to the spin: past −2 it flips and grows, which is the divergence.
+      return (Math.abs(torque.z) / inertia) * step
+    })
+
+    expect(Math.max(...shrink)).toBeLessThan(2)
+  })
 })
