@@ -18,6 +18,9 @@ export function ShellPanelButton({
   accented,
   acts,
   onClick,
+  // The ghost the drag carries is `aria-hidden`, and the chassis takes its button out of the tab
+  // order for it. Dropped, the reader tabs into a button nobody can see.
+  tabIndex,
 }: IconButtonProps) {
   const { t } = useTranslation()
 
@@ -33,6 +36,7 @@ export function ShellPanelButton({
       accented={accented}
       acts={acts}
       onClick={onClick}
+      tabIndex={tabIndex}
       iconSize={acts === true ? undefined : 22}
       className={acts === true ? undefined : 'size-(--sc-rail-button) rounded-(--radius-sc-md)'}
     >

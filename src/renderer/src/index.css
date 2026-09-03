@@ -773,6 +773,17 @@ body,
 }
 
 /*
+ * What a drag draws stands in for a rail BUTTON, so it takes the button's radius: the chassis
+ * rounds all three by `--pnl-radius`, a panel's corner, four pixels rounder. Under `.pnl-root`
+ * so the order of the two stylesheets decides nothing.
+ */
+.pnl-root .pnl-rail-drag__placeholder,
+.pnl-root .pnl-rail-drag__empty,
+.pnl-root .pnl-rail-drag__ghost {
+  border-radius: var(--radius-sc-md);
+}
+
+/*
  * React Flow reads its own colours from these, so the canvas is dressed by the studio's tokens
  * rather than by a stylesheet holding hex values of its own — the one rule no component escapes.
  *

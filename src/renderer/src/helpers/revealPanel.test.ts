@@ -7,7 +7,7 @@ import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { trackByGit } from '@/stores/git-fixtures'
 import { installDocument } from '@/stores/document-fixtures'
-import { revealAssets, revealTool, toolIsShown } from './revealPanel'
+import { closeTool, revealAssets, revealTool, toolIsShown } from './revealPanel'
 
 beforeEach(() => {
   useLayouts.setState({ activeWorkspace: 'image', home: false })
@@ -153,5 +153,36 @@ describe('revealing a panel while the chassis is still on the other view', () =>
 
     // `explorer` leads the lower left of a SPACE; the home is in front and holds its own.
     expect(toolIsShown('explorer')).toBe(false)
+  })
+})
+
+/**
+ * A reader may drag a rail icon into another half since `@pasquelin/panels` 0.4, and everything
+ * that answers ABOUT a panel has to read where it stands rather than where it was declared.
+ *
+ * 🛑 Read on the declaration, `closeTool` emptied the half the panel came FROM — taking a panel
+ * nobody named off screen — and answered yes; `toolIsShown` looked in a zone the panel had left.
+ * Both are what the assistant and an MCP client are told.
+ */
+describe('a panel the reader has moved', () => {
+  beforeEach(() => {
+    chassisFor('image', {
+      left: { primary: 'assets', secondary: null },
+      right: { primary: 'layers', secondary: null },
+    })
+    panelsStore.getState().movePanel('layers', { zone: 'left', slot: 'secondary' }, 0)
+  })
+
+  it('is shown where it stands, not where it was declared', () => {
+    expect(drawn('left').secondary).toBe('layers')
+    expect(toolIsShown('layers')).toBe(true)
+  })
+
+  it('closes the half it stands in, leaving the one it was declared in alone', () => {
+    const declared = drawn('right').primary
+
+    expect(closeTool('layers')).toBe(true)
+    expect(drawn('left').secondary).not.toBe('layers')
+    expect(drawn('right').primary).toBe(declared)
   })
 })

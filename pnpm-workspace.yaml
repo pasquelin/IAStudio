@@ -20,4 +20,4 @@ minimumReleaseAgeExclude:
   - dockview-core@8.1.0
   - dockview-react@8.1.0
   - dockview@8.1.0
-  - '@pasquelin/panels@0.3.3'
+  - '@pasquelin/panels@0.4.1'
