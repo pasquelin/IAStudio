@@ -311,7 +311,9 @@ export class SceneAnimations {
   }
 
   private placeAll(): void {
-    for (const player of this.players.values()) this.place(player)
+    for (const player of this.players.values()) {
+      if (player.bound.size > 0) this.place(player)
+    }
   }
 
   private place(player: Player): void {
