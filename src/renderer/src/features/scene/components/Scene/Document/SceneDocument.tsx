@@ -264,7 +264,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         role="region"
         aria-label={t('sceneNavigation.viewport')}
         tabIndex={0}
-        className="absolute inset-0 outline-none"
+        className="absolute inset-0"
       />
       <SceneDocumentMarquee box={marquee} />
       <SceneClock documentId={documentId} duration={scene.animation.duration} renderer={live} />

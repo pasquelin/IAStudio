@@ -157,6 +157,7 @@ describe('SceneDocument', () => {
 
     expect(viewport).toHaveAttribute('tabindex', '0')
     expect(viewport).toHaveFocus()
+    expect(viewport).not.toHaveClass('outline-none')
   })
 
   it('renders the shared toolbar with the scene tools', () => {
