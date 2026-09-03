@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { copiesOf } from './commands'
-import { playerModuleNodes } from './nodeFactory'
-import { cameraNode, groupNode } from './nodeFactory'
+import { armRest, cameraNode, groupNode, playerModuleNodes } from './nodeFactory'
 import {
   leavesPlayerModule,
   playerModuleFileOf,
@@ -114,15 +113,16 @@ describe('what a module points its arm at', () => {
   })
 
   /**
-   * 🛑 Turned to LOOK at the body, not merely placed behind it. Born unturned, the camera faced
-   * away from the very thing its arm follows — and the arm only acts once the scene plays, so
-   * nothing in the editor would ever have corrected it.
+   * 🛑 Turned to LOOK where the arm aims, which is its PIVOT — `lookAt` defaults there. Born
+   * unturned it faced away from the body; aimed at the body's own feet it tipped 21,8° the moment
+   * Play took over, and the arm only acts once the scene plays.
    */
-  it('turns its camera onto the body its arm follows', () => {
+  it('turns its camera onto the pivot its arm aims at', () => {
     const nodes = playerModuleNodes()
     const camera = nodes.find(node => node.type === 'camera')
-    const body = nodes.find(node => node.name === 'Capsule')
-    if (!camera || !body) throw new Error('no module')
+    const capsule = nodes.find(node => node.name === 'Capsule')
+    if (!camera || !capsule) throw new Error('no module')
+    const body = { transform: { position: armRest(capsule.transform.position).pivot } }
 
     // Where the camera looks: its own −z, turned by the node's rotation (three's default order).
     const { x: pitch, y: yaw } = camera.transform.rotation
@@ -138,7 +138,7 @@ describe('what a module points its arm at', () => {
     }
     const reach = Math.hypot(to.x, to.y, to.z)
 
-    // Both unit vectors: pointing AT the body means the two agree exactly.
+    // Both unit vectors: pointing AT the pivot means the two agree exactly.
     expect(ahead.x).toBeCloseTo(to.x / reach, 5)
     expect(ahead.y).toBeCloseTo(to.y / reach, 5)
     expect(ahead.z).toBeCloseTo(to.z / reach, 5)

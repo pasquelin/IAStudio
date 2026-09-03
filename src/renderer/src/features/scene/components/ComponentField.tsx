@@ -21,6 +21,11 @@ export type ComponentFieldProps = {
   scId: string
   /** The nodes a `picks: 'node'` field may be pointed at, already named. Empty elsewhere. */
   named?: readonly string[]
+  /**
+   * What the registry declares for this field. 🛑 Shown when the document carries NOTHING: a
+   * component written before a field existed read as 0 while the engine ran on the real default.
+   */
+  fallback?: JsonValue
   /** Puts the field back to what the registry declares. Absent while it already stands there. */
   onReset?: () => void
 }
@@ -43,7 +48,8 @@ export function ComponentField({
   onChange,
   gesture,
   scId,
-  named,
+  named = [],
+  fallback,
   onReset,
 }: ComponentFieldProps) {
   const { t } = useTranslation()
@@ -60,14 +66,16 @@ export function ComponentField({
     )
   }
 
-  if (field.kind === 'choice') {
+  // Both selects, written once: one closes on the registry's own options, the other on the nodes
+  // beside it — typing a sibling's name by hand is a spelling test a misspelling fails in silence.
+  if (field.kind === 'choice' || field.picks === 'node') {
     return (
       <SelectField
         label={label}
-        value={typeof held === 'string' ? held : null}
-        options={(field.options ?? []).map(option => ({
-          value: option,
-          label: t(`game.values.${option}`, option),
+        value={typeof held === 'string' && held !== '' ? held : null}
+        options={optionsOf(field, named, held).map(one => ({
+          value: one,
+          label: field.kind === 'choice' ? t(`game.values.${one}`, one) : one,
         }))}
         onChange={value => onChange(value)}
         // A value no option carries reads as the FIRST one otherwise, so the panel would show
@@ -85,7 +93,7 @@ export function ComponentField({
     return (
       <NumberField
         label={label}
-        value={typeof held === 'number' ? held : 0}
+        value={numberShown(held, fallback)}
         min={field.min}
         max={field.max}
         step={field.kind === 'integer' ? 1 : undefined}
@@ -93,22 +101,6 @@ export function ComponentField({
         onReset={onReset}
         onChange={value => onChange(value)}
         {...gesture}
-      />
-    )
-  }
-
-  // A field that NAMES a node is offered as a list: typing the name of a sibling by hand is a
-  // spelling test, and a misspelling shows as nothing happening at all.
-  if (field.picks === 'node' && named !== undefined) {
-    return (
-      <SelectField
-        label={label}
-        value={typeof held === 'string' && held !== '' ? held : null}
-        options={named.map(one => ({ value: one, label: one }))}
-        onChange={value => onChange(value)}
-        unnamedLabel={t('game.values.unnamedNode')}
-        scId={scId}
-        actions={<ResetButton onReset={onReset} />}
       />
     )
   }
@@ -122,4 +114,28 @@ export function ComponentField({
       onChange={value => onChange(value)}
     />
   )
+}
+
+/**
+ * What the row offers. 🛑 The held value is kept in the list when nothing else names it — an arm
+ * pointed OUTSIDE its module is the author's, and a select that dropped it could not type it back.
+ */
+function optionsOf(
+  field: ActionField,
+  named: readonly string[],
+  held: JsonValue | undefined,
+): string[] {
+  if (field.kind === 'choice') return [...(field.options ?? [])]
+
+  // Deduplicated, and never the empty name: two nodes may share one, and `''` is the row a
+  // `SelectField` keeps for a value nothing names.
+  const names = [...new Set(named.filter(one => one !== ''))]
+  if (typeof held === 'string' && held !== '' && !names.includes(held)) names.push(held)
+  return names
+}
+
+/** A number the document does not carry reads as what the registry declares, never as zero. */
+function numberShown(held: JsonValue | undefined, fallback: JsonValue | undefined): number {
+  if (typeof held === 'number') return held
+  return typeof fallback === 'number' ? fallback : 0
 }

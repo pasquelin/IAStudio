@@ -211,7 +211,6 @@ const SPRING_ARM: ComponentDescriptor = {
     textField('camera', 'node'),
     choiceField('orientation', ['pointer', 'subject', 'fixed']),
     numberField('length', 0, 50),
-    numberField('minLength', 0, 50),
     numberField('height', -10, 10),
     numberField('shoulder', -5, 5),
     flagField('collision'),
@@ -224,19 +223,17 @@ const SPRING_ARM: ComponentDescriptor = {
     numberField('collisionOutLag', 0, 2),
     numberField('pitchMin', -89, 89),
     numberField('pitchMax', -89, 89),
-    choiceField('lookAt', ['shoulder', 'body']),
+    choiceField('lookAt', ['pivot', 'subject']),
   ],
   // Seconds, the four lags, and zero is what an author writes for a camera welded to its subject.
-  // 🛑 `minLength` is what keeps the shot OUT of the head: pulled in against a wide pillar the arm
-  // reached the pivot itself, and a camera sitting on the pivot films forward — the character it
-  // was watching disappears. Measured on screen, 2026-09-03.
-  // 🛑 Coming in is FASTER than going out, never instant: `collisionInLag` 0,04 s is three frames.
+  // 🛑 Coming in is FASTER than going out, never instant: a snap read as a cut. What keeps the
+  // shot off the subject is `probeRadius` plus `safetyMargin` — measured 1,25 m against a 0,90 m
+  // pillar — and never a floor on the length, which would seat the camera INSIDE what it met.
   defaults: {
     subject: '',
     camera: '',
     orientation: 'pointer',
     length: 4,
-    minLength: 1.2,
     height: 1.6,
     shoulder: 0,
     collision: true,
@@ -249,7 +246,7 @@ const SPRING_ARM: ComponentDescriptor = {
     collisionOutLag: 0.25,
     pitchMin: -60,
     pitchMax: 60,
-    lookAt: 'shoulder',
+    lookAt: 'pivot',
   },
 }
 

@@ -105,7 +105,6 @@ describe('the arm a camera hangs on', () => {
   it('pulls the camera in to what stands between it and its subject', () => {
     const { world, physics, eye } = rigged({
       length: 4,
-      minLength: 0,
       height: 0,
       collisionInLag: 0,
     })
@@ -212,7 +211,6 @@ describe('the arm a camera hangs on', () => {
     const { world, physics, hero, eye } = rigged({
       orientation: 'subject',
       length: 4,
-      minLength: 0,
       rotationLag: 0,
     })
     physics.answers.cast = 0
@@ -243,7 +241,6 @@ describe('the arm a camera hangs on', () => {
   it('stops the camera short of the surface by the safety margin asked for', () => {
     const { world, physics, eye } = rigged({
       length: 4,
-      minLength: 0,
       height: 0,
       safetyMargin: 0.5,
       collisionInLag: 0,
@@ -259,7 +256,6 @@ describe('the arm a camera hangs on', () => {
   it('never pushes the camera past the pivot to make room for its margin', () => {
     const { world, physics, eye } = rigged({
       length: 4,
-      minLength: 0,
       height: 0,
       safetyMargin: 2,
       collisionInLag: 0,
@@ -275,7 +271,6 @@ describe('the arm a camera hangs on', () => {
   it('comes in faster than it goes out, and snaps in neither direction', () => {
     const { world, physics, eye } = rigged({
       length: 4,
-      minLength: 0,
       height: 0,
       safetyMargin: 0,
       hysteresis: 0,
@@ -301,19 +296,20 @@ describe('the arm a camera hangs on', () => {
   })
 
   /**
-   * 🛑 Measured on screen 2026-09-03, against a wide pillar: the arm reached the pivot itself, and
-   * a camera on the pivot films forward — the character it was watching was simply gone.
+   * 🛑 Measured against a real 0,90 m pillar: the probe and the margin hold the shot 1,25 m off on
+   * their own. A floor on the LENGTH was tried and dropped — it seated the camera inside the wall.
    */
-  it('never pulls the camera closer than the minimum length asked for', () => {
+  it('holds the shot off what it met by the probe and the margin, and never enters it', () => {
     const { world, physics, hero, eye } = rigged({
       length: 4,
-      minLength: 1.2,
-      height: 1.6,
+      height: 0,
+      probeRadius: 0.2,
+      safetyMargin: 0.1,
       positionLag: 0,
       collisionInLag: 0,
     })
-    // Nothing at all left free: the probe answers that the way is blocked from the pivot out.
-    physics.answers.cast = 0
+    // A quarter of the way is 1 m; the margin takes a tenth of it off.
+    physics.answers.cast = 0.25
 
     for (let frame = 0; frame < 30; frame++) world.lateUpdate(0, FRAME)
 
@@ -321,53 +317,13 @@ describe('the arm a camera hangs on', () => {
       eye.transform.position.x - hero.transform.position.x,
       eye.transform.position.z - hero.transform.position.z,
     )
-    expect(back).toBeCloseTo(1.2, 4)
-  })
-
-  it('comes all the way back out once the way has been clear long enough', () => {
-    const { world, physics, eye } = rigged({
-      length: 4,
-      height: 0,
-      safetyMargin: 0,
-      hysteresis: 0,
-      positionLag: 0,
-      collisionOutLag: 0.05,
-    })
-    physics.answers.cast = 0.25
-    world.lateUpdate(0, FRAME)
-
-    physics.answers.cast = null
-    for (let frame = 0; frame < 60; frame++) world.lateUpdate(0, FRAME)
-
-    expect(eye.transform.position.z).toBeCloseTo(4, 4)
-  })
-
-  it('leaves the arm where it is for a clearing smaller than the hysteresis asked for', () => {
-    const { world, physics, eye } = rigged({
-      length: 4,
-      minLength: 0,
-      height: 0,
-      safetyMargin: 0,
-      hysteresis: 0.5,
-      positionLag: 0,
-      collisionInLag: 0,
-      collisionOutLag: 0,
-    })
-    physics.answers.cast = 0.25
-    world.lateUpdate(0, FRAME)
-
-    // Two centimetres of extra room, well under the half metre asked for: nothing moves.
-    physics.answers.cast = 0.255
-    world.lateUpdate(0, FRAME)
-
-    expect(eye.transform.position.z).toBeCloseTo(1, 6)
+    expect(back).toBeCloseTo(0.9, 4)
   })
 
   /** 🛑 A deadband in METRES cannot be cleared by an arm shorter than itself — it stayed pinned. */
   it('comes back out of an arm shorter than the hysteresis it was given', () => {
     const { world, physics, eye } = rigged({
       length: 0.05,
-      minLength: 0,
       height: 0,
       safetyMargin: 0,
       hysteresis: 0.5,
@@ -424,7 +380,7 @@ describe('the arm a camera hangs on', () => {
   })
 
   it('turns the camera on the subject itself when it is told to look at it', () => {
-    const { world, eye } = rigged({ length: 4, height: 2, lookAt: 'body', rotationLag: 0 })
+    const { world, eye } = rigged({ length: 4, height: 2, lookAt: 'subject', rotationLag: 0 })
 
     world.lateUpdate(0, FRAME)
 

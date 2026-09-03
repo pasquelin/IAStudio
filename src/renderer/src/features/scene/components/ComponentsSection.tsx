@@ -1,7 +1,7 @@
 import { mdiPuzzleOutline, mdiPuzzlePlusOutline, mdiTrashCanOutline } from '@mdi/js'
-import { Fragment } from 'react'
+import { Fragment, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ComponentType } from '@shared/domain/component'
+import type { ComponentType, JsonValue } from '@shared/domain/component'
 import { COMPONENT_TYPES, descriptorOf } from '@shared/domain/componentRegistry'
 import { PropertyLine } from '@/components/PropertyLine'
 import { MenuButton } from '@/components/MenuButton'
@@ -13,6 +13,7 @@ import { attachComponent, detachComponent, setComponentField } from '@/engines/s
 import { pickableNodesOf } from '@/engines/scene/playerModule'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { PANEL_GROUP_LABEL_WIDE } from '@/components/styles'
+import { resetTo } from '@/helpers/resetTo'
 import { HINT_RIGHT, TIP_BOTTOM, TIP_LEFT } from '@/helpers/tooltip'
 import type { SceneEdit } from '@/hooks/useSceneEdit'
 import { ComponentField } from './ComponentField'
@@ -35,10 +36,19 @@ export type ComponentsSectionProps = {
 export function ComponentsSection({ node, nodes, edit }: ComponentsSectionProps) {
   const { t } = useTranslation()
   const held = node.components ?? []
-  // Its own name left out: an arm filming itself, or hanging behind itself, frames nothing.
-  const named = pickableNodesOf(nodes, node.id)
-    .filter(one => one.id !== node.id)
-    .map(one => one.name)
+  // 🛑 Memoised, and built ONLY where a field asks for a node: composed inline it walked every node
+  // of the scene on each frame of a drag, for any object selected. Its own name is left out — an
+  // arm filming itself frames nothing.
+  const named = useMemo(() => {
+    const asks = (node.components ?? []).some(one =>
+      descriptorOf(one.type).fields.some(field => field.picks === 'node'),
+    )
+    if (!asks) return []
+    return pickableNodesOf(nodes, node.id)
+      .filter(one => one.id !== node.id)
+      .map(one => one.name)
+  }, [node.components, nodes, node.id])
+
   const available = COMPONENT_TYPES.filter(type => !held.some(one => one.type === type))
 
   const add = (type: ComponentType): void => edit.run(attachComponent(node.id, type))
@@ -115,16 +125,19 @@ export function ComponentsSection({ node, nodes, edit }: ComponentsSectionProps)
                 label={t(field.labelKey)}
                 field={field}
                 named={named}
+                fallback={fallback}
                 gesture={edit.gesture}
                 scId={`components.${component.type}.${field.key}`}
-                // 🛑 Absent while the field already stands at its default, which is what draws the
-                // button inert rather than acting on nothing — see `FieldReset`.
-                onReset={
-                  fallback === undefined || component[field.key] === fallback
-                    ? undefined
-                    : () =>
-                        edit.run(setComponentField(node.id, component.type, field.key, fallback))
-                }
+                onReset={resetTo<JsonValue | undefined>(component[field.key], fallback, value =>
+                  edit.run(
+                    setComponentField(
+                      node.id,
+                      component.type,
+                      field.key,
+                      value ?? fallback ?? null,
+                    ),
+                  ),
+                )}
                 onChange={value =>
                   edit.run(setComponentField(node.id, component.type, field.key, value))
                 }

@@ -48,8 +48,8 @@ export function playerPartsOf(nodes: readonly SceneNode[]): PlayerParts | null {
 }
 
 /**
- * What a field naming a node may be pointed at, from a node's own point of view: what shares its
- * MODULE, or the whole scene when it belongs to none — the very order `entityNamed` resolves in.
+ * What a field naming a node may be pointed at: what shares its MODULE, or the whole scene when it
+ * belongs to none — which is the list `withBoundPlayerArm` will resolve the name against.
  */
 export function pickableNodesOf(nodes: readonly SceneNode[], id: string): readonly SceneNode[] {
   const owning = allPartsOf(nodes).find(parts => parts.inside.some(node => node.id === id))

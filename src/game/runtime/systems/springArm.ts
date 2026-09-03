@@ -137,12 +137,7 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
             numberOf(settings, 'probeRadius', ARM.probeRadius),
             IGNORED,
           )
-          const share = shortened(
-            met,
-            numberOf(settings, 'safetyMargin', ARM.safetyMargin),
-            numberOf(settings, 'minLength', ARM.minLength),
-            reach,
-          )
+          const share = shortened(met, numberOf(settings, 'safetyMargin', ARM.safetyMargin), reach)
 
           // Going out has to clear the hysteresis before it is even aimed at, or an obstacle
           // sitting right on the edge flickers free and blocked.
@@ -155,20 +150,22 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
           ) {
             kept.aim = share
           }
-          // 🛑 Faster IN than out, and never instant either way: a wall met in three frames still
-          // stops the shot before the near plane reaches it, where a snap read as a cut.
-          const lag =
-            kept.aim < kept.free
-              ? numberOf(settings, 'collisionInLag', ARM.collisionInLag)
-              : numberOf(settings, 'collisionOutLag', ARM.collisionOutLag)
-          if (kept.free !== kept.aim) kept.free += (kept.aim - kept.free) * approach(lag, over)
+          // 🛑 Faster IN than out, and never instant either way: a snap read as a cut. The guard
+          // spares the read and the exponential, not the addition, which would be a plain zero.
+          if (kept.free !== kept.aim) {
+            const lag =
+              kept.aim < kept.free
+                ? numberOf(settings, 'collisionInLag', ARM.collisionInLag)
+                : numberOf(settings, 'collisionOutLag', ARM.collisionOutLag)
+            kept.free += (kept.aim - kept.free) * approach(lag, over)
+          }
 
           PLACED.x = PIVOT.x + dx * kept.free
           PLACED.y = PIVOT.y + dy * kept.free
           PLACED.z = PIVOT.z + dz * kept.free
         }
 
-        const aimed = textOf(settings, 'lookAt', ARM.lookAt) === 'body' ? anchor.position : PIVOT
+        const aimed = textOf(settings, 'lookAt', ARM.lookAt) === 'subject' ? anchor.position : PIVOT
         BACK.x = aimed.x - PLACED.x
         BACK.y = aimed.y - PLACED.y
         BACK.z = aimed.z - PLACED.z
@@ -193,15 +190,10 @@ function approach(lag: number, dt: number): number {
   return 1 - Math.exp(-dt / lag)
 }
 
-/**
- * The share of the arm left free. Margin and floor are METRES and the probe answers a fraction, so
- * neither means anything without the reach. 🛑 `least` is what keeps the camera out of the head:
- * pulled all the way to the pivot it films forward, and the subject is simply gone.
- */
-function shortened(met: number | null, margin: number, floor: number, reach: number): number {
+/** The margin is METRES and the probe answers a fraction: it means nothing without the reach. */
+function shortened(met: number | null, margin: number, reach: number): number {
   if (met === null || reach <= 0) return 1
-  const least = Math.min(1, floor / reach)
-  return clamp(met - margin / reach, least, 1)
+  return clamp(met - margin / reach, 0, 1)
 }
 
 /**

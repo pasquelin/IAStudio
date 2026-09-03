@@ -48,8 +48,7 @@ import { presetPatch } from './environmentPresets'
 import { planeNodes } from './planeNodes'
 import {
   aimedFrom,
-  armRestPivot,
-  armRestSeat,
+  armRest,
   cameraNode,
   groupNode,
   lightNode,
@@ -86,12 +85,8 @@ function aimedCamera(height: number, distance: number, targetHeight = 0, targetZ
 }
 
 /**
- * A camera on an arm, wired to what it films. Named parts, so an author can read the pair in the
- * outliner and retune it — which is the whole of what makes an arm worth having.
- *
- * 🛑 The camera is SEATED where the arm will put it on the first frame, from the very functions
- * the system rides. Posed by hand beside the rig, the circuit's opened 11,56 m off and pointing
- * somewhere else — the yaw the car starts at was nowhere in the sum. Measured 2026-09-03.
+ * A camera on an arm, wired to what it films, and SEATED where the arm will put it — see
+ * `armRest`. Named parts, so an author can read the pair in the outliner and retune it.
  */
 function cameraRig(
   subject: SceneNode,
@@ -106,14 +101,11 @@ function cameraRig(
     arm = withComponentField(arm, key, value)
   }
   // 🛑 The NODE's own pose, never the numbers it was built from: `carNodes` turns its body by
-  // `heading + π` and lifts it by the ride height, so a rig recomputing either sat the shot
-  // sixteen metres out and facing backwards.
-  const at = subject.transform.position
-  const yaw = subject.transform.rotation.y
-  const seat = armRestSeat(at, yaw, arm)
+  // `heading + π` and lifts it by the ride height.
+  const { pivot, seat } = armRest(subject.transform.position, subject.transform.rotation.y, arm)
   return [
     { ...groupNode(transformAt(ORIGIN), 'Camera Rig'), components: [arm] },
-    cameraNode(transformAt(seat, aimedFrom(seat, armRestPivot(at, yaw, arm)))),
+    cameraNode(transformAt(seat, aimedFrom(seat, pivot))),
   ]
 }
 

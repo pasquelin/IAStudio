@@ -274,9 +274,11 @@ export function playerModuleNodes(): readonly SceneNode[] {
   // 🛑 Where the arm will put it on the first frame of play, worked out from the very functions
   // the system uses. Left at its parent's origin, the camera stood at the player's feet, and
   // nothing in the editor moves it: an arm only acts once the scene is playing.
-  const seat = armRestSeat(capsule.transform.position)
+  // 🛑 Aimed at the PIVOT and not at the body: `lookAt` defaults to the pivot, so a node turned on
+  // the feet made pressing Play tip the shot by 21,8° — measured 2026-09-03.
+  const { pivot, seat } = armRest(capsule.transform.position)
   const camera: SceneNode = {
-    ...cameraNode(transformAt(seat, aimedFrom(seat, capsule.transform.position))),
+    ...cameraNode(transformAt(seat, aimedFrom(seat, pivot))),
     parentId: arm.id,
   }
 
@@ -299,32 +301,20 @@ const WALKER_HEIGHT = Number(COMPONENTS.CharacterController.defaults.height)
 const WALKER_RADIUS = Number(COMPONENTS.CharacterController.defaults.radius)
 
 /**
- * Where a resting arm seats its camera, over a body standing at `body` and turned by `yaw`.
- *
- * 🛑 Worked out from the very functions the SYSTEM rides, and exported for that reason: a template
- * that puts its camera anywhere else opens on a shot the first frame of play throws away — the car
- * circuit stood 11,56 m off, measured 2026-09-03.
+ * Where a resting arm hangs, over a body standing at `body` and turned by `yaw` — its `pivot` and
+ * the `seat` it puts a camera at. 🛑 Off the very functions the SYSTEM rides: a template posing
+ * its camera anywhere else opens on a shot the first frame throws away — 11,56 m, 2026-09-03.
  */
-export function armRestSeat(
+export function armRest(
   body: Vector3,
   yaw = 0,
   arm: Readonly<Record<string, JsonValue>> = COMPONENTS.SpringArm.defaults,
-): Vector3 {
-  const pivot = armPivot(body, Number(arm.height), Number(arm.shoulder), yaw, { x: 0, y: 0, z: 0 })
-  return armSeat(pivot, aheadOf({ yaw, pitch: 0 }, { x: 0, y: 0, z: 0 }), Number(arm.length), {
-    x: 0,
-    y: 0,
-    z: 0,
+): { pivot: Vector3; seat: Vector3 } {
+  const pivot = armPivot(body, Number(arm.height), Number(arm.shoulder), yaw, { ...ORIGIN })
+  const seat = armSeat(pivot, aheadOf({ yaw, pitch: 0 }, { ...ORIGIN }), Number(arm.length), {
+    ...ORIGIN,
   })
-}
-
-/** Where that arm's PIVOT stands, which is what the camera it seats is turned towards. */
-export function armRestPivot(
-  body: Vector3,
-  yaw = 0,
-  arm: Readonly<Record<string, JsonValue>> = COMPONENTS.SpringArm.defaults,
-): Vector3 {
-  return armPivot(body, Number(arm.height), Number(arm.shoulder), yaw, { x: 0, y: 0, z: 0 })
+  return { pivot, seat }
 }
 
 /**
