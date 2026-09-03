@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { bindingOf, commandFor, COMMAND_REGISTRY } from './command'
+import { NAVIGATION_PRESETS, SCHEME_OF, type DeclaredPreset } from './navigationPreset'
 import {
   acceleratorOf,
   DEFAULT_MOTION,
@@ -94,8 +95,13 @@ describe('signatureOf', () => {
     expect(sign(event('Numpad1', { key: 'End' }))).toBe('Numpad1')
   })
 
-  it('reads a keypad digit as the digit it prints once the lock is on', () => {
-    expect(sign(event('Numpad1', { key: '1', metaKey: true }))).toBe('Meta+Digit1')
+  /**
+   * And leaves it alone with the lock ON too, where it prints the digit of the main row: Blender
+   * puts its numbered views on the pad, and a Mac has no lock to tell the two apart with.
+   */
+  it('keeps a keypad digit on its own position even once the lock is on', () => {
+    expect(sign(event('Numpad1', { key: '1', metaKey: true }))).toBe('Meta+Numpad1')
+    expect(sign(event('NumpadDecimal', { key: '.' }))).toBe('NumpadDecimal')
   })
 })
 
@@ -234,7 +240,7 @@ describe('shortcutLabel', () => {
  * refuses the whole binding rather than the key.
  */
 const ELECTRON_KEY =
-  /^(.|F\d{1,2}|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|Plus|Capslock|Numlock|PrintScreen)$/
+  /^(.|F\d{1,2}|num\d|numdec|numadd|numsub|nummult|numdiv|Space|Tab|Backspace|Delete|Insert|Return|Enter|Up|Down|Left|Right|Home|End|PageUp|PageDown|Escape|Esc|Plus|Capslock|Numlock|PrintScreen)$/
 
 describe('acceleratorOf', () => {
   // The one place a signature and an Electron accelerator meet. The menu wrote these by hand,
@@ -262,6 +268,23 @@ describe('acceleratorOf', () => {
       const key = accelerator?.split('+').at(-1) ?? ''
       return accelerator && !ELECTRON_KEY.test(key) ? [`${command.id} — ${accelerator}`] : []
     })
+
+    expect(unspeakable).toEqual([])
+  })
+
+  /**
+   * 🛑 The guard above reads the registry's OWN keys and nothing else, and a preset layer is the
+   * other half: Blender's numbered views are the first bindings to live only there, and every one
+   * of them spelled a `KeyboardEvent.code` — `Numpad1` — that Electron refuses to register.
+   */
+  it('spells every key a preset moves, which the registry never carries', () => {
+    const unspeakable = NAVIGATION_PRESETS.filter(preset => preset !== 'custom').flatMap(preset =>
+      Object.values(SCHEME_OF[preset as DeclaredPreset].bindings).flatMap(binding => {
+        const accelerator = acceleratorOf(binding ?? null)
+        const key = accelerator?.split('+').at(-1) ?? ''
+        return accelerator && !ELECTRON_KEY.test(key) ? [`${preset} — ${accelerator}`] : []
+      }),
+    )
 
     expect(unspeakable).toEqual([])
   })

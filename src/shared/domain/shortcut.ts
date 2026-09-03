@@ -50,10 +50,10 @@ export type KeyChord = {
  * go on answering the old key. Here the second spelling never exists.
  *
  * `NumpadEnter` is a distinct position, and reading it as `Enter` is what makes the keypad's
- * return key answer the two commands bound to that name. The keypad's DIGITS need no entry: with
- * the lock on they print their digit and `codeOf` names them by it, and with the lock off they
- * print `End` or `PageUp`, which no character names — so they stay on their own position, and a
- * keypress meant to move the caret fires nothing.
+ * return key answer the two commands bound to that name. It is the ONLY key of the pad that
+ * folds: the rest keep their own position, `codeOf` refusing to name them by what they print —
+ * Blender's numbered views live there, and a Mac has no lock to take them off the main row's
+ * digits with.
  */
 const CODE_ALIASES: Record<string, string> = {
   NumpadEnter: 'Enter',
@@ -116,7 +116,12 @@ function chordOf(event: KeyChord, isMac: boolean, code: string): Signature {
 
 /** The code a keypress is named by: the character it prints, or the position where none is. */
 function codeOf(event: KeyChord): string {
-  const printed = event.key.length === 1 ? US_CODE_BY_CHARACTER[event.key.toLowerCase()] : undefined
+  // The keypad is a PLACE, never a character: with the lock on it prints the digit of the main
+  // row, and a view bound to `Numpad1` fired `Digit1` — which is to say, on a Mac, never.
+  const printed =
+    event.key.length === 1 && !event.code.startsWith('Numpad')
+      ? US_CODE_BY_CHARACTER[event.key.toLowerCase()]
+      : undefined
   return printed ?? CODE_ALIASES[event.code] ?? event.code
 }
 
@@ -398,6 +403,23 @@ const ACCELERATOR_KEYS: Record<string, string> = {
   Enter: 'Return',
   Home: 'Home',
   End: 'End',
+  // The keypad, which Electron spells its own way: `Numpad1` is not a key it knows, and a row
+  // built with one logs « Invalid accelerator » and shows no shortcut at all.
+  Numpad0: 'num0',
+  Numpad1: 'num1',
+  Numpad2: 'num2',
+  Numpad3: 'num3',
+  Numpad4: 'num4',
+  Numpad5: 'num5',
+  Numpad6: 'num6',
+  Numpad7: 'num7',
+  Numpad8: 'num8',
+  Numpad9: 'num9',
+  NumpadDecimal: 'numdec',
+  NumpadAdd: 'numadd',
+  NumpadSubtract: 'numsub',
+  NumpadMultiply: 'nummult',
+  NumpadDivide: 'numdiv',
 }
 
 export function acceleratorOf(signature: Signature | null): string | undefined {

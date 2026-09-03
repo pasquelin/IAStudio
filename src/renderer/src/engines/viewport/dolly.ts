@@ -24,6 +24,20 @@ export function notchesOf(deltaY: number): number {
 
 const MAX_NOTCHES = 5
 
+/**
+ * Pixels of drag that spend one notch. A hand travels further than a detent for the same amount,
+ * which is what keeps a chord dolly from crossing the scene in a flick.
+ */
+const DRAG_PIXELS = 60
+
+/**
+ * Notches a DRAG spends. Right and up close in, as they do in the two applications that dolly
+ * this way; a diagonal spends both, so the gesture has no dead axis.
+ */
+export function dragNotchesOf(deltaX: number, deltaY: number): number {
+  return clamp((deltaX - deltaY) / DRAG_PIXELS, -MAX_NOTCHES, MAX_NOTCHES)
+}
+
 export type DollyRequest = {
   position: Vector3
   /** Where the pointer points, normalized. What the camera actually travels along. */

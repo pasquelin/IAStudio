@@ -12,7 +12,6 @@ import { canvasOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { displayOfPane, MAIN_SCENE_PANE, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
-import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useGit } from '@/stores/git'
 import { toolSurface, useLayouts } from '@/stores/layouts'
@@ -236,13 +235,6 @@ export function useNativeMenu(): void {
       if (documentId) addNodeTo(documentId, kind)
     })
 
-    // The camera is the engine's, not the store's: a side to look from is a move, not a state
-    // — see `PaneView`. The main pane alone, as the bar's own flyout does.
-    const stopSceneView = bridge.menu.onSceneView(({ direction }) => {
-      const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
-      if (documentId) sceneEngineOf(documentId)?.viewFrom(direction)
-    })
-
     const stopSceneDisplay = bridge.menu.onSceneDisplay(({ mode }) => {
       const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
       if (documentId) useSceneViews.getState().setDisplay(documentId, MAIN_SCENE_PANE, mode)
@@ -254,7 +246,6 @@ export function useNativeMenu(): void {
       stopDocumentNew()
       stopOpenRecent()
       stopSceneAdd()
-      stopSceneView()
       stopSceneDisplay()
       for (const stop of stopPublishing) stop()
     }

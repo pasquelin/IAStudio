@@ -180,7 +180,6 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
       newDocument: request => sendToFront(EVENTS.documentNew, request),
       openRecent: request => sendToFront(EVENTS.openRecent, request),
       addNode: request => sendToFront(EVENTS.sceneAdd, request),
-      viewFrom: request => sendToFront(EVENTS.sceneView, request),
       setDisplay: request => sendToFront(EVENTS.sceneDisplay, request),
       exportScene: command => sendToFront(EVENTS.sceneExport, command),
       captureScene: command => sendToFront(EVENTS.sceneCapture, command),

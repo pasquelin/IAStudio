@@ -16,7 +16,7 @@ git et doit le rester : une clé commitée survit dans l'historique au commit qu
 
 ## Où en est le banc
 
-La liste ci-dessous compte **439 demandes, et le banc en joue 439** (compté le 2026-08-31) — une par case, dans cet ordre.
+La liste ci-dessous compte **454 demandes, et le banc en joue 454** (compté le 2026-09-03) — une par case, dans cet ordre.
 `batterie.test.ts` tient les deux listes à la même longueur et dans le même ordre : une demande
 ajoutée ici sans scénario fait rougir la porte, et un scénario écrit pour rien aussi. C'est ce qui
 rend « on en est où ? » répondable.
@@ -391,6 +391,7 @@ L'assistant doit lire les valeurs **actuelles** avant d'appliquer une transforma
 - [ ] « Change l'arrière-plan sans changer l'éclairage de la scène. »
 - [ ] « Éclaire ma scène avec mon ciel Ciel Test. »
 - [ ] « Passe la navigation 3D en schéma Blender. »
+- [ ] « Cadre le cube et garde-le dans la vue même s'il bouge. »
 
 ## 11. Import d'assets dans une scène
 

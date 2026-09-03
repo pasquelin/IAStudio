@@ -1,4 +1,10 @@
-import type { CustomOrbit, CustomPan, FlyMode, NavigationPreset } from './navigationPreset'
+import type {
+  CustomDolly,
+  CustomOrbit,
+  CustomPan,
+  FlyMode,
+  NavigationPreset,
+} from './navigationPreset'
 import type { LanguagePreference } from '../i18n/languages'
 // From the model module rather than from the registry: `shellActions.ts` reads this file, and the
 // registry reads it back — `import-cycles.test.ts` holds that count at zero.
@@ -186,6 +192,7 @@ export type Settings = {
     /** The three gestures a person's OWN scheme is made of. Read only under `custom`. */
     navigationCustomOrbit: CustomOrbit
     navigationCustomPan: CustomPan
+    navigationCustomDolly: CustomDolly
     navigationCustomFly: FlyMode
     /**
      * Whether the view turns around what is SELECTED — Blender's *Orbit Around Selection* and
@@ -391,6 +398,7 @@ export const DEFAULT_SETTINGS: Settings = {
     navigationPreset: 'studio',
     navigationCustomOrbit: 'leftAlt',
     navigationCustomPan: 'middle',
+    navigationCustomDolly: 'altRight',
     navigationCustomFly: 'anyButton',
     orbitAroundSelection: true,
     orbitUnderCursor: false,

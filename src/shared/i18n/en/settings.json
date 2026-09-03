@@ -202,6 +202,13 @@
       "middleShift": "Shift + middle button",
       "leftAltShift": "Shift + Alt + left click"
     },
+    "navigationCustomDolly": {
+      "title": "Move in and out with",
+      "help": "The gesture that closes the view in on what it aims at, beside the wheel.",
+      "altRight": "Alt + right click",
+      "ctrlMiddle": "Ctrl + middle button",
+      "rightOntoLeft": "Right click, left already held"
+    },
     "navigationCustomFly": {
       "title": "Movement keys",
       "help": "When WASD belong to the camera. Held always, the letters stop being available to the scene’s commands — which is why Unity and Unreal ask for a button.",

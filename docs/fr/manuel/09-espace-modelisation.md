@@ -51,10 +51,12 @@ Trois façons de se déplacer, qui coexistent.
 | Geste | Effet |
 |---|---|
 | **Alt + clic gauche + glisser** | fait tourner la vue |
-| **Clic gauche + glisser** dans le vide | la même chose, sans rien tenir d’autre |
+| **Clic gauche + glisser** | trace un **rectangle de sélection** — voir *Choisir plusieurs objets* |
 | **Bouton du milieu + glisser** | déplace la vue latéralement |
 | **Maj + Alt + clic gauche + glisser** | la même chose, pour un trackpad qui n’a pas de bouton du milieu |
 | **Molette** | avance et recule **vers ce que vise le pointeur** |
+| **Alt + clic droit + glisser** | avance et recule, vers le point autour duquel la vue tourne |
+| **Deux doigts** sur un écran tactile | pincer avance et recule, glisser déplace latéralement |
 | **Clic droit + glisser** *(voir ci-dessous)* | fait voler |
 
 C’est le mode par défaut. On tourne **autour** de la scène, comme si on en faisait le tour. Ces
@@ -84,19 +86,33 @@ jamais de point de rotation : la vue partirait la chercher.
 > **<kbd>F</kbd> cadre la sélection**, et repose le point de rotation dessus. C’est le geste à
 > retenir quand on ne sait plus où l’on est — il est le même dans Blender, Unity, Unreal et Maya.
 
+> **<kbd>⇧F</kbd> la cadre ET la suit.** Tant que le suivi tient, ce qui bouge emmène la vue avec
+> lui, sans changer l’angle ni la distance que vous avez choisis : de quoi regarder un personnage
+> marcher sans courir derrière lui. Une seconde pression lâche prise, et une sélection vidée
+> aussi.
+
 ### Conduire la vue comme une autre application
 
 Si vous venez d’Unreal, d’Unity, de Blender ou de Roblox Studio, vous n’avez rien à réapprendre :
 **Affichage ▸ Navigation** dans le menu, ou **Réglages ▸ Espaces de travail ▸ Modélisation**, change le
 schéma de gestes ET de raccourcis d’un coup.
 
-| Schéma | Tourner | Déplacer latéralement | ZQSD | Déplacer / Tourner / Redimensionner |
-|---|---|---|---|---|
-| **IA Studio** | Alt + gauche, ou gauche seul | milieu | un bouton tenu | `G` `R` `S` |
-| **Unreal**, **Unity** | Alt + gauche | milieu | **bouton droit tenu** | `W` `E` `R` |
-| **Blender** | **milieu** | **Maj + milieu** | mode Walk/Fly, en <kbd>Maj</kbd>+<kbd>`</kbd> | `G` `R` `S` |
-| **Roblox Studio** | Alt + gauche | milieu | **en permanence** | `G` `R` `T` |
-| **Personnalisé** | au choix | au choix | au choix | les vôtres |
+| Schéma | Tourner | Déplacer latéralement | Avancer / reculer | ZQSD | Déplacer / Tourner / Redimensionner |
+|---|---|---|---|---|---|
+| **IA Studio** | Alt + gauche | milieu | Alt + droit | un bouton tenu | `G` `R` `S` |
+| **Unreal** | Alt + gauche | milieu, ou **droit ajouté au gauche** | Alt + droit | **bouton droit tenu** | `W` `E` `R` |
+| **Unity** | Alt + gauche | milieu | Alt + droit | **bouton droit tenu** | `W` `E` `R` |
+| **Blender** | **milieu** | **Maj + milieu** | **Ctrl + milieu** | mode Walk/Fly, en <kbd>Maj</kbd>+<kbd>`</kbd> | `G` `R` `S` |
+| **Roblox Studio** | Alt + gauche | milieu | Alt + droit | **en permanence** | `G` `R` `T` |
+| **Personnalisé** | au choix | au choix | au choix | au choix | les vôtres |
+
+**Le clic gauche seul ne tourne plus la vue, dans aucun schéma** : il trace le rectangle de
+sélection, comme chez Unity et Blender. Pour tourner, c’est Alt + gauche — le geste que trois des
+cinq donnent déjà.
+
+**Pan à deux boutons d’Unreal** : pressez d’abord le **gauche**, puis ajoutez le **droit**. Dans
+cet ordre et pas l’autre — chez nous le bouton droit fait voler la caméra, et un vol déjà armé ne
+rend pas la main au déplacement latéral.
 
 > **Un schéma ne remplace que ce que son application fait autrement.** Tout ce dont il ne dit
 > rien garde les touches d’IA Studio — y compris les commandes dont les autres logiciels n’ont
@@ -111,9 +127,16 @@ caméra sans qu’on tienne rien, donc `S` ne peut plus redimensionner : il pass
 *Ajouter* passe de <kbd>⇧A</kbd> à <kbd>⇧N</kbd>. C’est exactement pour éviter ça qu’Unity et
 Unreal exigent le bouton droit. Les flèches, elles, restent à l’interface dans tous les cas.
 
-**Le schéma personnalisé** ouvre trois choix de plus dans les réglages — avec quoi tourner, avec
-quoi déplacer latéralement, et quand les lettres appartiennent à la caméra. Le clavier, lui, se
-personnalise depuis l’écran des raccourcis, quel que soit le schéma.
+**Blender donne aussi son pavé numérique.** Sous ce schéma seul :
+<kbd>1</kbd> de face, <kbd>3</kbd> de droite, <kbd>7</kbd> de dessus, chacun avec <kbd>Ctrl</kbd>
+pour le côté opposé ; <kbd>5</kbd> bascule perspective et orthographique, <kbd>0</kbd> fait passer
+la vue par la caméra choisie et l’en ressort au second appel, et <kbd>.</kbd> cadre la sélection.
+Ce sont bien les touches **du pavé**, distinctes des chiffres de la rangée du haut, verrou
+numérique mis ou non.
+
+**Le schéma personnalisé** ouvre quatre choix de plus dans les réglages — avec quoi tourner, avec
+quoi déplacer latéralement, avec quoi avancer et reculer, et quand les lettres appartiennent à la
+caméra. Le clavier, lui, se personnalise depuis l’écran des raccourcis, quel que soit le schéma.
 
 ### Voler dans la scène — un bouton maintenu
 
@@ -531,6 +554,13 @@ recliquer un objet déjà choisi le sort de la sélection.
 | **`⇧`/`⌘`/`Ctrl` + clic** | il entre dans la sélection, ou en sort s’il y était |
 | **Clic dans le vide** | tout est désélectionné |
 | **`⇧`/`⌘`/`Ctrl` + clic dans le vide** | **rien ne change** — un raté ne doit pas défaire un tri patient |
+| **Clic gauche + glisser** | trace un rectangle : tout ce qu’il touche est choisi |
+| **`⇧`/`⌘`/`Ctrl` + glisser** | le rectangle **ajoute** à la sélection au lieu de la remplacer |
+
+**Le rectangle prend ce qu’il touche**, pas seulement ce qu’il enferme entièrement : un sol est
+toujours plus grand que le rectangle qu’on trace dessus. Un glisser qui ne traverse rien vide la
+sélection, comme un clic dans le vide. En mode pose, il désigne un **os** — le plus proche de la
+caméra parmi ceux qu’il croise — et jamais un objet.
 
 Tout ce qui suit — déplacer, tourner, supprimer, grouper, dupliquer, régler dans l’Inspecteur —
 agit sur **toute** la sélection, pas seulement sur le dernier objet cliqué.

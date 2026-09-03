@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
-import { DOLLY_FLOOR, DOLLY_RATE, dollyTo, notchesOf } from './dolly'
+import { DOLLY_FLOOR, DOLLY_RATE, dollyTo, dragNotchesOf, notchesOf } from './dolly'
 
 const FORWARD = new Vector3(0, 0, -1)
 
@@ -125,5 +125,28 @@ describe('reading the wheel', () => {
 
   it('caps one violent flick, which would otherwise cross the whole scene at once', () => {
     expect(notchesOf(-100000)).toBe(notchesOf(-1000))
+  })
+})
+
+describe('the notches a chord drag spends', () => {
+  it('closes in when the hand goes right, as Unity does', () => {
+    expect(dragNotchesOf(60, 0)).toBeGreaterThan(0)
+  })
+
+  it('closes in when the hand goes up, as Blender does', () => {
+    expect(dragNotchesOf(0, -60)).toBeGreaterThan(0)
+  })
+
+  it('pulls away the other way', () => {
+    expect(dragNotchesOf(-60, 0)).toBeLessThan(0)
+  })
+
+  /** A diagonal spends both, so neither axis of the gesture is dead. */
+  it('adds the two axes rather than picking one', () => {
+    expect(dragNotchesOf(30, -30)).toBeCloseTo(dragNotchesOf(60, 0), 6)
+  })
+
+  it('caps a flick, exactly as the wheel does', () => {
+    expect(dragNotchesOf(100000, 0)).toBe(dragNotchesOf(1000, 0))
   })
 })
