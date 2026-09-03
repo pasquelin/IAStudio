@@ -1,14 +1,13 @@
 /**
- * The stage: the end that OWNS the character, and the only thing the bench can drive without a
- * window. What it must do is publish — every assistant action runs in the STUDIO window, whose
- * own character store is empty.
+ * The stage: what a character tab lays under the model, and the only thing the bench can drive
+ * without a window.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { Rig } from '@shared/domain/rig'
-import { characterMessageOf, openCharacterChannel } from './characterChannel'
 import { createCharacterStage, workshopIdOf } from './characterStage'
 import { characterOf, useCharacters } from '@/stores/character'
+import { renameCharacterBone } from '@/engines/character/characterCommands'
 import { clearCharacters } from '@/stores/character-fixtures'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -20,22 +19,6 @@ const RIG: Rig = {
 }
 
 const renderer = () => ({ apply: vi.fn(), frameContents: vi.fn(() => true) })
-
-/** What the other end of the channel hears. */
-function listening(): { heard: unknown[]; close: () => void } {
-  const channel = openCharacterChannel()
-  const heard: unknown[] = []
-  channel.onmessage = event => void heard.push(characterMessageOf(event.data))
-
-  return { heard, close: () => channel.close() }
-}
-
-/**
- * A `BroadcastChannel` delivers on a turn of the loop, never on a microtask — and a single turn
- * is not a promise it has arrived: waited that way, this file went red once in fifteen runs.
- */
-const heardBy = (heard: unknown[], message: unknown): Promise<void> =>
-  vi.waitFor(() => expect(heard).toContainEqual(message))
 
 beforeEach(() => {
   clearCharacters()
@@ -72,7 +55,7 @@ describe('editing one character', () => {
   it('holds what the engine read off the file', () => {
     const stage = createCharacterStage({ renderer: renderer(), assetId: ASSET })
 
-    stage.read(RIG, { motions: [{ id: 'm1', name: 'Capoeira', assetId: 'a9' }] }, null)
+    stage.read(RIG, { motions: [{ id: 'm1', name: 'Capoeira', assetId: 'a9' }] })
 
     const held = characterOf(useCharacters.getState(), ASSET)
     expect(held.rig).toEqual(RIG)
@@ -80,45 +63,38 @@ describe('editing one character', () => {
     stage.close()
   })
 
-  // 🛑 Without this the ten skeleton actions reach nothing: they run in the studio window, and
-  // its character store is filled by this message alone.
-  it('publishes what it holds, so the studio can answer for it', async () => {
-    const heard = listening()
-    const stage = createCharacterStage({ renderer: renderer(), assetId: ASSET })
+  // 🛑 A tab remounts whenever the space changes, and the file lands again: reseeding then
+  // would throw away an hour of rigging without a word.
+  it('leaves a character already open exactly as it stands', () => {
+    const first = createCharacterStage({ renderer: renderer(), assetId: ASSET })
+    first.read(RIG, { motions: [{ id: 'm1', name: 'Capoeira', assetId: 'a9' }] })
+    useCharacters.getState().runCommand(ASSET, renameCharacterBone('Hips', 'Bassin'))
+    first.close()
 
-    stage.read(RIG, null, { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 2, z: 1 } })
+    const again = createCharacterStage({ renderer: renderer(), assetId: ASSET })
+    again.read(RIG, null)
 
-    await heardBy(heard.heard, {
-      kind: 'holds',
-      assetId: ASSET,
-      rig: RIG,
-      bounds: { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 2, z: 1 } },
-    })
-    stage.close()
-    heard.close()
+    expect(characterOf(useCharacters.getState(), ASSET).rig?.bones[0]?.name).toBe('Bassin')
+    again.close()
   })
 
-  // The window turns towards whichever character is opened: a store that kept them all would
-  // leave every action acting on the first one it was ever told about.
-  it('lets the character go on the way out, on both sides', async () => {
-    const heard = listening()
+  // The workshop belongs to the TAB, which is still open: dropped on a remount, the motion being
+  // posed would go with it.
+  it('keeps the workshop standing when the surface goes', () => {
     const stage = createCharacterStage({ renderer: renderer(), assetId: ASSET })
-    stage.read(RIG, null, null)
+    stage.read(RIG, null)
 
     stage.close()
-    await heardBy(heard.heard, { kind: 'dropped', assetId: ASSET })
 
-    expect(characterOf(useCharacters.getState(), ASSET).rig).toBeNull()
-    expect(sceneOf(useScenes.getState(), workshopIdOf(ASSET)).nodes).toEqual([])
-    heard.close()
+    expect(sceneOf(useScenes.getState(), workshopIdOf(ASSET)).nodes).toHaveLength(1)
   })
 
   it('aims the view once, and not again as the character moves', () => {
     const draw = renderer()
     const stage = createCharacterStage({ renderer: draw, assetId: ASSET })
 
-    stage.read(RIG, null, null)
-    stage.read(RIG, null, null)
+    stage.read(RIG, null)
+    stage.read(RIG, null)
 
     expect(draw.frameContents).toHaveBeenCalledTimes(1)
     stage.close()

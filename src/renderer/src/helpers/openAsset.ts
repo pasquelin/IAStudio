@@ -1,9 +1,10 @@
 import type { Asset } from '@shared/domain/asset'
 import { openDocument } from '@/features/shell/components/dockviewApi'
-import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { documentById, documentForAsset, useDocuments } from '@/stores/documents'
+import { openCharacter } from '@/character/openCharacter'
+import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import {
   editorIntent,
@@ -33,17 +34,14 @@ import {
  * but `openProjectFile` reports the gesture back to a caller that has to say what happened.
  */
 export async function openAsset(asset: Asset, into?: AssetIntent): Promise<boolean> {
-  // Both are edited in a window of their own, on the FILE — never as one node of a scene. Only
-  // where nobody named a destination: « Send to », the viewport drop and `node.addModel` all
-  // pass an intent, and each still puts a model in a scene.
+  // Both are opened on the FILE and never as one node of a scene — the module in a window of its
+  // own, the character on a tab. Only where nobody named a destination: « Send to », the viewport
+  // drop and `node.addModel` all pass an intent, and each still puts a model in a scene.
   if (!into && opensAsPlayerModule(asset)) {
     await getBridge()?.playerModuleWindow.open(asset.id)
     return true
   }
-  if (!into && opensAsCharacter(asset)) {
-    await getBridge()?.characterWindow.open(asset.id)
-    return true
-  }
+  if (!into && opensAsCharacter(asset)) return await openCharacter(asset.id)
 
   const intent = into ?? editorIntent(asset)
   const already = documentForAsset(useDocuments.getState(), asset.id, intent?.kind)

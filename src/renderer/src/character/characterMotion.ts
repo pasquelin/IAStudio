@@ -13,6 +13,12 @@ import { useAnimationViews } from '@/stores/animationView'
 import { useCharacters } from '@/stores/character'
 import { useScenes } from '@/stores/scenes'
 import { newId } from '@/helpers/ids'
+import i18next from 'i18next'
+import { animationViewOf } from '@/stores/animationView'
+import { scenePayload } from '@/engines/scene/sceneDocument'
+import { sceneOf } from '@/stores/scenes'
+import { sceneEngineOf } from '@/stores/sceneEngines'
+import { workshopIdOf } from './characterStage'
 
 /** What the band has to hold before there is a motion to file: one key on one channel. */
 export function hasMotion(timeline: AnimationTimeline): boolean {
@@ -106,4 +112,30 @@ function onNode(timeline: AnimationTimeline, nodeId: string): AnimationTimeline 
     ),
     sheet: [...new Set(timeline.sheet.map(id => (id === SCENE_SUBJECT_ID ? id : nodeId)))],
   }
+}
+
+/**
+ * The workshop exported with the clip the band bakes, the band itself riding in its `extras` —
+ * one file, and a second save lands on that same one.
+ *
+ * Reads the engine off the registry rather than taking one: the inspector that offers this sits
+ * in a DOCK, outside the tab holding it.
+ */
+export async function saveWorkshopMotion(assetId: string, asNew: boolean): Promise<void> {
+  const documentId = workshopIdOf(assetId)
+  const engine = sceneEngineOf(documentId)
+  if (!engine) return
+
+  // Through `scenePayload`, as a save of the document is: it purges the sheet of the ids of
+  // objects the scene has lost, which a band written raw would carry into the file for ever.
+  const written = scenePayload(sceneOf(useScenes.getState(), documentId)).animation
+  const saved = await saveCharacterMotion(
+    assetId,
+    i18next.t('character.motionNew'),
+    await engine.exportTo('glb', 'scene', motionExtras(written)),
+    asNew
+      ? undefined
+      : (animationViewOf(useAnimationViews.getState(), documentId).openMotion ?? undefined),
+  )
+  if (saved) useAnimationViews.getState().openMotion(documentId, saved)
 }

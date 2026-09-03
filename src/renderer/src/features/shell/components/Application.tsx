@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { connectRemoteActions } from '@/features/assistant/remoteActions'
-import { watchTheCharacterWindow } from '@/character/characterWatch'
 import { connectThoughtStream } from '@/features/assistant/thoughtStream'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useConnections } from '@/hooks/useConnections'
@@ -86,9 +85,6 @@ export function Application() {
   // An action asked for from outside the application lands on the same gate the modal uses, so
   // a generation started from a terminal still asks on this screen before it spends.
   useEffect(() => connectRemoteActions(), [])
-  // The skeleton window edits a character in a realm of its own, and an action asking about one
-  // runs HERE: this is what lets the studio answer for it.
-  useEffect(() => watchTheCharacterWindow(), [])
   useEffect(() => connectThoughtStream(), [])
 
   // Same reason again: a scene selects from four doors — the outliner, the viewport, the node

@@ -15,6 +15,9 @@ import { installSequence } from '@/stores/sequence-fixtures'
 import { selectTrackIn, sequenceOf, useSequences } from '@/stores/sequences'
 import { useLayouts } from '@/stores/layouts'
 import { useSelection } from '@/stores/selection'
+import { withQueries } from '@/features/shell/components/query-fixtures'
+import { installCharacterDocument } from '@/stores/character-fixtures'
+import { seedCharacter } from '@/stores/character'
 import { Inspector } from './Inspector'
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
@@ -38,6 +41,17 @@ describe('Inspector, on the document in front', () => {
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })
     useDocuments.setState({ documents: {}, activeId: null })
+  })
+
+  // The tab rigs a model of the library, and its skeleton is what the studio's one inspector
+  // reads while it is in front — nothing of a scene, which is why it has a tab of its own.
+  it('reads the skeleton of the character in front', () => {
+    installCharacterDocument('doc-1', 'asset-hero')
+    seedCharacter('asset-hero', null, {})
+    render(withQueries(<Inspector />))
+
+    expect(screen.getByText('Squelette')).toBeInTheDocument()
+    expect(screen.getByText(/pas encore animable/)).toBeInTheDocument()
   })
 
   it('asks for a selection when there is none', () => {

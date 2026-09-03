@@ -38,7 +38,7 @@ import { ASSET_INTENTS } from '@/helpers/assetIntents'
 import { FOLDER_SORTS } from '@/helpers/folderSort'
 import { TRACK_FLAGS } from '@/features/timeline/components/trackFlags'
 import { DOCUMENT_NAME_REFUSALS } from '@/features/document/documentName'
-import { DOCUMENT_KINDS } from '@shared/domain/document'
+import { DOCUMENT_KINDS, isMadeFromNothing } from '@shared/domain/document'
 import { SCENE_TEMPLATE_GROUPS, SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { FILE_KINDS } from '@shared/domain/folder'
 import { FILE_INFO_SECTIONS } from '@/features/document/components/FileInfoWindow/sections'
@@ -176,8 +176,9 @@ const COMPOSED_KEYS: readonly string[] = [
   // What a document of this kind is CALLED — the word a blank one is named after, « Scène 1 ».
   // A kind with no word would name every new document of that space `documents.kinds.x 1`.
   ...DOCUMENT_KINDS.map(kind => `documents.kinds.${kind}`),
-  // The heading of the field that names it, one per kind for the article French puts in front.
-  ...DOCUMENT_KINDS.map(kind => `documents.newByKind.${kind}`),
+  // The heading of the field that names it, one per kind for the article French puts in front —
+  // and only for a kind one can MAKE: a character is opened on a model, never named into being.
+  ...DOCUMENT_KINDS.filter(isMadeFromNothing).map(kind => `documents.newByKind.${kind}`),
   // What a new scene may open on: the tile's name, and the sentence that says what it holds. A
   // template with neither would read as its own id inside the window that offers it.
   ...SCENE_TEMPLATE_IDS.flatMap(id => [

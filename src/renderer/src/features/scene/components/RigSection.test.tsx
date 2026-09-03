@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { modelNodeFixture, rigStateFixture } from '@/engines/scene/scene-fixtures'
 import type { RigState } from '@/engines/scene/rigState'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useDocuments } from '@/stores/documents'
 import { useModelFiles } from '@/stores/modelFiles'
 import { RigSection } from './RigSection'
 
@@ -16,6 +17,7 @@ const show = (): void => {
 
 beforeEach(() => {
   useModelFiles.setState({ rigs: {} })
+  useDocuments.setState({ documents: {}, activeId: null })
 })
 
 const measured = (rig: Partial<RigState> = {}): void => {
@@ -55,16 +57,18 @@ describe('RigSection', () => {
     expect(screen.getByText(/trop plat/)).toBeInTheDocument()
   })
 
-  // 🛑 The whole point of the section now: a skeleton belongs to a FILE, and the window that
-  // opens on one is where it is edited — never here, over a node that only references it.
-  it('opens the skeleton window on the model’s own file', async () => {
-    const opened: string[] = []
-    installFakeBridge({ characterWindow: { open: id => (opened.push(id), Promise.resolve()) } })
+  // 🛑 The whole point of the section now: a skeleton belongs to a FILE, and the tab that opens
+  // on one is where it is edited — never here, over a node that only references it.
+  it('opens a character tab on the model’s own file', async () => {
+    installFakeBridge()
     measured({ status: 'riggedCharacter' })
     show()
 
     await userEvent.click(screen.getByRole('button', { name: /Modifier le squelette/ }))
 
-    expect(opened).toEqual([node.model.assetId])
+    const opened = Object.values(useDocuments.getState().documents)
+    expect(opened.map(one => [one.kind, one.sourceAssetId])).toEqual([
+      ['character', node.model.assetId],
+    ])
   })
 })

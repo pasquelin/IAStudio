@@ -4,7 +4,7 @@ import type { Asset } from '@shared/domain/asset'
 import { otioStudioMetadata } from '@shared/domain/otio'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  DOCUMENT_KINDS,
+  FILED_KINDS,
   DOCUMENT_VERSION,
   documentFolderOf,
   workspaceForKind,
@@ -25,7 +25,14 @@ import { meshNode } from '@/engines/scene/scene-fixtures'
 import { getBridge } from '@/services/bridge'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fakeBridge'
 import type { SaveLayeredRequest } from '@shared/ipc'
+import type * as CharacterSave from '@/character/characterSave'
 import { useAssets } from '@/stores/assets'
+import { characterStore, seedCharacter, useCharacters } from '@/stores/character'
+import { workshopIdOf } from '@/character/characterStage'
+import { installCharacterDocument } from '@/stores/character-fixtures'
+import { setCharacterBoneRest } from '@/engines/character/characterCommands'
+import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
+import type { RigBone } from '@shared/domain/rig'
 import { isCodeDirty, scriptRefOf, useCode } from '@/stores/code'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
@@ -120,6 +127,20 @@ const PIXELS = new Uint8Array([137, 80, 78, 71])
 const oraContent = (studio: string): string =>
   JSON.stringify({ width: 64, height: 32, nodes: [], studio })
 
+/** Every character tab ⌘S reached. The patch itself is `characterSave`'s own suite. */
+const patched = vi.hoisted((): string[] => [])
+
+vi.mock('@/character/characterSave', async importOriginal => ({
+  ...(await importOriginal<typeof CharacterSave>()),
+  saveCharacterDocument: (documentId: string) => {
+    patched.push(documentId)
+    return Promise.resolve(true)
+  },
+}))
+
+/** One bone, so a case can read back what ⌘S wrote into the skeleton of the model. */
+const BONE: RigBone = { name: 'Spine', parent: null, rest: IDENTITY_TRANSFORM }
+const RAISED = { ...IDENTITY_TRANSFORM, position: { x: 0, y: 0.2, z: 0 } }
 describe('saveDocument', () => {
   const openScene = async (): Promise<string> => {
     const created = await useDocuments.getState().create('3d')
@@ -127,6 +148,53 @@ describe('saveDocument', () => {
     useScenes.getState().runCommand(created.id, addNode(box))
     return created.id
   }
+
+  /**
+   * 🛑 The one kind with no file in the project: its tab rigs a model of the library, and ⌘S
+   * patches that container. A document written beside it would be the second truth this repo
+   * forbids — and the folder would gain a file nothing ever reads.
+   */
+  it('writes no project file for a character, and patches its model instead', async () => {
+    const write = vi.fn(() => Promise.resolve<DocumentWrite>('written'))
+    installFakeBridge({ documents: { write } })
+    installCharacterDocument('doc-hero', 'asset-hero')
+    seedCharacter('asset-hero', { origin: 'local', bones: [BONE] }, {})
+    useCharacters.getState().runCommand('asset-hero', setCharacterBoneRest('Spine', RAISED))
+
+    expect(await saveDocument('doc-hero')).toBe(true)
+
+    expect(write).not.toHaveBeenCalled()
+    // What the patch itself does — the container rebuilt, the weights of the moment — is
+    // measured where it lives, in `characterSave.test.ts`.
+    expect(patched).toEqual(['doc-hero'])
+  })
+
+  // Everything the tab was holding: the skeleton, what is picked in it, the weights the engine
+  // worked out, and the workshop the model stood on. Left behind, a band nobody filed would still
+  // be playing under the next character opened.
+  it('lets go of the skeleton and its workshop when the character tab closes', async () => {
+    installFakeBridge()
+    installCharacterDocument('doc-hero', 'asset-hero')
+    seedCharacter('asset-hero', { origin: 'local', bones: [BONE] }, {})
+    sceneStore.use.getState().replace(workshopIdOf('asset-hero'), createDefaultScene())
+
+    await closeDocument('doc-hero')
+
+    expect(characterStore.hasState(useCharacters.getState(), 'asset-hero')).toBe(false)
+    expect(sceneStore.hasState(useScenes.getState(), workshopIdOf('asset-hero'))).toBe(false)
+  })
+
+  // Nothing on disk answers for it: a read would ask the main process for a file that is not
+  // there, and `createDefault` would put an empty character over the one the engine is loading.
+  it('reads no file back for a character tab', async () => {
+    const read = vi.fn(() => Promise.resolve(null))
+    installFakeBridge({ documents: { read } })
+    installCharacterDocument('doc-hero', 'asset-hero')
+
+    await restoreDocument('doc-hero')
+
+    expect(read).not.toHaveBeenCalled()
+  })
 
   it('writes the scene as glTF, and only what a scene is — never its selection', async () => {
     const write = vi.fn((_id: string, _kind: DocumentKind, _draft: DocumentDraft) =>
@@ -1369,12 +1437,13 @@ describe('restoreDocument', () => {
   })
 
   // A kind absent from the table has a Save that does nothing and a tab that never reads its
-  // file — silently. This is what says the table still covers everything the studio can create.
-  it('reads the file of every kind the studio can create', async () => {
+  // file — silently. This is what says the table still covers every kind that HAS a file: the
+  // character has none, and `assetOnly` is what stops the read.
+  it('reads the file of every kind filed in the project', async () => {
     const read = vi.fn(() => Promise.resolve(null))
     installFakeBridge({ documents: { read } })
 
-    for (const kind of DOCUMENT_KINDS) {
+    for (const kind of FILED_KINDS) {
       const workspace = workspaceForKind(kind)
       if (!workspace) throw new Error(`no workspace opens ${kind}`)
       const id = `doc-${kind}`
@@ -1384,7 +1453,7 @@ describe('restoreDocument', () => {
       await restoreDocument(id)
     }
 
-    expect(read).toHaveBeenCalledTimes(DOCUMENT_KINDS.length)
+    expect(read).toHaveBeenCalledTimes(FILED_KINDS.length)
   })
 })
 

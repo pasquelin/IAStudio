@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AFFINITY_BY_WORKSPACE, CREATABLES, creatablesFor } from './creatable'
-import { DOCUMENT_KINDS } from './document'
+import { DOCUMENT_KINDS, isMadeFromNothing } from './document'
 import { HOME_SURFACE } from './tool'
 import { WORKSPACE_IDS } from './workspace'
 
@@ -8,9 +8,18 @@ describe('creatables', () => {
   /**
    * The defect this table exists to close: the New button read the HEAD of each space's kinds, so
    * `gui` could not be made from anywhere, and every gate stayed green over it.
+   *
+   * Every kind one can MAKE, which is every kind but the character: that tab is opened on a model
+   * the library already holds, and a blank one would carry no mesh at all.
    */
-  it('offers every kind of document exactly once', () => {
-    expect([...CREATABLES].map(one => one.kind).sort()).toEqual([...DOCUMENT_KINDS].sort())
+  it('offers every kind that can be made from nothing, exactly once', () => {
+    expect([...CREATABLES].map(one => one.kind).sort()).toEqual(
+      [...DOCUMENT_KINDS].filter(isMadeFromNothing).sort(),
+    )
+  })
+
+  it('leaves out what can only be opened on something', () => {
+    expect([...CREATABLES].map(one => one.kind)).not.toContain('character')
   })
 
   /**

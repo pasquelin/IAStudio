@@ -1,12 +1,10 @@
 import type { CharacterExtras } from '@shared/domain/character'
-import type { Bounds } from '@/engines/scene/rigFit'
 import type { Rig } from '@shared/domain/rig'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { modelNode } from '@/engines/scene/nodeFactory'
-import { characterStore, seedCharacter } from '@/stores/character'
+import { characterStore, seedCharacter, useCharacters } from '@/stores/character'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { openCharacterChannel, type CharacterMessage } from './characterChannel'
 
 /** What a stage needs of an engine: a workshop scene laid over it, and what the file turned out to be. */
 export type CharacterDraw = {
@@ -21,37 +19,25 @@ export type CharacterStageDeps = {
 
 export type CharacterStage = {
   /** Called by the engine when a model's file has landed — see `SceneRendererOptions.onCharacter`. */
-  read: (rig: Rig | null, extras: CharacterExtras | null, bounds: Bounds | null) => void
+  read: (rig: Rig | null, extras: CharacterExtras | null) => void
   close: () => void
 }
 
 /**
- * Where a character is edited: the channel end that OWNS the subject.
+ * Where a character is edited: the workshop laid under it, and the file read into the store.
  *
  * Not a hook, and that is why it exists — `pnpm banc` has no window, and mounts this on a stub
- * renderer. One transport, two callers, so what the window speaks is measured rather than
- * replaced.
+ * renderer. One path, two callers, so what a tab does is measured rather than replaced.
+ *
+ * 🛑 Nothing here overwrites what is already open. A tab remounts whenever the space changes —
+ * `DocumentArea` is keyed on it — and a workshop replaced then would take the motion being posed
+ * with it, a skeleton reseeded would take an hour of rigging.
  */
 export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
-  const channel = openCharacterChannel()
   let framed = false
 
-  // 🛑 Published rather than asked for: every assistant action runs in the STUDIO window, whose
-  // own character store is empty — without this the ten skeleton actions reach nothing at all.
-  const publish = (rig: Rig | null, bounds: Bounds | null): void => {
-    channel.postMessage({
-      kind: 'holds',
-      assetId: deps.assetId,
-      rig,
-      bounds,
-    } satisfies CharacterMessage)
-  }
-
-  // 🛑 A real scene document, in this window's own store: the motion picker, the preview and the
-  // blocks it lays are the studio's own surfaces, and they all speak that language. A state kept
-  // beside the store would have meant a second copy of every one of them.
   const documentId = workshopIdOf(deps.assetId)
-  useScenes.getState().replace(documentId, workshopScene(deps.assetId))
+  useScenes.getState().ensure(documentId, () => workshopScene(deps.assetId))
   deps.renderer.apply(sceneOf(useScenes.getState(), documentId))
   // Compared before applying: the store writes a fresh object for every command, every mark and
   // every document — and `apply` sweeps the whole scene each time it is called.
@@ -65,21 +51,15 @@ export function createCharacterStage(deps: CharacterStageDeps): CharacterStage {
   })
 
   return {
-    read: (rig, extras, bounds) => {
-      seedCharacter(deps.assetId, rig, extras ?? {})
-      publish(rig, bounds)
+    read: (rig, extras) => {
+      if (!characterStore.hasState(useCharacters.getState(), deps.assetId))
+        seedCharacter(deps.assetId, rig, extras ?? {})
       // Aimed ONCE: re-aiming per landing makes the view breathe as a pose changes the bounds.
       if (!framed) framed = deps.renderer.frameContents()
     },
-    close: () => {
-      watching()
-      // Let go on both sides: the store would otherwise keep every character this window has
-      // shown, and an action looking for « the open one » would find the first, for ever.
-      channel.postMessage({ kind: 'dropped', assetId: deps.assetId } satisfies CharacterMessage)
-      characterStore.use.getState().drop(deps.assetId)
-      useScenes.getState().drop(documentId)
-      channel.close()
-    },
+    // The subscription alone: the workshop and the skeleton belong to the TAB, which is still
+    // open — `IO_BY_KIND.character.forget` is what lets go of both when it closes.
+    close: () => watching(),
   }
 }
 

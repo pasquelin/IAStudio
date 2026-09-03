@@ -354,6 +354,10 @@ async function exportOf(
     // Nothing goes out yet: what an interface would export is the game that shows it.
     case 'gui':
       return null
+    // Its file IS the model of the library, and ⌘S writes it: an export would be a copy of a
+    // container the project already holds.
+    case 'character':
+      return null
     case 'scene': {
       const { sceneExportFiles } =
         await import('@/features/scene/components/Scene/Document/sceneExportFiles')

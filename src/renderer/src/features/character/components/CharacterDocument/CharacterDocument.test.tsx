@@ -7,15 +7,11 @@ import type { Rig } from '@shared/domain/rig'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
-import { clearCharacters } from '@/stores/character-fixtures'
-import { useCharacterView } from '@/stores/characterView'
-import type { Asset } from '@shared/domain/asset'
-import type { SaveAnimationRequest } from '@shared/ipc'
-import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
+import { clearCharacters, installCharacterDocument } from '@/stores/character-fixtures'
+import { characterViewOf, useCharacterView } from '@/stores/characterView'
 import { useAnimationViews } from '@/stores/animationView'
 import { useSettings } from '@/stores/settings'
-import { sceneOf, useScenes } from '@/stores/scenes'
-import { CharacterWindow } from './CharacterWindow'
+import { CharacterDocument } from './CharacterDocument'
 
 /** Every engine built, so a case can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
@@ -83,14 +79,14 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
 }))
 
 const ASSET = 'asset-hero'
-const WORKSHOP = 'character:asset-hero'
+const DOCUMENT = 'doc-hero'
 
-/** A band holding one key, which is what makes a motion worth filing at all. */
-const keyed = timelineWith([
-  animationTrack('track-1', 'position', [{ time: 0, value: { x: 0, y: 1, z: 0 } }], {
-    target: { nodeId: 'node-1', bone: 'Spine', property: 'position' },
-  }),
-])
+/** The tab, on the model it was opened from — what the dock and the shell both address it by. */
+const showTab = (): void => {
+  installCharacterDocument(DOCUMENT, ASSET)
+  render(<CharacterDocument documentId={DOCUMENT} />)
+}
+
 const SAMPLE = {
   bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
   points: new Float32Array(),
@@ -121,12 +117,7 @@ beforeEach(() => {
   clearCharacters()
   // The whole view, never the one flag a case happens to read: a padlock left closed by the case
   // before was what made the next one pass, and the leak showed only when the bar moved.
-  useCharacterView.setState({
-    editingRest: false,
-    heldAxes: [],
-    pickedBone: null,
-    mode: 'translate',
-  })
+  useCharacterView.setState({ views: {} })
   useAnimationViews.setState({ views: {} })
   installFakeBridge()
 })
@@ -141,7 +132,7 @@ afterEach(() => {
  * helpers. The window used to freeze both halves on the defaults.
  */
 it('follows the person on how the view turns, and nothing else of the studio', async () => {
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
   await waitFor(() => expect(configured.length).toBeGreaterThan(0))
 
   // Changed while the window is OPEN, which is how a preference is changed: the settings live in
@@ -161,7 +152,7 @@ it('follows the person on how the view turns, and nothing else of the studio', a
 // Asked for at the first sight of the window: a joint could be moved and never turned, and the
 // only way to say which was to edit the source.
 it('offers the ways of acting on a joint, opens on placing one, and offers no scale', async () => {
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
 
   const bar = screen.getByRole('toolbar', { name: 'Outils du squelette' })
 
@@ -179,7 +170,7 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
 
   await userEvent.click(within(bar).getByRole('button', { name: /Pivoter/ }))
 
-  expect(useCharacterView.getState().mode).toBe('rotate')
+  expect(characterViewOf(useCharacterView.getState(), ASSET).mode).toBe('rotate')
 })
 
 /**
@@ -187,7 +178,7 @@ it('offers the ways of acting on a joint, opens on placing one, and offers no sc
  * read as two modes at once — « soit je place l'articulation, soit je joue avec le modèle ».
  */
 it('lights one state at a time, and hands the held axes to the engine', async () => {
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
   const bar = screen.getByRole('toolbar', { name: 'Outils du squelette' })
   const pressedIn = () =>
     within(bar)
@@ -203,7 +194,7 @@ it('lights one state at a time, and hands the held axes to the engine', async ()
   await userEvent.click(within(bar).getByRole('button', { name: /squelette/i }))
 
   expect(pressedIn()).toEqual(['Déplacer', 'Modifier le squelette'])
-  expect(useCharacterView.getState().editingRest).toBe(true)
+  expect(characterViewOf(useCharacterView.getState(), ASSET).editingRest).toBe(true)
 })
 
 /**
@@ -213,7 +204,7 @@ it('lights one state at a time, and hands the held axes to the engine', async ()
  */
 it('poses the bone the gizmo moved, and writes the skeleton only once the bar asks', async () => {
   seedCharacter(ASSET, RIG, {})
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
   const move = { id: 'node-1', bone: 'Spine', transform: raised(0.2) }
 
   act(() => built[0]?.onTransform?.([move]))
@@ -235,34 +226,10 @@ it('poses the bone the gizmo moved, and writes the skeleton only once the bar as
   expect(restOfSpine()?.position.y).toBeCloseTo(0.2, 5)
 })
 
-// Without it, laying a motion by hand is out of reach — and posing a character is what the
-// gizmo now does. The studio's own band, on this window's workshop scene.
-it('stands a band under the character, on the scene of its workshop', () => {
-  render(<CharacterWindow assetId={ASSET} />)
-
-  expect(screen.getByRole('region', { name: 'Mouvement en cours' })).toBeInTheDocument()
-})
-
-// No film from a workshop, and that is not an oversight: it holds one character and no camera.
-
-it('gives the band its transport and its settings, and offers no film', () => {
-  render(<CharacterWindow assetId={ASSET} />)
-  const band = screen.getByRole('region', { name: 'Mouvement en cours' })
-
-  expect(within(band).getByRole('button', { name: 'Lire' })).toBeInTheDocument()
-  expect(within(band).getByRole('button', { name: 'Retour au début' })).toBeInTheDocument()
-  expect(
-    within(band).getByRole('button', { name: 'Enregistrement automatique' }),
-  ).toBeInTheDocument()
-  expect(within(band).getByLabelText('Durée')).toBeInTheDocument()
-  expect(within(band).getByLabelText('Images/s')).toBeInTheDocument()
-  expect(within(band).queryByRole('button', { name: 'Rendre en vidéo' })).toBeNull()
-})
-
 // The sentence is about the FILE landing, and a mesh with no skeleton is a character plainly on
 // screen — the panel beside it offers to rig it. Shown on « no rig » it stood over the model.
 it('drops the waiting note as soon as the engine has measured the mesh', async () => {
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
 
   expect(screen.getByText('En attente du personnage…')).toBeInTheDocument()
 
@@ -273,53 +240,12 @@ it('drops the waiting note as soon as the engine has measured the mesh', async (
   expect(screen.queryByText('En attente du personnage…')).not.toBeInTheDocument()
 })
 
-/** 🛑 ONE file: the band rides in its `extras`, and the second save lands on that same file. */
-it('files the motion with its band inside, and saves onto that same file afterwards', async () => {
-  const filed: Asset = {
-    id: 'asset-walk',
-    name: 'Nouveau mouvement',
-    type: 'animation',
-    location: 'local',
-    tags: [],
-    createdAt: '2026-09-02T00:00:00.000Z',
-  }
-  const saveAnimation = vi.fn((_request: SaveAnimationRequest) => Promise.resolve(filed))
-  installFakeBridge({ assets: { saveAnimation } })
-  render(<CharacterWindow assetId={ASSET} />)
-
-  act(() => {
-    useScenes.getState().replace(WORKSHOP, {
-      ...sceneOf(useScenes.getState(), WORKSHOP),
-      animation: keyed,
-    })
-  })
-  await userEvent.click(screen.getByRole('button', { name: 'Enregistrer le mouvement' }))
-
-  // The sheet PURGED of what the workshop does not hold: the file would otherwise carry the id
-  // of an object the scene has lost, and gather one more at every save.
-  expect(carried).toEqual([{ iastudio: { animation: { ...keyed, sheet: [] } } }])
-  expect(saveAnimation.mock.calls[0]?.[0]).toEqual({
-    name: 'Nouveau mouvement',
-    derivedFrom: ASSET,
-    glb: new Uint8Array([1, 2]),
-  })
-
-  await userEvent.click(screen.getByRole('button', { name: 'Mettre à jour le mouvement' }))
-
-  expect(saveAnimation.mock.calls[1]?.[0]).toEqual({
-    name: 'Nouveau mouvement',
-    derivedFrom: ASSET,
-    replaces: 'asset-walk',
-    glb: new Uint8Array([1, 2]),
-  })
-})
-
 /**
  * 🛑 This window wired neither `onMotionChange` nor `isFlying`, so its keys reached no engine at
  * all: it orbited and nothing else, where every other 3D surface of the studio flies.
  */
 it('flies the camera on the keys, like the viewport of the studio', async () => {
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
 
   await act(async () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', key: 'w' }))
@@ -337,7 +263,7 @@ it('flies the camera on the keys, like the viewport of the studio', async () => 
 // 🛑 The studio's viewport arms a persistent flight on one key; this window declared two commands
 // in all — undo and redo — so nothing here could ever hold the camera without a button pressed.
 it('arms the persistent flight on its own key, and disarms it on the next press', async () => {
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
 
   await act(async () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', key: '`' }))
@@ -356,7 +282,7 @@ it('arms the persistent flight on its own key, and disarms it on the next press'
  * first press after an Escape did nothing at all.
  */
 it('arms the flight again after the engine has left it on its own', async () => {
-  render(<CharacterWindow assetId={ASSET} />)
+  showTab()
 
   await act(async () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Backquote', key: '`' }))

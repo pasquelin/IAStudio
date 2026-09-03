@@ -9,7 +9,7 @@ import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
  * "File ▸ New", and duplicating the type would degrade `DocumentKind` to `string`.
  */
 export type DocumentKind =
-  'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'material' | 'script' | 'gui'
+  'image' | 'scene' | 'sequence' | 'audio' | 'skybox' | 'material' | 'script' | 'gui' | 'character'
 
 /** The values beside the type: a file read back off disk has to be checked against them. */
 export const DOCUMENT_KINDS: readonly DocumentKind[] = [
@@ -21,7 +21,28 @@ export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   'material',
   'script',
   'gui',
+  'character',
 ]
+
+/**
+ * The kinds with a file in the project — every one but the character, whose tab edits a model of
+ * the library. Derived so the day a second kind loses its file, this list follows.
+ */
+export const FILED_KINDS: readonly FiledKind[] = DOCUMENT_KINDS.filter(
+  (kind): kind is FiledKind => kind !== 'character',
+)
+
+/**
+ * The file a kind writes, or `null` for one that has no file in the project — the character,
+ * whose tab edits a model of the library. What a caller holding any kind asks.
+ */
+export function extensionOfKind(kind: DocumentKind): string | null {
+  return isFiledKind(kind) ? EXTENSIONS_BY_KIND[kind] : null
+}
+
+export function isFiledKind(kind: DocumentKind): kind is FiledKind {
+  return FILED_KINDS.includes(kind as FiledKind)
+}
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
   return DOCUMENT_KINDS.some(candidate => candidate === value)
@@ -77,12 +98,34 @@ export function documentsByPath(
  */
 const KINDS_BY_WORKSPACE: Record<WorkspaceId, readonly DocumentKind[]> = {
   image: ['image'],
-  '3d': ['scene', 'gui'],
+  '3d': ['scene', 'gui', 'character'],
   video: ['sequence'],
   audio: ['audio'],
   materials: ['material'],
   skyboxes: ['skybox'],
   code: ['script'],
+}
+
+/**
+ * Whether a kind can be made out of nothing — what « New » offers.
+ *
+ * A character cannot: it is a model the library already holds, opened to be rigged, so a blank
+ * one would be a tab with no mesh in it. A `Record` so the next kind answers before it compiles.
+ */
+const MADE_FROM_NOTHING: Record<DocumentKind, boolean> = {
+  image: true,
+  scene: true,
+  sequence: true,
+  audio: true,
+  skybox: true,
+  material: true,
+  script: true,
+  gui: true,
+  character: false,
+}
+
+export function isMadeFromNothing(kind: DocumentKind): boolean {
+  return MADE_FROM_NOTHING[kind]
 }
 
 /**
@@ -148,6 +191,8 @@ const ROLE_BY_KIND: Record<DocumentKind, FolderRole> = {
   material: 'materials',
   script: 'code',
   gui: 'gui',
+  // Filed with the models it edits: a character IS one of them, opened to be given a skeleton.
+  character: 'models',
 }
 
 export function roleForKind(kind: DocumentKind): FolderRole {
@@ -178,7 +223,9 @@ export const DOCUMENT_KIND_KEY = 'documentKind'
  * complete, but nothing makes that list complete, and a kind missing from it would be refused
  * at the IPC boundary without a word.
  */
-export const EXTENSIONS_BY_KIND: Record<DocumentKind, string> = {
+export type FiledKind = Exclude<DocumentKind, 'character'>
+
+export const EXTENSIONS_BY_KIND: Record<FiledKind, string> = {
   image: '.ora',
   scene: '.gltf',
   sequence: '.otio',
@@ -237,7 +284,7 @@ const COMPOUND_EXTENSIONS: readonly string[] = Object.values(EXTENSIONS_BY_KIND)
  * the folder a first save falls back to.
  */
 export function documentPath(id: string, kind: DocumentKind): string {
-  return `${LEGACY_DOCUMENTS_FOLDER}/${id}${EXTENSIONS_BY_KIND[kind]}`
+  return `${LEGACY_DOCUMENTS_FOLDER}/${id}${extensionOfKind(kind) ?? ''}`
 }
 
 /**
@@ -267,7 +314,7 @@ export function kindForExtension(extension: string): DocumentKind | null {
  * outright would let an envelope reading `texture` open a `.gltf` in the material editor.
  */
 export function kindsForExtension(extension: string): readonly DocumentKind[] {
-  return DOCUMENT_KINDS.filter(kind => EXTENSIONS_BY_KIND[kind] === extension)
+  return FILED_KINDS.filter(kind => EXTENSIONS_BY_KIND[kind] === extension)
 }
 
 /**

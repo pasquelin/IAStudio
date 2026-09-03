@@ -6,7 +6,10 @@ import { setCharacterBoneRest } from '@/engines/character/characterCommands'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { isCharacterDirty, seedCharacter, useCharacters } from '@/stores/character'
 import { clearCharacters } from '@/stores/character-fixtures'
-import { saveCharacter, type CharacterSkinning } from './characterSave'
+import { saveCharacter, saveCharacterDocument } from './characterSave'
+import { noteCharacterSkins, type CharacterSkinning } from './characterSkins'
+import { installCharacterDocument } from '@/stores/character-fixtures'
+import { useDocuments } from '@/stores/documents'
 
 /** Each container the port was asked to rebuild, held open until a case lets it land. */
 const writes = vi.hoisted(
@@ -151,5 +154,48 @@ describe('writing a character back to its own file', () => {
     await refused
     expect(await second).toBe(true)
     expect(dirty()).toBe(false)
+  })
+})
+
+/**
+ * ⌘S on a character tab, which is what the shell's own router fires: the model's container is
+ * patched, and the project folder gains nothing — see `IO_BY_KIND.character`.
+ */
+describe('saving the character tab in front', () => {
+  const DOCUMENT = 'doc-hero'
+
+  it('patches the model the tab was opened on, weights and all', async () => {
+    installCharacterDocument(DOCUMENT, ASSET)
+    seedCharacter(ASSET, RIG, {})
+    poseSpine(0.2)
+    noteCharacterSkins(ASSET, weighed)
+
+    const saved = saveCharacterDocument(DOCUMENT)
+    await vi.waitFor(() => expect(writes).toHaveLength(1))
+    writes[0]?.land(true)
+
+    expect(await saved).toBe(true)
+    expect(writes[0]?.skins).toBe(weighed)
+    expect(writes[0]?.bones[0]?.rest.position.y).toBeCloseTo(0.2, 5)
+  })
+
+  // A descriptor that lost its asset is a tab with nothing behind it: writing would patch a
+  // container this document never named.
+  it('writes nothing for a tab naming no model', async () => {
+    useDocuments.setState({
+      documents: {
+        [DOCUMENT]: {
+          id: DOCUMENT,
+          kind: 'character',
+          workspace: '3d',
+          title: 'orphan',
+          path: 'Modelling/Models/orphan.glb',
+        },
+      },
+      activeId: DOCUMENT,
+    })
+
+    expect(await saveCharacterDocument(DOCUMENT)).toBe(false)
+    expect(writes).toHaveLength(0)
   })
 })

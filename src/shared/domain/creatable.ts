@@ -1,4 +1,4 @@
-import { kindsForWorkspace, type DocumentKind } from './document'
+import { isMadeFromNothing, kindsForWorkspace, type DocumentKind } from './document'
 import { HOME_SURFACE, type ToolSurface } from './tool'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
@@ -19,7 +19,11 @@ export type Creatable = { kind: DocumentKind; workspace: WorkspaceId }
  * nothing else, and no test could see it — eight kinds, seven ways in, everything green.
  */
 export const CREATABLES: readonly Creatable[] = WORKSPACE_IDS.flatMap(workspace =>
-  kindsForWorkspace(workspace).map(kind => ({ kind, workspace })),
+  // 🛑 Filtered on a table of the domain, never on a list written here: what a space OPENS and
+  // what it can make from nothing are two questions, and a character answers no to the second.
+  kindsForWorkspace(workspace)
+    .filter(isMadeFromNothing)
+    .map(kind => ({ kind, workspace })),
 )
 
 /**

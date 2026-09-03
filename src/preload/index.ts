@@ -336,10 +336,6 @@ const bridge: StudioBridge = {
   playerModuleWindow: {
     open: assetId => ipcRenderer.invoke(CHANNELS.playerModuleWindowOpen, assetId),
   },
-  characterWindow: {
-    open: assetId => ipcRenderer.invoke(CHANNELS.characterWindowOpen, assetId),
-    onClosed: callback => subscribe<void>(EVENTS.characterWindowClosed, callback),
-  },
   gameWindow: {
     open: () => ipcRenderer.invoke(CHANNELS.gameWindowOpen),
     close: () => ipcRenderer.invoke(CHANNELS.gameWindowClose),

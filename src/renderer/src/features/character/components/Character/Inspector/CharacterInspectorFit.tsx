@@ -16,7 +16,7 @@ import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useCharacters } from '@/stores/character'
 
-export type CharacterWindowFitProps = {
+export type CharacterInspectorFitProps = {
   assetId: string
   /** What the engine measured of this mesh, or `null` while the file is still landing. */
   sample: MeshSample | null
@@ -28,7 +28,7 @@ export type CharacterWindowFitProps = {
  * 🛑 The chain a service needs — the file, its id, a job to follow — is only verifiable here: the
  * inspector could offer none of it, which is why every service was shown greyed out over there.
  */
-export function CharacterWindowFit({ assetId, sample }: CharacterWindowFitProps) {
+export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFitProps) {
   const { t, i18n } = useTranslation()
   const [kind, setKind] = useState<CharacterKind>('auto')
   const plan = usePlanAccess()

@@ -120,7 +120,8 @@
       "skybox": "Sky",
       "material": "Material",
       "script": "Script",
-      "gui": "Interface"
+      "gui": "Interface",
+      "character": "Character"
     },
     "new": "New document",
     "newKinds": "Document kinds",

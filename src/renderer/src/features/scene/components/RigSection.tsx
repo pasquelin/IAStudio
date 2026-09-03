@@ -3,8 +3,8 @@ import { Button } from '@/components/Button'
 import { PropertySection } from '@/components/PropertySection'
 import { QuietNote } from '@/components/QuietNote'
 import { rigFitFaultOf } from '@/engines/scene/rigFit'
+import { openCharacter } from '@/character/openCharacter'
 import type { ModelNode } from '@/engines/scene/sceneState'
-import { getBridge } from '@/services/bridge'
 import { rigOfNode, useModelFiles } from '@/stores/modelFiles'
 
 export type RigSectionProps = {
@@ -34,10 +34,7 @@ export function RigSection({ documentId, node }: RigSectionProps) {
       <QuietNote>{t(`inspector.rigStatus_${rig.status}`)}</QuietNote>
       {fault && <QuietNote>{t(`inspector.rigFault_${fault}`)}</QuietNote>}
 
-      <Button
-        variant="primary"
-        onClick={() => void getBridge()?.characterWindow.open(node.model.assetId)}
-      >
+      <Button variant="primary" onClick={() => void openCharacter(node.model.assetId)}>
         {rig.status === 'staticMesh' ? t('inspector.makeAnimatable') : t('inspector.editSkeleton')}
       </Button>
     </PropertySection>
