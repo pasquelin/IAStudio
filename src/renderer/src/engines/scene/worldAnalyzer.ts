@@ -1,5 +1,6 @@
 import { Mesh, SkinnedMesh, type BufferGeometry, type Object3D } from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
+import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
 import { DRAWN_BY_INSTANCE, WORTH_INSTANCING, isDrawn, shapeAndPaint, withFlags } from './grouping'
 import { isInstanceable } from './instanceableModel'
@@ -18,6 +19,12 @@ export type InstanceCandidate = {
   key: string
   sourceIds: readonly string[]
   meshCount: number
+}
+
+export type MaterialDeduplication = {
+  key: string
+  sourceIds: readonly string[]
+  duplicateCount: number
 }
 
 export type OptimizationWarning = {
@@ -39,6 +46,7 @@ export type OptimizationImpact = {
 export type OptimizationPlan = {
   classifications: readonly ClassifiedObject[]
   instances: readonly InstanceCandidate[]
+  sharedMaterials: readonly MaterialDeduplication[]
   warnings: readonly OptimizationWarning[]
   measured: OptimizationMetrics
   estimated: OptimizationImpact
@@ -48,6 +56,7 @@ export type OptimizationReport = {
   measured: OptimizationMetrics
   estimated: OptimizationImpact
   instanceCandidates: number
+  duplicateMaterials: number
   visualChanges: 'NONE'
 }
 
@@ -81,6 +90,7 @@ export function analyzeOptimization(
   // model of P primitives paid three full `traverse` walks for one pass.
   const drawn = new Set<Mesh>()
   const candidateGroups = new Map<string, CandidateGroup>()
+  const materialGroups = new Map<string, Set<string>>()
   const keyOf = withFlags(shapeAndPaint())
   const classifications: ClassifiedObject[] = []
   const warnings: OptimizationWarning[] = []
@@ -96,6 +106,12 @@ export function analyzeOptimization(
 
     const reason = warningOf(nodeClassifications)
     if (reason) warnings.push({ nodeId: node.id, reason })
+    if (node.type === 'mesh' && shown.length > 0) {
+      const key = stableKey([node.material, node.negative === true])
+      const group = materialGroups.get(key)
+      if (group) group.add(node.id)
+      else materialGroups.set(key, new Set([node.id]))
+    }
     if (!nodeClassifications.includes('INSTANCABLE')) continue
 
     for (const mesh of shown) {
@@ -118,12 +134,21 @@ export function analyzeOptimization(
     }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
   const meshes = [...drawn]
+  const sharedMaterials = [...materialGroups]
+    .filter(([, ids]) => ids.size > 1)
+    .map(([key, ids]) => ({
+      key,
+      sourceIds: [...ids].sort(byCodeUnit),
+      duplicateCount: ids.size - 1,
+    }))
+    .sort((one, other) => byCodeUnit(one.key, other.key))
   const sceneStats = statsOf(meshes)
   const savedDraws = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
 
   return {
     classifications,
     instances,
+    sharedMaterials,
     warnings,
     measured: {
       ...sceneStats,
@@ -143,6 +168,10 @@ export function optimizationReport(plan: OptimizationPlan): OptimizationReport {
     measured: plan.measured,
     estimated: plan.estimated,
     instanceCandidates: plan.instances.reduce((count, group) => count + group.meshCount, 0),
+    duplicateMaterials: plan.sharedMaterials.reduce(
+      (count, group) => count + group.duplicateCount,
+      0,
+    ),
     visualChanges: 'NONE',
   }
 }
