@@ -11,7 +11,7 @@ import type { BodyPart } from './humanoid'
 import type { Us } from './time'
 import type { GeometryDescriptor } from './geometry'
 import { EMPTY_STACK, type CameraPost, type PostStack } from './postProcessing'
-import type { ReliefSculpt } from './relief'
+import { RELIEF_CHUNK_TEXELS, type ReliefSculpt } from './relief'
 import type { Vector3 } from './transform'
 
 /** Re-exported so the fifty-odd files that read a pose from here keep reading it from here. */
@@ -19,7 +19,7 @@ export { isTransform, isVector3, type Transform, type Vector3 } from './transfor
 
 /** Re-exported for the same reason as the transform above: this is where a scene is read from. */
 export type { GeometryDescriptor } from './geometry'
-export type { ReliefExtent, ReliefSculpt } from './relief'
+export type { ReliefExtent, ReliefOverlay, ReliefSculpt } from './relief'
 
 /**
  * A texture is a reference to an asset of the project, never an image and never a three.js
@@ -29,11 +29,41 @@ export type { ReliefExtent, ReliefSculpt } from './relief'
 export type TextureRef = { assetId: string }
 
 /**
+ * What a terrain padlock holds. Two aspects rather than one boolean: freezing the sculpt while
+ * the patch can still move (or the reverse) is the ordinary case, matching the canvas.
+ */
+export type TerrainLocks = {
+  sculpt: boolean
+  placement: boolean
+}
+
+export const UNLOCKED_TERRAIN: TerrainLocks = Object.freeze({ sculpt: false, placement: false })
+
+/**
+ * One named overlay on a terrain. Locked is a single boolean: an edit has no placement of its
+ * own, and splitting sculpt from alpha would invent a workflow Unreal does not offer.
+ */
+export type TerrainEditLayer = {
+  id: string
+  name: string
+  enabled: boolean
+  locked: boolean
+  /** Signed blend weight. 1 = deltas as stored; 0 = none; negative subtracts. */
+  alpha: number
+  sculpt?: ReliefSculpt
+}
+
+/**
  * A patch of the world's surface. Relief names a heightmap by `TextureRef`, never the pixels.
  * Bytes are OpenEXR float32 — not PNG-16, not a house binary. Texel size lives on the asset.
+ * Several `kind: 'relief'` entries are distinct spatial zones, never blended with each other.
  */
 export type ReliefLayer = {
   kind: 'relief'
+  id: string
+  name: string
+  enabled: boolean
+  locked: TerrainLocks
   heightmap: TextureRef
   /** World position of the min corner (smallest x and z). */
   origin: { x: number; z: number }
@@ -44,7 +74,8 @@ export type ReliefLayer = {
    * `{ min: 0, max: 1 }` is the identity the decoder already produced.
    */
   elevation: { min: number; max: number }
-  sculpt?: ReliefSculpt
+  grain: number
+  edits: readonly TerrainEditLayer[]
 }
 
 /** Open union: a later kind does not migrate documents written with only Relief. */
@@ -576,18 +607,36 @@ export const DEFAULT_RELIEF_ELEVATION: ReliefLayer['elevation'] = Object.freeze(
   min: 0,
   max: 1,
 })
+export const DEFAULT_RELIEF_NAME = 'Terrain'
+export const DEFAULT_EDIT_NAME = 'Sculpt'
+
+export function terrainEditLayer(patch?: Partial<TerrainEditLayer>): TerrainEditLayer {
+  return {
+    id: patch?.id ?? 'sculpt',
+    name: patch?.name ?? DEFAULT_EDIT_NAME,
+    enabled: patch?.enabled ?? true,
+    locked: patch?.locked ?? false,
+    alpha: patch?.alpha ?? 1,
+    ...(patch?.sculpt && patch.sculpt.chunks.length > 0 ? { sculpt: patch.sculpt } : {}),
+  }
+}
 
 export function reliefLayer(
   heightmap: TextureRef,
-  patch?: Partial<Pick<ReliefLayer, 'origin' | 'size' | 'elevation' | 'sculpt'>>,
+  patch?: Partial<Omit<ReliefLayer, 'kind' | 'heightmap'>>,
 ): ReliefLayer {
   return {
     kind: 'relief',
+    id: patch?.id ?? 'terrain',
+    name: patch?.name ?? DEFAULT_RELIEF_NAME,
+    enabled: patch?.enabled ?? true,
+    locked: patch?.locked ?? UNLOCKED_TERRAIN,
     heightmap,
     origin: patch?.origin ?? DEFAULT_RELIEF_ORIGIN,
     size: patch?.size ?? DEFAULT_RELIEF_SIZE,
     elevation: patch?.elevation ?? DEFAULT_RELIEF_ELEVATION,
-    ...(patch?.sculpt ? { sculpt: patch.sculpt } : {}),
+    grain: patch?.grain ?? RELIEF_CHUNK_TEXELS,
+    edits: patch?.edits ?? [],
   }
 }
 

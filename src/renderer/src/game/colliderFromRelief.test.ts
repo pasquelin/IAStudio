@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { combinedAt, withChunkDelta, worldY } from '@shared/domain/relief'
-import { reliefLayer } from '@shared/domain/scene'
+import { RELIEF_CHUNK_TEXELS, combinedAt, withChunkDelta, worldY } from '@shared/domain/relief'
+import { reliefLayer, terrainEditLayer } from '@shared/domain/scene'
 import { colliderFromRelief } from './colliderFromRelief'
 
 const WIDTH = 4
@@ -56,16 +56,21 @@ describe('what a relief is felt as', () => {
     })
     const layer = reliefLayer(
       { assetId: 'asset_height' },
-      { sculpt, elevation: { min: 0, max: 1 } },
+      { elevation: { min: 0, max: 1 }, edits: [terrainEditLayer({ sculpt })] },
     )
 
     const shape = colliderFromRelief(layer, samples)
     const heights = shape?.kind === 'heightfield' ? shape.heights : new Float32Array()
 
     expect(heights[1 * WIDTH + 1]).toBeCloseTo(
-      worldY(combinedAt(samples, sculpt, 1, 1), layer.elevation),
+      worldY(
+        combinedAt(samples, RELIEF_CHUNK_TEXELS, [{ enabled: true, alpha: 1, sculpt }], 1, 1),
+        layer.elevation,
+      ),
     )
-    expect(heights[0]).toBeCloseTo(worldY(combinedAt(samples, undefined, 0, 0), layer.elevation))
+    expect(heights[0]).toBeCloseTo(
+      worldY(combinedAt(samples, RELIEF_CHUNK_TEXELS, [], 0, 0), layer.elevation),
+    )
     expect(heights[1 * WIDTH + 1]).not.toBeCloseTo(heights[0] ?? 0)
   })
 })

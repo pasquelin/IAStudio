@@ -1,4 +1,5 @@
 import {
+  RELIEF_CHUNK_TEXELS,
   withPackedChunks,
   type PackedReliefChunk,
   type ReliefExtent,
@@ -11,6 +12,7 @@ import type { ReliefSculptRequest, ReliefSculptResponse } from './reliefSculptMe
 export type ReliefDiskStroke = {
   samples: HeightmapSamples
   extent: ReliefExtent
+  grain?: number
   sculpt: ReliefSculpt | undefined
   disk: { x: number; z: number; radius: number }
   amount: number
@@ -60,11 +62,13 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
     const token = generation
     const before = heldAfter ?? job.sculpt
     try {
+      const grain = job.grain ?? RELIEF_CHUNK_TEXELS
       const response = await session.send({
         id: session.nextId(),
         width: job.samples.width,
         height: job.samples.height,
         extent: job.extent,
+        grain,
         sculpt: before,
         operation: { kind: 'raiseDisk', disk: job.disk, amount: job.amount },
       })
@@ -77,7 +81,7 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
         return
       }
       const edits = response.chunks
-      heldAfter = withPackedChunks(before, response.grain, edits)
+      heldAfter = withPackedChunks(before, edits)
       bound = heldAfter
       job.resolve(edits)
     } catch (error) {
@@ -113,7 +117,7 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
 
 function sameSculpt(left: ReliefSculpt | undefined, right: ReliefSculpt | undefined): boolean {
   if (left === right) return true
-  if (!left || !right || left.grain !== right.grain || left.chunks.length !== right.chunks.length) {
+  if (!left || !right || left.chunks.length !== right.chunks.length) {
     return false
   }
   const keys = new Set(left.chunks.map(chunk => `${chunk.column}:${chunk.row}:${chunk.payload}`))

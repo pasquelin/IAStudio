@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { withChunkDelta } from '@shared/domain/relief'
-import { DEFAULT_WORLD, reliefLayer, STUDIO_ENVIRONMENT } from '@shared/domain/scene'
+import {
+  DEFAULT_EDIT_NAME,
+  DEFAULT_RELIEF_NAME,
+  DEFAULT_WORLD,
+  reliefLayer,
+  STUDIO_ENVIRONMENT,
+  terrainEditLayer,
+  UNLOCKED_TERRAIN,
+} from '@shared/domain/scene'
 import { backgroundOfKind, environmentOfKind, fogOfKind, readWorld } from './sceneWorld'
 
 describe('reading a world back', () => {
@@ -87,10 +95,19 @@ describe('reading a world back', () => {
   })
 
   it('keeps a relief that names a heightmap, and drops one that does not', () => {
-    expect(
-      readWorld({ layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] }, undefined)
-        .layers,
-    ).toEqual([reliefLayer({ assetId: 'asset_height' })])
+    const layers = readWorld(
+      { layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] },
+      undefined,
+    ).layers
+    expect(layers).toHaveLength(1)
+    expect(layers[0]).toMatchObject({
+      kind: 'relief',
+      heightmap: { assetId: 'asset_height' },
+      name: DEFAULT_RELIEF_NAME,
+      enabled: true,
+      locked: UNLOCKED_TERRAIN,
+    })
+    expect(layers[0]?.kind === 'relief' ? layers[0].id.length : 0).toBeGreaterThan(0)
     expect(readWorld({ layers: [{ kind: 'relief', heightmap: {} }] }, undefined).layers).toEqual([])
     expect(readWorld({ layers: [{ kind: 'biome' }] }, undefined).layers).toEqual([])
   })
@@ -111,15 +128,14 @@ describe('reading a world back', () => {
         },
         undefined,
       ).layers,
-    ).toEqual([
-      reliefLayer(
-        { assetId: 'asset_height' },
-        {
-          origin: { x: -40, z: 8 },
-          size: { x: 128, z: 64 },
-          elevation: { min: -12, max: 48 },
-        },
-      ),
+    ).toMatchObject([
+      {
+        kind: 'relief',
+        heightmap: { assetId: 'asset_height' },
+        origin: { x: -40, z: 8 },
+        size: { x: 128, z: 64 },
+        elevation: { min: -12, max: 48 },
+      },
     ])
   })
 
@@ -136,9 +152,89 @@ describe('reading a world back', () => {
       { layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' }, sculpt }] },
       undefined,
     )
+    const layer = held.layers[0]
+    if (!layer || layer.kind !== 'relief') throw new Error('expected a relief')
 
-    expect(held.layers[0]).toEqual(reliefLayer({ assetId: 'asset_height' }, { sculpt }))
-    expect(JSON.stringify(held.layers[0])).not.toMatch(/"delta"|2\.0/)
+    expect(layer.edits).toHaveLength(1)
+    expect(layer.edits[0]?.name).toBe(DEFAULT_EDIT_NAME)
+    expect(layer.edits[0]?.alpha).toBe(1)
+    expect(layer.edits[0]?.enabled).toBe(true)
+    expect(layer.edits[0]?.sculpt).toEqual(sculpt)
+    expect(JSON.stringify(layer)).not.toMatch(/"delta"|2\.0/)
+  })
+
+  it('opens a sculpt-only document as one implicit edit layer named Sculpt', () => {
+    const samples = { width: 4, height: 4, values: new Float32Array(16) }
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 0,
+      localZ: 0,
+      delta: 1,
+    })
+    const held = readWorld(
+      {
+        layers: [
+          {
+            kind: 'relief',
+            heightmap: { assetId: 'asset_height' },
+            sculpt: { grain: 64, chunks: sculpt.chunks },
+          },
+        ],
+      },
+      undefined,
+    )
+    const layer = held.layers[0]
+    if (!layer || layer.kind !== 'relief') throw new Error('expected a relief')
+
+    expect(layer.grain).toBe(64)
+    expect(layer.name).toBe(DEFAULT_RELIEF_NAME)
+    expect(layer.enabled).toBe(true)
+    expect(layer.locked).toEqual(UNLOCKED_TERRAIN)
+    expect(layer.edits).toEqual([
+      expect.objectContaining({
+        name: DEFAULT_EDIT_NAME,
+        enabled: true,
+        locked: false,
+        alpha: 1,
+        sculpt,
+      }),
+    ])
+    expect(layer.id.length).toBeGreaterThan(0)
+    expect(layer.edits[0]?.id.length).toBeGreaterThan(0)
+  })
+
+  it('round-trips a terrain with several named edits, keeping their identity', () => {
+    const samples = { width: 4, height: 4, values: new Float32Array(16) }
+    const hills = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 0,
+      delta: 2,
+    })
+    const valley = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 2,
+      localZ: 0,
+      delta: -1,
+    })
+    const written = reliefLayer(
+      { assetId: 'asset_height' },
+      {
+        id: 'island',
+        name: 'Island',
+        grain: 64,
+        edits: [
+          terrainEditLayer({ id: 'hills', name: 'Hills', sculpt: hills }),
+          terrainEditLayer({ id: 'valley', name: 'Valley', alpha: 0.5, sculpt: valley }),
+        ],
+      },
+    )
+    const held = readWorld({ layers: [written] }, undefined)
+
+    expect(held.layers).toEqual([written])
   })
 
   it('gives a ground with no colour the studio one rather than a string', () => {

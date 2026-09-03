@@ -39,7 +39,7 @@ describe('relief sculpt cost', () => {
 
     // What the UI thread has left once the answer lands: hanging the chunks off the sculpt.
     const applyStarted = performance.now()
-    withPackedChunks(undefined, after.grain, edits)
+    withPackedChunks(undefined, edits)
     const mainMs = performance.now() - applyStarted
 
     // 1024² full disk, 2026-09-03: worker 177 ms, UI thread 0,5 ms. It was 94 ms while the worker

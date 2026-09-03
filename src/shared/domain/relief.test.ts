@@ -14,8 +14,24 @@ import {
   regionUploadBytes,
   unpackDeltas,
   withChunkDelta,
+  type ReliefSculpt,
 } from './relief'
 import { DEFAULT_RELIEF_ELEVATION, DEFAULT_RELIEF_ORIGIN, DEFAULT_RELIEF_SIZE } from './scene'
+
+function heightAt(
+  samples: { width: number; height: number; values: Float32Array },
+  sculpt: ReliefSculpt | undefined,
+  sx: number,
+  sz: number,
+): number {
+  return combinedAt(
+    samples,
+    RELIEF_CHUNK_TEXELS,
+    sculpt ? [{ enabled: true, alpha: 1, sculpt }] : [],
+    sx,
+    sz,
+  )
+}
 
 describe('relief chunk grain', () => {
   it('is 64 texels, the candidate whose full-chunk fallback is four times lighter', () => {
@@ -53,9 +69,9 @@ describe('relief chunk deltas', () => {
       delta: 3,
     })
 
-    expect(combinedAt(samples, sculpt, 2, 1)).toBeCloseTo(4)
+    expect(heightAt(samples, sculpt, 2, 1)).toBeCloseTo(4)
     expect(samples.values[1 * 8 + 2]).toBeCloseTo(1.0)
-    expect(combinedAt(samples, undefined, 2, 1)).toBeCloseTo(1.0)
+    expect(heightAt(samples, undefined, 2, 1)).toBeCloseTo(1.0)
   })
 
   it('packs a sparse overlay as base64, not a JSON array of floats', () => {
@@ -116,8 +132,8 @@ describe('raiseReliefDisk', () => {
       { x: seamX, z: extent.origin.z, radius: stepX * 2 },
       3,
     )
-    expect(combinedAt(samples, sculpt, 64, 0)).toBe(3)
-    expect(combinedAt(samples, sculpt, 0, 0)).toBe(0)
+    expect(heightAt(samples, sculpt, 64, 0)).toBe(3)
+    expect(heightAt(samples, sculpt, 0, 0)).toBe(0)
   })
 
   it('writes the same delta on both chunks that share the seam sample', () => {
@@ -132,7 +148,7 @@ describe('raiseReliefDisk', () => {
       { column: 1, row: 0 },
       { column: 0, row: 0 },
     ])
-    expect(combinedAt(samples, sculpt, 64, 0)).toBe(2)
+    expect(heightAt(samples, sculpt, 64, 0)).toBe(2)
     expect(sculpt.chunks).toHaveLength(2)
   })
 
@@ -162,8 +178,8 @@ describe('raiseReliefDisk', () => {
     it('raises the far corner by the amount asked for, not four times it', () => {
       const sculpt = raiseReliefDisk(wide, extent, undefined, { ...corner, radius: step }, 3)
 
-      expect(combinedAt(wide, sculpt, 128, 128)).toBe(3)
-      expect(combinedAt(wide, sculpt, 128, 127)).toBe(3)
+      expect(heightAt(wide, sculpt, 128, 128)).toBe(3)
+      expect(heightAt(wide, sculpt, 128, 127)).toBe(3)
     })
   })
 })

@@ -1,5 +1,5 @@
 import type { HeightmapSamples } from '@shared/domain/heightmap'
-import { combinedAt, worldY } from '@shared/domain/relief'
+import { reliefReader, worldY } from '@shared/domain/relief'
 import type { ReliefLayer } from '@shared/domain/scene'
 import type { ColliderShape } from '@game/physics/shape'
 
@@ -13,13 +13,11 @@ export function colliderFromRelief(
 ): ColliderShape | null {
   if (samples.width < 2 || samples.height < 2) return null
 
+  const read = reliefReader(samples, layer.grain, layer.edits)
   const heights = new Float32Array(samples.width * samples.height)
   for (let z = 0; z < samples.height; z++) {
     for (let x = 0; x < samples.width; x++) {
-      heights[z * samples.width + x] = worldY(
-        combinedAt(samples, layer.sculpt, x, z),
-        layer.elevation,
-      )
+      heights[z * samples.width + x] = worldY(read(x, z), layer.elevation)
     }
   }
 

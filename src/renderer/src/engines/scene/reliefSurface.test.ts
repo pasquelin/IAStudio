@@ -1,7 +1,18 @@
 import { BufferAttribute, Scene } from 'three'
 import { describe, expect, it } from 'vitest'
-import { combinedAt, raiseReliefDisk, withChunkDelta } from '@shared/domain/relief'
-import { DEFAULT_WORLD, reliefLayer, type ReliefLayer } from '@shared/domain/scene'
+import {
+  RELIEF_CHUNK_TEXELS,
+  combinedAt,
+  raiseReliefDisk,
+  withChunkDelta,
+  type ReliefSculpt,
+} from '@shared/domain/relief'
+import {
+  DEFAULT_WORLD,
+  reliefLayer,
+  terrainEditLayer,
+  type ReliefLayer,
+} from '@shared/domain/scene'
 import { createReliefSurface } from './reliefSurface'
 
 const WIDTH = 66
@@ -15,11 +26,14 @@ function samplesOf() {
   }
 }
 
-function layerOf(sculpt?: ReliefLayer['sculpt']): ReliefLayer {
-  return reliefLayer({ assetId: 'asset_height' }, sculpt ? { sculpt } : undefined)
+function layerOf(sculpt?: ReliefSculpt): ReliefLayer {
+  return reliefLayer(
+    { assetId: 'asset_height' },
+    { edits: sculpt ? [terrainEditLayer({ sculpt })] : [] },
+  )
 }
 
-function worldOf(sculpt?: ReliefLayer['sculpt']) {
+function worldOf(sculpt?: ReliefSculpt) {
   return { ...DEFAULT_WORLD, layers: [layerOf(sculpt)] }
 }
 
@@ -90,7 +104,13 @@ describe('relief surface chunks', () => {
     if (!(leftPos instanceof BufferAttribute) || !(rightPos instanceof BufferAttribute)) {
       throw new Error('seam chunks missing')
     }
-    const height = combinedAt(samples, sculpt, 64, 0)
+    const height = combinedAt(
+      samples,
+      RELIEF_CHUNK_TEXELS,
+      [{ enabled: true, alpha: 1, sculpt }],
+      64,
+      0,
+    )
     const leftY = leftPos.array[64 * 3 + 1]
     const rightY = rightPos.array[1]
     if (leftY === undefined || rightY === undefined) throw new Error('seam vertex missing')

@@ -14,6 +14,7 @@ export type ReliefSculptRequest = {
   width: number
   height: number
   extent: ReliefExtent
+  grain: number
   sculpt: ReliefSculpt | undefined
   operation: ReliefSculptOperation
 }

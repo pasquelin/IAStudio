@@ -12,6 +12,7 @@ import {
   DEFAULT_RELIEF_SIZE,
   DEFAULT_WORLD,
   reliefLayer,
+  terrainEditLayer,
 } from '@shared/domain/scene'
 import { sculptRelief } from './reliefCommands'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
@@ -71,11 +72,12 @@ function answer(fake: ReturnType<typeof fakeWorker>, request: ReliefSculptReques
     request.extent,
     request.sculpt,
     request.operation,
+    request.grain,
   )
   fake.reply({
     id: request.id,
     ok: true,
-    grain: after.grain,
+    grain: request.grain,
     chunks: changedChunks(request.sculpt, after),
   })
 }
@@ -125,7 +127,7 @@ describe('createReliefSculptor', () => {
 
     let state = sceneOf()
     let history = emptyHistory<SceneState>()
-    ;[state, history] = run(state, history, sculptRelief(0, edits1))
+    ;[state, history] = run(state, history, sculptRelief('terrain', 'sculpt', edits1))
     sculptor.note(sculptOf(state))
 
     const pendingSecond = sculptor.raiseDisk(second)
@@ -136,7 +138,7 @@ describe('createReliefSculptor', () => {
     if (!request2) throw new Error('second stroke was not sent')
     answer(fake, request2)
     const edits2 = await pendingSecond
-    if (edits2) state = run(state, history, sculptRelief(0, edits2))[0]
+    if (edits2) state = run(state, history, sculptRelief('terrain', 'sculpt', edits2))[0]
 
     expect(edits2).toBeNull()
     expect(sculptOf(state)).toBeUndefined()
@@ -148,14 +150,14 @@ function sceneOf(sculpt?: ReliefSculpt): SceneState {
     ...EMPTY_SCENE,
     world: {
       ...DEFAULT_WORLD,
-      layers: [reliefLayer({ assetId: 'asset_height' }, sculpt ? { sculpt } : undefined)],
+      layers: [reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ sculpt })] })],
     },
   }
 }
 
 function sculptOf(state: SceneState): ReliefSculpt | undefined {
   const layer = state.world.layers[0]
-  return layer?.kind === 'relief' ? layer.sculpt : undefined
+  return layer?.kind === 'relief' ? layer.edits[0]?.sculpt : undefined
 }
 
 function operationOf(stroke: ReturnType<typeof diskAt>): ReliefSculptOperation {

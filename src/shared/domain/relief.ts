@@ -4,7 +4,7 @@
  */
 import { bytesFromBase64, bytesToBase64 } from '../base64'
 import { clamp } from '../numeric'
-import { isRecord, readNumber, readString } from '../guards'
+import { isRecord, readString } from '../guards'
 import type { HeightmapSamples } from './heightmap'
 
 export const RELIEF_CHUNK_TEXELS = 64
@@ -82,8 +82,17 @@ export type ReliefChunkLayout = ReliefChunkKey & {
 export type PackedReliefChunk = ReliefChunkKey & { payload: string }
 
 export type ReliefSculpt = {
-  grain: number
   chunks: readonly PackedReliefChunk[]
+}
+
+/**
+ * One edit's contribution to a combined height. Identity (id, name, locked) lives on
+ * `TerrainEditLayer` — this is the blend the height functions read.
+ */
+export type ReliefOverlay = {
+  enabled: boolean
+  alpha: number
+  sculpt?: ReliefSculpt
 }
 
 export function chunkLayout(
@@ -147,8 +156,8 @@ export function withChunkDelta(
   samples: HeightmapSamples,
   sculpt: ReliefSculpt | undefined,
   at: ReliefChunkKey & { localX: number; localZ: number; delta: number },
+  grain = RELIEF_CHUNK_TEXELS,
 ): ReliefSculpt {
-  const grain = sculpt?.grain ?? RELIEF_CHUNK_TEXELS
   const layout = chunkLayout(at.column, at.row, samples.width, samples.height, grain)
   const held = sculpt?.chunks.find(chunk => chunk.column === at.column && chunk.row === at.row)
   const deltas = held
@@ -156,59 +165,82 @@ export function withChunkDelta(
     : new Float32Array(layout.width * layout.height)
   const index = at.localZ * layout.width + at.localX
   deltas[index] = (deltas[index] ?? 0) + at.delta
-  return replaceChunk(sculpt, grain, at, packDeltas(deltas))
+  return replaceChunk(sculpt, at, packDeltas(deltas))
 }
 
 /**
- * Base plus sculpt at one sample. 🛑 A loop over samples wants `reliefReader` instead: this
- * decodes the whole chunk it lands in, every call.
+ * Base plus the enabled overlays at one sample. 🛑 A loop over samples wants `reliefReader`
+ * instead: this decodes the whole chunk it lands in, every call.
  */
 export function combinedAt(
   samples: HeightmapSamples,
-  sculpt: ReliefSculpt | undefined,
+  grain: number,
+  overlays: readonly ReliefOverlay[],
   sx: number,
   sz: number,
 ): number {
-  return reliefReader(samples, sculpt)(sx, sz)
+  return reliefReader(samples, grain, overlays)(sx, sz)
 }
 
 export type ReliefRead = (sx: number, sz: number) => number
 
 /**
- * Reads base + sculpt over many samples, each chunk decoded once and held. A sculpt stroke
- * rebuilds 4 225 vertices from one chunk, five reads apiece — `reliefReadCost.test.ts`.
+ * Reads base + Σ(enabled ? alpha * delta) over many samples, each overlay's chunk decoded once
+ * and held. A sculpt stroke rebuilds 4 225 vertices from one chunk, five reads apiece —
+ * `reliefReadCost.test.ts`.
  */
 export function reliefReader(
   samples: HeightmapSamples,
-  sculpt: ReliefSculpt | undefined,
+  grain: number,
+  overlays: readonly ReliefOverlay[],
 ): ReliefRead {
-  if (!sculpt) return (sx, sz) => samples.values[sz * samples.width + sx] ?? 0
+  const active = overlays.filter(edit => edit.enabled && edit.alpha !== 0 && edit.sculpt)
+  if (active.length === 0) return (sx, sz) => samples.values[sz * samples.width + sx] ?? 0
+
+  const readers = active.map(edit => ({
+    alpha: edit.alpha,
+    deltaAt: overlayDeltaReader(samples, grain, edit.sculpt),
+  }))
+  return (sx, sz) => {
+    const base = samples.values[sz * samples.width + sx] ?? 0
+    let added = 0
+    for (const one of readers) added += one.alpha * one.deltaAt(sx, sz)
+    return base + added
+  }
+}
+
+function overlayDeltaReader(
+  samples: HeightmapSamples,
+  grain: number,
+  sculpt: ReliefSculpt | undefined,
+): (sx: number, sz: number) => number {
+  if (!sculpt) return () => 0
   // Decoded on first touch, not up front: one chunk's rebuild reads its own payload and the
   // 1-ring of its neighbours, never the whole sculpt — which a 4K map cuts into 4 096 chunks.
   const live = new Map<string, LiveChunk | null>()
   return (sx, sz) => {
-    const base = samples.values[sz * samples.width + sx] ?? 0
-    const column = chunkIndexAt(sx, samples.width, sculpt.grain)
-    const row = chunkIndexAt(sz, samples.height, sculpt.grain)
+    const column = chunkIndexAt(sx, samples.width, grain)
+    const row = chunkIndexAt(sz, samples.height, grain)
     const key = `${column}:${row}`
     let held = live.get(key)
     if (held === undefined) {
-      held = decodedChunk(samples, sculpt, { column, row })
+      held = decodedChunk(samples, sculpt, grain, { column, row })
       live.set(key, held)
     }
-    if (!held) return base
-    return base + (held.deltas[(sz - held.sampleZ) * held.width + (sx - held.sampleX)] ?? 0)
+    if (!held) return 0
+    return held.deltas[(sz - held.sampleZ) * held.width + (sx - held.sampleX)] ?? 0
   }
 }
 
 function decodedChunk(
   samples: HeightmapSamples,
   sculpt: ReliefSculpt,
+  grain: number,
   key: ReliefChunkKey,
 ): LiveChunk | null {
   const packed = sculpt.chunks.find(one => one.column === key.column && one.row === key.row)
   if (!packed) return null
-  const layout = chunkLayout(key.column, key.row, samples.width, samples.height, sculpt.grain)
+  const layout = chunkLayout(key.column, key.row, samples.width, samples.height, grain)
   return { ...layout, deltas: unpackDeltas(packed.payload, layout.width * layout.height) }
 }
 
@@ -243,11 +275,10 @@ function payloadsOf(sculpt: ReliefSculpt | undefined): Map<string, PackedReliefC
 
 export function withPackedChunks(
   sculpt: ReliefSculpt | undefined,
-  grain: number,
   edits: readonly PackedReliefChunk[],
 ): ReliefSculpt {
-  let next = sculpt ?? { grain, chunks: [] }
-  for (const edit of edits) next = replaceChunk(next, grain, edit, edit.payload)
+  let next = sculpt ?? { chunks: [] }
+  for (const edit of edits) next = replaceChunk(next, edit, edit.payload)
   return next
 }
 
@@ -280,10 +311,11 @@ export function applyReliefSculpt(
   extent: ReliefExtent,
   sculpt: ReliefSculpt | undefined,
   operation: ReliefSculptOperation,
+  grain = RELIEF_CHUNK_TEXELS,
 ): ReliefSculpt {
   switch (operation.kind) {
     case 'raiseDisk':
-      return raiseReliefDisk(samples, extent, sculpt, operation.disk, operation.amount)
+      return raiseReliefDisk(samples, extent, sculpt, operation.disk, operation.amount, grain)
   }
 }
 
@@ -293,8 +325,8 @@ export function raiseReliefDisk(
   sculpt: ReliefSculpt | undefined,
   disk: { x: number; z: number; radius: number },
   amount: number,
+  grain = RELIEF_CHUNK_TEXELS,
 ): ReliefSculpt {
-  const grain = sculpt?.grain ?? RELIEF_CHUNK_TEXELS
   const live = liveChunksOf(samples, sculpt, grain)
   const span = diskSamples(samples, extent, disk)
   const r2 = disk.radius * disk.radius
@@ -306,15 +338,18 @@ export function raiseReliefDisk(
       raiseSample(live, samples, grain, sx, sz, amount)
     }
   }
-  return sculptOfLive(grain, live)
+  return sculptOfLive(live)
 }
 
 export function readReliefSculpt(value: unknown): ReliefSculpt | undefined {
-  if (!isRecord(value)) return undefined
-  const grain = readNumber(value, 'grain', RELIEF_CHUNK_TEXELS)
-  if (!Number.isInteger(grain) || grain < 1 || !Array.isArray(value.chunks)) return undefined
-  const chunks = value.chunks.flatMap(readPackedChunk)
-  return { grain, chunks }
+  if (!isRecord(value) || !Array.isArray(value.chunks)) return undefined
+  return { chunks: value.chunks.flatMap(readPackedChunk) }
+}
+
+/** Grain a payload names, or the fallback. Integer ≥ 1 — a 0 or a float is not a texel count. */
+export function readReliefGrain(value: unknown, fallback = RELIEF_CHUNK_TEXELS): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) return fallback
+  return value
 }
 
 function readPackedChunk(value: unknown): readonly PackedReliefChunk[] {
@@ -387,13 +422,13 @@ function emptyLive(key: ReliefChunkKey, samples: HeightmapSamples, grain: number
   return { ...layout, deltas: new Float32Array(layout.width * layout.height) }
 }
 
-function sculptOfLive(grain: number, live: Map<string, LiveChunk>): ReliefSculpt {
+function sculptOfLive(live: Map<string, LiveChunk>): ReliefSculpt {
   const chunks: PackedReliefChunk[] = []
   for (const chunk of live.values()) {
     const payload = packDeltas(chunk.deltas)
     if (payload !== '') chunks.push({ column: chunk.column, row: chunk.row, payload })
   }
-  return { grain, chunks }
+  return { chunks }
 }
 
 function diskSamples(
@@ -419,7 +454,6 @@ function clampIndex(at: number, samples: number): number {
 
 function replaceChunk(
   sculpt: ReliefSculpt | undefined,
-  grain: number,
   at: ReliefChunkKey,
   payload: string,
 ): ReliefSculpt {
@@ -427,7 +461,6 @@ function replaceChunk(
     chunk => chunk.column !== at.column || chunk.row !== at.row,
   )
   return {
-    grain,
     chunks: payload === '' ? others : [...others, { column: at.column, row: at.row, payload }],
   }
 }

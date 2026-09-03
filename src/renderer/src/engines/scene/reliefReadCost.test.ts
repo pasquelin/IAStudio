@@ -1,12 +1,18 @@
 import { Scene } from 'three'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { raiseReliefDisk, reliefReader, type ReliefSculpt } from '@shared/domain/relief'
+import {
+  RELIEF_CHUNK_TEXELS,
+  raiseReliefDisk,
+  reliefReader,
+  type ReliefSculpt,
+} from '@shared/domain/relief'
 import {
   DEFAULT_RELIEF_ELEVATION,
   DEFAULT_RELIEF_ORIGIN,
   DEFAULT_RELIEF_SIZE,
   DEFAULT_WORLD,
   reliefLayer,
+  terrainEditLayer,
 } from '@shared/domain/scene'
 import { createReliefSurface } from './reliefSurface'
 
@@ -39,7 +45,9 @@ describe('what one relief rebuild costs to decode', () => {
     const sculpt = sculptOf()
     const decode = vi.spyOn(globalThis, 'atob')
 
-    const read = reliefReader(samplesOf(), sculpt)
+    const read = reliefReader(samplesOf(), RELIEF_CHUNK_TEXELS, [
+      { enabled: true, alpha: 1, sculpt },
+    ])
     for (let sz = 0; sz < HEIGHT; sz++) for (let sx = 0; sx < WIDTH; sx++) read(sx, sz)
 
     expect(decode.mock.calls.length).toBe(sculpt.chunks.length)
@@ -49,7 +57,7 @@ describe('what one relief rebuild costs to decode', () => {
     const sculpt = sculptOf()
     const decode = vi.spyOn(globalThis, 'atob')
 
-    reliefReader(samplesOf(), sculpt)
+    reliefReader(samplesOf(), RELIEF_CHUNK_TEXELS, [{ enabled: true, alpha: 1, sculpt }])
 
     expect(decode).not.toHaveBeenCalled()
   })
@@ -60,7 +68,12 @@ describe('what one relief rebuild costs to decode', () => {
 
     const surface = createReliefSurface(new Scene())
     surface.sync(
-      { ...DEFAULT_WORLD, layers: [reliefLayer({ assetId: 'asset_height' }, { sculpt })] },
+      {
+        ...DEFAULT_WORLD,
+        layers: [
+          reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ sculpt })] }),
+        ],
+      },
       samplesOf(),
     )
 

@@ -1,5 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { applyReliefSculpt, changedChunks, type ReliefSculpt } from '@shared/domain/relief'
+import {
+  RELIEF_CHUNK_TEXELS,
+  applyReliefSculpt,
+  changedChunks,
+  type ReliefSculpt,
+} from '@shared/domain/relief'
 import {
   DEFAULT_RELIEF_ELEVATION,
   DEFAULT_RELIEF_ORIGIN,
@@ -39,6 +44,7 @@ function ask(id: number, sculpt: ReliefSculpt | undefined = undefined): void {
     width: samples.width,
     height: samples.height,
     extent,
+    grain: RELIEF_CHUNK_TEXELS,
     sculpt,
     operation: { kind: 'raiseDisk', disk, amount: 3 },
   }
@@ -46,7 +52,7 @@ function ask(id: number, sculpt: ReliefSculpt | undefined = undefined): void {
 }
 
 function packedOf(response: Extract<ReliefSculptResponse, { ok: true }>): ReliefSculpt {
-  return { grain: response.grain, chunks: response.chunks }
+  return { chunks: response.chunks }
 }
 
 describe('the relief sculpt worker', () => {

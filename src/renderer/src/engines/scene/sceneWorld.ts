@@ -12,7 +12,9 @@ import {
   DEFAULT_GROUND,
   DEFAULT_LINEAR_FOG,
   DEFAULT_PLAY,
+  DEFAULT_EDIT_NAME,
   DEFAULT_RELIEF_ELEVATION,
+  DEFAULT_RELIEF_NAME,
   DEFAULT_RELIEF_ORIGIN,
   DEFAULT_RELIEF_SIZE,
   DEFAULT_WORLD,
@@ -36,10 +38,14 @@ import {
   type ReliefLayer,
   type ScenePlay,
   type SceneWorld,
+  type TerrainEditLayer,
+  type TerrainLocks,
   type WorldLayer,
+  terrainEditLayer,
+  UNLOCKED_TERRAIN,
 } from '@shared/domain/scene'
 import { readStack } from '@shared/domain/postProcessing'
-import { readReliefSculpt } from '@shared/domain/relief'
+import { readReliefGrain, readReliefSculpt } from '@shared/domain/relief'
 import { isRecord, oneOf, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 import { newId } from '@/helpers/ids'
 import { bound, type NumericBounds } from '@shared/numeric'
@@ -144,18 +150,61 @@ function readWorldLayer(value: unknown): readonly WorldLayer[] {
   if (!isRecord(value) || value.kind !== 'relief' || !isRecord(value.heightmap)) return []
   const assetId = value.heightmap.assetId
   if (typeof assetId !== 'string' || assetId === '') return []
-  const sculpt = readReliefSculpt(value.sculpt)
+  const legacySculpt = isRecord(value.sculpt) ? value.sculpt : undefined
   return [
     reliefLayer(
       { assetId },
       {
+        id: readString(value, 'id', '') || newId(),
+        name: readString(value, 'name', '') || DEFAULT_RELIEF_NAME,
+        enabled: readBoolean(value, 'enabled', true),
+        locked: readTerrainLocks(value.locked),
         origin: readReliefOrigin(value.origin),
         size: readReliefSize(value.size),
         elevation: readReliefElevation(value.elevation),
-        ...(sculpt ? { sculpt } : {}),
+        grain: readReliefGrain('grain' in value ? value.grain : legacySculpt?.grain),
+        edits: Array.isArray(value.edits)
+          ? value.edits.flatMap(readTerrainEditLayer)
+          : [migratedSculptEdit(legacySculpt)],
       },
     ),
   ]
+}
+
+/**
+ * A document written before `edits` existed: one implicit overlay holding the old `sculpt`
+ * chunks, named "Sculpt" so the first stroke still has a layer to land on.
+ */
+function migratedSculptEdit(legacy: Record<string, unknown> | undefined): TerrainEditLayer {
+  const sculpt = legacy ? readReliefSculpt(legacy) : undefined
+  return terrainEditLayer({
+    id: newId(),
+    name: DEFAULT_EDIT_NAME,
+    sculpt,
+  })
+}
+
+function readTerrainEditLayer(value: unknown): readonly TerrainEditLayer[] {
+  if (!isRecord(value)) return []
+  const sculpt = readReliefSculpt(value.sculpt)
+  return [
+    terrainEditLayer({
+      id: readString(value, 'id', '') || newId(),
+      name: readString(value, 'name', '') || DEFAULT_EDIT_NAME,
+      enabled: readBoolean(value, 'enabled', true),
+      locked: readBoolean(value, 'locked', false),
+      alpha: readNumber(value, 'alpha', 1),
+      sculpt,
+    }),
+  ]
+}
+
+function readTerrainLocks(value: unknown): TerrainLocks {
+  if (!isRecord(value)) return UNLOCKED_TERRAIN
+  return {
+    sculpt: readBoolean(value, 'sculpt', false),
+    placement: readBoolean(value, 'placement', false),
+  }
 }
 
 function readReliefOrigin(value: unknown): ReliefLayer['origin'] {
