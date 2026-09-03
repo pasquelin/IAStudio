@@ -2,7 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { HISTORY_LIMIT, emptyHistory, run, undo } from '../core/history'
 import { changedChunks, withChunkDelta, type ReliefSculpt } from '@shared/domain/relief'
 import { DEFAULT_WORLD, reliefLayer, terrainEditLayer } from '@shared/domain/scene'
-import { sculptRelief } from './reliefCommands'
+import {
+  addTerrain,
+  addTerrainEdit,
+  removeTerrain,
+  removeTerrainEdit,
+  renameTerrain,
+  renameTerrainEdit,
+  reorderTerrainEdits,
+  reorderTerrains,
+  sculptRelief,
+  setTerrainEditAlpha,
+  setTerrainEditEnabled,
+  setTerrainEditLocked,
+  setTerrainEnabled,
+  setTerrainLocked,
+} from './reliefCommands'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
 const samples = {
@@ -87,4 +102,146 @@ describe('sculptRelief', () => {
     expect(history.past).toHaveLength(HISTORY_LIMIT)
     expect(history.dropped).not.toBeNull()
   })
+
+  it('refuses a stroke on a sculpt-locked terrain, and on a locked edit', () => {
+    const stroke = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 0,
+      localZ: 0,
+      delta: 1,
+    })
+    const chunks = changedChunks(undefined, stroke)
+    const lockedTerrain = {
+      ...sceneOf(),
+      world: {
+        ...DEFAULT_WORLD,
+        layers: [
+          reliefLayer(
+            { assetId: 'asset_height' },
+            {
+              locked: { sculpt: true, placement: false },
+              edits: [terrainEditLayer()],
+            },
+          ),
+        ],
+      },
+    }
+    const lockedEdit = {
+      ...sceneOf(),
+      world: {
+        ...DEFAULT_WORLD,
+        layers: [
+          reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ locked: true })] }),
+        ],
+      },
+    }
+
+    expect(sculptRelief('terrain', 'sculpt', chunks).apply(lockedTerrain)).toBe(lockedTerrain)
+    expect(sculptRelief('terrain', 'sculpt', chunks).apply(lockedEdit)).toBe(lockedEdit)
+  })
 })
+
+describe('terrain and edit-layer commands', () => {
+  const empty = { ...EMPTY_SCENE, world: { ...DEFAULT_WORLD, layers: [] } }
+
+  it('adds a terrain that names the heightmap, and takes it back', () => {
+    const after = addTerrain({ assetId: 'asset_height' }, 'island').apply(empty)
+    expect(after.world.layers).toEqual([reliefLayer({ assetId: 'asset_height' }, { id: 'island' })])
+    expect(removeTerrain('island').apply(after).world.layers).toEqual([])
+  })
+
+  it('renames, reorders, enables and padlocks a terrain', () => {
+    const two = {
+      ...empty,
+      world: {
+        ...DEFAULT_WORLD,
+        layers: [
+          reliefLayer({ assetId: 'a' }, { id: 'a', name: 'A' }),
+          reliefLayer({ assetId: 'b' }, { id: 'b', name: 'B' }),
+        ],
+      },
+    }
+    expect(renameTerrain('a', 'Isle').apply(two).world.layers[0]?.name).toBe('Isle')
+    expect(
+      reorderTerrains(['b', 'a'])
+        .apply(two)
+        .world.layers.map(one => one.id),
+    ).toEqual(['b', 'a'])
+    expect(setTerrainEnabled('a', false).apply(two).world.layers[0]?.enabled).toBe(false)
+    expect(
+      setTerrainLocked('a', { sculpt: true, placement: false }).apply(two).world.layers[0],
+    ).toMatchObject({ locked: { sculpt: true, placement: false } })
+  })
+
+  it('adds an empty edit, then names, reorders, enables, padlocks and weights it', () => {
+    const start = sceneOf()
+    const added = addTerrainEdit('terrain', 'hills').apply(start)
+    const layer = added.world.layers[0]
+    if (!layer || layer.kind !== 'relief') throw new Error('expected a relief')
+    expect(layer.edits.map(one => one.id)).toEqual(['sculpt', 'hills'])
+    expect(layer.edits[1]).toEqual(terrainEditLayer({ id: 'hills' }))
+
+    const renamed = renameTerrainEdit('terrain', 'hills', 'Hills').apply(added)
+    expect(reliefEdits(renamed)[1]?.name).toBe('Hills')
+    expect(
+      reorderTerrainEdits('terrain', ['hills', 'sculpt']).apply(added).world.layers[0],
+    ).toMatchObject({ edits: [{ id: 'hills' }, { id: 'sculpt' }] })
+    expect(setTerrainEditEnabled('terrain', 'hills', false).apply(added)).toMatchObject({
+      world: { layers: [{ edits: [{ id: 'sculpt' }, { id: 'hills', enabled: false }] }] },
+    })
+    expect(setTerrainEditLocked('terrain', 'hills', true).apply(added)).toMatchObject({
+      world: { layers: [{ edits: [{ id: 'sculpt' }, { id: 'hills', locked: true }] }] },
+    })
+    expect(setTerrainEditAlpha('terrain', 'hills', -0.5).apply(added)).toMatchObject({
+      world: { layers: [{ edits: [{ id: 'sculpt' }, { id: 'hills', alpha: -0.5 }] }] },
+    })
+    expect(removeTerrainEdit('terrain', 'hills').apply(added).world.layers[0]).toMatchObject({
+      edits: [{ id: 'sculpt' }],
+    })
+  })
+
+  it('refuses to edit or remove a locked edit', () => {
+    const locked = {
+      ...sceneOf(),
+      world: {
+        ...DEFAULT_WORLD,
+        layers: [
+          reliefLayer(
+            { assetId: 'asset_height' },
+            {
+              edits: [terrainEditLayer({ id: 'a', locked: true }), terrainEditLayer({ id: 'b' })],
+            },
+          ),
+        ],
+      },
+    }
+    expect(removeTerrainEdit('terrain', 'a').apply(locked)).toBe(locked)
+    expect(renameTerrainEdit('terrain', 'a', 'Hills').apply(locked)).toBe(locked)
+    expect(setTerrainEditAlpha('terrain', 'a', 0.5).apply(locked)).toBe(locked)
+    expect(reorderTerrainEdits('terrain', ['b', 'a']).apply(locked)).toBe(locked)
+  })
+
+  it('still switches a locked edit off, and still writes the padlock itself', () => {
+    const locked = {
+      ...sceneOf(),
+      world: {
+        ...DEFAULT_WORLD,
+        layers: [
+          reliefLayer({ assetId: 'asset_height' }, { edits: [terrainEditLayer({ locked: true })] }),
+        ],
+      },
+    }
+    expect(setTerrainEditEnabled('terrain', 'sculpt', false).apply(locked)).toMatchObject({
+      world: { layers: [{ edits: [{ locked: true, enabled: false }] }] },
+    })
+    expect(
+      setTerrainEditLocked('terrain', 'sculpt', false).apply(locked).world.layers[0],
+    ).toMatchObject({ edits: [{ locked: false }] })
+  })
+})
+
+function reliefEdits(state: SceneState) {
+  const layer = state.world.layers[0]
+  return layer?.kind === 'relief' ? layer.edits : []
+}
