@@ -299,12 +299,7 @@ export type Grouped = {
 /**
  * What both strategies share of a rebuild: which meshes are drawn at all, what a group is keyed
  * by, which groups fall under the floor — those go straight back to the camera's layer — and
- * which sources may leave the walk of the scene.
- *
- * The shadow flags and the tool mark belong to every key: a group carries ONE of each, and the
- * shadow camera reads only the layer the sources have left, so a group that mixed them would
- * give its own answer to every node in it. The mark is louder still — a group draws the first
- * member's own material, so one negated brick among sixty-four would turn the whole wall red.
+ * which sources may leave the walk of the scene. The key comes from `keyOf` whole — see `flagsOf`.
  */
 export function sweep(
   nodes: readonly SceneNode[],
@@ -331,9 +326,7 @@ export function sweep(
       continue
     }
 
-    const key = `${keyOf(node, mesh)}|${mesh.castShadow ? 1 : 0}${mesh.receiveShadow ? 1 : 0}${
-      node.negative === true ? 1 : 0
-    }`
+    const key = keyOf(node, mesh)
     const held = groups.get(key)
     if (held) {
       held.ids.push(node.id)
@@ -383,6 +376,35 @@ export function spellingOf(spell: (node: SceneNode) => string): (node: SceneNode
 /** Everything a draw call would have to change: the shape, and what it is painted with. */
 export const shapeAndPaint = (): ((node: SceneNode) => string) =>
   spellingOf(node => (node.type === 'mesh' ? stableKey([node.geometry, node.material]) : ''))
+
+/**
+ * The three things a draw call cannot share, as one small number. A group carries ONE of each, so
+ * one that mixed them would answer for every node in it — and one negated brick among sixty-four
+ * would turn the whole wall red, a group drawing the first member's material.
+ */
+export const flagsOf = (node: SceneNode, mesh: Mesh): number =>
+  (mesh.castShadow ? 4 : 0) +
+  (mesh.receiveShadow ? 2 : 0) +
+  (node.type === 'mesh' && node.negative === true ? 1 : 0)
+
+/**
+ * A key held on the node, its flags compared rather than respelled — the sweep composed one string
+ * per body per pass, 5 000 on a rebuild of 5 000. Only for a `spell` reading nothing off the mesh:
+ * what is held is keyed by the node, so a mesh that changed alone would keep a stale key.
+ */
+export function withFlags(
+  spell: (node: SceneNode) => string,
+): (node: SceneNode, mesh: Mesh) => string {
+  const held = new WeakMap<SceneNode, { flags: number; key: string }>()
+  return (node, mesh) => {
+    const flags = flagsOf(node, mesh)
+    const known = held.get(node)
+    if (known?.flags === flags) return known.key
+    const key = `${spell(node)}|${flags}`
+    held.set(node, { flags, key })
+    return key
+  }
+}
 
 /** Where a node's matrix sits, so a move can be written without walking the scene again. */
 export type Placed = Map<string, { instance: InstancedMesh; slot: number }>

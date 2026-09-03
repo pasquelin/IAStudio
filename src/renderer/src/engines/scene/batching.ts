@@ -12,6 +12,7 @@ import { byCodeUnit } from '@shared/text'
 import {
   DRAWN_TRIANGLES,
   heldOutOfDraw,
+  flagsOf,
   spellingOf,
   sweep,
   trianglesOf,
@@ -49,8 +50,9 @@ export function createBatchedGroups(
   const paintOf = spellingOf(node => (node.type === 'mesh' ? stableKey(node.material) : ''))
   // The buffer LAYOUT is part of the key: three refuses to put an unindexed shape beside an
   // indexed one, or two attribute sets in one buffer.
+  // Spelled here rather than held by `withFlags`: this key reads the MESH, not the node alone.
   const keyOf = (node: SceneNode, mesh: Mesh): string =>
-    `${paintOf(node)}|${layoutOf(mesh.geometry)}`
+    `${paintOf(node)}|${layoutOf(mesh.geometry)}|${flagsOf(node, mesh)}`
 
   const clear = (): void => {
     for (const lot of drawn) {
