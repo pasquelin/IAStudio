@@ -1,6 +1,11 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'electron-vite'
+import {
+  defineConfig,
+  type MainViteConfig,
+  type PreloadViteConfig,
+  type RendererViteConfig,
+} from 'electron-vite'
 import type { Plugin } from 'vite'
 import { execSync } from 'node:child_process'
 import { basename, resolve } from 'node:path'
@@ -58,8 +63,8 @@ function commitHash(): string {
  *
  * `serve` is the `dev` command; `build` and `preview` run as `build`.
  */
-export default defineConfig(({ command }) => ({
-  main: {
+function main(command: string): MainViteConfig {
+  return {
     resolve: { alias: { '@shared': partage, '@main': principal } },
     define: {
       __COMMIT_HASH__: JSON.stringify(commitHash()),
@@ -85,34 +90,38 @@ export default defineConfig(({ command }) => ({
         output: { entryFileNames: '[name].js', chunkFileNames: '[name]-[hash].js' },
       },
     },
+  }
+}
+
+const preload: PreloadViteConfig = {
+  resolve: { alias: { '@shared': partage } },
+  build: {
+    externalizeDeps: true,
+    rollupOptions: {
+      input: resolve('src/preload/index.ts'),
+      // A sandboxed preload MUST be CommonJS: Electron refuses to load an ESM module, and
+      // the `window.studio` bridge is then never installed — silently.
+      output: { format: 'cjs', entryFileNames: 'index.cjs' },
+    },
   },
-  preload: {
-    resolve: { alias: { '@shared': partage } },
-    build: {
-      externalizeDeps: true,
-      rollupOptions: {
-        input: resolve('src/preload/index.ts'),
-        // A sandboxed preload MUST be CommonJS: Electron refuses to load an ESM module, and
-        // the `window.studio` bridge is then never installed — silently.
-        output: { format: 'cjs', entryFileNames: 'index.cjs' },
+}
+
+const renderer: RendererViteConfig = {
+  root: resolve('src/renderer'),
+  plugins: [react(), tailwindcss(), strippedDecoderUrls()],
+  // `@game` here as well as in `tsconfig.web.json`: a path the compiler resolves and the
+  // bundler does not fails at RUNTIME with a green typecheck.
+  resolve: {
+    alias: { '@': resolve('src/renderer/src'), '@game': resolve('src/game'), '@shared': partage },
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        index: resolve('src/renderer/index.html'),
+        splash: resolve('src/renderer/splash.html'),
       },
     },
   },
-  renderer: {
-    root: resolve('src/renderer'),
-    plugins: [react(), tailwindcss(), strippedDecoderUrls()],
-    // `@game` here as well as in `tsconfig.web.json`: a path the compiler resolves and the
-    // bundler does not fails at RUNTIME with a green typecheck.
-    resolve: {
-      alias: { '@': resolve('src/renderer/src'), '@game': resolve('src/game'), '@shared': partage },
-    },
-    build: {
-      rollupOptions: {
-        input: {
-          index: resolve('src/renderer/index.html'),
-          splash: resolve('src/renderer/splash.html'),
-        },
-      },
-    },
-  },
-}))
+}
+
+export default defineConfig(({ command }) => ({ main: main(command), preload, renderer }))
