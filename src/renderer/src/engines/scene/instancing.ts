@@ -37,7 +37,7 @@ export function createInstancedGroups(
 ): InstancedGroups {
   const drawn: InstancedMesh[] = []
   const placed: Placed = new Map()
-  const idsByInstance = new Map<InstancedMesh, string[]>()
+  const idsByInstance = new WeakMap<InstancedMesh, string[]>()
   const sources = heldOutOfDraw()
   const keyOf = withFlags(shapeAndPaint())
 
@@ -48,7 +48,6 @@ export function createInstancedGroups(
     }
     drawn.length = 0
     placed.clear()
-    idsByInstance.clear()
   }
 
   return {
@@ -103,7 +102,7 @@ export function createInstancedGroups(
 
     drawn: () => drawn,
 
-    pickable: () => [],
+    pickable: () => drawn,
 
     nodeIdOf: hit => {
       if (!(hit.object instanceof InstancedMesh) || hit.instanceId === undefined) return null

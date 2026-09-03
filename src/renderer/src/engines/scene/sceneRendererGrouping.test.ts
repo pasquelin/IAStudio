@@ -66,6 +66,7 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     // too and names itself. Left out of the targets, the tree built for the lot serves nobody.
     expect(body('nodeAt')).toContain('this.instances.pickable()')
     expect(body('nodeAt')).toContain('this.instances.nodeIdOf(hit) ??')
+    expect(body('nodeAt')).toContain('!this.instances.holdsSource(object)')
   })
 
   it('tells the zone where the camera stands before the pane it is about to draw', () => {

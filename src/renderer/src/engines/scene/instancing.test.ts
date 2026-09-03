@@ -247,7 +247,7 @@ describe('picking a body through the instance that draws it', () => {
     scene.updateMatrixWorld(true)
     const raycaster = new Raycaster(new Vector3(5, 10, 0), new Vector3(0, -1, 0))
 
-    const instance = instancesIn(scene)[0]
+    const instance = groups.pickable()[0]
     if (!instance) throw new Error('nothing was instanced')
     const hit = raycaster.intersectObject(instance, false)[0]
 
@@ -260,7 +260,7 @@ describe('picking a body through the instance that draws it', () => {
     const groups = createInstancedGroups(scene)
     const { nodes, objects } = alike(WORTH_INSTANCING)
     groups.rebuild(nodes, id => objects.get(id))
-    const instance = instancesIn(scene)[0]
+    const instance = groups.pickable()[0]
     if (!instance) throw new Error('nothing was instanced')
 
     expect(
