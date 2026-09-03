@@ -2246,6 +2246,22 @@ describe('closing a document', () => {
     expect(useCode.getState().files[script]).toBeUndefined()
   })
 
+  /** 🛑 The same defect one kind further: `modelOf` read the asset off the emptied map too, so a
+   * project change left the skeleton and its workshop standing for the session. */
+  it('forgets the skeleton and workshop of a character a project change dropped', async () => {
+    installFakeBridge({})
+    installCharacterDocument('doc-hero', 'asset-hero')
+    seedCharacter('asset-hero', { origin: 'local', bones: [BONE] }, {})
+    sceneStore.use.getState().replace(workshopIdOf('asset-hero'), createDefaultScene())
+
+    installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
+
+    await expect(refreshDocuments()).resolves.toBe(true)
+
+    expect(characterStore.hasState(useCharacters.getState(), 'asset-hero')).toBe(false)
+    expect(sceneStore.hasState(useScenes.getState(), workshopIdOf('asset-hero'))).toBe(false)
+  })
+
   it('leaves the flat view of a document it did not close alone', async () => {
     installFakeBridge({})
     const closing = await useDocuments.getState().create('materials')

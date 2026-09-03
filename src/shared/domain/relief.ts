@@ -331,10 +331,20 @@ function chunkIndexAt(sample: number, samples: number, grain: number): number {
   return Math.min(Math.floor(sample / grain), chunkCountAlong(samples, grain) - 1)
 }
 
+/**
+ * A sample on a chunk border belongs to BOTH, so a stroke writes it twice — once per chunk.
+ *
+ * 🛑 The two coincide at the far edge: `chunkIndexAt` clamps to the last chunk, which is the very
+ * one `sample / grain - 1` names when `(samples - 1) % grain === 0` — every 2ⁿ+1 heightmap. Handed
+ * back twice, `raiseSample` added the amount twice to one chunk: a ridge along the far edge and a
+ * spike four times too high in the corner.
+ */
 function axisHolding(sample: number, samples: number, grain: number): number[] {
   const primary = chunkIndexAt(sample, samples, grain)
-  if (sample > 0 && sample % grain === 0) return [primary, sample / grain - 1]
-  return [primary]
+  if (sample === 0 || sample % grain !== 0) return [primary]
+
+  const before = sample / grain - 1
+  return before === primary ? [primary] : [primary, before]
 }
 
 type LiveChunk = ReliefChunkLayout & { deltas: Float32Array }

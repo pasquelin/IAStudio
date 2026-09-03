@@ -142,4 +142,28 @@ describe('raiseReliefDisk', () => {
       applyReliefSculpt(samples, extent, undefined, { kind: 'raiseDisk', disk, amount: 3 }),
     ).toEqual(raiseReliefDisk(samples, extent, undefined, disk, 3))
   })
+
+  /**
+   * 🛑 A map of 2ⁿ+1 samples, which is what every classic heightmap is. Its last sample sits on a
+   * border whose two chunks are the SAME one, the index being clamped to the last — so the amount
+   * was added twice down the far edge and four times in the corner.
+   */
+  describe('at the far edge of a 129-sample map', () => {
+    const wide = { width: 129, height: 129, values: new Float32Array(129 * 129) }
+    const step = extent.size.x / (wide.width - 1)
+    const corner = { x: extent.origin.x + 128 * step, z: extent.origin.z + 128 * step }
+
+    it('names the last chunk once, not twice', () => {
+      expect(chunksHoldingSample(128, 0, 129, 129, RELIEF_CHUNK_TEXELS)).toEqual([
+        { column: 1, row: 0 },
+      ])
+    })
+
+    it('raises the far corner by the amount asked for, not four times it', () => {
+      const sculpt = raiseReliefDisk(wide, extent, undefined, { ...corner, radius: step }, 3)
+
+      expect(combinedAt(wide, sculpt, 128, 128)).toBe(3)
+      expect(combinedAt(wide, sculpt, 128, 127)).toBe(3)
+    })
+  })
 })
