@@ -43,7 +43,13 @@ export function exportedSceneNamed(game: ExportedGame, named: string): ExportedS
 }
 
 /** One scene as it is handed over: its identity, and the glTF it is. */
-export type SceneToExport = { id: string; title: string; content: string }
+export type SceneToExport = {
+  id: string
+  title: string
+  content: string
+  /** Assets the exported runtime reaches; absent keeps compatibility with older callers. */
+  assetIds?: readonly string[]
+}
 
 /** One script, already JavaScript — the studio transpiles, the sandbox never sees TypeScript. */
 export type ScriptToExport = { script: string; code: string }

@@ -74,6 +74,31 @@ describe('a game written to run with no studio', () => {
     expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/checker.png' })
   })
 
+  it('trusts typed runtime reachability instead of shipping an unused scene reference', async () => {
+    const asked: string[][] = []
+    const { ports, written } = writing({
+      assetFiles: ids => {
+        asked.push([...ids])
+        return Promise.resolve(new Map())
+      },
+    })
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: [
+        {
+          id: 'doc-1',
+          title: 'Menu',
+          content: SCENE('a', ['unused-sky']),
+          assetIds: [],
+        },
+      ],
+    })
+
+    expect(asked).toEqual([[]])
+    expect(manifestOf(written).assets).toEqual({})
+  })
+
   it('names the same asset once, however many scenes reach it', async () => {
     const { ports } = writing()
 
@@ -87,6 +112,51 @@ describe('a game written to run with no studio', () => {
     })
 
     expect(report.assets).toBe(1)
+  })
+
+  it('files byte-identical asset ids once while preserving both logical references', async () => {
+    const { ports, written } = writing({
+      assetFiles: () =>
+        Promise.resolve(
+          new Map([
+            ['first', { name: 'first.png', bytes: new Uint8Array([1, 2]) }],
+            ['second', { name: 'second.png', bytes: new Uint8Array([1, 2]) }],
+          ]),
+        ),
+    })
+
+    const report = await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: [{ id: 'doc-1', title: 'Menu', content: SCENE('a', ['first', 'second']) }],
+    })
+
+    expect(manifestOf(written).assets).toEqual({
+      first: 'assets/first.png',
+      second: 'assets/first.png',
+    })
+    expect([...written.keys()].filter(name => name.startsWith('assets/'))).toEqual([
+      'assets/first.png',
+    ])
+    expect(report.assets).toBe(2)
+  })
+
+  it('keeps different bytes apart even when their recorded fingerprints collide', async () => {
+    const { ports, written } = writing({
+      assetFiles: () =>
+        Promise.resolve(
+          new Map([
+            ['first', { name: 'first.png', bytes: new Uint8Array([1]), hash: 'same' }],
+            ['second', { name: 'second.png', bytes: new Uint8Array([2]), hash: 'same' }],
+          ]),
+        ),
+    })
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: [{ id: 'doc-1', title: 'Menu', content: SCENE('a', ['first', 'second']) }],
+    })
+
+    expect(new Set(Object.values(manifestOf(written).assets)).size).toBe(2)
   })
 
   /**
@@ -143,5 +213,15 @@ describe('a game written to run with no studio', () => {
       scenes: [{ id: 'doc-1', title: 'Menu', file: 'scenes/doc-1.gltf' }],
       scripts: [{ script: 'script:levels/Walk.ts', file: 'scripts/Walk.js' }],
     })
+  })
+
+  it('writes byte-equivalent packages twice from the same request', async () => {
+    const first = writing()
+    const second = writing()
+
+    await writeExportedGame(first.ports, ASKED)
+    await writeExportedGame(second.ports, ASKED)
+
+    expect([...first.written.entries()].sort()).toEqual([...second.written.entries()].sort())
   })
 })

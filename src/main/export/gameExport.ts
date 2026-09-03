@@ -12,7 +12,12 @@ import {
 } from '@shared/domain/gameExport'
 
 /** An asset's bytes, and the name to file them under. */
-export type ExportedAsset = { name: string; bytes: Uint8Array }
+export type ExportedAsset = {
+  name: string
+  bytes: Uint8Array
+  /** SHA-256 recorded by the catalogue when it ingested the file. */
+  hash?: string
+}
 
 export type GameExportPorts = {
   /**
@@ -39,9 +44,8 @@ export type GameExportReport = Omit<GameExportOutcome, 'folder'>
 /**
  * Writes a game that runs with no studio: the page, the bundle, the manifest and what they reach.
  *
- * 🛑 Two known edges of the textual `"assetId"` sweep. It copies a scene's SKYBOX, which
- * `buildGameScene` does not draw, so an `.exr` ships for nothing. And it does not read a SCRIPT:
- * an asset a script names by id in its own source is not copied, and 404s in the game.
+ * Asset reachability is computed from the typed authoring state before it crosses IPC. The text
+ * sweep remains only for callers from an older renderer that did not send that list.
  */
 export async function writeExportedGame(
   ports: GameExportPorts,
@@ -50,6 +54,7 @@ export async function writeExportedGame(
   const { scenes, scripts } = request
   const missing: string[] = []
   const assets: Record<string, string> = {}
+  const contentPaths = new Map<string, { body: Uint8Array; path: string }[]>()
   // 🛑 Two rows may name one file — `checker.png` twice, from two folders — and the second would
   // overwrite the first without a word. The same rule a montage bundle already follows.
   const taken = new Set<string>()
@@ -64,9 +69,19 @@ export async function writeExportedGame(
       continue
     }
 
+    const contentKey = file.hash ?? `bytes:${file.bytes.byteLength}`
+    const candidates = contentPaths.get(contentKey) ?? []
+    const shared = await matchingContent(candidates, file.bytes)
+    if (shared) {
+      assets[id] = shared.path
+      continue
+    }
+
     const name = freeName(safeFileName(file.name, 'asset'), taken)
     taken.add(name)
     assets[id] = `assets/${name}`
+    candidates.push({ body: file.bytes, path: assets[id] })
+    contentPaths.set(contentKey, candidates)
     assetWrites.push(ports.write(assets[id], file.bytes))
   }
 
@@ -116,10 +131,36 @@ export async function writeExportedGame(
   }
 }
 
+const COMPARISON_CHUNK_BYTES = 1024 * 1024
+
+async function matchingContent(
+  candidates: readonly { body: Uint8Array; path: string }[],
+  wanted: Uint8Array,
+): Promise<{ body: Uint8Array; path: string } | null> {
+  for (const candidate of candidates) {
+    if (candidate.body.byteLength !== wanted.byteLength) continue
+    if (await sameBytes(candidate.body, wanted)) return candidate
+  }
+  return null
+}
+
+async function sameBytes(left: Uint8Array, right: Uint8Array): Promise<boolean> {
+  for (let start = 0; start < left.byteLength; start += COMPARISON_CHUNK_BYTES) {
+    const end = Math.min(start + COMPARISON_CHUNK_BYTES, left.byteLength)
+    for (let at = start; at < end; at += 1) if (left[at] !== right[at]) return false
+    await new Promise<void>(resolve => setImmediate(resolve))
+  }
+  return true
+}
+
 /** Every asset a scene names, once, in the order they were met. */
 function assetIdsIn(scenes: readonly SceneToExport[]): readonly string[] {
   const found = new Set<string>()
   for (const scene of scenes) {
+    if (scene.assetIds) {
+      for (const id of scene.assetIds) if (id) found.add(id)
+      continue
+    }
     for (const [, id] of scene.content.matchAll(/"assetId"\s*:\s*"([^"]+)"/g)) {
       if (id) found.add(id)
     }
