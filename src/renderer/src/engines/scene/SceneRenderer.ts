@@ -1704,16 +1704,23 @@ export class SceneRenderer {
     // What the MODEL costs, so an isolation does not make the triangle count drop — `statsOf`
     // skips an invisible mesh, and hiding something to look past it is not making it cheaper.
     this.asDocumented(() => {
-      // Only when the set moved. `apply` runs on every state change, a selection included, and
-      // walking every geometry of the scene again for a number no selection can move was 12 % of
-      // the CPU of one click on 8 000 nodes — measured 20/08. The selected side is walked every
-      // time on purpose: it is bounded by what is selected, which is usually one thing.
-      if (this.contentChanged) {
-        this.modelStats = statsOf(this.objects.values())
-        this.contentChanged = false
+      // Sources of a grouped MODEL sit out of `holder.children`. Hung for the walk, then put
+      // back: counting the lots as well would double the draws.
+      this.instances.hangSources()
+      try {
+        // Only when the set moved. `apply` runs on every state change, a selection included, and
+        // walking every geometry of the scene again for a number no selection can move was 12 % of
+        // the CPU of one click on 8 000 nodes — measured 20/08. The selected side is walked every
+        // time on purpose: it is bounded by what is selected, which is usually one thing.
+        if (this.contentChanged) {
+          this.modelStats = statsOf(this.objects.values())
+          this.contentChanged = false
+        }
+        const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
+        report(this.modelStats, statsOf(selected))
+      } finally {
+        this.syncSourceWalk()
       }
-      const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
-      report(this.modelStats, statsOf(selected))
     })
   }
 
