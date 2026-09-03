@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 
 import type { Vector3 } from '@shared/domain/transform'
-import { clamp } from '../../numeric'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { componentOf, type Entity } from '../entity'
-import { flagOf, numberOf, textOf } from '../componentFields'
+import { choiceOf, flagOf, numberOf, textOf } from '../componentFields'
 import { pointsOf, stepTowards, turnTowards } from '../steering'
+import { advanced, WAYPOINT_MODES, type WaypointCursor } from './advanced'
 import type { System, World } from '../world'
 
 const PATH = COMPONENT_DEFAULTS.Path
 
 /** Where a traveller is on its rail: which point it wants, which way it goes, and whether it is done. */
-type Run = { at: number; forward: boolean; done: boolean }
+type Run = WaypointCursor
 
 /**
  * What runs along a rail of POINTS at a steady pace — a cart, a dolly shot, a platform on rails.
@@ -59,7 +59,7 @@ export function createPathSystem(): System {
 
         const reach = numberOf(settings, 'speed', PATH.speed) * dt
         if (!stepTowards(entity.transform.position, point, reach)) continue
-        advance(run, rail.length, textOf(settings, 'mode', PATH.mode))
+        advanced(run, rail.length, choiceOf(settings, 'mode', WAYPOINT_MODES, PATH.mode))
       }
     },
   }
@@ -67,21 +67,3 @@ export function createPathSystem(): System {
 
 /** Reused: a scene of fifty carts allocates nothing at all. */
 const TOWARDS: Vector3 = { x: 0, y: 0, z: 0 }
-
-/** `once` stops at the far end; the two others fold the run back, by wrapping or by walking it back. */
-function advance(run: Run, count: number, mode: string): void {
-  if (mode === 'once') {
-    if (run.at + 1 >= count) run.done = true
-    else run.at += 1
-    return
-  }
-  if (mode === 'pingPong') {
-    if (run.forward && run.at + 1 >= count) run.forward = false
-    else if (!run.forward && run.at === 0) run.forward = true
-    run.at = clamp(run.at + (run.forward ? 1 : -1), 0, count - 1)
-    return
-  }
-
-  // loop, and the default.
-  run.at = (run.at + 1) % count
-}
