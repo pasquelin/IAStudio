@@ -7,6 +7,7 @@ import {
   type Material,
   type Mesh,
   type Object3D,
+  type Intersection,
 } from 'three'
 import {
   dropSlotsOf,
@@ -350,6 +351,27 @@ export function createCellGroups(
     promoted.clear()
     listStale = true
   }
+  const drawnMeshes = (): readonly InstancedMesh[] => {
+    if (listStale) {
+      listed = []
+      for (const bucket of everyBucket()) listed.push(bucket.mesh)
+      for (const lot of mobiles.values()) listed.push(lot.mesh)
+      listStale = false
+    }
+    return listed
+  }
+  const nodeIdOf = (hit: Intersection): string | null => {
+    if (!(hit.object instanceof InstancedMesh) || hit.instanceId === undefined) return null
+    const ids = lotOf.get(hit.object)?.ids ?? bucketOf.get(hit.object)?.ids
+    return ids?.[hit.instanceId] ?? null
+  }
+  const pickableMeshes = (): InstancedMesh[] => {
+    const pickable = [...mobiles.values()].map(lot => lot.mesh)
+    for (const bucket of everyBucket()) {
+      if (bucket.cell === null || standing.has(bucket.cell)) pickable.push(bucket.mesh)
+    }
+    return pickable
+  }
   return {
     rebuild: (nodes, objectOf, excluded) => {
       pass += 1
@@ -388,17 +410,9 @@ export function createCellGroups(
       if (touched) for (const id of ids) growBoxes(id, objectOf)
       return touched
     },
-    drawn: () => {
-      if (listStale) {
-        listed = []
-        for (const bucket of everyBucket()) listed.push(bucket.mesh)
-        for (const lot of mobiles.values()) listed.push(lot.mesh)
-        listStale = false
-      }
-      return listed
-    },
-    pickable: () => [],
-    nodeIdOf: () => null,
+    drawn: drawnMeshes,
+    pickable: pickableMeshes,
+    nodeIdOf,
     follow: (camera, cast) =>
       followCells({ host, index, cells, standing, wanted, near, boxes, drawEvery }, camera, cast),
     builtAnew: () => {

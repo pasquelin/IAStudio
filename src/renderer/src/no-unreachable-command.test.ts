@@ -180,6 +180,19 @@ const NOT_PUBLISHED: readonly string[] = [
   'removePostEffect',
   'reorderPostEffects',
   'sculptRelief',
+  'addTerrain',
+  'addTerrainEdit',
+  'removeTerrain',
+  'removeTerrainEdit',
+  'renameTerrain',
+  'renameTerrainEdit',
+  'reorderTerrainEdits',
+  'reorderTerrains',
+  'setTerrainEditAlpha',
+  'setTerrainEditEnabled',
+  'setTerrainEditLocked',
+  'setTerrainEnabled',
+  'setTerrainLocked',
   // The ENGINE reaches it, never a handler: `endPixels` calls `onPixels`, which the window has
   // wired to this command since the brush existed. An action that paints goes through the port's
   // `paintCells`, which knows nothing of it — a second door is the same entry pushed twice.

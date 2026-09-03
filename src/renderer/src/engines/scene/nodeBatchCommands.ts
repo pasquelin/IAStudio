@@ -20,6 +20,7 @@ import {
   canCastShadow,
   canReceiveShadow,
   carriesMaterial,
+  type OptimizationSettings,
   type SceneNode,
   type SceneState,
 } from './sceneState'
@@ -60,6 +61,15 @@ export function batch<T extends { id: string }>(
       targets.map(target => target.id),
     ),
     targets.flatMap(target => make(target)?.writes ?? []),
+  )
+}
+
+export function setNodesOptimization(
+  nodes: readonly SceneNode[],
+  optimization: OptimizationSettings | undefined,
+): Command<SceneState> {
+  return batch('optimization', nodes, node =>
+    editNode('optimization', node.id, { optimization }),
   )
 }
 

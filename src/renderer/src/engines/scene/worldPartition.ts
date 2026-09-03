@@ -16,9 +16,6 @@ export const CELL_SIZE = 256
 /** What sits above the cells. Two cells a side: a coarser roof visits emptier nodes. */
 export const MACRO_SIZE = 512
 
-/** Largest reach kept spatial; beyond it the conservative global fallback costs less to query. */
-export const MAX_SPATIAL_REACH = 2_048
-
 export type CellKey = number
 
 export type PartitionStats = {

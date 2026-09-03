@@ -19,6 +19,7 @@ export {
   setGeometryOn,
   setLightOn,
   setMaterialOn,
+  setNodesOptimization,
   setShadowOn,
 } from './nodeBatchCommands'
 export {
@@ -58,17 +59,3 @@ export {
   setSelection,
   setWorld,
 } from './nodeBulkCommands'
-
-import type { Command } from '../core/history'
-import { batch } from './nodeBatchCommands'
-import { editNode } from './nodeEditCommands'
-import type { OptimizationSettings, SceneNode, SceneState } from './sceneState'
-
-export function setNodesOptimization(
-  nodes: readonly SceneNode[],
-  optimization: OptimizationSettings | undefined,
-): Command<SceneState> {
-  return batch('optimization', nodes, node =>
-    editNode('optimization', node.id, { optimization }),
-  )
-}

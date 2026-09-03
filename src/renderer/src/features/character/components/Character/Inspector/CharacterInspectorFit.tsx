@@ -1,79 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { CHARACTER_KINDS, HUMANOID_KINDS, type CharacterKind } from '@shared/domain/character'
-import { providersRefusalOf, rigProvidersOf } from '@shared/domain/rigProvider'
+import { CHARACTER_KINDS, HUMANOID_KINDS } from '@shared/domain/character'
 import { formatBytes } from '@/helpers/format'
 import { Button } from '@/components/Button'
 import { QuietNote } from '@/components/QuietNote'
 import { SelectField } from '@/components/SelectField'
-import { setCharacterRig } from '@/engines/character/characterCommands'
 import { rigFitFaultOf } from '@/engines/scene/rigFit'
 import type { MeshSample } from '@/engines/scene/rigSnap'
-import { fitHumanoidRig, humanoidAutoRigBackend } from '@/engines/scene/humanoidAutoRig'
-import AdaptiveRigWorker from '@/engines/scene/adaptiveRig.worker?worker'
-import { createAdaptiveRigFitter } from '@/engines/scene/adaptiveRigFitter'
 import { rigServiceNote } from '@/helpers/rigServiceNote'
-import { useFamilyModels } from '@/hooks/useFamilyModels'
-import { useMeshSizeLimit } from '@/hooks/useMeshSizeLimit'
-import { usePlanAccess } from '@/hooks/usePlanAccess'
-import { assetsById, useAssets } from '@/stores/assets'
-import { useCharacters } from '@/stores/character'
-import { useCharacterView } from '@/stores/characterView'
+import { useCharacterFit, type CharacterFit } from '@/hooks/useCharacterFit'
 
 export type CharacterInspectorFitProps = {
   assetId: string
   /** What the engine measured of this mesh, or `null` while the file is still landing. */
   sample: MeshSample | null
 }
-
-function useCharacterFit(assetId: string, sample: MeshSample | null) {
-  const { t, i18n } = useTranslation()
-  const [kind, setKind] = useState<CharacterKind>('auto')
-  const [fitting, setFitting] = useState(false)
-  const [fittingFailed, setFittingFailed] = useState(false)
-  const adaptive = useMemo(() => createAdaptiveRigFitter(() => new AdaptiveRigWorker()), [])
-  useEffect(() => adaptive.dispose, [adaptive])
-  const plan = usePlanAccess()
-  const services = rigProvidersOf(useFamilyModels('3d'))
-  const maxSize = useMeshSizeLimit(services[0]?.modelId ?? null)
-  const bytes = useAssets(state => assetsById(state).get(assetId)?.bytes ?? 0)
-  const refusal = providersRefusalOf(services, plan, { bytes, maxSize })
-  const fit = async (): Promise<void> => {
-    if (!sample) return
-    setFitting(true)
-    setFittingFailed(false)
-    try {
-      const backend = humanoidAutoRigBackend(
-        import.meta.env.DEV,
-        localStorage.getItem('ia-studio:humanoid-rig-backend'),
-      )
-      const fitted = await fitHumanoidRig(sample, backend, adaptive)
-      if (!fitted) return
-      useCharacterView.getState().noteRigAnalysis(assetId, fitted.analysis)
-      if (fitted.rig) useCharacters.getState().runCommand(assetId, setCharacterRig(fitted.rig))
-    } catch {
-      setFittingFailed(true)
-    } finally {
-      setFitting(false)
-    }
-  }
-  return {
-    t,
-    i18n,
-    kind,
-    setKind,
-    fitting,
-    fittingFailed,
-    plan,
-    services,
-    maxSize,
-    bytes,
-    refusal,
-    fit,
-  }
-}
-
-type CharacterFit = ReturnType<typeof useCharacterFit>
 
 function fitSelectors(state: CharacterFit) {
   const { t, kind, setKind, services, plan, bytes, maxSize } = state

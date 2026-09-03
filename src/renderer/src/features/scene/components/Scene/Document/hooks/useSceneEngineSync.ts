@@ -4,6 +4,7 @@ import type { sceneViewChromeOf } from '@/stores/sceneViews'
 import { useSceneDocumentExports } from './useSceneDocumentExports'
 import { useSceneRendererResources } from './useSceneRendererResources'
 import { useSceneRendererState } from './useSceneRendererState'
+import { useSceneReliefState } from './useSceneReliefState'
 
 /** Pushes declarative document/view state into the live imperative renderer. */
 export function useSceneEngineSync({
@@ -24,6 +25,7 @@ export function useSceneEngineSync({
   active: boolean
 }) {
   useSceneRendererState(engine, scene, viewport, view, mode, documentId)
+  useSceneReliefState(engine, view)
   useSceneRendererResources(engine)
   useSceneDocumentExports(active, documentId)
 }
