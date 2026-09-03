@@ -72,6 +72,8 @@ import {
   showsAid,
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
+import { loadHeightmap } from './heightmap'
+import { createReliefSurface } from './reliefSurface'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
 import { springArmRigsOf } from './springArmRigs'
@@ -864,6 +866,11 @@ export class SceneRenderer {
   private world: SceneWorld = DEFAULT_WORLD
   /** The document's own ground. Beside the nodes like the grid, and never one of them. */
   private readonly ground = createGroundPlane()
+  private readonly relief = createReliefSurface(this.viewport.scene, {
+    load: assetId => loadHeightmap(assetId, undefined, this.options.assetVersion?.(assetId)),
+    onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
+    onReady: () => this.redraw(),
+  })
   /** The sun the sky it names describes. A node of the scene, so it is born with the renderer. */
   private readonly sun: SkySun = createSkySun(this.viewport.scene)
   /** What the scene was last lit ON, so a pass that changes nothing costs nothing. */
@@ -3231,6 +3238,7 @@ export class SceneRenderer {
     this.grid?.dispose()
     this.grid = null
     this.ground.dispose()
+    this.relief.dispose()
     this.sun.dispose()
     this.aids.dispose()
 
@@ -3581,7 +3589,9 @@ export class SceneRenderer {
       applyToneMapping(gl, wanted.toneMapping, wanted.exposure)
     }
 
-    if (wanted.ground !== held.ground) this.applyGround()
+    if (wanted.ground !== held.ground || wanted.layers !== held.layers) this.applyGround()
+    if (wanted.layers !== held.layers) this.relief.sync(wanted)
+    if (this.relief.object.children.length > 0) this.ground.object.visible = false
     if (wanted.background !== held.background) this.paintBackground()
   }
 
