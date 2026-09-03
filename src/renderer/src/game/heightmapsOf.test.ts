@@ -11,8 +11,8 @@ describe('the heightmaps a scene names', () => {
       return samples
     }
     const layers = [
-      reliefLayer({ assetId: 'asset_height' }, { id: 'terrain' }),
-      reliefLayer({ assetId: 'asset_height' }, { id: 'terrain' }),
+      reliefLayer({ assetId: 'asset_height' }, { id: 'isle' }),
+      reliefLayer({ assetId: 'asset_height' }, { id: 'range' }),
     ]
 
     const maps = await heightmapsOf(layers, load)

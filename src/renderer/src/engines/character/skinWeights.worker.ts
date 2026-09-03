@@ -12,14 +12,14 @@ import { isCancel, type SkinIncoming, type SkinRequest, type SkinResponse } from
 import { emptyBinding, skinRange, vertexCountOf } from './skinVertices'
 import { loadSkinVerticesWasm } from './skinVerticesWasm'
 import { breathe } from '../core/breathe'
+import { createCancelRegistry } from '../core/cancelRegistry'
 
 declare const self: DedicatedWorkerGlobalScope
 
 /** Vertices per slice. Small enough that a cancellation lands promptly on a slow machine. */
 const SLICE = 4096
 
-const running = new Set<number>()
-const cancelled = new Set<number>()
+const cancels = createCancelRegistry()
 
 /**
  * Compiled on the first request, never at module load: nothing awaits it until then, so a
@@ -30,12 +30,10 @@ let wasmBinding: ReturnType<typeof loadSkinVerticesWasm> | null = null
 self.addEventListener('message', (event: MessageEvent<SkinIncoming>) => {
   const message = event.data
   if (isCancel(message)) {
-    // A cancel that lost the race against `done` names a request that is over: kept, it would
-    // sit in the set for the life of the worker.
-    if (running.has(message.id)) cancelled.add(message.id)
+    cancels.cancel(message.id)
     return
   }
-  running.add(message.id)
+  cancels.start(message.id)
   void run(message)
 })
 
@@ -52,7 +50,7 @@ async function run(request: SkinRequest): Promise<void> {
     const fallback = wasm ? undefined : emptyBinding(vertices)
 
     for (let from = 0; from < vertices; from += SLICE) {
-      if (cancelled.delete(request.id)) return
+      if (cancels.stopped(request.id)) return
 
       const to = Math.min(from + SLICE, vertices)
       if (wasm) wasm.skinRange(from, to)
@@ -64,7 +62,7 @@ async function run(request: SkinRequest): Promise<void> {
     }
 
     // Checked once more: the last slice may have run while a cancel was on its way.
-    if (cancelled.delete(request.id)) return
+    if (cancels.stopped(request.id)) return
 
     const binding = wasm ? wasm.binding() : fallback
     if (!binding) throw new Error('Skinning produced no binding')
@@ -74,8 +72,7 @@ async function run(request: SkinRequest): Promise<void> {
   } catch (error) {
     post({ id: request.id, done: true, ok: false, error: messageOf(error) })
   } finally {
-    running.delete(request.id)
-    cancelled.delete(request.id)
+    cancels.finish(request.id)
   }
 }
 

@@ -138,6 +138,40 @@ describe('relief sculpting through the scene renderer', () => {
     renderer.dispose()
   })
 
+  /**
+   * 🛑 A stroke is a worker round-trip, so at the release several are still out. Sealed there,
+   * their commands landed outside the gesture and the drag ended in one entry per stroke.
+   */
+  it('seals the drag only once the strokes still out have landed', async () => {
+    const settle: ((chunks: PackedReliefChunk[]) => void)[] = []
+    const ended = vi.fn()
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      relief: reliefStub(),
+      onReliefSculptEnd: ended,
+      createReliefSculptor: () => ({
+        raiseDisk: () =>
+          new Promise(resolve => {
+            settle.push(resolve)
+          }),
+        note: vi.fn(),
+        dispose: vi.fn(),
+      }),
+    })
+
+    const pending = renderer.raiseReliefDisk('terrain', 'hills', DISK, 0.1)
+    renderer['reliefPointer'] = 7
+    renderer['onPointerUp']({ button: 0, pointerId: 7 } as PointerEvent)
+    expect(ended).not.toHaveBeenCalled()
+
+    settle.shift()?.(CHANGED)
+    await pending
+
+    expect(ended).toHaveBeenCalledOnce()
+    renderer.dispose()
+  })
+
   it('holds one sculptor at a time, so a second edit layer does not add a worker pool', async () => {
     const spies = [sculptorSpy(), sculptorSpy()]
     let next = 0

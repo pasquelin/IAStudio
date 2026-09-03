@@ -299,6 +299,27 @@ describe('relief surface chunks', () => {
     expect(surface.meshOf(TERRAIN, 0, 0)).toBe(held)
   })
 
+  /**
+   * 🛑 Applying a layer starts the worker build, which bumps `generation` before the load's own
+   * `finally` reads it. Marked there, the terrain was never read again and stayed blank.
+   */
+  it('reads the heightmap again once a build has failed, rather than staying blank', async () => {
+    let reads = 0
+    const surface = createReliefSurface(new Scene(), {
+      load: async () => {
+        reads += 1
+        return samplesOf()
+      },
+      builder: { build: async () => null, dispose: vi.fn() },
+    })
+
+    surface.sync(worldOf())
+    await vi.waitFor(() => expect(reads).toBe(1))
+    surface.sync(worldOf())
+
+    await vi.waitFor(() => expect(reads).toBe(2))
+  })
+
   it('lets a load in flight finish rather than reading the heightmap again', async () => {
     let reads = 0
     const surface = createReliefSurface(new Scene(), {

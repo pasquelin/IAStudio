@@ -183,7 +183,6 @@ function applyLayer(
       void buildMeshesAway(state, terrain, state.builder, layer, samples, extent)
       return false
     }
-    dropPendingBuild(terrain)
     clearMeshes(terrain.meshes)
     buildMeshes(state, terrain, samples, extent, layer.grain, layer.edits)
   } else {
@@ -293,7 +292,9 @@ async function loadLayer(
     dropTerrain(state, layer.id, terrain)
     state.options.onFailure?.(layer.heightmap.assetId, error)
   } finally {
-    if (token === terrain.generation) terrain.loading = null
+    // Not on the token: applying the layer starts a worker build, which bumps `generation`
+    // BEFORE this runs — read there, the mark stayed and no heightmap was ever read again.
+    if (terrain.loading === layer.heightmap.assetId) terrain.loading = null
   }
 }
 

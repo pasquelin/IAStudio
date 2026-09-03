@@ -1312,10 +1312,20 @@ export class SceneRenderer {
   ): Promise<boolean> {
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
-    const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({ ...source, disk, amount })
-    if (!chunks) return false
-    this.options.onReliefSculpt?.(terrainId, editId, chunks)
-    return true
+    this.reliefPending += 1
+    try {
+      const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({
+        ...source,
+        disk,
+        amount,
+      })
+      if (!chunks) return false
+      this.options.onReliefSculpt?.(terrainId, editId, chunks)
+      return true
+    } finally {
+      this.reliefPending -= 1
+      this.sealReliefStroke()
+    }
   }
 
   private sculptorFor(terrainId: string, editId: string): ReliefSculptor {
@@ -1329,10 +1339,9 @@ export class SceneRenderer {
   }
 
   /**
-   * Where the sculptor learns of an outside write — an undo, a reload — the store having already
-   * landed. Read back on every stroke instead, it was one render BEHIND: indistinguishable from
-   * an undo, so the sculptor dropped its chaining and the next stroke rebased on the sculpt from
-   * before the last one, erasing it inside the chunks they shared.
+   * Where the sculptor learns of an outside write, the store having landed. Read back on every
+   * stroke it was one render BEHIND, and being indistinguishable from an undo it made the next
+   * stroke rebase on the sculpt from before the last one, erasing it in the chunks they shared.
    */
   private noteSculpt(): void {
     const held = this.reliefSculptor
@@ -1352,13 +1361,25 @@ export class SceneRenderer {
     }
     this.reliefBrush = brush
     this.endReliefStroke()
+    this.reliefPoint = null
   }
 
-  /** Closes the drag if one was held, so the history entry it opened is sealed exactly once. */
+  /** Ends the drag if one was held, the entry it opened being sealed once its strokes are back. */
   private endReliefStroke(): void {
     if (this.reliefPointer === null) return
     this.reliefPointer = null
     this.reliefPoint = null
+    this.reliefEnding = true
+    this.sealReliefStroke()
+  }
+
+  /**
+   * A stroke is a worker round-trip, so at the release several are usually still out. Sealed
+   * there, their commands landed outside the gesture and the drag ended in one entry per stroke.
+   */
+  private sealReliefStroke(): void {
+    if (!this.reliefEnding || this.reliefPending > 0) return
+    this.reliefEnding = false
     this.options.onReliefSculptEnd?.()
   }
 
@@ -1396,8 +1417,7 @@ export class SceneRenderer {
         amount,
       )
     } catch {
-      this.reliefPointer = null
-      this.reliefPoint = null
+      this.endReliefStroke()
     }
   }
 
@@ -3383,6 +3403,7 @@ export class SceneRenderer {
     this.bvh.dispose()
     this.skin.dispose()
     this.retarget.dispose()
+    this.endReliefStroke()
     this.reliefSculptor?.sculptor.dispose()
     this.reliefSculptor = null
     this.clipSources.dispose()
@@ -5756,6 +5777,7 @@ export class SceneRenderer {
   private readonly onPointerCancel = (event: PointerEvent): void => {
     if (this.flightPointer && event.pointerId !== this.flightPointer.pointerId) return
     this.pressed = null
+    this.endReliefStroke()
     this.dropMarquee()
     this.endFlight(this.flownWith ?? event.button, event)
   }
