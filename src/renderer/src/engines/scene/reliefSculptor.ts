@@ -1,5 +1,4 @@
 import {
-  packDeltas,
   withPackedChunks,
   type PackedReliefChunk,
   type ReliefExtent,
@@ -7,11 +6,7 @@ import {
 } from '@shared/domain/relief'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { createWorkerSession } from '../core/workerSession'
-import type {
-  ReliefSculptChunkDelta,
-  ReliefSculptRequest,
-  ReliefSculptResponse,
-} from './reliefSculptMessage'
+import type { ReliefSculptRequest, ReliefSculptResponse } from './reliefSculptMessage'
 
 export type ReliefDiskStroke = {
   samples: HeightmapSamples
@@ -81,7 +76,7 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
         job.reject(new Error(response.error))
         return
       }
-      const edits = packedOf(response.chunks)
+      const edits = response.chunks
       heldAfter = withPackedChunks(before, response.grain, edits)
       bound = heldAfter
       job.resolve(edits)
@@ -114,14 +109,6 @@ export function createReliefSculptor(spawn: () => Worker): ReliefSculptor {
       session.dispose()
     },
   }
-}
-
-function packedOf(chunks: readonly ReliefSculptChunkDelta[]): PackedReliefChunk[] {
-  return chunks.map(chunk => ({
-    column: chunk.column,
-    row: chunk.row,
-    payload: packDeltas(chunk.deltas),
-  }))
 }
 
 function sameSculpt(left: ReliefSculpt | undefined, right: ReliefSculpt | undefined): boolean {
