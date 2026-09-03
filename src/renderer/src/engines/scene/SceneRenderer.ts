@@ -77,7 +77,6 @@ import { createReliefSurface, type ReliefSurface } from './reliefSurface'
 import { createReliefBuilder } from './reliefBuilder'
 import { createReliefSculptor, type ReliefSculptor } from './reliefSculptor'
 import type { PackedReliefChunk } from '@shared/domain/relief'
-import type { ReliefBrush } from './reliefSculptTarget'
 import { applyFog, applyToneMapping } from './worldBinding'
 import { createViewportAids, type AidBody, type AidPalette, type AidRigs } from './viewportAids'
 import { springArmRigsOf } from './springArmRigs'
@@ -909,9 +908,6 @@ export class SceneRenderer {
   private dragged = false
   /** Where the left button went down, so the release can tell a click from an orbit. */
   private pressed: PointerPosition | null = null
-  private reliefBrush: ReliefBrush | null = null
-  private reliefPointer: number | null = null
-  private reliefPoint: Vector3 | null = null
   /**
    * Where the button that flies went down, or nothing while none is held. A flight that never
    * left the pixel it started on is a click: the right button raises the node menu, the left
@@ -1309,60 +1305,6 @@ export class SceneRenderer {
     if (!chunks) return false
     this.options.onReliefSculpt?.(terrainId, editId, chunks)
     return true
-  }
-
-  setReliefBrush(brush: ReliefBrush | null): void {
-    if (
-      brush &&
-      this.reliefBrush?.terrainId === brush.terrainId &&
-      this.reliefBrush.editId === brush.editId &&
-      this.reliefBrush.radius === brush.radius &&
-      this.reliefBrush.amount === brush.amount
-    ) {
-      return
-    }
-    this.reliefBrush = brush
-    this.reliefPointer = null
-    this.reliefPoint = null
-  }
-
-  private reliefPointAt(event: PointerEvent): Vector3 | null {
-    const brush = this.reliefBrush
-    const ndc = this.viewport.pointerNdcOf(event)
-    if (!brush || !ndc) return null
-    this.pointer.set(ndc.x, ndc.y)
-    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
-    return this.relief.pointAt(brush.terrainId, this.raycaster)
-  }
-
-  private applyReliefBrush(event: PointerEvent): boolean {
-    const brush = this.reliefBrush
-    const point = this.reliefPointAt(event)
-    if (!brush || !point) return false
-    if (this.reliefPoint && this.reliefPoint.distanceToSquared(point) < brush.radius ** 2 / 16) {
-      return true
-    }
-    this.reliefPoint = point.clone()
-    void this.commitReliefBrush(brush, point, event.altKey ? -brush.amount : brush.amount)
-    return true
-  }
-
-  private async commitReliefBrush(
-    brush: ReliefBrush,
-    point: Vector3,
-    amount: number,
-  ): Promise<void> {
-    try {
-      await this.raiseReliefDisk(
-        brush.terrainId,
-        brush.editId,
-        { x: point.x, z: point.z, radius: brush.radius },
-        amount,
-      )
-    } catch {
-      this.reliefPointer = null
-      this.reliefPoint = null
-    }
   }
 
   /**
@@ -5199,10 +5141,6 @@ export class SceneRenderer {
       return
     }
     if (event.button !== 0 || this.gizmo?.dragging) return
-    if (this.reliefBrush) {
-      if (this.applyReliefBrush(event)) this.reliefPointer = event.pointerId
-      return
-    }
     // The trihedron is drawn over the viewport, so it takes the click before the scene does — and
     // nothing is armed for a selection the click never meant.
     if (this.turnToViewHelper(event)) return
@@ -5249,12 +5187,6 @@ export class SceneRenderer {
       return
     }
     if (event.button !== 0) return
-
-    if (this.reliefPointer === event.pointerId) {
-      this.reliefPointer = null
-      this.reliefPoint = null
-      return
-    }
 
     const pressed = this.pressed
     const flew = this.flew
@@ -5356,15 +5288,6 @@ export class SceneRenderer {
   }
 
   private readonly onPointerMove = (event: PointerEvent): void => {
-    if (this.reliefPointer === event.pointerId) {
-      if ((event.buttons & maskOf(0)) === 0) {
-        this.reliefPointer = null
-        this.reliefPoint = null
-      } else {
-        this.applyReliefBrush(event)
-      }
-      return
-    }
     // Unreal, Unity and Roblox all use the right button as mouse-look while it owns their flight.
     // Client coordinates rather than `movementX`: no pointer lock is active for a held button.
     if (
