@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { HISTORY_LIMIT, emptyHistory, run, undo } from '../core/history'
-import { changedChunks, withChunkDelta, type ReliefSculpt } from '@shared/domain/relief'
+import {
+  RELIEF_CHUNK_TEXELS,
+  changedChunks,
+  combinedAt,
+  withChunkDelta,
+  type ReliefSculpt,
+} from '@shared/domain/relief'
 import { DEFAULT_WORLD, reliefLayer, terrainEditLayer } from '@shared/domain/scene'
+import { readWorld } from './sceneWorld'
 import {
   addTerrain,
   addTerrainEdit,
@@ -245,3 +252,47 @@ function reliefEdits(state: SceneState) {
   const layer = state.world.layers[0]
   return layer?.kind === 'relief' ? layer.edits : []
 }
+
+describe('a sculpt-only document opened into edit layers', () => {
+  it('keeps the migrated overlay intact when a second edit is sculpted', () => {
+    const samples = {
+      width: 8,
+      height: 8,
+      values: new Float32Array(64),
+    }
+    const original = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 1,
+      delta: 2,
+    })
+    const opened = {
+      ...EMPTY_SCENE,
+      world: readWorld(
+        { layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' }, sculpt: original }] },
+        undefined,
+      ),
+    }
+    const layer = opened.world.layers[0]
+    if (!layer || layer.kind !== 'relief') throw new Error('expected a migrated relief')
+    const firstId = layer.edits[0]?.id
+    if (!firstId) throw new Error('expected the implicit Sculpt edit')
+
+    const added = addTerrainEdit(layer.id, 'hills').apply(opened)
+    const extra = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 1,
+      delta: 3,
+    })
+    const sculpted = sculptRelief(layer.id, 'hills', changedChunks(undefined, extra)).apply(added)
+    const next = sculpted.world.layers[0]
+    if (!next || next.kind !== 'relief') throw new Error('expected a relief after sculpt')
+
+    expect(next.edits.find(edit => edit.id === firstId)?.sculpt).toEqual(original)
+    expect(combinedAt(samples, next.grain, next.edits, 1, 1)).toBeCloseTo(5)
+    expect(next.grain).toBe(RELIEF_CHUNK_TEXELS)
+  })
+})
