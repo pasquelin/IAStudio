@@ -19,6 +19,7 @@ import type { FrameDriver } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
 import { createStudioRender, type SceneDraw } from './studioRender'
 import { veilLift } from './veilLift'
+import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
 
 /** How often the game says what it is doing. Six times a second, and that is a decision — see
@@ -167,6 +168,24 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
     })
   }
 
+  const heightmaps = new Map(deps.heightmaps ?? [])
+  let pullingMaps = false
+
+  const mapsReadyFor = (state: SceneState): boolean =>
+    state.world.layers.every(
+      layer => layer.kind !== 'relief' || heightmaps.has(layer.heightmap.assetId),
+    )
+
+  const pullMaps = async (state: SceneState): Promise<void> => {
+    pullingMaps = true
+    try {
+      const loaded = await heightmapsOf(state.world.layers)
+      for (const [id, samples] of loaded) heightmaps.set(id, samples)
+    } finally {
+      pullingMaps = false
+    }
+  }
+
   const build = (state: SceneState): World =>
     worldFromScene(
       deps.documentId,
@@ -174,7 +193,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       ports,
       { modules: deps.modules ?? [], onFault: noted },
       1,
-      deps.heightmaps,
+      heightmaps,
     )
 
   let world = build(deps.editState())
@@ -247,24 +266,41 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       return
     }
 
-    waited = 0
     if (found === 'reading') {
+      waited = 0
       swap.settled()
       ports.log.write('warn', `scene "${request.scene}" is taking too long to read`)
       return
     }
 
-    swap.settled()
     if (found === 'unknown') {
+      waited = 0
+      swap.settled()
       ports.log.write('warn', `no scene named "${request.scene}" in this project`)
       return
     }
     // 🛑 A scene naming itself would rebuild a world every other frame, for ever. A chain of two
     // still can, and nothing here catches that — it needs a budget, not a comparison.
     if (found.document === playingDocument) {
+      waited = 0
+      swap.settled()
       ports.log.write('warn', `"${request.scene}" is already the scene being played`)
       return
     }
+
+    if (!mapsReadyFor(found.state)) {
+      if (!pullingMaps) {
+        waited = 0
+        void pullMaps(found.state)
+      }
+      if (waited < GIVE_UP_FRAMES) {
+        waited += 1
+        return
+      }
+      ports.log.write('warn', `relief of "${request.scene}" is taking too long to read`)
+    }
+    waited = 0
+    swap.settled()
 
     // 🛑 Heard by a native subscriber, NEVER by a script of the scene that is leaving: the script
     // system queues an event and delivers it on the next step, which this world will not run.

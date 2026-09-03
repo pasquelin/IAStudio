@@ -127,6 +127,25 @@ describe('the edit state, translated into something that runs', () => {
     expect(relief?.shape.kind === 'heightfield' ? relief.shape.heights[0] : 0).toBeCloseTo(2)
   })
 
+  it('keeps the cuboid when a relief has no heightmap and the plane is shown', () => {
+    const physics = notedPhysics()
+    const held = ports(physics)
+    const state: SceneState = {
+      ...scene(),
+      world: {
+        ...EMPTY_SCENE.world,
+        ground: { ...EMPTY_SCENE.world.ground, visible: true, size: 40 },
+        layers: [reliefLayer({ assetId: 'asset_height' })],
+      },
+    }
+
+    worldFromScene('doc-1', state, held).step(1 / 60)
+
+    expect(physics.added.find(body => body.body === 'world.ground')?.shape.kind).toBe('cuboid')
+    expect(physics.added.find(body => body.body === 'world.relief')).toBeUndefined()
+    expect(held.log.recent().some(entry => entry.message.includes('no heightmap'))).toBe(true)
+  })
+
   it('still lays the default cuboid when the scene has no relief', () => {
     const physics = notedPhysics()
     const ground = { ...EMPTY_SCENE.world.ground, visible: true, size: 40 }

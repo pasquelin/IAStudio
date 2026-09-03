@@ -30,6 +30,21 @@ describe('what a relief is felt as', () => {
     expect(shape?.kind === 'heightfield' ? shape.offset : null).toEqual({ x: 0, y: 0, z: 0 })
   })
 
+  it('places the grid at the layer origin, with a scale that spans the rectangle', () => {
+    const samples = { width: 4, height: 3, values: new Float32Array(12) }
+    const layer = reliefLayer(
+      { assetId: 'asset_height' },
+      { origin: { x: 10, z: -4 }, size: { x: 9, z: 6 } },
+    )
+
+    const shape = colliderFromRelief(layer, samples)
+
+    expect(shape?.kind === 'heightfield' ? shape.offset : null).toEqual({ x: 10, y: 0, z: -4 })
+    expect(shape?.kind === 'heightfield' ? shape.scale : null).toEqual({ x: 3, y: 1, z: 3 })
+    expect(shape?.kind === 'heightfield' ? shape.width : 0).toBe(4)
+    expect(shape?.kind === 'heightfield' ? shape.height : 0).toBe(3)
+  })
+
   it('feels a sculpted delta, not the base heightmap alone', () => {
     const samples = samplesOf(0.5)
     const sculpt = withChunkDelta(samples, undefined, {

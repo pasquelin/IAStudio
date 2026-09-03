@@ -133,6 +133,27 @@ describe('the physics as Jolt fills it', () => {
    * A 4×4 plateau two metres up: a ray from ten metres down through its centre meets it at
    * y = 2, which is 0,4 of the twenty metres asked for.
    */
+  it('hits a ramp higher where the samples are higher, along X not Z', () => {
+    const heights = new Float32Array(16)
+    for (let z = 0; z < 4; z++) for (let x = 0; x < 4; x++) heights[z * 4 + x] = x
+    const ramp: ColliderShape = {
+      kind: 'heightfield',
+      heights,
+      width: 4,
+      height: 4,
+      offset: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    }
+
+    expect(port.add([body({ body: 'ground', kind: 'fixed', shape: ramp })])).toEqual([])
+
+    const at = (x: number) =>
+      port.cast({ x, y: 10, z: 1.5 }, { x, y: -10, z: 1.5 }, 0, []) ?? Number.NaN
+    // y = x on the ramp: x = 0,5 → y ≈ 0,5 → 9,5 of 20 m; x = 2,5 → y ≈ 2,5 → 7,5 of 20 m.
+    expect(at(0.5)).toBeCloseTo(0.475, 2)
+    expect(at(2.5)).toBeCloseTo(0.375, 2)
+  })
+
   it('stops a downward ray on a heightfield at the height the samples name', () => {
     const plateau: ColliderShape = {
       kind: 'heightfield',

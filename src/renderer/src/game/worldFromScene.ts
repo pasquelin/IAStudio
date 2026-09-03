@@ -183,7 +183,7 @@ function systemsFor(
       shapeOf,
       characters,
       possessions,
-      statics: groundOf(state, heightmaps),
+      statics: groundOf(state, heightmaps, message => ports.log.write('warn', message)),
       worldOf: placed,
       localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
     }),
@@ -214,13 +214,15 @@ function systemsFor(
  */
 function groundOf(
   state: SceneState,
-  heightmaps?: ReadonlyMap<string, HeightmapSamples>,
+  heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
+  warn: (message: string) => void,
 ): readonly BodyDescriptor[] {
   const relief = state.world.layers.find(layer => layer.kind === 'relief')
   if (relief) {
     const samples = heightmaps?.get(relief.heightmap.assetId)
     const shape = samples ? colliderFromRelief(relief, samples) : null
     if (shape) return [staticBody(RELIEF_BODY, shape)]
+    warn(`relief ${relief.heightmap.assetId} has no heightmap the physics can feel`)
   }
 
   const ground = state.world.ground
