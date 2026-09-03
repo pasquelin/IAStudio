@@ -12,6 +12,9 @@ import {
   DEFAULT_GROUND,
   DEFAULT_LINEAR_FOG,
   DEFAULT_PLAY,
+  DEFAULT_RELIEF_ELEVATION,
+  DEFAULT_RELIEF_ORIGIN,
+  DEFAULT_RELIEF_SIZE,
   DEFAULT_WORLD,
   ENV_INTENSITY,
   EXPOSURE,
@@ -23,18 +26,20 @@ import {
   NO_FOG,
   PLAY_CAMERAS,
   readEnvironment,
+  reliefLayer,
   STUDIO_ENVIRONMENT,
   TONE_MAPPINGS,
   type BackgroundDescriptor,
   type EnvironmentRef,
   type FogDescriptor,
   type GroundDescriptor,
+  type ReliefLayer,
   type ScenePlay,
   type SceneWorld,
   type WorldLayer,
 } from '@shared/domain/scene'
 import { readStack } from '@shared/domain/postProcessing'
-import { isRecord, oneOf, readBoolean, readNumber, readString } from '@shared/guards'
+import { isRecord, oneOf, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 import { newId } from '@/helpers/ids'
 import { bound, type NumericBounds } from '@shared/numeric'
 
@@ -138,7 +143,40 @@ function readWorldLayer(value: unknown): readonly WorldLayer[] {
   if (!isRecord(value) || value.kind !== 'relief' || !isRecord(value.heightmap)) return []
   const assetId = value.heightmap.assetId
   if (typeof assetId !== 'string' || assetId === '') return []
-  return [{ kind: 'relief', heightmap: { assetId } }]
+  return [
+    reliefLayer(
+      { assetId },
+      {
+        origin: readReliefOrigin(value.origin),
+        size: readReliefSize(value.size),
+        elevation: readReliefElevation(value.elevation),
+      },
+    ),
+  ]
+}
+
+function readReliefOrigin(value: unknown): ReliefLayer['origin'] {
+  if (!isRecord(value)) return DEFAULT_RELIEF_ORIGIN
+  return {
+    x: readNumber(value, 'x', DEFAULT_RELIEF_ORIGIN.x),
+    z: readNumber(value, 'z', DEFAULT_RELIEF_ORIGIN.z),
+  }
+}
+
+function readReliefSize(value: unknown): ReliefLayer['size'] {
+  if (!isRecord(value)) return DEFAULT_RELIEF_SIZE
+  return {
+    x: readPositive(value, 'x', DEFAULT_RELIEF_SIZE.x),
+    z: readPositive(value, 'z', DEFAULT_RELIEF_SIZE.z),
+  }
+}
+
+function readReliefElevation(value: unknown): ReliefLayer['elevation'] {
+  if (!isRecord(value)) return DEFAULT_RELIEF_ELEVATION
+  return {
+    min: readNumber(value, 'min', DEFAULT_RELIEF_ELEVATION.min),
+    max: readNumber(value, 'max', DEFAULT_RELIEF_ELEVATION.max),
+  }
 }
 
 function readGround(value: unknown): GroundDescriptor {

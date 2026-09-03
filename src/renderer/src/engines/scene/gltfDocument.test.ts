@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { reliefLayer } from '@shared/domain/scene'
 import { DOCUMENT_ID_KEY, DOCUMENT_KIND_KEY, STUDIO_METADATA_KEY } from '@shared/domain/document'
 import { GLTF_SCENE_STATE, gltfStudioMetadata, isGltfDocument } from '@shared/domain/gltf'
 import { isRecord } from '@shared/guards'
@@ -132,19 +133,27 @@ describe('gltfDocumentOf', () => {
 })
 
 describe('sceneFromGltf', () => {
-  it('round-trips a relief heightmap reference, and the samples that asset holds', async () => {
+  it('round-trips a relief, and the samples that asset holds', async () => {
+    const layer = reliefLayer(
+      { assetId: 'asset_height' },
+      {
+        origin: { x: -16, z: 4 },
+        size: { x: 256, z: 128 },
+        elevation: { min: -8, max: 32 },
+      },
+    )
     const state: SceneState = {
       ...EMPTY_SCENE,
       world: {
         ...EMPTY_SCENE.world,
-        layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }],
+        layers: [layer],
       },
     }
     const document = JSON.parse(JSON.stringify(write(state)))
 
     expect(sceneHoldsMore(document)).toEqual([])
     const back = sceneFromGltf(document)
-    expect(back.world.layers).toEqual([{ kind: 'relief', heightmap: { assetId: 'asset_height' } }])
+    expect(back.world.layers).toEqual([layer])
 
     const values = Float32Array.from({ length: 16 }, (_, at) => at + 0.25)
     const bytes = openExrFloatY(4, 4, values)
