@@ -210,6 +210,7 @@ import {
   applyShadowQuality,
   applyShadows,
   fitShadowCamera,
+  limitShadowUpdates,
   needsShadowFrustum,
   ownedByAnotherNode,
   resizeShadowMap,
@@ -746,6 +747,7 @@ export class SceneRenderer {
     // Every surface — the panes, the preview, the film — reaches ONE composer through here, so
     // an effect cannot differ between the editor and the render. See § 26 of the specification.
     onDraw: request => this.compose(request),
+    onShadowFrame: refreshAll => this.limitShadowFrame(refreshAll),
     // Read back rather than computed here: only the controls know where an orbit ended up.
     onCameraSettled: pane => this.reportCameraSettled(pane),
     // The nodes alone, and the helpers on purpose: a lamp's glyph is a place one looks AT, never
@@ -806,6 +808,7 @@ export class SceneRenderer {
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
   private readonly belongsToAnotherNode = ownedByAnotherNode(id => this.objects.get(id))
   private readonly helpers = new Map<string, LightHelper>()
+  private readonly changedShadowLights = new Set<Object3D>()
   /** The frustum drawn under each camera of the scene — what makes one clickable. */
   private readonly frustums = new Map<string, CameraHelper>()
   /**
@@ -1212,7 +1215,7 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
-    let shadowsChanged =
+    let allShadowsChanged =
       state.animation !== this.timeline ||
       state.nodes.length !== this.applied.size ||
       state.world.ground !== this.world.ground ||
@@ -1229,9 +1232,14 @@ export class SceneRenderer {
     // The identity test sits HERE rather than only inside `syncNode`: on a pass where nothing
     // changed it is the whole of the work, and a call per node cost 4,6 ms on 50 000.
     for (const node of state.nodes) {
-      if (this.applied.get(node.id) === node) continue
-      shadowsChanged = true
+      const previous = this.applied.get(node.id)
+      if (previous === node) continue
+      if (previous?.type !== 'light' || node.type !== 'light') allShadowsChanged = true
       this.syncNode(node)
+      if (!allShadowsChanged && shadowOfLightMoved(previous, node)) {
+        const light = this.objects.get(node.id)
+        if (light) this.changedShadowLights.add(light)
+      }
     }
 
     // The set of live ids is built only when one can be missing. `applied` holds every node the
@@ -1294,7 +1302,8 @@ export class SceneRenderer {
     // world matrices, which nothing past here moves.
     this.regroupInstances()
     this.reportStats()
-    if (shadowsChanged) this.redraw()
+    if (allShadowsChanged) this.redraw()
+    else if (this.changedShadowLights.size > 0) this.refreshChangedShadows()
     else this.refreshWithoutShadows()
   }
 
@@ -2882,6 +2891,17 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  private refreshChangedShadows(): void {
+    this.viewport.invalidateInset()
+    this.viewport.requestShadowRender()
+  }
+
+  private limitShadowFrame(refreshAll: boolean): () => void {
+    const restore = limitShadowUpdates(this.objects.values(), refreshAll, this.changedShadowLights)
+    this.changedShadowLights.clear()
+    return restore
+  }
+
   private refreshWithoutShadows(): void {
     this.viewport.invalidateInset()
     this.viewport.requestCameraRender()
@@ -3817,7 +3837,9 @@ export class SceneRenderer {
     // `keepsItsGroup` lets nothing they read through.
     if (previous && keepsItsGroup(previous, node)) this.movedNodes.add(node.id)
     else this.markContentChanged()
-    this.placementChanged = true
+    if (previous?.type !== 'light' || node.type !== 'light' || shadowOfLightMoved(previous, node)) {
+      this.placementChanged = true
+    }
 
     // A model is its file: pointing a node at another asset is a different object, not an edit
     // of this one. Released and rebuilt — patching it would leave the old file on screen and
@@ -5823,6 +5845,35 @@ function helperVisibilityMoved(held: ViewportOptions, next: ViewportOptions): bo
 function pointsElsewhere(previous: ModelNode, node: SceneNode): boolean {
   if (node.type !== 'model') return true
   return previous.model.assetId !== node.model.assetId
+}
+
+function shadowOfLightMoved(previous: SceneNode | undefined, node: SceneNode): boolean {
+  if (previous?.type !== 'light' || node.type !== 'light') return true
+  if (
+    previous.transform !== node.transform ||
+    previous.visible !== node.visible ||
+    previous.castShadow !== node.castShadow ||
+    previous.parentId !== node.parentId ||
+    previous.attach !== node.attach ||
+    previous.light.kind !== node.light.kind
+  ) {
+    return true
+  }
+
+  if (previous.light.kind === 'directional' && node.light.kind === 'directional') {
+    return previous.light.target !== node.light.target
+  }
+  if (previous.light.kind === 'point' && node.light.kind === 'point') {
+    return previous.light.distance !== node.light.distance
+  }
+  if (previous.light.kind === 'spot' && node.light.kind === 'spot') {
+    return (
+      previous.light.distance !== node.light.distance ||
+      previous.light.angle !== node.light.angle ||
+      previous.light.target !== node.light.target
+    )
+  }
+  return false
 }
 
 function disposeMaterial(mesh: Mesh): void {

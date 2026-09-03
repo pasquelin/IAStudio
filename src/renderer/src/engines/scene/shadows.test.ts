@@ -16,6 +16,7 @@ import {
   applyShadowQuality,
   applyShadows,
   fitShadowCamera,
+  limitShadowUpdates,
   ownedByAnotherNode,
   resizeShadowMap,
 } from './shadows'
@@ -218,6 +219,30 @@ describe('fitShadowCamera', () => {
     const spot = new PointLight()
     expect(() => fitShadowCamera(spot, 20)).not.toThrow()
     expect(() => fitShadowCamera(new AmbientLight(), 20)).not.toThrow()
+  })
+})
+
+describe('limiting a shadow pass', () => {
+  it('updates only the changed light and restores off-screen rendering afterwards', () => {
+    const changed = new DirectionalLight()
+    const held = new PointLight()
+
+    const restore = limitShadowUpdates([changed, held], false, new Set([changed]))
+
+    expect(changed.shadow.autoUpdate).toBe(true)
+    expect(held.shadow.autoUpdate).toBe(false)
+    restore()
+    expect(held.shadow.autoUpdate).toBe(true)
+  })
+
+  it('updates every light after a caster changes', () => {
+    const first = new DirectionalLight()
+    const second = new PointLight()
+
+    limitShadowUpdates([first, second], true, new Set())
+
+    expect(first.shadow.autoUpdate).toBe(true)
+    expect(second.shadow.autoUpdate).toBe(true)
   })
 })
 
