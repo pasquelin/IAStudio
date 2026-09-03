@@ -29,6 +29,7 @@ import {
   type ReliefRead,
   type ReliefSculpt,
 } from '@shared/domain/relief'
+import { enabledTerrains } from '@shared/domain/scene'
 import type { ReliefLayer, SceneWorld, TerrainEditLayer } from '@shared/domain/scene'
 import { loadHeightmap } from './heightmap'
 import type { ReliefBuilder } from './reliefBuilder'
@@ -121,9 +122,7 @@ export function createReliefSurface(
 }
 
 function syncRelief(state: SurfaceState, world: SceneWorld, samples?: HeightmapSamples): void {
-  const wanted = world.layers.filter(
-    (layer): layer is ReliefLayer => layer.kind === 'relief' && layer.enabled,
-  )
+  const wanted = enabledTerrains(world.layers)
   const ids = new Set(wanted.map(layer => layer.id))
   for (const [id, terrain] of [...state.terrains]) {
     if (!ids.has(id)) dropTerrain(state, id, terrain)

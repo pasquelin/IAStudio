@@ -79,6 +79,8 @@ function install(samples: HeightmapSamples, chunks: ReliefGeometryData[]): Promi
   })
 }
 
+const SINGLE_RUN = { time: 200, iterations: 1, warmupTime: 0, warmupIterations: 1 }
+
 describe('building and releasing every relief position and normal on the UI thread', () => {
   for (const side of [512, 1024, 2048]) {
     const samples = samplesOf(side)
@@ -89,7 +91,7 @@ describe('building and releasing every relief position and normal on the UI thre
         surface.sync(WORLD, samples)
         surface.dispose()
       },
-      { time: 200, iterations: 1, warmupTime: 0, warmupIterations: 1 },
+      SINGLE_RUN,
     )
   }
 })
@@ -98,12 +100,7 @@ describe('copying samples for the worker and installing the geometry it built', 
   for (const side of [512, 1024, 2048]) {
     const samples = samplesOf(side)
     const chunks = geometryOf(samples)
-    bench(`${side} by ${side} samples`, () => install(samples, chunks), {
-      time: 200,
-      iterations: 1,
-      warmupTime: 0,
-      warmupIterations: 1,
-    })
+    bench(`${side} by ${side} samples`, () => install(samples, chunks), SINGLE_RUN)
   }
 })
 

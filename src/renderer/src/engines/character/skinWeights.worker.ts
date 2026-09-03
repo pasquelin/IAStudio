@@ -11,6 +11,7 @@ import { messageOf } from '@shared/guards'
 import { isCancel, type SkinIncoming, type SkinRequest, type SkinResponse } from './skinMessage'
 import { emptyBinding, skinRange, vertexCountOf } from './skinVertices'
 import { loadSkinVerticesWasm } from './skinVerticesWasm'
+import { breathe } from '../core/breathe'
 
 declare const self: DedicatedWorkerGlobalScope
 
@@ -68,10 +69,4 @@ async function run(request: SkinRequest): Promise<void> {
 
 function post(response: SkinResponse): void {
   self.postMessage(response)
-}
-
-function breathe(): Promise<void> {
-  return new Promise(resolve => {
-    setTimeout(resolve, 0)
-  })
 }

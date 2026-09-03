@@ -621,6 +621,11 @@ export function terrainEditLayer(patch?: Partial<TerrainEditLayer>): TerrainEdit
   }
 }
 
+/** The terrains a viewport draws and a body collides with: relief layers, minus the hidden ones. */
+export function enabledTerrains(layers: readonly WorldLayer[]): readonly ReliefLayer[] {
+  return layers.filter(layer => layer.kind === 'relief' && layer.enabled)
+}
+
 export function reliefLayer(
   heightmap: TextureRef,
   patch?: Partial<Omit<ReliefLayer, 'kind' | 'heightmap'>>,

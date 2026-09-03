@@ -47,7 +47,7 @@ export function reorderTerrains(order: readonly string[]): Command<SceneState> {
   return editLayers(
     'world:layers:reorder',
     layers => inOrder(layers, order),
-    state => idsOf(state.world.layers).join() === idsOf(inOrder(state.world.layers, order)).join(),
+    state => sameOrder(state.world.layers, inOrder(state.world.layers, order)),
   )
 }
 
@@ -105,7 +105,7 @@ export function reorderTerrainEdits(
     edits => inOrder(edits, order),
     terrain => {
       const next = inOrder(terrain.edits, order)
-      if (idsOf(terrain.edits).join() === idsOf(next).join()) return true
+      if (sameOrder(terrain.edits, next)) return true
       return terrain.edits.some((edit, at) => edit.locked && next[at]?.id !== edit.id)
     },
   )
@@ -209,10 +209,7 @@ function patchTerrain(
 ): Command<SceneState> {
   return editLayers(
     id,
-    layers =>
-      layers.map(layer =>
-        layer.kind === 'relief' && layer.id === terrainId ? { ...layer, ...patch } : layer,
-      ),
+    layers => mapTerrain(layers, terrainId, terrain => ({ ...terrain, ...patch })),
     state => !terrainOf(state, terrainId),
   )
 }
@@ -226,11 +223,7 @@ function patchTerrainEdits(
   return editLayers(
     id,
     layers =>
-      layers.map(layer =>
-        layer.kind === 'relief' && layer.id === terrainId
-          ? { ...layer, edits: change(layer.edits) }
-          : layer,
-      ),
+      mapTerrain(layers, terrainId, terrain => ({ ...terrain, edits: change(terrain.edits) })),
     state => {
       const terrain = terrainOf(state, terrainId)
       return !terrain || refuses(terrain)
@@ -278,26 +271,27 @@ function withEditSculpt(
   editId: string,
   sculpt: ReliefSculpt,
 ): SceneState {
-  const layers = state.world.layers.map(layer => {
-    if (layer.kind !== 'relief' || layer.id !== terrainId) return layer
-    return {
-      ...layer,
-      edits: layer.edits.map(edit => {
-        if (edit.id !== editId) return edit
-        if (sculpt.chunks.length === 0) {
-          return {
-            id: edit.id,
-            name: edit.name,
-            enabled: edit.enabled,
-            locked: edit.locked,
-            alpha: edit.alpha,
-          }
-        }
-        return { ...edit, sculpt }
-      }),
-    }
-  })
+  const layers = mapTerrain(state.world.layers, terrainId, terrain => ({
+    ...terrain,
+    edits: terrain.edits.map(edit =>
+      edit.id === editId ? terrainEditLayer({ ...edit, sculpt }) : edit,
+    ),
+  }))
   return { ...state, world: { ...state.world, layers } }
+}
+
+function mapTerrain(
+  layers: readonly WorldLayer[],
+  terrainId: string,
+  change: (terrain: ReliefLayer) => ReliefLayer,
+): readonly WorldLayer[] {
+  return layers.map(layer =>
+    layer.kind === 'relief' && layer.id === terrainId ? change(layer) : layer,
+  )
+}
+
+function sameOrder(items: readonly { id: string }[], next: readonly { id: string }[]): boolean {
+  return idsOf(items).join() === idsOf(next).join()
 }
 
 function idsOf(items: readonly { id: string }[]): string[] {

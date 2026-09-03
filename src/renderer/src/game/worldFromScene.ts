@@ -1,4 +1,5 @@
 import { COMPONENTS } from '@shared/domain/componentRegistry'
+import { enabledTerrains } from '@shared/domain/scene'
 import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
@@ -216,7 +217,7 @@ function groundOf(
   heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
   warn: (message: string) => void,
 ): readonly BodyDescriptor[] {
-  const reliefs = state.world.layers.filter(layer => layer.kind === 'relief' && layer.enabled)
+  const reliefs = enabledTerrains(state.world.layers)
   const bodies: BodyDescriptor[] = []
   for (const relief of reliefs) {
     const samples = heightmaps?.get(relief.heightmap.assetId)
