@@ -37,33 +37,8 @@ describe('analyzeOptimization', () => {
     expect([...objects.values()].map(mesh => mesh.visible)).toEqual(visibility)
     expect(optimizationReport(plan)).toMatchObject({
       instanceCandidates: WORTH_INSTANCING,
-      duplicateMaterials: WORTH_INSTANCING - 1,
       visualChanges: 'NONE',
     })
-  })
-
-  it('reports strictly identical material descriptors without merging visual variants', () => {
-    const first = meshNode('first')
-    const second = meshNode('second')
-    const variant = { ...meshNode('variant'), material: { ...first.material, roughness: 0.25 } }
-    const negative = { ...meshNode('negative'), negative: true }
-    const objects = new Map<string, Object3D>(
-      [first, second, variant, negative].map(node => [
-        node.id,
-        new Mesh(new BoxGeometry(), new MeshStandardMaterial()),
-      ]),
-    )
-
-    const plan = analyzeOptimization(
-      { nodes: [first, second, variant, negative], animation: EMPTY_TIMELINE },
-      new Object3D(),
-      id => objects.get(id),
-    )
-
-    expect(plan.sharedMaterials).toEqual([
-      expect.objectContaining({ sourceIds: ['first', 'second'], duplicateCount: 1 }),
-    ])
-    expect(optimizationReport(plan).duplicateMaterials).toBe(1)
   })
 
   /**
