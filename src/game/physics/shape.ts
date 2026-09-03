@@ -24,6 +24,19 @@ export type ColliderShape =
   /** The exact, disjoint pieces of a carved solid — ADR-25, never an approximate decomposition. */
   | { kind: 'convexes'; parts: readonly Float32Array[] }
   | { kind: 'trimesh'; vertices: Float32Array; indices: Uint32Array }
+  /**
+   * A grid of world-Y samples, row-major along X then Z. `scale.x` / `scale.z` are metres per
+   * sample; `scale.y` multiplies the stored height. The engine that cannot represent a rectangle
+   * pads; this type does not.
+   */
+  | {
+      kind: 'heightfield'
+      heights: Float32Array
+      width: number
+      height: number
+      offset: Vector3
+      scale: Vector3
+    }
 
 /** Four points is a tetrahedron, and the least that encloses anything at all. */
 export const HULL_FLOOR = 4
