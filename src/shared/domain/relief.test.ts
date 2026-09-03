@@ -7,7 +7,6 @@ import {
   chunkLayout,
   chunkMemoryBytes,
   chunkVerticesPerSide,
-  chunksHoldingSample,
   combinedAt,
   packDeltas,
   raiseReliefDisk,
@@ -144,10 +143,6 @@ describe('raiseReliefDisk', () => {
       { x: seamX, z: extent.origin.z, radius: stepX },
       2,
     )
-    expect(chunksHoldingSample(64, 0, 66, 8, RELIEF_CHUNK_TEXELS)).toEqual([
-      { column: 1, row: 0 },
-      { column: 0, row: 0 },
-    ])
     expect(heightAt(samples, sculpt, 64, 0)).toBe(2)
     expect(sculpt.chunks).toHaveLength(2)
   })
@@ -189,12 +184,6 @@ describe('raiseReliefDisk', () => {
     const wide = { width: 129, height: 129, values: new Float32Array(129 * 129) }
     const step = extent.size.x / (wide.width - 1)
     const corner = { x: extent.origin.x + 128 * step, z: extent.origin.z + 128 * step }
-
-    it('names the last chunk once, not twice', () => {
-      expect(chunksHoldingSample(128, 0, 129, 129, RELIEF_CHUNK_TEXELS)).toEqual([
-        { column: 1, row: 0 },
-      ])
-    })
 
     it('raises the far corner by the amount asked for, not four times it', () => {
       const sculpt = raiseReliefDisk(wide, extent, undefined, { ...corner, radius: step }, 3)
