@@ -5,7 +5,7 @@ import {
   mdiMagnify,
   mdiShapeOutline,
 } from '@mdi/js'
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { thumbnailUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
@@ -47,6 +47,7 @@ import {
 import { useDomainTree } from '@/hooks/useDomainTree'
 import { useFolderSearch } from '@/hooks/useFolderSearch'
 import { useFolderTree, type FolderNode } from '@/hooks/useFolderTree'
+import { useLatest } from '@/hooks/useLatest'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import type { CommandAnswer } from '@/services/commandBus'
@@ -222,18 +223,22 @@ export function Explorer() {
     [nodes, expandable],
   )
   const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
-  const foldOrder = useTreeFolds(state => state.explorer)
-  const seenFoldOrder = useRef(foldOrder.stamp)
+  const folding = useLatest({ expandableIds, expandedIds, toggle })
   useEffect(() => useTreeFolds.getState().note('explorer', anyExpanded), [anyExpanded])
   useEffect(() => {
-    if (seenFoldOrder.current === foldOrder.stamp) return
-    seenFoldOrder.current = foldOrder.stamp
-    if (foldOrder.wanted) {
-      for (const id of expandableIds) if (!expandedIds.has(id)) toggle(id)
-    } else {
-      for (const id of expandedIds) toggle(id)
-    }
-  }, [expandableIds, expandedIds, foldOrder.stamp, foldOrder.wanted, toggle])
+    let seenFoldOrder = useTreeFolds.getState().explorer.stamp
+    return useTreeFolds.subscribe(state => {
+      const order = state.explorer
+      if (seenFoldOrder === order.stamp) return
+      seenFoldOrder = order.stamp
+      const current = folding.current
+      if (order.wanted) {
+        for (const id of current.expandableIds) if (!current.expandedIds.has(id)) current.toggle(id)
+      } else {
+        for (const id of current.expandedIds) current.toggle(id)
+      }
+    })
+  }, [folding])
   const toggleBranch = useCallback(
     (id: string) => {
       const closing = expandedIds.has(id)
