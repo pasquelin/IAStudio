@@ -1,6 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Fragment, useEffect, useMemo, useRef, type DragEvent, type ReactNode } from 'react'
-import { cn } from '@/helpers/cn'
+import { useEffect, useMemo, useRef, type DragEvent, type ReactNode } from 'react'
 import { offerBlankDrop, type DragLike } from '@/helpers/drag'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collectionState'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
@@ -8,10 +7,9 @@ import { useGrid } from '@/hooks/useGrid'
 import { useReachEnd } from '@/hooks/useReachEnd'
 import { useRemeasure } from '@/hooks/useRemeasure'
 import { useRowHeight, type RowHeight } from '@/hooks/useRowHeight'
-import { RowChevron } from '../RowChevron'
 import { rowDrag } from '../rowDrag'
-import { CollectionCell } from './CollectionCell'
 import { focusVirtualCell, GAP, PREFETCH_ROWS } from '../virtual'
+import { CollectionVirtualRow } from './CollectionVirtualRow'
 
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
@@ -336,112 +334,33 @@ export function Collection<T extends { id: string }>({
           style={{ height: virtualizer.getTotalSize() }}
           className="relative"
         >
-          {virtualRows.map(row => {
-            const slice = items.slice(row.index * columns, (row.index + 1) * columns)
-
-            return (
-              <div
-                key={row.key}
-                // The virtualizer's row is geometry, not structure: a generic element between a
-                // `listbox` and its `option`s breaks the ownership ARIA requires.
-                //
-                // 🛑 Where a row opens, its detail is drawn HERE — beside the cell rather than
-                // inside it, an `option` being no place for a control. The listbox then owns one
-                // child that is not an option. Written down rather than hidden, and not measured
-                // against a screen reader.
-                role="presentation"
-                data-index={row.index}
-                // Measured only where a row can open: elsewhere the gauge is the answer, and a
-                // measurer would read the DOM back on every frame for nothing.
-                ref={openable ? virtualizer.measureElement : undefined}
-                style={{
-                  transform: `translateY(${row.start}px)`,
-                  // What `Row` sizes its picture against: the line it actually stands in, so no
-                  // row shape has to be guessed from the props a caller passed.
-                  ['--sc-row-height' as string]: `${rowPixels}px`,
-                  // Left to the content where a row can open — a stated height is exactly what
-                  // the measurer would read back, and every row would stay one gauge tall.
-                  ...(openable ? {} : { height: row.size }),
-                  ...(grid
-                    ? { gap: GAP, gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
-                    : { paddingBottom: ROW_GAP }),
-                }}
-                className={cn(
-                  'absolute inset-x-0 top-0 box-border',
-                  grid ? 'grid items-start' : openable ? 'flex flex-col' : 'flex',
-                )}
-              >
-                {slice.map((item, column) => {
-                  const index = row.index * columns + column
-                  const open = openable && item.id === expandedId && (canOpen?.(item) ?? true)
-                  const cell = (
-                    <CollectionCell
-                      key={item.id}
-                      expanded={openable && (canOpen?.(item) ?? true) ? open : undefined}
-                      index={index}
-                      selected={selected.has(item.id)}
-                      disabled={isDisabled?.(item) === true}
-                      tabbable={index === tabStop}
-                      // A list row spans the collection; a card is sized by its grid column, and
-                      // is inset so the selection this cell paints has somewhere to show. A card
-                      // is an opaque tile of exactly the cell's size: flush, it covered
-                      // `bg-accent-soft` to the last pixel and three picked assets looked like
-                      // every other. The inset is constant, so nothing moves on being picked.
-                      // Two insets, two jobs: a CARD's keeps an opaque tile off the selection
-                      // painted under it, so nothing moves on being picked; a ROW's is the
-                      // distance this cell owes its content from the fill it draws, which is
-                      // why it lives here rather than in `Row` — as the tree's row already does.
-                      className={
-                        grid
-                          ? 'p-1'
-                          : // 🛑 `flex items-center` where the cell holds a chevron: without it
-                            // the twist and the row stack, and every line of the shelf drew its
-                            // glyph ABOVE its own name, at twice the height. The tree gets the
-                            // same from the line shape its own row wears.
-                            cn('h-full w-full px-1', openable && 'flex items-center')
-                      }
-                      role={roles.cell}
-                      // The virtualizer mounts a window, so the cells cannot be counted from the
-                      // tree: without these a reader announces "1 of 35" over a list of 2000.
-                      position={index + 1}
-                      total={items.length}
-                      // `onOpen` rides the click slot: it IS the single click, and the two are
-                      // mutually exclusive by construction — a row that opens is not one to pick.
-                      onSelect={
-                        onSelect
-                          ? modifiers => pick(item, modifiers)
-                          : onOpen && (() => onOpen(item))
-                      }
-                      onActivate={onActivate ? () => onActivate(item) : undefined}
-                      onContextMenu={onContextMenu ? () => onContextMenu(item) : undefined}
-                      onArrow={event => onCellKeyDown(index, event)}
-                    >
-                      {openable && (
-                        <RowChevron
-                          expandable={canOpen?.(item) ?? true}
-                          expanded={open}
-                          onToggle={() => onToggleRow?.(item)}
-                        />
-                      )}
-                      {card ? card(item) : renderRow?.(item)}
-                    </CollectionCell>
-                  )
-
-                  if (!openable) return cell
-
-                  return (
-                    <Fragment key={item.id}>
-                      {/* The row keeps the gauge; only what opens under it is free to be tall. */}
-                      <div style={{ height: rowPixels }} className="flex shrink-0">
-                        {cell}
-                      </div>
-                      {open && <div data-row-detail>{renderRowDetail?.(item)}</div>}
-                    </Fragment>
-                  )
-                })}
-              </div>
-            )
-          })}
+          {virtualRows.map(row => (
+            <CollectionVirtualRow
+              key={row.key}
+              row={row}
+              items={items}
+              columns={columns}
+              rowPixels={rowPixels}
+              openable={openable}
+              grid={grid}
+              virtualizer={virtualizer}
+              selected={selected}
+              isDisabled={isDisabled}
+              tabStop={tabStop}
+              role={roles.cell}
+              pick={onSelect ? pick : undefined}
+              onOpen={onOpen}
+              onActivate={onActivate}
+              onContextMenu={onContextMenu}
+              onCellKeyDown={onCellKeyDown}
+              expandedId={expandedId}
+              canOpen={canOpen}
+              onToggleRow={onToggleRow}
+              renderCard={card}
+              renderRow={renderRow}
+              renderRowDetail={renderRowDetail}
+            />
+          ))}
         </div>
       )}
       {footer}

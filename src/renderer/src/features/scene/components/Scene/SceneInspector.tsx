@@ -59,13 +59,8 @@ export type SceneInspectorProps = { documentId: string }
  */
 export function SceneInspector({ documentId }: SceneInspectorProps) {
   const { t } = useTranslation()
-  // Two stable selectors, then derived: a selector that builds an array hands React a new
-  // snapshot on every call, and the render loop never settles.
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const animation = useScenes(state => sceneOf(state, documentId).animation)
-  // Where a key would land, which is where the lens has to be READ: the head runs on the wall
-  // clock during playback, so reading it raw would show a value no key ever takes. Snapped in the
-  // SELECTOR, so the panel sleeps between two frames instead of waking sixty times a second.
   const at = useSceneFrameHead(documentId, animation.fps)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const world = useScenes(state => sceneOf(state, documentId).world)
@@ -84,42 +79,25 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const sprite = node?.type === 'sprite' ? node : null
   const text = node?.type === 'text' ? node : null
   const model = node?.type === 'model' ? node : null
-  // How many materials the selected model's file turned out to carry — engine state, since the
-  // count lives in the GLB and not in the document. Zero until that file has landed.
   const modelSlots = useModelFiles(state =>
     model ? materialSlotsOfNode(state, documentId, model.id) : 0,
   )
   const camera = node?.type === 'camera' ? node : null
   const path = node?.type === 'path' ? node : null
-  // A band is swept along a rail held inside its shape, and it is edited by the rail's own panel:
-  // the same points, the same closing, the same handles — see `railOf`.
   const band =
     mesh && mesh.geometry.kind === 'ribbon' ? { id: mesh.id, shape: mesh.geometry } : null
   const rail = path?.path ?? band?.shape.path ?? null
-  // The descriptors keep their identity across every edit that does not touch them, so the
-  // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
   const lit = useMemo(() => (light ? lightFields(light.light) : []), [light])
-  // Derived from the node the component already holds, not a third subscription: a selector
-  // would re-scan `nodes` on every emission of any drag to find a camera that is right here.
   const cameraStack = ownedStackOf(camera?.camera.post)
   const cameraTarget = useMemo(
     (): PostTargetRef => ({ kind: 'camera', nodeId: camera?.id ?? '' }),
     [camera?.id],
   )
-  // `lensAt`, which the viewport draws through too: the field writes the same number back, so
-  // showing the descriptor alone would have a keyed camera jump by whatever its channel adds.
   const lens = useMemo(
     () => (camera ? cameraFields(lensAt(camera.camera, animation, camera.id, at)) : []),
     [camera, animation, at],
   )
-
-  /**
-   * The sections below cannot be memoised, and the reason is worth writing down rather than
-   * guessing at: their commands take the selected NODES, so their callbacks capture `selection` —
-   * derived from `nodes`, and therefore new on every edit to any node in the scene. Making them
-   * stable means commands that take ids, which is a change to `engines/scene/commands`.
-   */
 
   // Which lens fields can be keyed is `lensToCommand`'s to know, not a panel's. Read at call time
   // rather than from the render above, so a value typed as playback runs keys where it lands.
