@@ -2,9 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   applyReliefSculpt,
   changedChunks,
-  chunkLayout,
-  packDeltas,
-  unpackDeltas,
   withPackedChunks,
   type ReliefSculptOperation,
 } from '@shared/domain/relief'
@@ -17,7 +14,7 @@ import {
 const MAP = 1024
 
 describe('relief sculpt cost', () => {
-  it('leaves the disk loop off the UI thread: packing edits is the remainder', () => {
+  it('leaves the disk loop off the UI thread, and the packing with it', () => {
     const samples = { width: MAP, height: MAP, values: new Float32Array(MAP * MAP) }
     const extent = {
       origin: DEFAULT_RELIEF_ORIGIN,
@@ -34,32 +31,20 @@ describe('relief sculpt cost', () => {
       amount: 0.25,
     }
 
+    // What the worker does, packing included: `applyReliefSculpt` already writes base64.
     const started = performance.now()
     const after = applyReliefSculpt(samples, extent, undefined, operation)
-    const computeMs = performance.now() - started
-
     const edits = changedChunks(undefined, after)
-    const transferred = edits.map(edit => {
-      const layout = chunkLayout(edit.column, edit.row, MAP, MAP, after.grain)
-      return {
-        column: edit.column,
-        row: edit.row,
-        deltas: unpackDeltas(edit.payload, layout.width * layout.height),
-      }
-    })
+    const workerMs = performance.now() - started
 
+    // What the UI thread has left once the answer lands: hanging the chunks off the sculpt.
     const applyStarted = performance.now()
-    const packed = transferred.map(chunk => ({
-      column: chunk.column,
-      row: chunk.row,
-      payload: packDeltas(chunk.deltas),
-    }))
-    withPackedChunks(undefined, after.grain, packed)
+    withPackedChunks(undefined, after.grain, edits)
     const mainMs = performance.now() - applyStarted
 
-    // 1024² full disk, 2026-09-03: compute 177 ms on the UI thread, pack/apply 94 ms after.
-    expect(after.chunks.length).toBeGreaterThan(0)
-    expect(mainMs).toBeLessThan(computeMs)
-    expect(computeMs).toBeGreaterThan(1)
+    // 1024² full disk, 2026-09-03: worker 177 ms, UI thread 0,5 ms. It was 94 ms while the worker
+    // decoded each dirty chunk to transfer it and this side re-encoded what it had just decoded.
+    expect(edits.length).toBeGreaterThan(0)
+    expect(mainMs * 20).toBeLessThan(workerMs)
   })
 })

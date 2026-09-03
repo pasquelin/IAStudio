@@ -65,7 +65,10 @@ export function AccountSettingsAddForm() {
       )
       setFailure(refused)
       if (refused) return
-      reset()
+      // The provider STAYS: two accounts of the same cloud are added one after the other, and a
+      // bare `reset()` snapped the picker back to Scenario — where a key and a secret look alike,
+      // so the second account was filed under the wrong provider without a word.
+      reset({ providerId: fields.providerId, name: '', key: '', secret: '' })
     } finally {
       setBusy(false)
     }

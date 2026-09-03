@@ -605,6 +605,17 @@ function withHeldFuzz<T>(raycaster: Raycaster, pick: () => T): T {
 }
 
 /**
+ * 🛑 Visibility is INHERITED, and it is written per node: hiding a group clears the flag on the
+ * group's object alone, its children keeping theirs. Read on the node only, the marquee took
+ * what a hidden group held — invisible, and unclickable, since `isScenery` walks the chain.
+ */
+function shownInWorld(object: Object3D): boolean {
+  for (let node: Object3D | null = object; node; node = node.parent) if (!node.visible) return false
+
+  return true
+}
+
+/**
  * Whether a hit is scenery a DOCUMENT point may be written onto: not a rail of the studio, not a
  * workshop marker, and nothing hanging under something hidden.
  *
@@ -4130,91 +4141,90 @@ export class SceneRenderer {
     const holder = new Object3D()
     const { assetId } = node.model
 
-    void this.modelCache.acquire(assetId).then(source => {
-      // A freshness test and nothing more: `release` owns the reference, as `clear` does in
-      // `material-textures`. Letting go here too would drop the count twice, and free a source
-      // another node is still cloning.
-      if (this.objects.get(node.id) !== holder || !source) return
-
-      holder.add(instanceOf(source))
-      // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
-      // and the next one skips an unchanged node — the model would throw nothing until edited.
-      const applied = this.applied.get(node.id) ?? node
-
-      // The instance, never the cached source: its materials are shared with every other node
-      // built from the same file, and `createModelTextures` is what clones them before writing.
-      const maps = createModelTextures(
-        this.textureCache,
-        holder,
-        () => this.redraw(),
-        () =>
-          reportFailure(
-            'scene.texture',
-            assetId,
-            new Error('this model carries no material a map can be written into'),
-          ),
-      )
-      this.modelMaps.set(node.id, maps)
-      this.options.onMaterials?.(node.id, maps.count())
-      this.dressModel(node.id)
-
-      // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not
-      // carry them, and a clip addresses its targets by name — so the source's drive any
-      // instance built from it.
-      this.animations.add(node.id, holder, clipsOf(source))
-      if (applied.type === 'model') {
-        this.animations.apply(node.id, applied.model.lanes ?? [])
-        this.ensureBundled(node.id, applied.model.lanes ?? [])
-      }
-      this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
-
-      // The document's own rig, put back on. Its weights are NOT saved with it — they are derived
-      // from mesh and rig, like a BVH — so they are worked out again on every load. The skeleton
-      // is reported before that finishes: a rig that takes a minute to bind still has bones the
-      // inspector can name at once.
-      // Read once and used twice: whether this model has bones at all is the same question the
-      // helper asks, and answering it in two places is how the two came to disagree. The COUNT
-      // and not the named ones — an export that stripped joint names still has a rig to draw.
-      const clips = clipsOf(source)
-      const rig = rigStateOf(holder, clips)
-      if (applied.type === 'model') markInstanceable(holder, instanceableOf(applied, rig, clips))
-      this.bindSkeleton(node.id, holder, rig.boneCount > 0)
-      this.options.onRig?.(node.id, rig)
-      // Read off the very object that just landed: the skeleton window edits the FILE, and
-      // decoding it a second time to read its bones would pay for a million triangles twice.
-      const { rig: carried, extras } = characterOf(holder)
-      this.options.onCharacter?.(node.id, carried, extras, meshSampleOf(rig))
-      // 🛑 Before anything is retargeted onto it: the FILE is where a bone's role was put right,
-      // and a motion laid on a skeleton nobody has read plays on the wrong joints.
-      if (carried) this.learnRig(carried, extras?.roles)
-      // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
-      // on one of them would drive nothing at all until the next edit.
-      this.applyPoses()
-
-      applyShadowFlags(
-        holder,
-        applied.castShadow,
-        receivesShadow(applied),
-        this.belongsToAnotherNode,
-      )
-      // The count is a count of what is really there: a model's triangles arrive with its file,
-      // which is a tick after the `apply` that asked for it. It is also what the scene now
-      // OCCUPIES, so the lights are re-cut against a set that just grew by a whole model.
-      this.markContentChanged()
-      this.placementChanged = true
-      this.tuneShadowsIfMoved()
-      this.regroupInstances()
-      this.reportStats()
-      // Same reason, same place: what the file brought was not there when the mode was applied,
-      // and a model landing into a wireframe scene would be the one thing still drawn shaded.
-      if (this.needsEdges()) this.applyDisplay(holder)
-      // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
-      // Off the UI thread, and after the render: the viewport shows the file before the tree.
-      this.redraw()
-      void this.accelerateOrReport(holder, assetId)
-    })
+    void this.fillModelHolder(node, holder, assetId)
 
     return holder
+  }
+
+  /** What `buildModel` hands back an empty holder for: the file, once it has landed. */
+  private async fillModelHolder(node: ModelNode, holder: Object3D, assetId: string): Promise<void> {
+    const source = await this.modelCache.acquire(assetId)
+    // A freshness test and nothing more: `release` owns the reference, as `clear` does in
+    // `material-textures`. Letting go here too would drop the count twice, and free a source
+    // another node is still cloning.
+    if (this.objects.get(node.id) !== holder || !source) return
+
+    holder.add(instanceOf(source))
+    // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
+    // and the next one skips an unchanged node — the model would throw nothing until edited.
+    const applied = this.applied.get(node.id) ?? node
+
+    // The instance, never the cached source: its materials are shared with every other node
+    // built from the same file, and `createModelTextures` is what clones them before writing.
+    const maps = createModelTextures(
+      this.textureCache,
+      holder,
+      () => this.redraw(),
+      () =>
+        reportFailure(
+          'scene.texture',
+          assetId,
+          new Error('this model carries no material a map can be written into'),
+        ),
+    )
+    this.modelMaps.set(node.id, maps)
+    this.options.onMaterials?.(node.id, maps.count())
+    this.dressModel(node.id)
+
+    // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not
+    // carry them, and a clip addresses its targets by name — so the source's drive any
+    // instance built from it.
+    this.animations.add(node.id, holder, clipsOf(source))
+    if (applied.type === 'model') {
+      this.animations.apply(node.id, applied.model.lanes ?? [])
+      this.ensureBundled(node.id, applied.model.lanes ?? [])
+    }
+    this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
+
+    // The document's own rig, put back on. Its weights are NOT saved with it — they are derived
+    // from mesh and rig, like a BVH — so they are worked out again on every load. The skeleton
+    // is reported before that finishes: a rig that takes a minute to bind still has bones the
+    // inspector can name at once.
+    // Read once and used twice: whether this model has bones at all is the same question the
+    // helper asks, and answering it in two places is how the two came to disagree. The COUNT
+    // and not the named ones — an export that stripped joint names still has a rig to draw.
+    const clips = clipsOf(source)
+    const rig = rigStateOf(holder, clips)
+    if (applied.type === 'model') markInstanceable(holder, instanceableOf(applied, rig, clips))
+    this.bindSkeleton(node.id, holder, rig.boneCount > 0)
+    this.options.onRig?.(node.id, rig)
+    // Read off the very object that just landed: the skeleton window edits the FILE, and
+    // decoding it a second time to read its bones would pay for a million triangles twice.
+    const { rig: carried, extras } = characterOf(holder)
+    this.options.onCharacter?.(node.id, carried, extras, meshSampleOf(rig))
+    // 🛑 Before anything is retargeted onto it: the FILE is where a bone's role was put right,
+    // and a motion laid on a skeleton nobody has read plays on the wrong joints.
+    if (carried) this.learnRig(carried, extras?.roles)
+    // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
+    // on one of them would drive nothing at all until the next edit.
+    this.applyPoses()
+
+    applyShadowFlags(holder, applied.castShadow, receivesShadow(applied), this.belongsToAnotherNode)
+    // The count is a count of what is really there: a model's triangles arrive with its file,
+    // which is a tick after the `apply` that asked for it. It is also what the scene now
+    // OCCUPIES, so the lights are re-cut against a set that just grew by a whole model.
+    this.markContentChanged()
+    this.placementChanged = true
+    this.tuneShadowsIfMoved()
+    this.regroupInstances()
+    this.reportStats()
+    // Same reason, same place: what the file brought was not there when the mode was applied,
+    // and a model landing into a wireframe scene would be the one thing still drawn shaded.
+    if (this.needsEdges()) this.applyDisplay(holder)
+    // A dense model is what makes a click cost a frame — measured in `scenePicking.bench.ts`.
+    // Off the UI thread, and after the render: the viewport shows the file before the tree.
+    this.redraw()
+    void this.accelerateOrReport(holder, assetId)
   }
 
   /** Told once per skeleton, not per model: it is filed by what its bones ARE. */
@@ -5336,7 +5346,7 @@ export class SceneRenderer {
 
     const bodies: ScreenBody[] = []
     for (const [id, object] of this.objects) {
-      if (!object.visible) continue
+      if (!shownInWorld(object)) continue
 
       object.getWorldPosition(BODY_CENTRE)
       // `project` flips the sign behind the camera, so a body at one's back would fall in the box

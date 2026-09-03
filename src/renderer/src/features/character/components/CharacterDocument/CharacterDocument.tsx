@@ -112,13 +112,13 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
 
   useEffect(() => {
     engineRef.current?.setMode(view.mode)
-  }, [view.mode])
+  }, [view.mode, live])
 
   // 🛑 The padlocks reach the DRAG, not just the release: unheld for the length of a gesture, a
   // joint leaves the axis a hand meant to keep it on — seen on screen the 2026-09-02.
   useEffect(() => {
     engineRef.current?.setHeldBoneAxes(view.heldAxes)
-  }, [view.heldAxes])
+  }, [view.heldAxes, live])
 
   // 🛑 The rest is put back BEFORE the engine measures the skins against it: a bone left where a
   // pose placed it would be bound there, and that pose would become the character's own shape.
@@ -131,7 +131,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
         engine.poseBone(nodeId, bone.name, bone.rest)
 
     engine.setRestEditing(view.editingRest)
-  }, [view.editingRest, assetId, nodeId])
+  }, [view.editingRest, assetId, nodeId, live])
 
   // The band names its subject after the node, and a workshop is laid before the catalogue has
   // answered: without this its one row reads `asset_d826b135-…` rather than the character.
@@ -150,7 +150,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
     engineRef.current?.setPickedBone(
       view.pickedBone && nodeId ? { nodeId, bone: view.pickedBone } : null,
     )
-  }, [view.pickedBone, nodeId])
+  }, [view.pickedBone, nodeId, live])
 
   // 🛑 The skeleton the store holds, put ON the model. Without this a fitted rig lives in a
   // state nobody draws, no weights are ever worked out, and ⌘S writes bones bound to nothing.
@@ -159,7 +159,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
     if (!engine || !nodeId || !character.rig) return
 
     void engine.skinModel(nodeId, character.rig)
-  }, [character.rig, nodeId])
+  }, [character.rig, nodeId, live])
 
   // Its own effect: the one that mounts the renderer must not run again for a preference.
   useEffect(() => {
@@ -221,10 +221,6 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
     // edited by placing its joints, where a scene poses one by turning them.
     renderer.setSkeletons(true)
     renderer.setPoseMode(true)
-    const held = characterViewOf(useCharacterView.getState(), assetId)
-    renderer.setRestEditing(held.editingRest)
-    renderer.setMode(held.mode)
-    renderer.setHeldBoneAxes(held.heldAxes)
 
     const stage = createCharacterStage({ renderer, assetId })
 

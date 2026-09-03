@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import { clamp } from '../../numeric'
+import { pooled } from '../../pooled'
 import { aeroForces, type Aero, type Airframe, type Stick } from '../../physics/aerodynamics'
 import { axesOfEuler, restingAxes } from '../../physics/quaternion'
 import type { BodyForce } from '../../ports/physicsPort'
@@ -105,7 +106,7 @@ export function createAircraftSystem(
           aero,
         )
 
-        const push = pooled(pool, forces.length)
+        const push = pooled(pool, forces.length, freshForce)
         push.body = entity.id
         push.force.x = aero.force.x
         push.force.y = aero.force.y
@@ -141,15 +142,8 @@ function readFrame(settings: Component, into: Airframe): Airframe {
   return into
 }
 
-function pooled(pool: BodyForce[], at: number): BodyForce {
-  const kept = pool[at]
-  if (kept) return kept
-
-  const made: BodyForce = {
-    body: '',
-    force: { x: 0, y: 0, z: 0 },
-    torque: { x: 0, y: 0, z: 0 },
-  }
-  pool.push(made)
-  return made
-}
+const freshForce = (): BodyForce => ({
+  body: '',
+  force: { x: 0, y: 0, z: 0 },
+  torque: { x: 0, y: 0, z: 0 },
+})

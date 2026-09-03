@@ -1,6 +1,6 @@
 import { exportTargetOf } from '@shared/domain/exportRegistry'
 import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
-import { bytesToBase64 } from '@/helpers/base64'
+import { bytesToBase64 } from '@shared/base64'
 import { getBridge } from '@/services/bridge'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { documentExportName, useDocuments } from '@/stores/documents'

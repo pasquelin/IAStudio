@@ -1,10 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  applyReliefSculpt,
-  changedChunks,
-  packDeltas,
-  type ReliefSculpt,
-} from '@shared/domain/relief'
+import { applyReliefSculpt, changedChunks, type ReliefSculpt } from '@shared/domain/relief'
 import {
   DEFAULT_RELIEF_ELEVATION,
   DEFAULT_RELIEF_ORIGIN,
@@ -51,14 +46,7 @@ function ask(id: number, sculpt: ReliefSculpt | undefined = undefined): void {
 }
 
 function packedOf(response: Extract<ReliefSculptResponse, { ok: true }>): ReliefSculpt {
-  return {
-    grain: response.grain,
-    chunks: response.chunks.map(chunk => ({
-      column: chunk.column,
-      row: chunk.row,
-      payload: packDeltas(chunk.deltas),
-    })),
-  }
+  return { grain: response.grain, chunks: response.chunks }
 }
 
 describe('the relief sculpt worker', () => {
@@ -77,12 +65,14 @@ describe('the relief sculpt worker', () => {
     expect(packedOf(message).chunks).toEqual(changedChunks(undefined, direct))
   })
 
-  it('transfers the dirty chunk buffers rather than copying them', () => {
+  /** In the form the DOCUMENT holds: nothing is left for the UI thread to encode on arrival. */
+  it('answers packed chunks, and nothing to transfer beside them', () => {
     ask(5)
 
     const message = posted[0]?.[0] as ReliefSculptResponse
     if (!message || !message.ok) throw new Error('worker did not answer')
-    expect(posted[0]?.[1]).toHaveLength(message.chunks.length)
     expect(message.chunks.length).toBeGreaterThan(0)
+    expect(message.chunks.every(chunk => typeof chunk.payload === 'string')).toBe(true)
+    expect(posted[0]?.[1]).toBeUndefined()
   })
 })

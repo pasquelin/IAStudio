@@ -3,8 +3,6 @@ import { emptyHistory, run, undo } from '../core/history'
 import {
   applyReliefSculpt,
   changedChunks,
-  chunkLayout,
-  unpackDeltas,
   type ReliefSculpt,
   type ReliefSculptOperation,
 } from '@shared/domain/relief'
@@ -78,17 +76,7 @@ function answer(fake: ReturnType<typeof fakeWorker>, request: ReliefSculptReques
     id: request.id,
     ok: true,
     grain: after.grain,
-    chunks: changedChunks(request.sculpt, after).map(edit => {
-      const layout = chunkLayout(edit.column, edit.row, request.width, request.height, after.grain)
-      return {
-        column: edit.column,
-        row: edit.row,
-        deltas:
-          edit.payload === ''
-            ? new Float32Array(0)
-            : unpackDeltas(edit.payload, layout.width * layout.height),
-      }
-    }),
+    chunks: changedChunks(request.sculpt, after),
   })
 }
 

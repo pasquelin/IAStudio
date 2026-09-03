@@ -37,7 +37,7 @@ import {
   oraStackOf,
   oraSurfacesOf,
 } from '@/engines/canvas/oraDocument'
-import { bytesToBase64 } from '@/helpers/base64'
+import { bytesToBase64 } from '@shared/base64'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
@@ -616,7 +616,10 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
     holds: documentId => characterStore.hasState(useCharacters.getState(), modelOf(documentId)),
     dirty: documentId => isCharacterDirty(useCharacters.getState(), modelOf(documentId)),
     forget: document => {
-      const assetId = modelOf(document.id)
+      // 🛑 Off the DESCRIPTOR, never `modelOf`: `refreshDocuments` forgets a document AFTER the
+      // refresh has emptied the map, which is the whole reason it hands one over. Read from the
+      // store the asset answered `''`, and skeleton, view, skins and workshop all stayed.
+      const assetId = document.kind === 'character' ? (document.sourceAssetId ?? '') : ''
       useCharacters.getState().drop(assetId)
       useCharacterView.getState().forgetCharacterView(assetId)
       forgetCharacterSkins(assetId)

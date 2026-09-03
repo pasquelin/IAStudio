@@ -90,7 +90,12 @@ export function SceneTree({ documentId }: { documentId: string }) {
     const parents = new Set(shownItems.flatMap(item => (item.parentId ? [item.parentId] : [])))
     return new Set(shownItems.filter(item => parents.has(item.id)).map(item => item.id))
   }, [shownItems])
-  const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
+  // Walked rather than spread: a drag renders this once per frame, and the copy was a fresh array
+  // the size of the outliner's parents each time.
+  const anyExpanded = useMemo(() => {
+    for (const id of expandableIds) if (expandedIds.has(id)) return true
+    return false
+  }, [expandableIds, expandedIds])
   const latestExpandableIds = useLatest(expandableIds)
   useEffect(() => useTreeFolds.getState().note('scene', anyExpanded), [anyExpanded])
   useEffect(() => {

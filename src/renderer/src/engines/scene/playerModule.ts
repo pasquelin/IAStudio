@@ -78,6 +78,16 @@ function partsIn(nodes: readonly SceneNode[], module: SceneNode): FoundParts {
 }
 
 /**
+ * Every node a word may name: its id first, then the FIRST node of that name — the resolution
+ * `entityNamed` plays. Built as one map with ids laid first, so a homonym can never take an id.
+ */
+export function nodesByWord(nodes: readonly SceneNode[]): Map<string, SceneNode> {
+  const held = new Map(nodes.map(node => [node.id, node]))
+  for (const node of nodes) if (!held.has(node.name)) held.set(node.name, node)
+  return held
+}
+
+/**
  * Every module's arm, pointed at the body and the eye it HANGS with. 🛑 `copiesOf` remaps ids and
  * nothing inside a component, so a name resolved globally aimed a duplicate at the original's
  * camera. What points OUTSIDE — the car a player drives — is the author's, and is kept.
@@ -92,12 +102,7 @@ export function withBoundPlayerArm(nodes: readonly SceneNode[]): readonly SceneN
     const held = arm?.components?.find(one => one.type === 'SpringArm')
     if (!arm || !held) continue
 
-    const inside = new Map(
-      parts.inside.flatMap(node => [
-        [node.id, node],
-        [node.name, node],
-      ]),
-    )
+    const inside = nodesByWord(parts.inside)
     const own = (said: unknown, fresh?: SceneNode): string | null => {
       if (typeof said !== 'string') return fresh?.id ?? null
 

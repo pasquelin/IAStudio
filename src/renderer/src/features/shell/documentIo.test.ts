@@ -46,7 +46,7 @@ import { addLayer, renameLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas } from '@/features/image/canvasHosts'
 import { fakeCanvas } from '@/features/image/canvasHost-fixtures'
 import { PNG_HEAD } from '@/game/game-fixtures'
-import { bytesToBase64 } from '@/helpers/base64'
+import { bytesToBase64 } from '@shared/base64'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { EMPTY_AUDIO_EDIT, pushEdit } from '@/engines/audio/edits'
 import { addClip, removeTrack } from '@/engines/timeline/commands'
@@ -2244,6 +2244,22 @@ describe('closing a document', () => {
     await expect(refreshDocuments()).resolves.toBe(true)
 
     expect(useCode.getState().files[script]).toBeUndefined()
+  })
+
+  /** 🛑 The same defect one kind further: `modelOf` read the asset off the emptied map too, so a
+   * project change left the skeleton and its workshop standing for the session. */
+  it('forgets the skeleton and workshop of a character a project change dropped', async () => {
+    installFakeBridge({})
+    installCharacterDocument('doc-hero', 'asset-hero')
+    seedCharacter('asset-hero', { origin: 'local', bones: [BONE] }, {})
+    sceneStore.use.getState().replace(workshopIdOf('asset-hero'), createDefaultScene())
+
+    installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
+
+    await expect(refreshDocuments()).resolves.toBe(true)
+
+    expect(characterStore.hasState(useCharacters.getState(), 'asset-hero')).toBe(false)
+    expect(sceneStore.hasState(useScenes.getState(), workshopIdOf('asset-hero'))).toBe(false)
   })
 
   it('leaves the flat view of a document it did not close alone', async () => {

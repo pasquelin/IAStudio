@@ -374,7 +374,10 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       open: () => Promise.resolve(),
       ...overrides.mirror,
     },
-    playerModuleWindow: { open: () => Promise.resolve() },
+    playerModuleWindow: {
+      open: () => Promise.resolve(),
+      ...overrides.playerModuleWindow,
+    },
     gameWindow: {
       open: () => Promise.resolve(),
       close: () => Promise.resolve(),

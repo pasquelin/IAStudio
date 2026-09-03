@@ -4,7 +4,7 @@ import { textOf } from '@game/runtime/componentFields'
 import { lookOf, type Look } from '@game/runtime/playView'
 import { armRestOffsets } from '@game/runtime/systems/springArmRig'
 import { restingAxes } from '@game/physics/quaternion'
-import { withBoundPlayerArm } from './playerModule'
+import { nodesByWord, withBoundPlayerArm } from './playerModule'
 import type { SceneNode } from './sceneState'
 
 const ARM = COMPONENT_DEFAULTS.SpringArm
@@ -32,7 +32,7 @@ export function springArmRigsOf(
   const found = new Map<string, ArmRig>()
   // Built only once an arm is actually found: a scene of forty thousand nodes and no spring arm
   // paid a Map of forty thousand entries on every selection and every frame of a drag.
-  let held: Map<string, string> | null = null
+  let held: Map<string, SceneNode> | null = null
 
   for (const node of bound) {
     const arm = node.components?.find(one => one.type === 'SpringArm')
@@ -40,8 +40,8 @@ export function springArmRigsOf(
 
     // The id first and the FIRST name after, exactly as `entityNamed` resolves one: an arm outside
     // a module keeps the name its author typed, and reading ids alone drew nothing for those.
-    held ??= namesAndIds(bound)
-    const subjectId = held.get(textOf(arm, 'subject', ARM.subject))
+    held ??= nodesByWord(bound)
+    const subjectId = held.get(textOf(arm, 'subject', ARM.subject))?.id
     if (!subjectId) continue
 
     // 🛑 The three arms of `aimedAt` (`springArm.ts`) and its fallback, or the aid draws an arm
@@ -62,13 +62,6 @@ export function springArmRigsOf(
     found.set(node.id, { subjectId, lift, back })
   }
   return found
-}
-
-/** Every node reachable by what an author may write: its id, and the first node of that name. */
-function namesAndIds(nodes: readonly SceneNode[]): Map<string, string> {
-  const held = new Map(nodes.map(node => [node.id, node.id]))
-  for (const node of nodes) if (!held.has(node.name)) held.set(node.name, node.id)
-  return held
 }
 
 const AXES = restingAxes()

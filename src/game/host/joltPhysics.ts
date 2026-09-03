@@ -2,6 +2,7 @@
 
 import type { Vector3 } from '@shared/domain/transform'
 import { DEGREES } from '../numeric'
+import { pooled } from '../pooled'
 import { quaternionFromEuler } from '../physics/quaternion'
 import { HULL_FLOOR, type ColliderShape } from '../physics/shape'
 import type {
@@ -472,20 +473,24 @@ function createJoltPhysics(jolt: JoltModule): PhysicsPort {
       // world bounds, so a cast rewritten in place keeps the bounds of the one before. Measured —
       // only what stood on the centre line was ever found, whatever the radius.
       const sweep = new jolt.RShapeCast(probe.ball, probe.scale, probe.at, probe.along)
-      probe.shapeHit.Reset()
-      query.CastShape(
-        sweep,
-        probe.shapeSettings,
-        probe.zero,
-        probe.shapeHit,
-        broadFilter,
-        layerFilter,
-        probe.ignored,
-        shapeFilter,
-      )
-      const fraction = probe.shapeHit.HadHit() ? probe.shapeHit.mHit.mFraction : null
-      jolt.destroy(sweep)
-      return fraction
+      // Freed whatever happens: this runs once per frame and per arm, and WebAssembly memory a
+      // throw walked past is never given back.
+      try {
+        probe.shapeHit.Reset()
+        query.CastShape(
+          sweep,
+          probe.shapeSettings,
+          probe.zero,
+          probe.shapeHit,
+          broadFilter,
+          layerFilter,
+          probe.ignored,
+          shapeFilter,
+        )
+        return probe.shapeHit.HadHit() ? probe.shapeHit.mHit.mFraction : null
+      } finally {
+        jolt.destroy(sweep)
+      }
     },
 
     step: dt => {
@@ -600,16 +605,6 @@ const FACED = { x: 0, y: 0, z: 0 }
 
 const idOf = (jolt: JoltModule, pointer: number): number =>
   jolt.wrapPointer(pointer, jolt.Body).GetID().GetIndexAndSequenceNumber()
-
-/** One idiom for every buffer of this port: what a step hands out is never allocated by a step. */
-function pooled<T>(pool: T[], at: number, make: () => T): T {
-  const kept = pool[at]
-  if (kept) return kept
-
-  const made = make()
-  pool.push(made)
-  return made
-}
 
 /**
  * Everything one probe reuses, built ONCE. A cast runs per spring arm per frame, and each of these

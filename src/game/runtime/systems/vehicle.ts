@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import { clamp } from '../../numeric'
+import { pooled } from '../../pooled'
 import { axesOfEuler, dot, restingAxes } from '../../physics/quaternion'
 import type { VehicleDrive } from '../../ports/physicsPort'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
@@ -73,7 +74,7 @@ export function createVehicleSystem(
         const speed = motion ? dot(motion.linear, axesOfEuler(turned, heading).forward) : 0
         const braking = asked * speed < 0 && Math.abs(speed) > STOPPED
 
-        const drive = pooled(pool, wanted.length)
+        const drive = pooled(pool, wanted.length, freshDrive)
         drive.body = entity.id
         drive.forward = braking || handBrake === 1 ? 0 : asked
         drive.steer = steer
@@ -102,11 +103,4 @@ export function createVehicleSystem(
   }
 }
 
-function pooled(pool: VehicleDrive[], at: number): VehicleDrive {
-  const kept = pool[at]
-  if (kept) return kept
-
-  const made: VehicleDrive = { body: '', forward: 0, steer: 0, brake: 0, handBrake: 0 }
-  pool.push(made)
-  return made
-}
+const freshDrive = (): VehicleDrive => ({ body: '', forward: 0, steer: 0, brake: 0, handBrake: 0 })
