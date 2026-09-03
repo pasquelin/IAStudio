@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { GhostText } from '@/components/GhostText'
 import { QuietNote } from '@/components/QuietNote'
 import { fieldHandle } from '@/components/scHandle'
-import { PANEL_SCROLL } from '@/components/styles'
+import { PANEL_INSET, PANEL_SCROLL } from '@/components/styles'
 import { cn } from '@/helpers/cn'
 import { isComposing } from '@/helpers/composition'
 import { completionFor, foldForSearch, matchesWords, searchWords } from '@shared/text'
@@ -290,7 +290,7 @@ export function AssistantConversation() {
   useEffect(() => {
     const list = thread.current
     if (list && following.current) list.scrollTop = list.scrollHeight
-  }, [turns, busy, round, asked])
+  }, [turns, busy, round, asked, choosing])
 
   // 🛑 Never the whole conversation. `registerConfirmer` answers for MCP actions too, which need
   // no assistant model — swallowing the thread here left a question on screen that could not be
@@ -316,9 +316,9 @@ export function AssistantConversation() {
         setInside(stays)
         if (!stays) setSpeaking(micOpen)
       }}
-      className="flex min-h-0 w-full flex-1 flex-col gap-2 p-1"
+      className={cn(PANEL_INSET, 'flex min-h-0 w-full flex-1 flex-col gap-2')}
     >
-      {turns.length === 0 ? (
+      {turns.length === 0 && !asked && !choosing ? (
         // The room a thread would take, kept empty: the composer stays at the foot in both hosts,
         // where a chat puts it, rather than climbing to the top of a window with nothing in it.
         <div className="flex flex-1 flex-col justify-center">
@@ -329,21 +329,32 @@ export function AssistantConversation() {
         <ol
           ref={thread}
           onScroll={rememberScroll}
-          // 🛑 `pl-0` and never `p-0`: what is stripped is a list's own indent, and the right
-          // padding of `PANEL_SCROLL` is the room the macOS overlay bar is drawn in — over the
-          // bubbles, which are the one thing in the studio aligned to that edge.
-          className={cn(PANEL_SCROLL, 'm-0 list-none gap-2 pl-0')}
+          // 🛑 Padded by nothing of its own: `pl-0` strips a list's indent, and `pr-0` gives back
+          // the room `PANEL_SCROLL` reserves for the macOS overlay bar — the panel's own inset
+          // already draws it, and both together held the bubbles two steps off that edge.
+          className={cn(PANEL_SCROLL, 'm-0 list-none gap-2 pr-0 pl-0')}
         >
           {turns.map(turn => (
             <AssistantConversationTurn key={turn.id} turn={turn} />
           ))}
 
           <AssistantConversationWorking />
+
+          {/* LAST of the thread, where the working line already stands: read down by the field it
+              sat below the fold of a short conversation, and a reader watching the newest line
+              never saw the studio waiting on them. */}
+          {asked && (
+            <li key={asked.id}>
+              <AssistantConversationQuestion request={asked.request} />
+            </li>
+          )}
+          {choosing && (
+            <li key={choosing.id}>
+              <AssistantConversationChoice {...choosing} />
+            </li>
+          )}
         </ol>
       )}
-
-      {asked && <AssistantConversationQuestion key={asked.id} request={asked.request} />}
-      {choosing && <AssistantConversationChoice key={choosing.id} {...choosing} />}
 
       {/* The running hypothesis, above the field it will land in. The label is what makes it
           this window's: it says where the words are going, which "Listening…" does not — the
