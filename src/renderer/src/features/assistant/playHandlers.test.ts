@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { EMPTY_RUNTIME_PERFORMANCE } from '@shared/domain/gameRuntime'
 import { drawing } from '@/game/game-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
@@ -80,6 +81,7 @@ describe('a game driven from outside the window', () => {
           errors: [
             { script: 'script:Walk.ts', entity: null, message: 'no', line: 7, column: 3, at: 1 },
           ],
+          performance: EMPTY_RUNTIME_PERFORMANCE,
         },
       },
     })

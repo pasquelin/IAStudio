@@ -3,13 +3,19 @@ import { copyTransform, sameVector3, type Transform } from '@shared/domain/trans
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import type { RuntimePerformance } from '@shared/domain/gameRuntime'
 
 /**
  * The one thing a running game asks of the viewport. Narrowed to it rather than taking the whole
  * engine: a test then drives this without a WebGL context, and nothing here can reach for the
  * rest of a 4 300-line class by accident.
  */
-export type SceneDraw = Pick<SceneRenderer, 'apply' | 'placeView' | 'releaseView' | 'viewPlacement'>
+export type SceneDraw = Pick<
+  SceneRenderer,
+  'apply' | 'placeView' | 'releaseView' | 'viewPlacement'
+> & {
+  runtimePerformance?: () => Omit<RuntimePerformance, 'cpuFrameMs' | 'compilationMs'>
+}
 
 /**
  * What draws a running game inside the studio: the scene the editor already has, redrawn from a

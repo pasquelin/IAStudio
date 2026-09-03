@@ -34,6 +34,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
   let scene: SceneState | null = null
   let modules: readonly ScriptModule[] = []
   let troubles: readonly ScriptTrouble[] = []
+  let compilationMs = 0
   /** Scenes the studio has answered for, by the name the game asked with. */
   const known = new Map<string, SceneLookup>()
   /** Guards a start against the `play` that overtook it while the engines were landing. */
@@ -79,6 +80,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       troubles,
       sceneNamed,
       onReport: report,
+      compilationMs: () => compilationMs,
     })
 
     // Overtaken by a later Play, or stopped while the engines were landing.
@@ -111,6 +113,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       drop()
       documentId = message.documentId
       scene = compiler.compileRuntimeWorld(message.scene)
+      compilationMs = compiler.getOptimizationReport().compilationMs
       modules = message.modules
       troubles = message.troubles
       // 🛑 Applied whole, and it is what the studio's own viewport does on every edit: the render
@@ -126,12 +129,18 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       const compiled = compiler.compileRuntimeRegion(message.patch)
       if (!compiled) return
       scene = compiled
+      compilationMs = compiler.getOptimizationReport().compilationMs
       deps.renderer.apply(scene)
       return
     }
 
     if (message.kind === 'scene') {
-      known.set(message.scene, compiledLookup(message.found))
+      known.set(
+        message.scene,
+        compiledLookup(message.found, measured => {
+          compilationMs = measured
+        }),
+      )
       return
     }
 
@@ -156,10 +165,16 @@ export function createGameStage(deps: GameStageDeps): GameStage {
   }
 }
 
-function compiledLookup(found: SceneLookup): SceneLookup {
+function compiledLookup(
+  found: SceneLookup,
+  onCompilation: (milliseconds: number) => void,
+): SceneLookup {
   if (found === 'reading' || found === 'unknown') return found
+  const compiler = createRuntimeWorldCompiler()
+  const state = compiler.compileRuntimeWorld(found.state)
+  onCompilation(compiler.getOptimizationReport().compilationMs)
   return {
     ...found,
-    state: createRuntimeWorldCompiler().compileRuntimeWorld(found.state),
+    state,
   }
 }

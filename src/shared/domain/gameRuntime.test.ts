@@ -4,6 +4,10 @@ import { faultsOf, NOT_PLAYING, type RuntimeReport } from './gameRuntime'
 const report = (over: Partial<RuntimeReport>): RuntimeReport => ({ ...NOT_PLAYING, ...over })
 
 describe('the faults a running game reports', () => {
+  it('does not invent GPU timing before a compatible context measures one', () => {
+    expect(NOT_PLAYING.performance.gpuFrameMs).toBeNull()
+  })
+
   it('lists script errors first, then error log lines, and ignores the rest', () => {
     expect(
       faultsOf(

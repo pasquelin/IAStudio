@@ -1,4 +1,5 @@
 import {
+  BatchedMesh,
   Box3,
   BufferGeometry,
   CameraHelper,
@@ -6,12 +7,15 @@ import {
   type AnimationClip,
   DirectionalLight,
   Euler,
+  Frustum,
   GridHelper,
   type Intersection,
+  InstancedMesh,
   Light,
   LineBasicMaterial,
   type Material,
   Matrix3,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -230,7 +234,8 @@ import {
 } from './shadows'
 import { createPaneMemory, dressForPane, forgetDress } from './paneDress'
 import { createPaneMaterials, type PaneMaterials } from './paneMaterials'
-import { EMPTY_STATS, statsOf, type SceneStats } from './sceneStats'
+import { EMPTY_STATS, geometryBytesOf, statsOf, type SceneStats } from './sceneStats'
+import type { RuntimePerformance } from '@shared/domain/gameRuntime'
 import {
   applyWireOverlay,
   DEFAULT_PANE_VIEWS,
@@ -285,6 +290,7 @@ import { bakedInstancesOf } from './bakedInstances'
 import {
   behavioralGroupingExclusions,
   groupingExclusions,
+  isDrawn,
   unhang,
   worldReach,
   type InstancedGroups,
@@ -792,6 +798,64 @@ export class SceneRenderer {
     shadows: true,
   })
 
+  runtimePerformance(): Omit<RuntimePerformance, 'cpuFrameMs' | 'compilationMs'> {
+    if (this.runtimeProfileStale) {
+      this.runtimeModelStats = statsOf(this.objects.values())
+      this.runtimeGeometryBytes = geometryBytesOf(this.objects.values())
+      this.runtimeProfileStale = false
+    }
+    const grouped = this.instances.drawn()
+    let instanceCount = 0
+    let batchCount = 0
+    let visibleObjects = 0
+    let totalObjects = 0
+    const camera = this.viewport.camera
+    this.profileFrustum.setFromProjectionMatrix(
+      this.profileView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
+    )
+    for (const object of grouped) {
+      const inField =
+        isDrawn(object, this.viewport.scene) &&
+        object.layers.test(camera.layers) &&
+        (!object.frustumCulled || this.profileFrustum.intersectsObject(object))
+      if (object instanceof InstancedMesh) {
+        instanceCount += object.count
+        totalObjects += object.count
+        if (inField) visibleObjects += object.count
+      } else if (object instanceof BatchedMesh) {
+        batchCount += 1
+        totalObjects += object.instanceCount
+        if (inField) visibleObjects += object.instanceCount
+      }
+    }
+    for (const object of this.objects.values()) {
+      if (this.instances.holdsSource(object)) continue
+      object.traverse(child => {
+        if (!(child instanceof Mesh)) return
+        totalObjects += 1
+        if (
+          isDrawn(child, this.viewport.scene) &&
+          child.layers.test(camera.layers) &&
+          (!child.frustumCulled || this.profileFrustum.intersectsObject(child))
+        )
+          visibleObjects += 1
+      })
+    }
+    return {
+      drawCalls: this.viewport.stats.calls,
+      renderMs: this.viewport.stats.renderMs,
+      triangles: this.viewport.stats.triangles,
+      vertices: this.runtimeModelStats.vertices,
+      visibleObjects,
+      culledObjects: Math.max(0, totalObjects - visibleObjects),
+      instanceCount,
+      batchCount,
+      geometryBufferBytes: this.runtimeGeometryBytes,
+      estimatedTextureBytes: this.runtimeModelStats.textureBytes,
+      gpuFrameMs: this.viewport.stats.gpuFrameMs,
+    }
+  }
+
   /**
    * Replaced by `configure` before the first frame; these keep the engine usable without it.
    *
@@ -1035,6 +1099,11 @@ export class SceneRenderer {
   private hangAll = true
   /** What the model costs, held between the passes that cannot have changed it. */
   private modelStats: SceneStats = EMPTY_STATS
+  private runtimeModelStats: SceneStats = EMPTY_STATS
+  private runtimeGeometryBytes = 0
+  private runtimeProfileStale = true
+  private readonly profileFrustum = new Frustum()
+  private readonly profileView = new Matrix4()
   private mode: TransformMode = 'select'
   private snapping: Snapping = NOTHING_SNAPPED
   private space: TransformSpace = 'world'
@@ -2020,6 +2089,7 @@ export class SceneRenderer {
    */
   private markContentChanged(): void {
     this.contentChanged = true
+    this.runtimeProfileStale = true
     this.groupingStale = true
     this.hangAll = true
     // Only a node leaving or being rebuilt can make the scene SMALLER, so that is the one event
