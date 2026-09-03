@@ -7,7 +7,7 @@ import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
-import { scenarioAccount, type AccountSummary } from '@shared/domain/account'
+import type { AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import { outputExtensionOf } from '@shared/domain/localFields'
 import {
@@ -23,11 +23,7 @@ import {
   LEGACY_ASSETS_FOLDER,
   THUMBNAIL_SIZE,
   landedInDefaultFolder,
-  planProjectAccount,
   projectName,
-  withRecentProject,
-  type Project,
-  type ProjectAccountPlan,
 } from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
@@ -132,26 +128,17 @@ import { createFileOps, type FileOps } from './project/fileOps'
 import { createProjectGame, type ProjectGameStore } from './project/game'
 import { createGameScripts, type GameScriptStore } from './project/gameScripts'
 import { keepScriptPaths } from './project/scriptPaths'
-import {
-  createFolderReader,
-  createFolderWriter,
-  watchProjectFolder,
-  type FolderReader,
-  type FolderWatch,
-} from './project/folder'
+import { createFolderReader, createFolderWriter, type FolderReader } from './project/folder'
 import { composedContext } from '@shared/domain/projectContext'
-import { createProjectContext, type ProjectContextStore } from '@main/project/context'
+import type { ProjectContextStore } from '@main/project/context'
 import { createPromptContext, type PromptContext } from '@main/provider/promptContext'
-import { createProjectStore, openFailureKey, orWhenGone, type ProjectStore } from './project/store'
-import { createReconciler, type Reconciler } from './project/reconcile'
-import { createActivityLog, type ActivityLog } from './project/activityLog'
-import { createSaid, type Said } from './assistant/said'
-import { createTranscript, type Transcript } from './assistant/transcript'
-import { logsFolder } from './logFile'
-import { openCatalogThread } from './project/catalogThread'
-import { createMemoryHost, type MemoryHost } from './memory/memoryHost'
+import { openFailureKey, orWhenGone, type ProjectStore } from './project/store'
+import type { Reconciler } from './project/reconcile'
+import type { ActivityLog } from './project/activityLog'
+import type { Said } from './assistant/said'
+import type { Transcript } from './assistant/transcript'
+import type { MemoryHost } from './memory/memoryHost'
 import type { MemoryVectors } from './memory/memoryVectors'
-import { openMemoryThread } from './memory/memoryThread'
 import { catalogOf } from './provider/modelCatalog'
 import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
 import { createAssetInputResolver } from './provider/assetInputs'
@@ -162,7 +149,7 @@ import { createOwnerScope, type OwnerScope } from './provider/ownerScope'
 import { accountFingerprint } from './settings/accounts'
 import { createCloudBackend, type CloudBackend } from './assets/cloudBackend'
 import { isRecord } from '@shared/guards'
-import { clientFor, recordFailuresTo, type ClientProvider } from './provider/client'
+import { clientFor, type ClientProvider } from './provider/client'
 import { costEstimatorOf, type CostEstimator } from './provider/cost'
 import type { UsageReader } from './provider/usage'
 import { createJobStore } from './provider/jobStore'
@@ -175,12 +162,13 @@ import { createTripoRunner, tripoLaneOf } from './provider/tripoRunner'
 import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
 import { promptAssistApiOf } from './provider/promptAssistApi'
 import { createElectronAdapter } from './settings/adapter'
-import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
-import { buildMenu, noteNavigationPreset, noteProjectOpen, noteRecent } from './menu'
+import { createSettingsStore, type SettingsStore } from './settings/store'
+import { buildMenu, noteNavigationPreset, noteRecent } from './menu'
 import { setWindowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
 import { ProviderServices } from './serviceProvider'
 import { createLocalAiServices } from './serviceLocalAi'
+import { createProjectServices } from './serviceProject'
 
 /**
  * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
@@ -577,299 +565,31 @@ export function createServices(settings: SettingsStore): Services {
     assistQueue,
     usage,
   } = provider
-  let opened: ActivityLog | null = null
-
-  /**
-   * What pointing the open project at the key in force amounted to. `moved` is the only one worth
-   * a sentence: the project was working under another key, and the remote library just changed
-   * under it.
-   */
-  type Relink = { kind: 'unchanged' | 'adopted' | 'moved'; active: AccountSummary | null }
-
-  /**
-   * Points the open project at whichever account is active now.
-   *
-   * The link is the project's memory of its key, so it FOLLOWS a switch rather than fighting it:
-   * someone who moved to another account and worked an hour there must not find yesterday's key
-   * back tomorrow. Saying so is the caller's business — only a switch a USER made is worth a
-   * sentence, not one the studio made restoring a link.
-   *
-   * The active account is handed back with the verdict rather than looked up again: reading the
-   * book means decrypting the OS keychain, and the caller needs it to name the key it moved to.
-   */
-  const linkOpenProject = (): Relink => {
-    const current = project.current()
-    const accounts = settings.accounts()
-    const active = scenarioAccount(accounts)
-    if (!current || !active) return { kind: 'unchanged', active }
-
-    const links = settings.read().storage.projectAccounts
-    const before = links[current.path]
-    if (before === active.id) return { kind: 'unchanged', active }
-
-    settings.write({
-      storage: { projectAccounts: { ...links, [current.path]: active.id } },
-    })
-
-    // Whether the link EXISTED, not whether the account behind it is still held: removing the
-    // active account is a switch too, and the key it fell back to reads another library. Looking
-    // the previous account up would answer `null` there and swallow the very warning owed.
-    return { kind: before === undefined ? 'adopted' : 'moved', active }
-  }
-
-  /**
-   * The manager's overview is pulled from inputs it cannot watch — the open project, and the
-   * clouds a key is held for. This is the nudge, and it is owed at EVERY one of them: without it a
-   * settings window left open keeps a stale path, stale badges and a stale list of providers.
-   */
-  const republishAi = (after: string): void => {
-    void ai.refresh().catch((error: unknown) => {
-      log.warn('ai', `republishing after ${after} failed: ${String(error)}`)
-    })
-  }
-
-  /**
-   * Puts the studio back on the account a project last worked under, so reopening it lands on the
-   * library it was filled from rather than on whichever key was last switched to elsewhere.
-   *
-   * The plan is handed in rather than worked out here: the caller needs it to decide what to
-   * write, and reading the account book twice means opening the OS keychain twice.
-   */
-  const applyProjectAccount = (
-    plan: ProjectAccountPlan,
-    active: AccountSummary | null,
-    projectPath: string,
-  ): void => {
-    if (plan.kind === 'restore') {
-      let change: AccountChange
-      try {
-        change = settings.activateAccount(plan.account.id)
-      } catch (error) {
-        // A keychain the OS will not open this launch. The project still opens, on the active
-        // key: refusing to open a folder over which library it reads would be a worse trade.
-        log.warn('project', `restoring the account of ${projectPath} failed: ${String(error)}`)
-        return
-      }
-
-      // The same two beats `mutate` runs in the settings handlers, and conditioned the same way:
-      // the store derives whether the KEY moved, and purging every cache when it did not would
-      // cost a refetch of the model catalogue and the plan for nothing.
-      if (change.credentialsChanged) credentials.changed()
-      broadcast(EVENTS.accountsChanged, change.accounts)
-      republishAi('an account change')
-
-      opened?.record({
-        level: 'info',
-        topic: 'project',
-        messageKey: 'activity.projectAccountRestored',
-        params: { name: plan.account.name },
-      })
-      return
-    }
-
-    // The key went away — removed, or removed and added back, which mints a new id.
-    if (plan.kind === 'missing' && active) {
-      opened?.record({
-        level: 'warn',
-        topic: 'project',
-        messageKey: 'activity.projectAccountMissing',
-        params: { name: active.name },
-      })
-    }
-  }
-
-  // Same knot: the project store is built before the job manager and has to reach it. Read at
-  // call time, and a no-op until there is one to reach.
-  const resumeJobsOf = async (projectPath: string): Promise<void> => {
-    const remembered = await jobStore.read(projectPath)
-    if (remembered.length > 0) jobs.resume(remembered)
-  }
-
-  let folderWatch: FolderWatch | null = null
-
-  /**
-   * Records the project that just opened: the shelf, the folder to reopen next launch, and which
-   * account it works under — in ONE settings write.
-   *
-   * One and not two, which is what a second call would cost: every write rebuilds the native menu
-   * and broadcasts the whole settings object to every window.
-   */
-  const settleOpenedProject = (current: Project): void => {
-    const stored = settings.read()
-    const accounts = settings.accounts()
-    const active = scenarioAccount(accounts)
-    const links = stored.storage.projectAccounts
-    const plan = planProjectAccount(links[current.path], accounts)
-
-    // `adopt` alone records a link. A `missing` one is NOT repointed: `persistedBook` answers an
-    // empty book when the keychain will not open this launch, so a link would be rewritten to the
-    // development account over a lock that lifts on the next launch — destroying what the user
-    // chose. The warning repeats until they pick a key, and picking one is what repoints it.
-    const adopted = plan.kind === 'adopt' ? active?.id : undefined
-
-    settings.write({
-      storage: {
-        lastProject: current.path,
-        // Written on the same beat as `lastProject`, and replicated with it: the home reads the
-        // shelf from the settings every window already holds.
-        recentProjects: withRecentProject(stored.storage.recentProjects, current, timestamp()),
-        ...(adopted ? { projectAccounts: { ...links, [current.path]: adopted } } : {}),
-      },
-    })
-
-    applyProjectAccount(plan, active, current.path)
-  }
-
-  /**
-   * Declared before the store because its `onChange` names it, and it needs nothing of the store:
-   * a memory is opened from a PATH, and the path is what `onChange` hands over.
-   */
-  const memory = createMemoryHost({
-    userData: app.getPath('userData'),
-    open: openMemoryThread,
-    onTrouble: why => log.warn('memory', why),
-  })
-
-  const project = createProjectStore({
-    openCatalog: openCatalogThread,
+  const projectServices = createProjectServices({
+    settings,
+    credentialsChanged: credentials.changed,
     now: timestamp,
-    onRoles: roles => broadcast(EVENTS.projectFolderRoles, roles),
-    onChange: current => {
-      if (current) settleOpenedProject(current)
-      broadcast(EVENTS.projectChanged, current)
-      // File ▸ New file is greyed without one, and this is the only thing that knows.
-      noteProjectOpen(current?.path ?? null)
-
-      // Jobs left running by a previous session, picked up here rather than at boot: their
-      // outputs land in the project they were generated for, and the catalogue that receives
-      // them only exists once one is open.
-      if (current) void resumeJobsOf(current.path)
-
-      // Takes that arrived before the pipeline ran on downloads: they hold no length, no
-      // waveform and no proxy, and nothing else would ever go back for them. A project opened
-      // after the fix would otherwise show exactly what it showed before it.
-      if (current) void catchUpProject()
-
-      // Told which project it belongs to; it opens nothing until something asks it a question.
-      memory.follow(current?.path ?? null)
-      // And the vectors let go of the queue that was serving the previous one — see `release`.
-      memoryVectors.release()
-
-      // One watch at a time, and it belongs to the project that is open: left running, the
-      // previous project's folder would go on announcing changes the explorer would answer by
-      // re-reading a folder that is no longer on screen.
-      folderWatch?.stop()
-      folderWatch = current
-        ? watchProjectFolder(current.path, () => broadcast(EVENTS.projectFolderChanged))
-        : null
-
-      // What moved while the studio was closed. After the journal was replayed — that is what
-      // `activate` finishes before it publishes — so a move this session interrupted is already
-      // a row at the right path rather than one this pass would go looking for.
-      if (current) reconciler.request()
-
-      republishAi('a project change')
+    refreshAi: () => ai.refresh(),
+    resumeJobs: async projectPath => {
+      const remembered = await jobStore.read(projectPath)
+      if (remembered.length > 0) jobs.resume(remembered)
     },
-    settle: async () => {
-      // Both before the catalogue stops answering: the journal writes into it, and the pending
-      // jobs are about to be attributed to whichever project opens next.
-      await Promise.all([opened?.flush(), jobStore.flush()])
-    },
+    catchUpMedia: () => catchUpProject(),
+    releaseMemoryVectors: () => memoryVectors.release(),
+    flushJobs: () => jobStore.flush(),
   })
+  const {
+    memory,
+    project,
+    context,
+    reconciler,
+    journal,
+    transcribe,
+    said,
+    republishAi,
+    linkOpenProject,
+  } = projectServices
 
-  /** Nothing is cached: a few hundred bytes against a generation of several seconds. */
-  const context = createProjectContext({ rootOf: () => project.current()?.path ?? null })
-
-  /**
-   * Declared after the store because it reads it, and named before it because the store's own
-   * `onChange` asks for the first pass — a function-valued closure either way, so neither has to
-   * be built first.
-   */
-  const reconciler = createReconciler({
-    rootOf: () => project.current()?.path ?? null,
-    catalogOf: () => (project.current() ? project.catalog() : null),
-    announce: state => broadcast(EVENTS.projectRescan, state),
-    report: found => {
-      /**
-       * The windows are told, and this is what makes the pass VISIBLE rather than merely true.
-       *
-       * Every panel that lists assets reads the catalogue once and then waits to be told —
-       * `assets.onChanged` is the shelf's only trigger, and the explorer re-reads its folders on
-       * `onFolderChanged`. Without these two lines the pass would refile twelve rows, write its
-       * line to the journal, and leave the shelf drawing the answer from before it: thumbnails
-       * that open nothing, and assets missing from a library that holds them.
-       *
-       * Only when something actually changed, which is what keeps a pass on every focus quiet.
-       */
-      if (found.moved + found.missing + found.returned > 0) {
-        // No rows: a rescan refiles files it found on disk, and naming them would mean
-        // reading each one back out of the catalogue to say what a re-read says anyway.
-        broadcast(EVENTS.assetsChanged, [])
-        broadcast(EVENTS.projectFolderChanged)
-      }
-
-      // Only what CHANGED, and that is what makes running this on every focus quiet: a pass over
-      // a project nothing moved in writes nothing at all.
-      if (found.moved > 0) {
-        journal.record({
-          level: 'info',
-          topic: 'project',
-          messageKey: 'activity.filesFound',
-          params: { count: found.moved },
-        })
-      }
-      if (found.missing > 0) {
-        journal.record({
-          level: 'warn',
-          topic: 'project',
-          messageKey: 'activity.filesMissing',
-          params: { count: found.missing },
-        })
-      }
-    },
-    warn: error => log.warn('project', `reconciling the project folder failed: ${String(error)}`),
-  })
-
-  /**
-   * The other half of when: the Finder is where a project folder is rearranged, and a window
-   * coming back to the front is the moment the studio can find out. One pass at a time, so
-   * clicking between two windows does not walk the project twice.
-   */
-  app.on('browser-window-focus', () => {
-    reconciler.request()
-  })
-
-  // Reads the catalogue per flush rather than holding one: a project can close and another open
-  // while lines are still queued, and a line belongs to whichever project is open when it lands.
-  const journal = createActivityLog({
-    catalog: () => (project.current() ? project.catalog() : null),
-    broadcast: entries => broadcast(EVENTS.activity, entries),
-    now: timestamp,
-  })
-  opened = journal
-
-  // Beside the journal and beside `main.log`, never inside either: a briefing is 90 505 characters
-  // on a door with room, and both are bounded far below one turn's worth of them.
-  const transcribe = createTranscript(logsFolder)
-  const said = createSaid()
-
-  // Every reduced API failure, from one place rather than from each handler that remembers to.
-  // `describeFailure` is what `reducedBy` already holds — the only text allowed to travel.
-  recordFailuresTo((scope, detail) => {
-    journal.record({
-      level: 'error',
-      topic: scope === 'provider' ? 'generation' : 'library',
-      messageKey: 'activity.apiRefused',
-      detail,
-    })
-  })
-
-  /**
-   * What a file on this disk says about itself, or null when ffprobe is missing or refuses it.
-   *
-   * One wiring for the three callers that need it — the bytes an import just wrote, the takes a
-   * project is catching up on, and the pipeline's own probe step reaches it through its dep.
-   */
   const probeLocalFile = async (path: string): Promise<MediaProbe | null> => {
     const outcome = await probeSource(companionPath(ffmpeg.path()), path)
     return outcome.kind === 'probed' ? outcome.probe : null
@@ -1856,7 +1576,7 @@ export function createServices(settings: SettingsStore): Services {
       // about what the library holds, and a sentence there would fire on every project ever made.
       const relink = linkOpenProject()
       if (relink.kind === 'moved' && relink.active) {
-        opened?.record({
+        journal.record({
           level: 'warn',
           topic: 'project',
           messageKey: 'activity.projectAccountSwitched',
