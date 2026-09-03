@@ -47,6 +47,26 @@ describe('NewDocumentWindow', () => {
     useDocuments.setState({ documents: {}, stored: [] })
   })
 
+  it('uses the existing project shelf to choose where outside files are imported', async () => {
+    open({
+      ...ASK,
+      purpose: 'externalFiles',
+      recentProjects: [
+        {
+          path: '/projects/one',
+          openedAt: '2026-09-03T10:00:00.000Z',
+          createdAt: '2026-09-03T10:00:00.000Z',
+        },
+      ],
+    })
+    render(<NewDocumentWindow />)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'one' }))
+
+    expect(answer).toHaveBeenCalledWith({ answer: 'recentProject', path: '/projects/one' })
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
   it('opens on the suggested name, selected, with its extension beside it', async () => {
     open(ASK)
     render(<NewDocumentWindow />)

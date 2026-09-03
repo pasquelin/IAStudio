@@ -25,6 +25,7 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
     adopt: vi.fn(async () => null),
     pickMedia: vi.fn(async () => ['/Volumes/Rushes/A001.mov']),
     capabilities: async () => ({ ffmpeg: true }),
+    importPaths: async () => [],
     ...overrides,
   }
 }
@@ -89,6 +90,21 @@ describe('media handlers', () => {
 
     await expect(invoke(CHANNELS.mediaIngest)).resolves.toEqual([])
     expect(injected.media.ingest).not.toHaveBeenCalled()
+  })
+
+  it('imports paths supplied by the desktop into the requested project folder', async () => {
+    const imported = linkedAsset('/outside/model.glb', {
+      id: 'asset-1',
+      type: 'mesh',
+      now: '2026-09-03T10:00:00.000Z',
+    })
+    const importPaths = vi.fn(async () => [imported])
+    registerMediaHandlers(deps({ importPaths }))
+
+    const assets = await invoke(CHANNELS.mediaIngestPaths, ['/outside/model.glb'], 'Models')
+
+    expect(importPaths).toHaveBeenCalledWith(['/outside/model.glb'], 'Models')
+    expect(assets).toEqual([expect.not.objectContaining({ sourcePath: expect.anything() })])
   })
 
   it('adopts a file of the project, and answers the row without its whereabouts', async () => {

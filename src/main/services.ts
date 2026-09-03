@@ -132,6 +132,7 @@ import { openMicrophoneSettings, requestMicrophone } from './dictation/permissio
 import { openSttProcess } from './dictation/sttProcess'
 import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
+import { importFiles } from './media/importFiles'
 import { renderThumbnail } from './media/renderThumbnail'
 import { createThumbnailCache } from './project/thumbnailCache'
 import {
@@ -343,6 +344,7 @@ export type Services = {
   link: (source: string, type: AssetType) => Promise<Asset>
   /** The same for a file the project already holds, `null` when nothing here opens it. */
   adopt: (relative: string) => Promise<Asset | null>
+  importPaths: (paths: readonly string[], folder: string) => Promise<Asset[]>
   capabilities: () => Promise<MediaCapabilities>
   /** The language in force. Injected where it is needed, so no module reads the source itself. */
   language: () => Language
@@ -2260,6 +2262,18 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
 
+  const adopt = (relative: string): Promise<Asset | null> =>
+    adoptFile(relative, {
+      projectPath: () => project.path(),
+      catalog: () => project.catalog(),
+      newAssetId,
+      now: timestamp,
+      hash: hashOrNull,
+      probeFile: probeLocalFile,
+      onAdopted: onAssetLanded,
+      record: report => journal.record(report),
+    })
+
   return {
     settings,
     favorites,
@@ -2311,16 +2325,12 @@ export function createServices(settings: SettingsStore): Services {
       await project
         .catalog()
         .add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
-    adopt: relative =>
-      adoptFile(relative, {
+    adopt,
+    importPaths: (paths, target) =>
+      importFiles(paths, target, {
         projectPath: () => project.path(),
-        catalog: () => project.catalog(),
-        newAssetId,
-        now: timestamp,
-        hash: hashOrNull,
-        probeFile: probeLocalFile,
-        onAdopted: onAssetLanded,
-        record: report => journal.record(report),
+        names: folder.names,
+        adopt,
       }),
     // Asked, not cached: this is what the settings pane consults after the user installed the
     // binary it just said was missing. Run rather than looked for — a half-written download and

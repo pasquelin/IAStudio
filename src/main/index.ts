@@ -5,10 +5,12 @@ import { isDevelopment } from '@main/environment'
 import { log, setLogVerbosity } from '@main/log'
 import { checkoutOf, mcpEndpointPath, spawnedAsWayIn, stdioEndpointFrom } from '@main/mcp/endpoint'
 import { runStdioBridge } from '@main/mcp/stdio'
+import { captureExternalFiles } from '@main/externalFiles'
 
 // Before anything reads `app.getPath('userData')`: that path derives from the name, and a
 // late call would have electron-store read one folder while writing to another.
 app.setName(APP_NAME)
+captureExternalFiles(app, process.argv)
 
 /**
  * Spawned to be one client's way in: no window, no services, and no lock — a client connecting

@@ -18,6 +18,7 @@ import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { takeExternalFiles } from '@/features/shell/externalFiles'
 
 type SceneMenuState = { checked: MenuCheck[]; abilities: MenuAbility[] }
 
@@ -226,6 +227,8 @@ export function useNativeMenu(): void {
     const stopDocumentNew = bridge.menu.onDocumentNew(({ kind }) => void createDocumentOfKind(kind))
 
     const stopOpenRecent = bridge.menu.onOpenRecent(request => void openRecent(request))
+    const stopExternalFiles = bridge.externalFiles?.onOpen(() => void takeExternalFiles())
+    if (bridge.externalFiles) void takeExternalFiles()
 
     // The same path the toolbar and the panels take: two ways of adding a node would drift.
     const stopSceneAdd = bridge.menu.onSceneAdd(({ kind }) => {
@@ -245,6 +248,7 @@ export function useNativeMenu(): void {
       stopCommand()
       stopDocumentNew()
       stopOpenRecent()
+      stopExternalFiles?.()
       stopSceneAdd()
       stopSceneDisplay()
       for (const stop of stopPublishing) stop()

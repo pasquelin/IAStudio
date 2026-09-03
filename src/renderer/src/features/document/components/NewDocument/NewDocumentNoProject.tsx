@@ -12,6 +12,8 @@ export type NewDocumentNoProjectProps = {
   onNewProject: () => void
   onOpenProject: () => void
   onOpenRecent: (path: string) => void
+  title?: string
+  body?: string
 }
 
 /**
@@ -25,14 +27,16 @@ export function NewDocumentNoProject({
   onNewProject,
   onOpenProject,
   onOpenRecent,
+  title,
+  body,
 }: NewDocumentNoProjectProps) {
   const { t } = useTranslation()
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <h2 className="m-0 text-base font-semibold">{t('project.none')}</h2>
-        <p className={cn(WINDOW_CAPTION, 'm-0')}>{t('documents.noProjectBody')}</p>
+        <h2 className="m-0 text-base font-semibold">{title ?? t('project.none')}</h2>
+        <p className={cn(WINDOW_CAPTION, 'm-0')}>{body ?? t('documents.noProjectBody')}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

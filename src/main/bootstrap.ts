@@ -25,6 +25,7 @@ import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splashWindow'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
+import { offerExternalFiles, externalPathsFromArguments } from '@main/externalFiles'
 
 /**
  * Everything below blocks the main loop from end to end — `createServices()` opens SQLite
@@ -129,7 +130,10 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // Subscribed here, not beside the lock: reached any earlier, `showMainWindow` would find no
   // window yet and open one before `registerIpc` above — a renderer whose every `invoke` fails.
   // Never fires in development, where no lock is held: this path is exercised by a packaged run.
-  app.on('second-instance', showMainWindow)
+  app.on('second-instance', (_event, argv) => {
+    showMainWindow()
+    offerExternalFiles(externalPathsFromArguments(argv.slice(1)))
+  })
 }
 
 /** Called once `index.ts` has registered the asset scheme, which `ready` would otherwise beat. */

@@ -46,11 +46,13 @@ import { registerGameWindow } from '@main/window/gameWindow'
 import { registerPlayerModuleWindow } from '@main/window/playerModuleWindow'
 import { registerMirrorWindow } from '@main/window/mirror'
 import { registerNewDocumentWindow } from '@main/window/newDocument'
+import { registerExternalFileHandlers } from '@main/externalFiles'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
 
 /** Single place where the IPC surface is wired. Registered once, before any window loads. */
 export function registerIpc(services: Services): void {
+  registerExternalFileHandlers()
   registerWindowControls()
   registerMirrorWindow()
   registerGameWindow()

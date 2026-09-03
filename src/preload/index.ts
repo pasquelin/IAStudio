@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import type { AccountSummary } from '@shared/domain/account'
 import type { ActivityEntry } from '@shared/domain/activity'
 import type { MemoryIndexing, MemoryScope } from '@shared/domain/assistantMemory'
@@ -287,6 +287,7 @@ const bridge: StudioBridge = {
   media: {
     adopt: relative => ipcRenderer.invoke(CHANNELS.mediaAdopt, relative),
     ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
+    ingestPaths: (paths, folder) => ipcRenderer.invoke(CHANNELS.mediaIngestPaths, paths, folder),
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
     capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),
     onProgress: callback => subscribe<IngestProgress>(EVENTS.mediaProgress, callback),
@@ -373,6 +374,11 @@ const bridge: StudioBridge = {
     onSceneCapture: callback => subscribe<SceneCaptureCommand>(EVENTS.sceneCapture, callback),
     onMaterialExport: callback => subscribe<MaterialExportCommand>(EVENTS.materialExport, callback),
     onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),
+  },
+  externalFiles: {
+    take: () => ipcRenderer.invoke(CHANNELS.externalFilesTake),
+    paths: files => files.map(file => webUtils.getPathForFile(file)).filter(Boolean),
+    onOpen: callback => subscribe<void>(EVENTS.externalFiles, callback),
   },
   diagnostics: {
     onLog: callback => subscribe<LogEntry>(EVENTS.log, callback),
