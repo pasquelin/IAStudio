@@ -1,6 +1,9 @@
 {
   "commands": {
-    "appNew": { "title": "Nouveau…", "help": "Ouvre la fenêtre qui crée un projet ou un document, quel que soit l’écran" },
+    "appNew": {
+      "title": "Nouveau…",
+      "help": "Ouvre la fenêtre qui crée un projet ou un document, quel que soit l’écran"
+    },
     "projectNew": {
       "title": "Nouveau projet",
       "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
@@ -92,6 +95,10 @@
     "sceneScale": {
       "title": "Redimensionner",
       "help": "Agrandit ou rétrécit l’objet choisi, en tirant sur les poignées. Maintenir la touche Maj garde ses proportions."
+    },
+    "sceneSculpt": {
+      "title": "Sculpter le relief",
+      "help": "Relève le relief éditable sous la brosse. Maintenir Alt pendant le tracé pour le creuser."
     },
     "sceneFrame": {
       "title": "Cadrer la sélection",

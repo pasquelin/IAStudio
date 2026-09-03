@@ -38,6 +38,7 @@ function deriveSceneToolbarTools(facts: ToolbarFacts) {
     'scene.intersect': facts.cannotCarve,
     'scene.separate': facts.cannotSeparate,
     'scene.invertCarve': !canInvertCarve(facts.foldable),
+    'scene.sculpt': !facts.canSculpt,
   }
   return sceneTools(facts, pressed, unavailable)
 }
@@ -72,7 +73,8 @@ function sceneTools(
 export function useSceneToolbarTools(
   scene: ReturnType<typeof sceneOf>,
   view: ReturnType<typeof sceneViewChromeOf>,
+  canSculpt: boolean,
 ) {
-  const facts = useToolbarFacts(scene, view)
+  const facts = useToolbarFacts(scene, view, canSculpt)
   return useMemo(() => deriveSceneToolbarTools(facts), [facts])
 }

@@ -484,6 +484,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     scope === 'scene'
       ? [
           { type: 'separator' },
+          commandItem('scene.sculpt', t.commands.sceneSculpt.title),
+          { type: 'separator' },
           commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
           commandItem('scene.group', t.commands.sceneGroup.title),
           // The solids, under the grouping they read like: both fold a selection into one row
