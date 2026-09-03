@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
-import type { Transform } from '@shared/domain/transform'
-import { lerpAngle } from '../numeric'
+import type { Transform, Vector3 } from '@shared/domain/transform'
+import {
+  eulerFromQuaternion,
+  quaternionFromEuler,
+  quaternionSlerp,
+  type Quaternion,
+} from '../physics/quaternion'
 import type { EntityPlacement } from '../ports/renderPort'
 import { clonedTransform, copyAxes, copyTransformInto, type Entity } from './entity'
 import type { World } from './world'
@@ -43,17 +48,32 @@ export function poseAt(entity: Entity, alpha: number, into: Transform): Transfor
 
   const to = entity.transform
   lerpAxes(into.position, from.position, to.position, alpha)
-  // Angles by their SHORTEST way round: a yaw crossing π would otherwise spin the long way. Euler
-  // axis by axis rather than a slerp, which neither allocates nor converts.
-  // 🛑 Its blind spot: where `eulerFromQuaternion` flips representation — a pitch at the pole — all
-  // three angles jump together, and the frames between are drawn at an orientation neither pose
-  // held. A slerp is what fixes it, at three conversions an entity a frame.
-  into.rotation.x = lerpAngle(from.rotation.x, to.rotation.x, alpha)
-  into.rotation.y = lerpAngle(from.rotation.y, to.rotation.y, alpha)
-  into.rotation.z = lerpAngle(from.rotation.z, to.rotation.z, alpha)
+  turnBetween(from.rotation, to.rotation, alpha, into.rotation)
   lerpAxes(into.scale, from.scale, to.scale, alpha)
   return into
 }
+
+/**
+ * 🛑 SLERPED, not interpolated angle by angle: where `eulerFromQuaternion` flips representation —
+ * a pitch at the pole — all three angles jump together, and a plane rolling steeply was drawn
+ * 179,99° from where it stood, one frame in two. Measured, and it reads as four wings.
+ */
+function turnBetween(from: Vector3, to: Vector3, alpha: number, into: Vector3): void {
+  // The still case first: it is most of a scene, and it costs three conversions to answer.
+  if (from.x === to.x && from.y === to.y && from.z === to.z) {
+    copyAxes(into, to)
+    return
+  }
+
+  quaternionFromEuler(from, HELD)
+  quaternionFromEuler(to, WANTED)
+  eulerFromQuaternion(quaternionSlerp(HELD, WANTED, alpha, STEPPED), into)
+}
+
+// Rewritten in place: a pose is drawn per entity per frame, and allocates nothing doing it.
+const HELD: Quaternion = { x: 0, y: 0, z: 0, w: 1 }
+const WANTED: Quaternion = { x: 0, y: 0, z: 0, w: 1 }
+const STEPPED: Quaternion = { x: 0, y: 0, z: 0, w: 1 }
 
 function lerpAxes(
   into: { x: number; y: number; z: number },

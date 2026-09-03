@@ -35,7 +35,14 @@ const INDUCED_DRAG = 0.05
 /** Torque per unit of dynamic pressure, wing and lever, for a full stick — and for a radian off. */
 const CONTROL = 0.12
 const STABILITY = 0.4
-const DAMPING = 0.35
+
+/**
+ * 🛑 Per unit of lever DIVIDED BY SPEED, so damping grows with v and not with v². Grown with v²
+ * it removed thirty times the whole spin in one fixed step — measured at 140 m/s — so the spin
+ * flipped sign and doubled until Jolt clamped it at 47,12 rad/s: a strobing plane, answering
+ * nothing. Real damping is linear in v, since `ω·b/2v` is what sets the incidence on a surface.
+ */
+const DAMPING = 2.4
 
 /**
  * The forces on an airframe moving through still air, written into `into`. 🛑 The torques only
@@ -92,9 +99,10 @@ export function aeroForces(
   const roll = CONTROL * frame.agility * clamp(stick.roll, -1, 1)
   // A turn to the right is a turn about −up: rotating about +Y carries the nose to −X.
   const yaw = -(CONTROL * frame.agility * clamp(stick.yaw, -1, 1)) - STABILITY * slip
-  into.torque.x = lever * (pitch * right.x + roll * forward.x + yaw * up.x - DAMPING * angular.x)
-  into.torque.y = lever * (pitch * right.y + roll * forward.y + yaw * up.y - DAMPING * angular.y)
-  into.torque.z = lever * (pitch * right.z + roll * forward.z + yaw * up.z - DAMPING * angular.z)
+  const damping = (lever / speed) * DAMPING
+  into.torque.x = lever * (pitch * right.x + roll * forward.x + yaw * up.x) - damping * angular.x
+  into.torque.y = lever * (pitch * right.y + roll * forward.y + yaw * up.y) - damping * angular.y
+  into.torque.z = lever * (pitch * right.z + roll * forward.z + yaw * up.z) - damping * angular.z
   return into
 }
 
