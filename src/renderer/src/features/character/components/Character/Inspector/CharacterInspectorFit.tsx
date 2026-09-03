@@ -51,7 +51,7 @@ export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFit
     import.meta.env.DEV,
     localStorage.getItem('ia-studio:humanoid-rig-backend'),
   )
-  const fault = backend === 'legacy' && sample ? rigFitFaultOf(sample.bounds) : null
+  const fault = sample ? rigFitFaultOf(sample.bounds) : null
   if (fault) return <QuietNote>{t(`inspector.rigFault_${fault}`)}</QuietNote>
   if (!sample) return null
 
