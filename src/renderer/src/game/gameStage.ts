@@ -7,7 +7,10 @@ import { gameMessageOf, openGameChannel, type GameCommand } from './gameChannel'
 import { startGame } from './gameHost'
 import type { PlaySession, SceneLookup } from './playSession'
 import type { SceneDraw } from './studioRender'
-import { createRuntimeWorldCompiler } from '@/engines/scene/runtimeWorldCompiler'
+import {
+  createRuntimeWorldCompiler,
+  worldWithRuntimePatch,
+} from '@/engines/scene/runtimeWorldCompiler'
 
 export type GameStageDeps = {
   /** What draws. The game window's own engine — a WebGL context never crosses a window. */
@@ -32,6 +35,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
   let session: PlaySession | null = null
   let documentId: string | null = null
   let scene: SceneState | null = null
+  let authoring: SceneState | null = null
   let modules: readonly ScriptModule[] = []
   let troubles: readonly ScriptTrouble[] = []
   let compilationMs = 0
@@ -60,6 +64,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
     session = null
     documentId = null
     scene = null
+    authoring = null
     known.clear()
     compiler.clearOptimizationCache()
     deps.onReport?.(null)
@@ -112,7 +117,8 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       // arriving while the engines land drops this one on the floor rather than installing it.
       drop()
       documentId = message.documentId
-      scene = compiler.compileRuntimeWorld(message.scene)
+      authoring = message.scene
+      scene = compiler.compileRuntimeWorld(authoring)
       compilationMs = compiler.getOptimizationReport().compilationMs
       modules = message.modules
       troubles = message.troubles
@@ -124,8 +130,18 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       return
     }
 
+    if (message.kind === 'clearOptimization') {
+      if (message.documentId !== documentId || !authoring) return
+      compiler.clearOptimizationCache()
+      scene = compiler.compileRuntimeWorld(structuredClone(authoring))
+      compilationMs = compiler.getOptimizationReport().compilationMs
+      deps.renderer.apply(scene)
+      return
+    }
+
     if (message.kind === 'edit') {
       if (message.documentId !== documentId) return
+      if (authoring) authoring = worldWithRuntimePatch(authoring, message.patch)
       const compiled = compiler.compileRuntimeRegion(message.patch)
       if (!compiled) return
       scene = compiled

@@ -21,6 +21,21 @@ export { isTransform, isVector3, type Transform, type Vector3 } from './transfor
 export type { GeometryDescriptor } from './geometry'
 export type { ReliefExtent, ReliefOverlay, ReliefSculpt } from './relief'
 
+export type OptimizationMode = 'auto' | 'individual' | 'instance' | 'batch' | 'exclude'
+
+export const OPTIMIZATION_MODES: readonly OptimizationMode[] = [
+  'auto',
+  'individual',
+  'instance',
+  'batch',
+  'exclude',
+]
+
+export type OptimizationSettings = {
+  mode: OptimizationMode
+  groupId?: string
+}
+
 /**
  * A texture is a reference to an asset of the project, never an image and never a three.js
  * object: an engine is rebuilt from its serialized state, so what a document stores has to be

@@ -13,6 +13,7 @@ import {
   type LightDescriptor,
   type MaterialDescriptor,
   type ModelRef,
+  type OptimizationSettings,
   type PathDescriptor,
   type SpriteDescriptor,
   type TextDescriptor,
@@ -24,22 +25,6 @@ import type { CsgGraph } from '@shared/domain/csg'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
 import { cachedOn } from '../core/cachedOn'
-
-export type OptimizationMode = 'auto' | 'individual' | 'instance' | 'batch' | 'exclude'
-
-/** Read by the dialog that offers them and by the guard that checks each one is translated. */
-export const OPTIMIZATION_MODES: readonly OptimizationMode[] = [
-  'auto',
-  'individual',
-  'instance',
-  'batch',
-  'exclude',
-]
-
-export type OptimizationSettings = {
-  mode: OptimizationMode
-  groupId?: string
-}
 
 export type BakedInstance = {
   sourceId: string

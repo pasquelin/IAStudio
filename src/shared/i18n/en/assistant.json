@@ -605,6 +605,34 @@
         "title": "Read the scene being edited",
         "description": "Returns every object of the 3D document in front — its id, name, type, parent, visibility and transform, with the geometry, material or light it carries — plus what is selected, the camera shots, and the setting of the scene. A field STANDING AT ITS DEFAULT is left out, and absent means that default: no parent, drawn, standing at the origin unturned and unscaled, the studio’s own colour, a shape divided as its own kind always is. Measurements are never left out. A list that holds nothing is left out whole. To describe ONE object with its components and what may still be added to it, studio.describe."
       },
+      "optimizationAnalyze": {
+        "title": "Analyse scene optimisation",
+        "description": "Returns the deterministic optimisation plan for the named objects, or for the whole scene when none are named. It changes nothing."
+      },
+      "optimizationSelection": {
+        "title": "Optimise selection",
+        "description": "Sets the selected objects to automatic SAFE runtime optimisation while keeping every authoring object editable."
+      },
+      "optimizationWorld": {
+        "title": "Optimise the scene",
+        "description": "Sets every object to automatic SAFE runtime optimisation while keeping the authoring scene unchanged."
+      },
+      "optimizationReport": {
+        "title": "Read the optimisation report",
+        "description": "Returns measured scene costs separately from estimated SAFE runtime gains."
+      },
+      "optimizationClearCache": {
+        "title": "Clear the optimisation cache",
+        "description": "Discards the scene viewport’s disposable optimised representation so it is rebuilt from authoring state."
+      },
+      "optimizationExclude": {
+        "title": "Exclude objects from optimisation",
+        "description": "Keeps the named logical objects individual in optimised rendering."
+      },
+      "optimizationSetMode": {
+        "title": "Set object optimisation mode",
+        "description": "Sets Auto, Force Individual, Force Instance, Force Batch or Exclude on the named objects."
+      },
       "nodeAdd": {
         "title": "Add an object to the scene",
         "description": "Puts a primitive, a light, a camera, a sprite or a text into the 3D document in front, at the position given. Answers with the id the object was born with. A model of the project, or the one a generation has just answered, comes in through node.addModel; this makes a primitive."
@@ -1332,6 +1360,7 @@
       "turn": "Which way to flip or turn",
       "nodeId": "Object identifier",
       "nodeIds": "Object identifiers",
+      "optimizationMode": "Runtime optimisation mode",
       "matterId": "Identifier of the shape to be carved",
       "negative": "True marks it as a cutting tool, false takes the mark off",
       "nodeKind": "What to add",

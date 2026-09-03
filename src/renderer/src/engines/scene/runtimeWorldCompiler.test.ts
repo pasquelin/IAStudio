@@ -6,6 +6,7 @@ import {
   createRuntimeWorldCompiler,
   runtimeWorldPatch,
   runtimeWorldPatchIsEmpty,
+  worldWithRuntimePatch,
 } from './runtimeWorldCompiler'
 import type { SceneState } from './sceneState'
 
@@ -17,6 +18,15 @@ const stateOf = (...nodes: ReturnType<typeof meshNode>[]): SceneState => ({
 })
 
 describe('runtimeWorldPatch', () => {
+  it('applies a transported delta to the authoring world without using runtime state', () => {
+    const a = meshNode('a')
+    const b = meshNode('b')
+    const before = stateOf(a, b)
+    const after = stateOf({ ...b, visible: false }, meshNode('c'))
+
+    expect(worldWithRuntimePatch(before, runtimeWorldPatch(before, after))).toEqual(after)
+  })
+
   it('contains only changed authoring sections', () => {
     const a = meshNode('a')
     const b = meshNode('b')

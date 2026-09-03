@@ -19,6 +19,7 @@ import {
   MAIN_LANE_ID,
   isTransform,
   isVector3,
+  OPTIMIZATION_MODES,
   ROOT_MOTIONS,
   TEXTURE_SLOTS,
   TILES_PER_METRE,
@@ -390,7 +391,7 @@ function isOptionalBakedInstances(value: unknown): boolean {
 function isOptionalOptimization(value: unknown): boolean {
   if (value === undefined) return true
   if (!isRecord(value)) return false
-  if (!['auto', 'individual', 'instance', 'batch', 'exclude'].includes(String(value.mode))) {
+  if (!OPTIMIZATION_MODES.some(mode => mode === value.mode)) {
     return false
   }
   return value.groupId === undefined || typeof value.groupId === 'string'

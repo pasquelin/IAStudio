@@ -15,7 +15,7 @@ import { DRAWN_BY_INSTANCE, WORTH_INSTANCING } from './grouping'
 import { groupNodeFixture, meshNode, modelNodeFixture } from './scene-fixtures'
 import { markInstanceable } from './instanceableModel'
 import type { SceneNode } from './sceneState'
-import type { OptimizationSettings } from './sceneState'
+import type { OptimizationSettings } from '@shared/domain/scene'
 import { analyzeOptimization, analyzeOptimizationAsync, optimizationReport } from './worldAnalyzer'
 
 function repeated(count: number): {

@@ -1454,6 +1454,12 @@ export class SceneRenderer {
     )
   }
 
+  clearOptimizationCache(): void {
+    this.instances.dispose()
+    this.groupingStale = true
+    this.redraw()
+  }
+
   async raiseReliefDisk(
     terrainId: string,
     editId: string,

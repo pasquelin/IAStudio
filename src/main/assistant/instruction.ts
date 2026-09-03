@@ -72,14 +72,14 @@ const manualPrinted = (loaded: readonly ActionName[]): readonly Manual[] =>
 const manualText = (manuals: readonly Manual[]): string => manuals.map(one => one.text).join('\n')
 
 /**
- * 🛑 The whole registry as NAMES, headed by the family that publishes it — 4 225 characters where
- * the manuals of the same 283 actions run to 90 994, which no door but the widest could hold.
+ * 🛑 The whole registry as NAMES, headed by the family that publishes it. Commas have no following
+ * space so adding tools does not consume the narrow door with catalogue punctuation.
  */
 let namesHeld: string | null = null
 
 const namesPrinted = (): string =>
   (namesHeld ??= ACTION_FAMILIES.map(
-    family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
+    family => `  [${family.name}] ${family.actions.map(one => one.name).join(',')}`,
   ).join('\n'))
 
 /**

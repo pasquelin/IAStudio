@@ -2,6 +2,7 @@ import type { ViewDirection } from '@shared/domain/scene'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { FrameDriver } from './frameDriver'
 import type { SceneDraw } from './studioRender'
+import type { OptimizationPlan } from '@/engines/scene/worldAnalyzer'
 
 const AT_REST = { position: { x: 5, y: 5, z: 5 }, target: { x: 0, y: 0, z: 0 } }
 
@@ -51,6 +52,9 @@ export function drawing(over: Partial<SceneDraw> = {}): SceneRenderer {
     ...drawnBy(over),
     captureStill: () => Promise.resolve(PNG_HEAD),
     exportTo: () => Promise.resolve(PNG_HEAD),
+    analyzeOptimization: () => EMPTY_OPTIMIZATION_PLAN,
+    analyzeWorldOptimization: () => Promise.resolve(EMPTY_OPTIMIZATION_PLAN),
+    clearOptimizationCache: () => {},
     /**
      * 🛑 It MOVES the view rather than answering nothing: `viewPlacement` reads it back, so a
      * caller can tell the turn from a call that did nothing at all. Without any `viewFrom` the
@@ -62,6 +66,31 @@ export function drawing(over: Partial<SceneDraw> = {}): SceneRenderer {
     },
     viewPlacement: () => placed,
   } as unknown as SceneRenderer
+}
+
+const EMPTY_OPTIMIZATION_PLAN: OptimizationPlan = {
+  classifications: [],
+  instances: [],
+  bakeCandidates: [],
+  batches: [],
+  warnings: [],
+  measured: {
+    objects: 0,
+    visibleObjects: 0,
+    meshes: 0,
+    draws: 0,
+    triangles: 0,
+    vertices: 0,
+    geometryBytes: 0,
+    textureBytes: 0,
+    sharedMaterials: 0,
+  },
+  estimated: {
+    drawCallsBefore: 0,
+    drawCallsAfter: 0,
+    avoidedGeometryBytes: 0,
+    avoidedTextureBytes: 0,
+  },
 }
 
 /**

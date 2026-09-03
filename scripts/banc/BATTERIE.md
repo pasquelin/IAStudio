@@ -1021,3 +1021,13 @@ rien d'autre.
 - [ ] « Efface le pixel en 3, 4. »
 - [ ] « Génère un sprite de personnage. »
 - [ ] « Enlève la grille de pixel art de ce document. »
+
+## 69. Optimiser une scène 3D
+
+- [ ] « Analyse les possibilités d’optimisation de cette scène sans la modifier. »
+- [ ] « Optimise les objets sélectionnés sans aucune perte visuelle. »
+- [ ] « Prépare toute cette scène pour le jeu avec les optimisations sûres. »
+- [ ] « Trouve ce qui provoque le plus de draw calls et donne-moi le rapport. »
+- [ ] « Vide le cache d’optimisation de cette scène. »
+- [ ] « Optimise tout sauf Cube Test. »
+- [ ] « Force les deux sphères à utiliser des instances. »

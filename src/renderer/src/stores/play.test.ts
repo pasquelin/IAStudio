@@ -5,6 +5,7 @@ import { createInertScripts } from '@game/host/inertScripts'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { drawing } from '@/game/game-fixtures'
 import { createGameStage, type GameStage } from '@/game/gameStage'
+import { clearGameOptimizationCache } from '@/game/gameChannel'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -26,7 +27,7 @@ vi.mock('@game/host/quickjsScripts', () => ({
   loadQuickjsScripts: () => Promise.resolve(createInertScripts()),
 }))
 
-const DOCUMENT = 'doc-scene'
+const DOCUMENT = 'doc-play-scene'
 const OTHER = 'doc-other-scene'
 
 const opened = (): void => {
@@ -135,6 +136,34 @@ describe('a game played in a window of its own', () => {
 
     expect(edited.nodes[0]).toBe(first.nodes[0])
     expect(edited.nodes[1]).not.toBe(first.nodes[1])
+  })
+
+  it('rebuilds the runtime world after its optimization cache is cleared', async () => {
+    const applied: SceneState[] = []
+    stage?.close()
+    stage = createGameStage({
+      renderer: drawing({ apply: state => applied.push(state) }),
+      input: new EventTarget(),
+    })
+    opened()
+    registerSceneEngine(DOCUMENT, drawing())
+
+    usePlay.getState().start(DOCUMENT)
+    await vi.waitFor(() => expect(report().state).toBe('playing'))
+    const edited = sceneOf(useScenes.getState(), DOCUMENT)
+    useScenes.getState().replace(DOCUMENT, {
+      ...edited,
+      nodes: edited.nodes.map(node => ({ ...node, visible: false })),
+    })
+    await vi.waitFor(() => expect(applied.at(-1)?.nodes[0]?.visible).toBe(false))
+    const before = applied.length
+    const compiled = applied.at(-1)?.nodes[0]
+
+    clearGameOptimizationCache(DOCUMENT)
+
+    await vi.waitFor(() => expect(applied.length).toBeGreaterThan(before))
+    expect(applied.at(-1)?.nodes[0]).not.toBe(compiled)
+    expect(applied.at(-1)?.nodes[0]?.visible).toBe(false)
   })
 
   /**

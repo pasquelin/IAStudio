@@ -5,11 +5,8 @@ import { WindowButton } from '@/components/WindowButton'
 import { fieldHandle } from '@/components/scHandle'
 import { setNodesOptimization } from '@/engines/scene/commands'
 import { bakeOptimization } from '@/engines/scene/bakeOptimization'
-import {
-  OPTIMIZATION_MODES,
-  type OptimizationMode,
-  type SceneNode,
-} from '@/engines/scene/sceneState'
+import type { SceneNode } from '@/engines/scene/sceneState'
+import { OPTIMIZATION_MODES, type OptimizationMode } from '@shared/domain/scene'
 import { OPTIMIZATION_WARNING_REASONS, type OptimizationPlan } from '@/engines/scene/worldAnalyzer'
 import { formatBytes, formatDecimal } from '@/helpers/format'
 import { useScenes } from '@/stores/scenes'
