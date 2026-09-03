@@ -306,12 +306,6 @@ export type SceneRendererOptions = {
   /** The chunks a relief stroke changed, ready to enter the document as one undoable command. */
   onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   /**
-   * The ends of a brush DRAG, which is one thing the reader did: without them each stroke of it
-   * was its own history entry, and a drag flushed the stack the document shares.
-   */
-  onReliefSculptBegin?: () => void
-  onReliefSculptEnd?: () => void
-  /**
    * The editor's own furniture — trihedron, camera bodies and frustums, light helpers, rails.
    * `false` draws none of it: a window that PLAYS a scene shows the game, and the tools it was
    * built with are the studio talking over it.
@@ -1312,20 +1306,10 @@ export class SceneRenderer {
   ): Promise<boolean> {
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
-    this.reliefPending += 1
-    try {
-      const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({
-        ...source,
-        disk,
-        amount,
-      })
-      if (!chunks) return false
-      this.options.onReliefSculpt?.(terrainId, editId, chunks)
-      return true
-    } finally {
-      this.reliefPending -= 1
-      this.sealReliefStroke()
-    }
+    const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({ ...source, disk, amount })
+    if (!chunks) return false
+    this.options.onReliefSculpt?.(terrainId, editId, chunks)
+    return true
   }
 
   private sculptorFor(terrainId: string, editId: string): ReliefSculptor {
@@ -1347,78 +1331,6 @@ export class SceneRenderer {
     const held = this.reliefSculptor
     if (!held) return
     held.sculptor.note(this.relief.sculptSource(held.terrainId, held.editId)?.sculpt)
-  }
-
-  setReliefBrush(brush: ReliefBrush | null): void {
-    if (
-      brush &&
-      this.reliefBrush?.terrainId === brush.terrainId &&
-      this.reliefBrush.editId === brush.editId &&
-      this.reliefBrush.radius === brush.radius &&
-      this.reliefBrush.amount === brush.amount
-    ) {
-      return
-    }
-    this.reliefBrush = brush
-    this.endReliefStroke()
-    this.reliefPoint = null
-  }
-
-  /** Ends the drag if one was held, the entry it opened being sealed once its strokes are back. */
-  private endReliefStroke(): void {
-    if (this.reliefPointer === null) return
-    this.reliefPointer = null
-    this.reliefPoint = null
-    this.reliefEnding = true
-    this.sealReliefStroke()
-  }
-
-  /**
-   * A stroke is a worker round-trip, so at the release several are usually still out. Sealed
-   * there, their commands landed outside the gesture and the drag ended in one entry per stroke.
-   */
-  private sealReliefStroke(): void {
-    if (!this.reliefEnding || this.reliefPending > 0) return
-    this.reliefEnding = false
-    this.options.onReliefSculptEnd?.()
-  }
-
-  private reliefPointAt(event: PointerEvent): Vector3 | null {
-    const brush = this.reliefBrush
-    const ndc = this.viewport.pointerNdcOf(event)
-    if (!brush || !ndc) return null
-    this.pointer.set(ndc.x, ndc.y)
-    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
-    return this.relief.pointAt(brush.terrainId, this.raycaster)
-  }
-
-  private applyReliefBrush(event: PointerEvent): boolean {
-    const brush = this.reliefBrush
-    const point = this.reliefPointAt(event)
-    if (!brush || !point) return false
-    if (this.reliefPoint && this.reliefPoint.distanceToSquared(point) < brush.radius ** 2 / 16) {
-      return true
-    }
-    this.reliefPoint = point.clone()
-    void this.commitReliefBrush(brush, point, event.altKey ? -brush.amount : brush.amount)
-    return true
-  }
-
-  private async commitReliefBrush(
-    brush: ReliefBrush,
-    point: Vector3,
-    amount: number,
-  ): Promise<void> {
-    try {
-      await this.raiseReliefDisk(
-        brush.terrainId,
-        brush.editId,
-        { x: point.x, z: point.z, radius: brush.radius },
-        amount,
-      )
-    } catch {
-      this.endReliefStroke()
-    }
   }
 
   /**
@@ -3403,7 +3315,6 @@ export class SceneRenderer {
     this.bvh.dispose()
     this.skin.dispose()
     this.retarget.dispose()
-    this.endReliefStroke()
     this.reliefSculptor?.sculptor.dispose()
     this.reliefSculptor = null
     this.clipSources.dispose()
@@ -5777,7 +5688,6 @@ export class SceneRenderer {
   private readonly onPointerCancel = (event: PointerEvent): void => {
     if (this.flightPointer && event.pointerId !== this.flightPointer.pointerId) return
     this.pressed = null
-    this.endReliefStroke()
     this.dropMarquee()
     this.endFlight(this.flownWith ?? event.button, event)
   }
