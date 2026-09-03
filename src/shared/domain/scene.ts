@@ -11,6 +11,7 @@ import type { BodyPart } from './humanoid'
 import type { Us } from './time'
 import type { GeometryDescriptor } from './geometry'
 import { EMPTY_STACK, type CameraPost, type PostStack } from './postProcessing'
+import type { ReliefExtent, ReliefSculpt } from './relief'
 import type { Vector3 } from './transform'
 
 /** Re-exported so the fifty-odd files that read a pose from here keep reading it from here. */
@@ -18,6 +19,7 @@ export { isTransform, isVector3, type Transform, type Vector3 } from './transfor
 
 /** Re-exported for the same reason as the transform above: this is where a scene is read from. */
 export type { GeometryDescriptor } from './geometry'
+export type { ReliefExtent, ReliefSculpt } from './relief'
 
 /**
  * A texture is a reference to an asset of the project, never an image and never a three.js
@@ -42,6 +44,7 @@ export type ReliefLayer = {
    * `{ min: 0, max: 1 }` is the identity the decoder already produced.
    */
   elevation: { min: number; max: number }
+  sculpt?: ReliefSculpt
 }
 
 /** Open union: a later kind does not migrate documents written with only Relief. */
@@ -576,7 +579,7 @@ export const DEFAULT_RELIEF_ELEVATION: ReliefLayer['elevation'] = Object.freeze(
 
 export function reliefLayer(
   heightmap: TextureRef,
-  patch?: Partial<Pick<ReliefLayer, 'origin' | 'size' | 'elevation'>>,
+  patch?: Partial<Pick<ReliefLayer, 'origin' | 'size' | 'elevation' | 'sculpt'>>,
 ): ReliefLayer {
   return {
     kind: 'relief',
@@ -584,6 +587,7 @@ export function reliefLayer(
     origin: patch?.origin ?? DEFAULT_RELIEF_ORIGIN,
     size: patch?.size ?? DEFAULT_RELIEF_SIZE,
     elevation: patch?.elevation ?? DEFAULT_RELIEF_ELEVATION,
+    ...(patch?.sculpt ? { sculpt: patch.sculpt } : {}),
   }
 }
 

@@ -64,7 +64,7 @@ describe('relief chunk cost', () => {
     expect(chunks64).toBe(64)
     expect(chunks128).toBe(16)
     // Same map, same vertices to a few duplicated borders: totals sit within 2 %.
-    expect(chunks64 * at64.total / (chunks128 * at128.total)).toBeCloseTo(1, 1)
+    expect((chunks64 * at64.total) / (chunks128 * at128.total)).toBeCloseTo(1, 1)
     // A whole-chunk re-upload is what a missed updateRange would pay: 128 is four times 64.
     expect(at128.total / at64.total).toBeCloseTo(4, 0)
     expect(RELIEF_CHUNK_TEXELS).toBe(64)

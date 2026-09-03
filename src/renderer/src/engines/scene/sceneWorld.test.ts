@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { withChunkDelta } from '@shared/domain/relief'
 import { DEFAULT_WORLD, reliefLayer, STUDIO_ENVIRONMENT } from '@shared/domain/scene'
 import { backgroundOfKind, environmentOfKind, fogOfKind, readWorld } from './sceneWorld'
 
@@ -89,15 +90,7 @@ describe('reading a world back', () => {
     expect(
       readWorld({ layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] }, undefined)
         .layers,
-    ).toEqual([
-      {
-        kind: 'relief',
-        heightmap: { assetId: 'asset_height' },
-        origin: { x: 0, z: 0 },
-        size: { x: 20, z: 20 },
-        elevation: { min: 0, max: 1 },
-      },
-    ])
+    ).toEqual([reliefLayer({ assetId: 'asset_height' })])
     expect(readWorld({ layers: [{ kind: 'relief', heightmap: {} }] }, undefined).layers).toEqual([])
     expect(readWorld({ layers: [{ kind: 'biome' }] }, undefined).layers).toEqual([])
   })
@@ -128,6 +121,24 @@ describe('reading a world back', () => {
         },
       ),
     ])
+  })
+
+  it('round-trips packed sculpt deltas without expanding them to JSON floats', () => {
+    const samples = { width: 4, height: 4, values: new Float32Array(16) }
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 1,
+      delta: 2,
+    })
+    const held = readWorld(
+      { layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' }, sculpt }] },
+      undefined,
+    )
+
+    expect(held.layers[0]).toEqual(reliefLayer({ assetId: 'asset_height' }, { sculpt }))
+    expect(JSON.stringify(held.layers[0])).not.toMatch(/"delta"|2\.0/)
   })
 
   it('gives a ground with no colour the studio one rather than a string', () => {

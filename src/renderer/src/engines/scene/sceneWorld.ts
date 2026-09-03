@@ -39,6 +39,7 @@ import {
   type WorldLayer,
 } from '@shared/domain/scene'
 import { readStack } from '@shared/domain/postProcessing'
+import { readReliefSculpt } from '@shared/domain/relief'
 import { isRecord, oneOf, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 import { newId } from '@/helpers/ids'
 import { bound, type NumericBounds } from '@shared/numeric'
@@ -143,6 +144,7 @@ function readWorldLayer(value: unknown): readonly WorldLayer[] {
   if (!isRecord(value) || value.kind !== 'relief' || !isRecord(value.heightmap)) return []
   const assetId = value.heightmap.assetId
   if (typeof assetId !== 'string' || assetId === '') return []
+  const sculpt = readReliefSculpt(value.sculpt)
   return [
     reliefLayer(
       { assetId },
@@ -150,6 +152,7 @@ function readWorldLayer(value: unknown): readonly WorldLayer[] {
         origin: readReliefOrigin(value.origin),
         size: readReliefSize(value.size),
         elevation: readReliefElevation(value.elevation),
+        ...(sculpt ? { sculpt } : {}),
       },
     ),
   ]

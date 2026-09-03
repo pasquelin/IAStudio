@@ -435,15 +435,7 @@ describe('sceneFromPayload', () => {
         nodes: [],
         world: { layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] },
       }).world.layers,
-    ).toEqual([
-      {
-        kind: 'relief',
-        heightmap: { assetId: 'asset_height' },
-        origin: { x: 0, z: 0 },
-        size: { x: 20, z: 20 },
-        elevation: { min: 0, max: 1 },
-      },
-    ])
+    ).toEqual([reliefLayer({ assetId: 'asset_height' })])
   })
 
   // Saving a grouped scene and reopening it dropped every group, leaving their children hanging
