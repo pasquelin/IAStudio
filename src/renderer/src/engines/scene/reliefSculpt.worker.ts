@@ -1,11 +1,6 @@
 /// <reference lib="webworker" />
 import { messageOf } from '@shared/guards'
-import {
-  applyReliefSculpt,
-  changedChunks,
-  chunkLayout,
-  unpackDeltas,
-} from '@shared/domain/relief'
+import { applyReliefSculpt, changedChunks, chunkLayout, unpackDeltas } from '@shared/domain/relief'
 import {
   transferablesOf,
   type ReliefSculptChunkDelta,
