@@ -81,12 +81,8 @@ const ALT_MIDDLE: readonly GestureChord[] = [{ button: 1 }, { button: 1, alt: tr
 const SHIFT_ALT_LEFT: readonly GestureChord[] = [{ button: 0, alt: true, shift: true }]
 const ALT_RIGHT: readonly GestureChord[] = [{ button: 2, alt: true }]
 const CTRL_MIDDLE: readonly GestureChord[] = [{ button: 1, ctrl: true }]
-/**
- * Unreal's pan: the right button pressed while the left is held. THAT order and no other — the
- * right button flies, and a flight freezes the panes the pan would have needed.
- */
+/** Available to custom schemes; Unreal itself does not call its two-button vertical move a pan. */
 const RIGHT_ONTO_LEFT: readonly GestureChord[] = [{ button: 2, held: 0 }]
-
 /** The three verbs every one of them puts on the same three keys — or does not. */
 const UNITY_TOOLS: BindingOverrides = {
   'scene.translate': 'KeyW',

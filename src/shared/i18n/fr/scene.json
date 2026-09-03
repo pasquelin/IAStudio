@@ -345,6 +345,9 @@
     "unitM": "m"
   },
   "sceneNavigation": {
+    "viewport": "Viewport 3D",
+    "active": "Navigation activée.",
+    "inactive": "Navigation désactivée.",
     "move": "déplacer",
     "altitude": "monter, descendre",
     "boost": "accélérer",

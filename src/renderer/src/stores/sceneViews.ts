@@ -25,6 +25,8 @@ export type WatchedPreview = PreviewWatch & { laid?: ClipRef }
 
 export type SceneView = {
   projection: ProjectionKind
+  /** Whether transform handles use the selected object's axes rather than the world's. */
+  localFrame: boolean
   /**
    * One mode per view, main one first. A list rather than a single value: in a quad layout each
    * view answers for itself — wireframe on top while the flown one stays shaded is the whole
@@ -110,6 +112,7 @@ export type SceneView = {
 
 const DEFAULT_SCENE_VIEW: SceneView = {
   projection: 'perspective',
+  localFrame: false,
   displays: ['shaded'],
   skeletons: false,
   poseMode: false,
@@ -141,6 +144,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
 export type SceneViewsState = {
   views: Record<string, SceneView>
   setProjection: (documentId: string, projection: ProjectionKind) => void
+  setLocalFrame: (documentId: string, localFrame: boolean) => void
   setDisplay: (documentId: string, pane: number, display: DisplayMode) => void
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setPoseMode: (documentId: string, poseMode: boolean) => void
@@ -162,11 +166,7 @@ export type SceneViewsState = {
   setCamera: (documentId: string, camera: CameraPlacement) => void
 }
 
-/**
- * The pane a surface with one row to say it in speaks for — the native menu, the bar's flyout,
- * and an action. A quad layout gives each of its four views a way of being drawn, and none of
- * those three has four ways of asking.
- */
+/** The pane addressed by surfaces that expose only one display-mode row. */
 export const MAIN_SCENE_PANE = 0
 
 export const useSceneViews = create<SceneViewsState>()(set => ({
@@ -175,6 +175,11 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setProjection: (documentId, projection) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), projection } },
+    })),
+
+  setLocalFrame: (documentId, localFrame) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), localFrame } },
     })),
 
   setDisplay: (documentId, pane, display) =>
@@ -347,6 +352,7 @@ export function sceneViewChromeOf(state: SceneViewsState, documentId: string) {
     pickedBone: view.pickedBone,
     pickedPathPoint: view.pickedPathPoint,
     projection: view.projection,
+    localFrame: view.localFrame,
     displays: view.displays,
     quadEdges: view.quadEdges,
     skeletons: view.skeletons,
