@@ -186,12 +186,32 @@ class DiffusersAdapter:
         if refusal is not None:
             raise LoadRefusedError(refusal)
 
-        from diffusers import DiffusionPipeline
-
         self.unload()
         on = device()
         started = time.perf_counter_ns()
+        pipeline = self._open_pipeline(folder, torch_weights, on)
+
+        if attachment is not None:
+            pipeline = _attached(pipeline, attachment, on)
+
+        tune_pipeline(quietened(pipeline))
+        load_ms = (time.perf_counter_ns() - started) / 1e6
+
+        self.loaded = LoadedModel(
+            model_id=model_id,
+            device=on,
+            pipeline=pipeline,
+            bytes_resident=held_bytes(on),
+            tensor_bytes=tensor_bytes(on),
+            load_ms=load_ms,
+            takes_step_callback=_takes_step_callback(pipeline),
+            default_steps=_default_steps(pipeline),
+        )
+        return self.loaded
+
+    def _open_pipeline(self, folder: str, torch_weights: bool, on: str) -> Any:
         import torch
+        from diffusers import DiffusionPipeline
         from diffusers.utils import logging as diffusers_logging
 
         # Diffusers' OWN logging tqdm — the loading bars. It does NOT reach a denoise: the pipeline
@@ -218,23 +238,7 @@ class DiffusersAdapter:
 
             pipeline = StableDiffusionPanoramaPipeline.from_pipe(pipeline)
 
-        if attachment is not None:
-            pipeline = _attached(pipeline, attachment, on)
-
-        tune_pipeline(quietened(pipeline))
-        load_ms = (time.perf_counter_ns() - started) / 1e6
-
-        self.loaded = LoadedModel(
-            model_id=model_id,
-            device=on,
-            pipeline=pipeline,
-            bytes_resident=held_bytes(on),
-            tensor_bytes=tensor_bytes(on),
-            load_ms=load_ms,
-            takes_step_callback=_takes_step_callback(pipeline),
-            default_steps=_default_steps(pipeline),
-        )
-        return self.loaded
+        return pipeline
 
     def unload(self) -> None:
         """Drops the pipeline object, then asks the cache. ADR-19: the figure is what we re-read."""
@@ -248,10 +252,7 @@ class DiffusersAdapter:
         release_cache()
 
     def _wanted_class(self, held: LoadedModel, kwargs: dict[str, Any]) -> Any:
-        """
-        Which pipeline the ARGUMENTS call for. Video goes through a TABLE: diffusers
-        publishes no `AutoPipelineForVideoToVideo`, read on 2026-08-22.
-        """
+        """Choose the derived pipeline required by the supplied arguments."""
         if "video" in kwargs:
             import diffusers
 

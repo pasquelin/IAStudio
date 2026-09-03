@@ -8,7 +8,6 @@ The Python is ours (vendored or an extra). Weights stay in the digested folder, 
 from __future__ import annotations
 
 import sys
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
@@ -25,13 +24,26 @@ from ia_studio_engine.adapters.device import (
 from ia_studio_engine.adapters.loading import (
     NEEDS_PICTURE,
     NEEDS_PROMPT,
-    LoadedModel,
     LoadRefusedError,
     quietened,
     refuse_reason,
 )
 from ia_studio_engine.adapters.params import filled, knob, text
-from ia_studio_engine.core.jobqueue import CancelledError
+from ia_studio_engine.adapters.plugin_runtime import PluginAdapter
+
+__all__ = [
+    "PLUGINS",
+    "Plugin",
+    "PluginAdapter",
+    "device",
+    "held_bytes",
+    "is_plugin_model",
+    "quietened",
+    "refuse_reason",
+    "release_cache",
+    "result_frame",
+    "tensor_bytes",
+]
 
 _VENDOR = Path(__file__).resolve().parent.parent / "vendor"
 if str(_VENDOR) not in sys.path:
@@ -91,86 +103,6 @@ def _require(module: str, extra: str) -> Any:
         return __import__(module, fromlist=["*"])
     except ImportError as error:
         raise LoadRefusedError(f"{module} is not installed (extra {extra})") from error
-
-
-class PluginAdapter:
-    """One family at a time. The door swaps this in when the model id is a plugin id."""
-
-    def __init__(self) -> None:
-        self.loaded: LoadedModel | None = None
-
-    def backend(self) -> str:
-        return "pytorch"
-
-    def device(self) -> str:
-        return device()
-
-    def unload(self) -> None:
-        self.loaded = None
-        _forget_local_repos()
-        release_cache()
-
-    def load(
-        self,
-        model_id: str,
-        folder: str,
-        torch_weights: bool = False,
-        attachment: dict[str, Any] | None = None,
-    ) -> LoadedModel:
-        # `torch_weights` picks which FILES a diffusers folder opens, and a plugin reads its own.
-        del torch_weights
-        if attachment is not None:
-            raise LoadRefusedError(f"{model_id} takes no attached weights")
-
-        refusal = refuse_reason(folder)
-        if refusal is not None:
-            raise LoadRefusedError(refusal)
-
-        plugin = PLUGINS.get(model_id)
-        if plugin is None:
-            raise LoadRefusedError(f"no plugin adapter for {model_id}")
-
-        on = device()
-        if plugin.needs_cuda and on != "cuda":
-            raise LoadRefusedError(f"{model_id} needs CUDA, this machine is {on}")
-
-        self.unload()
-        started = time.perf_counter_ns()
-        handle = quietened(plugin.load(folder, on))
-
-        load_ms = (time.perf_counter_ns() - started) / 1e6
-        self.loaded = LoadedModel(
-            model_id=model_id,
-            device=on,
-            pipeline=handle,
-            bytes_resident=held_bytes(on),
-            tensor_bytes=tensor_bytes(on),
-            load_ms=load_ms,
-            takes_step_callback=False,
-            default_steps=25,
-        )
-        return self.loaded
-
-    def generate(
-        self,
-        params: dict[str, Any],
-        destination: str,
-        door: str,
-        on_step: Callable[[int, int], None] | None = None,
-        stopping: Callable[[], bool] | None = None,
-    ) -> dict[str, Any]:
-        held = self.loaded
-        if held is None:
-            raise LoadRefusedError("no model is loaded")
-        if stopping is not None and stopping():
-            raise CancelledError("the generation was cancelled")
-        if on_step is not None:
-            on_step(1, 1)
-
-        started = time.perf_counter_ns()
-        PLUGINS[held.model_id].run(held.pipeline, params, destination, held.device)
-        generate_ms = (time.perf_counter_ns() - started) / 1e6
-        return result_frame(door, held.device, self.backend(), destination, generate_ms)
 
 
 def _load_triposr(folder: str, on: str) -> Any:
@@ -373,8 +305,7 @@ def _load_lgm(folder: str, on: str) -> Any:
     )
 
     root = Path(folder)
-    # Component by component rather than through `from_pretrained`: the published pipeline names
-    # its unet class in a `.py` beside the weights, which this studio never downloads.
+    # Avoid `from_pretrained`: the published pipeline names untrusted code beside its weights.
     unet = MultiViewUNetModel.from_config(MultiViewUNetModel.load_config(str(root / "unet")))
     unet.load_state_dict(load_file(str(root / "unet/diffusion_pytorch_model.safetensors")))
     views = MVDreamPipeline(

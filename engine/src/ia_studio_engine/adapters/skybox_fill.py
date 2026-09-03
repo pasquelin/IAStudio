@@ -124,29 +124,43 @@ def _paint(faces: dict[str, Any], rays: tuple[Any, Any, Any], into: Any, front: 
         covered = axis & half
         if name == "front":
             numpy.copyto(front, covered)
+        _paint_face(faces[name], covered, u_num, u_sign, v_num, v_sign, den, into, words)
 
-        face = faces[name]
-        # 🛑 `[M]` A one-pixel face is a flat colour, written as a 32-bit WORD through a view of the
-        # canvas. The same fill spelled as an RGB triple broadcast into `(h, w, 3)` cost 225 ms of
-        # the 605 this function took, for five faces of six.
-        if face.shape[:2] == (1, 1):
-            # `[?]` Little-endian, which every target of this build is: on a big-endian machine
-            # red and blue would swap in silence. Measured nowhere else, so it is written here.
-            red, green, blue = (int(one) for one in face[0, 0])
-            packed = numpy.uint32(red | green << 8 | blue << 16 | 0xFF000000)
-            numpy.copyto(words, packed, where=covered)
-            continue
 
-        # The face's own axis divides both: a cube face is square, so one denominator.
-        on_face = den[covered]
-        u = (u_sign * u_num[covered] / on_face + 1) / 2
-        v = (v_sign * v_num[covered] / on_face + 1) / 2
-        fh, fw = face.shape[:2]
-        # Boolean indexing on both sides: the destinations are the covered pixels themselves, in
-        # the same order, which is what a grid of coordinates was being carried to spell out.
-        # Only the three colour channels: `convert("RGB")` drops alpha without compositing, so
-        # filling it was 8 ms of work nothing ever read.
-        into[covered, :3] = face[
-            numpy.clip((v * fh).astype(int), 0, fh - 1),
-            numpy.clip((u * fw).astype(int), 0, fw - 1),
-        ]
+def _paint_face(
+    face: Any,
+    covered: Any,
+    u_num: Any,
+    u_sign: int,
+    v_num: Any,
+    v_sign: int,
+    den: Any,
+    into: Any,
+    words: Any,
+) -> None:
+    import numpy
+
+    # 🛑 `[M]` A one-pixel face is a flat colour, written as a 32-bit WORD through a view of the
+    # canvas. The same fill spelled as an RGB triple broadcast into `(h, w, 3)` cost 225 ms of
+    # the 605 this function took, for five faces of six.
+    if face.shape[:2] == (1, 1):
+        # `[?]` Little-endian, which every target of this build is: on a big-endian machine
+        # red and blue would swap in silence. Measured nowhere else, so it is written here.
+        red, green, blue = (int(one) for one in face[0, 0])
+        packed = numpy.uint32(red | green << 8 | blue << 16 | 0xFF000000)
+        numpy.copyto(words, packed, where=covered)
+        return
+
+    # The face's own axis divides both: a cube face is square, so one denominator.
+    on_face = den[covered]
+    u = (u_sign * u_num[covered] / on_face + 1) / 2
+    v = (v_sign * v_num[covered] / on_face + 1) / 2
+    fh, fw = face.shape[:2]
+    # Boolean indexing on both sides: the destinations are the covered pixels themselves, in
+    # the same order, which is what a grid of coordinates was being carried to spell out.
+    # Only the three colour channels: `convert("RGB")` drops alpha without compositing, so
+    # filling it was 8 ms of work nothing ever read.
+    into[covered, :3] = face[
+        numpy.clip((v * fh).astype(int), 0, fh - 1),
+        numpy.clip((u * fw).astype(int), 0, fw - 1),
+    ]
