@@ -3,16 +3,15 @@ import { APP_NAME } from '@shared/constants'
 import { app, BrowserWindow, dialog, net, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { availableParallelism } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
-import { outputExtensionOf } from '@shared/domain/localFields'
 import { ASSET_ID_PREFIX, type Asset, type AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
-import { THUMBNAIL_SIZE, projectName } from '@shared/domain/project'
+import { THUMBNAIL_SIZE } from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settingsRegistry'
 import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
 import { defaultSettings, type AuthState } from '@shared/domain/settings'
@@ -23,9 +22,8 @@ import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createNewsService, type NewsService } from '@main/news/newsStore'
 import { createUpdates, type Updates } from '@main/updater'
-import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/autoCaption'
-import { assetFilePath, ownFileOf, posterFileOf, serveAssets } from './assets/protocol'
+import { posterFileOf, serveAssets } from './assets/protocol'
 import { createAssetResolvers } from './assets/assetResolvers'
 import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
@@ -62,15 +60,8 @@ import { machineFolders } from './assistant/machineFolders'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
 import type { DictationSession } from './dictation/session'
-import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import type { AiManager } from './ai/manager'
-import { createLocalJobRunner } from './ai/localJobRunner'
-import { createRoutedCollector } from './ai/routedCollector'
-import { createLocalCollector } from './assets/localCollector'
-import { createCodeJobRunner, isRetryableCloudChat } from './ai/codeJobRunner'
-import { createRoutedJobRunner } from './ai/routedJobRunner'
-import { createRetry, isRetryable } from './provider/retry'
 import { openMicrophoneSettings } from './dictation/permissions'
 import { adoptFile } from './media/adoptFile'
 import { linkedAsset, mediaFilters } from './media/link'
@@ -86,15 +77,8 @@ import type { TextureExtraction } from './assets/textureExtraction'
 import { broadcast, sendTo } from './ipc/broadcast'
 import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
-import { exists, writeAtomic } from './persistence'
-import type Scenario from '@scenario-labs/sdk'
-import {
-  createJobManager,
-  type AssetCollector,
-  type JobAccount,
-  type JobManager,
-} from './provider/jobManager'
-import { runnerOf } from './provider/runner'
+import { writeAtomic } from './persistence'
+import type { JobManager } from './provider/jobManager'
 import type { AskUser } from './project/documentDialogs'
 import type { DocumentFiles } from './project/documents'
 import type { FileOps } from './project/fileOps'
@@ -103,7 +87,7 @@ import type { GameScriptStore } from './project/gameScripts'
 import type { FolderReader } from './project/folder'
 import { composedContext } from '@shared/domain/projectContext'
 import type { ProjectContextStore } from '@main/project/context'
-import { createPromptContext, type PromptContext } from '@main/provider/promptContext'
+import type { PromptContext } from '@main/provider/promptContext'
 import { openFailureKey, orWhenGone, type ProjectStore } from './project/store'
 import type { Reconciler } from './project/reconcile'
 import type { ActivityLog } from './project/activityLog'
@@ -112,27 +96,17 @@ import type { Transcript } from './assistant/transcript'
 import type { MemoryHost } from './memory/memoryHost'
 import type { MemoryVectors } from './memory/memoryVectors'
 import { catalogOf } from './provider/modelCatalog'
-import { createAssetUploader, MAX_UPLOAD_BYTES, type AssetUploader } from './provider/uploader'
-import { createAssetInputResolver } from './provider/assetInputs'
-import { createLocalAssetInputResolver } from './ai/localAssetInputs'
-import { assetBackendOf, assetCatalogOf, type RemoteAssetCatalog } from './provider/assetCatalog'
-import { generationOfMetadata } from './provider/assetNormalizer'
-import { createOwnerScope, type OwnerScope } from './provider/ownerScope'
-import { accountFingerprint } from './settings/accounts'
-import { createCloudBackend, type CloudBackend } from './assets/cloudBackend'
-import { isRecord } from '@shared/guards'
-import { clientFor, type ClientProvider } from './provider/client'
-import { costEstimatorOf, type CostEstimator } from './provider/cost'
+import type { AssetUploader } from './provider/uploader'
+import type { RemoteAssetCatalog } from './provider/assetCatalog'
+import type { OwnerScope } from './provider/ownerScope'
+import type { CloudBackend } from './assets/cloudBackend'
+import type { ClientProvider } from './provider/client'
+import type { CostEstimator } from './provider/cost'
 import type { UsageReader } from './provider/usage'
-import { createJobStore } from './provider/jobStore'
-import { isTripoModelId, TRIPO_CLOUD } from '@shared/domain/tripo'
 import type { ModelRegistry } from './provider/modelRegistry'
 import type { PlanReader } from './provider/plan'
 import type { CreditsReader } from './provider/credits'
-import { createTripoApi, isRetryableTripo, tripoRetryAfterMs } from './provider/tripoApi'
-import { createTripoRunner, tripoLaneOf } from './provider/tripoRunner'
-import { createPromptAssist, type PromptAssist } from './provider/promptAssist'
-import { promptAssistApiOf } from './provider/promptAssistApi'
+import type { PromptAssist } from './provider/promptAssist'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type SettingsStore } from './settings/store'
 import { buildMenu, noteNavigationPreset, noteRecent } from './menu'
@@ -142,6 +116,7 @@ import { ProviderServices } from './serviceProvider'
 import { createLocalAiServices } from './serviceLocalAi'
 import { createProjectServices } from './serviceProject'
 import { createMediaServices } from './serviceMedia'
+import { createJobServices } from './serviceJobs'
 
 /**
  * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
@@ -606,377 +581,40 @@ export function createServices(settings: SettingsStore): Services {
     dictation,
   } = localAi
 
-  const collectorOf = (scenario: Scenario): AssetCollector =>
-    createAssetCollector({
-      retrieve: async remoteAssetId => {
-        const { asset } = await scenario.assets.retrieve(remoteAssetId)
-        const generation = generationOfMetadata(asset.metadata)
-        return {
-          ...asset,
-          metadataType: asset.metadata.type,
-          parentId: asset.metadata.parentId,
-          ownerId: asset.ownerId,
-          updatedAt: asset.updatedAt,
-          ...(asset.thumbnail?.url ? { thumbnailUrl: asset.thumbnail.url } : {}),
-          ...(asset.metadata.outputIndex === undefined
-            ? {}
-            : { outputIndex: asset.metadata.outputIndex }),
-          ...(generation ? { generation } : {}),
-        }
-      },
-      backend: assets,
-      newId: newAssetId,
-      // The disk rather than `missing_at`, which the row does not carry out of the catalogue
-      // anyway: the date says what the last reconciliation pass saw, and this is asked at the
-      // moment the answer is acted on. Through the async `exists` and never `existsSync` — this
-      // runs on the main process while a generation is being collected.
-      heldFor: async remoteAssetId => {
-        const held = await project.catalog().findByRemoteId(remoteAssetId)
-        if (!held) return null
-
-        const file = ownFileOf(project.path(), held)
-        return { ...held, onDisk: file !== null && (await exists(file)) }
-      },
-    })
-
-  // Rebuilt only when the client is, so every job of one account shares a single graph rather
-  // than allocating its own — what matters is that a job holds ONE binding, not a fresh one.
-  let bound: { scenario: Scenario | null; id: string; account: JobAccount } | null = null
-
-  /** The account id a job on THIS machine is filed under. Not a fingerprint: nothing was paid for. */
-  const LOCAL_ACCOUNT_ID = 'local'
-
-  /** A job of this machine, told from a cloud's by the id its runner minted. */
-  const isLocalJob = (remoteId: string): boolean => remoteId.startsWith('local_')
-
-  const uploads = createAssetUploader(() => client.require().assets)
-
-  // The client in force, resolved per call like every other service here: an estimate is asked
-  // before any job exists, so it is the key the user is about to spend from that must price it.
-  // `maxRetries: 0`, because a held request is answered with a synthetic 429 the SDK honours:
-  // retried twice, one courtesy estimate would take three slots of the window precisely when
-  // there are none left, and hold the transport for half a minute for a figure nobody waits on.
-  // 🛑 Tripo is unpriced, and not by oversight: they publish no dry run, and quoting credits
-  // under the `UC` label would put two counters under one word. The cost arrives with the job.
-  const estimateCost = costEstimatorOf(
-    (target, body) =>
-      client.require().generate.runModel(target.id, { body, dryRun: true }, { maxRetries: 0 }),
-    targetId => isLocalTarget(targetId) || isTripoModelId(targetId),
-  )
-
-  const promptContext = createPromptContext({
-    cards: async () => (await context.read()).cards,
-    fieldsOf: async targetId => (await models.describe(targetId)).fields,
-    log: message => log.warn('provider', message),
-  })
-
-  const ownerScope = createOwnerScope(credentials.watch)
-
-  /**
-   * The one door to the API for assets, wrapped so that listing it teaches the scope which
-   * project this key opens onto — there is no endpoint that would simply say.
-   *
-   * ONLY the listing. `getBulk` fetches ids the renderer chose, and a public asset belonging to
-   * someone else would plant the wrong project for the rest of the session: every local asset
-   * would then badge as foreign and every push would be refused. A listing is scoped to the key
-   * by construction, so it is the only answer that can speak for it.
-   */
-  const remoteAssets = (): RemoteAssetCatalog => {
-    const catalogue = assetCatalogOf(assetBackendOf(client.require()))
-
-    return {
-      ...catalogue,
-      list: async request => {
-        const page = await catalogue.list(request)
-        ownerScope.observe(page.assets)
-        return page
-      },
-    }
-  }
-
-  const cloudAssets = createCloudBackend({
-    remote: remoteAssets,
-    multipart: async params => {
-      // The helper's return type narrows on a literal `kind`; ours is a value, so what comes
-      // back is the union of an asset and a model. Read rather than asserted.
-      const result: unknown = await client.require().uploads.uploadFile(params)
-      const asset = isRecord(result) && isRecord(result.asset) ? result.asset : null
-      if (!asset || typeof asset.id !== 'string') throw new Error('upload-incomplete')
-
-      return {
-        assetId: asset.id,
-        ...(typeof asset.ownerId === 'string' ? { ownerId: asset.ownerId } : {}),
-        ...(typeof asset.updatedAt === 'string' ? { updatedAt: asset.updatedAt } : {}),
-      }
-    },
-    small: (name, image) => uploads.upload(name, image),
-    local: assets,
-    catalog: () => project.catalog(),
-    fileOf: asset => ownFileOf(project.path(), asset),
-    readFile: path => readFile(path),
-    sizeOf: async path => (await stat(path)).size,
-    newId: newAssetId,
-    now: timestamp,
-    smallUploadLimit: MAX_UPLOAD_BYTES,
-  })
-
-  /**
-   * The catalogue and the push path an id has to travel through before a job can name it. Both
-   * resolved per call, like every other service here: the project and the key both change under
-   * a resolver held for the life of the process.
-   */
-  const assetInputs = createAssetInputResolver({
-    find: assetId => project.catalog().find(assetId),
-    push: assetId => cloudAssets.push(assetId),
-    activeOwnerId: ownerScope.current,
-  })
-
-  /** The same pictures, for a model that runs HERE: a path on this disk, and nothing sent. */
-  const localAssetInputs = createLocalAssetInputResolver({
-    find: assetId => project.catalog().find(assetId),
-    projectPath: () => project.path(),
-  })
-
-  // Built here rather than beside the other Scenario services, because it needs the resolver
-  // above and the resolver needs the project and the cloud backend.
-  const prompts = createPromptAssist({
-    api: () => promptAssistApiOf(client.require()),
-    // Through the registry rather than the API: the generator just described the model to draw
-    // the form, so the descriptors are warm and no round trip is spent narrowing the answer.
-    fields: async modelId => (await models.describe(modelId)).fields,
-    resolvePictureIds: assetInputs.resolvePictureIds,
-  })
-
-  /**
-   * Drops the file an asset owns. A linked rush is only ever unlinked: the file belongs to
-   * whoever pointed at it, and deleting it would take away a take the project never copied.
-   */
-  const removeAssetFile = async (asset: Asset): Promise<void> => {
-    const current = project.current()
-    if (!current) return
-
-    // Through the same containment the scheme uses: a stored path is user-editable territory,
-    // and `rm` on one that escaped the project would delete a file nobody asked about.
-    //
-    // The still goes with it, and it is removed even for a LINKED rush whose own file stays put:
-    // it is ours, written into the project, and nothing would ever come back for it.
-    for (const stored of [asset.path, asset.posterPath]) {
-      const file = stored ? assetFilePath(current.path, stored) : null
-      if (file) await rm(file, { force: true })
-    }
-  }
-
-  /**
-   * Generations on this machine, behind the shape the job manager speaks — so it keeps holding
-   * the queue, the concurrency bound and the retries, and keeps knowing about ONE runner.
-   */
-  const localJobs = createLocalJobRunner({
-    generate: async request => {
-      const model = modelOf(request.model)
-      const generate = model ? runtimes[model.loader]?.generate : undefined
-      if (!model || !generate) throw new Error(`nothing here generates with ${request.model}`)
-
-      const release = ai.hold(request.model)
-      try {
-        await ai.ensureLoaded(request.model)
-
-        // The main process owns where it lands, and the engine only fills it — which is what makes
-        // the file ours to file and ours to delete.
-        const folder = await generationFolder()
-
-        return await generate({
-          model: model.id,
-          modality: request.modality,
-          prompt: request.prompt,
-          fields: request.fields,
-          // The extension follows the MODALITY: the collector reads it back off the path to file
-          // the asset, so a video written as `.png` lands as a picture nothing can play.
-          destination: join(folder, `${request.jobId}.${outputExtensionOf(request.modality)}`),
-          onProgress: request.onProgress,
-          signal: request.signal,
-        })
-      } finally {
-        release()
-      }
-    },
-
-    chat: async request => {
-      const model = modelOf(request.model)
-      const chat = model ? runtimes[model.loader]?.chat : undefined
-      if (!chat) throw new Error(`nothing here converses with ${request.model}`)
-
-      return await chat(request)
-    },
+  const jobServices = createJobServices({
+    settings,
+    credentialsWatch: credentials.watch,
+    client,
+    transport,
+    models,
+    context,
+    project,
+    journal,
+    assets,
+    runtimes,
+    ai,
     modelOf,
-    newId: () => randomUUID(),
-    log: (level, message) => log[level]('ai', message),
-  })
-
-  /**
-   * What a generation made HERE leaves behind: a file the studio owns, filed and then dropped.
-   *
-   * Nothing is retrieved and nothing is downloaded, which is why the cloud collector cannot serve
-   * — every branch of it turns on a remote asset id there is none of.
-   */
-  const collectLocal = createLocalCollector({
-    producedBy: jobId => localJobs.producedBy(jobId) ?? tripoJobs.producedBy(jobId),
-    discard: path => rm(path, { force: true }),
-    backend: assets,
-    newId: newAssetId,
-    log: (level, message) => log[level]('ai', message),
-  })
-
-  /**
-   * Scripts written by a chat cloud. Held outside `accountOn` because it belongs to no account of
-   * Scenario's: its key is the cloud's own, and a switch of Scenario account leaves it alone.
-   */
-  const codeJobs = createCodeJobRunner({
-    chatOf: cloud => {
-      const chat = CLOUD_PROVIDERS.find(one => one.id === cloud)?.chat
-      return chat === undefined || chat.kind === 'scenario' ? null : chat
-    },
-    keyOf: cloud => settings.readCredentialsFor(cloud)?.key ?? null,
-    modelOf: cloud => settings.read().assistant.cloudModels[cloud],
-    post: (input, init) => fetch(input, init),
-    // The studio's own backoff, told what a CHAT cloud can recover from: `isRetryable` reads a
-    // Scenario SDK error, and a chat refusal is neither.
-    retry: createRetry({
-      maxRetries: () => settings.read().generation.maxRetries,
-      sleep: delay,
-      retryable: isRetryableCloudChat,
-    }),
-    newId: () => randomUUID(),
-    log: (level, message) => log[level]('ai', message),
-  })
-
-  /**
-   * Held OUTSIDE `accountOn`, like the chat runner: its key is Tripo's own. Results come down on
-   * the poll that saw them succeed — their URLs are signed five minutes — and are filed by the
-   * LOCAL collector, there being no library to fetch them back from.
-   */
-  // 🛑 ONE client, not one per call: it remembers whether their grouped read is served, and a
-  // fresh one every poll threw that away — a wasted round trip every two seconds for the session.
-  const tripoApi = createTripoApi({
-    key: () => settings.readCredentialsFor(TRIPO_CLOUD)?.key ?? null,
-  })
-
-  const tripoJobs = createTripoRunner({
-    api: () => (holdsTripo() ? tripoApi : null),
-    download,
-    readFile: path => readFile(path),
-    writeFile: (path, bytes) => writeFile(path, bytes),
-    // The main process owns where it lands and the service only fills it — which is what makes
-    // the file ours to file and ours to delete, exactly as a local generation's is.
-    destinationFor: async (taskId, extension) =>
-      join(await generationFolder(), `${taskId}${extension}`),
-    gather: ms => delay(ms),
-    log: (level, message) => log[level]('provider', message),
-  })
-
-  const accountOn = (scenario: Scenario | null): JobAccount => ({
-    runner: createRoutedJobRunner({
-      local: localJobs,
-      code: codeJobs,
-      tripo: () => (holdsTripo() ? tripoJobs : null),
-      cloud: () => (scenario ? runnerOf(scenario) : null),
-      isLocalTarget,
-    }),
-    // Routed like the runner, and by the same question: a job id says which of the two owns what
-    // it produced. A local generation needs no account, so it is collected with none held.
-    collect: createRoutedCollector({
-      local: collectLocal,
-      cloud: () => (scenario ? collectorOf(scenario) : null),
-      // Tripo files through the LOCAL collector: what it produced is already a file on this disk.
-      owns: jobId => localJobs.owns(jobId) || tripoJobs.owns(jobId),
-      wroteText: jobId => codeJobs.owns(jobId),
-    }),
-  })
-
-  const jobStore = createJobStore(() => app.getPath('userData'))
-
-  const jobs = createJobManager({
-    accounts: {
-      // Read once per job and kept, so a switch mid-flight does not have the new key asked about
-      // the previous account's job id — see `JobAccount`.
-      // Answered even with no account at all: a generation on this machine needs none, and the
-      // routed runner refuses a CLOUD target readably rather than never being reached.
-      active: () => {
-        const scenario = client.get() ?? null
-        const held = settings.readCredentials()
-
-        if (bound?.scenario !== scenario) {
-          const id = held ? accountFingerprint(held) : LOCAL_ACCOUNT_ID
-          bound = { scenario, id, account: accountOn(scenario) }
-        }
-
-        return { id: bound.id, account: bound.account }
-      },
-
-      // A client of its own, not the one in force: a job resumed from a previous session belongs
-      // to the account that paid for it, whichever one the user has switched to since.
-      of: accountId => {
-        const credentials = settings.credentialsOf(accountId)
-        if (credentials) return accountOn(clientFor(credentials, transport))
-
-        // 🛑 `LOCAL_ACCOUNT_ID` is "no Scenario key was held", not an account gone: a job of
-        // another cloud is written down under it, and `null` would abandon a paid generation.
-        return accountId === LOCAL_ACCOUNT_ID ? accountOn(null) : null
-      },
-    },
-    projectPath: () => project.current()?.path ?? null,
-    // The folder IS the name — there is nowhere else to read it from, and nothing to fall back on.
-    projectNameOf: path => projectName(path),
-    // Routed on WHERE the target runs: a local model needs its picture off the disk, and
-    // uploading it to an account would be a transfer nobody asked for.
-    // Routed on WHERE the target runs. Anything but Scenario takes the LOCAL resolver: pushing
-    // a picture to a Scenario library for a generation billed elsewhere is a transfer nobody
-    // asked for — the Tripo runner sends it to Tripo itself.
-    resolveAssetInputs: (body, target) =>
-      isLocalTarget(target.id) || isTripoModelId(target.id)
-        ? localAssetInputs.resolveBody(body)
-        : assetInputs.resolveBody(body),
-    persist: (unfinished, handled) => {
-      // 🛑 A local job is never written down: its whole state lived in the memory of the process
-      // that ran it, so a launch that resumed one would poll a runner that has never heard of it.
-      const stored = unfinished.filter(job => !isLocalJob(job.remoteId))
-
-      // Nothing waits on this: the write is settled at quit and on a project change, which are
-      // the two moments the process may not outlive it. Said out loud all the same — a full disk
-      // or an unreadable file turns every note into a no-op, and the loss this whole mechanism
-      // exists to prevent would then happen with nothing anywhere saying why.
-      void jobStore.write(stored, handled).catch((error: unknown) => {
-        log.warn('jobs', `keeping notes of running jobs failed: ${String(error)}`)
-      })
-    },
-    concurrency: () => settings.read().generation.concurrentJobs,
-    localConcurrency: () => 1,
     isLocalTarget,
-    // Their reference publishes no cancellation, so a job reported as stopped would go on being
-    // billed. Said HERE, where the runners live: the row only draws what it is told.
-    cancellableTarget: targetId => !isTripoModelId(targetId),
-    // Tripo counts its own concurrency per CATEGORY — one picture at a time against ten meshes —
-    // so its ceilings are respected before the request rather than discovered by a 429.
-    lane: tripoLaneOf,
-    maxRetries: () => settings.read().generation.maxRetries,
-    // Two clouds word a refusal two ways, and the SDK's reader answers `false` for everything
-    // Tripo says — so their rate limit would have failed a job that one wait would have saved.
-    retryable: error => isRetryable(error) || isRetryableTripo(error),
-    retryDelayFor: tripoRetryAfterMs,
-    onProgress: progress => broadcast(EVENTS.jobProgress, progress),
-    onListChanged: list => broadcast(EVENTS.jobsChanged, list),
-    record: report => journal.record(report),
+    holdsTripo,
+    generationFolder,
+    download,
+    newAssetId,
+    delay,
     now: timestamp,
-    newId: () => `job_${randomUUID()}`,
-    sleep: delay,
   })
+  const {
+    uploads,
+    estimateCost,
+    promptContext,
+    ownerScope,
+    remoteAssets,
+    cloudAssets,
+    prompts,
+    removeAssetFile,
+    jobStore,
+    jobs,
+  } = jobServices
 
-  /**
-   * The assistant's thinking, on Scenario's own catalogue model.
-   *
-   * Through `jobs.run` rather than `jobs.submit`: it is machinery, not a generation, and the
-   * difference is what keeps every sentence typed at the assistant out of the jobs bar and its
-   * answers out of the asset browser — see `JobManager.run`.
-   */
   const providerBrain = createProviderBrain({
     run: (body, signal) => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body, signal),
     // Invariant 5, applied to the one form of this studio that was written by hand: what the
