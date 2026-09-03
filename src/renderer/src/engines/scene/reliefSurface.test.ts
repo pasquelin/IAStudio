@@ -52,6 +52,25 @@ function positionOf(
 }
 
 describe('relief surface chunks', () => {
+  it('exposes the loaded source of one sculpt edit', () => {
+    const surface = createReliefSurface(new Scene())
+    const samples = samplesOf()
+    const layer = reliefLayer(
+      { assetId: 'asset_height' },
+      { edits: [terrainEditLayer({ id: 'hills' })] },
+    )
+
+    surface.sync({ ...DEFAULT_WORLD, layers: [layer] }, samples)
+
+    expect(surface.sculptSource(layer.id, 'hills')).toEqual({
+      samples,
+      extent: { origin: layer.origin, size: layer.size, elevation: layer.elevation },
+      grain: layer.grain,
+      sculpt: undefined,
+    })
+    expect(surface.sculptSource(layer.id, 'missing')).toBeNull()
+  })
+
   it('leaves a full build to its builder and installs the answer when it is ready', async () => {
     const ready = vi.fn()
     const surface = createReliefSurface(new Scene(), {
