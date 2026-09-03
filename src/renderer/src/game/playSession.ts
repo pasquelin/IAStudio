@@ -13,6 +13,7 @@ import type { EntityPlacement } from '@game/ports/renderPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import { placementsOf } from '@game/runtime/placements'
 import type { World } from '@game/runtime/world'
+import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { FrameDriver } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
@@ -89,6 +90,8 @@ export type PlaySessionDeps = {
   troubles?: readonly ScriptTrouble[]
   /** What sounds. Absent leaves a game silent — no mixer is wired to a Play yet. */
   audio?: AudioPort
+  /** Heightmaps already decoded for this Play, keyed by the asset a relief names. */
+  heightmaps?: ReadonlyMap<string, HeightmapSamples>
   /**
    * Another scene of the project, by the title or the id a game names it with.
    *
@@ -165,7 +168,14 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   }
 
   const build = (state: SceneState): World =>
-    worldFromScene(deps.documentId, state, ports, { modules: deps.modules ?? [], onFault: noted })
+    worldFromScene(
+      deps.documentId,
+      state,
+      ports,
+      { modules: deps.modules ?? [], onFault: noted },
+      1,
+      deps.heightmaps,
+    )
 
   let world = build(deps.editState())
   let loop = createGameLoop(world)

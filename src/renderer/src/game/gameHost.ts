@@ -7,6 +7,7 @@ import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { animationFrames } from './frameDriver'
+import { heightmapsOf } from './heightmapsOf'
 import { startPlay, type PlaySession, type SceneLookup } from './playSession'
 import type { SceneDraw } from './studioRender'
 
@@ -29,11 +30,12 @@ export type GameHostDeps = {
  * WebAssembly landing in 27 ms, a frame nobody sees but not a wait a button takes synchronously.
  */
 export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
-  // Both together, and each failing on its own: the two machines are independent, and a game
-  // whose physics did not land still runs — it says so in its own log.
-  const [physics, script] = await Promise.all([
+  // The two machines together, each failing on its own: they are independent, and a game whose
+  // physics did not land still runs — it says so in its own log. The heightmaps ride along.
+  const [physics, script, heightmaps] = await Promise.all([
     orElse(loadJoltPhysics(), undefined),
     orElse(loadQuickjsScripts(), undefined),
+    heightmapsOf(deps.editState().world.layers),
   ])
 
   return startPlay({
@@ -48,5 +50,6 @@ export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
     troubles: deps.troubles,
     sceneNamed: deps.sceneNamed,
     onReport: deps.onReport,
+    heightmaps,
   })
 }

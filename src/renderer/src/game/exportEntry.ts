@@ -16,6 +16,7 @@ import { animationFrames } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
 import { veilLift } from './veilLift'
 import { createWebRender } from './webRender'
+import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
 
 /**
@@ -65,7 +66,14 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   const opening = sceneFromGltf(await fetched<unknown>(entry.file))
   // 🛑 No `onFault`: the default writes to the log, which the export host echoes to the console.
   // A game with nobody listening is exactly where a swallowed fault costs the most.
-  let world = worldFromScene(entry.id, opening, ports, { modules })
+  let world = worldFromScene(
+    entry.id,
+    opening,
+    ports,
+    { modules },
+    1,
+    await heightmapsOf(opening.world.layers),
+  )
   let loop = createGameLoop(world)
   let warmed = false
   let playing = entry.id
@@ -103,7 +111,14 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       world.events.drain()
       world.dispose()
       playing = wanted.id
-      world = worldFromScene(wanted.id, found, ports, { modules })
+      world = worldFromScene(
+        wanted.id,
+        found,
+        ports,
+        { modules },
+        1,
+        await heightmapsOf(found.world.layers),
+      )
       loop = createGameLoop(world)
       // The first step of the arrived scene derives every collider — not a gap to catch up on.
       warmed = false

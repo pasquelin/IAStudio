@@ -24,9 +24,11 @@ import { createVehicleSystem } from '@game/runtime/systems/vehicle'
 import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
 import { createTimelineSystem } from '@game/runtime/systems/timeline'
 import { createWorld, type System, type World } from '@game/runtime/world'
+import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
+import { colliderFromRelief } from './colliderFromRelief'
 import { createHierarchy } from './hierarchy'
 import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
 
@@ -35,6 +37,7 @@ import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
  * nobody stands on is the first thing anyone tries. A dot keeps the name out of reach of a uuid.
  */
 const GROUND_BODY = 'world.ground'
+const RELIEF_BODY = 'world.relief'
 
 /** Deep enough that nothing falls through it in one step at terminal speed. */
 const GROUND_DEPTH = 5
@@ -56,6 +59,7 @@ export function worldFromScene(
   ports: GameApi,
   scripts: Partial<ScriptSystemOptions> = {},
   seed = 1,
+  heightmaps?: ReadonlyMap<string, HeightmapSamples>,
 ): World {
   // A module's arm reads the TREE rather than its two written names. It rewrites the STATE where
   // `filmable` and the seat stay closure arguments: `springArm` reads its two fields off the
@@ -76,7 +80,13 @@ export function worldFromScene(
   const world = createWorld({
     scene: { kind: 'document', id: documentId },
     ports,
-    systems: systemsFor(state, ports, told, id => living?.entities.get(id)?.transform ?? null),
+    systems: systemsFor(
+      state,
+      ports,
+      told,
+      id => living?.entities.get(id)?.transform ?? null,
+      heightmaps,
+    ),
     seed,
     step: STEP_SECONDS,
     play: state.world.play,
@@ -105,6 +115,7 @@ function systemsFor(
   ports: GameApi,
   scripts: ScriptSystemOptions,
   liveOf: (nodeId: string) => Transform | null,
+  heightmaps?: ReadonlyMap<string, HeightmapSamples>,
 ): readonly System[] {
   const byId = new Map(state.nodes.map(node => [node.id, node]))
   const hierarchy = createHierarchy(byId, liveOf)
@@ -172,7 +183,7 @@ function systemsFor(
       shapeOf,
       characters,
       possessions,
-      statics: groundOf(state),
+      statics: groundOf(state, heightmaps),
       worldOf: placed,
       localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
     }),
@@ -197,31 +208,46 @@ function systemsFor(
   ]
 }
 
-/** The scene's ground as a slab, its top face at zero — where the studio draws it. */
-function groundOf(state: SceneState): readonly BodyDescriptor[] {
+/**
+ * The scene's ground. A relief, when its heightmap is in hand, replaces the cuboid slab — the
+ * same choice the viewport makes when it hides the plane under a drawn relief.
+ */
+function groundOf(
+  state: SceneState,
+  heightmaps?: ReadonlyMap<string, HeightmapSamples>,
+): readonly BodyDescriptor[] {
+  const relief = state.world.layers.find(layer => layer.kind === 'relief')
+  const samples = relief ? heightmaps?.get(relief.heightmap.assetId) : undefined
+  const shape = relief && samples ? colliderFromRelief(relief, samples) : null
+  if (shape) return [staticBody(RELIEF_BODY, shape)]
+
   const ground = state.world.ground
   if (!ground.visible) return []
 
   return [
-    {
-      body: GROUND_BODY,
-      kind: 'fixed',
-      shape: {
-        kind: 'cuboid',
-        hx: ground.size / 2,
-        hy: GROUND_DEPTH / 2,
-        hz: ground.size / 2,
-        at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
-      },
-      transform: IDENTITY_TRANSFORM,
-      friction: Number(COMPONENTS.Collider.defaults.friction),
-      restitution: Number(COMPONENTS.Collider.defaults.restitution),
-      mass: 0,
-      gravityScale: 1,
-      lockRotation: false,
-      sensor: false,
-      character: null,
-      vehicle: null,
-    },
+    staticBody(GROUND_BODY, {
+      kind: 'cuboid',
+      hx: ground.size / 2,
+      hy: GROUND_DEPTH / 2,
+      hz: ground.size / 2,
+      at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
+    }),
   ]
+}
+
+function staticBody(body: string, shape: ColliderShape): BodyDescriptor {
+  return {
+    body,
+    kind: 'fixed',
+    shape,
+    transform: IDENTITY_TRANSFORM,
+    friction: Number(COMPONENTS.Collider.defaults.friction),
+    restitution: Number(COMPONENTS.Collider.defaults.restitution),
+    mass: 0,
+    gravityScale: 1,
+    lockRotation: false,
+    sensor: false,
+    character: null,
+    vehicle: null,
+  }
 }

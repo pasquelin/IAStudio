@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
-import { DEFAULT_PLAY } from '@shared/domain/scene'
+import { DEFAULT_PLAY, reliefLayer } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { createExportHost } from '@game/host/exportHost'
-import { notedPhysics, type NotedPhysics } from '@game/physics/physics-fixtures'
+import { loadJoltPhysics } from '@game/host/joltPhysics'
+import { notedPhysics } from '@game/physics/physics-fixtures'
+import type { PhysicsPort } from '@game/ports/physicsPort'
 import type { GameApi } from '@game/api/gameApi'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
@@ -11,7 +13,7 @@ import type { World } from '@game/runtime/world'
 import { playerModuleNodes } from '@/engines/scene/nodeFactory'
 import { worldFromScene } from './worldFromScene'
 
-const ports = (physics?: NotedPhysics): GameApi => ({
+const ports = (physics?: PhysicsPort): GameApi => ({
   ...createExportHost({
     input: new EventTarget(),
     player: { id: 'p1', name: 'Alba', local: true },
@@ -90,6 +92,50 @@ describe('the edit state, translated into something that runs', () => {
     worldFromScene('doc-1', scene(), ports(physics)).step(1 / 60)
 
     expect(physics.added).toEqual([])
+  })
+
+  it('stands the scene on a relief heightfield instead of the default cuboid', () => {
+    const physics = notedPhysics()
+    const samples = {
+      width: 4,
+      height: 4,
+      values: new Float32Array(16).fill(0.5),
+    }
+    const state: SceneState = {
+      ...scene(),
+      world: {
+        ...EMPTY_SCENE.world,
+        ground: { ...EMPTY_SCENE.world.ground, visible: true, size: 40 },
+        layers: [reliefLayer({ assetId: 'asset_height' }, { elevation: { min: 0, max: 4 } })],
+      },
+    }
+
+    worldFromScene(
+      'doc-1',
+      state,
+      ports(physics),
+      {},
+      1,
+      new Map([['asset_height', samples]]),
+    ).step(1 / 60)
+
+    const floor = physics.added.find(body => body.body === 'world.ground')
+    const relief = physics.added.find(body => body.body === 'world.relief')
+    expect(floor).toBeUndefined()
+    expect(relief?.kind).toBe('fixed')
+    expect(relief?.shape.kind).toBe('heightfield')
+    expect(relief?.shape.kind === 'heightfield' ? relief.shape.heights[0] : 0).toBeCloseTo(2)
+  })
+
+  it('still lays the default cuboid when the scene has no relief', () => {
+    const physics = notedPhysics()
+    const ground = { ...EMPTY_SCENE.world.ground, visible: true, size: 40 }
+    const state = { ...scene(), world: { ...EMPTY_SCENE.world, ground } }
+
+    worldFromScene('doc-1', state, ports(physics)).step(1 / 60)
+
+    expect(physics.added.map(body => body.body)).toEqual(['world.ground'])
+    expect(physics.added[0]?.shape.kind).toBe('cuboid')
   })
 
   /**
@@ -264,5 +310,35 @@ describe('a player module that possesses something', () => {
     const state = drivable('')
 
     expect(bodyAt(state, worldFromScene('doc-1', state, ports()))).toMatchObject({ x: 0, z: 0 })
+  })
+})
+
+describe('a relief the physics can stand on', () => {
+  it('stops a downward ray on the relief, not on the cuboid plane at zero', async () => {
+    const physics = await loadJoltPhysics()
+    const samples = { width: 4, height: 4, values: new Float32Array(16).fill(2) }
+    const state: SceneState = {
+      ...scene(),
+      world: {
+        ...EMPTY_SCENE.world,
+        ground: { ...EMPTY_SCENE.world.ground, visible: true, size: 40 },
+        layers: [reliefLayer({ assetId: 'asset_height' }, { size: { x: 3, z: 3 } })],
+      },
+    }
+
+    worldFromScene(
+      'doc-1',
+      state,
+      ports(physics),
+      {},
+      1,
+      new Map([['asset_height', samples]]),
+    ).step(1 / 60)
+
+    const hit = physics.cast({ x: 1.5, y: 10, z: 1.5 }, { x: 1.5, y: -10, z: 1.5 }, 0, [])
+    physics.dispose()
+
+    // y = 2 is 8 m of the 20 m asked; the cuboid's top face at 0 would have been 0,5.
+    expect(hit).toBeCloseTo(0.4, 2)
   })
 })
