@@ -27,22 +27,25 @@ export type Targets = {
  * the moment the name changes or the entity it found is destroyed.
  */
 export function createTargets(): Targets {
-  const found = new WeakMap<Entity, { said: string; entity: Entity | null }>()
+  const found = new WeakMap<Entity, { said: string; born: number; entity: Entity | null }>()
 
   return {
     of: (world, from, said) => {
       if (said === '') return null
 
+      const born = world.entities.born()
       const kept = found.get(from)
       // 🛑 A MISS is remembered too: a name nobody wears would otherwise sweep the whole scene
-      // for every follower on every step, which is the one case the cache exists for.
-      if (kept && kept.said === said) {
+      // for every follower on every step, which is the one case the cache exists for. It is held
+      // only while the population stands — a script that spawns the very `Player` a turret was
+      // looking for was otherwise never found again, for the life of the world.
+      if (kept && kept.said === said && kept.born === born) {
         if (kept.entity === null) return null
         if (world.entities.get(kept.entity.id) !== null) return kept.entity
       }
 
       const entity = entityNamed(world, said)
-      found.set(from, { said, entity })
+      found.set(from, { said, born, entity })
       return entity
     },
   }

@@ -605,6 +605,17 @@ function withHeldFuzz<T>(raycaster: Raycaster, pick: () => T): T {
 }
 
 /**
+ * 🛑 Visibility is INHERITED, and it is written per node: hiding a group clears the flag on the
+ * group's object alone, its children keeping theirs. Read on the node only, the marquee took
+ * what a hidden group held — invisible, and unclickable, since `isScenery` walks the chain.
+ */
+function shownInWorld(object: Object3D): boolean {
+  for (let node: Object3D | null = object; node; node = node.parent) if (!node.visible) return false
+
+  return true
+}
+
+/**
  * Whether a hit is scenery a DOCUMENT point may be written onto: not a rail of the studio, not a
  * workshop marker, and nothing hanging under something hidden.
  *
@@ -5335,7 +5346,7 @@ export class SceneRenderer {
 
     const bodies: ScreenBody[] = []
     for (const [id, object] of this.objects) {
-      if (!object.visible) continue
+      if (!shownInWorld(object)) continue
 
       object.getWorldPosition(BODY_CENTRE)
       // `project` flips the sign behind the camera, so a body at one's back would fall in the box

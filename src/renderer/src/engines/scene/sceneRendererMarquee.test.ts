@@ -118,4 +118,14 @@ describe('SceneRenderer and the rectangle', () => {
     expect(screenBodies).toContain('BODY_UP.setFromMatrixColumn(camera.matrixWorld, 1)')
     expect(screenBodies).toContain('Math.abs(BODY_ABOVE.y - BODY_CENTRE.y)')
   })
+
+  /**
+   * `object.visible` is written per node, so a hidden GROUP leaves its children's flag standing.
+   * Read on the node alone, the rectangle took what a hidden group held — while a click walked
+   * the chain and could not. The two answer the same question, so both walk it.
+   */
+  it('skips a body whose ancestor is the one that was hidden', () => {
+    expect(screenBodies).toContain('shownInWorld(object)')
+    expect(source).toContain('for (let node: Object3D | null = object; node; node = node.parent)')
+  })
 })
