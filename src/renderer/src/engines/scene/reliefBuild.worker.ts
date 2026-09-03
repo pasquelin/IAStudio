@@ -8,16 +8,18 @@ import {
   type ReliefBuildResponse,
 } from './reliefBuildMessage'
 import { breathe } from '../core/breathe'
+import { createCancelRegistry } from '../core/cancelRegistry'
 
 declare const self: DedicatedWorkerGlobalScope
 
-const cancelled = new Set<number>()
+const cancels = createCancelRegistry()
 
 self.addEventListener('message', (event: MessageEvent<ReliefBuildIncoming>) => {
   if (isReliefBuildCancel(event.data)) {
-    cancelled.add(event.data.id)
+    cancels.cancel(event.data.id)
     return
   }
+  cancels.start(event.data.id)
   void build(event.data)
 })
 
@@ -30,7 +32,7 @@ async function build(request: Exclude<ReliefBuildIncoming, { cancel: true }>): P
 
     for (let row = 0; row < rows; row++) {
       for (let column = 0; column < columns; column++) {
-        if (cancelled.delete(request.id)) return
+        if (cancels.stopped(request.id)) return
         chunks.push(
           reliefGeometryData(
             samples,
@@ -45,7 +47,7 @@ async function build(request: Exclude<ReliefBuildIncoming, { cancel: true }>): P
       await breathe()
     }
 
-    if (cancelled.delete(request.id)) return
+    if (cancels.stopped(request.id)) return
     const transfer = chunks.flatMap(chunk => [
       chunk.position.buffer,
       chunk.normal.buffer,
@@ -60,6 +62,8 @@ async function build(request: Exclude<ReliefBuildIncoming, { cancel: true }>): P
     )
   } catch (error) {
     post({ id: request.id, done: true, ok: false, error: messageOf(error) })
+  } finally {
+    cancels.finish(request.id)
   }
 }
 

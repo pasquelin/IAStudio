@@ -25,6 +25,7 @@ const WORLD = {
     reliefLayer(
       { assetId: 'heightmap' },
       {
+        id: 'terrain',
         origin: DEFAULT_RELIEF_ORIGIN,
         size: DEFAULT_RELIEF_SIZE,
         elevation: DEFAULT_RELIEF_ELEVATION,
@@ -115,7 +116,7 @@ describe('patching a sculpted relief on the UI thread', () => {
   })
   const sculpted = {
     ...WORLD,
-    layers: [{ ...layer, edits: [terrainEditLayer({ sculpt })] }],
+    layers: [{ ...layer, edits: [terrainEditLayer({ id: 'sculpt', sculpt })] }],
   }
   const surface = createReliefSurface(new Scene())
   surface.sync(WORLD, samples)

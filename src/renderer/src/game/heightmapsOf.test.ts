@@ -11,8 +11,8 @@ describe('the heightmaps a scene names', () => {
       return samples
     }
     const layers = [
-      reliefLayer({ assetId: 'asset_height' }),
-      reliefLayer({ assetId: 'asset_height' }),
+      reliefLayer({ assetId: 'asset_height' }, { id: 'isle' }),
+      reliefLayer({ assetId: 'asset_height' }, { id: 'range' }),
     ]
 
     const maps = await heightmapsOf(layers, load)
@@ -22,9 +22,12 @@ describe('the heightmaps a scene names', () => {
   })
 
   it('leaves out a file that would not decode, so Play still starts', async () => {
-    const maps = await heightmapsOf([reliefLayer({ assetId: 'missing' })], async () => {
-      throw new Error('not OpenEXR')
-    })
+    const maps = await heightmapsOf(
+      [reliefLayer({ assetId: 'missing' }, { id: 'terrain' })],
+      async () => {
+        throw new Error('not OpenEXR')
+      },
+    )
 
     expect(maps.size).toBe(0)
   })

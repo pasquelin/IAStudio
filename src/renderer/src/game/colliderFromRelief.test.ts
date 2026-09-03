@@ -19,7 +19,7 @@ describe('what a relief is felt as', () => {
     const samples = samplesOf(0.5)
     const layer = reliefLayer(
       { assetId: 'asset_height' },
-      { size: { x: 9, z: 9 }, elevation: { min: 0, max: 10 } },
+      { id: 'terrain', size: { x: 9, z: 9 }, elevation: { min: 0, max: 10 } },
     )
 
     const shape = colliderFromRelief(layer, samples)
@@ -34,7 +34,7 @@ describe('what a relief is felt as', () => {
     const samples = { width: 4, height: 3, values: new Float32Array(12) }
     const layer = reliefLayer(
       { assetId: 'asset_height' },
-      { origin: { x: 10, z: -4 }, size: { x: 9, z: 6 } },
+      { id: 'terrain', origin: { x: 10, z: -4 }, size: { x: 9, z: 6 } },
     )
 
     const shape = colliderFromRelief(layer, samples)
@@ -56,7 +56,11 @@ describe('what a relief is felt as', () => {
     })
     const layer = reliefLayer(
       { assetId: 'asset_height' },
-      { elevation: { min: 0, max: 1 }, edits: [terrainEditLayer({ sculpt })] },
+      {
+        id: 'terrain',
+        elevation: { min: 0, max: 1 },
+        edits: [terrainEditLayer({ id: 'sculpt', sculpt })],
+      },
     )
 
     const shape = colliderFromRelief(layer, samples)

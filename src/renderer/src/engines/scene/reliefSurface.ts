@@ -71,6 +71,10 @@ type TerrainSurface = {
   group: Group
   meshes: Map<string, Mesh>
   held: Held | null
+  /** The heightmap a load is under way for, so a second sync does not start it over. */
+  loading: string | null
+  /** The last layer asked for, which a load that started before it must still honour. */
+  wanted: ReliefLayer | null
   generation: number
   buildAbort: AbortController | null
 }
@@ -122,6 +126,7 @@ function syncRelief(state: SurfaceState, world: SceneWorld, samples?: HeightmapS
   }
   for (const layer of wanted) {
     const terrain = terrainSurfaceOf(state, layer)
+    terrain.wanted = layer
     if (samples) {
       applyLayer(state, terrain, layer, samples)
       continue
@@ -130,6 +135,9 @@ function syncRelief(state: SurfaceState, world: SceneWorld, samples?: HeightmapS
       applyLayer(state, terrain, layer, terrain.held.samples)
       continue
     }
+    // Restarting a load in flight bumped the generation, so the answer about to land was thrown
+    // away and a large heightmap was read again from the top on every world change.
+    if (terrain.loading === layer.heightmap.assetId) continue
     void loadLayer(state, terrain, layer)
   }
 }
@@ -141,6 +149,8 @@ function terrainSurfaceOf(state: SurfaceState, layer: ReliefLayer): TerrainSurfa
     group: new Group(),
     meshes: new Map(),
     held: null,
+    loading: null,
+    wanted: null,
     generation: 0,
     buildAbort: null,
   }
@@ -176,6 +186,7 @@ function applyLayer(
     clearMeshes(terrain.meshes)
     buildMeshes(state, terrain, samples, extent, layer.grain, layer.edits)
   } else {
+    dropPendingBuild(terrain)
     patchMeshes(terrain, samples, extent, layer.grain, terrain.held?.edits ?? [], layer.edits)
   }
   terrain.held = {
@@ -186,6 +197,18 @@ function applyLayer(
     edits: layer.edits,
   }
   return true
+}
+
+/**
+ * A build in flight was computed for edits this call has just replaced — an alpha moved and moved
+ * back is enough. Left alone it landed with a token still current and painted the older surface
+ * over the one being drawn.
+ */
+function dropPendingBuild(terrain: TerrainSurface): void {
+  if (!terrain.buildAbort) return
+  terrain.generation += 1
+  terrain.buildAbort.abort()
+  terrain.buildAbort = null
 }
 
 async function buildMeshesAway(
@@ -257,14 +280,21 @@ async function loadLayer(
   layer: ReliefLayer,
 ): Promise<void> {
   const token = ++terrain.generation
+  terrain.loading = layer.heightmap.assetId
   try {
     const samples = await state.load(layer.heightmap.assetId)
     if (token !== terrain.generation) return
-    if (applyLayer(state, terrain, layer, samples)) state.options.onReady?.()
+    const asked =
+      terrain.wanted?.heightmap.assetId === layer.heightmap.assetId ? terrain.wanted : layer
+    if (applyLayer(state, terrain, asked, samples)) state.options.onReady?.()
   } catch (error) {
     if (token !== terrain.generation) return
     dropTerrain(state, layer.id, terrain)
     state.options.onFailure?.(layer.heightmap.assetId, error)
+  } finally {
+    // Not on the token: applying the layer starts a worker build, which bumps `generation`
+    // BEFORE this runs — read there, the mark stayed and no heightmap was ever read again.
+    if (terrain.loading === layer.heightmap.assetId) terrain.loading = null
   }
 }
 

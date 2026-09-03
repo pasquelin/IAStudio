@@ -888,7 +888,12 @@ export class SceneRenderer {
   /** The document's own ground. Beside the nodes like the grid, and never one of them. */
   private readonly ground = createGroundPlane()
   private readonly relief: ReliefSurface
-  private readonly reliefSculptors = new Map<string, ReliefSculptor>()
+  /**
+   * One pool at a time. Each sculptor holds `hardwareConcurrency - 2` workers, and keeping one
+   * per edit layer left a document that had touched five of them with five pools alive.
+   */
+  private reliefSculptor: { terrainId: string; editId: string; sculptor: ReliefSculptor } | null =
+    null
   /** The sun the sky it names describes. A node of the scene, so it is born with the renderer. */
   private readonly sun: SkySun = createSkySun(this.viewport.scene)
   /** What the scene was last lit ON, so a pass that changes nothing costs nothing. */
@@ -1301,19 +1306,31 @@ export class SceneRenderer {
   ): Promise<boolean> {
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
-    const key = JSON.stringify([terrainId, editId])
-    let sculptor = this.reliefSculptors.get(key)
-    if (!sculptor) {
-      sculptor =
-        this.options.createReliefSculptor?.() ??
-        createReliefSculptor(() => new ReliefSculptWorker())
-      this.reliefSculptors.set(key, sculptor)
-    }
-    sculptor.note(source.sculpt)
-    const chunks = await sculptor.raiseDisk({ ...source, disk, amount })
+    const chunks = await this.sculptorFor(terrainId, editId).raiseDisk({ ...source, disk, amount })
     if (!chunks) return false
     this.options.onReliefSculpt?.(terrainId, editId, chunks)
     return true
+  }
+
+  private sculptorFor(terrainId: string, editId: string): ReliefSculptor {
+    const held = this.reliefSculptor
+    if (held && held.terrainId === terrainId && held.editId === editId) return held.sculptor
+    held?.sculptor.dispose()
+    const sculptor =
+      this.options.createReliefSculptor?.() ?? createReliefSculptor(() => new ReliefSculptWorker())
+    this.reliefSculptor = { terrainId, editId, sculptor }
+    return sculptor
+  }
+
+  /**
+   * Where the sculptor learns of an outside write, the store having landed. Read back on every
+   * stroke it was one render BEHIND, and being indistinguishable from an undo it made the next
+   * stroke rebase on the sculpt from before the last one, erasing it in the chunks they shared.
+   */
+  private noteSculpt(): void {
+    const held = this.reliefSculptor
+    if (!held) return
+    held.sculptor.note(this.relief.sculptSource(held.terrainId, held.editId)?.sculpt)
   }
 
   /**
@@ -3298,8 +3315,8 @@ export class SceneRenderer {
     this.bvh.dispose()
     this.skin.dispose()
     this.retarget.dispose()
-    for (const sculptor of this.reliefSculptors.values()) sculptor.dispose()
-    this.reliefSculptors.clear()
+    this.reliefSculptor?.sculptor.dispose()
+    this.reliefSculptor = null
     this.clipSources.dispose()
     this.bundled.clear()
     this.iks.clear()
@@ -3660,7 +3677,10 @@ export class SceneRenderer {
     }
 
     if (wanted.ground !== held.ground || wanted.layers !== held.layers) this.applyGround()
-    if (wanted.layers !== held.layers) this.relief.sync(wanted)
+    if (wanted.layers !== held.layers) {
+      this.relief.sync(wanted)
+      this.noteSculpt()
+    }
     if (this.relief.object.children.length > 0) this.ground.object.visible = false
     if (wanted.background !== held.background) this.paintBackground()
   }

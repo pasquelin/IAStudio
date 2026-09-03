@@ -31,7 +31,7 @@ function samplesOf() {
 function layerOf(sculpt?: ReliefSculpt): ReliefLayer {
   return reliefLayer(
     { assetId: 'asset_height' },
-    { edits: sculpt ? [terrainEditLayer({ sculpt })] : [] },
+    { id: 'terrain', edits: sculpt ? [terrainEditLayer({ id: 'sculpt', sculpt })] : [] },
   )
 }
 
@@ -57,7 +57,7 @@ describe('relief surface chunks', () => {
     const samples = samplesOf()
     const layer = reliefLayer(
       { assetId: 'asset_height' },
-      { edits: [terrainEditLayer({ id: 'hills' })] },
+      { id: TERRAIN, edits: [terrainEditLayer({ id: 'hills' })] },
     )
 
     surface.sync({ ...DEFAULT_WORLD, layers: [layer] }, samples)
@@ -240,6 +240,134 @@ describe('relief surface chunks', () => {
     // The neighbour's shape is untouched, so only its lighting is sent again.
     expect(positionOf(surface, 1, 0).updateRanges).toEqual([])
     expect(right.updateRanges.length).toBeGreaterThan(0)
+  })
+
+  /**
+   * 🛑 The patch path never touched `generation`, so a build started for an alpha the reader has
+   * since moved back landed with a token still current and painted its older surface on top.
+   */
+  it('drops a build in flight when a later sync draws the terrain itself', async () => {
+    const pending: (() => void)[] = []
+    const surface = createReliefSurface(new Scene(), {
+      builder: {
+        build: (samples, extent, grain, edits) =>
+          new Promise(resolve => {
+            pending.push(() =>
+              resolve([
+                reliefGeometryData(
+                  samples,
+                  extent,
+                  chunkLayout(0, 0, WIDTH, HEIGHT, grain),
+                  grain,
+                  edits,
+                ),
+              ]),
+            )
+          }),
+        dispose: vi.fn(),
+      },
+    })
+    const samples = samplesOf()
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 0,
+      delta: 4,
+    })
+    const blended = (alpha: number) => ({
+      ...DEFAULT_WORLD,
+      layers: [
+        reliefLayer(
+          { assetId: 'asset_height' },
+          { id: 'terrain', edits: [terrainEditLayer({ id: 'sculpt', sculpt, alpha })] },
+        ),
+      ],
+    })
+
+    surface.sync(blended(1), samples)
+    pending.shift()?.()
+    await vi.waitFor(() => expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined())
+    const held = surface.meshOf(TERRAIN, 0, 0)
+
+    // A build for alpha 0.5 starts; the reader undoes back to 1, which the patch path draws.
+    surface.sync(blended(0.5), samples)
+    surface.sync(blended(1), samples)
+    pending.shift()?.()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(surface.meshOf(TERRAIN, 0, 0)).toBe(held)
+  })
+
+  /**
+   * 🛑 Applying a layer starts the worker build, which bumps `generation` before the load's own
+   * `finally` reads it. Marked there, the terrain was never read again and stayed blank.
+   */
+  it('reads the heightmap again once a build has failed, rather than staying blank', async () => {
+    let reads = 0
+    const surface = createReliefSurface(new Scene(), {
+      load: async () => {
+        reads += 1
+        return samplesOf()
+      },
+      builder: { build: async () => null, dispose: vi.fn() },
+    })
+
+    surface.sync(worldOf())
+    await vi.waitFor(() => expect(reads).toBe(1))
+    surface.sync(worldOf())
+
+    await vi.waitFor(() => expect(reads).toBe(2))
+  })
+
+  it('applies the layer asked for LAST when a load that started before it lands', async () => {
+    const settle: ((samples: ReturnType<typeof samplesOf>) => void)[] = []
+    const surface = createReliefSurface(new Scene(), {
+      load: () =>
+        new Promise(resolve => {
+          settle.push(resolve)
+        }),
+    })
+    const samples = samplesOf()
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 0,
+      delta: 4,
+    })
+    const blended = (alpha: number) => ({
+      ...DEFAULT_WORLD,
+      layers: [
+        reliefLayer(
+          { assetId: 'asset_height' },
+          { id: TERRAIN, edits: [terrainEditLayer({ id: 'sculpt', sculpt, alpha })] },
+        ),
+      ],
+    })
+
+    surface.sync(blended(1))
+    surface.sync(blended(0.5))
+    settle.shift()?.(samples)
+    await vi.waitFor(() => expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined())
+
+    expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(2.01)
+  })
+
+  it('lets a load in flight finish rather than reading the heightmap again', async () => {
+    let reads = 0
+    const surface = createReliefSurface(new Scene(), {
+      load: async () => {
+        reads += 1
+        return samplesOf()
+      },
+    })
+
+    surface.sync(worldOf())
+    surface.sync(worldOf())
+    await vi.waitFor(() => expect(surface.meshOf(TERRAIN, 0, 0)).toBeDefined())
+
+    expect(reads).toBe(1)
   })
 
   it('leaves the root empty when a heightmap will not load, so the ground stays drawn', async () => {

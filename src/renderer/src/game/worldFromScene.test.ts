@@ -106,7 +106,12 @@ describe('the edit state, translated into something that runs', () => {
       world: {
         ...EMPTY_SCENE.world,
         ground: { ...EMPTY_SCENE.world.ground, visible: true, size: 40 },
-        layers: [reliefLayer({ assetId: 'asset_height' }, { elevation: { min: 0, max: 4 } })],
+        layers: [
+          reliefLayer(
+            { assetId: 'asset_height' },
+            { id: 'terrain', elevation: { min: 0, max: 4 } },
+          ),
+        ],
       },
     }
 
@@ -135,7 +140,7 @@ describe('the edit state, translated into something that runs', () => {
       world: {
         ...EMPTY_SCENE.world,
         ground: { ...EMPTY_SCENE.world.ground, visible: true, size: 40 },
-        layers: [reliefLayer({ assetId: 'asset_height' })],
+        layers: [reliefLayer({ assetId: 'asset_height' }, { id: 'terrain' })],
       },
     }
 
@@ -392,7 +397,7 @@ describe('a relief the physics can stand on', () => {
       world: {
         ...EMPTY_SCENE.world,
         ground: { ...EMPTY_SCENE.world.ground, visible: true, size: 40 },
-        layers: [reliefLayer({ assetId: 'asset_height' }, { size: { x: 3, z: 3 } })],
+        layers: [reliefLayer({ assetId: 'asset_height' }, { id: 'terrain', size: { x: 3, z: 3 } })],
       },
     }
 
