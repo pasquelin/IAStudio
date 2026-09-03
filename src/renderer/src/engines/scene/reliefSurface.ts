@@ -15,6 +15,7 @@ import {
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import {
   RELIEF_CHUNK_TEXELS,
+  changedChunks,
   chunkCountAlong,
   chunkLayout,
   combinedAt,
@@ -183,7 +184,7 @@ function patchMeshes(
   after: ReliefSculpt | undefined,
 ): void {
   for (const mesh of state.meshes.values()) clearChunkRanges(mesh)
-  for (const { column, row } of dirtyChunks(before, after)) {
+  for (const { column, row } of changedChunks(before, after ?? { grain, chunks: [] })) {
     const mesh = state.meshes.get(keyOf(column, row))
     if (!mesh) continue
     const layout = chunkLayout(column, row, samples.width, samples.height, grain)
@@ -196,26 +197,6 @@ function clearChunkRanges(mesh: Mesh): void {
   const normal = mesh.geometry.getAttribute('normal')
   if (position instanceof BufferAttribute) position.clearUpdateRanges()
   if (normal instanceof BufferAttribute) normal.clearUpdateRanges()
-}
-
-function dirtyChunks(
-  before: ReliefSculpt | undefined,
-  after: ReliefSculpt | undefined,
-): { column: number; row: number }[] {
-  const keys = new Set<string>()
-  for (const chunk of before?.chunks ?? []) keys.add(keyOf(chunk.column, chunk.row))
-  for (const chunk of after?.chunks ?? []) keys.add(keyOf(chunk.column, chunk.row))
-  return [...keys].flatMap(key => {
-    const parts = key.split(':')
-    const column = Number(parts[0])
-    const row = Number(parts[1])
-    if (!Number.isInteger(column) || !Number.isInteger(row)) return []
-    return payloadOf(before, column, row) === payloadOf(after, column, row) ? [] : [{ column, row }]
-  })
-}
-
-function payloadOf(sculpt: ReliefSculpt | undefined, column: number, row: number): string {
-  return sculpt?.chunks.find(chunk => chunk.column === column && chunk.row === row)?.payload ?? ''
 }
 
 function keyOf(column: number, row: number): string {
