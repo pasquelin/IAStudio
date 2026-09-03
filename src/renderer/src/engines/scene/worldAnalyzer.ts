@@ -37,9 +37,18 @@ export type InstanceCandidate = {
 
 export type BatchCandidate = InstanceCandidate
 
+export type OptimizationWarningReason = 'animated' | 'dynamic' | 'skinned'
+
+/** Read by the dialog that names them and by the guard that checks each one is translated. */
+export const OPTIMIZATION_WARNING_REASONS: readonly OptimizationWarningReason[] = [
+  'animated',
+  'dynamic',
+  'skinned',
+]
+
 export type OptimizationWarning = {
   nodeId: string
-  reason: 'animated' | 'dynamic' | 'skinned'
+  reason: OptimizationWarningReason
 }
 
 export type OptimizationMetrics = SceneStats & {

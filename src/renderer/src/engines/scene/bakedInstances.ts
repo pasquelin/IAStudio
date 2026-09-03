@@ -15,12 +15,6 @@ export function bakedInstancesOf(
     mesh.setMatrixAt(slot, placement.matrix)
   }
   mesh.instanceMatrix.needsUpdate = true
-  mesh.userData['sourceIds'] = instances.map(instance => instance.sourceId)
   mesh.computeBoundingSphere()
   return mesh
-}
-
-export function bakedSourceIdOf(mesh: InstancedMesh, slot: number): string | null {
-  const sourceIds: unknown = mesh.userData['sourceIds']
-  return Array.isArray(sourceIds) && typeof sourceIds[slot] === 'string' ? sourceIds[slot] : null
 }
