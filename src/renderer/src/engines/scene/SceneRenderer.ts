@@ -69,6 +69,7 @@ import {
   type EnvironmentRef,
   type ModelDressRef,
   type SceneWorld,
+  type TextureSlot,
   type Transform,
   showsAid,
 } from '@shared/domain/scene'
@@ -3116,6 +3117,11 @@ export class SceneRenderer {
     this.viewport.requestCameraRender()
   }
 
+  private refreshMaterialTexture(slot: TextureSlot): void {
+    if (slot === 'displacementMap') this.redraw()
+    else this.refreshWithoutShadows()
+  }
+
   /**
    * Asks for a frame and says nothing about the preview: the workshop moved, not the scene.
    *
@@ -4347,7 +4353,9 @@ export class SceneRenderer {
     const mesh = new Mesh(uncutGeometry(node.carved), material)
     // The very slots a mesh gets: a solid wears the same descriptor, and without this its maps
     // are named by the document and loaded by nobody.
-    const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
+    const textures = createMaterialTextures(this.textureCache, mesh, material, slot =>
+      this.refreshMaterialTexture(slot),
+    )
     textures.apply(node.material)
     this.textures.set(node.id, textures)
 
@@ -4737,7 +4745,9 @@ export class SceneRenderer {
     const mesh = new Mesh(this.shapes.acquire(node.geometry, node.material.tilesPerMetre), material)
     // A texture arrives long after the frame that asked for it: the render is requested again
     // when it lands, or the viewport would show the mesh untextured until something else moved.
-    const textures = createMaterialTextures(this.textureCache, mesh, material, () => this.redraw())
+    const textures = createMaterialTextures(this.textureCache, mesh, material, slot =>
+      this.refreshMaterialTexture(slot),
+    )
     textures.apply(node.material)
     this.textures.set(node.id, textures)
 
