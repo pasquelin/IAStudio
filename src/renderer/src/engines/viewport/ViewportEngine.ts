@@ -46,7 +46,6 @@ type Pinch = { pane: number; gap: number; middleX: number; middleY: number; move
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
 const ORIGIN = new Vector3()
 
-/** The ground the studio is built on. What a ray that met no object falls back to. */
 /**
  * The parts of a viewport every workspace repeats: a canvas it owns, a renderer, a camera that
  * follows the element's aspect, orbit controls, and a loop that only runs while something

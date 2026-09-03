@@ -17,6 +17,7 @@ import { runSceneCommand, toggleNodeVisible } from '@/features/scene/components/
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useTreeFolds } from '@/stores/treeFolds'
+import { useLatest } from '@/hooks/useLatest'
 import { sceneNodeDrag } from '../dragged'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
@@ -90,14 +91,17 @@ export function SceneTree({ documentId }: { documentId: string }) {
     return new Set(shownItems.filter(item => parents.has(item.id)).map(item => item.id))
   }, [shownItems])
   const anyExpanded = [...expandableIds].some(id => expandedIds.has(id))
-  const foldOrder = useTreeFolds(state => state.scene)
-  const seenFoldOrder = useRef(foldOrder.stamp)
+  const latestExpandableIds = useLatest(expandableIds)
   useEffect(() => useTreeFolds.getState().note('scene', anyExpanded), [anyExpanded])
   useEffect(() => {
-    if (seenFoldOrder.current === foldOrder.stamp) return
-    seenFoldOrder.current = foldOrder.stamp
-    setExpandedIds(foldOrder.wanted ? new Set(expandableIds) : new Set())
-  }, [expandableIds, foldOrder.stamp, foldOrder.wanted])
+    let seenFoldOrder = useTreeFolds.getState().scene.stamp
+    return useTreeFolds.subscribe(state => {
+      const order = state.scene
+      if (seenFoldOrder === order.stamp) return
+      seenFoldOrder = order.stamp
+      setExpandedIds(order.wanted ? new Set(latestExpandableIds.current) : new Set())
+    })
+  }, [latestExpandableIds])
 
   const toggle = useCallback(
     (id: string) => {
