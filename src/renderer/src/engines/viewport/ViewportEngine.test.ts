@@ -1455,6 +1455,33 @@ describe('a viewport', () => {
     })
 
     /**
+     * 🛑 The chord is a press that lands WHILE a drag runs — it is what `held: 0` means — and a
+     * press was handed straight to the drag without ever being read as a gesture. With orbit on
+     * the bare left button, which `CUSTOM_ORBITS` offers beside this dolly, the right press did
+     * nothing at all and the view went on orbiting.
+     */
+    it('takes a dolly chord pressed onto the button already orbiting', () => {
+      const engine = backedOff({
+        scheme: () => ({
+          ...SCHEME_OF.studio,
+          orbit: [{ button: 0 }],
+          dolly: [{ button: 2, held: 0 }],
+        }),
+      })
+      const reach = engine.camera.position.length()
+
+      host.dispatchEvent(press({ button: 0, buttons: 1 }))
+      host.dispatchEvent(dragTo(340, 400, 1))
+      const orbited = engine.camera.position.length()
+      host.dispatchEvent(press({ button: 2, buttons: 3 }))
+      host.dispatchEvent(dragTo(340, 300, 3))
+
+      // Orbiting holds the distance; the dolly is the one gesture that changes it.
+      expect(orbited).toBeCloseTo(reach, 6)
+      expect(engine.camera.position.length()).not.toBeCloseTo(reach, 3)
+    })
+
+    /**
      * 🛑 A mouse gives every button ONE `pointerId`, and a release read off `buttons` alone is
      * never zero while another button is still down: Unreal's pan went on panning under the left
      * button by itself, where that button draws the rectangle.

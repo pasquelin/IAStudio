@@ -23,6 +23,9 @@ import { sceneNodeDrag } from '../dragged'
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
 const SCENE_ROOT = 'scene-root'
 
+/** The order the scene itself holds — what a drag between two siblings writes. */
+const SCENE_ORDER = 'scene'
+
 type SceneItem = TreeNode & { node: SceneNode | null }
 
 export function SceneTree({ documentId }: { documentId: string }) {
@@ -32,7 +35,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   // Folding is session state: nobody wants Cmd-Z to give them back a collapsed branch.
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set([SCENE_ROOT]))
-  const [collection, setCollection] = useState<CollectionState>({ ...LIST_ONLY, sort: 'name' })
+  const [collection, setCollection] = useState<CollectionState>({ ...LIST_ONLY, sort: SCENE_ORDER })
   // Which row has its name open, held here rather than in the row: the menu that opens one sits
   // at this level, and a memoized row cannot be told to open itself from outside.
   const [renaming, setRenaming] = useState<string | null>(null)
@@ -76,14 +79,18 @@ export function SceneTree({ documentId }: { documentId: string }) {
       }
     }
 
+    const shown = items.filter(item => term === '' || kept.has(item.id))
+    // 🛑 The scene's OWN order, and it is the default: `onInsert` writes a `reorderNodes` command
+    // and an undo entry, so an outliner that always sorted by name made the drag a no-op that
+    // left history behind it.
+    if (collection.sort === SCENE_ORDER) return shown
+
     const descending = collection.sort === 'nameDesc'
-    return items
-      .filter(item => term === '' || kept.has(item.id))
-      .sort((one, other) => {
-        if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
-        const order = one.node.name.localeCompare(other.node.name, language)
-        return descending ? -order : order
-      })
+    return shown.sort((one, other) => {
+      if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
+      const order = one.node.name.localeCompare(other.node.name, language)
+      return descending ? -order : order
+    })
   }, [collection.search, collection.sort, items, language])
 
   const expandableIds = useMemo(() => {
@@ -152,6 +159,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
         state={collection}
         onChange={setCollection}
         sorts={[
+          { value: SCENE_ORDER, label: t('scene.sortByScene') },
           { value: 'name', label: t('explorer.sort.name') },
           { value: 'nameDesc', label: t('explorer.sort.nameDesc') },
         ]}

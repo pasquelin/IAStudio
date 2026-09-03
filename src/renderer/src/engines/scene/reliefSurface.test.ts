@@ -99,6 +99,45 @@ describe('relief surface chunks', () => {
     expect(leftY).toBeCloseTo(height)
   })
 
+  /**
+   * 🛑 A normal reads the 1-ring around its vertex, which CROSSES the border: the seam vertex is
+   * drawn by both chunks, and the left one's stroke moves a height the right one reads. Only the
+   * left chunk's payload changes, so a patch that rewrote the changed chunks alone left the right
+   * side lit as it was before — a crease that never healed.
+   */
+  it('relights the neighbour whose 1-ring reaches into a stroke', () => {
+    const scene = new Scene()
+    const surface = createReliefSurface(scene)
+    const samples = samplesOf()
+    surface.sync(worldOf(), samples)
+
+    // One sample IN from the seam: it belongs to the left chunk alone, and the seam vertex the
+    // right chunk draws reads it for its normal.
+    const sculpt = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 63,
+      localZ: 0,
+      delta: 4,
+    })
+    surface.sync(worldOf(sculpt), samples)
+
+    const left = surface.meshOf(0, 0)?.geometry.getAttribute('normal')
+    const right = surface.meshOf(1, 0)?.geometry.getAttribute('normal')
+    if (!(left instanceof BufferAttribute) || !(right instanceof BufferAttribute)) {
+      throw new Error('seam chunks missing')
+    }
+
+    // The seam vertex: index 64 on the left, index 0 on the right. One vertex, one normal.
+    expect(right.array[0]).toBeCloseTo(left.array[64 * 3] ?? 0)
+    expect(right.array[2]).toBeCloseTo(left.array[64 * 3 + 2] ?? 0)
+    // And it MOVED: a flat map lights straight up, which is what the stroke tilted it away from.
+    expect(Math.abs(right.array[0] ?? 0)).toBeGreaterThan(0.01)
+    // The neighbour's shape is untouched, so only its lighting is sent again.
+    expect(positionOf(surface, 1, 0).updateRanges).toEqual([])
+    expect(right.updateRanges.length).toBeGreaterThan(0)
+  })
+
   it('clears the meshes when the world holds no relief', () => {
     const scene = new Scene()
     const surface = createReliefSurface(scene)

@@ -1067,15 +1067,20 @@ export class ViewportEngine {
    */
   private readonly onNavigate = (event: PointerEvent): void => {
     if (event.pointerType === 'touch') return this.navigateByTouch(event)
-    if (this.drag) return this.dragBy(event)
-    if (event.type !== 'pointerdown') return
+    // 🛑 A press is read even while a drag runs: a chord that ADDS a button to one already down —
+    // `rightOntoLeft`, which the settings screen offers — arrives as a `pointerdown` mid-drag, and
+    // handed straight to `dragBy` it never reached `gestureOf`. That dolly could not fire at all.
+    if (event.type !== 'pointerdown') return this.dragBy(event)
 
     const kind = gestureOf(event, this.options.scheme?.() ?? SCHEME_OF.studio)
-    if (kind === null) return
+    if (kind === null) return this.dragBy(event)
 
     const index = this.paneAtPointer(event)
-    if (index === null || !this.takesDrag(kind, index)) return
+    if (index === null || !this.takesDrag(kind, index)) return this.dragBy(event)
 
+    // The chord that answered wins over the one running: the second button is what the hand just
+    // asked for, and two drags cannot steer one camera.
+    this.endDrag()
     this.startDrag(kind, index, event.pointerId, event.button, event)
   }
 

@@ -21,6 +21,7 @@ import {
   chunkLayout,
   reliefReader,
   worldY,
+  type ReliefChunkKey,
   type ReliefChunkLayout,
   type ReliefExtent,
   type ReliefRead,
@@ -188,12 +189,53 @@ function patchMeshes(
   after: ReliefSculpt | undefined,
 ): void {
   for (const mesh of state.meshes.values()) clearChunkRanges(mesh)
-  for (const { column, row } of changedChunks(before, after ?? { grain, chunks: [] })) {
+  const edits = changedChunks(before, after ?? { grain, chunks: [] })
+  const dirty = new Set(edits.map(edit => keyOf(edit.column, edit.row)))
+
+  for (const { column, row } of edits) {
     const mesh = state.meshes.get(keyOf(column, row))
     if (!mesh) continue
     const layout = chunkLayout(column, row, samples.width, samples.height, grain)
     writeChunk(mesh.geometry, samples, extent, layout, after, true)
   }
+
+  // 🛑 A normal reads the 1-ring around its vertex, and that ring CROSSES the chunk border: the
+  // neighbour's own edge column is lit by heights this stroke just moved. Left alone it kept the
+  // lighting of before — a crease down every seam a brush came near, and one that never healed.
+  // Its normals only: nothing moved on that side, so its positions are already true.
+  for (const key of borderingChunks(dirty, samples, grain)) {
+    const mesh = state.meshes.get(keyOf(key.column, key.row))
+    if (!mesh) continue
+    const layout = chunkLayout(key.column, key.row, samples.width, samples.height, grain)
+    writeChunkNormals(mesh.geometry, samples, extent, layout, after)
+  }
+}
+
+/** The chunks touching a dirtied one, the dirtied ones themselves left out. */
+function borderingChunks(
+  dirty: ReadonlySet<string>,
+  samples: HeightmapSamples,
+  grain: number,
+): ReliefChunkKey[] {
+  const columns = chunkCountAlong(samples.width, grain)
+  const rows = chunkCountAlong(samples.height, grain)
+  const around = new Map<string, ReliefChunkKey>()
+
+  for (const key of dirty) {
+    const [column, row] = key.split(':').map(Number)
+    if (column === undefined || row === undefined) continue
+
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const near = { column: column + dx, row: row + dz }
+        const outside =
+          near.column < 0 || near.column >= columns || near.row < 0 || near.row >= rows
+        if (outside || dirty.has(keyOf(near.column, near.row))) continue
+        around.set(keyOf(near.column, near.row), near)
+      }
+    }
+  }
+  return [...around.values()]
 }
 
 function clearChunkRanges(mesh: Mesh): void {
@@ -257,6 +299,22 @@ function writeChunk(
     markChunk(normal, layout.width, layout.height)
   }
   position.needsUpdate = true
+  normal.needsUpdate = true
+}
+
+/** What `writeChunk` does for a neighbour: its lighting, never its shape. */
+function writeChunkNormals(
+  geometry: BufferGeometry,
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  layout: ReliefChunkLayout,
+  sculpt: ReliefSculpt | undefined,
+): void {
+  const normal = geometry.getAttribute('normal')
+  if (!(normal instanceof BufferAttribute) || !(normal.array instanceof Float32Array)) return
+
+  writeNormals(normal.array, samples, extent, layout, reliefReader(samples, sculpt))
+  markChunk(normal, layout.width, layout.height)
   normal.needsUpdate = true
 }
 
