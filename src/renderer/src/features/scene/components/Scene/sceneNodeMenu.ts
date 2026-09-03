@@ -10,6 +10,7 @@ import {
   mdiRenameOutline,
   mdiSelectionEllipseRemove,
   mdiSwapHorizontal,
+  mdiSpeedometer,
   mdiTrashCanOutline,
 } from '@mdi/js'
 import type { TFunction } from 'i18next'
@@ -107,6 +108,7 @@ export function openSceneNodeMenu({
       : []),
     command('scene.duplicate', mdiContentCopy),
     command('scene.group', mdiFolderPlusOutline),
+    command('scene.optimizeSelection', mdiSpeedometer),
     // The two of the boolean family a hand reaches for from HERE: marking a tool, and repairing a
     // fold that ran backwards. Greyed rather than hidden, like framing below — the menu keeps its
     // length whatever is under the pointer.

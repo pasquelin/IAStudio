@@ -32,7 +32,7 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
 
   it('keeps timeline-driven nodes out of a static batch', () => {
     expect(body('regroupInstances')).toContain(
-      'groupingExclusions([...this.applied.values()], drivenNodes(this.timeline))',
+      "drivenNodes(this.timeline),\n          this.options.grouping === 'batched' ? 'batch' : 'instance'",
     )
   })
 

@@ -94,6 +94,39 @@
     "removePathPoint": "Retirer ce point",
     "removePathPointHint": "Retire le point du chemin. Un chemin garde toujours ses deux derniers points"
   },
+  "optimization": {
+    "title": "Optimiser la sélection…",
+    "hint": "Analyse la sélection avant de choisir sa représentation runtime",
+    "optimize": "Optimiser",
+    "measured": "Mesuré",
+    "estimated": "Estimé",
+    "objects_one": "{{value}} objet",
+    "objects_other": "{{value}} objets",
+    "objects_many": "{{value}} objets",
+    "meshes": "{{value}} mailles",
+    "drawCalls": "{{value}} appels de rendu",
+    "triangles": "{{value}} triangles",
+    "geometry": "Géométrie {{value}}",
+    "images": "Images {{value}}",
+    "drawCallResult": "Appels de rendu {{before}} → {{after}}",
+    "instanceCandidates": "{{value}} candidats à l’instancing",
+    "warning": "{{value}} gardés individuels — {{reason}}",
+    "visualChangesNone": "Changements visuels — AUCUN",
+    "mode": "Représentation runtime",
+    "modes": {
+      "auto": "Auto",
+      "mixed": "Réglages mixtes — choisissez un mode",
+      "individual": "Forcer individuel",
+      "instance": "Forcer l’instancing",
+      "batch": "Forcer le batching",
+      "exclude": "Exclure de l’optimisation"
+    },
+    "warningReasons": {
+      "animated": "animé",
+      "dynamic": "dynamiques ou scriptés",
+      "skinned": "skinnés"
+    }
+  },
   "playerWindow": {
     "title": "Module joueur",
     "file": "Enregistrer comme module",

@@ -77,6 +77,7 @@ export type CommandId =
   | 'scene.invertCarve'
   | 'scene.group'
   | 'scene.duplicate'
+  | 'scene.optimizeSelection'
   | 'scene.copy'
   | 'scene.cut'
   | 'scene.paste'
@@ -771,6 +772,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneDuplicate.title',
     helpKey: 'commands.sceneDuplicate.help',
     defaultBinding: 'Meta+KeyD',
+  }),
+  command({
+    id: 'scene.optimizeSelection',
+    scope: 'scene',
+    raisesDialog: true,
+    titleKey: 'commands.sceneOptimizeSelection.title',
+    helpKey: 'commands.sceneOptimizeSelection.help',
+    defaultBinding: null,
   }),
   command({
     id: 'scene.copy',

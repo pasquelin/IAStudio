@@ -8,7 +8,7 @@ import {
 } from 'three'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
-import { DRAWN_BY_INSTANCE, WORTH_INSTANCING, isDrawn, shapeAndPaint, withFlags } from './grouping'
+import { WORTH_INSTANCING, groupingExclusions, isDrawn, shapeAndPaint, withFlags } from './grouping'
 import { isInstanceable } from './instanceableModel'
 import { statsOf, textureBytesOf, texturesOf, type SceneStats } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
@@ -69,15 +69,14 @@ export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = {
   minInstancesPerGroup: WORTH_INSTANCING,
 }
 
-type CandidateGroup = { ids: Set<string>; meshes: number }
+type CandidateGroup = { ids: Set<string>; meshes: number; forced: boolean }
 
 /**
- * What the camera actually draws. `isDrawn` reads `visible` alone, and `sweep` parks a source it
- * has ALREADY instanced on `DRAWN_BY_INSTANCE` while leaving it visible: counted as a draw call,
- * the analysis re-proposed groups the engine had made and overstated what they would save.
+ * What the authoring world would draw. A runtime group parks its sources on another layer but
+ * leaves them visible, so the report can still measure the editable baseline.
  */
 function isRendered(mesh: Object3D, host: Object3D): boolean {
-  return isDrawn(mesh, host) && !mesh.layers.isEnabled(DRAWN_BY_INSTANCE)
+  return isDrawn(mesh, host)
 }
 
 export function analyzeOptimization(
@@ -85,8 +84,10 @@ export function analyzeOptimization(
   host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
   policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+  runtimeNodes: readonly SceneNode[] = state.nodes,
 ): OptimizationPlan {
   const animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
+  const excluded = groupingExclusions(runtimeNodes, animated, 'instance')
   // Enumerated ONCE per node: read again for the classification and again for the grouping, a
   // model of P primitives paid three full `traverse` walks for one pass.
   const drawn = new Set<Mesh>()
@@ -106,7 +107,7 @@ export function analyzeOptimization(
 
     const reason = warningOf(nodeClassifications)
     if (reason) warnings.push({ nodeId: node.id, reason })
-    if (!nodeClassifications.includes('INSTANCABLE')) continue
+    if (excluded.has(node.id) || !nodeClassifications.includes('INSTANCABLE')) continue
 
     for (const mesh of shown) {
       if (Array.isArray(mesh.material)) continue
@@ -115,12 +116,19 @@ export function analyzeOptimization(
       if (group) {
         group.ids.add(node.id)
         group.meshes += 1
-      } else candidateGroups.set(key, { ids: new Set([node.id]), meshes: 1 })
+        group.forced ||= node.optimization?.mode === 'instance'
+      } else {
+        candidateGroups.set(key, {
+          ids: new Set([node.id]),
+          meshes: 1,
+          forced: node.optimization?.mode === 'instance',
+        })
+      }
     }
   }
 
   const instances = [...candidateGroups]
-    .filter(([, group]) => group.meshes >= policy.minInstancesPerGroup)
+    .filter(([, group]) => group.forced || group.meshes >= policy.minInstancesPerGroup)
     .map(([key, group]) => ({
       key,
       sourceIds: [...group.ids].sort(byCodeUnit),
@@ -169,7 +177,9 @@ function classificationsOf(
 ): OptimizationClassification[] {
   const classifications: OptimizationClassification[] = []
   const skinned = meshes.some(mesh => mesh instanceof SkinnedMesh)
-  const dynamic = movesOnItsOwn(node.components)
+  const dynamic =
+    movesOnItsOwn(node.components) ||
+    node.components?.some(component => component.type === 'Script')
   const instancable =
     !animated &&
     !dynamic &&

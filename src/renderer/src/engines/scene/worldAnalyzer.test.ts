@@ -63,7 +63,7 @@ describe('analyzeOptimization', () => {
    * 🛑 `sweep` parks a source it has already instanced on `DRAWN_BY_INSTANCE` and leaves it
    * VISIBLE. Counted as a draw call, the analysis re-proposed a group the engine had made.
    */
-  it('leaves out the sources an instance already draws for', () => {
+  it('still reports the authoring sources after the runtime has instanced them', () => {
     const { nodes, objects } = repeated(WORTH_INSTANCING)
     for (const mesh of objects.values()) mesh.layers.set(DRAWN_BY_INSTANCE)
 
@@ -71,9 +71,46 @@ describe('analyzeOptimization', () => {
       objects.get(id),
     )
 
+    expect(plan.instances).toHaveLength(1)
+    expect(plan.measured.meshes).toBe(WORTH_INSTANCING)
+    expect(plan.estimated.drawCallsBefore).toBe(WORTH_INSTANCING)
+  })
+
+  it('does not promise groups below a scripted parent the runtime must preserve', () => {
+    const { nodes, objects } = repeated(WORTH_INSTANCING)
+    const parent: SceneNode = {
+      ...groupNodeFixture('parent'),
+      components: [{ type: 'Script' }],
+    }
+    const children: SceneNode[] = nodes.map(node => ({ ...node, parentId: parent.id }))
+
+    const plan = analyzeOptimization(
+      { nodes: [parent, ...children], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+    )
+
     expect(plan.instances).toEqual([])
-    expect(plan.measured.meshes).toBe(0)
-    expect(plan.estimated.drawCallsBefore).toBe(0)
+    expect(plan.estimated.drawCallsAfter).toBe(plan.estimated.drawCallsBefore)
+  })
+
+  it('keeps a selected child excluded when its scripted parent is outside the report target', () => {
+    const { nodes, objects } = repeated(WORTH_INSTANCING)
+    const parent: SceneNode = {
+      ...groupNodeFixture('parent'),
+      components: [{ type: 'Script' }],
+    }
+    const children: SceneNode[] = nodes.map(node => ({ ...node, parentId: parent.id }))
+
+    const plan = analyzeOptimization(
+      { nodes: children, animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+      undefined,
+      [parent, ...children],
+    )
+
+    expect(plan.instances).toEqual([])
   })
 
   it('returns the same ordered plan for the same world', () => {

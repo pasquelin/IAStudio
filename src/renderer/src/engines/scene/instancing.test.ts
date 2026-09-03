@@ -387,7 +387,7 @@ describe('keepsItsGroup', () => {
     expect(keepsItsGroup(node, { ...node, transform: moved })).toBe(true)
   })
 
-  it('lets go of a node whose shape, paint, visibility, parent, shadow or mark changed', () => {
+  it('lets go of a node whose grouping inputs or optimization intent changed', () => {
     const node = meshNode('n0')
     const elsewhere: Partial<typeof node>[] = [
       { geometry: { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 8 } },
@@ -399,6 +399,7 @@ describe('keepsItsGroup', () => {
       // An instance draws the FIRST member's own material, so a brick marked as a tool inside a
       // wall of sixty-four would either stay grey or turn the whole wall red.
       { negative: true },
+      { optimization: { mode: 'exclude' } },
     ]
 
     // Each of the seven is read by the grouping: kept, the node would go on being drawn by an
@@ -415,7 +416,7 @@ describe('keepsItsGroup', () => {
     expect(keepsItsGroup(node, { ...node, transform: moved })).toBe(true)
   })
 
-  it('lets go of a model whose asset, dress or shadow changed', () => {
+  it('lets go of a model whose asset, dress, shadow or optimization intent changed', () => {
     const node = modelNodeFixture('tree')
     expect(keepsItsGroup(node, { ...node, model: { assetId: 'other' } })).toBe(false)
     expect(
@@ -425,6 +426,7 @@ describe('keepsItsGroup', () => {
       }),
     ).toBe(false)
     expect(keepsItsGroup(node, { ...node, castShadow: !node.castShadow })).toBe(false)
+    expect(keepsItsGroup(node, { ...node, optimization: { mode: 'exclude' } })).toBe(false)
   })
 })
 

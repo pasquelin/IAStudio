@@ -217,6 +217,42 @@ describe('createBatchedGroups', () => {
     }
   })
 
+  it('keeps user overrides out of an incompatible grouping strategy', () => {
+    const nodes: SceneNode[] = [
+      { ...meshNode('individual'), optimization: { mode: 'individual' } },
+      { ...meshNode('instances'), optimization: { mode: 'instance' } },
+      { ...meshNode('batches'), optimization: { mode: 'batch' } },
+      { ...meshNode('excluded'), optimization: { mode: 'exclude' } },
+    ]
+
+    expect([...groupingExclusions(nodes, new Set(), 'instance')]).toEqual([
+      'individual',
+      'batches',
+      'excluded',
+    ])
+    expect([...groupingExclusions(nodes, new Set(), 'batch')]).toEqual([
+      'individual',
+      'instances',
+      'excluded',
+    ])
+  })
+
+  it('honours a forced compatible strategy below the automatic threshold', () => {
+    const scene = host()
+    const { nodes, objects } = laidOut(1)
+    const node = nodes[0]
+    if (!node) throw new Error('missing forced fixture')
+    const forced: SceneNode = { ...node, optimization: { mode: 'batch' } }
+
+    expect(
+      createBatchedGroups(scene).rebuild(
+        [forced],
+        id => objects.get(id),
+        groupingExclusions([forced], new Set(), 'batch'),
+      ),
+    ).toBe(1)
+  })
+
   it('restores a grouped source when an animated ancestor excludes it', () => {
     const scene = host()
     const { nodes, objects } = laidOut(WORTH_INSTANCING)

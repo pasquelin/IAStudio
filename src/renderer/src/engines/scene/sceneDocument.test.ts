@@ -457,6 +457,17 @@ describe('sceneFromPayload', () => {
     expect(back[1]?.parentId).toBe(group.id)
   })
 
+  it('carries a runtime optimization override without making it the scene truth', () => {
+    const node: SceneNode = { ...mesh('a'), optimization: { mode: 'exclude' } }
+
+    expect(reread({ ...EMPTY_SCENE, nodes: [node] }).nodes[0]?.optimization).toEqual({
+      mode: 'exclude',
+    })
+    expect(
+      sceneFromPayload({ nodes: [{ ...node, optimization: { mode: 'unknown' } }] }).nodes,
+    ).toEqual([])
+  })
+
   // Same trap as the group's: a node type the loader has never heard of is dropped, and a scene
   // saved with sprites would reopen without them.
   it('carries a sprite and the picture it wears through a round trip', () => {

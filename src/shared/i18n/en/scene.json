@@ -94,6 +94,39 @@
     "removePathPoint": "Remove this point",
     "removePathPointHint": "Takes the point off the path. A path always keeps its last two points"
   },
+  "optimization": {
+    "title": "Optimise selection…",
+    "hint": "Analyzes the selection before choosing its runtime representation",
+    "optimize": "Optimise",
+    "measured": "Measured",
+    "estimated": "Estimated",
+    "objects_one": "{{value}} object",
+    "objects_other": "{{value}} objects",
+    "objects_many": "{{value}} objects",
+    "meshes": "{{value}} meshes",
+    "drawCalls": "{{value}} draw calls",
+    "triangles": "{{value}} triangles",
+    "geometry": "Geometry {{value}}",
+    "images": "Images {{value}}",
+    "drawCallResult": "Draw calls {{before}} → {{after}}",
+    "instanceCandidates": "{{value}} instance candidates",
+    "warning": "{{value}} kept individual — {{reason}}",
+    "visualChangesNone": "Visual changes — NONE",
+    "mode": "Runtime representation",
+    "modes": {
+      "auto": "Auto",
+      "mixed": "Mixed settings — choose a mode",
+      "individual": "Force individual",
+      "instance": "Force instance",
+      "batch": "Force batch",
+      "exclude": "Exclude from optimisation"
+    },
+    "warningReasons": {
+      "animated": "animated",
+      "dynamic": "dynamic or scripted",
+      "skinned": "skinned"
+    }
+  },
   "playerWindow": {
     "title": "Player module",
     "file": "Save as a module",

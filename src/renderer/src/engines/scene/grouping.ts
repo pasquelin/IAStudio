@@ -301,15 +301,33 @@ export type Grouped = {
   material: Material
 }
 
+export type GroupingStrategy = 'instance' | 'batch'
+
+export function excludesGrouping(node: SceneNode, strategy: GroupingStrategy): boolean {
+  const mode = node.optimization?.mode ?? 'auto'
+  return (
+    mode === 'exclude' ||
+    mode === 'individual' ||
+    (mode === 'instance' && strategy === 'batch') ||
+    (mode === 'batch' && strategy === 'instance')
+  )
+}
+
+function forcesGrouping(node: SceneNode): boolean {
+  return node.optimization?.mode === 'instance' || node.optimization?.mode === 'batch'
+}
+
 /** Nodes whose runtime behaviour requires their original render representation. */
 export function groupingExclusions(
   nodes: readonly SceneNode[],
   driven: ReadonlySet<string>,
+  strategy: GroupingStrategy = 'instance',
 ): ReadonlySet<string> {
   const excluded = new Set(driven)
   const children = new Map<string, string[]>()
   for (const node of nodes) {
     if (
+      excludesGrouping(node, strategy) ||
       movesOnItsOwn(node.components) ||
       node.components?.some(component => component.type === 'Script')
     ) {
@@ -390,7 +408,7 @@ export function sweep(
   for (const group of groups.values()) {
     // Back to the camera's layer: a group that shrank below the floor since the last pass would
     // otherwise stay invisible with nothing drawing it.
-    if (group.meshes.length < WORTH_INSTANCING) {
+    if (group.meshes.length < WORTH_INSTANCING && !group.nodes.some(forcesGrouping)) {
       for (const mesh of group.meshes) mesh.layers.set(0)
       continue
     }

@@ -161,6 +161,7 @@ export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
       previous.model.dress === node.model.dress &&
       previous.visible === node.visible &&
       previous.parentId === node.parentId &&
+      previous.optimization === node.optimization &&
       previous.castShadow === node.castShadow &&
       previous.receiveShadow === node.receiveShadow
     )
@@ -172,6 +173,7 @@ export function keepsItsGroup(previous: SceneNode, node: SceneNode): boolean {
     previous.material === node.material &&
     previous.visible === node.visible &&
     previous.parentId === node.parentId &&
+    previous.optimization === node.optimization &&
     // The shadow flags and the tool mark are part of the group key: an instance carries one of
     // each, so a node that changed its mind has to leave the group rather than keep its slot.
     previous.castShadow === node.castShadow &&

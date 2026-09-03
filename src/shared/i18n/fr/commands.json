@@ -1,6 +1,9 @@
 {
   "commands": {
-    "appNew": { "title": "Nouveau…", "help": "Ouvre la fenêtre qui crée un projet ou un document, quel que soit l’écran" },
+    "appNew": {
+      "title": "Nouveau…",
+      "help": "Ouvre la fenêtre qui crée un projet ou un document, quel que soit l’écran"
+    },
     "projectNew": {
       "title": "Nouveau projet",
       "help": "Crée un projet vide et l’ouvre. Un projet est le dossier qui contient tout ce que vous fabriquez : les images, les vidéos, les sons et la façon dont ils sont rangés."
@@ -188,6 +191,10 @@
     "sceneDuplicate": {
       "title": "Dupliquer",
       "help": "Pose une copie de ce qui est sélectionné, sous le même parent et exactement au même endroit, puis la sélectionne. Un groupe se duplique entier, avec tout ce qui pend dessous."
+    },
+    "sceneOptimizeSelection": {
+      "title": "Optimiser la sélection…",
+      "help": "Mesure la sélection et présente une représentation runtime SAFE avant de modifier ses réglages d’optimisation."
     },
     "sceneCopy": {
       "title": "Copier",

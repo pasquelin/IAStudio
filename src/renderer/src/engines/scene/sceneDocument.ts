@@ -303,6 +303,7 @@ function isSceneNode(value: unknown): value is SceneNode {
   // Absent is legal and means "the default", filled in below. `null` counts as absent: a tool
   // that serializes missing fields that way must not cost the node.
   if (!isOptionalFlag(value.castShadow) || !isOptionalFlag(value.receiveShadow)) return false
+  if (!isOptionalOptimization(value.optimization)) return false
 
   if (value.type === 'mesh') {
     return (
@@ -349,6 +350,15 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'path') return isPath(value.path)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
+}
+
+function isOptionalOptimization(value: unknown): boolean {
+  if (value === undefined) return true
+  if (!isRecord(value)) return false
+  if (!['auto', 'individual', 'instance', 'batch', 'exclude'].includes(String(value.mode))) {
+    return false
+  }
+  return value.groupId === undefined || typeof value.groupId === 'string'
 }
 
 /**

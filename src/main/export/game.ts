@@ -25,22 +25,32 @@ export type GameExportDeps = {
 /** Writing a game that runs with no studio. The split is written on the channel, in `ipc.ts`. */
 export function registerGameExportHandler(deps: GameExportDeps): void {
   const writes = new Map<string, ReturnType<typeof writeQueue>>()
+  const admissions = writeQueue()
   handle(CHANNELS.gameExport, async (_event, request: GameExportRequest) => {
-    // The project FIRST: asked the other way round, a person with none picked a folder and got
-    // back the same `null` a cancel gives.
-    const project = deps.projectPath()
-    if (!project) return null
-
-    const chosen = await folderFor(request.folder, project, deps.pickFolder)
-    if (!chosen) return null
-
-    const name = safeFileName(request.title, 'game')
-    const root = join(chosen, name)
-    await mkdir(chosen, { recursive: true })
-    const queue = writes.get(root) ?? writeQueue()
-    writes.set(root, queue)
-    return await queue.next(async () => await exportInto(deps, project, root, request))
+    const admitted = await admissions.next(async () => await admitExport(deps, writes, request))
+    return admitted ? await admitted.answer : null
   })
+}
+
+async function admitExport(
+  deps: GameExportDeps,
+  writes: Map<string, ReturnType<typeof writeQueue>>,
+  request: GameExportRequest,
+): Promise<{ answer: Promise<GameExportOutcome> } | null> {
+  // The project FIRST: asked the other way round, a person with none picked a folder and got
+  // back the same `null` a cancel gives.
+  const project = deps.projectPath()
+  if (!project) return null
+
+  const chosen = await folderFor(request.folder, project, deps.pickFolder)
+  if (!chosen) return null
+
+  const name = safeFileName(request.title, 'game')
+  const root = join(chosen, name)
+  await mkdir(chosen, { recursive: true })
+  const queue = writes.get(root) ?? writeQueue()
+  writes.set(root, queue)
+  return { answer: queue.next(async () => await exportInto(deps, project, root, request)) }
 }
 
 async function exportInto(

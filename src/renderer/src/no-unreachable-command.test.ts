@@ -150,6 +150,7 @@ const THROUGH_A_COMMAND: Readonly<Record<string, string>> = {
   // The toggle half of the tool mark: `node.markAsCuttingTool` publishes `setNodesNegative`, which SAYS
   // which of the two it means, where a button has to read what is already marked.
   negateNodes: 'scene.negate',
+  setNodesOptimization: 'scene.optimizeSelection',
 }
 
 /**

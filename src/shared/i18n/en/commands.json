@@ -1,6 +1,9 @@
 {
   "commands": {
-    "appNew": { "title": "New…", "help": "Opens the window that makes a project or a document, from any screen" },
+    "appNew": {
+      "title": "New…",
+      "help": "Opens the window that makes a project or a document, from any screen"
+    },
     "projectNew": {
       "title": "New project",
       "help": "Creates an empty project and opens it. A project is the folder holding everything you make: the images, the videos, the sounds, and how they are arranged."
@@ -188,6 +191,10 @@
     "sceneDuplicate": {
       "title": "Duplicate",
       "help": "Puts a copy of the selection under the same parent and at the very same place, then selects it. A group duplicates whole, with everything hanging from it."
+    },
+    "sceneOptimizeSelection": {
+      "title": "Optimise selection…",
+      "help": "Measures the selection and previews a SAFE runtime representation before changing its optimisation settings."
     },
     "sceneCopy": {
       "title": "Copy",
