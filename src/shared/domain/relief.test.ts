@@ -8,14 +8,22 @@ import {
   chunkMemoryBytes,
   chunkVerticesPerSide,
   combinedAt,
+  containsXZ,
+  getHeightAt,
   packDeltas,
   raiseReliefDisk,
   regionUploadBytes,
   unpackDeltas,
   withChunkDelta,
+  type ReliefHeightLayer,
   type ReliefSculpt,
 } from './relief'
-import { DEFAULT_RELIEF_ELEVATION, DEFAULT_RELIEF_ORIGIN, DEFAULT_RELIEF_SIZE } from './scene'
+import {
+  DEFAULT_RELIEF_ELEVATION,
+  DEFAULT_RELIEF_ORIGIN,
+  DEFAULT_RELIEF_SIZE,
+  reliefLayer,
+} from './scene'
 
 function heightAt(
   samples: { width: number; height: number; values: Float32Array },
@@ -251,5 +259,77 @@ describe('combined overlays', () => {
     expect(
       combinedAt(samples, RELIEF_CHUNK_TEXELS, [overlay(hills, { alpha: -1 })], 2, 1),
     ).toBeCloseTo(1.0 - 3)
+  })
+})
+
+describe('containsXZ', () => {
+  const extent = {
+    origin: { x: 0, z: -4 },
+    size: { x: 10, z: 6 },
+    elevation: DEFAULT_RELIEF_ELEVATION,
+  }
+
+  it('includes the origin and the far edge, and refuses a point past either', () => {
+    expect(containsXZ(extent, 0, -4)).toBe(true)
+    expect(containsXZ(extent, 10, 2)).toBe(true)
+    expect(containsXZ(extent, -0.01, 0)).toBe(false)
+    expect(containsXZ(extent, 10.01, 0)).toBe(false)
+    expect(containsXZ(extent, 5, 2.01)).toBe(false)
+  })
+})
+
+describe('getHeightAt', () => {
+  const quad: ReliefHeightLayer = {
+    ...reliefLayer({ assetId: 'h' }, { size: { x: 1, z: 1 } }),
+    samples: { width: 2, height: 2, values: Float32Array.from([0, 4, 8, 12]) },
+  }
+
+  it('interpolates the four neighbouring texels at a point off the grid', () => {
+    expect(getHeightAt([quad], 0.25, 0.5)).toBeCloseTo(5)
+  })
+
+  it('returns null when no enabled terrain contains the point', () => {
+    expect(getHeightAt([quad], -1, 0.5)).toBeNull()
+    expect(getHeightAt([{ ...quad, enabled: false }], 0.25, 0.5)).toBeNull()
+  })
+
+  it('reads the combined height, so a sculpted overlay is felt', () => {
+    const painted: ReliefHeightLayer = {
+      ...quad,
+      edits: [
+        {
+          enabled: true,
+          alpha: 1,
+          sculpt: withChunkDelta(quad.samples, undefined, {
+            column: 0,
+            row: 0,
+            localX: 0,
+            localZ: 0,
+            delta: 1,
+          }),
+        },
+      ],
+    }
+    expect(getHeightAt([painted], 0, 0)).toBeCloseTo(1)
+  })
+
+  it('lets the first overlapping terrain in the list answer, not the second', () => {
+    const low: ReliefHeightLayer = {
+      ...reliefLayer(
+        { assetId: 'low' },
+        { origin: { x: 0, z: 0 }, size: { x: 10, z: 10 }, id: 'low' },
+      ),
+      samples: { width: 2, height: 2, values: new Float32Array(4).fill(0.2) },
+    }
+    const high: ReliefHeightLayer = {
+      ...reliefLayer(
+        { assetId: 'high' },
+        { origin: { x: 0, z: 0 }, size: { x: 10, z: 10 }, id: 'high' },
+      ),
+      samples: { width: 2, height: 2, values: new Float32Array(4).fill(0.8) },
+    }
+
+    expect(getHeightAt([low, high], 5, 5)).toBeCloseTo(0.2)
+    expect(getHeightAt([high, low], 5, 5)).toBeCloseTo(0.8)
   })
 })

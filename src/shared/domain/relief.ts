@@ -69,6 +69,27 @@ export function worldY(sample: number, elevation: ReliefExtent['elevation']): nu
   return elevation.min + sample * (elevation.max - elevation.min)
 }
 
+/** World units from one texel to the next along X and Z. */
+export function texelStep(
+  size: ReliefSize,
+  samples: { width: number; height: number },
+): ReliefSize {
+  return {
+    x: size.x / Math.max(1, samples.width - 1),
+    z: size.z / Math.max(1, samples.height - 1),
+  }
+}
+
+/** Whether (x, z) sits on the rectangle, edges included. Outside is false — never clamped in. */
+export function containsXZ(extent: ReliefExtent, x: number, z: number): boolean {
+  return (
+    x >= extent.origin.x &&
+    x <= extent.origin.x + extent.size.x &&
+    z >= extent.origin.z &&
+    z <= extent.origin.z + extent.size.z
+  )
+}
+
 export type ReliefChunkKey = { column: number; row: number }
 
 export type ReliefChunkLayout = ReliefChunkKey & {
@@ -93,6 +114,48 @@ export type ReliefOverlay = {
   enabled: boolean
   alpha: number
   sculpt?: ReliefSculpt
+}
+
+/**
+ * A height query: the spatial half of a relief plus the samples the heightmap asset holds.
+ * `ReliefLayer` matches this shape once `samples` is attached — the asset stays a `TextureRef`.
+ */
+export type ReliefHeightLayer = ReliefExtent & {
+  enabled: boolean
+  grain: number
+  edits: readonly ReliefOverlay[]
+  samples: HeightmapSamples
+}
+
+/**
+ * World Y at (x, z): first enabled layer whose extent contains the point, bilinear sample.
+ * Overlapping extents: the earlier entry wins. None contain the point → null.
+ */
+export function getHeightAt(
+  layers: readonly ReliefHeightLayer[],
+  x: number,
+  z: number,
+): number | null {
+  const layer = layers.find(one => one.enabled && containsXZ(one, x, z))
+  if (!layer) return null
+
+  const { samples } = layer
+  const step = texelStep(layer.size, samples)
+  const tx = (x - layer.origin.x) / step.x
+  const tz = (z - layer.origin.z) / step.z
+  const lastX = samples.width - 1
+  const lastZ = samples.height - 1
+  const x0 = clamp(Math.floor(tx), 0, lastX)
+  const z0 = clamp(Math.floor(tz), 0, lastZ)
+  const x1 = Math.min(x0 + 1, lastX)
+  const z1 = Math.min(z0 + 1, lastZ)
+  const read = reliefReader(samples, layer.grain, layer.edits)
+  const sample = mix(
+    mix(read(x0, z0), read(x1, z0), tx - x0),
+    mix(read(x0, z1), read(x1, z1), tx - x0),
+    tz - z0,
+  )
+  return worldY(sample, layer.elevation)
 }
 
 export function chunkLayout(
@@ -431,8 +494,7 @@ function diskSamples(
   extent: ReliefExtent,
   disk: { x: number; z: number; radius: number },
 ): { minX: number; maxX: number; minZ: number; maxZ: number; stepX: number; stepZ: number } {
-  const stepX = extent.size.x / Math.max(1, samples.width - 1)
-  const stepZ = extent.size.z / Math.max(1, samples.height - 1)
+  const { x: stepX, z: stepZ } = texelStep(extent.size, samples)
   return {
     stepX,
     stepZ,
@@ -445,6 +507,10 @@ function diskSamples(
 
 function clampIndex(at: number, samples: number): number {
   return clamp(at, 0, samples - 1)
+}
+
+function mix(a: number, b: number, t: number): number {
+  return a + (b - a) * t
 }
 
 function replaceChunk(
