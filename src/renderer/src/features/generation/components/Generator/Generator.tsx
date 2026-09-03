@@ -1,5 +1,5 @@
 import { mdiCreationOutline } from '@mdi/js'
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { isFinished, type Job } from '@shared/domain/job'
@@ -19,8 +19,6 @@ import { withBodyExtras } from '@/generation/bodyExtras'
 import { landingChoiceOf, landingCreatesOf, landingSiblingsOf } from '@/generation/landingChoice'
 import { roleFolderOf, useFolderRoles } from '@/stores/folderRoles'
 import { registerGenerator } from '@/features/assistant/generatorBridge'
-import { dictationAccessory } from '@/features/dictation/components/Dictation/DictationField'
-import { failureKeyOf } from '@/services/failureMessage'
 import { useJobs } from '@/stores/jobs'
 import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
@@ -28,27 +26,17 @@ import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit, documentAwaits } from '@/stores/generationClaims'
 import type { LandingTarget } from '@shared/domain/landingTarget'
-import { GeneratorLanding } from './Landing/GeneratorLanding'
-import { GeneratorLandingDialog } from './Landing/GeneratorLandingDialog'
 import { useAiModels } from '@/stores/aiModels'
 import { useSettings } from '@/stores/settings'
 import { useAccounts } from '@/stores/accounts'
 import { cloudsHeldFor } from '@/features/models/modelFilters'
-import { DynamicForm } from '@/components/dynamicFormLazy'
-import { cn } from '@/helpers/cn'
-import { PANEL_SCROLL } from '@/components/styles'
 import { EmptyState } from '@/components/EmptyState'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { MissingCredentials } from '@/features/shell/components/MissingCredentials'
 import { NoProject } from '@/features/shell/components/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
-import { GeneratorContext } from './GeneratorContext'
-import { GeneratorPixelArt } from './GeneratorPixelArt'
 import { usePixelArtGrid } from '@/hooks/usePixelArtGrid'
-import { GeneratorModel } from './GeneratorModel'
-import { GeneratorOperation } from './GeneratorOperation'
-import { GeneratorRun } from './GeneratorRun'
-import { GeneratorSources } from './GeneratorSources'
+import { GeneratorForm } from './GeneratorForm'
+import { DynamicForm } from '@/components/dynamicFormLazy'
 
 /**
  * The one panel a generation is run from — ADR-23. The operation the workspace points at, the
@@ -64,12 +52,6 @@ export function Generator() {
   const forceCapability = useGeneration(state => state.forceCapability)
   const { inputs, capability, withdraw } = useGenerationContext(forced)
 
-  // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
-  // undefined and every field opens on its own default.
-  //
-  // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
-  // preset changes, so dropping it would blank the form under the hand that is filling it. It
-  // stays until the next "regenerate" replaces it, which reads as the last settings used.
   const prepared = useModels(state =>
     capability.chosen ? state.preset[capability.chosen] : undefined,
   )
@@ -92,40 +74,19 @@ export function Generator() {
 
   const descriptor = useDescriptor(modelId)
 
-  /** The descriptor's own fields, plus the lists only this window can fill — see `useTaskChoices`. */
   const fields = useTaskChoices(descriptor.data?.fields, modelId)
 
-  /**
-   * 🛑 What the form opens on: the values an edit prepared, over the sources the workspace holds.
-   *
-   * Without this the panel DREW the sources and sent none of them — while those same sources
-   * decided which operation ran. Selecting a picture switched the generator to image-to-image and
-   * left the picture behind.
-   */
   const sources = useMemo(() => fillSourceFields(fields, inputs), [fields, inputs])
   const preset = useMemo(() => ({ ...sources, ...prepared }), [sources, prepared])
-  /**
-   * Whether this shot carries the project's context. Held here and not in `values`: it must never
-   * reach `buildBody`, which is what is sent to the API.
-   *
-   * Not reset after a run — « leave the context out of this shot » means without setting a card
-   * aside, not once.
-   */
   const [contextUse, setContextUse] = useState<ContextUse>('apply')
   // Held OUTSIDE `values`, like the context's own: it must never reach `buildBody`, and
   // `unchangedSince` compares raw values to raw values.
   const [pixelArt, setPixelArt] = useState(true)
   const pixelArtGrid = usePixelArtGrid()
 
-  /** Where this shot lands and the files it names — composed once, and read by the bridge too. */
   const choice = useDocuments(
     useShallow(state => landingChoiceOf(role, state, landingChoice, documentAwaits())),
   )
-  /**
-   * The deviation carries the OPERATION it was made against, so it never reaches another one. It
-   * is MASKED, not dropped: coming back to the same operation restores it, as `contextUse` does.
-   * Keyed on what the operation DERIVED, two operations deriving the same answer shared it.
-   */
   const [deviated, setDeviated] = useState<{ from: AiRoleId; to: LandingTarget } | null>(null)
   const offered = choice.derived
   const landing = role !== null && deviated?.from === role ? deviated.to : offered
@@ -135,22 +96,8 @@ export function Generator() {
   const plan = usePlanAccess()
   const refusalFor = usePlanRefusal(plan)
 
-  /**
-   * The body as the form stands, kept for whoever asks from outside — today the assistant, which
-   * has to see what would be sent before it may quote a cost and ask for a yes.
-   *
-   * A ref rather than state: this changes on every keystroke, and the panel has no reason to
-   * re-render because something that is not on screen wants to read it. `useCostEstimate`
-   * subscribes to the same feed for the same reason.
-   */
   const body = useRef<FormValues>({})
 
-  /**
-   * The generation this panel launched, followed until it stops — § 30.
-   *
-   * Held by id rather than by the job itself: the main process pushes progress every couple of
-   * seconds, and a copy kept here would be the stale half of two answers.
-   */
   const [runningId, setRunningId] = useState<string | null>(null)
   const running = useJobs(state => state.jobs.find(job => job.id === runningId) ?? null)
   /**
@@ -280,6 +227,7 @@ export function Generator() {
   if (!capability.chosen) {
     return <EmptyState icon={mdiCreationOutline} message={t('generation.noOperation')} />
   }
+  const chosen = capability.chosen
 
   // Claimed at the click and settled when the job id arrives: which workspace has somewhere to
   // put a result is not this panel's business — it serves every one of them.
@@ -296,111 +244,51 @@ export function Generator() {
   }
 
   return (
-    <>
-      {asking && (
-        <GeneratorLandingDialog
-          onCancel={() => setAsking(null)}
-          onAnswer={(target, remember) => {
-            const values = asking
-            setAsking(null)
-            if (remember) void setValue('generation.landing', target)
-            void runGeneration(values, target)
-          }}
-        />
-      )}
-      {/* The gutter and the rhythm live HERE, once: every child wore its own `px-2 pt-2` and the
-          one that forgot read as a second panel. `PANEL_SCROLL` keeps the right edge off the bar. */}
-      <div className={cn(PANEL_SCROLL, 'gap-2 pt-2 pl-2')}>
-        <GeneratorOperation capability={capability} onForce={forceCapability} />
-        <GeneratorModel
-          capability={capability.chosen}
-          modelId={modelId}
-          name={descriptor.data?.name}
-          plan={plan}
-        />
-
-        {/* Gated on a model: `useDescriptor(null)` is disabled, and a disabled query reads as
-          pending — so two sentences were painted one under the other. Having none is said by
-          `GeneratorModel`, which is the only one that knows whether the catalogue is empty. */}
-        {modelId !== null && descriptor.isPending && (
-          <EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />
-        )}
-        {modelId !== null && descriptor.isError && (
-          <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(descriptor.error))} />
-        )}
-
-        <GeneratorSources inputs={inputs} onWithdraw={withdraw} />
-        {/* Gated on the model as well as the descriptor: `prepare` ARMS what it is handed, and an
-            empty id would arm nothing under the name of nothing. */}
-        {descriptor.data && modelId !== null && (
-          <GeneratorContext
-            fields={fields}
-            modelId={modelId}
-            role={capability.chosen}
-            use={contextUse}
-            onUse={setContextUse}
-          />
-        )}
-
-        {/* Beside the context and for the same reason: what is added to a prompt is shown, and
-            can be turned off — a studio on a grid still wants a photo reference now and then. */}
-        <GeneratorPixelArt
-          fields={fields}
-          grid={pixelArtGrid}
-          applies={pixelArt}
-          onApplies={setPixelArt}
-        />
-        {/* Below the sources and above the run: what is sent, then where it lands, then the
-            generation itself — the order the eye reads the panel in. */}
-        {role !== null && offered !== null && landing !== null && (
-          <GeneratorLanding
-            role={role}
-            choice={choice}
-            landing={landing}
-            onLanding={target => setDeviated({ from: role, to: target })}
-          />
-        )}
-        <GeneratorRun job={running} />
-
-        {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
-        {refusal && <p className="text-muted text-xs">{refusal}</p>}
-
-        {/* Gated on the descriptor, which is what makes the deferred form free to the eye: it only
-          renders once that round trip has come back, so the wait its chunk adds sits inside one
-          the panel already had. */}
-        {descriptor.data && (
-          // Above the `Suspense`: a rejected `lazy()` import is an error, not a fallback. Without
-          // it the throw leaves the panel, leaves the dock, and takes the whole window down.
-          <ErrorBoundary>
-            <Suspense
-              fallback={<EmptyState icon={mdiCreationOutline} message={t('collection.loading')} />}
-            >
-              <DynamicForm
-                fields={fields}
-                onSubmit={generate}
-                submitLabel={t('actions.generate')}
-                submitHint={t('actions.generateHint')}
-                submitNote={cost.note}
-                onValuesChange={onValuesChange}
-                // 🛑 The double-submission guard as well as the refusal: `submit` is a round trip,
-                // and a second press before it answers pays for two generations.
-                // `project` is not in this: the panel returns before the form when there is none.
-                busy={
-                  refusal !== undefined ||
-                  submitting ||
-                  (running !== null && !isFinished(running.status))
-                }
-                preset={preset}
-                sources={sources}
-                // Dictation alone now. Rewriting a prompt, translating it and reading the style of
-                // the references left this panel for the assistant: they are things one ASKS for,
-                // and three buttons under a field could only ever offer three of them.
-                accessory={dictationAccessory}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        )}
-      </div>
-    </>
+    <GeneratorForm
+      asking={asking}
+      Form={DynamicForm}
+      setAsking={setAsking}
+      answerLanding={(target, remember) => {
+        const values = asking
+        setAsking(null)
+        if (!values) return
+        if (remember) void setValue('generation.landing', target)
+        void runGeneration(values, target)
+      }}
+      capability={capability}
+      onForce={forceCapability}
+      model={{ capability: chosen, modelId, name: descriptor.data?.name, plan }}
+      descriptor={{
+        pending: descriptor.isPending,
+        error: descriptor.isError ? descriptor.error : null,
+        ready: descriptor.data !== undefined,
+      }}
+      sourcesInput={{ inputs, onWithdraw: withdraw }}
+      context={{
+        fields,
+        modelId: modelId!,
+        role: chosen,
+        use: contextUse,
+        onUse: setContextUse,
+      }}
+      pixelArt={{ fields, grid: pixelArtGrid, applies: pixelArt, onApplies: setPixelArt }}
+      role={role}
+      offered={offered}
+      landing={landing}
+      landingChoice={choice}
+      onLanding={target => setDeviated({ from: chosen, to: target })}
+      running={running}
+      refusal={refusal}
+      submitNote={cost.note}
+      form={{
+        fields,
+        onSubmit: generate,
+        onValuesChange,
+        busy:
+          refusal !== undefined || submitting || (running !== null && !isFinished(running.status)),
+        preset,
+        sources,
+      }}
+    />
   )
 }
