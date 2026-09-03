@@ -32,7 +32,12 @@ import {
 import { sameOrder } from '@shared/collections'
 import { toRadians } from '@shared/domain/angles'
 import { movesOnItsOwn } from '@shared/domain/component'
-import { buildPartition, type CellKey, type WorldPartition } from './worldPartition'
+import {
+  buildPartition,
+  MAX_SPATIAL_REACH,
+  type CellKey,
+  type WorldPartition,
+} from './worldPartition'
 
 /**
  * Draws a repeated shape through one `InstancedMesh` per CELL of the world, and turns off the
@@ -53,6 +58,7 @@ export function createCellGroups(
   ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
 ): InstancedGroups {
   const index = buildPartition()
+  let queryReach = index.cellSize / 2
   /** One `Group` per cell, hung under the host: a zone is one flag per cell, not one per body. */
   const cells = new Map<CellKey, Held>()
   /**
@@ -439,11 +445,19 @@ export function createCellGroups(
 
   return {
     rebuild: (nodes, objectOf, excluded) => {
+      const groups = sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)
+      queryReach = index.cellSize / 2
+      for (const worn of groups) {
+        for (const mesh of worn.meshes) {
+          const reach = worldReach(mesh.geometry, mesh.matrixWorld)
+          if (reach <= MAX_SPATIAL_REACH) queryReach = Math.max(queryReach, reach)
+        }
+      }
       pass += 1
       /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
       const seen = new Map<string, string>()
       let instanced = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
+      for (const worn of groups) {
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { ids: [], meshes: [] }
@@ -500,7 +514,7 @@ export function createCellGroups(
     //
     // `null` draws every cell — a film and a capture render from a camera of their own.
     follow: (camera, cast) => {
-      const radius = camera ? seenFrom(camera) + index.cellSize / 2 : Infinity
+      const radius = camera ? seenFrom(camera) + queryReach : Infinity
       if (!camera || !Number.isFinite(radius)) return drawEvery()
       // 🛑 The camera's own matrices first, and BOTH of them. A pane is dressed before `render`
       // composes anything, so `matrixWorldInverse` is a frame behind — the cell entering the view
@@ -664,7 +678,7 @@ function splitByCell(
     // The translation read straight off the world matrix, never `decompose`: a non-uniform scale
     // inside a rotated parent shears, and a decomposed translation of a sheared matrix drifts.
     const stands = mesh.matrixWorld.elements
-    const spills = !index.fitsACell(worldReach(shape, mesh.matrixWorld))
+    const spills = worldReach(shape, mesh.matrixWorld) > MAX_SPATIAL_REACH
     // Filed under the cell ITSELF, never under a name: naming here spelled and hashed one string
     // per body, 5 000 of them a rebuild on 5 000 bodies.
     const cell = spills ? null : index.cellAt(stands[12] ?? 0, stands[14] ?? 0)
