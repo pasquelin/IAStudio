@@ -7,7 +7,7 @@ import { nameOf, parentOf, pathIn } from '@shared/domain/folder'
 import { SCRIPT_EXTENSION, type GameManifest } from '@shared/domain/game'
 import type { StudioBridge } from '@shared/ipc'
 import { mergedSettings } from '@main/settings/store'
-import { installFakeBridge } from '@/services/fakeBridge'
+import { installFakeBridge, type BridgeOverrides } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { useJobs } from '@/stores/jobs'
 import { useSettings } from '@/stores/settings'
@@ -63,7 +63,7 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
      * the window has to turn up in `studio.files()`, or no oracle can read it back. What a write
      * MEANS — the refusal of a path that leaves the project — stays in the main process.
      */
-    game: {
+    game: ((): NonNullable<BridgeOverrides['game']> => ({
       /**
        * 🛑 A PORT: the disk an export writes onto. Every file lands in the memory folder under
        * the game's own name, so an oracle can read back what was written — and 65.1 could not
@@ -106,7 +106,7 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
         game.current = written
         return Promise.resolve({ game: game.current, trouble: null })
       },
-    },
+    }))(),
     /**
      * 🛑 A PORT, and one the bench had wrong: the stub answered `DEFAULT_SETTINGS` to every write,
      * and the store keeps what the channel hands back — so any preference written wiped the shelf
@@ -116,7 +116,7 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
       write: partial => Promise.resolve(mergedSettings(useSettings.getState().settings, partial)),
       read: () => Promise.resolve(useSettings.getState().settings),
     },
-    project: {
+    project: ((): NonNullable<BridgeOverrides['project']> => ({
       ...shell.channels.project,
       listFolder: (relative, hidden) => folder.list(relative, hidden),
       searchFolder: (term, hidden) => folder.search(term, hidden),
@@ -158,8 +158,8 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
             : { path: relative, kind, bytes: 0, createdAt: WHEN, modifiedAt: WHEN },
         )
       },
-    },
-    assets: {
+    }))(),
+    assets: ((): NonNullable<BridgeOverrides['assets']> => ({
       search: query => catalog.search(query),
       /**
        * 🛑 The stub REJECTED, so « ouvre la texture utilisée par mon modèle » had no answer at
@@ -239,7 +239,7 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
       remove: async assetIds => {
         for (const one of assetIds) await catalog.remove(one)
       },
-    },
+    }))(),
     // What `openProjectFile` asks before it decides between a document and an asset.
     media: {
       adopt: relative => {
@@ -247,7 +247,7 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
         return catalog.search({ path: relative, limit: 1 }).then(found => found[0] ?? null)
       },
     },
-    documents: {
+    documents: ((): NonNullable<BridgeOverrides['documents']> => ({
       list: () => Promise.resolve([...documentsOnDisk.values()]),
       // 🛑 A PORT: the envelope the main process stamps, around the TEXT on disk. `null` for a
       // document nothing was ever written under, which is what a fresh one is.
@@ -280,9 +280,9 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
         }
         return next
       },
-    },
+    }))(),
     ...(think ? { assistant: { think } } : {}),
-    provider: {
+    provider: ((): NonNullable<BridgeOverrides['provider']> => ({
       searchModels: query => cloud.searchModels(query),
       describeModel: modelId => cloud.describeModel(modelId),
       generate: (modelId, body) => cloud.generate(modelId, body),
@@ -308,6 +308,6 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
           silent: [],
           price: null,
         }),
-    },
+    }))(),
   })
 }
