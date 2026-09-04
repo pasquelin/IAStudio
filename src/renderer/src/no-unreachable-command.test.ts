@@ -200,7 +200,6 @@ const NOT_PUBLISHED: readonly string[] = [
   'setScatterLocked',
   'setScatterMask',
   'paintScatterMask',
-  'deriveScatterMask',
   'setScatterRules',
   'setScatterSeed',
   'setScatterAssets',

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { reliefLayer, terrainEditLayer } from '@shared/domain/scene'
+import { reliefLayer, scatterLayer, terrainEditLayer } from '@shared/domain/scene'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -91,5 +91,31 @@ describe('WorldTools sculpt session', () => {
       min: 0,
       max: 1,
     })
+  })
+})
+
+describe('WorldTools scatter session', () => {
+  beforeEach(() => {
+    useSceneViews.setState({ views: {} })
+    const scene = createDefaultScene()
+    installScene('doc-1', {
+      ...scene,
+      world: { ...scene.world, layers: [scatterLayer({ id: 'trees' })] },
+    })
+    useSceneViews.getState().setArmedWorld('doc-1', { kind: 'scatter', id: 'trees' })
+  })
+
+  it('arms direct ground painting and writes scatter placement settings', async () => {
+    render(<WorldPanel />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Peindre le sol' }))
+    await userEvent.click(screen.getByLabelText('Rotation aléatoire'))
+
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1')).toMatchObject({
+      sculptMode: true,
+      sculptTool: 'paintGround',
+    })
+    const layer = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
+    expect(layer?.kind === 'scatter' ? layer.rules.randomRotation : true).toBe(false)
   })
 })

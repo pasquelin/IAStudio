@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { setTransform } from '@/engines/scene/commands'
 import { paintTerrainEditMask, sculptRelief } from '@/engines/scene/reliefCommands'
+import { paintScatterMask } from '@/engines/scene/scatterCommands'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { EMPTY_STATS, sameStats, type SceneStats } from '@/engines/scene/sceneStats'
 import { assetVersionOf } from '@/stores/assets'
@@ -36,6 +37,8 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
       useScenes.getState().runCommand(documentId, sculptRelief(terrainId, editId, chunks)),
     onReliefMask: (terrainId, editId, chunks) =>
       useScenes.getState().runCommand(documentId, paintTerrainEditMask(terrainId, editId, chunks)),
+    onScatterMask: (scatterId, chunks) =>
+      useScenes.getState().runCommand(documentId, paintScatterMask(scatterId, chunks)),
     onGroundPaint: (terrainId, paint) => {
       pendingGroundPaint = { terrainId, paint }
     },

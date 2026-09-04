@@ -12,11 +12,8 @@ import { terrainIdOfObject } from './reliefSurface'
 import { createReliefBrushCursor } from './reliefBrushCursor'
 import { combinedAt, texelStep } from '@shared/domain/relief'
 import { clamp } from '@shared/numeric'
-import { emptyGroundPaint, paintGroundDisk, type GroundPaint } from '@shared/domain/groundPaint'
-import { SCATTER_MASK_TEXELS, type WorldLayer } from '@shared/domain/scene'
-
-type ArmedWorld =
-  { kind: 'relief'; id: string; editId: string | null } | { kind: 'scatter'; id: string } | null
+import type { GroundPaint } from '@shared/domain/groundPaint'
+import { groundPaintedAt, scatterMaskStroke, type ArmedWorld } from './sceneSurfacePaint'
 
 export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   protected abstract dropMarquee(): void
@@ -33,6 +30,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     last: { x: number; z: number }
     terrainId: string
     editId: string
+    scatterId?: string
     target?: number
   } | null = null
   private reliefSculptor: {
@@ -91,8 +89,6 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   }
 
   dispose(): void {
-    // Before the cursor goes: a stroke still open closes the document's history gesture, and
-    // nothing else would — closing a tab mid-dab left every later edit in that same undo step.
     this.endReliefStroke()
     this.brushCursor.dispose()
     this.reliefSculptor?.sculptor.dispose()
@@ -127,19 +123,16 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     this.armedRelief = armed
     this.armedWorld = armed ? { kind: 'relief', id: armed.terrainId, editId: armed.editId } : null
   }
-
   setArmedWorld(armed: ArmedWorld): void {
     this.armedWorld = armed
     this.armedRelief =
       armed?.kind === 'relief' ? { terrainId: armed.id, editId: armed.editId } : null
   }
-
   setSculptBrush(radius: number, falloff: number, amount = SCULPT_AMOUNT): void {
     this.sculptRadius = radius
     this.sculptFalloff = falloff
     this.sculptAmount = amount
   }
-
   setSculptTool(tool: SculptTool): void {
     this.sculptTool = tool
   }
@@ -172,6 +165,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     const hit = this.reliefHitAt(event)
     if (hit && this.armedWorld?.kind === 'scatter' && this.sculptTool === 'paintGround') {
       void this.startGroundStroke(hit.terrainId, hit.x, hit.z)
+      return true
+    }
+    if (hit && this.armedWorld?.kind === 'scatter' && this.sculptTool === 'paint') {
+      void this.startScatterStroke(this.armedWorld.id, hit.x, hit.z)
       return true
     }
     const target = sculptEditOf(this.world.layers, this.armedRelief)
@@ -214,6 +211,13 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     return this.paintGroundDisk(terrainId, x, z)
   }
 
+  private async startScatterStroke(scatterId: string, x: number, z: number): Promise<boolean> {
+    this.endReliefStroke()
+    this.sculptStroke = { last: { x, z }, terrainId: '', editId: '', scatterId }
+    this.options.onReliefStrokeStart?.()
+    return this.paintScatterMaskDisk(scatterId, x, z)
+  }
+
   async moveReliefStroke(x: number, z: number): Promise<void> {
     const stroke = this.sculptStroke
     if (!stroke) return
@@ -236,6 +240,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   private paintReliefDab(x: number, z: number): Promise<boolean> {
     const stroke = this.sculptStroke
     if (!stroke) return Promise.resolve(false)
+    if (stroke.scatterId) return this.paintScatterMaskDisk(stroke.scatterId, x, z)
     if (this.sculptTool === 'paintGround') {
       return this.paintGroundDisk(stroke.terrainId, x, z)
     }
@@ -250,28 +255,28 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     )
   }
 
+  async paintScatterMaskDisk(scatterId: string, x: number, z: number): Promise<boolean> {
+    const stroke = scatterMaskStroke(
+      this.world,
+      scatterId,
+      surfaceDisk(x, z, this.sculptRadius, this.sculptAmount, this.sculptFalloff),
+    )
+    if (!stroke) return false
+    const chunks = await this.sculptorFor(scatterId, 'mask', true).raiseDisk(stroke)
+    if (!chunks) return false
+    this.options.onScatterMask?.(scatterId, chunks)
+    return true
+  }
+
   async paintGroundDisk(terrainId: string, x: number, z: number): Promise<boolean> {
-    const terrain = this.world.layers.find(
-      (layer): layer is Extract<WorldLayer, { kind: 'relief' }> =>
-        layer.kind === 'relief' && layer.id === terrainId,
+    const paint = await groundPaintedAt(
+      this.world,
+      this.groundPaints,
+      this.options.loadGroundPaint,
+      terrainId,
+      surfaceDisk(x, z, this.sculptRadius, this.sculptAmount, this.sculptFalloff),
     )
-    if (!terrain || terrain.locked.sculpt) return false
-    const loaded = this.groundPaints.has(terrainId)
-      ? this.groundPaints.get(terrainId)
-      : await this.options.loadGroundPaint?.(terrainId)
-    const before = loaded ?? emptyGroundPaint(SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS)
-    const paint = paintGroundDisk(
-      before,
-      { origin: terrain.origin, size: terrain.size, elevation: terrain.elevation },
-      {
-        x,
-        z,
-        radius: this.sculptRadius,
-        amount: this.sculptAmount,
-        falloff: this.sculptFalloff,
-        color: [32, 192, 64, 255],
-      },
-    )
+    if (!paint) return false
     this.groundPaints.set(terrainId, paint)
     this.options.onGroundPaint?.(terrainId, paint)
     return true
@@ -308,4 +313,8 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
       source.extent,
     )
   }
+}
+
+function surfaceDisk(x: number, z: number, radius: number, amount: number, falloff: number) {
+  return { x, z, radius, amount, falloff }
 }

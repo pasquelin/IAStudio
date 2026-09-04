@@ -59,6 +59,7 @@ export type SceneRendererOptions = {
   onTransform: (moves: readonly NodeMove[]) => void
   onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   onReliefMask?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
+  onScatterMask?: (scatterId: string, chunks: readonly PackedReliefChunk[]) => void
   onGroundPaint?: (terrainId: string, paint: GroundPaint) => void
   loadGroundPaint?: (terrainId: string) => Promise<GroundPaint | null>
   onReliefStrokeStart?: () => void

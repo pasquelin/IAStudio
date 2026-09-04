@@ -53,6 +53,7 @@ const OTHER_SENSES: Record<string, string> = {
   SceneRendererLifecycle:
     'World relief: `apply` compares world.layers to know a shadow pass is owed',
   SceneRendererSculpt: 'World relief: which heightmap a stroke writes, not a timeline line',
+  sceneSurfacePaint: 'World relief and scatter surfaces, not timeline lines',
   SceneRendererOptimization: 'Three.js visibility layers shared by objects and cameras',
   'scene-renderer-relief':
     'World relief: the edit layers a sculptor is held for, not a timeline line',

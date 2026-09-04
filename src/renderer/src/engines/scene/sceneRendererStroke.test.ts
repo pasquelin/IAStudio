@@ -2,7 +2,7 @@
 import { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { PackedReliefChunk, ReliefSculpt } from '@shared/domain/relief'
-import { DEFAULT_WORLD, reliefLayer, terrainEditLayer } from '@shared/domain/scene'
+import { DEFAULT_WORLD, reliefLayer, scatterLayer, terrainEditLayer } from '@shared/domain/scene'
 import type { ReliefSurface } from './reliefSurface'
 import type { ReliefDiskStroke, ReliefSculptor } from './reliefSculptor'
 import { SceneRenderer } from './SceneRenderer'
@@ -134,6 +134,30 @@ describe('a sculpt drag through the scene renderer', () => {
     expect(paint?.pixels.slice((128 * 256 + 128) * 4, (128 * 256 + 128) * 4 + 4)).toEqual(
       Uint8ClampedArray.from([32, 192, 64, 255]),
     )
+    renderer.dispose()
+  })
+
+  it('publishes painted chunks for an armed scatter mask', async () => {
+    const published = vi.fn()
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      onScatterMask: published,
+      relief: reliefStub(),
+      createReliefSculptor: () => ({
+        raiseDisk: async () => CHANGED,
+        note: vi.fn(),
+        dispose: vi.fn(),
+      }),
+    })
+    renderer['applyWorld']({
+      ...worldWithTerrain(),
+      layers: [...worldWithTerrain().layers, scatterLayer({ id: 'trees' })],
+    })
+
+    await expect(renderer.paintScatterMaskDisk('trees', 10, 10)).resolves.toBe(true)
+
+    expect(published).toHaveBeenCalledWith('trees', CHANGED)
     renderer.dispose()
   })
 
