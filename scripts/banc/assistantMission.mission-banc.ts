@@ -1,4 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { CLOUD_PROVIDERS, defaultChatModel } from '@shared/domain/aiCloud'
 import { isRecord } from '@shared/guards'
 import { createHttpChatBrain } from '@main/assistant/brainHttp'
@@ -9,6 +11,12 @@ import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/
 import type { Run, Scenario } from './run'
 import { SCENARIOS } from './scenarios'
 import { playMission } from './playMission'
+import {
+  missionFamilyCoverage,
+  missionScenarios,
+  scenarioFamilies,
+  type MissionBenchSet,
+} from './missionCatalogue'
 
 const KEY = process.env['EVAL_KEY'] ?? ''
 const RUNS = Math.max(1, Math.trunc(Number(process.env['EVAL_RUNS'] ?? 3)) || 1)
@@ -20,19 +28,13 @@ const TRACE_FOLDER =
   process.env['MISSION_TRACE_DIR'] ??
   `logs/mission-runtime/${new Date().toISOString().replace(/[:.]/g, '-')}`
 
-const MISSION_SCENARIOS = new Set([
-  '1.1 names the open project and the open documents',
-  '6.1 adds a cube at the centre',
-  '6.2 renames the cube Cube Test',
-  '12.2 turns its first material red',
-  '20.1 generates a photoreal red car in a Paris street',
-  '22.1 generates a 3D model of a wooden chest',
-  '41.6 makes a project called Démo Assistant',
-  '57.4 remembers the project aims at photoreal marine work',
-  '58.7 puts the project under version control',
-])
-
-const scenarios = SCENARIOS.filter(scenario => MISSION_SCENARIOS.has(scenario.name))
+const requestedSet = process.env['MISSION_BENCH_SET'] ?? 'baseline'
+function missionBenchSet(value: string): MissionBenchSet {
+  if (value === 'representative' || value === 'expanded' || value === 'all') return value
+  return 'baseline'
+}
+const BENCH_SET = missionBenchSet(requestedSet)
+const scenarios = missionScenarios(SCENARIOS, BENCH_SET)
 
 type Tokens = { sent: number; back: number; cached: number; calls: number }
 type Result = {
@@ -44,6 +46,7 @@ type Result = {
   milliseconds: number
   tokens: Tokens
   metrics: MissionRuntimeMetrics
+  families: readonly string[]
 }
 
 const emptyMetrics = (): MissionRuntimeMetrics => createMissionMetrics().read()
@@ -139,6 +142,7 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
       milliseconds: 0,
       tokens: { sent: 0, back: 0, cached: 0, calls: 0 },
       metrics: emptyMetrics(),
+      families: scenarioFamilies(scenario),
     }
     const failures: string[] = []
     const brain = createHttpChatBrain({
@@ -206,6 +210,34 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
         `${sum(result => result.searches)} model action searches · ${Math.round(sum(result => result.milliseconds))} ms`,
     )
     console.log(`  causal traces: ${TRACE_FOLDER}`)
+    mkdirSync(TRACE_FOLDER, { recursive: true })
+    writeFileSync(
+      join(TRACE_FOLDER, 'summary.json'),
+      `${JSON.stringify(
+        {
+          benchSet: BENCH_SET,
+          provider: PROVIDER,
+          model: MODEL,
+          runs: RUNS,
+          scenarios: scenarios.length,
+          passed,
+          total,
+          tokens: sum(result => result.tokens.sent),
+          contextChars: sum(result => result.metrics.contextChars),
+          candidates: sum(result => result.metrics.actionsSentToLlm),
+          actions: sum(result => result.actions),
+          unnecessary: sum(result => result.unnecessary),
+          rounds: sum(result => result.metrics.llmCalls),
+          providerCalls: sum(result => result.tokens.calls),
+          topK: 12,
+          coverage: missionFamilyCoverage(scenarios),
+          results,
+        },
+        null,
+        2,
+      )}\n`,
+      'utf8',
+    )
   })
 })
 
