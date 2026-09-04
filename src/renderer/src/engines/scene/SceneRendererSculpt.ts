@@ -12,6 +12,11 @@ import { terrainIdOfObject } from './reliefSurface'
 import { createReliefBrushCursor } from './reliefBrushCursor'
 import { combinedAt, texelStep } from '@shared/domain/relief'
 import { clamp } from '@shared/numeric'
+import { emptyGroundPaint, paintGroundDisk, type GroundPaint } from '@shared/domain/groundPaint'
+import { SCATTER_MASK_TEXELS, type WorldLayer } from '@shared/domain/scene'
+
+type ArmedWorld =
+  { kind: 'relief'; id: string; editId: string | null } | { kind: 'scatter'; id: string } | null
 
 export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   protected abstract dropMarquee(): void
@@ -19,6 +24,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   protected sculptMode = false
   protected sculptTool: SculptTool = 'raise'
   protected armedRelief: { terrainId: string; editId: string | null } | null = null
+  protected armedWorld: ArmedWorld = null
   protected sculptRadius = 2
   protected sculptFalloff = 0
   protected sculptAmount = SCULPT_AMOUNT
@@ -35,6 +41,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     paint: boolean
     sculptor: ReliefSculptor
   } | null = null
+  private readonly groundPaints = new Map<string, GroundPaint>()
 
   async raiseReliefDisk(
     terrainId: string,
@@ -45,6 +52,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     kind: SculptTool = 'raise',
     target?: number,
   ): Promise<boolean> {
+    if (kind === 'paintGround') return false
     const source = this.relief.sculptSource(terrainId, editId)
     if (!source) return false
     const operation = kind === 'raise' ? 'raiseDisk' : kind === 'paint' ? 'paintMask' : kind
@@ -117,6 +125,13 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
 
   setArmedRelief(armed: { terrainId: string; editId: string | null } | null): void {
     this.armedRelief = armed
+    this.armedWorld = armed ? { kind: 'relief', id: armed.terrainId, editId: armed.editId } : null
+  }
+
+  setArmedWorld(armed: ArmedWorld): void {
+    this.armedWorld = armed
+    this.armedRelief =
+      armed?.kind === 'relief' ? { terrainId: armed.id, editId: armed.editId } : null
   }
 
   setSculptBrush(radius: number, falloff: number, amount = SCULPT_AMOUNT): void {
@@ -155,6 +170,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
 
   protected beginReliefStrokeFrom(event: PointerEvent): boolean {
     const hit = this.reliefHitAt(event)
+    if (hit && this.armedWorld?.kind === 'scatter' && this.sculptTool === 'paintGround') {
+      void this.startGroundStroke(hit.terrainId, hit.x, hit.z)
+      return true
+    }
     const target = sculptEditOf(this.world.layers, this.armedRelief)
     if (!hit || !target || target.terrainId !== hit.terrainId) return false
     void this.startReliefStroke(hit.x, hit.z)
@@ -188,6 +207,13 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     return this.paintReliefDab(x, z)
   }
 
+  private async startGroundStroke(terrainId: string, x: number, z: number): Promise<boolean> {
+    this.endReliefStroke()
+    this.sculptStroke = { last: { x, z }, terrainId, editId: '' }
+    this.options.onReliefStrokeStart?.()
+    return this.paintGroundDisk(terrainId, x, z)
+  }
+
   async moveReliefStroke(x: number, z: number): Promise<void> {
     const stroke = this.sculptStroke
     if (!stroke) return
@@ -210,6 +236,9 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   private paintReliefDab(x: number, z: number): Promise<boolean> {
     const stroke = this.sculptStroke
     if (!stroke) return Promise.resolve(false)
+    if (this.sculptTool === 'paintGround') {
+      return this.paintGroundDisk(stroke.terrainId, x, z)
+    }
     return this.raiseReliefDisk(
       stroke.terrainId,
       stroke.editId,
@@ -219,6 +248,31 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
       this.sculptTool,
       stroke.target,
     )
+  }
+
+  paintGroundDisk(terrainId: string, x: number, z: number): Promise<boolean> {
+    const terrain = this.world.layers.find(
+      (layer): layer is Extract<WorldLayer, { kind: 'relief' }> =>
+        layer.kind === 'relief' && layer.id === terrainId,
+    )
+    if (!terrain || terrain.locked.sculpt) return Promise.resolve(false)
+    const before =
+      this.groundPaints.get(terrainId) ?? emptyGroundPaint(SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS)
+    const paint = paintGroundDisk(
+      before,
+      { origin: terrain.origin, size: terrain.size, elevation: terrain.elevation },
+      {
+        x,
+        z,
+        radius: this.sculptRadius,
+        amount: this.sculptAmount,
+        falloff: this.sculptFalloff,
+        color: [32, 192, 64, 255],
+      },
+    )
+    this.groundPaints.set(terrainId, paint)
+    this.options.onGroundPaint?.(terrainId, paint)
+    return Promise.resolve(true)
   }
 
   private flattenTargetAt(

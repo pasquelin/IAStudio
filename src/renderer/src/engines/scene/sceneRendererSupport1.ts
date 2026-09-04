@@ -34,6 +34,7 @@ import type { PickedPathPoint } from './pickedPathPoint'
 import type { PackedReliefChunk } from '@shared/domain/relief'
 import type { ReliefSurface } from './reliefSurface'
 import type { ReliefSculptor } from './reliefSculptor'
+import type { GroundPaint } from '@shared/domain/groundPaint'
 
 export type { TransformMode, TransformSpace } from './gizmoTarget'
 
@@ -58,6 +59,7 @@ export type SceneRendererOptions = {
   onTransform: (moves: readonly NodeMove[]) => void
   onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   onReliefMask?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
+  onGroundPaint?: (terrainId: string, paint: GroundPaint) => void
   onReliefStrokeStart?: () => void
   onReliefStrokeEnd?: () => void
   /**

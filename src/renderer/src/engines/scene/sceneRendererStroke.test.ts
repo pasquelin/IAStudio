@@ -116,6 +116,27 @@ describe('a sculpt drag through the scene renderer', () => {
     renderer.dispose()
   })
 
+  it('paints RGBA ground pixels through the scene brush', async () => {
+    const painted = vi.fn()
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      onGroundPaint: painted,
+      relief: reliefStub(),
+    })
+    renderer['applyWorld'](worldWithTerrain())
+    renderer.setSculptBrush(1, 0, 1)
+
+    await expect(renderer.paintGroundDisk('terrain', 10, 10)).resolves.toBe(true)
+
+    const paint = painted.mock.calls[0]?.[1]
+    expect(paint?.pixels.some((value: number) => value !== 0)).toBe(true)
+    expect(paint?.pixels.slice((128 * 256 + 128) * 4, (128 * 256 + 128) * 4 + 4)).toEqual(
+      Uint8ClampedArray.from([32, 192, 64, 255]),
+    )
+    renderer.dispose()
+  })
+
   it('forwards a flatten stroke with the combined height at pointerdown as the target', async () => {
     const strokes: ReliefDiskStroke[] = []
     const values = Float32Array.from([0.4, 0.8, 0.1, 0.9])

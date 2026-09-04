@@ -34,7 +34,7 @@ export const STROKE_SPACING = 0.25
 /** Sample-space raise of one dab. The session default; the panel exposes it as intensity. */
 export const SCULPT_AMOUNT = 0.1
 
-export type SculptTool = 'raise' | 'smooth' | 'flatten' | 'paint'
+export type SculptTool = 'raise' | 'smooth' | 'flatten' | 'paint' | 'paintGround'
 
 /**
  * The edit a stroke writes into. An armed terrain with no edit of its own takes the first
