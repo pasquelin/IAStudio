@@ -229,6 +229,45 @@ describe('mission runtime', () => {
     expect(run).toHaveBeenCalledTimes(1)
   })
 
+  it('reasons again before using a resource produced earlier in the same answer', async () => {
+    const time = clock()
+    const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+    const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+    const search: AssistantCall = {
+      action: 'models.search',
+      input: { query: '3d', family: '3d' },
+    }
+    const premature: AssistantCall = {
+      action: 'models.readGenerationModelFields',
+      input: { modelId: 'invented' },
+    }
+    const grounded: AssistantCall = {
+      action: 'models.select',
+      input: { family: '3d', modelId: 'model-3d' },
+    }
+    const { brain, requests } = brainWith([
+      { say: '', calls: [search, premature], cost: 0 },
+      { say: '', calls: [grounded], cost: 0 },
+      { say: 'Done.', calls: [], cost: 0 },
+    ])
+    const run = vi.fn(async (): Promise<ActionOutcome> => ({ ok: true, data: [{ id: 'model-3d' }] }))
+    const runtime = createMissionRuntime({
+      manager,
+      context: { build: async ({ mission }) => contextFor(mission) },
+      brain,
+      actions: { run, settle: vi.fn() },
+      jobs: { list: () => [] },
+      revisions: { read: async () => ({ current: [], unavailable: [] }) },
+      clock: time,
+    })
+
+    const mission = await runtime.create('Generate a model', {})
+
+    expect(mission.state).toBe('completed')
+    expect(run.mock.calls.map(call => call[0])).toEqual([search, grounded])
+    expect(requests).toHaveLength(3)
+  })
+
   it('persists a user answer before resuming planning', async () => {
     const time = clock()
     const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }

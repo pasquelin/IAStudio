@@ -1,4 +1,9 @@
-import type { AssistantAnswer, AssistantCall } from '@shared/domain/assistant'
+import {
+  ACTION_REGISTRY,
+  type ActionResource,
+  type AssistantAnswer,
+  type AssistantCall,
+} from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
 import {
   addMissionStep,
@@ -67,6 +72,19 @@ const verificationStep = (): PlannedStep => ({
 
 const MAX_MISSION_STEPS = 48
 
+function dependsOnProduced(
+  resource: ActionResource,
+  produced: ReadonlySet<ActionResource>,
+  visited: ReadonlySet<ActionResource> = new Set(),
+): boolean {
+  if (produced.has(resource)) return true
+  if (visited.has(resource)) return false
+  const nextVisited = new Set(visited).add(resource)
+  return ACTION_REGISTRY.filter(action => action.produces?.includes(resource)).some(action =>
+    (action.requires ?? []).some(required => dependsOnProduced(required, produced, nextVisited)),
+  )
+}
+
 function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly PlannedStep[] {
   if (answer.ask) {
     return [
@@ -77,7 +95,16 @@ function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly P
       reasoningStep(),
     ]
   }
-  const actions = answer.calls.map(actionStep)
+  const produced = new Set<ActionResource>()
+  const actions: PlannedStep[] = []
+  for (const call of answer.calls) {
+    const descriptor = ACTION_REGISTRY.find(action => action.name === call.action)
+    if ((descriptor?.requires ?? []).some(resource => dependsOnProduced(resource, produced))) {
+      return [...actions, reasoningStep()]
+    }
+    actions.push(actionStep(call))
+    for (const resource of descriptor?.produces ?? []) produced.add(resource)
+  }
   return actions.length > 0 ? [...actions, verificationStep()] : verification ? [] : actions
 }
 
