@@ -14,6 +14,7 @@ const { compileLossyModels } = vi.hoisted(() => ({
 vi.mock('@/engines/scene/lossyModelCompiler', () => ({ compileLossyModels }))
 vi.mock('@/engines/scene/lossyTextureCompiler', () => ({
   compileLossyTextures: vi.fn(async () => []),
+  compileLossyModelTextures: vi.fn(async () => []),
 }))
 
 const DOCUMENT = 'doc-1'
@@ -90,7 +91,7 @@ describe('a game written out of the studio', () => {
       nodeId: node.id,
       modelAssetId: 'tree-glb',
     })
-    expect(asked[0]?.scenes[0]?.optimization?.modelAssets).toEqual({
+    expect(asked[0]?.modelAssets).toEqual({
       'tree-glb': [
         {
           meshIndex: 0,

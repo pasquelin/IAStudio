@@ -115,6 +115,7 @@ export type ExportedGame = {
   scripts: readonly ExportedScript[]
   /** Asset id → the file beside the page. What `createBundledAssets` is handed. */
   assets: Readonly<Record<string, string>>
+  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
   /** Absent in older exports and equivalent to every LOSSY option being off. */
   lossyOptimization?: LossyOptimization
 }
@@ -153,6 +154,7 @@ export type GameExportRequest = {
   lossyOptimization?: LossyOptimization
   /** Image bytes prepared off the UI and main threads, keyed by their logical asset identity. */
   assetOverrides?: readonly ExportedAssetOverride[]
+  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
   /**
    * Where to write, INSIDE the project and relative to its root. Absent, a folder picker asks —
    * which is the only way a person at the window ever does it, and the only way a caller with no
@@ -164,7 +166,7 @@ export type GameExportRequest = {
 export type ExportedAssetOverride = {
   id: string
   bytes: Uint8Array
-  extension: 'jpg' | 'png'
+  extension: 'glb' | 'jpg' | 'png'
 }
 
 export type GameExportOutcome = {

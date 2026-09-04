@@ -84,7 +84,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   let stopped = false
   /** Seconds of veil the scene that has just arrived still owes. */
   let fading = 0
-  await render.show(opening, entry.optimization)
+  await render.show(opening, optimizationOf(entry.optimization, game.modelAssets))
 
   /**
    * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -129,7 +129,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       // stepping the arrived world over the picture of the one just left — and the veil would
       // lift onto it.
       fading = request.fade
-      await render.show(found, wanted.optimization)
+      await render.show(found, optimizationOf(wanted.optimization, game.modelAssets))
       // A second suspension point, so a second look: the stop above threw this world away.
       if (stopped) return
 
@@ -185,6 +185,14 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     script.dispose()
     render.dispose()
   }
+}
+
+function optimizationOf(
+  scene: ExportedGame['scenes'][number]['optimization'],
+  modelAssets: ExportedGame['modelAssets'],
+) {
+  if (!scene && !modelAssets) return undefined
+  return { nodes: scene?.nodes ?? [], ...(modelAssets ? { modelAssets } : {}) }
 }
 
 /** Every script of the game, already JavaScript: the studio transpiled them at export time. */

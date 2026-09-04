@@ -3,6 +3,7 @@ import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { meshNode } from './scene-fixtures'
 import { compileLossyWorld } from './lossyWorldCompiler'
 import type { SceneState } from './sceneState'
+import { analyzeLossyWorld } from './worldAnalyzer'
 
 function scene(count: number): Pick<SceneState, 'nodes'> {
   return {
@@ -16,12 +17,17 @@ function scene(count: number): Pick<SceneState, 'nodes'> {
 describe('compiling explicit lossy runtime descriptors', () => {
   for (const count of [50, 10_000]) {
     const source = scene(count)
+    const plan = analyzeLossyWorld(source.nodes)
     bench(`${count} repeated spheres`, () => {
-      compileLossyWorld(source, {
-        ...NO_LOSSY_OPTIMIZATION,
-        generateLods: true,
-        geometrySimplification: 'balanced',
-      })
+      compileLossyWorld(
+        source,
+        {
+          ...NO_LOSSY_OPTIMIZATION,
+          generateLods: true,
+          geometrySimplification: 'balanced',
+        },
+        plan,
+      )
     })
   }
 })

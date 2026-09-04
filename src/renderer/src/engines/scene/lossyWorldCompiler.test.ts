@@ -7,6 +7,7 @@ import { csgPartOf } from '@shared/domain/csg'
 import { DEFAULT_MATERIAL, type SceneNode } from './sceneState'
 import type { GeometryDescriptor } from '@shared/domain/geometry'
 import type { CsgGraph } from '@shared/domain/csg'
+import { analyzeLossyWorld } from './worldAnalyzer'
 
 const SPHERE = {
   kind: 'sphere',
@@ -17,7 +18,10 @@ const SPHERE = {
 
 describe('the LOSSY world compiled for an export', () => {
   it('produces no runtime geometry while geometry losses are off', () => {
-    expect(compileLossyWorld({ nodes: [meshNode(SPHERE)] }, NO_LOSSY_OPTIMIZATION)).toBeUndefined()
+    const nodes = [meshNode(SPHERE)]
+    expect(
+      compileLossyWorld({ nodes }, NO_LOSSY_OPTIMIZATION, analyzeLossyWorld(nodes)),
+    ).toBeUndefined()
   })
 
   it('reduces the exported descriptor without touching the authoring node', () => {
@@ -25,6 +29,7 @@ describe('the LOSSY world compiled for an export', () => {
     const compiled = compileLossyWorld(
       { nodes: [node] },
       { ...NO_LOSSY_OPTIMIZATION, geometrySimplification: 'balanced' },
+      analyzeLossyWorld([node]),
     )
 
     expect(compiled?.nodes[0]?.geometry).toEqual({
@@ -42,6 +47,7 @@ describe('the LOSSY world compiled for an export', () => {
       compileLossyWorld(
         { nodes: [node] },
         { ...NO_LOSSY_OPTIMIZATION, geometrySimplification: 'aggressive' },
+        analyzeLossyWorld([node]),
       ),
     ).toBeUndefined()
   })
@@ -55,6 +61,7 @@ describe('the LOSSY world compiled for an export', () => {
         generateLods: true,
         geometrySimplification: 'aggressive',
       },
+      analyzeLossyWorld([node]),
     )
     const lods = compiled?.nodes[0]?.lodGeometries
 
@@ -74,9 +81,11 @@ describe('the LOSSY world compiled for an export', () => {
       ],
       collision: 'hull',
     }
+    const node = carvedNode(graph)
     const compiled = compileLossyWorld(
-      { nodes: [carvedNode(graph)] },
+      { nodes: [node] },
       { ...NO_LOSSY_OPTIMIZATION, geometrySimplification: 'conservative' },
+      analyzeLossyWorld([node]),
     )
 
     expect(compiled?.nodes[0]?.carved).toMatchObject({
@@ -101,6 +110,7 @@ describe('the LOSSY world compiled for an export', () => {
       { nodes: [node] },
       { ...NO_LOSSY_OPTIMIZATION, geometrySimplification: 'balanced' },
       async () => geometry,
+      analyzeLossyWorld([node]),
     )
 
     expect(compiled?.nodes).toEqual([

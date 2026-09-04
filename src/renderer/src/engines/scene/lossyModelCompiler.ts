@@ -1,12 +1,4 @@
-import {
-  BufferAttribute,
-  BufferGeometry,
-  LOD,
-  Mesh,
-  PropertyBinding,
-  SkinnedMesh,
-  type Object3D,
-} from 'three'
+import { BufferAttribute, BufferGeometry, type Object3D } from 'three'
 import type {
   CompiledMeshGeometry,
   CompiledModelMesh,
@@ -19,9 +11,10 @@ import { compiledMeshOf } from './compiledGeometry'
 import LossyModelWorker from './lossyModel.worker?worker'
 import type { LossyModelResponse, ModelGeometryBuffers } from './lossyModelMessage'
 import { disposeTree } from './modelCache'
+import { analyzeModelOptimization, type ModelOptimizationCandidate } from './worldAnalyzer'
 
 type LossyModelPorts = {
-  load: (url: string) => Promise<Object3D | null>
+  load: (url: string, signal: AbortSignal | undefined) => Promise<Object3D | null>
   simplify: (
     geometry: BufferGeometry,
     ratio: number,
@@ -43,21 +36,15 @@ export async function compileLossyModels(
   try {
     for (const asset of uniqueAssets(assets)) {
       if (signal?.aborted) throw new DOMException('Model compilation aborted', 'AbortError')
-      const root = await active.load(asset.url)
+      const root = await active.load(asset.url, signal)
+      if (signal?.aborted) {
+        if (root) disposeTree(root)
+        throw new DOMException('Model compilation aborted', 'AbortError')
+      }
       if (!root) continue
       try {
         const meshes: CompiledModelMesh[] = []
-        let meshIndex = 0
-        const candidates: { meshIndex: number; geometry: BufferGeometry }[] = []
-        const animated = animatedNodeNames(root)
-        root.traverse(object => {
-          if (!(object instanceof Mesh)) return
-          const index = meshIndex
-          meshIndex += 1
-          if (canSimplify(object, options.generateLods, animated)) {
-            candidates.push({ meshIndex: index, geometry: object.geometry })
-          }
-        })
+        const candidates = analyzeModelOptimization(root, options.generateLods)
         for (const candidate of candidates) {
           const plan = await compiledModelMesh(candidate, options, signal, active.simplify)
           if (plan) meshes.push(plan)
@@ -81,7 +68,7 @@ function uniqueAssets(assets: readonly { id: string; url: string }[]): readonly 
 }
 
 async function compiledModelMesh(
-  candidate: { meshIndex: number; geometry: BufferGeometry },
+  candidate: ModelOptimizationCandidate,
   options: LossyOptimization,
   signal: AbortSignal | undefined,
   simplify: LossyModelPorts['simplify'],
@@ -105,55 +92,6 @@ async function compiledModelMesh(
   return { meshIndex: candidate.meshIndex, geometry: compiled }
 }
 
-function canSimplify(mesh: Mesh, generateLods: boolean, animated: ReadonlySet<string>): boolean {
-  const attributes = Object.keys(mesh.geometry.attributes)
-  const color = mesh.geometry.getAttribute('color')
-  return (
-    !(mesh instanceof SkinnedMesh) &&
-    !animated.has(mesh.name) &&
-    (!generateLods || !hasLodAncestor(mesh)) &&
-    Object.keys(mesh.geometry.morphAttributes).length === 0 &&
-    !Array.isArray(mesh.material) &&
-    attributes.every(attribute => SIMPLIFIED_MODEL_ATTRIBUTES.has(attribute)) &&
-    (!color || color.itemSize === 3) &&
-    mesh.geometry.drawRange.start === 0 &&
-    mesh.geometry.drawRange.count === Infinity &&
-    mesh.geometry.getAttribute('position')?.count > 3
-  )
-}
-
-const SIMPLIFIED_MODEL_ATTRIBUTES = new Set(['position', 'normal', 'uv', 'tangent', 'color'])
-
-function hasLodAncestor(mesh: Mesh): boolean {
-  let parent = mesh.parent
-  while (parent) {
-    if (parent instanceof LOD) return true
-    parent = parent.parent
-  }
-  return false
-}
-
-function animatedNodeNames(root: Object3D): ReadonlySet<string> {
-  const names = new Set<string>()
-  for (const clip of root.animations) {
-    for (const track of clip.tracks) {
-      try {
-        names.add(PropertyBinding.parseTrackName(track.name).nodeName)
-      } catch {
-        // An unreadable track will remain attached to geometry that this compiler leaves exact.
-        return new Set(namesIn(root))
-      }
-    }
-  }
-  return names
-}
-
-function namesIn(root: Object3D): readonly string[] {
-  const names: string[] = []
-  root.traverse(object => names.push(object.name))
-  return names
-}
-
 function browserModelPorts(): LossyModelPorts {
   const source = createGltfSource(() => null)
   const port = createWorkerPort<BufferGeometry, LossyModelResponse>(
@@ -162,10 +100,15 @@ function browserModelPorts(): LossyModelPorts {
     answer => geometryOf(answer.geometry),
   )
   return {
-    load: async url => {
+    load: async (url, signal) => {
       try {
-        return await source.load(url)
+        const response = await fetch(url, { signal })
+        if (!response.ok) return null
+        const bytes = await response.arrayBuffer()
+        if (signal?.aborted) throw new DOMException('Model compilation aborted', 'AbortError')
+        return source.parse ? await source.parse(bytes, url) : await source.load(url)
       } catch {
+        if (signal?.aborted) throw new DOMException('Model compilation aborted', 'AbortError')
         // Missing or unsupported models remain original and are reported by the package writer.
         return null
       }

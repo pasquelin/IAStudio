@@ -122,6 +122,7 @@ export async function writeExportedGame(
     })),
     scripts: scripts.map(one => ({ script: one.script, file: `scripts/${named.get(one.script)}` })),
     assets,
+    ...(request.modelAssets ? { modelAssets: request.modelAssets } : {}),
     ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
   }
 

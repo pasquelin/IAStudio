@@ -4,6 +4,7 @@ import { fetchOriginalAsset } from '@/helpers/assetFetch'
 import { createWorkerPort } from '../core/workerPort'
 import LossyTextureWorker from './lossyTexture.worker?worker'
 import type { LossyTextureResponse } from './lossyTextureMessage'
+import { optimizedGlbTextures } from './lossyGlbTextures'
 
 export type LossyTextureWatch = {
   signal?: AbortSignal
@@ -32,10 +33,7 @@ export async function compileLossyTextures(
 
   const active = ports ?? browserTexturePorts()
   const overrides: ExportedAssetOverride[] = []
-  const quality =
-    options.textureCompression === 'off'
-      ? undefined
-      : DEFAULT_OPTIMIZATION_POLICY.jpegQuality[options.textureCompression] / 100
+  const quality = textureQuality(options)
   try {
     for (const [index, assetId] of assetIds.entries()) {
       if (watch.signal?.aborted) throw new DOMException('Texture compilation aborted', 'AbortError')
@@ -59,6 +57,38 @@ export async function compileLossyTextures(
   } finally {
     active.dispose?.()
   }
+}
+
+export async function compileLossyModelTextures(
+  assetIds: readonly string[],
+  options: LossyOptimization,
+  signal?: AbortSignal,
+): Promise<readonly ExportedAssetOverride[]> {
+  if (options.textureReduction === 'off' && options.textureCompression === 'off') return []
+  const active = browserTexturePorts()
+  const quality = textureQuality(options)
+  const scale = DEFAULT_OPTIMIZATION_POLICY.textureScale[options.textureReduction]
+  const overrides: ExportedAssetOverride[] = []
+  try {
+    for (const assetId of assetIds) {
+      if (signal?.aborted) throw new DOMException('Texture compilation aborted', 'AbortError')
+      const file = await active.read(assetId, signal)
+      if (!file) continue
+      const optimized = await optimizedGlbTextures(assetId, file, async (id, bytes) =>
+        active.transform(id, bytes, scale, quality, signal),
+      )
+      if (optimized) overrides.push(optimized)
+    }
+    return overrides
+  } finally {
+    active.dispose?.()
+  }
+}
+
+function textureQuality(options: LossyOptimization): number | undefined {
+  return options.textureCompression === 'off'
+    ? undefined
+    : DEFAULT_OPTIMIZATION_POLICY.jpegQuality[options.textureCompression] / 100
 }
 
 function browserTexturePorts(): TextureCompilerPorts {

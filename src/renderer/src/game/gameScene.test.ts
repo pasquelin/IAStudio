@@ -28,10 +28,16 @@ import {
 import { colliderFromNode } from './colliderFromNode'
 import { buildGameScene } from './gameScene'
 import { WORTH_INSTANCING } from '@/engines/scene/grouping'
-import { compileLossyWorld } from '@/engines/scene/lossyWorldCompiler'
+import { compileLossyWorld as compilePlannedWorld } from '@/engines/scene/lossyWorldCompiler'
+import { analyzeLossyWorld } from '@/engines/scene/worldAnalyzer'
+import type { LossyOptimization } from '@shared/domain/gameExport'
 import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 
 const NOTHING: AssetPort = { urlOf: () => null }
+
+function compileLossyWorld(state: SceneState, options: LossyOptimization) {
+  return compilePlannedWorld(state, options, analyzeLossyWorld(state.nodes))
+}
 const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
 
 const scene = (nodes: readonly SceneNode[]): SceneState => ({ ...EMPTY_SCENE, nodes: [...nodes] })

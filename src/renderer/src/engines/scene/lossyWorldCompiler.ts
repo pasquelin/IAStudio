@@ -10,17 +10,18 @@ import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import type { BufferGeometry } from 'three'
 import type { SceneNode, SceneState } from './sceneState'
 import { compiledMeshOf } from './compiledGeometry'
-import { lossyCandidatesOf } from './worldAnalyzer'
+import type { LossyWorldPlan } from './worldAnalyzer'
 
 /** Compiles only runtime hints; the authoring state is neither mutated nor embedded in the plan. */
 export function compileLossyWorld(
   state: Pick<SceneState, 'nodes'>,
   options: LossyOptimization,
+  plan: LossyWorldPlan,
 ): CompiledSceneOptimization | undefined {
   if (!options.generateLods && options.geometrySimplification === 'off') return undefined
 
   const ratio = DEFAULT_OPTIMIZATION_POLICY.simplificationRatios[options.geometrySimplification]
-  const candidates = new Set(lossyCandidatesOf(state.nodes).lodCandidates.map(one => one.nodeId))
+  const candidates = new Set(plan.nodeIds)
   const nodes = state.nodes.flatMap(node =>
     candidates.has(node.id) ? compiledNode(node, options.generateLods, ratio) : [],
   )
@@ -34,12 +35,13 @@ export async function compileLossyWorldGeometry(
   state: Pick<SceneState, 'nodes'>,
   options: LossyOptimization,
   carve: CarvedGeometryCompiler,
+  plan: LossyWorldPlan,
 ): Promise<CompiledSceneOptimization | undefined> {
-  const plan = compileLossyWorld(state, options)
-  if (!plan) return undefined
+  const compiled = compileLossyWorld(state, options, plan)
+  if (!compiled) return undefined
 
   const nodes = await Promise.all(
-    plan.nodes.map(async node => {
+    compiled.nodes.map(async node => {
       if (node.lodCarved) {
         const meshes = await compileGraphs(node.lodCarved, carve)
         return meshes ? { nodeId: node.nodeId, lodMeshes: meshes } : node

@@ -28,6 +28,7 @@ const KTX2_PATH = './decoders/basis/'
  */
 export type GltfSource = {
   load: ModelSource
+  parse?: (bytes: ArrayBuffer, url: string) => Promise<Object3D>
   /**
    * A file read for the ANIMATION it carries rather than for its shape, and read whatever format
    * it is in: the studio takes `.glb`, `.gltf` and `.fbx`, and a shipped animation is named by
@@ -99,6 +100,7 @@ export function createGltfSource(
 
   return {
     load: async url => parse(await bytesOf(url), url),
+    parse,
     loadAnimation: async url => parse(await bytesOf(url), url),
     // `KTX2Loader` counts live instances: an undisposed one makes the next engine warn about itself.
     dispose: () => {

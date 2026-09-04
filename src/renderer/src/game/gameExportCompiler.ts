@@ -14,11 +14,15 @@ import { useProject } from '@/stores/project'
 import { compiledScripts } from '@/stores/play'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { compileLossyWorldGeometry } from '@/engines/scene/lossyWorldCompiler'
-import { compileLossyTextures } from '@/engines/scene/lossyTextureCompiler'
+import {
+  compileLossyModelTextures,
+  compileLossyTextures,
+} from '@/engines/scene/lossyTextureCompiler'
 import { compileLossyModels } from '@/engines/scene/lossyModelCompiler'
 import { createCsgEvaluator } from '@/engines/csg/csgEvaluator'
 import CsgWorker from '@/engines/csg/csg.worker?worker'
-import { runtimeAssetIds, runtimeModelAssetIds, runtimeTextureAssetIds } from './runtimeAssetIds'
+import { runtimeAssetIds } from './runtimeAssetIds'
+import { analyzeLossyWorld, lossyCandidatesOf } from '@/engines/scene/worldAnalyzer'
 
 export type GameExportFailure = 'noBridge' | 'noProject' | 'noScene' | 'unknownScene' | 'declined'
 
@@ -48,17 +52,26 @@ export async function exportGameProject(options: GameExportOptions): Promise<Gam
     : projectScenes.scenes[0]
   if (!entry) return { ok: false, reason: 'unknownScene' }
 
-  const [compiled, assetOverrides] = await Promise.all([
+  const [compiled, textureOverrides, modelTextureOverrides] = await Promise.all([
     compiledScripts(),
     compileLossyTextures(projectScenes.textureAssetIds, options.lossyOptimization, {
       signal: options.signal,
     }),
+    compileLossyModelTextures(
+      projectScenes.modelAssetIds,
+      options.lossyOptimization,
+      options.signal,
+    ),
   ])
+  const assetOverrides = [...textureOverrides, ...modelTextureOverrides]
   const request: GameExportRequest = {
     title: options.title ?? projectName(project.path),
     entryScene: entry.id,
     scenes: projectScenes.scenes,
     scripts: compiled.modules.map(module => ({ script: module.script, code: module.code })),
+    ...(Object.keys(projectScenes.modelAssets).length > 0
+      ? { modelAssets: projectScenes.modelAssets }
+      : {}),
     ...(hasVisualChanges(options.lossyOptimization)
       ? { lossyOptimization: options.lossyOptimization }
       : {}),
@@ -74,6 +87,8 @@ export async function exportGameProject(options: GameExportOptions): Promise<Gam
 type CompiledProjectScenes = {
   scenes: GameExportRequest['scenes']
   textureAssetIds: readonly string[]
+  modelAssets: NonNullable<GameExportRequest['modelAssets']>
+  modelAssetIds: readonly string[]
 }
 
 async function compileProjectScenes(
@@ -89,9 +104,16 @@ async function compileProjectScenes(
     }),
   )
   const modelAssetIds = new Set<string>()
+  const protectedModelAssetIds = new Set<string>()
   for (const state of states.values()) {
-    for (const id of runtimeModelAssetIds(state)) modelAssetIds.add(id)
+    for (const node of state.nodes) {
+      if (node.type !== 'model') continue
+      ;(node.optimization?.mode === 'exclude' ? protectedModelAssetIds : modelAssetIds).add(
+        node.model.assetId,
+      )
+    }
   }
+  for (const id of protectedModelAssetIds) modelAssetIds.delete(id)
   const modelPlans = await compileLossyModels(
     [...modelAssetIds].map(id => ({
       id,
@@ -112,6 +134,7 @@ async function compileProjectScenes(
           state,
           lossyOptimization,
           async graph => await csg.acquire(graph),
+          analyzeLossyWorld(state.nodes),
         )
         const modelNodes = state.nodes.flatMap(node => {
           if (node.type !== 'model' || node.optimization?.mode === 'exclude') return []
@@ -120,19 +143,7 @@ async function compileProjectScenes(
             : []
         })
         const optimizedNodes = [...(geometryPlan?.nodes ?? []), ...modelNodes]
-        const modelAssets = Object.fromEntries(
-          modelNodes.flatMap(node => {
-            const plan = node.modelAssetId ? modelPlans.get(node.modelAssetId) : undefined
-            return node.modelAssetId && plan ? [[node.modelAssetId, plan]] : []
-          }),
-        )
-        const optimization =
-          optimizedNodes.length > 0
-            ? {
-                nodes: optimizedNodes,
-                ...(Object.keys(modelAssets).length > 0 ? { modelAssets } : {}),
-              }
-            : undefined
+        const optimization = optimizedNodes.length > 0 ? { nodes: optimizedNodes } : undefined
         return {
           id: document.id,
           title: document.title,
@@ -143,13 +154,15 @@ async function compileProjectScenes(
       }),
     )
     if (signal?.aborted) throw new DOMException('World compilation aborted', 'AbortError')
-    const textureAssetIds = new Set<string>()
-    for (const state of states.values()) {
-      for (const id of runtimeTextureAssetIds(state)) textureAssetIds.add(id)
-    }
+    const allNodes = [...states.values()].flatMap(state => state.nodes)
+    const textureAssetIds = lossyCandidatesOf(allNodes).textureCandidates.map(
+      candidate => candidate.assetId,
+    )
     return {
       scenes: scenes.flatMap(scene => (scene ? [scene] : [])),
-      textureAssetIds: [...textureAssetIds],
+      textureAssetIds,
+      modelAssets: Object.fromEntries(modelPlans),
+      modelAssetIds: [...modelAssetIds],
     }
   } finally {
     signal?.removeEventListener('abort', abort)

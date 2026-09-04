@@ -1,5 +1,7 @@
 import {
+  LOD,
   Mesh,
+  PropertyBinding,
   SkinnedMesh,
   type BufferGeometry,
   type Material,
@@ -71,6 +73,8 @@ export type OptimizationImpact = {
 
 export type LossyCandidate = { nodeId: string }
 export type TextureOptimizationCandidate = { assetId: string }
+export type LossyWorldPlan = { nodeIds: readonly string[] }
+export type ModelOptimizationCandidate = { meshIndex: number; geometry: BufferGeometry }
 
 export type OptimizationPlan = {
   classifications: readonly ClassifiedObject[]
@@ -339,6 +343,68 @@ export function lossyCandidatesOf(
     lodCandidates,
     textureCandidates: [...textures].sort(byCodeUnit).map(assetId => ({ assetId })),
   }
+}
+
+export function analyzeLossyWorld(nodes: readonly SceneNode[]): LossyWorldPlan {
+  return { nodeIds: lossyCandidatesOf(nodes).lodCandidates.map(candidate => candidate.nodeId) }
+}
+
+export function analyzeModelOptimization(
+  root: Object3D,
+  generateLods: boolean,
+): readonly ModelOptimizationCandidate[] {
+  const animated = animatedModelNodeNames(root)
+  const candidates: ModelOptimizationCandidate[] = []
+  let meshIndex = 0
+  root.traverse(object => {
+    if (!(object instanceof Mesh)) return
+    const index = meshIndex
+    meshIndex += 1
+    const attributes = Object.keys(object.geometry.attributes)
+    const color = object.geometry.getAttribute('color')
+    if (
+      !(object instanceof SkinnedMesh) &&
+      !animated.has(object.name) &&
+      (!generateLods || !hasLodAncestor(object)) &&
+      Object.keys(object.geometry.morphAttributes).length === 0 &&
+      !Array.isArray(object.material) &&
+      attributes.every(attribute => SIMPLIFIED_MODEL_ATTRIBUTES.has(attribute)) &&
+      (!color || color.itemSize === 3) &&
+      object.geometry.drawRange.start === 0 &&
+      object.geometry.drawRange.count === Infinity &&
+      object.geometry.getAttribute('position')?.count > 3
+    ) {
+      candidates.push({ meshIndex: index, geometry: object.geometry })
+    }
+  })
+  return candidates
+}
+
+const SIMPLIFIED_MODEL_ATTRIBUTES = new Set(['position', 'normal', 'uv', 'tangent', 'color'])
+
+function hasLodAncestor(mesh: Mesh): boolean {
+  let parent = mesh.parent
+  while (parent) {
+    if (parent instanceof LOD) return true
+    parent = parent.parent
+  }
+  return false
+}
+
+function animatedModelNodeNames(root: Object3D): ReadonlySet<string> {
+  const names = new Set<string>()
+  for (const clip of root.animations) {
+    for (const track of clip.tracks) {
+      try {
+        names.add(PropertyBinding.parseTrackName(track.name).nodeName)
+      } catch {
+        const all = new Set<string>()
+        root.traverse(object => all.add(object.name))
+        return all
+      }
+    }
+  }
+  return names
 }
 
 function nextTask(): Promise<void> {
