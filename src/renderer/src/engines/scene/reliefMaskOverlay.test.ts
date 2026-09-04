@@ -78,4 +78,14 @@ describe('a painted mask overlay on a drawn terrain', () => {
     expect(colorAt(surface, 4, 0)).toEqual([1, 1, 1])
     surface.dispose()
   })
+
+  it('leaves a terrain with no painted mask untouched', () => {
+    const surface = createReliefSurface(new Scene())
+
+    surface.sync(worldOf(), samplesOf())
+
+    // A raise dab on a terrain nobody painted rewrote 12 675 floats of white per dirtied chunk.
+    expect(surface.meshOf(TERRAIN, 0, 0)?.geometry.getAttribute('color')).toBeUndefined()
+    surface.dispose()
+  })
 })
