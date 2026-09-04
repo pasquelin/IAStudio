@@ -125,6 +125,9 @@ describe('ActionIndex', () => {
     expect(
       discovery.find(hit => hit.action.name === 'models.search')?.action.description,
     ).toContain('not the content to generate')
+    expect(
+      discovery.find(hit => hit.action.name === 'generator.prepare')?.workflowScore,
+    ).toBeGreaterThan(0)
   })
 
   it('uses structural scope without mixing it into the lexical query', () => {

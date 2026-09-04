@@ -2,7 +2,7 @@ import { findActions, refused, type ActionOutcome } from '@shared/domain/assista
 import { commandDescriptor } from '@shared/domain/command'
 import { primaryRoleOf } from '@shared/domain/aiRole'
 import { LANDING_TARGETS } from '@shared/domain/landingTarget'
-import { MODEL_FAMILIES } from '@shared/domain/model'
+import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES } from '@shared/domain/model'
 import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { englishText } from '@shared/i18n'
@@ -259,10 +259,18 @@ export const CORE_HANDLERS: ActionHandlers = {
   'models.search': input => {
     const family = oneOf(input, 'family', MODEL_FAMILIES)
     return withBridge(async bridge => {
-      const page = await bridge.provider.searchModels({
-        search: textOf(input, 'query') ?? '',
+      const operation = textOf(input, 'operation')
+      const query = {
         ...(family ? { family } : {}),
-      })
+        ...(operation && family && CAPABILITIES_BY_FAMILY[family].includes(operation)
+          ? { capabilities: [operation] }
+          : {}),
+      }
+      const search = textOf(input, 'query')
+      let page = await bridge.provider.searchModels({ ...query, ...(search ? { search } : {}) })
+      if (page.items.length === 0 && search && family) {
+        page = await bridge.provider.searchModels(query)
+      }
       return page.items.map(model => ({ id: model.id, name: model.name, family: model.family }))
     })
   },

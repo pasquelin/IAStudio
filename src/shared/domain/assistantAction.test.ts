@@ -24,6 +24,7 @@ describe('the node every family that points at one names', () => {
       labelKey: 'assistant.fields.nodeId',
       required: true,
       picks: 'node',
+      reference: 'node',
     })
   })
 })

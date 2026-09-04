@@ -1,4 +1,5 @@
 import {
+  ACTION_RESOURCES,
   ACTION_REGISTRY,
   assistantAction,
   type ActionResource,
@@ -73,6 +74,92 @@ const verificationStep = (): PlannedStep => ({
 
 const MAX_MISSION_STEPS = 48
 
+type ReferenceRefusal = {
+  ok: false
+  refusal: 'untrustedReference'
+  field: string
+  given: string
+  validReferences: readonly string[]
+}
+
+function referenceValues(value: unknown, key: string): readonly string[] {
+  if (Array.isArray(value)) return value.flatMap(item => referenceValues(item, key))
+  if (typeof value !== 'object' || value === null) return []
+  const record = Object.entries(value)
+  return record.flatMap(([entryKey, entryValue]) =>
+    entryKey === key && typeof entryValue === 'string' ? [entryValue] : [],
+  )
+}
+
+function referencesReturned(
+  mission: Mission,
+  resource: ActionResource,
+): { authoritative: boolean; values: readonly string[] } {
+  const steps = mission.plan.steps.filter(
+    step =>
+      step.kind === 'action' &&
+      step.state === 'completed' &&
+      (assistantAction(step.call.action)?.returns ?? []).includes(resource),
+  )
+  const reference = ACTION_RESOURCES[resource].reference
+  return {
+    authoritative: steps.length > 0,
+    values: reference
+      ? [...new Set(steps.flatMap(step => referenceValues(step.result, reference.key)))]
+      : [],
+  }
+}
+
+function resourceAvailable(mission: Mission, resource: ActionResource): boolean {
+  return mission.plan.steps.some(step => {
+    if (step.kind !== 'action' || step.state !== 'completed') return false
+    const descriptor = assistantAction(step.call.action)
+    if (descriptor?.produces?.includes(resource)) return true
+    if (!descriptor?.returns?.includes(resource)) return false
+    return Array.isArray(step.result)
+      ? step.result.length > 0
+      : step.result !== undefined && step.result !== null
+  })
+}
+
+function missingResources(
+  mission: Mission,
+  step: Extract<Mission['plan']['steps'][number], { kind: 'action' }>,
+): readonly ActionResource[] {
+  const descriptor = assistantAction(step.call.action)
+  return [...(descriptor?.requires ?? []), ...(descriptor?.inputs ?? [])].filter(
+    resource => !resourceAvailable(mission, resource),
+  )
+}
+
+function referenceRefusal(
+  mission: Mission,
+  step: Extract<Mission['plan']['steps'][number], { kind: 'action' }>,
+): ReferenceRefusal | null {
+  const descriptor = assistantAction(step.call.action)
+  if (!descriptor) return null
+  for (const field of descriptor.fields) {
+    if (!field.reference || typeof step.call.input[field.key] !== 'string') continue
+    const resources = (descriptor.inputs ?? []).filter(
+      resource => ACTION_RESOURCES[resource].reference?.kind === field.reference,
+    )
+    const returned = resources.map(resource => referencesReturned(mission, resource))
+    if (!returned.some(result => result.authoritative)) continue
+    const validReferences = [...new Set(returned.flatMap(result => result.values))]
+    const given = step.call.input[field.key]
+    if (typeof given === 'string' && !validReferences.includes(given)) {
+      return {
+        ok: false,
+        refusal: 'untrustedReference',
+        field: field.key,
+        given,
+        validReferences,
+      }
+    }
+  }
+  return null
+}
+
 function dependsOnReturned(
   resource: ActionResource,
   produced: ReadonlySet<ActionResource>,
@@ -106,7 +193,21 @@ function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly P
     actions.push(actionStep(call))
     for (const resource of descriptor?.returns ?? []) returned.add(resource)
   }
-  return actions.length > 0 ? [...actions, verificationStep()] : verification ? [] : actions
+  const last = answer.calls.at(-1)
+  const descriptor = last ? assistantAction(last.action) : null
+  const enablesContinuation = [
+    ...(descriptor?.produces ?? []),
+    ...(descriptor?.returns ?? []),
+  ].some(resource =>
+    ACTION_REGISTRY.some(
+      action => action.inputs?.includes(resource) || action.requires?.includes(resource),
+    ),
+  )
+  return actions.length > 0
+    ? [...actions, enablesContinuation ? reasoningStep() : verificationStep()]
+    : verification
+      ? []
+      : actions
 }
 
 const jobIdOf = (value: unknown): string | null => {
@@ -192,8 +293,36 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         steps: plannedFrom(answer, true),
       }
     }
+    const missing = missingResources(mission, step)
+    if (missing.length > 0) {
+      return {
+        kind: 'planned',
+        result: {
+          ok: false,
+          refusal: 'missingResources',
+          resources: missing,
+          producers: ACTION_REGISTRY.filter(action =>
+            missing.some(
+              resource => action.produces?.includes(resource) || action.returns?.includes(resource),
+            ),
+          ).map(action => action.name),
+        },
+        steps: [reasoningStep()],
+      }
+    }
+    const refused = referenceRefusal(mission, step)
+    if (refused) {
+      return { kind: 'planned', result: refused, steps: [reasoningStep()] }
+    }
     const outcome = await deps.actions.run(step.call, signal)
     if (!outcome.ok) {
+      if (outcome.refusal === 'badInput' || outcome.refusal === 'notFound') {
+        return {
+          kind: 'planned',
+          result: { ...outcome, action: step.call.action, input: step.call.input },
+          steps: [reasoningStep()],
+        }
+      }
       return { kind: 'failed', error: `action ${step.call.action}: ${outcome.refusal}` }
     }
     const jobId = jobIdOf(outcome.data)

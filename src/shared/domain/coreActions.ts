@@ -114,7 +114,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     reach: 'both',
     returns: ['generationModelCandidates'],
     fields: [
-      { key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true },
+      { key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: false },
       {
         key: 'family',
         kind: 'choice',
@@ -122,6 +122,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         required: false,
         options: MODEL_FAMILIES,
       },
+      { key: 'operation', kind: 'text', labelKey: 'assistant.fields.operation', required: false },
     ],
   }),
   action({
@@ -140,7 +141,13 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         required: true,
         options: MODEL_FAMILIES,
       },
-      { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
+      {
+        key: 'modelId',
+        kind: 'text',
+        labelKey: 'assistant.fields.modelId',
+        required: true,
+        reference: 'model',
+      },
     ],
   }),
   action({
@@ -150,7 +157,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'both',
-    inputs: ['generationModelCandidates'],
+    inputs: ['generationModelCandidates', 'generationModelFields'],
     produces: ['preparedGeneration'],
     fields: [
       {
@@ -160,7 +167,13 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
         required: true,
         options: MODEL_FAMILIES,
       },
-      { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
+      {
+        key: 'modelId',
+        kind: 'text',
+        labelKey: 'assistant.fields.modelId',
+        required: true,
+        reference: 'model',
+      },
       /**
        * 🛑 The employment, since a family alone names its FIRST — so `code` armed `txt2code` and
        * a call could never reach `code2code`, which is what « rewrite this script » is.

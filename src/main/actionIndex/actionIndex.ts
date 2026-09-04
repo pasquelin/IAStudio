@@ -154,6 +154,18 @@ function workflowScoresOf(
     }
   }
   for (const hit of ranked.slice(0, 3)) visit(hit.action, 6, new Set())
+  for (const hit of ranked) {
+    for (const resource of [...hit.action.produces, ...hit.action.returns]) {
+      for (const consumer of hits.filter(
+        candidate =>
+          candidate.action.requires.includes(resource) ||
+          candidate.action.inputs.includes(resource),
+      )) {
+        scores.set(consumer.action.name, Math.max(scores.get(consumer.action.name) ?? 0, 3))
+        visit(consumer.action, 6, new Set())
+      }
+    }
+  }
   for (const resource of available) {
     for (const hit of ranked.filter(
       candidate =>

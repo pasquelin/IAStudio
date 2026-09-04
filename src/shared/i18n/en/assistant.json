@@ -11,7 +11,7 @@
       },
       "modelsSearch": {
         "title": "Search for a model",
-        "description": "Searches generation engines by model name or identifier, narrowed to one family when given. Search for the engine to run, not the content to generate; use the family with a broad query when no model name was requested. Changes nothing on screen."
+        "description": "Searches generation engines by model name or identifier, family and operation. The query is optional and names the engine, not the content to generate; if no engine matches it, the compatible family remains available. Changes nothing on screen."
       },
       "modelsSelect": {
         "title": "Pick a model",

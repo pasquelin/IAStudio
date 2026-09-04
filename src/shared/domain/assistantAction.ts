@@ -1,7 +1,7 @@
 import { HEX_COLOR } from './color'
 import type { FieldKind } from './model'
 import { ENVIRONMENT_KINDS } from './scene'
-import type { ActionResource } from './actionResource'
+import type { ActionReferenceKind, ActionResource } from './actionResource'
 /**
  * Every action the studio publishes, in one list.
  *
@@ -82,6 +82,7 @@ export type ActionField = {
    * that asked for a FILE under it. A second kind comes with a second label.
    */
   picks?: 'folder' | 'node'
+  reference?: ActionReferenceKind
   min?: number
   max?: number
   /** A list of `kind` rather than one of it. `raw` stays a single value — it is already open. */
@@ -144,6 +145,7 @@ export const NODE_ID: ActionField = {
   labelKey: 'assistant.fields.nodeId',
   required: true,
   picks: 'node',
+  reference: 'node',
 }
 
 /** How one works on a channel or a row — the same three flags, two families. */

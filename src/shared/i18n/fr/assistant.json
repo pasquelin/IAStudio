@@ -11,7 +11,7 @@
       },
       "modelsSearch": {
         "title": "Chercher un modèle",
-        "description": "Cherche un moteur de génération par nom ou identifiant de modèle, en se limitant à une famille si elle est précisée. La recherche vise le moteur à exécuter, pas le contenu à générer ; si aucun modèle n’est nommé, utiliser la famille avec une requête large. Ne change rien à l’écran."
+        "description": "Cherche un moteur de génération par nom ou identifiant, famille et opération. La requête est facultative et nomme le moteur, pas le contenu à générer ; si aucun moteur n’y correspond, la famille compatible reste proposée. Ne change rien à l’écran."
       },
       "modelsSelect": {
         "title": "Choisir un modèle",

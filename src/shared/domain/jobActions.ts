@@ -24,8 +24,15 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     inputs: ['generationModelCandidates'],
+    returns: ['generationModelFields'],
     fields: [
-      { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
+      {
+        key: 'modelId',
+        kind: 'text',
+        labelKey: 'assistant.fields.modelId',
+        required: true,
+        reference: 'model',
+      },
     ],
   }),
   action({

@@ -271,6 +271,158 @@ describe('mission runtime', () => {
     expect(requests).toHaveLength(3)
   })
 
+  it('rejects an invented reference after an authoritative action returned valid values', async () => {
+    const time = clock()
+    const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+    const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+    const search: AssistantCall = {
+      action: 'models.search',
+      input: { query: '3d', family: '3d' },
+    }
+    const invented: AssistantCall = {
+      action: 'models.select',
+      input: { family: '3d', modelId: 'invented' },
+    }
+    const grounded: AssistantCall = {
+      action: 'models.select',
+      input: { family: '3d', modelId: 'model-3d' },
+    }
+    const { brain } = brainWith([
+      { say: '', calls: [search], cost: 0 },
+      { say: '', calls: [invented], cost: 0 },
+      { say: '', calls: [grounded], cost: 0 },
+      { say: 'Done.', calls: [], cost: 0 },
+    ])
+    const run = vi.fn(async (call: AssistantCall): Promise<ActionOutcome> => ({
+      ok: true,
+      data: call.action === 'models.search' ? [{ id: 'model-3d' }] : undefined,
+    }))
+    const runtime = createMissionRuntime({
+      manager,
+      context: { build: async ({ mission }) => contextFor(mission) },
+      brain,
+      actions: { run, settle: vi.fn() },
+      jobs: { list: () => [] },
+      revisions: { read: async () => ({ current: [], unavailable: [] }) },
+      clock: time,
+    })
+
+    const mission = await runtime.create('Generate a model', {})
+
+    expect(run.mock.calls.map(call => call[0])).toEqual([search, grounded])
+    expect(
+      mission.plan.steps.some(
+        step => step.result && JSON.stringify(step.result).includes('untrustedReference'),
+      ),
+    ).toBe(true)
+  })
+
+  it('does not execute an action before its structured input resource exists', async () => {
+    const time = clock()
+    const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+    const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+    const { brain } = brainWith([
+      {
+        say: '',
+        calls: [
+          {
+            action: 'generator.prepare',
+            input: { family: '3d', modelId: 'invented', parameters: { prompt: 'chest' } },
+          },
+        ],
+        cost: 0,
+      },
+      { say: 'Done.', calls: [], cost: 0 },
+    ])
+    const run = vi.fn(async (): Promise<ActionOutcome> => ({ ok: true }))
+    const runtime = createMissionRuntime({
+      manager,
+      context: { build: async ({ mission }) => contextFor(mission) },
+      brain,
+      actions: { run, settle: vi.fn() },
+      jobs: { list: () => [] },
+      revisions: { read: async () => ({ current: [], unavailable: [] }) },
+      clock: time,
+    })
+
+    const mission = await runtime.create('Generate a model', {})
+
+    expect(run).not.toHaveBeenCalled()
+    expect(
+      mission.plan.steps.some(
+        step => step.result && JSON.stringify(step.result).includes('missingResources'),
+      ),
+    ).toBe(true)
+  })
+
+  it('replans after a reparable action input refusal', async () => {
+    const time = clock()
+    const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+    const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+    const first: AssistantCall = { action: 'project.create', input: { wrong: true } }
+    const corrected: AssistantCall = { action: 'project.create', input: { name: 'Boat' } }
+    const { brain } = brainWith([
+      { say: '', calls: [first], cost: 0 },
+      { say: '', calls: [corrected], cost: 0 },
+      { say: 'Done.', calls: [], cost: 0 },
+      { say: 'Done.', calls: [], cost: 0 },
+    ])
+    let attempts = 0
+    const run = vi.fn(async (_call: AssistantCall): Promise<ActionOutcome> =>
+      attempts++ === 0
+        ? { ok: false, refusal: 'badInput', detail: 'no field "wrong" — use "name"' }
+        : { ok: true },
+    )
+    const runtime = createMissionRuntime({
+      manager,
+      context: { build: async ({ mission }) => contextFor(mission) },
+      brain,
+      actions: { run, settle: vi.fn() },
+      jobs: { list: () => [] },
+      revisions: { read: async () => ({ current: [], unavailable: [] }) },
+      clock: time,
+    })
+
+    const mission = await runtime.create('Create a project', {})
+
+    expect(mission.state).toBe('completed')
+    expect(run.mock.calls.map(call => call[0])).toEqual([first, corrected])
+  })
+
+  it('continues planning when an action result enables another action', async () => {
+    const time = clock()
+    const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+    const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+    const { brain, requests } = brainWith([
+      {
+        say: '',
+        calls: [{ action: 'models.search', input: { family: 'image' } }],
+        cost: 0,
+      },
+      { say: 'Done.', calls: [], cost: 0 },
+    ])
+    const runtime = createMissionRuntime({
+      manager,
+      context: { build: async ({ mission }) => contextFor(mission) },
+      brain,
+      actions: {
+        run: async () => ({ ok: true, data: [{ id: 'model-image' }] }),
+        settle: vi.fn(),
+      },
+      jobs: { list: () => [] },
+      revisions: { read: async () => ({ current: [], unavailable: [] }) },
+      clock: time,
+    })
+
+    const mission = await runtime.create('Generate an image', {})
+
+    expect(requests).toHaveLength(2)
+    expect(
+      mission.plan.steps.some(step => step.kind === 'reason' && step.title === 'Continue mission'),
+    ).toBe(true)
+    expect(mission.plan.steps.some(step => step.kind === 'verify')).toBe(false)
+  })
+
   it('persists a user answer before resuming planning', async () => {
     const time = clock()
     const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
