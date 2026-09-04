@@ -12,6 +12,7 @@ import { formatBytes, formatDecimal } from '@/helpers/format'
 import { assetsById, useAssets } from '@/stores/assets'
 import { characterOf, useCharacters } from '@/stores/character'
 import {
+  fileTexturesOfNode,
   materialNamesOfNode,
   materialSlotsOfNode,
   modelPartsOfNode,
@@ -44,6 +45,7 @@ export function CharacterInspectorModel({
   )
   const stats = useModelFiles(state => modelStatsOf(state, documentId))
   const names = useModelFiles(state => materialNamesOfNode(state, documentId, nodeId))
+  const fileTextures = useModelFiles(state => fileTexturesOfNode(state, documentId, nodeId))
   const selectedPartId = useModelFiles(state => selectedModelPartOf(state, documentId))
   const selectedPart = useModelFiles(state =>
     modelPartsOfNode(state, documentId, nodeId).find(
@@ -76,6 +78,7 @@ export function CharacterInspectorModel({
         dress={character.dress}
         slots={slots}
         extractable={asset?.location === 'local'}
+        ownTextures={fileTextures}
         names={names}
         slotIndices={selectedPart?.materialSlots}
         onChange={dress => run(assetId, dressCharacter(dress))}

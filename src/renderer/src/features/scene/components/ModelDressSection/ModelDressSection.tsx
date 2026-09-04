@@ -33,6 +33,8 @@ export type ModelDressSectionProps = {
   slots: number
   /** Only a local model has a file the main process can extract from. */
   extractable: boolean
+  /** Whether the loaded file still carries textures that can be extracted or restored. */
+  ownTextures?: boolean
   /** Material names read from the model file, in slot order. */
   names?: readonly string[]
   slotIndices?: readonly number[]
@@ -49,6 +51,7 @@ export function ModelDressSection({
   dress,
   slots,
   extractable,
+  ownTextures,
   names = [],
   slotIndices,
   onChange,
@@ -57,7 +60,8 @@ export function ModelDressSection({
   const { t } = useTranslation()
   const pictures = useProjectPictures(PICTURES)
   const pictureAssets = useProjectPictureAssets(PICTURES)
-  const mode: DressMode = dress?.kind === 'plain' ? 'image' : (dress?.kind ?? 'own')
+  const hasOwnTextures = ownTextures !== false
+  const mode = dressMode(dress, hasOwnTextures)
   const imageAssetId = imageAssetIdOf(dress)
 
   const extract = async (): Promise<readonly Asset[] | null> => {
@@ -93,6 +97,12 @@ export function ModelDressSection({
     )
   }
   const appliesImage = slots === 1
+  const modes = dressModes(
+    hasOwnTextures,
+    t('inspector.modelOwnMaterial'),
+    t('inspector.modelDressImage'),
+    t('inspector.modelDressMaterials'),
+  )
 
   return (
     <PropertySection
@@ -148,11 +158,7 @@ export function ModelDressSection({
             />
           ) : undefined
         }
-        options={[
-          { value: 'own', label: t('inspector.modelOwnMaterial') },
-          { value: 'image', label: t('inspector.modelDressImage') },
-          { value: 'materials', label: t('inspector.modelDressMaterials') },
-        ]}
+        options={modes}
         // A mode with nothing in it yet, rather than nothing at all: what says which mode a model
         // is in is the dress being there, so an empty one is what makes the choice stick.
         onChange={next => onChange(dressFor(next))}
@@ -181,6 +187,26 @@ export function ModelDressSection({
       )}
     </PropertySection>
   )
+}
+
+function dressModes(
+  hasOwnTextures: boolean,
+  own: string,
+  image: string,
+  materials: string,
+): Array<{ value: DressMode; label: string }> {
+  const modes: Array<{ value: DressMode; label: string }> = [
+    { value: 'image', label: image },
+    { value: 'materials', label: materials },
+  ]
+  if (hasOwnTextures) modes.unshift({ value: 'own', label: own })
+  return modes
+}
+
+function dressMode(dress: ModelDressRef | undefined, hasOwnTextures: boolean): DressMode {
+  if (dress?.kind === 'plain') return 'image'
+  if (dress) return dress.kind
+  return hasOwnTextures ? 'own' : 'image'
 }
 
 function imageAssetIdOf(dress: ModelDressRef | undefined): string | null {

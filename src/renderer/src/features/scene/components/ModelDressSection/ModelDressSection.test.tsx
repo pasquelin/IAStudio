@@ -28,6 +28,27 @@ const PICTURES: Asset[] = [
 ]
 
 describe('model image dress', () => {
+  it('offers neither the file nor extraction once no embedded texture remains', () => {
+    installFakeBridge({ assets: { search: () => Promise.resolve([]) } })
+
+    render(
+      <ModelDressSection
+        assetId="model"
+        name="Model"
+        dress={undefined}
+        slots={1}
+        extractable
+        ownTextures={false}
+        onChange={vi.fn()}
+        onWearAt={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('combobox', { name: 'Recouvert par' })).toHaveValue('image')
+    expect(screen.queryByRole('option', { name: 'Celle de son fichier' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Extraire/ })).not.toBeInTheDocument()
+  })
+
   it('chooses its texture through the shared picture picker', async () => {
     installFakeBridge({ assets: { search: () => Promise.resolve(PICTURES) } })
     const onChange = vi.fn()

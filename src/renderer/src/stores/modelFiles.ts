@@ -37,6 +37,7 @@ type ModelFilesState = {
   /** How many MATERIALS each model's file carries — its slots. The count lives in the GLB. */
   materials: Record<string, Record<string, number>>
   materialNames: Record<string, Record<string, readonly string[]>>
+  fileTextures: Record<string, Record<string, boolean>>
   parts: Record<string, Record<string, readonly ModelPart[]>>
   selectedParts: Record<string, string>
   selectPart: (documentId: string, partId: string | null) => void
@@ -46,6 +47,7 @@ type ModelFilesState = {
     count: number,
     names?: readonly string[],
     parts?: readonly ModelPart[],
+    hasFileTextures?: boolean,
   ) => void
   stats: Record<string, SceneStats>
   reportStats: (documentId: string, stats: SceneStats) => void
@@ -73,6 +75,7 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
   rigs: {},
   materials: {},
   materialNames: {},
+  fileTextures: {},
   parts: {},
   selectedParts: {},
   selectPart: (documentId, partId) =>
@@ -112,7 +115,7 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       },
     })),
 
-  reportMaterials: (documentId, nodeId, count, names = [], parts = []) =>
+  reportMaterials: (documentId, nodeId, count, names = [], parts = [], hasFileTextures) =>
     set(state => ({
       materials: {
         ...state.materials,
@@ -123,6 +126,13 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
         [documentId]: { ...state.materialNames[documentId], [nodeId]: names },
       },
       parts: { ...state.parts, [documentId]: { ...state.parts[documentId], [nodeId]: parts } },
+      fileTextures:
+        hasFileTextures === undefined
+          ? state.fileTextures
+          : {
+              ...state.fileTextures,
+              [documentId]: { ...state.fileTextures[documentId], [nodeId]: hasFileTextures },
+            },
     })),
 
   reportStats: (documentId, stats) =>
@@ -150,6 +160,7 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       fits: withoutKey(state.fits, documentId),
       materials: withoutKey(state.materials, documentId),
       materialNames: withoutKey(state.materialNames, documentId),
+      fileTextures: withoutKey(state.fileTextures, documentId),
       parts: withoutKey(state.parts, documentId),
       selectedParts: withoutKey(state.selectedParts, documentId),
       stats: withoutKey(state.stats, documentId),
@@ -218,6 +229,14 @@ export function modelPartsOfNode(
   nodeId: string,
 ): readonly ModelPart[] {
   return state.parts[documentId]?.[nodeId] ?? NO_PARTS
+}
+
+export function fileTexturesOfNode(
+  state: ModelFilesState,
+  documentId: string,
+  nodeId: string,
+): boolean | undefined {
+  return state.fileTextures[documentId]?.[nodeId]
 }
 
 const NO_PARTS: readonly ModelPart[] = []

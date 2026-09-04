@@ -89,6 +89,7 @@ export type SceneRendererOptions = {
     count: number,
     names: readonly string[],
     parts: readonly ModelPart[],
+    hasFileTextures: boolean,
   ) => void
   /**
    * How well a clip from elsewhere fits this character, once both skeletons are in hand. Only

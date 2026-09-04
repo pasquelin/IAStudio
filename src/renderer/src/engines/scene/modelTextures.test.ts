@@ -166,6 +166,17 @@ describe('createModelTextures', () => {
     expect(materialOf(instance).map).toBeNull()
   })
 
+  it('reports that extraction consumed its file textures', () => {
+    const { source } = loadedModel()
+    const textures = createModelTextures(scriptedTextureCache().cache, instanceOf(source), onChange)
+
+    expect(textures.hasFileTextures()).toBe(true)
+
+    textures.detachFileTextures()
+
+    expect(textures.hasFileTextures()).toBe(false)
+  })
+
   it('removes and restores a texture carried by an unlit glTF material', () => {
     const scripted = scriptedTextureCache()
     const fileMap = new Texture()

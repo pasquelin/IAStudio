@@ -36,7 +36,7 @@ import { CameraPostSection } from '../Camera/CameraPostSection'
 import { PostProcessingSection } from '../Post/PostProcessingSection'
 import { MaterialSection } from '../../../material/components/Material/MaterialSection'
 import { ModelDressSection } from '../ModelDressSection/ModelDressSection'
-import { materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
+import { fileTexturesOfNode, materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { PathSection } from '../PathSection'
 import { AttachSection } from '../AttachSection'
 import { ShadowSection } from '../ShadowSection'
@@ -100,6 +100,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const model = useMemo(() => modelOf(node), [node])
   const modelSlots = useModelFiles(state =>
     model ? materialSlotsOfNode(state, documentId, model.id) : 0,
+  )
+  const modelFileTextures = useModelFiles(state =>
+    model ? fileTexturesOfNode(state, documentId, model.id) : undefined,
   )
   const modelAsset = useAssets(state =>
     model ? assetsById(state).get(model.model.assetId) : undefined,
@@ -246,6 +249,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               dress={model.model.dress}
               slots={modelSlots}
               extractable={modelAsset?.location === 'local'}
+              ownTextures={modelFileTextures}
               onChange={dress => edit.run(dressModel(model.id, dress))}
               // A COMMAND, so the list it edits is the one the document holds when it lands — not
               // the one this panel was drawn with, several awaits earlier.

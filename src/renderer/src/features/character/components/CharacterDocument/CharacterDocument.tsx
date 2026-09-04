@@ -214,8 +214,10 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
         useCharacterView.getState().noteCharacterSample(assetId, measured)
         stage.read(rig, extras)
       },
-      onMaterials: (id, count, names, parts) =>
-        useModelFiles.getState().reportMaterials(workshopId, id, count, names, parts),
+      onMaterials: (id, count, names, parts, hasFileTextures) =>
+        useModelFiles
+          .getState()
+          .reportMaterials(workshopId, id, count, names, parts, hasFileTextures),
       onStats: stats => useModelFiles.getState().reportStats(workshopId, stats),
       // Kept for ⌘S: only the engine ever weighs a mesh against a rig, and the save runs from
       // `documentIo` — outside this tab.

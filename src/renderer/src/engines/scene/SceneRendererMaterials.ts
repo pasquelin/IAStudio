@@ -219,7 +219,15 @@ export abstract class SceneRendererMaterials extends SceneRendererFlight {
   detachModelFileTextures(assetId: string): void {
     for (const [nodeId, maps] of this.modelMaps) {
       const node = this.applied.get(nodeId)
-      if (node?.type === 'model' && node.model.assetId === assetId) maps.detachFileTextures()
+      if (node?.type !== 'model' || node.model.assetId !== assetId) continue
+      maps.detachFileTextures()
+      this.options.onMaterials?.(
+        nodeId,
+        maps.count(),
+        maps.names(),
+        maps.parts(),
+        maps.hasFileTextures(),
+      )
     }
   }
   /**

@@ -19,6 +19,8 @@ export type ModelTextures = {
   names: () => readonly string[]
   /** Meshes below the model root, with the material slots each one wears. */
   parts: () => readonly ModelPart[]
+  /** Whether the file still carries at least one texture. */
+  hasFileTextures: () => boolean
   /** Keeps or removes every texture carried by the cloned file materials. */
   fileTextures: (enabled: boolean) => void
   /** Forgets file textures after extraction, so no later mode can restore stale GPU copies. */
@@ -154,6 +156,9 @@ export function createModelTextures(
     count: () => slots.length,
     names: () => slots.map(slot => slot.held.material.name),
     parts: () => parts,
+    hasFileTextures: () =>
+      fileMaterials.some(held => held.maps.size > 0) ||
+      slots.some(slot => [...slot.held.fileMaps.values()].some(Boolean)),
     fileTextures: enabled => {
       for (const held of fileMaterials) setFileTextures(held, enabled, onChange)
       for (const slot of slots) slot.held.fileTextures = enabled
