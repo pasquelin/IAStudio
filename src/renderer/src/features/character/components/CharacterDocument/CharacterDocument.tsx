@@ -81,6 +81,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
   // Beside the ref, and not instead of it: a ref never re-renders, and the clock is a component
   // that has to learn the engine exists — `SceneDocument` holds its own the same way.
   const [live, setLive] = useState<SceneRenderer | null>(null)
+  const [landedAssetId, setLandedAssetId] = useState<string | null>(null)
   const character = useCharacters(state => characterOf(state, assetId))
   const name = useAssets(state => assetsById(state).get(assetId)?.name ?? assetId)
   // The workshop this tab lays the model on: a scene document of this window, which is what the
@@ -220,10 +221,12 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
         useCharacterView.getState().noteCharacterSample(assetId, measured)
         stage.read(rig, extras)
       },
-      onMaterials: (id, count, names, parts, hasFileTextures, sourceIndices) =>
+      onMaterials: (id, count, names, parts, hasFileTextures, sourceIndices) => {
+        setLandedAssetId(assetId)
         useModelFiles
           .getState()
-          .reportMaterials(workshopId, id, count, names, parts, hasFileTextures, sourceIndices),
+          .reportMaterials(workshopId, id, count, names, parts, hasFileTextures, sourceIndices)
+      },
       onStats: stats => useModelFiles.getState().reportStats(workshopId, stats),
       // Kept for ⌘S: only the engine ever weighs a mesh against a rig, and the save runs from
       // `documentIo` — outside this tab.
@@ -298,10 +301,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
         }
       />
       {navigating && <SceneNavigationHint speed={flySpeed} />}
-      {/* While the FILE is still landing, never while it merely carries no skeleton: a bare mesh
-          is on screen and animatable from the panel beside it, and the sentence sat over a
-          character plainly there. `sample` is what the engine measured. */}
-      {!view.sample && (
+      {landedAssetId !== assetId && (
         <div className="pointer-events-none absolute inset-0">
           <EmptyState icon={mdiSkull} message={t('character.window.waiting')} />
         </div>

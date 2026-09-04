@@ -91,11 +91,6 @@ const showTab = (): void => {
   render(<CharacterDocument documentId={DOCUMENT} />)
 }
 
-const SAMPLE = {
-  bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
-  points: new Float32Array(),
-}
-
 const raised = (y: number): Transform => ({
   ...IDENTITY_TRANSFORM,
   position: { x: 0, y, z: 0 },
@@ -230,15 +225,13 @@ it('poses the bone the gizmo moved, and writes the skeleton only once the bar as
   expect(restOfSpine()?.position.y).toBeCloseTo(0.2, 5)
 })
 
-// The sentence is about the FILE landing, and a mesh with no skeleton is a character plainly on
-// screen — the panel beside it offers to rig it. Shown on « no rig » it stood over the model.
-it('drops the waiting note as soon as the engine has measured the mesh', async () => {
+it('drops the waiting note as soon as the model has landed', async () => {
   showTab()
 
   expect(screen.getByText('En attente du personnage…')).toBeInTheDocument()
 
   await act(async () => {
-    built[0]?.onCharacter?.('node-1', null, {}, SAMPLE)
+    built[0]?.onMaterials?.('node-1', 1, ['Material'], [], true, [0])
   })
 
   expect(screen.queryByText('En attente du personnage…')).not.toBeInTheDocument()
