@@ -270,6 +270,16 @@ describe('dressModel', () => {
     expect(dressOf(applied.revert(after))).toBeUndefined()
   })
 
+  it('keeps the remembered image when an assembled material arrives', () => {
+    const covered = dressModel('m', { kind: 'image', assetId: 'pic-1' }).apply(withModel())
+
+    expect(dressOf(wearMaterialAt('m', 0, 'mat-1').apply(covered))).toEqual({
+      kind: 'materials',
+      documentIds: ['mat-1'],
+      imageAssetId: 'pic-1',
+    })
+  })
+
   // No dress at all is « the file's own maps », which a document should not carry a field to say.
   it('drops the field when the dress is taken off', () => {
     const dressed = wearMaterialAt('m', 0, 'mat-1').apply(withModel())

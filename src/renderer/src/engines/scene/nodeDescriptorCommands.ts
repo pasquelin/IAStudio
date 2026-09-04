@@ -117,12 +117,15 @@ export function dressModel(id: string, dress: ModelDressRef | null): Command<Sce
  * the row away under the finger that just cleared it is not what clearing means.
  */
 export function wearMaterialAt(id: string, slot: number, documentId: string): Command<SceneState> {
-  return editModel(id, 'dress', model =>
-    dressed(model, {
+  return editModel(id, 'dress', model => {
+    const imageAssetId =
+      model.dress?.kind === 'image' ? model.dress.assetId : model.dress?.imageAssetId
+    return dressed(model, {
       kind: 'materials',
       documentIds: withMaterialAt(wornMaterials(model.dress), slot, documentId),
-    }),
-  )
+      ...(imageAssetId ? { imageAssetId } : {}),
+    })
+  })
 }
 
 /** The dress written onto a model — and `materialDocumentId` dropped, which is read once and

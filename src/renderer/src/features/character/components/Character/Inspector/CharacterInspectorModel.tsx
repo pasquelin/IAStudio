@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { DisplayUnit } from '@shared/domain/scene'
 import { shownLength } from '@shared/domain/units'
-import { withMaterialAt, wornMaterials } from '@shared/domain/scene'
 import { PropertyRow } from '@/components/PropertyRow'
 import { PropertySection } from '@/components/PropertySection'
-import { dressCharacter } from '@/engines/character/characterCommands'
+import { dressCharacter, wearCharacterMaterialAt } from '@/engines/character/characterCommands'
 import type { MeshSample } from '@/engines/scene/rigSnap'
 import { AssetInspector } from '@/features/assets/components/Asset/Inspector/AssetInspector'
 import { ModelDressSection } from '@/features/scene/components/ModelDressSection/ModelDressSection'
@@ -82,15 +81,7 @@ export function CharacterInspectorModel({
         names={names}
         slotIndices={selectedPart?.materialSlots}
         onChange={dress => run(assetId, dressCharacter(dress))}
-        onWearAt={(slot, materialId) =>
-          run(
-            assetId,
-            dressCharacter({
-              kind: 'materials',
-              documentIds: withMaterialAt(wornMaterials(character.dress), slot, materialId),
-            }),
-          )
-        }
+        onWearAt={(slot, materialId) => run(assetId, wearCharacterMaterialAt(slot, materialId))}
       />
     </>
   )

@@ -16,6 +16,7 @@ import {
   setCharacterBoneRole,
   setCharacterRig,
   unlinkCharacterMotion,
+  wearCharacterMaterialAt,
 } from './characterCommands'
 import { EMPTY_CHARACTER, type CharacterState } from './characterState'
 
@@ -138,5 +139,15 @@ describe('editing a character', () => {
     expect(dressed.dress).toEqual(dress)
     expect(command.revert(dressed)).toEqual(RIGGED)
     expect(dressCharacter(null).apply(dressed).dress).toBeUndefined()
+  })
+
+  it('keeps the remembered image when an assembled material arrives', () => {
+    const covered = dressCharacter({ kind: 'image', assetId: 'pic-1' }).apply(RIGGED)
+
+    expect(wearCharacterMaterialAt(0, 'material-1').apply(covered).dress).toEqual({
+      kind: 'materials',
+      documentIds: ['material-1'],
+      imageAssetId: 'pic-1',
+    })
   })
 })

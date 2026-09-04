@@ -183,29 +183,59 @@ export type ModelRef = {
  *
  * Both ride in `extras[studio]` verbatim, so no glTF reader sees them and no format head changes.
  */
-export type ModelDressRef =
-  | { kind: 'plain' }
-  | { kind: 'image'; assetId: string }
-  | { kind: 'materials'; documentIds: readonly string[] }
+type ModelDressMemory = {
+  /** Image kept while the materials mode is active. */
+  imageAssetId?: string
+  /** Materials kept while the image mode is active. */
+  materialDocumentIds?: readonly string[]
+}
+
+type StoredModelDress = {
+  kind?: unknown
+  assetId?: unknown
+  documentIds?: unknown
+  imageAssetId?: unknown
+  materialDocumentIds?: unknown
+}
+
+export type ModelDressRef = ModelDressMemory &
+  (
+    | { kind: 'plain' }
+    | { kind: 'image'; assetId: string }
+    | { kind: 'materials'; documentIds: readonly string[] }
+  )
 
 /** A persisted model dress, or `null` when the value names no complete supported mode. */
 export function modelDressRefOf(value: unknown): ModelDressRef | null {
   if (typeof value !== 'object' || value === null) return null
 
-  const held: { kind?: unknown; assetId?: unknown; documentIds?: unknown } = value
-  if (held.kind === 'plain') return { kind: 'plain' }
+  const held: StoredModelDress = value
+  const memory = modelDressMemoryOf(held)
+  if (held.kind === 'plain') return { kind: 'plain', ...memory }
   if (held.kind === 'image' && typeof held.assetId === 'string') {
-    return { kind: 'image', assetId: held.assetId }
+    return { kind: 'image', assetId: held.assetId, ...memory }
   }
   if (
     held.kind === 'materials' &&
     Array.isArray(held.documentIds) &&
     held.documentIds.every(id => typeof id === 'string')
   ) {
-    return { kind: 'materials', documentIds: held.documentIds }
+    return { kind: 'materials', documentIds: held.documentIds, ...memory }
   }
 
   return null
+}
+
+function modelDressMemoryOf(held: StoredModelDress): ModelDressMemory {
+  const memory: ModelDressMemory = {}
+  if (typeof held.imageAssetId === 'string') memory.imageAssetId = held.imageAssetId
+  if (
+    Array.isArray(held.materialDocumentIds) &&
+    held.materialDocumentIds.every(id => typeof id === 'string')
+  ) {
+    memory.materialDocumentIds = held.materialDocumentIds
+  }
+  return memory
 }
 
 /**

@@ -18,7 +18,7 @@ import {
 } from '@shared/domain/rig'
 import { rigHandBones } from '../scene/rigHandBones'
 import type { MeshSample } from '../scene/rigSnap'
-import type { ModelDressRef } from '@shared/domain/scene'
+import { withMaterialAt, wornMaterials, type ModelDressRef } from '@shared/domain/scene'
 import { ikLinksOf } from './ik'
 import type { CharacterState } from './characterState'
 
@@ -67,6 +67,21 @@ export function dressCharacter(dress: ModelDressRef | null): Command<CharacterSt
       return { ...state, dress: undefined }
     }
     return { ...state, dress }
+  })
+}
+
+export function wearCharacterMaterialAt(slot: number, documentId: string): Command<CharacterState> {
+  return edit('material.dress', state => {
+    const imageAssetId =
+      state.dress?.kind === 'image' ? state.dress.assetId : state.dress?.imageAssetId
+    return {
+      ...state,
+      dress: {
+        kind: 'materials',
+        documentIds: withMaterialAt(wornMaterials(state.dress), slot, documentId),
+        ...(imageAssetId ? { imageAssetId } : {}),
+      },
+    }
   })
 }
 

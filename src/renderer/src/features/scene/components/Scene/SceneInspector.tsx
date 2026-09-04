@@ -251,8 +251,6 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               extractable={modelAsset?.location === 'local'}
               ownTextures={modelFileTextures}
               onChange={dress => edit.run(dressModel(model.id, dress))}
-              // A COMMAND, so the list it edits is the one the document holds when it lands — not
-              // the one this panel was drawn with, several awaits earlier.
               onWearAt={(slot, materialId) => edit.run(wearMaterialAt(model.id, slot, materialId))}
             />
           </>

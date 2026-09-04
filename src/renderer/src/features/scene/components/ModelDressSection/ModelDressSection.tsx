@@ -38,9 +38,9 @@ export type ModelDressSectionProps = {
   /** Material names read from the model file, in slot order. */
   names?: readonly string[]
   slotIndices?: readonly number[]
-  /** The whole dress at once: the two modes exclude each other, so a change is never partial. */
+  /** The active dress and the inactive mode's remembered selection. */
   onChange: (dress: ModelDressRef | null) => void
-  /** One slot, NAMED rather than written: assembling awaits, and this panel's list goes stale. */
+  /** Applies an assembled material to the latest document state after assembly. */
   onWearAt: (slot: number, documentId: string) => void
 }
 
@@ -77,8 +77,8 @@ export function ModelDressSection({
     }
   }
 
-  const assemble = async (slot: number): Promise<void> => {
-    const own = pictureAssets.filter(asset => asset.derivedFrom === assetId)
+  const assemble = async (slot: number, pictures = pictureAssets): Promise<void> => {
+    const own = pictures.filter(asset => asset.derivedFrom === assetId)
 
     try {
       const materialId = await openModelMaterial({ id: assetId, name }, own)
@@ -92,9 +92,8 @@ export function ModelDressSection({
     const own = await extract()
     if (own === null) return
     const baseColor = own.find(asset => asset.map === 'baseColor')
-    onChange(
-      slots === 1 && baseColor ? { kind: 'image', assetId: baseColor.id } : { kind: 'plain' },
-    )
+    if (slots === 1 && own.length > 1) return assemble(0, own)
+    onChange(slots === 1 && baseColor ? imageDress(baseColor.id, dress) : imageDress(null, dress))
   }
   const appliesImage = slots === 1
   const modes = dressModes(
@@ -161,14 +160,14 @@ export function ModelDressSection({
         options={modes}
         // A mode with nothing in it yet, rather than nothing at all: what says which mode a model
         // is in is the dress being there, so an empty one is what makes the choice stick.
-        onChange={next => onChange(dressFor(next))}
+        onChange={next => onChange(dressFor(next, dress))}
       />
 
       {mode === 'image' && (
         <PictureField
           label={t('inspector.modelDressImageField')}
           value={imageAssetId}
-          onChange={assetId => onChange(assetId ? { kind: 'image', assetId } : { kind: 'plain' })}
+          onChange={assetId => onChange(imageDress(assetId, dress))}
           emptyLabel={t('inspector.modelDressNoImage')}
           scId="model.dressImage"
         />
@@ -181,7 +180,7 @@ export function ModelDressSection({
           slots={slots}
           names={names}
           indices={slotIndices}
-          onChange={documentIds => onChange({ kind: 'materials', documentIds })}
+          onChange={documentIds => onChange(materialsDress(documentIds, dress))}
           onAssemble={slot => void assemble(slot)}
         />
       )}
@@ -210,20 +209,46 @@ function dressMode(dress: ModelDressRef | undefined, hasOwnTextures: boolean): D
 }
 
 function imageAssetIdOf(dress: ModelDressRef | undefined): string | null {
-  return dress?.kind === 'image' ? dress.assetId || null : null
+  if (dress?.kind === 'image') return dress.assetId || null
+  return dress?.imageAssetId || null
+}
+
+function materialDocumentIdsOf(dress: ModelDressRef | undefined): readonly string[] {
+  if (dress?.kind === 'materials') return dress.documentIds
+  return dress?.materialDocumentIds ?? []
+}
+
+function imageDress(assetId: string | null, previous: ModelDressRef | undefined): ModelDressRef {
+  const materialDocumentIds = materialDocumentIdsOf(previous)
+  return assetId
+    ? {
+        kind: 'image',
+        assetId,
+        ...(materialDocumentIds.length > 0 ? { materialDocumentIds } : {}),
+      }
+    : { kind: 'plain', ...(materialDocumentIds.length > 0 ? { materialDocumentIds } : {}) }
+}
+
+function materialsDress(
+  documentIds: readonly string[],
+  previous: ModelDressRef | undefined,
+): ModelDressRef {
+  const imageAssetId = imageAssetIdOf(previous)
+  return { kind: 'materials', documentIds, ...(imageAssetId ? { imageAssetId } : {}) }
 }
 
 /** One slot more, empty — or the last one gone, which is what `−` takes off. */
 function withSlots(dress: ModelDressRef, by: number): ModelDressRef {
   const worn = wornMaterials(dress)
-  return {
-    kind: 'materials',
-    documentIds: by > 0 ? [...worn, NOTHING_WORN] : worn.slice(0, -1),
-  }
+  const documentIds = by > 0 ? [...worn, NOTHING_WORN] : worn.slice(0, -1)
+  return materialsDress(documentIds, dress)
 }
 
-function dressFor(mode: DressMode): ModelDressRef | null {
-  if (mode === 'image') return { kind: 'plain' }
-  if (mode === 'materials') return { kind: 'materials', documentIds: [NOTHING_WORN] }
+function dressFor(mode: DressMode, previous: ModelDressRef | undefined): ModelDressRef | null {
+  if (mode === 'image') return imageDress(imageAssetIdOf(previous), previous)
+  if (mode === 'materials') {
+    const documentIds = materialDocumentIdsOf(previous)
+    return materialsDress(documentIds.length > 0 ? documentIds : [NOTHING_WORN], previous)
+  }
   return null
 }
