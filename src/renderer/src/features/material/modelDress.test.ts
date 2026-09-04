@@ -104,6 +104,7 @@ describe('what a model’s dress is worth to one of its slots', () => {
 
     expect(wornModelDress(dress, 0)?.textures).toEqual({ map: { assetId: 'brick' } })
     expect(wornModelDress(dress, 3)?.textures).toEqual({ map: { assetId: 'brick' } })
+    expect(wornModelDress(dress, 0)?.fileTextures).toBe(false)
   })
 
   /**
@@ -116,8 +117,11 @@ describe('what a model’s dress is worth to one of its slots', () => {
   })
 
   // The mode is chosen and the picture is not — the panel has to stay in it, so this is a state.
-  it('dresses nothing while the image mode holds no picture yet', () => {
-    expect(wornModelDress({ kind: 'image', assetId: '' }, 0)).toBeNull()
+  it('removes file textures while the image mode holds no picture', () => {
+    expect(wornModelDress({ kind: 'image', assetId: '' }, 0)).toEqual({
+      textures: {},
+      fileTextures: false,
+    })
   })
 
   /**

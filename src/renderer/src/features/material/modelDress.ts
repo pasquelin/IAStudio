@@ -42,13 +42,13 @@ const dresses = new WeakMap<MaterialState, ModelDress>()
  */
 const covers = new Map<string, ModelDress>()
 
-function coveredBy(assetId: string): ModelDress | null {
-  if (!isWorn(assetId)) return null
+function coveredBy(assetId: string): ModelDress {
+  if (!isWorn(assetId)) return PLAIN_DRESS
 
   const held = covers.get(assetId)
   if (held) return held
 
-  const made: ModelDress = { textures: { map: { assetId } } }
+  const made: ModelDress = { textures: { map: { assetId } }, fileTextures: false }
   covers.set(assetId, made)
   return made
 }

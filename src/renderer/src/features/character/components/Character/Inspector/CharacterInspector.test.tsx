@@ -236,7 +236,10 @@ describe('what a character is made of', () => {
     show()
     invalidate.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
+    const mode = screen.getByLabelText('Recouvert par')
+    const extractButton = screen.getByRole('button', { name: 'Extraire les textures du modèle' })
+    expect(mode.parentElement).toContainElement(extractButton)
+    await userEvent.click(extractButton)
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
     expect(invalidate).toHaveBeenCalledOnce()
@@ -244,7 +247,7 @@ describe('what a character is made of', () => {
     expect(screen.getByLabelText('Recouvert par')).toHaveValue('image')
   })
 
-  it('returns to the model file when the extracted image is removed', async () => {
+  it('keeps image mode without restoring the model file when the extracted image is removed', async () => {
     useAssets.setState({
       items: [
         LOCAL_MODEL,
@@ -264,7 +267,8 @@ describe('what a character is made of', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Retirer l’image' }))
 
     expect(held().dress).toEqual({ kind: 'plain' })
-    expect(screen.getByLabelText('Recouvert par')).toHaveValue('plain')
+    expect(screen.getByLabelText('Recouvert par')).toHaveValue('image')
+    expect(screen.queryByRole('option', { name: 'Matière sans image' })).not.toBeInTheDocument()
   })
 
   it('does not apply a data texture as the model image', async () => {
@@ -288,13 +292,13 @@ describe('what a character is made of', () => {
     seedCharacter(ASSET, RIG, {})
     show()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
-    expect(held().dress).toBeUndefined()
+    expect(held().dress).toEqual({ kind: 'plain' })
   })
 
-  it('extracts without applying one material image over a multi-material model', async () => {
+  it('detaches file textures without applying one image over a multi-material model', async () => {
     const texture: Asset = {
       id: 'hair-1',
       name: 'Hair — Couleur de base',
@@ -315,10 +319,10 @@ describe('what a character is made of', () => {
     seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: ['', ''] } })
     show()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
-    expect(held().dress).toEqual({ kind: 'materials', documentIds: ['', ''] })
+    expect(held().dress).toEqual({ kind: 'plain' })
   })
 
   it('disables texture extraction when the model has no local file', () => {
@@ -326,7 +330,7 @@ describe('what a character is made of', () => {
     seedCharacter(ASSET, RIG, {})
     show()
 
-    expect(screen.getByRole('button', { name: 'Extraire les images du modèle' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Extraire les textures du modèle' })).toBeDisabled()
   })
 
   it('reports a failed extraction and still refreshes the catalogue', async () => {
@@ -338,7 +342,7 @@ describe('what a character is made of', () => {
     show()
     invalidate.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
 
     await vi.waitFor(() =>
       expect(reportFailure).toHaveBeenCalledWith('assets.extract', 'Hero', failure),

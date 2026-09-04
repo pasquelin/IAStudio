@@ -20,8 +20,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from '@/stores/assets'
 import { ModelDressSectionMaterials } from './ModelDressSectionMaterials'
 
-/** Derived, never restated: a third `kind` on the union has to answer here or it will not compile. */
-type DressMode = ModelDressRef['kind'] | 'own'
+type DressMode = Exclude<ModelDressRef['kind'], 'plain'> | 'own'
 
 export type ModelDressSectionProps = {
   /** The model's own asset — what the pictures an assembled material is made of came out of. */
@@ -56,7 +55,8 @@ export function ModelDressSection({
 }: ModelDressSectionProps) {
   const { t } = useTranslation()
   const pictures = useProjectPictures(PICTURES)
-  const mode: DressMode = dress?.kind ?? 'own'
+  const mode: DressMode = dress?.kind === 'plain' ? 'image' : (dress?.kind ?? 'own')
+  const imageAssetId = imageAssetIdOf(dress)
 
   const extract = async (): Promise<readonly Asset[] | null> => {
     try {
@@ -83,8 +83,11 @@ export function ModelDressSection({
 
   const extractFromHeader = async (): Promise<void> => {
     const own = await extract()
-    const baseColor = own?.find(asset => asset.map === 'baseColor')
-    if (slots === 1 && baseColor) onChange({ kind: 'image', assetId: baseColor.id })
+    if (own === null) return
+    const baseColor = own.find(asset => asset.map === 'baseColor')
+    onChange(
+      slots === 1 && baseColor ? { kind: 'image', assetId: baseColor.id } : { kind: 'plain' },
+    )
   }
   const appliesImage = slots === 1
 
@@ -96,17 +99,6 @@ export function ModelDressSection({
       // the group they act on, never one per row.
       actions={
         <>
-          <ToolButton
-            icon={mdiImageMultipleOutline}
-            label={t('assets.extractTextures')}
-            description={t(
-              appliesImage ? 'inspector.modelExtractTextureHint' : 'assets.extractTexturesHint',
-            )}
-            tooltip={TIP_LEFT}
-            variant="header"
-            disabled={!extractable}
-            onClick={() => void extractFromHeader()}
-          />
           {dress?.kind === 'materials' && slotIndices === undefined && (
             <>
               <ToolButton
@@ -138,10 +130,20 @@ export function ModelDressSection({
         label={t('inspector.modelDressMode')}
         scId="modelDressMode"
         value={mode}
-        actions={false}
+        actions={
+          <ToolButton
+            icon={mdiImageMultipleOutline}
+            label={t('assets.extractTextures')}
+            description={t(
+              appliesImage ? 'inspector.modelExtractTextureHint' : 'assets.extractTexturesHint',
+            )}
+            tooltip={TIP_LEFT}
+            disabled={!extractable}
+            onClick={() => void extractFromHeader()}
+          />
+        }
         options={[
           { value: 'own', label: t('inspector.modelOwnMaterial') },
-          { value: 'plain', label: t('inspector.modelDressPlain') },
           { value: 'image', label: t('inspector.modelDressImage') },
           { value: 'materials', label: t('inspector.modelDressMaterials') },
         ]}
@@ -150,10 +152,10 @@ export function ModelDressSection({
         onChange={next => onChange(dressFor(next))}
       />
 
-      {dress?.kind === 'image' && (
+      {mode === 'image' && (
         <LinkField
           label={t('inspector.modelDressImageField')}
-          value={dress.assetId || null}
+          value={imageAssetId}
           options={pictures}
           onChange={assetId => onChange(assetId ? { kind: 'image', assetId } : { kind: 'plain' })}
           emptyLabel={t('inspector.modelDressNoImage')}
@@ -164,7 +166,7 @@ export function ModelDressSection({
           open={{
             label: t('inspector.modelDressOpenImage'),
             hint: t('inspector.modelDressOpenImageHint'),
-            run: () => openAssetById(dress.assetId || null),
+            run: () => openAssetById(imageAssetId),
           }}
           scId="model.dressImage"
         />
@@ -185,6 +187,10 @@ export function ModelDressSection({
   )
 }
 
+function imageAssetIdOf(dress: ModelDressRef | undefined): string | null {
+  return dress?.kind === 'image' ? dress.assetId || null : null
+}
+
 /** One slot more, empty — or the last one gone, which is what `−` takes off. */
 function withSlots(dress: ModelDressRef, by: number): ModelDressRef {
   const worn = wornMaterials(dress)
@@ -195,8 +201,7 @@ function withSlots(dress: ModelDressRef, by: number): ModelDressRef {
 }
 
 function dressFor(mode: DressMode): ModelDressRef | null {
-  if (mode === 'plain') return { kind: 'plain' }
-  if (mode === 'image') return { kind: 'image', assetId: NOTHING_WORN }
+  if (mode === 'image') return { kind: 'plain' }
   if (mode === 'materials') return { kind: 'materials', documentIds: [NOTHING_WORN] }
   return null
 }

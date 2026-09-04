@@ -90,6 +90,8 @@ export type ImportRequest = {
   generation?: AssetGeneration
   map?: PbrChannel
   mapInverted?: boolean
+  /** The glTF slot of an extracted packed or extension map no PBR channel names exactly. */
+  packedSlot?: string
   /**
    * The library's own still for this asset. Brought down for the kinds no browser can decode —
    * a mesh — so a tile that was a picture in the library stays one once the file is here.
@@ -221,6 +223,7 @@ function writtenAssetOf(input: WrittenAsset): Asset {
     ...(request.map
       ? { map: request.map, ...(request.mapInverted ? { mapInverted: true } : {}) }
       : {}),
+    ...(request.packedSlot ? { packedSlot: request.packedSlot } : {}),
     ...twinOf(request, at),
   }
 }

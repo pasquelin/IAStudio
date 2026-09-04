@@ -170,6 +170,22 @@ describe('local backend', () => {
     })
   })
 
+  it('keeps an extracted packed map in the materials folder and catalogue row', async () => {
+    const asset = await backend.importFromBytes(
+      {
+        id: 'asset_orm',
+        name: 'Robot — metallicRoughnessTexture',
+        type: 'image',
+        extension: '.png',
+        packedSlot: 'metallicRoughnessTexture',
+      },
+      BYTES,
+    )
+
+    expect(asset.path).toBe('Materials/Robot — metallicRoughnessTexture.png')
+    expect(asset.packedSlot).toBe('metallicRoughnessTexture')
+  })
+
   it("records a generation's remote id without counting it as synced", async () => {
     const asset = await backend.importFromUrl({
       id: 'asset_1',

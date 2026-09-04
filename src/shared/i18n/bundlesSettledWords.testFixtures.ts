@@ -15,11 +15,19 @@ export const SETTLED_WORDS: Record<
      * shelf is gone, and what a picture serves is read off its channel. The word survives in
      * KEYS, which come from the API and are not screen text.
      *
-     * No `except`: the two senses this would wrongly catch — the glTF vocabulary of a file
-     * "with its textures beside it", and the audio one of a sound with no texture — live in
-     * `docs/`, which this guard cannot reach anyway.
+     * The extraction controls use the glTF term because they act on maps embedded in that file,
+     * not on ordinary pictures.
      */
-    { dropped: /textures?/i, kept: 'image' },
+    {
+      dropped: /textures?/i,
+      kept: 'image',
+      except: [
+        'assets.extractTextures',
+        'assets.extractTexturesHint',
+        'inspector.modelExtractTextureHint',
+        'inspector.modelDressClearImageHint',
+      ],
+    },
     /**
      * `rigué` is English wearing a French ending, and the workspace that gave a mesh its bones
      * had already decided against it: seven of its nine sentences said `squelette`, two command
