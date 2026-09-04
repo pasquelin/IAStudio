@@ -18,6 +18,7 @@ import { machineFolders } from './assistant/machineFolders'
 import { providerLimits } from './assistant/providerLimits'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
+import { parseSnapshot } from './assistant/validation'
 import { bundledFile } from './bundledFile'
 import { createFavorites } from './favorites/store'
 import { sendTo } from './ipc/broadcast'
@@ -87,6 +88,10 @@ export function createAssistantBrains(deps: AssistantDeps) {
   const remoteActions = createRemoteActions({
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
   })
+  const snapshot = async () => {
+    const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
+    return outcome.ok ? parseSnapshot(outcome.data) : null
+  }
   const brain = createRoutedBrain({
     providerOf: () => deps.ai.providerOf(ASSISTANT_ROLE),
     modelOf: deps.modelOf,
@@ -104,8 +109,8 @@ export function createAssistantBrains(deps: AssistantDeps) {
     cloudBrain: id => deps.clouds[id]?.brain() ?? null,
     contextOf: async () => composedContext((await deps.context.read()).cards),
     stateOf: async () => {
-      const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
-      return outcome.ok ? describeStudio(outcome.data) : ''
+      const current = await snapshot()
+      return current ? describeStudio(current) : ''
     },
     memoriesOf: () => deps.memoryVectors.held('project'),
     foldersOf: () => {
@@ -116,7 +121,7 @@ export function createAssistantBrains(deps: AssistantDeps) {
       )
     },
   })
-  return { providerBrain, remoteActions, brain }
+  return { providerBrain, remoteActions, brain, snapshot }
 }
 
 export function createAssistantPresentation(deps: AssistantDeps) {

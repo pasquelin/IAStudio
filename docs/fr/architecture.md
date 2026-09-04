@@ -255,6 +255,12 @@ ligne invalide est ignorée, une version future est refusée. Une action retrouv
 en pause avec `action_outcome_unknown` et n’est jamais rejouée automatiquement. L’arrêt attend le
 flush du Store, puis celui du journal.
 
+Avant qu’une étape réfléchisse, `AssistantContextBuilder` reconstruit un objet typé depuis la
+mission et l’état courant : snapshot validé de la fenêtre, projet, document, sélection, résultats,
+jobs, contexte projet, souvenirs rappelés et actions recherchées. Chaque source est limitée avant
+l’assemblage et publie son propre rapport de budget. Un snapshot appartenant à un autre projet est
+écarté en bloc, afin que deux missions ou deux fenêtres ne partagent jamais un état volatil.
+
 ### Le JobManager est le seul à poller
 
 Le `job.wait()` du SDK ne rapporte aucune progression et plafonne à 120 secondes — inutilisable

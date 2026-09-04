@@ -54,6 +54,7 @@ import type { AutoRigHost } from './ai/autoRigHost'
 import type { MissionManager } from './mission/manager'
 import type { StudioEventBus } from './mission/eventBus'
 import type { ActionSearchService } from './actionIndex/actionSearchService'
+import type { AssistantContextBuilder } from './mission/contextBuilder'
 
 export type Services = {
   missions: MissionManager
@@ -98,6 +99,8 @@ export type Services = {
   actionIndex: ActionSearchService
   /** Settles retrieval consumers before closing their shared embedding process. */
   closeRetrieval: () => Promise<void>
+  /** Rebuilds a typed, bounded context for one mission step. */
+  assistantContext: AssistantContextBuilder
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
   /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */

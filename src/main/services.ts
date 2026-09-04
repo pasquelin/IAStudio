@@ -17,6 +17,7 @@ import { createMissionManager } from '@main/mission/manager'
 import { createMissionStore } from '@main/mission/store'
 import { createStudioEventBus } from '@main/mission/eventBus'
 import { createActionSearchService } from '@main/actionIndex/actionSearchService'
+import { createAssistantContextBuilder } from '@main/mission/contextBuilder'
 import { createUpdates } from '@main/updater'
 import { bundledGameRuntime, resourcesRoot } from './resources'
 import { createMcpControl } from './mcp/control'
@@ -237,7 +238,14 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
   const assistantDeps = assistantDependencies()
-  const { providerBrain, remoteActions, brain } = createAssistantBrains(assistantDeps)
+  const { providerBrain, remoteActions, brain, snapshot } = createAssistantBrains(assistantDeps)
+  const assistantContext = createAssistantContextBuilder({
+    snapshot,
+    actions: actionIndex,
+    memories: memoryVectors,
+    jobs,
+    projectContext: context,
+  })
 
   function buildMcp() {
     const checkout = checkoutOf(app.getAppPath())
@@ -301,6 +309,7 @@ export function createServices(settings: SettingsStore): Services {
       memoryVectors,
       actionIndex,
       closeRetrieval,
+      assistantContext,
       // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
       // here, and an export named against nothing is a refusal rather than a failure.
       projectPath: () => project.current()?.path ?? null,
