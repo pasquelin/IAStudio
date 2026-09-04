@@ -1,11 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { BatchedMesh, InstancedMesh, Matrix4, Mesh } from 'three'
-import type { MeshStandardMaterial } from 'three'
+import {
+  BatchedMesh,
+  BoxGeometry,
+  InstancedMesh,
+  LOD,
+  AnimationClip,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  NumberKeyframeTrack,
+  Object3D,
+} from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
+import { embeddedClip } from '@shared/domain/scene'
+import { SECOND } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
 import { csgPartOf, type CsgGraph } from '@shared/domain/csg'
-import { carvedNode, groupNode, lightNode, meshNode } from '@/engines/scene/nodeFactory'
+import type { CompiledMeshGeometry } from '@shared/domain/gameExport'
+import { carvedNode, groupNode, lightNode, meshNode, modelNode } from '@/engines/scene/nodeFactory'
 import {
   DEFAULT_MATERIAL,
   EMPTY_SCENE,
@@ -15,8 +28,16 @@ import {
 import { colliderFromNode } from './colliderFromNode'
 import { buildGameScene } from './gameScene'
 import { WORTH_INSTANCING } from '@/engines/scene/grouping'
+import { compileLossyWorld as compilePlannedWorld } from '@/engines/scene/lossyWorldCompiler'
+import { analyzeLossyWorld } from '@/engines/scene/worldAnalyzer'
+import type { LossyOptimization } from '@shared/domain/gameExport'
+import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 
 const NOTHING: AssetPort = { urlOf: () => null }
+
+function compileLossyWorld(state: SceneState, options: LossyOptimization) {
+  return compilePlannedWorld(state, options, analyzeLossyWorld(state.nodes))
+}
 const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
 
 const scene = (nodes: readonly SceneNode[]): SceneState => ({ ...EMPTY_SCENE, nodes: [...nodes] })
@@ -141,6 +162,114 @@ describe('a scene as a game draws it', () => {
     expect(matrix.elements.slice(12, 15)).toEqual([7, 1, -2])
   })
 
+  it('builds every generated LOD level as an instanced draw for a baked group', async () => {
+    const base = meshNode(
+      { kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 },
+      { name: 'Baked trees' },
+    )
+    if (base.type !== 'mesh') throw new Error('expected a mesh fixture')
+    const node: SceneNode = {
+      ...base,
+      instances: [
+        { sourceId: 'first', name: 'First', transform: IDENTITY_TRANSFORM },
+        { sourceId: 'second', name: 'Second', transform: IDENTITY_TRANSFORM },
+      ],
+    }
+    const state = scene([node])
+    const built = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, { ...NO_LOSSY_OPTIMIZATION, generateLods: true }),
+    )
+
+    expect(built.byEntity.get(node.id)).toBeInstanceOf(LOD)
+    expect(instancesIn(built.byEntity.get(node.id))).toHaveLength(3)
+    expect(instancesIn(built.byEntity.get(node.id)).every(mesh => mesh.count === 2)).toBe(true)
+  })
+
+  it('loads and preserves existing LODs carried by a model asset', async () => {
+    const source = new LOD()
+    source.addLevel(new Mesh(), 0)
+    source.addLevel(new Mesh(), 20)
+    const node = {
+      ...modelNode('model-1', 'Model'),
+      transform: { ...IDENTITY_TRANSFORM, scale: { x: 4, y: 4, z: 4 } },
+    }
+    const built = await buildGameScene(
+      scene([node]),
+      { urlOf: () => 'assets/model.glb' },
+      undefined,
+      async () => source,
+    )
+
+    const rendered = built.byEntity.get(node.id)
+    expect(rendered).toBeInstanceOf(LOD)
+    expect(rendered instanceof LOD ? rendered.levels.map(level => level.distance) : []).toEqual([
+      0, 20,
+    ])
+  })
+
+  it('seeks embedded model animation from the exported scene clock', async () => {
+    const source = new Object3D()
+    source.animations = [
+      new AnimationClip('walk', 1, [new NumberKeyframeTrack('.position[x]', [0, 1], [0, 6])]),
+    ]
+    const base = modelNode('model-1', 'Model')
+    if (base.type !== 'model') throw new Error('expected a model')
+    const node = {
+      ...base,
+      model: {
+        ...base.model,
+        lanes: [
+          {
+            id: 'main',
+            clips: [embeddedClip('walk-block', 'walk', { duration: SECOND })],
+          },
+        ],
+      },
+    }
+    const built = await buildGameScene(
+      scene([node]),
+      { urlOf: () => 'assets/model.glb' },
+      undefined,
+      async () => source,
+    )
+
+    built.seek(SECOND / 2)
+
+    expect(built.byEntity.get(node.id)?.position.x).toBeCloseTo(3)
+  })
+
+  it('adds exported distant levels to a static mesh while preserving its exact model LOD0', async () => {
+    const source = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    const node = modelNode('model-1', 'Model')
+    const triangle: CompiledMeshGeometry = {
+      encoding: 'float32-base64',
+      position: 'AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA',
+      normal: '',
+      uv: '',
+      index: 'AAAAAAEAAAACAAAA',
+    }
+    const built = await buildGameScene(
+      scene([node]),
+      { urlOf: () => 'assets/model.glb' },
+      {
+        nodes: [{ nodeId: node.id, modelAssetId: 'model-1' }],
+        modelAssets: { 'model-1': [{ meshIndex: 0, lodMeshes: [triangle] }] },
+      },
+      async () => source,
+    )
+    const lods: LOD[] = []
+    built.byEntity.get(node.id)?.traverse(object => {
+      if (object instanceof LOD) lods.push(object)
+    })
+
+    expect(lods).toHaveLength(1)
+    expect(lods[0]?.levels).toHaveLength(2)
+    expect(lods[0]?.levels[0]?.object instanceof Mesh).toBe(true)
+    expect(lods[0]?.levels[1]?.object instanceof Mesh).toBe(true)
+  })
+
   /** A game has no picture for a texture the project has lost, and draws the shape all the same. */
   it('draws a shape whose texture nothing resolves, with no map on it', async () => {
     const node = meshNode(BOX)
@@ -168,6 +297,29 @@ describe('a scene as a game draws it', () => {
     expect(object.geometry.getAttribute('position').count).toBeGreaterThan(0)
   })
 
+  it('uploads an exported CSG buffer without evaluating its authoring recipe again', async () => {
+    const node = carvedNode(pierced())
+    const built = await buildGameScene(scene([node]), NOTHING, {
+      nodes: [
+        {
+          nodeId: node.id,
+          mesh: {
+            encoding: 'float32-base64',
+            position: 'AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA',
+            normal: '',
+            uv: '',
+            index: 'AAAAAAEAAAACAAAA',
+          },
+        },
+      ],
+    })
+    const object = built.byEntity.get(node.id)
+
+    if (!(object instanceof Mesh)) throw new Error('expected a mesh')
+    expect(object.geometry.getAttribute('position').count).toBe(3)
+    expect(object.geometry.getIndex()?.count).toBe(3)
+  })
+
   it('paints the background a scene asked for', async () => {
     const built = await buildGameScene(
       {
@@ -178,6 +330,72 @@ describe('a scene as a game draws it', () => {
     )
 
     expect(built.scene.background).not.toBeNull()
+  })
+
+  it('keeps the original geometry as LOD0 and simplifies only the distant levels', async () => {
+    const node = meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 })
+    const state = scene([node])
+    const built = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, { ...NO_LOSSY_OPTIMIZATION, generateLods: true }),
+    )
+    const object = built.byEntity.get(node.id)
+
+    expect(object).toBeInstanceOf(LOD)
+    if (!(object instanceof LOD)) throw new Error('expected generated LOD')
+    expect(object.levels).toHaveLength(3)
+    expect(object.levels[0]?.object instanceof Mesh && object.levels[0].object.geometry.type).toBe(
+      'SphereGeometry',
+    )
+    const counts = object.levels.map(level =>
+      level.object instanceof Mesh ? level.object.geometry.getAttribute('position').count : 0,
+    )
+    expect(counts[0]).toBeGreaterThan(counts[1] ?? 0)
+    expect(counts[1]).toBeGreaterThan(counts[2] ?? 0)
+  })
+
+  it('scales generated LOD distances with the logical object size', async () => {
+    const node = {
+      ...meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 }),
+      transform: { ...IDENTITY_TRANSFORM, scale: { x: 4, y: 2, z: 1 } },
+    }
+    const state = scene([node])
+    const built = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, { ...NO_LOSSY_OPTIMIZATION, generateLods: true }),
+    )
+    const object = built.byEntity.get(node.id)
+
+    if (!(object instanceof LOD)) throw new Error('expected generated LOD')
+    expect(object.levels[1]?.distance).toBeCloseTo(48)
+    expect(object.levels[2]?.distance).toBeCloseTo(144)
+    built.place(node.id, { ...IDENTITY_TRANSFORM, scale: { x: 2, y: 2, z: 2 } })
+    expect(object.levels[1]?.distance).toBeCloseTo(24)
+    expect(object.levels[2]?.distance).toBeCloseTo(72)
+  })
+
+  it('simplifies one mesh only when a LOSSY geometry level is named', async () => {
+    const node = meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 })
+    const original = await buildGameScene(scene([node]), NOTHING)
+    const state = scene([node])
+    const reduced = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, {
+        ...NO_LOSSY_OPTIMIZATION,
+        geometrySimplification: 'aggressive',
+      }),
+    )
+    const before = original.byEntity.get(node.id)
+    const after = reduced.byEntity.get(node.id)
+
+    expect(before instanceof Mesh && after instanceof Mesh).toBe(true)
+    if (!(before instanceof Mesh) || !(after instanceof Mesh)) return
+    expect(after.geometry.getAttribute('position').count).toBeLessThan(
+      before.geometry.getAttribute('position').count,
+    )
   })
 })
 
@@ -193,4 +411,12 @@ function pierced(): CsgGraph {
     ],
     collision: 'hull',
   }
+}
+
+function instancesIn(object: Object3D | undefined): readonly InstancedMesh[] {
+  const instances: InstancedMesh[] = []
+  object?.traverse(child => {
+    if (child instanceof InstancedMesh) instances.push(child)
+  })
+  return instances
 }

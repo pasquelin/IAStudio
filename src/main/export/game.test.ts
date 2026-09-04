@@ -128,6 +128,15 @@ describe('the door onto a game written out of the studio', () => {
     expect(await readFile(join(chosen, 'Demo/scenes/doc-1.gltf'), 'utf8')).toBe(SCENE)
   })
 
+  it('copies decoder subfolders required by compressed models', async () => {
+    await mkdir(join(runtime, 'decoders/draco'), { recursive: true })
+    await writeFile(join(runtime, 'decoders/draco/decoder.wasm'), 'decoder')
+
+    await exporting()
+
+    expect(await readFile(join(chosen, 'Demo/decoders/draco/decoder.wasm'), 'utf8')).toBe('decoder')
+  })
+
   it('replaces a previous package without keeping files the new game cannot reach', async () => {
     await exporting({
       scenes: [

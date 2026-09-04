@@ -638,7 +638,7 @@ src/main/
 ├── favorites/               the pinned recipes, kept outside every project
 ├── styles/                  the material settings replayed from one material to the next
 ├── scene/                   exporting a scene, and validating it
-├── export/                  writing several files into a folder: a material, six sky faces
+├── export/                  deterministic material, sky and compiled game packages
 ├── diagnostics/             the channel the renderer reports a failure through
 ├── media/                   ingesting a file: probe, hash, proxy, waveform
 ├── fonts/                   the shipped typefaces and the system's

@@ -20,6 +20,7 @@ import { veilLift } from './veilLift'
 import { createWebRender } from './webRender'
 import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
+import { secondsToUs } from '@shared/domain/time'
 
 /**
  * A game running in a browser page, with no studio anywhere.
@@ -83,7 +84,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   let stopped = false
   /** Seconds of veil the scene that has just arrived still owes. */
   let fading = 0
-  await render.show(opening)
+  await render.show(opening, optimizationOf(entry.optimization, game.modelAssets))
 
   /**
    * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -128,7 +129,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       // stepping the arrived world over the picture of the one just left — and the veil would
       // lift onto it.
       fading = request.fade
-      await render.show(found)
+      await render.show(found, optimizationOf(wanted.optimization, game.modelAssets))
       // A second suspension point, so a second look: the stop above threw this world away.
       if (stopped) return
 
@@ -154,6 +155,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     if (swap.pending()) void asked()
 
     render.place(placementsOf(world, placements, loop.alpha()))
+    render.seek(secondsToUs(world.time.elapsed))
     // The veil the arrived scene came in under, on ITS clock, which a swap restarts at zero.
     if (fading > 0) {
       const lift = veilLift(world.time.elapsed, fading, veiled)
@@ -183,6 +185,14 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     script.dispose()
     render.dispose()
   }
+}
+
+function optimizationOf(
+  scene: ExportedGame['scenes'][number]['optimization'],
+  modelAssets: ExportedGame['modelAssets'],
+) {
+  if (!scene && !modelAssets) return undefined
+  return { nodes: scene?.nodes ?? [], ...(modelAssets ? { modelAssets } : {}) }
 }
 
 /** Every script of the game, already JavaScript: the studio transpiled them at export time. */

@@ -15,6 +15,7 @@ import {
   setNodeVisible,
 } from '@/engines/scene/commands'
 import { openOptimizationDialog, openWorldPerformanceDialog } from '@/hooks/useOptimizationDialog'
+import { openGameExportDialog } from '@/hooks/useGameExportDialog'
 import { railCommand, railOf } from '@/engines/scene/nodeRail'
 import { withoutPoint } from '@/engines/scene/cameraPath'
 import {
@@ -267,6 +268,10 @@ export function runSceneCommand(documentId: string, command: CommandId): Command
 
     case 'scene.worldPerformance':
       if (sceneEngineOf(documentId)) openWorldPerformanceDialog(documentId)
+      return true
+
+    case 'scene.exportGame':
+      if (sceneEngineOf(documentId)) openGameExportDialog(documentId)
       return true
 
     // Marks the selection as tools for the next fold — Roblox's Negate. Not a fold itself, so it

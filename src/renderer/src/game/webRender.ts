@@ -14,13 +14,17 @@ import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
 import type { SceneState } from '@/engines/scene/sceneState'
+import type { CompiledSceneOptimization } from '@shared/domain/gameExport'
 import { buildGameScene, type GameScene } from './gameScene'
+import { createGltfSource } from '@/engines/scene/gltfSource'
+import type { Us } from '@shared/domain/time'
 
 export type WebRender = RenderPort & {
   /** Puts another scene on. What a `game.scene.load` lands as, outside the studio. */
-  show: (state: SceneState) => Promise<void>
+  show: (state: SceneState, optimization?: CompiledSceneOptimization) => Promise<void>
   resize: (width: number, height: number) => void
   draw: () => void
+  seek: (time: Us) => void
   dispose: () => void
 }
 
@@ -35,6 +39,7 @@ const FAR = 2000
  */
 export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): WebRender {
   const renderer = new WebGLRenderer({ canvas, antialias: true })
+  const gltf = createGltfSource(() => renderer)
   renderer.shadowMap.enabled = true
   const camera = new PerspectiveCamera(60, 1, NEAR, FAR)
   const veil = veilPass()
@@ -46,9 +51,9 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
   let building = 0
 
   return {
-    show: async state => {
+    show: async (state, optimization) => {
       const mine = (building += 1)
-      const built = await buildGameScene(state, assets)
+      const built = await buildGameScene(state, assets, optimization, gltf.load)
       if (mine !== building) {
         built.dispose()
         return
@@ -79,6 +84,8 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
     veil: amount => {
       veil.material.opacity = clamp(amount, 0, 1)
     },
+
+    seek: time => held?.seek(time),
 
     // 🛑 Only when it CHANGED: `setSize` reassigns `canvas.width`, which reallocates and clears
     // the framebuffer — sixty times a second at a size nobody touched.
@@ -111,6 +118,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
       held?.dispose()
       held = null
       veil.dispose()
+      gltf.dispose()
       renderer.dispose()
     },
   }

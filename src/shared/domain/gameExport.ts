@@ -1,3 +1,6 @@
+import type { CsgGraph } from './csg'
+import type { GeometryDescriptor } from './geometry'
+
 /**
  * What an exported game ships beside its page, and the one thing its writer and its reader both
  * read. The writer is the main process, the reader is the page: neither parses the other's code.
@@ -7,6 +10,50 @@ export const EXPORTED_GAME_VERSION = 1
 /** Named rather than spelled twice: the page fetches it, the writer writes it. */
 export const EXPORTED_GAME_FILE = 'game.json'
 
+export type GeometrySimplification = 'off' | 'conservative' | 'balanced' | 'aggressive'
+export const GEOMETRY_SIMPLIFICATIONS: readonly GeometrySimplification[] = [
+  'off',
+  'conservative',
+  'balanced',
+  'aggressive',
+]
+
+export type TextureReduction = 'off' | 'half' | 'quarter'
+export const TEXTURE_REDUCTIONS: readonly TextureReduction[] = ['off', 'half', 'quarter']
+
+export type TextureCompression = 'off' | 'conservative' | 'balanced' | 'aggressive'
+export const TEXTURE_COMPRESSIONS: readonly TextureCompression[] = [
+  'off',
+  'conservative',
+  'balanced',
+  'aggressive',
+]
+
+/** Lossy choices are absent by default and never inferred from a SAFE optimization request. */
+export type LossyOptimization = {
+  generateLods: boolean
+  geometrySimplification: GeometrySimplification
+  textureReduction: TextureReduction
+  textureCompression: TextureCompression
+}
+
+export const NO_LOSSY_OPTIMIZATION: LossyOptimization = Object.freeze({
+  generateLods: false,
+  geometrySimplification: 'off',
+  textureReduction: 'off',
+  textureCompression: 'off',
+})
+
+export function hasVisualChanges(options: LossyOptimization | undefined): boolean {
+  return (
+    options !== undefined &&
+    (options.generateLods ||
+      options.geometrySimplification !== 'off' ||
+      options.textureReduction !== 'off' ||
+      options.textureCompression !== 'off')
+  )
+}
+
 export type ExportedScene = {
   /** The document id, which every reference of a scene already carries. */
   id: string
@@ -14,6 +61,43 @@ export type ExportedScene = {
   title: string
   /** Where the glTF sits, relative to the page. */
   file: string
+  /** Runtime-only geometry plan compiled from the authoring scene before it crossed IPC. */
+  optimization?: CompiledSceneOptimization
+}
+
+export type CompiledNodeGeometry = {
+  nodeId: string
+  geometry?: GeometryDescriptor
+  carved?: CsgGraph
+  lodGeometries?: readonly GeometryDescriptor[]
+  lodCarved?: readonly CsgGraph[]
+  mesh?: CompiledMeshGeometry
+  lodMeshes?: readonly CompiledMeshGeometry[]
+  modelAssetId?: string
+}
+
+/** Tight runtime buffers encoded once during export, never recomputed by the shipped game. */
+export type CompiledMeshGeometry = {
+  encoding: 'float32-base64'
+  indexEncoding?: 'uint32-base64'
+  position: string
+  normal: string
+  uv: string
+  index?: string
+  tangent?: string
+  color?: string
+}
+
+export type CompiledModelMesh = {
+  meshIndex: number
+  geometry?: CompiledMeshGeometry
+  /** Distant levels only: the loaded model remains exact LOD0. */
+  lodMeshes?: readonly CompiledMeshGeometry[]
+}
+
+export type CompiledSceneOptimization = {
+  nodes: readonly CompiledNodeGeometry[]
+  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
 }
 
 export type ExportedScript = {
@@ -31,6 +115,9 @@ export type ExportedGame = {
   scripts: readonly ExportedScript[]
   /** Asset id → the file beside the page. What `createBundledAssets` is handed. */
   assets: Readonly<Record<string, string>>
+  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
+  /** Absent in older exports and equivalent to every LOSSY option being off. */
+  lossyOptimization?: LossyOptimization
 }
 
 /** Which scene a name stands for — its title first, as a person says it, then its id. */
@@ -49,6 +136,8 @@ export type SceneToExport = {
   content: string
   /** Assets the exported runtime reaches; absent keeps compatibility with older callers. */
   assetIds?: readonly string[]
+  /** Built from this scene for this export; never written back into the authoring document. */
+  optimization?: CompiledSceneOptimization
 }
 
 /** One script, already JavaScript — the studio transpiles, the sandbox never sees TypeScript. */
@@ -61,12 +150,23 @@ export type GameExportRequest = {
   entryScene: string
   scenes: readonly SceneToExport[]
   scripts: readonly ScriptToExport[]
+  /** Must be named by the caller: no export path enables a visual change on its behalf. */
+  lossyOptimization?: LossyOptimization
+  /** Image bytes prepared off the UI and main threads, keyed by their logical asset identity. */
+  assetOverrides?: readonly ExportedAssetOverride[]
+  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
   /**
    * Where to write, INSIDE the project and relative to its root. Absent, a folder picker asks —
    * which is the only way a person at the window ever does it, and the only way a caller with no
    * screen never can.
    */
   folder?: string
+}
+
+export type ExportedAssetOverride = {
+  id: string
+  bytes: Uint8Array
+  extension: 'glb' | 'jpg' | 'png'
 }
 
 export type GameExportOutcome = {

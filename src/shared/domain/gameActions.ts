@@ -2,6 +2,7 @@ import { TIMELINE_TEMPLATES } from './animation'
 import { TEMPLATES_BY_GROUP } from './sceneTemplate'
 import { action, NODE_ID, type ActionField, type AssistantAction } from './assistantAction'
 import { COMPONENT_TYPES } from './componentRegistry'
+import { GEOMETRY_SIMPLIFICATIONS, TEXTURE_COMPRESSIONS, TEXTURE_REDUCTIONS } from './gameExport'
 
 /**
  * What an object DOES while the game runs, driven from outside the window.
@@ -412,6 +413,33 @@ export const EXPORT_ACTIONS: readonly AssistantAction[] = [
       { key: 'entryScene', kind: 'text', labelKey: 'assistant.fields.entryScene', required: false },
       { key: 'title', kind: 'text', labelKey: 'assistant.fields.gameTitle', required: false },
       { key: 'folder', kind: 'text', labelKey: 'assistant.fields.exportFolder', required: false },
+      {
+        key: 'generateLods',
+        kind: 'boolean',
+        labelKey: 'assistant.fields.generateLods',
+        required: false,
+      },
+      {
+        key: 'geometrySimplification',
+        kind: 'choice',
+        labelKey: 'assistant.fields.geometrySimplification',
+        required: false,
+        options: GEOMETRY_SIMPLIFICATIONS,
+      },
+      {
+        key: 'textureCompression',
+        kind: 'choice',
+        labelKey: 'assistant.fields.textureCompression',
+        required: false,
+        options: TEXTURE_COMPRESSIONS,
+      },
+      {
+        key: 'textureReduction',
+        kind: 'choice',
+        labelKey: 'assistant.fields.textureReduction',
+        required: false,
+        options: TEXTURE_REDUCTIONS,
+      },
     ],
   }),
 ]

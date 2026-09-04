@@ -1,5 +1,7 @@
 import {
+  LOD,
   Mesh,
+  PropertyBinding,
   SkinnedMesh,
   type BufferGeometry,
   type Material,
@@ -9,13 +11,7 @@ import {
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
 import { stableKey } from '@shared/hash'
-import {
-  WORTH_INSTANCING,
-  behavioralGroupingExclusions,
-  isDrawn,
-  shapeAndPaint,
-  withFlags,
-} from './grouping'
+import { behavioralGroupingExclusions, isDrawn, shapeAndPaint, withFlags } from './grouping'
 import { isInstanceable } from './instanceableModel'
 import {
   EMPTY_STATS,
@@ -26,6 +22,7 @@ import {
   type SceneStats,
 } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
+import type { LossyOptimization } from '@shared/domain/gameExport'
 import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
 
@@ -74,11 +71,18 @@ export type OptimizationImpact = {
   avoidedTextureBytes: number
 }
 
+export type LossyCandidate = { nodeId: string }
+export type TextureOptimizationCandidate = { assetId: string }
+export type LossyWorldPlan = { nodeIds: readonly string[] }
+export type ModelOptimizationCandidate = { meshIndex: number; geometry: BufferGeometry }
+
 export type OptimizationPlan = {
   classifications: readonly ClassifiedObject[]
   instances: readonly InstanceCandidate[]
   bakeCandidates: readonly BakeCandidate[]
   batches: readonly BatchCandidate[]
+  lodCandidates?: readonly LossyCandidate[]
+  textureCandidates?: readonly TextureOptimizationCandidate[]
   warnings: readonly OptimizationWarning[]
   measured: OptimizationMetrics
   estimated: OptimizationImpact
@@ -92,14 +96,23 @@ export type OptimizationReport = {
   visualChanges: 'NONE'
 }
 
-export type OptimizationPolicy = {
-  minInstancesPerGroup: number
-  analysisChunkSize: number
+export type LossyOptimizationImpact = {
+  trianglesAfter: number
+  geometryBytesAfter: number
+  textureBytesAfter: number
 }
 
-export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = {
-  minInstancesPerGroup: WORTH_INSTANCING,
-  analysisChunkSize: 100,
+import {
+  DEFAULT_OPTIMIZATION_POLICY,
+  type OptimizationPolicy,
+} from '@shared/domain/optimizationPolicy'
+export {
+  DEFAULT_OPTIMIZATION_POLICY,
+  type OptimizationPolicy,
+} from '@shared/domain/optimizationPolicy'
+
+type AnalyzerPolicy = Pick<OptimizationPolicy, 'minInstancesPerGroup' | 'analysisChunkSize'> & {
+  minBatchSize?: number
 }
 
 type CandidateGroup = { ids: Set<string>; units: Set<string>; forced: boolean }
@@ -116,7 +129,7 @@ export function analyzeOptimization(
   state: Pick<SceneState, 'nodes' | 'animation'>,
   host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
-  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+  policy: AnalyzerPolicy = DEFAULT_OPTIMIZATION_POLICY,
   runtimeNodes: readonly SceneNode[] = state.nodes,
 ): OptimizationPlan {
   return complete(optimizationSteps(state, host, objectOf, policy, runtimeNodes, true))
@@ -126,7 +139,7 @@ export async function analyzeOptimizationAsync(
   state: Pick<SceneState, 'nodes' | 'animation'>,
   host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
-  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+  policy: AnalyzerPolicy = DEFAULT_OPTIMIZATION_POLICY,
   runtimeNodes: readonly SceneNode[] = state.nodes,
   pause: () => Promise<void> = nextTask,
 ): Promise<OptimizationPlan> {
@@ -154,7 +167,7 @@ function* optimizationSteps(
   state: Pick<SceneState, 'nodes' | 'animation'>,
   host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
-  policy: OptimizationPolicy,
+  policy: AnalyzerPolicy,
   runtimeNodes: readonly SceneNode[],
   includeBakeCandidates: boolean,
 ): Generator<void, OptimizationPlan> {
@@ -255,7 +268,11 @@ function* optimizationSteps(
     ? bakeCandidatesOf(state.nodes, runtimeNodes, animated)
     : []
   const batches = [...batchGroups]
-    .filter(([, group]) => group.forced || group.units.size >= 2)
+    .filter(
+      ([, group]) =>
+        group.forced ||
+        group.units.size >= (policy.minBatchSize ?? DEFAULT_OPTIMIZATION_POLICY.minBatchSize),
+    )
     .map(([key, group]) => ({
       key,
       sourceIds: [...group.ids].sort(byCodeUnit),
@@ -283,6 +300,7 @@ function* optimizationSteps(
     instances,
     bakeCandidates,
     batches,
+    ...lossyCandidatesOf(state.nodes),
     warnings,
     measured: {
       ...sceneStats,
@@ -301,6 +319,94 @@ function* optimizationSteps(
   }
 }
 
+export function lossyCandidatesOf(
+  nodes: readonly SceneNode[],
+): Pick<Required<OptimizationPlan>, 'lodCandidates' | 'textureCandidates'> {
+  const lodCandidates = nodes
+    .filter(
+      node =>
+        node.optimization?.mode !== 'exclude' &&
+        (node.type === 'mesh' || node.type === 'carved' || node.type === 'model'),
+    )
+    .map(node => ({ nodeId: node.id }))
+    .sort((one, other) => byCodeUnit(one.nodeId, other.nodeId))
+  const textures = new Set<string>()
+  const protectedTextures = new Set<string>()
+  for (const node of nodes) {
+    if (node.type !== 'mesh' && node.type !== 'carved') continue
+    const assetId = node.material.map?.assetId
+    if (!assetId) continue
+    ;(node.optimization?.mode === 'exclude' ? protectedTextures : textures).add(assetId)
+  }
+  for (const assetId of protectedTextures) textures.delete(assetId)
+  return {
+    lodCandidates,
+    textureCandidates: [...textures].sort(byCodeUnit).map(assetId => ({ assetId })),
+  }
+}
+
+export function analyzeLossyWorld(nodes: readonly SceneNode[]): LossyWorldPlan {
+  return { nodeIds: lossyCandidatesOf(nodes).lodCandidates.map(candidate => candidate.nodeId) }
+}
+
+export function analyzeModelOptimization(
+  root: Object3D,
+  generateLods: boolean,
+): readonly ModelOptimizationCandidate[] {
+  const animated = animatedModelNodeNames(root)
+  const candidates: ModelOptimizationCandidate[] = []
+  let meshIndex = 0
+  root.traverse(object => {
+    if (!(object instanceof Mesh)) return
+    const index = meshIndex
+    meshIndex += 1
+    const attributes = Object.keys(object.geometry.attributes)
+    const color = object.geometry.getAttribute('color')
+    if (
+      !(object instanceof SkinnedMesh) &&
+      !animated.has(object.name) &&
+      (!generateLods || !hasLodAncestor(object)) &&
+      Object.keys(object.geometry.morphAttributes).length === 0 &&
+      !Array.isArray(object.material) &&
+      attributes.every(attribute => SIMPLIFIED_MODEL_ATTRIBUTES.has(attribute)) &&
+      (!color || color.itemSize === 3) &&
+      object.geometry.drawRange.start === 0 &&
+      object.geometry.drawRange.count === Infinity &&
+      object.geometry.getAttribute('position')?.count > 3
+    ) {
+      candidates.push({ meshIndex: index, geometry: object.geometry })
+    }
+  })
+  return candidates
+}
+
+const SIMPLIFIED_MODEL_ATTRIBUTES = new Set(['position', 'normal', 'uv', 'tangent', 'color'])
+
+function hasLodAncestor(mesh: Mesh): boolean {
+  let parent = mesh.parent
+  while (parent) {
+    if (parent instanceof LOD) return true
+    parent = parent.parent
+  }
+  return false
+}
+
+function animatedModelNodeNames(root: Object3D): ReadonlySet<string> {
+  const names = new Set<string>()
+  for (const clip of root.animations) {
+    for (const track of clip.tracks) {
+      try {
+        names.add(PropertyBinding.parseTrackName(track.name).nodeName)
+      } catch {
+        const all = new Set<string>()
+        root.traverse(object => all.add(object.name))
+        return all
+      }
+    }
+  }
+  return names
+}
+
 function nextTask(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0))
 }
@@ -312,6 +418,24 @@ export function optimizationReport(plan: OptimizationPlan): OptimizationReport {
     instanceCandidates: plan.instances.reduce((count, group) => count + group.meshCount, 0),
     batchCandidates: plan.batches.reduce((count, group) => count + group.meshCount, 0),
     visualChanges: 'NONE',
+  }
+}
+
+export function estimatedLossyImpact(
+  plan: OptimizationPlan,
+  options: LossyOptimization,
+  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+): LossyOptimizationImpact {
+  const geometryRatio = policy.simplificationRatios[options.geometrySimplification]
+  const textureScale = policy.textureScale[options.textureReduction]
+  const textureQuality =
+    options.textureCompression === 'off' ? 1 : policy.jpegQuality[options.textureCompression] / 100
+  return {
+    trianglesAfter: Math.round(plan.measured.triangles * (1 - geometryRatio)),
+    geometryBytesAfter: Math.round(plan.measured.geometryBytes * (1 - geometryRatio)),
+    textureBytesAfter: Math.round(
+      plan.measured.textureBytes * textureScale * textureScale * textureQuality,
+    ),
   }
 }
 

@@ -200,6 +200,10 @@
       "title": "World performance…",
       "help": "Measures the whole scene and reports SAFE optimisation opportunities without changing the authoring world."
     },
+    "sceneExportGame": {
+      "title": "Export the game…",
+      "help": "Builds a standalone game from an optimised runtime copy while leaving the authoring scenes untouched."
+    },
     "sceneCopy": {
       "title": "Copy",
       "help": "Holds on to the selection so it can be pasted, here or in another scene. This is the studio’s own clipboard: it leaves the system one alone."

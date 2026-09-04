@@ -1,5 +1,5 @@
 import { access, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import { safeFileName } from '@shared/domain/fileName'
 import { nameOf } from '@shared/domain/folder'
@@ -158,21 +158,13 @@ function portsFor(deps: GameExportDeps, project: string, root: string): GameExpo
 
     runtime: async () => {
       const folder = deps.runtimeFolder()
-      let names: string[]
       try {
-        // `withFileTypes`, and files only: the day the bundler emits a subfolder, a blind read
-        // would report the EISDIR as « no runtime is built ».
-        const found = await readdir(folder, { withFileTypes: true })
-        names = found.filter(one => one.isFile()).map(one => one.name)
+        return await runtimeFiles(folder)
       } catch {
         // 🛑 In development the folder exists only once `pnpm game:runtime` has run, and git
         // ignores it. Said as a game with no runtime rather than as a bare ENOENT over the wire.
         throw new Error('no game runtime is built: run `pnpm game:runtime`')
       }
-
-      return await Promise.all(
-        names.map(async name => ({ name, body: await readFile(join(folder, name)) })),
-      )
     },
 
     write: async (relative, body) => {
@@ -188,4 +180,20 @@ function portsFor(deps: GameExportDeps, project: string, root: string): GameExpo
       await writeFile(file, body)
     },
   }
+}
+
+async function runtimeFiles(
+  root: string,
+  folder: string = root,
+): Promise<readonly { name: string; body: Uint8Array }[]> {
+  const entries = await readdir(folder, { withFileTypes: true })
+  const files = await Promise.all(
+    entries.map(async entry => {
+      const path = join(folder, entry.name)
+      if (entry.isDirectory()) return await runtimeFiles(root, path)
+      if (!entry.isFile()) return []
+      return [{ name: relative(root, path).split(sep).join('/'), body: await readFile(path) }]
+    }),
+  )
+  return files.flat()
 }

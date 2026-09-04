@@ -45,7 +45,7 @@ const ALLOWED = new Map<string, string>([
     'hole: video, audio and peaks all read through here, unversioned',
   ],
   [
-    'helpers/assetFetch.ts | return fetchOver(assetMasterUrl(assetId), assetId)',
+    'helpers/assetFetch.ts | return fetchOver(assetMasterUrl(assetId), assetId, signal)',
     'hole: the export path reads the original the same way',
   ],
   [

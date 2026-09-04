@@ -224,4 +224,45 @@ describe('a game written to run with no studio', () => {
 
     expect([...first.written.entries()].sort()).toEqual([...second.written.entries()].sort())
   })
+
+  it('keeps original asset bytes when the renderer supplied no transformed copy', async () => {
+    const { ports, written } = writing()
+
+    await writeExportedGame(ports, ASKED)
+
+    expect(written.get('assets/checker.png')).toEqual(new Uint8Array([1]))
+  })
+
+  it('writes the explicit LOSSY choices and packages the transformed image', async () => {
+    const { ports, written } = writing()
+    const lossyOptimization = {
+      generateLods: true,
+      geometrySimplification: 'balanced',
+      textureReduction: 'half',
+      textureCompression: 'conservative',
+    } satisfies NonNullable<GameExportRequest['lossyOptimization']>
+
+    const optimization = {
+      nodes: [
+        {
+          nodeId: 'tree',
+          geometry: { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 4 },
+        },
+      ],
+    } satisfies NonNullable<GameExportRequest['scenes'][number]['optimization']>
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: ASKED.scenes.map(scene => ({ ...scene, optimization })),
+      lossyOptimization,
+      assetOverrides: [{ id: 'tex-1', extension: 'jpg', bytes: new Uint8Array([7, 8]) }],
+      modelAssets: { tree: [] },
+    })
+
+    expect(manifestOf(written).lossyOptimization).toEqual(lossyOptimization)
+    expect(manifestOf(written).scenes[0]?.optimization).toEqual(optimization)
+    expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/checker.jpg' })
+    expect(manifestOf(written).modelAssets).toEqual({ tree: [] })
+    expect(written.get('assets/checker.jpg')).toEqual(new Uint8Array([7, 8]))
+  })
 })

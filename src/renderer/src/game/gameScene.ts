@@ -1,19 +1,26 @@
 import {
   Color,
   InstancedMesh,
+  LOD,
   Mesh,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
   SRGBColorSpace,
   Scene,
-  type BufferGeometry,
   type Texture,
+  type BufferGeometry,
 } from 'three'
 import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
 import type { Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
+import type {
+  CompiledModelMesh,
+  CompiledNodeGeometry,
+  CompiledSceneOptimization,
+} from '@shared/domain/gameExport'
+import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import { createGeometryCache } from '@/engines/scene/geometryCache'
 import { createGroundPlane } from '@/engines/scene/groundPlane'
@@ -21,11 +28,17 @@ import { applyFog } from '@/engines/scene/worldBinding'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
 import { applyTransform } from '@/engines/scene/pivot'
-import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import type { BakedInstance, SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
 import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { bakedInstancesOf } from '@/engines/scene/bakedInstances'
+import { disposeTree, instanceOf, type ModelSource } from '@/engines/scene/modelCache'
+import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
+import { SceneAnimations } from '@/engines/scene/animation'
+import { clipKeyOf } from '@shared/domain/scene'
+import type { ModelRef } from '@shared/domain/scene'
+import type { Us } from '@shared/domain/time'
 
 /**
  * A scene as three.js draws it in a GAME — no gizmo, no helper, no selection, no grid.
@@ -40,6 +53,7 @@ export type GameScene = {
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
   place: (entityId: string, transform: Transform) => void
+  seek: (time: Us) => void
   dispose: () => void
 }
 
@@ -55,14 +69,71 @@ const NO_ENVIRONMENT = '#9fb2c8'
 /** How a carved solid's shape is worked out — see `carver`. */
 type Carve = (graph: CsgGraph) => BufferGeometry
 
-export async function buildGameScene(state: SceneState, assets: AssetPort): Promise<GameScene> {
-  const carve = state.nodes.some(node => node.type === 'carved') ? await carver() : uncutGeometry
+const BASE_LOD_DISTANCES = new WeakMap<LOD, readonly number[]>()
+
+export async function buildGameScene(
+  state: SceneState,
+  assets: AssetPort,
+  optimization?: CompiledSceneOptimization,
+  loadModel?: ModelSource,
+): Promise<GameScene> {
+  const compiled = new Map(optimization?.nodes.map(node => [node.nodeId, node]) ?? [])
+  const needsCarver = state.nodes.some(
+    node =>
+      node.type === 'carved' && !compiled.get(node.id)?.mesh && !compiled.get(node.id)?.lodMeshes,
+  )
+  const carve = needsCarver ? await carver() : uncutGeometry
   const scene = new Scene()
   const byEntity = new Map<string, Object3D>()
   const placements = new Map<string, (transform: Transform) => void>()
   const geometries = createGeometryCache()
   // The PROMISE, not the texture: two nodes wearing one picture must decode it once.
   const textures = new Map<string, Promise<Texture>>()
+  const models = new Map<string, Promise<Object3D>>()
+  const modelMeshes = new WeakSet<Mesh>()
+  const ownedModelGeometries = new Set<BufferGeometry>()
+  const animations = new SceneAnimations()
+  animations.setTimeline(state.animation)
+
+  const modelOf = async (
+    nodeId: string,
+    model: ModelRef,
+    modelPlan: readonly CompiledModelMesh[] | undefined,
+  ): Promise<Object3D | null> => {
+    const assetId = model.assetId
+    const url = assets.urlOf({ kind: 'asset', id: assetId })
+    if (!url || !loadModel) return null
+    try {
+      const held = models.get(assetId) ?? loadModel(url)
+      models.set(assetId, held)
+      const source = await held
+      const object = instanceOf(source)
+      object.traverse(child => {
+        if (child instanceof Mesh) modelMeshes.add(child)
+      })
+      const optimized = applyCompiledModel(object, modelPlan, ownedModelGeometries, modelMeshes)
+      animations.add(nodeId, optimized, source.animations)
+      for (const lane of model.lanes ?? []) {
+        for (const clip of lane.clips) {
+          if (clip.source.kind !== 'asset') continue
+          const clipUrl = assets.urlOf({ kind: 'asset', id: clip.source.assetId })
+          if (!clipUrl) continue
+          try {
+            const clipSource = await loadModel(clipUrl)
+            const animation = clipSource.animations[0]
+            if (animation) animations.addClip(nodeId, clipKeyOf(clip.source), animation)
+            disposeTree(clipSource)
+          } catch {
+            // A missing optional animation leaves its block silent without hiding the model.
+          }
+        }
+      }
+      animations.apply(nodeId, model.lanes ?? [])
+      return optimized
+    } catch {
+      return null
+    }
+  }
 
   /**
    * 🛑 Through `loadTexture`, never three's own loader: a PNG decoded on the UI thread is a frame
@@ -95,25 +166,42 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     }
   }
 
-  for (const node of state.nodes) {
-    const object = objectOf(node, geometries.acquire, dress, carve)
+  const objects = await Promise.all(
+    state.nodes.map(
+      async node =>
+        await objectOf(
+          node,
+          compiled.get(node.id),
+          geometries.acquire,
+          dress,
+          carve,
+          modelOf,
+          optimization,
+        ),
+    ),
+  )
+  for (const [index, node] of state.nodes.entries()) {
+    const object = objects[index]
     if (!object) continue
 
     object.name = node.name
     object.visible = node.visible
-    applyTransform(object, node.transform)
+    applyGameTransform(object, node.transform)
     byEntity.set(node.id, object)
-    placements.set(node.id, transform => applyTransform(object, transform))
-    if (node.type === 'mesh' && node.instances && object instanceof InstancedMesh) {
+    placements.set(node.id, transform => applyGameTransform(object, transform))
+    if (node.type === 'mesh' && node.instances) {
+      const renderedInstances = instancedMeshesIn(object)
       const placement = new Object3D()
       for (const [slot, instance] of node.instances.entries()) {
         byEntity.set(instance.sourceId, object)
         placements.set(instance.sourceId, transform => {
           applyTransform(placement, transform)
           placement.updateMatrix()
-          object.setMatrixAt(slot, placement.matrix)
-          object.instanceMatrix.needsUpdate = true
-          object.computeBoundingSphere()
+          for (const mesh of renderedInstances) {
+            mesh.setMatrixAt(slot, placement.matrix)
+            mesh.instanceMatrix.needsUpdate = true
+            mesh.computeBoundingSphere()
+          }
         })
       }
     }
@@ -130,11 +218,11 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
 
   scene.updateMatrixWorld()
   const instances = createOptimizedGroups(scene)
-  instances.rebuild(
-    state.nodes,
-    id => byEntity.get(id),
-    behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)),
-  )
+  const excluded = new Set(behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)))
+  for (const node of optimization?.nodes ?? []) {
+    if (node.lodGeometries || node.lodCarved) excluded.add(node.nodeId)
+  }
+  instances.rebuild(state.nodes, id => byEntity.get(id), excluded)
 
   // 🛑 What a game shows of the world, and what it does NOT: the image-based environment is not
   // shipped, so `environment` falls back to a plain sky rather than to black. Written rather than
@@ -153,12 +241,17 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     world: state.world,
     byEntity,
     place: (entityId, transform) => placements.get(entityId)?.(transform),
+    seek: time => animations.seek(time),
     dispose: () => {
+      animations.clear()
       instances.dispose()
       ground.dispose()
       for (const held of textures.values()) void disposeWhenLoaded(held)
+      for (const held of models.values()) void disposeModelWhenLoaded(held)
+      for (const geometry of ownedModelGeometries) geometry.dispose()
       scene.traverse(one => {
         if (!(one instanceof Mesh)) return
+        if (modelMeshes.has(one)) return
         // 🛑 RELEASED, never disposed: the same buffers are drawn by every node of that shape.
         // A carved solid is cut for itself and no cache lends it, so it is freed here or never.
         if (geometries.owns(one.geometry)) geometries.release(one.geometry)
@@ -178,36 +271,179 @@ async function disposeWhenLoaded(held: Promise<Texture>): Promise<void> {
   }
 }
 
-function objectOf(
+async function disposeModelWhenLoaded(held: Promise<Object3D>): Promise<void> {
+  try {
+    disposeTree(await held)
+  } catch {
+    // A model that never loaded owns no render resource to release.
+  }
+}
+
+async function objectOf(
   node: SceneNode,
+  compiled: CompiledNodeGeometry | undefined,
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
   dress: (material: MeshStandardMaterial, assetId: string) => void,
   carve: Carve,
-): Object3D | null {
+  modelOf: (
+    nodeId: string,
+    model: ModelRef,
+    modelPlan: readonly CompiledModelMesh[] | undefined,
+  ) => Promise<Object3D | null>,
+  optimization: CompiledSceneOptimization | undefined,
+): Promise<Object3D | null> {
   if (node.type === 'mesh') {
-    const geometry = acquire(node.geometry, node.material.tilesPerMetre)
     const material = materialOf(node.material, dress)
-    const mesh = node.instances
-      ? bakedInstancesOf(geometry, material, node.instances)
-      : new Mesh(geometry, material)
-    mesh.castShadow = node.castShadow
-    mesh.receiveShadow = node.receiveShadow
-    return mesh
+    const descriptors = compiled?.lodGeometries ?? [compiled?.geometry ?? node.geometry]
+    const object = renderedGeometry(
+      descriptors.map(descriptor => acquire(descriptor, node.material.tilesPerMetre)),
+      material,
+      node.instances,
+    )
+    object.traverse(child => {
+      if (!(child instanceof Mesh)) return
+      child.castShadow = node.castShadow
+      child.receiveShadow = node.receiveShadow
+    })
+    return object
   }
   if (node.type === 'carved') {
-    const mesh = new Mesh(carve(node.carved), materialOf(node.material, dress))
-    mesh.castShadow = node.castShadow
-    mesh.receiveShadow = node.receiveShadow
-    return mesh
+    const geometries =
+      compiled?.lodMeshes?.map(geometryOfCompiledMesh) ??
+      (compiled?.mesh ? [geometryOfCompiledMesh(compiled.mesh)] : undefined)
+    const graphs = geometries ? [] : (compiled?.lodCarved ?? [compiled?.carved ?? node.carved])
+    const object = renderedGeometry(
+      geometries ?? graphs.map(graph => carve(graph)),
+      materialOf(node.material, dress),
+    )
+    object.traverse(mesh => {
+      if (!(mesh instanceof Mesh)) return
+      mesh.castShadow = node.castShadow
+      mesh.receiveShadow = node.receiveShadow
+    })
+    return object
   }
   if (node.type === 'light') return lightFor(node.light)
-  // A group carries children and nothing else. A camera and a path ARE an editor's business.
-  //
-  // 🛑 `model` is a technical HOLE — its shape comes from a file no loader here lands. `sprite`
-  // and `text` are a hole of SCOPE: the studio builds both synchronously, and this module already
-  // has the arrival motif they need. Nothing invisible is walked into either way, `colliderFromNode`
-  // feeling none of the three.
+  if (node.type === 'model') {
+    const modelPlan = compiled?.modelAssetId
+      ? optimization?.modelAssets?.[compiled.modelAssetId]
+      : undefined
+    return await modelOf(node.id, node.model, modelPlan)
+  }
+  // A group carries children. Cameras, paths, sprites and text belong to the editor renderer.
   return node.type === 'group' ? new Object3D() : null
+}
+
+function applyCompiledModel(
+  root: Object3D,
+  plan: readonly CompiledModelMesh[] | undefined,
+  owned: Set<BufferGeometry>,
+  modelMeshes: WeakSet<Mesh>,
+): Object3D {
+  if (!plan) return root
+  let optimized = root
+  const meshes: Mesh[] = []
+  root.traverse(object => {
+    if (object instanceof Mesh) meshes.push(object)
+  })
+  for (const item of plan) {
+    const mesh = meshes[item.meshIndex]
+    if (!mesh) continue
+    if (item.geometry) {
+      const geometry = geometryOfCompiledMesh(item.geometry)
+      mesh.geometry = geometry
+      owned.add(geometry)
+      continue
+    }
+    if (!item.lodMeshes || item.lodMeshes.length === 0) continue
+    const parent = mesh.parent
+    const lod = new LOD()
+    lod.name = mesh.name
+    lod.position.copy(mesh.position)
+    lod.quaternion.copy(mesh.quaternion)
+    lod.scale.copy(mesh.scale)
+    mesh.position.set(0, 0, 0)
+    mesh.quaternion.identity()
+    mesh.scale.set(1, 1, 1)
+    if (parent) parent.add(lod)
+    else optimized = lod
+    lod.addLevel(mesh, 0)
+    mesh.geometry.computeBoundingSphere()
+    const radius = mesh.geometry.boundingSphere?.radius ?? 1
+    for (const [index, compiled] of item.lodMeshes.entries()) {
+      const geometry = geometryOfCompiledMesh(compiled)
+      owned.add(geometry)
+      const level = new Mesh(geometry, mesh.material)
+      modelMeshes.add(level)
+      level.castShadow = mesh.castShadow
+      level.receiveShadow = mesh.receiveShadow
+      lod.addLevel(level, radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index] ?? 1))
+    }
+    rememberLodDistances(lod)
+  }
+  return optimized
+}
+
+function renderedGeometry(
+  geometries: readonly BufferGeometry[],
+  material: MeshStandardMaterial,
+  baked?: readonly BakedInstance[],
+): Object3D {
+  const levels = geometries.map(geometry =>
+    baked ? bakedInstancesOf(geometry, material, baked) : new Mesh(geometry, material),
+  )
+  if (levels.length === 1) return levels[0] ?? new Object3D()
+
+  const lod = new LOD()
+  const first = levels[0]
+  if (first instanceof InstancedMesh) first.computeBoundingSphere()
+  else geometries[0]?.computeBoundingSphere()
+  const radius =
+    first instanceof InstancedMesh
+      ? (first.boundingSphere?.radius ?? 1)
+      : (geometries[0]?.boundingSphere?.radius ?? 1)
+  levels.forEach((level, index) =>
+    lod.addLevel(
+      level,
+      index === 0
+        ? 0
+        : radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index - 1] ?? 1),
+    ),
+  )
+  rememberLodDistances(lod)
+  return lod
+}
+
+function rememberLodDistances(lod: LOD): void {
+  BASE_LOD_DISTANCES.set(
+    lod,
+    lod.levels.map(level => level.distance),
+  )
+}
+
+function applyGameTransform(object: Object3D, transform: Transform): void {
+  applyTransform(object, transform)
+  const scale = Math.max(
+    Math.abs(transform.scale.x),
+    Math.abs(transform.scale.y),
+    Math.abs(transform.scale.z),
+  )
+  object.traverse(child => {
+    if (!(child instanceof LOD)) return
+    const distances = BASE_LOD_DISTANCES.get(child)
+    if (!distances) return
+    child.levels.forEach((level, index) => {
+      level.distance = (distances[index] ?? level.distance) * scale
+    })
+  })
+}
+
+function instancedMeshesIn(object: Object3D): readonly InstancedMesh[] {
+  const meshes: InstancedMesh[] = []
+  object.traverse(child => {
+    if (child instanceof InstancedMesh) meshes.push(child)
+  })
+  return meshes
 }
 
 /**

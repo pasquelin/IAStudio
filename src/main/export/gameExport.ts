@@ -5,6 +5,7 @@ import {
   EXPORTED_GAME_FILE,
   EXPORTED_GAME_VERSION,
   type ExportedGame,
+  type ExportedAssetOverride,
   type GameExportOutcome,
   type GameExportRequest,
   type ScriptToExport,
@@ -62,6 +63,7 @@ export async function writeExportedGame(
   // 🛑 Two rows may name one file — `checker.png` twice, from two folders — and the second would
   // overwrite the first without a word. The same rule a montage bundle already follows.
   const taken = new Set<string>()
+  const overrides = new Map(request.assetOverrides?.map(override => [override.id, override]) ?? [])
 
   const ids = assetIdsIn(scenes)
   const found = await ports.assetFiles(ids)
@@ -73,20 +75,22 @@ export async function writeExportedGame(
       continue
     }
 
-    const contentKey = file.hash ?? `bytes:${file.bytes.byteLength}`
+    const optimized = overriddenAsset(file, overrides.get(id))
+    const contentKey =
+      optimized === file && file.hash ? file.hash : `bytes:${optimized.bytes.byteLength}`
     const candidates = contentPaths.get(contentKey) ?? []
-    const shared = await matchingContent(candidates, file.bytes)
+    const shared = await matchingContent(candidates, optimized.bytes)
     if (shared) {
       assets[id] = shared.path
       continue
     }
 
-    const name = freeName(safeFileName(file.name, 'asset'), taken)
+    const name = freeName(safeFileName(optimized.name, 'asset'), taken)
     taken.add(name)
     assets[id] = `assets/${name}`
-    candidates.push({ body: file.bytes, path: assets[id] })
+    candidates.push({ body: optimized.bytes, path: assets[id] })
     contentPaths.set(contentKey, candidates)
-    assetWrites.push(ports.write(assets[id], file.bytes))
+    assetWrites.push(ports.write(assets[id], optimized.bytes))
   }
 
   // 🛑 Through `safeFileName` and deduplicated: an id comes from the WINDOW over IPC, so `../../x`
@@ -110,9 +114,16 @@ export async function writeExportedGame(
     version: EXPORTED_GAME_VERSION,
     title: request.title,
     entryScene: request.entryScene,
-    scenes: scenes.map(one => ({ id: one.id, title: one.title, file: files.get(one.id) ?? '' })),
+    scenes: scenes.map(one => ({
+      id: one.id,
+      title: one.title,
+      file: files.get(one.id) ?? '',
+      ...(one.optimization ? { optimization: one.optimization } : {}),
+    })),
     scripts: scripts.map(one => ({ script: one.script, file: `scripts/${named.get(one.script)}` })),
     assets,
+    ...(request.modelAssets ? { modelAssets: request.modelAssets } : {}),
+    ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
   }
 
   // Names are allocated above, in order, because `freeName` is pure; only the writing is
@@ -133,6 +144,15 @@ export async function writeExportedGame(
     assets: Object.keys(assets).length,
     missing,
   }
+}
+
+function overriddenAsset(
+  source: ExportedAsset,
+  override: ExportedAssetOverride | undefined,
+): ExportedAsset {
+  return override
+    ? { name: `${stemOf(source.name)}.${override.extension}`, bytes: override.bytes }
+    : source
 }
 
 const COMPARISON_CHUNK_BYTES = 1024 * 1024

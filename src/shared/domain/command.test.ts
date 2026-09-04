@@ -280,6 +280,7 @@ describe('the commands that raise a dialogue only a person can fill', () => {
       'montage.import',
       'project.new',
       'project.open',
+      'scene.exportGame',
       'scene.optimizeSelection',
       'scene.worldPerformance',
     ])

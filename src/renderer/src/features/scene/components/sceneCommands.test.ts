@@ -13,6 +13,7 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { runSceneCommand } from './sceneCommands'
 import { useOptimizationDialog } from '@/hooks/useOptimizationDialog'
+import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 
 const DOCUMENT = 'doc-1'
 
@@ -31,6 +32,7 @@ beforeEach(() => {
   useAnimationViews.setState({ views: {} })
   installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [rail()], selectedIds: ['rail'] })
   useOptimizationDialog.getState().close()
+  useGameExportDialog.getState().close()
 })
 
 it('opens optimization only after a selection and its live renderer exist', () => {
@@ -58,6 +60,15 @@ it('opens the whole-world performance report without requiring a selection', () 
     selectedIds: [],
     scope: 'world',
   })
+  forgetSceneEngine(DOCUMENT)
+})
+
+it('opens the game export report from a live scene', () => {
+  registerSceneEngine(DOCUMENT, {} as unknown as SceneRenderer)
+
+  runSceneCommand(DOCUMENT, 'scene.exportGame')
+
+  expect(useGameExportDialog.getState().documentId).toBe(DOCUMENT)
   forgetSceneEngine(DOCUMENT)
 })
 
