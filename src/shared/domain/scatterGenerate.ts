@@ -1,5 +1,5 @@
 import { clamp } from '../numeric'
-import { chunkLayout, unpackDeltas } from './relief'
+import { chunkLayout, unpackDeltas, type PackedReliefChunk } from './relief'
 import { standingAngles } from './scatterRotation'
 import {
   SCATTER_MASK_TEXELS,
@@ -27,6 +27,8 @@ export type ScatterPose = {
 
 const DEG = Math.PI / 180
 const LANES = { jitterX: 1, jitterZ: 2, accept: 3, mask: 4, asset: 5, scale: 6, yaw: 7, tilt: 8 }
+
+type MaskCache = Map<PackedReliefChunk, Float32Array>
 
 /**
  * One Mulberry32 draw from a cell address. Sequential `createRandom` would shift every later
@@ -56,13 +58,14 @@ export function scatterPosesOf(
   if (chance === 0) return []
 
   const poses: ScatterPose[] = []
+  const maskCache: MaskCache = new Map()
   const gx0 = Math.floor(region.minX / step)
   const gx1 = Math.ceil(region.maxX / step)
   const gz0 = Math.floor(region.minZ / step)
   const gz1 = Math.ceil(region.maxZ / step)
   for (let gz = gz0; gz < gz1; gz++) {
     for (let gx = gx0; gx < gx1; gx++) {
-      const pose = poseAt(layer, rules, ground, region, gx, gz, step, chance)
+      const pose = poseAt(layer, rules, ground, region, gx, gz, step, chance, maskCache)
       if (pose) poses.push(pose)
     }
   }
@@ -78,10 +81,11 @@ function poseAt(
   gz: number,
   step: number,
   chance: number,
+  maskCache: MaskCache,
 ): ScatterPose | null {
   const x = (gx + 0.25 + scatterHash(layer.seed, gx, gz, LANES.jitterX) * 0.5) * step
   const z = (gz + 0.25 + scatterHash(layer.seed, gx, gz, LANES.jitterZ) * 0.5) * step
-  if (!acceptedAt(layer, rules, ground, region, gx, gz, x, z, chance)) return null
+  if (!acceptedAt(layer, rules, ground, region, gx, gz, x, z, chance, maskCache)) return null
   const slope = ground.slopeAt(x, z)
   const assetId = pickAsset(layer.assets, scatterHash(layer.seed, gx, gz, LANES.asset))
   if (!assetId) return null
@@ -112,10 +116,11 @@ function acceptedAt(
   x: number,
   z: number,
   chance: number,
+  maskCache: MaskCache,
 ): boolean {
   if (!inside(region, x, z) || !insideLayer(layer, x, z)) return false
   if (scatterHash(layer.seed, gx, gz, LANES.accept) >= chance) return false
-  const weight = maskWeightAt(layer, x, z, ground)
+  const weight = maskWeightAt(layer, x, z, ground, maskCache)
   if (weight <= 0) return false
   if (weight < 1 && scatterHash(layer.seed, gx, gz, LANES.mask) >= weight) return false
   const y = ground.heightAt(x, z) ?? 0
@@ -152,7 +157,13 @@ function pickAsset(assets: readonly ScatterAsset[], unit: number): string | null
   return assets[assets.length - 1]?.assetId ?? null
 }
 
-function maskWeightAt(layer: ScatterLayer, x: number, z: number, ground: ScatterGround): number {
+function maskWeightAt(
+  layer: ScatterLayer,
+  x: number,
+  z: number,
+  ground: ScatterGround,
+  maskCache: MaskCache,
+): number {
   const mask = layer.mask
   if (!mask) return 1
   if (mask.kind === 'height') {
@@ -162,10 +173,10 @@ function maskWeightAt(layer: ScatterLayer, x: number, z: number, ground: Scatter
   if (mask.kind === 'slope') {
     return inRange(ground.slopeAt(x, z).degrees, mask.min, mask.max) ? 1 : 0
   }
-  return paintedWeightAt(layer, x, z)
+  return paintedWeightAt(layer, x, z, maskCache)
 }
 
-function paintedWeightAt(layer: ScatterLayer, x: number, z: number): number {
+function paintedWeightAt(layer: ScatterLayer, x: number, z: number, maskCache: MaskCache): number {
   const mask = layer.mask
   if (!mask || mask.kind !== 'painted') return 1
   const width = SCATTER_MASK_TEXELS
@@ -178,7 +189,11 @@ function paintedWeightAt(layer: ScatterLayer, x: number, z: number): number {
   const packed = mask.weights.chunks.find(chunk => chunk.column === column && chunk.row === row)
   if (!packed) return 0
   const layout = chunkLayout(column, row, width, width, grain)
-  const deltas = unpackDeltas(packed.payload, layout.width * layout.height)
+  let deltas = maskCache.get(packed)
+  if (!deltas) {
+    deltas = unpackDeltas(packed.payload, layout.width * layout.height)
+    maskCache.set(packed, deltas)
+  }
   return clamp(deltas[(sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)] ?? 0, 0, 1)
 }
 
