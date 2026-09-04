@@ -1,0 +1,202 @@
+import { afterAll, describe, expect, it } from 'vitest'
+import { CLOUD_PROVIDERS, defaultChatModel } from '@shared/domain/aiCloud'
+import { isRecord } from '@shared/guards'
+import { createHttpChatBrain } from '@main/assistant/brainHttp'
+import { createActionIndex } from '@main/actionIndex/actionIndex'
+import { actionCorpus } from '@main/actionIndex/actionCorpus'
+import { openMemoryDatabase } from '@main/project/sqliteMemory'
+import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/metrics'
+import type { Run, Scenario } from './run'
+import { SCENARIOS } from './scenarios'
+import { playMission } from './playMission'
+
+const KEY = process.env['EVAL_KEY'] ?? ''
+const RUNS = Math.max(1, Math.trunc(Number(process.env['EVAL_RUNS'] ?? 3)) || 1)
+const PROVIDER = process.env['EVAL_PROVIDER'] ?? 'deepseek'
+const cloud = CLOUD_PROVIDERS.find(provider => provider.id === PROVIDER)
+const chat = cloud?.chat !== undefined && cloud.chat.kind !== 'scenario' ? cloud.chat : null
+const MODEL = process.env['EVAL_MODEL'] ?? defaultChatModel(PROVIDER) ?? ''
+
+const MISSION_SCENARIOS = new Set([
+  '1.1 names the open project and the open documents',
+  '6.1 adds a cube at the centre',
+  '6.2 renames the cube Cube Test',
+  '12.2 turns its first material red',
+  '20.1 generates a photoreal red car in a Paris street',
+  '22.1 generates a 3D model of a wooden chest',
+  '41.6 makes a project called Démo Assistant',
+  '57.4 remembers the project aims at photoreal marine work',
+  '58.7 puts the project under version control',
+])
+
+const scenarios = SCENARIOS.filter(scenario => MISSION_SCENARIOS.has(scenario.name))
+
+type Tokens = { sent: number; back: number; cached: number; calls: number }
+type Result = {
+  name: string
+  passed: number
+  actions: number
+  unnecessary: number
+  searches: number
+  milliseconds: number
+  tokens: Tokens
+  metrics: MissionRuntimeMetrics
+}
+
+const emptyMetrics = (): MissionRuntimeMetrics => createMissionMetrics().read()
+
+function addMetrics(total: MissionRuntimeMetrics, metrics: MissionRuntimeMetrics): void {
+  total.contextChars += metrics.contextChars
+  total.contextSources += metrics.contextSources
+  total.actionCandidates += metrics.actionCandidates
+  total.actionsSentToLlm += metrics.actionsSentToLlm
+  total.memoryCandidates += metrics.memoryCandidates
+  total.memoriesSentToLlm += metrics.memoriesSentToLlm
+  total.visualContextBytes += metrics.visualContextBytes
+  total.missionSteps += metrics.missionSteps
+  total.llmCalls += metrics.llmCalls
+  total.planningCalls += metrics.planningCalls
+  total.replans += metrics.replans
+  total.revisionConflicts += metrics.revisionConflicts
+  total.userWaits += metrics.userWaits
+  total.jobWaits += metrics.jobWaits
+  total.maximumConcurrentMissions = Math.max(
+    total.maximumConcurrentMissions,
+    metrics.maximumConcurrentMissions,
+  )
+  total.actionIndexSearches += metrics.actionIndexSearches
+}
+
+function counting(tokens: Tokens): typeof fetch {
+  return async (input, init) => {
+    tokens.calls += 1
+    const response = await fetch(input, init)
+    const written = await response.text()
+    const body = parsed(written)
+    const usage = isRecord(body) && isRecord(body['usage']) ? body['usage'] : {}
+    const number = (key: string): number => (typeof usage[key] === 'number' ? usage[key] : 0)
+    tokens.sent += number('prompt_tokens') + number('input_tokens')
+    tokens.back += number('completion_tokens') + number('output_tokens')
+    tokens.cached += number('prompt_cache_hit_tokens') + number('cache_read_input_tokens')
+    return new Response([204, 205, 304].includes(response.status) ? null : written, response)
+  }
+}
+
+function parsed(written: string): unknown {
+  try {
+    return JSON.parse(written)
+  } catch {
+    return null
+  }
+}
+
+function resultPassed(scenario: Scenario, run: Run): boolean {
+  if (scenario.name === '57.4 remembers the project aims at photoreal marine work') {
+    return run.studio
+      .memories()
+      .some(memory =>
+        `${memory.summary} ${memory.body}`.toLocaleLowerCase('fr').includes('photoréaliste marine'),
+      )
+  }
+  if (scenario.name !== '1.1 names the open project and the open documents') {
+    return scenario.passed(run)
+  }
+  const answer = run.said.toLocaleLowerCase('fr')
+  return (
+    answer.includes(run.studio.projectName().toLocaleLowerCase('fr')) &&
+    run.studio
+      .documents()
+      .every(document => answer.includes(document.title.toLocaleLowerCase('fr')))
+  )
+}
+
+function unnecessaryActions(_scenario: Scenario, run: Run): number {
+  const seen = new Set<string>()
+  return run.called.filter(call => {
+    const key = `${call.action}:${JSON.stringify(call.input)}`
+    const unnecessary = call.answer?.startsWith('refused') === true || seen.has(key)
+    seen.add(key)
+    return unnecessary
+  }).length
+}
+
+const actionDatabase = openMemoryDatabase()
+const actionIndex = createActionIndex(actionDatabase)
+actionIndex.rebuild(actionCorpus())
+const results: Result[] = []
+
+describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`, () => {
+  it.each(scenarios)('$name', { timeout: 1_800_000 }, async scenario => {
+    const result: Result = {
+      name: scenario.name,
+      passed: 0,
+      actions: 0,
+      unnecessary: 0,
+      searches: 0,
+      milliseconds: 0,
+      tokens: { sent: 0, back: 0, cached: 0, calls: 0 },
+      metrics: emptyMetrics(),
+    }
+    const failures: string[] = []
+    const brain = createHttpChatBrain({
+      cloud: PROVIDER,
+      chat: chat ?? { kind: 'openai', baseUrl: '', model: '' },
+      credentials: () => ({ key: KEY, secret: '' }),
+      model: () => MODEL,
+      fetch: counting(result.tokens),
+    })
+
+    for (let run = 0; run < RUNS; run += 1) {
+      const started = performance.now()
+      const played = await playMission(scenario, request => brain.think(request), {
+        search: async (query, limit) => actionIndex.search({ query, limit }),
+      })
+      try {
+        result.milliseconds += performance.now() - started
+        result.actions += played.called.length
+        result.searches += played.called.filter(call => call.action === 'actions.find').length
+        result.unnecessary += unnecessaryActions(scenario, played)
+        addMetrics(result.metrics, played.metrics)
+        if (resultPassed(scenario, played)) result.passed += 1
+        else
+          failures.push(
+            `${played.called.map(call => call.action).join(', ') || 'no action'} — ${played.said}`,
+          )
+      } finally {
+        played.studio.close()
+      }
+    }
+    results.push(result)
+    expect(result.passed, failures.join('\n')).toBe(RUNS)
+  })
+
+  afterAll(() => {
+    const passed = results.reduce((total, result) => total + result.passed, 0)
+    const total = results.length * RUNS
+    const sum = (read: (result: Result) => number): number =>
+      results.reduce((value, result) => value + read(result), 0)
+    console.log(`\n  mission runtime — ${PROVIDER}/${MODEL}, ${RUNS} runs`)
+    for (const result of results) {
+      console.log(
+        `  ${result.passed === RUNS ? '✓' : '✗'} ${result.name}: ${result.passed}/${RUNS}, ` +
+          `${result.actions} actions, ${result.unnecessary} unnecessary, ` +
+          `${result.metrics.actionsSentToLlm} candidates sent, ${result.tokens.sent} tokens`,
+      )
+    }
+    console.log(
+      `  ${Math.round((passed / total) * 100)}% passed · ${sum(result => result.tokens.sent)} tokens · ` +
+        `${sum(result => result.metrics.contextChars)} context chars · ` +
+        `${sum(result => result.metrics.llmCalls)} runtime rounds · ` +
+        `${sum(result => result.tokens.calls)} provider calls · ` +
+        `${sum(result => result.metrics.replans)} replans · ` +
+        `${sum(result => result.metrics.revisionConflicts)} revision conflicts · ` +
+        `${sum(result => result.metrics.userWaits)} user waits · ` +
+        `${sum(result => result.metrics.jobWaits)} job waits · ` +
+        `${Math.max(...results.map(result => result.metrics.maximumConcurrentMissions))} concurrent missions max · ` +
+        `${sum(result => result.metrics.actionIndexSearches)} index searches · ` +
+        `${sum(result => result.searches)} model action searches · ${Math.round(sum(result => result.milliseconds))} ms`,
+    )
+  })
+})
+
+afterAll(() => actionIndex.close())

@@ -12,7 +12,7 @@ export const CONTEXT_BUDGETS: Record<ContextSource, ContextSourceBudget> = {
   document: { maxItems: 1, maxCharacters: 800 },
   selection: { maxItems: 8, maxCharacters: 800 },
   documentState: { maxItems: 1, maxCharacters: 2_000 },
-  actions: { maxItems: 5, maxCharacters: 6_000 },
+  actions: { maxItems: 12, maxCharacters: 6_000 },
   memories: { maxItems: 6, maxCharacters: 4_000 },
   jobs: { maxItems: 6, maxCharacters: 2_000 },
   results: { maxItems: 6, maxCharacters: 4_000 },
@@ -25,12 +25,13 @@ const charactersOf = (value: unknown): number => JSON.stringify(value)?.length ?
 export function withinBudget<T>(
   values: readonly T[],
   budget: ContextSourceBudget,
+  measure: (value: T) => unknown = value => value,
 ): { values: readonly T[]; report: ContextSourceReport } {
   const selected: T[] = []
   let characters = 0
   for (const value of values) {
     if (selected.length >= budget.maxItems) break
-    const cost = charactersOf(value)
+    const cost = charactersOf(measure(value))
     if (characters + cost > budget.maxCharacters) continue
     selected.push(value)
     characters += cost

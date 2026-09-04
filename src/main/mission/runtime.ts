@@ -14,6 +14,7 @@ import type { AssistantBrain } from '@main/assistant/brainPort'
 import type { RemoteActions } from '@main/mcp/asking'
 import type { JobManager } from '@main/provider/jobManager'
 import type { AssistantContextBuilder } from './contextBuilder'
+import type { MissionMetrics } from './metrics'
 import type { MissionManager, MissionScope } from './manager'
 import {
   createMissionScheduler,
@@ -37,14 +38,20 @@ type RuntimeDeps = {
   jobs: Pick<JobManager, 'list'>
   revisions: MissionRevisionReader
   clock: MissionClock
+  metrics?: MissionMetrics
 }
 
 type PlannedStep = { title: string; draft: MissionStepDraft }
 
-const contextText = (context: Awaited<ReturnType<AssistantContextBuilder['build']>>): string =>
-  JSON.stringify(context, (_key, value: unknown) =>
+const contextText = (context: Awaited<ReturnType<AssistantContextBuilder['build']>>): string => {
+  const compact = {
+    ...context,
+    actions: context.actions.map(hit => ({ name: hit.action.name, score: hit.score })),
+  }
+  return JSON.stringify(compact, (_key, value: unknown) =>
     value instanceof Uint8Array ? `[${value.byteLength} image bytes]` : value,
   )
+}
 
 const actionStep = (call: AssistantCall): PlannedStep => ({
   title: call.action,
@@ -115,11 +122,14 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     const wantsVisual =
       capabilities.multimodalImages && visualRequest.test(`${mission.goal} ${step.title}`)
     const context = await buildContext(mission, step, wantsVisual)
+    const serialized = contextText(context)
+    deps.metrics?.context(context, serialized.length)
+    deps.metrics?.llmCall(step.kind === 'reason')
     return await deps.brain.think(
       {
         utterance,
         history: [],
-        context: contextText(context),
+        context: serialized,
         candidates: context.actions.map(hit => hit.action.name),
         images: context.visual?.map(({ mimeType, bytes }) => ({ mimeType, bytes })),
       },
@@ -141,6 +151,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       }
     }
     if (revision.decision === 'reconsider') {
+      deps.metrics?.replan()
       const answer = await think(
         mission,
         step,
@@ -172,14 +183,17 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     revision: MissionRevisionCheck,
   ): MissionStepOutcome | null => {
     if (step.kind === 'user_input') {
+      if (!revision.resumed) deps.metrics?.wait('user')
       return revision.resumed
         ? { kind: 'completed' }
         : { kind: 'waiting', wait: { kind: 'user', stepId: step.id } }
     }
     if (step.kind === 'job') {
       const job = terminalJob(deps.jobs.list(), step.jobId)
-      if (!job)
+      if (!job) {
+        deps.metrics?.wait('job')
         return { kind: 'waiting', wait: { kind: 'job', stepId: step.id, jobId: step.jobId } }
+      }
       return job.status === 'succeeded'
         ? { kind: 'completed', result: job }
         : { kind: 'failed', error: `job ${job.id} ${job.status}` }
@@ -199,6 +213,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
   ): Promise<MissionStepOutcome> => {
     const mission = await deps.manager.read(step.missionId)
     if (!mission) return { kind: 'failed', error: `mission ${step.missionId} disappeared` }
+    if (revision.decision === 'reconsider') deps.metrics?.revisionConflict()
     const passive = passiveOutcome(step, revision)
     if (passive) return passive
     if (step.kind === 'action') return await runAction(mission, step, signal, revision)
@@ -213,10 +228,12 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         ? `Verify whether this mission is complete from the current state: ${mission.goal}`
         : mission.goal,
     )
+    const steps = plannedFrom(answer, step.kind === 'verify')
+    deps.metrics?.plannedSteps(steps.length)
     return {
       kind: 'planned',
       result: { say: answer.say, ask: answer.ask },
-      steps: plannedFrom(answer, step.kind === 'verify'),
+      steps,
     }
   }
 
@@ -235,6 +252,10 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     },
     create: async (goal, scope) => {
       const mission = await deps.manager.create(goal, scope)
+      const activeMissions = (await deps.manager.list(scope)).filter(
+        candidate => !isMissionFinished(candidate.state),
+      ).length
+      deps.metrics?.concurrency(activeMissions)
       const planned = await deps.manager.update(mission.id, mission.revision, current =>
         addMissionStep(
           current,

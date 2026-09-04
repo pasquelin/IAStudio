@@ -84,6 +84,7 @@ export function studioFacade(
     changed: () => unsavedDocumentIds().some(one => !runtime.settled.has(one)) || ops.can().undo,
     refusals: () => runtime.refusals,
     memories: memory.held,
+    projectContext: () => shell.context(),
     playing: async () => {
       for (let tries = 0; tries < 200; tries++) {
         if (studio.playState() !== 'edit') return true

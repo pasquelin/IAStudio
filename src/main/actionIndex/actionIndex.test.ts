@@ -48,6 +48,31 @@ describe('ActionIndex', () => {
     )
   })
 
+  it('retrieves actions from the translated user request without translating the manuals', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    expect(
+      index.search({ query: 'ajoute un cube au centre de la scène' }).map(hit => hit.action.name),
+    ).toContain('node.add')
+    expect(index.search({ query: 'crée un nouveau projet' }).map(hit => hit.action.name)).toContain(
+      'project.create',
+    )
+    const requests = [
+      ['renomme objet scène 3D cube Cube Test', 'node.rename'],
+      ['change la couleur du premier matériau en rouge', 'node.setMeshMaterial'],
+      ['génère une image photoréaliste', 'generator.prepare'],
+      ['génère un modèle 3D', 'generator.prepare'],
+      ['mets le projet sous gestion de versions', 'git.init'],
+    ]
+    for (const [query, expected] of requests) {
+      const names = index.search({ query: query ?? '', limit: 12 }).map(hit => hit.action.name)
+      expect(names, `${query}: ${JSON.stringify(names)}`).toContain(expected)
+    }
+  })
+
   it('lets BM25 rank descriptive matches before registry order', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())

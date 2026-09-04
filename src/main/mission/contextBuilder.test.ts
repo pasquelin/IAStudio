@@ -196,8 +196,8 @@ describe('AssistantContextBuilder', () => {
       }),
     )
     const context = await builder.build({ mission, step, request: 'Find an action' })
-    expect(context.actions).toHaveLength(5)
-    expect(context.budget.actions).toMatchObject({ considered: 8, selected: 5, truncated: true })
+    expect(context.actions).toHaveLength(8)
+    expect(context.budget.actions).toMatchObject({ considered: 8, selected: 8, truncated: false })
     expect(context.jobs).toHaveLength(6)
     expect(context.budget.jobs).toMatchObject({ considered: 9, selected: 6, truncated: true })
   })

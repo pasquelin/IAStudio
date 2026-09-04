@@ -10,6 +10,7 @@ import type { StudioBridge } from '@shared/ipc'
 import type { PaintedCells } from './canvasSurface'
 import type { MemoryGit } from './memoryGit'
 import type { MemoryShell } from './memoryShell'
+import type { ContextState } from '@shared/domain/projectContext'
 
 export type Think = StudioBridge['assistant']['think']
 
@@ -32,6 +33,7 @@ export type Studio = {
   changed: () => boolean
   refusals: () => readonly string[]
   memories: () => readonly Memory[]
+  projectContext: () => ContextState
   playState: () => PlayState
   playing: () => Promise<boolean>
   settle: () => void

@@ -54,8 +54,9 @@ function selected<T>(
   report: ContextBudgetReport,
   source: ContextSource,
   values: readonly T[],
+  measure?: (value: T) => unknown,
 ): readonly T[] {
-  const bounded = withinBudget(values, CONTEXT_BUDGETS[source])
+  const bounded = withinBudget(values, CONTEXT_BUDGETS[source], measure)
   const contentTruncated = report[source].contentTruncated
   report[source] = {
     ...bounded.report,
@@ -80,11 +81,20 @@ function markContentTruncated(report: ContextBudgetReport, source: ContextSource
   report[source] = { ...report[source], truncated: true, contentTruncated: true }
 }
 
-function retrievalQuery(input: AssistantContextRequest): string {
+function retrievalQuery(input: AssistantContextRequest, snapshot: StudioSnapshot | null): string {
+  const active = snapshot?.documents.find(document => document.active)
+  const structuralState = JSON.stringify(snapshot?.activeDocumentState?.state)
   return [
-    textWithin(input.mission.goal, 480),
-    textWithin(input.request, 480),
-    textWithin(input.step.title, 160),
+    ...new Set(
+      [
+        textWithin(input.mission.goal, 480),
+        textWithin(input.request, 480),
+        textWithin(input.step.title, 160),
+        active?.kind ?? '',
+        active?.workspace ?? snapshot?.workspace ?? '',
+        structuralState ? textWithin(structuralState, 480) : '',
+      ].filter(Boolean),
+    ),
   ].join('\n')
 }
 
@@ -131,7 +141,7 @@ async function collectContext(
   input: AssistantContextRequest,
   snapshot: StudioSnapshot | null,
 ): Promise<CollectedContext> {
-  const query = retrievalQuery(input)
+  const query = retrievalQuery(input, snapshot)
   const refs = rememberedRefs(snapshot)
   const attached =
     input.mission.projectId !== undefined && snapshot?.project?.path === input.mission.projectId
@@ -335,7 +345,10 @@ function assembledContext(
     ...(current.document ? { document: current.document } : {}),
     ...(current.selection ? { selection: current.selection } : {}),
     ...(state === undefined ? {} : { documentState: state }),
-    actions: selected(report, 'actions', collected.actions),
+    actions: selected(report, 'actions', collected.actions, hit => ({
+      name: hit.action.name,
+      score: hit.score,
+    })),
     memories: selected(report, 'memories', collected.memories),
     jobs: selected(report, 'jobs', relevantJobs(input, collected.jobs)),
     previousResults: selected(report, 'results', previousResults(input, report)),

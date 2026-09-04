@@ -262,7 +262,7 @@ export function createTripoApi({
 
     upload: async (fileName, bytes, mimeType) => {
       const form = new FormData()
-      form.append('file', new Blob([bytes], { type: mimeType }), fileName)
+      form.append('file', new Blob([new Uint8Array(bytes)], { type: mimeType }), fileName)
       const data = await call('files', { method: 'POST', body: form })
       const token = isRecord(data) ? textOf(data, 'file_token') : undefined
       if (!token) throw new TripoError(0, 200, 'a file was accepted without a token')

@@ -59,20 +59,47 @@ function actionOf(row: SqlRow): IndexedAction | null {
   }
 }
 
+const folded = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('en')
+
+const wordsOf = (value: string): readonly string[] => folded(value).match(/[\p{L}\p{N}_]+/gu) ?? []
+
 function lexicalScore(query: string, action: IndexedAction, rank?: number): number {
-  const wanted = query.toLocaleLowerCase('en').trim()
+  const wanted = folded(query).trim()
   const name = action.name.toLocaleLowerCase('en')
-  const tokens = wanted.match(/[\p{L}\p{N}_]+/gu) ?? []
+  const tokens = wordsOf(wanted)
   const nameTokens = name.split(/[.:]/)
+  const searchableTokens = wordsOf(action.searchable)
+  const titleTokens = action.localizedTitles.flatMap(wordsOf)
+  const fieldTokens = action.localizedFieldLabels.flatMap(wordsOf)
   let score = rank === undefined ? 0 : 1 / (1 + Math.exp(rank))
   if (name === wanted) score += 12
   else if (name.startsWith(wanted)) score += 7
   if (nameTokens.some(token => token === wanted)) score += 4
   if (action.family === wanted) score += 2
-  for (const token of tokens) {
-    if (nameTokens.some(nameToken => nameToken.startsWith(token))) score += 1.5
-    if (action.title.toLocaleLowerCase('en').includes(token)) score += 0.75
-  }
+  for (const token of tokens)
+    score += tokenScore(token, action.title, nameTokens, searchableTokens, titleTokens, fieldTokens)
+  return score
+}
+
+function tokenScore(
+  token: string,
+  title: string,
+  nameTokens: readonly string[],
+  searchableTokens: readonly string[],
+  titleTokens: readonly string[],
+  fieldTokens: readonly string[],
+): number {
+  let score = nameTokens.some(nameToken => nameToken.startsWith(token)) ? 1.5 : 0
+  if (title.toLocaleLowerCase('en').includes(token)) score += 0.75
+  if (token.length < 4) return score
+  const prefix = token.slice(0, 4)
+  if (searchableTokens.some(candidate => candidate.startsWith(prefix))) score += 0.5
+  if (titleTokens.some(candidate => candidate.startsWith(prefix))) score += 2
+  if (fieldTokens.some(candidate => candidate.startsWith(prefix))) score += 1.5
   return score
 }
 
@@ -181,8 +208,18 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
           )
           .all(wanted.embedding.model)
       : []
+    const fallbackRows = driver
+      .prepare(
+        `SELECT a.descriptor, v.embedding, v.model AS embedding_model, a.ordinal, NULL AS rank
+         FROM indexed_actions a LEFT JOIN action_vectors v ON v.action_name = a.name
+         WHERE a.name <> 'actions.find'`,
+      )
+      .all()
     const rows = new Map(
-      [...semanticRows, ...lexicalRows].map(row => [optionalText(row, 'descriptor') ?? '', row]),
+      [...fallbackRows, ...semanticRows, ...lexicalRows].map(row => [
+        optionalText(row, 'descriptor') ?? '',
+        row,
+      ]),
     ).values()
     const question = wanted.embedding ? normalised(wanted.embedding.values) : null
     const hits = [...rows].flatMap(row => {
@@ -205,6 +242,7 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
     })
     const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(wanted.limit ?? DEFAULT_LIMIT)))
     return hits
+      .filter(hit => hit.score >= 1)
       .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
       .slice(0, limit)
   }

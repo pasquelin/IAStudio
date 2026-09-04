@@ -24,6 +24,7 @@
     "test:watch": "vitest",
     "bench": "vitest bench --run",
     "banc": "vitest run --config vitest.banc.config.ts",
+    "banc:mission": "vitest run --config vitest.mission-banc.config.ts",
     "unused:main": "knip",
     "duplication": "jscpd",
     "dry": "dry-ts --profile src src",

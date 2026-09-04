@@ -5,7 +5,7 @@ import type {
   ActionName,
   ActionReach,
 } from '@shared/domain/assistant'
-import { englishText } from '@shared/i18n'
+import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
 import { digestOf } from '@main/memory/vectors'
 
 export type IndexedAction = {
@@ -22,6 +22,8 @@ export type IndexedAction = {
   runsOthers: boolean
   ordinal: number
   searchable: string
+  localizedTitles: readonly string[]
+  localizedFieldLabels: readonly string[]
 }
 
 export type ActionCorpus = {
@@ -39,6 +41,8 @@ export function actionCorpus(): ActionCorpus {
     family.actions.map(action => {
       const title = englishText(action.titleKey)
       const description = englishText(action.descriptionKey)
+      const frenchTitle = textAt(TRANSLATIONS.fr, action.titleKey)
+      const frenchDescription = textAt(TRANSLATIONS.fr, action.descriptionKey)
       const fields = action.fields.map(field => ({ ...field }))
       const indexed: IndexedAction = {
         name: action.name,
@@ -53,14 +57,22 @@ export function actionCorpus(): ActionCorpus {
         asksItself: action.asksItself === true,
         runsOthers: action.runsOthers === true,
         ordinal: ordinal++,
+        localizedTitles: [title, frenchTitle],
+        localizedFieldLabels: fields.flatMap(field => [
+          englishText(field.labelKey),
+          textAt(TRANSLATIONS.fr, field.labelKey),
+        ]),
         searchable: [
           action.name,
           family.name,
           title,
           description,
+          frenchTitle,
+          frenchDescription,
           ...fields.flatMap(field => [
             field.key,
             englishText(field.labelKey),
+            textAt(TRANSLATIONS.fr, field.labelKey),
             ...(field.options ?? []),
           ]),
         ].join(' '),
