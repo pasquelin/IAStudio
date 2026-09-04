@@ -23,6 +23,7 @@ describe('the node every family that points at one names', () => {
       kind: 'text',
       labelKey: 'assistant.fields.nodeId',
       required: true,
+      picks: 'node',
     })
   })
 })

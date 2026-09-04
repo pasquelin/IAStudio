@@ -1,5 +1,6 @@
 import type { ActionName } from '@shared/domain/assistant'
 import type { ActionResource } from '@shared/domain/actionResource'
+import { isDocumentKind } from '@shared/domain/document'
 import { askExpression } from '@main/project/ftsMatch'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { bytes, number, optionalNumber, optionalText } from '@main/project/sqlRow'
@@ -111,7 +112,18 @@ function tokenScore(
 function actionScopeScore(action: IndexedAction, scope: ActionSearch['scope']): number {
   const target = scope?.target?.toLocaleLowerCase('en')
   const document = scope?.document?.toLocaleLowerCase('en')
-  return Number(action.name.split('.')[0] === target) * 3 + Number(action.family === document) * 0.5
+  const targetsSelection =
+    target !== undefined &&
+    action.fields.some(
+      field => field.picks === target || field.key.toLocaleLowerCase('en') === `${target}id`,
+    )
+  const documentScore =
+    document !== undefined && isDocumentKind(action.family)
+      ? action.family === document
+        ? 2
+        : -2
+      : 0
+  return Number(targetsSelection) * 4 + documentScore
 }
 
 function workflowScoresOf(

@@ -37,7 +37,6 @@ export type { ActionName } from './assistantActionNames'
  * about those would teach its user to click Allow without reading.
  */
 export type ActionCommitment = 'none' | 'files' | 'asset' | 'remote' | 'studio' | 'credits'
-
 export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
   'none',
   'files',
@@ -144,6 +143,7 @@ export const NODE_ID: ActionField = {
   kind: 'text',
   labelKey: 'assistant.fields.nodeId',
   required: true,
+  picks: 'node',
 }
 
 /** How one works on a channel or a row — the same three flags, two families. */

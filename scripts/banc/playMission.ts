@@ -102,9 +102,14 @@ function tracedContext(
   return {
     build: async request => {
       let snapshot: StudioSnapshot | null = null
-      let retrieval = {
+      let retrieval: {
+        query: string
+        available: NonNullable<Parameters<typeof actions.search>[2]>
+        scope: NonNullable<Parameters<typeof actions.search>[3]>
+        candidates: Awaited<ReturnType<typeof actions.search>>
+      } = {
         query: '',
-        available: [] as Parameters<typeof actions.search>[2],
+        available: [],
         scope: {} as NonNullable<Parameters<typeof actions.search>[3]>,
         candidates: [] as Awaited<ReturnType<typeof actions.search>>,
       }

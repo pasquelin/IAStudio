@@ -140,7 +140,25 @@ describe('ActionIndex', () => {
     })
 
     expect(hits.map(hit => hit.action.name)).toContain('node.rename')
-    expect(hits.find(hit => hit.action.name === 'node.rename')?.scopeScore).toBe(3)
+    expect(hits.find(hit => hit.action.name === 'node.rename')?.scopeScore).toBe(4)
+  })
+
+  it('ranks an action targeting the selection above a similarly worded document action', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const hits = index.search({
+      query: 'Change la couleur de base de son premier matériau en rouge.\nPlan mission',
+      limit: 12,
+      scope: { target: 'node', document: 'scene' },
+    })
+
+    expect(hits.findIndex(hit => hit.action.name === 'node.setMeshMaterial')).toBeLessThan(
+      hits.findIndex(hit => hit.action.name === 'material.setSurfaceSettings'),
+    )
+    expect(hits.find(hit => hit.action.name === 'material.setSurfaceSettings')?.scopeScore).toBe(-2)
   })
 
   it('replaces fields, vectors and FTS words when the corpus changes', () => {
