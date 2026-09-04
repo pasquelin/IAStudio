@@ -1,3 +1,6 @@
+import { clamp } from '../numeric'
+import type { ReliefChunkLayout, ReliefSize } from './relief'
+
 export const RELIEF_CHUNK_TEXELS = 64
 export const RELIEF_CHUNK_CANDIDATES: readonly number[] = [64, 128]
 
@@ -32,4 +35,42 @@ export function regionUploadBytes(texelsX: number, texelsZ: number): RegionUploa
   const position = (texelsX + 1) * (texelsZ + 1) * 12
   const normal = (texelsX + 3) * (texelsZ + 3) * 12
   return { position, normal, total: position + normal }
+}
+
+export function texelStep(
+  size: ReliefSize,
+  samples: { width: number; height: number },
+): ReliefSize {
+  return {
+    x: size.x / Math.max(1, samples.width - 1),
+    z: size.z / Math.max(1, samples.height - 1),
+  }
+}
+
+export function worldY(sample: number, elevation: { min: number; max: number }): number {
+  return elevation.min + sample * (elevation.max - elevation.min)
+}
+
+export function sampleOfWorldY(y: number, elevation: { min: number; max: number }): number {
+  const span = elevation.max - elevation.min
+  return span === 0 ? 0 : (y - elevation.min) / span
+}
+
+export function chunkLayout(
+  column: number,
+  row: number,
+  width: number,
+  height: number,
+  grain: number,
+): ReliefChunkLayout {
+  const sampleX = column * grain
+  const sampleZ = row * grain
+  return {
+    column,
+    row,
+    sampleX,
+    sampleZ,
+    width: clamp(width - 1 - sampleX, 0, grain) + 1,
+    height: clamp(height - 1 - sampleZ, 0, grain) + 1,
+  }
 }

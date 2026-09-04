@@ -1,4 +1,5 @@
 import { bytesFromBase64, bytesToBase64 } from '../base64'
+import type { PackedReliefChunk, ReliefSculpt } from './relief'
 
 const SPARSE = 0
 const DENSE = 1
@@ -58,4 +59,8 @@ function denseOf(deltas: Float32Array): Uint8Array {
   out[0] = DENSE
   out.set(new Uint8Array(deltas.buffer, deltas.byteOffset, deltas.byteLength), 1)
   return out
+}
+
+export function payloadsOf(sculpt: ReliefSculpt | undefined): Map<string, PackedReliefChunk> {
+  return new Map((sculpt?.chunks ?? []).map(chunk => [`${chunk.column}:${chunk.row}`, chunk]))
 }

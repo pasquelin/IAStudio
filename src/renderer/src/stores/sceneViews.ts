@@ -1,6 +1,5 @@
 import type { PickedPathPoint } from '@/engines/scene/SceneRenderer'
 import type { SculptTool } from '@/engines/scene/reliefStroke'
-
 export type { SculptTool }
 import { create } from 'zustand'
 import { snapToFrame, type Us } from '@shared/domain/time'
@@ -40,18 +39,11 @@ export type SceneView = {
   skeletons: boolean
   /** Whether a click picks a bone rather than a mesh. Exclusive on purpose — see the renderer. */
   poseMode: boolean
-  /**
-   * Whether a drag sculpts the armed relief. Exclusive of `poseMode` and of the gizmo — see
-   * `setSculptMode`. Not a `TransformMode`.
-   */
+  /** Whether a drag sculpts the armed relief. Exclusive of `poseMode`. Not a `TransformMode`. */
   sculptMode: boolean
-  /** Which disk operation a sculpt drag runs. Session, with `sculptMode`. */
   sculptTool: SculptTool
-  /** World units. Session, like the canvas brush diameter. */
   sculptRadius: number
-  /** 0 = hard edge. Session. */
   sculptFalloff: number
-  /** Sample-space raise of one dab. Session, like radius and falloff. */
   sculptAmount: number
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null

@@ -22,10 +22,7 @@ import {
   type ReliefChunkKey,
   type ReliefChunkLayout,
   type ReliefExtent,
-  type ReliefMask,
-  type ReliefOverlay,
   type ReliefRead,
-  type ReliefSculpt,
 } from '@shared/domain/relief'
 import { enabledTerrains } from '@shared/domain/scene'
 import type { ReliefLayer, SceneWorld, TerrainEditLayer } from '@shared/domain/scene'
@@ -33,8 +30,10 @@ import { loadHeightmap } from './heightmap'
 import type { ReliefBuilder } from './reliefBuilder'
 import type { ReliefGeometryData } from './reliefBuildMessage'
 import { reliefGeometryData, writeChunkNormals, writeChunkRegion } from './reliefSurfaceGeometry'
+import { reliefSculptSourceOf, type ReliefSculptSource } from './reliefSculptSource'
 
 export { reliefGeometryData } from './reliefSurfaceGeometry'
+export type { ReliefSculptSource } from './reliefSculptSource'
 
 export type ReliefSurface = {
   object: Object3D
@@ -54,18 +53,6 @@ export function terrainIdOfObject(object: Object3D): string | null {
     current = current.parent
   }
   return null
-}
-
-export type ReliefSculptSource = {
-  samples: HeightmapSamples
-  extent: ReliefExtent
-  grain: number
-  sculpt: ReliefSculpt | undefined
-  maskWeights: ReliefSculpt | undefined
-  overlayAlpha: number
-  overlayMask?: ReliefMask
-  /** Enabled overlays other than the armed edit, so smooth/flatten see combined height. */
-  overlays: readonly ReliefOverlay[]
 }
 
 export type ReliefSurfaceOptions = {
@@ -130,25 +117,7 @@ export function createReliefSurface(
     sculptSource: (terrainId, editId) => {
       const held = state.terrains.get(terrainId)?.held
       const edit = held?.edits.find(candidate => candidate.id === editId)
-      return held && edit
-        ? {
-            samples: held.samples,
-            extent: held.extent,
-            grain: held.grain,
-            sculpt: edit.sculpt,
-            maskWeights: edit.mask?.kind === 'painted' ? edit.mask.weights : undefined,
-            overlayAlpha: edit.alpha,
-            overlayMask: edit.mask,
-            overlays: held.edits
-              .filter(candidate => candidate.id !== editId)
-              .map(candidate => ({
-                enabled: candidate.enabled,
-                alpha: candidate.alpha,
-                sculpt: candidate.sculpt,
-                mask: candidate.mask,
-              })),
-          }
-        : null
+      return held && edit ? reliefSculptSourceOf(held, edit) : null
     },
     dispose: () => disposeRelief(state),
   }

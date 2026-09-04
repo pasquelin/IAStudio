@@ -189,6 +189,8 @@ const NOT_PUBLISHED: readonly string[] = [
   'reorderTerrainEdits',
   'reorderTerrains',
   'setTerrainEditAlpha',
+  'setTerrainEditMask',
+  'paintTerrainEditMask',
   'setTerrainEditEnabled',
   'setTerrainEditLocked',
   'setTerrainEnabled',
