@@ -55,13 +55,22 @@ export function claimExternalFiles(id: string): readonly string[] {
   return paths
 }
 
+/**
+ * What a command line offers, launch or second instance. `argv[0]` is CUT rather than compared:
+ * it names the binary under whatever path invoked it — a symlink, another case — and a name that
+ * misses `execPath` was offered for import, refused for its extension, and announced at every
+ * start.
+ */
+export function launchedPaths(argv: readonly string[], appPath: string): string[] {
+  return externalPathsFromArguments(argv.slice(1), new Set([process.execPath, appPath]))
+}
+
 export function captureExternalFiles(app: App, argv: readonly string[]): void {
   app.on('open-file', (event, path) => {
     event.preventDefault()
     offerExternalFiles([path])
   })
-  const launchPaths = new Set([process.execPath, app.getAppPath()])
-  offerExternalFiles(externalPathsFromArguments(argv, launchPaths))
+  offerExternalFiles(launchedPaths(argv, app.getAppPath()))
 }
 
 export function registerExternalFileHandlers(): void {

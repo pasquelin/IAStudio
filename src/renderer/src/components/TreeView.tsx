@@ -27,7 +27,7 @@ export function TreeView<T extends TreeNode>({ state }: TreeViewProps<T>) {
       ref={scroller}
       className={cn(
         'h-full overflow-auto p-2',
-        (copiesDropTone(foreignTone) || foreignTone === 'refused') && 'outline-2 -outline-offset-2',
+        (foreignTone === 'accepted' || warnsDropTone(foreignTone)) && 'outline-2 -outline-offset-2',
         foreignTone === 'accepted' && 'outline-accent',
         warnsDropTone(foreignTone) && 'outline-danger',
       )}
@@ -57,7 +57,7 @@ export function TreeView<T extends TreeNode>({ state }: TreeViewProps<T>) {
         setForeignTone(tone)
         offerBlankDrop(event, {
           copies: copiesDropTone(tone),
-          refuses: tone === 'refused' || tone === 'neutral',
+          refuses: tone === 'refused',
           moves: onDropRoot !== undefined && rowDrag.carries(event),
         })
       }}

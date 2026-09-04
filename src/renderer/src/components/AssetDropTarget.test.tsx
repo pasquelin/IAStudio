@@ -36,6 +36,15 @@ function desktopFiles(names: readonly string[]): DataTransfer {
   return dataTransfer
 }
 
+/** What Chromium really hands a `dragover`: the store is protected, so no name is readable. */
+function protectedDesktopDrag(): DataTransfer {
+  const dataTransfer = dragTransfer()
+  dataTransfer.setData('Files', '')
+  // An EMPTY list, never a missing one: the store is protected, not absent.
+  Object.defineProperty(dataTransfer, 'files', { value: [] })
+  return dataTransfer
+}
+
 function target(accepts: readonly AssetType[], onDrop = vi.fn()) {
   render(
     <AssetDropTarget accepts={accepts} onDrop={onDrop}>
@@ -195,6 +204,17 @@ describe('a surface an asset can be dropped onto', () => {
 
     await waitFor(() => expect(onDrop).toHaveBeenCalledWith(model))
     expect(ingestPaths).toHaveBeenCalledWith('request-1', '', expect.any(String))
+  })
+
+  it('lets a drag whose names it cannot read through, rather than forbidding the drop', () => {
+    const { surface } = target(PICTURES)
+    const dataTransfer = protectedDesktopDrag()
+
+    fireEvent.dragOver(surface, { dataTransfer })
+
+    // `none` stops the browser sending `drop` at all, and the store is protected on EVERY real
+    // dragover — set on a neutral tone, nothing dropped from the desktop ever imported.
+    expect(dataTransfer.dropEffect).toBe('copy')
   })
 
   it('hands the compatible part of a mixed desktop batch to the target', async () => {
