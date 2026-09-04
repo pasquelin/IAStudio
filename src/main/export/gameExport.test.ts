@@ -256,11 +256,13 @@ describe('a game written to run with no studio', () => {
       scenes: ASKED.scenes.map(scene => ({ ...scene, optimization })),
       lossyOptimization,
       assetOverrides: [{ id: 'tex-1', extension: 'jpg', bytes: new Uint8Array([7, 8]) }],
+      modelAssets: { tree: [] },
     })
 
     expect(manifestOf(written).lossyOptimization).toEqual(lossyOptimization)
     expect(manifestOf(written).scenes[0]?.optimization).toEqual(optimization)
     expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/checker.jpg' })
+    expect(manifestOf(written).modelAssets).toEqual({ tree: [] })
     expect(written.get('assets/checker.jpg')).toEqual(new Uint8Array([7, 8]))
   })
 })

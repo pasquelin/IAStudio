@@ -12,6 +12,20 @@ import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { compileLossyModels } from './lossyModelCompiler'
 
 describe('LOSSY imported models compiled for an export', () => {
+  it('passes cancellation to the model read', async () => {
+    const controller = new AbortController()
+    const load = vi.fn(async () => null)
+
+    await compileLossyModels(
+      [{ id: 'tree', url: 'ia-studio://master/tree?v=1' }],
+      { ...NO_LOSSY_OPTIMIZATION, generateLods: true },
+      controller.signal,
+      { load, simplify: vi.fn(), dispose: vi.fn() },
+    )
+
+    expect(load).toHaveBeenCalledWith('ia-studio://master/tree?v=1', controller.signal)
+  })
+
   it('keeps exact LOD0 outside the plan and compiles only distant levels', async () => {
     const root = new Group()
     root.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()))

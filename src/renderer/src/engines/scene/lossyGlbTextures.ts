@@ -25,6 +25,7 @@ export async function optimizedGlbTextures(
     if (!isRecord(image) || typeof image.bufferView !== 'number') continue
     const view = views[image.bufferView]
     if (!isRecord(view)) continue
+    if (view.buffer !== undefined && view.buffer !== 0) continue
     const offset = typeof view.byteOffset === 'number' ? view.byteOffset : 0
     if (typeof view.byteLength !== 'number') continue
     const source = chunks.bin.slice(offset, offset + view.byteLength)
