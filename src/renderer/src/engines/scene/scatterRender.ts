@@ -1,6 +1,7 @@
 import { LOD, Object3D, type Mesh } from 'three'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import type { ScatterPose } from '@shared/domain/scatterGenerate'
+import type { ScatterCategory } from '@shared/domain/scene'
 import { bakedInstancesOf } from './bakedInstances'
 import type { BakedInstance } from './sceneState'
 import { CELL_SIZE, cellCoords, cellKey, type CellKey, type WorldPartition } from './worldPartition'
@@ -8,7 +9,14 @@ import { CELL_SIZE, cellCoords, cellKey, type CellKey, type WorldPartition } fro
 export type ScatterBatch = {
   assetId: string
   cell: CellKey
+  cellSize: number
   poses: readonly ScatterPose[]
+}
+
+export const GRASS_CELL_SIZE = 32
+
+export function scatterCellSize(category: ScatterCategory): number {
+  return category === 'grass' ? GRASS_CELL_SIZE : CELL_SIZE
 }
 
 export function scatterBatchKey(assetId: string, cell: CellKey): string {
@@ -18,6 +26,7 @@ export function scatterBatchKey(assetId: string, cell: CellKey): string {
 export function scatterBatchesOf(
   poses: readonly ScatterPose[],
   cellAt: (x: number, z: number) => CellKey = defaultCellAt,
+  cellSize = CELL_SIZE,
 ): readonly ScatterBatch[] {
   const groups = new Map<string, { assetId: string; cell: CellKey; poses: ScatterPose[] }>()
   for (const pose of poses) {
@@ -30,12 +39,12 @@ export function scatterBatchesOf(
     }
     groups.set(key, { assetId: pose.assetId, cell, poses: [pose] })
   }
-  return [...groups.values()]
+  return [...groups.values()].map(group => ({ ...group, cellSize }))
 }
 
 export function scatterDrawnOf(batch: ScatterBatch, source: Mesh): LOD {
   const { cx, cz } = cellCoords(batch.cell)
-  const centre = { x: (cx + 0.5) * CELL_SIZE, z: (cz + 0.5) * CELL_SIZE }
+  const centre = { x: (cx + 0.5) * batch.cellSize, z: (cz + 0.5) * batch.cellSize }
   const mesh = bakedInstancesOf(
     source.geometry,
     source.material,

@@ -1,8 +1,13 @@
 import { BoxGeometry, InstancedMesh, LOD, Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { ScatterPose } from '@shared/domain/scatterGenerate'
-import { holdScatterCells, scatterBatchesOf, scatterDrawnOf } from './scatterRender'
-import { buildPartition, CELL_SIZE } from './worldPartition'
+import {
+  GRASS_CELL_SIZE,
+  holdScatterCells,
+  scatterBatchesOf,
+  scatterDrawnOf,
+} from './scatterRender'
+import { buildPartition, cellKey, CELL_SIZE } from './worldPartition'
 
 function pose(assetId: string, x: number, z: number): ScatterPose {
   return {
@@ -58,6 +63,20 @@ describe('scatterDrawnOf', () => {
     ])
     expect(drawn.levels[2]?.distance ?? 0).toBeGreaterThan(drawn.levels[1]?.distance ?? 0)
     expect(drawn.position.toArray()).toEqual([CELL_SIZE / 2, 0, CELL_SIZE / 2])
+  })
+
+  it('centres a grass batch on its finer cell grain', () => {
+    const batch = scatterBatchesOf(
+      [pose('grass', GRASS_CELL_SIZE + 1, 1)],
+      () => cellKey(1, 0),
+      GRASS_CELL_SIZE,
+    )[0]
+    if (!batch) throw new Error('expected a batch')
+    const drawn = scatterDrawnOf(
+      batch,
+      new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial()),
+    )
+    expect(drawn.position.toArray()).toEqual([GRASS_CELL_SIZE * 1.5, 0, GRASS_CELL_SIZE / 2])
   })
 })
 

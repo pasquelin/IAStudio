@@ -3,6 +3,7 @@ import {
   enabledScatters,
   enabledTerrains,
   type ReliefLayer,
+  type ScatterCategory,
   type ScatterLayer,
   type SceneWorld,
 } from '@shared/domain/scene'
@@ -15,12 +16,11 @@ import {
 import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
 import { layerRegion, scatterRebuildOf, type ScatterRebuild } from '@shared/domain/scatterFollow'
 import { dirtiedChunks } from './reliefSurfaceEdits'
-import { scatterBatchesOf, scatterDrawnOf } from './scatterRender'
+import { scatterBatchesOf, scatterCellSize, scatterDrawnOf } from './scatterRender'
 import {
   buildPartition,
   cellCoords,
   cellKey,
-  CELL_SIZE,
   MAX_SPATIAL_REACH,
   type CellKey,
   type WorldPartition,
@@ -53,12 +53,12 @@ type ScatterAssets = {
 }
 
 type ScatterCells = {
-  byLayer: Map<string, Map<CellKey, Object3D[]>>
-  references: Map<CellKey, number>
-  partition: WorldPartition
+  byLayer: Map<string, { category: ScatterCategory; cells: Map<CellKey, Object3D[]> }>
+  references: Map<ScatterCategory, Map<CellKey, number>>
+  partitions: Map<ScatterCategory, WorldPartition>
   group: Group
-  queried: CellKey[]
-  wanted: Set<CellKey>
+  queried: Map<ScatterCategory, CellKey[]>
+  wanted: Map<ScatterCategory, Set<CellKey>>
 }
 
 type ScatterState = {
@@ -76,11 +76,23 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
     assets: { revision: 0, sources: new Map(), held: new Set(), loading: new Map() },
     cells: {
       byLayer: new Map(),
-      references: new Map(),
-      partition: buildPartition(),
+      references: new Map([
+        ['props', new Map()],
+        ['grass', new Map()],
+      ]),
+      partitions: new Map([
+        ['props', buildPartition()],
+        ['grass', buildPartition(scatterCellSize('grass'))],
+      ]),
       group,
-      queried: [],
-      wanted: new Set(),
+      queried: new Map([
+        ['props', []],
+        ['grass', []],
+      ]),
+      wanted: new Map([
+        ['props', new Set()],
+        ['grass', new Set()],
+      ]),
     },
     world: null,
     grounded: new Set(),
@@ -88,11 +100,13 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
   return {
     object: group,
     get partition() {
-      return state.cells.partition
+      const partition = state.cells.partitions.get('props')
+      if (!partition) throw new Error('Missing props scatter partition')
+      return partition
     },
     sync: async (world, heightmaps) => syncScatter(state, world, heightmaps, options),
     updateVisibility: camera => updateScatterVisibility(state.cells, camera),
-    objectsInCell: (layerId, key) => state.cells.byLayer.get(layerId)?.get(key) ?? [],
+    objectsInCell: (layerId, key) => state.cells.byLayer.get(layerId)?.cells.get(key) ?? [],
     dispose: () => disposeScatter(state, options.models),
   }
 }
@@ -105,20 +119,24 @@ function updateScatterVisibility(cells: ScatterCells, camera: Camera): boolean {
     'far' in camera && typeof camera.far === 'number'
       ? Math.min(camera.far, MAX_SPATIAL_REACH)
       : MAX_SPATIAL_REACH
-  cells.partition.query(SCATTER_EYE.x, SCATTER_EYE.z, reach, cells.queried)
-  cells.wanted.clear()
-  for (const key of cells.queried) cells.wanted.add(key)
+  for (const category of ['props', 'grass'] satisfies readonly ScatterCategory[]) {
+    const queried = cells.queried.get(category) ?? []
+    cells.partitions.get(category)?.query(SCATTER_EYE.x, SCATTER_EYE.z, reach, queried)
+    const wanted = cells.wanted.get(category)
+    wanted?.clear()
+    for (const key of queried) wanted?.add(key)
+  }
   let changed = false
   for (const [layerId, layerCells] of cells.byLayer) {
-    for (const [key, objects] of layerCells) {
-      const visible = cells.wanted.has(key)
+    for (const [key, objects] of layerCells.cells) {
+      const visible = cells.wanted.get(layerCells.category)?.has(key) ?? false
       for (const object of objects) {
         if (object.visible === visible) continue
         object.visible = visible
         changed = true
       }
     }
-    if (layerCells.size === 0) cells.byLayer.delete(layerId)
+    if (layerCells.cells.size === 0) cells.byLayer.delete(layerId)
   }
   return changed
 }
@@ -155,9 +173,10 @@ async function syncScatter(
 
 function keysToRebuild(layer: ScatterLayer, rebuild: ScatterRebuild): readonly CellKey[] {
   if (rebuild.kind === 'none') return []
+  const cellSize = scatterCellSize(layer.category)
   return rebuild.kind === 'all'
-    ? cellKeysIn(layerRegion(layer))
-    : cellKeysIn(intersection(layerRegion(layer), rebuild.region))
+    ? cellKeysIn(layerRegion(layer), cellSize)
+    : cellKeysIn(intersection(layerRegion(layer), rebuild.region), cellSize)
 }
 
 function rebuildLayer(
@@ -178,19 +197,27 @@ function rebuildCell(
   sources: ReadonlyMap<string, Object3D>,
 ): void {
   dropCell(cells, layer.id, key)
-  const poses = scatterPosesOf(layer, intersection(layerRegion(layer), cellRegion(key)), ground)
+  const cellSize = scatterCellSize(layer.category)
+  const poses = scatterPosesOf(
+    layer,
+    intersection(layerRegion(layer), cellRegion(key, cellSize)),
+    ground,
+  )
   const drawn: Object3D[] = []
-  for (const batch of scatterBatchesOf(poses, () => key)) {
+  for (const batch of scatterBatchesOf(poses, () => key, cellSize)) {
     const source = sources.get(batch.assetId)
     if (!source) continue
     for (const mesh of meshesOf(source)) drawn.push(scatterDrawnOf(batch, mesh))
   }
   if (drawn.length === 0) return
   for (const object of drawn) cells.group.add(object)
-  const layerCells = cells.byLayer.get(layer.id) ?? new Map<CellKey, Object3D[]>()
-  layerCells.set(key, drawn)
+  const layerCells = cells.byLayer.get(layer.id) ?? {
+    category: layer.category,
+    cells: new Map<CellKey, Object3D[]>(),
+  }
+  layerCells.cells.set(key, drawn)
   cells.byLayer.set(layer.id, layerCells)
-  holdCell(cells, key)
+  holdCell(cells, layer.category, key)
 }
 
 function reliefRebuildOf(
@@ -230,25 +257,25 @@ function mergeRebuild(left: ScatterRebuild, right: ScatterRebuild): ScatterRebui
   }
 }
 
-function cellKeysIn(region: ScatterRegion): CellKey[] {
+function cellKeysIn(region: ScatterRegion, cellSize: number): CellKey[] {
   const keys: CellKey[] = []
-  const minX = Math.floor(region.minX / CELL_SIZE)
-  const maxX = Math.ceil(region.maxX / CELL_SIZE)
-  const minZ = Math.floor(region.minZ / CELL_SIZE)
-  const maxZ = Math.ceil(region.maxZ / CELL_SIZE)
+  const minX = Math.floor(region.minX / cellSize)
+  const maxX = Math.ceil(region.maxX / cellSize)
+  const minZ = Math.floor(region.minZ / cellSize)
+  const maxZ = Math.ceil(region.maxZ / cellSize)
   for (let x = minX; x < maxX; x += 1) {
     for (let z = minZ; z < maxZ; z += 1) keys.push(cellKey(x, z))
   }
   return keys
 }
 
-function cellRegion(key: CellKey): ScatterRegion {
+function cellRegion(key: CellKey, cellSize: number): ScatterRegion {
   const { cx, cz } = cellCoords(key)
   return {
-    minX: cx * CELL_SIZE,
-    minZ: cz * CELL_SIZE,
-    maxX: (cx + 1) * CELL_SIZE,
-    maxZ: (cz + 1) * CELL_SIZE,
+    minX: cx * cellSize,
+    minZ: cz * cellSize,
+    maxX: (cx + 1) * cellSize,
+    maxZ: (cz + 1) * cellSize,
   }
 }
 
@@ -261,30 +288,33 @@ function intersection(left: ScatterRegion, right: ScatterRegion): ScatterRegion 
   }
 }
 
-function holdCell(cells: ScatterCells, key: CellKey): void {
-  const references = cells.references.get(key) ?? 0
-  if (references === 0) cells.partition.hold(key)
-  cells.references.set(key, references + 1)
+function holdCell(cells: ScatterCells, category: ScatterCategory, key: CellKey): void {
+  const references = cells.references.get(category)
+  const count = references?.get(key) ?? 0
+  if (count === 0) cells.partitions.get(category)?.hold(key)
+  references?.set(key, count + 1)
 }
 
 function dropCell(cells: ScatterCells, layerId: string, key: CellKey): void {
   const layerCells = cells.byLayer.get(layerId)
-  const objects = layerCells?.get(key)
+  if (!layerCells) return
+  const objects = layerCells.cells.get(key)
   if (!objects) return
   for (const object of objects) disposeDrawn(object)
-  layerCells?.delete(key)
-  if (layerCells?.size === 0) cells.byLayer.delete(layerId)
-  const references = (cells.references.get(key) ?? 1) - 1
-  if (references <= 0) {
-    cells.references.delete(key)
-    cells.partition.release(key)
-  } else cells.references.set(key, references)
+  layerCells.cells.delete(key)
+  if (layerCells.cells.size === 0) cells.byLayer.delete(layerId)
+  const references = cells.references.get(layerCells.category)
+  const count = (references?.get(key) ?? 1) - 1
+  if (count <= 0) {
+    references?.delete(key)
+    cells.partitions.get(layerCells.category)?.release(key)
+  } else references?.set(key, count)
 }
 
 function dropRemovedLayers(cells: ScatterCells, wanted: ReadonlySet<string>): void {
   for (const [layerId, layerCells] of [...cells.byLayer]) {
     if (wanted.has(layerId)) continue
-    for (const key of [...layerCells.keys()]) dropCell(cells, layerId, key)
+    for (const key of [...layerCells.cells.keys()]) dropCell(cells, layerId, key)
   }
 }
 
@@ -383,7 +413,9 @@ function disposeScatter(state: ScatterState, models: ModelCache): void {
   state.assets.held.clear()
   state.assets.sources.clear()
   state.assets.loading.clear()
-  for (const key of state.cells.references.keys()) state.cells.partition.release(key)
+  for (const [category, references] of state.cells.references) {
+    for (const key of references.keys()) state.cells.partitions.get(category)?.release(key)
+  }
   state.cells.byLayer.clear()
   state.cells.references.clear()
   state.grounded.clear()

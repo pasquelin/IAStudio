@@ -293,4 +293,34 @@ describe('createScatterSurface', () => {
     await pending
     surface.dispose()
   })
+
+  it('keeps grass in finer persistent cells than props', async () => {
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    await surface.sync({
+      ...DEFAULT_WORLD,
+      layers: [
+        scatterLayer({
+          id: 'meadow',
+          category: 'grass',
+          assets: [{ assetId: 'blade', weight: 1 }],
+          origin: { x: 0, z: 0 },
+          size: { x: 64, z: 64 },
+          rules: { ...scatterLayer({ id: 'rules' }).rules, density: 1, spacing: 1 },
+        }),
+      ],
+    })
+    expect([
+      surface.objectsInCell('meadow', cellKey(0, 0)).length,
+      surface.objectsInCell('meadow', cellKey(1, 0)).length,
+      surface.objectsInCell('meadow', cellKey(0, 1)).length,
+      surface.objectsInCell('meadow', cellKey(1, 1)).length,
+    ]).toEqual([2, 2, 2, 2])
+    surface.dispose()
+  })
 })
