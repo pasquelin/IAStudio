@@ -161,10 +161,24 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
   // state nobody draws, no weights are ever worked out, and ⌘S writes bones bound to nothing.
   useEffect(() => {
     const engine = engineRef.current
-    if (!engine || !nodeId || !character.rig) return
-
-    void engine.skinModel(nodeId, character.rig)
-  }, [character.rig, nodeId, live])
+    if (!engine || !nodeId) return
+    if (!character.rig) {
+      engine.clearRig(nodeId)
+      return
+    }
+    if (character.autoRigBindings)
+      void engine.applyAutoRig(nodeId, {
+        rig: character.rig,
+        bindings: character.autoRigBindings,
+        metadata: {
+          backendId: 'stored',
+          sourceInfluences: character.rig.bones.length,
+          outputInfluences: 4,
+          fingers: false,
+        },
+      })
+    else void engine.skinModel(nodeId, character.rig)
+  }, [character.rig, character.autoRigBindings, nodeId, live])
 
   // Its own effect: the one that mounts the renderer must not run again for a preference.
   useEffect(() => {

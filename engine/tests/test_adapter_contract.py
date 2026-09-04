@@ -42,7 +42,7 @@ def test_an_adapter_publishes_the_five_calls_a_door_makes_and_nothing_else(adapt
         if not name.startswith("_") and callable(getattr(adapter, name))
     )
 
-    assert published == ["backend", "device", "generate", "load", "unload"]
+    assert published == ["auto_rig", "backend", "device", "generate", "load", "unload"]
 
 
 @pytest.mark.parametrize("adapter", ADAPTERS, ids=lambda one: one.__name__)

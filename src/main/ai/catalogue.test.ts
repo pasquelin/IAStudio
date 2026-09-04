@@ -192,6 +192,23 @@ describe('the shipped generation catalogue', () => {
     expect(model?.runtimeStatus).not.toBe('unsupported')
   })
 
+  it('offers the advanced Auto Rig with only its four pinned checkpoints', () => {
+    const model = shippedModel('make-it-animatable')
+
+    expect(shippedModelsFor(aiRoleId('3d', 'rig'))).toEqual([model])
+    expect(model?.files.map(file => file.name)).toEqual([
+      'bw.pth',
+      'joints.pth',
+      'joints_coarse.pth',
+      'pose.pth',
+    ])
+    expect(
+      model?.files.every(file => file.revision === 'eb12b71253361fd1a7216625a95144af3c58263e'),
+    ).toBe(true)
+    expect(model?.diskBytes).toBe(1_901_082_275)
+    expect(model?.needsCuda).not.toBe(true)
+  })
+
   it('opens InstantMesh as a CUDA plugin, its unet standing in for zero123plus own', () => {
     const model = shippedModel('instantmesh')
 

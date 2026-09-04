@@ -15,6 +15,7 @@ import { readFavoriteThumbnail } from '@main/favorites/thumbnail'
 import { registerAssistantHandlers } from '@main/assistant/handlers'
 import { registerMemoryHandlers } from '@main/memory/handlers'
 import { registerAiHandlers } from '@main/ai/handlers'
+import { registerAutoRigHandlers } from '@main/ai/autoRigHandlers'
 import { registerDictationHandlers } from '@main/dictation/handlers'
 import { registerMediaHandlers } from '@main/media/handlers'
 import { registerMenuHandlers } from '@main/menu'
@@ -104,6 +105,7 @@ function registerCreativeIpc(
   })
   registerMemoryHandlers({ host: services.memory, vectors: services.memoryVectors })
   registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })
+  registerAutoRigHandlers(services.autoRig, running)
   registerDictationHandlers({
     session: services.dictation,
     openPrivacySettings: services.openMicrophoneSettings,

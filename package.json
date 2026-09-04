@@ -39,6 +39,7 @@
     "ffmpeg:fetch": "node scripts/fetch-ffmpeg.mjs",
     "stt:fetch": "node scripts/fetch-stt.mjs",
     "engine:fetch": "node scripts/fetch-engine.mjs",
+    "engine:prepare:autorig": "node scripts/prepare-engine-runtime.mjs",
     "textures:make": "node scripts/make-checker-textures.mjs",
     "jolt:build": "node scripts/build-jolt.mjs",
     "licences:collect": "node scripts/collect-licences.mjs",

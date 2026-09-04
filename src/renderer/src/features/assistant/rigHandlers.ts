@@ -17,7 +17,6 @@ import { secondsToUs, snapToFrame } from '@shared/domain/time'
 import { clampPlayhead } from '@/engines/scene/animationEval'
 import { clipsEdited, clipsMoved, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
 import { removeModelClip, setModelLanes } from '@/engines/scene/commands'
-import { rigFit, rigFitFaultOf, type Bounds } from '@/engines/scene/rigFit'
 import type { Command } from '@/engines/core/history'
 import type { CharacterState } from '@/engines/character/characterState'
 import {
@@ -30,8 +29,10 @@ import {
   removeCharacterSocket,
   renameCharacterBone,
   setCharacterBoneRole,
+  setCharacterAutoRig,
   setCharacterRig,
 } from '@/engines/character/characterCommands'
+import { autoRigServiceFor } from '@/engines/character/autoRigBackends'
 import { workshopIdOf } from '@/character/characterStage'
 import { useCharacters } from '@/stores/character'
 import { type ModelNode, type SceneState } from '@/engines/scene/sceneState'
@@ -42,6 +43,9 @@ import { getBridge } from '@/services/bridge'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
 import { laySceneClip, sceneOf, useScenes } from '@/stores/scenes'
+import { sceneEngineOf } from '@/stores/sceneEngines'
+import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
+import type { MeshSample } from '@/engines/scene/rigSnap'
 import { type ActionHandlers } from './actionHandler'
 import { NO_SCENE } from './sceneHandlers'
 import { maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
@@ -137,41 +141,62 @@ function editCharacter(
  * The skeleton the studio fits to the mesh it has measured. `null` bounds mean the engine has not
  * read the model yet, which is a wait rather than a fault.
  */
-function fitRig(): ActionOutcome {
+async function fitRig(
+  _input: Record<string, unknown>,
+  _wire?: unknown,
+  signal = new AbortController().signal,
+): Promise<ActionOutcome> {
   const open = character()
   if (!open) return noCharacter()
 
-  const bounds = boundsOfCharacter(open.assetId)
-  if (!bounds)
+  const documentId = workshopIdOf(open.assetId)
+  const node = sceneOf(useScenes.getState(), documentId).nodes.find(
+    candidate => candidate.type === 'model',
+  )
+  const engine = sceneEngineOf(documentId)
+  const sample = node ? engine?.meshSample(node.id) : null
+  if (!node || !engine || !sample)
     return refused(
       'notFound',
       'the studio has not measured this character yet — rig.state answers "status"; wait for it to read the file, then send this again',
     )
 
-  const fault = rigFitFaultOf(bounds)
-  if (fault)
+  try {
+    return await fitMeasuredRig(open, documentId, node.id, engine, sample, signal)
+  } catch (error) {
     return refused(
       'failed',
-      fault === 'noGeometry'
-        ? 'this model measures too small to lay bones in — it carries no geometry the studio can fit a rig to'
-        : 'this model lies down, and a rig is proportioned off the height — stand it up, then send this again',
+      String(error).includes('CANCELLED')
+        ? 'Auto Rig was cancelled before it changed the character'
+        : 'Auto Rig could not produce a valid skeleton and skin for this character',
     )
-
-  useCharacters.getState().runCommand(open.assetId, setCharacterRig(rigFit(bounds)))
-  return { ok: true }
+  }
 }
 
-/**
- * What the engine measured of the open character.
- *
- * 🛑 Its OWN workshop scene, never « the first model of any document »: a fit proportions itself
- * off a height, and one read from another mesh would lay a skeleton of the wrong size.
- */
-function boundsOfCharacter(assetId: string): Bounds | null {
-  const files = useModelFiles.getState()
-  const measured = files.rigs[workshopIdOf(assetId)] ?? {}
-
-  return Object.values(measured).find(rig => rig.bounds)?.bounds ?? null
+async function fitMeasuredRig(
+  open: CharacterState,
+  documentId: string,
+  nodeId: string,
+  engine: SceneRenderer,
+  sample: MeshSample,
+  signal: AbortSignal,
+): Promise<ActionOutcome> {
+  const targets = engine.autoRigTargets(nodeId)
+  const service = autoRigServiceFor(
+    async (_backendInput, context) => {
+      const result = await engine.simpleAutoRig(nodeId, sample, context.signal, context.onProgress)
+      if (!result) throw new Error('INVALID_MESH')
+      return result
+    },
+    async () => {
+      throw new Error('ENGINE_UNAVAILABLE')
+    },
+  )
+  const result = await service.run('simple', {}, { signal, onProgress: () => {}, targets })
+  if (sceneEngineOf(documentId) !== engine || engine.autoRigTargets(nodeId).length === 0)
+    return refused('notFound', 'the character changed before Auto Rig completed')
+  useCharacters.getState().runCommand(open.assetId, setCharacterAutoRig(result))
+  return { ok: true }
 }
 
 /** What the panels read off a character: its bones, their roles, its handles, what it can play. */

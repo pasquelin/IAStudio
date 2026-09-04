@@ -3,13 +3,14 @@ import type { AiRoleId } from '@shared/domain/aiRole'
 import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import {
   isSuppliedModel,
+  modelRefusalOf,
   type DownloadProgress,
   type LocalModel,
   type ModelLoader,
 } from '@shared/domain/localModel'
 import type { Settings } from '@shared/domain/settings'
 import { admissionFor } from './admission'
-import { chooseProviders } from './managerChoices'
+import { assertProvidersAdmitted, chooseProviders } from './managerChoices'
 import { catalogueWith, modelsForWith, modelWith, rolesServedBy } from './catalogue'
 import { asRuntimeSnapshot, type HardwareFacts } from './hardwareProbe'
 import {
@@ -219,6 +220,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     onProgress: (progress: DownloadProgress) => void,
     signal?: AbortSignal,
   ): Promise<void> {
+    if (modelRefusalOf(model) !== null) return Promise.reject(new Error('model is not admitted'))
     if (runtimeInstaller.isInstallingOllama()) {
       return Promise.reject(new Error('busy with ollama'))
     }
@@ -324,6 +326,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     }
   }
   const runLoad = async (model: LocalModel): Promise<void> => {
+    if (modelRefusalOf(model) !== null) throw new Error('model is not admitted')
     if (loading?.modelId === model.id && loadFlight) return loadFlight
     if (loading !== null) throw new Error(`busy loading ${loading.modelId}`)
     const work = (async () => {
@@ -367,8 +370,10 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     loadFlight = trackLoad(work)
     await loadFlight
   }
-  const chooseMany: AiManager['chooseMany'] = (writes, scope) =>
-    chooseProviders(deps, announce, compose, writes, scope)
+  const chooseMany: AiManager['chooseMany'] = async (writes, scope) => {
+    assertProvidersAdmitted(writes, modelOf)
+    return await chooseProviders(deps, announce, compose, writes, scope)
+  }
   return {
     overview: compose,
     installedIds: () => onDisk,
@@ -423,8 +428,9 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     remove: async modelId => {
       const model = modelOf(modelId)
       if (model === null) return compose()
+      const endpoint = endpointOf(model.loader, model.modality)
+      if ((working.get(endpoint) ?? 0) > 0) return compose()
       if (isSuppliedModel(model)) {
-        const endpoint = endpointOf(model.loader, model.modality)
         if (occupancy.get(endpoint)?.modelId === modelId) await release(endpoint)
         const stored = deps.settings()
         await deps.writeSettings({

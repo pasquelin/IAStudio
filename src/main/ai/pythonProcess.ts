@@ -134,6 +134,8 @@ export function openPythonProcess({
         PYTHONPATH: sources,
         // Otherwise a Python stack trace sits in a buffer while the studio wonders why nothing came.
         PYTHONUNBUFFERED: '1',
+        // A packaged runtime is sealed by codesign; writing import caches invalidates that seal.
+        PYTHONDONTWRITEBYTECODE: '1',
       },
     })
 

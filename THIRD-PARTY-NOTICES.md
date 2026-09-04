@@ -12,7 +12,7 @@ The terms below govern these components. They are not affected by the licence of
 | @mdi/js | 7.4.47 | Apache-2.0 |
 | @mdi/react | 1.6.1 | MIT |
 | @modelcontextprotocol/sdk | 1.30.0 | MIT |
-| @pasquelin/panels | 0.3.3 | MIT |
+| @pasquelin/panels | 0.4.1 | MIT |
 | @scenario-labs/sdk | 3.0.0 | MIT |
 | @tanstack/react-query | 5.101.4 | MIT |
 | @tanstack/react-virtual | 3.14.9 | MIT |
@@ -22,11 +22,11 @@ The terms below govern these components. They are not affected by the licence of
 | ACE-Step 1.5 XL Turbo | shipped with the application | MIT |
 | ag-psd | 31.0.2 | MIT |
 | annotated-doc | 0.0.5 | MIT |
-| anyio | 4.14.2 | MIT |
+| anyio | 4.15.0 | MIT |
 | better-sqlite3 | 13.0.3 | MIT |
 | certifi | 2026.7.22 | MPL-2.0 |
 | charset-normalizer | 3.5.1 | MIT |
-| click | 8.4.2 | BSD-3-Clause |
+| click | 8.5.0 | BSD-3-Clause |
 | CogVideoX 2B | shipped with the application | Apache-2.0 |
 | ControlNet Canny SDXL | shipped with the application | Apache-2.0 |
 | CPython | 3.12.14 | PSF-2.0 |
@@ -35,6 +35,7 @@ The terms below govern these components. They are not affected by the licence of
 | diffusers | 0.40.0 | Apache 2.0 License |
 | Diffusion360 | shipped with the application | Apache-2.0 |
 | dockview-react | 8.1.0 | MIT |
+| einops | 0.8.2 | MIT |
 | electron | 43.4.0 | MIT |
 | electron-store | 11.0.2 | MIT |
 | electron-updater | 6.8.9 | MIT |
@@ -48,19 +49,23 @@ The terms below govern these components. They are not affected by the licence of
 | hf-xet | 1.6.0 | Apache-2.0 |
 | httpcore | 1.0.9 | BSD-3-Clause |
 | httpx | 0.28.1 | BSD-3-Clause |
-| huggingface-hub | 1.28.0 | Apache-2.0 |
+| huggingface-hub | 1.30.0 | Apache-2.0 |
 | i18next | 26.3.6 | MIT |
 | IBM Plex Mono | shipped with the application | OFL-1.1 |
 | IBM Plex Serif | shipped with the application | OFL-1.1 |
 | idna | 3.19 | BSD-3-Clause |
+| imageio | 2.37.4 | BSD-2-Clause |
+| imageio-ffmpeg | 0.6.0 | BSD-2-Clause |
 | immer | 11.1.16 | MIT |
-| importlib-metadata | 9.0.0 | Apache-2.0 |
+| importlib-metadata | 9.0.1 | Apache-2.0 |
 | InstantMesh | shipped with the application | Apache-2.0 |
 | IP-Adapter SDXL | shipped with the application | Apache-2.0 |
-| jinja2 | 3.1.6 | BSD License |
+| jinja2 | 3.1.6 | BSD-3-Clause |
 | jolt-physics | 1.1.0-simd.3e3b5ff | MIT |
 | Lato | shipped with the application | OFL-1.1 |
 | LGM | shipped with the application | MIT |
+| Make-It-Animatable | shipped with the application | Apache-2.0 |
+| Make-It-Animatable code | d60cc7e01ff8da46448e458dbf450e8967b34e77 | MIT |
 | markdown-it-py | 4.2.0 | MIT License |
 | markupsafe | 3.0.3 | BSD-3-Clause |
 | mdurl | 0.1.2 | MIT License |
@@ -70,7 +75,7 @@ The terms below govern these components. They are not affected by the licence of
 | MMAudio Small | shipped with the application | CC-BY-NC-4.0 |
 | Mochi 1 | shipped with the application | Apache-2.0 |
 | monaco-editor | 0.52.2 | MIT |
-| mpmath | 1.3.0 | BSD |
+| mpmath | 1.3.0 | BSD-3-Clause |
 | MVDiffusion | shipped with the application | other |
 | networkx | 3.6.1 | BSD-3-Clause |
 | node-llama-cpp | 3.20.0 | MIT |
@@ -81,6 +86,7 @@ The terms below govern these components. They are not affected by the licence of
 | PanFusion | shipped with the application | other |
 | Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
 | pillow | 12.3.0 | MIT-CMU |
+| pip | 26.2.1 | MIT |
 | pixi.js | 8.19.0 | MIT |
 | psutil | 7.2.2 | BSD-3-Clause |
 | pygments | 2.21.0 | BSD-2-Clause |
@@ -102,7 +108,7 @@ The terms below govern these components. They are not affected by the licence of
 | react-markdown | 10.1.0 | MIT |
 | react-tooltip | 6.0.8 | MIT |
 | recharts | 3.10.1 | MIT |
-| regex | 2026.7.19 | Apache-2.0 AND CNRI-Python |
+| regex | 2026.9.3 | Apache-2.0 AND CNRI-Python |
 | remark-gfm | 4.0.1 | MIT |
 | requests | 2.34.2 | Apache-2.0 |
 | rich | 15.0.0 | MIT |
@@ -118,22 +124,24 @@ The terms below govern these components. They are not affected by the licence of
 | Silero VAD | v5 | MIT |
 | simple-git | 3.36.0 | MIT |
 | SSD-1B | shipped with the application | Apache-2.0 |
-| sympy | 1.14.0 | BSD |
+| sympy | 1.14.0 | BSD-3-Clause |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
 | three | 0.185.1 | MIT |
 | three-bvh-csg | 0.0.18 | MIT |
 | three-mesh-bvh | 0.9.14 | MIT |
-| tokenizers | 0.22.2 | Apache Software License |
-| torch | 2.13.0 | Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT |
+| timm | 1.0.29 | Apache-2.0 |
+| tokenizers | 0.23.2 | Apache Software License |
+| torch | 2.14.0 | Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT |
+| torchvision | 0.29.0 | BSD |
 | tqdm | 4.70.0 | MPL-2.0 AND MIT |
-| transformers | 5.15.1 | Apache 2.0 License |
+| transformers | 5.16.1 | Apache 2.0 License |
 | TRELLIS Image | shipped with the application | MIT |
 | TRELLIS Text | shipped with the application | MIT |
 | TRELLIS.2 4B | shipped with the application | MIT |
 | TripoSG | shipped with the application | MIT |
 | TripoSR | shipped with the application | MIT |
-| typer | 0.27.1 | MIT |
+| typer | 0.27.2 | MIT |
 | typescript | 6.0.3 | Apache-2.0 |
 | typing-extensions | 4.16.0 | PSF-2.0 |
 | UniPano | shipped with the application | other |
@@ -149,7 +157,7 @@ The terms below govern these components. They are not affected by the licence of
 
 ## @hookform/resolvers
 
-Version: 5.7.1  
+Version: 5.7.1
 Licence: MIT
 
 ```
@@ -177,7 +185,7 @@ SOFTWARE.
 ```
 ## @jitl/quickjs-singlefile-browser-release-sync
 
-Version: 0.32.0  
+Version: 0.32.0
 Licence: MIT
 
 ```
@@ -231,7 +239,7 @@ THE SOFTWARE.
 ```
 ## @mdi/js
 
-Version: 7.4.47  
+Version: 7.4.47
 Licence: Apache-2.0
 
 ```
@@ -258,7 +266,7 @@ The MIT license applies to all non-font and non-icon files.
 ```
 ## @mdi/react
 
-Version: 1.6.1  
+Version: 1.6.1
 Licence: MIT
 
 ```
@@ -286,7 +294,7 @@ SOFTWARE.
 ```
 ## @modelcontextprotocol/sdk
 
-Version: 1.30.0  
+Version: 1.30.0
 Licence: MIT
 
 ```
@@ -314,7 +322,7 @@ SOFTWARE.
 ```
 ## @pasquelin/panels
 
-Version: 0.3.3  
+Version: 0.4.1
 Licence: MIT
 
 ```
@@ -342,7 +350,7 @@ SOFTWARE.
 ```
 ## @scenario-labs/sdk
 
-Version: 3.0.0  
+Version: 3.0.0
 Licence: MIT
 
 ```
@@ -356,7 +364,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ```
 ## @tanstack/react-query
 
-Version: 5.101.4  
+Version: 5.101.4
 Licence: MIT
 
 ```
@@ -384,7 +392,7 @@ SOFTWARE.
 ```
 ## @tanstack/react-virtual
 
-Version: 3.14.9  
+Version: 3.14.9
 Licence: MIT
 
 ```
@@ -412,7 +420,7 @@ SOFTWARE.
 ```
 ## accelerate
 
-Version: 1.14.0  
+Version: 1.14.0
 Licence: Apache
 
 Corresponding sources:
@@ -422,15 +430,14 @@ https://github.com/huggingface/accelerate
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache.
 Source: https://github.com/huggingface/accelerate
 ```
 ## ACE-Step 1.5 XL
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -450,7 +457,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## ACE-Step 1.5 XL SFT
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -470,7 +477,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## ACE-Step 1.5 XL Turbo
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -490,7 +497,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## ag-psd
 
-Version: 31.0.2  
+Version: 31.0.2
 Licence: MIT
 
 ```
@@ -523,7 +530,7 @@ license and belong to their copyright holders.
 ```
 ## annotated-doc
 
-Version: 0.0.5  
+Version: 0.0.5
 Licence: MIT
 
 Corresponding sources:
@@ -533,15 +540,14 @@ https://github.com/fastapi/annotated-doc
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/fastapi/annotated-doc
 ```
 ## anyio
 
-Version: 4.14.2  
+Version: 4.15.0
 Licence: MIT
 
 Corresponding sources:
@@ -551,15 +557,14 @@ https://github.com/agronholm/anyio
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/agronholm/anyio
 ```
 ## better-sqlite3
 
-Version: 13.0.3  
+Version: 13.0.3
 Licence: MIT
 
 ```
@@ -587,7 +592,7 @@ SOFTWARE.
 ```
 ## certifi
 
-Version: 2026.7.22  
+Version: 2026.7.22
 Licence: MPL-2.0
 
 Corresponding sources:
@@ -597,15 +602,14 @@ https://github.com/certifi/python-certifi
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MPL-2.0.
 Source: https://github.com/certifi/python-certifi
 ```
 ## charset-normalizer
 
-Version: 3.5.1  
+Version: 3.5.1
 Licence: MIT
 
 Corresponding sources:
@@ -615,15 +619,14 @@ https://github.com/jawah/charset_normalizer
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/jawah/charset_normalizer
 ```
 ## click
 
-Version: 8.4.2  
+Version: 8.5.0
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -633,15 +636,14 @@ https://github.com/pallets/click/
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/pallets/click/
 ```
 ## CogVideoX 2B
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -661,7 +663,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## ControlNet Canny SDXL
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -681,7 +683,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## CPython
 
-Version: 3.12.14  
+Version: 3.12.14
 Licence: PSF-2.0
 
 Corresponding sources:
@@ -698,7 +700,7 @@ Source: https://github.com/astral-sh/python-build-standalone
 ```
 ## CraftsMan3D
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: CreativeML Open RAIL-M
 
 Corresponding sources:
@@ -731,7 +733,7 @@ Licensed under CreativeML Open RAIL-M. Full terms: https://huggingface.co/spaces
 ```
 ## daisyui
 
-Version: 5.7.16  
+Version: 5.7.16
 Licence: MIT
 
 ```
@@ -759,7 +761,7 @@ SOFTWARE.
 ```
 ## diffusers
 
-Version: 0.40.0  
+Version: 0.40.0
 Licence: Apache 2.0 License
 
 Corresponding sources:
@@ -769,15 +771,14 @@ https://github.com/huggingface/diffusers
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache 2.0 License.
 Source: https://github.com/huggingface/diffusers
 ```
 ## Diffusion360
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -799,15 +800,32 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## dockview-react
 
-Version: 8.1.0  
+Version: 8.1.0
 Licence: MIT
 
 ```
 See README.md of the package.
 ```
+## einops
+
+Version: 0.8.2
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/arogozhnikov/einops
+```
+
+```
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
+
+Licensed under MIT.
+Source: https://github.com/arogozhnikov/einops
+```
 ## electron
 
-Version: 43.4.0  
+Version: 43.4.0
 Licence: MIT
 
 ```
@@ -835,7 +853,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 ## electron-store
 
-Version: 11.0.2  
+Version: 11.0.2
 Licence: MIT
 
 ```
@@ -851,7 +869,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ```
 ## electron-updater
 
-Version: 6.8.9  
+Version: 6.8.9
 Licence: MIT
 
 ```
@@ -879,7 +897,7 @@ SOFTWARE.
 ```
 ## EmbeddingGemma 300M
 
-Version: Q8_0  
+Version: Q8_0
 Licence: other
 
 Corresponding sources:
@@ -901,7 +919,7 @@ Full terms: https://ai.google.dev/gemma/terms
 ```
 ## fflate
 
-Version: 0.8.3  
+Version: 0.8.3
 Licence: MIT
 
 ```
@@ -929,7 +947,7 @@ SOFTWARE.
 ```
 ## FFmpeg
 
-Version: 7.1.1 / 7.1.5  
+Version: 7.1.1 / 7.1.5
 Licence: GPL-3.0-or-later / LGPL-2.1-or-later
 
 Corresponding sources:
@@ -955,7 +973,7 @@ prints the configuration it was built with under `ffmpeg -buildconf`.
 ```
 ## filelock
 
-Version: 3.32.3  
+Version: 3.32.3
 Licence: MIT
 
 Corresponding sources:
@@ -965,15 +983,14 @@ https://github.com/tox-dev/py-filelock
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under MIT.
 Source: https://github.com/tox-dev/py-filelock
 ```
 ## fsspec
 
-Version: 2026.7.0  
+Version: 2026.7.0
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -983,15 +1000,14 @@ https://github.com/fsspec/filesystem_spec
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/fsspec/filesystem_spec
 ```
 ## GenEx World Initializer
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: CC-BY-4.0
 
 Corresponding sources:
@@ -1010,7 +1026,7 @@ Licensed under CC-BY-4.0. Full terms: https://creativecommons.org/licenses/by/4.
 ```
 ## h11
 
-Version: 0.16.0  
+Version: 0.16.0
 Licence: MIT
 
 Corresponding sources:
@@ -1020,15 +1036,14 @@ https://github.com/python-hyper/h11
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/python-hyper/h11
 ```
 ## hf-xet
 
-Version: 1.6.0  
+Version: 1.6.0
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1038,15 +1053,14 @@ https://github.com/huggingface/xet-core.git
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0.
 Source: https://github.com/huggingface/xet-core.git
 ```
 ## httpcore
 
-Version: 1.0.9  
+Version: 1.0.9
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -1056,15 +1070,14 @@ https://github.com/encode/httpcore
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/encode/httpcore
 ```
 ## httpx
 
-Version: 0.28.1  
+Version: 0.28.1
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -1074,15 +1087,14 @@ https://github.com/encode/httpx
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/encode/httpx
 ```
 ## huggingface-hub
 
-Version: 1.28.0  
+Version: 1.30.0
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1092,15 +1104,14 @@ https://github.com/huggingface/huggingface_hub
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0.
 Source: https://github.com/huggingface/huggingface_hub
 ```
 ## i18next
 
-Version: 26.3.6  
+Version: 26.3.6
 Licence: MIT
 
 ```
@@ -1128,7 +1139,7 @@ SOFTWARE.
 ```
 ## IBM Plex Mono
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: OFL-1.1
 
 Corresponding sources:
@@ -1158,7 +1169,7 @@ with others.
 
 The OFL allows the licensed fonts to be used, studied, modified and
 redistributed freely as long as they are not sold by themselves. The
-fonts, including any derivative works, can be bundled, embedded, 
+fonts, including any derivative works, can be bundled, embedded,
 redistributed and/or sold with any software provided that any reserved
 names are not used by derivative works. The fonts and derivatives,
 however, cannot be released under any other type of license. The
@@ -1234,7 +1245,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 ## IBM Plex Serif
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: OFL-1.1
 
 Corresponding sources:
@@ -1264,7 +1275,7 @@ with others.
 
 The OFL allows the licensed fonts to be used, studied, modified and
 redistributed freely as long as they are not sold by themselves. The
-fonts, including any derivative works, can be bundled, embedded, 
+fonts, including any derivative works, can be bundled, embedded,
 redistributed and/or sold with any software provided that any reserved
 names are not used by derivative works. The fonts and derivatives,
 however, cannot be released under any other type of license. The
@@ -1340,7 +1351,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 ## idna
 
-Version: 3.19  
+Version: 3.19
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -1350,15 +1361,48 @@ https://github.com/kjd/idna
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/kjd/idna
 ```
+## imageio
+
+Version: 2.37.4
+Licence: BSD-2-Clause
+
+Corresponding sources:
+
+```
+https://github.com/imageio/imageio
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-2-Clause.
+Source: https://github.com/imageio/imageio
+```
+## imageio-ffmpeg
+
+Version: 0.6.0
+Licence: BSD-2-Clause
+
+Corresponding sources:
+
+```
+https://github.com/imageio/imageio-ffmpeg
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD-2-Clause.
+Source: https://github.com/imageio/imageio-ffmpeg
+```
 ## immer
 
-Version: 11.1.16  
+Version: 11.1.16
 Licence: MIT
 
 ```
@@ -1386,7 +1430,7 @@ SOFTWARE.
 ```
 ## importlib-metadata
 
-Version: 9.0.0  
+Version: 9.0.1
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1396,15 +1440,14 @@ https://github.com/python/importlib_metadata
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0.
 Source: https://github.com/python/importlib_metadata
 ```
 ## InstantMesh
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1431,7 +1474,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## IP-Adapter SDXL
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1454,8 +1497,8 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## jinja2
 
-Version: 3.1.6  
-Licence: BSD License
+Version: 3.1.6
+Licence: BSD-3-Clause
 
 Corresponding sources:
 
@@ -1464,15 +1507,14 @@ https://github.com/pallets/jinja/
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
-Licensed under BSD License.
+Licensed under BSD-3-Clause.
 Source: https://github.com/pallets/jinja/
 ```
 ## jolt-physics
 
-Version: 1.1.0-simd.3e3b5ff  
+Version: 1.1.0-simd.3e3b5ff
 Licence: MIT
 
 ```
@@ -1500,7 +1542,7 @@ SOFTWARE.
 ```
 ## Lato
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: OFL-1.1
 
 Corresponding sources:
@@ -1530,7 +1572,7 @@ with others.
 
 The OFL allows the licensed fonts to be used, studied, modified and
 redistributed freely as long as they are not sold by themselves. The
-fonts, including any derivative works, can be bundled, embedded, 
+fonts, including any derivative works, can be bundled, embedded,
 redistributed and/or sold with any software provided that any reserved
 names are not used by derivative works. The fonts and derivatives,
 however, cannot be released under any other type of license. The
@@ -1606,7 +1648,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 ## LGM
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -1631,9 +1673,48 @@ is a rasterizer whose licence forbids commercial use, and it is not fetched or s
 
 Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
+## Make-It-Animatable
+
+Version: shipped with the application
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://huggingface.co/jasongzy/Make-It-Animatable
+```
+
+```
+Advanced local humanoid Auto Rig with skeleton and skin weights, one of the models the studio generates with on this machine.
+It is NOT shipped with the application: it is fetched on request into the user data folder,
+against a published digest, and removed from the model manager.
+
+The Hugging Face repository declares Apache-2.0 for these files. The provenance and
+redistribution rights of the training data and derived checkpoints remain unconfirmed;
+the model is restricted and must not be enabled in a public release on that declaration alone.
+
+Licensed under Apache-2.0. Full terms: https://huggingface.co/jasongzy/Make-It-Animatable/blob/eb12b71253361fd1a7216625a95144af3c58263e/README.md
+```
+## Make-It-Animatable code
+
+Version: d60cc7e01ff8da46448e458dbf450e8967b34e77
+Licence: MIT
+
+Corresponding sources:
+
+```
+https://github.com/jasongzy/Make-It-Animatable
+```
+
+```
+The inference implementation vendored by the Auto Rig backend.
+
+Copyright (c) 2025 Zhiyang Guo. Licensed under the MIT License.
+Full terms: https://github.com/jasongzy/Make-It-Animatable/blob/d60cc7e01ff8da46448e458dbf450e8967b34e77/LICENSE
+```
 ## markdown-it-py
 
-Version: 4.2.0  
+Version: 4.2.0
 Licence: MIT License
 
 Corresponding sources:
@@ -1643,15 +1724,14 @@ https://github.com/executablebooks/markdown-it-py
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT License.
 Source: https://github.com/executablebooks/markdown-it-py
 ```
 ## markupsafe
 
-Version: 3.0.3  
+Version: 3.0.3
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -1661,15 +1741,14 @@ https://github.com/pallets/markupsafe/
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/pallets/markupsafe/
 ```
 ## mdurl
 
-Version: 0.1.2  
+Version: 0.1.2
 Licence: MIT License
 
 Corresponding sources:
@@ -1679,15 +1758,14 @@ https://github.com/executablebooks/mdurl
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT License.
 Source: https://github.com/executablebooks/mdurl
 ```
 ## mediabunny
 
-Version: 1.53.1  
+Version: 1.53.1
 Licence: MPL-2.0
 
 Corresponding sources, unmodified:
@@ -2073,7 +2151,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 ```
 ## MMAudio Large
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: CC-BY-NC-4.0
 
 Corresponding sources:
@@ -2095,7 +2173,7 @@ NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
 ```
 ## MMAudio Medium
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: CC-BY-NC-4.0
 
 Corresponding sources:
@@ -2117,7 +2195,7 @@ NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
 ```
 ## MMAudio Small
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: CC-BY-NC-4.0
 
 Corresponding sources:
@@ -2139,7 +2217,7 @@ NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
 ```
 ## Mochi 1
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2159,7 +2237,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## monaco-editor
 
-Version: 0.52.2  
+Version: 0.52.2
 Licence: MIT
 
 ```
@@ -2187,8 +2265,8 @@ SOFTWARE.
 ```
 ## mpmath
 
-Version: 1.3.0  
-Licence: BSD
+Version: 1.3.0
+Licence: BSD-3-Clause
 
 Corresponding sources:
 
@@ -2197,15 +2275,14 @@ https://github.com/fredrik-johansson/mpmath
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
-Licensed under BSD.
+Licensed under BSD-3-Clause.
 Source: https://github.com/fredrik-johansson/mpmath
 ```
 ## MVDiffusion
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: other
 
 Corresponding sources:
@@ -2226,7 +2303,7 @@ Licensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-d
 ```
 ## networkx
 
-Version: 3.6.1  
+Version: 3.6.1
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -2236,15 +2313,14 @@ https://github.com/networkx/networkx
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/networkx/networkx
 ```
 ## node-llama-cpp
 
-Version: 3.20.0  
+Version: 3.20.0
 Licence: MIT
 
 ```
@@ -2272,7 +2348,7 @@ SOFTWARE.
 ```
 ## numpy
 
-Version: 2.5.2  
+Version: 2.5.2
 Licence: BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
 
 Corresponding sources:
@@ -2282,15 +2358,14 @@ https://github.com/numpy/numpy
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0.
 Source: https://github.com/numpy/numpy
 ```
 ## ONNX Runtime
 
-Version: 1.27.0  
+Version: 1.27.0
 Licence: MIT
 
 Corresponding sources:
@@ -2308,7 +2383,7 @@ Full terms: https://github.com/microsoft/onnxruntime/blob/main/LICENSE
 ```
 ## opentype.js
 
-Version: 2.0.0  
+Version: 2.0.0
 Licence: MIT
 
 ```
@@ -2335,7 +2410,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 ## packaging
 
-Version: 26.3  
+Version: 26.3
 Licence: Apache-2.0 OR BSD-2-Clause
 
 Corresponding sources:
@@ -2345,15 +2420,14 @@ https://github.com/pypa/packaging
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0 OR BSD-2-Clause.
 Source: https://github.com/pypa/packaging
 ```
 ## PanFusion
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: other
 
 Corresponding sources:
@@ -2374,7 +2448,7 @@ Licensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-d
 ```
 ## Parakeet TDT 0.6b v3
 
-Version: int8  
+Version: int8
 Licence: CC-BY-4.0
 
 Corresponding sources:
@@ -2396,7 +2470,7 @@ Full terms: https://creativecommons.org/licenses/by/4.0/legalcode
 ```
 ## pillow
 
-Version: 12.3.0  
+Version: 12.3.0
 Licence: MIT-CMU
 
 Corresponding sources:
@@ -2406,15 +2480,24 @@ https://github.com/python-pillow/Pillow
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT-CMU.
 Source: https://github.com/python-pillow/Pillow
 ```
+## pip
+
+Version: 26.2.1
+Licence: MIT
+
+```
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
+
+Licensed under MIT.
+```
 ## pixi.js
 
-Version: 8.19.0  
+Version: 8.19.0
 Licence: MIT
 
 ```
@@ -2442,7 +2525,7 @@ THE SOFTWARE.
 ```
 ## psutil
 
-Version: 7.2.2  
+Version: 7.2.2
 Licence: BSD-3-Clause
 
 Corresponding sources:
@@ -2452,15 +2535,14 @@ https://github.com/giampaolo/psutil
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-3-Clause.
 Source: https://github.com/giampaolo/psutil
 ```
 ## pygments
 
-Version: 2.21.0  
+Version: 2.21.0
 Licence: BSD-2-Clause
 
 Corresponding sources:
@@ -2470,15 +2552,14 @@ https://github.com/pygments/pygments
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under BSD-2-Clause.
 Source: https://github.com/pygments/pygments
 ```
 ## pyyaml
 
-Version: 6.0.3  
+Version: 6.0.3
 Licence: MIT
 
 Corresponding sources:
@@ -2488,15 +2569,14 @@ https://github.com/yaml/pyyaml
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/yaml/pyyaml
 ```
 ## quickjs-emscripten-core
 
-Version: 0.32.0  
+Version: 0.32.0
 Licence: MIT
 
 ```
@@ -2524,7 +2604,7 @@ SOFTWARE.
 ```
 ## Qwen-Image
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2544,7 +2624,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Qwen-Image-Edit
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2564,7 +2644,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Qwen2.5 0.5B Instruct
 
-Version: Q4_K_M  
+Version: Q4_K_M
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2583,7 +2663,7 @@ Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## Qwen2.5 1.5B Instruct
 
-Version: Q4_K_M  
+Version: Q4_K_M
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2602,7 +2682,7 @@ Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## Qwen2.5 14B Instruct
 
-Version: Q4_K_M  
+Version: Q4_K_M
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2621,7 +2701,7 @@ Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## Qwen2.5 7B Instruct
 
-Version: Q4_K_M  
+Version: Q4_K_M
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2640,7 +2720,7 @@ Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## Qwen2.5-Coder 1.5B Instruct
 
-Version: Q4_K_M  
+Version: Q4_K_M
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2659,7 +2739,7 @@ Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## Qwen2.5-Coder 7B Instruct
 
-Version: Q4_K_M  
+Version: Q4_K_M
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2678,7 +2758,7 @@ Full terms: https://www.apache.org/licenses/LICENSE-2.0
 ```
 ## react
 
-Version: 19.2.8  
+Version: 19.2.8
 Licence: MIT
 
 ```
@@ -2706,7 +2786,7 @@ SOFTWARE.
 ```
 ## react-dom
 
-Version: 19.2.8  
+Version: 19.2.8
 Licence: MIT
 
 ```
@@ -2734,7 +2814,7 @@ SOFTWARE.
 ```
 ## react-hook-form
 
-Version: 7.85.0  
+Version: 7.85.0
 Licence: MIT
 
 ```
@@ -2762,7 +2842,7 @@ SOFTWARE.
 ```
 ## react-i18next
 
-Version: 17.0.11  
+Version: 17.0.11
 Licence: MIT
 
 ```
@@ -2790,7 +2870,7 @@ SOFTWARE.
 ```
 ## react-is
 
-Version: 19.2.8  
+Version: 19.2.8
 Licence: MIT
 
 ```
@@ -2818,7 +2898,7 @@ SOFTWARE.
 ```
 ## react-markdown
 
-Version: 10.1.0  
+Version: 10.1.0
 Licence: MIT
 
 ```
@@ -2846,7 +2926,7 @@ SOFTWARE.
 ```
 ## react-tooltip
 
-Version: 6.0.8  
+Version: 6.0.8
 Licence: MIT
 
 ```
@@ -2874,7 +2954,7 @@ SOFTWARE.
 ```
 ## recharts
 
-Version: 3.10.1  
+Version: 3.10.1
 Licence: MIT
 
 ```
@@ -2902,7 +2982,7 @@ SOFTWARE.
 ```
 ## regex
 
-Version: 2026.7.19  
+Version: 2026.9.3
 Licence: Apache-2.0 AND CNRI-Python
 
 Corresponding sources:
@@ -2912,15 +2992,14 @@ https://github.com/mrabarnett/mrab-regex
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0 AND CNRI-Python.
 Source: https://github.com/mrabarnett/mrab-regex
 ```
 ## remark-gfm
 
-Version: 4.0.1  
+Version: 4.0.1
 Licence: MIT
 
 ```
@@ -2949,7 +3028,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 ## requests
 
-Version: 2.34.2  
+Version: 2.34.2
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2959,15 +3038,14 @@ https://github.com/psf/requests
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache-2.0.
 Source: https://github.com/psf/requests
 ```
 ## rich
 
-Version: 15.0.0  
+Version: 15.0.0
 Licence: MIT
 
 Corresponding sources:
@@ -2977,15 +3055,14 @@ https://github.com/Textualize/rich
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/Textualize/rich
 ```
 ## safetensors
 
-Version: 0.8.0  
+Version: 0.8.0
 Licence: Apache Software License
 
 Corresponding sources:
@@ -2995,15 +3072,14 @@ https://github.com/huggingface/safetensors
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache Software License.
 Source: https://github.com/huggingface/safetensors
 ```
 ## SANA 1.5 1.6B
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3023,7 +3099,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Sana 1600M
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3043,7 +3119,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Sana 600M
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3068,7 +3144,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## setuptools
 
-Version: 84.0.0  
+Version: 84.0.0
 Licence: MIT
 
 Corresponding sources:
@@ -3078,15 +3154,14 @@ https://github.com/pypa/setuptools
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under MIT.
 Source: https://github.com/pypa/setuptools
 ```
 ## Shap-E
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -3111,7 +3186,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## Shap-E Image
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -3131,7 +3206,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## shellingham
 
-Version: 1.5.4  
+Version: 1.5.4
 Licence: ISC License
 
 Corresponding sources:
@@ -3141,15 +3216,14 @@ https://github.com/sarugaku/shellingham
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under ISC License.
 Source: https://github.com/sarugaku/shellingham
 ```
 ## sherpa-onnx-node
 
-Version: 1.13.5  
+Version: 1.13.5
 Licence: Apache-2.0
 
 ```
@@ -3157,7 +3231,7 @@ See README.md of the package.
 ```
 ## Silero VAD
 
-Version: v5  
+Version: v5
 Licence: MIT
 
 Corresponding sources:
@@ -3174,7 +3248,7 @@ Full terms: https://github.com/snakers4/silero-vad/blob/master/LICENSE
 ```
 ## simple-git
 
-Version: 3.36.0  
+Version: 3.36.0
 Licence: MIT
 
 ```
@@ -3182,7 +3256,7 @@ See readme.md of the package.
 ```
 ## SSD-1B
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3206,8 +3280,8 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## sympy
 
-Version: 1.14.0  
-Licence: BSD
+Version: 1.14.0
+Licence: BSD-3-Clause
 
 Corresponding sources:
 
@@ -3216,15 +3290,14 @@ https://github.com/sympy/sympy
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
-Licensed under BSD.
+Licensed under BSD-3-Clause.
 Source: https://github.com/sympy/sympy
 ```
 ## tailwind-merge
 
-Version: 3.6.0  
+Version: 3.6.0
 Licence: MIT
 
 ```
@@ -3252,7 +3325,7 @@ SOFTWARE.
 ```
 ## tailwindcss
 
-Version: 4.3.3  
+Version: 4.3.3
 Licence: MIT
 
 ```
@@ -3280,7 +3353,7 @@ SOFTWARE.
 ```
 ## three
 
-Version: 0.185.1  
+Version: 0.185.1
 Licence: MIT
 
 ```
@@ -3308,7 +3381,7 @@ THE SOFTWARE.
 ```
 ## three-bvh-csg
 
-Version: 0.0.18  
+Version: 0.0.18
 Licence: MIT
 
 ```
@@ -3336,7 +3409,7 @@ SOFTWARE.
 ```
 ## three-mesh-bvh
 
-Version: 0.9.14  
+Version: 0.9.14
 Licence: MIT
 
 ```
@@ -3362,9 +3435,26 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+## timm
+
+Version: 1.0.29
+Licence: Apache-2.0
+
+Corresponding sources:
+
+```
+https://github.com/huggingface/pytorch-image-models
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
+
+Licensed under Apache-2.0.
+Source: https://github.com/huggingface/pytorch-image-models
+```
 ## tokenizers
 
-Version: 0.22.2  
+Version: 0.23.2
 Licence: Apache Software License
 
 Corresponding sources:
@@ -3374,15 +3464,14 @@ https://github.com/huggingface/tokenizers
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache Software License.
 Source: https://github.com/huggingface/tokenizers
 ```
 ## torch
 
-Version: 2.13.0  
+Version: 2.14.0
 Licence: Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT
 
 Corresponding sources:
@@ -3392,15 +3481,31 @@ https://github.com/pytorch/pytorch
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT.
 Source: https://github.com/pytorch/pytorch
 ```
+## torchvision
+
+Version: 0.29.0
+Licence: BSD
+
+Corresponding sources:
+
+```
+https://github.com/pytorch/vision
+```
+
+```
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
+
+Licensed under BSD.
+Source: https://github.com/pytorch/vision
+```
 ## tqdm
 
-Version: 4.70.0  
+Version: 4.70.0
 Licence: MPL-2.0 AND MIT
 
 Corresponding sources:
@@ -3410,15 +3515,14 @@ https://github.com/tqdm/tqdm
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MPL-2.0 AND MIT.
 Source: https://github.com/tqdm/tqdm
 ```
 ## transformers
 
-Version: 5.15.1  
+Version: 5.16.1
 Licence: Apache 2.0 License
 
 Corresponding sources:
@@ -3428,15 +3532,14 @@ https://github.com/huggingface/transformers
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under Apache 2.0 License.
 Source: https://github.com/huggingface/transformers
 ```
 ## TRELLIS Image
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -3455,7 +3558,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TRELLIS Text
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -3474,7 +3577,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TRELLIS.2 4B
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -3494,7 +3597,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TripoSG
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -3514,7 +3617,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TripoSR
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: MIT
 
 Corresponding sources:
@@ -3534,7 +3637,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## typer
 
-Version: 0.27.1  
+Version: 0.27.2
 Licence: MIT
 
 Corresponding sources:
@@ -3544,15 +3647,14 @@ https://github.com/fastapi/typer
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/fastapi/typer
 ```
 ## typescript
 
-Version: 6.0.3  
+Version: 6.0.3
 Licence: Apache-2.0
 
 ```
@@ -3560,7 +3662,7 @@ Apache License
 
 Version 2.0, January 2004
 
-http://www.apache.org/licenses/ 
+http://www.apache.org/licenses/
 
 TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
@@ -3614,7 +3716,7 @@ END OF TERMS AND CONDITIONS
 ```
 ## typing-extensions
 
-Version: 4.16.0  
+Version: 4.16.0
 Licence: PSF-2.0
 
 Corresponding sources:
@@ -3624,15 +3726,14 @@ https://github.com/python/typing_extensions
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.
 
 Licensed under PSF-2.0.
 Source: https://github.com/python/typing_extensions
 ```
 ## UniPano
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: other
 
 Corresponding sources:
@@ -3653,7 +3754,7 @@ Licensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-d
 ```
 ## urllib3
 
-Version: 2.7.0  
+Version: 2.7.0
 Licence: MIT
 
 Corresponding sources:
@@ -3663,15 +3764,14 @@ https://github.com/urllib3/urllib3
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/urllib3/urllib3
 ```
 ## utif
 
-Version: 3.1.0  
+Version: 3.1.0
 Licence: MIT
 
 ```
@@ -3699,7 +3799,7 @@ SOFTWARE.
 ```
 ## Wan 2.1 I2V 14B
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3719,7 +3819,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Wan 2.1 T2V 1.3B
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3741,7 +3841,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Wan 2.2 TI2V 5B
 
-Version: shipped with the application  
+Version: shipped with the application
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3761,7 +3861,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## wavesurfer.js
 
-Version: 7.12.11  
+Version: 7.12.11
 Licence: BSD-3-Clause
 
 ```
@@ -3797,7 +3897,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 ## zipp
 
-Version: 4.1.0  
+Version: 4.1.0
 Licence: MIT
 
 Corresponding sources:
@@ -3807,15 +3907,14 @@ https://github.com/jaraco/zipp
 ```
 
 ```
-Part of the environment a local generation runs in. It is NOT shipped with the
-application: it is fetched on first use, and removed with the engine.
+Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.
 
 Licensed under MIT.
 Source: https://github.com/jaraco/zipp
 ```
 ## zod
 
-Version: 4.4.3  
+Version: 4.4.3
 Licence: MIT
 
 ```
@@ -3843,7 +3942,7 @@ SOFTWARE.
 ```
 ## zustand
 
-Version: 5.0.15  
+Version: 5.0.15
 Licence: MIT
 
 ```

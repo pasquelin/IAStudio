@@ -56,3 +56,13 @@ class RoutingAdapter:
         stopping: Callable[[], bool] | None = None,
     ) -> dict[str, Any]:
         return self._inner.generate(params, destination, door, on_step, stopping)
+
+    def auto_rig(
+        self,
+        params: dict[str, Any],
+        destination: str,
+        door: str,
+        on_phase: Callable[[int, int, str], None],
+        stopping: Callable[[], bool],
+    ) -> dict[str, Any]:
+        return self._inner.auto_rig(params, destination, door, on_phase, stopping)

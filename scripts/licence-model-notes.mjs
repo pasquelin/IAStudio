@@ -1,5 +1,10 @@
 /** Per-model attribution details that do not belong to the catalogue schema. */
 export const MODEL_NOTES = {
+  'make-it-animatable': [
+    'The Hugging Face repository declares Apache-2.0 for these files. The provenance and',
+    'redistribution rights of the training data and derived checkpoints remain unconfirmed;',
+    'the model is restricted and must not be enabled in a public release on that declaration alone.',
+  ],
   'sana-600m-1024': [
     'Copyright NVIDIA Corporation and the Sana authors.',
     '',

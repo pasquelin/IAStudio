@@ -40,7 +40,16 @@
     "running_other": "{{count, number}} tâches",
     "open": "Afficher les tâches",
     "openHint": "Ouvre la liste des tâches en cours",
-    "cancel": "Interrompre cette tâche"
+    "cancel": "Interrompre cette tâche",
+    "phases": {
+      "prepare": "Préparation du modèle",
+      "load": "Chargement du moteur",
+      "analyse": "Analyse du personnage",
+      "skeleton": "Génération du squelette",
+      "pose": "Calcul de la pose de repos",
+      "skinning": "Calcul du skinning",
+      "apply": "Application du squelette"
+    }
   },
   "dialog": {
     "allMedia": "Tous les médias",

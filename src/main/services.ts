@@ -163,7 +163,7 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
   // prettier-ignore
-  const { clouds, runtimes, ai, engine: localEngine, llama, modelOf, isLocalTarget, notReady, memoryVectors, addOwnAiModel, dictation } = buildLocalAi()
+  const { clouds, runtimes, ai, engine: localEngine, llama, modelOf, isLocalTarget, notReady, memoryVectors, addOwnAiModel, dictation, autoRig } = buildLocalAi()
   function buildJobServices(): JobServices {
     return createJobServices({
       settings,
@@ -289,6 +289,7 @@ export function createServices(settings: SettingsStore): Services {
       ai,
       addOwnAiModel,
       dictation,
+      autoRig,
     }
   }
 

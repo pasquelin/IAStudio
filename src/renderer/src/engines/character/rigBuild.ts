@@ -10,11 +10,11 @@ import {
   BufferAttribute,
   Matrix4,
   Mesh,
+  Object3D,
   Skeleton,
   SkinnedMesh,
   Uint16BufferAttribute,
   Vector3,
-  type Object3D,
 } from 'three'
 import type { Rig } from '@shared/domain/rig'
 import { INFLUENCES } from './skinMessage'
@@ -51,6 +51,25 @@ export function reskinnableMeshesOf(root: Object3D): Mesh[] {
 export function unrig(holder: Object3D): void {
   for (const root of [...holder.children]) {
     if (root instanceof Bone) root.removeFromParent()
+  }
+}
+
+export function removeRig(holder: Object3D): void {
+  const skinned: SkinnedMesh[] = []
+  holder.traverse(object => {
+    if (object instanceof SkinnedMesh) skinned.push(object)
+  })
+  unrig(holder)
+  for (const mesh of skinned) {
+    const geometry = mesh.geometry.clone()
+    geometry.deleteAttribute('skinIndex')
+    geometry.deleteAttribute('skinWeight')
+    const plain = new Mesh(geometry, mesh.material)
+    plain.copy(mesh, false)
+    const parent = mesh.parent ?? holder
+    mesh.removeFromParent()
+    parent.add(plain)
+    mesh.geometry.dispose()
   }
 }
 
@@ -121,43 +140,76 @@ export function applyRig(
 ): void {
   if (bound.length === 0) return
 
+  const previousRoots = holder.children.filter(child => child instanceof Bone)
   const { bones, roots } = bonesOfRig(rig)
-  for (const root of roots) holder.add(root)
-  // BEFORE the skeleton is built: it takes each bone's inverse from that bone's `matrixWorld`
-  // there and then, and a bone just created carries the identity. Without this every inverse is
-  // wrong and the character bursts apart on the first frame it is drawn.
-  holder.updateWorldMatrix(false, true)
-  const skeleton = new Skeleton(bones)
-
-  for (const { mesh, binding } of bound) {
-    // The geometry is CLONED. `SkeletonUtils.clone` shares it with the cached source on purpose,
-    // so writing skin attributes onto it would hand every other node built from the same file
-    // this model's weights — and the last rig posed would silently drive all of them.
-    // 🛑 A clone carries no `boundsTree`: the caller owes this mesh its picking tree again.
+  const prepared = bound.map(({ mesh, binding }) => {
     const geometry = mesh.geometry.clone()
-    // Only a clone of OURS is freed: the first rig replaces the mesh the cache lends, whose
-    // geometry other nodes of the same file share. A re-rig replaces our own, and leaving it
-    // behind would leak the whole of it on every joint added.
-    if (mesh instanceof SkinnedMesh) mesh.geometry.dispose()
     geometry.setAttribute('skinIndex', new Uint16BufferAttribute(binding.skinIndex, INFLUENCES))
     geometry.setAttribute('skinWeight', new BufferAttribute(binding.skinWeight, INFLUENCES))
-
     const skinned = new SkinnedMesh(geometry, mesh.material)
-    skinned.name = mesh.name
-    skinned.position.copy(mesh.position)
-    skinned.quaternion.copy(mesh.quaternion)
-    skinned.scale.copy(mesh.scale)
-
+    Object3D.prototype.copy.call(skinned, mesh, false)
+    skinned.castShadow = mesh.castShadow
+    skinned.receiveShadow = mesh.receiveShadow
+    skinned.onBeforeRender = mesh.onBeforeRender
+    skinned.onAfterRender = mesh.onAfterRender
+    skinned.updateMorphTargets()
+    if (mesh.morphTargetInfluences) skinned.morphTargetInfluences = [...mesh.morphTargetInfluences]
+    if (mesh.morphTargetDictionary)
+      skinned.morphTargetDictionary = { ...mesh.morphTargetDictionary }
     const parent = mesh.parent ?? holder
-    mesh.removeFromParent()
-    parent.add(skinned)
-    skinned.bind(skeleton)
-  }
+    return {
+      mesh,
+      skinned,
+      parent,
+      index: parent.children.indexOf(mesh),
+      children: [...mesh.children],
+    }
+  })
 
-  // 🛑 Bound, THEN measured: `bind` reads the mesh's own `matrixWorld`, and a mesh created and
-  // parented a line earlier still carries the identity. The skeleton then stood outside the
-  // body — measured on screen. The skeleton window used to hide it by re-measuring on mount.
-  restInverses(holder)
+  try {
+    for (const root of roots) holder.add(root)
+    holder.updateWorldMatrix(false, true)
+    const skeleton = new Skeleton(bones)
+    for (const entry of prepared) replaceMesh(entry, skeleton)
+    restInverses(holder)
+    for (const root of previousRoots) root.removeFromParent()
+    for (const { mesh } of prepared) if (mesh instanceof SkinnedMesh) mesh.geometry.dispose()
+  } catch (error) {
+    for (const root of roots) root.removeFromParent()
+    for (const entry of prepared.toReversed()) restoreMesh(entry)
+    for (const { skinned } of prepared) skinned.geometry.dispose()
+    throw error
+  }
+}
+
+type PreparedMesh = {
+  mesh: Mesh
+  skinned: SkinnedMesh
+  parent: Object3D
+  index: number
+  children: readonly Object3D[]
+}
+
+function replaceMesh(entry: PreparedMesh, skeleton: Skeleton): void {
+  entry.parent.add(entry.skinned)
+  for (const child of entry.children) entry.skinned.add(child)
+  entry.mesh.removeFromParent()
+  moveChildTo(entry.parent, entry.skinned, entry.index)
+  entry.skinned.bind(skeleton)
+}
+
+function restoreMesh(entry: PreparedMesh): void {
+  for (const child of entry.children) entry.mesh.add(child)
+  entry.skinned.removeFromParent()
+  if (entry.mesh.parent !== entry.parent) entry.parent.add(entry.mesh)
+  moveChildTo(entry.parent, entry.mesh, entry.index)
+}
+
+function moveChildTo(parent: Object3D, child: Object3D, index: number): void {
+  const current = parent.children.indexOf(child)
+  if (current < 0 || current === index) return
+  parent.children.splice(current, 1)
+  parent.children.splice(index, 0, child)
 }
 
 /**

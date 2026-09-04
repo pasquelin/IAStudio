@@ -80,7 +80,7 @@ function readEnvironment(sitePackages) {
 
     const text = readFileSync(metadata, 'utf8')
     const name = /^Name:\s*(.+)$/m.exec(text)?.[1]?.trim()
-    if (!name) continue
+    if (!name || name === 'ia-studio-engine') continue
 
     // Normalised the way the lock spells it: PyPI allows `_` and `.` where the lock writes `-`.
     found[name.toLowerCase().replace(/[._]+/g, '-')] = {
@@ -105,16 +105,7 @@ function materialise() {
   execFileSync('uv', ['venv', '--python', '3.12', venv], { stdio: 'inherit' })
   execFileSync(
     'uv',
-    [
-      'pip',
-      'install',
-      '--python',
-      join(venv, 'bin', 'python'),
-      '--project',
-      ENGINE,
-      '--extra',
-      'diffusion',
-    ],
+    ['pip', 'install', '--python', join(venv, 'bin', 'python'), `${ENGINE}[diffusion]`],
     { stdio: 'inherit', cwd: ROOT },
   )
 

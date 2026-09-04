@@ -43,7 +43,7 @@ const GONE = 'the local AI engine is gone'
 /** What a caller wants to know while a job runs, and what stops it. */
 type EngineJobWatch = {
   /** From 0 to 1, pushed between two steps by the door itself. */
-  readonly onStep?: (ratio: number) => void
+  readonly onStep?: (ratio: number, phase?: string) => void
   readonly signal?: AbortSignal
 }
 
@@ -134,7 +134,7 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
     {
       resolve: (job: EngineSettledJob) => void
       reject: (error: Error) => void
-      onStep?: (ratio: number) => void
+      onStep?: (ratio: number, phase?: string) => void
     }
   >()
   let nextJob = 1
@@ -158,7 +158,7 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
   function receive(frame: EngineFrame): void {
     if (!('evt' in frame)) return
     if (isJobProgress(frame)) {
-      jobs.get(frame.job)?.onStep?.(frame.ratio)
+      jobs.get(frame.job)?.onStep?.(frame.ratio, frame.phase)
       return
     }
     if (settleJob(frame) || isWorkerHello(frame)) return

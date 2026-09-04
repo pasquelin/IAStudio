@@ -214,6 +214,8 @@ export function modelWith(
 export function catalogueRefusals(): readonly { model: string; refusal: string }[] {
   return SHIPPED.flatMap(entry => {
     const refusal = modelRefusalOf(entry.model)
-    return refusal === null ? [] : [{ model: entry.model.id, refusal }]
+    return refusal === null || refusal === 'distribution-blocked'
+      ? []
+      : [{ model: entry.model.id, refusal }]
   })
 }

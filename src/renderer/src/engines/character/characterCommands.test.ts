@@ -12,6 +12,7 @@ import {
   renameCharacterBone,
   setCharacterBoneRest,
   setCharacterBoneRole,
+  setCharacterAutoRig,
   setCharacterRig,
   unlinkCharacterMotion,
 } from './characterCommands'
@@ -32,6 +33,29 @@ const RIGGED: CharacterState = { ...EMPTY_CHARACTER, assetId: 'asset-1', rig: RI
 const SOCKET = { id: 's1', name: 'Paume droite', bone: 'LeftFoot', rest: IDENTITY_TRANSFORM }
 
 describe('editing a character', () => {
+  it('undoes an advanced rig with all of its backend-neutral skin bindings', () => {
+    const binding = {
+      mesh: 0,
+      primitive: 0,
+      skinIndex: new Uint16Array([0, 0, 0, 0]),
+      skinWeight: new Float32Array([1, 0, 0, 0]),
+    }
+    const command = setCharacterAutoRig({
+      rig: RIG,
+      bindings: [binding],
+      metadata: {
+        backendId: 'make-it-animatable',
+        sourceInfluences: 52,
+        outputInfluences: 4,
+        fingers: true,
+      },
+    })
+    const after = command.apply(EMPTY_CHARACTER)
+
+    expect(after.autoRigBindings).toEqual([binding])
+    expect(command.revert(after)).toEqual(EMPTY_CHARACTER)
+  })
+
   it('undoes what it did, which is the whole reason a rig is a document', () => {
     const command = removeCharacterBone('LeftFoot')
     const after = command.apply(RIGGED)

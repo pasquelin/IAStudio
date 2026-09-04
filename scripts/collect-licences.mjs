@@ -3,9 +3,7 @@
  * which the Help ▸ Licences window reads, and into `THIRD-PARTY-NOTICES.md` for readers of the
  * repository and the release page.
  *
- * What is shipped is `SHIPPED`, and why it is a list rather than a query is written there.
- * `licence.test.ts` fails if a runtime dependency is added without landing in it, and
- * `main/licences.test.ts` fails if one of its names is no longer declared in the manifest.
+ * What is shipped comes from `SHIPPED`; the licence guards keep it aligned with the manifests.
  *
  * The texts themselves are read from `node_modules`, never copied by hand — a version bump
  * brings its own wording.
@@ -23,11 +21,13 @@ import { isCopyleft, NO_VERSION } from '../src/shared/domain/licence.ts'
 import { SHIPPED } from '../src/main/shippedPackages.ts'
 import { BUILD_ONLY_PYTHON, ENGINE_PACKAGE, INTERPRETER } from '../src/main/pythonPackages.ts'
 import { MODEL_NOTES } from './licence-model-notes.mjs'
+import { makeItAnimatableLicence } from './make-it-animatable-licence.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Written by `collect-python-licences.mjs` from a materialised environment, and committed. */
 const PYTHON_LICENCES = join(ROOT, 'engine', 'licences.json')
+const AUTORIG_RUNTIME = join(ROOT, 'engine', 'autorig-runtime.json')
 const OUTPUT = join(ROOT, 'src', 'shared', 'licences.json')
 const NOTICES = join(ROOT, 'THIRD-PARTY-NOTICES.md')
 
@@ -248,6 +248,7 @@ function modelLicences() {
       ].join('\n'),
       sources: 'https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3',
     },
+    makeItAnimatableLicence,
     ...extraModelLicences(),
   ]
 }
@@ -268,6 +269,17 @@ const UNSTATED_LICENCE = 'unstated'
 
 function pythonLicences() {
   const read = existsSync(PYTHON_LICENCES) ? JSON.parse(readFileSync(PYTHON_LICENCES, 'utf8')) : {}
+  const runtime = JSON.parse(readFileSync(AUTORIG_RUNTIME, 'utf8'))
+  const runtimeByName = new Map(
+    runtime.distributions.map(distribution => [
+      distribution.name.replaceAll('_', '-'),
+      distribution,
+    ]),
+  )
+  const packageNames = new Set([
+    ...Object.keys(read),
+    ...runtime.distributions.map(distribution => distribution.name),
+  ])
 
   const interpreter = {
     name: INTERPRETER.name,
@@ -282,23 +294,32 @@ function pythonLicences() {
     sources: INTERPRETER.source,
   }
 
-  const packages = Object.entries(read)
-    .filter(([name]) => !BUILD_ONLY_PYTHON.includes(name) && name !== ENGINE_PACKAGE)
-    .map(([name, entry]) => ({
-      name,
-      version: entry.version ?? NO_VERSION,
-      // NOT `NO_VERSION`, which reads "shipped with the application" — a sentence about a
-      // version, printed in the licence column of a package whose metadata states none.
-      spdx: entry.spdx ?? UNSTATED_LICENCE,
-      text: [
-        'Part of the environment a local generation runs in. It is NOT shipped with the',
-        'application: it is fetched on first use, and removed with the engine.',
-        '',
-        `Licensed under ${entry.spdx ?? 'a licence its metadata does not state'}.`,
-        ...(entry.home ? [`Source: ${entry.home}`] : []),
-      ].join('\n'),
-      ...(entry.home ? { sources: entry.home } : {}),
-    }))
+  const packages = [...packageNames]
+    .filter(name => !BUILD_ONLY_PYTHON.includes(name) && name !== ENGINE_PACKAGE)
+    .sort((left, right) => left.localeCompare(right))
+    .map(name => {
+      const entry = read[name] ?? {}
+      const runtimeDistribution = runtimeByName.get(name.replaceAll('_', '-'))
+      const shipped = runtimeDistribution !== undefined
+      const spdx = runtimeDistribution?.licence ?? entry.spdx ?? UNSTATED_LICENCE
+
+      return {
+        name,
+        version: runtimeDistribution?.version ?? entry.version ?? NO_VERSION,
+        // NOT `NO_VERSION`, which reads "shipped with the application" — a sentence about a
+        // version, printed in the licence column of a package whose metadata states none.
+        spdx,
+        text: [
+          shipped
+            ? 'Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.'
+            : 'Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.',
+          '',
+          `Licensed under ${spdx}.`,
+          ...(entry.home ? [`Source: ${entry.home}`] : []),
+        ].join('\n'),
+        ...(entry.home ? { sources: entry.home } : {}),
+      }
+    })
 
   return [interpreter, ...packages]
 }
@@ -471,5 +492,8 @@ refuse(
 writeFileSync(OUTPUT, `${JSON.stringify(licences, null, 2)}\n`)
 console.log(`${licences.length} licences → src/shared/licences.json`)
 
-writeFileSync(NOTICES, renderNotices(licences))
+const notices = renderNotices(licences)
+  .replace(/\r\n?/g, '\n')
+  .replace(/[ \t]+$/gm, '')
+writeFileSync(NOTICES, notices)
 console.log(`${licences.length} licences → THIRD-PARTY-NOTICES.md`)

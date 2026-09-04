@@ -5211,6 +5211,65 @@
       "licenceStatus": "commercial"
     }
   ],
+  "3d/rig": [
+    {
+      "id": "make-it-animatable",
+      "backendId": "make-it-animatable",
+      "name": "Make-It-Animatable",
+      "summary": "Advanced local humanoid Auto Rig with skeleton and skin weights",
+      "releasedAt": "2024-12-06",
+      "format": "pickle",
+      "loader": "plugin",
+      "modality": "mesh",
+      "family": "3d",
+      "capabilities": ["rig"],
+      "rank": 1,
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://huggingface.co/jasongzy/Make-It-Animatable/blob/eb12b71253361fd1a7216625a95144af3c58263e/README.md",
+      "licenceStatus": "restricted",
+      "distributionStatus": "blocked",
+      "source": "https://huggingface.co/jasongzy/Make-It-Animatable",
+      "files": [
+        {
+          "role": "skinning",
+          "name": "bw.pth",
+          "url": "https://huggingface.co/jasongzy/Make-It-Animatable/resolve/eb12b71253361fd1a7216625a95144af3c58263e/output/best/new/bw.pth",
+          "bytes": 424693698,
+          "sha256": "8ff6abc9ed78665513d2dcd7b2d7e8430f6c86335389120281be3bd999d27830",
+          "revision": "eb12b71253361fd1a7216625a95144af3c58263e"
+        },
+        {
+          "role": "joints",
+          "name": "joints.pth",
+          "url": "https://huggingface.co/jasongzy/Make-It-Animatable/resolve/eb12b71253361fd1a7216625a95144af3c58263e/output/best/new/joints.pth",
+          "bytes": 525833771,
+          "sha256": "595587abb2ef9977bc9e49f8221c326da473de8ff1cd8785eb55ac63acde2b8e",
+          "revision": "eb12b71253361fd1a7216625a95144af3c58263e"
+        },
+        {
+          "role": "joints-coarse",
+          "name": "joints_coarse.pth",
+          "url": "https://huggingface.co/jasongzy/Make-It-Animatable/resolve/eb12b71253361fd1a7216625a95144af3c58263e/output/best/new/joints_coarse.pth",
+          "bytes": 424706373,
+          "sha256": "389e18f92a65e7925c1a940dfff22cc85e9ac4ead17ab4a65fd4ef5d6088b96b",
+          "revision": "eb12b71253361fd1a7216625a95144af3c58263e"
+        },
+        {
+          "role": "pose",
+          "name": "pose.pth",
+          "url": "https://huggingface.co/jasongzy/Make-It-Animatable/resolve/eb12b71253361fd1a7216625a95144af3c58263e/output/best/new/pose.pth",
+          "bytes": 525848433,
+          "sha256": "4996440d7d90064516e134e748abacd3b96e17856a7d8a4a245bbeb205402b7e",
+          "revision": "eb12b71253361fd1a7216625a95144af3c58263e"
+        }
+      ],
+      "diskBytes": 1901082275,
+      "reservationBytes": 3800000000,
+      "distribution": "direct-download",
+      "runtimeStatus": "supported",
+      "readsTorchWeights": true
+    }
+  ],
   "code/txt2code": [
     {
       "id": "qwen2.5-coder-1.5b-instruct-q4",

@@ -28,6 +28,7 @@ import type { StudioBridgeProject } from './studioBridgeProject'
 import type { StudioBridgeLibrary } from './studioBridgeLibrary'
 import type { StudioBridgeCreation } from './studioBridgeCreation'
 import type { StudioBridgeShell } from './studioBridgeShell'
+import type { StudioBridgeAutoRig } from './studioBridgeAutoRig'
 
 type CreationBridge = Omit<StudioBridgeCreation, 'media'> & {
   media: StudioBridgeCreation['media'] & {
@@ -49,4 +50,5 @@ export type StudioBridge = StudioBridgeSettings &
   StudioBridgeLibrary &
   CreationBridge &
   StudioBridgeShell &
-  ExternalFilesBridge
+  ExternalFilesBridge &
+  StudioBridgeAutoRig

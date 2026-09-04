@@ -31,7 +31,7 @@
   },
   {
     "name": "@pasquelin/panels",
-    "version": "0.3.3",
+    "version": "0.4.1",
     "spdx": "MIT",
     "text": "MIT License\n\nCopyright (c) 2026 alban pasquelin\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
   },
@@ -57,7 +57,7 @@
     "name": "accelerate",
     "version": "1.14.0",
     "spdx": "Apache",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache.\nSource: https://github.com/huggingface/accelerate",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache.\nSource: https://github.com/huggingface/accelerate",
     "sources": "https://github.com/huggingface/accelerate"
   },
   {
@@ -88,14 +88,14 @@
     "name": "annotated-doc",
     "version": "0.0.5",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/fastapi/annotated-doc",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/fastapi/annotated-doc",
     "sources": "https://github.com/fastapi/annotated-doc"
   },
   {
     "name": "anyio",
-    "version": "4.14.2",
+    "version": "4.15.0",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/agronholm/anyio",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/agronholm/anyio",
     "sources": "https://github.com/agronholm/anyio"
   },
   {
@@ -108,21 +108,21 @@
     "name": "certifi",
     "version": "2026.7.22",
     "spdx": "MPL-2.0",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MPL-2.0.\nSource: https://github.com/certifi/python-certifi",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MPL-2.0.\nSource: https://github.com/certifi/python-certifi",
     "sources": "https://github.com/certifi/python-certifi"
   },
   {
     "name": "charset-normalizer",
     "version": "3.5.1",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/jawah/charset_normalizer",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/jawah/charset_normalizer",
     "sources": "https://github.com/jawah/charset_normalizer"
   },
   {
     "name": "click",
-    "version": "8.4.2",
+    "version": "8.5.0",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/pallets/click/",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/pallets/click/",
     "sources": "https://github.com/pallets/click/"
   },
   {
@@ -160,7 +160,7 @@
     "name": "diffusers",
     "version": "0.40.0",
     "spdx": "Apache 2.0 License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache 2.0 License.\nSource: https://github.com/huggingface/diffusers",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache 2.0 License.\nSource: https://github.com/huggingface/diffusers",
     "sources": "https://github.com/huggingface/diffusers"
   },
   {
@@ -174,6 +174,13 @@
     "version": "8.1.0",
     "spdx": "MIT",
     "text": "See README.md of the package."
+  },
+  {
+    "name": "einops",
+    "version": "0.8.2",
+    "spdx": "MIT",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under MIT.\nSource: https://github.com/arogozhnikov/einops",
+    "sources": "https://github.com/arogozhnikov/einops"
   },
   {
     "name": "electron",
@@ -217,14 +224,14 @@
     "name": "filelock",
     "version": "3.32.3",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/tox-dev/py-filelock",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under MIT.\nSource: https://github.com/tox-dev/py-filelock",
     "sources": "https://github.com/tox-dev/py-filelock"
   },
   {
     "name": "fsspec",
     "version": "2026.7.0",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/fsspec/filesystem_spec",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/fsspec/filesystem_spec",
     "sources": "https://github.com/fsspec/filesystem_spec"
   },
   {
@@ -237,35 +244,35 @@
     "name": "h11",
     "version": "0.16.0",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/python-hyper/h11",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/python-hyper/h11",
     "sources": "https://github.com/python-hyper/h11"
   },
   {
     "name": "hf-xet",
     "version": "1.6.0",
     "spdx": "Apache-2.0",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/huggingface/xet-core.git",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/huggingface/xet-core.git",
     "sources": "https://github.com/huggingface/xet-core.git"
   },
   {
     "name": "httpcore",
     "version": "1.0.9",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/encode/httpcore",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/encode/httpcore",
     "sources": "https://github.com/encode/httpcore"
   },
   {
     "name": "httpx",
     "version": "0.28.1",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/encode/httpx",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/encode/httpx",
     "sources": "https://github.com/encode/httpx"
   },
   {
     "name": "huggingface-hub",
-    "version": "1.28.0",
+    "version": "1.30.0",
     "spdx": "Apache-2.0",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/huggingface/huggingface_hub",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/huggingface/huggingface_hub",
     "sources": "https://github.com/huggingface/huggingface_hub"
   },
   {
@@ -290,8 +297,22 @@
     "name": "idna",
     "version": "3.19",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/kjd/idna",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/kjd/idna",
     "sources": "https://github.com/kjd/idna"
+  },
+  {
+    "name": "imageio",
+    "version": "2.37.4",
+    "spdx": "BSD-2-Clause",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-2-Clause.\nSource: https://github.com/imageio/imageio",
+    "sources": "https://github.com/imageio/imageio"
+  },
+  {
+    "name": "imageio-ffmpeg",
+    "version": "0.6.0",
+    "spdx": "BSD-2-Clause",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-2-Clause.\nSource: https://github.com/imageio/imageio-ffmpeg",
+    "sources": "https://github.com/imageio/imageio-ffmpeg"
   },
   {
     "name": "immer",
@@ -301,9 +322,9 @@
   },
   {
     "name": "importlib-metadata",
-    "version": "9.0.0",
+    "version": "9.0.1",
     "spdx": "Apache-2.0",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/python/importlib_metadata",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/python/importlib_metadata",
     "sources": "https://github.com/python/importlib_metadata"
   },
   {
@@ -321,8 +342,8 @@
   {
     "name": "jinja2",
     "version": "3.1.6",
-    "spdx": "BSD License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD License.\nSource: https://github.com/pallets/jinja/",
+    "spdx": "BSD-3-Clause",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/pallets/jinja/",
     "sources": "https://github.com/pallets/jinja/"
   },
   {
@@ -344,24 +365,37 @@
     "sources": "https://huggingface.co/ashawkey/LGM"
   },
   {
+    "name": "Make-It-Animatable",
+    "spdx": "Apache-2.0",
+    "text": "Advanced local humanoid Auto Rig with skeleton and skin weights, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe Hugging Face repository declares Apache-2.0 for these files. The provenance and\nredistribution rights of the training data and derived checkpoints remain unconfirmed;\nthe model is restricted and must not be enabled in a public release on that declaration alone.\n\nLicensed under Apache-2.0. Full terms: https://huggingface.co/jasongzy/Make-It-Animatable/blob/eb12b71253361fd1a7216625a95144af3c58263e/README.md",
+    "sources": "https://huggingface.co/jasongzy/Make-It-Animatable"
+  },
+  {
+    "name": "Make-It-Animatable code",
+    "version": "d60cc7e01ff8da46448e458dbf450e8967b34e77",
+    "spdx": "MIT",
+    "text": "The inference implementation vendored by the Auto Rig backend.\n\nCopyright (c) 2025 Zhiyang Guo. Licensed under the MIT License.\nFull terms: https://github.com/jasongzy/Make-It-Animatable/blob/d60cc7e01ff8da46448e458dbf450e8967b34e77/LICENSE",
+    "sources": "https://github.com/jasongzy/Make-It-Animatable"
+  },
+  {
     "name": "markdown-it-py",
     "version": "4.2.0",
     "spdx": "MIT License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT License.\nSource: https://github.com/executablebooks/markdown-it-py",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT License.\nSource: https://github.com/executablebooks/markdown-it-py",
     "sources": "https://github.com/executablebooks/markdown-it-py"
   },
   {
     "name": "markupsafe",
     "version": "3.0.3",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/pallets/markupsafe/",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/pallets/markupsafe/",
     "sources": "https://github.com/pallets/markupsafe/"
   },
   {
     "name": "mdurl",
     "version": "0.1.2",
     "spdx": "MIT License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT License.\nSource: https://github.com/executablebooks/mdurl",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT License.\nSource: https://github.com/executablebooks/mdurl",
     "sources": "https://github.com/executablebooks/mdurl"
   },
   {
@@ -405,8 +439,8 @@
   {
     "name": "mpmath",
     "version": "1.3.0",
-    "spdx": "BSD",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD.\nSource: https://github.com/fredrik-johansson/mpmath",
+    "spdx": "BSD-3-Clause",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/fredrik-johansson/mpmath",
     "sources": "https://github.com/fredrik-johansson/mpmath"
   },
   {
@@ -419,7 +453,7 @@
     "name": "networkx",
     "version": "3.6.1",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/networkx/networkx",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/networkx/networkx",
     "sources": "https://github.com/networkx/networkx"
   },
   {
@@ -432,7 +466,7 @@
     "name": "numpy",
     "version": "2.5.2",
     "spdx": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0.\nSource: https://github.com/numpy/numpy",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0.\nSource: https://github.com/numpy/numpy",
     "sources": "https://github.com/numpy/numpy"
   },
   {
@@ -452,7 +486,7 @@
     "name": "packaging",
     "version": "26.3",
     "spdx": "Apache-2.0 OR BSD-2-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0 OR BSD-2-Clause.\nSource: https://github.com/pypa/packaging",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0 OR BSD-2-Clause.\nSource: https://github.com/pypa/packaging",
     "sources": "https://github.com/pypa/packaging"
   },
   {
@@ -472,8 +506,14 @@
     "name": "pillow",
     "version": "12.3.0",
     "spdx": "MIT-CMU",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT-CMU.\nSource: https://github.com/python-pillow/Pillow",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT-CMU.\nSource: https://github.com/python-pillow/Pillow",
     "sources": "https://github.com/python-pillow/Pillow"
+  },
+  {
+    "name": "pip",
+    "version": "26.2.1",
+    "spdx": "MIT",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under MIT."
   },
   {
     "name": "pixi.js",
@@ -485,21 +525,21 @@
     "name": "psutil",
     "version": "7.2.2",
     "spdx": "BSD-3-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/giampaolo/psutil",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/giampaolo/psutil",
     "sources": "https://github.com/giampaolo/psutil"
   },
   {
     "name": "pygments",
     "version": "2.21.0",
     "spdx": "BSD-2-Clause",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-2-Clause.\nSource: https://github.com/pygments/pygments",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD-2-Clause.\nSource: https://github.com/pygments/pygments",
     "sources": "https://github.com/pygments/pygments"
   },
   {
     "name": "pyyaml",
     "version": "6.0.3",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/yaml/pyyaml",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/yaml/pyyaml",
     "sources": "https://github.com/yaml/pyyaml"
   },
   {
@@ -612,9 +652,9 @@
   },
   {
     "name": "regex",
-    "version": "2026.7.19",
+    "version": "2026.9.3",
     "spdx": "Apache-2.0 AND CNRI-Python",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0 AND CNRI-Python.\nSource: https://github.com/mrabarnett/mrab-regex",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0 AND CNRI-Python.\nSource: https://github.com/mrabarnett/mrab-regex",
     "sources": "https://github.com/mrabarnett/mrab-regex"
   },
   {
@@ -627,21 +667,21 @@
     "name": "requests",
     "version": "2.34.2",
     "spdx": "Apache-2.0",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/psf/requests",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/psf/requests",
     "sources": "https://github.com/psf/requests"
   },
   {
     "name": "rich",
     "version": "15.0.0",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/Textualize/rich",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/Textualize/rich",
     "sources": "https://github.com/Textualize/rich"
   },
   {
     "name": "safetensors",
     "version": "0.8.0",
     "spdx": "Apache Software License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache Software License.\nSource: https://github.com/huggingface/safetensors",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache Software License.\nSource: https://github.com/huggingface/safetensors",
     "sources": "https://github.com/huggingface/safetensors"
   },
   {
@@ -666,7 +706,7 @@
     "name": "setuptools",
     "version": "84.0.0",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/pypa/setuptools",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under MIT.\nSource: https://github.com/pypa/setuptools",
     "sources": "https://github.com/pypa/setuptools"
   },
   {
@@ -685,7 +725,7 @@
     "name": "shellingham",
     "version": "1.5.4",
     "spdx": "ISC License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under ISC License.\nSource: https://github.com/sarugaku/shellingham",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under ISC License.\nSource: https://github.com/sarugaku/shellingham",
     "sources": "https://github.com/sarugaku/shellingham"
   },
   {
@@ -716,8 +756,8 @@
   {
     "name": "sympy",
     "version": "1.14.0",
-    "spdx": "BSD",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD.\nSource: https://github.com/sympy/sympy",
+    "spdx": "BSD-3-Clause",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under BSD-3-Clause.\nSource: https://github.com/sympy/sympy",
     "sources": "https://github.com/sympy/sympy"
   },
   {
@@ -751,31 +791,45 @@
     "text": "MIT License\n\nCopyright (c) 2018 Garrett Johnson\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
   },
   {
+    "name": "timm",
+    "version": "1.0.29",
+    "spdx": "Apache-2.0",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0.\nSource: https://github.com/huggingface/pytorch-image-models",
+    "sources": "https://github.com/huggingface/pytorch-image-models"
+  },
+  {
     "name": "tokenizers",
-    "version": "0.22.2",
+    "version": "0.23.2",
     "spdx": "Apache Software License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache Software License.\nSource: https://github.com/huggingface/tokenizers",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache Software License.\nSource: https://github.com/huggingface/tokenizers",
     "sources": "https://github.com/huggingface/tokenizers"
   },
   {
     "name": "torch",
-    "version": "2.13.0",
+    "version": "2.14.0",
     "spdx": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT.\nSource: https://github.com/pytorch/pytorch",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT.\nSource: https://github.com/pytorch/pytorch",
     "sources": "https://github.com/pytorch/pytorch"
+  },
+  {
+    "name": "torchvision",
+    "version": "0.29.0",
+    "spdx": "BSD",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under BSD.\nSource: https://github.com/pytorch/vision",
+    "sources": "https://github.com/pytorch/vision"
   },
   {
     "name": "tqdm",
     "version": "4.70.0",
     "spdx": "MPL-2.0 AND MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MPL-2.0 AND MIT.\nSource: https://github.com/tqdm/tqdm",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MPL-2.0 AND MIT.\nSource: https://github.com/tqdm/tqdm",
     "sources": "https://github.com/tqdm/tqdm"
   },
   {
     "name": "transformers",
-    "version": "5.15.1",
+    "version": "5.16.1",
     "spdx": "Apache 2.0 License",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache 2.0 License.\nSource: https://github.com/huggingface/transformers",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under Apache 2.0 License.\nSource: https://github.com/huggingface/transformers",
     "sources": "https://github.com/huggingface/transformers"
   },
   {
@@ -810,9 +864,9 @@
   },
   {
     "name": "typer",
-    "version": "0.27.1",
+    "version": "0.27.2",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/fastapi/typer",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/fastapi/typer",
     "sources": "https://github.com/fastapi/typer"
   },
   {
@@ -825,7 +879,7 @@
     "name": "typing-extensions",
     "version": "4.16.0",
     "spdx": "PSF-2.0",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under PSF-2.0.\nSource: https://github.com/python/typing_extensions",
+    "text": "Part of the embedded Auto Rig runtime. It IS shipped with the macOS ARM64 application.\n\nLicensed under PSF-2.0.\nSource: https://github.com/python/typing_extensions",
     "sources": "https://github.com/python/typing_extensions"
   },
   {
@@ -838,7 +892,7 @@
     "name": "urllib3",
     "version": "2.7.0",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/urllib3/urllib3",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/urllib3/urllib3",
     "sources": "https://github.com/urllib3/urllib3"
   },
   {
@@ -875,7 +929,7 @@
     "name": "zipp",
     "version": "4.1.0",
     "spdx": "MIT",
-    "text": "Part of the environment a local generation runs in. It is NOT shipped with the\napplication: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/jaraco/zipp",
+    "text": "Part of the environment a local generation runs in. It is NOT shipped with the application: it is fetched on first use, and removed with the engine.\n\nLicensed under MIT.\nSource: https://github.com/jaraco/zipp",
     "sources": "https://github.com/jaraco/zipp"
   },
   {

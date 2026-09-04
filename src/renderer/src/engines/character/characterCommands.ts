@@ -20,6 +20,7 @@ import { rigHandBones } from '../scene/rigHandBones'
 import type { MeshSample } from '../scene/rigSnap'
 import { ikLinksOf } from './ik'
 import type { CharacterState } from './characterState'
+import type { AutoRigResult } from '@shared/domain/autoRig'
 
 /**
  * What one does to a character's own file: its skeleton, its points of attachment, the motions
@@ -57,7 +58,15 @@ function edit(
 }
 
 export function setCharacterRig(rig: Rig | null): Command<CharacterState> {
-  return edit('rig', state => ({ ...state, rig }))
+  return edit('rig', state => ({ ...state, rig, autoRigBindings: undefined }))
+}
+
+export function setCharacterAutoRig(result: AutoRigResult): Command<CharacterState> {
+  return edit('rig', state => ({
+    ...state,
+    rig: result.rig,
+    autoRigBindings: result.bindings,
+  }))
 }
 
 /** Every bone edit goes through this: a rig the reader would drop is never written. */
@@ -69,7 +78,7 @@ function editBones(
     const next = state.rig && change(state.rig.bones)
     if (!state.rig || !next || rigFaultOf(next) !== null) return null
 
-    return { ...state, rig: { ...state.rig, bones: next } }
+    return { ...state, rig: { ...state.rig, bones: next }, autoRigBindings: undefined }
   })
 }
 

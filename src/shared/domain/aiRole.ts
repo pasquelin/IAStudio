@@ -37,6 +37,9 @@ export const DICTATION_ROLE = 'dictation' as AiRoleId
  */
 export const EMBEDDING_ROLE = 'embedding' as AiRoleId
 
+/** The Auto Rig employment; no selected provider means the integrated geometric backend. */
+export const AUTO_RIG_ROLE = aiRoleId('3d', 'rig')
+
 /** The roles no space holds. Exported because they are the only ones a bundle NAMES. */
 export const STANDALONE_ROLES: readonly AiRoleId[] = [
   ASSISTANT_ROLE,

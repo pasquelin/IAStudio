@@ -1,6 +1,6 @@
 import type { MemorySnapshot } from '@shared/domain/aiMemory'
 import type { AiOverview } from '@shared/domain/aiOverview'
-import { aiRoleId, ASSISTANT_ROLE } from '@shared/domain/aiRole'
+import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
 import { GIBI } from '@shared/domain/localModel-fixtures'
@@ -115,6 +115,48 @@ const candidateOf = (overview: AiOverview, modelId: string) =>
   overview.roles.flatMap(row => row.candidates).find(one => one.model.id === modelId)
 
 describe('the AI manager', () => {
+  it('refuses installation before a distribution-blocked runtime is contacted', async () => {
+    const install = vi.fn(() => Promise.resolve())
+    const ai = manager({ runtimes: { 'sherpa-onnx': idleRuntime(install) } })
+    const blocked: LocalModel = { ...STT_MODEL, distributionStatus: 'blocked' }
+
+    await expect(ai.installModel(blocked, nothing)).rejects.toThrow('model is not admitted')
+    expect(install).not.toHaveBeenCalled()
+  })
+
+  it('refuses selecting a distribution-blocked local model', async () => {
+    const blocked: LocalModel = {
+      ...STT_MODEL,
+      id: 'blocked-model',
+      distributionStatus: 'blocked',
+    }
+    const ai = manager({
+      settings: () => ({
+        ...DEFAULT_SETTINGS,
+        ai: { ...DEFAULT_SETTINGS.ai, ownModels: [blocked] },
+      }),
+    })
+
+    await expect(
+      ai.choose(DICTATION_ROLE, { kind: 'local', modelId: blocked.id }, 'app'),
+    ).rejects.toThrow('model is not admitted')
+  })
+
+  it('does not remove a model while a runtime client holds it', async () => {
+    const remove = vi.fn(() => Promise.resolve())
+    const ai = manager({
+      runtimes: { 'sherpa-onnx': { ...idleRuntime(), remove } },
+    })
+    const release = ai.hold(STT_MODEL.id)
+
+    await ai.remove(STT_MODEL.id)
+    expect(remove).not.toHaveBeenCalled()
+
+    release()
+    await ai.remove(STT_MODEL.id)
+    expect(remove).toHaveBeenCalledOnce()
+  })
+
   it('lists a discovered Ollama chat model on the assistant', async () => {
     const qwen = ollamaModel({ name: 'qwen3:8b', size: 5_000_000_000 })
     expect(qwen).not.toBeNull()

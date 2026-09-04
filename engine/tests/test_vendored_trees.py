@@ -21,6 +21,7 @@ LICENCE_OF = {
     "lgm": "LGM-LICENSE",
     "triposg": "TRIPOSG-LICENSE",
     "tsr": "TRIPOSR-LICENSE",
+    "make_it_animatable": "MAKE-IT-ANIMATABLE-LICENSE",
 }
 
 VENDORED = sorted(LICENCE_OF)
@@ -89,6 +90,7 @@ def test_no_vendored_tree_is_left_without_a_licence() -> None:
 
 
 ADAPTER = Path(__file__).resolve().parents[1] / "src/ia_studio_engine/adapters/plugin_adapter.py"
+AUTORIG = Path(__file__).resolve().parents[1] / "src/ia_studio_engine/autorig/make_it_animatable.py"
 
 #: Reached by a NAME read from a checkpoint's config rather than by an import, so no static reader
 #: will ever see these. `tsr/system.py` builds every part through `find_class`; TripoSG's scheduler
@@ -121,22 +123,24 @@ def _module_of(path: Path) -> Path | None:
 
 def _entry_points() -> set[str]:
     """What `plugin_adapter.py` opens: its own imports, plus the modules `_require` names."""
-    tree = ast.parse(ADAPTER.read_text())
     named: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            named |= {alias.name for alias in node.names}
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            named.add(node.module)
-        elif (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "_require"
-            and node.args
-            and isinstance(node.args[0], ast.Constant)
-        ):
-            named.add(str(node.args[0].value))
-    return {name for name in named if name.split(".")[0] in LICENCE_OF}
+    for entry_point in (ADAPTER, AUTORIG):
+        for node in ast.walk(ast.parse(entry_point.read_text())):
+            if isinstance(node, ast.Import):
+                named |= {alias.name for alias in node.names}
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                named.add(node.module)
+            elif (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "_require"
+                and node.args
+                and isinstance(node.args[0], ast.Constant)
+            ):
+                named.add(str(node.args[0].value))
+    prefix = "ia_studio_engine.vendor."
+    normalized = {name.removeprefix(prefix) for name in named}
+    return {name for name in normalized if name.split(".")[0] in LICENCE_OF}
 
 
 def _reached() -> set[Path]:

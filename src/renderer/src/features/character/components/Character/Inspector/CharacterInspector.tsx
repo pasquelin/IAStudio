@@ -87,7 +87,12 @@ export function CharacterInspector({ assetId }: CharacterInspectorProps) {
         {!rig && (
           <>
             <QuietNote>{t('inspector.rigStatus_staticMesh')}</QuietNote>
-            <CharacterInspectorFit assetId={assetId} sample={sample} />
+            <CharacterInspectorFit
+              assetId={assetId}
+              documentId={documentId}
+              nodeId={nodeId}
+              sample={sample}
+            />
           </>
         )}
         {rig && <QuietNote>{t('inspector.rigReady')}</QuietNote>}

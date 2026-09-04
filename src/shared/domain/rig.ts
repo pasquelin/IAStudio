@@ -60,7 +60,8 @@ export type RigBone = {
  * A string rather than a boolean because every caller has something to do with it: the document
  * reader drops the model, and a command refuses the edit and says which rule it broke.
  */
-export type RigFault = 'empty' | 'duplicate-bone' | 'unknown-parent' | 'cycle' | 'duplicate-role'
+export type RigFault =
+  'empty' | 'duplicate-bone' | 'unknown-parent' | 'cycle' | 'duplicate-role' | 'invalid-transform'
 
 export function rigFaultOf(bones: readonly RigBone[]): RigFault | null {
   if (bones.length === 0) return 'empty'
@@ -73,6 +74,7 @@ export function rigFaultOf(bones: readonly RigBone[]): RigFault | null {
 
   const roles = new Set<HumanoidRole>()
   for (const bone of bones) {
+    if (!finiteTransform(bone.rest)) return 'invalid-transform'
     if (bone.parent !== null && !byName.has(bone.parent)) return 'unknown-parent'
     if (!bone.role) continue
     if (roles.has(bone.role)) return 'duplicate-role'
@@ -80,6 +82,12 @@ export function rigFaultOf(bones: readonly RigBone[]): RigFault | null {
   }
 
   return hasCycle(bones, byName) ? 'cycle' : null
+}
+
+function finiteTransform(transform: Transform): boolean {
+  return [transform.position, transform.rotation, transform.scale].every(vector =>
+    [vector.x, vector.y, vector.z].every(Number.isFinite),
+  )
 }
 
 /**

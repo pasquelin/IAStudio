@@ -192,6 +192,8 @@
     "none": "Aucun",
     "noneHint": "Pas d’IA pour ce travail.",
     "notInstalledYet": "À installer avant de pouvoir servir cette opération.",
+    "autoRigSimple": "Squelettage simple",
+    "autoRigSimpleHint": "Intégré, rapide et disponible hors ligne sans téléchargement.",
     "ollamaHelpDown": "Ollama n’est pas ouvert. Le studio l’ouvre tout seul.",
     "ollamaHelpEmpty": "Ollama n’a encore aucun modèle.",
     "ollamaHelpFailed": "L’installation n’a pas marché. Rien n’a été effacé. Vous pouvez réessayer.",

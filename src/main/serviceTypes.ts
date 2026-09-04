@@ -49,6 +49,7 @@ import type { StylesStore } from './styles/store'
 import type { Updates } from './updater'
 import type { AiManager } from './ai/manager'
 import type { AskUser } from './project/documentDialogs'
+import type { AutoRigHost } from './ai/autoRigHost'
 
 export type Services = {
   settings: SettingsStore
@@ -124,6 +125,7 @@ export type Services = {
   mcpLaunch: McpLaunch
   /** Which AI serves each role, what the machine holds, and what may be installed. */
   ai: AiManager
+  autoRig: AutoRigHost
   /** Rank 3's gesture, whole: a picker, a GGUF header, an entry. Rejects on a file it cannot read. */
   addOwnAiModel: () => Promise<AiOverview>
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
