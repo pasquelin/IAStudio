@@ -104,6 +104,26 @@ describe('ActionIndex', () => {
     expect(index.search({ query: 'quasar' })[0]?.action.name).toBe(actions[1]?.name)
   })
 
+  it('retrieves transitive workflow prerequisites and favours available continuations', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const discovery = index.search({ query: 'génère une image photoréaliste', limit: 12 })
+    expect(discovery.map(hit => hit.action.name)).toEqual(
+      expect.arrayContaining(['models.search', 'models.select', 'generator.prepare']),
+    )
+    const continuation = index.search({
+      query: 'génère une image photoréaliste',
+      limit: 12,
+      available: ['generationModelCandidates'],
+    })
+    expect(continuation.find(hit => hit.action.name === 'models.select')?.workflowScore).toBeGreaterThan(
+      0,
+    )
+  })
+
   it('replaces fields, vectors and FTS words when the corpus changes', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())

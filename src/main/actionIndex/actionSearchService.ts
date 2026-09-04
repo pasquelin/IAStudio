@@ -3,6 +3,7 @@ import { chunk } from '@shared/collections'
 import { messageOf } from '@shared/guards'
 import type { Embedder } from '@main/memory/embedder'
 import { actionCorpus } from './actionCorpus'
+import type { ActionResource } from '@shared/domain/assistant'
 import type { ActionEmbedding, ActionHit } from './actionIndex'
 import type { AsyncActionIndex } from './actionIndexClient'
 import { openActionIndexThread } from './actionIndexThread'
@@ -10,7 +11,11 @@ import { openActionIndexThread } from './actionIndexThread'
 const EMBED_BATCH = 32
 
 export type ActionSearchService = {
-  search: (query: string, limit?: number) => Promise<readonly ActionHit[]>
+  search: (
+    query: string,
+    limit?: number,
+    available?: readonly ActionResource[],
+  ) => Promise<readonly ActionHit[]>
   close: () => Promise<void>
 }
 
@@ -62,7 +67,7 @@ export function createActionSearchService({
   }
 
   return {
-    search: async (query, limit) => {
+    search: async (query, limit, available) => {
       let index: AsyncActionIndex
       try {
         index = await holder()
@@ -77,14 +82,14 @@ export function createActionSearchService({
           await indexing
           const values = await embedder.embedQuery(query)
           if (values.length > 0 && embedder.chosen() === model)
-            return await index.search({ query, limit, embedding: { model, values } })
+            return await index.search({ query, limit, available, embedding: { model, values } })
         } catch (error) {
           onTrouble(messageOf(error))
         } finally {
           indexing = null
         }
       }
-      return await index.search({ query, limit })
+      return await index.search({ query, limit, available })
     },
     close: async () => {
       try {

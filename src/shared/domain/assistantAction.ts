@@ -59,6 +59,12 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
  */
 export type ActionReach = 'both' | 'mcp'
 
+export type ActionResource =
+  | 'generationModelCandidates'
+  | 'selectedGenerationModel'
+  | 'preparedGeneration'
+  | 'gitRepository'
+
 export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
 
 /**
@@ -132,6 +138,8 @@ export type AssistantAction = {
   runsOthers?: true
   reach: ActionReach
   fields: readonly ActionField[]
+  requires?: readonly ActionResource[]
+  produces?: readonly ActionResource[]
 }
 
 export function action(descriptor: AssistantAction): AssistantAction {

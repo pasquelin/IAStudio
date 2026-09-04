@@ -6,6 +6,7 @@ import type { JobManager } from '@main/provider/jobManager'
 import type { Memory, MemoryRef } from '@shared/domain/assistantMemory'
 import type { Job } from '@shared/domain/job'
 import type { Mission, MissionStep } from '@shared/domain/mission'
+import { ACTION_REGISTRY, type ActionResource } from '@shared/domain/assistant'
 import { noContext, type ContextState } from '@shared/domain/projectContext'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import type {
@@ -93,6 +94,20 @@ function retrievalQuery(input: AssistantContextRequest): string {
   ].join('\n')
 }
 
+function availableActionResources(
+  input: AssistantContextRequest,
+  snapshot: StudioSnapshot | null,
+): readonly ActionResource[] {
+  const resources = new Set<ActionResource>()
+  if (Object.keys(snapshot?.armedModels ?? {}).length > 0) resources.add('selectedGenerationModel')
+  for (const step of input.mission.plan.steps) {
+    if (step.kind !== 'action' || step.state !== 'completed') continue
+    const descriptor = ACTION_REGISTRY.find(action => action.name === step.call.action)
+    for (const resource of descriptor?.produces ?? []) resources.add(resource)
+  }
+  return [...resources]
+}
+
 function rankedCards(context: ContextState, query: string): ContextState {
   const words = query.toLocaleLowerCase('en').match(/[\p{L}\p{N}_]+/gu) ?? []
   const cards = context.cards
@@ -142,7 +157,11 @@ async function collectContext(
     input.mission.projectId !== undefined && snapshot?.project?.path === input.mission.projectId
   const [actions, projectMemories, globalMemories, jobs, projectContext, document] =
     await Promise.all([
-      deps.actions.search(query, CONTEXT_BUDGETS.actions.maxItems),
+      deps.actions.search(
+        query,
+        CONTEXT_BUDGETS.actions.maxItems,
+        availableActionResources(input, snapshot),
+      ),
       attached
         ? deps.memories.recall('project', {
             text: query,

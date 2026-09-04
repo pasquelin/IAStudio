@@ -1,4 +1,5 @@
 import type { ActionName } from '@shared/domain/assistant'
+import type { ActionResource } from '@shared/domain/assistantAction'
 import { askExpression } from '@main/project/ftsMatch'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { bytes, number, optionalNumber, optionalText } from '@main/project/sqlRow'
@@ -21,6 +22,7 @@ export type ActionSearch = {
   query: string
   limit?: number
   embedding?: { model: string; values: Float32Array }
+  available?: readonly ActionResource[]
 }
 
 export type ActionHit = {
@@ -28,6 +30,7 @@ export type ActionHit = {
   score: number
   lexicalScore: number
   semanticScore?: number
+  workflowScore?: number
 }
 
 export type ActionRebuild = {
@@ -240,8 +243,42 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         },
       ]
     })
+    const available = new Set(wanted.available ?? [])
+    const workflowScores = new Map<ActionName, number>()
+    const actions = hits.map(hit => hit.action)
+    const rankedHits = hits
+      .filter(hit => hit.score >= 1)
+      .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
+    const producers = (resource: ActionResource): readonly IndexedAction[] =>
+      actions.filter(action => action.produces.includes(resource))
+    const visitRequirements = (
+      action: IndexedAction,
+      score: number,
+      visited: ReadonlySet<ActionResource>,
+    ): void => {
+      for (const resource of action.requires) {
+        if (available.has(resource) || visited.has(resource)) continue
+        const nextVisited = new Set(visited).add(resource)
+        for (const producer of producers(resource)) {
+          workflowScores.set(producer.name, Math.max(workflowScores.get(producer.name) ?? 0, score))
+          visitRequirements(producer, Math.max(1, score - 1), nextVisited)
+        }
+      }
+    }
+    for (const hit of rankedHits.slice(0, MAX_LIMIT))
+      visitRequirements(hit.action, 6, new Set())
+    for (const resource of available) {
+      for (const action of actions.filter(candidate => candidate.requires.includes(resource)))
+        workflowScores.set(action.name, Math.max(workflowScores.get(action.name) ?? 0, 4))
+    }
     const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(wanted.limit ?? DEFAULT_LIMIT)))
     return hits
+      .map(hit => {
+        const workflowScore = workflowScores.get(hit.action.name) ?? 0
+        return workflowScore === 0
+          ? hit
+          : { ...hit, workflowScore, score: hit.score + workflowScore }
+      })
       .filter(hit => hit.score >= 1)
       .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
       .slice(0, limit)

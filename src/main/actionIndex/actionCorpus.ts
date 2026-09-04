@@ -4,6 +4,7 @@ import type {
   ActionField,
   ActionName,
   ActionReach,
+  ActionResource,
 } from '@shared/domain/assistant'
 import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
 import { digestOf } from '@main/memory/vectors'
@@ -24,6 +25,8 @@ export type IndexedAction = {
   searchable: string
   localizedTitles: readonly string[]
   localizedFieldLabels: readonly string[]
+  requires: readonly ActionResource[]
+  produces: readonly ActionResource[]
 }
 
 export type ActionCorpus = {
@@ -58,6 +61,8 @@ export function actionCorpus(): ActionCorpus {
         runsOthers: action.runsOthers === true,
         ordinal: ordinal++,
         localizedTitles: [title, frenchTitle],
+        requires: action.requires ?? [],
+        produces: action.produces ?? [],
         localizedFieldLabels: fields.flatMap(field => [
           englishText(field.labelKey),
           textAt(TRANSLATIONS.fr, field.labelKey),

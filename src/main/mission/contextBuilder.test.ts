@@ -110,8 +110,26 @@ describe('AssistantContextBuilder', () => {
 
     await builder.build({ mission, step, request: 'Rename the selected cube' })
 
-    expect(search).toHaveBeenCalledWith(expect.stringContaining('Rename the selected cube'), 12)
+    expect(search).toHaveBeenCalledWith(
+      expect.stringContaining('Rename the selected cube'),
+      12,
+      [],
+    )
     expect(search.mock.calls[0]?.[0]).not.toContain('light_')
+  })
+
+  it('tells action retrieval when a generation model is already selected', async () => {
+    const { mission, step } = missionOf('/projects/alpha')
+    const snapshot = snapshotOf()
+    snapshot.armedModels = { txt2img: 'model_1' }
+    const search = vi.fn(async () => [])
+    const builder = createAssistantContextBuilder(
+      dependencies({ snapshot: async () => snapshot, actions: { search } }),
+    )
+
+    await builder.build({ mission, step, request: 'Generate an image' })
+
+    expect(search).toHaveBeenCalledWith(expect.any(String), 12, ['selectedGenerationModel'])
   })
 
   it('builds a useful context without a window or project', async () => {

@@ -112,6 +112,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'both',
+    produces: ['generationModelCandidates'],
     fields: [
       { key: 'query', kind: 'text', labelKey: 'assistant.fields.query', required: true },
       {
@@ -130,6 +131,8 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: false,
     reach: 'both',
+    requires: ['generationModelCandidates'],
+    produces: ['selectedGenerationModel'],
     fields: [
       {
         key: 'family',
@@ -148,6 +151,8 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'both',
+    requires: ['selectedGenerationModel'],
+    produces: ['preparedGeneration'],
     fields: [
       {
         key: 'family',
@@ -192,6 +197,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'credits',
     repeatable: true,
     reach: 'both',
+    requires: ['preparedGeneration'],
     fields: [
       {
         key: 'landing',
