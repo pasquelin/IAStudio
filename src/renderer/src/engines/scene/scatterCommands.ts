@@ -48,6 +48,14 @@ export function setScatterMask(id: string, mask: ReliefMask | undefined): Comman
   return patchScatter(`world:layers:${id}:mask`, id, { mask }, layer => layer.locked)
 }
 
+export function deriveScatterMask(id: string, source: ReliefMask): Command<SceneState> {
+  const derived: ReliefMask =
+    source.kind === 'painted'
+      ? { kind: 'painted', weights: { chunks: source.weights.chunks.map(chunk => ({ ...chunk })) } }
+      : source
+  return setScatterMask(id, derived)
+}
+
 export function paintScatterMask(
   id: string,
   edits: readonly PackedReliefChunk[],

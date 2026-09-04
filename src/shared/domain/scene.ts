@@ -205,6 +205,7 @@ export function reliefLayer(
     elevation: patch.elevation ?? DEFAULT_RELIEF_ELEVATION,
     grain: patch.grain ?? RELIEF_CHUNK_TEXELS,
     edits: patch.edits ?? [],
+    groundMaterials: patch.groundMaterials ?? [],
   }
 }
 

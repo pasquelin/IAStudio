@@ -11,6 +11,7 @@ import {
   setScatterEnabled,
   setScatterLocked,
   setScatterMask,
+  deriveScatterMask,
 } from './scatterCommands'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
 
@@ -115,6 +116,33 @@ describe('scatter placement mask', () => {
     const [after, history] = run(masked, emptyHistory(), paintScatterMask('trees', weights.chunks))
     expect(maskOf(after)).toEqual({ kind: 'height', min: 2, max: 7 })
     expect(history.past).toEqual([])
+  })
+
+  it('derives an independent painted mask and leaves the source untouched when the derived mask is cleared', () => {
+    const source: ReliefMask = {
+      kind: 'painted',
+      weights: withChunkDelta(samples, undefined, {
+        column: 0,
+        row: 0,
+        localX: 1,
+        localZ: 1,
+        delta: 1,
+      }),
+    }
+    const [derived] = run(sceneOf(), emptyHistory(), deriveScatterMask('trees', source))
+    expect(maskOf(derived)).toEqual(source)
+    const [cleared] = run(derived, emptyHistory(), setScatterMask('trees', undefined))
+    expect(maskOf(cleared)).toBeUndefined()
+    expect(source).toEqual({
+      kind: 'painted',
+      weights: withChunkDelta(samples, undefined, {
+        column: 0,
+        row: 0,
+        localX: 1,
+        localZ: 1,
+        delta: 1,
+      }),
+    })
   })
 
   it('refuses to paint a locked scatter layer', () => {

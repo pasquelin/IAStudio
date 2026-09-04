@@ -17,6 +17,7 @@ import {
   type TerrainEditLayer,
   type TerrainLocks,
   type TextureRef,
+  type GroundMaterialLayer,
   type WorldLayer,
 } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
@@ -58,6 +59,13 @@ export function setTerrainEnabled(id: string, enabled: boolean): Command<SceneSt
 
 export function setTerrainLocked(id: string, locked: TerrainLocks): Command<SceneState> {
   return patchTerrain(`world:layers:locks:${id}`, id, { locked })
+}
+
+export function setTerrainGroundMaterials(
+  id: string,
+  groundMaterials: readonly GroundMaterialLayer[],
+): Command<SceneState> {
+  return patchTerrain(`world:layers:${id}:groundMaterials`, id, { groundMaterials })
 }
 
 export function addTerrainEdit(terrainId: string, id = newId()): Command<SceneState> {

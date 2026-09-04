@@ -77,7 +77,15 @@ export type ReliefLayer = {
   elevation: { min: number; max: number }
   grain: number
   edits: readonly TerrainEditLayer[]
+  /**
+   * Ground materials painted on this terrain. V1 writes 0 or 1 entry; the array is the Chantier B
+   * splat reservation — a later multi-layer blend reads the same field without a document migration.
+   */
+  groundMaterials: readonly GroundMaterialLayer[]
 }
+
+/** One splat layer. Weight is unused in V1 (a single entry is the whole paint). */
+export type GroundMaterialLayer = { texture: TextureRef; weight: number }
 
 /** Open union: a later kind does not migrate documents written with only Relief. */
 export type { ScatterLayer }

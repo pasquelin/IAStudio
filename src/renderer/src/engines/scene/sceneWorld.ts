@@ -46,6 +46,7 @@ import {
   type EnvironmentRef,
   type FogDescriptor,
   type GroundDescriptor,
+  type GroundMaterialLayer,
   type ReliefLayer,
   type ScatterAsset,
   type ScatterLayer,
@@ -190,9 +191,19 @@ function readWorldLayer(value: unknown): readonly WorldLayer[] {
         edits: Array.isArray(value.edits)
           ? value.edits.flatMap(readTerrainEditLayer)
           : [migratedSculptEdit(legacySculpt)],
+        groundMaterials: Array.isArray(value.groundMaterials)
+          ? value.groundMaterials.flatMap(readGroundMaterial)
+          : [],
       },
     ),
   ]
+}
+
+function readGroundMaterial(value: unknown): readonly GroundMaterialLayer[] {
+  if (!isRecord(value) || !isRecord(value.texture)) return []
+  const assetId = value.texture.assetId
+  if (typeof assetId !== 'string' || assetId === '') return []
+  return [{ texture: { assetId }, weight: readPositive(value, 'weight', 1) }]
 }
 
 function readScatterLayer(value: Record<string, unknown>): readonly ScatterLayer[] {

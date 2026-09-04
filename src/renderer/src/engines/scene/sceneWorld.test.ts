@@ -330,6 +330,21 @@ describe('reading a world back', () => {
     expect(enabledScatters([terrain, scatter]).map(layer => layer.id)).toEqual(['rocks'])
   })
 
+  it('round-trips a ground material array reserved for later splat layers', () => {
+    const written = reliefLayer(
+      { assetId: 'asset_height' },
+      {
+        id: 'island',
+        groundMaterials: [{ texture: { assetId: 'dirt' }, weight: 1 }],
+      },
+    )
+    expect(readWorld({ layers: [written] }, undefined).layers).toEqual([written])
+    expect(
+      readWorld({ layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] }, undefined)
+        .layers[0],
+    ).toMatchObject({ groundMaterials: [] })
+  })
+
   it('publishes the scatter collision cap and the painted-mask texel count', () => {
     expect(SCATTER_COLLISION_CAP).toBe(4096)
     expect(SCATTER_MASK_TEXELS).toBe(256)
