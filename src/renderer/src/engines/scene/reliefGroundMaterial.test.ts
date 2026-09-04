@@ -187,6 +187,69 @@ describe('relief ground material', () => {
     expect(terrain.groundGeneration).toBe(generation + 1)
   })
 
+  it('writes a changed albedo into the uniform three already compiled a program for', async () => {
+    const terrain: ReliefGroundMaterial = {
+      material: new MeshStandardMaterial(),
+      groundAssetId: null,
+      groundGeneration: 0,
+    }
+    const first = reliefLayer(
+      { assetId: 'height' },
+      {
+        id: 'terrain',
+        groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
+        groundWeights: { assetId: 'weights' },
+      },
+    )
+    syncGroundMaterial(terrain, first, { loadGround: async () => new Texture() })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+    const bound = terrain.groundUniforms?.albedos[0]
+    const key = terrain.material.customProgramCacheKey()
+    const replacement = new Texture()
+
+    syncGroundMaterial(
+      terrain,
+      {
+        ...first,
+        groundMaterials: [{ albedo: { assetId: 'other' }, normal: null, channel: 'r' }],
+      },
+      { loadGround: async () => replacement },
+    )
+    await vi.waitFor(() => expect(terrain.groundUniforms?.albedos[0]?.value).toBe(replacement))
+
+    // The SAME object, so the program three cached for it keeps sampling what this call wrote:
+    // only the cache-miss branch installs a new uniform set, and the key has not changed.
+    expect(terrain.groundUniforms?.albedos[0]).toBe(bound)
+    expect(terrain.material.customProgramCacheKey()).toBe(key)
+  })
+
+  it('asks three for another program when the uniform set is rebuilt from scratch', async () => {
+    const terrain: ReliefGroundMaterial = {
+      material: new MeshStandardMaterial(),
+      groundAssetId: null,
+      groundGeneration: 0,
+    }
+    const splat = reliefLayer(
+      { assetId: 'height' },
+      {
+        id: 'terrain',
+        groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
+        groundWeights: { assetId: 'weights' },
+      },
+    )
+    const loadGround = async () => new Texture()
+    syncGroundMaterial(terrain, splat, { loadGround })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+    const key = terrain.material.customProgramCacheKey()
+
+    syncGroundMaterial(terrain, { ...splat, groundWeights: null }, { loadGround })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeUndefined())
+    syncGroundMaterial(terrain, splat, { loadGround })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+
+    expect(terrain.material.customProgramCacheKey()).not.toBe(key)
+  })
+
   it('decodes persisted weights the way a live DataTexture samples them', async () => {
     const loadGround = vi.fn(async () => new Texture())
     const terrain: ReliefGroundMaterial = {

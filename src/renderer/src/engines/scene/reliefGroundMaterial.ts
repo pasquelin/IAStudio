@@ -183,29 +183,61 @@ function installSplat(
   const normals = loaded.slice(layers.length, layers.length + normalCount)
   const weights = loaded[loaded.length - 1]
   const fallbackAlbedo = albedos[0]
-  if (!weights || !fallbackAlbedo) return
+  if (!weights || !fallbackAlbedo) {
+    disposeTextures(loaded)
+    return
+  }
   const neutral = neutralNormal()
   const normalsByAsset = new Map<string, Texture>()
   let normalIndex = 0
   for (const layer of layers) {
     if (layer.normal) normalsByAsset.set(layer.normal.assetId, normals[normalIndex++] ?? neutral)
   }
-  const uniforms: ReliefSplatUniforms = {
-    albedos: GROUND_MATERIAL_CHANNELS.map(channel => {
-      const index = layers.findIndex(layer => layer.channel === channel)
-      return { value: albedos[index] ?? fallbackAlbedo }
-    }),
-    normals: GROUND_MATERIAL_CHANNELS.map(channel => {
-      const normal = layers.find(layer => layer.channel === channel)?.normal
-      return { value: normal ? (normalsByAsset.get(normal.assetId) ?? neutral) : neutral }
-    }),
-    weights: { value: weights },
-  }
+  const albedoValues = GROUND_MATERIAL_CHANNELS.map(channel => {
+    const index = layers.findIndex(layer => layer.channel === channel)
+    return albedos[index] ?? fallbackAlbedo
+  })
+  const normalValues = GROUND_MATERIAL_CHANNELS.map(channel => {
+    const normal = layers.find(layer => layer.channel === channel)?.normal
+    return normal ? (normalsByAsset.get(normal.assetId) ?? neutral) : neutral
+  })
   disposeTextures(terrain.groundTextures ?? [])
   terrain.material.map?.dispose()
   terrain.groundTextures = [...loaded, neutral]
-  terrain.groundUniforms = uniforms
-  bindReliefSplat(terrain.material, uniforms)
+  // The uniform OBJECTS are kept and written into: a new set forces three to compile another
+  // program for this material, and the old set stays bound until it does.
+  terrain.groundUniforms = writtenUniforms(
+    terrain.groundUniforms,
+    albedoValues,
+    normalValues,
+    weights,
+  )
+  bindReliefSplat(terrain.material, terrain.groundUniforms)
+}
+
+function writtenUniforms(
+  existing: ReliefSplatUniforms | undefined,
+  albedos: readonly Texture[],
+  normals: readonly Texture[],
+  weights: Texture,
+): ReliefSplatUniforms {
+  if (!existing) {
+    return {
+      albedos: albedos.map(value => ({ value })),
+      normals: normals.map(value => ({ value })),
+      weights: { value: weights },
+    }
+  }
+  albedos.forEach((value, index) => {
+    const uniform = existing.albedos[index]
+    if (uniform) uniform.value = value
+  })
+  normals.forEach((value, index) => {
+    const uniform = existing.normals[index]
+    if (uniform) uniform.value = value
+  })
+  existing.weights.value = weights
+  return existing
 }
 
 type GroundTextureId = {

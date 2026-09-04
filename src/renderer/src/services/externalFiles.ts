@@ -87,7 +87,10 @@ async function importRequest(
   const imported = await runTask(i18next.t('activity.importingFiles'), id =>
     bridge.media.ingestPaths(request.id, request.folder ?? '', id),
   )
-  if (imported) await handImported(imported, onImported)
+  // A stop undoes nothing the main already copied and adopted, and its answer is dropped with the
+  // race it lost — without this the catalogue holds rows the browser never shows.
+  if (!imported) return await useAssets.getState().refresh()
+  await handImported(imported, onImported)
 }
 
 async function handImported(
