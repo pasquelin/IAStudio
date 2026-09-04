@@ -85,6 +85,12 @@ export type ReliefLayer = {
 
 export type GroundMaterialChannel = 'r' | 'g' | 'b' | 'a'
 
+export const GROUND_MATERIAL_CHANNELS: readonly GroundMaterialChannel[] = ['r', 'g', 'b', 'a']
+
+export function groundMaterialChannelOffset(channel: GroundMaterialChannel): number {
+  return GROUND_MATERIAL_CHANNELS.indexOf(channel)
+}
+
 /** One appearance layer addressed by a channel of the terrain's shared weight texture. */
 export type GroundMaterialLayer = {
   albedo: TextureRef

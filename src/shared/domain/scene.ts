@@ -5,7 +5,7 @@ import type { Vector3 } from './transform'
 import type { GeometryDescriptor } from './geometry'
 import {
   UNLOCKED_TERRAIN,
-  type GroundMaterialChannel,
+  GROUND_MATERIAL_CHANNELS,
   type ReliefLayer,
   type ScatterLayer,
   type TerrainEditLayer,
@@ -167,7 +167,6 @@ export const DEFAULT_RELIEF_ELEVATION: ReliefLayer['elevation'] = Object.freeze(
 })
 export const DEFAULT_RELIEF_NAME = 'Terrain'
 export const DEFAULT_EDIT_NAME = 'Sculpt'
-export const GROUND_MATERIAL_CHANNELS: readonly GroundMaterialChannel[] = ['r', 'g', 'b', 'a']
 /** Measured at 12/16 fragment samplers with IBL and one shadow on Apple M2 Max, 2026-09-04. */
 export const MAX_GROUND_MATERIALS = GROUND_MATERIAL_CHANNELS.length
 

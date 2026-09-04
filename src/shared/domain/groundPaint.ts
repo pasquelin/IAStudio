@@ -1,5 +1,5 @@
 import type { ReliefExtent } from './relief'
-import type { GroundMaterialChannel } from './scene'
+import { groundMaterialChannelOffset, type GroundMaterialChannel } from './sceneModel'
 import { clamp } from '../numeric'
 
 export type GroundPaint = {
@@ -33,9 +33,10 @@ export function paintGroundChannelDisk(
   disk: Omit<GroundPaintDisk, 'color'>,
   channel: GroundMaterialChannel,
 ): GroundPaint {
+  const offset = groundMaterialChannelOffset(channel)
   const color: [number, number, number, number] = [0, 0, 0, 0]
-  color[channelOffset(channel)] = 255
-  return paintGroundDisk(before, extent, { ...disk, color }, channelOffset(channel))
+  color[offset] = 255
+  return paintGroundDisk(before, extent, { ...disk, color }, offset)
 }
 
 export function paintGroundDisk(
@@ -93,10 +94,6 @@ function paintPixel(
     if (onlyChannel !== undefined && channel !== onlyChannel) continue
     pixels[offset + channel] = blend(pixels[offset + channel], disk.color[channel] ?? 0, strength)
   }
-}
-
-function channelOffset(channel: GroundMaterialChannel): number {
-  return channel === 'r' ? 0 : channel === 'g' ? 1 : channel === 'b' ? 2 : 3
 }
 
 function blend(before: number | undefined, after: number, strength: number): number {

@@ -4,8 +4,8 @@ import type {
   Texture,
   WebGLProgramParametersWithUniforms,
 } from 'three'
+import { GROUND_MATERIAL_CHANNELS } from '@shared/domain/scene'
 
-const CHANNELS = ['r', 'g', 'b', 'a']
 const LEGACY_HOOKS = new WeakMap<
   MeshStandardMaterial,
   Pick<MeshStandardMaterial, 'onBeforeCompile' | 'customProgramCacheKey'>
@@ -17,8 +17,8 @@ export type ReliefSplatUniforms = {
   weights: IUniform<Texture>
 }
 
-const DECLARATIONS = `${CHANNELS.map((_, index) => `uniform sampler2D scGroundAlbedo${index};`).join('\n')}
-${CHANNELS.map((_, index) => `uniform sampler2D scGroundNormal${index};`).join('\n')}
+const DECLARATIONS = `${GROUND_MATERIAL_CHANNELS.map((_, index) => `uniform sampler2D scGroundAlbedo${index};`).join('\n')}
+${GROUND_MATERIAL_CHANNELS.map((_, index) => `uniform sampler2D scGroundNormal${index};`).join('\n')}
 uniform sampler2D scGroundWeights;
 varying vec2 scGroundUv;
 void main() {`
@@ -28,10 +28,10 @@ float scWeightSum = dot( scWeights, vec4( 1.0 ) );
 scWeights = scWeightSum > 0.0 ? scWeights / scWeightSum : vec4( 1.0, 0.0, 0.0, 0.0 );`
 
 const ALBEDO = `${WEIGHTS}
-vec4 scAlbedo = ${CHANNELS.map((channel, index) => `texture2D( scGroundAlbedo${index}, scGroundUv ) * scWeights.${channel}`).join(' + ')};
+vec4 scAlbedo = ${GROUND_MATERIAL_CHANNELS.map((channel, index) => `texture2D( scGroundAlbedo${index}, scGroundUv ) * scWeights.${channel}`).join(' + ')};
 diffuseColor *= scAlbedo;`
 
-const NORMAL = `vec3 scMapN = ${CHANNELS.map((channel, index) => `( texture2D( scGroundNormal${index}, scGroundUv ).xyz * 2.0 - 1.0 ) * scWeights.${channel}`).join(' + ')};
+const NORMAL = `vec3 scMapN = ${GROUND_MATERIAL_CHANNELS.map((channel, index) => `( texture2D( scGroundNormal${index}, scGroundUv ).xyz * 2.0 - 1.0 ) * scWeights.${channel}`).join(' + ')};
 vec3 scQ0 = dFdx( -vViewPosition );
 vec3 scQ1 = dFdy( -vViewPosition );
 vec2 scSt0 = dFdx( scGroundUv );
@@ -81,7 +81,7 @@ function bindUniforms(
   shader: WebGLProgramParametersWithUniforms,
   uniforms: ReliefSplatUniforms,
 ): void {
-  for (let index = 0; index < CHANNELS.length; index += 1) {
+  for (let index = 0; index < GROUND_MATERIAL_CHANNELS.length; index += 1) {
     const albedo = uniforms.albedos[index]
     const normal = uniforms.normals[index]
     if (!albedo || !normal) throw new Error('relief splat uniforms need four material layers')

@@ -1,6 +1,6 @@
 import type { GroundPaint } from './groundPaint'
 import { chunkLayout, packDeltas, type ReliefSculpt } from './relief'
-import type { GroundMaterialChannel } from './scene'
+import { groundMaterialChannelOffset, type GroundMaterialChannel } from './sceneModel'
 import { SCATTER_MASK_TEXELS } from './scatter'
 
 export type PaintExtent = { origin: { x: number; z: number }; size: { x: number; z: number } }
@@ -36,11 +36,7 @@ function paintedWeightAt(
   const x = Math.round(u * (paint.width - 1))
   const z = Math.round(v * (paint.height - 1))
   const offset = (z * paint.width + x) * 4
-  return (paint.pixels[offset + channelOffset(channel)] ?? 0) / 255
-}
-
-function channelOffset(channel: GroundMaterialChannel): number {
-  return channel === 'r' ? 0 : channel === 'g' ? 1 : channel === 'b' ? 2 : 3
+  return (paint.pixels[offset + groundMaterialChannelOffset(channel)] ?? 0) / 255
 }
 
 /**
