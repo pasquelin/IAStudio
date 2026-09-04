@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { withoutKey } from '@/helpers/objects'
 import type { RetargetFit } from '@/engines/scene/retarget'
 import type { RigState } from '@/engines/scene/rigState'
+import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
 
 type ClipsByNode = Record<string, readonly string[]>
 
@@ -34,7 +35,15 @@ type ModelFilesState = {
   reportSockets: (documentId: string, nodeId: string, sockets: readonly CharacterSocket[]) => void
   /** How many MATERIALS each model's file carries — its slots. The count lives in the GLB. */
   materials: Record<string, Record<string, number>>
-  reportMaterials: (documentId: string, nodeId: string, count: number) => void
+  materialNames: Record<string, Record<string, readonly string[]>>
+  reportMaterials: (
+    documentId: string,
+    nodeId: string,
+    count: number,
+    names?: readonly string[],
+  ) => void
+  stats: Record<string, SceneStats>
+  reportStats: (documentId: string, stats: SceneStats) => void
   /**
    * How well each foreign clip fits the character playing it, by `clipKeyOf`.
    *
@@ -58,6 +67,8 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
   clips: {},
   rigs: {},
   materials: {},
+  materialNames: {},
+  stats: {},
   lengths: {},
   fits: {},
   report: (documentId, nodeId, clips, lengths) =>
@@ -88,13 +99,20 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       },
     })),
 
-  reportMaterials: (documentId, nodeId, count) =>
+  reportMaterials: (documentId, nodeId, count, names = []) =>
     set(state => ({
       materials: {
         ...state.materials,
         [documentId]: { ...state.materials[documentId], [nodeId]: count },
       },
+      materialNames: {
+        ...state.materialNames,
+        [documentId]: { ...state.materialNames[documentId], [nodeId]: names },
+      },
     })),
+
+  reportStats: (documentId, stats) =>
+    set(state => ({ stats: { ...state.stats, [documentId]: stats } })),
 
   reportClipFit: (documentId, nodeId, clipKey, fit) =>
     set(state => {
@@ -117,8 +135,14 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       lengths: withoutKey(state.lengths, documentId),
       fits: withoutKey(state.fits, documentId),
       materials: withoutKey(state.materials, documentId),
+      materialNames: withoutKey(state.materialNames, documentId),
+      stats: withoutKey(state.stats, documentId),
     })),
 }))
+
+export function modelStatsOf(state: ModelFilesState, documentId: string): SceneStats {
+  return state.stats[documentId] ?? EMPTY_STATS
+}
 
 /**
  * Answered for a node nothing has reported for. Shared rather than built on the spot: this is
@@ -162,6 +186,14 @@ export function materialSlotsOfNode(
   nodeId: string,
 ): number {
   return state.materials[documentId]?.[nodeId] ?? 0
+}
+
+export function materialNamesOfNode(
+  state: ModelFilesState,
+  documentId: string,
+  nodeId: string,
+): readonly string[] {
+  return state.materialNames[documentId]?.[nodeId] ?? NO_CLIPS
 }
 
 /**

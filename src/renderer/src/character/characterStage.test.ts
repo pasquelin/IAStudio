@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { Rig } from '@shared/domain/rig'
+import type { ModelDressRef } from '@shared/domain/scene'
 import { createCharacterStage, workshopIdOf } from './characterStage'
 import { characterOf, useCharacters } from '@/stores/character'
 import { renameCharacterBone } from '@/engines/character/characterCommands'
@@ -60,6 +61,16 @@ describe('editing one character', () => {
     const held = characterOf(useCharacters.getState(), ASSET)
     expect(held.rig).toEqual(RIG)
     expect(held.motions).toHaveLength(1)
+    stage.close()
+  })
+
+  it('holds the material dress read from the model file', () => {
+    const stage = createCharacterStage({ renderer: renderer(), assetId: ASSET })
+    const dress: ModelDressRef = { kind: 'materials', documentIds: ['material-1'] }
+
+    stage.read(RIG, { dress })
+
+    expect(characterOf(useCharacters.getState(), ASSET).dress).toEqual(dress)
     stage.close()
   })
 

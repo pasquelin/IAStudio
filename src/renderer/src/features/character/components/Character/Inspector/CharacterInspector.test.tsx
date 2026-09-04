@@ -9,6 +9,10 @@ import { characterOf, seedCharacter, useCharacters } from '@/stores/character'
 import { clearCharacters } from '@/stores/character-fixtures'
 import { characterViewOf, useCharacterView } from '@/stores/characterView'
 import { CharacterInspector } from './CharacterInspector'
+import { workshopIdOf, workshopScene } from '@/character/characterStage'
+import { clearScenes } from '@/stores/scene-fixtures'
+import { sceneOf, useScenes } from '@/stores/scenes'
+import { useModelFiles } from '@/stores/modelFiles'
 
 const ASSET = 'asset-hero'
 const SAMPLE = {
@@ -35,6 +39,8 @@ const held = () => characterOf(useCharacters.getState(), ASSET)
 
 beforeEach(() => {
   clearCharacters()
+  clearScenes()
+  useModelFiles.setState({ materials: {}, materialNames: {}, stats: {} })
   useCharacterView.setState({ views: {} })
   installFakeBridge({})
 })
@@ -106,6 +112,28 @@ describe('what a character is made of', () => {
     show()
 
     expect(screen.getByText(/aucun mouvement/)).toBeInTheDocument()
+  })
+
+  it('offers the existing model material workflow on the character itself', async () => {
+    seedCharacter(ASSET, RIG, {})
+    show()
+
+    await userEvent.selectOptions(screen.getByLabelText('Recouvert par'), 'materials')
+
+    expect(held().dress).toEqual({ kind: 'materials', documentIds: [''] })
+    expect(screen.getByText('Matière 1')).toBeInTheDocument()
+  })
+
+  it('names a material slot as the model file names it', () => {
+    const documentId = workshopIdOf(ASSET)
+    useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
+    const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
+    useModelFiles.getState().reportMaterials(documentId, nodeId, 1, ['Coat'])
+    seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: [''] } })
+
+    show()
+
+    expect(screen.getByText('Coat')).toBeInTheDocument()
   })
 
   // Asked for at the first sight of the panel: a joint could only be put right by eye, and there

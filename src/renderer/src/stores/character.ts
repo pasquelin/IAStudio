@@ -30,6 +30,7 @@ export function seedCharacter(assetId: string, rig: Rig | null, extras: Characte
     rig,
     sockets: extras.sockets ?? [],
     motions: extras.motions ?? [],
+    ...(extras.dress && { dress: extras.dress }),
   })
   const seeded = store.use.getState()
   store.use.getState().markSaved(assetId, store.markOf(seeded, assetId))

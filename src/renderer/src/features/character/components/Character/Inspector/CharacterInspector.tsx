@@ -35,6 +35,7 @@ import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { workshopIdOf } from '@/character/characterStage'
 import { saveWorkshopMotion } from '@/character/characterMotion'
+import { CharacterInspectorModel } from './CharacterInspectorModel'
 
 export type CharacterInspectorProps = { assetId: string }
 
@@ -83,6 +84,14 @@ export function CharacterInspector({ assetId }: CharacterInspectorProps) {
     // row that decides it: three axis fields, their letters and the end column. At 320 px a
     // joint's offset read `-0` — the value cut, not the field.
     <>
+      <CharacterInspectorModel
+        assetId={assetId}
+        documentId={documentId}
+        nodeId={nodeId}
+        sample={view.sample}
+        unit={unit}
+      />
+
       <PropertySection title={t('character.skeleton')} scId="character.skeleton">
         {!rig && (
           <>

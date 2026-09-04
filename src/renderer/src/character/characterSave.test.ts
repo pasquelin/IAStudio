@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Rig, RigBone } from '@shared/domain/rig'
+import type { CharacterExtras } from '@shared/domain/character'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { setCharacterBoneRest } from '@/engines/character/characterCommands'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -13,18 +14,27 @@ import { useDocuments } from '@/stores/documents'
 
 /** Each container the port was asked to rebuild, held open until a case lets it land. */
 const writes = vi.hoisted(
-  (): { bones: readonly RigBone[]; skins: unknown; land: (ok: boolean) => void }[] => [],
+  (): {
+    bones: readonly RigBone[]
+    skins: unknown
+    extras: CharacterExtras
+    land: (ok: boolean) => void
+  }[] => [],
 )
 
 vi.mock('@/engines/scene/glbWrite.worker?worker', () => ({ default: class {} }))
 
 vi.mock('@/engines/scene/glbWriter', () => ({
   createGlbWriter: () => ({
-    write: (_file: Uint8Array, patch: { bones: readonly RigBone[]; skins: unknown }) =>
+    write: (
+      _file: Uint8Array,
+      patch: { bones: readonly RigBone[]; skins: unknown; extras: CharacterExtras },
+    ) =>
       new Promise((resolve, reject) => {
         writes.push({
           bones: patch.bones,
           skins: patch.skins,
+          extras: patch.extras,
           land: ok => (ok ? resolve(new Uint8Array([1])) : reject(new Error('the worker let go'))),
         })
       }),
@@ -79,6 +89,37 @@ describe('writing a character back to its own file', () => {
 
     expect(await saving).toBe(true)
     expect(dirty()).toBe(true)
+  })
+
+  it('writes the material dress beside the character data', async () => {
+    seedCharacter(ASSET, RIG, {
+      dress: { kind: 'materials', documentIds: ['material-1'] },
+    })
+
+    const saving = saveCharacter(ASSET, () => weighed)
+    await vi.waitFor(() => expect(writes).toHaveLength(1))
+    writes[0]?.land(true)
+    await saving
+
+    expect(writes[0]?.extras.dress).toEqual({
+      kind: 'materials',
+      documentIds: ['material-1'],
+    })
+  })
+
+  it('writes the material dress when the model has no skeleton', async () => {
+    seedCharacter(ASSET, null, { dress: { kind: 'image', assetId: 'texture-1' } })
+
+    const saving = saveCharacter(ASSET, () => weighed)
+    await vi.waitFor(() => expect(writes).toHaveLength(1))
+    writes[0]?.land(true)
+
+    expect(await saving).toBe(true)
+    expect(writes[0]).toMatchObject({
+      bones: [],
+      skins: [],
+      extras: { dress: { kind: 'image', assetId: 'texture-1' } },
+    })
   })
 
   // A second ⌘S is pressed precisely because the first showed nothing. Answered with the first

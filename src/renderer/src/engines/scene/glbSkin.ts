@@ -49,7 +49,11 @@ export function glbSkinFaultOf(file: Uint8Array, patch: GlbSkinPatch): GlbSkinFa
 
   const gltf: unknown = glbJson(chunks.json)
   if (!isRecord(gltf)) return 'not-glb'
-  if (!Array.isArray(gltf.buffers) || gltf.buffers.length === 0) return 'no-buffer'
+  if (
+    (patch.bones.length > 0 || patch.skins.length > 0) &&
+    (!Array.isArray(gltf.buffers) || gltf.buffers.length === 0)
+  )
+    return 'no-buffer'
 
   const meshes = Array.isArray(gltf.meshes) ? gltf.meshes : []
   for (const skin of patch.skins) {
@@ -72,6 +76,12 @@ export function glbSkinFaultOf(file: Uint8Array, patch: GlbSkinPatch): GlbSkinFa
  * would cost the character the sharpness of its maps. Here the container is patched in place.
  */
 export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
+  if (patch.bones.length === 0 && patch.skins.length === 0) return glbWithExtras(file, patch.extras)
+
+  return glbWithRig(file, patch)
+}
+
+function glbWithRig(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
   const work = skinWorkspace(file)
   if (!work) return file
   const push = (bytes: Uint8Array, stride: number): number => appendView(work, bytes, stride)
@@ -134,6 +144,27 @@ export function glbWithSkin(file: Uint8Array, patch: GlbSkinPatch): Uint8Array {
   return glbFrom({
     json: new TextEncoder().encode(JSON.stringify(written)),
     bin: joined(work.chunks.bin, work.appended, work.length),
+  })
+}
+
+/** The same container with only the studio scene extras changed; every binary byte is retained. */
+function glbWithExtras(file: Uint8Array, extras: CharacterExtras): Uint8Array {
+  const chunks = glbChunksOf(file)
+  const gltf: unknown = chunks && glbJson(chunks.json)
+  if (!chunks || !isRecord(gltf)) return file
+
+  const shown = typeof gltf.scene === 'number' ? gltf.scene : 0
+  const scenes = Array.isArray(gltf.scenes)
+    ? gltf.scenes.map((scene, index) =>
+        index === shown && isRecord(scene)
+          ? { ...scene, extras: { ...ownExtras(scene), [STUDIO_METADATA_KEY]: extras } }
+          : scene,
+      )
+    : []
+
+  return glbFrom({
+    json: new TextEncoder().encode(JSON.stringify({ ...gltf, scenes })),
+    bin: chunks.bin,
   })
 }
 

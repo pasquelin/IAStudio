@@ -29,6 +29,8 @@ export type ModelDressSectionProps = {
   dress: ModelDressRef | undefined
   /** How many materials this model's own file carries — see `ModelTextures.count`. */
   slots: number
+  /** Material names read from the model file, in slot order. */
+  names?: readonly string[]
   /** The whole dress at once: the two modes exclude each other, so a change is never partial. */
   onChange: (dress: ModelDressRef | null) => void
   /** One slot, NAMED rather than written: assembling awaits, and this panel's list goes stale. */
@@ -41,6 +43,7 @@ export function ModelDressSection({
   name,
   dress,
   slots,
+  names = [],
   onChange,
   onWearAt,
 }: ModelDressSectionProps) {
@@ -130,6 +133,7 @@ export function ModelDressSection({
           worn={wornMaterials(dress)}
           pictures={pictures}
           slots={slots}
+          names={names}
           onChange={documentIds => onChange({ kind: 'materials', documentIds })}
           onAssemble={slot => void assemble(slot)}
         />

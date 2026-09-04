@@ -11,6 +11,7 @@ import { useWornMaterial } from '@/stores/materialSources'
 
 export type ModelDressSectionRowProps = {
   slot: number
+  name?: string
   documentId: string
   options: readonly LinkOption[]
   /** The project's pictures, so the slot shows its base colour — held by the parent, not per row. */
@@ -27,6 +28,7 @@ export type ModelDressSectionRowProps = {
  */
 export function ModelDressSectionRow({
   slot,
+  name,
   documentId,
   options,
   pictures,
@@ -42,9 +44,11 @@ export function ModelDressSectionRow({
   return (
     <LinkField
       label={
-        inert
-          ? t('inspector.modelDressSlotInert', { index })
-          : t('inspector.modelDressSlot', { index })
+        name
+          ? name
+          : inert
+            ? t('inspector.modelDressSlotInert', { index })
+            : t('inspector.modelDressSlot', { index })
       }
       scId={`model.material.${slot}`}
       value={isWorn(documentId) ? documentId : null}

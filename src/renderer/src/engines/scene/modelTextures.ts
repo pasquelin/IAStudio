@@ -22,6 +22,8 @@ export type ModelTextures = {
    * a file nothing can be written into, which is what `onUndressable` is said about.
    */
   count: () => number
+  /** Names in editable slot order, with an empty string where the file names none. */
+  names: () => readonly string[]
   /** The overrides one slot holds, or none. An empty set puts its maps back to the file's own. */
   apply: (slot: number, maps: ModelDress['textures']) => void
   /** The finish one slot wears over its file. Absent fields leave what the glTF put there. */
@@ -123,6 +125,7 @@ export function createModelTextures(
 
   return {
     count: () => slots.length,
+    names: () => slots.map(slot => slot.held.material.name),
     apply: (slot, maps) => {
       const held = slots[slot]
       if (held) return held.bindings.apply(maps)

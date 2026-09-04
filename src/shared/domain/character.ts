@@ -2,6 +2,7 @@ import { isRecord } from '../guards'
 import { isHumanoidRole, type HumanoidRole } from './humanoid'
 import { isTransform, type Transform } from './transform'
 import { STUDIO_METADATA_KEY } from './studioMetadata'
+import { modelDressRefOf, type ModelDressRef } from './sceneModel'
 
 /**
  * What a character IS, as far as rigging goes.
@@ -53,6 +54,8 @@ export type CharacterExtras = {
   roles?: Readonly<Record<string, HumanoidRole>>
   sockets?: readonly CharacterSocket[]
   motions?: readonly MotionRef[]
+  /** Non-destructive material documents worn when this model is opened on its own. */
+  dress?: ModelDressRef
 }
 
 /**
@@ -71,11 +74,13 @@ export function characterExtrasOf(userData: unknown): CharacterExtras | null {
   const roles = rolesOf(character.roles)
   const sockets = socketsOf(character.sockets)
   const motions = motionsOf(character.motions)
+  const dress = modelDressRefOf(character.dress)
 
   const extras: CharacterExtras = {
     ...(roles && { roles }),
     ...(sockets && { sockets }),
     ...(motions && { motions }),
+    ...(dress && { dress }),
   }
 
   return Object.keys(extras).length > 0 ? extras : null

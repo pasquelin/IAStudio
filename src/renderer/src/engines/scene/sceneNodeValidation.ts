@@ -1,4 +1,10 @@
-import { isTransform, isVector3, ROOT_MOTIONS, TEXTURE_SLOTS } from '@shared/domain/scene'
+import {
+  isTransform,
+  isVector3,
+  modelDressRefOf,
+  ROOT_MOTIONS,
+  TEXTURE_SLOTS,
+} from '@shared/domain/scene'
 import { CSG_OPERATIONS } from '@shared/domain/csg'
 import { BODY_PARTS } from '@shared/domain/humanoid'
 import { isRecord } from '@shared/guards'
@@ -264,15 +270,7 @@ function isOptionalTextureOverrides(value: unknown): boolean {
  */
 function isOptionalDress(value: unknown): boolean {
   if (value == null) return true
-  if (!isRecord(value)) return false
-
-  if (value.kind === 'image') return typeof value.assetId === 'string'
-
-  return (
-    value.kind === 'materials' &&
-    Array.isArray(value.documentIds) &&
-    value.documentIds.every(id => typeof id === 'string')
-  )
+  return modelDressRefOf(value) !== null
 }
 
 /**

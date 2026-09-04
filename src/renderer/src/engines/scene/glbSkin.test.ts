@@ -131,6 +131,20 @@ describe('putting a skeleton into a file', () => {
     })
   })
 
+  it('patches only the extras when a model has no skeleton', async () => {
+    const original = await written(bareCharacter())
+    const file = glbWithSkin(original, {
+      bones: [],
+      skins: [],
+      extras: { dress: { kind: 'image', assetId: 'texture-1' } },
+    })
+
+    expect((await read(file)).userData).toMatchObject({
+      iastudio: { dress: { kind: 'image', assetId: 'texture-1' } },
+    })
+    expect(glbChunksOf(file)?.bin).toEqual(glbChunksOf(original)?.bin)
+  })
+
   // 🛑 A character rigged elsewhere carries its own skin, and a save that stripped it would hand
   // back a file whose mesh follows nothing.
   it('leaves a skin this studio did not write exactly where it is', async () => {

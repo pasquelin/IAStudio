@@ -1,5 +1,6 @@
 import type { CharacterSocket, MotionRef } from '@shared/domain/character'
 import type { Rig } from '@shared/domain/rig'
+import type { ModelDressRef } from '@shared/domain/scene'
 
 /**
  * A character as the skeleton window holds it: its own file, and nothing of any scene.
@@ -13,6 +14,7 @@ export type CharacterState = {
   rig: Rig | null
   sockets: readonly CharacterSocket[]
   motions: readonly MotionRef[]
+  dress?: ModelDressRef
 }
 
 export const EMPTY_CHARACTER: CharacterState = {

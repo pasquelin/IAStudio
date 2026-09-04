@@ -57,7 +57,8 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
     onRig: (id, rig) => useModelFiles.getState().reportRig(documentId, id, rig),
     onCharacter: (id, _rig, extras) =>
       useModelFiles.getState().reportSockets(documentId, id, extras?.sockets ?? []),
-    onMaterials: (id, count) => useModelFiles.getState().reportMaterials(documentId, id, count),
+    onMaterials: (id, count, names) =>
+      useModelFiles.getState().reportMaterials(documentId, id, count, names),
     profiles: skeletonProfilesOf(useSkeletonProfiles.getState(), projectPath),
     onProfile: profile =>
       projectPath && useSkeletonProfiles.getState().rememberSkeletonProfile(projectPath, profile),

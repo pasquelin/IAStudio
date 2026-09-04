@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Rig } from '@shared/domain/rig'
+import type { ModelDressRef } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import {
   addCharacterBone,
   addCharacterIkChain,
   addCharacterSocket,
+  dressCharacter,
   linkCharacterMotion,
   removeCharacterBone,
   removeCharacterIkChain,
@@ -126,5 +128,15 @@ describe('editing a character', () => {
 
     expect(after.rig).toBe(RIG)
     expect(command.revert(after).rig).toBeNull()
+  })
+
+  it('keeps a reversible material dress on the character file', () => {
+    const dress: ModelDressRef = { kind: 'materials', documentIds: ['material-1'] }
+    const command = dressCharacter(dress)
+    const dressed = command.apply(RIGGED)
+
+    expect(dressed.dress).toEqual(dress)
+    expect(command.revert(dressed)).toEqual(RIGGED)
+    expect(dressCharacter(null).apply(dressed).dress).toBeUndefined()
   })
 })

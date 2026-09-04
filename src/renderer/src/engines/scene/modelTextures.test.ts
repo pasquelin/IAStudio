@@ -63,6 +63,18 @@ beforeEach(() => {
 })
 
 describe('createModelTextures', () => {
+  it('reports material names in the same order as their editable slots', () => {
+    const scripted = scriptedTextureCache()
+    const source = twoMaterialModel()
+    const materials = materialsOf(source)
+    if (materials[0]) materials[0].name = 'Coat'
+    if (materials[1]) materials[1].name = 'Glass'
+
+    const textures = createModelTextures(scripted.cache, instanceOf(source), onChange)
+
+    expect(textures.names()).toEqual(['Coat', 'Glass'])
+  })
+
   it('puts the project picture over the map the file carries', async () => {
     const scripted = scriptedTextureCache()
     const { source } = loadedModel()

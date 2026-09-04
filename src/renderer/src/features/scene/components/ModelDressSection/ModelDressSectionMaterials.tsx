@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { QuietNote } from '@/components/QuietNote'
 import type { LinkOption } from '@/components/LinkField/linkOption'
-import { withMaterialAt } from '@shared/domain/scene'
+import { NOTHING_WORN, withMaterialAt } from '@shared/domain/scene'
 import { useDocumentOptions } from '@/hooks/useDocumentOptions'
 import { ModelDressSectionRow } from './ModelDressSectionRow'
 
@@ -11,6 +11,7 @@ export type ModelDressSectionMaterialsProps = {
   pictures: readonly LinkOption[]
   /** How many materials the model's own file carries. Zero while its file has not landed. */
   slots: number
+  names: readonly string[]
   onChange: (documentIds: readonly string[]) => void
   onAssemble: (slot: number) => void
 }
@@ -23,18 +24,22 @@ export function ModelDressSectionMaterials({
   worn,
   pictures,
   slots,
+  names,
   onChange,
   onAssemble,
 }: ModelDressSectionMaterialsProps) {
   const { t } = useTranslation()
   const options = useDocumentOptions('material')
+  const rows =
+    slots > worn.length ? [...worn, ...Array<string>(slots - worn.length).fill(NOTHING_WORN)] : worn
 
   return (
     <>
-      {worn.map((documentId, slot) => (
+      {rows.map((documentId, slot) => (
         <ModelDressSectionRow
           key={slot}
           slot={slot}
+          name={names[slot]}
           documentId={documentId}
           options={options}
           pictures={pictures}

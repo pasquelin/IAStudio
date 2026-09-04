@@ -10,7 +10,7 @@ import { PANE_TOOLBAR, PANE_TOOLBAR_ASIDE } from '@/components/styles'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
 import { wornModelDress } from '@/features/material/modelDress'
-import { createCharacterStage, workshopIdOf } from '@/character/characterStage'
+import { createCharacterStage, dressCharacterStage, workshopIdOf } from '@/character/characterStage'
 import { noteCharacterSkins } from '@/character/characterSkins'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -26,6 +26,8 @@ import { nodeById } from '@/engines/scene/sceneState'
 import { renameNode } from '@/engines/scene/commands'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { useModelFiles } from '@/stores/modelFiles'
+import { useSceneRendererResources } from '@/features/scene/components/Scene/Document/hooks/useSceneRendererResources'
 import { SceneClock } from '@/features/scene/components/Scene/SceneClock'
 import { SceneNavigationHint } from '@/features/scene/components/Scene/SceneNavigationHint'
 import { SceneSpeedControl } from '@/features/scene/components/Scene/SceneSpeedControl'
@@ -92,6 +94,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
     useCharacters(state => isCharacterDirty(state, assetId)),
   )
   useRestoredDocument(documentId)
+  useSceneRendererResources(engineRef)
   // The persistent flight, exactly as the studio's viewport arms it: the engine owns the pointer
   // capture, and this only says whether the mode is meant to be on.
   const [navigating, setNavigating] = useState(false)
@@ -166,6 +169,10 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
     void engine.skinModel(nodeId, character.rig)
   }, [character.rig, nodeId, live])
 
+  useEffect(() => {
+    dressCharacterStage(assetId, character.dress)
+  }, [assetId, character.dress])
+
   // Its own effect: the one that mounts the renderer must not run again for a preference.
   useEffect(() => {
     engineRef.current?.configure(characterViewport(three))
@@ -206,6 +213,9 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
         useCharacterView.getState().noteCharacterSample(assetId, measured)
         stage.read(rig, extras)
       },
+      onMaterials: (id, count, names) =>
+        useModelFiles.getState().reportMaterials(workshopId, id, count, names),
+      onStats: stats => useModelFiles.getState().reportStats(workshopId, stats),
       // Kept for ⌘S: only the engine ever weighs a mesh against a rig, and the save runs from
       // `documentIo` — outside this tab.
       onSkinning: (_nodeId, weighed) => noteCharacterSkins(assetId, weighed),
@@ -233,6 +243,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
       engineRef.current = null
       setLive(null)
       forgetSceneEngine(workshopId)
+      useModelFiles.getState().forget(workshopId)
       stage.close()
       renderer.dispose()
     }

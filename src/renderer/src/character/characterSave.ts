@@ -77,7 +77,6 @@ async function write(
   // wrote the skeleton of now with the weights of before, and `JOINTS_0` indexes those bones.
   const current = characterStore.use.getState()
   const state = characterOf(current, assetId)
-  if (!state.rig) return false
 
   // The mark BEFORE the write, handed back after it — `documentStore.markSaved` spells the rule
   // and `documentIo` follows it: rebuilding tens of megabytes takes seconds, and a joint dragged
@@ -87,8 +86,8 @@ async function write(
   writer ??= createGlbWriter(() => new GlbWriteWorker())
 
   const written = await writer.write(file, {
-    bones: state.rig.bones,
-    skins: skins(),
+    bones: state.rig?.bones ?? [],
+    skins: state.rig ? skins() : [],
     extras: extrasOf(state),
   })
   if (!written) return false
@@ -109,6 +108,7 @@ export function extrasOf(state: CharacterState): CharacterExtras {
     ...(Object.keys(roles).length > 0 && { roles }),
     ...(state.sockets.length > 0 && { sockets: state.sockets }),
     ...(state.motions.length > 0 && { motions: state.motions }),
+    ...(state.dress && { dress: state.dress }),
   }
 }
 

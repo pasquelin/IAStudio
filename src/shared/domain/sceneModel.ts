@@ -186,6 +186,25 @@ export type ModelRef = {
 export type ModelDressRef =
   { kind: 'image'; assetId: string } | { kind: 'materials'; documentIds: readonly string[] }
 
+/** A persisted model dress, or `null` when the value names no complete supported mode. */
+export function modelDressRefOf(value: unknown): ModelDressRef | null {
+  if (typeof value !== 'object' || value === null) return null
+
+  const held: { kind?: unknown; assetId?: unknown; documentIds?: unknown } = value
+  if (held.kind === 'image' && typeof held.assetId === 'string') {
+    return { kind: 'image', assetId: held.assetId }
+  }
+  if (
+    held.kind === 'materials' &&
+    Array.isArray(held.documentIds) &&
+    held.documentIds.every(id => typeof id === 'string')
+  ) {
+    return { kind: 'materials', documentIds: held.documentIds }
+  }
+
+  return null
+}
+
 /**
  * The empty slot of either mode: a picture not chosen yet, a slot keeping the file's own material.
  *

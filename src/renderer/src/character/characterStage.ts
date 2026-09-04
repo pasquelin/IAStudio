@@ -81,6 +81,19 @@ export function workshopScene(assetId: string): SceneState {
   }
 }
 
+/** Puts the character's persisted dress onto the workshop's only model. */
+export function dressCharacterStage(assetId: string, dress: CharacterExtras['dress']): void {
+  const documentId = workshopIdOf(assetId)
+  const scene = sceneOf(useScenes.getState(), documentId)
+  const node = scene.nodes[0]
+  if (node?.type !== 'model' || node.model.dress === dress) return
+
+  useScenes.getState().replace(documentId, {
+    ...scene,
+    nodes: [{ ...node, model: { ...node.model, dress } }],
+  })
+}
+
 /** The document this window's workshop scene lives under — one per character, in its own store. */
 export function workshopIdOf(assetId: string): string {
   return `character:${assetId}`

@@ -83,7 +83,7 @@ export type SceneRendererOptions = {
    * How many MATERIALS a model's file carries — its slots. Same reason as `onClips`: the count
    * lives in the file, and a panel drawing one row per slot has no other way to know it.
    */
-  onMaterials?: (nodeId: string, count: number) => void
+  onMaterials?: (nodeId: string, count: number, names: readonly string[]) => void
   /**
    * How well a clip from elsewhere fits this character, once both skeletons are in hand. Only
    * the engine ever holds the two at once, so nothing else could work it out.

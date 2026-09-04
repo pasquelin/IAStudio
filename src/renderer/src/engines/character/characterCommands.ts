@@ -18,6 +18,7 @@ import {
 } from '@shared/domain/rig'
 import { rigHandBones } from '../scene/rigHandBones'
 import type { MeshSample } from '../scene/rigSnap'
+import type { ModelDressRef } from '@shared/domain/scene'
 import { ikLinksOf } from './ik'
 import type { CharacterState } from './characterState'
 
@@ -58,6 +59,15 @@ function edit(
 
 export function setCharacterRig(rig: Rig | null): Command<CharacterState> {
   return edit('rig', state => ({ ...state, rig }))
+}
+
+export function dressCharacter(dress: ModelDressRef | null): Command<CharacterState> {
+  return edit('material.dress', state => {
+    if (dress === null) {
+      return { ...state, dress: undefined }
+    }
+    return { ...state, dress }
+  })
 }
 
 /** Every bone edit goes through this: a rig the reader would drop is never written. */
