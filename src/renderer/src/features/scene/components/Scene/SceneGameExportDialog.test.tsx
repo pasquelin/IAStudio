@@ -8,7 +8,9 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { SceneGameExportDialog } from './SceneGameExportDialog'
 
-const { runAction } = vi.hoisted(() => ({ runAction: vi.fn(async () => ({ ok: true })) }))
+const { runAction } = vi.hoisted(() => ({
+  runAction: vi.fn(async (..._arguments: unknown[]) => ({ ok: true })),
+}))
 vi.mock('@/features/assistant/executor', () => ({ runAction }))
 
 const DOCUMENT = 'Forest'
@@ -72,11 +74,37 @@ it('exports through the shared game action with the explicit choices', async () 
   expect(screen.getByText('Triangles affichés 100 → 65')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Exporter' }))
 
-  expect(runAction).toHaveBeenCalledWith('game.export', {
-    entryScene: DOCUMENT,
-    generateLods: false,
-    geometrySimplification: 'balanced',
-    textureCompression: 'off',
-    textureReduction: 'off',
-  })
+  expect(runAction).toHaveBeenCalledWith(
+    'game.export',
+    {
+      entryScene: DOCUMENT,
+      generateLods: false,
+      geometrySimplification: 'balanced',
+      textureCompression: 'off',
+      textureReduction: 'off',
+    },
+    undefined,
+    expect.any(AbortSignal),
+  )
+})
+
+it('aborts export preparation when the user cancels the dialog', async () => {
+  let finish: ((outcome: { ok: false }) => void) | undefined
+  runAction.mockImplementationOnce(
+    async () =>
+      await new Promise<{ ok: false }>(resolve => {
+        finish = resolve
+      }),
+  )
+  const user = userEvent.setup()
+  render(<SceneGameExportDialog documentId={DOCUMENT} />)
+
+  await screen.findByText('Appels de rendu 20 → 2')
+  await user.click(screen.getByRole('button', { name: 'Exporter' }))
+  const signal: unknown = runAction.mock.calls[0]?.[3]
+  if (!(signal instanceof AbortSignal)) throw new Error('expected an export abort signal')
+  await user.click(screen.getByRole('button', { name: 'Annuler' }))
+
+  expect(signal.aborted).toBe(true)
+  finish?.({ ok: false })
 })

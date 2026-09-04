@@ -15,6 +15,17 @@ export function runtimeAssetIds(state: SceneState): readonly string[] {
   return [...found]
 }
 
+/** Pixel assets whose resolution or encoding an explicitly LOSSY export may replace. */
+export function runtimeTextureAssetIds(state: SceneState): readonly string[] {
+  const found = new Set<string>()
+  for (const node of state.nodes) {
+    if (node.type === 'mesh' || node.type === 'carved') assetOfMaterial(node.material, found)
+  }
+  for (const layer of state.world.layers) found.add(layer.heightmap.assetId)
+  found.delete('')
+  return [...found]
+}
+
 function assetOfMaterial(material: MaterialDescriptor, found: Set<string>): void {
   if (material.map) found.add(material.map.assetId)
 }

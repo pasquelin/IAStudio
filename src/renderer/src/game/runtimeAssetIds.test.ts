@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { reliefLayer, type GeometryDescriptor } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
-import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { meshNode, modelNode, spriteNode } from '@/engines/scene/nodeFactory'
-import { runtimeAssetIds } from './runtimeAssetIds'
+import { runtimeAssetIds, runtimeTextureAssetIds } from './runtimeAssetIds'
 
 describe('assets reachable from an exported runtime', () => {
   it('keeps only assets the standalone runtime reads, once in first-use order', () => {
@@ -20,21 +20,22 @@ describe('assets reachable from an exported runtime', () => {
     if (plainSprite.type !== 'sprite') throw new Error('expected a sprite')
     const sprite = { ...plainSprite, sprite: { ...plainSprite.sprite, map: { assetId: 'shared' } } }
 
-    expect(
-      runtimeAssetIds({
-        ...EMPTY_SCENE,
-        nodes: [{ ...textured, material }, model, sprite],
-        world: {
-          ...EMPTY_SCENE.world,
-          environment: { kind: 'skybox', assetId: 'unused-sky' },
-          layers: [reliefLayer({ assetId: 'height' }, { id: 'terrain' })],
-        },
-        animation: {
-          ...EMPTY_TIMELINE,
-          audio: [{ id: 'audio', assetId: 'sound', start: 0, duration: 1 }],
-          video: [{ id: 'video', assetId: 'movie', start: 0, duration: 1 }],
-        },
-      }),
-    ).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      nodes: [{ ...textured, material }, model, sprite],
+      world: {
+        ...EMPTY_SCENE.world,
+        environment: { kind: 'skybox', assetId: 'unused-sky' },
+        layers: [reliefLayer({ assetId: 'height' }, { id: 'terrain' })],
+      },
+      animation: {
+        ...EMPTY_TIMELINE,
+        audio: [{ id: 'audio', assetId: 'sound', start: 0, duration: 1 }],
+        video: [{ id: 'video', assetId: 'movie', start: 0, duration: 1 }],
+      },
+    }
+
+    expect(runtimeAssetIds(state)).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
+    expect(runtimeTextureAssetIds(state)).toEqual(['shared', 'height'])
   })
 })

@@ -225,24 +225,16 @@ describe('a game written to run with no studio', () => {
     expect([...first.written.entries()].sort()).toEqual([...second.written.entries()].sort())
   })
 
-  it('does not touch an asset when no visual change was explicitly requested', async () => {
-    let optimized = 0
-    const { ports } = writing({
-      optimizeAsset: asset => {
-        optimized += 1
-        return Promise.resolve(asset)
-      },
-    })
+  it('keeps original asset bytes when the renderer supplied no transformed copy', async () => {
+    const { ports, written } = writing()
 
     await writeExportedGame(ports, ASKED)
 
-    expect(optimized).toBe(0)
+    expect(written.get('assets/checker.png')).toEqual(new Uint8Array([1]))
   })
 
   it('writes the explicit LOSSY choices and packages the transformed image', async () => {
-    const { ports, written } = writing({
-      optimizeAsset: () => Promise.resolve({ name: 'checker.jpg', bytes: new Uint8Array([7, 8]) }),
-    })
+    const { ports, written } = writing()
     const lossyOptimization = {
       generateLods: true,
       geometrySimplification: 'balanced',
@@ -263,6 +255,7 @@ describe('a game written to run with no studio', () => {
       ...ASKED,
       scenes: ASKED.scenes.map(scene => ({ ...scene, optimization })),
       lossyOptimization,
+      assetOverrides: [{ id: 'tex-1', extension: 'jpg', bytes: new Uint8Array([7, 8]) }],
     })
 
     expect(manifestOf(written).lossyOptimization).toEqual(lossyOptimization)

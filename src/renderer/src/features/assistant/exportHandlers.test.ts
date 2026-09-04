@@ -8,6 +8,10 @@ import { runAction } from './executor'
 import { modelNode } from '@/engines/scene/nodeFactory'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
+vi.mock('@/engines/scene/lossyTextureCompiler', () => ({
+  compileLossyTextures: vi.fn(async () => []),
+}))
+
 const DOCUMENT = 'doc-1'
 
 function exporting(answer: GameExportRequest['scenes'] extends never ? never : boolean = true) {

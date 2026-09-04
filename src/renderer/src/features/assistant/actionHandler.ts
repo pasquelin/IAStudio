@@ -18,6 +18,7 @@ export type ActionHandler = (
    * calls of its own, and they engage on the terms of the door the LOT came through.
    */
   wire?: WireCall,
+  signal?: AbortSignal,
 ) => ActionOutcome | Promise<ActionOutcome>
 
 /**

@@ -5,6 +5,7 @@ import {
   EXPORTED_GAME_FILE,
   EXPORTED_GAME_VERSION,
   type ExportedGame,
+  type ExportedAssetOverride,
   type GameExportOutcome,
   type GameExportRequest,
   type ScriptToExport,
@@ -34,11 +35,6 @@ export type GameExportPorts = {
    * imports by name — and a page shipped with the entry alone is a page that loads nothing.
    */
   runtime: () => Promise<readonly { name: string; body: Uint8Array }[]>
-  /** Re-encodes one picture only when the request explicitly carries LOSSY texture choices. */
-  optimizeAsset?: (
-    asset: ExportedAsset,
-    options: NonNullable<GameExportRequest['lossyOptimization']>,
-  ) => Promise<ExportedAsset>
   /** Writes one file of the exported folder, at a path relative to its root. */
   write: (relative: string, body: string | Uint8Array) => Promise<void>
 }
@@ -67,6 +63,7 @@ export async function writeExportedGame(
   // 🛑 Two rows may name one file — `checker.png` twice, from two folders — and the second would
   // overwrite the first without a word. The same rule a montage bundle already follows.
   const taken = new Set<string>()
+  const overrides = new Map(request.assetOverrides?.map(override => [override.id, override]) ?? [])
 
   const ids = assetIdsIn(scenes)
   const found = await ports.assetFiles(ids)
@@ -78,10 +75,7 @@ export async function writeExportedGame(
       continue
     }
 
-    const optimized =
-      request.lossyOptimization && ports.optimizeAsset
-        ? await ports.optimizeAsset(file, request.lossyOptimization)
-        : file
+    const optimized = overriddenAsset(file, overrides.get(id))
     const contentKey =
       optimized === file && file.hash ? file.hash : `bytes:${optimized.bytes.byteLength}`
     const candidates = contentPaths.get(contentKey) ?? []
@@ -149,6 +143,15 @@ export async function writeExportedGame(
     assets: Object.keys(assets).length,
     missing,
   }
+}
+
+function overriddenAsset(
+  source: ExportedAsset,
+  override: ExportedAssetOverride | undefined,
+): ExportedAsset {
+  return override
+    ? { name: `${stemOf(source.name)}.${override.extension}`, bytes: override.bytes }
+    : source
 }
 
 const COMPARISON_CHUNK_BYTES = 1024 * 1024

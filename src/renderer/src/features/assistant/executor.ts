@@ -151,6 +151,7 @@ export async function runAction(
   name: ActionName,
   input: Record<string, unknown>,
   wire?: WireCall,
+  signal?: AbortSignal,
 ): Promise<ActionOutcome> {
   const handler = HANDLERS[name]
   if (!handler)
@@ -162,7 +163,7 @@ export async function runAction(
   const read = readOrRefusal(name, input)
   if ('refusal' in read) return read.refusal
 
-  const outcome = await ranSafely(handler, read.listed, wire)
+  const outcome = await ranSafely(handler, read.listed, wire, signal)
   // Not awaited, and the input READ rather than the one sent: what a memory anchors on must be
   // what the action actually acted on. A memory that will not persist must not turn a call that
   // changed the studio into a refusal.
@@ -180,9 +181,10 @@ async function ranSafely(
   handler: ActionHandler,
   listed: Record<string, unknown>,
   wire: WireCall | undefined,
+  signal: AbortSignal | undefined,
 ): Promise<ActionOutcome> {
   try {
-    return await handler(listed, wire)
+    return await handler(listed, wire, signal)
   } catch (error) {
     // `failed` and not `badInput`: the input was checked at the door, so what threw is the studio
     // — a client told its input was wrong would retry a call that was never the problem.

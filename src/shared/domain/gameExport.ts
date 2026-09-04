@@ -138,12 +138,20 @@ export type GameExportRequest = {
   scripts: readonly ScriptToExport[]
   /** Must be named by the caller: no export path enables a visual change on its behalf. */
   lossyOptimization?: LossyOptimization
+  /** Image bytes prepared off the UI and main threads, keyed by their logical asset identity. */
+  assetOverrides?: readonly ExportedAssetOverride[]
   /**
    * Where to write, INSIDE the project and relative to its root. Absent, a folder picker asks —
    * which is the only way a person at the window ever does it, and the only way a caller with no
    * screen never can.
    */
   folder?: string
+}
+
+export type ExportedAssetOverride = {
+  id: string
+  bytes: Uint8Array
+  extension: 'jpg' | 'png'
 }
 
 export type GameExportOutcome = {

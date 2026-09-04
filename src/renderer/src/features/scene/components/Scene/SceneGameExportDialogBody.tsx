@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   GEOMETRY_SIMPLIFICATIONS,
@@ -36,6 +36,7 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
   const [plan, setPlan] = useState<OptimizationPlan | null>(null)
   const [exporting, setExporting] = useState(false)
   const [failed, setFailed] = useState(false)
+  const exportController = useRef<AbortController | null>(null)
   const geometryOptions = useMemo(
     () => choices(GEOMETRY_SIMPLIFICATIONS, value => t(`game.export.quality.${value}`)),
     [t],
@@ -78,12 +79,25 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
       ? 1
       : DEFAULT_OPTIMIZATION_POLICY.jpegQuality[options.textureCompression] / 100
   const submit = async (): Promise<void> => {
+    const controller = new AbortController()
+    exportController.current = controller
     setExporting(true)
     setFailed(false)
-    const outcome = await runAction('game.export', { entryScene: title, ...options })
+    const outcome = await runAction(
+      'game.export',
+      { entryScene: title, ...options },
+      undefined,
+      controller.signal,
+    )
+    exportController.current = null
+    if (controller.signal.aborted) return
     setExporting(false)
     if (outcome.ok) close()
     else setFailed(true)
+  }
+  const cancel = (): void => {
+    exportController.current?.abort()
+    close()
   }
 
   return (
@@ -91,7 +105,7 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
       title={t('game.export.title')}
       actions={
         <>
-          <WindowButton size="dialog" variant="secondary" onClick={close}>
+          <WindowButton size="dialog" variant="secondary" onClick={cancel}>
             {t('actions.cancel')}
           </WindowButton>
           <WindowButton size="dialog" disabled={!plan || exporting} onClick={() => void submit()}>
