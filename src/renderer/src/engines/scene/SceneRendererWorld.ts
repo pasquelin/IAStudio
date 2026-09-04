@@ -6,6 +6,7 @@ import { gizmoSizeFor, heldRadius, screenFactor } from './gizmoSize'
 import { snapSteps } from './snapSteps'
 import { STUDIO_INTENSITY } from './sceneRendererSupport1'
 import { SceneRendererAids } from './SceneRendererAids'
+import { reportFailure } from '@/services/diagnostics'
 
 export abstract class SceneRendererWorld extends SceneRendererAids {
   protected abstract applyPalette(): void
@@ -96,11 +97,19 @@ export abstract class SceneRendererWorld extends SceneRendererAids {
     if (wanted.ground !== held.ground || wanted.layers !== held.layers) this.applyGround()
     if (wanted.layers !== held.layers) {
       this.relief.sync(wanted)
-      this.scatter.sync(wanted)
+      void this.syncScatter(wanted)
       this.noteReliefSculpt()
     }
     if (this.relief.object.children.length > 0) this.ground.object.visible = false
     if (wanted.background !== held.background) this.paintBackground()
+  }
+
+  private async syncScatter(wanted: SceneWorld): Promise<void> {
+    try {
+      await this.scatter.sync(wanted)
+    } catch (error) {
+      reportFailure('scene.model', 'scatter', error)
+    }
   }
 
   /**

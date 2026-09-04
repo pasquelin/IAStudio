@@ -38,7 +38,6 @@ export class SceneRendererConstruction extends SceneRendererFrame {
         onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
         onReady: () => this.redraw(),
       })
-    this.scatter = createScatterSurface(this.viewport.scene)
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.
@@ -69,6 +68,16 @@ export class SceneRendererConstruction extends SceneRendererFrame {
         // otherwise indistinguishable from one that was never asked for.
         (assetId, error) => reportFailure('scene.model', assetId, error),
       )
+      this.scatter = createScatterSurface(this.viewport.scene, {
+        models: this.modelCache,
+        onUnsupported: (assetId, status) =>
+          reportFailure(
+            'scene.model',
+            assetId,
+            new Error(`scatter requires a static model; received ${status}`),
+          ),
+        onReady: () => this.redraw(),
+      })
       this.clipSources = createRefCache({
         load: url => this.gltf.loadAnimation(url),
         free: disposeTree,

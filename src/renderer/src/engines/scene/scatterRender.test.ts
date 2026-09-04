@@ -1,4 +1,4 @@
-import { BoxGeometry, InstancedMesh, LOD, MeshStandardMaterial, Object3D } from 'three'
+import { BoxGeometry, InstancedMesh, LOD, Mesh, MeshStandardMaterial, Object3D } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { ScatterPose } from '@shared/domain/scatterGenerate'
 import { holdScatterCells, scatterBatchesOf, scatterDrawnOf } from './scatterRender'
@@ -39,7 +39,7 @@ describe('scatterDrawnOf', () => {
     const material = new MeshStandardMaterial()
     const batch = scatterBatchesOf([pose('pine', 0, 0), pose('pine', 1, 0), pose('pine', 2, 0)])[0]
     if (!batch) throw new Error('expected a batch')
-    const drawn = scatterDrawnOf(batch, geometry, material)
+    const drawn = scatterDrawnOf(batch, new Mesh(geometry, material))
     expect(drawn).toBeInstanceOf(LOD)
     const mesh = drawn.levels[0]?.object
     expect(mesh).toBeInstanceOf(InstancedMesh)

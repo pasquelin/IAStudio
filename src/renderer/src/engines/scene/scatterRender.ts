@@ -1,4 +1,4 @@
-import { LOD, Object3D, type BufferGeometry, type Material } from 'three'
+import { LOD, Object3D, type Mesh } from 'three'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import type { ScatterPose } from '@shared/domain/scatterGenerate'
 import { bakedInstancesOf } from './bakedInstances'
@@ -33,12 +33,13 @@ export function scatterBatchesOf(
   return [...groups.values()]
 }
 
-export function scatterDrawnOf(
-  batch: ScatterBatch,
-  geometry: BufferGeometry,
-  material: Material,
-): LOD {
-  const mesh = bakedInstancesOf(geometry, material, bakedOf(batch.poses))
+export function scatterDrawnOf(batch: ScatterBatch, source: Mesh): LOD {
+  const mesh = bakedInstancesOf(
+    source.geometry,
+    source.material,
+    bakedOf(batch.poses),
+    source.matrixWorld,
+  )
   const lod = new LOD()
   lod.name = `scatter-${scatterBatchKey(batch.assetId, batch.cell)}`
   mesh.computeBoundingSphere()
