@@ -18,6 +18,7 @@ export type LinkFieldProps = {
   missingLabel: string
   clearLabel: string
   clearHint: string
+  clearWhenEmpty?: boolean
   accepts?: readonly AssetType[]
   badge?: ReactNode
   onDropAsset?: (asset: Asset) => void
@@ -44,6 +45,7 @@ function linkFieldView(props: LinkFieldViewProps) {
     onChange,
     emptyLabel,
     clearLabel,
+    clearWhenEmpty,
     accepts,
     badge,
     onDropAsset,
@@ -75,7 +77,7 @@ function linkFieldView(props: LinkFieldViewProps) {
         }
         actions={
           <LinkFieldActions
-            {...{ browse, clearLabel, emptyLabel, value }}
+            {...{ browse, clearLabel, clearWhenEmpty, emptyLabel, value }}
             onClear={() => onChange(null)}
           />
         }
@@ -101,7 +103,7 @@ function linkMenu(props: LinkFieldViewProps) {
 }
 
 export function LinkField(props: LinkFieldProps) {
-  const { value, options, emptyLabel, missingLabel, onChange, valueUrl } = props
+  const { value, options, emptyLabel, missingLabel, onChange, valueUrl, clearWhenEmpty } = props
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
   const choices = useMemo(
     () => [
@@ -112,7 +114,10 @@ export function LinkField(props: LinkFieldProps) {
     [options, value, chosen, emptyLabel, missingLabel],
   )
   const menu = useContextMenu()
-  const clearing = emptyLabel === undefined || value === null ? undefined : () => onChange(null)
+  const clearing =
+    emptyLabel === undefined || (value === null && !clearWhenEmpty)
+      ? undefined
+      : () => onChange(null)
   const shown = valueUrl ?? chosen?.url
   return createElement(linkFieldView, { ...props, choices, chosen, clearing, menu, shown })
 }

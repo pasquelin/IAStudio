@@ -59,6 +59,7 @@ export function ModelDressSectionRow({
       missingLabel={t('inspector.modelDressMissingMaterial')}
       clearLabel={t('inspector.modelDressClearMaterial')}
       clearHint={t('inspector.modelDressClearMaterialHint')}
+      clearWhenEmpty={inert}
       open={{
         label: t('inspector.modelDressOpenMaterial'),
         hint: t('inspector.modelDressOpenMaterialHint'),

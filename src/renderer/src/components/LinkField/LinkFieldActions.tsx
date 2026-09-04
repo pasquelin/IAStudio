@@ -7,6 +7,7 @@ import type { LinkPress } from './linkPress'
 type LinkActionsProps = {
   browse?: LinkPress
   clearLabel: string
+  clearWhenEmpty?: boolean
   emptyLabel?: string
   onClear: () => void
   value: string | null
@@ -15,6 +16,7 @@ type LinkActionsProps = {
 export function LinkFieldActions({
   browse,
   clearLabel,
+  clearWhenEmpty,
   emptyLabel,
   onClear,
   value,
@@ -39,7 +41,7 @@ export function LinkFieldActions({
           label={clearLabel}
           tooltip={TIP_LEFT}
           variant="header"
-          disabled={value === null}
+          disabled={value === null && !clearWhenEmpty}
           onClick={onClear}
         />
       )}

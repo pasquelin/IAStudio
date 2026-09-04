@@ -6,10 +6,9 @@ import {
   wornMaterials,
   type ModelDressRef,
 } from '@shared/domain/scene'
-import { mdiMinus, mdiPlus } from '@mdi/js'
+import { mdiImageMultipleOutline, mdiMinus, mdiPlus } from '@mdi/js'
 import { LinkField } from '@/components/LinkField/LinkField'
 import { ToolButton } from '@/components/ToolButton'
-import { Button } from '@/components/Button'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { PropertySection } from '@/components/PropertySection'
 import { SelectField } from '@/components/SelectField'
@@ -82,6 +81,13 @@ export function ModelDressSection({
     }
   }
 
+  const extractFromHeader = async (): Promise<void> => {
+    const own = await extract()
+    const baseColor = own?.find(asset => asset.map === 'baseColor')
+    if (slots === 1 && baseColor) onChange({ kind: 'image', assetId: baseColor.id })
+  }
+  const appliesImage = slots === 1
+
   return (
     <PropertySection
       title={t('inspector.modelDress')}
@@ -89,37 +95,50 @@ export function ModelDressSection({
       // Blender's `+` and `−`, where every other list of the studio keeps them: on the heading of
       // the group they act on, never one per row.
       actions={
-        dress?.kind === 'materials' &&
-        slotIndices === undefined && (
-          <>
-            <ToolButton
-              icon={mdiMinus}
-              label={t('inspector.modelDressRemoveSlot')}
-              description={t('inspector.modelDressRemoveSlotHint')}
-              tooltip={TIP_LEFT}
-              variant="header"
-              disabled={wornMaterials(dress).length <= 1}
-              onClick={() => onChange(withSlots(dress, -1))}
-            />
-            <ToolButton
-              icon={mdiPlus}
-              label={t('inspector.modelDressAddSlot')}
-              description={t('inspector.modelDressAddSlotHint')}
-              tooltip={TIP_LEFT}
-              variant="header"
-              // The list GROWS to reach the slot named, so `withMaterialAt` refuses past this —
-              // a row it would refuse is a row that redraws itself empty, saying nothing.
-              disabled={wornMaterials(dress).length >= MATERIAL_SLOTS}
-              onClick={() => onChange(withSlots(dress, 1))}
-            />
-          </>
-        )
+        <>
+          <ToolButton
+            icon={mdiImageMultipleOutline}
+            label={t('assets.extractTextures')}
+            description={t(
+              appliesImage ? 'inspector.modelExtractTextureHint' : 'assets.extractTexturesHint',
+            )}
+            tooltip={TIP_LEFT}
+            variant="header"
+            disabled={!extractable}
+            onClick={() => void extractFromHeader()}
+          />
+          {dress?.kind === 'materials' && slotIndices === undefined && (
+            <>
+              <ToolButton
+                icon={mdiMinus}
+                label={t('inspector.modelDressRemoveSlot')}
+                description={t('inspector.modelDressRemoveSlotHint')}
+                tooltip={TIP_LEFT}
+                variant="header"
+                disabled={wornMaterials(dress).length <= 1}
+                onClick={() => onChange(withSlots(dress, -1))}
+              />
+              <ToolButton
+                icon={mdiPlus}
+                label={t('inspector.modelDressAddSlot')}
+                description={t('inspector.modelDressAddSlotHint')}
+                tooltip={TIP_LEFT}
+                variant="header"
+                // The list GROWS to reach the slot named, so `withMaterialAt` refuses past this —
+                // a row it would refuse is a row that redraws itself empty, saying nothing.
+                disabled={wornMaterials(dress).length >= MATERIAL_SLOTS}
+                onClick={() => onChange(withSlots(dress, 1))}
+              />
+            </>
+          )}
+        </>
       }
     >
       <SelectField
         label={t('inspector.modelDressMode')}
         scId="modelDressMode"
         value={mode}
+        actions={false}
         options={[
           { value: 'own', label: t('inspector.modelOwnMaterial') },
           { value: 'image', label: t('inspector.modelDressImage') },
@@ -130,18 +149,12 @@ export function ModelDressSection({
         onChange={next => onChange(dressFor(next))}
       />
 
-      <Button disabled={!extractable} onClick={() => void extract()}>
-        {t('assets.extractTextures')}
-      </Button>
-
       {dress?.kind === 'image' && (
         <LinkField
           label={t('inspector.modelDressImageField')}
           value={dress.assetId || null}
           options={pictures}
-          // Emptied rather than undressed: the mode is what the row above says, and clearing a
-          // picture is not leaving the mode — `own` is the entry that does that.
-          onChange={assetId => onChange({ kind: 'image', assetId: assetId ?? NOTHING_WORN })}
+          onChange={assetId => onChange(assetId ? { kind: 'image', assetId } : null)}
           emptyLabel={t('inspector.modelDressNoImage')}
           missingLabel={t('inspector.modelDressMissingImage')}
           clearLabel={t('inspector.modelDressClearImage')}

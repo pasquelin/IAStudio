@@ -214,10 +214,24 @@ describe('what a character is made of', () => {
   })
 
   it('extracts embedded pictures directly from the inspector', async () => {
-    const extractTextures = vi.fn(() => Promise.resolve([]))
+    const texture: Asset = {
+      id: 'texture-1',
+      name: 'Hero — Couleur de base',
+      type: 'image',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-09-04T00:00:00.000Z',
+      derivedFrom: ASSET,
+      map: 'baseColor',
+    }
+    const extractTextures = vi.fn(() => Promise.resolve([texture]))
     const invalidate = vi.spyOn(useAssets.getState(), 'invalidate')
     installFakeBridge({ assets: { extractTextures } })
     useAssets.setState({ items: [LOCAL_MODEL] })
+    const documentId = workshopIdOf(ASSET)
+    useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
+    const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
+    useModelFiles.getState().reportMaterials(documentId, nodeId, 1, ['Material.001'])
     seedCharacter(ASSET, RIG, {})
     show()
     invalidate.mockClear()
@@ -226,6 +240,85 @@ describe('what a character is made of', () => {
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
     expect(invalidate).toHaveBeenCalledOnce()
+    expect(held().dress).toEqual({ kind: 'image', assetId: 'texture-1' })
+    expect(screen.getByLabelText('Recouvert par')).toHaveValue('image')
+  })
+
+  it('returns to the model file when the extracted image is removed', async () => {
+    useAssets.setState({
+      items: [
+        LOCAL_MODEL,
+        {
+          id: 'texture-1',
+          name: 'Hero — Couleur de base',
+          type: 'image',
+          location: 'local',
+          tags: [],
+          createdAt: '2026-09-04T00:00:00.000Z',
+        },
+      ],
+    })
+    seedCharacter(ASSET, RIG, { dress: { kind: 'image', assetId: 'texture-1' } })
+    show()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retirer l’image' }))
+
+    expect(held().dress).toBeUndefined()
+    expect(screen.getByLabelText('Recouvert par')).toHaveValue('own')
+  })
+
+  it('does not apply a data texture as the model image', async () => {
+    const normal: Asset = {
+      id: 'normal-1',
+      name: 'Hero — Normale',
+      type: 'image',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-09-04T00:00:00.000Z',
+      derivedFrom: ASSET,
+      map: 'normal',
+    }
+    const extractTextures = vi.fn(() => Promise.resolve([normal]))
+    installFakeBridge({ assets: { extractTextures } })
+    useAssets.setState({ items: [LOCAL_MODEL] })
+    const documentId = workshopIdOf(ASSET)
+    useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
+    const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
+    useModelFiles.getState().reportMaterials(documentId, nodeId, 1, ['Material.001'])
+    seedCharacter(ASSET, RIG, {})
+    show()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+
+    await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
+    expect(held().dress).toBeUndefined()
+  })
+
+  it('extracts without applying one material image over a multi-material model', async () => {
+    const texture: Asset = {
+      id: 'hair-1',
+      name: 'Hair — Couleur de base',
+      type: 'image',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-09-04T00:00:00.000Z',
+      derivedFrom: ASSET,
+      map: 'baseColor',
+    }
+    const extractTextures = vi.fn(() => Promise.resolve([texture]))
+    installFakeBridge({ assets: { extractTextures } })
+    useAssets.setState({ items: [LOCAL_MODEL] })
+    const documentId = workshopIdOf(ASSET)
+    useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
+    const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
+    useModelFiles.getState().reportMaterials(documentId, nodeId, 2, ['Hair', 'Skin'])
+    seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: ['', ''] } })
+    show()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+
+    await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
+    expect(held().dress).toEqual({ kind: 'materials', documentIds: ['', ''] })
   })
 
   it('disables texture extraction when the model has no local file', () => {
@@ -251,6 +344,21 @@ describe('what a character is made of', () => {
       expect(reportFailure).toHaveBeenCalledWith('assets.extract', 'Hero', failure),
     )
     expect(invalidate).toHaveBeenCalledOnce()
+  })
+
+  it('removes an unused material slot from its own clear button', async () => {
+    const documentId = workshopIdOf(ASSET)
+    useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
+    const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
+    useModelFiles.getState().reportMaterials(documentId, nodeId, 1, ['Material.001'])
+    seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: ['', ''] } })
+    show()
+
+    const remove = screen.getAllByRole('button', { name: 'Retirer la matière' }).at(-1)
+    expect(remove).toBeEnabled()
+    if (remove) await userEvent.click(remove)
+
+    expect(held().dress).toEqual({ kind: 'materials', documentIds: [''] })
   })
 
   // Asked for at the first sight of the panel: a joint could only be put right by eye, and there

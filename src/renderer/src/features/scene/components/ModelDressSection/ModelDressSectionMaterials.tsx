@@ -49,7 +49,13 @@ export function ModelDressSectionMaterials({
           // Beyond what the file carries — the row is kept, and does nothing until the model has
           // that many materials. Said on the note below rather than on every row.
           inert={slots > 0 && slot >= slots}
-          onChange={next => onChange(withMaterialAt(worn, slot, next))}
+          onChange={next =>
+            onChange(
+              slots > 0 && slot >= slots && next === ''
+                ? [...worn.slice(0, slot), ...worn.slice(slot + 1)]
+                : withMaterialAt(worn, slot, next),
+            )
+          }
           onAssemble={() => onAssemble(slot)}
         />
       ))}
