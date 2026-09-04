@@ -102,6 +102,11 @@ export abstract class SceneRendererViews extends SceneRendererCamera {
    */
   setQuadView(on: boolean): void {
     this.viewport.setLayout(on ? 'quad' : 'single')
+    if (!on) {
+      this.post?.releaseSurface('pane:1')
+      this.post?.releaseSurface('pane:2')
+      this.post?.releaseSurface('pane:3')
+    }
     if (on) this.placePanes()
     // Now rather than at the next pointer move: the gizmo reads its own events, and one left
     // aimed at a quarter of the canvas answers a click nowhere near the handle it is drawn on.

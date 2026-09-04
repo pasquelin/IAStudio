@@ -176,7 +176,10 @@ export abstract class SceneRendererPreview extends SceneRendererSkinning {
    */
   setCameraPreview(preview: CameraPreviewRequest | null): void {
     const camera = this.cameraObject(preview?.cameraNodeId ?? null)
-    if (!camera || !preview) return this.viewport.setInsetPane(null)
+    if (!camera || !preview) {
+      this.post?.releaseSurface('inset')
+      return this.viewport.setInsetPane(null)
+    }
 
     // The viewport's own colour, never a panel one: what this shows is a RENDER, and a preview
     // painted on studio chrome would promise a film nobody is going to get.

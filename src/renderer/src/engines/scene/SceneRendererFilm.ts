@@ -173,6 +173,7 @@ export abstract class SceneRendererFilm extends SceneRendererPreview {
             } finally {
               gl.setRenderTarget(null)
               target.dispose()
+              this.post?.releaseSurface('offscreen')
               loan.restore()
               restore()
               // Where the head was before the film was asked for: a render is not an edit.

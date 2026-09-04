@@ -20,19 +20,14 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
-import {
-  planStack,
-  slotOf,
-  stackShapeKey,
-  type PostEffect,
-  type PostStack,
-} from '@shared/domain/postProcessing'
+import { planStack, slotOf, type PostEffect, type PostStack } from '@shared/domain/postProcessing'
 import type { ViewportQuality } from '@shared/domain/scene'
 import { QUAD_VERTEX_SHADER } from '@/engines/gpu/passes/quad'
 import { onePass, type EffectInstance, type ViewInfo } from './effectInstance'
 import { fuseShader, type FusableChunk } from './fuseShader'
 import { createLutCache, type LutCache, type LutSource } from './lutCache'
 import { budgetFor, chainSize } from './postQuality'
+import { PostChainCache, resizePostChain, type PostChain as Chain } from './postChainCache'
 import { heaviestCost, stepsOf, wantsFloat, type PostStep } from './postPlan'
 import { fusableFor, fusableKind } from './shaders/fusableChunks'
 import { standaloneFor, type BuildContext } from './standaloneEffects'
@@ -45,6 +40,8 @@ import { standaloneFor, type BuildContext } from './standaloneEffects'
 export type PostRect = { x: number; y: number; width: number; height: number }
 
 export type PostDrawJob = {
+  /** Stable destination identity, independent of dimensions, cameras and temporary targets. */
+  surface: string
   scene: Scene
   camera: Camera
   stack: PostStack
@@ -71,32 +68,12 @@ export type PostComposerOptions = {
 
 type Applier = EffectInstance['apply']
 
-type Chain = {
-  composer: EffectComposer
-  /** The plain render at the head, absent when a supersampling pass draws the scene instead. */
-  head: RenderPass | null
-  appliers: readonly Applier[]
-  instances: readonly EffectInstance[]
-  width: number
-  height: number
-  usedAt: number
-}
-
-/**
- * How many compiled chains are held at once.
- *
- * A chain is two full-size buffers plus whatever its passes keep, so this is the memory ceiling
- * of the whole system. Six covers what a session actually alternates between — a viewport, a
- * preview, and a second look on a camera — and evicts the sizes a resize left behind.
- */
-const CHAINS_HELD = 6
-
 /** What the scratch view opens on before the first draw fills it. Never rendered. */
 const SCRATCH_SCENE = new Scene()
 const SCRATCH_CAMERA = new Camera()
 
 export class PostComposer {
-  private readonly chains = new Map<string, Chain>()
+  private readonly chains = new PostChainCache()
   private readonly luts: LutCache
   private readonly output = new OutputPass()
   /** Scratch, so a frame allocates nothing: `draw` runs once per surface, per image. */
@@ -143,6 +120,7 @@ export class PostComposer {
     // drag, and a size-keyed cache compiled a fresh composer — two full-frame buffers and a GLSL
     // link per pass — on every tick, then evicted it. A resize resizes; it does not recompile.
     const key = `${plan.shapeKey}#${float ? 'f' : 'b'}`
+    const binding = `${key}#${bufferSurface(plan.effects, job.surface)}`
 
     const view = this.view
     view.scene = job.scene
@@ -152,10 +130,9 @@ export class PostComposer {
     view.time = job.time
     view.budget = budget
 
-    const chain = this.chains.get(key) ?? this.compile(key, plan.effects, view, float)
-    this.clock += 1
-    chain.usedAt = this.clock
-    this.resize(chain, size.width, size.height)
+    const chain = this.chainFor(key, binding, plan.effects, view, float)
+    chain.usedAt = ++this.clock
+    resizePostChain(chain, size.width, size.height)
 
     if (chain.head) {
       chain.head.scene = job.scene
@@ -179,14 +156,18 @@ export class PostComposer {
     }
   }
 
-  /** The chain, brought to the size being drawn — three resizes both buffers and every pass. */
-  private resize(chain: Chain, width: number, height: number): void {
-    if (chain.width === width && chain.height === height) return
-
-    chain.composer.setSize(width, height)
-    for (const instance of chain.instances) instance.setSize(width, height)
-    chain.width = width
-    chain.height = height
+  private chainFor(
+    key: string,
+    binding: string,
+    effects: readonly PostEffect[],
+    view: ViewInfo,
+    float: boolean,
+  ): Chain {
+    const cached = this.chains.acquire(key, binding, view.width, view.height)
+    if (cached) return cached
+    const chain = this.compile(key, effects, view, float)
+    this.chains.bind(binding, chain)
+    return chain
   }
 
   /**
@@ -209,19 +190,16 @@ export class PostComposer {
 
   /** Frees every chain no live stack asks for — a scene closed, a camera stopped overriding. */
   sweep(live: readonly PostStack[]): void {
-    const wanted = new Set(live.map(stackShapeKey))
-    for (const [key, chain] of this.chains) {
-      // The shape is the head of the key — held as a field it was state nothing but this line
-      // read, and `sweep` runs on a change of scene rather than per image.
-      if (wanted.has(key.slice(0, key.indexOf('#')))) continue
-      dropChain(chain)
-      this.chains.delete(key)
-    }
+    this.chains.sweep(live)
+  }
+
+  /** A closed preview or completed export must not retain its potentially large buffers. */
+  releaseSurface(surface: string): void {
+    this.chains.releaseSurface(surface)
   }
 
   dispose(): void {
-    for (const chain of this.chains.values()) dropChain(chain)
-    this.chains.clear()
+    this.chains.dispose()
     this.luts.dispose()
     this.output.dispose()
   }
@@ -271,7 +249,6 @@ export class PostComposer {
     view: ViewInfo,
     float: boolean,
   ): Chain {
-    this.evict()
     const target = new WebGLRenderTarget(view.width, view.height, {
       type: float ? HalfFloatType : UnsignedByteType,
       minFilter: LinearFilter,
@@ -300,9 +277,9 @@ export class PostComposer {
       this.addStep(step, composer, context, appliers, instances)
     }
 
-    for (const pass of composer.passes) pass.setSize(view.width, view.height)
-
     const chain: Chain = {
+      key,
+      users: new Set(),
       composer,
       head,
       appliers,
@@ -311,7 +288,6 @@ export class PostComposer {
       height: view.height,
       usedAt: this.clock,
     }
-    this.chains.set(key, chain)
     return chain
   }
 
@@ -360,23 +336,13 @@ export class PostComposer {
       appliers.push((effect, view) => fusable.apply(effect, view, own))
     }
   }
-
-  /** The least recently drawn chain goes when the cache is full — never the one about to draw. */
-  private evict(): void {
-    if (this.chains.size < CHAINS_HELD) return
-
-    let oldest: [string, Chain] | null = null
-    for (const entry of this.chains) {
-      if (!oldest || entry[1].usedAt < oldest[1].usedAt) oldest = entry
-    }
-    if (!oldest) return
-
-    dropChain(oldest[1])
-    this.chains.delete(oldest[0])
-  }
 }
 
-function dropChain(chain: Chain): void {
-  for (const instance of chain.instances) instance.dispose()
-  chain.composer.dispose()
+/** Only audited stateless passes share by size; Glitch must keep its original draw cadence. */
+function bufferSurface(effects: readonly PostEffect[], surface: string): string {
+  return effects.every(sharesBuffers) ? surface : 'legacy'
+}
+
+function sharesBuffers(effect: PostEffect): boolean {
+  return effect.effect === 'bloom' || fusableKind(effect) !== null
 }

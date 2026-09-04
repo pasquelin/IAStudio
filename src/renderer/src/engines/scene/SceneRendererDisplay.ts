@@ -188,6 +188,10 @@ export abstract class SceneRendererDisplay extends SceneRendererExport {
     if (!stackDraws(stack)) return false
 
     composer.draw({
+      surface:
+        request.surface === 'pane'
+          ? (PANE_SURFACES[request.paneIndex] ?? 'pane:0')
+          : request.surface,
       scene: request.scene,
       camera: request.camera,
       stack,
@@ -206,3 +210,5 @@ export abstract class SceneRendererDisplay extends SceneRendererExport {
     return true
   }
 }
+
+const PANE_SURFACES = ['pane:0', 'pane:1', 'pane:2', 'pane:3']
