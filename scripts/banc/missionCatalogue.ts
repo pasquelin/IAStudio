@@ -29,7 +29,7 @@ const actionsByRank = (): ReadonlyMap<string, readonly ActionName[]> => {
   return actions
 }
 
-export function expectedActions(scenario: Scenario): readonly ActionName[] {
+function expectedActions(scenario: Scenario): readonly ActionName[] {
   return actionsByRank().get(rankOf(scenario)) ?? []
 }
 
