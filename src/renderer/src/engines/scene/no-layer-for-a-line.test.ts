@@ -44,6 +44,8 @@ const OTHER_SENSES: Record<string, string> = {
   sceneWorld: 'World relief: a heightmap the scene holds, not a timeline line',
   reliefSurface: 'World relief: a heightmap the scene holds, not a timeline line',
   reliefCommands: 'World relief: sculpt deltas on a heightmap, not a timeline line',
+  scatterCommands: 'World scatter: a placement layer, not a timeline line',
+  worldLayerCommands: 'World scatter: the shared layer list, not a timeline line',
   reliefSculptor: 'World relief: sculpt deltas on a heightmap, not a timeline line',
   reliefReadCost: 'World relief: the heightmap layer a surface is built from, not a timeline line',
   sceneRendererRelief: 'World relief: applyWorld reads world.layers, not a timeline line',

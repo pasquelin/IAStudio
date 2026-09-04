@@ -22,13 +22,18 @@ import {
 import { newId } from '@/helpers/ids'
 import type { Command } from '../core/history'
 import type { SceneState } from './sceneState'
+import { editWorldLayers, reorderWorldLayers, sameLayerOrder } from './worldLayerCommands'
+
+export function reorderTerrains(order: readonly string[]): Command<SceneState> {
+  return reorderWorldLayers(order)
+}
 
 export function addTerrain(heightmap: TextureRef, id = newId()): Command<SceneState> {
   const layer = reliefLayer(heightmap, {
     id,
     edits: [terrainEditLayer({ id: 'sculpt' })],
   })
-  return editLayers(
+  return editWorldLayers(
     `world:layers:add:${id}`,
     layers => [...layers, layer],
     state => state.world.layers.some(one => one.id === id),
@@ -36,7 +41,7 @@ export function addTerrain(heightmap: TextureRef, id = newId()): Command<SceneSt
 }
 
 export function removeTerrain(id: string): Command<SceneState> {
-  return editLayers(
+  return editWorldLayers(
     `world:layers:remove:${id}`,
     layers => layers.filter(layer => layer.id !== id),
     state => !terrainOf(state, id),
@@ -45,14 +50,6 @@ export function removeTerrain(id: string): Command<SceneState> {
 
 export function renameTerrain(id: string, name: string): Command<SceneState> {
   return patchTerrain(`world:layers:rename:${id}`, id, { name })
-}
-
-export function reorderTerrains(order: readonly string[]): Command<SceneState> {
-  return editLayers(
-    'world:layers:reorder',
-    layers => inOrder(layers, order),
-    state => sameOrder(state.world.layers, inOrder(state.world.layers, order)),
-  )
 }
 
 export function setTerrainEnabled(id: string, enabled: boolean): Command<SceneState> {
@@ -109,7 +106,7 @@ export function reorderTerrainEdits(
     edits => inOrder(edits, order),
     terrain => {
       const next = inOrder(terrain.edits, order)
-      if (sameOrder(terrain.edits, next)) return true
+      if (sameLayerOrder(terrain.edits, next)) return true
       return terrain.edits.some((edit, at) => edit.locked && next[at]?.id !== edit.id)
     },
   )
@@ -244,30 +241,12 @@ export function sculptRelief(
   }
 }
 
-function editLayers(
-  id: string,
-  change: (layers: readonly WorldLayer[]) => readonly WorldLayer[],
-  refuses: (state: SceneState) => boolean,
-): Command<SceneState> {
-  let previous: readonly WorldLayer[] | null = null
-  return {
-    id,
-    refuses,
-    apply: state => {
-      if (refuses(state)) return state
-      previous = state.world.layers
-      return { ...state, world: { ...state.world, layers: change(state.world.layers) } }
-    },
-    revert: state => (previous ? { ...state, world: { ...state.world, layers: previous } } : state),
-  }
-}
-
 function patchTerrain(
   id: string,
   terrainId: string,
   patch: Partial<ReliefLayer>,
 ): Command<SceneState> {
-  return editLayers(
+  return editWorldLayers(
     id,
     layers => mapTerrain(layers, terrainId, terrain => ({ ...terrain, ...patch })),
     state => !terrainOf(state, terrainId),
@@ -280,7 +259,7 @@ function patchTerrainEdits(
   change: (edits: readonly TerrainEditLayer[]) => readonly TerrainEditLayer[],
   refuses: (terrain: ReliefLayer) => boolean,
 ): Command<SceneState> {
-  return editLayers(
+  return editWorldLayers(
     id,
     layers =>
       mapTerrain(layers, terrainId, terrain => ({ ...terrain, edits: change(terrain.edits) })),
@@ -363,12 +342,4 @@ function mapTerrain(
   return layers.map(layer =>
     layer.kind === 'relief' && layer.id === terrainId ? change(layer) : layer,
   )
-}
-
-function sameOrder(items: readonly { id: string }[], next: readonly { id: string }[]): boolean {
-  return idsOf(items).join() === idsOf(next).join()
-}
-
-function idsOf(items: readonly { id: string }[]): string[] {
-  return items.map(one => one.id)
 }
