@@ -1,6 +1,7 @@
 import {
   BufferAttribute,
   BufferGeometry,
+  Color,
   DynamicDrawUsage,
   Mesh,
   type Group,
@@ -58,11 +59,16 @@ export function writeMaskOverlay(
   edits: readonly TerrainEditLayer[],
 ): void {
   const vertices = layout.width * layout.height
+  const painted = paintedEdits(edits)
+  // Nothing to tint and nothing tinted last time: a raise dab on a terrain with no painted mask
+  // rewrote 12 675 floats of white and re-uploaded 50 kB per dirtied chunk, for nothing.
+  if (painted.length === 0 && geometry.userData.maskOverlayTinted !== true) return
+  geometry.userData.maskOverlayTinted = painted.length > 0
   const color = colorAttribute(geometry, vertices)
   const into = color.array
   if (!(into instanceof Float32Array)) return
   const [red, green, blue] = accentRgb()
-  const weightAt = paintedOverlayAt(edits, samples, grain)
+  const weightAt = paintedOverlayAt(painted, samples, grain)
   for (let z = 0; z < layout.height; z++) {
     for (let x = 0; x < layout.width; x++) {
       const weight = weightAt(layout.sampleX + x, layout.sampleZ + z)
@@ -76,15 +82,18 @@ export function writeMaskOverlay(
   color.needsUpdate = true
 }
 
+/** The enabled edits whose mask is painted — the only ones that tint anything. */
+function paintedEdits(edits: readonly TerrainEditLayer[]): readonly TerrainEditLayer[] {
+  return edits.filter(edit => edit.enabled && edit.mask?.kind === 'painted')
+}
+
 function paintedOverlayAt(
   edits: readonly TerrainEditLayer[],
   samples: HeightmapSamples,
   grain: number,
 ): (sx: number, sz: number) => number {
   const readers = edits.flatMap(edit =>
-    edit.enabled && edit.mask?.kind === 'painted'
-      ? [overlayDeltaReader(samples, grain, edit.mask.weights)]
-      : [],
+    edit.mask?.kind === 'painted' ? [overlayDeltaReader(samples, grain, edit.mask.weights)] : [],
   )
   return (sx, sz) => {
     let peak = 0
@@ -99,13 +108,20 @@ function paintedOverlayAt(
 function colorAttribute(geometry: BufferGeometry, vertices: number): BufferAttribute {
   const held = geometry.getAttribute('color')
   if (held instanceof BufferAttribute && held.array.length === vertices * 3) return held
-  const next = new BufferAttribute(new Float32Array(vertices * 3), 3).setUsage(DynamicDrawUsage)
+  // Filled with white: zeroes under `vertexColors` are not « no tint », they are black.
+  const next = new BufferAttribute(new Float32Array(vertices * 3).fill(1), 3).setUsage(
+    DynamicDrawUsage,
+  )
   geometry.setAttribute('color', next)
   return next
 }
 
+/**
+ * Through `Color`, never a hand-rolled parse: a vertex colour is read as already linear, so the
+ * raw sRGB of `#346ef2` (0.204, 0.431, 0.949) paints 0.034, 0.156, 0.888 — a washed-out blue.
+ * It also reads `color-mix()` and `rgb()`, which a hex parse silently turned black.
+ */
 function accentRgb(): [number, number, number] {
-  const value = rootColour('--color-accent')
-  const hex = value.startsWith('#') ? Number.parseInt(value.slice(1), 16) : 0
-  return [((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255]
+  const accent = new Color(rootColour('--color-accent'))
+  return [accent.r, accent.g, accent.b]
 }
