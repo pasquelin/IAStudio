@@ -20,7 +20,17 @@ if (
     entry =>
       entry.equivalent !== true ||
       entry.nonUniformFrames !== entry.cameraCount * 2 ||
-      entry.observedPickSamples === 0,
+      entry.observedPickSamples === 0 ||
+      (entry.id === 'S5' &&
+        (entry.executedScriptHooks === 0 ||
+          entry.successfulScriptEffects === 0 ||
+          entry.scriptFaults !== 0 ||
+          entry.simulatedPhysicsBodies === 0 ||
+          entry.simulatedPhysicsSteps === 0 ||
+          entry.simulatedPhysicsEffects === 0 ||
+          entry.executedTimelineActions === 0 ||
+          entry.successfulDuplications === 0 ||
+          entry.successfulUndoRedo === 0)),
   )
 ) {
   throw new Error('la validation SAFE S1–S5 a détecté une différence')

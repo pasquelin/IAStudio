@@ -169,7 +169,10 @@ describe('scene runtime validation driver', () => {
     expect(requestFrame).toHaveBeenCalledTimes(2)
     expect(await driver.render(optimized, CAMERA)).toBe(FRAME)
     expect(calls.captured).toEqual([CAMERA])
-    expect(await driver.observe(original)).toBe(SNAPSHOT)
+    expect(await driver.observe(original)).toMatchObject({
+      picking: [],
+      duplication: { freshIds: true },
+    })
     expect(document.body.querySelectorAll('div')).toHaveLength(2)
 
     driver.dispose(original)

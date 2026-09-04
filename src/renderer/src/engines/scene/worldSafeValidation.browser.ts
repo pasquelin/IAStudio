@@ -7,6 +7,8 @@ import {
   MeshStandardMaterial,
   NumberKeyframeTrack,
 } from 'three'
+import { loadJoltPhysics } from '@game/host/joltPhysics'
+import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import { worldBenchmarkScenes, type WorldBenchmarkId } from './worldBenchmarkScenes.fixture'
 import type { SceneState } from './sceneState'
 import {
@@ -23,6 +25,15 @@ type WorldSafeValidationResult = {
   nonUniformFrames: number
   cameraCount: number
   observedPickSamples: number
+  executedScriptHooks: number
+  successfulScriptEffects: number
+  scriptFaults: number
+  simulatedPhysicsBodies: number
+  simulatedPhysicsSteps: number
+  simulatedPhysicsEffects: number
+  executedTimelineActions: number
+  successfulDuplications: number
+  successfulUndoRedo: number
   failedChecks: readonly string[]
 }
 
@@ -39,9 +50,31 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
         loadModel: async () => benchmarkModel(),
         loadTexture: async () => benchmarkTexture(),
       },
+      functional:
+        benchmark.id === 'S5'
+          ? {
+              createPhysics: loadJoltPhysics,
+              createScripts: loadQuickjsScripts,
+              modules: [
+                {
+                  script: 'script:Benchmark.ts',
+                  code: 'exports.default = defineScript({ onUpdate(self) { self.moveBy(0.01, 0, 0) }, onMessage() {} })',
+                },
+              ],
+            }
+          : undefined,
     })
     let nonUniformFrames = 0
     let observedPickSamples = 0
+    let executedScriptHooks = 0
+    let successfulScriptEffects = 0
+    let scriptFaults = 0
+    let simulatedPhysicsBodies = 0
+    let simulatedPhysicsSteps = 0
+    let simulatedPhysicsEffects = 0
+    let executedTimelineActions = 0
+    let successfulDuplications = 0
+    let successfulUndoRedo = 0
     const report = await validateRuntimeRepresentation(benchmark.state, {
       cameras,
       visualOptions: {
@@ -58,6 +91,32 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
         observe: async representation => {
           const snapshot = await driver.observe(representation)
           observedPickSamples += renderedPickCount(snapshot.picking)
+          executedScriptHooks += arrayFieldLength(snapshot.scripts, 'hooks')
+          successfulScriptEffects += movedEntityCount(snapshot.scripts, 'scripted', {
+            x: 0,
+            y: 0,
+            z: 0,
+          })
+          scriptFaults += arrayFieldLength(snapshot.scripts, 'faults')
+          simulatedPhysicsBodies += arrayFieldLength(snapshot.physics, 'bodies')
+          simulatedPhysicsSteps += arrayFieldLength(snapshot.physics, 'steps')
+          simulatedPhysicsEffects += movedEntityCount(snapshot.physics, 'physical', {
+            x: 0,
+            y: 5,
+            z: 0,
+          })
+          executedTimelineActions += arrayFieldLength(snapshot.timeline, 'scenes')
+          successfulDuplications +=
+            booleanField(snapshot.duplication, 'equivalent') &&
+            booleanField(snapshot.duplication, 'freshIds') &&
+            booleanField(snapshot.duplication, 'freshInstanceIds')
+              ? 1
+              : 0
+          successfulUndoRedo +=
+            booleanField(snapshot.undoRedo, 'restored') &&
+            booleanField(snapshot.undoRedo, 'replayed')
+              ? 1
+              : 0
           return snapshot
         },
       },
@@ -70,10 +129,54 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
       nonUniformFrames,
       cameraCount: cameras.length,
       observedPickSamples,
+      executedScriptHooks,
+      successfulScriptEffects,
+      scriptFaults,
+      simulatedPhysicsBodies,
+      simulatedPhysicsSteps,
+      simulatedPhysicsEffects,
+      executedTimelineActions,
+      successfulDuplications,
+      successfulUndoRedo,
       failedChecks: report.functional.flatMap(result => (result.equivalent ? [] : [result.check])),
     })
   }
   return results
+}
+
+function arrayFieldLength(value: unknown, field: string): number {
+  if (typeof value !== 'object' || value === null) return 0
+  const entries = Reflect.get(value, field)
+  return Array.isArray(entries) ? entries.length : 0
+}
+
+function booleanField(value: unknown, field: string): boolean {
+  return typeof value === 'object' && value !== null && Reflect.get(value, field) === true
+}
+
+function movedEntityCount(
+  value: unknown,
+  id: string,
+  initial: { x: number; y: number; z: number },
+): number {
+  if (typeof value !== 'object' || value === null) return 0
+  const entities = Reflect.get(value, 'entities')
+  if (!Array.isArray(entities)) return 0
+  return entities.some(entity => {
+    if (typeof entity !== 'object' || entity === null || Reflect.get(entity, 'id') !== id)
+      return false
+    const transform = Reflect.get(entity, 'transform')
+    if (typeof transform !== 'object' || transform === null) return false
+    const position = Reflect.get(transform, 'position')
+    if (typeof position !== 'object' || position === null) return false
+    return (
+      Reflect.get(position, 'x') !== initial.x ||
+      Reflect.get(position, 'y') !== initial.y ||
+      Reflect.get(position, 'z') !== initial.z
+    )
+  })
+    ? 1
+    : 0
 }
 
 function renderedPickCount(value: unknown): number {

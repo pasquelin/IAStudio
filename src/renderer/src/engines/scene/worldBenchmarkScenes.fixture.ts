@@ -73,15 +73,39 @@ export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
     positioned(meshNode(`building-${index}`), index, 200),
   )
   const mixed: SceneNode[] = [
+    {
+      id: 'validation-group',
+      parentId: null,
+      name: 'Validation group',
+      visible: true,
+      transform: IDENTITY_TRANSFORM,
+      ...shadowDefaults({ type: 'group' }),
+      type: 'group',
+    },
+    {
+      ...meshNode('validation-child'),
+      parentId: 'validation-group',
+      instances: [
+        {
+          sourceId: 'validation-instance',
+          name: 'Validation instance',
+          transform: IDENTITY_TRANSFORM,
+        },
+      ],
+    },
     ...Array.from({ length: 300 }, (_unused, index) =>
       positioned(meshNode(`static-${index}`), index, 30),
     ),
     { ...meshNode('animated'), components: [newComponent('Spin')] },
     {
       ...meshNode('physical'),
+      transform: { ...IDENTITY_TRANSFORM, position: { x: 0, y: 5, z: 0 } },
       components: [newComponent('Collider'), newComponent('RigidBody')],
     },
-    { ...meshNode('scripted'), components: [newComponent('Script')] },
+    {
+      ...meshNode('scripted'),
+      components: [{ ...newComponent('Script'), script: 'script:Benchmark.ts' }],
+    },
     {
       id: 'character',
       parentId: null,
@@ -119,6 +143,20 @@ export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
     { id: 'S2', purpose: 'repeated-object instancing', state: state(repetition) },
     { id: 'S3', purpose: 'different static props batching', state: state(props) },
     { id: 'S4', purpose: 'city partitioning and culling', state: state(city) },
-    { id: 'S5', purpose: 'mixed gameplay compatibility', state: state(mixed) },
+    {
+      id: 'S5',
+      purpose: 'mixed gameplay compatibility',
+      state: {
+        ...state(mixed),
+        world: { ...DEFAULT_WORLD, play: { ...DEFAULT_WORLD.play, gravity: 9.81 } },
+        animation: {
+          ...EMPTY_TIMELINE,
+          events: [{ id: 'benchmark-event', at: 0, name: 'BenchmarkStarted' }],
+          transitions: [
+            { id: 'benchmark-cut', at: 0, kind: 'cut', duration: 0, scene: 'BenchmarkNext' },
+          ],
+        },
+      },
+    },
   ]
 }
