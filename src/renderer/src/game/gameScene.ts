@@ -65,6 +65,8 @@ const NO_ENVIRONMENT = '#9fb2c8'
 /** How a carved solid's shape is worked out — see `carver`. */
 type Carve = (graph: CsgGraph) => BufferGeometry
 
+const BASE_LOD_DISTANCES = new WeakMap<LOD, readonly number[]>()
+
 export async function buildGameScene(
   state: SceneState,
   assets: AssetPort,
@@ -99,6 +101,7 @@ export async function buildGameScene(
       const object = instanceOf(await held)
       object.traverse(child => {
         if (child instanceof Mesh) modelMeshes.add(child)
+        if (child instanceof LOD) rememberLodDistances(child)
       })
       return applyCompiledModel(object, modelPlan, ownedModelGeometries, modelMeshes)
     } catch {
@@ -149,9 +152,9 @@ export async function buildGameScene(
 
     object.name = node.name
     object.visible = node.visible
-    applyTransform(object, node.transform)
+    applyGameTransform(object, node.transform)
     byEntity.set(node.id, object)
-    placements.set(node.id, transform => applyTransform(object, transform))
+    placements.set(node.id, transform => applyGameTransform(object, transform))
     if (node.type === 'mesh' && node.instances) {
       const renderedInstances = instancedMeshesIn(object)
       const placement = new Object3D()
@@ -333,6 +336,7 @@ function applyCompiledModel(
       level.receiveShadow = mesh.receiveShadow
       lod.addLevel(level, radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index] ?? 1))
     }
+    rememberLodDistances(lod)
   }
   return optimized
 }
@@ -393,7 +397,32 @@ function renderedGeometry(
         : radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index - 1] ?? 1),
     ),
   )
+  rememberLodDistances(lod)
   return lod
+}
+
+function rememberLodDistances(lod: LOD): void {
+  BASE_LOD_DISTANCES.set(
+    lod,
+    lod.levels.map(level => level.distance),
+  )
+}
+
+function applyGameTransform(object: Object3D, transform: Transform): void {
+  applyTransform(object, transform)
+  const scale = Math.max(
+    Math.abs(transform.scale.x),
+    Math.abs(transform.scale.y),
+    Math.abs(transform.scale.z),
+  )
+  object.traverse(child => {
+    if (!(child instanceof LOD)) return
+    const distances = BASE_LOD_DISTANCES.get(child)
+    if (!distances) return
+    child.levels.forEach((level, index) => {
+      level.distance = (distances[index] ?? level.distance) * scale
+    })
+  })
 }
 
 function instancedMeshesIn(object: Object3D): readonly InstancedMesh[] {

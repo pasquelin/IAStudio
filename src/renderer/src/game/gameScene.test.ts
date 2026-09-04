@@ -305,6 +305,27 @@ describe('a scene as a game draws it', () => {
     expect(counts[1]).toBeGreaterThan(counts[2] ?? 0)
   })
 
+  it('scales generated LOD distances with the logical object size', async () => {
+    const node = {
+      ...meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 }),
+      transform: { ...IDENTITY_TRANSFORM, scale: { x: 4, y: 2, z: 1 } },
+    }
+    const state = scene([node])
+    const built = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, { ...NO_LOSSY_OPTIMIZATION, generateLods: true }),
+    )
+    const object = built.byEntity.get(node.id)
+
+    if (!(object instanceof LOD)) throw new Error('expected generated LOD')
+    expect(object.levels[1]?.distance).toBeCloseTo(48)
+    expect(object.levels[2]?.distance).toBeCloseTo(144)
+    built.place(node.id, { ...IDENTITY_TRANSFORM, scale: { x: 2, y: 2, z: 2 } })
+    expect(object.levels[1]?.distance).toBeCloseTo(24)
+    expect(object.levels[2]?.distance).toBeCloseTo(72)
+  })
+
   it('simplifies one mesh only when a LOSSY geometry level is named', async () => {
     const node = meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 })
     const original = await buildGameScene(scene([node]), NOTHING)
