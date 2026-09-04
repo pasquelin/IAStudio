@@ -12,11 +12,11 @@ import type { SceneNode, SceneState } from './sceneState'
 import {
   validateSafeRuntime,
   type SafeValidationCamera,
+  type SafeRuntimeSnapshot,
   type SafeRuntimeValidationInput,
   type SafeRuntimeValidationReport,
 } from './safeRuntimeValidation'
 import type { VisualFrame } from './visualRegression'
-import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
 import { adaptiveCellsOf } from './adaptivePartition'
 
 export type OptimizationSignature = string
@@ -65,6 +65,8 @@ export type RuntimeWorldValidationInput = Pick<
 > & {
   renderOriginal: (world: SceneState, camera: SafeValidationCamera) => Promise<VisualFrame>
   renderOptimized: (world: RuntimeWorld, camera: SafeValidationCamera) => Promise<VisualFrame>
+  observeOriginal: (world: SceneState) => Promise<SafeRuntimeSnapshot>
+  observeOptimized: (world: RuntimeWorld) => Promise<SafeRuntimeSnapshot>
 }
 
 const EMPTY_REPORT: RuntimeCompilationReport = {
@@ -280,8 +282,8 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
         ...input,
         renderOriginal: async camera => await input.renderOriginal(world, camera),
         renderOptimized: async camera => await input.renderOptimized(compiled, camera),
-        observeOriginal: async () => sceneRuntimeSnapshot(world),
-        observeOptimized: async () => sceneRuntimeSnapshot(compiled),
+        observeOriginal: async () => await input.observeOriginal(world),
+        observeOptimized: async () => await input.observeOptimized(compiled),
       })
     },
   }
