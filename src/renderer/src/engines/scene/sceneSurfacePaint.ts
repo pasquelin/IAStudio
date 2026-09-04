@@ -6,17 +6,20 @@ export type ArmedWorld =
   { kind: 'relief'; id: string; editId: string | null } | { kind: 'scatter'; id: string } | null
 
 type SurfaceDisk = { x: number; z: number; radius: number; amount: number; falloff: number }
+export type HeldGroundPaint = { assetId: string | null; paint: GroundPaint }
 
 export async function groundPaintedAt(
   world: SceneWorld,
-  held: ReadonlyMap<string, GroundPaint>,
+  held: ReadonlyMap<string, HeldGroundPaint>,
   load: ((terrainId: string) => Promise<GroundPaint | null>) | undefined,
   terrainId: string,
   disk: SurfaceDisk,
 ): Promise<GroundPaint | null> {
   const terrain = world.layers.find(layer => layer.kind === 'relief' && layer.id === terrainId)
   if (!terrain || terrain.kind !== 'relief' || terrain.locked.sculpt) return null
-  const loaded = held.has(terrainId) ? held.get(terrainId) : await load?.(terrainId)
+  const assetId = terrain.groundMaterials[0]?.texture.assetId ?? null
+  const cached = held.get(terrainId)
+  const loaded = cached?.assetId === assetId ? cached.paint : await load?.(terrainId)
   return paintGroundDisk(
     loaded ?? emptyGroundPaint(SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS),
     { origin: terrain.origin, size: terrain.size, elevation: terrain.elevation },

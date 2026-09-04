@@ -47,6 +47,7 @@ describe('ground paint assets', () => {
     }
     const savePicture = vi.fn(async request => {
       expect([...bytesFromBase64(request.png)]).toEqual([...paint.pixels])
+      expect(request).not.toHaveProperty('replaces')
       return picture('paint-1')
     })
     bridgeWatchingLogs({
@@ -60,6 +61,46 @@ describe('ground paint assets', () => {
     const terrain = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
     expect(terrain?.kind === 'relief' ? terrain.groundMaterials : []).toEqual([
       { texture: { assetId: 'paint-1' }, weight: 1 },
+    ])
+  })
+
+  it('creates a derived picture and preserves the reserved material layers', async () => {
+    const terrain = reliefLayer(
+      { assetId: 'height' },
+      {
+        id: 'terrain',
+        name: 'Island',
+        groundMaterials: [
+          { texture: { assetId: 'source' }, weight: 0.7 },
+          { texture: { assetId: 'detail' }, weight: 0.3 },
+        ],
+      },
+    )
+    useScenes.getState().replace('doc-1', {
+      ...EMPTY_SCENE,
+      world: { ...DEFAULT_WORLD, layers: [terrain] },
+    })
+    const requests: unknown[] = []
+    const savePicture = vi.fn(async (request: unknown) => {
+      requests.push(request)
+      return picture('paint-1')
+    })
+    bridgeWatchingLogs({ assets: { savePicture, search: async () => [picture('paint-1')] } })
+    const codec: GroundPaintCodec = {
+      encode: async () => new Uint8Array(),
+      decode: async () => emptyGroundPaint(1, 1),
+    }
+
+    await expect(saveGroundPaint('doc-1', 'terrain', emptyGroundPaint(1, 1), codec)).resolves.toBe(
+      true,
+    )
+
+    expect(requests[0]).toMatchObject({ derivedFrom: 'source' })
+    expect(requests[0]).not.toHaveProperty('replaces')
+    const stored = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
+    expect(stored?.kind === 'relief' ? stored.groundMaterials : []).toEqual([
+      { texture: { assetId: 'paint-1' }, weight: 0.7 },
+      { texture: { assetId: 'detail' }, weight: 0.3 },
     ])
   })
 })

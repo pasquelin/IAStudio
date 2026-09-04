@@ -1,4 +1,13 @@
-import { BoxGeometry, InstancedMesh, LOD, Mesh, MeshBasicMaterial, Object3D, Scene } from 'three'
+import {
+  BoxGeometry,
+  InstancedMesh,
+  LOD,
+  Mesh,
+  MeshBasicMaterial,
+  Object3D,
+  PerspectiveCamera,
+  Scene,
+} from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_WORLD, reliefLayer, scatterLayer, terrainEditLayer } from '@shared/domain/scene'
 import { withChunkDelta } from '@shared/domain/relief'
@@ -129,6 +138,37 @@ describe('createScatterSurface', () => {
     expect(surface.objectsInCell('trees', cellKey(0, 0))).not.toEqual(west)
     expect(surface.objectsInCell('trees', cellKey(1, 0))).toEqual(east)
     expect(surface.objectsInCell('trees', cellKey(1, 0))[0]).toBe(east[0])
+    surface.dispose()
+  })
+
+  it('uses the world partition to hide cells beyond the camera reach', async () => {
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    await surface.sync({
+      ...DEFAULT_WORLD,
+      layers: [
+        scatterLayer({
+          id: 'trees',
+          assets: [{ assetId: 'pine', weight: 1 }],
+          origin: { x: 0, z: 0 },
+          size: { x: 512, z: 256 },
+          rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.01, spacing: 16 },
+        }),
+      ],
+    })
+    const camera = new PerspectiveCamera(50, 1, 0.1, 200)
+    camera.position.set(0, 10, 0)
+    camera.updateMatrixWorld(true)
+
+    surface.updateVisibility(camera)
+
+    expect(surface.objectsInCell('trees', cellKey(0, 0))[0]?.visible).toBe(true)
+    expect(surface.objectsInCell('trees', cellKey(1, 0))[0]?.visible).toBe(false)
     surface.dispose()
   })
 })

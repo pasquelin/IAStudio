@@ -30,6 +30,9 @@ import type { ReliefGeometryData } from './reliefBuildMessage'
 import { reliefGeometryData, writeChunkNormals, writeChunkRegion } from './reliefSurfaceGeometry'
 import { blendChanged, dirtiedChunks } from './reliefSurfaceEdits'
 import { reliefSculptSourceOf, type ReliefSculptSource } from './reliefSculptSource'
+import type { GroundPaint } from '@shared/domain/groundPaint'
+import type { TextureSource } from './textureCache'
+import { applyGroundPaint, syncGroundMaterial } from './reliefGroundMaterial'
 
 export { reliefGeometryData } from './reliefSurfaceGeometry'
 export type { ReliefSculptSource } from './reliefSculptSource'
@@ -40,6 +43,7 @@ export type ReliefSurface = {
   heightmaps: () => ReadonlyMap<string, HeightmapSamples>
   meshOf: (terrainId: string, column: number, row: number) => Mesh | undefined
   sculptSource: (terrainId: string, editId: string) => ReliefSculptSource | null
+  paintGround?: (terrainId: string, paint: GroundPaint) => void
   dispose: () => void
 }
 
@@ -60,6 +64,8 @@ export type ReliefSurfaceOptions = {
   builder?: ReliefBuilder
   onReady?: () => void
   onFailure?: (assetId: string, error: unknown) => void
+  loadGround?: TextureSource
+  assetVersion?: (assetId: string) => string | undefined
 }
 
 const RELIEF_NAME = 'scene-relief'
@@ -84,6 +90,9 @@ type TerrainSurface = {
   wanted: ReliefLayer | null
   generation: number
   buildAbort: AbortController | null
+  material: MeshStandardMaterial
+  groundAssetId: string | null
+  groundGeneration: number
 }
 
 type SurfaceState = {
@@ -125,6 +134,7 @@ export function createReliefSurface(
       const edit = held?.edits.find(candidate => candidate.id === editId)
       return held && edit ? reliefSculptSourceOf(held, edit) : null
     },
+    paintGround: (terrainId, paint) => applyGroundPaint(state.terrains.get(terrainId), paint),
     dispose: () => disposeRelief(state),
   }
 }
@@ -164,6 +174,9 @@ function terrainSurfaceOf(state: SurfaceState, layer: ReliefLayer): TerrainSurfa
     wanted: null,
     generation: 0,
     buildAbort: null,
+    material: state.material.clone(),
+    groundAssetId: null,
+    groundGeneration: 0,
   }
   terrain.group.name = `relief-${layer.id}`
   state.terrains.set(layer.id, terrain)
@@ -172,8 +185,11 @@ function terrainSurfaceOf(state: SurfaceState, layer: ReliefLayer): TerrainSurfa
 
 function dropTerrain(state: SurfaceState, id: string, terrain: TerrainSurface): void {
   terrain.generation += 1
+  terrain.groundGeneration += 1
   terrain.buildAbort?.abort()
   clearMeshes(terrain.meshes)
+  terrain.material.map?.dispose()
+  terrain.material.dispose()
   terrain.group.removeFromParent()
   state.terrains.delete(id)
 }
@@ -184,6 +200,7 @@ function applyLayer(
   layer: ReliefLayer,
   samples: HeightmapSamples,
 ): boolean {
+  syncGroundMaterial(terrain, layer, state.options)
   const extent: ReliefExtent = {
     origin: layer.origin,
     size: layer.size,
@@ -332,7 +349,7 @@ function buildMeshesFromData(
   if (terrain.group.parent !== state.group) state.group.add(terrain.group)
 }
 
-function addMesh(state: SurfaceState, terrain: TerrainSurface, data: ReliefGeometryData): void {
+function addMesh(_state: SurfaceState, terrain: TerrainSurface, data: ReliefGeometryData): void {
   const geometry = new BufferGeometry()
   geometry.setAttribute(
     'position',
@@ -341,7 +358,7 @@ function addMesh(state: SurfaceState, terrain: TerrainSurface, data: ReliefGeome
   geometry.setAttribute('normal', new BufferAttribute(data.normal, 3).setUsage(DynamicDrawUsage))
   geometry.setAttribute('uv', new BufferAttribute(data.uv, 2))
   geometry.setIndex(new BufferAttribute(data.index, 1))
-  const mesh = new Mesh(geometry, state.material)
+  const mesh = new Mesh(geometry, terrain.material)
   mesh.name = `relief-chunk-${data.column}-${data.row}`
   mesh.castShadow = false
   mesh.receiveShadow = true

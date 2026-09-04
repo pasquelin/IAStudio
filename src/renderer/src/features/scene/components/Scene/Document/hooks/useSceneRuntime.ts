@@ -30,6 +30,7 @@ import type { GroundPaint } from '@shared/domain/groundPaint'
 function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRenderer {
   const projectPath = useProject.getState().project?.path ?? null
   let pendingGroundPaint: { terrainId: string; paint: GroundPaint } | null = null
+  let groundSave: Promise<boolean> = Promise.resolve(true)
   return new SceneRenderer({
     onSelect: (ids, mode) => selectIn(documentId, ids, mode),
     onTransform: moves => recordTransform(documentId, moves),
@@ -49,7 +50,7 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
       if (!pendingGroundPaint) return
       const saved = pendingGroundPaint
       pendingGroundPaint = null
-      void saveGroundPaint(documentId, saved.terrainId, saved.paint)
+      groundSave = saveGroundAfter(groundSave, documentId, saved)
     },
     onClips: (id, clips, lengths) =>
       useModelFiles.getState().report(documentId, id, clips, lengths),
@@ -87,6 +88,15 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
     wornDress: wornModelDress,
     environmentDress: environmentDressOf,
   })
+}
+
+async function saveGroundAfter(
+  previous: Promise<boolean>,
+  documentId: string,
+  saved: { terrainId: string; paint: GroundPaint },
+): Promise<boolean> {
+  await previous
+  return await saveGroundPaint(documentId, saved.terrainId, saved.paint)
 }
 
 /** Owns the imperative renderer and translates its callbacks into document/view stores. */

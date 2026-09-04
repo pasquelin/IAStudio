@@ -32,6 +32,7 @@ export class SceneRendererConstruction extends SceneRendererFrame {
       options.relief ??
       createReliefSurface(this.viewport.scene, {
         load: assetId => loadHeightmap(assetId, undefined, options.assetVersion?.(assetId)),
+        assetVersion: options.assetVersion,
         // 🛑 Invariant 6: cutting the terrain is the longest thing this engine does. Without the
         // builder `reliefSurface` falls back to an inline build and the window freezes.
         builder: createReliefBuilder(() => new ReliefBuildWorker()),

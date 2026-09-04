@@ -99,6 +99,7 @@ export abstract class SceneRendererWorld extends SceneRendererAids {
       this.relief.sync(wanted)
       void this.syncScatter(wanted)
       this.noteReliefSculpt()
+      this.noteGroundPaint()
     }
     if (this.relief.object.children.length > 0) this.ground.object.visible = false
     if (wanted.background !== held.background) this.paintBackground()

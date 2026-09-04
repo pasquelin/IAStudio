@@ -8,12 +8,15 @@ import {
   type SculptTool,
 } from './reliefStroke'
 import { SceneRendererMaterials } from './SceneRendererMaterials'
-import { terrainIdOfObject } from './reliefSurface'
+import { terrainIdOfObject, type ReliefSurface } from './reliefSurface'
 import { createReliefBrushCursor } from './reliefBrushCursor'
 import { combinedAt, texelStep } from '@shared/domain/relief'
 import { clamp } from '@shared/numeric'
-import type { GroundPaint } from '@shared/domain/groundPaint'
-import { groundPaintedAt, scatterMaskStroke, type ArmedWorld } from './sceneSurfacePaint'
+import { scatterMaskStroke, type ArmedWorld } from './sceneSurfacePaint'
+import {
+  createSceneGroundPaintSession,
+  type SceneGroundPaintSession,
+} from './sceneGroundPaintSession'
 
 export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   protected abstract dropMarquee(): void
@@ -39,7 +42,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     paint: boolean
     sculptor: ReliefSculptor
   } | null = null
-  private readonly groundPaints = new Map<string, GroundPaint>()
+  private groundPaintSession: SceneGroundPaintSession | null = null
 
   async raiseReliefDisk(
     terrainId: string,
@@ -86,6 +89,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     if (!held) return
     const source = this.relief.sculptSource(held.terrainId, held.editId)
     held.sculptor.note(held.paint ? source?.maskWeights : source?.sculpt)
+  }
+
+  protected noteGroundPaint(): void {
+    this.groundPaintSession?.clear()
   }
 
   dispose(): void {
@@ -198,7 +205,8 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
       last: { x, z },
       terrainId: target.terrainId,
       editId: target.editId,
-      target: this.sculptTool === 'flatten' ? this.flattenTargetAt(target, x, z) : undefined,
+      target:
+        this.sculptTool === 'flatten' ? flattenTargetAt(this.relief, target, x, z) : undefined,
     }
     this.options.onReliefStrokeStart?.()
     return this.paintReliefDab(x, z)
@@ -233,8 +241,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
 
   endReliefStroke(): void {
     if (!this.sculptStroke) return
+    const waitsForGround = this.sculptTool === 'paintGround'
     this.sculptStroke = null
-    this.options.onReliefStrokeEnd?.()
+    if (waitsForGround) void this.finishGroundStroke(this.groundPaintSession?.finish())
+    else this.options.onReliefStrokeEnd?.()
   }
 
   private paintReliefDab(x: number, z: number): Promise<boolean> {
@@ -268,51 +278,58 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     return true
   }
 
-  async paintGroundDisk(terrainId: string, x: number, z: number): Promise<boolean> {
-    const paint = await groundPaintedAt(
-      this.world,
-      this.groundPaints,
-      this.options.loadGroundPaint,
+  paintGroundDisk(terrainId: string, x: number, z: number): Promise<boolean> {
+    return this.groundPainter().paint(
       terrainId,
       surfaceDisk(x, z, this.sculptRadius, this.sculptAmount, this.sculptFalloff),
     )
-    if (!paint) return false
-    this.groundPaints.set(terrainId, paint)
-    this.options.onGroundPaint?.(terrainId, paint)
-    return true
   }
 
-  private flattenTargetAt(
-    target: { terrainId: string; editId: string },
-    x: number,
-    z: number,
-  ): number | undefined {
-    const source = this.relief.sculptSource(target.terrainId, target.editId)
-    if (!source) return undefined
-    const step = texelStep(source.extent.size, source.samples)
-    const sx = clamp(Math.round((x - source.extent.origin.x) / step.x), 0, source.samples.width - 1)
-    const sz = clamp(
-      Math.round((z - source.extent.origin.z) / step.z),
-      0,
-      source.samples.height - 1,
-    )
-    return combinedAt(
-      source.samples,
-      source.grain,
-      [
-        ...source.overlays,
-        {
-          enabled: true,
-          alpha: source.overlayAlpha,
-          sculpt: source.sculpt,
-          mask: source.overlayMask,
-        },
-      ],
-      sx,
-      sz,
-      source.extent,
-    )
+  private groundPainter(): SceneGroundPaintSession {
+    return (this.groundPaintSession ??= createSceneGroundPaintSession({
+      world: () => this.world,
+      load: this.options.loadGroundPaint,
+      apply: (terrainId, paint) => {
+        this.relief.paintGround?.(terrainId, paint)
+        this.redraw()
+        this.options.onGroundPaint?.(terrainId, paint)
+      },
+    }))
   }
+
+  private async finishGroundStroke(task: Promise<void> | undefined): Promise<void> {
+    await task
+    this.options.onReliefStrokeEnd?.()
+  }
+}
+
+function flattenTargetAt(
+  relief: ReliefSurface,
+  target: { terrainId: string; editId: string },
+  x: number,
+  z: number,
+): number | undefined {
+  const source = relief.sculptSource(target.terrainId, target.editId)
+  if (!source) return undefined
+  const step = texelStep(source.extent.size, source.samples)
+  const sx = clamp(Math.round((x - source.extent.origin.x) / step.x), 0, source.samples.width - 1)
+  const sz = clamp(Math.round((z - source.extent.origin.z) / step.z), 0, source.samples.height - 1)
+  return combinedAt(
+    source.samples,
+    source.grain,
+    [
+      ...source.overlays,
+      {
+        enabled: true,
+        alpha: source.overlayAlpha,
+        sculpt: source.sculpt,
+        mask: source.overlayMask,
+      },
+    ],
+    sx,
+    sz,
+    source.extent,
+  )
 }
 
 function surfaceDisk(x: number, z: number, radius: number, amount: number, falloff: number) {

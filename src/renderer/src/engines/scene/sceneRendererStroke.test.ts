@@ -137,6 +137,35 @@ describe('a sculpt drag through the scene renderer', () => {
     renderer.dispose()
   })
 
+  it('finishes a quick ground click only after its asynchronous paint lands', async () => {
+    let release: ((paint: null) => void) | undefined
+    const loading = new Promise<null>(resolve => {
+      release = resolve
+    })
+    const painted = vi.fn()
+    const ended = vi.fn()
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      onGroundPaint: painted,
+      onReliefStrokeEnd: ended,
+      loadGroundPaint: async () => await loading,
+      relief: reliefStub(),
+    })
+    renderer['applyWorld'](worldWithTerrain())
+    renderer.setSculptTool('paintGround')
+
+    const started = renderer['startGroundStroke']('terrain', 10, 10)
+    renderer.endReliefStroke()
+    expect(ended).not.toHaveBeenCalled()
+    release?.(null)
+    await started
+    await vi.waitFor(() => expect(ended).toHaveBeenCalledOnce())
+
+    expect(painted).toHaveBeenCalledOnce()
+    renderer.dispose()
+  })
+
   it('publishes painted chunks for an armed scatter mask', async () => {
     const published = vi.fn()
     const renderer = new SceneRenderer({

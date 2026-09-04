@@ -61,15 +61,19 @@ export async function saveGroundPaint(
     const asset = await bridge.assets.savePicture({
       name: i18next.t('world.groundPaintName', { name: terrain.name }),
       png: bytesToBase64(png),
-      ...(previous ? { replaces: previous } : {}),
+      ...(previous ? { derivedFrom: previous } : {}),
     })
     await useAssets.getState().refresh()
+    const current = terrainOf(documentId, terrainId)
+    if (!current || current.groundMaterials[0]?.texture.assetId !== previous) return false
+    const groundMaterials = current.groundMaterials.length
+      ? current.groundMaterials.map((entry, index) =>
+          index === 0 ? { ...entry, texture: { assetId: asset.id } } : entry,
+        )
+      : [{ texture: { assetId: asset.id }, weight: 1 }]
     useScenes
       .getState()
-      .runCommand(
-        documentId,
-        setTerrainGroundMaterials(terrainId, [{ texture: { assetId: asset.id }, weight: 1 }]),
-      )
+      .runCommand(documentId, setTerrainGroundMaterials(terrainId, groundMaterials))
     return true
   } catch (error) {
     reportFailure('scene.model', terrainId, error)

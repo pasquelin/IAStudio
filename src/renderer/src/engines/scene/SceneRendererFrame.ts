@@ -4,6 +4,7 @@ import { SceneRendererPicking } from './SceneRendererPicking'
 export abstract class SceneRendererFrame extends SceneRendererPicking {
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */
   protected advance(delta: number): boolean {
+    const scatterChanged = this.scatter.updateVisibility(this.viewport.camera)
     // Before the panes are drawn and after everything that writes a pose — the head, a clip, a
     // gizmo on the handle: whatever moved, the chain reaches for where the target stands NOW.
     for (const chain of this.iks.values()) chain.update()
@@ -35,7 +36,7 @@ export abstract class SceneRendererFrame extends SceneRendererPicking {
           }
           // The clips do not appear here: they stand where the head put them, and the head is advanced
           // by `useAnimationPlayback`, which calls `setPlayhead` and asks for a frame of its own.
-          return moving || followed
+          return moving || followed || scatterChanged
         }
         return advanceStep2()
       }

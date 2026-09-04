@@ -1,4 +1,4 @@
-import { Group, type Object3D, type Scene } from 'three'
+import { Group, Vector3, type Camera, type Object3D, type Scene } from 'three'
 import {
   enabledScatters,
   enabledTerrains,
@@ -21,6 +21,7 @@ import {
   cellCoords,
   cellKey,
   CELL_SIZE,
+  MAX_SPATIAL_REACH,
   type CellKey,
   type WorldPartition,
 } from './worldPartition'
@@ -33,6 +34,7 @@ export type ScatterSurface = {
   object: Object3D
   partition: WorldPartition
   sync: (world: SceneWorld, heightmaps?: ReadonlyMap<string, HeightmapSamples>) => Promise<void>
+  updateVisibility: (camera: Camera) => boolean
   objectsInCell: (layerId: string, key: CellKey) => readonly Object3D[]
   dispose: () => void
 }
@@ -55,6 +57,7 @@ type ScatterCells = {
   references: Map<CellKey, number>
   partition: WorldPartition
   group: Group
+  queried: CellKey[]
 }
 
 type ScatterState = {
@@ -69,7 +72,13 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
   scene.add(group)
   const state: ScatterState = {
     assets: { revision: 0, sources: new Map(), held: new Set(), loading: new Map() },
-    cells: { byLayer: new Map(), references: new Map(), partition: buildPartition(), group },
+    cells: {
+      byLayer: new Map(),
+      references: new Map(),
+      partition: buildPartition(),
+      group,
+      queried: [],
+    },
     world: null,
   }
   return {
@@ -78,9 +87,35 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
       return state.cells.partition
     },
     sync: async (world, heightmaps) => syncScatter(state, world, heightmaps, options),
+    updateVisibility: camera => updateScatterVisibility(state.cells, camera),
     objectsInCell: (layerId, key) => state.cells.byLayer.get(layerId)?.get(key) ?? [],
     dispose: () => disposeScatter(state, options.models),
   }
+}
+
+const SCATTER_EYE = new Vector3()
+
+function updateScatterVisibility(cells: ScatterCells, camera: Camera): boolean {
+  camera.getWorldPosition(SCATTER_EYE)
+  const reach =
+    'far' in camera && typeof camera.far === 'number'
+      ? Math.min(camera.far, MAX_SPATIAL_REACH)
+      : MAX_SPATIAL_REACH
+  cells.partition.query(SCATTER_EYE.x, SCATTER_EYE.z, reach, cells.queried)
+  const wanted = new Set(cells.queried)
+  let changed = false
+  for (const [layerId, layerCells] of cells.byLayer) {
+    for (const [key, objects] of layerCells) {
+      const visible = wanted.has(key)
+      for (const object of objects) {
+        if (object.visible === visible) continue
+        object.visible = visible
+        changed = true
+      }
+    }
+    if (layerCells.size === 0) cells.byLayer.delete(layerId)
+  }
+  return changed
 }
 
 async function syncScatter(
