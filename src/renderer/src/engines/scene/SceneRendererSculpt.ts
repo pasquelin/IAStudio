@@ -282,6 +282,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     return this.groundPainter().paint(
       terrainId,
       surfaceDisk(x, z, this.sculptRadius, this.sculptAmount, this.sculptFalloff),
+      this.armedWorld?.kind === 'relief' ? (this.armedWorld.materialChannel ?? 'r') : 'r',
     )
   }
 

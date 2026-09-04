@@ -1,4 +1,5 @@
 import type { ReliefExtent } from './relief'
+import type { GroundMaterialChannel } from './scene'
 import { clamp } from '../numeric'
 
 export type GroundPaint = {
@@ -20,10 +21,28 @@ export function emptyGroundPaint(width: number, height: number): GroundPaint {
   return { width, height, pixels: new Uint8ClampedArray(width * height * 4) }
 }
 
+export function emptyGroundWeights(width: number, height: number): GroundPaint {
+  const paint = emptyGroundPaint(width, height)
+  for (let offset = 0; offset < paint.pixels.length; offset += 4) paint.pixels[offset] = 255
+  return paint
+}
+
+export function paintGroundChannelDisk(
+  before: GroundPaint,
+  extent: ReliefExtent,
+  disk: Omit<GroundPaintDisk, 'color'>,
+  channel: GroundMaterialChannel,
+): GroundPaint {
+  const color: [number, number, number, number] = [0, 0, 0, 0]
+  color[channelOffset(channel)] = 255
+  return paintGroundDisk(before, extent, { ...disk, color }, channelOffset(channel))
+}
+
 export function paintGroundDisk(
   before: GroundPaint,
   extent: ReliefExtent,
   disk: GroundPaintDisk,
+  onlyChannel?: number,
 ): GroundPaint {
   const pixels = before.pixels.slice()
   const stepX = extent.size.x / Math.max(1, before.width - 1)
@@ -52,13 +71,18 @@ export function paintGroundDisk(
       const strength = clamp(disk.amount * (disk.falloff === 0 ? 1 : edge ** disk.falloff), 0, 1)
       const offset = (z * before.width + x) * 4
       const [red, green, blue, alpha] = disk.color
-      pixels[offset] = blend(pixels[offset], red, strength)
-      pixels[offset + 1] = blend(pixels[offset + 1], green, strength)
-      pixels[offset + 2] = blend(pixels[offset + 2], blue, strength)
-      pixels[offset + 3] = blend(pixels[offset + 3], alpha, strength)
+      const colors = [red, green, blue, alpha]
+      for (let channel = 0; channel < 4; channel += 1) {
+        if (onlyChannel !== undefined && channel !== onlyChannel) continue
+        pixels[offset + channel] = blend(pixels[offset + channel], colors[channel] ?? 0, strength)
+      }
     }
   }
   return { ...before, pixels }
+}
+
+function channelOffset(channel: GroundMaterialChannel): number {
+  return channel === 'r' ? 0 : channel === 'g' ? 1 : channel === 'b' ? 2 : 3
 }
 
 function blend(before: number | undefined, after: number, strength: number): number {

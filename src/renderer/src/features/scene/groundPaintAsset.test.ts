@@ -59,9 +59,10 @@ describe('ground paint assets', () => {
     await expect(saveGroundPaint('doc-1', 'terrain', paint, codec)).resolves.toBe(true)
     await expect(loadGroundPaint('doc-1', 'terrain', codec)).resolves.toEqual(paint)
     const terrain = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
-    expect(terrain?.kind === 'relief' ? terrain.groundMaterials : []).toEqual([
-      { albedo: { assetId: 'paint-1' }, normal: null, channel: 'r' },
-    ])
+    expect(terrain?.kind === 'relief' ? terrain.groundMaterials : []).toEqual([])
+    expect(terrain?.kind === 'relief' ? terrain.groundWeights : null).toEqual({
+      assetId: 'paint-1',
+    })
   })
 
   it('creates a derived picture and preserves the reserved material layers', async () => {
@@ -74,6 +75,7 @@ describe('ground paint assets', () => {
           { albedo: { assetId: 'source' }, normal: null, channel: 'r' },
           { albedo: { assetId: 'detail' }, normal: null, channel: 'g' },
         ],
+        groundWeights: { assetId: 'weights-before' },
       },
     )
     useScenes.getState().replace('doc-1', {
@@ -95,12 +97,15 @@ describe('ground paint assets', () => {
       true,
     )
 
-    expect(requests[0]).toMatchObject({ derivedFrom: 'source' })
+    expect(requests[0]).toMatchObject({ derivedFrom: 'weights-before' })
     expect(requests[0]).not.toHaveProperty('replaces')
     const stored = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
     expect(stored?.kind === 'relief' ? stored.groundMaterials : []).toEqual([
-      { albedo: { assetId: 'paint-1' }, normal: null, channel: 'r' },
+      { albedo: { assetId: 'source' }, normal: null, channel: 'r' },
       { albedo: { assetId: 'detail' }, normal: null, channel: 'g' },
     ])
+    expect(stored?.kind === 'relief' ? stored.groundWeights : null).toEqual({
+      assetId: 'paint-1',
+    })
   })
 })

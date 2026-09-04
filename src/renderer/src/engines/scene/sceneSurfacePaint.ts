@@ -1,9 +1,19 @@
-import { emptyGroundPaint, paintGroundDisk, type GroundPaint } from '@shared/domain/groundPaint'
-import { SCATTER_MASK_TEXELS, type SceneWorld } from '@shared/domain/scene'
+import {
+  emptyGroundWeights,
+  paintGroundChannelDisk,
+  type GroundPaint,
+} from '@shared/domain/groundPaint'
+import {
+  SCATTER_MASK_TEXELS,
+  type GroundMaterialChannel,
+  type SceneWorld,
+} from '@shared/domain/scene'
 import type { ReliefDiskStroke } from './reliefSculptor'
 
 export type ArmedWorld =
-  { kind: 'relief'; id: string; editId: string | null } | { kind: 'scatter'; id: string } | null
+  | { kind: 'relief'; id: string; editId: string | null; materialChannel?: GroundMaterialChannel }
+  | { kind: 'scatter'; id: string }
+  | null
 
 type SurfaceDisk = { x: number; z: number; radius: number; amount: number; falloff: number }
 export type HeldGroundPaint = { assetId: string | null; paint: GroundPaint }
@@ -14,6 +24,7 @@ export async function groundPaintedAt(
   load: ((terrainId: string) => Promise<GroundPaint | null>) | undefined,
   terrainId: string,
   disk: SurfaceDisk,
+  channel: GroundMaterialChannel,
 ): Promise<GroundPaint | null> {
   const terrain = world.layers.find(layer => layer.kind === 'relief' && layer.id === terrainId)
   if (!terrain || terrain.kind !== 'relief' || terrain.locked.sculpt) return null
@@ -21,10 +32,11 @@ export async function groundPaintedAt(
     terrain.groundWeights?.assetId ?? terrain.groundMaterials[0]?.albedo.assetId ?? null
   const cached = held.get(terrainId)
   const loaded = cached?.assetId === assetId ? cached.paint : await load?.(terrainId)
-  return paintGroundDisk(
-    loaded ?? emptyGroundPaint(SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS),
+  return paintGroundChannelDisk(
+    loaded ?? emptyGroundWeights(SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS),
     { origin: terrain.origin, size: terrain.size, elevation: terrain.elevation },
-    { ...disk, color: [32, 192, 64, 255] },
+    disk,
+    channel,
   )
 }
 

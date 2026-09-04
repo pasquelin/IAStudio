@@ -116,7 +116,7 @@ describe('a sculpt drag through the scene renderer', () => {
     renderer.dispose()
   })
 
-  it('paints RGBA ground pixels through the scene brush', async () => {
+  it('paints the armed ground-weight channel through the scene brush', async () => {
     const painted = vi.fn()
     const renderer = new SceneRenderer({
       onSelect: vi.fn(),
@@ -132,7 +132,7 @@ describe('a sculpt drag through the scene renderer', () => {
     const paint = painted.mock.calls[0]?.[1]
     expect(paint?.pixels.some((value: number) => value !== 0)).toBe(true)
     expect(paint?.pixels.slice((128 * 256 + 128) * 4, (128 * 256 + 128) * 4 + 4)).toEqual(
-      Uint8ClampedArray.from([32, 192, 64, 255]),
+      Uint8ClampedArray.from([255, 0, 0, 0]),
     )
     renderer.dispose()
   })

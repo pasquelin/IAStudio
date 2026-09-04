@@ -68,6 +68,13 @@ export function setTerrainGroundMaterials(
   return patchTerrain(`world:layers:${id}:groundMaterials`, id, { groundMaterials })
 }
 
+export function setTerrainGroundWeights(
+  id: string,
+  groundWeights: TextureRef | null,
+): Command<SceneState> {
+  return patchTerrain(`world:layers:${id}:groundWeights`, id, { groundWeights })
+}
+
 export function addTerrainEdit(terrainId: string, id = newId()): Command<SceneState> {
   const edit = terrainEditLayer({ id })
   return patchTerrainEdits(

@@ -1,12 +1,12 @@
 import type { GroundPaint } from '@shared/domain/groundPaint'
-import type { SceneWorld } from '@shared/domain/scene'
+import type { GroundMaterialChannel, SceneWorld } from '@shared/domain/scene'
 import { groundPaintedAt, type HeldGroundPaint } from './sceneSurfacePaint'
 
 type Disk = { x: number; z: number; radius: number; amount: number; falloff: number }
 
 export type SceneGroundPaintSession = {
   clear: () => void
-  paint: (terrainId: string, disk: Disk) => Promise<boolean>
+  paint: (terrainId: string, disk: Disk, channel: GroundMaterialChannel) => Promise<boolean>
   finish: () => Promise<void>
 }
 
@@ -19,8 +19,8 @@ export function createSceneGroundPaintSession(options: {
   let task: Promise<boolean> = Promise.resolve(false)
   return {
     clear: () => held.clear(),
-    paint: (terrainId, disk) => {
-      task = paintAfter(task, options, held, terrainId, disk)
+    paint: (terrainId, disk, channel) => {
+      task = paintAfter(task, options, held, terrainId, disk, channel)
       return task
     },
     finish: async () => {
@@ -39,10 +39,11 @@ async function paintAfter(
   held: Map<string, HeldGroundPaint>,
   terrainId: string,
   disk: Disk,
+  channel: GroundMaterialChannel,
 ): Promise<boolean> {
   await previous
   const world = options.world()
-  const paint = await groundPaintedAt(world, held, options.load, terrainId, disk)
+  const paint = await groundPaintedAt(world, held, options.load, terrainId, disk, channel)
   if (!paint) return false
   const terrain = world.layers.find(item => item.kind === 'relief' && item.id === terrainId)
   const assetId =

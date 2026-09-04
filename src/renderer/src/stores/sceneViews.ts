@@ -9,7 +9,7 @@ import {
   type PaneView,
   type PreviewWatch,
 } from '@/engines/scene/sceneView'
-import { type ClipRef, type DisplayMode } from '@shared/domain/scene'
+import { type ClipRef, type DisplayMode, type GroundMaterialChannel } from '@shared/domain/scene'
 import { NOTHING_ISOLATED, type Isolation } from '@/engines/scene/isolation'
 import { NOTHING_SNAPPED, snappingToggled, type SnapKind, type Snapping } from '@shared/domain/snap'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
@@ -26,7 +26,9 @@ import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 export type WatchedPreview = PreviewWatch & { laid?: ClipRef }
 
 export type ArmedWorld =
-  { kind: 'relief'; id: string; editId: string | null } | { kind: 'scatter'; id: string } | null
+  | { kind: 'relief'; id: string; editId: string | null; materialChannel?: GroundMaterialChannel }
+  | { kind: 'scatter'; id: string }
+  | null
 
 export type SceneView = {
   projection: ProjectionKind
