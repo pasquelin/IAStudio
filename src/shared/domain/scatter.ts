@@ -44,9 +44,8 @@ export type ScatterRules = {
 }
 
 /**
- * Trees, rocks, bushes — density in the hundreds of thousands globally, never a grass carpet.
- * Instances are not scene nodes: they are edited in bulk, like a sculpt. Origin/size/grain give
- * the painted mask its world mapping; they are not a second heightmap.
+ * One category per scatter layer keeps collision and density LOD unambiguous. Instances are edited
+ * in bulk, never as scene nodes; origin/size/grain map their paint, not a second heightmap.
  */
 type ScatterLayerBase = {
   kind: 'scatter'

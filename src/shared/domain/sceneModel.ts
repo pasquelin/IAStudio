@@ -77,10 +77,7 @@ export type ReliefLayer = {
   elevation: { min: number; max: number }
   grain: number
   edits: readonly TerrainEditLayer[]
-  /**
-   * Ground materials painted on this terrain. V1 writes 0 or 1 entry; the array is the Chantier B
-   * splat reservation — a later multi-layer blend reads the same field without a document migration.
-   */
+  /** Up to four appearances, each addressed by one channel of `groundWeights`. */
   groundMaterials: readonly GroundMaterialLayer[]
   /** Shared RGBA splat weights. Null preserves the single-material legacy rendering path. */
   groundWeights: TextureRef | null

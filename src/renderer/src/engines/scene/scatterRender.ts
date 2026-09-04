@@ -15,6 +15,7 @@ export type ScatterBatch = {
   poses: readonly ScatterPose[]
 }
 
+/** At 10/m², 32 m caps a full grass cell at 10,240 candidates instead of 655,360 at 256 m. */
 export const GRASS_CELL_SIZE = 32
 
 export type ScatterDensityLevel = { density: number; distanceMultiplier: number }
