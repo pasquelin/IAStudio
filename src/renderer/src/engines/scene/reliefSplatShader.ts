@@ -11,6 +11,18 @@ const LEGACY_HOOKS = new WeakMap<
   Pick<MeshStandardMaterial, 'onBeforeCompile' | 'customProgramCacheKey'>
 >()
 
+/**
+ * The cache key follows the uniform OBJECTS, and a constant one silently broke every rebind:
+ * three keeps one program per material and cache key, and only the cache MISS branch calls
+ * `onBeforeCompile` and installs `parameters.uniforms`. A second bind handing fresh objects under
+ * the same key left the GPU sampling the first set — textures the install had just disposed.
+ */
+const BOUND_UNIFORMS = new WeakMap<
+  MeshStandardMaterial,
+  { uniforms: ReliefSplatUniforms; key: string }
+>()
+let boundCount = 0
+
 export type ReliefSplatUniforms = {
   albedos: readonly IUniform<Texture>[]
   normals: readonly IUniform<Texture>[]
@@ -61,7 +73,10 @@ export function bindReliefSplat(
     shader.vertexShader = patchVertex(shader.vertexShader)
     shader.fragmentShader = patchFragment(shader.fragmentShader)
   }
-  material.customProgramCacheKey = () => 'relief-splat-v1'
+  const bound = BOUND_UNIFORMS.get(material)
+  const key = bound?.uniforms === uniforms ? bound.key : `relief-splat-${(boundCount += 1)}`
+  BOUND_UNIFORMS.set(material, { uniforms, key })
+  material.customProgramCacheKey = () => key
   material.needsUpdate = true
 }
 
@@ -71,6 +86,7 @@ export function clearReliefSplat(material: MeshStandardMaterial): void {
   material.onBeforeCompile = legacy.onBeforeCompile
   material.customProgramCacheKey = legacy.customProgramCacheKey
   LEGACY_HOOKS.delete(material)
+  BOUND_UNIFORMS.delete(material)
 }
 
 export function patchReliefSplatFragment(source: string): string {

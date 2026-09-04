@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LogEntry } from '@shared/ipc'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { useAssets } from '@/stores/assets'
 import { useProject } from '@/stores/project'
+import { useTasks } from '@/stores/tasks'
 import { importExternalFiles, takeExternalFiles } from './externalFiles'
 
 vi.mock('i18next', () => ({
@@ -92,6 +94,29 @@ describe('external file arrivals', () => {
     await vi.waitFor(() => expect(ask).toHaveBeenCalledOnce())
     expect(discard).toHaveBeenCalledWith('request-without-project')
     expect(ingestPaths).not.toHaveBeenCalled()
+  })
+
+  it('shows what the main already adopted when the import is stopped part way', async () => {
+    const refresh = vi.fn(async () => undefined)
+    const restore = useAssets.getState().refresh
+    useAssets.setState({ refresh })
+    installFakeBridge({
+      externalFiles: {
+        take: async () => [{ request: { id: 'request-7', folder: '' }, refused: [] }],
+        discard: async () => undefined,
+      },
+      // Never answers: the stop is what ends the call, and its answer is dropped with the race.
+      media: { ingestPaths: () => new Promise(() => {}) },
+    })
+
+    await takeExternalFiles()
+    await vi.waitFor(() => expect(Object.keys(useTasks.getState().running)).toHaveLength(1))
+    for (const id of Object.keys(useTasks.getState().running)) {
+      useTasks.getState().cancelTask(id)
+    }
+
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalled())
+    useAssets.setState({ refresh: restore })
   })
 
   it('releases the paths the main holds when an import fails', async () => {
