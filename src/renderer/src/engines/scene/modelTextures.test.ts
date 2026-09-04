@@ -75,6 +75,21 @@ describe('createModelTextures', () => {
     expect(textures.names()).toEqual(['Coat', 'Glass'])
   })
 
+  it('reports each mesh as a part of the same model root', () => {
+    const scripted = scriptedTextureCache()
+    const source = twoMaterialModel()
+    const meshes = source.children.filter(child => child instanceof Mesh)
+    if (meshes[0]) meshes[0].name = 'Hair'
+    if (meshes[1]) meshes[1].name = 'Head'
+
+    const textures = createModelTextures(scripted.cache, instanceOf(source), onChange)
+
+    expect(textures.parts()).toEqual([
+      { id: 'mesh-0', name: 'Hair', materialSlots: [0] },
+      { id: 'mesh-1', name: 'Head', materialSlots: [1] },
+    ])
+  })
+
   it('puts the project picture over the map the file carries', async () => {
     const scripted = scriptedTextureCache()
     const { source } = loadedModel()

@@ -33,6 +33,7 @@ export type ModelDressSectionProps = {
   slots: number
   /** Material names read from the model file, in slot order. */
   names?: readonly string[]
+  slotIndices?: readonly number[]
   /** The whole dress at once: the two modes exclude each other, so a change is never partial. */
   onChange: (dress: ModelDressRef | null) => void
   /** One slot, NAMED rather than written: assembling awaits, and this panel's list goes stale. */
@@ -46,6 +47,7 @@ export function ModelDressSection({
   dress,
   slots,
   names = [],
+  slotIndices,
   onChange,
   onWearAt,
 }: ModelDressSectionProps) {
@@ -82,7 +84,8 @@ export function ModelDressSection({
       // Blender's `+` and `−`, where every other list of the studio keeps them: on the heading of
       // the group they act on, never one per row.
       actions={
-        dress?.kind === 'materials' && (
+        dress?.kind === 'materials' &&
+        slotIndices === undefined && (
           <>
             <ToolButton
               icon={mdiMinus}
@@ -150,6 +153,7 @@ export function ModelDressSection({
           pictures={pictures}
           slots={slots}
           names={names}
+          indices={slotIndices}
           onChange={documentIds => onChange({ kind: 'materials', documentIds })}
           onAssemble={slot => void assemble(slot)}
         />

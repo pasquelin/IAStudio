@@ -24,6 +24,8 @@ export type ModelTextures = {
   count: () => number
   /** Names in editable slot order, with an empty string where the file names none. */
   names: () => readonly string[]
+  /** Meshes below the model root, with the material slots each one wears. */
+  parts: () => readonly ModelPart[]
   /** The overrides one slot holds, or none. An empty set puts its maps back to the file's own. */
   apply: (slot: number, maps: ModelDress['textures']) => void
   /** The finish one slot wears over its file. Absent fields leave what the glTF put there. */
@@ -31,6 +33,8 @@ export type ModelTextures = {
   /** Gives every reference back. The materials go with the instance that wore them. */
   dispose: () => void
 }
+
+export type ModelPart = { id: string; name: string; materialSlots: readonly number[] }
 
 /**
  * One material of the instance, and the maps the file had put in it. The MESHES, plural: a glTF
@@ -122,10 +126,24 @@ export function createModelTextures(
   // Its keys are the file's own materials, shared with the cached source: held past the build,
   // this map would keep them alive for as long as the instance wearing their clones.
   bySource.clear()
+  const parts: ModelPart[] = []
+  root.traverse(object => {
+    if (!(object instanceof Mesh)) return
+    const materials = Array.isArray(object.material) ? object.material : [object.material]
+    parts.push({
+      id: `mesh-${parts.length}`,
+      name: object.name,
+      materialSlots: materials.flatMap(material => {
+        const slot = slots.findIndex(candidate => candidate.held.material === material)
+        return slot < 0 ? [] : [slot]
+      }),
+    })
+  })
 
   return {
     count: () => slots.length,
     names: () => slots.map(slot => slot.held.material.name),
+    parts: () => parts,
     apply: (slot, maps) => {
       const held = slots[slot]
       if (held) return held.bindings.apply(maps)

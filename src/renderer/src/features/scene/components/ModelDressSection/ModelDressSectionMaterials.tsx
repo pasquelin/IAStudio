@@ -12,6 +12,7 @@ export type ModelDressSectionMaterialsProps = {
   /** How many materials the model's own file carries. Zero while its file has not landed. */
   slots: number
   names: readonly string[]
+  indices?: readonly number[]
   onChange: (documentIds: readonly string[]) => void
   onAssemble: (slot: number) => void
 }
@@ -25,6 +26,7 @@ export function ModelDressSectionMaterials({
   pictures,
   slots,
   names,
+  indices,
   onChange,
   onAssemble,
 }: ModelDressSectionMaterialsProps) {
@@ -32,15 +34,16 @@ export function ModelDressSectionMaterials({
   const options = useDocumentOptions('material')
   const rows =
     slots > worn.length ? [...worn, ...Array<string>(slots - worn.length).fill(NOTHING_WORN)] : worn
+  const shownSlots = indices ?? rows.map((_, slot) => slot)
 
   return (
     <>
-      {rows.map((documentId, slot) => (
+      {shownSlots.map(slot => (
         <ModelDressSectionRow
           key={slot}
           slot={slot}
           name={names[slot]}
-          documentId={documentId}
+          documentId={rows[slot] ?? NOTHING_WORN}
           options={options}
           pictures={pictures}
           // Beyond what the file carries — the row is kept, and does nothing until the model has

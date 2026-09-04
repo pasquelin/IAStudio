@@ -46,7 +46,13 @@ const held = () => characterOf(useCharacters.getState(), ASSET)
 beforeEach(() => {
   clearCharacters()
   clearScenes()
-  useModelFiles.setState({ materials: {}, materialNames: {}, stats: {} })
+  useModelFiles.setState({
+    materials: {},
+    materialNames: {},
+    parts: {},
+    selectedParts: {},
+    stats: {},
+  })
   useCharacterView.setState({ views: {} })
   openModelMaterial.mockReset()
   installFakeBridge({})
@@ -141,6 +147,29 @@ describe('what a character is made of', () => {
     show()
 
     expect(screen.getByText('Coat')).toBeInTheDocument()
+  })
+
+  it('shows only the material slots worn by the mesh selected in the scene tree', () => {
+    const documentId = workshopIdOf(ASSET)
+    useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
+    const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
+    useModelFiles.getState().reportMaterials(
+      documentId,
+      nodeId,
+      2,
+      ['Hair', 'Skin'],
+      [
+        { id: 'mesh-0', name: 'Hair', materialSlots: [0] },
+        { id: 'mesh-1', name: 'Head', materialSlots: [1] },
+      ],
+    )
+    useModelFiles.getState().selectPart(documentId, `${nodeId}:mesh-0`)
+    seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: ['', ''] } })
+
+    show()
+
+    expect(screen.getByLabelText('Hair')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Skin')).not.toBeInTheDocument()
   })
 
   it('extracts embedded pictures before opening them as an editable material', async () => {

@@ -14,7 +14,9 @@ import { characterOf, useCharacters } from '@/stores/character'
 import {
   materialNamesOfNode,
   materialSlotsOfNode,
+  modelPartsOfNode,
   modelStatsOf,
+  selectedModelPartOf,
   useModelFiles,
 } from '@/stores/modelFiles'
 
@@ -42,6 +44,12 @@ export function CharacterInspectorModel({
   )
   const stats = useModelFiles(state => modelStatsOf(state, documentId))
   const names = useModelFiles(state => materialNamesOfNode(state, documentId, nodeId))
+  const selectedPartId = useModelFiles(state => selectedModelPartOf(state, documentId))
+  const selectedPart = useModelFiles(state =>
+    modelPartsOfNode(state, documentId, nodeId).find(
+      part => `${nodeId}:${part.id}` === selectedPartId,
+    ),
+  )
   const run = useCharacters(state => state.runCommand)
   const number = (value: number): string => formatDecimal(value, i18n.language, { digits: 0 })
 
@@ -68,6 +76,7 @@ export function CharacterInspectorModel({
         dress={character.dress}
         slots={slots}
         names={names}
+        slotIndices={selectedPart?.materialSlots}
         onChange={dress => run(assetId, dressCharacter(dress))}
         onWearAt={(slot, materialId) =>
           run(

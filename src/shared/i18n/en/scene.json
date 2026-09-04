@@ -78,7 +78,8 @@
     "humanoidHint": "A low-poly human silhouette, painted as clothes, the size of a walking body"
   },
   "scene": {
-    "root": "Scene",
+  "root": "Scene",
+  "modelMesh": "Mesh {{index}}",
     "sortByScene": "Scene order",
     "onAir": "On air",
     "previewFull": "Grow the preview to the whole view",

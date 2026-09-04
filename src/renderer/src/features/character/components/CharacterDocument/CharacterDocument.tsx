@@ -183,7 +183,8 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
     if (!element || assetId === '') return
 
     const renderer = new SceneRenderer({
-      onSelect: () => {},
+      // A viewport click addresses the whole model root, never one virtual mesh from the tree.
+      onSelect: () => useModelFiles.getState().selectPart(workshopId, null),
       // The gizmo's own report, once per gesture. A joint dragged is a joint that RESTS there:
       // the fit lands each one near enough off a bounding box, and this is the hand correcting it.
       onTransform: moves => {
@@ -213,8 +214,8 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
         useCharacterView.getState().noteCharacterSample(assetId, measured)
         stage.read(rig, extras)
       },
-      onMaterials: (id, count, names) =>
-        useModelFiles.getState().reportMaterials(workshopId, id, count, names),
+      onMaterials: (id, count, names, parts) =>
+        useModelFiles.getState().reportMaterials(workshopId, id, count, names, parts),
       onStats: stats => useModelFiles.getState().reportStats(workshopId, stats),
       // Kept for ⌘S: only the engine ever weighs a mesh against a rig, and the save runs from
       // `documentIo` — outside this tab.

@@ -4,6 +4,7 @@ import { withoutKey } from '@/helpers/objects'
 import type { RetargetFit } from '@/engines/scene/retarget'
 import type { RigState } from '@/engines/scene/rigState'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/sceneStats'
+import type { ModelPart } from '@/engines/scene/modelTextures'
 
 type ClipsByNode = Record<string, readonly string[]>
 
@@ -36,11 +37,15 @@ type ModelFilesState = {
   /** How many MATERIALS each model's file carries — its slots. The count lives in the GLB. */
   materials: Record<string, Record<string, number>>
   materialNames: Record<string, Record<string, readonly string[]>>
+  parts: Record<string, Record<string, readonly ModelPart[]>>
+  selectedParts: Record<string, string>
+  selectPart: (documentId: string, partId: string | null) => void
   reportMaterials: (
     documentId: string,
     nodeId: string,
     count: number,
     names?: readonly string[],
+    parts?: readonly ModelPart[],
   ) => void
   stats: Record<string, SceneStats>
   reportStats: (documentId: string, stats: SceneStats) => void
@@ -68,6 +73,14 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
   rigs: {},
   materials: {},
   materialNames: {},
+  parts: {},
+  selectedParts: {},
+  selectPart: (documentId, partId) =>
+    set(state => ({
+      selectedParts: partId
+        ? { ...state.selectedParts, [documentId]: partId }
+        : withoutKey(state.selectedParts, documentId),
+    })),
   stats: {},
   lengths: {},
   fits: {},
@@ -99,7 +112,7 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       },
     })),
 
-  reportMaterials: (documentId, nodeId, count, names = []) =>
+  reportMaterials: (documentId, nodeId, count, names = [], parts = []) =>
     set(state => ({
       materials: {
         ...state.materials,
@@ -109,6 +122,7 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
         ...state.materialNames,
         [documentId]: { ...state.materialNames[documentId], [nodeId]: names },
       },
+      parts: { ...state.parts, [documentId]: { ...state.parts[documentId], [nodeId]: parts } },
     })),
 
   reportStats: (documentId, stats) =>
@@ -136,6 +150,8 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       fits: withoutKey(state.fits, documentId),
       materials: withoutKey(state.materials, documentId),
       materialNames: withoutKey(state.materialNames, documentId),
+      parts: withoutKey(state.parts, documentId),
+      selectedParts: withoutKey(state.selectedParts, documentId),
       stats: withoutKey(state.stats, documentId),
     })),
 }))
@@ -194,6 +210,20 @@ export function materialNamesOfNode(
   nodeId: string,
 ): readonly string[] {
   return state.materialNames[documentId]?.[nodeId] ?? NO_CLIPS
+}
+
+export function modelPartsOfNode(
+  state: ModelFilesState,
+  documentId: string,
+  nodeId: string,
+): readonly ModelPart[] {
+  return state.parts[documentId]?.[nodeId] ?? NO_PARTS
+}
+
+const NO_PARTS: readonly ModelPart[] = []
+
+export function selectedModelPartOf(state: ModelFilesState, documentId: string): string | null {
+  return state.selectedParts[documentId] ?? null
 }
 
 /**

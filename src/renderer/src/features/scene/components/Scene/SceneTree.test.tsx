@@ -9,6 +9,8 @@ import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { groupNodeFixture, meshNode } from '@/engines/scene/scene-fixtures'
 import { SceneTree } from './SceneTree'
 import { SceneActions } from './SceneActions'
+import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { useModelFiles } from '@/stores/modelFiles'
 
 /** jsdom implements no `DataTransfer`; the tree reads exactly these three members of one. */
 function dragData() {
@@ -34,6 +36,32 @@ beforeEach(() => {
 })
 
 describe('SceneTree', () => {
+  it('shows and selects multiple meshes below one model root without making them scene nodes', async () => {
+    const model = modelNodeFixture('character')
+    useScenes.getState().replace('doc-1', { ...EMPTY_SCENE, nodes: [model] })
+    useModelFiles.getState().reportMaterials(
+      'doc-1',
+      model.id,
+      2,
+      ['Hair', 'Skin'],
+      [
+        { id: 'mesh-0', name: 'Hair', materialSlots: [0] },
+        { id: 'mesh-1', name: 'Head', materialSlots: [1] },
+      ],
+    )
+
+    render(<SceneTree documentId="doc-1" modelContents />)
+
+    expect(screen.getByText('Hair')).toBeInTheDocument()
+    expect(screen.getByText('Head')).toBeInTheDocument()
+    expect(scene().nodes).toEqual([model])
+
+    await userEvent.click(screen.getByText('Hair'))
+
+    expect(scene().selectedIds).toEqual([model.id])
+    expect(useModelFiles.getState().selectedParts['doc-1']).toBe(`${model.id}:mesh-0`)
+  })
+
   it('shows the scene root and its three default lights', () => {
     render(<SceneTree documentId="doc-1" />)
 

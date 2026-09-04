@@ -1,4 +1,4 @@
-import { mdiCubeOutline } from '@mdi/js'
+import { mdiCubeOutline, mdiShapeOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Row } from '@/components/Row'
@@ -19,18 +19,28 @@ import { sceneEngineOf } from '@/stores/sceneEngines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useTreeFolds } from '@/stores/treeFolds'
 import { sceneNodeDrag } from '../dragged'
+import { modelPartsOfNode, selectedModelPartOf, useModelFiles } from '@/stores/modelFiles'
+import type { ModelPart } from '@/engines/scene/modelTextures'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
 const SCENE_ROOT = 'scene-root'
 const SCENE_ORDER = 'sceneOrder'
 
-type SceneItem = TreeNode & { node: SceneNode | null }
+type SceneItem = TreeNode & { node: SceneNode | null; part?: ModelPart }
+type SceneTreeProps = { documentId: string; modelContents?: boolean }
 
-export function SceneTree({ documentId }: { documentId: string }) {
+export function SceneTree({ documentId, modelContents = false }: SceneTreeProps) {
   const { t, i18n } = useTranslation()
   const language = i18n.language
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
+  const modelNodeId = nodes.find(node => node.type === 'model')?.id ?? ''
+  const parts = useModelFiles(state => modelPartsOfNode(state, documentId, modelNodeId))
+  const selectedPart = useModelFiles(state => selectedModelPartOf(state, documentId))
+  useEffect(() => {
+    if (selectedPart && !selectedIds.includes(modelNodeId))
+      useModelFiles.getState().selectPart(documentId, null)
+  }, [documentId, modelNodeId, selectedIds, selectedPart])
   // Folding is session state: nobody wants Cmd-Z to give them back a collapsed branch.
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set([SCENE_ROOT]))
   const [collection, setCollection] = useState<CollectionState>({ ...LIST_ONLY, sort: SCENE_ORDER })
@@ -47,45 +57,34 @@ export function SceneTree({ documentId }: { documentId: string }) {
   // lost them. Folding it again has to stick, so this happens once per group and not per render.
   const known = useRef(new Set<string>())
   useEffect(() => {
-    const fresh = nodes.filter(node => node.type === 'group' && !known.current.has(node.id))
+    const fresh = nodes.filter(
+      node =>
+        (node.type === 'group' || (modelContents && node.type === 'model')) &&
+        !known.current.has(node.id),
+    )
     if (fresh.length === 0) return
 
     for (const group of fresh) known.current.add(group.id)
     setExpandedIds(current => new Set([...current, ...fresh.map(group => group.id)]))
-  }, [nodes])
+  }, [modelContents, nodes])
 
   const items = useMemo<SceneItem[]>(
     () => [
       { id: SCENE_ROOT, parentId: null, node: null },
       ...nodes.map(node => ({ id: node.id, parentId: node.parentId ?? SCENE_ROOT, node })),
+      ...modelPartItems(modelContents, modelNodeId, parts),
     ],
-    [nodes],
+    [modelContents, modelNodeId, nodes, parts],
+  )
+  const partIds = useMemo(
+    () => new Set(modelPartItems(modelContents, modelNodeId, parts).map(part => part.id)),
+    [modelContents, modelNodeId, parts],
   )
 
-  const shownItems = useMemo<SceneItem[]>(() => {
-    const term = collection.search.trim().toLocaleLowerCase(language)
-    const kept = new Set<string>([SCENE_ROOT])
-    const byId = new Map(items.map(item => [item.id, item]))
-
-    for (const item of items) {
-      if (!item.node || (term && !item.node.name.toLocaleLowerCase(language).includes(term))) {
-        continue
-      }
-      for (let current: SceneItem | undefined = item; current;) {
-        kept.add(current.id)
-        current = current.parentId ? byId.get(current.parentId) : undefined
-      }
-    }
-
-    const shown = items.filter(item => term === '' || kept.has(item.id))
-    if (collection.sort === SCENE_ORDER) return shown
-    const descending = collection.sort === 'nameDesc'
-    return shown.sort((one, other) => {
-      if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
-      const order = one.node.name.localeCompare(other.node.name, language)
-      return descending ? -order : order
-    })
-  }, [collection.search, collection.sort, items, language])
+  const shownItems = useMemo(
+    () => filteredSceneItems(items, collection, language),
+    [collection, items, language],
+  )
 
   const expandableIds = useMemo(() => {
     const parents = new Set(shownItems.flatMap(item => (item.parentId ? [item.parentId] : [])))
@@ -159,15 +158,18 @@ export function SceneTree({ documentId }: { documentId: string }) {
         <Tree
           nodes={shownItems}
           label={t('panels.scene')}
-          selectedIds={selectedIds}
+          selectedIds={selectedPart ? [selectedPart] : selectedIds}
           expandedIds={expandedIds}
           // The root is a row but not a node: clicking it selects nothing, and a range that spans
           // it steps over it rather than selecting a thing the scene has never heard of.
-          selectable={item => item.node !== null}
+          selectable={item => item.node !== null || item.part !== undefined}
           // Taking hold of a row already picked takes the whole selection with it: six objects filed
           // into a group in one gesture, which is the reason anyone selects six. A row OUTSIDE the
           // selection travels alone and leaves it whole — see `batchFrom`.
           dragMultiple
+          draggable={item => item.node !== null}
+          droppable={item => item.part === undefined}
+          insertable={item => item.part === undefined}
           // Dropped ONTO a row, which hangs the batch from it — the root standing for the scene, so
           // that is also how a node comes back out of a group.
           onDrop={(ids, parentId) =>
@@ -203,7 +205,11 @@ export function SceneTree({ documentId }: { documentId: string }) {
               selectedIds.includes(item.node.id) ? selectedIds : [item.node.id],
             )
           }}
-          onSelect={(ids, mode) => selectIn(documentId, ids, mode)}
+          onSelect={(ids, mode) => {
+            const partId = [...ids].reverse().find(id => partIds.has(id)) ?? null
+            useModelFiles.getState().selectPart(documentId, partId)
+            selectIn(documentId, partId ? [modelNodeId] : ids, partId ? 'replace' : mode)
+          }}
           onToggle={toggle}
           // Through the tree rather than from the row, as the layer stack does: it holds the
           // `preventDefault` a right-click needs — without it the system raises its clipboard menu
@@ -237,7 +243,12 @@ export function SceneTree({ documentId }: { documentId: string }) {
             )
           }
           renderRow={({ node: item }) =>
-            item.node ? (
+            item.part ? (
+              <Row
+                icon={mdiShapeOutline}
+                title={item.part.name || t('scene.modelMesh', { index: item.part.id.slice(5) })}
+              />
+            ) : item.node ? (
               <SceneNodeRow
                 documentId={documentId}
                 node={item.node}
@@ -253,5 +264,49 @@ export function SceneTree({ documentId }: { documentId: string }) {
         />
       </div>
     </div>
+  )
+}
+
+function modelPartItems(
+  shown: boolean,
+  modelNodeId: string,
+  parts: readonly ModelPart[],
+): SceneItem[] {
+  if (!shown || parts.length <= 1) return []
+  return parts.map(part => ({
+    id: `${modelNodeId}:${part.id}`,
+    parentId: modelNodeId,
+    node: null,
+    part,
+  }))
+}
+
+function filteredSceneItems(
+  items: readonly SceneItem[],
+  collection: CollectionState,
+  language: string,
+): SceneItem[] {
+  const term = collection.search.trim().toLocaleLowerCase(language)
+  const kept = new Set<string>([SCENE_ROOT])
+  const byId = new Map(items.map(item => [item.id, item]))
+  for (const item of items) {
+    const name = item.node?.name ?? item.part?.name ?? ''
+    if ((!item.node && !item.part) || (term && !name.toLocaleLowerCase(language).includes(term)))
+      continue
+    for (let current: SceneItem | undefined = item; current;) {
+      kept.add(current.id)
+      current = current.parentId ? byId.get(current.parentId) : undefined
+    }
+  }
+  const shown = items.filter(item => term === '' || kept.has(item.id))
+  if (collection.sort === SCENE_ORDER) return shown
+  const direction = collection.sort === 'nameDesc' ? -1 : 1
+  return shown.sort(
+    (one, other) =>
+      direction *
+      (one.node?.name ?? one.part?.name ?? '').localeCompare(
+        other.node?.name ?? other.part?.name ?? '',
+        language,
+      ),
   )
 }

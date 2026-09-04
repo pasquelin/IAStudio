@@ -58,7 +58,7 @@ export abstract class SceneRendererModels extends SceneRendererGeometry {
             ),
         )
         this.modelMaps.set(node.id, maps)
-        this.options.onMaterials?.(node.id, maps.count(), maps.names())
+        this.options.onMaterials?.(node.id, maps.count(), maps.names(), maps.parts())
         const sceneTask1Step2 = () => {
           this.dressModel(node.id)
           // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not

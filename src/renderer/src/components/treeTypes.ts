@@ -33,6 +33,7 @@ export type TreeProps<T extends TreeNode> = {
   onDrop?: (ids: readonly string[], parentId: string) => void
   onInsert?: (ids: readonly string[], parentId: string | null, index: number) => void
   draggable?: (node: T) => boolean
+  insertable?: (node: T) => boolean
   dragMultiple?: boolean
   onDropRoot?: (ids: readonly string[]) => void
   foreign?: ForeignDrop<T>

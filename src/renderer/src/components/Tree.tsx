@@ -139,7 +139,11 @@ export function Tree<T extends TreeNode>(props: TreeProps<T>) {
   }
   const dropTargetFor = (row: TreeRow<T>, event: DragEvent<HTMLElement>): DropTarget | null => {
     const into = onDrop !== undefined && accepts(row.node)
-    if (onInsert === undefined || !(selectable?.(row.node) ?? true))
+    if (
+      onInsert === undefined ||
+      !(selectable?.(row.node) ?? true) ||
+      !(props.insertable?.(row.node) ?? true)
+    )
       return into ? { zone: 'into' } : null
     const box = event.currentTarget.getBoundingClientRect()
     const ratio = (event.clientY - box.top) / box.height

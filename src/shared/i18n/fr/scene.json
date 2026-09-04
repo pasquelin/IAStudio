@@ -78,7 +78,8 @@
     "humanoidHint": "Une silhouette humaine en polygones, habillée de couleurs, à la taille d’un corps qui marche"
   },
   "scene": {
-    "root": "Scène",
+  "root": "Scène",
+  "modelMesh": "Mesh {{index}}",
     "sortByScene": "Ordre de la scène",
     "onAir": "À l’antenne",
     "previewFull": "Agrandir l’aperçu à toute la vue",
