@@ -140,6 +140,8 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
   const startPlayStep1 = () => {
     const drawn: SceneDraw = {
       apply: state => deps.renderer.apply(state),
+      applyRuntimeTransforms: placements =>
+        deps.renderer.applyRuntimeTransforms?.(placements) ?? false,
       viewPlacement: () => deps.renderer.viewPlacement(),
       releaseView: () => deps.renderer.releaseView(),
       placeView: view => {
