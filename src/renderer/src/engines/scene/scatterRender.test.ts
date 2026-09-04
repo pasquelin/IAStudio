@@ -44,8 +44,20 @@ describe('scatterDrawnOf', () => {
     const mesh = drawn.levels[0]?.object
     expect(mesh).toBeInstanceOf(InstancedMesh)
     expect(mesh instanceof InstancedMesh ? mesh.count : 0).toBe(3)
-    expect(drawn.levels[1]?.object).toBeInstanceOf(Object3D)
-    expect(drawn.levels[1]?.object instanceof InstancedMesh).toBe(false)
+    expect(drawn.levels).toHaveLength(3)
+    expect(drawn.levels[1]?.object).toBeInstanceOf(InstancedMesh)
+    expect(
+      drawn.levels[1]?.object instanceof InstancedMesh ? drawn.levels[1].object.count : 0,
+    ).toBe(1)
+    expect(drawn.levels[2]?.object).toBeInstanceOf(Object3D)
+    expect(drawn.levels[2]?.object instanceof InstancedMesh).toBe(false)
+    expect(drawn.levels.map(level => level.distance)).toEqual([
+      0,
+      expect.any(Number),
+      expect.any(Number),
+    ])
+    expect(drawn.levels[2]?.distance ?? 0).toBeGreaterThan(drawn.levels[1]?.distance ?? 0)
+    expect(drawn.position.toArray()).toEqual([CELL_SIZE / 2, 0, CELL_SIZE / 2])
   })
 })
 

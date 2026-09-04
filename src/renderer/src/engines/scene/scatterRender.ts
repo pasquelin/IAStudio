@@ -3,7 +3,7 @@ import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import type { ScatterPose } from '@shared/domain/scatterGenerate'
 import { bakedInstancesOf } from './bakedInstances'
 import type { BakedInstance } from './sceneState'
-import { CELL_SIZE, cellKey, type CellKey, type WorldPartition } from './worldPartition'
+import { CELL_SIZE, cellCoords, cellKey, type CellKey, type WorldPartition } from './worldPartition'
 
 export type ScatterBatch = {
   assetId: string
@@ -34,19 +34,36 @@ export function scatterBatchesOf(
 }
 
 export function scatterDrawnOf(batch: ScatterBatch, source: Mesh): LOD {
+  const { cx, cz } = cellCoords(batch.cell)
+  const centre = { x: (cx + 0.5) * CELL_SIZE, z: (cz + 0.5) * CELL_SIZE }
   const mesh = bakedInstancesOf(
     source.geometry,
     source.material,
-    bakedOf(batch.poses),
+    bakedOf(batch.poses, centre),
     source.matrixWorld,
   )
   const lod = new LOD()
   lod.name = `scatter-${scatterBatchKey(batch.assetId, batch.cell)}`
+  lod.position.set(centre.x, 0, centre.z)
   mesh.computeBoundingSphere()
   const radius = mesh.boundingSphere?.radius ?? 1
   lod.addLevel(mesh, 0)
-  const far = radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[0] ?? 12)
-  lod.addLevel(new Object3D(), far)
+  lod.addLevel(
+    bakedInstancesOf(
+      source.geometry,
+      source.material,
+      bakedOf(
+        batch.poses.filter((_, index) => index % 4 === 0),
+        centre,
+      ),
+      source.matrixWorld,
+    ),
+    radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[0] ?? 12),
+  )
+  lod.addLevel(
+    new Object3D(),
+    radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[1] ?? 36),
+  )
   return lod
 }
 
@@ -62,12 +79,15 @@ export function holdScatterCells(
   }
 }
 
-function bakedOf(poses: readonly ScatterPose[]): readonly BakedInstance[] {
+function bakedOf(
+  poses: readonly ScatterPose[],
+  centre: { x: number; z: number },
+): readonly BakedInstance[] {
   return poses.map((pose, slot) => ({
     sourceId: `${slot}`,
     name: pose.assetId,
     transform: {
-      position: { x: pose.x, y: pose.y, z: pose.z },
+      position: { x: pose.x - centre.x, y: pose.y, z: pose.z - centre.z },
       rotation: pose.rotation,
       scale: { x: pose.scale, y: pose.scale, z: pose.scale },
     },

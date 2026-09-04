@@ -54,7 +54,7 @@ describe('createScatterSurface', () => {
       lod.levels.flatMap(level => (level.object instanceof InstancedMesh ? [level.object] : [])),
     )
     expect(lods.length).toBeGreaterThan(0)
-    expect(meshes.length).toBe(lods.length)
+    expect(meshes.length).toBe(lods.length * 2)
     expect(new Set(meshes.map(mesh => mesh.geometry)).size).toBe(2)
     expect(meshes.reduce((sum, mesh) => sum + mesh.count, 0)).toBeGreaterThan(1)
     expect(surface.object.children.length).toBe(lods.length)
