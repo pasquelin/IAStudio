@@ -89,6 +89,14 @@ describe('scatter layer commands', () => {
     expect(scatterIn(stillGrass)).toMatchObject({ category: 'grass', collision: false })
   })
 
+  it('keeps the category of a locked scatter', () => {
+    const [locked] = run(sceneOf(), emptyHistory(), setScatterLocked('trees', true))
+    const [unchanged, history] = run(locked, emptyHistory(), setScatterCategory('trees', 'grass'))
+
+    expect(scatterIn(unchanged)?.category).toBe('props')
+    expect(history.past).toEqual([])
+  })
+
   it('reorders mixed relief and scatter layers by id', () => {
     const terrain = reliefLayer({ assetId: 'height' }, { id: 'ground' })
     const scatter = scatterLayer({ id: 'trees' })

@@ -38,6 +38,7 @@ export function WorldToolsScatterActions({ documentId, scatter }: Props) {
   const categories = SCATTER_CATEGORIES.map(category => ({
     value: category,
     label: t(`world.scatterCategory_${category}`),
+    disabled: scatter.locked,
   }))
 
   return (

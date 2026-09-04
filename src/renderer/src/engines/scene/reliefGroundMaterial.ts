@@ -37,8 +37,13 @@ export function applyGroundPaint(
 ): void {
   if (!terrain?.groundUniforms) return
   const texture = paintTexture(paint)
-  terrain.groundUniforms.weights.value.dispose()
+  const previous = terrain.groundUniforms.weights.value
+  previous.dispose()
   terrain.groundUniforms.weights.value = texture
+  const owned = terrain.groundTextures ?? []
+  terrain.groundTextures = owned.some(candidate => candidate === previous)
+    ? owned.map(candidate => (candidate === previous ? texture : candidate))
+    : [...owned, texture]
 }
 
 export function syncGroundMaterial(
@@ -113,9 +118,7 @@ async function loadSplat(
   const layers = orderedLayers(layer.groundMaterials)
   const ids = splatIds(layers, layer.groundWeights?.assetId)
   try {
-    const loaded = await Promise.all(
-      ids.map(({ id, color }) => groundTexture(id, options, color ? SRGBColorSpace : NoColorSpace)),
-    )
+    const loaded = await loadGroundTextures(ids, options)
     if (token !== terrain.groundGeneration) {
       disposeTextures(loaded)
       return
@@ -125,6 +128,28 @@ async function loadSplat(
   } catch (error) {
     if (token === terrain.groundGeneration) options.onFailure?.(ids[0]?.id ?? '', error)
   }
+}
+
+async function loadGroundTextures(
+  ids: readonly { id: string; color: boolean }[],
+  options: Options,
+): Promise<readonly Texture[]> {
+  const results = await Promise.allSettled(
+    ids.map(({ id, color }) => groundTexture(id, options, color ? SRGBColorSpace : NoColorSpace)),
+  )
+  const loaded: Texture[] = []
+  let failed = false
+  let failure: unknown
+  for (const result of results) {
+    if (result.status === 'fulfilled') loaded.push(result.value)
+    else if (!failed) {
+      failed = true
+      failure = result.reason
+    }
+  }
+  if (!failed) return loaded
+  disposeTextures(loaded)
+  throw failure
 }
 
 function orderedLayers(layers: readonly GroundMaterialLayer[]): readonly GroundMaterialLayer[] {

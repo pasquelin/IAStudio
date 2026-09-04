@@ -23,6 +23,10 @@ function pose(assetId: string, x: number, z: number): ScatterPose {
 }
 
 describe('scatterBatchesOf', () => {
+  it('keeps an empty cell registry empty', () => {
+    expect(scatterBatchesOf([])).toEqual([])
+  })
+
   it('opens one batch per asset and world-partition cell, never one per pose', () => {
     const poses = [
       pose('pine', 1, 1),

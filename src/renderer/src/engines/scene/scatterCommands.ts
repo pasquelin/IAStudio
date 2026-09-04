@@ -62,7 +62,7 @@ export function setScatterAssets(id: string, assets: ScatterLayer['assets']): Co
 }
 
 export function setScatterCategory(id: string, category: ScatterCategory): Command<SceneState> {
-  return patchScatter(`world:layers:${id}:category`, id, { category })
+  return patchScatter(`world:layers:${id}:category`, id, { category }, layer => layer.locked)
 }
 
 export function setScatterCollision(id: string, collision: boolean): Command<SceneState> {
