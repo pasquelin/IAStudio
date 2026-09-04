@@ -1446,6 +1446,28 @@ avant de calculer quoi que ce soit** — un rendu prend des minutes.
 
 ---
 
+## Optimiser et exporter un jeu
+
+La scène modifiée reste le monde auteur : chaque arbre, accessoire et objet piloté par un script
+garde son identité et reste modifiable. **Play** et **Exporter le jeu…** construisent un monde
+runtime séparé. Les optimisations sûres partagent les géométries et matières répétées,
+instancient les objets compatibles, regroupent les objets statiques proches et conservent
+l’identifiant source pour le picking, les scripts et la physique.
+
+Utilisez **Édition ▸ Optimiser la sélection…** pour prévisualiser puis appliquer une consigne aux
+objets choisis. **Édition ▸ Performances du monde…** rend compte de toute la scène. Les deux
+distinguent les chiffres mesurés des résultats estimés. Le compilateur runtime réutilise les
+zones inchangées quand Play est relancé.
+
+**Édition ▸ Exporter le jeu…** présente d’abord les opérations SAFE, qui ne changent ni l’image
+attendue ni le comportement. La section Avancé est volontaire : niveaux de distance générés,
+simplification géométrique, compression et redimensionnement des images peuvent modifier le
+résultat. Le dialogue affiche donc **Changements visuels : AUCUN** jusqu’à l’activation de l’une
+d’elles, puis **POSSIBLES**. Les niveaux générés gardent toujours l’original en LOD0. L’export ne
+réécrit jamais la scène auteur ; son cache runtime peut être supprimé puis reconstruit.
+
+---
+
 ## Ce qui manque encore
 
 L’espace Modélisation a désormais tout ce que ce manuel décrit. Ce qui reste tient en deux phrases : les

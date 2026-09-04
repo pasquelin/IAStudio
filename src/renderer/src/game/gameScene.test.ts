@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { BatchedMesh, InstancedMesh, LOD, Matrix4, Mesh } from 'three'
+import { BatchedMesh, InstancedMesh, LOD, Matrix4, Mesh, type Object3D } from 'three'
 import type { MeshStandardMaterial } from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
 import { csgPartOf, type CsgGraph } from '@shared/domain/csg'
-import { carvedNode, groupNode, lightNode, meshNode } from '@/engines/scene/nodeFactory'
+import { carvedNode, groupNode, lightNode, meshNode, modelNode } from '@/engines/scene/nodeFactory'
 import {
   DEFAULT_MATERIAL,
   EMPTY_SCENE,
@@ -15,6 +15,8 @@ import {
 import { colliderFromNode } from './colliderFromNode'
 import { buildGameScene } from './gameScene'
 import { WORTH_INSTANCING } from '@/engines/scene/grouping'
+import { compileLossyWorld } from '@/engines/scene/lossyWorldCompiler'
+import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 
 const NOTHING: AssetPort = { urlOf: () => null }
 const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
@@ -141,6 +143,50 @@ describe('a scene as a game draws it', () => {
     expect(matrix.elements.slice(12, 15)).toEqual([7, 1, -2])
   })
 
+  it('builds every generated LOD level as an instanced draw for a baked group', async () => {
+    const base = meshNode(
+      { kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 },
+      { name: 'Baked trees' },
+    )
+    if (base.type !== 'mesh') throw new Error('expected a mesh fixture')
+    const node: SceneNode = {
+      ...base,
+      instances: [
+        { sourceId: 'first', name: 'First', transform: IDENTITY_TRANSFORM },
+        { sourceId: 'second', name: 'Second', transform: IDENTITY_TRANSFORM },
+      ],
+    }
+    const state = scene([node])
+    const built = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, { ...NO_LOSSY_OPTIMIZATION, generateLods: true }),
+    )
+
+    expect(built.byEntity.get(node.id)).toBeInstanceOf(LOD)
+    expect(instancesIn(built.byEntity.get(node.id))).toHaveLength(3)
+    expect(instancesIn(built.byEntity.get(node.id)).every(mesh => mesh.count === 2)).toBe(true)
+  })
+
+  it('loads and preserves existing LODs carried by a model asset', async () => {
+    const source = new LOD()
+    source.addLevel(new Mesh(), 0)
+    source.addLevel(new Mesh(), 20)
+    const node = modelNode('model-1', 'Model')
+    const built = await buildGameScene(
+      scene([node]),
+      { urlOf: () => 'assets/model.glb' },
+      undefined,
+      async () => source,
+    )
+
+    const rendered = built.byEntity.get(node.id)
+    expect(rendered).toBeInstanceOf(LOD)
+    expect(rendered instanceof LOD ? rendered.levels.map(level => level.distance) : []).toEqual([
+      0, 20,
+    ])
+  })
+
   /** A game has no picture for a texture the project has lost, and draws the shape all the same. */
   it('draws a shape whose texture nothing resolves, with no map on it', async () => {
     const node = meshNode(BOX)
@@ -182,12 +228,12 @@ describe('a scene as a game draws it', () => {
 
   it('keeps the original geometry as LOD0 and simplifies only the distant levels', async () => {
     const node = meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 })
-    const built = await buildGameScene(scene([node]), NOTHING, {
-      generateLods: true,
-      geometrySimplification: 'off',
-      textureCompression: 'off',
-      textureReduction: 'off',
-    })
+    const state = scene([node])
+    const built = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, { ...NO_LOSSY_OPTIMIZATION, generateLods: true }),
+    )
     const object = built.byEntity.get(node.id)
 
     expect(object).toBeInstanceOf(LOD)
@@ -206,12 +252,15 @@ describe('a scene as a game draws it', () => {
   it('simplifies one mesh only when a LOSSY geometry level is named', async () => {
     const node = meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 })
     const original = await buildGameScene(scene([node]), NOTHING)
-    const reduced = await buildGameScene(scene([node]), NOTHING, {
-      generateLods: false,
-      geometrySimplification: 'aggressive',
-      textureCompression: 'off',
-      textureReduction: 'off',
-    })
+    const state = scene([node])
+    const reduced = await buildGameScene(
+      state,
+      NOTHING,
+      compileLossyWorld(state, {
+        ...NO_LOSSY_OPTIMIZATION,
+        geometrySimplification: 'aggressive',
+      }),
+    )
     const before = original.byEntity.get(node.id)
     const after = reduced.byEntity.get(node.id)
 
@@ -235,4 +284,12 @@ function pierced(): CsgGraph {
     ],
     collision: 'hull',
   }
+}
+
+function instancesIn(object: Object3D | undefined): readonly InstancedMesh[] {
+  const instances: InstancedMesh[] = []
+  object?.traverse(child => {
+    if (child instanceof InstancedMesh) instances.push(child)
+  })
+  return instances
 }

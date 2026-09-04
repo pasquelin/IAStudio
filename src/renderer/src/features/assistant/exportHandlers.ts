@@ -6,6 +6,7 @@ import {
   TEXTURE_REDUCTIONS,
   hasVisualChanges,
   type GameExportRequest,
+  type LossyOptimization,
 } from '@shared/domain/gameExport'
 import { scenePayloadOf } from '@/features/shell/sceneDocument'
 
@@ -20,6 +21,7 @@ import { boolOf, oneOf, textOf } from './actionInputs'
 import { messageOf } from '@shared/guards'
 import { projectName } from '@shared/domain/project'
 import { runtimeAssetIds } from '@/game/runtimeAssetIds'
+import { compileLossyWorld } from '@/engines/scene/lossyWorldCompiler'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
@@ -42,9 +44,22 @@ export const EXPORT_HANDLERS: ActionHandlers = {
         'with no "folder" named the studio raises a picker of the operating system, which a caller on the wire can neither fill nor read — name "folder" and send this again',
       )
 
+    const lossyOptimization: LossyOptimization = {
+      generateLods: boolOf(input, 'generateLods'),
+      geometrySimplification:
+        oneOf(input, 'geometrySimplification', GEOMETRY_SIMPLIFICATIONS) ??
+        NO_LOSSY_OPTIMIZATION.geometrySimplification,
+      textureCompression:
+        oneOf(input, 'textureCompression', TEXTURE_COMPRESSIONS) ??
+        NO_LOSSY_OPTIMIZATION.textureCompression,
+      textureReduction:
+        oneOf(input, 'textureReduction', TEXTURE_REDUCTIONS) ??
+        NO_LOSSY_OPTIMIZATION.textureReduction,
+    }
+    const visualChanges = hasVisualChanges(lossyOptimization) ? 'POSSIBLE' : 'NONE'
     let scenes: GameExportRequest['scenes']
     try {
-      scenes = await scenesOfProject()
+      scenes = await scenesOfProject(lossyOptimization)
     } catch (error) {
       return refused('failed', messageOf(error))
     }
@@ -58,19 +73,6 @@ export const EXPORT_HANDLERS: ActionHandlers = {
     if (!entry) return refused('badInput', `no scene named "${wanted}"`)
 
     const compiled = await compiledScripts()
-    const lossyOptimization = {
-      generateLods: boolOf(input, 'generateLods'),
-      geometrySimplification:
-        oneOf(input, 'geometrySimplification', GEOMETRY_SIMPLIFICATIONS) ??
-        NO_LOSSY_OPTIMIZATION.geometrySimplification,
-      textureCompression:
-        oneOf(input, 'textureCompression', TEXTURE_COMPRESSIONS) ??
-        NO_LOSSY_OPTIMIZATION.textureCompression,
-      textureReduction:
-        oneOf(input, 'textureReduction', TEXTURE_REDUCTIONS) ??
-        NO_LOSSY_OPTIMIZATION.textureReduction,
-    }
-    const visualChanges = hasVisualChanges(lossyOptimization) ? 'POSSIBLE' : 'NONE'
     const request: GameExportRequest = {
       title: textOf(input, 'title') ?? projectName(project.path),
       entryScene: entry.id,
@@ -112,13 +114,16 @@ export const EXPORT_HANDLERS: ActionHandlers = {
 }
 
 /** Every scene of the project, as the glTF a save writes — the open tab's when there is one. */
-async function scenesOfProject(): Promise<GameExportRequest['scenes']> {
+async function scenesOfProject(
+  lossyOptimization: LossyOptimization,
+): Promise<GameExportRequest['scenes']> {
   const listed = documentsOfKind(useDocuments.getState(), 'scene')
   await Promise.all(listed.map(one => loadSceneSource(one.id)))
 
   return listed.flatMap(one => {
     const state = montageSceneOf(one.id)
     if (!state) return []
+    const optimization = compileLossyWorld(state, lossyOptimization)
 
     return [
       {
@@ -126,6 +131,7 @@ async function scenesOfProject(): Promise<GameExportRequest['scenes']> {
         title: one.title,
         content: JSON.stringify(scenePayloadOf(state, one.id)),
         assetIds: runtimeAssetIds(state),
+        ...(optimization ? { optimization } : {}),
       },
     ]
   })

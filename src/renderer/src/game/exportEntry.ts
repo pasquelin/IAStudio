@@ -30,7 +30,7 @@ import { worldFromScene } from './worldFromScene'
 export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() => void> {
   const game = await fetched<ExportedGame>(EXPORTED_GAME_FILE)
   const assets = createBundledAssets(game.assets)
-  const render = createWebRender(canvas, assets, game.lossyOptimization)
+  const render = createWebRender(canvas, assets)
   /** How far the running scene's own TIMELINE has veiled the picture, as of the last step. */
   let veiled = 0
   // 🛑 The host's port and not the renderer's own: read back off the renderer, the arrival fade
@@ -83,7 +83,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   let stopped = false
   /** Seconds of veil the scene that has just arrived still owes. */
   let fading = 0
-  await render.show(opening)
+  await render.show(opening, entry.optimization)
 
   /**
    * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -128,7 +128,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       // stepping the arrived world over the picture of the one just left — and the veil would
       // lift onto it.
       fading = request.fade
-      await render.show(found)
+      await render.show(found, wanted.optimization)
       // A second suspension point, so a second look: the stop above threw this world away.
       if (stopped) return
 

@@ -136,6 +136,37 @@
       "wheelWidth": "Largeur des roues",
       "wingArea": "Surface alaire"
     },
+    "export": {
+      "title": "Optimiser le jeu",
+      "action": "Exporter",
+      "safeTitle": "Optimisations runtime SAFE",
+      "safeRuntime": "Optimiser la représentation runtime",
+      "instancing": "Instancier les objets répétés",
+      "batching": "Regrouper les géométries statiques compatibles",
+      "deduplication": "Dédupliquer les ressources",
+      "geometryBuffers": "Optimiser les buffers géométriques",
+      "losslessCompression": "Compresser sans perte visuelle",
+      "removeUnused": "Supprimer les ressources inutilisées",
+      "visualTitle": "Avancé · changements visuels",
+      "generateLods": "Générer les niveaux de distance",
+      "geometryLabel": "Simplification géométrique",
+      "compressionLabel": "Compression des images",
+      "reductionLabel": "Résolution des images",
+      "quality": {
+        "off": "Désactivée",
+        "conservative": "Prudente",
+        "balanced": "Équilibrée",
+        "aggressive": "Agressive"
+      },
+      "reduction": {
+        "off": "Originale",
+        "half": "Moitié",
+        "quarter": "Quart"
+      },
+      "visualChangesNone": "Changements visuels : AUCUN",
+      "visualChangesPossible": "Changements visuels : POSSIBLES",
+      "failed": "Le jeu n’a pas pu être exporté."
+    },
     "play": {
       "faults_many": "{{count, number}} erreurs",
       "faults_one": "{{count, number}} erreur",

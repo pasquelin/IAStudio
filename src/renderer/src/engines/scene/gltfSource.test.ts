@@ -159,7 +159,10 @@ describe('createGltfSource', () => {
   it('reports the textures a file asked for and did not get', async () => {
     parseAsync.mockResolvedValue(parsed({ wants: 2, gets: 0 }))
 
-    await createGltfSource(() => null).load('ia-studio://asset/mesh-1')
+    await createGltfSource(
+      () => null,
+      (scope, error) => reportFailure('scene.texture', scope, error),
+    ).load('ia-studio://asset/mesh-1')
 
     expect(reportFailure).toHaveBeenCalledWith(
       'scene.texture',
@@ -171,7 +174,10 @@ describe('createGltfSource', () => {
   it('reports the ones missing when only some arrived', async () => {
     parseAsync.mockResolvedValue(parsed({ wants: 3, gets: 2 }))
 
-    await createGltfSource(() => null).load('ia-studio://asset/mesh-1')
+    await createGltfSource(
+      () => null,
+      (scope, error) => reportFailure('scene.texture', scope, error),
+    ).load('ia-studio://asset/mesh-1')
 
     expect(reportFailure).toHaveBeenCalledWith(
       'scene.texture',

@@ -1208,7 +1208,10 @@ export class SceneRenderer {
           loadAnimation: options.loadAnimation ?? options.loadModel,
           dispose: () => {},
         }
-      : createGltfSource(() => this.viewport.gl)
+      : createGltfSource(
+          () => this.viewport.gl,
+          (scope, error) => reportFailure('scene.texture', scope, error),
+        )
     this.modelCache = createModelCache(
       this.gltf.load,
       // The node stays in the outliner and draws nothing: a corrupt or compressed GLB is

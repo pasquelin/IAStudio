@@ -136,6 +136,37 @@
       "wheelWidth": "Wheel width",
       "wingArea": "Wing area"
     },
+    "export": {
+      "title": "Optimise game",
+      "action": "Export",
+      "safeTitle": "SAFE runtime optimisations",
+      "safeRuntime": "Optimise the runtime representation",
+      "instancing": "Instance repeated objects",
+      "batching": "Batch compatible static geometry",
+      "deduplication": "Deduplicate resources",
+      "geometryBuffers": "Optimise geometry buffers",
+      "losslessCompression": "Compress without visual loss",
+      "removeUnused": "Remove unused resources",
+      "visualTitle": "Advanced · visual changes",
+      "generateLods": "Generate distance levels",
+      "geometryLabel": "Geometry simplification",
+      "compressionLabel": "Image compression",
+      "reductionLabel": "Image resolution",
+      "quality": {
+        "off": "Off",
+        "conservative": "Conservative",
+        "balanced": "Balanced",
+        "aggressive": "Aggressive"
+      },
+      "reduction": {
+        "off": "Original",
+        "half": "Half",
+        "quarter": "Quarter"
+      },
+      "visualChangesNone": "Visual changes: NONE",
+      "visualChangesPossible": "Visual changes: POSSIBLE",
+      "failed": "The game could not be exported."
+    },
     "play": {
       "faults_many": "{{count, number}} errors",
       "faults_one": "{{count, number}} error",

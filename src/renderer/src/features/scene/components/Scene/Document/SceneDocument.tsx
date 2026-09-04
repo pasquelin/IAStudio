@@ -38,6 +38,7 @@ import { useSceneRuntime } from './hooks/useSceneRuntime'
 import { useSceneToolbarTools } from './hooks/useSceneToolbarTools'
 import { openNodeMenu } from './sceneRuntimeActions'
 import { SceneOptimizationDialog } from '../SceneOptimizationDialog'
+import { SceneGameExportDialog } from '../SceneGameExportDialog'
 
 /** What one of the three visibility gestures does, given the scene and what is already hidden. */
 type IsolationEdit = (
@@ -308,6 +309,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         onMode={runMode}
       />
       <SceneOptimizationDialog documentId={documentId} />
+      <SceneGameExportDialog documentId={documentId} />
     </AssetDropTarget>
   )
 }

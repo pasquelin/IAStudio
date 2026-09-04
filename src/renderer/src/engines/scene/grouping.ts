@@ -11,6 +11,7 @@ import {
   type Sphere,
 } from 'three'
 import { stableKey } from '@shared/hash'
+import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import { movesOnItsOwn } from '@shared/domain/component'
 import { cachedOn } from '../core/cachedOn'
 import type { SceneNode } from './sceneState'
@@ -41,7 +42,7 @@ export const DRAWN_BY_INSTANCE = 2
  * series, that cost is 10 to 30 ms with no trend against group size at all. What it did instead
  * was pay the sweep and group nothing — below the old floor, the count of grouped nodes was zero.
  */
-export const WORTH_INSTANCING = 16
+export const WORTH_INSTANCING = DEFAULT_OPTIMIZATION_POLICY.minInstancesPerGroup
 
 /** What both strategies — one `InstancedMesh` per shape, one `BatchedMesh` per material — answer to. */
 export type InstancedGroups = {

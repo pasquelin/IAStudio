@@ -488,6 +488,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           commandItem('scene.group', t.commands.sceneGroup.title),
           commandItem('scene.optimizeSelection', t.commands.sceneOptimizeSelection.title),
           commandItem('scene.worldPerformance', t.commands.sceneWorldPerformance.title),
+          commandItem('scene.exportGame', t.commands.sceneExportGame.title),
           // The solids, under the grouping they read like: both fold a selection into one row
           // of the outliner. Their keys are unbound, so the menu is where a hand finds them.
           { type: 'separator' },

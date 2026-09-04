@@ -12,13 +12,22 @@ export type ToggleFieldProps = FieldHandle &
     onChange: (value: boolean) => void
     /** Buttons for the row's end column, drawn before the reset — a padlock, say. */
     actions?: ReactNode
+    disabled?: boolean
   }
 
 /**
  * A property that is on or off. It carries no gesture props: a checkbox changes once per
  * click, so there is no drag to coalesce into a single history entry.
  */
-export function ToggleField({ label, value, onChange, scId, actions, onReset }: ToggleFieldProps) {
+export function ToggleField({
+  label,
+  value,
+  onChange,
+  scId,
+  actions,
+  onReset,
+  disabled,
+}: ToggleFieldProps) {
   return (
     <PropertyLine
       label={label}
@@ -37,6 +46,7 @@ export function ToggleField({ label, value, onChange, scId, actions, onReset }: 
         type="checkbox"
         data-sc={scId && fieldHandle(scId)}
         checked={value}
+        disabled={disabled}
         onChange={event => onChange(event.target.checked)}
         // `mr-auto` rather than a filler element: the box keeps its size and takes the column.
         className={cn(CHECKBOX, 'mr-auto size-4 shrink-0')}

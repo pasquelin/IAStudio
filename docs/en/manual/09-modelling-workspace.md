@@ -1401,6 +1401,26 @@ computing anything** — a render takes minutes.
 
 ---
 
+## Optimising and exporting a game
+
+The scene you edit remains the authoring world: every tree, prop and scripted object keeps its
+identity and stays editable. **Play** and **Export the game…** build a separate runtime world. Safe
+optimisations share repeated geometry and materials, instance compatible objects, batch nearby
+static objects and retain the source object ID for picking, scripts and physics.
+
+Use **Edit ▸ Optimise selection…** to preview and apply an override to selected objects. **Edit ▸
+World performance…** reports the whole scene. Both distinguish measured figures from estimated
+results. The runtime compiler reuses unchanged regions when Play is started again.
+
+**Edit ▸ Export the game…** first lists the SAFE operations, which do not alter the intended
+picture or behaviour. The Advanced section is opt-in: generated distance levels, geometry
+simplification, image compression and image resizing may change the result. The dialogue therefore
+says **Visual changes: NONE** until one of them is enabled, then **POSSIBLE**. Generated distance
+levels always retain the original as LOD0. Export never rewrites the authoring scene; its runtime
+cache can be discarded and rebuilt.
+
+---
+
 ## What is still missing
 
 The Modelling workspace now has everything this manual describes. What is left fits in two sentences:

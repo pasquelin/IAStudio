@@ -1,3 +1,6 @@
+import type { CsgGraph } from './csg'
+import type { GeometryDescriptor } from './geometry'
+
 /**
  * What an exported game ships beside its page, and the one thing its writer and its reader both
  * read. The writer is the main process, the reader is the page: neither parses the other's code.
@@ -58,6 +61,20 @@ export type ExportedScene = {
   title: string
   /** Where the glTF sits, relative to the page. */
   file: string
+  /** Runtime-only geometry plan compiled from the authoring scene before it crossed IPC. */
+  optimization?: CompiledSceneOptimization
+}
+
+export type CompiledNodeGeometry = {
+  nodeId: string
+  geometry?: GeometryDescriptor
+  carved?: CsgGraph
+  lodGeometries?: readonly GeometryDescriptor[]
+  lodCarved?: readonly CsgGraph[]
+}
+
+export type CompiledSceneOptimization = {
+  nodes: readonly CompiledNodeGeometry[]
 }
 
 export type ExportedScript = {
@@ -95,6 +112,8 @@ export type SceneToExport = {
   content: string
   /** Assets the exported runtime reaches; absent keeps compatibility with older callers. */
   assetIds?: readonly string[]
+  /** Built from this scene for this export; never written back into the authoring document. */
+  optimization?: CompiledSceneOptimization
 }
 
 /** One script, already JavaScript — the studio transpiles, the sandbox never sees TypeScript. */

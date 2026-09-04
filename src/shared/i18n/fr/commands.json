@@ -200,6 +200,10 @@
       "title": "Performances du monde…",
       "help": "Mesure toute la scène et présente les possibilités d’optimisation SAFE sans modifier le monde auteur."
     },
+    "sceneExportGame": {
+      "title": "Exporter le jeu…",
+      "help": "Construit un jeu autonome depuis une copie runtime optimisée sans modifier les scènes d’édition."
+    },
     "sceneCopy": {
       "title": "Copier",
       "help": "Retient ce qui est sélectionné pour le coller ensuite, ici ou dans une autre scène. Ce presse-papiers est celui du studio : il ne touche pas à celui du système."

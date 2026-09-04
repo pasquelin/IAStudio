@@ -2,18 +2,10 @@ import { nativeImage } from 'electron'
 import { extname } from 'node:path'
 import { stemOf } from '@shared/domain/fileName'
 import type { LossyOptimization } from '@shared/domain/gameExport'
+import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import type { ExportedAsset } from './gameExport'
 
 const DECODABLE = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif', '.bmp'])
-const JPEG_QUALITY: Readonly<
-  Record<Exclude<LossyOptimization['textureCompression'], 'off'>, number>
-> = Object.freeze({ conservative: 88, balanced: 75, aggressive: 55 })
-const SIZE_FACTOR: Readonly<Record<LossyOptimization['textureReduction'], number>> = Object.freeze({
-  off: 1,
-  half: 0.5,
-  quarter: 0.25,
-})
-
 /** Returns the original bytes for containers and codecs Chromium cannot safely decode here. */
 export async function optimizeLossyAsset(
   asset: ExportedAsset,
@@ -29,7 +21,7 @@ export async function optimizeLossyAsset(
   const decoded = nativeImage.createFromBuffer(Buffer.from(asset.bytes))
   if (decoded.isEmpty()) return asset
 
-  const factor = SIZE_FACTOR[options.textureReduction]
+  const factor = DEFAULT_OPTIMIZATION_POLICY.textureScale[options.textureReduction]
   const size = decoded.getSize()
   const image =
     factor === 1
@@ -45,6 +37,6 @@ export async function optimizeLossyAsset(
   }
   return {
     name: `${stemOf(asset.name)}.jpg`,
-    bytes: image.toJPEG(JPEG_QUALITY[options.textureCompression]),
+    bytes: image.toJPEG(DEFAULT_OPTIMIZATION_POLICY.jpegQuality[options.textureCompression]),
   }
 }

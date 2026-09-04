@@ -241,7 +241,7 @@ src/main/
 ├── favorites/               les recettes épinglées, gardées hors des projets
 ├── styles/                  les réglages de matière qu'on rejoue d'une matière à l'autre
 ├── scene/                   l'export d'une scène, et sa validation
-├── export/                  écrire plusieurs fichiers dans un dossier : une matière, six faces de ciel
+├── export/                  paquets déterministes de matière, ciel et jeu compilé
 ├── diagnostics/             le canal par lequel le renderer signale un échec
 ├── media/                   importer un fichier : sonde, hachage, proxy, forme d'onde
 ├── fonts/                   les polices embarquées et celles du système

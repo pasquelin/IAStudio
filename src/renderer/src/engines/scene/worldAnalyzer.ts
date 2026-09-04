@@ -86,8 +86,14 @@ export type OptimizationReport = {
   visualChanges: 'NONE'
 }
 
-import { DEFAULT_OPTIMIZATION_POLICY, type OptimizationPolicy } from './optimizationPolicy'
-export { DEFAULT_OPTIMIZATION_POLICY, type OptimizationPolicy } from './optimizationPolicy'
+import {
+  DEFAULT_OPTIMIZATION_POLICY,
+  type OptimizationPolicy,
+} from '@shared/domain/optimizationPolicy'
+export {
+  DEFAULT_OPTIMIZATION_POLICY,
+  type OptimizationPolicy,
+} from '@shared/domain/optimizationPolicy'
 
 type AnalyzerPolicy = Pick<OptimizationPolicy, 'minInstancesPerGroup' | 'analysisChunkSize'>
 

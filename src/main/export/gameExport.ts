@@ -120,7 +120,12 @@ export async function writeExportedGame(
     version: EXPORTED_GAME_VERSION,
     title: request.title,
     entryScene: request.entryScene,
-    scenes: scenes.map(one => ({ id: one.id, title: one.title, file: files.get(one.id) ?? '' })),
+    scenes: scenes.map(one => ({
+      id: one.id,
+      title: one.title,
+      file: files.get(one.id) ?? '',
+      ...(one.optimization ? { optimization: one.optimization } : {}),
+    })),
     scripts: scripts.map(one => ({ script: one.script, file: `scripts/${named.get(one.script)}` })),
     assets,
     ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
@@ -128,7 +133,7 @@ export async function writeExportedGame(
 
   // Names are allocated above, in order, because `freeName` is pure; only the writing is
   // independent, and a hundred assets paid two syscalls each strictly one after another.
-  const runtime = runtimeFilesFor(await ports.runtime(), request.lossyOptimization)
+  const runtime = await ports.runtime()
   await Promise.all([
     ...assetWrites,
     ...scenes.map(scene => ports.write(files.get(scene.id) ?? '', scene.content)),
@@ -144,18 +149,6 @@ export async function writeExportedGame(
     assets: Object.keys(assets).length,
     missing,
   }
-}
-
-function runtimeFilesFor(
-  files: readonly { name: string; body: Uint8Array }[],
-  options: GameExportRequest['lossyOptimization'],
-): readonly { name: string; body: Uint8Array }[] {
-  if (options?.generateLods || (options && options.geometrySimplification !== 'off')) return files
-  return files.filter(
-    file =>
-      !file.name.startsWith('geometrySimplifierWorker-') &&
-      !file.name.startsWith('SimplifyModifier-'),
-  )
 }
 
 const COMPARISON_CHUNK_BYTES = 1024 * 1024

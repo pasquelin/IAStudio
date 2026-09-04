@@ -28,8 +28,6 @@ function writing(over: Partial<GameExportPorts> = {}) {
       Promise.resolve([
         { name: 'runtime.js', body: new Uint8Array([2]) },
         { name: 'jolt-abc.js', body: new Uint8Array([3]) },
-        { name: 'geometrySimplifierWorker-abc.js', body: new Uint8Array([4]) },
-        { name: 'SimplifyModifier-abc.js', body: new Uint8Array([5]) },
       ]),
     write: (relative, body) => {
       written.set(relative, body)
@@ -257,7 +255,5 @@ describe('a game written to run with no studio', () => {
     expect(manifestOf(written).lossyOptimization).toEqual(lossyOptimization)
     expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/checker.jpg' })
     expect(written.get('assets/checker.jpg')).toEqual(new Uint8Array([7, 8]))
-    expect(written.has('geometrySimplifierWorker-abc.js')).toBe(true)
-    expect(written.has('SimplifyModifier-abc.js')).toBe(true)
   })
 })

@@ -26,6 +26,7 @@ function strippedDecoderUrls(): Plugin {
 }
 
 export default defineConfig({
+  publicDir: resolve('src/renderer/public'),
   plugins: [strippedDecoderUrls()],
   resolve: {
     alias: {

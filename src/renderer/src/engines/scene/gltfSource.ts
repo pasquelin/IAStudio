@@ -6,7 +6,6 @@ import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js'
 import { materialDefOf, textureSlotsOf } from '@shared/domain/gltf'
 import { meshFormatOf, type MeshFormat } from '@shared/domain/meshFormat'
-import { reportFailure } from '@/services/diagnostics'
 import type { ModelSource } from './modelCache'
 import { texturesOf } from './sceneStats'
 
@@ -49,7 +48,10 @@ export type GltfSource = {
  * it can actually transcode to, and the viewport has no renderer until it is mounted — while
  * this source is built in the engine's constructor.
  */
-export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSource {
+export function createGltfSource(
+  rendererOf: () => WebGLRenderer | null,
+  onFailure: (scope: string, error: unknown) => void = () => undefined,
+): GltfSource {
   const loader = new GLTFLoader()
 
   const draco = new DRACOLoader().setDecoderPath(DRACO_PATH)
@@ -81,7 +83,7 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
     const { missing, declared } = unresolvedTextures(gltf)
     // A count, not a sentence: the scope carries the translated line the user reads, and this
     // detail rides beside it exactly as an SDK message would.
-    if (missing > 0) reportFailure('scene.texture', url, new Error(`${missing}/${declared}`))
+    if (missing > 0) onFailure(url, new Error(`${missing}/${declared}`))
 
     return gltf.scene
   }
