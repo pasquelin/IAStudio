@@ -168,9 +168,13 @@ function revisionsOf(value: unknown): Mission['revisionSnapshots'] | null {
   const revisions = value.map(item => {
     const revision = recordOf(item)
     const resource = revision ? refOf(revision.resource) : null
-    return resource && typeof revision?.revision === 'number'
-      ? { resource, revision: revision.revision }
-      : null
+    if (!resource || typeof revision?.revision !== 'number') return null
+    return {
+      resource,
+      incarnation:
+        typeof revision.incarnation === 'string' ? revision.incarnation : 'legacy-unknown',
+      revision: revision.revision,
+    }
   })
   return revisions.includes(null) ? null : revisions.filter(revision => revision !== null)
 }

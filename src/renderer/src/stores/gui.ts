@@ -33,7 +33,7 @@ export function selectInGui(
   const current = guiOf(state, documentId)
   const next = setUiSelection(current, ids, mode)
 
-  if (next.selectedIds !== current.selectedIds) state.replace(documentId, next)
+  if (next.selectedIds !== current.selectedIds) state.replaceView(documentId, next)
 }
 
 /**

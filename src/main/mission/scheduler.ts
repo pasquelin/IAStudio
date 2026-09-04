@@ -11,9 +11,11 @@ import {
   type MissionStep,
   type MissionStepId,
   type MissionWaiting,
+  type ResourceRevision,
 } from '@shared/domain/mission'
 import type { MissionManager } from './manager'
 import { writeQueue } from '@main/persistence'
+import { refToString } from '@shared/domain/ref'
 
 export type MissionStepOutcome =
   | { readonly kind: 'completed'; readonly result?: unknown }
@@ -23,13 +25,74 @@ export type MissionStepOutcome =
 export type MissionStepRunner = (
   step: MissionStep,
   signal: AbortSignal,
+  revisionCheck: MissionRevisionCheck,
 ) => Promise<MissionStepOutcome>
+
+type MissionRevisionCheck = {
+  decision: 'continue' | 'reconsider' | 'unknown'
+  current: readonly ResourceRevision[]
+  changed: readonly ResourceRevision[]
+  unavailable: readonly ResourceRevision[]
+  observed: boolean
+}
+
+export type MissionRevisionReader = {
+  read: (mission: Mission) => Promise<MissionRevisionRead>
+}
+
+type MissionRevisionRead = {
+  current: readonly ResourceRevision[]
+  unavailable: readonly ResourceRevision[]
+}
 
 export type MissionScheduler = {
   wake: (missionId: MissionId) => Promise<void>
   resume: (missionId: MissionId, stepId: MissionStepId) => Promise<void>
   resumeJob: (missionId: MissionId, jobId: string) => Promise<void>
   cancel: (missionId: MissionId) => Promise<void>
+}
+
+async function readRevisions(
+  mission: Mission,
+  reader?: MissionRevisionReader,
+): Promise<MissionRevisionRead | null> {
+  if (!reader) return null
+  try {
+    return await reader.read(mission)
+  } catch {
+    return null
+  }
+}
+
+async function revisionCheckOf(
+  mission: Mission,
+  stepId: MissionStepId,
+  reader?: MissionRevisionReader,
+): Promise<{ check: MissionRevisionCheck; snapshots: readonly ResourceRevision[] }> {
+  const read = await readRevisions(mission, reader)
+  const previous = new Map(
+    mission.revisionSnapshots.map(revision => [refToString(revision.resource), revision]),
+  )
+  const changed = (read?.current ?? []).filter(revision => {
+    const before = previous.get(refToString(revision.resource))
+    return (
+      before !== undefined &&
+      (before.incarnation !== revision.incarnation || before.revision !== revision.revision)
+    )
+  })
+  const resumed = mission.plan.steps.find(step => step.id === stepId)?.startedAt !== undefined
+  const reconsider = resumed && (changed.length > 0 || (read?.unavailable.length ?? 0) > 0)
+  const snapshots = read ? [...read.current, ...read.unavailable] : mission.revisionSnapshots
+  return {
+    snapshots,
+    check: {
+      decision: read === null ? 'unknown' : reconsider ? 'reconsider' : 'continue',
+      current: snapshots,
+      changed,
+      unavailable: read?.unavailable ?? [],
+      observed: read !== null,
+    },
+  }
 }
 
 export function readyMissionSteps(mission: Mission): readonly MissionStep[] {
@@ -85,6 +148,7 @@ export function createMissionScheduler(
   runner: MissionStepRunner,
   clock: MissionClock,
   concurrency = 2,
+  revisions?: MissionRevisionReader,
 ): MissionScheduler {
   if (!Number.isInteger(concurrency) || concurrency < 1)
     throw new Error('invalid mission concurrency')
@@ -119,9 +183,13 @@ export function createMissionScheduler(
       const changed = change(current)
       return changed ? await manager.update(missionId, current.revision, () => changed) : current
     })
-  const runStep = async (step: MissionStep, signal: AbortSignal): Promise<MissionStepOutcome> => {
+  const runStep = async (
+    step: MissionStep,
+    signal: AbortSignal,
+    revisionCheck: MissionRevisionCheck,
+  ): Promise<MissionStepOutcome> => {
     try {
-      return await runner(step, signal)
+      return await runner(step, signal, revisionCheck)
     } catch (error) {
       return { kind: 'failed', error: String(error) }
     }
@@ -162,12 +230,14 @@ export function createMissionScheduler(
     try {
       const mission = await manager.read(missionId)
       if (!mission || isMissionFinished(mission.state)) return
-      const running = await update(missionId, current =>
-        transitionMissionStep(current, stepId, 'running', clock.now()),
-      )
+      const revision = await revisionCheckOf(mission, stepId, revisions)
+      const running = await update(missionId, current => ({
+        ...transitionMissionStep(current, stepId, 'running', clock.now()),
+        revisionSnapshots: revision.snapshots,
+      }))
       const step = running.plan.steps.find(candidate => candidate.id === stepId)
       if (!step) throw new Error(`mission lost step ${stepId}`)
-      let outcome = await runStep(step, controller.signal)
+      let outcome = await runStep(step, controller.signal, revision.check)
       const current = await manager.read(missionId)
       if (ignoresOutcome(current, controller.signal) || !current) return
       if (outcome.kind === 'waiting' && outcome.wait.stepId !== stepId) {

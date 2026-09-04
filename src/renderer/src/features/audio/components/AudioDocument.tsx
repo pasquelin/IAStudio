@@ -69,7 +69,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
       if (!sequenceStore.hasState(store, documentId)) return
 
       // Scrubbing is not an edit: the head goes through `replace`, which skips the history.
-      store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
+      store.replaceView(documentId, { ...sequenceOf(store, documentId), playhead })
     },
     [documentId],
   )

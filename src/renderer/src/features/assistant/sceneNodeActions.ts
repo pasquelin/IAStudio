@@ -148,8 +148,8 @@ export function select(input: Record<string, unknown>): ActionOutcome {
       `the scene in front holds no node ${missing.join(', ')} — scene.state answers "nodes" with the ids it does hold`,
     )
 
-  // Selection is not a command: it stays out of the history, so `replace` writes the state.
-  useScenes.getState().replace(open.documentId, setSelection(open.state, nodeIds))
+  // Selection is not a command and does not change the document revision.
+  useScenes.getState().replaceView(open.documentId, setSelection(open.state, nodeIds))
   return { ok: true }
 }
 

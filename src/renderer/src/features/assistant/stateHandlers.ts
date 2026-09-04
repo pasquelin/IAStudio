@@ -43,6 +43,7 @@ import { sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 import { withBridge, type ActionHandlers } from './actionHandler'
 import { numberOf, oneOf, textOf } from './actionInputs'
+import { documentRevisionOf, documentStateOf } from './documentStateProviders'
 
 /** The face a sky is exported at when a client names none — the row the native menu offers. */
 const DEFAULT_FACE = 2048
@@ -148,12 +149,9 @@ function studioState(): ActionOutcome {
   const documents = useDocuments.getState()
   const surface = toolSurface()
   const project = useProject.getState()
-  /**
-   * 🛑 The window's own mirror, NOT `settings.authState()`. That one probes the API — one
-   * `models.list` over the wire — and this answer now sits in front of every sentence typed at
-   * the assistant, where it used to run only when an MCP client asked.
-   */
+  // The window's mirror avoids probing the API before every assistant turn.
   const auth = useSettings.getState()
+  const activeDocument = documents.activeId ? documents.documents[documents.activeId] : undefined
 
   const snapshot: StudioSnapshot = {
     project: project.project,
@@ -169,6 +167,13 @@ function studioState(): ActionOutcome {
     surface,
     commandScope: scopeOfWorkspace(surface, frontKind(documents)),
     documents: Object.values(documents.documents).map(one => summaryOf(one, documents.activeId)),
+    documentRevisions: Object.values(documents.documents).flatMap(document => {
+      const revision = documentRevisionOf(document)
+      return revision ? [revision] : []
+    }),
+    ...(activeDocument
+      ? { activeDocumentState: documentStateOf(activeDocument) ?? undefined }
+      : {}),
     // What the person has designated, which is what a spoken request most often means by "it".
     selection: selectionNow(documents),
     armedModels: useModels.getState().selected,

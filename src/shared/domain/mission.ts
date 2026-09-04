@@ -22,6 +22,7 @@ export type MissionStepState =
 
 export type ResourceRevision = {
   readonly resource: Ref
+  readonly incarnation: string
   readonly revision: number
 }
 

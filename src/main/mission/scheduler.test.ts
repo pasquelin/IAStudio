@@ -91,6 +91,155 @@ describe('mission scheduler', () => {
     expect(await missions.read(created.id)).toMatchObject({ state: 'completed', waits: [] })
   })
 
+  it('reports a document changed while a step waited and refreshes its precondition', async () => {
+    const time = clock()
+    const missions = manager(time)
+    const created = await missions.create('Wait for a render', {})
+    const step = createMissionStep(created.id, 'Render', { kind: 'job', jobId: 'job-1' }, time)
+    await missions.update(created.id, created.revision, current => ({
+      ...addMissionStep(current, step, time.now()),
+      resourceRefs: [{ kind: 'document', id: 'scene-a' }],
+    }))
+    let revision = 4
+    const checks: number[] = []
+    const scheduler = createMissionScheduler(
+      missions,
+      async (current, _signal, check) => {
+        checks.push(check.changed[0]?.revision ?? 0)
+        return checks.length === 1
+          ? { kind: 'waiting', wait: { kind: 'job', stepId: current.id, jobId: 'job-1' } }
+          : { kind: 'completed' }
+      },
+      time,
+      2,
+      {
+        read: async mission => ({
+          current: mission.resourceRefs.map(resource => ({
+            resource,
+            incarnation: 'window-a',
+            revision,
+          })),
+          unavailable: [],
+        }),
+      },
+    )
+
+    await scheduler.wake(created.id)
+    revision = 7
+    await scheduler.resumeJob(created.id, 'job-1')
+
+    expect(checks).toEqual([0, 7])
+    expect(await missions.read(created.id)).toMatchObject({
+      state: 'completed',
+      revisionSnapshots: [{ revision: 7 }],
+    })
+  })
+
+  it('does not classify a preceding mission step own mutation as concurrent', async () => {
+    const time = clock()
+    let mission = withAction(createMission('Two edits', time), time, 'First')
+    mission = withAction(mission, time, 'Second', [mission.plan.steps[0]?.id ?? 'missing'])
+    mission = { ...mission, resourceRefs: [{ kind: 'document', id: 'scene-a' }] }
+    const missions = manager(time, [mission])
+    let revision = 1
+    const decisions: string[] = []
+    const scheduler = createMissionScheduler(
+      missions,
+      async (_step, _signal, check) => {
+        decisions.push(check.decision)
+        revision += 1
+        return { kind: 'completed' }
+      },
+      time,
+      2,
+      {
+        read: async current => ({
+          current: current.resourceRefs.map(resource => ({
+            resource,
+            incarnation: 'window-a',
+            revision,
+          })),
+          unavailable: [],
+        }),
+      },
+    )
+
+    await scheduler.wake(mission.id)
+
+    expect(decisions).toEqual(['continue', 'continue'])
+  })
+
+  it('continues with an unknown revision check when the reader is unavailable', async () => {
+    const time = clock()
+    const mission = withAction(createMission('Read failure', time), time, 'Act')
+    const missions = manager(time, [mission])
+    const decisions: string[] = []
+    const scheduler = createMissionScheduler(
+      missions,
+      async (_step, _signal, check) => {
+        decisions.push(check.decision)
+        return { kind: 'completed' }
+      },
+      time,
+      2,
+      {
+        read: async () => {
+          throw new Error('window gone')
+        },
+      },
+    )
+
+    await scheduler.wake(mission.id)
+
+    expect(decisions).toEqual(['unknown'])
+    expect(await missions.read(mission.id)).toMatchObject({ state: 'completed' })
+  })
+
+  it('reconsiders a resumed step when its previously observed document disappeared', async () => {
+    const time = clock()
+    const missions = manager(time)
+    const created = await missions.create('Wait on a document', {})
+    const step = createMissionStep(created.id, 'Wait', { kind: 'job', jobId: 'job-1' }, time)
+    await missions.update(created.id, created.revision, current => ({
+      ...addMissionStep(current, step, time.now()),
+      resourceRefs: [{ kind: 'document', id: 'scene-a' }],
+    }))
+    let present = true
+    const decisions: string[] = []
+    const scheduler = createMissionScheduler(
+      missions,
+      async (current, _signal, check) => {
+        decisions.push(check.decision)
+        return decisions.length === 1
+          ? { kind: 'waiting', wait: { kind: 'job', stepId: current.id, jobId: 'job-1' } }
+          : { kind: 'completed' }
+      },
+      time,
+      2,
+      {
+        read: async mission => {
+          const previous = mission.revisionSnapshots
+          return present
+            ? {
+                current: mission.resourceRefs.map(resource => ({
+                  resource,
+                  incarnation: 'window-a',
+                  revision: 1,
+                })),
+                unavailable: [],
+              }
+            : { current: [], unavailable: previous }
+        },
+      },
+    )
+
+    await scheduler.wake(created.id)
+    present = false
+    await scheduler.resumeJob(created.id, 'job-1')
+
+    expect(decisions).toEqual(['continue', 'reconsider'])
+  })
+
   it('persists a step result and turns a runner error into mission failure', async () => {
     const time = clock()
     const successful = withAction(createMission('Result', time), time, 'Return')

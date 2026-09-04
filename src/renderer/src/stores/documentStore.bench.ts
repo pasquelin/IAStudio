@@ -30,6 +30,8 @@ const state = {
   states: { 'doc-1': { value: 0 } },
   histories: { 'doc-1': history },
   saved: { 'doc-1': history.past.at(-1) ?? null },
+  revisions: { 'doc-1': 1 },
+  incarnations: { 'doc-1': 'bench' },
 }
 
 describe('reading the modified marker', () => {

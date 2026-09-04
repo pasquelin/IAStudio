@@ -38,6 +38,41 @@ const entries = (store: ReturnType<typeof storeOf>): number =>
 const valueOf = (store: ReturnType<typeof storeOf>): string =>
   store.stateOf(store.use.getState(), 'doc').value
 
+describe('document revisions', () => {
+  it('advances for content changes and undo, even when dirty returns to its old value', () => {
+    const store = storeOf()
+    const initial = store.revisionOf(store.use.getState(), 'doc')
+
+    store.use.getState().runCommand('doc', set('name', 'changed'))
+    const changed = store.revisionOf(store.use.getState(), 'doc')
+    store.use.getState().undo('doc')
+
+    expect(changed).toBe(initial + 1)
+    expect(store.revisionOf(store.use.getState(), 'doc')).toBe(changed + 1)
+  })
+
+  it('does not advance for view-only replacements or identical state', () => {
+    const store = storeOf()
+    const current = store.use.getState()
+    const initial = store.revisionOf(current, 'doc')
+
+    current.replaceView('doc', { value: 'cursor moved' })
+    current.replace('doc', store.stateOf(store.use.getState(), 'doc'))
+
+    expect(store.revisionOf(store.use.getState(), 'doc')).toBe(initial)
+  })
+
+  it('renews the incarnation when a document is dropped and reopened', () => {
+    const store = storeOf()
+    const first = store.incarnationOf(store.use.getState(), 'doc')
+
+    store.use.getState().drop('doc')
+    store.use.getState().ensure('doc', () => ({ value: '' }))
+
+    expect(store.incarnationOf(store.use.getState(), 'doc')).not.toBe(first)
+  })
+})
+
 describe('a document the store was told to forget', () => {
   it('is not put back by a command that arrives after it closed', () => {
     const store = storeOf()

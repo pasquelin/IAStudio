@@ -135,7 +135,9 @@ async function collectContext(
       }),
       Promise.resolve(deps.jobs.list()),
       attached ? deps.projectContext.read() : Promise.resolve(noContext()),
-      active && deps.documentState ? deps.documentState(active) : undefined,
+      active && deps.documentState
+        ? deps.documentState(active)
+        : snapshot?.activeDocumentState?.state,
     ])
   return {
     actions,
@@ -284,10 +286,15 @@ function assembledContext(
 ): AssistantContext {
   const report = emptyBudgetReport()
   const current = snapshotContext(snapshot, report)
+  const compactState = compactValue(
+    collected.documentState,
+    CONTEXT_BUDGETS.documentState.maxCharacters,
+  )
+  if (compactState.truncated) markContentTruncated(report, 'documentState')
   const state = selected(
     report,
     'documentState',
-    collected.documentState === undefined ? [] : [collected.documentState],
+    collected.documentState === undefined ? [] : [compactState.value],
   )[0]
   const context = projectContext(collected, report)
   return {
