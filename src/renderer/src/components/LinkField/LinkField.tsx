@@ -1,4 +1,4 @@
-import { createElement, useMemo, type ReactNode } from 'react'
+import { createElement, useMemo, type MouseEvent, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { useContextMenu } from '@/hooks/useContextMenu'
 import { SelectField } from '../SelectField'
@@ -38,6 +38,22 @@ type LinkFieldViewProps = LinkFieldProps & {
   shown?: string
 }
 
+function rowOpening(chosen: LinkOption | undefined, open: LinkPress | undefined) {
+  if (!chosen || !open) return undefined
+  return (event: MouseEvent): void => {
+    if (event.target instanceof Element && event.target.closest('button')) return
+    open.run()
+  }
+}
+
+const dropping =
+  ({ onDropAsset, onChange }: LinkFieldProps) =>
+  (asset: Asset): void =>
+    onDropAsset ? onDropAsset(asset) : onChange(asset.id)
+
+const hasLinkMenu = (props: LinkFieldViewProps): boolean =>
+  Boolean(props.browse || (props.chosen && props.open) || props.clearing || props.menuExtra)
+
 function linkFieldView(props: LinkFieldViewProps) {
   const {
     label,
@@ -48,29 +64,30 @@ function linkFieldView(props: LinkFieldViewProps) {
     clearWhenEmpty,
     accepts,
     badge,
-    onDropAsset,
     open,
     press,
     browse,
     busy,
     busyLabel,
     scId,
-    menuExtra,
     choices,
     chosen,
-    clearing,
     menu,
     shown,
   } = props
-  const hasMenu = Boolean(browse || (chosen && open) || clearing || menuExtra)
-  const drop = (asset: Asset) => (onDropAsset ? onDropAsset(asset) : onChange(asset.id))
   return (
-    <LinkFieldSlot accepts={accepts} onDrop={drop} onContextMenu={hasMenu ? menu.open : undefined}>
+    <LinkFieldSlot
+      accepts={accepts}
+      onDrop={dropping(props)}
+      onContextMenu={hasLinkMenu(props) ? menu.open : undefined}
+      onDoubleClick={rowOpening(chosen, open)}
+    >
       <SelectField
         label={label}
         scId={scId}
         options={choices}
         value={value ?? ''}
+        compactActions={!browse}
         onChange={id => onChange(id === '' ? null : id)}
         leading={
           <LinkFieldThumbnail {...{ badge, busy, busyLabel, chosen, label, open, press, shown }} />

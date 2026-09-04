@@ -31,6 +31,7 @@ export type AssetDropTargetProps = {
   outlined?: boolean
   /** The surface is what a right-click lands on, where the caller holds a menu for it. */
   onContextMenu?: (event: MouseEvent) => void
+  onDoubleClick?: (event: MouseEvent) => void
   className?: string
   children: ReactNode
 }
@@ -50,6 +51,7 @@ export function AssetDropTarget({
   exclusive,
   outlined = true,
   onContextMenu,
+  onDoubleClick,
   className,
   children,
 }: AssetDropTargetProps) {
@@ -58,6 +60,7 @@ export function AssetDropTarget({
   return (
     <div
       onContextMenu={onContextMenu}
+      onDoubleClick={onDoubleClick}
       className={cn(
         className,
         outlined && state !== 'idle' && 'outline-2 -outline-offset-2',
@@ -96,7 +99,7 @@ export function AssetDropTarget({
         if (to instanceof Node && event.currentTarget.contains(to)) return
         setState('idle')
       }}
-      onDrop={event => {
+      onDrop={async event => {
         setState('idle')
 
         if (carriesExternalFiles(event)) {

@@ -189,6 +189,15 @@ describe('LinkField', () => {
       expect(run).toHaveBeenCalled()
     })
 
+    it('opens what it holds on a double-click of its selected value', async () => {
+      const run = vi.fn()
+      render(<Slot value="tex-1" onChange={vi.fn()} open={{ ...OPEN, run }} />)
+
+      await userEvent.dblClick(screen.getByRole('combobox'))
+
+      expect(run).toHaveBeenCalledOnce()
+    })
+
     // A focus stop that leads nowhere is one more Tab to cross for nothing.
     it('offers nothing to open while the slot is empty', () => {
       render(<Slot value={null} onChange={vi.fn()} open={OPEN} />)

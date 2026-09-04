@@ -22,6 +22,7 @@ export type SelectFieldProps<V extends string> = {
   hint?: Record<string, string>
   leading?: ReactNode
   actions?: ReactNode
+  compactActions?: boolean
   scId?: string
   className?: string
 }
@@ -112,7 +113,7 @@ function selectControl<V extends string>({
 type SelectLayoutProps = Pick<
   SelectFieldProps<string>,
   'label' | 'layout' | 'leading' | 'actions' | 'className'
-> & { id: string; children: ReactNode }
+> & { id: string; children: ReactNode; compactActions?: boolean }
 
 function stackedSelectLayout({
   label,
@@ -138,6 +139,7 @@ function selectLayout({
   layout = 'row',
   leading,
   actions,
+  compactActions,
   className,
   id,
   children,
@@ -152,6 +154,7 @@ function selectLayout({
         htmlFor={id}
         nameProps={{ as: 'label' }}
         actions={actions}
+        compactActions={compactActions}
         className={className}
       >
         {leading}
@@ -189,6 +192,7 @@ export function SelectField<V extends string>({
   hint,
   leading,
   actions,
+  compactActions,
   scId,
   className,
 }: SelectFieldProps<V>) {
@@ -212,5 +216,14 @@ export function SelectField<V extends string>({
     unnamed,
     named,
   })
-  return selectLayout({ label, layout, leading, actions, className, id, children })
+  return selectLayout({
+    label,
+    layout,
+    leading,
+    actions,
+    compactActions,
+    className,
+    id,
+    children,
+  })
 }

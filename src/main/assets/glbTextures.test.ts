@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { glbChunksOf, glbFrom, glbJson } from '@shared/domain/glbContainer'
 import { glbFile as glb, glbWearing as fileWith } from './glb-fixtures'
-import { embeddedTextures } from './glbTextures'
+import { embeddedTextures, withoutEmbeddedTextures } from './glbTextures'
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4])
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 9, 9])
@@ -320,5 +321,166 @@ describe('glb texture defaults', () => {
     )
 
     expect(embeddedTextures(file)).toEqual([])
+  })
+})
+
+describe('a glb after extraction', () => {
+  it('keeps geometry while removing material slots and image bytes', () => {
+    const geometry = new Uint8Array([1, 2, 3, 4])
+    const source = glb(
+      {
+        buffers: [{ byteLength: JPEG.byteLength + geometry.byteLength }],
+        bufferViews: [
+          { buffer: 0, byteOffset: 0, byteLength: JPEG.byteLength },
+          { buffer: 0, byteOffset: JPEG.byteLength, byteLength: geometry.byteLength },
+        ],
+        accessors: [{ bufferView: 1, componentType: 5121, count: 4, type: 'SCALAR' }],
+        materials: [
+          {
+            pbrMetallicRoughness: { baseColorTexture: { index: 0 } },
+            extras: { preferredTexture: 'linen' },
+          },
+        ],
+        textures: [{ source: 0 }],
+        images: [{ bufferView: 0, mimeType: 'image/jpeg' }],
+      },
+      new Uint8Array([...JPEG, ...geometry]),
+    )
+
+    const result = withoutEmbeddedTextures(source)
+    const chunks = glbChunksOf(result)
+    const json = chunks ? glbJson(chunks.json) : null
+
+    expect(embeddedTextures(result)).toEqual([])
+    expect(chunks?.bin).toEqual(geometry)
+    expect(json).toMatchObject({
+      buffers: [{ byteLength: geometry.byteLength }],
+      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: geometry.byteLength }],
+      accessors: [{ bufferView: 0 }],
+      materials: [{ pbrMetallicRoughness: {}, extras: { preferredTexture: 'linen' } }],
+    })
+    expect(json).not.toHaveProperty('images')
+    expect(json).not.toHaveProperty('textures')
+  })
+
+  it('keeps external images and remaps the material slot that uses them', () => {
+    const source = glb(
+      {
+        materials: [
+          {
+            pbrMetallicRoughness: { baseColorTexture: { index: 0 } },
+            normalTexture: { index: 1 },
+          },
+        ],
+        textures: [{ source: 0 }, { source: 1 }],
+        images: [
+          { bufferView: 0, mimeType: 'image/jpeg' },
+          { uri: 'normal.png', mimeType: 'image/png' },
+        ],
+        bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: JPEG.byteLength }],
+      },
+      JPEG,
+    )
+
+    const chunks = glbChunksOf(withoutEmbeddedTextures(source))
+    const json = chunks ? glbJson(chunks.json) : null
+
+    expect(json).toMatchObject({
+      images: [{ uri: 'normal.png' }],
+      textures: [{ source: 0 }],
+      materials: [{ pbrMetallicRoughness: {}, normalTexture: { index: 0 } }],
+    })
+  })
+
+  it('preserves unknown container chunks byte-for-byte', () => {
+    const chunks = glbChunksOf(fileWith('baseColorTexture', JPEG))
+    if (!chunks) throw new Error('fixture is not a glb')
+    const extra = { kind: 0x12345678, bytes: new Uint8Array([9, 8, 7, 0]) }
+
+    const result = glbChunksOf(withoutEmbeddedTextures(glbFrom({ ...chunks, extra: [extra] })))
+
+    expect(result?.extra).toEqual([extra])
+  })
+
+  it('keeps a material image when a root extension also references its index', () => {
+    const source = glb(
+      {
+        materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
+        textures: [{ source: 0 }],
+        images: [{ bufferView: 0, mimeType: 'image/jpeg' }],
+        bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: JPEG.byteLength }],
+        extensions: { EXT_lights_image_based: { lights: [{ specularImages: [[0]] }] } },
+      },
+      JPEG,
+    )
+
+    expect(withoutEmbeddedTextures(source)).toBe(source)
+  })
+
+  it('does not mistake punctual light numbers for image indexes', () => {
+    const source = glb(
+      {
+        materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
+        textures: [{ source: 0 }],
+        images: [{ bufferView: 0, mimeType: 'image/jpeg' }],
+        bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: JPEG.byteLength }],
+        extensions: {
+          KHR_lights_punctual: { lights: [{ type: 'point', intensity: 1, color: [1, 1, 1] }] },
+        },
+      },
+      JPEG,
+    )
+
+    expect(embeddedTextures(withoutEmbeddedTextures(source))).toEqual([])
+  })
+
+  it('keeps compressed buffer offsets intact while removing material images', () => {
+    const binary = new Uint8Array([...JPEG, 1, 2, 3, 4])
+    const source = glb(
+      {
+        buffers: [{ byteLength: binary.byteLength }],
+        bufferViews: [
+          { buffer: 0, byteOffset: 0, byteLength: JPEG.byteLength },
+          {
+            buffer: 0,
+            byteOffset: JPEG.byteLength,
+            byteLength: 4,
+            extensions: {
+              EXT_meshopt_compression: {
+                buffer: 0,
+                byteOffset: JPEG.byteLength,
+                byteLength: 4,
+                byteStride: 1,
+                count: 4,
+                mode: 'ATTRIBUTES',
+                filter: 'NONE',
+              },
+            },
+          },
+        ],
+        accessors: [{ bufferView: 1, componentType: 5121, count: 4, type: 'SCALAR' }],
+        materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
+        textures: [{ source: 0 }],
+        images: [{ bufferView: 0, mimeType: 'image/jpeg' }],
+      },
+      binary,
+    )
+
+    const chunks = glbChunksOf(withoutEmbeddedTextures(source))
+    const json = chunks ? glbJson(chunks.json) : null
+
+    expect(chunks?.bin).toEqual(binary)
+    expect(json).toMatchObject({
+      bufferViews: [
+        { byteOffset: 0, byteLength: JPEG.byteLength },
+        {
+          byteOffset: JPEG.byteLength,
+          extensions: { EXT_meshopt_compression: { byteOffset: JPEG.byteLength } },
+        },
+      ],
+      accessors: [{ bufferView: 1 }],
+    })
+    expect(json).not.toHaveProperty('images')
+    expect(json).not.toHaveProperty('textures')
   })
 })

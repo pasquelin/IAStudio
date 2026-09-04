@@ -15,6 +15,7 @@ import { SelectField } from '@/components/SelectField'
 import { openAssetById } from '@/helpers/openAsset'
 import { getBridge } from '@/services/bridge'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
+import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 import { openModelMaterial } from '@/features/material/openModelMaterial'
 import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from '@/stores/assets'
@@ -55,6 +56,7 @@ export function ModelDressSection({
 }: ModelDressSectionProps) {
   const { t } = useTranslation()
   const pictures = useProjectPictures(PICTURES)
+  const pictureAssets = useProjectPictureAssets(PICTURES)
   const mode: DressMode = dress?.kind === 'plain' ? 'image' : (dress?.kind ?? 'own')
   const imageAssetId = imageAssetIdOf(dress)
 
@@ -70,8 +72,7 @@ export function ModelDressSection({
   }
 
   const assemble = async (slot: number): Promise<void> => {
-    const own = await extract()
-    if (own === null) return
+    const own = pictureAssets.filter(asset => asset.derivedFrom === assetId)
 
     try {
       const materialId = await openModelMaterial({ id: assetId, name }, own)
@@ -130,6 +131,7 @@ export function ModelDressSection({
         label={t('inspector.modelDressMode')}
         scId="modelDressMode"
         value={mode}
+        compactActions
         actions={
           <ToolButton
             icon={mdiImageMultipleOutline}

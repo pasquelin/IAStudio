@@ -184,7 +184,7 @@ describe('what a character is made of', () => {
     expect(screen.queryByLabelText('Skin')).not.toBeInTheDocument()
   })
 
-  it('extracts embedded pictures before opening them as an editable material', async () => {
+  it('opens already extracted pictures as an editable material without stripping the model', async () => {
     const texture: Asset = {
       id: 'texture-1',
       name: 'Hero — Couleur de base',
@@ -195,9 +195,10 @@ describe('what a character is made of', () => {
       derivedFrom: ASSET,
       map: 'baseColor',
     }
-    const extractTextures = vi.fn(() => Promise.resolve([texture]))
-    const invalidate = vi.spyOn(useAssets.getState(), 'invalidate')
-    installFakeBridge({ assets: { extractTextures } })
+    const extractTextures = vi.fn(() => Promise.resolve([]))
+    installFakeBridge({
+      assets: { extractTextures, search: vi.fn(() => Promise.resolve([texture])) },
+    })
     openModelMaterial.mockResolvedValue('material-1')
     seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: [''] } })
     show()
@@ -205,8 +206,7 @@ describe('what a character is made of', () => {
     fireEvent.contextMenu(screen.getByLabelText('Matière 1'))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Assembler depuis le fichier' }))
 
-    await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
-    expect(invalidate).toHaveBeenCalledOnce()
+    expect(extractTextures).not.toHaveBeenCalled()
     expect(openModelMaterial).toHaveBeenCalledWith({ id: ASSET, name: ASSET }, [texture])
     await vi.waitFor(() =>
       expect(held().dress).toEqual({ kind: 'materials', documentIds: ['material-1'] }),

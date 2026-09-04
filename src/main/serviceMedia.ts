@@ -89,7 +89,6 @@ export function createMediaServices(deps: MediaDeps) {
       void deriveLandedFiles(asset, asset.type, asset.path, asset.probe)
       return
     }
-    if (asset.type === 'mesh') void extractAssetTextures(extractTextures, asset)
   }
   const assets = createLocalBackend({
     download: deps.download,
@@ -105,6 +104,9 @@ export function createMediaServices(deps: MediaDeps) {
     fileOf: asset => ownFileOf(deps.project.path(), asset),
     search: query => deps.project.catalog().search(query),
     write: (request, bytes) => assets.importFromBytes(request, bytes),
+    replaceModel: async (source, bytes) => {
+      await assets.replaceBytes(source.id, bytes, '.glb')
+    },
     newAssetId: deps.newAssetId,
     record: report => deps.journal.record(report),
   })
@@ -238,17 +240,6 @@ function createAnnouncer(): (asset: Asset) => void {
       landed = []
       broadcast(EVENTS.assetsChanged, rows)
     }, ANNOUNCE_MS)
-  }
-}
-
-async function extractAssetTextures(
-  extract: ReturnType<typeof createTextureExtraction>,
-  asset: Asset,
-): Promise<void> {
-  try {
-    await extract(asset)
-  } catch (error) {
-    log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`)
   }
 }
 

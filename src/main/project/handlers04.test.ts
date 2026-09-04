@@ -99,6 +99,7 @@ export function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDep
         fileOf: source => ownFileOf(merged.project.path(), source),
         search: query => catalog.search(query),
         write: (request, bytes) => merged.assets.importFromBytes(request, bytes),
+        replaceModel: async () => undefined,
         newAssetId: merged.newAssetId,
         record: merged.record,
       }),

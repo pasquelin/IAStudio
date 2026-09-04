@@ -21,10 +21,12 @@ import { noContext } from '@shared/domain/projectContext'
 import { CHANNELS } from '@shared/ipc'
 
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
+import { embeddedTextures } from '@main/assets/glbTextures'
 
 import { ownFileOf } from '@main/assets/protocol'
 
 import { createTextureExtraction } from '@main/assets/textureExtraction'
+import type { WriteRequest } from '@main/assets/localBackend'
 
 import { invoke, resetHandlers } from '@main/ipc/testHarness'
 
@@ -99,6 +101,9 @@ export function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDep
         fileOf: source => ownFileOf(merged.project.path(), source),
         search: query => catalog.search(query),
         write: (request, bytes) => merged.assets.importFromBytes(request, bytes),
+        replaceModel: async (source, bytes) => {
+          await merged.assets.replaceBytes(source.id, bytes, '.glb')
+        },
         newAssetId: merged.newAssetId,
         record: merged.record,
       }),
@@ -201,10 +206,36 @@ describe('project handlers', () => {
 
     const backend = () => ({
       importFromUrl: vi.fn(),
-      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      importFromBytes: vi.fn<(request: WriteRequest, bytes: Uint8Array) => Promise<Asset>>(
+        async () => asset({ id: 'asset-new', type: 'image' }),
+      ),
       importFromFile: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
       replaceBytes: vi.fn(),
     })
+
+    const glbWithTwoPictures = (): Uint8Array => {
+      const normal = new Uint8Array([9, 8, 7, 6])
+      return glbFile(
+        {
+          materials: [
+            {
+              pbrMetallicRoughness: { baseColorTexture: { index: 0 } },
+              normalTexture: { index: 1 },
+            },
+          ],
+          textures: [{ source: 0 }, { source: 1 }],
+          images: [
+            { bufferView: 0, mimeType: 'image/jpeg' },
+            { bufferView: 1, mimeType: 'image/jpeg' },
+          ],
+          bufferViews: [
+            { buffer: 0, byteOffset: 0, byteLength: JPEG.byteLength },
+            { buffer: 0, byteOffset: JPEG.byteLength, byteLength: normal.byteLength },
+          ],
+        },
+        new Uint8Array([...JPEG, ...normal]),
+      )
+    }
 
     /**
      * What one call wrote, with the bytes as plain numbers: the reader hands back views ONTO the
@@ -253,20 +284,25 @@ describe('project handlers', () => {
         // `.jpg`, from what the file declares: the bytes are copied, so the name must not lie.
         extension: '.jpg',
         derivedFrom: 'asset-1',
+        outputIndex: 0,
       })
       expect(wrote(assets).bytes).toEqual([...JPEG])
+      const replacement = assets.replaceBytes.mock.calls[0]?.[1]
+      expect(replacement).toBeInstanceOf(Uint8Array)
+      if (replacement instanceof Uint8Array) expect(embeddedTextures(replacement)).toEqual([])
       await rm(root, { recursive: true, force: true })
     })
 
-    /**
-     * An import extracts on its own now, and the row is what catches up the models a project held
-     * before it did. Both call the same thing, so without this a model imported since would have
-     * every one of its pictures doubled by one click.
-     */
-    it('leaves a model that already has its pictures alone, and answers with them', async () => {
+    it('reuses a texture that was already extracted, then strips the model copy', async () => {
       const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
       await catalog.add(
-        asset({ id: 'asset-tex', type: 'image', derivedFrom: 'asset-1', name: 'Skeleton base' }),
+        asset({
+          id: 'asset-tex',
+          type: 'image',
+          derivedFrom: 'asset-1',
+          name: 'Skeleton base',
+          map: 'baseColor',
+        }),
       )
       const assets = backend()
       registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
@@ -274,7 +310,54 @@ describe('project handlers', () => {
       const answered = await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
 
       expect(assets.importFromBytes).not.toHaveBeenCalled()
+      expect(assets.replaceBytes).toHaveBeenCalledTimes(1)
       expect(answered).toMatchObject([{ id: 'asset-tex' }])
+      await rm(root, { recursive: true, force: true })
+    })
+
+    it('ignores another derived image that is not an extracted material texture', async () => {
+      const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
+      await catalog.add(
+        asset({ id: 'asset-preview', type: 'image', derivedFrom: 'asset-1', name: 'Preview' }),
+      )
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
+
+      await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
+
+      expect(assets.importFromBytes).toHaveBeenCalledTimes(1)
+      expect(assets.replaceBytes).toHaveBeenCalledTimes(1)
+      await rm(root, { recursive: true, force: true })
+    })
+
+    it('resumes after a partial write before stripping the model', async () => {
+      const root = await modelInProject(glbWithTwoPictures())
+      const assets = backend()
+      let calls = 0
+      assets.importFromBytes.mockImplementation(async request => {
+        calls += 1
+        if (calls === 2) throw new Error('disk full')
+        const written = asset({
+          id: request.id,
+          name: request.name,
+          type: 'image',
+          derivedFrom: request.derivedFrom,
+          outputIndex: request.outputIndex,
+          map: request.map,
+          packedSlot: request.packedSlot,
+        })
+        await catalog.add(written)
+        return written
+      })
+      registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
+
+      await expect(invoke(CHANNELS.assetsExtractTextures, 'asset-1')).rejects.toThrow('disk full')
+      expect(assets.replaceBytes).not.toHaveBeenCalled()
+
+      await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
+
+      expect(assets.importFromBytes).toHaveBeenCalledTimes(3)
+      expect(assets.replaceBytes).toHaveBeenCalledTimes(1)
       await rm(root, { recursive: true, force: true })
     })
 
