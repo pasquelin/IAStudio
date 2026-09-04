@@ -196,7 +196,11 @@ function groundSignature(layer: ReliefLayer): string | null {
   if (!layer.groundWeights) return layer.groundMaterials[0]?.albedo.assetId ?? null
   return [
     layer.groundWeights.assetId,
-    ...layer.groundMaterials.flatMap(item => [item.albedo.assetId, item.normal?.assetId ?? '']),
+    ...layer.groundMaterials.flatMap(item => [
+      item.channel,
+      item.albedo.assetId,
+      item.normal?.assetId ?? '',
+    ]),
   ].join('|')
 }
 

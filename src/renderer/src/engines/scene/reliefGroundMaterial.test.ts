@@ -82,4 +82,35 @@ describe('relief ground material', () => {
     applyGroundPaint(terrain, emptyGroundPaint(2, 2))
     expect(terrain.groundUniforms?.weights.value).not.toBe(textures[3])
   })
+
+  it('reloads bindings when an existing material changes channel', async () => {
+    const terrain: ReliefGroundMaterial = {
+      material: new MeshStandardMaterial(),
+      groundAssetId: null,
+      groundGeneration: 0,
+    }
+    const first = reliefLayer(
+      { assetId: 'height' },
+      {
+        id: 'terrain',
+        groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
+        groundWeights: { assetId: 'weights' },
+      },
+    )
+    const loadGround = async () => new Texture()
+    syncGroundMaterial(terrain, first, { loadGround })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+    const generation = terrain.groundGeneration
+
+    syncGroundMaterial(
+      terrain,
+      {
+        ...first,
+        groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'g' }],
+      },
+      { loadGround },
+    )
+
+    expect(terrain.groundGeneration).toBe(generation + 1)
+  })
 })
