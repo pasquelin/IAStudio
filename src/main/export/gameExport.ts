@@ -1,6 +1,10 @@
 import { pathBaseNameOf, safeFileName, stemOf } from '@shared/domain/fileName'
 import { escapeXml } from '@shared/domain/xmlText'
 import { freeName } from '@shared/domain/otioz'
+import { availableParallelism } from 'node:os'
+import { gzip } from 'node:zlib'
+import { boundedPool } from '@main/boundedPool'
+import { compactGlbGeometry } from './glbGeometry'
 import {
   EXPORTED_GAME_FILE,
   EXPORTED_GAME_VERSION,
@@ -59,7 +63,8 @@ export async function writeExportedGame(
   const { scenes, scripts } = request
   const missing: string[] = []
   const assets: Record<string, string> = {}
-  const contentPaths = new Map<string, { body: Uint8Array; path: string }[]>()
+  const compressedAssets: string[] = []
+  const contentPaths = new Map<string, { body: Uint8Array; path: string; compressed: boolean }[]>()
   // 🛑 Two rows may name one file — `checker.png` twice, from two folders — and the second would
   // overwrite the first without a word. The same rule a montage bundle already follows.
   const taken = new Set<string>()
@@ -75,39 +80,65 @@ export async function writeExportedGame(
       continue
     }
 
-    const optimized = overriddenAsset(file, overrides.get(id))
+    const overridden = overriddenAsset(file, overrides.get(id))
+    const optimized = await optimizedAsset(overridden)
     const contentKey =
       optimized === file && file.hash ? file.hash : `bytes:${optimized.bytes.byteLength}`
     const candidates = contentPaths.get(contentKey) ?? []
     const shared = await matchingContent(candidates, optimized.bytes)
     if (shared) {
       assets[id] = shared.path
+      if (shared.compressed) compressedAssets.push(id)
       continue
     }
 
-    const name = freeName(safeFileName(optimized.name, 'asset'), taken)
+    const compressed = await gzipBytes(optimized.bytes)
+    const body = compressed.byteLength < optimized.bytes.byteLength ? compressed : optimized.bytes
+    const suffix = body === compressed ? '.gz' : ''
+    const name = freeName(`${safeFileName(optimized.name, 'asset')}${suffix}`, taken)
     taken.add(name)
     assets[id] = `assets/${name}`
-    candidates.push({ body: optimized.bytes, path: assets[id] })
+    if (suffix) compressedAssets.push(id)
+    candidates.push({ body: optimized.bytes, path: assets[id], compressed: suffix.length > 0 })
     contentPaths.set(contentKey, candidates)
-    assetWrites.push(ports.write(assets[id], optimized.bytes))
+    assetWrites.push(ports.write(assets[id], body))
   }
 
   // 🛑 Through `safeFileName` and deduplicated: an id comes from the WINDOW over IPC, so `../../x`
   // would be written wherever it pointed, and two ids cleaning to one name would overwrite each
   // other in silence.
+  const compression = boundedPool(() => Math.max(1, availableParallelism() - 2))
+  const storedScenes = await Promise.all(
+    scenes.map(async scene => ({
+      scene,
+      stored: await compression.run(() => storedText(scene.content)),
+    })),
+  )
+  const storedScripts = await Promise.all(
+    scripts.map(async script => ({
+      script,
+      stored: await compression.run(() => storedText(script.code)),
+    })),
+  )
   const files = new Map<string, string>()
-  for (const scene of scenes) {
-    const name = freeName(`${safeFileName(scene.id, 'scene')}.gltf`, taken)
+  const compressedScenes = new Set<string>()
+  for (const { scene, stored } of storedScenes) {
+    const name = freeName(
+      `${safeFileName(scene.id, 'scene')}.gltf${stored.compressed ? '.gz' : ''}`,
+      taken,
+    )
     taken.add(name)
     files.set(scene.id, `scenes/${name}`)
+    if (stored.compressed) compressedScenes.add(scene.id)
   }
 
   const named = new Map<string, string>()
-  for (const script of scripts) {
-    const name = freeName(fileNameOf(script), taken)
+  const compressedScripts = new Set<string>()
+  for (const { script, stored } of storedScripts) {
+    const name = freeName(`${fileNameOf(script)}${stored.compressed ? '.gz' : ''}`, taken)
     taken.add(name)
     named.set(script.script, name)
+    if (stored.compressed) compressedScripts.add(script.script)
   }
 
   const game: ExportedGame = {
@@ -118,10 +149,16 @@ export async function writeExportedGame(
       id: one.id,
       title: one.title,
       file: files.get(one.id) ?? '',
+      ...(compressedScenes.has(one.id) ? { compression: 'gzip' } : {}),
       ...(one.optimization ? { optimization: one.optimization } : {}),
     })),
-    scripts: scripts.map(one => ({ script: one.script, file: `scripts/${named.get(one.script)}` })),
+    scripts: scripts.map(one => ({
+      script: one.script,
+      file: `scripts/${named.get(one.script)}`,
+      ...(compressedScripts.has(one.script) ? { compression: 'gzip' } : {}),
+    })),
     assets,
+    ...(compressedAssets.length > 0 ? { compressedAssets } : {}),
     ...(request.modelAssets ? { modelAssets: request.modelAssets } : {}),
     ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
   }
@@ -131,8 +168,10 @@ export async function writeExportedGame(
   const runtime = await ports.runtime()
   await Promise.all([
     ...assetWrites,
-    ...scenes.map(scene => ports.write(files.get(scene.id) ?? '', scene.content)),
-    ...scripts.map(script => ports.write(`scripts/${named.get(script.script)}`, script.code)),
+    ...storedScenes.map(({ scene, stored }) => ports.write(files.get(scene.id) ?? '', stored.body)),
+    ...storedScripts.map(({ script, stored }) =>
+      ports.write(`scripts/${named.get(script.script)}`, stored.body),
+    ),
     ...runtime.map(file => ports.write(file.name, file.body)),
     ports.write(EXPORTED_GAME_FILE, `${JSON.stringify(game, null, 2)}\n`),
     ports.write('index.html', pageFor(request.title)),
@@ -144,6 +183,37 @@ export async function writeExportedGame(
     assets: Object.keys(assets).length,
     missing,
   }
+}
+
+async function storedText(
+  source: string,
+): Promise<{ body: string | Uint8Array; compressed: boolean }> {
+  const compressed = await gzipBytes(source)
+  return compressed.byteLength < Buffer.byteLength(source)
+    ? { body: compressed, compressed: true }
+    : { body: source, compressed: false }
+}
+
+async function gzipBytes(source: string | Uint8Array): Promise<Uint8Array> {
+  return await new Promise<Uint8Array>((resolve, reject) => {
+    gzip(source, { level: 9 }, (error, bytes) => {
+      if (error) reject(error)
+      else resolve(bytes)
+    })
+  })
+}
+
+async function optimizedAsset(source: ExportedAsset): Promise<ExportedAsset> {
+  if (!source.name.toLowerCase().endsWith('.glb')) return source
+  const compact = compactGlbGeometry(source.bytes)
+  if (compact === source.bytes) return source
+  const [originalGzip, compactGzip] = await Promise.all([
+    gzipBytes(source.bytes),
+    gzipBytes(compact),
+  ])
+  const originalStoredBytes = Math.min(source.bytes.byteLength, originalGzip.byteLength)
+  const compactStoredBytes = Math.min(compact.byteLength, compactGzip.byteLength)
+  return compactStoredBytes < originalStoredBytes ? { ...source, bytes: compact } : source
 }
 
 function overriddenAsset(
@@ -158,9 +228,9 @@ function overriddenAsset(
 const COMPARISON_CHUNK_BYTES = 1024 * 1024
 
 async function matchingContent(
-  candidates: readonly { body: Uint8Array; path: string }[],
+  candidates: readonly { body: Uint8Array; path: string; compressed: boolean }[],
   wanted: Uint8Array,
-): Promise<{ body: Uint8Array; path: string } | null> {
+): Promise<{ body: Uint8Array; path: string; compressed: boolean } | null> {
   for (const candidate of candidates) {
     if (candidate.body.byteLength !== wanted.byteLength) continue
     if (await sameBytes(candidate.body, wanted)) return candidate

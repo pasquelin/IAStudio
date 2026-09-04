@@ -8,10 +8,16 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { SceneGameExportDialog } from './SceneGameExportDialog'
 
-const { exportGameProject } = vi.hoisted(() => ({
+const { analyzeGameOptimization, exportGameProject } = vi.hoisted(() => ({
+  analyzeGameOptimization: vi.fn(async () => ({
+    scenes: 2,
+    objects: 50,
+    drawCallsBefore: 45,
+    drawCallsAfter: 5,
+  })),
   exportGameProject: vi.fn(async (..._arguments: unknown[]) => ({ ok: true })),
 }))
-vi.mock('@/game/gameExportCompiler', () => ({ exportGameProject }))
+vi.mock('@/game/gameExportCompiler', () => ({ analyzeGameOptimization, exportGameProject }))
 
 const DOCUMENT = 'Forest'
 const PLAN: OptimizationPlan = {
@@ -50,6 +56,7 @@ beforeEach(() => {
   } as unknown as SceneRenderer)
   useGameExportDialog.getState().open(DOCUMENT)
   exportGameProject.mockClear()
+  analyzeGameOptimization.mockClear()
 })
 
 afterEach(() => {
@@ -70,12 +77,12 @@ it('exports through the shared game action with the explicit choices', async () 
   const user = userEvent.setup()
   render(<SceneGameExportDialog documentId={DOCUMENT} />)
 
-  await screen.findByText('Appels de rendu 20 → 2')
+  await screen.findByText('Appels de rendu 45 → 5')
   await user.selectOptions(
     screen.getByRole('combobox', { name: 'Simplification géométrique' }),
     'balanced',
   )
-  expect(screen.getByText('Triangles affichés 100 → 65')).toBeInTheDocument()
+  expect(screen.getByText(/Scène actuelle avec pertes · 65 triangles/)).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Exporter' }))
 
   expect(exportGameProject).toHaveBeenCalledWith({
@@ -101,7 +108,7 @@ it('aborts export preparation when the user cancels the dialog', async () => {
   const user = userEvent.setup()
   render(<SceneGameExportDialog documentId={DOCUMENT} />)
 
-  await screen.findByText('Appels de rendu 20 → 2')
+  await screen.findByText('Appels de rendu 45 → 5')
   await user.click(screen.getByRole('button', { name: 'Exporter' }))
   const options: unknown = exportGameProject.mock.calls[0]?.[0]
   const signal = typeof options === 'object' && options ? Reflect.get(options, 'signal') : undefined

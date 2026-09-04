@@ -12,6 +12,22 @@ import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { compileLossyModels } from './lossyModelCompiler'
 
 describe('LOSSY imported models compiled for an export', () => {
+  it('does not duplicate model buffers when SAFE mode has no measured storage benefit', async () => {
+    const load = vi.fn()
+    const dispose = vi.fn()
+
+    const compiled = await compileLossyModels(
+      [{ id: 'tree', url: 'ia-studio://master/tree?v=1' }],
+      NO_LOSSY_OPTIMIZATION,
+      undefined,
+      { load, simplify: vi.fn(), dispose },
+    )
+
+    expect(compiled.size).toBe(0)
+    expect(load).not.toHaveBeenCalled()
+    expect(dispose).not.toHaveBeenCalled()
+  })
+
   it('passes cancellation to the model read', async () => {
     const controller = new AbortController()
     const load = vi.fn(async () => null)
