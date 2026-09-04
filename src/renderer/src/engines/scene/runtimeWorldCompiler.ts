@@ -17,7 +17,7 @@ import {
   type SafeRuntimeValidationReport,
 } from './safeRuntimeValidation'
 import type { VisualFrame } from './visualRegression'
-import { adaptiveCellsOf } from './adaptivePartition'
+import { adaptiveCellsOf, adaptiveRootCellKeyOf } from './adaptivePartition'
 
 export type OptimizationSignature = string
 
@@ -37,6 +37,7 @@ export type RuntimeCompilationReport = {
   readonly compilationMs: number
   readonly compiledArtifacts: number
   readonly reusedArtifacts: number
+  readonly analyzedArtifactNodes: number
 }
 
 export type RuntimeOptimization = {
@@ -77,6 +78,7 @@ const EMPTY_REPORT: RuntimeCompilationReport = {
   compilationMs: 0,
   compiledArtifacts: 0,
   reusedArtifacts: 0,
+  analyzedArtifactNodes: 0,
 }
 
 /** Describes one immutable authoring change without serializing the unchanged world. */
@@ -165,14 +167,29 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
   const invalidated = new Set<string>()
   let runtime: RuntimeWorld | null = null
   let artifacts = new Map<string, RuntimeRenderArtifact>()
+  let artifactRegions = new Map<string, readonly RuntimeRenderArtifact[]>()
+  let artifactRegionByNode = new Map<string, string>()
+  let artifactRegionMembers = new Map<string, Set<string>>()
+  let regionalArtifacts = false
+  let forcedMeshKeys = new Set<string>()
+  let nodePositions = new Map<string, number>()
+  let parentedNodes = 0
   let report = EMPTY_REPORT
 
   const compileRuntimeWorld = (world: SceneState): RuntimeWorld => {
     const started = performance.now()
     nodes.clear()
     for (const node of world.nodes) nodes.set(node.id, node)
+    nodePositions = new Map(world.nodes.map((node, index) => [node.id, index]))
+    parentedNodes = world.nodes.filter(node => node.parentId !== null).length
     invalidated.clear()
-    const compiledArtifacts = runtimeArtifactsOf(world.nodes, world.animation)
+    const compiled = compileArtifactWorld(world.nodes, world.animation)
+    const compiledArtifacts = compiled.artifacts
+    artifactRegions = compiled.regions
+    artifactRegionByNode = compiled.regionByNode
+    artifactRegionMembers = compiled.regionMembers
+    regionalArtifacts = compiled.regional
+    forcedMeshKeys = compiled.forcedMeshKeys
     artifacts = new Map(compiledArtifacts.map(artifact => [artifact.signature, artifact]))
     runtime = runtimeState(world, world.nodes, compiledArtifacts)
     report = {
@@ -183,6 +200,7 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       compilationMs: performance.now() - started,
       compiledArtifacts: compiledArtifacts.length,
       reusedArtifacts: 0,
+      analyzedArtifactNodes: world.nodes.length,
     }
     return runtime
   }
@@ -190,13 +208,28 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
   const compileRuntimeRegion = (patch: RuntimeWorldPatch): RuntimeWorld | null => {
     if (!runtime) return null
     const started = performance.now()
+    const affectedRegions = new Set<string>()
+    const invalidatedIds = new Set(invalidated)
+    const removedIds = new Set(patch.removedIds)
+    for (const id of [
+      ...patch.removedIds,
+      ...patch.changedNodes.map(node => node.id),
+      ...invalidated,
+    ]) {
+      const region = artifactRegionByNode.get(id)
+      if (region) affectedRegions.add(region)
+    }
     let compiledNodes = 0
     let artifactInputsChanged = patch.removedIds.length > 0 || patch.animation !== null
-    const forceArtifactCompilation = invalidated.size > 0
+    let forcedMeshGroupChanged = false
+    const driven = new Set(
+      (patch.animation ?? runtime.animation).tracks.map(track => track.target.nodeId),
+    )
     if (invalidated.size > 0) {
       artifactInputsChanged = true
       const changedIds = new Set(patch.changedNodes.map(node => node.id))
       for (const id of invalidated) {
+        if (removedIds.has(id)) continue
         const previous = nodes.get(id)
         if (!previous || changedIds.has(id)) continue
         nodes.set(id, structuredClone(previous))
@@ -212,35 +245,112 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       if (!previous || artifactInputSignature(previous) !== artifactInputSignature(node)) {
         artifactInputsChanged = true
       }
+      if (forcedMeshKeyOf(previous, driven) !== forcedMeshKeyOf(node, driven)) {
+        forcedMeshGroupChanged = true
+      }
+      if (previous) {
+        if (previous.parentId !== null && node.parentId === null) parentedNodes -= 1
+        if (previous.parentId === null && node.parentId !== null) parentedNodes += 1
+      } else if (node.parentId !== null) {
+        parentedNodes += 1
+      }
       nodes.set(node.id, node)
+      updateArtifactRegion(node, artifactRegionByNode, artifactRegionMembers, affectedRegions)
       compiledNodes += 1
     }
     let removedNodes = 0
     for (const id of patch.removedIds) {
-      if (nodes.delete(id)) removedNodes += 1
+      if (nodes.delete(id)) {
+        const previous = runtime.nodes[nodePositions.get(id) ?? -1]
+        if (forcedMeshKeyOf(previous, driven)) forcedMeshGroupChanged = true
+        if (previous?.parentId !== null) parentedNodes -= 1
+        removeArtifactRegion(id, artifactRegionByNode, artifactRegionMembers)
+        removedNodes += 1
+      }
     }
     const ordered = patch.order
       ? patch.order.flatMap(id => {
           const node = nodes.get(id)
           return node ? [node] : []
         })
-      : runtime.nodes.flatMap(node => {
-          const current = nodes.get(node.id)
-          return current ? [current] : []
-        })
+      : runtime.nodes.slice()
+    if (!patch.order) {
+      for (const id of [...patch.changedNodes.map(node => node.id), ...invalidatedIds]) {
+        const index = nodePositions.get(id)
+        const node = nodes.get(id)
+        if (index !== undefined && node) ordered[index] = node
+      }
+    } else {
+      nodePositions = new Map(ordered.map((node, index) => [node.id, index]))
+    }
     let compiledArtifacts = 0
     let reusedArtifacts = runtime.runtimeOptimization.artifacts.length
-    const heldArtifacts = artifactInputsChanged
-      ? runtimeArtifactsOf(ordered, patch.animation ?? runtime.animation).map(artifact => {
-          const held = forceArtifactCompilation ? undefined : artifacts.get(artifact.signature)
+    const remainsRegional = parentedNodes === 0
+    let analyzedArtifactNodes = 0
+    let heldArtifacts = runtime.runtimeOptimization.artifacts
+    if (artifactInputsChanged) {
+      if (
+        regionalArtifacts &&
+        remainsRegional &&
+        patch.animation === null &&
+        !forcedMeshGroupChanged
+      ) {
+        const previousArtifacts = artifacts
+        const nextArtifacts = new Map(artifacts)
+        for (const region of affectedRegions) {
+          for (const artifact of artifactRegions.get(region) ?? []) {
+            nextArtifacts.delete(artifact.signature)
+          }
+          const members = [...(artifactRegionMembers.get(region) ?? [])].flatMap(id => {
+            const node = nodes.get(id)
+            return node ? [node] : []
+          })
+          analyzedArtifactNodes += members.length
+          if (members.length > 0) {
+            const compiledRegion = runtimeArtifactsOf(
+              membersWithForcedInstances(members, forcedMeshKeys, runtime.animation),
+              runtime.animation,
+            ).map(artifact => {
+              const forced = artifact.sourceIds.some(id => invalidatedIds.has(id))
+              const held =
+                invalidatedIds.size > 0 && forced
+                  ? undefined
+                  : previousArtifacts.get(artifact.signature)
+              if (held) return held
+              compiledArtifacts += 1
+              return artifact
+            })
+            artifactRegions.set(region, compiledRegion)
+            for (const artifact of compiledRegion) nextArtifacts.set(artifact.signature, artifact)
+          } else {
+            artifactRegions.delete(region)
+          }
+        }
+        artifacts = nextArtifacts
+        heldArtifacts = [...artifacts.values()].sort((one, other) =>
+          byCodeUnit(one.signature, other.signature),
+        )
+      } else {
+        const compiled = compileArtifactWorld(ordered, patch.animation ?? runtime.animation)
+        heldArtifacts = compiled.artifacts.map(artifact => {
+          const forced = artifact.sourceIds.some(id => invalidatedIds.has(id))
+          const held =
+            invalidatedIds.size > 0 && forced ? undefined : artifacts.get(artifact.signature)
           if (held) return held
           compiledArtifacts += 1
           return artifact
         })
-      : runtime.runtimeOptimization.artifacts
+        artifactRegions = compiled.regions
+        artifactRegionByNode = compiled.regionByNode
+        artifactRegionMembers = compiled.regionMembers
+        regionalArtifacts = compiled.regional
+        forcedMeshKeys = compiled.forcedMeshKeys
+        analyzedArtifactNodes = ordered.length
+        artifacts = new Map(heldArtifacts.map(artifact => [artifact.signature, artifact]))
+      }
+    }
     invalidated.clear()
     if (artifactInputsChanged) reusedArtifacts = heldArtifacts.length - compiledArtifacts
-    artifacts = new Map(heldArtifacts.map(artifact => [artifact.signature, artifact]))
     runtime = runtimeState(
       {
         ...runtime,
@@ -258,6 +368,7 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       compilationMs: performance.now() - started,
       compiledArtifacts,
       reusedArtifacts,
+      analyzedArtifactNodes,
     }
     return runtime
   }
@@ -274,6 +385,13 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       invalidated.clear()
       runtime = null
       artifacts.clear()
+      artifactRegions.clear()
+      artifactRegionByNode.clear()
+      artifactRegionMembers.clear()
+      regionalArtifacts = false
+      forcedMeshKeys.clear()
+      nodePositions.clear()
+      parentedNodes = 0
       report = EMPTY_REPORT
     },
     validateSafeWorld: async (world, input) => {
@@ -287,6 +405,153 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       })
     },
   }
+}
+
+type ArtifactWorldCompilation = {
+  artifacts: readonly RuntimeRenderArtifact[]
+  regions: Map<string, readonly RuntimeRenderArtifact[]>
+  regionByNode: Map<string, string>
+  regionMembers: Map<string, Set<string>>
+  regional: boolean
+  forcedMeshKeys: Set<string>
+}
+
+function compileArtifactWorld(
+  nodes: readonly SceneNode[],
+  animation: AnimationTimeline,
+): ArtifactWorldCompilation {
+  if (nodes.some(node => node.parentId !== null)) {
+    return {
+      artifacts: runtimeArtifactsOf(nodes, animation),
+      regions: new Map(),
+      regionByNode: new Map(),
+      regionMembers: new Map(),
+      regional: false,
+      forcedMeshKeys: new Set(),
+    }
+  }
+  const regionByNode = new Map<string, string>()
+  const regionMembers = new Map<string, Set<string>>()
+  const excluded = behavioralGroupingExclusions(
+    nodes,
+    new Set(animation.tracks.map(track => track.target.nodeId)),
+  )
+  const forcedMeshKeys = new Set(
+    nodes.flatMap(node => {
+      const key = forcedMeshKeyOf(node, excluded)
+      return key ? [key] : []
+    }),
+  )
+  for (const node of nodes) {
+    const region = artifactRegionOf(node)
+    if (!region) continue
+    regionByNode.set(node.id, region)
+    const members = regionMembers.get(region)
+    if (members) members.add(node.id)
+    else regionMembers.set(region, new Set([node.id]))
+  }
+  const byId = new Map(nodes.map(node => [node.id, node]))
+  const regions = new Map<string, readonly RuntimeRenderArtifact[]>()
+  for (const [region, ids] of regionMembers) {
+    const members = [...ids].flatMap(id => {
+      const node = byId.get(id)
+      return node ? [node] : []
+    })
+    regions.set(
+      region,
+      runtimeArtifactsOf(membersWithForcedInstances(members, forcedMeshKeys, animation), animation),
+    )
+  }
+  return {
+    artifacts: [...regions.values()]
+      .flat()
+      .sort((one, other) => byCodeUnit(one.signature, other.signature)),
+    regions,
+    regionByNode,
+    regionMembers,
+    regional: true,
+    forcedMeshKeys,
+  }
+}
+
+function forcedMeshKeyOf(
+  node: SceneNode | undefined,
+  excludedOrDriven: ReadonlySet<string>,
+): string | null {
+  if (node?.type !== 'mesh' || !node.visible || node.optimization?.mode !== 'instance') return null
+  const excluded = behavioralGroupingExclusions([node], excludedOrDriven)
+  return excluded.has(node.id) ? null : instanceCompatibilityKeyOf(node)
+}
+
+function membersWithForcedInstances(
+  nodes: readonly SceneNode[],
+  forcedKeys: ReadonlySet<string>,
+  animation: AnimationTimeline,
+): readonly SceneNode[] {
+  const excluded = behavioralGroupingExclusions(
+    nodes,
+    new Set(animation.tracks.map(track => track.target.nodeId)),
+  )
+  const forcedInRegion = new Set(
+    nodes.flatMap(node => {
+      const key = forcedMeshKeyOf(node, excluded)
+      return key ? [key] : []
+    }),
+  )
+  const promoted = new Set<string>()
+  return nodes.map(node => {
+    if (
+      node.type !== 'mesh' ||
+      excluded.has(node.id) ||
+      (node.optimization?.mode ?? 'auto') !== 'auto'
+    ) {
+      return node
+    }
+    const key = instanceCompatibilityKeyOf(node)
+    if (!forcedKeys.has(key) || forcedInRegion.has(key) || promoted.has(key)) return node
+    promoted.add(key)
+    return { ...node, optimization: { ...node.optimization, mode: 'instance' } }
+  })
+}
+
+function artifactRegionOf(node: SceneNode): string | null {
+  const mode = node.optimization?.mode ?? 'auto'
+  if (!node.visible || mode === 'individual' || mode === 'exclude') return null
+  if (node.type === 'mesh') {
+    return `mesh:${adaptiveRootCellKeyOf(node, DEFAULT_OPTIMIZATION_POLICY) ?? `oversize:${node.id}`}`
+  }
+  if (node.type !== 'model') return null
+  const strategy = mode === 'auto' || mode === 'instance' ? 'instance' : mode
+  return `model:${strategy}:${mode === 'batch' ? batchCompatibilityKeyOf(node) : instanceCompatibilityKeyOf(node)}`
+}
+
+function updateArtifactRegion(
+  node: SceneNode,
+  regionByNode: Map<string, string>,
+  regionMembers: Map<string, Set<string>>,
+  affected: Set<string>,
+): void {
+  removeArtifactRegion(node.id, regionByNode, regionMembers)
+  const region = artifactRegionOf(node)
+  if (!region) return
+  regionByNode.set(node.id, region)
+  const members = regionMembers.get(region)
+  if (members) members.add(node.id)
+  else regionMembers.set(region, new Set([node.id]))
+  affected.add(region)
+}
+
+function removeArtifactRegion(
+  id: string,
+  regionByNode: Map<string, string>,
+  regionMembers: Map<string, Set<string>>,
+): void {
+  const region = regionByNode.get(id)
+  if (!region) return
+  regionByNode.delete(id)
+  const members = regionMembers.get(region)
+  members?.delete(id)
+  if (members?.size === 0) regionMembers.delete(region)
 }
 
 function runtimeState(
@@ -320,13 +585,7 @@ export function runtimeArtifactsOf(
       continue
     const mode = node.optimization?.mode ?? 'auto'
     if (mode === 'batch') {
-      const key = stableKey([
-        node.type,
-        node.type === 'mesh' ? node.material : node.model.assetId,
-        node.castShadow,
-        node.receiveShadow,
-        node.optimization?.groupId ?? null,
-      ])
+      const key = batchCompatibilityKeyOf(node)
       const members = batches.get(key)
       const spatial = spatialNodes.get(node.id) ?? node
       if (members) members.push(spatial)
@@ -334,13 +593,7 @@ export function runtimeArtifactsOf(
       continue
     }
     if (mode !== 'auto' && mode !== 'instance') continue
-    const key = stableKey([
-      node.type,
-      node.type === 'mesh' ? [node.geometry, node.material, node.negative] : [node.model],
-      node.castShadow,
-      node.receiveShadow,
-      node.optimization?.groupId ?? null,
-    ])
+    const key = instanceCompatibilityKeyOf(node)
     const members = groups.get(key)
     if (members) {
       members.nodes.push(spatialNodes.get(node.id) ?? node)
@@ -358,6 +611,26 @@ export function runtimeArtifactsOf(
   return [...instances, ...batchArtifacts, ...automatic].sort((one, other) =>
     byCodeUnit(one.signature, other.signature),
   )
+}
+
+function batchCompatibilityKeyOf(node: Extract<SceneNode, { type: 'mesh' | 'model' }>): string {
+  return stableKey([
+    node.type,
+    node.type === 'mesh' ? node.material : node.model.assetId,
+    node.castShadow,
+    node.receiveShadow,
+    node.optimization?.groupId ?? null,
+  ])
+}
+
+function instanceCompatibilityKeyOf(node: Extract<SceneNode, { type: 'mesh' | 'model' }>): string {
+  return stableKey([
+    node.type,
+    node.type === 'mesh' ? [node.geometry, node.material, node.negative] : [node.model],
+    node.castShadow,
+    node.receiveShadow,
+    node.optimization?.groupId ?? null,
+  ])
 }
 
 function instanceArtifacts(
