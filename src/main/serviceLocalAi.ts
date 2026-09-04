@@ -12,7 +12,7 @@ import { totalmem } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import { createAiManager, type AiManager } from './ai/manager'
-import { modelWith } from './ai/catalogue'
+import { catalogueWith, modelWith } from './ai/catalogue'
 import { electronHardwarePort } from './ai/electronHardwarePort'
 import { electronLlamaPort } from './ai/electronLlamaPort'
 import { llamaLocalRuntime } from './ai/llamaRuntime'
@@ -33,6 +33,7 @@ import { createPythonClient } from './ai/pythonClient'
 import { openPythonProcess } from './ai/pythonProcess'
 import { pythonRuntime } from './ai/pythonRuntime'
 import { createPythonSupervisor } from './ai/pythonSupervisor'
+import { createAutoRigHost } from './ai/autoRigHost'
 import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
 import { ownModelFrom } from './ai/ownModel'
 import { fetchModel, modelIsComplete } from './ai/modelInstall'
@@ -140,6 +141,13 @@ export function createLocalAiServices(deps: LocalAiDeps) {
     discovered: () => ai.discovered(),
   } satisfies FromManager)
   const memoryVectors = createVectors(deps, ai, modelOf, weightsOf)
+  const autoRig = createAutoRigHost({
+    models: () => catalogueWith(deps.settings.read().ai.ownModels, ai.discovered()),
+    installedIds: ai.installedIds,
+    ensureLoaded: ai.ensureLoaded,
+    hold: ai.hold,
+    engine: () => engine.supervisor.engine(),
+  })
   const addOwnAiModel = createOwnModelAdder(deps, ai)
   dictation = createDictation(deps, ai, modelFolder, downloads)
   return {
@@ -157,6 +165,7 @@ export function createLocalAiServices(deps: LocalAiDeps) {
     memoryVectors,
     addOwnAiModel,
     dictation,
+    autoRig,
   }
 }
 

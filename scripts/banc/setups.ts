@@ -1,6 +1,9 @@
 import type { RecentProject } from '@shared/domain/project'
 import type { WorkspaceId } from '@shared/domain/workspace'
-import { workshopIdOf } from '@/character/characterStage'
+import { workshopIdOf, workshopScene } from '@/character/characterStage'
+import { drawing } from '@/game/game-fixtures'
+import { registerSceneEngine } from '@/stores/sceneEngines'
+import { rigFit } from '@/engines/scene/rigFit'
 import { seedCharacter, useCharacters } from '@/stores/character'
 import { useJobs } from '@/stores/jobs'
 import { useSettings } from '@/stores/settings'
@@ -94,7 +97,36 @@ export const modelScene = async (studio: Studio): Promise<void> => {
   // measured too — a fit proportions itself off a height, and reads it from that scene alone.
   const character = assetOf(studio, 'knight in plate armour, character.glb')
   seedCharacter(character, null, {})
-  measured(studio, 'workshop', workshopIdOf(character))
+  const documentId = workshopIdOf(character)
+  const bounds = { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } }
+  useScenes.getState().ensure(documentId, () => workshopScene(character))
+  const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
+  registerSceneEngine(
+    documentId,
+    drawing({
+      meshSample: () => ({ bounds, points: new Float32Array() }),
+      autoRigTargets: () => [{ mesh: 0, primitive: 0, vertexCount: 1 }],
+      simpleAutoRig: () =>
+        Promise.resolve({
+          rig: rigFit(bounds),
+          bindings: [
+            {
+              mesh: 0,
+              primitive: 0,
+              skinIndex: new Uint16Array([0, 0, 0, 0]),
+              skinWeight: new Float32Array([1, 0, 0, 0]),
+            },
+          ],
+          metadata: {
+            backendId: 'simple',
+            sourceInfluences: 4,
+            outputInfluences: 4,
+            fingers: false,
+          },
+        }),
+    }),
+  )
+  measured(studio, nodeId, documentId)
 }
 
 /**

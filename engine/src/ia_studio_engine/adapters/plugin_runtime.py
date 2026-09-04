@@ -52,6 +52,8 @@ class PluginAdapter:
         on = plugin_adapter.device()
         if plugin.needs_cuda and on != "cuda":
             raise LoadRefusedError(f"{model_id} needs CUDA, this machine is {on}")
+        if plugin.devices is not None and on not in plugin.devices:
+            raise LoadRefusedError(f"{model_id} does not support {on}")
         self.unload()
         started = time.perf_counter_ns()
         handle = plugin_adapter.quietened(plugin.load(folder, on))
@@ -88,3 +90,29 @@ class PluginAdapter:
         plugin_adapter.PLUGINS[held.model_id].run(held.pipeline, params, destination, held.device)
         elapsed = (time.perf_counter_ns() - started) / 1e6
         return plugin_adapter.result_frame(door, held.device, self.backend(), destination, elapsed)
+
+    def auto_rig(
+        self,
+        params: dict[str, Any],
+        destination: str,
+        door: str,
+        on_phase: Callable[[int, int, str], None],
+        stopping: Callable[[], bool],
+    ) -> dict[str, Any]:
+        from ia_studio_engine.adapters import plugin_adapter
+
+        held = self.loaded
+        if held is None:
+            raise LoadRefusedError("no model is loaded")
+        runner = plugin_adapter.PLUGINS[held.model_id].auto_rig
+        if runner is None:
+            raise LoadRefusedError(f"{held.model_id} does not support Auto Rig")
+        if stopping():
+            raise CancelledError("the Auto Rig job was cancelled")
+        started = time.perf_counter_ns()
+        metrics = runner(held.pipeline, params, destination, on_phase, stopping)
+        elapsed = (time.perf_counter_ns() - started) / 1e6
+        return {
+            **plugin_adapter.result_frame(door, held.device, self.backend(), destination, elapsed),
+            **metrics,
+        }

@@ -218,6 +218,7 @@ type ChannelMethod = {
   [CHANNELS.aiCancelLoad]: StudioBridge['ai']['cancelLoad']
   [CHANNELS.aiUnload]: StudioBridge['ai']['unload']
   [CHANNELS.aiAddOwnModel]: StudioBridge['ai']['addOwnModel']
+  [CHANNELS.autoRigRun]: StudioBridge['autoRig']['run']
 
   [CHANNELS.dictationState]: StudioBridge['dictation']['state']
   [CHANNELS.dictationStart]: StudioBridge['dictation']['start']

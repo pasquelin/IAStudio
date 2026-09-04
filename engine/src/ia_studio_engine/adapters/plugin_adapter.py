@@ -8,8 +8,6 @@ The Python is ours (vendored or an extra). Weights stay in the digested folder, 
 from __future__ import annotations
 
 import sys
-from collections.abc import Callable
-from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -29,7 +27,9 @@ from ia_studio_engine.adapters.loading import (
     refuse_reason,
 )
 from ia_studio_engine.adapters.params import filled, knob, text
+from ia_studio_engine.adapters.plugin_contract import Plugin
 from ia_studio_engine.adapters.plugin_runtime import PluginAdapter
+from ia_studio_engine.autorig import plugin as autorig_plugin
 
 __all__ = [
     "PLUGINS",
@@ -48,20 +48,6 @@ __all__ = [
 _VENDOR = Path(__file__).resolve().parent.parent / "vendor"
 if str(_VENDOR) not in sys.path:
     sys.path.insert(0, str(_VENDOR))
-
-#: `(folder, device) -> handle` and `(handle, params, destination, device) -> None`. What a family
-#: needs beyond that is bound into the table by `partial`, never read off a model id.
-Loader = Callable[[str, str], Any]
-Runner = Callable[[Any, dict[str, Any], str, str], None]
-
-
-@dataclass(frozen=True)
-class Plugin:
-    """One family, as this adapter practises it."""
-
-    load: Loader
-    run: Runner
-    needs_cuda: bool = False
 
 
 def _torch_load(path: Path) -> Any:
@@ -471,6 +457,12 @@ def _run_mmaudio(handle: dict[str, Any], params: dict[str, Any], destination: st
 #: whether it demands CUDA. Anything narrower than a family — a TRELLIS variant, an MMAudio
 #: architecture — is BOUND HERE, so no loader reads the id it was dispatched by.
 PLUGINS: dict[str, Plugin] = {
+    "make-it-animatable": Plugin(
+        autorig_plugin.load,
+        autorig_plugin.generate,
+        auto_rig=autorig_plugin.auto_rig,
+        devices=("cpu", "mps"),
+    ),
     "triposr": Plugin(_load_triposr, _run_triposr),
     "trellis-text-large": Plugin(
         partial(_load_trellis, text=True), partial(_run_trellis, from_words=True), needs_cuda=True

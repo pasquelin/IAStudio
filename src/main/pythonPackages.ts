@@ -88,10 +88,7 @@ export const UNREAD_ON_THIS_PLATFORM: readonly string[] = [
  * list and its count come down by one.
  */
 export const UNREAD_PENDING_COLLECTION: readonly string[] = [
-  'imageio',
-  'imageio-ffmpeg',
   'antlr4-python3-runtime',
-  'einops',
   'omegaconf',
   'trimesh',
   'attrs',
@@ -110,7 +107,6 @@ export const UNREAD_PENDING_COLLECTION: readonly string[] = [
   'scipy',
   'tifffile',
   'torchaudio',
-  'torchvision',
   'pymcubes',
   'kiui',
   'roma',
@@ -124,7 +120,6 @@ export const UNREAD_PENDING_COLLECTION: readonly string[] = [
   'pytorch-lightning',
   'lightning-utilities',
   'torchmetrics',
-  'timm',
   'jaxtyping',
   'typeguard',
   'wadler-lindig',

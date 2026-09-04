@@ -39,3 +39,12 @@ class ModelAdapter(Protocol):
         on_step: Callable[[int, int], None] | None = None,
         stopping: Callable[[], bool] | None = None,
     ) -> dict[str, Any]: ...
+
+    def auto_rig(
+        self,
+        params: dict[str, Any],
+        destination: str,
+        door: str,
+        on_phase: Callable[[int, int, str], None],
+        stopping: Callable[[], bool],
+    ) -> dict[str, Any]: ...

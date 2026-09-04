@@ -11,6 +11,13 @@ dependencies = []
 # which is why the core stays at the 10 ms of a bare interpreter. Workers pay it, once, and stay
 # alive. The `llm`, `diffusion`, `audio` and `3d` groups land with the worker that needs them.
 core = []
+# The production Auto Rig door. It intentionally excludes the diffusion, training, demo and
+# Blender stacks: MIA inference imports only these three distributions directly.
+autorig = [
+  "torch==2.14.0",
+  "numpy>=1.26",
+  "einops>=0.7",
+]
 # The door that holds tensors. NEVER installed by `pnpm engine:check`: the gate would then
 # download 682 Mo to be green, and the tests of `engine/tests` are written to need none of it.
 diffusion = [
@@ -31,6 +38,10 @@ diffusion = [
   # An undeclared import is one a dependency is free to drop from under us.
   "numpy>=1.26",
   "pillow>=10.0",
+  # Make-It-Animatable runs on this same door. Both publish pure-Python wheels, so first use asks
+  # for no compiler on CPU or Apple Silicon.
+  "einops>=0.7",
+  "timm>=1.0",
 ]
 # TripoSR / TRELLIS / TripoSG / InstantMesh / LGM / CraftsMan3D / MMAudio. NEVER installed by
 # `pnpm engine:check`.

@@ -41,7 +41,14 @@ HANDLERS: Mapping[str, Handler] = {
 
 #: What the core hands to a door rather than answering itself. Each reads gigabytes or runs for
 #: seconds, so each answers with the job it opened and pushes its result as an event.
-ROUTED_OPS = ("models.load", "models.unload", "generate", "worker.status", "memory.info")
+ROUTED_OPS = (
+    "models.load",
+    "models.unload",
+    "generate",
+    "auto-rig",
+    "worker.status",
+    "memory.info",
+)
 
 
 def memory_handlers(router: DoorRouter) -> dict[str, Handler]:

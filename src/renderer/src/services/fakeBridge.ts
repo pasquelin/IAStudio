@@ -8,19 +8,8 @@ import { IDLE_RESCAN } from '@shared/domain/project'
 import { noContext } from '@shared/domain/projectContext'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
-import type { AiOverview } from '@shared/domain/aiOverview'
 import type { LogEntry, StudioBridge, TraceEntry } from '@shared/ipc'
-const EMPTY_AI_OVERVIEW: AiOverview = {
-  roles: [],
-  machine: { physicalBytes: 0, availableBytes: 0, diskFreeBytes: null, gpu: null, vram: null },
-  projectPath: null,
-  installing: null,
-  loading: null,
-  loadFailure: null,
-  installFailure: null,
-  ollama: { ready: false, installed: false, names: [], progress: null, failed: false },
-  engine: { known: false, missing: [], progress: null, failed: false },
-}
+import { EMPTY_AI_OVERVIEW } from './fakeAiOverview'
 const noSubscription = (): (() => void) => () => {}
 const nothingMoved = (): Promise<FileOutcome> =>
   Promise.resolve({ done: [], refused: [], batch: 'batch-fake' })
@@ -474,6 +463,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     media: fakeMedia(overrides),
     assistant: fakeAssistant(overrides),
     ai: fakeAi(overrides),
+    autoRig: { run: () => Promise.reject(new Error('no Auto Rig backend')), ...overrides.autoRig },
     dictation: fakeDictation(overrides),
     mirror: fakeMirror(overrides),
     playerModuleWindow: fakePlayerModuleWindow(overrides),

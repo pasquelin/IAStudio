@@ -91,17 +91,12 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
   const duration = useScenes(state => sceneOf(state, workshopId).animation.duration)
   const view = useCharacterView(state => characterViewOf(state, assetId))
   const inFront = useDocumentIsInFront(documentId)
-  // The bullet on the tab, as every other space posts one. `useRestoredDocument` is asked for
-  // too, and answers nothing: this kind has no file in the project to read back — see
-  // `IO_BY_KIND.character`.
   useDocumentTitle(
     documentId,
     useCharacters(state => isCharacterDirty(state, assetId)),
   )
   useRestoredDocument(documentId)
   useSceneRendererResources(engineRef)
-  // The persistent flight, exactly as the studio's viewport arms it: the engine owns the pointer
-  // capture, and this only says whether the mode is meant to be on.
   const [navigating, setNavigating] = useState(false)
   /** Metres per second the wheel left the flight at, or `null` while it has said nothing. */
   const [flySpeed, setFlySpeed] = useState<number | null>(null)
@@ -146,8 +141,6 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
     engine.setRestEditing(view.editingRest)
   }, [view.editingRest, assetId, nodeId, live])
 
-  // The band names its subject after the node, and a workshop is laid before the catalogue has
-  // answered: without this its one row reads `asset_d826b135-…` rather than the character.
   useEffect(() => {
     if (!nodeId || name === assetId) return
 
@@ -169,10 +162,24 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
   // state nobody draws, no weights are ever worked out, and ⌘S writes bones bound to nothing.
   useEffect(() => {
     const engine = engineRef.current
-    if (!engine || !nodeId || !character.rig) return
-
-    void engine.skinModel(nodeId, character.rig)
-  }, [character.rig, nodeId, live])
+    if (!engine || !nodeId) return
+    if (!character.rig) {
+      engine.clearRig(nodeId)
+      return
+    }
+    if (character.autoRigBindings)
+      void engine.applyAutoRig(nodeId, {
+        rig: character.rig,
+        bindings: character.autoRigBindings,
+        metadata: {
+          backendId: 'stored',
+          sourceInfluences: character.rig.bones.length,
+          outputInfluences: 4,
+          fingers: false,
+        },
+      })
+    else void engine.skinModel(nodeId, character.rig)
+  }, [character.rig, character.autoRigBindings, nodeId, live])
 
   useEffect(() => {
     dressCharacterStage(assetId, character.dress)

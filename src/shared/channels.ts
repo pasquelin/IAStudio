@@ -214,6 +214,8 @@ export type Channels = {
   aiUnload: 'ai:unload'
   aiAddOwnModel: 'ai:add-own-model'
 
+  autoRigRun: 'autorig:run'
+
   sceneExport: 'scene:export'
   postExport: 'post:export'
   postImport: 'post:import'

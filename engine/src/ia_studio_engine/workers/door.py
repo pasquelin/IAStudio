@@ -104,7 +104,28 @@ def queued_handlers(door: str, adapter: RoutingAdapter, loop: WorkerLoop) -> dic
             stopping=loop.queue.cancelled,
         )
 
-    return {"models.load": load, "models.unload": unload, "generate": generate}
+    def auto_rig(params: dict[str, Any]) -> dict[str, Any]:
+        job = params.get("jobId")
+
+        def report(done: int, total: int, phase: str) -> None:
+            loop.send(
+                encode_event("job.progress", job=job, ratio=round(done / total, 4), phase=phase)
+            )
+
+        return adapter.auto_rig(
+            params,
+            str(params["destination"]),
+            door,
+            on_phase=report,
+            stopping=loop.queue.cancelled,
+        )
+
+    return {
+        "models.load": load,
+        "models.unload": unload,
+        "generate": generate,
+        "auto-rig": auto_rig,
+    }
 
 
 def serve(door: str, fd: int) -> int:

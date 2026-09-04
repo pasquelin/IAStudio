@@ -309,7 +309,7 @@ const oraSurface = z.object({
  * the sandboxed side, and a model of a million triangles with its maps inside runs to hundreds
  * of megabytes.
  */
-const MAX_MESH_BYTES = 1024 * 1024 * 1024
+export const MAX_MESH_BYTES = 1024 * 1024 * 1024
 
 const saveMesh = z.object({
   // Required, unlike every neighbour: ⌘S rewrites the file the window opened, in place.

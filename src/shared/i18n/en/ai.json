@@ -192,6 +192,8 @@
     "none": "None",
     "noneHint": "No AI for this job.",
     "notInstalledYet": "Install it before it can serve this operation.",
+    "autoRigSimple": "Simple Auto Rig",
+    "autoRigSimpleHint": "Integrated, fast and available offline without a download.",
     "ollamaHelpDown": "Ollama is not open. The studio opens it on its own.",
     "ollamaHelpEmpty": "Ollama has no model yet.",
     "ollamaHelpFailed": "The install did not work. Nothing was deleted. You can try again.",

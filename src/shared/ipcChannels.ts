@@ -182,6 +182,7 @@ export const CHANNELS: Channels = {
   aiCancelLoad: 'ai:cancel-load',
   aiUnload: 'ai:unload',
   aiAddOwnModel: 'ai:add-own-model',
+  autoRigRun: 'autorig:run',
   sceneExport: 'scene:export',
   postExport: 'post:export',
   postImport: 'post:import',

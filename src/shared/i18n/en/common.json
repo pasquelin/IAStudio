@@ -40,7 +40,16 @@
     "running_other": "{{count, number}} tasks",
     "open": "Show tasks",
     "openHint": "Opens the list of tasks in progress",
-    "cancel": "Stop this task"
+    "cancel": "Stop this task",
+    "phases": {
+      "prepare": "Preparing model",
+      "load": "Loading engine",
+      "analyse": "Analysing character",
+      "skeleton": "Generating skeleton",
+      "pose": "Computing rest pose",
+      "skinning": "Computing skinning",
+      "apply": "Applying skeleton"
+    }
   },
   "dialog": {
     "allMedia": "All media",

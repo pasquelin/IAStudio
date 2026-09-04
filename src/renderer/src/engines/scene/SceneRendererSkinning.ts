@@ -5,7 +5,7 @@ import {
   positionsIn,
   reskinnableMeshesOf,
   restRig,
-  unrig,
+  removeRig,
   wearsRig,
 } from '../character/rigBuild'
 import { createIkBinding, ikSpecsOf } from '../character/ik'
@@ -15,10 +15,115 @@ import type { SkinBinding } from '../character/skinVertices'
 import type { Rig } from '@shared/domain/rig'
 import './bvhPatches'
 import { SceneRendererRig } from './SceneRendererRig'
+import type { AutoRigInferenceRequest } from '@shared/domain/autoRigInference'
+import type { AutoRigResult } from '@shared/domain/autoRig'
+import type { AutoRigPrimitiveTarget, AutoRigSkinBinding } from '@shared/domain/autoRig'
+import { autoRigBindingsFor } from '../character/autoRigBindings'
+import { autoRigInputFor } from '../character/autoRigInput'
+import type { MeshSample } from './rigSnap'
+import { rigSnappedTo } from './rigSnap'
+import { rigFit } from './rigFit'
 export abstract class SceneRendererSkinning extends SceneRendererRig {
   protected abstract redraw(): void
   protected abstract accelerateOrReport(object: Object3D, subject: string): Promise<void>
   protected abstract paintPickedJoint(): void
+
+  async autoRigInput(
+    nodeId: string,
+    signal?: AbortSignal,
+  ): Promise<Omit<AutoRigInferenceRequest, 'id' | 'backendId'> | null> {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return null
+    return await autoRigInputFor(holder, undefined, signal)
+  }
+
+  autoRigTargets(nodeId: string): readonly AutoRigPrimitiveTarget[] {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return []
+    return reskinnableMeshesOf(holder).map((mesh, index) => ({
+      mesh: index,
+      primitive: 0,
+      vertexCount: mesh.geometry.getAttribute('position').count,
+    }))
+  }
+
+  autoRigIdentity(nodeId: string): string | null {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return null
+    return [holder.uuid, ...reskinnableMeshesOf(holder).map(mesh => mesh.geometry.uuid)].join(':')
+  }
+
+  async simpleAutoRig(
+    nodeId: string,
+    sample: MeshSample,
+    signal: AbortSignal,
+    onProgress: (progress: number) => void,
+  ): Promise<AutoRigResult | null> {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return null
+    const rig = rigSnappedTo(rigFit(sample.bounds), sample)
+    const meshes = reskinnableMeshesOf(holder)
+    const bindings: AutoRigSkinBinding[] = []
+    for (const [mesh, object] of meshes.entries()) {
+      const binding = await this.skin.bind(positionsIn(object, holder), rig, {
+        signal,
+        onProgress: progress => onProgress((mesh + progress) / meshes.length),
+      })
+      if (!binding || signal.aborted || this.objects.get(nodeId) !== holder) return null
+      bindings.push({ mesh, primitive: 0, ...binding })
+    }
+    return {
+      rig,
+      bindings,
+      metadata: {
+        backendId: 'simple',
+        sourceInfluences: rig.bones.length,
+        outputInfluences: 4,
+        fingers: false,
+      },
+    }
+  }
+
+  async applyAutoRig(nodeId: string, result: AutoRigResult): Promise<boolean> {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return false
+    const meshes = reskinnableMeshesOf(holder)
+    const bound = autoRigBindingsFor(
+      result,
+      meshes.map((object, mesh) => ({ mesh, primitive: 0, object })),
+    )
+    if (!bound) return false
+    this.stopSkinning(nodeId)
+    this.rigRests.set(nodeId, new Map(result.rig.bones.map(one => [one.name, one.rest])))
+    applyRig(holder, result.rig, bound)
+    this.bindIk(nodeId, holder, result.rig)
+    this.options.onSkinning?.(
+      nodeId,
+      result.bindings.map(binding => ({
+        mesh: binding.mesh,
+        primitive: binding.primitive,
+        joints: binding.skinIndex,
+        weights: binding.skinWeight,
+      })),
+    )
+    this.bindSkeleton(nodeId, holder, true)
+    this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+    void this.accelerateOrReport(holder, nodeId)
+    await this.precompile()
+    this.redraw()
+    return true
+  }
+
+  clearRig(nodeId: string): void {
+    const holder = this.objects.get(nodeId)
+    if (!holder) return
+    removeRig(holder)
+    this.rigRests.delete(nodeId)
+    this.bindSkeleton(nodeId, holder, false)
+    this.options.onSkinning?.(nodeId, [])
+    this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+    this.redraw()
+  }
   /**
    * Weights every mesh of a model against a rig, then binds them — what « make animatable » does.
    *
@@ -31,86 +136,49 @@ export abstract class SceneRendererSkinning extends SceneRendererRig {
     if (!holder) return
     // Before the branches below, which all return early: the leash needs the rig either way.
     this.rigRests.set(nodeId, new Map(rig.bones.map(one => [one.name, one.rest])))
-    const skinModelStep1 = async () => {
-      const skinModelStep1 = async () => {
-        // 🛑 A model already wearing these very bones is having its REST edited, not its rig
-        // rebuilt: the weights are per vertex and unchanged, so putting the bones back where the
-        // rig now rests and taking the inverses again is the whole of it. Re-weighing here would
-        // cost half a million distances per joint dragged — and `skinnableMeshesOf` answers nothing
-        // for a skinned model anyway, so this used to return in silence and leave the character
-        // posed against a rest pose that no longer existed.
-        if (wearsRig(holder, rig)) {
-          restRig(holder, rig)
-          this.bindIk(nodeId, holder, rig)
-          this.redraw()
-          return
-        }
-        // Captured once: `applyRig` is told which meshes these weights belong to rather than walking
-        // the holder again after the awaits, when it may hold others. The SKINNED ones too — a rig
-        // that changed shape is weighed again, and refusing them left « add hands » doing nothing.
-        const meshes = reskinnableMeshesOf(holder)
-        if (meshes.length === 0) return
-        const skinModelStep2 = async () => {
-          this.stopSkinning(nodeId)
-          const stop = new AbortController()
-          this.skinning.set(nodeId, stop)
-          const skinModelStep3 = async () => {
-            try {
-              const bound: {
-                mesh: Mesh
-                binding: SkinBinding
-              }[] = []
-              for (const [index, mesh] of meshes.entries()) {
-                const binding = await this.skin.bind(positionsIn(mesh, holder), rig, {
-                  signal: stop.signal,
-                  onProgress: progress =>
-                    this.options.onRigProgress?.(nodeId, (index + progress) / meshes.length),
-                })
-                // Taken back, or the port let go — either way this model is no longer being skinned.
-                if (!binding) return
-                bound.push({ mesh, binding })
-              }
-              // The model may have been released while the weights were out.
-              if (this.objects.get(nodeId) !== holder) return
-              // The skeleton this one replaces, off first: left on, `wearsRig` would count both sets and
-              // every later rest edit would be measured against bones nothing drives.
-              unrig(holder)
-              applyRig(holder, rig, bound)
-              this.bindIk(nodeId, holder, rig)
-              // Handed over rather than recomputed at save time: only this side ever weighs a mesh, and
-              // the order is `skinnableMeshesOf`'s — the same order a `.glb` spells its primitives in.
-              this.options.onSkinning?.(
-                nodeId,
-                bound.map((one, index) => ({
-                  mesh: index,
-                  primitive: 0,
-                  joints: one.binding.skinIndex,
-                  weights: one.binding.skinWeight,
-                })),
-              )
-              // 🛑 `applyRig` CLONES each geometry, and a clone carries no `boundsTree`: rigging threw
-              // away the tree built when the model landed.
-              void this.accelerateOrReport(holder, nodeId)
-              // The bones exist only now: the helper was bound before them, when the holder carried none,
-              // and without this a locally rigged character has a skeleton nothing can show or pick.
-              this.bindSkeleton(nodeId, holder, true)
-              this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
-              await this.precompile()
-              this.redraw()
-            } finally {
-              this.skinning.delete(nodeId)
-              // In every exit, cancellation included: what says "binding" is the progress being there,
-              // so leaving it behind would hide both buttons of the inspector for good.
-              this.options.onRigProgress?.(nodeId, 1)
-            }
-          }
-          return skinModelStep3()
-        }
-        return skinModelStep2()
-      }
-      return skinModelStep1()
+    if (wearsRig(holder, rig)) {
+      restRig(holder, rig)
+      this.bindIk(nodeId, holder, rig)
+      this.redraw()
+      return
     }
-    return skinModelStep1()
+    const meshes = reskinnableMeshesOf(holder)
+    if (meshes.length === 0) return
+    this.stopSkinning(nodeId)
+    const stop = new AbortController()
+    this.skinning.set(nodeId, stop)
+    try {
+      const bound: { mesh: Mesh; binding: SkinBinding }[] = []
+      for (const [index, mesh] of meshes.entries()) {
+        const binding = await this.skin.bind(positionsIn(mesh, holder), rig, {
+          signal: stop.signal,
+          onProgress: progress =>
+            this.options.onRigProgress?.(nodeId, (index + progress) / meshes.length),
+        })
+        if (!binding) return
+        bound.push({ mesh, binding })
+      }
+      if (this.objects.get(nodeId) !== holder) return
+      applyRig(holder, rig, bound)
+      this.bindIk(nodeId, holder, rig)
+      this.options.onSkinning?.(
+        nodeId,
+        bound.map((one, index) => ({
+          mesh: index,
+          primitive: 0,
+          joints: one.binding.skinIndex,
+          weights: one.binding.skinWeight,
+        })),
+      )
+      void this.accelerateOrReport(holder, nodeId)
+      this.bindSkeleton(nodeId, holder, true)
+      this.options.onRig?.(nodeId, rigStateOf(holder, this.animations.clipsOf(nodeId)))
+      await this.precompile()
+      this.redraw()
+    } finally {
+      this.skinning.delete(nodeId)
+      this.options.onRigProgress?.(nodeId, 1)
+    }
   }
   /**
    * The chains this model reaches with, if any — solved once a frame in `advance`.

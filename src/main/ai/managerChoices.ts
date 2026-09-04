@@ -1,7 +1,19 @@
 import type { AiOverview, ChoiceScope } from '@shared/domain/aiOverview'
 import type { AiRoleId, RoleProvider } from '@shared/domain/aiRole'
+import { modelRefusalOf, type LocalModel } from '@shared/domain/localModel'
 import type { ManagerDeps } from './managerTypes'
 import { withWrites } from './managerHelpers'
+
+export function assertProvidersAdmitted(
+  writes: readonly { provider: RoleProvider | null }[],
+  modelOf: (modelId: string) => LocalModel | null,
+): void {
+  for (const { provider } of writes) {
+    if (provider?.kind !== 'local') continue
+    const model = modelOf(provider.modelId)
+    if (!model || modelRefusalOf(model) !== null) throw new Error('model is not admitted')
+  }
+}
 
 export async function chooseProviders(
   deps: ManagerDeps,

@@ -1,5 +1,5 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh } from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Rig } from '@shared/domain/rig'
 import { INFLUENCES } from './skinMessage'
 import { emptyBinding } from './skinVertices'
@@ -150,6 +150,58 @@ describe('putting a rig on a model', () => {
     const skinned = skinnedIn(holder)
     expect(skinned?.name).toBe('body')
     expect(skinned?.position.toArray()).toEqual([1, 2, 3])
+  })
+
+  it('preserves editor and rendering properties when replacing a mesh', () => {
+    const mesh = plainMesh()
+    const child = new Object3D()
+    mesh.add(child)
+    mesh.visible = false
+    mesh.layers.set(3)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    mesh.renderOrder = 7
+    mesh.frustumCulled = false
+    mesh.userData = { assetId: 'body' }
+    const holder = modelWith(mesh)
+
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
+
+    const skinned = skinnedIn(holder)
+    expect(skinned).toMatchObject({
+      visible: false,
+      castShadow: true,
+      receiveShadow: true,
+      renderOrder: 7,
+      frustumCulled: false,
+      userData: { assetId: 'body' },
+    })
+    expect(skinned?.layers.mask).toBe(mesh.layers.mask)
+    expect(child.parent).toBe(skinned)
+  })
+
+  it('restores every mesh when a multi-mesh commit fails', () => {
+    const first = plainMesh()
+    const second = plainMesh()
+    const firstParent = modelWith(first)
+    const secondParent = modelWith(second)
+    const holder = modelWith(firstParent, secondParent)
+    vi.spyOn(secondParent, 'add').mockImplementationOnce(() => {
+      throw new Error('injected commit failure')
+    })
+
+    expect(() =>
+      applyRig(holder, RIG, [
+        { mesh: first, binding: bindingFor(first) },
+        { mesh: second, binding: bindingFor(second) },
+      ]),
+    ).toThrow('injected commit failure')
+    expect(first.parent).toBe(firstParent)
+    expect(second.parent).toBe(secondParent)
+    expect(holder.getObjectByProperty('isSkinnedMesh', true)).toBeUndefined()
+    expect(holder.children.some(child => child instanceof Object3D && child.name === 'Hips')).toBe(
+      false,
+    )
   })
 
   /**

@@ -340,3 +340,14 @@ class DiffusersAdapter:
             write_params["samplingRate"] = int(sample_rate)
         self.modality.write(result, destination, write_params)
         return result_frame(door, held.device, self.backend(), destination, generate_ms)
+
+    def auto_rig(
+        self,
+        params: dict[str, Any],
+        destination: str,
+        door: str,
+        on_phase: Callable[[int, int, str], None],
+        stopping: Callable[[], bool],
+    ) -> dict[str, Any]:
+        del params, destination, door, on_phase, stopping
+        raise LoadRefusedError("the loaded model does not support Auto Rig")

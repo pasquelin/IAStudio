@@ -21,15 +21,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -115,11 +107,6 @@ export async function fetchEngine(platform = process.platform, arch = process.ar
   const triple = tripleFor(platform, arch)
   const stamp = join(DESTINATION, '.fetched')
   const wanted = `${triple}@${RELEASE}`
-
-  if (existsSync(stamp) && readFileSync(stamp, 'utf8').trim() === wanted) {
-    syncEngineSources()
-    return
-  }
 
   const expected = DIGESTS[triple]
   if (!expected) {

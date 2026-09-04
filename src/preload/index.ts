@@ -321,6 +321,9 @@ const bridge: StudioBridge = {
     addOwnModel: () => ipcRenderer.invoke(CHANNELS.aiAddOwnModel),
     onChanged: callback => subscribe<AiOverview>(EVENTS.ai, callback),
   },
+  autoRig: {
+    run: request => ipcRenderer.invoke(CHANNELS.autoRigRun, request),
+  },
   dictation: {
     state: () => ipcRenderer.invoke(CHANNELS.dictationState),
     start: () => ipcRenderer.invoke(CHANNELS.dictationStart),

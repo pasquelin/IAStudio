@@ -22,7 +22,7 @@ export type EngineOp = 'hardware.info' | 'memory.ledger' | 'engine.requirements'
  * each answers with the job it opened and pushes its result as an event.
  */
 export type EngineJobOp =
-  'models.load' | 'models.unload' | 'generate' | 'worker.status' | 'memory.info'
+  'models.load' | 'models.unload' | 'generate' | 'auto-rig' | 'worker.status' | 'memory.info'
 
 /** Drops a request the engine still holds. Posted by `processClient` when a caller aborts. */
 export const CANCEL_OP = 'engine.cancel'
@@ -71,6 +71,7 @@ const jobProgress = z.object({
   evt: z.literal('job.progress'),
   job: z.string(),
   ratio: z.number(),
+  phase: z.string().optional(),
 })
 
 /**
@@ -97,6 +98,7 @@ const settledJob = z.object({
   tensorBytes: z.number().nullable().optional(),
   heldBytes: z.number().nullable().optional(),
   machine: z.unknown().optional(),
+  peakRssBytes: z.number().optional(),
 })
 
 /** What the engine says about a frame it could not read: there is no run id to answer under. */

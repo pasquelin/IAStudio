@@ -130,7 +130,15 @@ extraResources:
   # the hardened runtime.
   - from: resources/engine
     to: engine
-    filter: ['**/*']
+    filter:
+      - '**/*'
+      - '!src/ia_studio_engine/autorig/drop_path.py'
+      - '!src/ia_studio_engine/autorig/fps.py'
+      - '!src/ia_studio_engine/autorig/make_it_animatable.py'
+      - '!src/ia_studio_engine/autorig/support.py'
+      - '!src/ia_studio_engine/autorig/torch_fps.py'
+      - '!src/ia_studio_engine/autorig/__pycache__/**'
+      - '!src/ia_studio_engine/vendor/make_it_animatable/**'
   # The animations a character can be made to play, one folder each. In the repository rather
   # than fetched: they are the only thing the animations panel has to offer on a fresh install.
   - from: resources/animations

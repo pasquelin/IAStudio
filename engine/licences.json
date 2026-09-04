@@ -10,7 +10,7 @@
     "home": "https://github.com/fastapi/annotated-doc"
   },
   "anyio": {
-    "version": "4.14.2",
+    "version": "4.15.0",
     "spdx": "MIT",
     "home": "https://github.com/agronholm/anyio"
   },
@@ -25,7 +25,7 @@
     "home": "https://github.com/jawah/charset_normalizer"
   },
   "click": {
-    "version": "8.4.2",
+    "version": "8.5.0",
     "spdx": "BSD-3-Clause",
     "home": "https://github.com/pallets/click/"
   },
@@ -34,8 +34,13 @@
     "spdx": "Apache 2.0 License",
     "home": "https://github.com/huggingface/diffusers"
   },
+  "einops": {
+    "version": "0.8.2",
+    "spdx": "MIT",
+    "home": "https://github.com/arogozhnikov/einops"
+  },
   "filelock": {
-    "version": "3.32.3",
+    "version": "3.32.5",
     "spdx": "MIT",
     "home": "https://github.com/tox-dev/py-filelock"
   },
@@ -65,7 +70,7 @@
     "home": "https://github.com/encode/httpx"
   },
   "huggingface-hub": {
-    "version": "1.28.0",
+    "version": "1.30.0",
     "spdx": "Apache-2.0",
     "home": "https://github.com/huggingface/huggingface_hub"
   },
@@ -74,8 +79,18 @@
     "spdx": "BSD-3-Clause",
     "home": "https://github.com/kjd/idna"
   },
+  "imageio": {
+    "version": "2.37.4",
+    "spdx": "BSD-2-Clause",
+    "home": "https://github.com/imageio/imageio"
+  },
+  "imageio-ffmpeg": {
+    "version": "0.6.0",
+    "spdx": "BSD-2-Clause",
+    "home": "https://github.com/imageio/imageio-ffmpeg"
+  },
   "importlib-metadata": {
-    "version": "9.0.0",
+    "version": "9.0.1",
     "spdx": "Apache-2.0",
     "home": "https://github.com/python/importlib_metadata"
   },
@@ -140,7 +155,7 @@
     "home": "https://github.com/yaml/pyyaml"
   },
   "regex": {
-    "version": "2026.7.19",
+    "version": "2026.9.3",
     "spdx": "Apache-2.0 AND CNRI-Python",
     "home": "https://github.com/mrabarnett/mrab-regex"
   },
@@ -174,15 +189,25 @@
     "spdx": "BSD",
     "home": "https://github.com/sympy/sympy"
   },
+  "timm": {
+    "version": "1.0.29",
+    "spdx": "Apache-2.0",
+    "home": "https://github.com/huggingface/pytorch-image-models"
+  },
   "tokenizers": {
-    "version": "0.22.2",
+    "version": "0.23.2",
     "spdx": "Apache Software License",
     "home": "https://github.com/huggingface/tokenizers"
   },
   "torch": {
-    "version": "2.13.0",
+    "version": "2.14.0",
     "spdx": "Apache-2.0 AND Apache-2.0 WITH LLVM-exception AND BSD-2-Clause AND BSD-3-Clause AND BSL-1.0 AND MIT",
     "home": "https://github.com/pytorch/pytorch"
+  },
+  "torchvision": {
+    "version": "0.29.0",
+    "spdx": "BSD",
+    "home": "https://github.com/pytorch/vision"
   },
   "tqdm": {
     "version": "4.70.0",
@@ -190,12 +215,12 @@
     "home": "https://github.com/tqdm/tqdm"
   },
   "transformers": {
-    "version": "5.15.1",
+    "version": "5.16.1",
     "spdx": "Apache 2.0 License",
     "home": "https://github.com/huggingface/transformers"
   },
   "typer": {
-    "version": "0.27.1",
+    "version": "0.27.2",
     "spdx": "MIT",
     "home": "https://github.com/fastapi/typer"
   },

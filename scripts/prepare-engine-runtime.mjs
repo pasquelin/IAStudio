@@ -1,0 +1,140 @@
+import { execFileSync } from 'node:child_process'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ENGINE = join(ROOT, 'engine')
+const RUNTIME = join(ROOT, 'resources', 'engine')
+
+function pythonOf(platform) {
+  return join(RUNTIME, 'python', platform === 'win32' ? 'python.exe' : 'bin/python3')
+}
+
+function sitePackagesOf(python) {
+  return execFileSync(python, ['-c', 'import sysconfig; print(sysconfig.get_paths()["purelib"])'], {
+    encoding: 'utf8',
+  }).trim()
+}
+
+function metadataValue(text, key) {
+  return new RegExp(`^${key}:\\s*(.+)$`, 'm').exec(text)?.[1]?.trim() ?? null
+}
+
+function filesBelow(path, base = path) {
+  return readdirSync(path).flatMap(entry => {
+    const absolute = join(path, entry)
+    return statSync(absolute).isDirectory()
+      ? filesBelow(absolute, base)
+      : [relative(base, absolute)]
+  })
+}
+
+function removeBytecode(path) {
+  for (const entry of readdirSync(path)) {
+    const absolute = join(path, entry)
+    if (entry === '__pycache__') {
+      rmSync(absolute, { recursive: true, force: true })
+    } else if (statSync(absolute).isDirectory()) {
+      removeBytecode(absolute)
+    } else if (entry.endsWith('.pyc')) {
+      rmSync(absolute, { force: true })
+    }
+  }
+}
+
+function runtimeManifest(sitePackages, platform, arch) {
+  const nativeSuffixes = ['.dylib', '.dll', '.pyd', '.so']
+  const distributions = readdirSync(sitePackages)
+    .filter(entry => entry.endsWith('.dist-info'))
+    .map(entry => {
+      const directory = join(sitePackages, entry)
+      const metadata = readFileSync(join(directory, 'METADATA'), 'utf8')
+      const wheel = readFileSync(join(directory, 'WHEEL'), 'utf8')
+      const record = readFileSync(join(directory, 'RECORD'), 'utf8')
+      const native = record
+        .split('\n')
+        .some(line => nativeSuffixes.some(suffix => line.split(',')[0].endsWith(suffix)))
+      return {
+        name: metadataValue(metadata, 'Name'),
+        version: metadataValue(metadata, 'Version'),
+        licence: metadataValue(metadata, 'License-Expression'),
+        wheelFilename: `${entry.slice(0, -'.dist-info'.length)}-${
+          /^Tag:\s*(.+)$/m.exec(wheel)?.[1] ?? 'unknown'
+        }.whl`,
+        native,
+      }
+    })
+    .filter(distribution => distribution.name !== 'ia-studio-engine')
+    .sort((left, right) => left.name.localeCompare(right.name))
+
+  return {
+    schemaVersion: 1,
+    platform,
+    arch,
+    python: execFileSync(pythonOf(platform), ['--version'], { encoding: 'utf8' }).trim(),
+    profile: 'autorig',
+    files: filesBelow(sitePackages).length,
+    distributions,
+  }
+}
+
+export function prepareEngineRuntime(platform = process.platform, arch = process.arch) {
+  const python = pythonOf(platform)
+  if (!existsSync(python)) throw new Error('Fetch the embedded Python runtime before preparing it')
+
+  const work = mkdtempSync(join(tmpdir(), 'ia-studio-autorig-'))
+  try {
+    const requirements = join(work, 'requirements.txt')
+    execFileSync(
+      'uv',
+      [
+        'export',
+        '--project',
+        ENGINE,
+        '--locked',
+        '--quiet',
+        '--no-dev',
+        '--extra',
+        'autorig',
+        '--no-emit-project',
+        '--output-file',
+        requirements,
+      ],
+      { cwd: ROOT, stdio: 'inherit' },
+    )
+    execFileSync(
+      'uv',
+      [
+        'pip',
+        'install',
+        '--python',
+        python,
+        '--exact',
+        '--only-binary',
+        ':all:',
+        '--requirement',
+        requirements,
+      ],
+      { cwd: ROOT, stdio: 'inherit' },
+    )
+    const sitePackages = sitePackagesOf(python)
+    removeBytecode(join(RUNTIME, 'python'))
+    const manifest = runtimeManifest(sitePackages, platform, arch)
+    writeFileSync(join(RUNTIME, 'runtime-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+    return manifest
+  } finally {
+    rmSync(work, { recursive: true, force: true })
+  }
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) prepareEngineRuntime()

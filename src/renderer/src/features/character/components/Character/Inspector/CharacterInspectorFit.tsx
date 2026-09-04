@@ -10,6 +10,8 @@ import { useCharacterFit, type CharacterFit } from '@/hooks/useCharacterFit'
 
 export type CharacterInspectorFitProps = {
   assetId: string
+  documentId: string
+  nodeId: string
   /** What the engine measured of this mesh, or `null` while the file is still landing. */
   sample: MeshSample | null
 }
@@ -73,8 +75,13 @@ function fitNotices(state: CharacterFit) {
  * 🛑 The chain a service needs — the file, its id, a job to follow — is only verifiable here: the
  * inspector could offer none of it, which is why every service was shown greyed out over there.
  */
-export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFitProps) {
-  const state = useCharacterFit(assetId, sample)
+export function CharacterInspectorFit({
+  assetId,
+  documentId,
+  nodeId,
+  sample,
+}: CharacterInspectorFitProps) {
+  const state = useCharacterFit(assetId, documentId, nodeId, sample)
   const fault = sample ? rigFitFaultOf(sample.bounds) : null
   if (fault) return <QuietNote>{state.t(`inspector.rigFault_${fault}`)}</QuietNote>
   if (!sample) return null
@@ -83,7 +90,23 @@ export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFit
     <>
       {fitSelectors(state)}
       {fitNotices(state)}
-      <Button disabled={!HUMANOID_KINDS.includes(state.kind)} onClick={state.fit}>
+      {state.failure && (
+        <QuietNote>{state.t(`inspector.autoRigErrors.${state.failure}`)}</QuietNote>
+      )}
+      {state.needsDownload && (
+        <Button onClick={() => void state.download()}>
+          {state.t('inspector.autoRigDownload')}
+        </Button>
+      )}
+      {state.failure && state.failure !== 'CANCELLED' && (
+        <Button onClick={() => void state.useSimple()}>
+          {state.t('inspector.autoRigUseSimple')}
+        </Button>
+      )}
+      <Button
+        disabled={!HUMANOID_KINDS.includes(state.kind) || state.running}
+        onClick={() => void state.fit()}
+      >
         {state.t('inspector.rigCreate')}
       </Button>
     </>
