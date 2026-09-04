@@ -19,6 +19,21 @@ protocole ; la spec prime sur le périmètre fonctionnel.
 | 9 | Flux d’activité UI | terminé |
 | 10 | Métriques et banc comparatif | terminé, objectif de score non atteint |
 | 10.1 | Instrumentation causale et campagne DeepSeek isolée | terminé, 12 échecs classés |
+| 10.2 | Fiabilisation retrieval, continuité et scope structuré | en cours, campagne bloquée sans `EVAL_KEY` |
+
+## Phase 10.2 — état mesuré
+
+- Dilution supprimée : la requête lexicale ne contient plus l’état structurel sérialisé.
+- Scope document/sélection transmis séparément au score ActionIndex.
+- Relations `inputs` / `returns` et `requires` / `produces` distinctes ; résultats vides exclus de
+  la continuité.
+- Relecture imposée uniquement lorsqu’un input dépend d’un résultat encore inconnu ;
+  `generator.prepare` puis `generator.submit` reste exécutable dans un seul batch.
+- Revue adverse effectuée et défauts critiques corrigés.
+- Verts : 35 tests ciblés, 46 tests socket/watcher hors sandbox, typecheck, lint, format, tailles,
+  knip, 195 tests Python.
+- Non conclusif : catalogue TypeScript complet interrompu après blocage sans erreur affichée.
+- Non exécuté : campagne DeepSeek 27 runs, clé absente de l’environnement.
 
 ## Ce que tu ne tranches pas seul
 
