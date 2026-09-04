@@ -9,7 +9,7 @@ import {
   type Object3D,
   type Intersection,
 } from 'three'
-import { sourcesByNode, standingLots, standingSources } from './cellInstancingPicking'
+import { cellPicking, sourcesByNode } from './cellInstancingPicking'
 import {
   dropSlotsOf,
   heldOutOfDraw,
@@ -76,8 +76,7 @@ export function createCellGroups(
   } = cellGroupState()
   /** The widest body still held in a cell, so a query reaches the ones straddling its edge. */
   let queryReach = index.cellSize / 2
-  let pass = 0,
-    sourceCount = 0
+  let pass = 0
   let listed: InstancedMesh[] = []
   let sourcesById: ReadonlyMap<string, Mesh[]> = new Map()
   let listStale = true
@@ -395,9 +394,7 @@ export function createCellGroups(
       const seen = new Map<string, string>()
       let instanced = 0
       sourcesById = sourcesByNode(groups)
-      sourceCount = 0
       for (const worn of groups) {
-        sourceCount += worn.meshes.length
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { ids: [], meshes: [] }
@@ -426,9 +423,7 @@ export function createCellGroups(
       return touched
     },
     drawn: drawnMeshes,
-    pickable: () => standingLots(everyBucket(), standing, mobiles.values()),
-    editorPickable: () => standingSources(everyBucket(), standing, mobiles.values(), sourcesById),
-    editorSourceCount: () => sourceCount,
+    ...cellPicking(everyBucket, standing, mobiles, () => sourcesById),
     nodeIdOf,
     follow: (camera, cast) =>
       followCells(
@@ -448,7 +443,6 @@ export function createCellGroups(
     ...sources.fields(() => {
       clear()
       sourcesById = new Map()
-      sourceCount = 0
     }),
   }
 }

@@ -8,30 +8,6 @@ import type { ReliefMask, ReliefOverlay } from './reliefOverlay'
 
 export type ReliefRead = (sx: number, sz: number) => number
 
-/** Weight of one mask at a sample — the same number `reliefReader` multiplies a delta by. */
-export function reliefMaskAt(
-  mask: ReliefMask | undefined,
-  sx: number,
-  sz: number,
-  samples: HeightmapSamples,
-  extent: ReliefExtent | undefined,
-  grain: number,
-  unmaskedAt: ReliefRead,
-): number {
-  return maskWeight(
-    {
-      mask,
-      paintedAt:
-        mask?.kind === 'painted' ? overlayDeltaReader(samples, grain, mask.weights) : undefined,
-    },
-    sx,
-    sz,
-    (x, z) => unmaskedAt(x, z),
-    samples,
-    extent,
-  )
-}
-
 /**
  * Base plus the enabled overlays at one sample. 🛑 A loop over samples wants `reliefReader`
  * instead: this decodes the whole chunk it lands in, every call.

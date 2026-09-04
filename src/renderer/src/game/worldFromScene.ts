@@ -1,5 +1,5 @@
 import { COMPONENTS } from '@shared/domain/componentRegistry'
-import { enabledTerrains } from '@shared/domain/scene'
+import { enabledTerrains, type SceneWorld } from '@shared/domain/scene'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { GameApi } from '@game/api/gameApi'
@@ -40,6 +40,23 @@ import { scatterCollisionOf } from './scatterCollision'
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
  * nobody stands on is the first thing anyone tries. A dot keeps the name out of reach of a uuid.
  */
+/** The scatter half of the statics, and what it could not place. */
+function scatterBodies(
+  world: SceneWorld,
+  heightmaps: ReadonlyMap<string, HeightmapSamples>,
+  warn: (message: string) => void,
+): readonly BodyDescriptor[] {
+  const terrains = scatterTerrainsOf(world, heightmaps)
+  const scatter = scatterCollisionOf(world, scatterGroundOf(terrains))
+  // Without one, every capsule lands at y = 0 — the relief branch already says so for its own
+  // half, and a silent floor of props at the origin is the harder thing to diagnose.
+  if (terrains.length === 0 && scatter.bodies.length > 0)
+    warn(`scatter collision placed ${scatter.bodies.length} bodies with no heightmap loaded`)
+  for (const refused of scatter.refused)
+    warn(`scatter ${refused.layerId} collision refused for ${refused.count} instances`)
+  return scatter.bodies
+}
+
 const GROUND_BODY = 'world.ground'
 /** Deep enough that nothing falls through it in one step at terminal speed. */
 const GROUND_DEPTH = 5
@@ -237,14 +254,7 @@ function staticsOf(
       }),
     )
   }
-  const scatter = scatterCollisionOf(
-    state.world,
-    scatterGroundOf(scatterTerrainsOf(state.world, heightmaps ?? new Map())),
-  )
-  bodies.push(...scatter.bodies)
-  for (const refused of scatter.refused) {
-    warn(`scatter ${refused.layerId} collision refused for ${refused.count} instances`)
-  }
+  bodies.push(...scatterBodies(state.world, heightmaps ?? new Map(), warn))
   return bodies
 }
 function staticBody(body: string, shape: ColliderShape): BodyDescriptor {
