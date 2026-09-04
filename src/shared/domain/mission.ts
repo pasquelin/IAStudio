@@ -28,7 +28,11 @@ export type ResourceRevision = {
 
 export type MissionWaiting =
   | { kind: 'user'; stepId: MissionStepId }
-  | { kind: 'recovery'; stepId: MissionStepId; reason: 'action_outcome_unknown' }
+  | {
+      kind: 'recovery'
+      stepId: MissionStepId
+      reason: 'action_outcome_unknown' | 'scope_unavailable'
+    }
   | { kind: 'job'; stepId: MissionStepId; jobId: string }
   | { kind: 'dependency'; stepId: MissionStepId; missionId: MissionId }
 
@@ -260,7 +264,9 @@ export function resolveMissionWait(
   )
   return {
     ...mission,
-    state: missionStateForWork(steps, waits),
+    state: waits.some(wait => wait.kind === 'recovery')
+      ? 'paused'
+      : missionStateForWork(steps, waits),
     updatedAt: now,
     plan: { steps },
     waits,
@@ -292,7 +298,8 @@ function missionStepsAtEnd(
 }
 
 function waitingStateOf(waiting: MissionWaiting): MissionState {
-  if (waiting.kind === 'user' || waiting.kind === 'recovery') return 'waiting_user'
+  if (waiting.kind === 'recovery') return 'paused'
+  if (waiting.kind === 'user') return 'waiting_user'
   if (waiting.kind === 'job') return 'waiting_job'
   return 'waiting_dependency'
 }
@@ -327,27 +334,32 @@ function validateMissionWait(mission: Mission, waiting: MissionWaiting): void {
 }
 
 export function recoverInterruptedMission(mission: Mission, now: string): Mission {
-  const interrupted = mission.plan.steps.filter(
-    step => step.kind === 'action' && step.state === 'running',
-  )
+  const interrupted = mission.plan.steps.filter(step => step.state === 'running')
   if (interrupted.length === 0) return mission
-  const waits = [
-    ...mission.waits,
-    ...interrupted.map<MissionWaiting>(step => ({
-      kind: 'recovery',
-      stepId: step.id,
-      reason: 'action_outcome_unknown',
-    })),
-  ]
+  const waits = [...mission.waits]
+  for (const step of interrupted) {
+    if (step.kind === 'action')
+      waits.push({ kind: 'recovery', stepId: step.id, reason: 'action_outcome_unknown' })
+    if (step.kind === 'job') waits.push({ kind: 'job', stepId: step.id, jobId: step.jobId })
+    if (step.kind === 'user_input') waits.push({ kind: 'user', stepId: step.id })
+    if (step.kind === 'sub_mission')
+      waits.push({ kind: 'dependency', stepId: step.id, missionId: step.childMissionId })
+  }
+  const steps = mission.plan.steps.map(step => {
+    if (!interrupted.includes(step)) return step
+    return missionStepInState(
+      step,
+      step.kind === 'reason' || step.kind === 'verify' ? 'ready' : 'waiting',
+      now,
+    )
+  })
   return {
     ...mission,
-    state: 'paused',
+    state: waits.some(wait => wait.kind === 'recovery')
+      ? 'paused'
+      : missionStateForWork(steps, waits),
     updatedAt: now,
-    plan: {
-      steps: mission.plan.steps.map(step =>
-        interrupted.includes(step) ? missionStepInState(step, 'waiting', now) : step,
-      ),
-    },
+    plan: { steps },
     waits,
   }
 }

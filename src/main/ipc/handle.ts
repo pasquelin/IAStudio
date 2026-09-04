@@ -10,6 +10,7 @@ import type { CHANNELS, StudioBridge } from '@shared/ipc'
 type ChannelMethod = {
   [CHANNELS.missionsWatch]: StudioBridge['missions']['watch']
   [CHANNELS.missionsCreate]: StudioBridge['missions']['create']
+  [CHANNELS.missionsResume]: StudioBridge['missions']['resume']
   [CHANNELS.settingsRead]: StudioBridge['settings']['read']
   [CHANNELS.settingsWrite]: StudioBridge['settings']['write']
   [CHANNELS.settingsAuthState]: StudioBridge['settings']['authState']

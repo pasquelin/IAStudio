@@ -307,6 +307,7 @@ const bridge: StudioBridge = {
   missions: {
     watch: scope => ipcRenderer.invoke(CHANNELS.missionsWatch, scope),
     create: goal => ipcRenderer.invoke(CHANNELS.missionsCreate, goal),
+    resume: (stepId, answer) => ipcRenderer.invoke(CHANNELS.missionsResume, stepId, answer),
     onChanged: callback => subscribe<Mission>(EVENTS.missionChanged, callback),
   },
   ai: {

@@ -94,7 +94,7 @@ function registerCreativeIpc(
   services: Services,
   running: ReturnType<typeof createRunningTasks>,
 ): void {
-  registerMissionHandlers(services.missions)
+  registerMissionHandlers(services.missions, services.missionRuntime)
   registerStyleHandlers(services.styles)
   registerMediaHandlers({ ...services, running })
   registerAssistantHandlers({

@@ -1,5 +1,7 @@
 import {
   isMissionFinished,
+  addMissionStep,
+  createMissionStep,
   missionCanComplete,
   resolveMissionWait,
   transitionMission,
@@ -9,6 +11,7 @@ import {
   type MissionClock,
   type MissionId,
   type MissionStep,
+  type MissionStepDraft,
   type MissionStepId,
   type MissionWaiting,
   type ResourceRevision,
@@ -19,6 +22,14 @@ import { refToString } from '@shared/domain/ref'
 
 export type MissionStepOutcome =
   | { readonly kind: 'completed'; readonly result?: unknown }
+  | {
+      readonly kind: 'planned'
+      readonly result?: unknown
+      readonly steps: readonly {
+        title: string
+        draft: MissionStepDraft
+      }[]
+    }
   | { readonly kind: 'waiting'; readonly wait: MissionWaiting }
   | { readonly kind: 'failed'; readonly error: string }
 
@@ -28,12 +39,13 @@ export type MissionStepRunner = (
   revisionCheck: MissionRevisionCheck,
 ) => Promise<MissionStepOutcome>
 
-type MissionRevisionCheck = {
+export type MissionRevisionCheck = {
   decision: 'continue' | 'reconsider' | 'unknown'
   current: readonly ResourceRevision[]
   changed: readonly ResourceRevision[]
   unavailable: readonly ResourceRevision[]
   observed: boolean
+  resumed: boolean
 }
 
 export type MissionRevisionReader = {
@@ -47,7 +59,7 @@ type MissionRevisionRead = {
 
 export type MissionScheduler = {
   wake: (missionId: MissionId) => Promise<void>
-  resume: (missionId: MissionId, stepId: MissionStepId) => Promise<void>
+  resume: (missionId: MissionId, stepId: MissionStepId, result?: unknown) => Promise<void>
   resumeJob: (missionId: MissionId, jobId: string) => Promise<void>
   cancel: (missionId: MissionId) => Promise<void>
 }
@@ -91,6 +103,7 @@ async function revisionCheckOf(
       changed,
       unavailable: read?.unavailable ?? [],
       observed: read !== null,
+      resumed,
     },
   }
 }
@@ -117,6 +130,7 @@ function completedStep(
   stepId: MissionStepId,
   result: unknown,
   now: string,
+  finishMission = true,
 ): Mission {
   const completed = transitionMissionStep(mission, stepId, 'completed', now)
   const withResult = {
@@ -127,7 +141,7 @@ function completedStep(
       ),
     },
   }
-  return missionCanComplete(withResult)
+  return finishMission && missionCanComplete(withResult)
     ? transitionMission(withResult, 'completed', now)
     : withResult
 }
@@ -206,6 +220,36 @@ export function createMissionScheduler(
   ): Mission => {
     if (outcome.kind === 'completed') {
       return completedStep(mission, stepId, outcome.result, clock.now())
+    }
+    if (outcome.kind === 'planned') {
+      let planned = completedStep(mission, stepId, outcome.result, clock.now(), false)
+      const dependentIds = new Set(
+        planned.plan.steps.filter(step => step.dependsOn.includes(stepId)).map(step => step.id),
+      )
+      let dependency = stepId
+      for (const next of outcome.steps) {
+        const step = createMissionStep(planned.id, next.title, next.draft, clock, [dependency])
+        planned = addMissionStep(planned, step, clock.now())
+        dependency = step.id
+      }
+      if (dependency !== stepId) {
+        planned = {
+          ...planned,
+          plan: {
+            steps: planned.plan.steps.map(step =>
+              dependentIds.has(step.id)
+                ? {
+                    ...step,
+                    dependsOn: step.dependsOn.map(id => (id === stepId ? dependency : id)),
+                  }
+                : step,
+            ),
+          },
+        }
+      }
+      return missionCanComplete(planned)
+        ? transitionMission(planned, 'completed', clock.now())
+        : planned
     }
     if (outcome.kind === 'waiting') {
       try {
@@ -288,7 +332,7 @@ export function createMissionScheduler(
 
   return {
     wake,
-    resume: async (missionId, stepId) => {
+    resume: async (missionId, stepId, result) => {
       const mission = await manager.read(missionId)
       if (!mission) throw new Error(`mission ${missionId} does not exist`)
       await update(mission.id, current => {
@@ -297,7 +341,17 @@ export function createMissionScheduler(
         if (waiting.kind !== 'user' && waiting.kind !== 'recovery') {
           throw new Error(`mission step ${stepId} does not wait on the user`)
         }
-        return resolveMissionWait(current, stepId, 'ready', clock.now())
+        const resumed = resolveMissionWait(current, stepId, 'ready', clock.now())
+        return result === undefined
+          ? resumed
+          : {
+              ...resumed,
+              plan: {
+                steps: resumed.plan.steps.map(step =>
+                  step.id === stepId ? { ...step, result } : step,
+                ),
+              },
+            }
       })
       await wake(missionId)
     },

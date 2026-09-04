@@ -4,6 +4,7 @@ import type { MissionScope } from '@shared/studioBridgeMissions'
 import { sendToSender } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { missionBelongsToScope, type MissionManager } from './manager'
+import type { MissionRuntime } from './runtime'
 
 function parseScope(value: unknown): MissionScope {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -23,7 +24,14 @@ function parseGoal(value: unknown): string {
   return value
 }
 
-export function registerMissionHandlers(manager: MissionManager): void {
+function parseAnswer(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 10_000) {
+    throw new Error('mission answer must be a bounded string')
+  }
+  return value
+}
+
+export function registerMissionHandlers(manager: MissionManager, runtime?: MissionRuntime): void {
   const scopes = new Map<number, { readonly sender: WebContents; readonly scope: MissionScope }>()
   manager.subscribe(mission => {
     for (const projection of scopes.values()) {
@@ -44,6 +52,23 @@ export function registerMissionHandlers(manager: MissionManager): void {
   handle(CHANNELS.missionsCreate, (event, goal) => {
     const projection = scopes.get(event.sender.id)
     if (!projection) throw new Error('window must watch missions before creating one')
-    return manager.create(parseGoal(goal), projection.scope)
+    const parsed = parseGoal(goal)
+    return runtime
+      ? runtime.create(parsed, projection.scope)
+      : manager.create(parsed, projection.scope)
+  })
+
+  handle(CHANNELS.missionsResume, async (event, stepId, answer) => {
+    const projection = scopes.get(event.sender.id)
+    if (!projection || !runtime) throw new Error('window must watch missions before resuming one')
+    if (typeof stepId !== 'string') throw new Error('mission step id must be a string')
+    const mission = (await manager.list(projection.scope)).find(candidate =>
+      candidate.plan.steps.some(step => step.id === stepId),
+    )
+    if (!mission) throw new Error(`mission step ${stepId} does not belong to this window`)
+    await runtime.scheduler.resume(mission.id, stepId, parseAnswer(answer))
+    const resumed = await manager.read(mission.id)
+    if (!resumed) throw new Error(`mission ${mission.id} disappeared`)
+    return resumed
   })
 }

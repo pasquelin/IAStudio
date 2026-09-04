@@ -73,10 +73,18 @@ export const manualText = (manuals: readonly Manual[]): string =>
  */
 let namesHeld: string | null = null
 
-export const namesPrinted = (): string =>
-  (namesHeld ??= ACTION_FAMILIES.map(
-    family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
-  ).join('\n'))
+export const namesPrinted = (only?: readonly ActionName[]): string => {
+  if (!only) {
+    return (namesHeld ??= ACTION_FAMILIES.map(
+      family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
+    ).join('\n'))
+  }
+  const wanted = new Set(only)
+  return ACTION_FAMILIES.flatMap(family => {
+    const names = family.actions.map(action => action.name).filter(name => wanted.has(name))
+    return names.length > 0 ? [`  [${family.name}] ${names.join(', ')}`] : []
+  }).join('\n')
+}
 
 /**
  * 🛑 Every name of the registry, and that is the point of showing names: a model may call anything

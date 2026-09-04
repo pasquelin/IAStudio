@@ -244,6 +244,8 @@ export type AssistantThought = {
    * briefing a renderer can inflate. Unknown names are dropped rather than refused.
    */
   loaded?: readonly ActionName[]
+  /** ActionIndex candidates for a disposable mission turn. Absent on the legacy conversation. */
+  candidates?: readonly ActionName[]
 }
 
 /**

@@ -12,10 +12,9 @@ import { log } from './log'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createNewsService } from '@main/news/newsStore'
-import { createMissionJournal } from '@main/mission/journal'
-import { createMissionManager } from '@main/mission/manager'
-import { createMissionStore } from '@main/mission/store'
-import { createStudioEventBus } from '@main/mission/eventBus'
+import { createMissionRuntime } from '@main/mission/runtime'
+import { createMissionRevisionReader } from '@main/mission/resourceState'
+import { createMissionServices } from '@main/mission/services'
 import { createActionSearchService } from '@main/actionIndex/actionSearchService'
 import { createAssistantContextBuilder } from '@main/mission/contextBuilder'
 import { createUpdates } from '@main/updater'
@@ -120,17 +119,8 @@ const serviceSlice = <T extends Partial<Services>>(services: T): T => services
  * refuses before then. The settings are built before it and handed in — see `createSettings`.
  */
 export function createServices(settings: SettingsStore): Services {
-  const missionJournal = createMissionJournal(() => app.getPath('userData'), timestamp)
-  const studioEvents = createStudioEventBus((error, event) =>
-    log.warn('assistant', `studio event ${event.id} listener failed: ${String(error)}`),
-  )
-  const missionStore = createMissionStore(missionJournal, (error, mission) =>
-    log.warn('assistant', `mission ${mission.id} listener failed: ${String(error)}`),
-  )
-  const missions = createMissionManager(missionStore, studioEvents, {
-    now: timestamp,
-    newId: randomUUID,
-  })
+  const { missions, studioEvents, missionClock, connectMissionRuntime, onJobProgress } =
+    createMissionServices(timestamp)
   const provider = new ProviderServices(settings, delay, () =>
     log.info('provider', 'rate limit reached, requests are queueing'),
   )
@@ -212,6 +202,7 @@ export function createServices(settings: SettingsStore): Services {
       newAssetId,
       delay,
       now: timestamp,
+      onProgress: onJobProgress,
     })
   }
   // prettier-ignore
@@ -246,6 +237,16 @@ export function createServices(settings: SettingsStore): Services {
     jobs,
     projectContext: context,
   })
+  const missionRuntime = createMissionRuntime({
+    manager: missions,
+    context: assistantContext,
+    brain,
+    actions: remoteActions,
+    jobs,
+    revisions: createMissionRevisionReader(snapshot),
+    clock: missionClock,
+  })
+  connectMissionRuntime(missionRuntime)
 
   function buildMcp() {
     const checkout = checkoutOf(app.getAppPath())
@@ -310,6 +311,7 @@ export function createServices(settings: SettingsStore): Services {
       actionIndex,
       closeRetrieval,
       assistantContext,
+      missionRuntime,
       // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
       // here, and an export named against nothing is a refusal rather than a failure.
       projectPath: () => project.current()?.path ?? null,

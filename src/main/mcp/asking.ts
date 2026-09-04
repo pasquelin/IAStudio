@@ -58,7 +58,7 @@ export type RemoteActionDeps = {
 }
 
 export type RemoteActions = {
-  run: (call: AssistantCall) => Promise<ActionOutcome>
+  run: (call: AssistantCall, signal?: AbortSignal) => Promise<ActionOutcome>
   /** The window's answer, quoting the id it was asked under. Unknown ids are dropped. */
   settle: (result: AssistantActionResult) => void
 }
@@ -71,9 +71,13 @@ export function createRemoteActions({
   const waiting = new Map<string, (outcome: ActionOutcome) => void>()
 
   return {
-    run: call =>
+    run: (call, signal) =>
       new Promise<ActionOutcome>(resolve => {
         const callId = newCallId()
+        if (signal?.aborted) {
+          resolve({ ok: false, refusal: 'timedOut' })
+          return
+        }
 
         // Refused rather than queued: an application with no window in front has nowhere to
         // show the question that a costly action would need, and a call held until one appears
@@ -88,6 +92,7 @@ export function createRemoteActions({
             // Dropped from the map first, so an answer that arrives late finds nothing to resolve
             // rather than resolving a promise its caller already gave up on.
             waiting.delete(callId)
+            signal?.removeEventListener('abort', abort)
             resolve({ ok: false, refusal: 'timedOut' })
             // Capped rather than replaced, so a decor that shortens the wait shortens both.
           },
@@ -97,8 +102,16 @@ export function createRemoteActions({
         // The wait must not be a reason the application stays alive at quit.
         timer.unref()
 
+        const abort = (): void => {
+          clearTimeout(timer)
+          waiting.delete(callId)
+          resolve({ ok: false, refusal: 'timedOut' })
+        }
+        signal?.addEventListener('abort', abort, { once: true })
+
         waiting.set(callId, outcome => {
           clearTimeout(timer)
+          signal?.removeEventListener('abort', abort)
           resolve(outcome)
         })
       }),

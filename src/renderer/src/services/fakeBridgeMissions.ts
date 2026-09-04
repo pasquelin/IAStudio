@@ -6,6 +6,7 @@ export function fakeBridgeMissions(
   return {
     watch: () => Promise.resolve([]),
     create: () => Promise.reject(new Error('fake mission creation is not configured')),
+    resume: () => Promise.reject(new Error('fake mission resume is not configured')),
     onChanged: () => () => {},
     ...overrides,
   }

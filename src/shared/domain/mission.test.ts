@@ -194,6 +194,27 @@ describe('mission domain', () => {
     })
   })
 
+  it('reconstructs disposable reasoning and durable waits after interruption', () => {
+    const { mission, time } = runningMission()
+    const reason = createMissionStep(mission.id, 'Think', { kind: 'reason' }, time)
+    const job = createMissionStep(mission.id, 'Wait', { kind: 'job', jobId: 'job_8' }, time)
+    const interrupted: Mission = {
+      ...mission,
+      plan: {
+        steps: [
+          { ...reason, state: 'running', startedAt: time.now() },
+          { ...job, state: 'running', startedAt: time.now() },
+        ],
+      },
+    }
+
+    expect(recoverInterruptedMission(interrupted, time.now())).toMatchObject({
+      state: 'running',
+      waits: [{ kind: 'job', stepId: job.id, jobId: 'job_8' }],
+      plan: { steps: [{ state: 'ready' }, { state: 'waiting' }] },
+    })
+  })
+
   it('completes only after every required step settles and no wait remains', () => {
     const { mission, step, time } = runningMission()
     expect(() => transitionMission(mission, 'completed', time.now())).toThrow(

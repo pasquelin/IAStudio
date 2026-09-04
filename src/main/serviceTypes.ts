@@ -55,9 +55,11 @@ import type { MissionManager } from './mission/manager'
 import type { StudioEventBus } from './mission/eventBus'
 import type { ActionSearchService } from './actionIndex/actionSearchService'
 import type { AssistantContextBuilder } from './mission/contextBuilder'
+import type { MissionRuntime } from './mission/runtime'
 
 export type Services = {
   missions: MissionManager
+  missionRuntime: MissionRuntime
   studioEvents: StudioEventBus
   settings: SettingsStore
   client: ClientProvider

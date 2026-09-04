@@ -1,5 +1,6 @@
 import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import type { Asset } from '@shared/domain/asset'
+import type { JobProgress } from '@shared/domain/job'
 import { outputExtensionOf } from '@shared/domain/localFields'
 import type { LocalModel } from '@shared/domain/localModel'
 import { projectName } from '@shared/domain/project'
@@ -70,6 +71,7 @@ type JobDeps = {
   newAssetId: () => string
   delay: (ms: number, signal?: AbortSignal) => Promise<void>
   now: () => string
+  onProgress?: (progress: JobProgress) => void
 }
 
 export function createJobServices(deps: JobDeps) {
@@ -168,7 +170,10 @@ export function createJobServices(deps: JobDeps) {
     maxRetries: () => deps.settings.read().generation.maxRetries,
     retryable: error => isRetryable(error) || isRetryableTripo(error),
     retryDelayFor: tripoRetryAfterMs,
-    onProgress: progress => broadcast(EVENTS.jobProgress, progress),
+    onProgress: progress => {
+      broadcast(EVENTS.jobProgress, progress)
+      deps.onProgress?.(progress)
+    },
     onListChanged: list => broadcast(EVENTS.jobsChanged, list),
     record: report => deps.journal.record(report),
     now: deps.now,
