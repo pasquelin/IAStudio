@@ -48,6 +48,20 @@ export function WorldToolsGroundMaterials({ documentId, terrain }: Props) {
       ),
     )
   }
+  const setAlbedo = (assetId: string | null): void => {
+    if (!assetId) return
+    if (active) {
+      patchActive({ albedo: { assetId } })
+      return
+    }
+    const channel = GROUND_MATERIAL_CHANNELS[0]
+    if (!channel) return
+    run(
+      documentId,
+      setTerrainGroundMaterials(terrain.id, [{ albedo: { assetId }, normal: null, channel }]),
+    )
+    arm(channel)
+  }
   const add = (): void => {
     const channel = GROUND_MATERIAL_CHANNELS.find(
       candidate => !terrain.groundMaterials.some(material => material.channel === candidate),
@@ -68,6 +82,7 @@ export function WorldToolsGroundMaterials({ documentId, terrain }: Props) {
     run(documentId, setTerrainGroundMaterials(terrain.id, remaining))
     const next = remaining[0]?.channel
     if (next) arm(next)
+    else views.setArmedWorld(documentId, { kind: 'relief', id: terrain.id, editId: null })
   }
   const paint = (): void => {
     if (!active) return
@@ -89,7 +104,7 @@ export function WorldToolsGroundMaterials({ documentId, terrain }: Props) {
       <PictureField
         label={t('world.groundAlbedo')}
         value={active?.albedo.assetId ?? null}
-        onChange={assetId => assetId && patchActive({ albedo: { assetId } })}
+        onChange={setAlbedo}
         scId="world.groundAlbedo"
       />
       <PictureField
@@ -109,7 +124,7 @@ export function WorldToolsGroundMaterials({ documentId, terrain }: Props) {
         icon={mdiMinus}
         label={t('world.removeGroundMaterial')}
         tooltip={TIP_TOP}
-        disabled={!active || terrain.groundMaterials.length <= 1}
+        disabled={!active}
         onClick={remove}
       />
       <ToolButton
