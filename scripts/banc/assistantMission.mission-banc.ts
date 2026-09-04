@@ -34,7 +34,7 @@ function missionBenchSet(value: string): MissionBenchSet {
   return 'baseline'
 }
 const BENCH_SET = missionBenchSet(requestedSet)
-const scenarios = missionScenarios(SCENARIOS, BENCH_SET)
+const scenarios = missionScenarios(SCENARIOS, BENCH_SET, process.env['MISSION_BENCH_RANKS'] ?? '')
 
 type Tokens = { sent: number; back: number; cached: number; calls: number }
 type Result = {

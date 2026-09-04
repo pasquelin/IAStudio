@@ -21,6 +21,13 @@ describe('mission runtime bench catalogue', () => {
     )
   })
 
+  it('selects targeted ranks without maintaining another scenario list', () => {
+    expect(missionScenarios(SCENARIOS, 'all', '1.3, 61.1').map(scenario => scenario.name)).toEqual([
+      '1.3 counts the assets of each kind',
+      '61.1 starts the game',
+    ])
+  })
+
   it('builds progressive sets from every represented action family', () => {
     const represented = ACTION_FAMILIES.filter(family =>
       SCENARIOS.some(scenario => scenarioFamilies(scenario).includes(family.name)),

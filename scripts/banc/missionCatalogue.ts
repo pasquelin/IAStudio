@@ -43,7 +43,9 @@ export function scenarioFamilies(scenario: Scenario): readonly string[] {
 function balancedScenarios(scenarios: readonly Scenario[], perFamily: number): readonly Scenario[] {
   const selected = new Set<Scenario>()
   for (const family of ACTION_FAMILIES) {
-    const candidates = scenarios.filter(scenario => scenarioFamilies(scenario).includes(family.name))
+    const candidates = scenarios.filter(scenario =>
+      scenarioFamilies(scenario).includes(family.name),
+    )
     for (const scenario of candidates.slice(0, perFamily)) selected.add(scenario)
   }
   return scenarios.filter(scenario => selected.has(scenario))
@@ -52,7 +54,16 @@ function balancedScenarios(scenarios: readonly Scenario[], perFamily: number): r
 export function missionScenarios(
   scenarios: readonly Scenario[],
   set: MissionBenchSet,
+  ranks = '',
 ): readonly Scenario[] {
+  const requestedRanks = new Set(
+    ranks
+      .split(',')
+      .map(rank => rank.trim())
+      .filter(Boolean),
+  )
+  if (requestedRanks.size > 0)
+    return scenarios.filter(scenario => requestedRanks.has(rankOf(scenario)))
   if (set === 'all') return scenarios
   if (set === 'baseline')
     return scenarios.filter(scenario => BASELINE_MISSION_SCENARIOS.has(scenario.name))
@@ -67,7 +78,9 @@ export type MissionFamilyCoverage = {
   missing: number
 }
 
-export function missionFamilyCoverage(scenarios: readonly Scenario[]): readonly MissionFamilyCoverage[] {
+export function missionFamilyCoverage(
+  scenarios: readonly Scenario[],
+): readonly MissionFamilyCoverage[] {
   return ACTION_FAMILIES.map(family => {
     const covered = scenarios.filter(scenario => scenarioFamilies(scenario).includes(family.name))
     return {

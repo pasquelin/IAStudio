@@ -12,6 +12,7 @@ import { ACTION_INDEX_MIGRATIONS } from './actionIndexSchema'
 const DEFAULT_LIMIT = 5
 const MAX_LIMIT = 12
 const FTS_CANDIDATES = 40
+const AVAILABLE_RESOURCE_SCORE = 8
 
 export type ActionEmbedding = {
   name: ActionName
@@ -167,11 +168,14 @@ function workflowScoresOf(
     }
   }
   for (const resource of available) {
-    for (const hit of ranked.filter(
+    for (const hit of hits.filter(
       candidate =>
         candidate.action.requires.includes(resource) || candidate.action.inputs.includes(resource),
     ))
-      scores.set(hit.action.name, Math.max(scores.get(hit.action.name) ?? 0, 4))
+      scores.set(
+        hit.action.name,
+        Math.max(scores.get(hit.action.name) ?? 0, AVAILABLE_RESOURCE_SCORE),
+      )
   }
   return scores
 }

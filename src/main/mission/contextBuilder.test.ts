@@ -122,6 +122,27 @@ describe('AssistantContextBuilder', () => {
     expect(search.mock.calls[0]?.[0]).not.toContain('light_')
   })
 
+  it('does not scope an unrelated request to the current selection', async () => {
+    const { mission, step } = missionOf('/projects/alpha')
+    const scene = snapshotOf()
+    scene.activeDocumentState = {
+      documentId: 'document_1',
+      kind: 'scene',
+      incarnation: 'scene_1',
+      revision: 4,
+      state: {},
+    }
+    scene.selection = { kind: 'node', items: [{ id: 'node_1', name: 'Cube' }] }
+    const search = vi.fn(async () => [])
+    const builder = createAssistantContextBuilder(
+      dependencies({ snapshot: async () => scene, actions: { search } }),
+    )
+
+    await builder.build({ mission, step, request: 'List project scripts' })
+
+    expect(search).toHaveBeenCalledWith(expect.any(String), 12, [], { document: 'scene' })
+  })
+
   it('only exposes resources returned with a non-empty result', async () => {
     const base = missionOf('/projects/alpha')
     const discovered: MissionStep = {

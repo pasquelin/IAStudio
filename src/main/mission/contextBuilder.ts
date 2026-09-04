@@ -9,6 +9,7 @@ import type { Mission, MissionStep } from '@shared/domain/mission'
 import { assistantAction, type ActionResource } from '@shared/domain/assistant'
 import { noContext, type ContextState } from '@shared/domain/projectContext'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
+import { foldForSearch } from '@shared/text'
 import type {
   AssistantContext,
   ContextBudgetReport,
@@ -110,12 +111,20 @@ function availableActionResources(input: AssistantContextRequest): readonly Acti
   return [...resources]
 }
 
-function actionScope(snapshot: StudioSnapshot | null): {
+function actionScope(
+  snapshot: StudioSnapshot | null,
+  query: string,
+): {
   target?: string
   document?: string
 } {
+  const request = foldForSearch(query)
+  const targetsSelection = snapshot?.selection?.items.some(item => {
+    const name = foldForSearch(item.name)
+    return name !== '' && request.includes(name)
+  })
   return {
-    ...(snapshot?.selection ? { target: snapshot.selection.kind } : {}),
+    ...(snapshot?.selection && targetsSelection ? { target: snapshot.selection.kind } : {}),
     ...(snapshot?.activeDocumentState ? { document: snapshot.activeDocumentState.kind } : {}),
   }
 }
@@ -173,7 +182,7 @@ async function collectContext(
         query,
         CONTEXT_BUDGETS.actions.maxItems,
         availableActionResources(input),
-        actionScope(snapshot),
+        actionScope(snapshot, input.request),
       ),
       attached
         ? deps.memories.recall('project', {

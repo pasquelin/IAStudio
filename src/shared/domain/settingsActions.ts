@@ -22,6 +22,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [],
+    returns: ['settingsState'],
   }),
   action({
     /**
@@ -36,6 +37,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     commitment: 'studio',
     repeatable: true,
     reach: 'mcp',
+    inputs: ['settingsState'],
     fields: [
       {
         key: 'settings',

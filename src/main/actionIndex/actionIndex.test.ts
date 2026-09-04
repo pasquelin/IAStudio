@@ -162,6 +162,47 @@ describe('ActionIndex', () => {
     expect(hits.map(hit => hit.action.name)).not.toContain('material.setSurfaceSettings')
   })
 
+  it('keeps representative families within bounded lexical results', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    const requests = [
+      ['Compte les assets de chaque type.', 'assets.counts'],
+      ['Active la grille de la scène.', 'settings.write'],
+      ['Quel est le statut Git du projet ?', 'git.status'],
+      ['Lance le jeu.', 'play.start'],
+      ['Liste les scripts du projet.', 'script.list'],
+      ['Décris ce qui est devant.', 'studio.describe'],
+      ['Exporte le jeu.', 'game.export'],
+    ]
+
+    for (const [query, expected] of requests) {
+      const names = index
+        .search({ query: query ?? '', limit: 12, scope: {} })
+        .map(hit => hit.action.name)
+      expect(names, `${query}: ${JSON.stringify(names)}`).toContain(expected)
+    }
+  })
+
+  it('offers a workflow continuation even when its words are absent from the new query', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const names = index
+      .search({
+        query: 'Active la grille de la scène.\nPlan mission',
+        limit: 12,
+        available: ['settingsState'],
+        scope: { document: 'scene' },
+      })
+      .map(hit => hit.action.name)
+
+    expect(names).toContain('settings.write')
+  })
+
   it('replaces fields, vectors and FTS words when the corpus changes', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())
