@@ -26,6 +26,7 @@ export type ContextSource =
 export type ContextSourceBudget = {
   maxItems: number
   maxCharacters: number
+  maxBytes?: number
 }
 
 export type ContextSourceReport = ContextSourceBudget & {
@@ -64,7 +65,7 @@ export type WorkspaceContext = Pick<
   | 'authKnown'
 >
 
-type VisualContext = {
+export type VisualContext = {
   kind: 'viewport' | 'document' | 'camera' | 'preview'
   mimeType: 'image/png' | 'image/jpeg'
   width: number

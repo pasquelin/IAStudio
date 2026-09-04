@@ -7,6 +7,7 @@ import { createRoutedBrain, type RoutedBrainDeps } from './brainRouted'
 const llama = localModel({ id: 'llama3.2:3b', loader: 'ollama', files: [] })
 
 const answering = (say: string): AssistantBrain => ({
+  capabilities: async () => ({ streaming: false, structuredJson: true, multimodalImages: false }),
   window: () => Promise.resolve(null),
   think: () => Promise.resolve<AssistantAnswer>({ say, calls: [], cost: 0 }),
 })
@@ -34,6 +35,11 @@ describe('the routed brain', () => {
     const brain = routed({
       providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
       localBrain: () => ({
+        capabilities: async () => ({
+          streaming: false,
+          structuredJson: true,
+          multimodalImages: false,
+        }),
         window: () => Promise.resolve(null),
         think: request => {
           seen.push(request)
@@ -91,7 +97,15 @@ describe('the routed brain', () => {
     const think = vi.fn(() => Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 }))
     const brain = routed({
       providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
-      localBrain: () => ({ think, window: () => Promise.resolve(null) }),
+      localBrain: () => ({
+        think,
+        window: () => Promise.resolve(null),
+        capabilities: async () => ({
+          streaming: false,
+          structuredJson: true,
+          multimodalImages: false,
+        }),
+      }),
       contextOf: () => Promise.resolve('World: a forest'),
       stateOf: () => Promise.resolve('Studio now:\n  Space: image.'),
     })
@@ -119,5 +133,20 @@ describe('the routed brain', () => {
     await brain.think(thought)
 
     expect(providerOf).toHaveBeenCalledTimes(2)
+  })
+
+  it('drops images when the brain selected for the turn is text-only', async () => {
+    const think = vi.fn(() => Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 }))
+    const brain = routed({
+      providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
+      localBrain: () => ({ ...answering(''), think }),
+    })
+
+    await brain.think({
+      ...thought,
+      images: [{ mimeType: 'image/png', bytes: new Uint8Array([1]) }],
+    })
+
+    expect(think).toHaveBeenCalledWith(expect.objectContaining({ images: undefined }), undefined)
   })
 })

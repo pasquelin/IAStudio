@@ -17,7 +17,7 @@ export const CONTEXT_BUDGETS: Record<ContextSource, ContextSourceBudget> = {
   jobs: { maxItems: 6, maxCharacters: 2_000 },
   results: { maxItems: 6, maxCharacters: 4_000 },
   projectContext: { maxItems: 8, maxCharacters: 1_200 },
-  visual: { maxItems: 2, maxCharacters: 0 },
+  visual: { maxItems: 2, maxCharacters: 0, maxBytes: 8_000_000 },
 }
 
 const charactersOf = (value: unknown): number => JSON.stringify(value)?.length ?? 0

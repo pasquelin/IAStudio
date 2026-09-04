@@ -55,6 +55,7 @@ import type { MissionManager } from './mission/manager'
 import type { StudioEventBus } from './mission/eventBus'
 import type { ActionSearchService } from './actionIndex/actionSearchService'
 import type { AssistantContextBuilder } from './mission/contextBuilder'
+import type { VisualCapturePort } from './mission/visualCapture'
 import type { MissionRuntime } from './mission/runtime'
 
 export type Services = {
@@ -135,6 +136,7 @@ export type Services = {
    * which asks, and the IPC handler, which hears the reply.
    */
   remoteActions: RemoteActions
+  visualCapture: VisualCapturePort
   /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
   mcp: McpControl
   /** How a client spawns this application as its way in. No address, so it never goes stale. */

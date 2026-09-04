@@ -10,6 +10,7 @@ import type { Job } from '@shared/domain/job'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import type { ActionHit } from '@main/actionIndex/actionIndex'
+import type { VisualContext } from './context'
 import { createAssistantContextBuilder, type AssistantContextBuilderDeps } from './contextBuilder'
 
 const clock = { now: () => '2026-09-04T10:00:00.000Z', newId: () => 'one' }
@@ -278,5 +279,46 @@ describe('AssistantContextBuilder', () => {
     const context = await builder.build({ mission, step, request: 'boat colors' })
     expect(context.projectContext?.cards[0]?.id).toBe('card_8')
     expect(context.budget.projectContext.truncated).toBe(true)
+  })
+
+  it('captures visual context only when requested and keeps its byte budget independent', async () => {
+    const { mission, step } = missionOf('/projects/alpha')
+    const capture = vi.fn(async (): Promise<VisualContext> => ({
+      kind: 'document',
+      mimeType: 'image/png',
+      width: 1,
+      height: 1,
+      bytes: new Uint8Array([1, 2, 3]),
+      capturedAt: clock.now(),
+    }))
+    const builder = createAssistantContextBuilder(dependencies({ visual: capture }))
+
+    expect((await builder.build({ mission, step, request: 'Continue' })).visual).toBeUndefined()
+    const context = await builder.build({ mission, step, request: 'Inspect it', visual: true })
+
+    expect(capture).toHaveBeenCalledTimes(1)
+    expect(context.visual?.[0]?.bytes).toEqual(new Uint8Array([1, 2, 3]))
+    expect(context.budget.visual).toMatchObject({ considered: 1, selected: 1, truncated: false })
+  })
+
+  it('drops a visual capture larger than its source budget', async () => {
+    const { mission, step } = missionOf('/projects/alpha')
+    const builder = createAssistantContextBuilder(
+      dependencies({
+        visual: async () => ({
+          kind: 'document',
+          mimeType: 'image/png',
+          width: 4_000,
+          height: 4_000,
+          bytes: new Uint8Array(8_000_001),
+          capturedAt: clock.now(),
+        }),
+      }),
+    )
+
+    const context = await builder.build({ mission, step, request: 'Inspect it', visual: true })
+
+    expect(context.visual).toBeUndefined()
+    expect(context.budget.visual).toMatchObject({ considered: 1, selected: 0, truncated: true })
   })
 })

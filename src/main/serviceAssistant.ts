@@ -23,6 +23,7 @@ import { bundledFile } from './bundledFile'
 import { createFavorites } from './favorites/store'
 import { sendTo } from './ipc/broadcast'
 import { createRemoteActions } from './mcp/asking'
+import { createVisualCapturePort } from './mission/visualCapture'
 import { renderThumbnail } from './media/renderThumbnail'
 import { createThumbnailCache } from './project/thumbnailCache'
 import { orWhenGone, type ProjectStore } from './project/store'
@@ -88,6 +89,10 @@ export function createAssistantBrains(deps: AssistantDeps) {
   const remoteActions = createRemoteActions({
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
   })
+  const visualCapture = createVisualCapturePort({
+    send: request => sendTo(studioWindow(), EVENTS.assistantVisualCapture, request),
+    now: () => new Date().toISOString(),
+  })
   const snapshot = async () => {
     const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
     return outcome.ok ? parseSnapshot(outcome.data) : null
@@ -121,7 +126,7 @@ export function createAssistantBrains(deps: AssistantDeps) {
       )
     },
   })
-  return { providerBrain, remoteActions, brain, snapshot }
+  return { providerBrain, remoteActions, visualCapture, brain, snapshot }
 }
 
 export function createAssistantPresentation(deps: AssistantDeps) {

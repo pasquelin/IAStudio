@@ -100,6 +100,7 @@ function registerCreativeIpc(
   registerAssistantHandlers({
     brain: services.assistant,
     settleAction: services.remoteActions.settle,
+    settleVisualCapture: services.visualCapture.settle,
     running,
     journal: () => services.journal,
     transcribe: services.transcribe,

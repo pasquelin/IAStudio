@@ -9,7 +9,13 @@ import type {
 } from './domain/assistant'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { TaskProgress } from './domain/taskProgress'
-import type { AssistantActionRequest, AssistantActionResult, Unsubscribe } from './ipcEvents'
+import type {
+  AssistantActionRequest,
+  AssistantActionResult,
+  AssistantVisualCaptureRequest,
+  AssistantVisualCaptureResult,
+  Unsubscribe,
+} from './ipcEvents'
 import type {
   FolderExportRequest,
   MontageExportRequest,
@@ -186,6 +192,7 @@ export type StudioBridgeCreation = {
      * native menu already avoids.
      */
     onAction: (callback: (request: AssistantActionRequest) => void) => Unsubscribe
+    onVisualCapture: (callback: (request: AssistantVisualCaptureRequest) => void) => Unsubscribe
     /**
      * What the model is writing, while it writes it — this window's turn alone.
      *
@@ -195,6 +202,7 @@ export type StudioBridgeCreation = {
     onStream: (callback: (progress: AssistantProgress) => void) => Unsubscribe
     /** What that window made of it, quoting the `callId` it was asked under. */
     actionResult: (result: AssistantActionResult) => Promise<void>
+    visualCaptureResult: (result: AssistantVisualCaptureResult) => Promise<void>
     /**
      * What the chain just did, for the journal — a call run, a refusal, a question answered.
      *

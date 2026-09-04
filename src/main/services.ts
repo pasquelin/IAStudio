@@ -229,13 +229,28 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
   const assistantDeps = assistantDependencies()
-  const { providerBrain, remoteActions, brain, snapshot } = createAssistantBrains(assistantDeps)
+  const { providerBrain, remoteActions, visualCapture, brain, snapshot } =
+    createAssistantBrains(assistantDeps)
   const assistantContext = createAssistantContextBuilder({
     snapshot,
     actions: actionIndex,
     memories: memoryVectors,
     jobs,
     projectContext: context,
+    visual: async document => {
+      const before = await snapshot()
+      const revision = before?.documentRevisions?.find(one => one.documentId === document.id)
+      const captured = await visualCapture.capture(document.id, revision?.revision)
+      const after = await snapshot()
+      const current = after?.documentRevisions?.find(one => one.documentId === document.id)
+      const active = after?.documents.find(one => one.active)
+      return revision &&
+        current &&
+        revision.revision === current.revision &&
+        active?.id === document.id
+        ? captured
+        : null
+    },
   })
   const missionRuntime = createMissionRuntime({
     manager: missions,
@@ -312,6 +327,7 @@ export function createServices(settings: SettingsStore): Services {
       closeRetrieval,
       assistantContext,
       missionRuntime,
+      visualCapture,
       // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
       // here, and an export named against nothing is a refusal rather than a failure.
       projectPath: () => project.current()?.path ?? null,

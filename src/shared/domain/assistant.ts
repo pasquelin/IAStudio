@@ -175,6 +175,11 @@ export function loadedWith(
 /** One thing the assistant decided to do. Checked against the registry before it is run. */
 export type AssistantCall = { action: ActionName; input: Record<string, unknown> }
 
+export type AssistantImage = {
+  mimeType: 'image/png' | 'image/jpeg'
+  bytes: Uint8Array
+}
+
 /** What is asked of whatever does the thinking. */
 export type AssistantThought = {
   utterance: string
@@ -192,6 +197,7 @@ export type AssistantThought = {
    * ships can only carry ten blocks of text.
    */
   history: readonly string[]
+  images?: readonly AssistantImage[]
   /**
    * What the open project is about, already composed — see `composedContext`.
    *

@@ -58,7 +58,10 @@ const contextFor = (mission: Mission): AssistantContext => {
   }
 }
 
-function brainWith(answers: readonly AssistantAnswer[]): {
+function brainWith(
+  answers: readonly AssistantAnswer[],
+  multimodalImages = false,
+): {
   brain: AssistantBrain
   requests: AssistantThought[]
 } {
@@ -67,6 +70,11 @@ function brainWith(answers: readonly AssistantAnswer[]): {
   return {
     requests,
     brain: {
+      capabilities: async () => ({
+        streaming: false,
+        structuredJson: true,
+        multimodalImages,
+      }),
       think: async request => {
         requests.push(request)
         const answer = queued.shift()
@@ -89,7 +97,10 @@ describe('mission runtime', () => {
       cost: 1,
     }
     const verified: AssistantAnswer = { say: 'Done.', calls: [], cost: 1 }
-    const { brain, requests } = brainWith([planned, verified])
+    const { brain, requests } = brainWith([planned, verified], true)
+    const build = vi.fn(async ({ mission }: { mission: Mission; visual?: boolean }) =>
+      contextFor(mission),
+    )
     const run = vi.fn(
       async (_call: AssistantCall, _signal?: AbortSignal): Promise<ActionOutcome> => ({
         ok: true,
@@ -98,7 +109,7 @@ describe('mission runtime', () => {
     )
     const runtime = createMissionRuntime({
       manager,
-      context: { build: async ({ mission }) => contextFor(mission) },
+      context: { build },
       brain,
       actions: { run, settle: vi.fn() },
       jobs: { list: () => [] },
@@ -111,6 +122,67 @@ describe('mission runtime', () => {
     expect(mission.state).toBe('completed')
     expect(run.mock.calls[0]?.[0]).toEqual({ action: 'project.create', input: {} })
     expect(requests.every(request => request.candidates?.length === 1)).toBe(true)
+    expect(build.mock.calls.every(call => call[0].visual === false)).toBe(true)
+  })
+
+  it('requests and sends ephemeral visuals only for a multimodal brain', async () => {
+    const time = clock()
+    const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+    const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+    const requests: AssistantThought[] = []
+    const brain: AssistantBrain = {
+      capabilities: async () => ({
+        streaming: false,
+        structuredJson: true,
+        multimodalImages: true,
+      }),
+      think: async request => {
+        requests.push(request)
+        return { say: 'Done.', calls: [], cost: 0 }
+      },
+      window: async () => null,
+    }
+    const build = vi.fn(
+      async ({
+        mission,
+        visual,
+      }: {
+        mission: Mission
+        visual?: boolean
+      }): Promise<AssistantContext> => ({
+        ...contextFor(mission),
+        ...(visual
+          ? {
+              visual: [
+                {
+                  kind: 'document',
+                  mimeType: 'image/png',
+                  width: 1,
+                  height: 1,
+                  bytes: new Uint8Array([1, 2, 3]),
+                  capturedAt: time.now(),
+                },
+              ],
+            }
+          : {}),
+      }),
+    )
+    const runtime = createMissionRuntime({
+      manager,
+      context: { build },
+      brain,
+      actions: { run: async () => ({ ok: true }), settle: vi.fn() },
+      jobs: { list: () => [] },
+      revisions: { read: async () => ({ current: [], unavailable: [] }) },
+      clock: time,
+    })
+
+    await runtime.create('Inspect the image', {})
+
+    expect(build).toHaveBeenCalledWith(expect.objectContaining({ visual: true }))
+    expect(requests[0]?.images).toEqual([
+      { mimeType: 'image/png', bytes: new Uint8Array([1, 2, 3]) },
+    ])
   })
 
   it('inserts a durable job wait without replaying its submission', async () => {

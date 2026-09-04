@@ -13,6 +13,7 @@ import type {
   ContextBudgetReport,
   ContextSource,
   MissionContext,
+  VisualContext,
   WorkspaceContext,
 } from './context'
 import { CONTEXT_BUDGETS, emptyBudgetReport, withinBudget } from './contextBudget'
@@ -21,6 +22,7 @@ type AssistantContextRequest = {
   mission: Mission
   step: MissionStep
   request: string
+  visual?: boolean
 }
 
 export type AssistantContextBuilder = {
@@ -34,6 +36,7 @@ export type AssistantContextBuilderDeps = {
   jobs: Pick<JobManager, 'list'>
   projectContext: Pick<ProjectContextStore, 'read'>
   documentState?: (document: StudioSnapshot['documents'][number]) => Promise<unknown>
+  visual?: (document: StudioSnapshot['documents'][number]) => Promise<VisualContext | null>
 }
 
 function rememberedRefs(snapshot: StudioSnapshot | null): readonly MemoryRef[] {
@@ -106,6 +109,21 @@ type CollectedContext = {
   jobs: readonly Job[]
   projectContext: ContextState
   documentState?: unknown
+  visual?: VisualContext
+}
+
+async function collectDocumentContext(
+  deps: AssistantContextBuilderDeps,
+  input: AssistantContextRequest,
+  snapshot: StudioSnapshot | null,
+): Promise<readonly [unknown, VisualContext | null]> {
+  const active = snapshot?.documents.find(document => document.active)
+  const state =
+    active && deps.documentState
+      ? await deps.documentState(active)
+      : snapshot?.activeDocumentState?.state
+  const visual = input.visual && active && deps.visual ? await deps.visual(active) : null
+  return [state, visual]
 }
 
 async function collectContext(
@@ -117,8 +135,7 @@ async function collectContext(
   const refs = rememberedRefs(snapshot)
   const attached =
     input.mission.projectId !== undefined && snapshot?.project?.path === input.mission.projectId
-  const active = snapshot?.documents.find(document => document.active)
-  const [actions, projectMemories, globalMemories, jobs, projectContext, documentState] =
+  const [actions, projectMemories, globalMemories, jobs, projectContext, document] =
     await Promise.all([
       deps.actions.search(query, CONTEXT_BUDGETS.actions.maxItems),
       attached
@@ -135,9 +152,7 @@ async function collectContext(
       }),
       Promise.resolve(deps.jobs.list()),
       attached ? deps.projectContext.read() : Promise.resolve(noContext()),
-      active && deps.documentState
-        ? deps.documentState(active)
-        : snapshot?.activeDocumentState?.state,
+      collectDocumentContext(deps, input, snapshot),
     ])
   return {
     actions,
@@ -148,8 +163,23 @@ async function collectContext(
     ],
     jobs,
     projectContext: rankedCards(projectContext, query),
-    ...(documentState === undefined ? {} : { documentState }),
+    ...(document[0] === undefined ? {} : { documentState: document[0] }),
+    ...(document[1] ? { visual: document[1] } : {}),
   }
+}
+
+function visualContext(collected: CollectedContext, report: ContextBudgetReport) {
+  const accepted =
+    collected.visual && collected.visual.bytes.byteLength <= (CONTEXT_BUDGETS.visual.maxBytes ?? 0)
+      ? [collected.visual]
+      : []
+  report.visual = {
+    ...report.visual,
+    considered: collected.visual ? 1 : 0,
+    selected: accepted.length,
+    truncated: collected.visual !== undefined && accepted.length === 0,
+  }
+  return accepted
 }
 
 function previousResults(input: AssistantContextRequest, report: ContextBudgetReport) {
@@ -297,6 +327,7 @@ function assembledContext(
     collected.documentState === undefined ? [] : [compactState.value],
   )[0]
   const context = projectContext(collected, report)
+  const visual = visualContext(collected, report)
   return {
     mission: missionContext(input, report),
     workspace: current.workspace,
@@ -309,6 +340,7 @@ function assembledContext(
     jobs: selected(report, 'jobs', relevantJobs(input, collected.jobs)),
     previousResults: selected(report, 'results', previousResults(input, report)),
     ...(context ? { projectContext: context } : {}),
+    ...(visual.length > 0 ? { visual } : {}),
     budget: report,
   }
 }

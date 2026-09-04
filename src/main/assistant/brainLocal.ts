@@ -91,6 +91,12 @@ export function createLocalBrain({
   }
 
   return {
+    capabilities: async () => ({
+      streaming: true,
+      structuredJson: true,
+      multimodalImages: false,
+      contextTokens,
+    }),
     // The same figure the frames carry, said before a turn rather than only during one.
     window: () => Promise.resolve({ size: contextTokens, unit: 'tokens', assumed: false }),
     think: async (request, watch = {}) => {

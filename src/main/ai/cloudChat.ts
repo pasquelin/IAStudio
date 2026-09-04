@@ -3,6 +3,8 @@ import type { HttpChat } from '@shared/domain/aiCloud'
 import { assistantProgress, type AssistantProgress } from '@shared/domain/assistant'
 import { linesOf } from '@main/netStream'
 import { isRecord } from '@shared/guards'
+import { bytesToBase64 } from '@shared/base64'
+import type { AssistantImage } from '@shared/domain/assistant'
 import type { ChatTurn } from './localRuntimes'
 
 /**
@@ -27,6 +29,7 @@ export type CloudChatAsk = {
   readonly chat: HttpChat
   readonly key: string
   readonly messages: readonly ChatTurn[]
+  readonly images?: readonly AssistantImage[]
   /** Whether the answer must be one JSON object. Stated by the caller: nothing here guesses. */
   readonly json: boolean
   readonly maxTokens: number
@@ -126,6 +129,56 @@ function geminiContents(messages: readonly ChatTurn[]): unknown[] {
     role: turn.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: turn.content }],
   }))
+}
+
+const encodedImages = (images: readonly AssistantImage[] | undefined) =>
+  (images ?? []).map(image => ({ ...image, data: bytesToBase64(image.bytes) }))
+
+function openAiMessages(ask: CloudChatAsk): unknown[] {
+  const images = encodedImages(ask.images)
+  return ask.messages.map((turn, index) =>
+    turn.role === 'user' && index === ask.messages.length - 1 && images.length > 0
+      ? {
+          ...turn,
+          content: [
+            { type: 'text', text: turn.content },
+            ...images.map(image => ({
+              type: 'image_url',
+              image_url: { url: `data:${image.mimeType};base64,${image.data}` },
+            })),
+          ],
+        }
+      : turn,
+  )
+}
+
+function anthropicMessages(ask: CloudChatAsk): unknown[] {
+  const images = encodedImages(ask.images)
+  const messages = withoutSystem(ask.messages)
+  return messages.map((turn, index) => ({
+    role: turn.role === 'assistant' ? 'assistant' : 'user',
+    content:
+      turn.role === 'user' && index === messages.length - 1 && images.length > 0
+        ? [
+            { type: 'text', text: turn.content },
+            ...images.map(image => ({
+              type: 'image',
+              source: { type: 'base64', media_type: image.mimeType, data: image.data },
+            })),
+          ]
+        : turn.content,
+  }))
+}
+
+function geminiContentsWithImages(ask: CloudChatAsk): unknown[] {
+  const images = encodedImages(ask.images)
+  const contents = geminiContents(ask.messages)
+  const last = contents[contents.length - 1]
+  if (images.length === 0 || !isRecord(last) || !Array.isArray(last['parts'])) return contents
+  last['parts'].push(
+    ...images.map(image => ({ inlineData: { mimeType: image.mimeType, data: image.data } })),
+  )
+  return contents
 }
 
 /** The frames of a `text/event-stream`. Only `data:` lines carry anything the doors below read. */
@@ -269,7 +322,7 @@ async function askOpenAi(
     { authorization: `Bearer ${ask.key}` },
     {
       model: chat.model,
-      messages: ask.messages,
+      messages: openAiMessages(ask),
       max_tokens: ask.maxTokens,
       ...sampling(ask, 'top_p'),
       ...(ask.json ? { response_format: { type: 'json_object' } } : {}),
@@ -301,10 +354,7 @@ async function askAnthropic(
       max_tokens: ask.maxTokens,
       ...sampling(ask, 'top_p'),
       system: systemOf(ask.messages),
-      messages: withoutSystem(ask.messages).map(turn => ({
-        role: turn.role === 'assistant' ? 'assistant' : 'user',
-        content: turn.content,
-      })),
+      messages: anthropicMessages(ask),
       ...(ask.onProgress ? { stream: true } : {}),
     },
     ask.signal,
@@ -334,7 +384,7 @@ async function askGemini(
     {},
     {
       ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-      contents: geminiContents(ask.messages),
+      contents: geminiContentsWithImages(ask),
       generationConfig: {
         maxOutputTokens: ask.maxTokens,
         ...sampling(ask, 'topP'),

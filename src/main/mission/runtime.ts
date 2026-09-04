@@ -88,8 +88,9 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
   const buildContext = async (
     mission: Mission,
     step: Mission['plan']['steps'][number],
+    visual = false,
   ): ReturnType<AssistantContextBuilder['build']> => {
-    const context = await deps.context.build({ mission, step, request: mission.goal })
+    const context = await deps.context.build({ mission, step, request: mission.goal, visual })
     if (context.document) {
       const resource: Ref = { kind: 'document', id: context.document.id }
       if (!mission.resourceRefs.some(ref => refToString(ref) === refToString(resource))) {
@@ -108,13 +109,19 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     signal: AbortSignal,
     utterance: string,
   ): Promise<AssistantAnswer> => {
-    const context = await buildContext(mission, step)
+    const capabilities = await deps.brain.capabilities()
+    const visualRequest =
+      /\b(inspect|look at|compare visually|visual appearance|inspecte|regarde|compare visuellement|apparence visuelle)\b/iu
+    const wantsVisual =
+      capabilities.multimodalImages && visualRequest.test(`${mission.goal} ${step.title}`)
+    const context = await buildContext(mission, step, wantsVisual)
     return await deps.brain.think(
       {
         utterance,
         history: [],
         context: contextText(context),
         candidates: context.actions.map(hit => hit.action.name),
+        images: context.visual?.map(({ mimeType, bytes }) => ({ mimeType, bytes })),
       },
       { signal },
     )

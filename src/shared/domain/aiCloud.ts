@@ -14,9 +14,14 @@ export type CloudAuth = 'key' | 'key-secret'
 /** How the assistant talks to it: Scenario's catalogue job, or HTTP chat. */
 export type CloudChat =
   | { readonly kind: 'scenario' }
-  | { readonly kind: 'openai'; readonly baseUrl: string; readonly model: string }
-  | { readonly kind: 'anthropic'; readonly model: string }
-  | { readonly kind: 'gemini'; readonly model: string }
+  | {
+      readonly kind: 'openai'
+      readonly baseUrl: string
+      readonly model: string
+      readonly multimodalImages?: boolean
+    }
+  | { readonly kind: 'anthropic'; readonly model: string; readonly multimodalImages?: boolean }
+  | { readonly kind: 'gemini'; readonly model: string; readonly multimodalImages?: boolean }
 
 export type HttpChat = Exclude<CloudChat, { kind: 'scenario' }>
 
@@ -75,24 +80,37 @@ export const CLOUD_PROVIDERS: readonly CloudProvider[] = [
     kind: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
+    multimodalImages: true,
   }),
-  chatCloud('anthropic', { kind: 'anthropic', model: 'claude-sonnet-4-5' }),
-  chatCloud('google', { kind: 'gemini', model: 'gemini-2.0-flash' }),
+  chatCloud('anthropic', {
+    kind: 'anthropic',
+    model: 'claude-sonnet-4-5',
+    multimodalImages: true,
+  }),
+  chatCloud('google', { kind: 'gemini', model: 'gemini-2.0-flash', multimodalImages: true }),
   chatCloud('deepseek', {
     kind: 'openai',
     baseUrl: 'https://api.deepseek.com',
     model: 'deepseek-chat',
+    multimodalImages: false,
   }),
-  chatCloud('xai', { kind: 'openai', baseUrl: 'https://api.x.ai/v1', model: 'grok-3-mini' }),
+  chatCloud('xai', {
+    kind: 'openai',
+    baseUrl: 'https://api.x.ai/v1',
+    model: 'grok-3-mini',
+    multimodalImages: false,
+  }),
   chatCloud('mistral', {
     kind: 'openai',
     baseUrl: 'https://api.mistral.ai/v1',
     model: 'mistral-small-latest',
+    multimodalImages: false,
   }),
   chatCloud('openrouter', {
     kind: 'openai',
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'openai/gpt-4o-mini',
+    multimodalImages: true,
   }),
   /**
    * The second cloud that GENERATES. No `chat` and no `standalone`: it answers no conversation,
