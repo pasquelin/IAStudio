@@ -6,7 +6,7 @@ import { MediaTile } from '@/components/MediaTile'
 import { rowDrag } from '@/components/rowDrag'
 import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
-import type { DragLike } from '@/helpers/drag'
+import type { DragLike, DropTone } from '@/helpers/drag'
 
 /**
  * What the card stands for, which decides the SHAPE it draws: a folder, a plain file, or a file
@@ -52,6 +52,7 @@ export type EntryCardProps = {
   foreign?: {
     accepts: boolean
     carries: (event: DragLike) => boolean
+    tone?: (event: DragLike) => DropTone
     onDrop: (event: DragEvent<HTMLElement>) => void
   }
   onDropInto: (ids: readonly string[]) => void
@@ -84,7 +85,7 @@ export function EntryCard({
   onRelease,
 }: EntryCardProps) {
   const { t } = useTranslation()
-  const [over, setOver] = useState(false)
+  const [over, setOver] = useState<DropTone | null>(null)
 
   return (
     <div
@@ -103,23 +104,23 @@ export function EntryCard({
         if (foreign?.carries(event)) {
           if (!foreign.accepts) return
           event.preventDefault()
-          // What leaves the shelf is COPIED into the folder, never taken from it.
-          event.dataTransfer.dropEffect = 'copy'
-          return setOver(true)
+          const tone = foreign.tone?.(event) ?? 'accepted'
+          event.dataTransfer.dropEffect = tone === 'accepted' ? 'copy' : 'none'
+          return setOver(tone)
         }
         if (!accepts || !rowDrag.carries(event)) return
         // Without this the browser refuses the drop, and neither callback ever fires.
         event.preventDefault()
         event.dataTransfer.dropEffect = 'move'
-        setOver(true)
+        setOver('accepted')
       }}
-      onDragLeave={() => setOver(false)}
+      onDragLeave={() => setOver(null)}
       onDragEnd={() => {
-        setOver(false)
+        setOver(null)
         onRelease()
       }}
       onDrop={event => {
-        setOver(false)
+        setOver(null)
         // Before the grid's own reading, which answers about what IT picked up — nothing did.
         if (foreign?.carries(event)) {
           event.preventDefault()
@@ -135,7 +136,8 @@ export function EntryCard({
       className={cn(
         'size-full',
         // The outline the tree draws on the row a drop lands in, so one gesture reads alike in both.
-        over && 'outline-accent rounded-(--radius-sc-md) outline -outline-offset-1',
+        over === 'accepted' && 'outline-accent rounded-(--radius-sc-md) outline -outline-offset-1',
+        over === 'refused' && 'outline-danger rounded-(--radius-sc-md) outline -outline-offset-1',
         // Cut, and on its way out. An opacity rather than a quiet ink: what dims is a PICTURE, and
         // there is no ink to quieten on one — exempted by name in `tokens.test.ts`.
         waiting && 'opacity-50',

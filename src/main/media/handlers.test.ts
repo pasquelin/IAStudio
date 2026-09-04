@@ -25,7 +25,7 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
     adopt: vi.fn(async () => null),
     pickMedia: vi.fn(async () => ['/Volumes/Rushes/A001.mov']),
     capabilities: async () => ({ ffmpeg: true }),
-    importPaths: async () => [],
+    importPaths: async () => ({ assets: [], documents: [], montages: [], refused: [] }),
     claimExternalFiles: () => [],
     ...overrides,
   }
@@ -99,13 +99,23 @@ describe('media handlers', () => {
       type: 'mesh',
       now: '2026-09-03T10:00:00.000Z',
     })
-    const importPaths = vi.fn(async () => [imported])
+    const importPaths = vi.fn(async () => ({
+      assets: [imported],
+      documents: [],
+      montages: [],
+      refused: [],
+    }))
     registerMediaHandlers(deps({ importPaths, claimExternalFiles: () => ['/outside/model.glb'] }))
 
-    const assets = await invoke(CHANNELS.mediaIngestPaths, 'request-1', 'Models')
+    const result = await invoke(CHANNELS.mediaIngestPaths, 'request-1', 'Models')
 
     expect(importPaths).toHaveBeenCalledWith(['/outside/model.glb'], 'Models')
-    expect(assets).toEqual([expect.not.objectContaining({ sourcePath: expect.anything() })])
+    expect(result).toEqual({
+      assets: [expect.not.objectContaining({ sourcePath: expect.anything() })],
+      documents: [],
+      montages: [],
+      refused: [],
+    })
   })
 
   it('adopts a file of the project, and answers the row without its whereabouts', async () => {

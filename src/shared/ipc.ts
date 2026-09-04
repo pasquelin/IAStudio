@@ -1,5 +1,4 @@
-import type { Asset } from './domain/asset'
-import type { ExternalFileRequest } from './domain/externalFile'
+import type { ExternalFileImport, ExternalFileOffer } from './domain/externalFile'
 import type { Channels as BaseChannels } from './channels'
 import { CHANNELS as BASE_CHANNELS } from './ipcChannels'
 import { EVENTS as BASE_EVENTS, type Unsubscribe } from './ipcEvents'
@@ -32,14 +31,14 @@ import type { StudioBridgeShell } from './studioBridgeShell'
 
 type CreationBridge = Omit<StudioBridgeCreation, 'media'> & {
   media: StudioBridgeCreation['media'] & {
-    ingestPaths: (requestId: string, folder: string) => Promise<Asset[]>
+    ingestPaths: (requestId: string, folder: string) => Promise<ExternalFileImport>
   }
 }
 
 type ExternalFilesBridge = {
   externalFiles: {
-    take: () => Promise<ExternalFileRequest[]>
-    offer: (files: readonly File[]) => Promise<ExternalFileRequest | null>
+    take: () => Promise<ExternalFileOffer[]>
+    offer: (files: readonly File[]) => Promise<ExternalFileOffer>
     discard: (requestId: string) => Promise<void>
     onOpen: (callback: () => void) => Unsubscribe
   }

@@ -142,7 +142,7 @@ describe('Tree, a drag that did not start in it', () => {
   function renderForeign(
     onDrop: (event: unknown, node: { id: string } | null) => void,
     accepts: (node: { id: string }) => boolean = () => true,
-    extra?: { onToggle?: (id: string) => void },
+    extra?: { onToggle?: (id: string) => void; tone?: () => 'accepted' | 'refused' | 'neutral' },
   ) {
     return render(
       <Tree
@@ -157,7 +157,7 @@ describe('Tree, a drag that did not start in it', () => {
         onDrop={() => {}}
         onInsert={() => {}}
         onDropRoot={() => {}}
-        foreign={{ carries, accepts, onDrop }}
+        foreign={{ carries, accepts, onDrop, ...(extra?.tone ? { tone: extra.tone } : {}) }}
         renderRow={row => <span>{row.node.id}</span>}
       />,
     )
@@ -179,6 +179,31 @@ describe('Tree, a drag that did not start in it', () => {
     fireEvent.drop(screen.getAllByRole('treeitem')[1]!, { dataTransfer: foreignTransfer() })
 
     expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  it('draws a refused foreign file in danger and still delivers the drop for its alert', () => {
+    const onDrop = vi.fn()
+    renderForeign(onDrop, undefined, { tone: () => 'refused' })
+    const row = screen.getAllByRole('treeitem')[1]!
+    const dataTransfer = foreignTransfer()
+
+    fireEvent.dragOver(row, { dataTransfer })
+
+    expect(row.className).toContain('outline-danger')
+    expect(dataTransfer.dropEffect).toBe('none')
+
+    fireEvent.drop(row, { dataTransfer })
+    expect(onDrop).toHaveBeenCalled()
+  })
+
+  it('draws no acceptance while the operating system still hides the file name', () => {
+    renderForeign(vi.fn(), undefined, { tone: () => 'neutral' })
+    const row = screen.getAllByRole('treeitem')[1]!
+
+    fireEvent.dragOver(row, { dataTransfer: foreignTransfer() })
+
+    expect(row.className).not.toContain('outline-accent')
+    expect(row.className).not.toContain('outline-danger')
   })
 
   /**

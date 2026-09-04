@@ -400,14 +400,16 @@ dépasse le blanc est écrêté.
 | Type | Extensions |
 |---|---|
 | **Vidéo** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
-| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
-| **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
-| **3D** | `glb` |
+| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` `aiff` |
+| **Image** | `png` `ora` `jpg` `jpeg` `webp` `avif` `gif` `svg` `tif` `tiff` `exr` `hdr` |
+| **3D** | `glb` `obj` `fbx` `stl` `ply` `usdz` |
+| **Documents** | `ora` `gltf` `otio` `mtlx` |
+| **Montage avec médias** | `otioz` |
 
 ### Ce qui ne s’importe pas
 
-- **les fichiers 3D autres que `.glb`** — `.gltf` séparé, `.obj`, `.fbx` ;
-- **les HDRI** — `.hdr`.
+- **les modèles à fichiers voisins** — un `.gltf` qui n’est pas un document IA Studio, `.dae`, `.usd`, `.usda`, `.usdc` ;
+- **les matières et textures voisines d’un `.obj`** — seule sa géométrie entre pour l’instant.
 
 Un `.exr` s’importe, mais il est catalogué comme **image**, pas comme ciel. Il fonctionne quand
 même comme source pour une *skybox* : il faut simplement aller le chercher dans les images.
@@ -554,7 +556,7 @@ Si vous ne deviez retenir que quatre choses de ce chapitre :
 2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;
 3. **l’export vidéo sort muet** — le fichier final est livrable, le son du montage n’y est pas ;
-4. **on ne peut pas importer de HDRI** ni de modèle 3D autre qu’un `.glb`.
+4. **un modèle qui dépend de fichiers voisins** ne les rassemble pas encore à l’import.
 
 Tout le reste est du confort.
 

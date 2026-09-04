@@ -1,5 +1,6 @@
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
+import type { ExternalFileImport } from '@shared/domain/externalFile'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { parseAssetId } from '@main/assets/validation'
@@ -16,7 +17,7 @@ export type MediaHandlerDeps = {
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
   pickMedia: () => Promise<string[]>
   capabilities: () => Promise<MediaCapabilities>
-  importPaths: (paths: readonly string[], folder: string) => Promise<Asset[]>
+  importPaths: (paths: readonly string[], folder: string) => Promise<ExternalFileImport>
   claimExternalFiles: (id: string) => readonly string[]
 }
 
@@ -52,11 +53,10 @@ export function registerMediaHandlers({
     return assets
   })
 
-  handle(CHANNELS.mediaIngestPaths, async (_event, requestId, folder) =>
-    (await importPaths(claimExternalFiles(requestId), parseFolderPath(folder))).map(
-      withoutSourcePath,
-    ),
-  )
+  handle(CHANNELS.mediaIngestPaths, async (_event, requestId, folder) => {
+    const imported = await importPaths(claimExternalFiles(requestId), parseFolderPath(folder))
+    return { ...imported, assets: imported.assets.map(withoutSourcePath) }
+  })
 
   handle(CHANNELS.mediaCancel, (_event, assetId) => media.cancel(parseAssetId(assetId)))
 

@@ -386,14 +386,16 @@ above white is clipped.
 | Type | Extensions |
 |---|---|
 | **Video** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
-| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
-| **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
-| **3D** | `glb` |
+| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` `aiff` |
+| **Image** | `png` `ora` `jpg` `jpeg` `webp` `avif` `gif` `svg` `tif` `tiff` `exr` `hdr` |
+| **3D** | `glb` `obj` `fbx` `stl` `ply` `usdz` |
+| **Documents** | `ora` `gltf` `otio` `mtlx` |
+| **Montage with media** | `otioz` |
 
 ### What cannot
 
-- **3D files other than `.glb`** — separate `.gltf`, `.obj`, `.fbx`;
-- **HDRIs** — `.hdr`.
+- **models with neighbouring files** — a `.gltf` that is not an IA Studio document, `.dae`, `.usd`, `.usda`, `.usdc`;
+- **materials and textures beside an `.obj`** — only its geometry enters for now.
 
 An `.exr` does import, but it is catalogued as an **image**, not as a sky. It still works as a source
 for a *skybox*: you simply have to go and find it among the images.
@@ -535,7 +537,7 @@ If you only remember four things from this chapter:
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;
 3. **the video export comes out silent** — the final file is deliverable, the edit's sound is not in it;
-4. **you cannot import an HDRI**, or a 3D model in anything but `.glb`.
+4. **a model that depends on neighbouring files** does not gather them on import yet.
 
 Everything else is comfort.
 

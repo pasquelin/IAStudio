@@ -1,5 +1,6 @@
 import type { DragEvent } from 'react'
 import type { Point } from '@/engines/core/geometry'
+import type { Asset } from '@shared/domain/asset'
 import { addClips, addClipsOnNewTracks } from '@/engines/timeline/commands'
 import { newTracksForAsset, opensTrackFor, placementsForAsset } from '@/engines/timeline/insert'
 import { hitTest, xToTime, type Viewport } from '@/engines/timeline/timelineGeometry'
@@ -45,6 +46,13 @@ async function dropAsset(event: DragEvent<HTMLCanvasElement>, context: DropConte
   event.stopPropagation()
   const asset = await droppedAsset(event)
   if (!asset) return
+  placeTimelineAsset(context, asset, point)
+}
+
+export function placeTimelineAsset(context: DropContext, asset: Asset, point: Point): void {
+  const target = hitTest(context.sequence, context.viewport, point)
+  if (target?.kind === 'ruler') return
+  if (!target && !opensTrackFor(context.sequence, asset.type)) return
 
   const store = useSequences.getState()
   const current = sequenceOf(store, context.documentId)

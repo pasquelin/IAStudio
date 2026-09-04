@@ -8,9 +8,10 @@ import type {
   SetStateAction,
 } from 'react'
 import type { Modifiers } from '@/helpers/selection'
+import type { DropTone } from '@/helpers/drag'
 import type { DropTarget, TreeNode, TreeProps, TreeRow } from './treeTypes'
 
-export type TreeOver = { id: string; target: DropTarget } | null
+export type TreeOver = { id: string; target: DropTarget; tone?: DropTone } | null
 
 export type TreeViewState<T extends TreeNode> = {
   label: string

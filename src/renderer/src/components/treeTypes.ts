@@ -1,5 +1,5 @@
 import type { DragEvent, ReactNode } from 'react'
-import type { DragLike } from '@/helpers/drag'
+import type { DragLike, DropTone } from '@/helpers/drag'
 import type { SelectionMode } from '@/helpers/selection'
 
 export type TreeNode = { id: string; parentId: string | null }
@@ -7,6 +7,7 @@ export type DropTarget =
   { zone: 'into' } | { zone: 'before' | 'after'; parentId: string | null; index: number }
 export type ForeignDrop<T> = {
   carries: (event: DragLike) => boolean
+  tone?: (event: DragLike) => DropTone
   accepts: (node: T) => boolean
   onDrop: (event: DragEvent<HTMLElement>, node: T | null) => void
 }

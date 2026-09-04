@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { LogEntry } from '@shared/ipc'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useProject } from '@/stores/project'
 import { takeExternalFiles } from './externalFiles'
+
+vi.mock('i18next', () => ({
+  default: {
+    t: (_key: string, params: { extensions: string }) => `Unsupported ${params.extensions}`,
+  },
+}))
 
 const project = {
   path: '/projects/one',
@@ -16,10 +23,15 @@ describe('external file arrivals', () => {
   beforeEach(() => useProject.setState({ project, known: true }))
 
   it('imports into the project explicitly chosen from the existing shelf', async () => {
-    const ingestPaths = vi.fn(async () => [])
+    const ingestPaths = vi.fn(async () => ({
+      assets: [],
+      documents: [],
+      montages: [],
+      refused: [],
+    }))
     installFakeBridge({
       externalFiles: {
-        take: async () => [{ id: 'request-1' }],
+        take: async () => [{ request: { id: 'request-1' }, refused: [] }],
       },
       newDocument: {
         ask: async () => ({ answer: 'recentProject', path: project.path }),
@@ -33,12 +45,17 @@ describe('external file arrivals', () => {
   })
 
   it('copies nothing when the project choice is cancelled', async () => {
-    const ingestPaths = vi.fn(async () => [])
+    const ingestPaths = vi.fn(async () => ({
+      assets: [],
+      documents: [],
+      montages: [],
+      refused: [],
+    }))
     const ask = vi.fn(async () => null)
     const discard = vi.fn(async () => undefined)
     installFakeBridge({
       externalFiles: {
-        take: async () => [{ id: 'request-2' }],
+        take: async () => [{ request: { id: 'request-2' }, refused: [] }],
         discard,
       },
       newDocument: { ask },
@@ -55,7 +72,7 @@ describe('external file arrivals', () => {
     const discard = vi.fn(async () => undefined)
     installFakeBridge({
       externalFiles: {
-        take: async () => [{ id: 'request-5', folder: '' }],
+        take: async () => [{ request: { id: 'request-5', folder: '' }, refused: [] }],
         discard,
       },
       media: { ingestPaths: vi.fn().mockRejectedValue(new Error('copy failed')) },
@@ -70,12 +87,12 @@ describe('external file arrivals', () => {
     const ingestPaths = vi
       .fn()
       .mockRejectedValueOnce(new Error('copy failed'))
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ assets: [], documents: [], montages: [], refused: [] })
     installFakeBridge({
       externalFiles: {
         take: async () => [
-          { id: 'request-3', folder: '' },
-          { id: 'request-4', folder: '' },
+          { request: { id: 'request-3', folder: '' }, refused: [] },
+          { request: { id: 'request-4', folder: '' }, refused: [] },
         ],
       },
       media: { ingestPaths },
@@ -85,5 +102,29 @@ describe('external file arrivals', () => {
 
     await vi.waitFor(() => expect(ingestPaths).toHaveBeenCalledTimes(2))
     expect(ingestPaths).toHaveBeenLastCalledWith('request-4', '')
+  })
+
+  it('reports unsupported files from a desktop launch instead of dropping them silently', async () => {
+    const report = vi.fn(async (_entry: LogEntry) => undefined)
+    installFakeBridge({
+      externalFiles: {
+        take: async () => [
+          {
+            request: null,
+            refused: [{ name: 'notes.txt', extension: 'txt' }],
+          },
+        ],
+      },
+      diagnostics: { report },
+    })
+
+    await takeExternalFiles()
+
+    await vi.waitFor(() =>
+      expect(report).toHaveBeenCalledWith(
+        expect.objectContaining({ level: 'warn', scope: 'assets.copy' }),
+      ),
+    )
+    expect(report.mock.calls[0]?.[0].message).toContain('.txt')
   })
 })

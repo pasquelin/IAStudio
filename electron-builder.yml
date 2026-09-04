@@ -39,18 +39,30 @@ fileAssociations:
     role: Editor
     ext:
       - glb
+      - obj
+      - fbx
+      - stl
+      - ply
+      - usdz
+      - gltf
       - png
+      - ora
       - jpg
       - jpeg
       - webp
       - avif
       - gif
       - svg
+      - tif
+      - tiff
+      - exr
+      - hdr
       - mp4
       - mov
       - mkv
       - webm
       - avi
+      - mxf
       - m4v
       - wav
       - mp3
@@ -59,6 +71,9 @@ fileAssociations:
       - m4a
       - aac
       - aiff
+      - otio
+      - otioz
+      - mtlx
 
 # `devTools: false` is a per-webContents preference; these are process-level switches that
 # would otherwise reopen the same door. `--remote-debugging-port` attaches CDP to the main

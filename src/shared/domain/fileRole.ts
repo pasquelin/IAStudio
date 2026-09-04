@@ -1,6 +1,7 @@
 import { ASSET_TYPES, type AssetType } from './asset'
 import { typeOfWorkspace } from './assetKind'
 import { documentExtensionOf, kindForExtension, workspaceForKind } from './document'
+import { importableAssetTypeOf } from './importFormat'
 
 /**
  * Which domain a file belongs to, plus the answer for one that belongs to none.
@@ -117,38 +118,6 @@ export function natureOf(fileName: string): FileNature {
 }
 
 /**
- * Which of those the studio can actually SHOW, rather than merely name.
- *
- * Narrower than the domains above on purpose: `.heic`, `.tif`, `.exr` and `.hdr` are pictures
- * nothing here opens as a tab, and `.glb` is the only mesh a loader here reads. Opening one of
- * the others would post an empty tab where handing it to the system still shows the file.
- */
-const OPENABLE_EXTENSIONS: readonly string[] = [
-  '.png',
-  '.ora',
-  '.jpg',
-  '.jpeg',
-  '.webp',
-  '.avif',
-  '.gif',
-  '.svg',
-  '.mp4',
-  '.webm',
-  '.mov',
-  '.mkv',
-  '.avi',
-  '.m4v',
-  '.wav',
-  '.mp3',
-  '.flac',
-  '.ogg',
-  '.m4a',
-  '.aac',
-  '.aiff',
-  '.glb',
-]
-
-/**
  * Whether a double-click on this file belongs in the studio or with the system.
  *
  * A document always does — it is the studio's own. A source does when something here can draw
@@ -170,20 +139,21 @@ export function opensInStudio(fileName: string): boolean {
  * questions came apart the day a document took the extension of an open format: an `.ora` from
  * another application is a picture to adopt, and `natureOf` calls it an edit.
  *
- * `openable` is narrower than a domain on purpose: `.heic` and `.gltf` carry one and nothing here
- * draws them in a tab. `catalogable` is the adopt door: an `.exr` is held even so.
+ * `catalogable` follows the import registry. `openable` is narrower: TIFF and high-dynamic-range
+ * pictures enter the catalogue for materials and skies, but the image canvas cannot draw them.
  *
  * Narrower than `FileDomain` in its return, and the compiler is what holds it: bytes adopted into
  * the catalogue take an asset TYPE, and `material` is a document rather than one.
  */
 export function sourceNatureOf(fileName: string): SourceNature {
   const extension = documentExtensionOf(fileName).toLowerCase()
-  const domain = DOMAIN_BY_EXTENSION[extension] ?? 'other'
-  const openable = OPENABLE_EXTENSIONS.includes(extension)
+  const importable = importableAssetTypeOf(fileName)
+  const domain = importable ?? DOMAIN_BY_EXTENSION[extension] ?? 'other'
+  const openable = importable !== null && !['.tif', '.tiff', '.exr', '.hdr'].includes(extension)
   return {
     domain,
     openable,
-    catalogable: openable || extension === '.exr',
+    catalogable: importable !== null,
   }
 }
 

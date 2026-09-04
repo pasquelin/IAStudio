@@ -1,4 +1,6 @@
-import { offerBlankDrop } from '@/helpers/drag'
+import { useState } from 'react'
+import { offerBlankDrop, type DropTone } from '@/helpers/drag'
+import { cn } from '@/helpers/cn'
 import type { TreeNode } from './treeTypes'
 import { rowDrag } from './rowDrag'
 import { TreeViewRow } from './TreeViewRow'
@@ -7,6 +9,7 @@ import type { TreeViewState } from './treeViewTypes'
 export type TreeViewProps<T extends TreeNode> = { state: TreeViewState<T> }
 
 export function TreeView<T extends TreeNode>({ state }: TreeViewProps<T>) {
+  const [foreignTone, setForeignTone] = useState<DropTone | null>(null)
   const {
     scroller,
     reducing: reducingRef,
@@ -22,7 +25,12 @@ export function TreeView<T extends TreeNode>({ state }: TreeViewProps<T>) {
   return (
     <div
       ref={scroller}
-      className="h-full overflow-auto p-2"
+      className={cn(
+        'h-full overflow-auto p-2',
+        (foreignTone === 'accepted' || foreignTone === 'refused') && 'outline-2 -outline-offset-2',
+        foreignTone === 'accepted' && 'outline-accent',
+        foreignTone === 'refused' && 'outline-danger',
+      )}
       onPointerDownCapture={() => {
         reducingRef.current = null
       }}
@@ -39,15 +47,31 @@ export function TreeView<T extends TreeNode>({ state }: TreeViewProps<T>) {
         onContextMenuRoot()
       }}
       onDragOver={event => {
-        if (event.target !== event.currentTarget) return
+        if (event.target !== event.currentTarget) {
+          setForeignTone(null)
+          return
+        }
         setOver(null)
+        const carries = foreign?.carries(event) ?? false
+        const tone = carries ? (foreign?.tone?.(event) ?? 'accepted') : null
+        setForeignTone(tone)
         offerBlankDrop(event, {
-          copies: foreign?.carries(event) ?? false,
+          copies: tone === 'accepted',
+          refuses: tone === 'refused' || tone === 'neutral',
           moves: onDropRoot !== undefined && rowDrag.carries(event),
         })
       }}
+      onDragLeave={event => {
+        const next = event.relatedTarget
+        if (next instanceof Node && event.currentTarget.contains(next)) return
+        setForeignTone(null)
+      }}
       onDrop={event => {
-        if (event.target !== event.currentTarget) return
+        if (event.target !== event.currentTarget) {
+          setForeignTone(null)
+          return
+        }
+        setForeignTone(null)
         if (foreign?.carries(event)) {
           event.preventDefault()
           setOver(null)

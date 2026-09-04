@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from '@testing-library/react'
+import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
@@ -47,6 +47,13 @@ function dataTransfer(assetId: string): DataTransfer {
   return transfer
 }
 
+function desktopFile(name = 'rush.mp4'): DataTransfer {
+  const transfer = dragTransfer()
+  transfer.setData('Files', '')
+  Object.defineProperty(transfer, 'files', { value: [new File(['video'], name)] })
+  return transfer
+}
+
 function paint(tool: VideoToolId = 'select') {
   const view = render(<TimelineCanvas documentId="doc-1" tool={tool} />)
   const canvas = view.container.querySelector('canvas')
@@ -83,6 +90,34 @@ describe('TimelineCanvas', () => {
 
     expect(clipsOf()).toHaveLength(1)
     expect(clipsOf()[0]).toMatchObject({ assetId: 'asset-1', start: 2_000_000 })
+  })
+
+  it('imports a desktop video onto the track it was dropped on', async () => {
+    const imported = asset({ id: 'asset-desktop' })
+    installFakeBridge({
+      externalFiles: { offer: async () => ({ request: { id: 'request-1' }, refused: [] }) },
+      media: {
+        ingestPaths: async () => ({ assets: [imported], documents: [], montages: [], refused: [] }),
+      },
+    })
+
+    fireEvent.drop(paint(), {
+      clientX: 200,
+      clientY: RULER_HEIGHT + 10,
+      dataTransfer: desktopFile(),
+    })
+
+    await waitFor(() => expect(clipsOf()[0]).toMatchObject({ assetId: 'asset-desktop' }))
+  })
+
+  it('refuses an unsupported desktop file in red before it is dropped', () => {
+    const canvas = paint()
+    const transfer = desktopFile('notes.txt')
+
+    fireEvent.dragOver(canvas, { dataTransfer: transfer })
+
+    expect(canvas.className).toContain('outline-danger')
+    expect(transfer.dropEffect).toBe('none')
   })
 
   it('gives a clip the probed duration of its asset', async () => {

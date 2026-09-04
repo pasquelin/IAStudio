@@ -88,7 +88,7 @@ describe('import dialog filters', () => {
 
   it('offers every kind in the first filter, so one pick can mix rushes and takes', () => {
     expect(mediaFilters(labels)[0]?.extensions).toEqual(
-      expect.arrayContaining(['mov', 'wav', 'png']),
+      expect.arrayContaining(['mov', 'mxf', 'wav', 'aiff', 'png', 'ora', 'hdr', 'obj']),
     )
   })
 })

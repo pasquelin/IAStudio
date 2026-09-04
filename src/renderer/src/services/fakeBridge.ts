@@ -304,7 +304,7 @@ const fakeAnimations = (overrides: BridgeOverrides): StudioBridge['animations'] 
 
 const fakeMedia = (overrides: BridgeOverrides): StudioBridge['media'] => ({
   ingest: () => Promise.resolve([]),
-  ingestPaths: () => Promise.resolve([]),
+  ingestPaths: () => Promise.resolve({ assets: [], documents: [], montages: [], refused: [] }),
   adopt: () => Promise.resolve(null),
   cancel: () => Promise.resolve(),
   capabilities: () => Promise.resolve({ ffmpeg: true }),
@@ -371,7 +371,7 @@ const fakePlayerModuleWindow = (
 
 const fakeExternalFiles = (overrides: BridgeOverrides): StudioBridge['externalFiles'] => ({
   take: () => Promise.resolve([]),
-  offer: () => Promise.resolve(null),
+  offer: () => Promise.resolve({ request: null, refused: [] }),
   discard: () => Promise.resolve(),
   onOpen: noSubscription,
   ...overrides.externalFiles,

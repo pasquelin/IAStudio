@@ -13,6 +13,7 @@
  * double.
  */
 export type DragLike = { dataTransfer: DataTransfer | null }
+export type DropTone = 'accepted' | 'refused' | 'neutral'
 
 export type DragChannel = {
   start: (event: DragLike, id: string) => void
@@ -86,9 +87,12 @@ export type DropOffer = { dataTransfer: DataTransfer; preventDefault: () => void
  * the same way — they had drifted by a line. Missing the `preventDefault` is the difference
  * between a drop that works and one refused in silence.
  */
-export function offerBlankDrop(event: DropOffer, takes: { copies: boolean; moves: boolean }): void {
-  if (!takes.copies && !takes.moves) return
+export function offerBlankDrop(
+  event: DropOffer,
+  takes: { copies: boolean; moves: boolean; refuses?: boolean },
+): void {
+  if (!takes.copies && !takes.moves && !takes.refuses) return
 
   event.preventDefault()
-  event.dataTransfer.dropEffect = takes.copies ? 'copy' : 'move'
+  event.dataTransfer.dropEffect = takes.refuses ? 'none' : takes.copies ? 'copy' : 'move'
 }

@@ -446,20 +446,29 @@ PROJET et non une ligne, ce qui est pourquoi il vit sous le blanc, à côté de 
 | Type | Extensions acceptées |
 |---|---|
 | **Vidéo** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
-| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
-| **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
-| **3D** | `glb` |
+| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` `aiff` |
+| **Image** | `png` `ora` `jpg` `jpeg` `webp` `avif` `gif` `svg` `tif` `tiff` `exr` `hdr` |
+| **3D** | `glb` `obj` `fbx` `stl` `ply` `usdz` |
+| **Documents** | `ora` `gltf` `otio` `mtlx` |
+| **Montage avec médias** | `otioz` |
 
-> **Les modèles 3D s’importent au format `.glb`.** Le `.gltf` séparé (avec ses fichiers `.bin`
-> et ses textures à côté) ne s’importe pas : le studio sert chaque asset seul, sans son
-> voisinage, et les fichiers liés resteraient introuvables. `.obj`, `.fbx` et les HDRI (`.hdr`)
-> ne s’importent pas encore.
-> Un `.exr` importé est catalogué comme une image, pas comme un ciel. Voir
-> [Ce qui n’existe pas encore](18-limites.md).
+La même liste vaut pour le glisser depuis le bureau, l’icône de l’application et **Ouvrir avec**.
+Un document standard est copié dans le projet puis ouvert. Un `.otioz` est dépaqueté avec ses
+médias comme par **Fichier › Importer**. Un modèle `.gltf` à fichiers voisins
+reste refusé si son contenu n’est pas un document du studio.
+
+La même liste vaut pour le sélecteur, le dépôt depuis le bureau, l’icône de l’application et
+« Ouvrir avec ». Une cible compatible se dessine en bleu ; un format refusé se dessine en rouge
+et le journal nomme les fichiers qui ne sont pas entrés. Dans un lot mélangé, les fichiers
+acceptés entrent et les autres sont signalés ensemble.
+
+> Un `.obj` entre avec sa géométrie. Son éventuel `.mtl` et les textures qu’il référence ne sont
+> pas encore rassemblés avec lui. Un `.gltf` séparé, un `.dae` ou un `.usd` qui référence des
+> fichiers voisins ne s’importe pas encore pour la même raison.
 
 ### Le fichier n’est pas copié — à l’import
 
-**Important.** À l’import, le studio ne copie pas votre fichier dans le projet : il crée un
+**Important.** Le sélecteur **Importer un média** ne copie pas votre fichier dans le projet : il crée un
 **lien** vers l’endroit où il se trouve.
 
 Deux conséquences :

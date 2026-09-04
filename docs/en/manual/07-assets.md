@@ -433,18 +433,26 @@ and not at a row, which is why it lives under the blank, next to **New folder**.
 | Type | Accepted extensions |
 |---|---|
 | **Video** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
-| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
-| **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
-| **3D** | `glb` |
+| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` `aiff` |
+| **Image** | `png` `ora` `jpg` `jpeg` `webp` `avif` `gif` `svg` `tif` `tiff` `exr` `hdr` |
+| **3D** | `glb` `obj` `fbx` `stl` `ply` `usdz` |
+| **Documents** | `ora` `gltf` `otio` `mtlx` |
+| **Montage with media** | `otioz` |
 
-> **3D models import as `.glb`.** A separate `.gltf` — the one with its `.bin` and textures
-> beside it — does not: the studio serves each asset on its own, so the linked files would be
-> nowhere to be found. `.obj`, `.fbx` and HDRIs (`.hdr`) cannot be imported yet, and an imported
-> `.exr` is catalogued as an image, not as a sky. See [What does not exist yet](18-limits.md).
+The same asset list applies to the picker; desktop drops, the application icon and Open with also
+accept the standard documents and montage bundles listed above. A document is copied into the
+project and opened; an `.otioz` is unpacked with its media as through **File › Import**. A
+compatible target is outlined in blue; a refused format is outlined in red and the journal names
+the files that did not enter. In a mixed batch, accepted files enter and the rest are reported
+together.
+
+> An `.obj` enters with its geometry. Its optional `.mtl` and referenced textures are not gathered
+> with it yet. A `.gltf` model that is not an IA Studio document, `.dae` or `.usd` that references neighbouring files is not
+> imported yet for the same reason.
 
 ### The file is not copied — on import
 
-**Important.** On import, the studio does not copy your file into the project: it creates a
+**Important.** The **Import media** picker does not copy your file into the project: it creates a
 **link** to where it sits.
 
 Two consequences:

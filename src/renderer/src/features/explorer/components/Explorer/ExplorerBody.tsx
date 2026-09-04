@@ -8,7 +8,7 @@ import { CollectionBar } from '@/components/CollectionBar/CollectionBar'
 import { FolderCrumbs } from '@/components/FolderCrumbs'
 import { Tree } from '@/components/Tree'
 import { carriesAsset } from '@/helpers/assetDrag'
-import { carriesExternalFiles } from '@/features/shell/externalFiles'
+import { carriesExternalFiles, externalFileDropTone } from '@/services/externalFiles'
 import type { DragLike } from '@/helpers/drag'
 import { isDomainHeading, type ExplorerNode } from '@/helpers/domainNodes'
 import { applySelection } from '@/helpers/selection'
@@ -17,6 +17,7 @@ import { HINT_TOP } from '@/helpers/tooltip'
 import type { FolderNode } from '@/hooks/useFolderTree'
 import type { useExplorerEntryPresentation } from '@/hooks/useExplorerEntryPresentation'
 import type { useExplorerListing } from '@/hooks/useExplorerListing'
+import { useExternalDropFrame } from '@/hooks/useExternalDropFrame'
 import { DomainRow } from '../DomainRow'
 import { EntryCard } from '../Entry/EntryCard'
 import { EntryRow } from '../Entry/EntryRow'
@@ -97,6 +98,8 @@ export function ExplorerBody(props: ExplorerBodyProps) {
   const { documentOf, hintFor, iconFor, inkFor, isOpen, kindOf, previewFor } = presentation
   const carriesIntoExplorer = (event: DragLike): boolean =>
     carriesAsset(event) || carriesExternalFiles(event)
+  const toneIntoExplorer = (event: DragLike) => externalFileDropTone(event) ?? 'accepted'
+  const gridDropFrame = useExternalDropFrame(externalFileDropTone)
 
   return (
     <div className="flex h-full min-h-0 flex-col" onFocus={onFocus} onBlur={onBlur}>
@@ -122,64 +125,70 @@ export function ExplorerBody(props: ExplorerBodyProps) {
       <ImportProgress />
       <div className="min-h-0 flex-1">
         {grid ? (
-          <Collection
-            items={entries}
-            state={collection}
-            label={t('panels.explorer')}
-            multiple
-            selectedIds={selectedIds}
-            onSelect={(_, ids, mode) => pick(applySelection(selectedIds, ids, mode))}
-            onActivate={enter}
-            onContextMenu={raiseEntryMenu}
-            onPressRoot={() => pick([])}
-            onDropRoot={paths => {
-              setCarried(null)
-              moveFiles(paths, browsed)
-            }}
-            foreign={{ carries: carriesIntoExplorer, onDrop: event => landAsset(event, browsed) }}
-            onContextMenuRoot={() => raiseRootMenu(browsed)}
-            empty={
-              browsable && browsed !== FOLDER_ROOT ? (
-                <ExplorerEmptyState
-                  searching={searching}
-                  searchAnswered={search.answered}
-                  inDomain={inDomain}
-                  domainsLoaded={domains.loaded}
-                  emptyFolder
+          <div {...gridDropFrame}>
+            <Collection
+              items={entries}
+              state={collection}
+              label={t('panels.explorer')}
+              multiple
+              selectedIds={selectedIds}
+              onSelect={(_, ids, mode) => pick(applySelection(selectedIds, ids, mode))}
+              onActivate={enter}
+              onContextMenu={raiseEntryMenu}
+              onPressRoot={() => pick([])}
+              onDropRoot={paths => {
+                setCarried(null)
+                moveFiles(paths, browsed)
+              }}
+              foreign={{
+                carries: carriesIntoExplorer,
+                onDrop: event => landAsset(event, browsed),
+              }}
+              onContextMenuRoot={() => raiseRootMenu(browsed)}
+              empty={
+                browsable && browsed !== FOLDER_ROOT ? (
+                  <ExplorerEmptyState
+                    searching={searching}
+                    searchAnswered={search.answered}
+                    inDomain={inDomain}
+                    domainsLoaded={domains.loaded}
+                    emptyFolder
+                  />
+                ) : (
+                  emptyState
+                )
+              }
+              renderCard={node => (
+                <EntryCard
+                  name={documentOf(node)?.title ?? node.name}
+                  icon={iconFor(node, false)}
+                  kind={kindOf(node)}
+                  preview={previewFor(node)}
+                  open={isOpen(node)}
+                  waiting={waiting.has(node.path)}
+                  dragIds={selectedIds.includes(node.id) ? selectedIds : [node.id]}
+                  pickable={!isPrivatePath(node.path)}
+                  accepts={
+                    node.kind === 'folder' &&
+                    carried !== null &&
+                    carried.every(path => canMoveInto(path, node.path))
+                  }
+                  foreign={{
+                    accepts: acceptsAsset(node),
+                    carries: carriesIntoExplorer,
+                    tone: toneIntoExplorer,
+                    onDrop: event => landAsset(event, node.path),
+                  }}
+                  onPickUp={setCarried}
+                  onRelease={() => setCarried(null)}
+                  onDropInto={paths => moveFiles(paths, node.path)}
+                  {...(renaming?.nodeId === node.id
+                    ? { onRename: (name: string) => commitRename(node, renaming.asset, name) }
+                    : {})}
                 />
-              ) : (
-                emptyState
-              )
-            }
-            renderCard={node => (
-              <EntryCard
-                name={documentOf(node)?.title ?? node.name}
-                icon={iconFor(node, false)}
-                kind={kindOf(node)}
-                preview={previewFor(node)}
-                open={isOpen(node)}
-                waiting={waiting.has(node.path)}
-                dragIds={selectedIds.includes(node.id) ? selectedIds : [node.id]}
-                pickable={!isPrivatePath(node.path)}
-                accepts={
-                  node.kind === 'folder' &&
-                  carried !== null &&
-                  carried.every(path => canMoveInto(path, node.path))
-                }
-                foreign={{
-                  accepts: acceptsAsset(node),
-                  carries: carriesIntoExplorer,
-                  onDrop: event => landAsset(event, node.path),
-                }}
-                onPickUp={setCarried}
-                onRelease={() => setCarried(null)}
-                onDropInto={paths => moveFiles(paths, node.path)}
-                {...(renaming?.nodeId === node.id
-                  ? { onRename: (name: string) => commitRename(node, renaming.asset, name) }
-                  : {})}
-              />
-            )}
-          />
+              )}
+            />
+          </div>
         ) : nodes.length === 0 ? (
           emptyState
         ) : (
@@ -208,6 +217,7 @@ export function ExplorerBody(props: ExplorerBodyProps) {
             foreign={{
               carries: carriesIntoExplorer,
               accepts: acceptsAsset,
+              tone: toneIntoExplorer,
               onDrop: (event, node) =>
                 landAsset(event, node && !isDomainHeading(node) ? node.path : FOLDER_ROOT),
             }}

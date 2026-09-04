@@ -38,7 +38,12 @@ import { familyOf, type ToolId } from '@shared/domain/tool'
 import { panelsStore } from '@/stores/panels'
 import { ShellPanelActions } from './ShellPanelActions'
 import { ShellPanelBody } from './ShellPanelBody'
-import { carriesExternalFiles, offerExternalFiles, queueExternalFiles } from '../../externalFiles'
+import {
+  carriesExternalFiles,
+  externalFileDropTone,
+  offerExternalFiles,
+  queueExternalFiles,
+} from '@/services/externalFiles'
 import { ShellPanelButton } from './ShellPanelButton'
 import 'dockview-react/dist/styles/dockview.css'
 import '../dockview-theme.css'
@@ -78,7 +83,11 @@ function iconOf(id: ToolId): ReactElement {
 export function Shell() {
   useEffect(() => {
     const allowFileDrop = (event: DragEvent): void => {
-      if (carriesExternalFiles(event)) event.preventDefault()
+      if (!carriesExternalFiles(event)) return
+      event.preventDefault()
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = externalFileDropTone(event) === 'accepted' ? 'copy' : 'none'
+      }
     }
     const takeFileDrop = async (event: DragEvent): Promise<void> => {
       if (event.defaultPrevented && event.cancelBubble) return
@@ -86,8 +95,8 @@ export function Shell() {
       // composer or a textarea was never inserted — the listener sits above the whole tree.
       if (!carriesExternalFiles(event)) return
       event.preventDefault()
-      const request = await offerExternalFiles(event.dataTransfer?.files)
-      if (request) queueExternalFiles([request])
+      const offer = await offerExternalFiles(event.dataTransfer?.files)
+      if (offer) queueExternalFiles([offer])
     }
     const handleFileDrop = (event: DragEvent): void => {
       void takeFileDrop(event)

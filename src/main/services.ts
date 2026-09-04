@@ -30,6 +30,7 @@ import { openMicrophoneSettings } from './dictation/permissions'
 import { claimExternalFiles } from './externalFiles'
 import { adoptFile } from './media/adoptFile'
 import { importFiles } from './media/importFiles'
+import { importMontageArchive } from './import/montageImport'
 import { linkedAsset } from './media/link'
 import { binaryRuns, forgetBinaries, hashOrNull, runProcess } from './media/runner'
 import { broadcast } from './ipc/broadcast'
@@ -315,6 +316,12 @@ export function createServices(settings: SettingsStore): Services {
           projectPath: () => project.path(),
           names: folder.names,
           adopt,
+          documents: documents.list,
+          importBundle: (source, target) =>
+            importMontageArchive(source, project.path(), target, new AbortController().signal, {
+              bundles,
+              adopt,
+            }),
         }),
       claimExternalFiles,
       // Asked, not cached: this is what the settings pane consults after the user installed the

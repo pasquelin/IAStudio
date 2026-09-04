@@ -50,7 +50,11 @@ function treeRowClass<T extends TreeNode>(
     rowSkin(picked, { surface: 'row' }),
     state.over?.id === row.node.id &&
       state.over.target.zone === 'into' &&
-      'outline-accent outline -outline-offset-1',
+      (state.over.tone === 'refused'
+        ? 'outline-danger outline -outline-offset-1'
+        : state.over.tone === 'neutral'
+          ? undefined
+          : 'outline-accent outline -outline-offset-1'),
     state.gap !== null && state.dragged?.some(one => one.id === row.node.id) && 'opacity-40',
   )
 }
@@ -95,8 +99,9 @@ export function TreeViewRow<T extends TreeNode>({ state, virtual }: TreeVirtualR
           if (state.foreign?.carries(event)) {
             if (!state.foreign.accepts(row.node)) return
             event.preventDefault()
-            event.dataTransfer.dropEffect = 'copy'
-            state.setOver({ id: row.node.id, target: { zone: 'into' } })
+            const tone = state.foreign.tone?.(event) ?? 'accepted'
+            event.dataTransfer.dropEffect = tone === 'accepted' ? 'copy' : 'none'
+            state.setOver({ id: row.node.id, target: { zone: 'into' }, tone })
             return
           }
           if (!rowDrag.carries(event)) return

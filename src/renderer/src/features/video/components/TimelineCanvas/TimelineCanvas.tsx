@@ -19,10 +19,9 @@ import {
   type Us,
 } from '@/engines/timeline/timelineState'
 import { clampViewport } from '@/engines/timeline/viewport'
-import { carriesAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
 import { cachedImage } from '@/helpers/imageCache'
-import { carriesScene } from '@/helpers/sceneDrag'
+import { useExternalTimelineDrop } from '@/hooks/useExternalTimelineDrop'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useTimelineCanvasCommands } from '@/hooks/useTimelineCanvasCommands'
 import { useTimelineWheel } from '@/hooks/useTimelineWheel'
@@ -285,6 +284,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
   })
 
   const onDrop = createTimelineDropHandler({ documentId, sequence, viewport, pointAt })
+  const externalDrop = useExternalTimelineDrop({ documentId, sequence, viewport, pointAt }, onDrop)
 
   return (
     <canvas
@@ -292,6 +292,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
       tabIndex={0}
       className={cn(
         'block h-full w-full outline-none',
+        externalDrop.className,
         tool === 'hand' && 'cursor-grab active:cursor-grabbing',
       )}
       onContextMenu={onContextMenu}
@@ -305,10 +306,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
       // over the whole timeline would promise the ruler takes what it refuses. Only the half
       // that has nothing to do with tracks is shared — preventing a drag we do not carry is
       // what makes a surface swallow files dragged in from the desktop.
-      onDragOver={event => {
-        if (carriesAsset(event) || carriesScene(event)) event.preventDefault()
-      }}
-      onDrop={onDrop}
+      {...externalDrop.handlers}
     />
   )
 }

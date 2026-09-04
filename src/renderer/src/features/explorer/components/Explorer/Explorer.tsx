@@ -14,9 +14,10 @@ import { renameAsset, renameDocument } from '@/helpers/rename'
 import { openProjectFile } from '@/helpers/openProjectFile'
 import {
   carriesExternalFiles,
+  externalFileOfferInto,
   offerExternalFiles,
   queueExternalFiles,
-} from '@/features/shell/externalFiles'
+} from '@/services/externalFiles'
 import type { FolderNode } from '@/hooks/useFolderTree'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useExplorerEntryPresentation } from '@/hooks/useExplorerEntryPresentation'
@@ -244,8 +245,8 @@ async function landExplorerAsset(
   if (carriesExternalFiles(event)) {
     event.preventDefault()
     event.stopPropagation()
-    const request = await offerExternalFiles(event.dataTransfer.files)
-    if (request) queueExternalFiles([{ ...request, folder, project: projectPath ?? undefined }])
+    const offer = await offerExternalFiles(event.dataTransfer.files)
+    if (offer) queueExternalFiles([externalFileOfferInto(offer, folder, projectPath)])
     return
   }
   const outcome = await landAssetIn(event, folder)

@@ -1,38 +1,44 @@
-import { isAbsolute } from 'node:path'
+import { basename, extname, isAbsolute } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { App } from 'electron'
-import type { ExternalFileRequest } from '@shared/domain/externalFile'
-import { sourceNatureOf } from '@shared/domain/fileRole'
+import type { ExternalFileOffer, ExternalFileRequest } from '@shared/domain/externalFile'
+import { isImportableFile } from '@shared/domain/importFormat'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 
-const pending: ExternalFileRequest[] = []
+const pending: ExternalFileOffer[] = []
 const authorised = new Map<string, readonly string[]>()
 
-function accepted(path: string): boolean {
-  return isAbsolute(path) && sourceNatureOf(path).openable
-}
-
-export function externalPathsFromArguments(argv: readonly string[]): string[] {
-  return argv.filter(accepted)
+export function externalPathsFromArguments(
+  argv: readonly string[],
+  ignored: ReadonlySet<string> = new Set(),
+): string[] {
+  return argv.filter(path => isAbsolute(path) && !ignored.has(path))
 }
 
 export function offerExternalFiles(paths: readonly string[]): void {
-  const request = authoriseExternalFiles(paths)
-  if (!request) return
-  pending.push(request)
+  const offer = authoriseExternalFiles(paths)
+  if (!offer.request && offer.refused.length === 0) return
+  pending.push(offer)
   broadcast(EVENTS.externalFiles)
 }
 
-export function authoriseExternalFiles(paths: unknown): ExternalFileRequest | null {
-  if (!Array.isArray(paths)) return null
-  const acceptedPaths = paths.filter(one => typeof one === 'string' && accepted(one))
-  if (acceptedPaths.length === 0) return null
+export function authoriseExternalFiles(paths: unknown): ExternalFileOffer {
+  if (!Array.isArray(paths)) return { request: null, refused: [] }
+  const candidates = paths.filter(one => typeof one === 'string' && isAbsolute(one))
+  const acceptedPaths = candidates.filter(isImportableFile)
+  const refused = candidates
+    .filter(path => !isImportableFile(path))
+    .map(path => ({
+      name: basename(path),
+      extension: extname(path).slice(1).toLowerCase(),
+    }))
+  if (acceptedPaths.length === 0) return { request: null, refused }
 
-  const id = randomUUID()
-  authorised.set(id, acceptedPaths)
-  return { id }
+  const request: ExternalFileRequest = { id: randomUUID() }
+  authorised.set(request.id, acceptedPaths)
+  return { request, refused }
 }
 
 export function claimExternalFiles(id: string): readonly string[] {
@@ -46,7 +52,8 @@ export function captureExternalFiles(app: App, argv: readonly string[]): void {
     event.preventDefault()
     offerExternalFiles([path])
   })
-  offerExternalFiles(externalPathsFromArguments(argv.slice(1)))
+  const launchPaths = new Set([process.execPath, app.getAppPath()])
+  offerExternalFiles(externalPathsFromArguments(argv, launchPaths))
 }
 
 export function registerExternalFileHandlers(): void {

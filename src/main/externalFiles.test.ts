@@ -6,7 +6,7 @@ import {
 } from './externalFiles'
 
 describe('externalPathsFromArguments', () => {
-  it('keeps supported absolute file arguments on desktop launches', () => {
+  it('keeps absolute file arguments so a desktop launch can report accepted and refused files', () => {
     expect(
       externalPathsFromArguments([
         '/Applications/IA Studio',
@@ -15,25 +15,41 @@ describe('externalPathsFromArguments', () => {
         '--inspect',
         'relative.glb',
       ]),
-    ).toEqual(['/work/model.glb', '/work/image.png'])
+    ).toEqual(['/Applications/IA Studio', '/work/model.glb', '/work/image.png'])
   })
 
-  it('leaves unsupported file arguments to the operating system', () => {
-    expect(externalPathsFromArguments(['/work/scene.gltf', '/work/notes.txt'])).toEqual([])
+  it('keeps unsupported absolute arguments for a visible refusal', () => {
+    expect(externalPathsFromArguments(['/work/scene.gltf', '/work/notes.txt'])).toEqual([
+      '/work/scene.gltf',
+      '/work/notes.txt',
+    ])
+  })
+
+  it('excludes the executable and application folder from launch candidates', () => {
+    expect(
+      externalPathsFromArguments(
+        ['/Applications/IA Studio', '/work/model.obj'],
+        new Set(['/Applications/IA Studio']),
+      ),
+    ).toEqual(['/work/model.obj'])
   })
 })
 
 describe('external file authorisations', () => {
   it('exchanges accepted paths through a one-use opaque request', () => {
-    const request = authoriseExternalFiles(['/work/model.glb', '/work/notes.txt'])
+    const offer = authoriseExternalFiles(['/work/model.obj', '/work/notes.txt'])
 
-    expect(request).not.toBeNull()
-    if (!request) return
-    expect(claimExternalFiles(request.id)).toEqual(['/work/model.glb'])
-    expect(claimExternalFiles(request.id)).toEqual([])
+    expect(offer.refused).toEqual([{ name: 'notes.txt', extension: 'txt' }])
+    expect(offer.request).not.toBeNull()
+    if (!offer.request) return
+    expect(claimExternalFiles(offer.request.id)).toEqual(['/work/model.obj'])
+    expect(claimExternalFiles(offer.request.id)).toEqual([])
   })
 
-  it('does not authorise an unsupported path', () => {
-    expect(authoriseExternalFiles(['/work/notes.txt'])).toBeNull()
+  it('does not authorise an unsupported path and preserves its refusal', () => {
+    expect(authoriseExternalFiles(['/work/notes.txt'])).toEqual({
+      request: null,
+      refused: [{ name: 'notes.txt', extension: 'txt' }],
+    })
   })
 })

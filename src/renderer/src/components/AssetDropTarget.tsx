@@ -1,6 +1,11 @@
 import { useState, type MouseEvent, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import { carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/assetDrag'
+import {
+  carriesExternalFiles,
+  externalFileTargetTone,
+  importExternalFilesInto,
+} from '@/services/externalFiles'
 import { cn } from '@/helpers/cn'
 
 export type AssetDropTargetProps = {
@@ -29,19 +34,15 @@ export type AssetDropTargetProps = {
   children: ReactNode
 }
 
-/**
- * A surface an asset can be dropped onto, with the two halves every one of them got wrong.
- *
- * First: `preventDefault` on `dragover` is what makes a drop possible at all, and calling it
- * unconditionally means the surface swallows files dragged in from the desktop. It is called
- * only for drags that carry one of ours, and only for a kind this target would take.
- *
- * Second: the target says whether it would accept WHILE the asset is still flying. That needs
- * the kind, which is why the drag announces it in its MIME type — `getData` answers nothing
- * before the drop, so a target reading the asset would be painting after the fact. A drag that
- * announces no kind is accepted rather than refused: a drop that silently does nothing is worse
- * than one that lands somewhere sensible.
- */
+async function handDroppedAsset(
+  pending: Promise<Asset | null>,
+  onDrop: (asset: Asset) => void,
+): Promise<void> {
+  const asset = await pending
+  if (asset) onDrop(asset)
+}
+
+/** A target for catalogue assets and desktop files, imported before its callback receives them. */
 export function AssetDropTarget({
   accepts,
   onDrop,
@@ -65,6 +66,14 @@ export function AssetDropTarget({
         outlined && state === 'refused' && 'outline-danger',
       )}
       onDragOver={event => {
+        if (carriesExternalFiles(event)) {
+          if (exclusive) event.stopPropagation()
+          const tone = externalFileTargetTone(event, accepts)
+          event.preventDefault()
+          event.dataTransfer.dropEffect = tone === 'accepted' ? 'copy' : 'none'
+          setState(tone === 'accepted' ? 'over' : tone === 'refused' ? 'refused' : 'idle')
+          return
+        }
         if (!carriesAsset(event)) return
         if (exclusive) event.stopPropagation()
 
@@ -89,6 +98,14 @@ export function AssetDropTarget({
       onDrop={event => {
         setState('idle')
 
+        if (carriesExternalFiles(event)) {
+          if (event.dataTransfer.files.length === 0) return
+          event.preventDefault()
+          event.stopPropagation()
+          void importExternalFilesInto(event.dataTransfer.files, accepts, onDrop)
+          return
+        }
+
         /**
          * Asked AGAIN here, and that is the whole point: `dragover` decides the outline, this
          * decides whether the drop is taken — and since the shell mounts a fallback that welcomes
@@ -106,9 +123,7 @@ export function AssetDropTarget({
 
         // Read synchronously, awaited after: a library asset is fetched first, and the event
         // is recycled the moment this handler returns.
-        void droppedAsset(event).then(asset => {
-          if (asset) onDrop(asset)
-        })
+        void handDroppedAsset(droppedAsset(event), onDrop)
       }}
     >
       {children}

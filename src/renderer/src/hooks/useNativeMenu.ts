@@ -19,7 +19,7 @@ import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { takeExternalFiles } from '@/features/shell/externalFiles'
+import { takeExternalFiles } from '@/services/externalFiles'
 
 type SceneMenuState = { checked: MenuCheck[]; abilities: MenuAbility[] }
 
