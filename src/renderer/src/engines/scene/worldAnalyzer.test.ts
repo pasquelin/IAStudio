@@ -158,7 +158,7 @@ describe('analyzeOptimization', () => {
     expect(analyze()).toEqual(analyze())
   })
 
-  it('reports compatible different shapes as batch candidates before Force Batch is applied', () => {
+  it('respects individual and excluded overrides when reporting runtime candidates', () => {
     const first: SceneNode = { ...meshNode('first'), optimization: { mode: 'exclude' } }
     const second: SceneNode = {
       ...meshNode('second'),
@@ -178,8 +178,8 @@ describe('analyzeOptimization', () => {
     )
 
     expect(plan.instances).toEqual([])
-    expect(plan.batches).toHaveLength(1)
-    expect(plan.batches[0]?.sourceIds).toEqual(['first', 'second'])
+    expect(plan.batches).toEqual([])
+    expect(plan.merges).toEqual([])
   })
 
   it('classifies moving, animated, and skinned objects as unsafe candidates', () => {
@@ -268,7 +268,7 @@ describe('analyzeOptimization', () => {
     expect(plan.estimated.avoidedGeometryBytes).toBe(interleaved.array.byteLength)
   })
 
-  it('includes compatible batching when estimating the potential submissions', () => {
+  it('includes automatic merging when estimating the potential submissions', () => {
     const material = new MeshStandardMaterial()
     const nodes = ['small', 'medium', 'large'].map(id => meshNode(id))
     const objects = new Map<string, Mesh>(
@@ -280,10 +280,9 @@ describe('analyzeOptimization', () => {
     )
 
     expect(plan.instances).toEqual([])
-    expect(plan.batches).toHaveLength(1)
-    // Proposed, not delivered: `auto` never reaches the batcher, so the estimate promises nothing
-    // until someone answers `batch`.
-    expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 3 })
+    expect(plan.batches).toEqual([])
+    expect(plan.merges).toHaveLength(1)
+    expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 1 })
   })
 
   it('counts the batching saving once someone has actually asked for it', () => {
@@ -304,7 +303,7 @@ describe('analyzeOptimization', () => {
     expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 1 })
   })
 
-  it('counts batchable primitives separately inside one model', () => {
+  it('does not promise automatic model batching before runtime compatibility is known', () => {
     const node = modelNodeFixture('building')
     const model = new Object3D()
     const material = new MeshStandardMaterial()
@@ -322,7 +321,7 @@ describe('analyzeOptimization', () => {
     )
 
     expect(plan.instances).toEqual([])
-    expect(plan.batches[0]).toMatchObject({ sourceIds: [node.id], meshCount: 3 })
+    expect(plan.batches).toEqual([])
     expect(plan.estimated).toMatchObject({ drawCallsBefore: 3, drawCallsAfter: 3 })
   })
 

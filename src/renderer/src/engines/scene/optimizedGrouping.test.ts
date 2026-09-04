@@ -120,3 +120,38 @@ it('builds only the representations selected by compiled runtime artifacts', () 
   expect(groups.drawn()).toHaveLength(1)
   expect(groups.drawn()[0]?.geometry).toBe(firstGeometry)
 })
+
+it('builds compiled merge and sub-instancing-threshold batch artifacts', () => {
+  const host = new Object3D()
+  const material = new MeshStandardMaterial()
+  const nodes: SceneNode[] = Array.from({ length: 11 }, (_unused, index) => ({
+    ...meshNode(`node-${index}`),
+    geometry: { kind: 'box', width: index + 1, height: 1, depth: 1 },
+  }))
+  const objects = new Map(
+    nodes.map((node, index) => [node.id, new Mesh(new BoxGeometry(index + 1, 1, 1), material)]),
+  )
+  for (const object of objects.values()) object.updateMatrixWorld(true)
+  const artifacts: readonly RuntimeRenderArtifact[] = [
+    {
+      key: 'small-props',
+      strategy: 'merge',
+      sourceIds: nodes.slice(0, 2).map(node => node.id),
+      signature: 'small-props',
+    },
+    {
+      key: 'large-props',
+      strategy: 'batch',
+      sourceIds: nodes.slice(2).map(node => node.id),
+      signature: 'large-props',
+    },
+  ]
+
+  const groups = createOptimizedGroups(host)
+
+  expect(groups.rebuild(nodes, id => objects.get(id), undefined, artifacts)).toBe(11)
+  expect(
+    groups.drawn().filter(mesh => mesh instanceof Mesh && !(mesh instanceof BatchedMesh)),
+  ).toHaveLength(1)
+  expect(groups.drawn().filter(mesh => mesh instanceof BatchedMesh)).toHaveLength(1)
+})

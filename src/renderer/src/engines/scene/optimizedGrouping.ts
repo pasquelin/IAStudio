@@ -1,6 +1,7 @@
 import { Mesh, type Intersection, type Material, type Object3D } from 'three'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
+import { createMergedGroups } from './mergedGrouping'
 import type { InstancedGroups, RuntimeRenderArtifact } from './grouping'
 import { meshesOf } from './instanceableModel'
 
@@ -10,11 +11,13 @@ export function createOptimizedGroups(
 ): InstancedGroups {
   const instances = createCellGroups(host, ownMaterialOf)
   const batches = createBatchedGroups(host, ownMaterialOf)
+  const merges = createMergedGroups(host, ownMaterialOf)
 
   return {
     rebuild: (nodes, objectOf, excluded, artifacts) => {
       instances.hangSources()
       batches.hangSources()
+      merges.hangSources()
       for (const node of nodes) {
         const object = objectOf(node.id)
         if (object instanceof Mesh) object.layers.set(0)
@@ -38,35 +41,44 @@ export function createOptimizedGroups(
           : modeById.get(id) === 'batch'
             ? objectOf(id)
             : undefined
+      const forMerges = (id: string): Object3D | undefined =>
+        compiled?.merges.has(id) ? objectOf(id) : undefined
       const grouped =
         instances.rebuild(nodes, forInstances, excluded) +
-        batches.rebuild(nodes, forBatches, excluded)
+        batches.rebuild(nodes, forBatches, excluded, artifacts) +
+        merges.rebuild(nodes, forMerges, excluded, artifacts)
       instances.dropSources()
       batches.dropSources()
+      merges.dropSources()
       return grouped
     },
     moved: (ids, objectOf) => {
       const movedIds = [...ids]
       const movedInstances = instances.moved(movedIds, objectOf)
       const movedBatches = batches.moved(movedIds, objectOf)
-      return movedInstances || movedBatches
+      return movedInstances || movedBatches || merges.moved(movedIds, objectOf)
     },
-    drawn: () => [...instances.drawn(), ...batches.drawn()],
-    pickable: () => [...instances.pickable(), ...batches.pickable()],
-    nodeIdOf: (hit: Intersection) => instances.nodeIdOf(hit) ?? batches.nodeIdOf(hit),
+    drawn: () => [...instances.drawn(), ...batches.drawn(), ...merges.drawn()],
+    pickable: () => [...instances.pickable(), ...batches.pickable(), ...merges.pickable()],
+    nodeIdOf: (hit: Intersection) =>
+      instances.nodeIdOf(hit) ?? batches.nodeIdOf(hit) ?? merges.nodeIdOf(hit),
     hangSources: () => {
       instances.hangSources()
       batches.hangSources()
+      merges.hangSources()
     },
     dropSources: () => {
       instances.dropSources()
       batches.dropSources()
+      merges.dropSources()
     },
     refreshSources: () => {
       instances.refreshSources()
       batches.refreshSources()
+      merges.refreshSources()
     },
-    holdsSource: object => instances.holdsSource(object) || batches.holdsSource(object),
+    holdsSource: object =>
+      instances.holdsSource(object) || batches.holdsSource(object) || merges.holdsSource(object),
     follow: (camera, cast) => instances.follow?.(camera, cast) ?? false,
     builtAnew: () => instances.builtAnew?.() ?? false,
     stats: () =>
@@ -80,21 +92,28 @@ export function createOptimizedGroups(
     dispose: () => {
       instances.dispose()
       batches.dispose()
+      merges.dispose()
     },
   }
 }
 
-function selectionsOf(
-  artifacts: readonly RuntimeRenderArtifact[] | undefined,
-): { instances: ReadonlySet<string>; batches: ReadonlySet<string> } | null {
+function selectionsOf(artifacts: readonly RuntimeRenderArtifact[] | undefined): {
+  instances: ReadonlySet<string>
+  batches: ReadonlySet<string>
+  merges: ReadonlySet<string>
+} | null {
   if (!artifacts) return null
   const instances = new Set<string>()
   const batches = new Set<string>()
+  const merges = new Set<string>()
   for (const artifact of artifacts) {
     const target =
-      artifact.strategy === 'instance' ? instances : artifact.strategy === 'batch' ? batches : null
-    if (!target) continue
+      artifact.strategy === 'instance'
+        ? instances
+        : artifact.strategy === 'batch'
+          ? batches
+          : merges
     for (const id of artifact.sourceIds) target.add(id)
   }
-  return { instances, batches }
+  return { instances, batches, merges }
 }

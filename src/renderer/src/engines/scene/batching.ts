@@ -9,6 +9,7 @@ import {
 import './bvhPatches'
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
+import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import {
   DRAWN_TRIANGLES,
   heldOutOfDraw,
@@ -63,11 +64,27 @@ export function createBatchedGroups(
   }
 
   return {
-    rebuild: (nodes, objectOf, excluded) => {
+    rebuild: (nodes, objectOf, excluded, artifacts) => {
       clear()
+      const artifactById = new Map(
+        artifacts
+          ?.filter(artifact => artifact.strategy === 'batch')
+          .flatMap(artifact => artifact.sourceIds.map(id => [id, artifact.signature])) ?? [],
+      )
+      const groupedKey = (node: SceneNode, mesh: Mesh): string =>
+        `${keyOf(node, mesh)}|artifact:${artifactById.get(node.id) ?? ''}`
 
       let batched = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
+      for (const worn of sweep(
+        nodes,
+        objectOf,
+        host,
+        ownMaterialOf,
+        groupedKey,
+        sources,
+        excluded,
+        artifacts ? DEFAULT_OPTIMIZATION_POLICY.minBatchSize : undefined,
+      )) {
         const first = worn.meshes[0]
         if (!first) continue
 

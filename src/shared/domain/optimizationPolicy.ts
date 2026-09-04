@@ -3,6 +3,11 @@ import type { GeometrySimplification, TextureCompression, TextureReduction } fro
 export type OptimizationPolicy = {
   minInstancesPerGroup: number
   minBatchSize: number
+  minMergeSize: number
+  maxObjectsPerMerge: number
+  maxObjectsPerBatch: number
+  maxBatchBounds: number
+  spatialCellTargetSize: number
   analysisChunkSize: number
   simplificationRatios: Readonly<Record<GeometrySimplification, number>>
   lodDistanceMultipliers: readonly number[]
@@ -15,6 +20,11 @@ export type OptimizationPolicy = {
 export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = Object.freeze({
   minInstancesPerGroup: 16,
   minBatchSize: 2,
+  minMergeSize: 2,
+  maxObjectsPerMerge: 8,
+  maxObjectsPerBatch: 2_048,
+  maxBatchBounds: 256,
+  spatialCellTargetSize: 256,
   analysisChunkSize: 100,
   simplificationRatios: Object.freeze({
     off: 0,
