@@ -16,6 +16,7 @@ function reliefStub(): ReliefSurface {
   return {
     object: new Object3D(),
     sync: vi.fn(),
+    heightmaps: () => new Map(),
     meshOf: vi.fn(),
     sculptSource: vi.fn(() => ({
       samples: { width: 2, height: 2, values: new Float32Array(4) },

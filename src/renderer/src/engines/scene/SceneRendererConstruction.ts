@@ -36,7 +36,10 @@ export class SceneRendererConstruction extends SceneRendererFrame {
         // builder `reliefSurface` falls back to an inline build and the window freezes.
         builder: createReliefBuilder(() => new ReliefBuildWorker()),
         onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
-        onReady: () => this.redraw(),
+        onReady: () => {
+          this.redraw()
+          void this.syncScatter(this.world)
+        },
       })
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.

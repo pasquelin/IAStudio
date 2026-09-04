@@ -83,6 +83,7 @@ describe('relief surface chunks', () => {
       overlays: [],
     })
     expect(surface.sculptSource(layer.id, 'missing')).toBeNull()
+    expect(surface.heightmaps()).toEqual(new Map([['asset_height', samples]]))
   })
 
   it('leaves a full build to its builder and installs the answer when it is ready', async () => {

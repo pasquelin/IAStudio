@@ -1,6 +1,4 @@
 import { Group, type Object3D, type Scene } from 'three'
-import { getHeightAt, type ReliefHeightLayer } from '@shared/domain/relief'
-import { clamp } from '@shared/numeric'
 import {
   enabledScatters,
   enabledTerrains,
@@ -14,6 +12,7 @@ import {
   type ScatterGround,
   type ScatterRegion,
 } from '@shared/domain/scatterGenerate'
+import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
 import { scatterRebuildOf, type ScatterRebuild } from '@shared/domain/scatterFollow'
 import { dirtiedChunks } from './reliefSurfaceEdits'
 import { scatterBatchesOf, scatterDrawnOf } from './scatterRender'
@@ -92,7 +91,7 @@ async function syncScatter(
 ): Promise<void> {
   const revision = await reconcileSources(world, state.assets, options)
   if (revision !== state.assets.revision) return
-  const ground = scatterGroundOf(world, heightmaps)
+  const ground = scatterGroundOf(scatterTerrainsOf(world, heightmaps ?? new Map()))
   const previous = state.world
   dropRemovedLayers(state.cells, new Set(enabledScatters(world.layers).map(layer => layer.id)))
   for (const layer of enabledScatters(world.layers)) {
@@ -315,39 +314,6 @@ function scatterLayerOf(world: SceneWorld, id: string): ScatterLayer | undefined
 function reliefLayerOf(world: SceneWorld, id: string): ReliefLayer | undefined {
   const layer = world.layers.find(candidate => candidate.id === id)
   return layer?.kind === 'relief' ? layer : undefined
-}
-
-function scatterGroundOf(
-  world: SceneWorld,
-  heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
-): ScatterGround {
-  const terrains: ReliefHeightLayer[] = enabledTerrains(world.layers).flatMap(layer => {
-    const samples = heightmaps?.get(layer.heightmap.assetId)
-    return samples ? [{ ...layer, samples }] : []
-  })
-  return {
-    heightAt: (x, z) => getHeightAt(terrains, x, z),
-    slopeAt: (x, z) => slopeAt(terrains, x, z),
-  }
-}
-
-function slopeAt(
-  terrains: readonly ReliefHeightLayer[],
-  x: number,
-  z: number,
-): { degrees: number; nx: number; ny: number; nz: number } {
-  const height = getHeightAt(terrains, x, z) ?? 0
-  const east = getHeightAt(terrains, x + 0.5, z) ?? height
-  const north = getHeightAt(terrains, x, z + 0.5) ?? height
-  const nx = height - east
-  const nz = height - north
-  const length = Math.hypot(nx, 1, nz) || 1
-  return {
-    degrees: Math.acos(clamp(1 / length, -1, 1)) * (180 / Math.PI),
-    nx: nx / length,
-    ny: 1 / length,
-    nz: nz / length,
-  }
 }
 
 function disposeScatter(state: ScatterState, models: ModelCache): void {

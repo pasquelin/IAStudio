@@ -37,6 +37,7 @@ export type { ReliefSculptSource } from './reliefSculptSource'
 export type ReliefSurface = {
   object: Object3D
   sync: (world: SceneWorld, samples?: HeightmapSamples) => void
+  heightmaps: () => ReadonlyMap<string, HeightmapSamples>
   meshOf: (terrainId: string, column: number, row: number) => Mesh | undefined
   sculptSource: (terrainId: string, editId: string) => ReliefSculptSource | null
   dispose: () => void
@@ -111,6 +112,12 @@ export function createReliefSurface(
   return {
     object: state.group,
     sync: (world, samples) => syncRelief(state, world, samples),
+    heightmaps: () =>
+      new Map(
+        [...state.terrains.values()].flatMap(terrain =>
+          terrain.held ? [[terrain.held.assetId, terrain.held.samples]] : [],
+        ),
+      ),
     meshOf: (terrainId, column, row) =>
       state.terrains.get(terrainId)?.meshes.get(keyOf(column, row)),
     sculptSource: (terrainId, editId) => {

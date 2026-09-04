@@ -104,9 +104,9 @@ export abstract class SceneRendererWorld extends SceneRendererAids {
     if (wanted.background !== held.background) this.paintBackground()
   }
 
-  private async syncScatter(wanted: SceneWorld): Promise<void> {
+  protected async syncScatter(wanted: SceneWorld): Promise<void> {
     try {
-      await this.scatter.sync(wanted)
+      await this.scatter.sync(wanted, this.relief.heightmaps())
     } catch (error) {
       reportFailure('scene.model', 'scatter', error)
     }
