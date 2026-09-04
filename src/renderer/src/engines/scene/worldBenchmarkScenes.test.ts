@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { worldBenchmarkScenes } from './worldBenchmarkScenes.fixture'
+import { runtimeArtifactsOf } from './runtimeWorldCompiler'
 
 describe('the reproducible world benchmark suite', () => {
   it('holds the five documented workloads at their declared scale', () => {
@@ -14,5 +15,15 @@ describe('the reproducible world benchmark suite', () => {
 
   it('rebuilds identical deterministic inputs', () => {
     expect(worldBenchmarkScenes()).toEqual(worldBenchmarkScenes())
+  })
+
+  it('partitions the props workload into bounded spatial batches', () => {
+    const props = worldBenchmarkScenes().find(scene => scene.id === 'S3')
+    if (!props) throw new Error('S3 benchmark scene is missing')
+
+    const artifacts = runtimeArtifactsOf(props.state.nodes, props.state.animation)
+
+    expect(artifacts).toHaveLength(16)
+    expect(Math.max(...artifacts.map(artifact => artifact.sourceIds.length))).toBe(1_024)
   })
 })

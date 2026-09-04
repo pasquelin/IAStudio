@@ -10,7 +10,7 @@ import {
   runtimeWorldPatchIsEmpty,
   worldWithRuntimePatch,
 } from './runtimeWorldCompiler'
-import type { SceneState } from './sceneState'
+import type { SceneNode, SceneState } from './sceneState'
 
 const stateOf = (...nodes: ReturnType<typeof meshNode>[]): SceneState => ({
   nodes,
@@ -228,6 +228,110 @@ describe('createRuntimeWorldCompiler', () => {
     )
   })
 
+  it('keeps forced batches spatial instead of creating one world-sized draw unit', () => {
+    const first = {
+      ...boxNode('first', 1, 0),
+      optimization: { mode: 'batch' },
+    } satisfies ReturnType<typeof meshNode>
+    const second = {
+      ...boxNode('second', 2, DEFAULT_OPTIMIZATION_POLICY.maxBatchBounds * 2),
+      optimization: { mode: 'batch' },
+    } satisfies ReturnType<typeof meshNode>
+
+    const artifacts = runtimeArtifactsOf([first, second], EMPTY_TIMELINE)
+
+    expect(artifacts).toHaveLength(2)
+    expect(artifacts.every(artifact => artifact.sourceIds.length === 1)).toBe(true)
+  })
+
+  it('partitions repeated instances into stable spatial artifacts', () => {
+    const nodes = Array.from({ length: 32 }, (_unused, index) => {
+      const node = meshNode(`tree-${index}`)
+      return {
+        ...node,
+        transform: {
+          ...node.transform,
+          position: { x: index < 16 ? index : 512 + index, y: 0, z: 0 },
+        },
+      }
+    })
+
+    const artifacts = runtimeArtifactsOf(nodes, EMPTY_TIMELINE)
+
+    expect(artifacts).toHaveLength(2)
+    expect(artifacts.every(artifact => artifact.strategy === 'instance')).toBe(true)
+    expect(artifacts.every(artifact => artifact.sourceIds.length === 16)).toBe(true)
+  })
+
+  it('refuses automatic instance cells below their local benefit threshold', () => {
+    const nodes = Array.from({ length: 16 }, (_unused, index) => {
+      const node = meshNode(`tree-${index}`)
+      return {
+        ...node,
+        transform: {
+          ...node.transform,
+          position: { x: index * DEFAULT_OPTIMIZATION_POLICY.maxBatchBounds, y: 0, z: 0 },
+        },
+      }
+    })
+
+    expect(runtimeArtifactsOf(nodes, EMPTY_TIMELINE)).toEqual([])
+  })
+
+  it('partitions children from their resolved world transforms', () => {
+    const parent = (id: string, x: number): SceneNode => {
+      const transform = meshNode(id).transform
+      return {
+        id,
+        parentId: null,
+        name: id,
+        visible: true,
+        castShadow: false,
+        receiveShadow: false,
+        type: 'group',
+        transform: { ...transform, position: { x, y: 0, z: 0 } },
+      }
+    }
+    const children = Array.from({ length: 32 }, (_unused, index) => ({
+      ...meshNode(`child-${index}`),
+      parentId: index < 16 ? 'near' : 'far',
+    }))
+
+    const artifacts = runtimeArtifactsOf(
+      [parent('near', 0), parent('far', 512), ...children],
+      EMPTY_TIMELINE,
+    )
+
+    expect(artifacts).toHaveLength(2)
+    expect(artifacts.every(artifact => artifact.sourceIds.length === 16)).toBe(true)
+  })
+
+  it('reuses instance artifacts outside the edited root cell', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const nodes = Array.from({ length: 32 }, (_unused, index) => {
+      const node = meshNode(`tree-${index}`)
+      return {
+        ...node,
+        transform: {
+          ...node.transform,
+          position: { x: index < 16 ? index : 512 + index, y: 0, z: 0 },
+        },
+      }
+    })
+    const before = stateOf(...nodes)
+    compiler.compileRuntimeWorld(before)
+    const first = nodes[0]!
+    const moved = {
+      ...first,
+      transform: { ...first.transform, position: { x: 70, y: 0, z: 0 } },
+    }
+
+    compiler.compileRuntimeRegion(runtimeWorldPatch(before, stateOf(moved, ...nodes.slice(1))))
+
+    expect(compiler.getOptimizationReport().compiledArtifacts).toBe(1)
+    expect(compiler.getOptimizationReport().reusedArtifacts).toBe(1)
+  })
+
   it('chooses a measured merge for a small cell and a batch for a larger compatible cell', () => {
     const compiler = createRuntimeWorldCompiler()
     const nodes = Array.from({ length: 11 }, (_unused, index) =>
@@ -277,6 +381,76 @@ describe('createRuntimeWorldCompiler', () => {
     const runtime = compiler.compileRuntimeWorld(stateOf(first, second))
 
     expect(runtime.runtimeOptimization.artifacts).toEqual([])
+  })
+
+  it('keeps a mesh wider than the culling bound out of automatic artifacts', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const nodes: ReturnType<typeof meshNode>[] = ['first', 'second'].map((id, index) => ({
+      ...boxNode(id, index + 1, index),
+      geometry: { kind: 'box', width: 300, height: 1, depth: 1 },
+    }))
+
+    const runtime = compiler.compileRuntimeWorld(stateOf(...nodes))
+
+    expect(runtime.runtimeOptimization.artifacts).toEqual([])
+  })
+
+  it('splits a dense compatible world into finer culling cells', () => {
+    const nodes = Array.from({ length: 4_096 }, (_unused, index) =>
+      boxNode(`dense-${index}`, 1 + index / 100_000, index % 64),
+    ).map((node, index) => ({
+      ...node,
+      transform: {
+        ...node.transform,
+        position: { x: node.transform.position.x, y: 0, z: Math.floor(index / 64) },
+      },
+    }))
+
+    const artifacts = runtimeArtifactsOf(nodes, EMPTY_TIMELINE)
+
+    expect(artifacts).toHaveLength(4)
+    expect(artifacts.every(artifact => artifact.sourceIds.length === 1_024)).toBe(true)
+  })
+
+  it('recompiles when a move crosses an adaptive boundary inside the legacy fixed cell', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const nodes = Array.from({ length: 512 }, (_unused, index) =>
+      boxNode(`prop-${index}`, 1 + index / 100_000, index % 32),
+    ).map((node, index) => ({
+      ...node,
+      transform: {
+        ...node.transform,
+        position: { x: node.transform.position.x, y: 0, z: Math.floor(index / 32) },
+      },
+    }))
+    const before = stateOf(...nodes)
+    compiler.compileRuntimeWorld(before)
+    const moved = {
+      ...nodes[0]!,
+      transform: { ...nodes[0]!.transform, position: { x: 40, y: 0, z: 0 } },
+    }
+    const after = stateOf(moved, ...nodes.slice(1))
+
+    compiler.compileRuntimeRegion(runtimeWorldPatch(before, after))
+
+    expect(compiler.getOptimizationReport().compiledArtifacts).toBeGreaterThan(0)
+  })
+
+  it('recompiles when scale makes a spatial member too large for its cell', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const first = boxNode('first', 1, 0)
+    const second = boxNode('second', 2, 1)
+    const before = stateOf(first, second)
+    compiler.compileRuntimeWorld(before)
+    const scaled = {
+      ...second,
+      transform: { ...second.transform, scale: { x: 300, y: 300, z: 300 } },
+    }
+
+    const runtime = compiler.compileRuntimeRegion(runtimeWorldPatch(before, stateOf(first, scaled)))
+
+    expect(runtime?.runtimeOptimization.artifacts).toEqual([])
+    expect(compiler.getOptimizationReport().compiledArtifacts).toBe(0)
   })
 
   it('recompiles spatial artifacts when a node crosses a cell boundary', () => {

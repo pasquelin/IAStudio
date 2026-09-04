@@ -26,8 +26,8 @@ import type { SceneNode, SceneState } from './sceneState'
 import type { LossyOptimization } from '@shared/domain/gameExport'
 import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
-import { CELL_SIZE, cellKey } from './worldPartition'
 import { runtimeArtifactsOf } from './runtimeWorldCompiler'
+import { adaptiveCellsOf } from './adaptivePartition'
 import {
   GEOMETRY_CONTENT,
   MATERIAL_CONTENT,
@@ -72,7 +72,7 @@ export type MaterialDeduplication = {
 }
 
 export type SpatialCellPlan = {
-  key: number
+  key: string
   sourceIds: readonly string[]
 }
 
@@ -385,7 +385,7 @@ function* optimizationSteps(
       sourceIds: [...group.sourceIds].sort(byCodeUnit),
     }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
-  const spatialCells = spatialCellsOf(state.nodes, objectOf)
+  const spatialCells = spatialCellsOf(state.nodes, objectOf, policy)
 
   return {
     classifications,
@@ -471,22 +471,59 @@ function countIdentity<T>(uses: Map<T, number>, resource: T): number {
 function spatialCellsOf(
   nodes: readonly SceneNode[],
   objectOf: (id: string) => Object3D | undefined,
+  policy: AnalyzerPolicy,
 ): readonly SpatialCellPlan[] {
-  const cells = new Map<number, string[]>()
   const position = new Vector3()
+  const scale = new Vector3()
+  const meshes = nodes.flatMap(node => {
+    if (node.type !== 'mesh') return []
+    const object = objectOf(node.id)
+    if (!object) return [node]
+    object.getWorldPosition(position)
+    object.getWorldScale(scale)
+    return [
+      {
+        ...node,
+        transform: {
+          ...node.transform,
+          position: { x: position.x, y: position.y, z: position.z },
+          scale: { x: scale.x, y: scale.y, z: scale.z },
+        },
+      },
+    ]
+  })
+  const resolved = { ...DEFAULT_OPTIMIZATION_POLICY, ...policy }
+  const cells = new Map<string, string[]>()
+  for (const { cell, nodes: members } of adaptiveCellsOf(meshes, resolved)) {
+    const key = stableKey([cell.size, cell.x, cell.y, cell.z])
+    cells.set(
+      key,
+      members.map(node => node.id),
+    )
+  }
+  const fallbackSize = Math.max(
+    1,
+    Math.min(resolved.maxBatchBounds / 4, resolved.spatialCellTargetSize),
+  )
   for (const node of nodes) {
+    if (node.type === 'mesh') continue
     const object = objectOf(node.id)
     if (object) object.getWorldPosition(position)
     else
       position.set(node.transform.position.x, node.transform.position.y, node.transform.position.z)
-    const key = cellKey(Math.floor(position.x / CELL_SIZE), Math.floor(position.z / CELL_SIZE))
+    const key = stableKey([
+      fallbackSize,
+      Math.floor(position.x / fallbackSize),
+      Math.floor(position.y / fallbackSize),
+      Math.floor(position.z / fallbackSize),
+    ])
     const sourceIds = cells.get(key)
     if (sourceIds) sourceIds.push(node.id)
     else cells.set(key, [node.id])
   }
   return [...cells]
     .map(([key, sourceIds]) => ({ key, sourceIds: sourceIds.sort(byCodeUnit) }))
-    .sort((one, other) => one.key - other.key)
+    .sort((one, other) => byCodeUnit(one.key, other.key))
 }
 
 export function lossyCandidatesOf(

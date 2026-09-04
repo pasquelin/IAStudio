@@ -1,5 +1,6 @@
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
+import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
 import {
   DEFAULT_OPTIMIZATION_POLICY,
   type OptimizationPolicy,
@@ -16,6 +17,7 @@ import {
 } from './safeRuntimeValidation'
 import type { VisualFrame } from './visualRegression'
 import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
+import { adaptiveCellsOf } from './adaptivePartition'
 
 export type OptimizationSignature = string
 
@@ -304,30 +306,34 @@ export function runtimeArtifactsOf(
   animation: AnimationTimeline,
   policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
 ): readonly RuntimeRenderArtifact[] {
+  const spatialNodes = spatialNodesOf(nodes)
   const excluded = behavioralGroupingExclusions(
     nodes,
     new Set(animation.tracks.map(track => track.target.nodeId)),
   )
-  const groups = new Map<string, { sourceIds: string[]; forced: boolean }>()
-  const batches = new Map<string, string[]>()
+  const groups = new Map<string, { nodes: SceneNode[]; forced: boolean }>()
+  const batches = new Map<string, SceneNode[]>()
   for (const node of nodes) {
     if ((node.type !== 'mesh' && node.type !== 'model') || excluded.has(node.id) || !node.visible)
       continue
     const mode = node.optimization?.mode ?? 'auto'
     if (mode === 'batch') {
       const key = stableKey([
+        node.type,
         node.type === 'mesh' ? node.material : node.model.assetId,
         node.castShadow,
         node.receiveShadow,
         node.optimization?.groupId ?? null,
       ])
       const members = batches.get(key)
-      if (members) members.push(node.id)
-      else batches.set(key, [node.id])
+      const spatial = spatialNodes.get(node.id) ?? node
+      if (members) members.push(spatial)
+      else batches.set(key, [spatial])
       continue
     }
     if (mode !== 'auto' && mode !== 'instance') continue
     const key = stableKey([
+      node.type,
       node.type === 'mesh' ? [node.geometry, node.material, node.negative] : [node.model],
       node.castShadow,
       node.receiveShadow,
@@ -335,47 +341,87 @@ export function runtimeArtifactsOf(
     ])
     const members = groups.get(key)
     if (members) {
-      members.sourceIds.push(node.id)
+      members.nodes.push(spatialNodes.get(node.id) ?? node)
       members.forced ||= mode === 'instance'
-    } else groups.set(key, { sourceIds: [node.id], forced: mode === 'instance' })
-  }
-  const instances = [...groups]
-    .filter(([, group]) => group.forced || group.sourceIds.length >= policy.minInstancesPerGroup)
-    .map<RuntimeRenderArtifact>(([key, group]) => {
-      const ordered = group.sourceIds.sort(byCodeUnit)
-      return {
-        key,
-        strategy: 'instance',
-        sourceIds: ordered,
-        signature: stableKey(['instance', key, ordered]),
-      }
-    })
-  const batchArtifacts = [...batches].map<RuntimeRenderArtifact>(([key, sourceIds]) => {
-    const ordered = sourceIds.sort(byCodeUnit)
-    return {
-      key,
-      strategy: 'batch',
-      sourceIds: ordered,
-      signature: stableKey(['batch', key, ordered]),
+    } else {
+      groups.set(key, { nodes: [spatialNodes.get(node.id) ?? node], forced: mode === 'instance' })
     }
-  })
+  }
+  const instances = instanceArtifacts(groups, policy)
+  const batchArtifacts = forcedBatchArtifacts(batches, policy)
   const selected = new Set(
     [...instances, ...batchArtifacts].flatMap(artifact => artifact.sourceIds),
   )
-  const automatic = automaticStaticArtifacts(nodes, excluded, selected, policy)
+  const automatic = automaticStaticArtifacts(nodes, spatialNodes, excluded, selected, policy)
   return [...instances, ...batchArtifacts, ...automatic].sort((one, other) =>
     byCodeUnit(one.signature, other.signature),
   )
 }
 
+function instanceArtifacts(
+  groups: ReadonlyMap<string, { nodes: readonly SceneNode[]; forced: boolean }>,
+  policy: OptimizationPolicy,
+): readonly RuntimeRenderArtifact[] {
+  const artifacts: RuntimeRenderArtifact[] = []
+  for (const [compatibilityKey, group] of groups) {
+    if (!group.forced && group.nodes.length < policy.minInstancesPerGroup) continue
+    const meshes = group.nodes.filter(
+      (node): node is Extract<SceneNode, { type: 'mesh' }> => node.type === 'mesh',
+    )
+    if (meshes.length === group.nodes.length) {
+      for (const { cell, nodes } of adaptiveCellsOf(meshes, policy)) {
+        if (!group.forced && nodes.length < policy.minInstancesPerGroup) continue
+        pushArtifacts(artifacts, 'instance', stableKey([compatibilityKey, cell]), nodes, policy)
+      }
+      continue
+    }
+    pushArtifacts(artifacts, 'instance', compatibilityKey, group.nodes, policy)
+  }
+  return artifacts
+}
+
+function forcedBatchArtifacts(
+  batches: ReadonlyMap<string, readonly SceneNode[]>,
+  policy: OptimizationPolicy,
+): readonly RuntimeRenderArtifact[] {
+  const artifacts: RuntimeRenderArtifact[] = []
+  for (const [compatibilityKey, candidates] of batches) {
+    const meshes = candidates.filter(
+      (node): node is Extract<SceneNode, { type: 'mesh' }> => node.type === 'mesh',
+    )
+    if (meshes.length === candidates.length) {
+      for (const { cell, nodes } of adaptiveCellsOf(meshes, policy)) {
+        pushArtifacts(artifacts, 'batch', stableKey([compatibilityKey, cell]), nodes, policy)
+      }
+      continue
+    }
+    pushArtifacts(artifacts, 'batch', compatibilityKey, candidates, policy)
+  }
+  return artifacts
+}
+
+function pushArtifacts(
+  into: RuntimeRenderArtifact[],
+  strategy: RuntimeRenderArtifact['strategy'],
+  key: string,
+  nodes: readonly SceneNode[],
+  policy: OptimizationPolicy,
+): void {
+  const ordered = nodes.map(node => node.id).sort(byCodeUnit)
+  for (let offset = 0; offset < ordered.length; offset += policy.maxObjectsPerBatch) {
+    const sourceIds = ordered.slice(offset, offset + policy.maxObjectsPerBatch)
+    into.push({ key, strategy, sourceIds, signature: stableKey([strategy, key, sourceIds]) })
+  }
+}
+
 function automaticStaticArtifacts(
   nodes: readonly SceneNode[],
+  spatialNodes: ReadonlyMap<string, SceneNode>,
   excluded: ReadonlySet<string>,
   selected: ReadonlySet<string>,
   policy: OptimizationPolicy,
 ): readonly RuntimeRenderArtifact[] {
-  const groups = new Map<string, SceneNode[]>()
-  const cellSize = Math.min(policy.maxBatchBounds, policy.spatialCellTargetSize)
+  const compatible = new Map<string, Extract<SceneNode, { type: 'mesh' }>[]>()
   const parentIds = new Set(nodes.flatMap(node => (node.parentId ? [node.parentId] : [])))
   for (const node of nodes) {
     if (
@@ -387,20 +433,26 @@ function automaticStaticArtifacts(
       !node.visible
     )
       continue
-    const key = stableKey([
+    const compatibilityKey = stableKey([
       node.material,
       node.castShadow,
       node.receiveShadow,
       node.negative ?? false,
       mergeLayoutOf(node),
-      Math.floor(node.transform.position.x / cellSize),
-      Math.floor(node.transform.position.y / cellSize),
-      Math.floor(node.transform.position.z / cellSize),
       node.optimization?.groupId ?? null,
     ])
-    const members = groups.get(key)
-    if (members) members.push(node)
-    else groups.set(key, [node])
+    const members = compatible.get(compatibilityKey)
+    const spatial = spatialNodes.get(node.id) ?? node
+    if (spatial.type !== 'mesh') continue
+    if (members) members.push(spatial)
+    else compatible.set(compatibilityKey, [spatial])
+  }
+
+  const groups = new Map<string, Extract<SceneNode, { type: 'mesh' }>[]>()
+  for (const [compatibilityKey, candidates] of compatible) {
+    for (const { cell, nodes: members } of adaptiveCellsOf(candidates, policy)) {
+      groups.set(stableKey([compatibilityKey, cell]), members)
+    }
   }
 
   const artifacts: RuntimeRenderArtifact[] = []
@@ -441,11 +493,50 @@ function mergeLayoutOf(node: SceneNode): string {
   }
 }
 
-function artifactInputSignature(node: SceneNode): string {
-  const cellSize = Math.min(
-    DEFAULT_OPTIMIZATION_POLICY.maxBatchBounds,
-    DEFAULT_OPTIMIZATION_POLICY.spatialCellTargetSize,
+function spatialNodesOf(nodes: readonly SceneNode[]): ReadonlyMap<string, SceneNode> {
+  const source = new Map(nodes.map(node => [node.id, node]))
+  const matrices = new Map<string, Matrix4>()
+  const visiting = new Set<string>()
+  const matrixOf = (node: SceneNode): Matrix4 => {
+    const known = matrices.get(node.id)
+    if (known) return known
+    const transform = node.transform
+    const local = new Matrix4().compose(
+      new Vector3(transform.position.x, transform.position.y, transform.position.z),
+      new Quaternion().setFromEuler(
+        new Euler(transform.rotation.x, transform.rotation.y, transform.rotation.z),
+      ),
+      new Vector3(transform.scale.x, transform.scale.y, transform.scale.z),
+    )
+    if (visiting.has(node.id)) return local
+    visiting.add(node.id)
+    const parent = node.parentId ? source.get(node.parentId) : undefined
+    const world = parent ? matrixOf(parent).clone().multiply(local) : local
+    visiting.delete(node.id)
+    matrices.set(node.id, world)
+    return world
+  }
+  return new Map(
+    nodes.map(node => {
+      const matrix = matrixOf(node)
+      const position = new Vector3().setFromMatrixPosition(matrix)
+      const scale = matrix.getMaxScaleOnAxis()
+      return [
+        node.id,
+        {
+          ...node,
+          transform: {
+            ...node.transform,
+            position: { x: position.x, y: position.y, z: position.z },
+            scale: { x: scale, y: scale, z: scale },
+          },
+        },
+      ]
+    }),
   )
+}
+
+function artifactInputSignature(node: SceneNode): string {
   return stableKey([
     node.type,
     node.parentId,
@@ -454,13 +545,7 @@ function artifactInputSignature(node: SceneNode): string {
     node.receiveShadow,
     node.components ?? null,
     node.optimization ?? null,
-    node.type === 'mesh'
-      ? [
-          Math.floor(node.transform.position.x / cellSize),
-          Math.floor(node.transform.position.y / cellSize),
-          Math.floor(node.transform.position.z / cellSize),
-        ]
-      : null,
+    node.transform,
     node.type === 'mesh' ? [node.geometry, node.material, node.negative] : null,
     node.type === 'model' ? node.model : null,
   ])
