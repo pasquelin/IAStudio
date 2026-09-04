@@ -84,7 +84,9 @@ async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asse
   const found = embeddedTextures(bytes)
   if (found.length === 0 && already.length > 0) return [...already]
   const extracted = await writeMissing(deps, source, found, already)
-  if (found.length > 0) await deps.replaceModel(source, withoutEmbeddedTextures(bytes))
+  if (found.length > 0 && source.modelMaterialIds && source.modelMaterialIds.length > 0) {
+    await deps.replaceModel(source, withoutEmbeddedTextures(bytes))
+  }
   recordResult(deps, source, extracted.length)
   return extracted
 }
@@ -162,6 +164,7 @@ function requestFor(
     name: extractedTextureName(source.name, texture),
     type: 'image',
     extension: extensionOfMime(texture.mimeType),
+    folderRole: 'image',
     // Traceable both ways: the inspector shows a model's own pictures beside it by asking the
     // catalogue what was derived from it.
     derivedFrom: source.id,
@@ -169,6 +172,7 @@ function requestFor(
     // One or the other, never both: a slot naming exactly one channel says so through `map`, and
     // the rest carry the slot they came out of so something can later tell an ORM from a coat.
     ...(texture.channel ? { map: texture.channel } : { packedSlot: texture.slot }),
+    modelTextureUses: texture.uses,
     // A PNG carries its size in its header, which `probePng` reads. A JPEG's is not read at all —
     // nothing probes an extracted picture afterwards, so its row shows none.
     ...(isPngBytes(texture.bytes) ? { probe: probePng(texture.bytes) ?? undefined } : {}),

@@ -124,7 +124,6 @@ describe('the pictures a glb carries', () => {
     expect(found[0]?.channel).toBeUndefined()
   })
 
-  // Two slots that mean the SAME channel still agree, and the picture keeps it.
   it('keeps the channel when every slot wearing it says the same thing', () => {
     const file = glb(
       {
@@ -309,7 +308,7 @@ describe('glb texture defaults', () => {
     expect(embeddedTextures(file)).toMatchObject([{ mimeType: 'image/png', bytes: PNG }])
   })
 
-  it('ignores a picture no material wears', () => {
+  it('extracts a picture even when no material wears it', () => {
     const file = glb(
       {
         materials: [{ name: 'bare' }],
@@ -320,7 +319,7 @@ describe('glb texture defaults', () => {
       PNG,
     )
 
-    expect(embeddedTextures(file)).toEqual([])
+    expect(embeddedTextures(file)).toMatchObject([{ slot: 'image1', bytes: PNG }])
   })
 })
 
@@ -402,19 +401,33 @@ describe('a glb after extraction', () => {
     expect(result?.extra).toEqual([extra])
   })
 
-  it('keeps a material image when a root extension also references its index', () => {
+  it('removes image-based lighting references when another external image remains', () => {
     const source = glb(
       {
-        materials: [{ pbrMetallicRoughness: { baseColorTexture: { index: 0 } } }],
-        textures: [{ source: 0 }],
-        images: [{ bufferView: 0, mimeType: 'image/jpeg' }],
+        materials: [
+          { pbrMetallicRoughness: { baseColorTexture: { index: 0 } }, normalTexture: { index: 1 } },
+        ],
+        textures: [{ source: 0 }, { source: 1 }],
+        images: [
+          { bufferView: 0, mimeType: 'image/jpeg' },
+          { uri: 'normal.png', mimeType: 'image/png' },
+        ],
         bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: JPEG.byteLength }],
         extensions: { EXT_lights_image_based: { lights: [{ specularImages: [[0]] }] } },
+        scenes: [{ extensions: { EXT_lights_image_based: { light: 0 } } }],
+        extensionsUsed: ['EXT_lights_image_based'],
       },
       JPEG,
     )
 
-    expect(withoutEmbeddedTextures(source)).toBe(source)
+    const chunks = glbChunksOf(withoutEmbeddedTextures(source))
+    const json = chunks ? glbJson(chunks.json) : null
+
+    expect(embeddedTextures(withoutEmbeddedTextures(source))).toEqual([])
+    expect(json).toMatchObject({ images: [{ uri: 'normal.png' }] })
+    expect(json).not.toHaveProperty('extensions.EXT_lights_image_based')
+    expect(json).not.toHaveProperty('scenes.0.extensions.EXT_lights_image_based')
+    expect(json).not.toHaveProperty('extensionsUsed')
   })
 
   it('does not mistake punctual light numbers for image indexes', () => {
@@ -434,7 +447,7 @@ describe('a glb after extraction', () => {
     expect(embeddedTextures(withoutEmbeddedTextures(source))).toEqual([])
   })
 
-  it('keeps compressed buffer offsets intact while removing material images', () => {
+  it('compacts compressed buffers while removing material images', () => {
     const binary = new Uint8Array([...JPEG, 1, 2, 3, 4])
     const source = glb(
       {
@@ -469,16 +482,16 @@ describe('a glb after extraction', () => {
     const chunks = glbChunksOf(withoutEmbeddedTextures(source))
     const json = chunks ? glbJson(chunks.json) : null
 
-    expect(chunks?.bin).toEqual(binary)
+    expect(chunks?.bin).toEqual(new Uint8Array([1, 2, 3, 4]))
     expect(json).toMatchObject({
       bufferViews: [
-        { byteOffset: 0, byteLength: JPEG.byteLength },
         {
-          byteOffset: JPEG.byteLength,
-          extensions: { EXT_meshopt_compression: { byteOffset: JPEG.byteLength } },
+          byteOffset: 0,
+          extensions: { EXT_meshopt_compression: { byteOffset: 0 } },
         },
       ],
-      accessors: [{ bufferView: 1 }],
+      accessors: [{ bufferView: 0 }],
+      buffers: [{ byteLength: 4 }],
     })
     expect(json).not.toHaveProperty('images')
     expect(json).not.toHaveProperty('textures')

@@ -12,7 +12,11 @@ import { selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/sceneViews'
 import { skeletonProfilesOf, useSkeletonProfiles } from '@/stores/skeletonProfiles'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
-import { wornModelDress } from '@/features/material/modelDress'
+import {
+  extractedModelDress,
+  prepareExtractedModelDress,
+  wornModelDress,
+} from '@/features/material/modelDress'
 import type { ScreenBox } from '@/engines/scene/marqueeSelection'
 import {
   addPathPoint,
@@ -57,10 +61,10 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
     onRig: (id, rig) => useModelFiles.getState().reportRig(documentId, id, rig),
     onCharacter: (id, _rig, extras) =>
       useModelFiles.getState().reportSockets(documentId, id, extras?.sockets ?? []),
-    onMaterials: (id, count, names, parts, hasFileTextures) =>
+    onMaterials: (id, count, names, parts, hasFileTextures, sourceIndices) =>
       useModelFiles
         .getState()
-        .reportMaterials(documentId, id, count, names, parts, hasFileTextures),
+        .reportMaterials(documentId, id, count, names, parts, hasFileTextures, sourceIndices),
     profiles: skeletonProfilesOf(useSkeletonProfiles.getState(), projectPath),
     onProfile: profile =>
       projectPath && useSkeletonProfiles.getState().rememberSkeletonProfile(projectPath, profile),
@@ -89,6 +93,8 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
     assetVersion: assetVersionOf,
     livePreview: livePreviewOf,
     wornDress: wornModelDress,
+    defaultModelDress: extractedModelDress,
+    prepareModelDress: prepareExtractedModelDress,
     environmentDress: environmentDressOf,
   })
 }

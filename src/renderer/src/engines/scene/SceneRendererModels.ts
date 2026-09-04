@@ -33,7 +33,10 @@ export abstract class SceneRendererModels extends SceneRendererGeometry {
   }
 
   private async loadModelInto(node: ModelNode, holder: Object3D, assetId: string): Promise<void> {
-    const source = await this.modelCache.acquire(assetId)
+    const [source] = await Promise.all([
+      this.modelCache.acquire(assetId),
+      this.options.prepareModelDress?.(assetId),
+    ])
     // A freshness test and nothing more: `release` owns the reference, as `clear` does in
     // `material-textures`. Letting go here too would drop the count twice, and free a source
     // another node is still cloning.
@@ -64,6 +67,7 @@ export abstract class SceneRendererModels extends SceneRendererGeometry {
           maps.names(),
           maps.parts(),
           maps.hasFileTextures(),
+          maps.sourceIndices(),
         )
         const sceneTask1Step2 = () => {
           this.dressModel(node.id)

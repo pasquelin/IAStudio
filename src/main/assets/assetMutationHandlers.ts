@@ -56,6 +56,9 @@ async function updateAsset(
     ...(name === undefined ? {} : { name }),
     ...(parsed.tags === undefined ? {} : { tags: [...parsed.tags] }),
     ...(parsed.type === undefined ? {} : { type: parsed.type }),
+    ...(parsed.modelMaterialIds === undefined
+      ? {}
+      : { modelMaterialIds: [...parsed.modelMaterialIds] }),
     ...(path === undefined ? {} : { path }),
   }
   const saved = await deps.catalog().add(updated)

@@ -36,7 +36,12 @@ import { CameraPostSection } from '../Camera/CameraPostSection'
 import { PostProcessingSection } from '../Post/PostProcessingSection'
 import { MaterialSection } from '../../../material/components/Material/MaterialSection'
 import { ModelDressSection } from '../ModelDressSection/ModelDressSection'
-import { fileTexturesOfNode, materialSlotsOfNode, useModelFiles } from '@/stores/modelFiles'
+import {
+  fileTexturesOfNode,
+  materialSlotsOfNode,
+  materialSourceIndicesOfNode,
+  useModelFiles,
+} from '@/stores/modelFiles'
 import { PathSection } from '../PathSection'
 import { AttachSection } from '../AttachSection'
 import { ShadowSection } from '../ShadowSection'
@@ -103,6 +108,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   )
   const modelFileTextures = useModelFiles(state =>
     model ? fileTexturesOfNode(state, documentId, model.id) : undefined,
+  )
+  const modelSourceIndices = useModelFiles(state =>
+    materialSourceIndicesOfNode(state, documentId, model?.id ?? ''),
   )
   const modelAsset = useAssets(state =>
     model ? assetsById(state).get(model.model.assetId) : undefined,
@@ -250,6 +258,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               slots={modelSlots}
               extractable={modelAsset?.location === 'local'}
               ownTextures={modelFileTextures}
+              sourceIndices={modelSourceIndices}
               onChange={dress => edit.run(dressModel(model.id, dress))}
               onWearAt={(slot, materialId) => edit.run(wearMaterialAt(model.id, slot, materialId))}
             />

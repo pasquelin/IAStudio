@@ -186,6 +186,23 @@ describe('local backend', () => {
     expect(asset.packedSlot).toBe('metallicRoughnessTexture')
   })
 
+  it('files an extracted model map with images while keeping its channel metadata', async () => {
+    const asset = await backend.importFromBytes(
+      {
+        id: 'asset_model_map',
+        name: 'Robot — Normal',
+        type: 'image',
+        extension: '.png',
+        map: 'normal',
+        folderRole: 'image',
+      },
+      BYTES,
+    )
+
+    expect(asset.path).toBe('Images/Robot — Normal.png')
+    expect(asset.map).toBe('normal')
+  })
+
   it("records a generation's remote id without counting it as synced", async () => {
     const asset = await backend.importFromUrl({
       id: 'asset_1',

@@ -145,6 +145,36 @@ describe('catalog', () => {
     expect(catalog.find('asset_norm')?.mapInverted).toBeUndefined()
   })
 
+  it('keeps the recipe and assembled materials of an extracted model through a round trip', () => {
+    const modelTextureUses: NonNullable<Asset['modelTextureUses']> = [
+      {
+        materialIndex: 0,
+        materialName: 'Shell',
+        slot: 'baseColorTexture',
+        channel: 'baseColor',
+        sampling: { channel: 1, wrapS: 33648, wrapT: 10497, minFilter: 9728, magFilter: 9729 },
+        settings: {
+          color: '#ffffff',
+          roughness: 1,
+          metalness: 0,
+          normalScale: 1,
+          aoIntensity: 1,
+          emissive: '#000000',
+          emissiveIntensity: 1,
+          tiling: { x: 1, y: 1 },
+          offset: { x: 0, y: 0 },
+          rotation: 0,
+        },
+      },
+    ]
+    catalog.add(asset({ id: 'model', modelMaterialIds: ['material'], modelTextureUses }))
+
+    expect(catalog.find('model')).toMatchObject({
+      modelMaterialIds: ['material'],
+      modelTextureUses,
+    })
+  })
+
   it('leaves a picture that carries no channel alone', () => {
     catalog.add(asset({ id: 'asset_plain' }))
     expect(catalog.find('asset_plain')?.map).toBeUndefined()

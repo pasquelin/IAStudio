@@ -1,8 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/material'
 import { newMaterial, type ChannelMap, type MaterialState } from '@/engines/material/materialState'
 import type { ModelDressRef } from '@shared/domain/scene'
-import { modelDressOf, wornModelDress } from './modelDress'
+import type { Asset } from '@shared/domain/asset'
+import { installFakeBridge } from '@/services/fakeBridge'
+import { forgetRememberedAssets, useAssets } from '@/stores/assets'
+import {
+  extractedModelDress,
+  modelDressOf,
+  prepareExtractedModelDress,
+  wornModelDress,
+} from './modelDress'
 
 const materialWith = (over: Partial<MaterialState> = {}): MaterialState => ({
   ...newMaterial(),
@@ -81,11 +89,60 @@ describe('what a material is worth to a model', () => {
     })
   })
 
+  it('keeps a different UV transform on each channel', () => {
+    const baseColor = channel('albedo')
+    baseColor.transform = {
+      tiling: { x: 2, y: 3 },
+      offset: { x: 0.25, y: 0.5 },
+      rotation: 0.4,
+    }
+    const normal = channel('normal')
+    normal.transform = {
+      tiling: { x: 1, y: 1 },
+      offset: { x: 0, y: 0 },
+      rotation: 0,
+    }
+
+    expect(modelDressOf(materialWith({ channels: { baseColor, normal } })).textures).toEqual({
+      map: { assetId: 'albedo', transform: baseColor.transform },
+      normalMap: { assetId: 'normal', transform: normal.transform },
+    })
+  })
+
   /** The cavity is the one channel a scene has no slot for — it is read in a shader of its own. */
   it('leaves out the one channel no slot of a scene reads', () => {
     const { textures } = modelDressOf(materialWith({ channels: { edge: channel('rim') } }))
 
     expect(textures).toEqual({})
+  })
+})
+
+describe('the materials extracted from a model', () => {
+  beforeEach(() => {
+    forgetRememberedAssets()
+    useAssets.setState({ items: [] })
+  })
+
+  it('reads the exact model outside the current catalogue page before dressing it', async () => {
+    const found: Asset = {
+      id: 'model',
+      name: 'Model',
+      type: 'mesh',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-09-04',
+      modelMaterialIds: ['material-a', 'material-b'],
+    }
+    const search = vi.fn(async () => [found])
+    installFakeBridge({ assets: { search } })
+
+    await prepareExtractedModelDress('model')
+
+    expect(search).toHaveBeenCalledWith({ ids: ['model'], limit: 1 })
+    expect(extractedModelDress('model')).toEqual({
+      kind: 'materials',
+      documentIds: ['material-a', 'material-b'],
+    })
   })
 })
 

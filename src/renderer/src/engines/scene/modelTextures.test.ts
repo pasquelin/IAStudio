@@ -14,7 +14,6 @@ import { scriptedTextureCache } from './scene-fixtures'
 import { instanceOf } from './modelCache'
 import { geometryFor } from './threeFactory'
 
-/** A parsed file: one mesh wearing one material, already dressed with the map it ships. */
 function loadedModel(): { source: Object3D; fileMap: Texture } {
   const fileMap = new Texture()
   const material = new MeshStandardMaterial()
@@ -25,7 +24,6 @@ function loadedModel(): { source: Object3D; fileMap: Texture } {
   return { source, fileMap }
 }
 
-/** The one material of an instance, whatever depth the file put it at. */
 function materialOf(root: Object3D): MeshStandardMaterial {
   let found: MeshStandardMaterial | null = null
   root.traverse(object => {
@@ -37,7 +35,6 @@ function materialOf(root: Object3D): MeshStandardMaterial {
   return found
 }
 
-/** Two meshes, two materials — a car body and its glass, which is the ordinary glTF file. */
 function twoMaterialModel(): Object3D {
   const source = new Object3D()
   for (let made = 0; made < 2; made += 1) {
@@ -77,6 +74,18 @@ describe('createModelTextures', () => {
     expect(textures.names()).toEqual(['Coat', 'Glass'])
   })
 
+  it('reports glTF material indices in runtime slot order', () => {
+    const scripted = scriptedTextureCache()
+    const source = twoMaterialModel()
+    const materials = materialsOf(source)
+    if (materials[0]) materials[0].userData.gltfMaterialIndex = 3
+    if (materials[1]) materials[1].userData.gltfMaterialIndex = 1
+
+    const textures = createModelTextures(scripted.cache, instanceOf(source), onChange)
+
+    expect(textures.sourceIndices()).toEqual([3, 1])
+  })
+
   it('reports each mesh as a part of the same model root', () => {
     const scripted = scriptedTextureCache()
     const source = twoMaterialModel()
@@ -108,8 +117,6 @@ describe('createModelTextures', () => {
     expect(onChange).toHaveBeenCalled()
   })
 
-  // The point of the whole file: `instanceOf` clones a tree but SHARES its materials, so writing
-  // a map straight into one would repaint every other node built from the same file.
   it('leaves the other instances of the same file alone', async () => {
     const scripted = scriptedTextureCache()
     const { source, fileMap } = loadedModel()
@@ -477,15 +484,11 @@ describe('a finish a dress no longer names', () => {
     expect(`#${materialOf(instance).color.getHexString()}`).toBe('#204080')
   })
 
-  // `needsUpdate` makes three.js re-derive the program's key, and this runs per slot of every
-  // model on each catalogue refresh — a model wearing what it already wears must not pay for it.
   it('leaves the program alone when nothing moved', () => {
     const instance = instanceOf(loadedModel().source)
     const textures = createModelTextures(scriptedTextureCache().cache, instance, onChange)
 
     textures.dress(0, { roughness: 0.4 })
-    // `needsUpdate` has no getter in three.js — `version` is what it bumps, and what a renderer
-    // compares to decide whether the program has to be derived again.
     const material = materialOf(instance)
     const before = material.version
     textures.dress(0, { roughness: 0.4 })

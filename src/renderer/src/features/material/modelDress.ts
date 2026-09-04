@@ -10,6 +10,8 @@ import { PBR_CHANNELS, slotForChannel, type MaterialSettings } from '@shared/dom
 import { cachedOn } from '@/engines/core/cachedOn'
 import type { ChannelSet, MaterialState } from '@/engines/material/materialState'
 import { loadMaterialSource, wornMaterialOf } from '@/stores/materialSources'
+import { assetsById, rememberAssets, useAssets } from '@/stores/assets'
+import { getBridge } from '@/services/bridge'
 
 /**
  * What a model's dress is worth to ONE of its material slots — the port every scene takes.
@@ -29,6 +31,19 @@ export function wornModelDress(dress: ModelDressRef, slot: number): ModelDress |
 
   void loadMaterialSource(materialId)
   return null
+}
+
+export function extractedModelDress(assetId: string): ModelDressRef | undefined {
+  const documentIds = assetsById(useAssets.getState()).get(assetId)?.modelMaterialIds
+  return documentIds ? { kind: 'materials', documentIds } : undefined
+}
+
+export async function prepareExtractedModelDress(assetId: string): Promise<void> {
+  if (assetsById(useAssets.getState()).has(assetId)) return
+  const bridge = getBridge()
+  if (!bridge) return
+  const assets = await bridge.assets.search({ ids: [assetId], limit: 1 })
+  rememberAssets(assets)
 }
 
 const PLAIN_DRESS: ModelDress = Object.freeze({ textures: {}, fileTextures: false })
@@ -66,7 +81,13 @@ function slotsOf(channels: ChannelSet): Partial<Record<TextureSlot, TextureRef>>
   for (const channel of PBR_CHANNELS) {
     const slot = slotForChannel(channel)
     const held = channels[channel]
-    if (slot && held) slots[slot] = { assetId: held.assetId }
+    if (slot && held) {
+      slots[slot] = {
+        assetId: held.assetId,
+        ...(held.transform ? { transform: held.transform } : {}),
+        ...(held.sampling ? { sampling: held.sampling } : {}),
+      }
+    }
   }
 
   return slots

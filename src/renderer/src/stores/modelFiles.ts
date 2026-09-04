@@ -37,6 +37,7 @@ type ModelFilesState = {
   /** How many MATERIALS each model's file carries — its slots. The count lives in the GLB. */
   materials: Record<string, Record<string, number>>
   materialNames: Record<string, Record<string, readonly string[]>>
+  materialSourceIndices: Record<string, Record<string, readonly (number | null)[]>>
   fileTextures: Record<string, Record<string, boolean>>
   parts: Record<string, Record<string, readonly ModelPart[]>>
   selectedParts: Record<string, string>
@@ -48,6 +49,7 @@ type ModelFilesState = {
     names?: readonly string[],
     parts?: readonly ModelPart[],
     hasFileTextures?: boolean,
+    sourceIndices?: readonly (number | null)[],
   ) => void
   stats: Record<string, SceneStats>
   reportStats: (documentId: string, stats: SceneStats) => void
@@ -75,6 +77,7 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
   rigs: {},
   materials: {},
   materialNames: {},
+  materialSourceIndices: {},
   fileTextures: {},
   parts: {},
   selectedParts: {},
@@ -115,7 +118,15 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       },
     })),
 
-  reportMaterials: (documentId, nodeId, count, names = [], parts = [], hasFileTextures) =>
+  reportMaterials: (
+    documentId,
+    nodeId,
+    count,
+    names = [],
+    parts = [],
+    hasFileTextures,
+    sourceIndices = [],
+  ) =>
     set(state => ({
       materials: {
         ...state.materials,
@@ -124,6 +135,13 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       materialNames: {
         ...state.materialNames,
         [documentId]: { ...state.materialNames[documentId], [nodeId]: names },
+      },
+      materialSourceIndices: {
+        ...state.materialSourceIndices,
+        [documentId]: {
+          ...state.materialSourceIndices[documentId],
+          [nodeId]: sourceIndices,
+        },
       },
       parts: { ...state.parts, [documentId]: { ...state.parts[documentId], [nodeId]: parts } },
       fileTextures:
@@ -160,6 +178,7 @@ export const useModelFiles = create<ModelFilesState>()(set => ({
       fits: withoutKey(state.fits, documentId),
       materials: withoutKey(state.materials, documentId),
       materialNames: withoutKey(state.materialNames, documentId),
+      materialSourceIndices: withoutKey(state.materialSourceIndices, documentId),
       fileTextures: withoutKey(state.fileTextures, documentId),
       parts: withoutKey(state.parts, documentId),
       selectedParts: withoutKey(state.selectedParts, documentId),
@@ -177,6 +196,7 @@ export function modelStatsOf(state: ModelFilesState, documentId: string): SceneS
  * the loop then never settles, which is the very trap `SceneInspector` carries a note about.
  */
 const NO_CLIPS: readonly string[] = []
+const NO_SOURCE_INDICES: readonly (number | null)[] = []
 
 /** The clips a node can be asked to play, or none — a model still loading has none yet. */
 export function clipsOfNode(
@@ -221,6 +241,14 @@ export function materialNamesOfNode(
   nodeId: string,
 ): readonly string[] {
   return state.materialNames[documentId]?.[nodeId] ?? NO_CLIPS
+}
+
+export function materialSourceIndicesOfNode(
+  state: ModelFilesState,
+  documentId: string,
+  nodeId: string,
+): readonly (number | null)[] {
+  return state.materialSourceIndices[documentId]?.[nodeId] ?? NO_SOURCE_INDICES
 }
 
 export function modelPartsOfNode(

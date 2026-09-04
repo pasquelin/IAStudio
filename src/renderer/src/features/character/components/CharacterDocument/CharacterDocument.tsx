@@ -9,7 +9,11 @@ import { Toolbar } from '@/components/Toolbar/Toolbar'
 import { PANE_TOOLBAR, PANE_TOOLBAR_ASIDE } from '@/components/styles'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
-import { wornModelDress } from '@/features/material/modelDress'
+import {
+  extractedModelDress,
+  prepareExtractedModelDress,
+  wornModelDress,
+} from '@/features/material/modelDress'
 import { createCharacterStage, dressCharacterStage, workshopIdOf } from '@/character/characterStage'
 import { noteCharacterSkins } from '@/character/characterSkins'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
@@ -209,15 +213,17 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
       chrome: false,
       assetVersion: assetVersionOf,
       wornDress: wornModelDress,
+      defaultModelDress: extractedModelDress,
+      prepareModelDress: prepareExtractedModelDress,
       environmentDress: environmentDressOf,
       onCharacter: (_nodeId, rig, extras, measured) => {
         useCharacterView.getState().noteCharacterSample(assetId, measured)
         stage.read(rig, extras)
       },
-      onMaterials: (id, count, names, parts, hasFileTextures) =>
+      onMaterials: (id, count, names, parts, hasFileTextures, sourceIndices) =>
         useModelFiles
           .getState()
-          .reportMaterials(workshopId, id, count, names, parts, hasFileTextures),
+          .reportMaterials(workshopId, id, count, names, parts, hasFileTextures, sourceIndices),
       onStats: stats => useModelFiles.getState().reportStats(workshopId, stats),
       // Kept for ⌘S: only the engine ever weighs a mesh against a rig, and the save runs from
       // `documentIo` — outside this tab.

@@ -20,6 +20,12 @@ import { texturesOf } from './sceneStats'
  */
 const DRACO_PATH = './decoders/draco/'
 const KTX2_PATH = './decoders/basis/'
+const GLTF_MATERIAL_INDEX = 'gltfMaterialIndex'
+
+export function gltfMaterialIndexOf(material: Material): number | null {
+  const index = material.userData[GLTF_MATERIAL_INDEX]
+  return typeof index === 'number' ? index : null
+}
 
 /**
  * A source and the handle that shuts it down. Both decoders own Web Workers and nothing else can
@@ -76,6 +82,16 @@ export function createGltfSource(
     }
 
     const gltf = await loader.parseAsync(bytes, baseOf(url))
+    gltf.scene.traverse(object => {
+      if (!(object instanceof Mesh)) return
+      const materials: Material[] = Array.isArray(object.material)
+        ? object.material
+        : [object.material]
+      for (const material of materials) {
+        const index = gltf.parser.associations.get(material)?.materials
+        if (index !== undefined) material.userData[GLTF_MATERIAL_INDEX] = index
+      }
+    })
     // Carried on the root rather than returned beside it: `Object3D.animations` is where three
     // itself keeps them, and the cache hands one object back. Dropping them here is what left
     // every model Scenario animates standing still, with nothing said.

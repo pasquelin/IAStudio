@@ -13,6 +13,7 @@ import { characterOf, useCharacters } from '@/stores/character'
 import {
   fileTexturesOfNode,
   materialNamesOfNode,
+  materialSourceIndicesOfNode,
   materialSlotsOfNode,
   modelPartsOfNode,
   modelStatsOf,
@@ -44,6 +45,9 @@ export function CharacterInspectorModel({
   )
   const stats = useModelFiles(state => modelStatsOf(state, documentId))
   const names = useModelFiles(state => materialNamesOfNode(state, documentId, nodeId))
+  const sourceIndices = useModelFiles(state =>
+    materialSourceIndicesOfNode(state, documentId, nodeId),
+  )
   const fileTextures = useModelFiles(state => fileTexturesOfNode(state, documentId, nodeId))
   const selectedPartId = useModelFiles(state => selectedModelPartOf(state, documentId))
   const selectedPart = useModelFiles(state =>
@@ -79,6 +83,7 @@ export function CharacterInspectorModel({
         extractable={asset?.location === 'local'}
         ownTextures={fileTextures}
         names={names}
+        sourceIndices={sourceIndices}
         slotIndices={selectedPart?.materialSlots}
         onChange={dress => run(assetId, dressCharacter(dress))}
         onWearAt={(slot, materialId) => run(assetId, wearCharacterMaterialAt(slot, materialId))}

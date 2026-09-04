@@ -258,7 +258,15 @@ describe('project handlers', () => {
       await mkdir(join(root, 'assets/3d'), { recursive: true })
       await writeFile(join(root, 'assets/3d/asset-1.glb'), file)
 
-      await catalog.add(asset({ id: 'asset-1', name, type: 'mesh', path: 'assets/3d/asset-1.glb' }))
+      await catalog.add(
+        asset({
+          id: 'asset-1',
+          name,
+          type: 'mesh',
+          path: 'assets/3d/asset-1.glb',
+          modelMaterialIds: ['material-1'],
+        }),
+      )
       return root
     }
 
@@ -285,6 +293,7 @@ describe('project handlers', () => {
         extension: '.jpg',
         derivedFrom: 'asset-1',
         outputIndex: 0,
+        folderRole: 'image',
       })
       expect(wrote(assets).bytes).toEqual([...JPEG])
       const replacement = assets.replaceBytes.mock.calls[0]?.[1]

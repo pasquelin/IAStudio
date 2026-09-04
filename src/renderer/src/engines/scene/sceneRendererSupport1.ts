@@ -90,6 +90,7 @@ export type SceneRendererOptions = {
     names: readonly string[],
     parts: readonly ModelPart[],
     hasFileTextures: boolean,
+    sourceIndices: readonly (number | null)[],
   ) => void
   /**
    * How well a clip from elsewhere fits this character, once both skeletons are in hand. Only
@@ -231,6 +232,8 @@ export type SceneRendererOptions = {
    * every test.
    */
   wornDress?: (dress: ModelDressRef, slot: number) => ModelDress | null
+  defaultModelDress?: (assetId: string) => ModelDressRef | undefined
+  prepareModelDress?: (assetId: string) => Promise<void>
   /**
    * What the ENVIRONMENT this scene names is worth to it. Synchronous, like `wornDress`: the
    * window answers from the open tab or from the copy read off disk. Absent, the studio lights it.

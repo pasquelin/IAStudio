@@ -22,6 +22,36 @@ import { isPbrChannel } from '@shared/domain/material'
 import { LOG_SCOPES } from '@shared/ipc'
 import type { SqlRow } from './sqlite'
 import { optionalNumber, optionalText, text } from './sqlRow'
+import { z } from 'zod'
+
+const vector2 = z.object({ x: z.number(), y: z.number() })
+const textureUse = z.object({
+  materialIndex: z.number().int().nonnegative(),
+  materialName: z.string(),
+  slot: z.string(),
+  channel: z
+    .enum(['baseColor', 'normal', 'roughness', 'metalness', 'ao', 'height', 'emissive', 'edge'])
+    .optional(),
+  sampling: z.object({
+    channel: z.number().int().nonnegative(),
+    wrapS: z.number(),
+    wrapT: z.number(),
+    minFilter: z.number(),
+    magFilter: z.number(),
+  }),
+  settings: z.object({
+    color: z.string(),
+    roughness: z.number(),
+    metalness: z.number(),
+    normalScale: z.number(),
+    aoIntensity: z.number(),
+    emissive: z.string(),
+    emissiveIntensity: z.number(),
+    tiling: vector2,
+    offset: vector2,
+    rotation: z.number(),
+  }),
+})
 
 /** The column is a closed union in the domain but a free string in SQLite. */
 function assetType(row: SqlRow): AssetType {
@@ -66,6 +96,8 @@ export function assetOf(row: SqlRow, tags: string[]): Asset {
       proxyPath: optionalText(row, 'proxy_path'),
       peaksPath: optionalText(row, 'peaks_path'),
       posterPath: optionalText(row, 'poster_path'),
+      modelTextureUses: parsedJson(optionalText(row, 'model_texture_uses'), z.array(textureUse)),
+      modelMaterialIds: parsedJson(optionalText(row, 'model_material_ids'), z.array(z.string())),
     }),
     // The column is a free string in SQLite; a channel this build no longer knows leaves the
     // asset as an ordinary picture rather than making the whole row unreadable.
@@ -73,6 +105,17 @@ export function assetOf(row: SqlRow, tags: string[]): Asset {
       ? { map, ...(optionalNumber(row, 'map_inverted') === 1 ? { mapInverted: true } : {}) }
       : {}),
     ...(packedSlot ? { packedSlot } : {}),
+  }
+}
+
+function parsedJson<T>(raw: string | undefined, schema: z.ZodType<T>): T | undefined {
+  if (raw === undefined) return undefined
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    const result = schema.safeParse(parsed)
+    return result.success ? result.data : undefined
+  } catch {
+    return undefined
   }
 }
 

@@ -4,7 +4,7 @@ import type { ScatterLayer } from './scatter'
 import type { Us } from './time'
 import type { CameraPost } from './postProcessing'
 import type { TextureSlot } from './sceneTexture'
-
+import type { TextureRef } from './textureRef'
 export type OptimizationMode = 'auto' | 'individual' | 'instance' | 'batch' | 'exclude'
 
 export const OPTIMIZATION_MODES: readonly OptimizationMode[] = [
@@ -29,8 +29,7 @@ export type { ReliefExtent, ReliefOverlay, ReliefSculpt } from './relief'
  * object: an engine is rebuilt from its serialized state, so what a document stores has to be
  * something a reload can resolve again. The engine loads it, caches it and frees it.
  */
-export type TextureRef = { assetId: string }
-
+export type { TextureRef } from './textureRef'
 /**
  * What a terrain padlock holds. Two aspects rather than one boolean: freezing the sculpt while
  * the patch can still move (or the reverse) is the ordinary case, matching the canvas.

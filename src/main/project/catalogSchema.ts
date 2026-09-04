@@ -193,6 +193,10 @@ const MIGRATIONS: readonly string[] = [
   -- untouched here. Nothing moves on disk — a row keeps the path it has.
   UPDATE assets SET type = 'image' WHERE type = 'texture';
   `,
+  `
+  ALTER TABLE assets ADD COLUMN model_texture_uses TEXT;
+  ALTER TABLE assets ADD COLUMN model_material_ids TEXT;
+  `,
 ]
 
 export const CATALOG_DEFAULT_LIMIT = 200

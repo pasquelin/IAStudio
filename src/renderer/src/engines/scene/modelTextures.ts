@@ -1,13 +1,33 @@
-import { Color, Mesh, MeshStandardMaterial, Texture, type Material, type Object3D } from 'three'
+import {
+  ClampToEdgeWrapping,
+  Color,
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  LinearMipmapNearestFilter,
+  Mesh,
+  MeshStandardMaterial,
+  MirroredRepeatWrapping,
+  NearestFilter,
+  NearestMipmapLinearFilter,
+  NearestMipmapNearestFilter,
+  RepeatWrapping,
+  Texture,
+  type Material,
+  type MinificationTextureFilter,
+  type Object3D,
+  type Wrapping,
+} from 'three'
 import {
   TEXTURE_SLOTS,
   type ModelMaterial,
   type ModelDress,
+  type TextureRef,
   type TextureSlot,
 } from '@shared/domain/scene'
 import { createSlotBindings, type SlotBindings } from './textureBinding'
 import type { TextureCache } from './textureCache'
 import { giveSecondUvSet } from './threeSync'
+import { gltfMaterialIndexOf } from './gltfSource'
 
 export type ModelTextures = {
   /**
@@ -17,6 +37,8 @@ export type ModelTextures = {
   count: () => number
   /** Names in editable slot order, with an empty string where the file names none. */
   names: () => readonly string[]
+  /** Source glTF material indices in editable slot order. */
+  sourceIndices: () => readonly (number | null)[]
   /** Meshes below the model root, with the material slots each one wears. */
   parts: () => readonly ModelPart[]
   /** Whether the file still carries at least one texture. */
@@ -50,6 +72,8 @@ type Dressed = {
   /** The clones this material wears — ours to free, unlike anything the cache handed out. */
   worn: Map<TextureSlot, Texture>
   fileTextures: boolean
+  sourceIndex: number | null
+  refs: Map<TextureSlot, TextureRef>
 }
 
 type FileMaterial = { material: Material; maps: Map<string, Texture>; enabled: boolean }
@@ -118,6 +142,8 @@ export function createModelTextures(
         fileFinish: finishOf(material),
         worn: new Map(),
         fileTextures: true,
+        sourceIndex: gltfMaterialIndexOf(one),
+        refs: new Map(),
       }
       for (const map of TEXTURE_SLOTS) held.fileMaps.set(map, held.material[map])
       // `from-image`, unlike every other holder of this cache: the glTF stores its UVs for an
@@ -155,6 +181,7 @@ export function createModelTextures(
   return {
     count: () => slots.length,
     names: () => slots.map(slot => slot.held.material.name),
+    sourceIndices: () => slots.map(slot => slot.held.sourceIndex),
     parts: () => parts,
     hasFileTextures: () =>
       fileMaterials.some(held => held.maps.size > 0) ||
@@ -173,6 +200,11 @@ export function createModelTextures(
     apply: (slot, maps) => {
       const held = slots[slot]
       if (held) {
+        held.held.refs.clear()
+        for (const map of TEXTURE_SLOTS) {
+          const ref = maps[map]
+          if (ref) held.held.refs.set(map, ref)
+        }
         held.bindings.apply(maps)
         for (const map of TEXTURE_SLOTS) {
           if (!maps[map]) writeMap(held.held, map, null, onChange)
@@ -195,7 +227,11 @@ export function createModelTextures(
       // own maps alike. It counts as a MOVE: a material whose only change is its tiling repaints
       // nothing otherwise — `apply` writes no map, and `wear` sees no dial move.
       for (const map of TEXTURE_SLOTS) {
-        moved = tile(held.worn.get(map) ?? held.fileMaps.get(map), finish) || moved
+        moved =
+          tile(
+            held.worn.get(map) ?? held.fileMaps.get(map),
+            held.refs.get(map)?.transform ?? finish,
+          ) || moved
       }
       // Only when something MOVED: a redraw marks the shadows stale, and this runs per slot of
       // every model each time any material document is touched — see `useMaterialRefresh`.
@@ -236,7 +272,7 @@ function writeMap(
 ): void {
   const { meshes, material, fileMaps, worn } = held
   const file = fileMaps.get(slot) ?? null
-  const next = texture ? sampledLike(texture, file) : held.fileTextures ? file : null
+  const next = textureFor(held, slot, texture, file)
   if (material[slot] === next) return
 
   // Same reason as a mesh's own maps: occlusion reads the second UV set, and a generated model
@@ -255,6 +291,16 @@ function writeMap(
   material[slot] = next
   material.needsUpdate = true
   onChange()
+}
+
+function textureFor(
+  held: Dressed,
+  slot: TextureSlot,
+  texture: Texture | null,
+  file: Texture | null,
+): Texture | null {
+  if (texture) return sampledLike(texture, file, held.refs.get(slot))
+  return held.fileTextures ? file : null
 }
 
 function texturePropertiesOf(material: Material, standardSlots: boolean): Map<string, Texture> {
@@ -287,19 +333,50 @@ function setFileTextures(held: FileMaterial, enabled: boolean, onChange: () => v
  * tiling would reach every other slot pointing at that picture. It shares the `Source`, but NOT
  * the GPU texture — `getTextureCacheKey` reads the wrapping — so the caller frees what it wears.
  */
-function sampledLike(texture: Texture, file: Texture | null | undefined): Texture {
-  if (!file) return texture
+function sampledLike(
+  texture: Texture,
+  file: Texture | null | undefined,
+  reference?: TextureRef,
+): Texture {
+  if (!file && !reference?.transform && !reference?.sampling) return texture
 
   const worn = texture.clone()
-  worn.wrapS = file.wrapS
-  worn.wrapT = file.wrapT
-  worn.repeat.copy(file.repeat)
-  worn.offset.copy(file.offset)
-  worn.center.copy(file.center)
-  worn.rotation = file.rotation
-  // The UV set the glTF told this slot to read — a model carrying a second one dresses from it.
-  worn.channel = file.channel
+  if (file) {
+    worn.wrapS = file.wrapS
+    worn.wrapT = file.wrapT
+    worn.repeat.copy(file.repeat)
+    worn.offset.copy(file.offset)
+    worn.center.copy(file.center)
+    worn.rotation = file.rotation
+    worn.channel = file.channel
+  }
+  if (reference?.sampling) {
+    worn.channel = reference.sampling.channel
+    worn.wrapS = wrappingOf(reference.sampling.wrapS)
+    worn.wrapT = wrappingOf(reference.sampling.wrapT)
+    worn.minFilter = minFilterOf(reference.sampling.minFilter)
+    worn.magFilter = reference.sampling.magFilter === 9728 ? NearestFilter : LinearFilter
+  }
+  tile(worn, reference?.transform)
   return worn
+}
+
+function wrappingOf(value: number): Wrapping {
+  if (value === 33071) return ClampToEdgeWrapping
+  if (value === 33648) return MirroredRepeatWrapping
+  return RepeatWrapping
+}
+
+function minFilterOf(value: number): MinificationTextureFilter {
+  const filters: Record<number, MinificationTextureFilter> = {
+    9728: NearestFilter,
+    9729: LinearFilter,
+    9984: NearestMipmapNearestFilter,
+    9985: LinearMipmapNearestFilter,
+    9986: NearestMipmapLinearFilter,
+    9987: LinearMipmapLinearFilter,
+  }
+  return filters[value] ?? LinearMipmapLinearFilter
 }
 
 /** The dials the FILE gave a material, so a dress naming none can put them back. */

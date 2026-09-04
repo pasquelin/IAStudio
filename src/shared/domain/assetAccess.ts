@@ -137,6 +137,7 @@ export type AssetChanges = {
    * is why only a file the catalogue holds can be corrected at all.
    */
   type?: AssetType
+  modelMaterialIds?: readonly string[]
 }
 
 export const ASSET_SCHEME = 'ia-studio'

@@ -226,7 +226,8 @@ describe('what a character is made of', () => {
     }
     const extractTextures = vi.fn(() => Promise.resolve([texture]))
     const invalidate = vi.spyOn(useAssets.getState(), 'invalidate')
-    installFakeBridge({ assets: { extractTextures } })
+    installFakeBridge({ assets: { extractTextures, update: () => Promise.resolve(texture) } })
+    openModelMaterial.mockResolvedValue('material-1')
     useAssets.setState({ items: [LOCAL_MODEL] })
     const documentId = workshopIdOf(ASSET)
     useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
@@ -243,8 +244,10 @@ describe('what a character is made of', () => {
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
     expect(invalidate).toHaveBeenCalledOnce()
-    expect(held().dress).toEqual({ kind: 'image', assetId: 'texture-1' })
-    expect(screen.getByLabelText('Recouvert par')).toHaveValue('image')
+    await vi.waitFor(() =>
+      expect(held().dress).toEqual({ kind: 'materials', documentIds: ['material-1'] }),
+    )
+    expect(screen.getByLabelText('Recouvert par')).toHaveValue('materials')
     expect(
       screen.queryByRole('button', { name: 'Extraire les textures du modèle' }),
     ).not.toBeInTheDocument()
@@ -274,7 +277,7 @@ describe('what a character is made of', () => {
     expect(screen.queryByRole('option', { name: 'Matière sans image' })).not.toBeInTheDocument()
   })
 
-  it('does not apply a data texture as the model image', async () => {
+  it('assembles a data map into a material instead of applying it as an image', async () => {
     const normal: Asset = {
       id: 'normal-1',
       name: 'Hero — Normale',
@@ -286,7 +289,8 @@ describe('what a character is made of', () => {
       map: 'normal',
     }
     const extractTextures = vi.fn(() => Promise.resolve([normal]))
-    installFakeBridge({ assets: { extractTextures } })
+    installFakeBridge({ assets: { extractTextures, update: () => Promise.resolve(normal) } })
+    openModelMaterial.mockResolvedValue('material-1')
     useAssets.setState({ items: [LOCAL_MODEL] })
     const documentId = workshopIdOf(ASSET)
     useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
@@ -298,10 +302,12 @@ describe('what a character is made of', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
-    expect(held().dress).toEqual({ kind: 'plain' })
+    await vi.waitFor(() =>
+      expect(held().dress).toEqual({ kind: 'materials', documentIds: ['material-1'] }),
+    )
   })
 
-  it('detaches file textures without applying one image over a multi-material model', async () => {
+  it('assembles extracted pictures for a multi-material model', async () => {
     const texture: Asset = {
       id: 'hair-1',
       name: 'Hair — Couleur de base',
@@ -313,7 +319,8 @@ describe('what a character is made of', () => {
       map: 'baseColor',
     }
     const extractTextures = vi.fn(() => Promise.resolve([texture]))
-    installFakeBridge({ assets: { extractTextures } })
+    installFakeBridge({ assets: { extractTextures, update: () => Promise.resolve(texture) } })
+    openModelMaterial.mockResolvedValue('material-1')
     useAssets.setState({ items: [LOCAL_MODEL] })
     const documentId = workshopIdOf(ASSET)
     useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
@@ -325,7 +332,9 @@ describe('what a character is made of', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
-    expect(held().dress).toEqual({ kind: 'plain' })
+    await vi.waitFor(() =>
+      expect(held().dress).toEqual({ kind: 'materials', documentIds: ['material-1'] }),
+    )
   })
 
   it('disables texture extraction when the model has no local file', () => {

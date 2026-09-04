@@ -1,11 +1,13 @@
 import { FILE_NAME_MAX_LENGTH } from './fileName'
 import type { FolderRole } from './folderRole'
-import type { PbrChannel } from './material'
+import type { MaterialSettings, PbrChannel } from './material'
+import type { ModelTextureUse } from './modelTextureUse'
 
 import type { AssetLocation, AssetType, SyncStatus } from './assetTypes'
 import { PICTURES } from './assetAccess'
 
 export type { AssetLocation, AssetType, SyncStatus } from './assetTypes'
+export type { ModelTextureUse } from './modelTextureUse'
 
 /** The values, beside the type: a validator and a row reader both need to enumerate them. */
 export const ASSET_TYPES: readonly AssetType[] = [
@@ -245,6 +247,13 @@ export type Asset = {
    * unpack either would write a roughness out of a coat.
    */
   packedSlot?: string
+  /** glTF material uses retained so an interrupted extraction can resume without the source maps. */
+  modelTextureUses?: readonly ModelTextureUse[]
+  /** Per-channel UV transform carried into an assembled material during model extraction. */
+  textureTransform?: Pick<MaterialSettings, 'tiling' | 'offset' | 'rotation'>
+  textureSampling?: ModelTextureUse['sampling']
+  /** Default editable materials replacing images extracted from this model file. */
+  modelMaterialIds?: readonly string[]
   /**
    * Absolute path of a linked external media. A twenty-minute 4K rush is twenty gigabytes: it
    * is linked, never copied into the project, which is why `hash` exists to relink it.

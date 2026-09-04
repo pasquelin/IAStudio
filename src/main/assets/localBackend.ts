@@ -11,6 +11,7 @@ import {
 import type { FolderRole } from '@shared/domain/folderRole'
 import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/material'
+import type { ModelTextureUse } from '@shared/domain/modelTextureUse'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import { log } from '@main/log'
 import { freeAssetPath } from './assetFile'
@@ -92,6 +93,7 @@ export type ImportRequest = {
   mapInverted?: boolean
   /** The glTF slot of an extracted packed or extension map no PBR channel names exactly. */
   packedSlot?: string
+  modelTextureUses?: readonly ModelTextureUse[]
   /**
    * The library's own still for this asset. Brought down for the kinds no browser can decode —
    * a mesh — so a tile that was a picture in the library stays one once the file is here.
@@ -102,6 +104,8 @@ export type ImportRequest = {
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
 export type WriteRequest = Omit<ImportRequest, 'url'> & {
   extension: string
+  /** Overrides filing without changing what kind of asset the catalogue records. */
+  folderRole?: FolderRole
   /** What the bytes say about themselves, when the caller could read it. */
   probe?: MediaProbe
 }
@@ -216,6 +220,13 @@ function writtenAssetOf(input: WrittenAsset): Asset {
     ...(probe ? { probe } : {}),
     ...(posterPath ? { posterPath } : {}),
     ...(request.jobId ? { jobId: request.jobId } : {}),
+    ...requestMetadata(request),
+    ...twinOf(request, at),
+  }
+}
+
+function requestMetadata(request: Omit<ImportRequest, 'url'>): Partial<Asset> {
+  return {
     ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
     ...(request.groupId ? { groupId: request.groupId } : {}),
     ...(request.outputIndex !== undefined ? { outputIndex: request.outputIndex } : {}),
@@ -224,7 +235,7 @@ function writtenAssetOf(input: WrittenAsset): Asset {
       ? { map: request.map, ...(request.mapInverted ? { mapInverted: true } : {}) }
       : {}),
     ...(request.packedSlot ? { packedSlot: request.packedSlot } : {}),
-    ...twinOf(request, at),
+    ...(request.modelTextureUses ? { modelTextureUses: request.modelTextureUses } : {}),
   }
 }
 
@@ -326,7 +337,12 @@ export function createLocalBackend({
     const extension = safeExtension(request.extension, request.type)
     return existing?.path
       ? withExtension(existing.path, extension)
-      : freeAssetPath(projectPath(), await folderFor(roleForAsset(request)), name, extension)
+      : freeAssetPath(
+          projectPath(),
+          await folderFor(request.folderRole ?? roleForAsset(request)),
+          name,
+          extension,
+        )
   }
 
   const removeReplacedPoster = async (

@@ -82,15 +82,17 @@ function wrapFor(channel: PbrChannel, material: MaterialSettings): MtlxWrap | un
   return undefined
 }
 
-function imageFor(channel: PbrChannel, file: string, { material }: MaterialState): MtlxImage {
+function imageFor(channel: PbrChannel, file: string, state: MaterialState): MtlxImage {
+  const { material } = state
+  const transform = state.channels[channel]?.transform ?? material
   const wrap = wrapFor(channel, material)
   return {
     input: INPUT_BY_CHANNEL[channel] ?? channel,
     type: typeOf(channel),
     file,
     ...(contentOf(channel) === 'color' ? { colorspace: MTLX_SRGB } : {}),
-    tiling: [material.tiling.x, material.tiling.y],
-    offset: [material.offset.x, material.offset.y],
+    tiling: [transform.tiling.x, transform.tiling.y],
+    offset: [transform.offset.x, transform.offset.y],
     ...(wrap ? { wrap } : {}),
     // The tint the studio multiplies over the base map, written as the `<multiply>` the standard
     // has — carried as a value instead, it would be a colour no other reader applies.
@@ -150,10 +152,26 @@ export function materialFromMtlx(
 
   if (Object.keys(studio).length > 0) {
     const held = parseMaterial(studio)
-    return { ...held, channels: { ...held.channels, ...relinked } }
+    return { ...held, channels: relinkChannels(held.channels, relinked) }
   }
 
   return foreignMaterial(payload, relinked)
+}
+
+function relinkChannels(stored: ChannelSet, relinked: ChannelSet): ChannelSet {
+  const channels = { ...stored }
+  for (const channel of PBR_CHANNELS) {
+    const fresh = relinked[channel]
+    if (!fresh) continue
+    const transform = stored[channel]?.transform
+    const sampling = stored[channel]?.sampling
+    channels[channel] = {
+      ...fresh,
+      ...(transform ? { transform } : {}),
+      ...(sampling ? { sampling } : {}),
+    }
+  }
+  return channels
 }
 
 /** The channels the FILE points at, by the path it spells — empty for a picture nothing answers. */

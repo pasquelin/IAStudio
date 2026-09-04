@@ -7,7 +7,11 @@ import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { leaveProject } from '@/helpers/leaveProject'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { environmentDressOf } from '@/features/skybox/components/environmentDress'
-import { wornModelDress } from '@/features/material/modelDress'
+import {
+  extractedModelDress,
+  prepareExtractedModelDress,
+  wornModelDress,
+} from '@/features/material/modelDress'
 import { createGameStage } from '@/game/gameStage'
 import { assetVersionOf } from '@/stores/assets'
 import { useProject } from '@/stores/project'
@@ -38,6 +42,8 @@ export function GameWindow() {
       chrome: false,
       assetVersion: assetVersionOf,
       wornDress: wornModelDress,
+      defaultModelDress: extractedModelDress,
+      prepareModelDress: prepareExtractedModelDress,
       environmentDress: environmentDressOf,
     })
     renderer.mount(element)

@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PICTURES, type Asset } from '@shared/domain/asset'
+import { PICTURES, type Asset, type ModelTextureUse } from '@shared/domain/asset'
 import {
   MATERIAL_SLOTS,
   NOTHING_WORN,
@@ -16,6 +17,7 @@ import { getBridge } from '@/services/bridge'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 import { openModelMaterial } from '@/features/material/openModelMaterial'
+import { wearExtractedModelMaterial } from '@/features/material/wearExtractedModelMaterial'
 import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from '@/stores/assets'
 import { detachModelFileTexturesInScenes } from '@/stores/sceneEngines'
@@ -37,6 +39,8 @@ export type ModelDressSectionProps = {
   ownTextures?: boolean
   /** Material names read from the model file, in slot order. */
   names?: readonly string[]
+  /** glTF material indices in runtime slot order. */
+  sourceIndices?: readonly (number | null)[]
   slotIndices?: readonly number[]
   /** The active dress and the inactive mode's remembered selection. */
   onChange: (dress: ModelDressRef | null) => void
@@ -53,6 +57,7 @@ export function ModelDressSection({
   extractable,
   ownTextures,
   names = [],
+  sourceIndices = [],
   slotIndices,
   onChange,
   onWearAt,
@@ -60,15 +65,15 @@ export function ModelDressSection({
   const { t } = useTranslation()
   const pictures = useProjectPictures(PICTURES)
   const pictureAssets = useProjectPictureAssets(PICTURES)
-  const hasOwnTextures = ownTextures !== false
+  const [extractedAssetId, setExtractedAssetId] = useState<string | null>(null)
+  const hasOwnTextures = ownTextures !== false && extractedAssetId !== assetId
   const mode = dressMode(dress, hasOwnTextures)
   const imageAssetId = imageAssetIdOf(dress)
 
   const extract = async (): Promise<readonly Asset[] | null> => {
     try {
-      const extracted = await (getBridge()?.assets.extractTextures(assetId) ?? [])
-      detachModelFileTexturesInScenes(assetId)
-      return extracted
+      const extractedPictures = await (getBridge()?.assets.extractTextures(assetId) ?? [])
+      return extractedPictures
     } catch (error) {
       reportFailure('assets.extract', name, error)
       return null
@@ -77,23 +82,56 @@ export function ModelDressSection({
     }
   }
 
-  const assemble = async (slot: number, pictures = pictureAssets): Promise<void> => {
+  const assembleMaterial = async (
+    pictures: readonly Asset[],
+    material: { id: string; name: string; settings?: ModelTextureUse['settings'] },
+  ): Promise<string | null> => {
     const own = pictures.filter(asset => asset.derivedFrom === assetId)
-
     try {
-      const materialId = await openModelMaterial({ id: assetId, name }, own)
-      if (materialId) onWearAt(slot, materialId)
+      return await openModelMaterial(material, own)
     } catch (error) {
       reportFailure('assets.open', name, error)
+      return null
     }
+  }
+
+  const assemble = async (slot: number): Promise<void> => {
+    const materialId = await assembleMaterial(pictureAssets, { id: assetId, name })
+    if (materialId) onWearAt(slot, materialId)
   }
 
   const extractFromHeader = async (): Promise<void> => {
     const own = await extract()
     if (own === null) return
-    const baseColor = own.find(asset => asset.map === 'baseColor')
-    if (slots === 1 && own.length > 1) return assemble(0, own)
-    onChange(slots === 1 && baseColor ? imageDress(baseColor.id, dress) : imageDress(null, dress))
+    if (own.length > 0) {
+      const groups = extractedMaterialGroups(assetId, name, names, sourceIndices, own)
+      const documentIds = Array.from({ length: slots }, () => NOTHING_WORN)
+      const assembled: { slot: number; materialId: string }[] = []
+      for (const group of groups) {
+        const materialId = await assembleMaterial(group.pictures, group.material)
+        if (!materialId) return
+        documentIds[group.slot] = materialId
+        assembled.push({ slot: group.slot, materialId })
+      }
+      const bridge = getBridge()
+      if (bridge) {
+        try {
+          await bridge.assets.update(assetId, { modelMaterialIds: documentIds })
+          await bridge.assets.extractTextures(assetId)
+        } catch (error) {
+          reportFailure('assets.extract', assetId, error)
+          return
+        }
+      }
+      for (const material of assembled) {
+        wearExtractedModelMaterial(assetId, material.slot, material.materialId)
+      }
+      setExtractedAssetId(assetId)
+      detachModelFileTexturesInScenes(assetId)
+      return
+    }
+    detachModelFileTexturesInScenes(assetId)
+    onChange(imageDress(null, dress))
   }
   const appliesImage = slots === 1
   const modes = dressModes(
@@ -186,6 +224,59 @@ export function ModelDressSection({
       )}
     </PropertySection>
   )
+}
+
+type ExtractedMaterialGroup = {
+  slot: number
+  pictures: readonly Asset[]
+  material: { id: string; name: string; settings?: ModelTextureUse['settings'] }
+}
+
+function extractedMaterialGroups(
+  assetId: string,
+  modelName: string,
+  materialNames: readonly string[],
+  sourceIndices: readonly (number | null)[],
+  pictures: readonly Asset[],
+): readonly ExtractedMaterialGroup[] {
+  const uses = pictures.flatMap(picture =>
+    (picture.modelTextureUses ?? []).map(use => ({ picture, use })),
+  )
+  if (uses.length === 0) {
+    return [{ slot: 0, pictures, material: { id: assetId, name: modelName } }]
+  }
+
+  const indices = [...new Set(uses.map(({ use }) => use.materialIndex))].sort((a, b) => a - b)
+  return indices.map((materialIndex, groupIndex) => {
+    const held = uses.filter(({ use }) => use.materialIndex === materialIndex)
+    const first = held[0]?.use
+    const sourceSlot = sourceIndices.indexOf(materialIndex)
+    const namedSlot = first ? materialNames.indexOf(first.materialName) : -1
+    const slot = sourceSlot >= 0 ? sourceSlot : namedSlot >= 0 ? namedSlot : groupIndex
+    return {
+      slot,
+      pictures: held.map(({ picture, use }) => pictureForUse(picture, use)),
+      material: {
+        id: `${assetId}:material:${materialIndex}`,
+        name: first?.materialName ?? `${modelName} ${slot + 1}`,
+        ...(first ? { settings: first.settings } : {}),
+      },
+    }
+  })
+}
+
+function pictureForUse(picture: Asset, use: ModelTextureUse): Asset {
+  return {
+    ...picture,
+    map: use.channel,
+    packedSlot: use.channel ? undefined : use.slot,
+    textureTransform: {
+      tiling: use.settings.tiling,
+      offset: use.settings.offset,
+      rotation: use.settings.rotation,
+    },
+    textureSampling: use.sampling,
+  }
 }
 
 function dressModes(

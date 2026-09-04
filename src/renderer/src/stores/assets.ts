@@ -172,6 +172,12 @@ export function assetsById(state: Pick<AssetsState, 'items'>): ReadonlyMap<strin
   return indexed.byId
 }
 
+export function rememberAssets(assets: readonly Asset[]): void {
+  const byId = new Map(indexed?.byId)
+  for (const asset of assets) byId.set(asset.id, asset)
+  indexed = { items: useAssets.getState().items, byId }
+}
+
 /**
  * Drops what the index remembers — every asset of the project being left.
  *

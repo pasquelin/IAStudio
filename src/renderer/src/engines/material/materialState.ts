@@ -18,6 +18,7 @@ import {
   type PreviewShape,
 } from '@shared/domain/material'
 import { clamp } from '@shared/numeric'
+import type { TextureSampling } from '@shared/domain/textureSampling'
 
 /**
  * The `MeshStandardMaterial` property a channel feeds. Named here rather than borrowed from the
@@ -100,6 +101,8 @@ export type ChannelMap = {
   height: number
   /** Set when the pixels read the other way round — a smoothness map stored as roughness. */
   inverted?: true
+  transform?: Pick<MaterialSettings, 'tiling' | 'offset' | 'rotation'>
+  sampling?: TextureSampling
 }
 
 export type ChannelSet = { [C in PbrChannel]?: ChannelMap }
@@ -239,9 +242,34 @@ function readChannels(value: unknown): ChannelSet {
     }
     if (typeof entry.modelId === 'string') map.modelId = entry.modelId
     if (entry.inverted === true) map.inverted = true
+    const transform = readTransform(entry.transform)
+    if (transform) map.transform = transform
+    const sampling = readSampling(entry.sampling)
+    if (sampling) map.sampling = sampling
     channels[channel] = map
   }
   return channels
+}
+
+function readSampling(value: unknown): ChannelMap['sampling'] {
+  if (!isRecord(value)) return undefined
+  const values = ['channel', 'wrapS', 'wrapT', 'minFilter', 'magFilter']
+  if (!values.every(key => typeof value[key] === 'number' && Number.isFinite(value[key]))) {
+    return undefined
+  }
+  return {
+    channel: Number(value.channel),
+    wrapS: Number(value.wrapS),
+    wrapT: Number(value.wrapT),
+    minFilter: Number(value.minFilter),
+    magFilter: Number(value.magFilter),
+  }
+}
+
+function readTransform(value: unknown): ChannelMap['transform'] {
+  if (!isRecord(value)) return undefined
+  const material = readMaterial(value)
+  return { tiling: material.tiling, offset: material.offset, rotation: material.rotation }
 }
 
 function readPreview(value: unknown): PreviewSettings {

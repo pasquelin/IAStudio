@@ -168,7 +168,7 @@ export abstract class SceneRendererMaterials extends SceneRendererFlight {
     const maps = this.modelMaps.get(nodeId)
     const node = this.applied.get(nodeId)
     if (!maps || node?.type !== 'model') return
-    const dress = node.model.dress
+    const dress = node.model.dress ?? this.options.defaultModelDress?.(node.model.assetId)
     const first = dress ? (this.options.wornDress?.(dress, 0) ?? null) : null
     maps.fileTextures(first?.fileTextures !== false)
     // Every slot, always: a slot dropped from the list goes back to its own material. And one
@@ -227,6 +227,7 @@ export abstract class SceneRendererMaterials extends SceneRendererFlight {
         maps.names(),
         maps.parts(),
         maps.hasFileTextures(),
+        maps.sourceIndices(),
       )
     }
   }
