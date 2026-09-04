@@ -1,4 +1,4 @@
-import { Group, Vector3, type Camera, type Object3D, type Scene } from 'three'
+import { Group, InstancedMesh, Vector3, type Camera, type Object3D, type Scene } from 'three'
 import {
   enabledScatters,
   enabledTerrains,
@@ -13,7 +13,7 @@ import {
   type ScatterRegion,
 } from '@shared/domain/scatterGenerate'
 import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
-import { scatterRebuildOf, type ScatterRebuild } from '@shared/domain/scatterFollow'
+import { layerRegion, scatterRebuildOf, type ScatterRebuild } from '@shared/domain/scatterFollow'
 import { dirtiedChunks } from './reliefSurfaceEdits'
 import { scatterBatchesOf, scatterDrawnOf } from './scatterRender'
 import {
@@ -58,12 +58,14 @@ type ScatterCells = {
   partition: WorldPartition
   group: Group
   queried: CellKey[]
+  wanted: Set<CellKey>
 }
 
 type ScatterState = {
   assets: ScatterAssets
   cells: ScatterCells
   world: SceneWorld | null
+  grounded: Set<string>
 }
 
 export function createScatterSurface(scene: Scene, options: ScatterSurfaceOptions): ScatterSurface {
@@ -78,8 +80,10 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
       partition: buildPartition(),
       group,
       queried: [],
+      wanted: new Set(),
     },
     world: null,
+    grounded: new Set(),
   }
   return {
     object: group,
@@ -102,11 +106,12 @@ function updateScatterVisibility(cells: ScatterCells, camera: Camera): boolean {
       ? Math.min(camera.far, MAX_SPATIAL_REACH)
       : MAX_SPATIAL_REACH
   cells.partition.query(SCATTER_EYE.x, SCATTER_EYE.z, reach, cells.queried)
-  const wanted = new Set(cells.queried)
+  cells.wanted.clear()
+  for (const key of cells.queried) cells.wanted.add(key)
   let changed = false
   for (const [layerId, layerCells] of cells.byLayer) {
     for (const [key, objects] of layerCells) {
-      const visible = wanted.has(key)
+      const visible = cells.wanted.has(key)
       for (const object of objects) {
         if (object.visible === visible) continue
         object.visible = visible
@@ -133,10 +138,11 @@ async function syncScatter(
     const before = previous ? scatterLayerOf(previous, layer.id) : undefined
     const rebuild: ScatterRebuild =
       before === layer && previous
-        ? reliefRebuildOf(layer, previous, world, heightmaps)
+        ? reliefRebuildOf(layer, previous, world, heightmaps, state.grounded)
         : { kind: 'all' }
     rebuildLayer(state.cells, layer, rebuild, ground, state.assets.sources)
   }
+  rememberGrounded(state.grounded, world, heightmaps)
   state.world = world
   options.onReady?.()
 }
@@ -184,11 +190,13 @@ function reliefRebuildOf(
   before: SceneWorld,
   after: SceneWorld,
   heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
+  grounded: ReadonlySet<string>,
 ): ScatterRebuild {
   let rebuild: ScatterRebuild = { kind: 'none' }
   for (const terrain of enabledTerrains(after.layers)) {
     const previous = reliefLayerOf(before, terrain.id)
     const samples = heightmaps?.get(terrain.heightmap.assetId)
+    if (samples && !grounded.has(terrain.id)) return { kind: 'all' }
     if (!previous || !samples) continue
     const next = scatterRebuildOf(
       layer.followRelief,
@@ -236,15 +244,6 @@ function cellRegion(key: CellKey): ScatterRegion {
   }
 }
 
-function layerRegion(layer: ScatterLayer): ScatterRegion {
-  return {
-    minX: layer.origin.x,
-    minZ: layer.origin.z,
-    maxX: layer.origin.x + layer.size.x,
-    maxZ: layer.origin.z + layer.size.z,
-  }
-}
-
 function intersection(left: ScatterRegion, right: ScatterRegion): ScatterRegion {
   return {
     minX: Math.max(left.minX, right.minX),
@@ -264,7 +263,7 @@ function dropCell(cells: ScatterCells, layerId: string, key: CellKey): void {
   const layerCells = cells.byLayer.get(layerId)
   const objects = layerCells?.get(key)
   if (!objects) return
-  for (const object of objects) object.removeFromParent()
+  for (const object of objects) disposeDrawn(object)
   layerCells?.delete(key)
   if (layerCells?.size === 0) cells.byLayer.delete(layerId)
   const references = (cells.references.get(key) ?? 1) - 1
@@ -351,13 +350,33 @@ function reliefLayerOf(world: SceneWorld, id: string): ReliefLayer | undefined {
   return layer?.kind === 'relief' ? layer : undefined
 }
 
+function rememberGrounded(
+  grounded: Set<string>,
+  world: SceneWorld,
+  heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
+): void {
+  grounded.clear()
+  for (const terrain of enabledTerrains(world.layers)) {
+    if (heightmaps?.get(terrain.heightmap.assetId)) grounded.add(terrain.id)
+  }
+}
+
+function disposeDrawn(object: Object3D): void {
+  object.traverse(child => {
+    if (child instanceof InstancedMesh) child.dispose()
+  })
+  object.removeFromParent()
+}
+
 function disposeScatter(state: ScatterState, models: ModelCache): void {
   state.assets.revision += 1
-  for (const object of [...state.cells.group.children]) object.removeFromParent()
+  for (const object of [...state.cells.group.children]) disposeDrawn(object)
   for (const assetId of state.assets.held) models.release(assetId)
   state.assets.held.clear()
   state.assets.sources.clear()
   state.assets.loading.clear()
+  for (const key of state.cells.references.keys()) state.cells.partition.release(key)
   state.cells.byLayer.clear()
   state.cells.references.clear()
+  state.grounded.clear()
 }

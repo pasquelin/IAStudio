@@ -12,6 +12,7 @@ import {
   type ReliefSculpt,
 } from './relief'
 import { DEFAULT_RELIEF_ELEVATION, DEFAULT_RELIEF_ORIGIN, DEFAULT_RELIEF_SIZE } from './scene'
+import type { ReliefMask } from './relief'
 
 function heightAt(
   samples: { width: number; height: number; values: Float32Array },
@@ -371,4 +372,68 @@ describe('overlay masks', () => {
     expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, [empty], 2, 2)).toBeCloseTo(0)
     expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, [painted], 2, 2)).toBeCloseTo(1)
   })
+
+  it('writes no raise or flatten delta where the armed painted mask is zero', () => {
+    const { placed, disk, armed } = paintedArm(samples)
+    const raised = raiseReliefDisk(
+      samples,
+      placed,
+      undefined,
+      disk,
+      1,
+      0,
+      RELIEF_CHUNK_TEXELS,
+      undefined,
+      armed,
+    )
+    const flattened = flattenReliefDisk(
+      samples,
+      placed,
+      undefined,
+      disk,
+      10,
+      1,
+      0,
+      RELIEF_CHUNK_TEXELS,
+      undefined,
+      [],
+      armed,
+    )
+    for (const sculpt of [raised, flattened]) {
+      expect(
+        combinedAt(samples, RELIEF_CHUNK_TEXELS, [{ enabled: true, alpha: 1, sculpt }], 2, 2),
+      ).toBeGreaterThan(0)
+      expect(
+        combinedAt(samples, RELIEF_CHUNK_TEXELS, [{ enabled: true, alpha: 1, sculpt }], 4, 2),
+      ).toBeCloseTo(0)
+    }
+  })
 })
+
+function paintedMask(weights: ReliefSculpt): ReliefMask {
+  return { kind: 'painted', weights }
+}
+
+function paintedArm(samples: { width: number; height: number; values: Float32Array }) {
+  const placed = {
+    origin: DEFAULT_RELIEF_ORIGIN,
+    size: DEFAULT_RELIEF_SIZE,
+    elevation: DEFAULT_RELIEF_ELEVATION,
+  }
+  const paint = withChunkDelta(samples, undefined, {
+    column: 0,
+    row: 0,
+    localX: 2,
+    localZ: 2,
+    delta: 1,
+  })
+  return {
+    placed,
+    disk: {
+      x: placed.origin.x + 2 * (placed.size.x / (samples.width - 1)),
+      z: placed.origin.z + 2 * (placed.size.z / (samples.height - 1)),
+      radius: placed.size.x,
+    },
+    armed: { alpha: 1, mask: paintedMask(paint) },
+  }
+}

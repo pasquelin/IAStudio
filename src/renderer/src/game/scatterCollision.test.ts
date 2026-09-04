@@ -27,7 +27,7 @@ describe('scatterCollisionOf', () => {
     })
   })
 
-  it('adds nothing and reports the layer when its poses exceed the safety cap', () => {
+  it('fills up to the safety cap and reports only the poses it refused', () => {
     const layer = scatterLayer({
       id: 'forest',
       collision: true,
@@ -36,7 +36,7 @@ describe('scatterCollisionOf', () => {
       rules: { ...scatterLayer({ id: 'rules' }).rules, density: 1, spacing: 1 },
     })
     const result = scatterCollisionOf({ ...DEFAULT_WORLD, layers: [layer] }, flat)
-    expect(result.bodies).toEqual([])
-    expect(result.refused).toEqual([{ layerId: 'forest', count: SCATTER_COLLISION_CAP + 1 }])
+    expect(result.bodies).toHaveLength(SCATTER_COLLISION_CAP)
+    expect(result.refused).toEqual([{ layerId: 'forest', count: 1 }])
   })
 })

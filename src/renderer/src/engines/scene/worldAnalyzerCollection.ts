@@ -11,7 +11,7 @@ import {
   type ResourceContent,
 } from './resourceContent'
 import type { SceneNode, SceneState } from './sceneState'
-import type { ClassifiedObject, OptimizationWarning } from './worldAnalyzer'
+import type { ClassifiedObject, OptimizationWarning } from './worldAnalyzerTypes'
 
 type CandidateGroup = { ids: Set<string>; units: Set<string>; forced: boolean }
 type ContentGroup<T> = {

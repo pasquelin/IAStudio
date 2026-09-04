@@ -5,7 +5,7 @@ import type { PackedReliefChunk, ReliefSculpt } from './reliefPacking'
 import { chunkCountAlong, chunkLayout, RELIEF_CHUNK_TEXELS, texelStep } from './reliefMetrics'
 import type { ReliefChunkLayout, ReliefExtent } from './reliefMetrics'
 import type { ReliefMask, ReliefOverlay } from './reliefOverlay'
-import { reliefReader } from './reliefRead'
+import { reliefMaskAt, reliefReader } from './reliefRead'
 import type { ReliefRead } from './reliefRead'
 
 export type ReliefDisk = { x: number; z: number; radius: number }
@@ -58,7 +58,7 @@ export function applyReliefSculpt(
   const { disk, amount } = operation
   const falloff = operation.falloff ?? 0
   if (operation.kind === 'raiseDisk') {
-    return raiseReliefDisk(samples, extent, sculpt, disk, amount, falloff, grain, rows)
+    return raiseReliefDisk(samples, extent, sculpt, disk, amount, falloff, grain, rows, armed)
   }
   if (operation.kind === 'smooth') {
     return smoothReliefDisk(
@@ -101,7 +101,9 @@ export function raiseReliefDisk(
   falloff = 0,
   grain = RELIEF_CHUNK_TEXELS,
   rows?: ReliefChunkRows,
+  armed?: { alpha: number; mask?: ReliefMask },
 ): ReliefSculpt {
+  const maskAt = writeMask(samples, extent, grain, armed)
   return addDiskDeltas(
     samples,
     extent,
@@ -110,7 +112,7 @@ export function raiseReliefDisk(
     falloff,
     grain,
     rows,
-    (_sx, _sz, weight) => amount * weight,
+    (sx, sz, weight) => amount * weight * maskAt(sx, sz),
   )
 }
 
@@ -131,9 +133,10 @@ export function smoothReliefDisk(
   armed?: { alpha: number; mask?: ReliefMask },
 ): ReliefSculpt {
   const read = combinedRead(samples, grain, overlays, sculpt, extent, armed)
+  const maskAt = writeMask(samples, extent, grain, armed, overlays)
   return addDiskDeltas(samples, extent, sculpt, disk, falloff, grain, rows, (sx, sz, weight) => {
     const combined = read(sx, sz)
-    return (neighbourMean(read, samples, sx, sz) - combined) * amount * weight
+    return (neighbourMean(read, samples, sx, sz) - combined) * amount * weight * maskAt(sx, sz)
   })
 }
 
@@ -155,6 +158,7 @@ export function flattenReliefDisk(
   armed?: { alpha: number; mask?: ReliefMask },
 ): ReliefSculpt {
   const read = combinedRead(samples, grain, overlays, sculpt, extent, armed)
+  const maskAt = writeMask(samples, extent, grain, armed, overlays)
   return addDiskDeltas(
     samples,
     extent,
@@ -163,7 +167,7 @@ export function flattenReliefDisk(
     falloff,
     grain,
     rows,
-    (sx, sz, weight) => (target - read(sx, sz)) * amount * weight,
+    (sx, sz, weight) => (target - read(sx, sz)) * amount * weight * maskAt(sx, sz),
   )
 }
 
@@ -189,6 +193,18 @@ export function paintReliefMask(
     () => clamp(amount, 0, 1),
     'mix',
   )
+}
+
+function writeMask(
+  samples: HeightmapSamples,
+  extent: ReliefExtent,
+  grain: number,
+  armed?: { alpha: number; mask?: ReliefMask },
+  overlays: readonly ReliefOverlay[] = [],
+): (sx: number, sz: number) => number {
+  if (!armed?.mask) return () => 1
+  const unmasked = reliefReader(samples, grain, overlays, extent)
+  return (sx, sz) => reliefMaskAt(armed.mask, sx, sz, samples, extent, grain, unmasked)
 }
 
 function combinedRead(

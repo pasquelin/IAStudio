@@ -10,7 +10,7 @@ import { movesOnItsOwn } from '@shared/domain/component'
 import { cachedOn } from '../core/cachedOn'
 import { behavioralGroupingExclusions, type RuntimeRenderArtifact } from './grouping'
 import type { SceneNode, SceneState } from './sceneState'
-import type { RuntimeOptimization, RuntimeWorld } from './runtimeWorldCompiler'
+import type { RuntimeOptimization, RuntimeWorld } from './runtimeWorldTypes'
 import { adaptiveCellsOf, adaptiveRootCellKeyOf, nodeAtWorld } from './adaptivePartition'
 import {
   automaticStaticArtifacts,

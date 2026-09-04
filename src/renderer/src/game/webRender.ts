@@ -14,6 +14,7 @@ import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
 import type { SceneState } from '@/engines/scene/sceneState'
+import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { CompiledModelMesh, CompiledSceneOptimization } from '@shared/domain/gameExport'
 import { buildGameScene, type GameScene } from './gameScene'
 import { createGltfSource } from '@/engines/scene/gltfSource'
@@ -25,6 +26,7 @@ export type WebRender = RenderPort & {
     state: SceneState,
     optimization?: CompiledSceneOptimization,
     modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>,
+    heightmaps?: ReadonlyMap<string, HeightmapSamples>,
   ) => Promise<void>
   resize: (width: number, height: number) => void
   draw: () => void
@@ -55,9 +57,16 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
   let building = 0
 
   return {
-    show: async (state, optimization, modelAssets) => {
+    show: async (state, optimization, modelAssets, heightmaps) => {
       const mine = (building += 1)
-      const built = await buildGameScene(state, assets, optimization, modelAssets, gltf.load)
+      const built = await buildGameScene(
+        state,
+        assets,
+        optimization,
+        modelAssets,
+        gltf.load,
+        heightmaps,
+      )
       if (mine !== building) {
         built.dispose()
         return

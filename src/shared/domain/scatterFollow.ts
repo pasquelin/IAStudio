@@ -44,7 +44,7 @@ export function scatterPosesAfterSculpt(
   return [...kept, ...scatterPosesOf(layer, rebuild.region, ground)]
 }
 
-function layerRegion(layer: ScatterLayer): ScatterRegion {
+export function layerRegion(layer: ScatterLayer): ScatterRegion {
   return {
     minX: layer.origin.x,
     minZ: layer.origin.z,

@@ -30,6 +30,7 @@ export function applyGroundPaint(
   )
   texture.colorSpace = SRGBColorSpace
   texture.needsUpdate = true
+  terrain.groundGeneration += 1
   terrain.material.map?.dispose()
   terrain.material.map = texture
   terrain.material.needsUpdate = true

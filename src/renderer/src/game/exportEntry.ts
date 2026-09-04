@@ -47,7 +47,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     ])
 
     const openingScene = await createOpeningScene(entry, openingSource, assets, ports, modules)
-    const { opening } = openingScene
+    const { opening, heightmaps } = openingScene
     let { world } = openingScene
     rollback.add(() => world.dispose())
     let loop = createGameLoop(world)
@@ -57,7 +57,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     let stopped = false
     /** Seconds of veil the scene that has just arrived still owes. */
     let fading = 0
-    await render.show(opening, entry.optimization, game.modelAssets)
+    await render.show(opening, entry.optimization, game.modelAssets, heightmaps)
 
     /**
      * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -87,14 +87,10 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         world.events.drain()
         world.dispose()
         playing = wanted.id
-        world = worldFromScene(
-          wanted.id,
-          found,
-          ports,
-          { modules },
-          1,
-          await heightmapsOf(found.world.layers, id => heightmapFromBundle(assets, id)),
+        const nextMaps = await heightmapsOf(found.world.layers, id =>
+          heightmapFromBundle(assets, id),
         )
+        world = worldFromScene(wanted.id, found, ports, { modules }, 1, nextMaps)
         loop = createGameLoop(world)
         // The first step of the arrived scene derives every collider — not a gap to catch up on.
         warmed = false
@@ -102,7 +98,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         // stepping the arrived world over the picture of the one just left — and the veil would
         // lift onto it.
         fading = request.fade
-        await render.show(found, wanted.optimization, game.modelAssets)
+        await render.show(found, wanted.optimization, game.modelAssets, nextMaps)
         // A second suspension point, so a second look: the stop above threw this world away.
         if (stopped) return
 
@@ -231,15 +227,9 @@ async function createOpeningScene(
   modules: readonly ScriptModule[],
 ) {
   const opening = sceneFromGltf(source)
-  const world = worldFromScene(
-    entry.id,
-    opening,
-    ports,
-    { modules },
-    1,
-    await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id)),
-  )
-  return { opening, world }
+  const heightmaps = await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id))
+  const world = worldFromScene(entry.id, opening, ports, { modules }, 1, heightmaps)
+  return { opening, world, heightmaps }
 }
 
 /** Every script of the game, already JavaScript: the studio transpiled them at export time. */

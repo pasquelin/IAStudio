@@ -12,6 +12,7 @@ import {
 } from 'three'
 import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
+import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
 import type {
@@ -28,13 +29,14 @@ import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
 import { applyTransform } from '@/engines/scene/pivot'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
-import { runtimeOptimizationOf } from '@/engines/scene/runtimeWorldCompiler'
+import { runtimeArtifactsOf, runtimeOptimizationOf } from '@/engines/scene/runtimeWorldCompiler'
 import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { disposeTree, instanceOf, type ModelSource } from '@/engines/scene/modelCache'
 import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
 import type { SceneAnimations } from '@/engines/scene/animation'
 import { createSceneResources, type SceneResources } from './gameSceneResources'
+import { drapeWorld, type WorldDrape } from './gameSceneWorld'
 import { clipKeyOf } from '@shared/domain/scene'
 import type { ModelRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
@@ -83,6 +85,7 @@ export async function buildGameScene(
   optimization?: CompiledSceneOptimization,
   modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>,
   loadModel?: ModelSource,
+  heightmaps?: ReadonlyMap<string, HeightmapSamples>,
 ): Promise<GameScene> {
   const compiled = new Map(optimization?.nodes.map(node => [node.nodeId, node]) ?? [])
   const needsCarver = state.nodes.some(
@@ -110,7 +113,16 @@ export async function buildGameScene(
     resources.staleInstances,
   )
 
-  return finalizeGameScene({ state, optimization, scene, byEntity, placements, resources })
+  const drape = await drapeWorld(scene, state.world, assets, loadModel, heightmaps)
+  return finalizeGameScene({
+    state,
+    optimization,
+    scene,
+    byEntity,
+    placements,
+    resources,
+    drape,
+  })
 }
 
 function createDress(assets: AssetPort, textures: Map<string, Promise<Texture>>) {
@@ -147,10 +159,11 @@ type FinalizeContext = {
   byEntity: Map<string, Object3D>
   placements: Map<string, (transform: Transform) => void>
   resources: SceneResources
+  drape: WorldDrape
 }
 
 function finalizeGameScene(context: FinalizeContext): GameScene {
-  const { state, optimization, scene, byEntity, placements, resources } = context
+  const { state, optimization, scene, byEntity, placements, resources, drape } = context
   const { staleInstances, animations } = resources
   scene.updateMatrixWorld()
   const instances = createOptimizedGroups(scene)
@@ -162,7 +175,7 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     state.nodes,
     id => byEntity.get(id),
     excluded,
-    runtimeOptimizationOf(state)?.artifacts,
+    runtimeOptimizationOf(state)?.artifacts ?? runtimeArtifactsOf(state.nodes, state.animation),
   )
 
   // 🛑 What a game shows of the world, and what it does NOT: the image-based environment is not
@@ -173,9 +186,11 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
   )
   applyFog(scene, state.world.fog)
 
-  const ground = createGroundPlane()
-  ground.apply(state.world.ground, MESH_COLOUR)
-  scene.add(ground.object)
+  const ground = drape.hideGround ? null : createGroundPlane()
+  if (ground) {
+    ground.apply(state.world.ground, MESH_COLOUR)
+    scene.add(ground.object)
+  }
 
   return {
     scene,
@@ -195,7 +210,8 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     dispose: () => {
       animations.clear()
       instances.dispose()
-      ground.dispose()
+      drape.dispose()
+      ground?.dispose()
       for (const held of resources.textures.values()) void disposeWhenLoaded(held)
       for (const held of resources.models.values()) void disposeModelWhenLoaded(held)
       for (const geometry of resources.ownedModelGeometries) geometry.dispose()
