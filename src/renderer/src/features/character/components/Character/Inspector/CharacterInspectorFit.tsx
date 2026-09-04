@@ -49,7 +49,7 @@ function fitSelectors(state: CharacterFit) {
 }
 
 function fitNotices(state: CharacterFit) {
-  const { t, i18n, refusal, fittingFailed, kind, plan } = state
+  const { t, i18n, refusal, kind, plan } = state
   return (
     <>
       {refusal?.kind === 'plan' && (
@@ -62,7 +62,6 @@ function fitNotices(state: CharacterFit) {
           })}
         </QuietNote>
       )}
-      {fittingFailed && <QuietNote>{t('inspector.rigAdaptiveFailed')}</QuietNote>}
       {!HUMANOID_KINDS.includes(kind) && <QuietNote>{t('inspector.rigNotHumanoid')}</QuietNote>}
     </>
   )
@@ -84,7 +83,7 @@ export function CharacterInspectorFit({ assetId, sample }: CharacterInspectorFit
     <>
       {fitSelectors(state)}
       {fitNotices(state)}
-      <Button disabled={!HUMANOID_KINDS.includes(state.kind) || state.fitting} onClick={state.fit}>
+      <Button disabled={!HUMANOID_KINDS.includes(state.kind)} onClick={state.fit}>
         {state.t('inspector.rigCreate')}
       </Button>
     </>

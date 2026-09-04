@@ -1,7 +1,5 @@
 import { BatchedMesh, InstancedMesh, Mesh } from 'three'
 import type { RuntimePerformance } from '@shared/domain/gameRuntime'
-import type { AdaptiveRigDebug } from './adaptiveGeometricRig'
-import { createAdaptiveRigDebugView, type AdaptiveRigDebugView } from './adaptiveRigDebugView'
 import { subtreesOf } from './sceneState'
 import { geometryBytesOf, statsOf } from './sceneStats'
 import { isDrawn } from './grouping'
@@ -13,8 +11,6 @@ import {
 import { SceneRendererSculpt } from './SceneRendererSculpt'
 
 export abstract class SceneRendererOptimization extends SceneRendererSculpt {
-  private readonly adaptiveRigDebug = new Map<string, AdaptiveRigDebugView>()
-
   analyzeOptimization(ids: readonly string[]): OptimizationPlan {
     const nodes = ids.length === 0 ? this.documentOrder : subtreesOf(this.documentOrder, ids)
     return analyzeOptimization(
@@ -124,23 +120,5 @@ export abstract class SceneRendererOptimization extends SceneRendererSculpt {
       object.layers.test(camera.layers) &&
       (!object.frustumCulled || this.profileFrustum.intersectsObject(object))
     )
-  }
-
-  setAdaptiveRigDebug(nodeId: string, debug: AdaptiveRigDebug | null): void {
-    const held = this.adaptiveRigDebug.get(nodeId)
-    held?.group.removeFromParent()
-    held?.dispose()
-    this.adaptiveRigDebug.delete(nodeId)
-    if (debug) {
-      const view = createAdaptiveRigDebugView(debug)
-      this.adaptiveRigDebug.set(nodeId, view)
-      this.viewport.scene.add(view.group)
-    }
-    this.repaint()
-  }
-
-  dispose(): void {
-    for (const id of [...this.adaptiveRigDebug.keys()]) this.setAdaptiveRigDebug(id, null)
-    super.dispose()
   }
 }
