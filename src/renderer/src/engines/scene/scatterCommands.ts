@@ -52,6 +52,26 @@ export function setScatterSeed(id: string, seed: number): Command<SceneState> {
   return patchScatter(`world:layers:${id}:seed`, id, { seed }, layer => layer.locked)
 }
 
+export function setScatterAssets(id: string, assets: ScatterLayer['assets']): Command<SceneState> {
+  return patchScatter(`world:layers:${id}:assets`, id, { assets }, layer => layer.locked)
+}
+
+export function setScatterCollision(id: string, collision: boolean): Command<SceneState> {
+  return patchScatter(`world:layers:${id}:collision`, id, { collision }, layer => layer.locked)
+}
+
+export function setScatterFollowRelief(
+  id: string,
+  followRelief: ScatterLayer['followRelief'],
+): Command<SceneState> {
+  return patchScatter(
+    `world:layers:${id}:followRelief`,
+    id,
+    { followRelief },
+    layer => layer.locked,
+  )
+}
+
 export function setScatterMask(id: string, mask: ReliefMask | undefined): Command<SceneState> {
   return patchScatter(`world:layers:${id}:mask`, id, { mask }, layer => layer.locked)
 }

@@ -93,6 +93,18 @@ describe('scatterPosesOf', () => {
     expect(scatterPosesOf(scatterLayer({ ...pines(), assets: [] }), region, flat)).toEqual([])
   })
 
+  it('keeps neighbouring poses at least half a spacing apart', () => {
+    const poses = scatterPosesOf(pines(), region, flat)
+    const spacing = pines().rules.spacing
+    for (let i = 0; i < poses.length; i++) {
+      for (let j = i + 1; j < poses.length; j++) {
+        const dx = (poses[i]?.x ?? 0) - (poses[j]?.x ?? 0)
+        const dz = (poses[i]?.z ?? 0) - (poses[j]?.z ?? 0)
+        expect(Math.hypot(dx, dz)).toBeGreaterThanOrEqual(spacing * 0.5 - 1e-6)
+      }
+    }
+  })
+
   it('keeps the same asset at a cell when the neighbour is rebuilt', () => {
     const layer = pines()
     const left = scatterPosesOf(layer, region, flat)

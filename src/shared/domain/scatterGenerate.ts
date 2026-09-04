@@ -75,8 +75,8 @@ function poseAt(
   step: number,
   chance: number,
 ): ScatterPose | null {
-  const x = (gx + scatterHash(layer.seed, gx, gz, LANES.jitterX)) * step
-  const z = (gz + scatterHash(layer.seed, gx, gz, LANES.jitterZ)) * step
+  const x = (gx + 0.25 + scatterHash(layer.seed, gx, gz, LANES.jitterX) * 0.5) * step
+  const z = (gz + 0.25 + scatterHash(layer.seed, gx, gz, LANES.jitterZ) * 0.5) * step
   if (!acceptedAt(layer, rules, ground, region, gx, gz, x, z, chance)) return null
   const slope = ground.slopeAt(x, z)
   const assetId = pickAsset(layer.assets, scatterHash(layer.seed, gx, gz, LANES.asset))

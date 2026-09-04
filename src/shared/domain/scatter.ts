@@ -22,7 +22,7 @@ export const SCATTER_FOLLOW_RELIEF: readonly ScatterFollowRelief[] = ['none', 'b
 export type ScatterRules = {
   /** Accepted points per square metre, before spacing and the mask thin them. */
   density: number
-  /** Minimum metres between two accepted points. */
+  /** Grid step in metres. Jitter stays inside the cell, so neighbours keep at least half a step. */
   spacing: number
   minScale: number
   maxScale: number

@@ -11,6 +11,9 @@ import {
   setScatterEnabled,
   setScatterLocked,
   setScatterMask,
+  setScatterAssets,
+  setScatterCollision,
+  setScatterFollowRelief,
   deriveScatterMask,
 } from './scatterCommands'
 import { EMPTY_SCENE, type SceneState } from './sceneState'
@@ -62,6 +65,21 @@ describe('scatter layer commands', () => {
     const [hidden] = run(named, emptyHistory(), setScatterEnabled('trees', false))
     const [locked] = run(hidden, emptyHistory(), setScatterLocked('trees', true))
     expect(scatterIn(locked)).toMatchObject({ name: 'Pines', enabled: false, locked: true })
+  })
+
+  it('names assets, collision and relief follow on a scatter layer', () => {
+    const [named] = run(
+      sceneOf(),
+      emptyHistory(),
+      setScatterAssets('trees', [{ assetId: 'pine', weight: 1 }]),
+    )
+    const [colliding] = run(named, emptyHistory(), setScatterCollision('trees', true))
+    const [following] = run(colliding, emptyHistory(), setScatterFollowRelief('trees', 'none'))
+    expect(scatterIn(following)).toMatchObject({
+      assets: [{ assetId: 'pine', weight: 1 }],
+      collision: true,
+      followRelief: 'none',
+    })
   })
 
   it('reorders mixed relief and scatter layers by id', () => {
