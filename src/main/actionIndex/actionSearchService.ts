@@ -83,7 +83,13 @@ export function createActionSearchService({
           await indexing
           const values = await embedder.embedQuery(query)
           if (values.length > 0 && embedder.chosen() === model)
-            return await index.search({ query, limit, available, scope, embedding: { model, values } })
+            return await index.search({
+              query,
+              limit,
+              available,
+              scope,
+              embedding: { model, values },
+            })
         } catch (error) {
           onTrouble(messageOf(error))
         } finally {

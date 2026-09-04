@@ -94,9 +94,7 @@ function retrievalQuery(input: AssistantContextRequest): string {
   ].join('\n')
 }
 
-function availableActionResources(
-  input: AssistantContextRequest,
-): readonly ActionResource[] {
+function availableActionResources(input: AssistantContextRequest): readonly ActionResource[] {
   const resources = new Set<ActionResource>()
   for (const step of input.mission.plan.steps) {
     if (step.kind !== 'action' || step.state !== 'completed') continue
