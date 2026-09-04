@@ -187,14 +187,21 @@ async function runTouched(touched, since) {
 }
 
 async function main(since) {
+  let touched
   try {
-    return await runTouched(touchedFiles(since), since)
+    touched = touchedFiles(since)
   } catch (failure) {
+    // Git's own words, not a guess: this catches a missing binary and a corrupt index too, and
+    // naming the revision for those sends the reader hunting a typo they never made. NARROW on
+    // purpose — wrapped around the whole run, a failed wide-guard walk or a broken gate reported
+    // itself as « git failed », with the real stack cut down to `failure.message`.
     const complaint = String(failure.stderr ?? failure.message).trim()
     process.stderr.write(`\nERROR: git failed while reading what changed since '${since}'.\n`)
     process.stderr.write(`${complaint}\n\n`)
     return 1
   }
+
+  return runTouched(touched, since)
 }
 
 // `exitCode` rather than `process.exit`: the failing gate's whole output has just been written,

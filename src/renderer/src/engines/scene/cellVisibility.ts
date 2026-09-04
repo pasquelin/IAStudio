@@ -20,6 +20,8 @@ type VisibilityContext = {
   near: CellKey[]
   boxes: WeakMap<InstancedMesh, Box3>
   drawEvery: () => boolean
+  /** How far past the eye a cell can still hold something visible — see `measuredReach`. */
+  queryReach: number
 }
 
 export function followCells(
@@ -28,7 +30,7 @@ export function followCells(
   cast: ShadowThrow | null | undefined,
 ): boolean {
   // Removing far cells avoids 0.97 ms of matrix walking for 6,912 meshes on 500,000 bodies.
-  const radius = camera ? seenFrom(camera) + context.index.cellSize / 2 : Infinity
+  const radius = camera ? seenFrom(camera) + context.queryReach : Infinity
   if (!camera || !Number.isFinite(radius)) return context.drawEvery()
   prepareCamera(context, camera, radius)
   let moved = synchronizeStandingCells(context)

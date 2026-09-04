@@ -4,6 +4,7 @@ import {
   DOCUMENT_VERSION,
   type DocumentEnvelope,
   type DocumentFile,
+  isDocumentKind,
 } from '@shared/domain/document'
 import { isMtlxDocument, MTLX_HEAD_LIMIT } from '@shared/domain/materialX'
 import { isRecord, readString } from '@shared/guards'
@@ -28,7 +29,7 @@ function mtlxEnvelope(envelope: string): DocumentEnvelope {
   const kind = readString(studio, DOCUMENT_KIND_KEY, '')
   return {
     version: DOCUMENT_VERSION,
-    kind: kind === 'material' ? kind : 'material',
+    kind: isDocumentKind(kind) ? kind : 'material',
     title: '',
     updatedAt: '',
     ...(id ? { id } : {}),

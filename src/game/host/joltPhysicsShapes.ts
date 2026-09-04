@@ -130,17 +130,23 @@ function fillHeightSamples(
   count: number,
 ): void {
   settings.mHeightSamples.reserve(count * count)
-  const finite: number[] = []
+  // 🛑 Swept, never collected then spread: `Math.min(...samples)` passes one argument per sample
+  // and blows the stack — measured between 100 000 and 131 072 on Node's main thread, 360 000 and
+  // 500 000 in a vitest worker. A 1024x1024 relief is past both, and the throw costs its collider.
+  let lowest = Infinity
+  let highest = -Infinity
   for (let z = 0; z < count; z++)
     for (let x = 0; x < count; x++) {
       const held = x < shape.width && z < shape.height ? shape.heights[z * shape.width + x] : NaN
       const height = Number.isFinite(held) ? (held ?? 0) : HEIGHTFIELD_HOLE
       settings.mHeightSamples.push_back(height)
-      if (height !== HEIGHTFIELD_HOLE) finite.push(height)
+      if (height === HEIGHTFIELD_HOLE) continue
+      lowest = Math.min(lowest, height)
+      highest = Math.max(highest, height)
     }
-  if (finite.length === 0) return
-  settings.mMinHeightValue = Math.min(...finite)
-  settings.mMaxHeightValue = Math.max(...finite)
+  if (lowest === Infinity) return
+  settings.mMinHeightValue = lowest
+  settings.mMaxHeightValue = highest
 }
 
 /** The generated declarations leave the vectors empty; the build carries their own methods. */

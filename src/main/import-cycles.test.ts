@@ -16,10 +16,9 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 /**
  * The import cycles this repository still carries, each written as its two files sorted.
  *
- * **Empty, and that is the point of keeping it.** A ratchet, not a target: the list is meant to
- * shrink and never to grow. Nothing else in `pnpm validate` sees a cycle — not the compiler, not
- * eslint, not the tests — so a cycle removed today can come back tomorrow with every gate green,
- * which is what happened to the fifth one. An empty list makes the next one fail on sight.
+ * A ratchet, not a target: the list is meant to shrink and never to grow. Nothing else in
+ * `pnpm validate` sees a cycle — not the compiler, not eslint, not the tests — so a cycle removed
+ * today can come back tomorrow with every gate green, which is what happened to the fifth one.
  *
  * **Nothing here enforces the direction.** A line can be added as easily as removed, and no test
  * can tell a surrender from a fix. Review is what holds it, and that is worth knowing rather than
@@ -28,8 +27,19 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  * It matched `madge --circular` exactly on the day it was written. That is an observation about
  * this tree, not a property of this detector: the two disagree the moment one sees an edge the
  * other does not.
+ *
+ * **The three below are TYPE cycles born of the size split, measured 2026-09-04.** Each is a
+ * module and the half just extracted from it re-importing a type the parent still declares — the
+ * trap `.agents/rules/nommage.md` names. They are debt WRITTEN rather than a guard gone quiet:
+ * `engines/scene/` is being worked on elsewhere, so the shared type moves to a sibling module in a
+ * later batch. The four others of the same day (LinkField, canvasState, relief, usePages) were
+ * broken rather than listed.
  */
-const KNOWN: readonly string[] = []
+const KNOWN: readonly string[] = [
+  'renderer/src/engines/scene/runtimeWorldArtifacts.ts -> renderer/src/engines/scene/runtimeWorldCompiler.ts',
+  'renderer/src/engines/scene/worldAnalyzer.ts -> renderer/src/engines/scene/worldAnalyzerCollection.ts',
+  'renderer/src/engines/scene/worldAnalyzer.ts -> renderer/src/engines/scene/worldAnalyzerSupport.ts',
+]
 
 const sources = (from: string): string[] => {
   const found: string[] = []
@@ -95,36 +105,6 @@ const fixturesReachedBy = (file: string, code: string): string[] =>
 
 const shippedFiles = (): string[] => sources(SRC).filter(file => !TEST_MATERIAL.test(file))
 
-function runtimeSpecifiers(file: string, code: string): string[] {
-  const tree = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true)
-  const found: string[] = []
-  const visit = (node: ts.Node): void => {
-    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
-      const clause = node.importClause
-      const named = clause?.namedBindings
-      const onlyNamedTypes =
-        named &&
-        ts.isNamedImports(named) &&
-        !clause?.name &&
-        named.elements.every(element => element.isTypeOnly)
-      if (!clause?.isTypeOnly && !onlyNamedTypes) found.push(node.moduleSpecifier.text)
-    } else if (
-      ts.isExportDeclaration(node) &&
-      !node.isTypeOnly &&
-      node.moduleSpecifier &&
-      ts.isStringLiteral(node.moduleSpecifier)
-    ) {
-      found.push(node.moduleSpecifier.text)
-    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
-      const [argument] = node.arguments
-      if (argument && ts.isStringLiteral(argument)) found.push(argument.text)
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(tree)
-  return found
-}
-
 describe('what a shipped file may reach', () => {
   it('reaches no fixture', () => {
     const found = shippedFiles().flatMap(file =>
@@ -170,9 +150,12 @@ describe('the import graph', () => {
     const files = sources(SRC)
     const graph = new Map<string, string[]>(
       files.map(file => {
-        const imports = runtimeSpecifiers(file, readFileSync(file, 'utf8'))
+        // `import type` counts as an edge, and that is the whole point: the trap of a size split is
+        // a type the extracted half re-imports from its parent. A walker that skipped type-only
+        // imports answered 0 here on a tree carrying 7 — measured 2026-09-04.
+        const imports = ts.preProcessFile(readFileSync(file, 'utf8'), true, true).importedFiles
         const edges = imports
-          .map(fileName => resolveSpecifier(fileName, file))
+          .map(({ fileName }) => resolveSpecifier(fileName, file))
           .filter((target): target is string => target !== null)
         return [file, edges]
       }),
@@ -192,10 +175,9 @@ describe('the import graph', () => {
   })
 
   /**
-   * And it can fail. While `KNOWN` held entries, the second assertion above was the liveness
-   * probe: a detector gone blind answered nothing and the missing lines reddened. Emptying the
-   * list retired that probe — `[].filter(…)` is empty however broken the walk is — so the proof
-   * that this file can still SEE a cycle has to be made on a graph of its own.
+   * And it can fail. `KNOWN` holding entries makes the second assertion above a liveness probe of
+   * its own — a detector gone blind answers nothing and the missing lines redden — but that probe
+   * dies the day the list empties again, so the proof is also made here, on a graph of its own.
    */
   it('would see a cycle if the tree had one', () => {
     const [a, b] = [join(SRC, 'a.ts'), join(SRC, 'b.ts')]

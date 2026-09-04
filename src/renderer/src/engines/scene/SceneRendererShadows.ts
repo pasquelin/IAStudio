@@ -19,7 +19,7 @@ import { aimLightMarker, holdMarkerSize } from './markerPose'
 import { applyMaterial, applyNegative, applySprite, lightFor } from './threeSync'
 import { createMaterialTextures, createSpriteTexture } from './materialTextures'
 import { reportFailure } from '@/services/diagnostics'
-import { fitShadowCamera, needsShadowFrustum, resizeShadowMap } from './shadows'
+import { fitShadowCamera, limitShadowUpdates, needsShadowFrustum, resizeShadowMap } from './shadows'
 import { applyWireOverlay } from './sceneView'
 import './bvhPatches'
 import { isNegative } from '../csg/carve'
@@ -71,6 +71,16 @@ export abstract class SceneRendererShadows extends SceneRendererModels {
     // The mode itself lands per pane, at render time; what an arriving object needs here is its
     // edges, which are geometry rather than a flag.
     applyWireOverlay(object, this.needsEdges(), this.wireMaterial, this.quadEdges)
+  }
+
+  /**
+   * Hands the viewport back the frame it asked for, with the unchanged lights left out of the
+   * depth pass. Cleared HERE and not on the request: several requests may fall on one frame.
+   */
+  protected limitShadowFrame(refreshAll: boolean): () => void {
+    const restore = limitShadowUpdates(this.objects.values(), refreshAll, this.changedShadowLights)
+    this.changedShadowLights.clear()
+    return restore
   }
 
   /**

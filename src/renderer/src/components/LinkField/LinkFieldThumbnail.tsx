@@ -7,7 +7,7 @@ import { Flyout } from '../Flyout'
 import { Spinner } from '../Spinner'
 import { FIELD_THUMBNAIL } from '../styles'
 import { Thumbnail } from '../Thumbnail'
-import type { LinkOption } from './LinkField'
+import type { LinkOption } from './linkOption'
 import type { LinkPress } from './linkPress'
 
 const PREVIEW_DELAY = 400

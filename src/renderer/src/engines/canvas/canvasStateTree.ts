@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import type { CanvasState, GroupLayer, Layer } from './canvasState'
+import type { CanvasState, GroupLayer, Layer } from './canvasLayers'
 
 export function isGroup(layer: Layer): layer is GroupLayer {
   return layer.kind === 'group'

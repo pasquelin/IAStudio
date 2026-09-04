@@ -17,6 +17,7 @@ import {
   slotOn,
   withFlags,
   sweep,
+  widen,
   worldReach,
   writeMoved,
   type Grouped,
@@ -24,7 +25,7 @@ import {
   type InstancedGroups,
   type Placed,
 } from './grouping'
-import { buildPartition, type CellKey } from './worldPartition'
+import { buildPartition, MAX_SPATIAL_REACH, type CellKey } from './worldPartition'
 import {
   AT,
   grow,
@@ -71,6 +72,8 @@ export function createCellGroups(
     promoted,
     lotOf,
   } = cellGroupState()
+  /** The widest body still held in a cell, so a query reaches the ones straddling its edge. */
+  let queryReach = index.cellSize / 2
   let pass = 0
   let listed: InstancedMesh[] = []
   let listStale = true
@@ -223,6 +226,9 @@ export function createCellGroups(
     lot.mesh.count = lot.ids.length
     lot.mesh.setMatrixAt(slot, placement)
     lot.mesh.instanceMatrix.addUpdateRange(slot * 16, 16)
+    // three caches the sphere at the FIRST ray and never invalidates it, and a lot is kept across
+    // rebuilds: without this a body settled beyond it is silently out of every click.
+    widen(lot.mesh.boundingSphere, lot.mesh.geometry, placement)
     pushSlot(placed, id, { instance: lot.mesh, slot, source })
   }
   /** Whether a body is already drawn by a lot of movers rather than by a cell. */
@@ -265,6 +271,9 @@ export function createCellGroups(
     if (lot && held) {
       lot.mesh.setMatrixAt(held.slot, source.matrixWorld)
       lot.mesh.instanceMatrix.addUpdateRange(held.slot * 16, 16)
+      // The same cached sphere, on the body that KEPT its slot: a rebuild moves it just as a
+      // promotion places it, and three would never widen it again.
+      widen(lot.mesh.boundingSphere, lot.mesh.geometry, source.matrixWorld)
       return lot
     }
     const available =
@@ -374,11 +383,13 @@ export function createCellGroups(
   }
   return {
     rebuild: (nodes, objectOf, excluded) => {
+      const groups = sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)
+      queryReach = measuredReach(groups, index.cellSize / 2)
       pass += 1
       /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
       const seen = new Map<string, string>()
       let instanced = 0
-      for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
+      for (const worn of groups) {
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { ids: [], meshes: [] }
@@ -414,7 +425,11 @@ export function createCellGroups(
     pickable: pickableMeshes,
     nodeIdOf,
     follow: (camera, cast) =>
-      followCells({ host, index, cells, standing, wanted, near, boxes, drawEvery }, camera, cast),
+      followCells(
+        { host, index, cells, standing, wanted, near, boxes, drawEvery, queryReach },
+        camera,
+        cast,
+      ),
     builtAnew: () => {
       const made = built
       built = false
@@ -426,6 +441,20 @@ export function createCellGroups(
     },
     ...sources.fields(clear),
   }
+}
+/**
+ * How far a query has to reach past a cell, from the widest body still filed in one. Anything
+ * past `MAX_SPATIAL_REACH` is drawn apart and would otherwise widen every query of the world.
+ */
+function measuredReach(groups: readonly Grouped[], floor: number): number {
+  let reach = floor
+  for (const worn of groups) {
+    for (const mesh of worn.meshes) {
+      const measured = worldReach(mesh.geometry, mesh.matrixWorld)
+      if (measured <= MAX_SPATIAL_REACH) reach = Math.max(reach, measured)
+    }
+  }
+  return reach
 }
 function cellGroupState() {
   const index = buildPartition()

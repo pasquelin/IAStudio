@@ -248,6 +248,26 @@ describe('the tool chrome', () => {
     expect(opsOf(calls, 'stroke')).toEqual([])
   })
 
+  /**
+   * The one tool whose gesture shows nothing else: a caption is framed before a single glyph
+   * exists, so an unpainted box leaves the person dragging blind.
+   */
+  it('marches the ants round the box a caption is being sized into', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, toolScene({ textBox: RECT }))
+
+    expect(opsOf(calls, 'moveTo')).toEqual([
+      [27.5, 51.5],
+      [27.5, 51.5],
+    ])
+    expect(opsOf(calls, 'lineTo').slice(0, 4)).toEqual([
+      [87.5, 51.5],
+      [87.5, 131.5],
+      [27.5, 131.5],
+      [27.5, 51.5],
+    ])
+  })
+
   it('closes the marquee back onto its first corner, in screen coordinates', () => {
     const { context, calls } = recorder()
     drawOverlay(context, toolScene({ selection: { kind: 'rect', rect: RECT } }))

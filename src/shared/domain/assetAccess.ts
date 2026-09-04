@@ -8,8 +8,25 @@ type AssetForUrl = {
   posterPath?: string
 }
 
-const isLocalPicture = (asset: AssetForUrl): boolean =>
-  asset.location === 'local' && (asset.type === 'image' || asset.type === 'skybox')
+/** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
+export const PICTURES: readonly AssetType[] = ['image', 'skybox']
+
+/**
+ * Whether this asset is a picture the studio can serve from disk. One answer to the question,
+ * because a browser that draws a thumbnail and a texture slot that offers one must not disagree
+ * about which assets qualify.
+ *
+ * The file is not named here: the main process resolves it from the id, for a still copied into
+ * the project as much as for one linked where it lies — and the renderer is never told where
+ * either sits (`withoutSourcePath`). A file gone missing answers 404, which every consumer of
+ * `posterUrl` already falls back from.
+ *
+ * It lives beside `posterUrl` rather than in `asset.ts`, which republishes it: that one already
+ * reads this module, so the answer written there and read here would be a cycle.
+ */
+export function isLocalPicture(asset: AssetForUrl): boolean {
+  return PICTURES.includes(asset.type) && asset.location === 'local'
+}
 
 export const ASSET_PATHS_MAX = 2000
 

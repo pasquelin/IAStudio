@@ -13,7 +13,12 @@ import type { GpuTimer } from './gpuTimer'
 import { type PaneLayout, type PaneRect } from './panes'
 import { type PointerPosition } from './pointer'
 import { ViewportNavigationTarget } from './ViewportNavigationTarget'
-import { ORIGIN, EXTRA_PANE_HEIGHT, aimPivotAhead } from './viewportEngineSupport1'
+import {
+  ORIGIN,
+  EXTRA_PANE_HEIGHT,
+  GPU_TIMED_FRAMES,
+  aimPivotAhead,
+} from './viewportEngineSupport1'
 import type {
   Pinch,
   ViewportEngineOptions,
@@ -154,6 +159,17 @@ export abstract class ViewportState {
   readonly stats: GpuStats = emptyGpuStats()
 
   protected gpuTimer: GpuTimer | null = null
+
+  /**
+   * Frames still owed a GPU measurement. A timer query is not free — it is asked for only while
+   * somebody reads the figure, and `wantsGpuTiming` re-arms it on every read.
+   */
+  protected gpuFramesWanted = 0
+
+  /** Asks for the GPU time of the next few frames. Called by whoever is about to show it. */
+  readonly wantsGpuTiming = (): void => {
+    this.gpuFramesWanted = GPU_TIMED_FRAMES
+  }
 
   /** Whether anything but the camera has moved since the last frame drew its shadow maps. */
   protected shadowsStale = true

@@ -7,6 +7,7 @@ import {
   hostedParts,
   hostedUrl,
   isAssetType,
+  isLocalPicture,
   isSyncStatus,
   isTimeless,
   mediaDuration,
@@ -14,6 +15,7 @@ import {
   roleForAsset,
   withoutSourcePath,
   MASTER_HOST,
+  PICTURES,
   POSTER_HOST,
   type Asset,
 } from './asset'
@@ -54,6 +56,15 @@ describe('which assets have a picture to show', () => {
   // would never come — the whole asset browser would fall back to its icons.
   it('offers a poster for a linked still, whose path the window never sees', () => {
     expect(posterUrl(asset({ type: 'image' }))).toBe(assetUrl('asset-1'))
+  })
+
+  // One answer, read from `PICTURES` on both sides: a kind added there and not to the poster
+  // would draw a « local » thumbnail in the browser while the still slot answered nothing.
+  it('serves every kind the browser calls a picture', () => {
+    for (const type of PICTURES) {
+      expect(isLocalPicture(asset({ type }))).toBe(true)
+      expect(posterUrl(asset({ type }))).toBe(assetUrl('asset-1'))
+    }
   })
 
   it('offers one for a still copied into the project too', () => {

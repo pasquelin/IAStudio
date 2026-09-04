@@ -421,3 +421,27 @@ it('leaves a camera with no shot exactly where its transform puts it', () => {
   engine.dispose()
 })
 // @vitest-environment jsdom
+
+it('reuses unchanged shadow maps while a camera travels on a rail', () => {
+  const engine = staged()
+  const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+  const refresh = vi.spyOn(engine['viewport'], 'requestCameraRender')
+
+  engine.setPlayhead(SECOND)
+
+  // The shot moves what is looked FROM, and a shadow map is drawn from a light.
+  expect(redraw).not.toHaveBeenCalled()
+  expect(refresh).toHaveBeenCalledOnce()
+  engine.dispose()
+})
+
+it('refreshes shadow maps when a camera shot carries a shadow caster', () => {
+  const scene = stagedScene()
+  const engine = stagedOn({ ...scene, nodes: [...scene.nodes, meshNode('carried', 'cam')] })
+  const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+  engine.setPlayhead(SECOND)
+
+  expect(redraw).toHaveBeenCalledOnce()
+  engine.dispose()
+})

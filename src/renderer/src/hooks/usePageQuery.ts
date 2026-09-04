@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import type { Page } from './usePages'
+import type { Page } from './page'
 
 type QueryOptions<T> = {
   key: readonly unknown[]

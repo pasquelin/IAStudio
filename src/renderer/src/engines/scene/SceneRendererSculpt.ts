@@ -83,6 +83,9 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   }
 
   dispose(): void {
+    // Before the cursor goes: a stroke still open closes the document's history gesture, and
+    // nothing else would — closing a tab mid-dab left every later edit in that same undo step.
+    this.endReliefStroke()
     this.brushCursor.dispose()
     this.reliefSculptor?.sculptor.dispose()
     this.reliefSculptor = null
@@ -101,6 +104,14 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
       return
     }
     this.endReliefStroke()
+    this.brushCursor.set({
+      x: 0,
+      y: 0,
+      z: 0,
+      radius: this.sculptRadius,
+      falloff: this.sculptFalloff,
+      visible: false,
+    })
     this.attachGizmo()
   }
 

@@ -170,7 +170,7 @@ export abstract class SceneRendererDisplay extends SceneRendererExport {
   setPostBypassed(bypassed: boolean): void {
     if (bypassed === this.bypassed) return
     this.bypassed = bypassed
-    this.redraw()
+    this.refreshWithoutShadows()
   }
 
   /**

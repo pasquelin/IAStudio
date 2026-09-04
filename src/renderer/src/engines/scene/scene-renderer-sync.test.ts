@@ -10,6 +10,7 @@ import {
   spriteNodeFixture,
 } from './scene-fixtures'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from './sceneState'
+import { type LightDescriptor } from '@shared/domain/scene'
 
 /**
  * What an edit does to a scene already built — and, above all, what it frees. The renderer is
@@ -254,5 +255,137 @@ describe('finding which node was clicked', () => {
     stray.name = 'Cube.001'
 
     expect(nodeIdOf(stray, known)).toBeNull()
+  })
+})
+
+/**
+ * Which of the three refresh intents an edit reaches for. A shadow map is drawn from a light, so
+ * an edit that moved no silhouette can reuse the maps of the frame before — measured at 4.9 ms
+ * against 2.2 for four point lights, which cast six faces each.
+ */
+describe('what an edit asks the viewport for', () => {
+  const watched = (renderer: SceneRenderer) => ({
+    every: vi.spyOn(renderer['viewport'], 'requestRender'),
+    changed: vi.spyOn(renderer['viewport'], 'requestShadowRender'),
+    none: vi.spyOn(renderer['viewport'], 'requestCameraRender'),
+  })
+
+  it('reuses shadow maps when only the selection changes', () => {
+    const nodes = [meshNode('box-1')]
+    const renderer = rendererOf(...nodes)
+    const asked = watched(renderer)
+
+    renderer.apply({ ...EMPTY_SCENE, nodes, selectedIds: ['box-1'] })
+
+    expect(asked.every).not.toHaveBeenCalled()
+    expect(asked.none).toHaveBeenCalled()
+  })
+
+  it('reuses shadow maps when only a mesh surface changes', () => {
+    const original = meshNode('box-1')
+    const renderer = rendererOf(original)
+    const asked = watched(renderer)
+
+    applied(renderer, {
+      ...original,
+      material: { ...original.material, color: '#ff0000', roughness: 0.2, metalness: 0.8 },
+    })
+
+    expect(asked.every).not.toHaveBeenCalled()
+    expect(asked.changed).not.toHaveBeenCalled()
+    expect(asked.none).toHaveBeenCalledOnce()
+  })
+
+  it('refreshes shadow maps when displacement changes a mesh silhouette', () => {
+    const original = meshNode('box-1')
+    const renderer = rendererOf(original)
+    const asked = watched(renderer)
+
+    applied(renderer, {
+      ...original,
+      material: { ...original.material, displacementMap: { assetId: 'height-1' } },
+    })
+
+    expect(asked.every).toHaveBeenCalledOnce()
+  })
+
+  it('reuses shadow maps when a light changes only colour and intensity', () => {
+    const target = { x: 0, y: 0, z: 0 }
+    const lit: LightDescriptor = { kind: 'directional', color: '#ffffff', intensity: 1, target }
+    const renderer = rendererOf(lightNodeFixture('light-1', lit))
+    const asked = watched(renderer)
+
+    applied(renderer, lightNodeFixture('light-1', { ...lit, color: '#ff0000', intensity: 0.5 }))
+
+    expect(asked.changed).not.toHaveBeenCalled()
+    expect(asked.none).toHaveBeenCalled()
+  })
+
+  it('requests a shadow pass when a light projection changes', () => {
+    const renderer = rendererOf(directionalLight('light-1'))
+    const asked = watched(renderer)
+
+    applied(
+      renderer,
+      lightNodeFixture('light-1', {
+        kind: 'directional',
+        color: '#ffffff',
+        intensity: 1,
+        target: { x: 2, y: 0, z: 0 },
+      }),
+    )
+
+    expect(asked.changed).toHaveBeenCalled()
+  })
+
+  it('redraws every shadow map when a light carrying another one moves', () => {
+    const under = {
+      ...lightNodeFixture('light-2', {
+        kind: 'directional',
+        color: '#ffffff',
+        intensity: 1,
+        target: { x: 0, y: 0, z: 0 },
+      }),
+      parentId: 'light-1',
+    }
+    const renderer = rendererOf(directionalLight('light-1'), under)
+    const asked = watched(renderer)
+
+    applied(
+      renderer,
+      lightNodeFixture('light-1', {
+        kind: 'directional',
+        color: '#ffffff',
+        intensity: 1,
+        target: { x: 2, y: 0, z: 0 },
+      }),
+      under,
+    )
+
+    // What hangs UNDER a lamp has its own shadow moved by it, and nothing in the state says so.
+    expect(asked.changed).not.toHaveBeenCalled()
+    expect(asked.every).toHaveBeenCalled()
+  })
+
+  it('reuses shadow maps while the Before/After gesture is held', () => {
+    const renderer = rendererOf(meshNode('box-1'))
+    const asked = watched(renderer)
+
+    renderer.setPostBypassed(true)
+
+    // A composition held off changes the pixels, never a silhouette — and this is a press-and-hold.
+    expect(asked.every).not.toHaveBeenCalled()
+    expect(asked.none).toHaveBeenCalledOnce()
+  })
+
+  it('arms the GPU timer only for whoever reads the runtime profile', () => {
+    const renderer = rendererOf(meshNode('box-1'))
+    const wants = vi.spyOn(renderer['viewport'], 'wantsGpuTiming')
+
+    applied(renderer, meshNode('box-2'))
+    expect(wants).not.toHaveBeenCalled()
+
+    renderer.runtimePerformance()
+    expect(wants).toHaveBeenCalled()
   })
 })

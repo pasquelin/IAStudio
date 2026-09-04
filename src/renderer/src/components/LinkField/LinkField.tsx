@@ -3,15 +3,11 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import { useContextMenu } from '@/hooks/useContextMenu'
 import { SelectField } from '../SelectField'
 import { LinkFieldMenu } from './LinkFieldMenu'
+import type { LinkOption } from './linkOption'
 import type { LinkPress } from './linkPress'
 import { LinkFieldActions } from './LinkFieldActions'
 import { LinkFieldThumbnail } from './LinkFieldThumbnail'
 import { LinkFieldSlot } from './LinkFieldSlot'
-export type LinkOption = {
-  id: string
-  name: string
-  url?: string
-}
 export type LinkFieldProps = {
   label: string
   value: string | null

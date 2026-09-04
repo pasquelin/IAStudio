@@ -48,16 +48,22 @@ export class ViewportFrame extends ViewportInset {
   }
 
   /**
-   * The whole draw inside one query: `begin` early-returns while a query is open, so a frame
-   * that threw would leave its own for the NEXT one to close, timing two frames as if they
-   * were one.
+   * The whole draw inside one query, and only while somebody is reading the figure — a query per
+   * frame is a synchronous round trip to the driver, paid by every viewport that mounts one.
+   *
+   * `begin` early-returns while a query is open, so a frame that threw would leave its own for
+   * the NEXT one to close, timing two frames as if they were one. Hence the `finally`.
    */
   private drawTimedFrame(
     renderer: WebGLRenderer,
     panesDrawn: boolean,
     refreshAllShadows: () => void,
-  ): void {
-    this.gpuTimer?.begin()
+  ): boolean {
+    const timesGpu = this.gpuFramesWanted > 0
+    if (timesGpu) {
+      this.gpuFramesWanted -= 1
+      this.gpuTimer?.begin()
+    }
     try {
       try {
         if (panesDrawn) this.renderPanes(renderer, refreshAllShadows)
@@ -67,8 +73,9 @@ export class ViewportFrame extends ViewportInset {
       }
       this.renderOverlay(renderer)
     } finally {
-      this.gpuTimer?.end()
+      if (timesGpu) this.gpuTimer?.end()
     }
+    return timesGpu
   }
 
   /**
@@ -106,9 +113,9 @@ export class ViewportFrame extends ViewportInset {
     }
     const panesDrawn = !this.insetCoversAll()
     const renderStarted = performance.now()
-    this.drawTimedFrame(renderer, panesDrawn, refreshAllShadows)
+    const timedGpu = this.drawTimedFrame(renderer, panesDrawn, refreshAllShadows)
     recordFrame(renderer.info, this.stats, performance.now() - renderStarted)
-    this.stats.gpuFrameMs = this.gpuTimer?.read() ?? null
+    this.stats.gpuFrameMs = timedGpu ? (this.gpuTimer?.read() ?? null) : null
     renderer.shadowMap.needsUpdate = true
     if (moving || settling) {
       this.requestCameraRender()

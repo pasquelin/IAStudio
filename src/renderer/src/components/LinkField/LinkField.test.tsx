@@ -5,7 +5,8 @@ import { PICTURES, type Asset, type AssetType } from '@shared/domain/asset'
 import { startAssetDrag } from '@/helpers/assetDrag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
-import { LinkField, type LinkFieldProps, type LinkOption } from './LinkField'
+import { LinkField, type LinkFieldProps } from './LinkField'
+import type { LinkOption } from './linkOption'
 
 const OPTIONS: LinkOption[] = [
   { id: 'tex-1', name: 'Brick', url: 'ia-studio://asset/tex-1' },

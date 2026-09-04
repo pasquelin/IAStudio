@@ -3,9 +3,27 @@ import { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { PackedReliefChunk, ReliefSculpt } from '@shared/domain/relief'
 import { DEFAULT_WORLD } from '@shared/domain/scene'
-import type { ReliefSurface } from './reliefSurface'
+import type * as ReliefSurfaceModule from './reliefSurface'
+import type { ReliefSurface, ReliefSurfaceOptions } from './reliefSurface'
 import type { ReliefDiskStroke, ReliefSculptor } from './reliefSculptor'
 import { SceneRenderer } from './SceneRenderer'
+
+/** What the engine handed the surface it built for itself — the wiring, not the surface. */
+const handed: ReliefSurfaceOptions[] = []
+
+vi.mock('./reliefSurface', async importOriginal => {
+  const original = await importOriginal<typeof ReliefSurfaceModule>()
+  return {
+    ...original,
+    createReliefSurface: (
+      scene: Parameters<typeof original.createReliefSurface>[0],
+      options = {},
+    ) => {
+      handed.push(options)
+      return original.createReliefSurface(scene, options)
+    },
+  }
+})
 
 const SCULPT: ReliefSculpt = { chunks: [{ column: 0, row: 0, payload: 'AAAAAA==' }] }
 const CHANGED: PackedReliefChunk[] = [{ column: 0, row: 0, payload: 'AQAAAA==' }]
@@ -141,6 +159,19 @@ describe('relief sculpting through the scene renderer', () => {
     expect(next).toBe(2)
     expect(spies[0]?.dispose).toHaveBeenCalledOnce()
     expect(spies[1]?.dispose).not.toHaveBeenCalled()
+    renderer.dispose()
+  })
+})
+
+describe('where the relief geometry is built', () => {
+  it('gives the surface a builder, so a rebuild leaves the thread that draws', () => {
+    handed.length = 0
+
+    const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+
+    // 🛑 Invariant 6. Without the builder `reliefSurface` falls back to `buildMeshes`, which cuts
+    // the whole terrain inline — and the abort that lets one stroke cancel another goes with it.
+    expect(handed.at(-1)?.builder).toBeDefined()
     renderer.dispose()
   })
 })

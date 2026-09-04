@@ -10,8 +10,14 @@ import { loadLutTexture } from '../postfx/lutSource'
 import './bvhPatches'
 import { STUDIO_INTENSITY } from './sceneRendererSupport1'
 import { capsuleBodiesOf, NO_RIGS } from './sceneRendererSupport2'
+import { shadowOfLightMoved, shadowOfNodeMoved } from './shadowChanges'
+import type { RuntimeRenderArtifact } from './grouping'
+import { runtimeOptimizationOf } from './runtimeWorldArtifacts'
 import { SceneRendererResources } from './SceneRendererResources'
 export abstract class SceneRendererLifecycle extends SceneRendererResources {
+  /** Read here because `apply` is the only step handed the state the compiler wrote it into. */
+  protected runtimeArtifacts: readonly RuntimeRenderArtifact[] | undefined
+  protected abstract canPlayheadMoveShadows(nodes: readonly SceneNode[]): boolean
   protected abstract readonly onPaletteChanged: () => void
   protected abstract applyPalette(): void
   protected abstract applyGround(): void
@@ -143,7 +149,53 @@ export abstract class SceneRendererLifecycle extends SceneRendererResources {
   unmount(): void {
     this.dispose()
   }
+  /**
+   * Syncs what changed and answers whether EVERY shadow map has to be drawn again. The lights
+   * that alone moved are held instead, so a pass can be narrowed to them.
+   */
+  protected syncChangedNodes(nodes: readonly SceneNode[], allChanged: boolean): boolean {
+    for (const node of nodes) {
+      const previous = this.applied.get(node.id)
+      if (previous === node) continue
+      if (
+        (previous?.type !== 'light' || node.type !== 'light') &&
+        shadowOfNodeMoved(previous, node)
+      )
+        allChanged = true
+      this.syncNode(node)
+      if (
+        !allChanged &&
+        previous?.type === 'light' &&
+        node.type === 'light' &&
+        shadowOfLightMoved(previous, node)
+      ) {
+        allChanged = this.lightCarriesAnother(node.id)
+      }
+    }
+    return allChanged
+  }
+
+  /**
+   * A node hung UNDER a light has its shadow moved by it while nothing in the state says so; the
+   * lamp's own glyph does not count. Rare enough to pay the whole pass for.
+   */
+  private lightCarriesAnother(id: string): boolean {
+    const light = this.objects.get(id)
+    if (!light) return false
+    const glyph = this.markers.get(id)
+    if (light.children.some(child => child !== glyph)) return true
+    this.changedShadowLights.add(light)
+    return false
+  }
+
   apply(state: SceneState): void {
+    this.runtimeArtifacts = runtimeOptimizationOf(state)?.artifacts
+    let allShadowsChanged =
+      state.animation !== this.timeline ||
+      state.nodes.length !== this.applied.size ||
+      state.world.ground !== this.world.ground ||
+      state.world.layers !== this.world.layers ||
+      state.world.environment !== this.world.environment
     // Before the nodes, not after: whether a block travels is decided against what the band
     // already drives, and a model built in this very pass has to read the timeline that arrived
     // with it rather than the previous one.
@@ -155,9 +207,7 @@ export abstract class SceneRendererLifecycle extends SceneRendererResources {
         this.documentOrder = state.nodes
         // The identity test sits HERE rather than only inside `syncNode`: on a pass where nothing
         // changed it is the whole of the work, and a call per node cost 4,6 ms on 50 000.
-        for (const node of state.nodes) {
-          if (this.applied.get(node.id) !== node) this.syncNode(node)
-        }
+        allShadowsChanged = this.syncChangedNodes(state.nodes, allShadowsChanged)
         // The set of live ids is built only when one can be missing. `applied` holds every node the
         // last pass knew, so it outgrows the state exactly when a node left it — and building that
         // set of 50 000 strings on every pass was most of what `apply` spent outside its sub-passes.
@@ -220,8 +270,11 @@ export abstract class SceneRendererLifecycle extends SceneRendererResources {
                   // Before the counters and after every placement: the instance matrices are copied from the
                   // world matrices, which nothing past here moves.
                   this.regroupInstances()
+                  this.playheadMovesShadows = this.canPlayheadMoveShadows(state.nodes)
                   this.reportStats()
-                  this.redraw()
+                  if (allShadowsChanged) this.redraw()
+                  else if (this.changedShadowLights.size > 0) this.refreshChangedShadows()
+                  else this.refreshWithoutShadows()
                 }
                 return applyStep6()
               }
