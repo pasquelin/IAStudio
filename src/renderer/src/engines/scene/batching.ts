@@ -93,7 +93,9 @@ export function createBatchedGroups(
         excluded,
         artifacts ? DEFAULT_OPTIMIZATION_POLICY.minBatchSize : undefined,
       )) {
-        sourceMeshes.push(...worn.meshes)
+        // Pushed one by one: a spread of 200 000 arguments overflows the stack, and a single
+        // group of identical bodies reaches that on the levels this engine is measured against.
+        for (const mesh of worn.meshes) sourceMeshes.push(mesh)
         const first = worn.meshes[0]
         if (!first) continue
         const { lot, ids, triangles } = buildLot(worn, placed)
@@ -115,8 +117,8 @@ export function createBatchedGroups(
       return batched
     },
 
-    moved: (ids, objectOf) => {
-      refreshMovedSources(sources, ids, objectOf)
+    moved: (rawIds, objectOf) => {
+      const ids = refreshMovedSources(sources, rawIds, objectOf)
       let touched = false
       for (const id of ids) {
         const slots = placed.get(id)

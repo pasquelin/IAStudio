@@ -470,3 +470,21 @@ describe('a cell whose bodies moved without changing cell', () => {
     expect(drawnIn(scene)).toHaveLength(1)
   })
 })
+
+it('drops the sources of a cell the view no longer stands', () => {
+  const scene = host()
+  const wide = new BoxGeometry(4 * CELL_SIZE, 1, 4 * CELL_SIZE)
+  const places = [
+    ...inOneCell(WORTH_INSTANCING / 2, 3 * CELL_SIZE),
+    ...inOneCell(WORTH_INSTANCING / 2, 20 * CELL_SIZE),
+  ]
+  const { nodes, objects } = bodies(places, wide)
+  const groups = createCellGroups(scene)
+  groups.rebuild(nodes, id => objects.get(id))
+  groups.follow?.(looking(0, 500))
+
+  // What the editor casts against is what the view stands: a click on empty space must not
+  // select a body the follow put away and nothing draws.
+  expect(groups.pickable()).toHaveLength(1)
+  expect(groups.editorPickable()).toHaveLength(WORTH_INSTANCING / 2)
+})

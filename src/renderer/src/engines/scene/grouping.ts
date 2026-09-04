@@ -200,18 +200,22 @@ export type HeldOutOfDraw = {
 /**
  * The sources of what MOVED, composed against the parents the move has just written. A primitive
  * of a grouped model hangs from no walk, so nothing else ever reaches it.
+ * Answers the ids it read: `moved` walks them again, and an `Iterable` may be a generator whose
+ * second walk finds nothing — no matrix written, and not a word about it.
  */
 export function refreshMovedSources(
   sources: HeldOutOfDraw,
   ids: Iterable<string>,
   objectOf: (id: string) => Object3D | undefined,
-): void {
+): readonly string[] {
+  const read = [...ids]
   const parents = new Set<Object3D>()
-  for (const id of ids) {
+  for (const id of read) {
     const object = objectOf(id)
     if (object) parents.add(object)
   }
   sources.refresh(parents)
+  return read
 }
 
 /**

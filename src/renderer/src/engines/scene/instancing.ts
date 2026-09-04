@@ -59,7 +59,9 @@ export function createInstancedGroups(
 
       let instanced = 0
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
-        sourceMeshes.push(...worn.meshes)
+        // Pushed one by one: a spread of 200 000 arguments overflows the stack, and a single
+        // group of identical bodies reaches that on the levels this engine is measured against.
+        for (const mesh of worn.meshes) sourceMeshes.push(mesh)
         const first = worn.meshes[0]
         if (!first) continue
         buildRegions(worn, first, placed, host, drawn, idsByInstance)
@@ -68,10 +70,8 @@ export function createInstancedGroups(
       return instanced
     },
 
-    moved: (ids, objectOf) => {
-      refreshMovedSources(sources, ids, objectOf)
-      return writeMoved(placed, ids, objectOf)
-    },
+    moved: (ids, objectOf) =>
+      writeMoved(placed, refreshMovedSources(sources, ids, objectOf), objectOf),
 
     drawn: () => drawn,
 
