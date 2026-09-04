@@ -3,7 +3,7 @@ import { reliefLayer, type GeometryDescriptor } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { meshNode, modelNode, spriteNode } from '@/engines/scene/nodeFactory'
-import { runtimeAssetIds, runtimeTextureAssetIds } from './runtimeAssetIds'
+import { runtimeAssetIds, runtimeModelAssetIds, runtimeTextureAssetIds } from './runtimeAssetIds'
 
 describe('assets reachable from an exported runtime', () => {
   it('keeps only assets the standalone runtime reads, once in first-use order', () => {
@@ -37,5 +37,6 @@ describe('assets reachable from an exported runtime', () => {
 
     expect(runtimeAssetIds(state)).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
     expect(runtimeTextureAssetIds(state)).toEqual(['shared', 'height'])
+    expect(runtimeModelAssetIds(state)).toEqual(['model'])
   })
 })

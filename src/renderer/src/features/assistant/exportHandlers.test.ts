@@ -8,6 +8,10 @@ import { runAction } from './executor'
 import { modelNode } from '@/engines/scene/nodeFactory'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
+const { compileLossyModels } = vi.hoisted(() => ({
+  compileLossyModels: vi.fn(async () => new Map()),
+}))
+vi.mock('@/engines/scene/lossyModelCompiler', () => ({ compileLossyModels }))
 vi.mock('@/engines/scene/lossyTextureCompiler', () => ({
   compileLossyTextures: vi.fn(async () => []),
 }))
@@ -38,6 +42,8 @@ describe('a game written out of the studio', () => {
       known: true,
     } as never)
     vi.stubGlobal('Worker', class {} as never)
+    compileLossyModels.mockReset()
+    compileLossyModels.mockResolvedValue(new Map())
   })
 
   it('hands over every scene of the project, as the glTF a save writes', async () => {
@@ -58,6 +64,32 @@ describe('a game written out of the studio', () => {
     await runAction('game.export', {})
 
     expect(asked[0]?.scenes[0]?.assetIds).toEqual(['tree-glb'])
+  })
+
+  it('attaches export-time generated model levels to their logical node', async () => {
+    const node = modelNode('tree-glb', 'Tree')
+    compileLossyModels.mockResolvedValueOnce(
+      new Map([
+        [
+          'tree-glb',
+          [
+            {
+              meshIndex: 0,
+              lodMeshes: [{ position: '', normal: '', uv: '' }],
+            },
+          ],
+        ],
+      ]),
+    )
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [node] })
+    const asked = exporting()
+
+    await runAction('game.export', { generateLods: true })
+
+    expect(asked[0]?.scenes[0]?.optimization?.nodes).toContainEqual({
+      nodeId: node.id,
+      modelMeshes: [{ meshIndex: 0, lodMeshes: [{ position: '', normal: '', uv: '' }] }],
+    })
   })
 
   /** 🛑 A caller that named a scene and got the FIRST one exported the wrong game, saying `ok`. */

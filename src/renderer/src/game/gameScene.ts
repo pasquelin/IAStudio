@@ -85,8 +85,12 @@ export async function buildGameScene(
   const textures = new Map<string, Promise<Texture>>()
   const models = new Map<string, Promise<Object3D>>()
   const modelMeshes = new WeakSet<Mesh>()
+  const ownedModelGeometries = new Set<BufferGeometry>()
 
-  const modelOf = async (assetId: string): Promise<Object3D | null> => {
+  const modelOf = async (
+    assetId: string,
+    modelPlan: CompiledNodeGeometry['modelMeshes'],
+  ): Promise<Object3D | null> => {
     const url = assets.urlOf({ kind: 'asset', id: assetId })
     if (!url || !loadModel) return null
     try {
@@ -96,7 +100,7 @@ export async function buildGameScene(
       object.traverse(child => {
         if (child instanceof Mesh) modelMeshes.add(child)
       })
-      return object
+      return applyCompiledModel(object, modelPlan, ownedModelGeometries, modelMeshes)
     } catch {
       return null
     }
@@ -205,6 +209,7 @@ export async function buildGameScene(
       ground.dispose()
       for (const held of textures.values()) void disposeWhenLoaded(held)
       for (const held of models.values()) void disposeModelWhenLoaded(held)
+      for (const geometry of ownedModelGeometries) geometry.dispose()
       scene.traverse(one => {
         if (!(one instanceof Mesh)) return
         if (modelMeshes.has(one)) return
@@ -241,7 +246,10 @@ async function objectOf(
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
   dress: (material: MeshStandardMaterial, assetId: string) => void,
   carve: Carve,
-  modelOf: (assetId: string) => Promise<Object3D | null>,
+  modelOf: (
+    assetId: string,
+    modelPlan: CompiledNodeGeometry['modelMeshes'],
+  ) => Promise<Object3D | null>,
 ): Promise<Object3D | null> {
   if (node.type === 'mesh') {
     const material = materialOf(node.material, dress)
@@ -275,9 +283,58 @@ async function objectOf(
     return object
   }
   if (node.type === 'light') return lightFor(node.light)
-  if (node.type === 'model') return await modelOf(node.model.assetId)
+  if (node.type === 'model') return await modelOf(node.model.assetId, compiled?.modelMeshes)
   // A group carries children. Cameras, paths, sprites and text belong to the editor renderer.
   return node.type === 'group' ? new Object3D() : null
+}
+
+function applyCompiledModel(
+  root: Object3D,
+  plan: CompiledNodeGeometry['modelMeshes'],
+  owned: Set<BufferGeometry>,
+  modelMeshes: WeakSet<Mesh>,
+): Object3D {
+  if (!plan) return root
+  let optimized = root
+  const meshes: Mesh[] = []
+  root.traverse(object => {
+    if (object instanceof Mesh) meshes.push(object)
+  })
+  for (const item of plan) {
+    const mesh = meshes[item.meshIndex]
+    if (!mesh) continue
+    if (item.geometry) {
+      const geometry = compiledGeometryOf(item.geometry)
+      mesh.geometry = geometry
+      owned.add(geometry)
+      continue
+    }
+    if (!item.lodMeshes || item.lodMeshes.length === 0) continue
+    const parent = mesh.parent
+    const lod = new LOD()
+    lod.name = mesh.name
+    lod.position.copy(mesh.position)
+    lod.quaternion.copy(mesh.quaternion)
+    lod.scale.copy(mesh.scale)
+    mesh.position.set(0, 0, 0)
+    mesh.quaternion.identity()
+    mesh.scale.set(1, 1, 1)
+    if (parent) parent.add(lod)
+    else optimized = lod
+    lod.addLevel(mesh, 0)
+    mesh.geometry.computeBoundingSphere()
+    const radius = mesh.geometry.boundingSphere?.radius ?? 1
+    for (const [index, compiled] of item.lodMeshes.entries()) {
+      const geometry = compiledGeometryOf(compiled)
+      owned.add(geometry)
+      const level = new Mesh(geometry, mesh.material)
+      modelMeshes.add(level)
+      level.castShadow = mesh.castShadow
+      level.receiveShadow = mesh.receiveShadow
+      lod.addLevel(level, radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index] ?? 1))
+    }
+  }
+  return optimized
 }
 
 function compiledGeometryOf(mesh: CompiledMeshGeometry): BufferGeometry {
@@ -285,6 +342,9 @@ function compiledGeometryOf(mesh: CompiledMeshGeometry): BufferGeometry {
   geometry.setAttribute('position', new BufferAttribute(floatsFrom(mesh.position), 3))
   if (mesh.normal) geometry.setAttribute('normal', new BufferAttribute(floatsFrom(mesh.normal), 3))
   if (mesh.uv) geometry.setAttribute('uv', new BufferAttribute(floatsFrom(mesh.uv), 2))
+  if (mesh.tangent)
+    geometry.setAttribute('tangent', new BufferAttribute(floatsFrom(mesh.tangent), 4))
+  if (mesh.color) geometry.setAttribute('color', new BufferAttribute(floatsFrom(mesh.color), 3))
   if (mesh.index) geometry.setIndex(new BufferAttribute(uintsFrom(mesh.index), 1))
   return geometry
 }

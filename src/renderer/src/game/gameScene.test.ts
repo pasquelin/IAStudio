@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { BatchedMesh, InstancedMesh, LOD, Matrix4, Mesh, type Object3D } from 'three'
-import type { MeshStandardMaterial } from 'three'
+import {
+  BatchedMesh,
+  BoxGeometry,
+  InstancedMesh,
+  LOD,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  type Object3D,
+} from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
@@ -185,6 +193,32 @@ describe('a scene as a game draws it', () => {
     expect(rendered instanceof LOD ? rendered.levels.map(level => level.distance) : []).toEqual([
       0, 20,
     ])
+  })
+
+  it('adds exported distant levels to a static mesh while preserving its exact model LOD0', async () => {
+    const source = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
+    const node = modelNode('model-1', 'Model')
+    const triangle = {
+      position: 'AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA',
+      normal: '',
+      uv: '',
+      index: 'AAAAAAEAAAACAAAA',
+    }
+    const built = await buildGameScene(
+      scene([node]),
+      { urlOf: () => 'assets/model.glb' },
+      { nodes: [{ nodeId: node.id, modelMeshes: [{ meshIndex: 0, lodMeshes: [triangle] }] }] },
+      async () => source,
+    )
+    const lods: LOD[] = []
+    built.byEntity.get(node.id)?.traverse(object => {
+      if (object instanceof LOD) lods.push(object)
+    })
+
+    expect(lods).toHaveLength(1)
+    expect(lods[0]?.levels).toHaveLength(2)
+    expect(lods[0]?.levels[0]?.object instanceof Mesh).toBe(true)
+    expect(lods[0]?.levels[1]?.object instanceof Mesh).toBe(true)
   })
 
   /** A game has no picture for a texture the project has lost, and draws the shape all the same. */

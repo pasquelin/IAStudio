@@ -26,6 +26,17 @@ export function runtimeTextureAssetIds(state: SceneState): readonly string[] {
   return [...found]
 }
 
+/** Imported geometry assets eligible for an explicit model simplification pass. */
+export function runtimeModelAssetIds(state: SceneState): readonly string[] {
+  const found = new Set<string>()
+  for (const node of state.nodes) {
+    if (node.type === 'model' && node.optimization?.mode !== 'exclude')
+      found.add(node.model.assetId)
+  }
+  found.delete('')
+  return [...found]
+}
+
 function assetOfMaterial(material: MaterialDescriptor, found: Set<string>): void {
   if (material.map) found.add(material.map.assetId)
 }

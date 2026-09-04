@@ -73,6 +73,7 @@ export type CompiledNodeGeometry = {
   lodCarved?: readonly CsgGraph[]
   mesh?: CompiledMeshGeometry
   lodMeshes?: readonly CompiledMeshGeometry[]
+  modelMeshes?: readonly CompiledModelMesh[]
 }
 
 /** Tight runtime buffers encoded once during export, never recomputed by the shipped game. */
@@ -81,6 +82,15 @@ export type CompiledMeshGeometry = {
   normal: string
   uv: string
   index?: string
+  tangent?: string
+  color?: string
+}
+
+export type CompiledModelMesh = {
+  meshIndex: number
+  geometry?: CompiledMeshGeometry
+  /** Distant levels only: the loaded model remains exact LOD0. */
+  lodMeshes?: readonly CompiledMeshGeometry[]
 }
 
 export type CompiledSceneOptimization = {

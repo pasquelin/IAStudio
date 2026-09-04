@@ -20,9 +20,14 @@ import type { ActionHandlers } from './actionHandler'
 import { boolOf, oneOf, textOf } from './actionInputs'
 import { messageOf } from '@shared/guards'
 import { projectName } from '@shared/domain/project'
-import { runtimeAssetIds, runtimeTextureAssetIds } from '@/game/runtimeAssetIds'
+import {
+  runtimeAssetIds,
+  runtimeModelAssetIds,
+  runtimeTextureAssetIds,
+} from '@/game/runtimeAssetIds'
 import { compileLossyWorldGeometry } from '@/engines/scene/lossyWorldCompiler'
 import { compileLossyTextures } from '@/engines/scene/lossyTextureCompiler'
+import { compileLossyModels } from '@/engines/scene/lossyModelCompiler'
 import { createCsgEvaluator } from '@/engines/csg/csgEvaluator'
 import CsgWorker from '@/engines/csg/csg.worker?worker'
 
@@ -142,19 +147,37 @@ async function scenesOfProject(
 ): Promise<CompiledProjectScenes> {
   const listed = documentsOfKind(useDocuments.getState(), 'scene')
   await Promise.all(listed.map(one => loadSceneSource(one.id)))
+  const states = new Map(
+    listed.flatMap(one => {
+      const state = montageSceneOf(one.id)
+      return state ? [[one.id, state]] : []
+    }),
+  )
+  const modelAssetIds = new Set<string>()
+  for (const state of states.values()) {
+    for (const id of runtimeModelAssetIds(state)) modelAssetIds.add(id)
+  }
+  const modelPlans = await compileLossyModels([...modelAssetIds], lossyOptimization, signal)
   const csg = createCsgEvaluator({ spawn: () => new CsgWorker(), onFailure: () => undefined })
   const abort = (): void => csg.dispose()
   signal?.addEventListener('abort', abort, { once: true })
   try {
     const scenes = await Promise.all(
       listed.map(async one => {
-        const state = montageSceneOf(one.id)
+        const state = states.get(one.id)
         if (!state) return null
-        const optimization = await compileLossyWorldGeometry(
+        const geometryPlan = await compileLossyWorldGeometry(
           state,
           lossyOptimization,
           async graph => await csg.acquire(graph),
         )
+        const modelNodes = state.nodes.flatMap(node => {
+          if (node.type !== 'model' || node.optimization?.mode === 'exclude') return []
+          const modelMeshes = modelPlans.get(node.model.assetId)
+          return modelMeshes ? [{ nodeId: node.id, modelMeshes }] : []
+        })
+        const optimizedNodes = [...(geometryPlan?.nodes ?? []), ...modelNodes]
+        const optimization = optimizedNodes.length > 0 ? { nodes: optimizedNodes } : undefined
         return {
           id: one.id,
           title: one.title,
@@ -167,10 +190,8 @@ async function scenesOfProject(
     if (signal?.aborted) throw new DOMException('World compilation aborted', 'AbortError')
     const available = scenes.flatMap(scene => (scene ? [scene] : []))
     const textureAssetIds = new Set<string>()
-    for (const one of listed) {
-      const state = montageSceneOf(one.id)
-      if (state) for (const id of runtimeTextureAssetIds(state)) textureAssetIds.add(id)
-    }
+    for (const state of states.values())
+      for (const id of runtimeTextureAssetIds(state)) textureAssetIds.add(id)
     return { scenes: available, textureAssetIds: [...textureAssetIds] }
   } finally {
     signal?.removeEventListener('abort', abort)

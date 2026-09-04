@@ -59,13 +59,19 @@ async function compileGraphs(
   return geometries.flatMap(geometry => (geometry ? [compiledMeshOf(geometry)] : []))
 }
 
-function compiledMeshOf(geometry: BufferGeometry): CompiledMeshGeometry {
+export function compiledMeshOf(geometry: BufferGeometry): CompiledMeshGeometry {
   const index = geometry.getIndex()
   return {
     position: floatAttributeBase64(geometry.getAttribute('position')),
     normal: floatAttributeBase64(geometry.getAttribute('normal')),
     uv: floatAttributeBase64(geometry.getAttribute('uv')),
     ...(index ? { index: attributeBase64(index) } : {}),
+    ...(geometry.getAttribute('tangent')
+      ? { tangent: floatAttributeBase64(geometry.getAttribute('tangent')) }
+      : {}),
+    ...(geometry.getAttribute('color')
+      ? { color: floatAttributeBase64(geometry.getAttribute('color')) }
+      : {}),
   }
 }
 
