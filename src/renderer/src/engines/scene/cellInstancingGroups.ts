@@ -12,6 +12,7 @@ import {
 import {
   dropSlotsOf,
   heldOutOfDraw,
+  refreshMovedSources,
   pushSlot,
   shapeAndPaint,
   slotOn,
@@ -414,6 +415,7 @@ export function createCellGroups(
       return instanced
     },
     moved: (ids, objectOf) => {
+      refreshMovedSources(sources, ids, objectOf)
       // Promoted BEFORE the write, so the matrix lands in the lot the body now belongs to.
       for (const id of ids) if (!onLot(id)) promote(id, objectOf)
       const touched = writeMoved(placed, ids, objectOf)

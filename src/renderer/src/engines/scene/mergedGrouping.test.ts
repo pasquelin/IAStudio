@@ -43,7 +43,6 @@ it('merges nearby static shapes while resolving a picked face to its source UUID
   expect(groups.moved(['second'], id => objects.get(id))).toBe(true)
   host.updateMatrixWorld(true)
   ray.set(new Vector3(15, 0, 10), new Vector3(0, 0, -1))
-  expect(groups.editorPickable()).toEqual(groups.pickable())
   const moved = groups.editorPickable().flatMap(object => ray.intersectObject(object))[0]
   if (!moved) throw new Error('missing moved hit')
   expect(groups.nodeIdOf(moved)).toBe('second')

@@ -124,7 +124,9 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
     const stride = Math.max(1, Math.floor(objects.length / VALIDATION_PICK_SAMPLES))
     const targets = [
       ...[...this.objects.values()].filter(object => !this.instances.holdsSource(object)),
-      ...this.instances.pickable(),
+      // What `nodeAt` casts against, never the lots: the recipe is the only automated proof that
+      // a ray comes back with the node it was aimed at, and it must prove the editor's own path.
+      ...this.instances.editorPickable(),
     ]
     const raycaster = withEveryLayer(new Raycaster())
     return objects

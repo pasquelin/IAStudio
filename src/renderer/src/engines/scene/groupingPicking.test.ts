@@ -148,3 +148,74 @@ it('exposes the detached primitives of a grouped model to the editor picker', ()
   expect(targets).toHaveLength(WORTH_INSTANCING * 2)
   expect(hit?.object.parent?.name).toBe('model-5')
 })
+
+it('keeps a moved model primitive pickable at its new position', () => {
+  const scene = new Object3D()
+  const groups = createCellGroups(scene)
+  const geometry = new BoxGeometry()
+  const material = new MeshStandardMaterial()
+  const nodes = Array.from({ length: WORTH_INSTANCING }, (_unused, at) =>
+    modelNodeFixture(`model-${at}`),
+  )
+  const objects = new Map(
+    nodes.map((node, at) => {
+      const holder = new Group()
+      holder.name = node.id
+      holder.position.x = at * 3
+      holder.add(new Mesh(geometry, material), new Mesh(geometry, material))
+      markInstanceable(holder, true)
+      scene.add(holder)
+      return [node.id, holder]
+    }),
+  )
+  scene.updateMatrixWorld(true)
+  groups.rebuild(nodes, id => objects.get(id))
+
+  const moved = objects.get('model-5')
+  if (!moved) throw new Error('model fixture missing')
+  moved.position.set(500, 0, 0)
+  // Exactly what SceneRendererGrouping does on a move, and nothing more.
+  moved.updateWorldMatrix(true, false)
+  groups.moved(['model-5'], id => objects.get(id))
+
+  const raycaster = new Raycaster(new Vector3(500, 10, 0), new Vector3(0, -1, 0))
+  raycaster.layers.enableAll()
+  const hit = raycaster.intersectObjects([...groups.editorPickable()], false)[0]
+
+  expect(hit?.object.parent?.name).toBe('model-5')
+})
+
+it('draws a moved model primitive at its new position', () => {
+  const scene = new Object3D()
+  const groups = createCellGroups(scene)
+  const geometry = new BoxGeometry()
+  const material = new MeshStandardMaterial()
+  const nodes = Array.from({ length: WORTH_INSTANCING }, (_unused, at) =>
+    modelNodeFixture(`model-${at}`),
+  )
+  const objects = new Map(
+    nodes.map((node, at) => {
+      const holder = new Group()
+      holder.name = node.id
+      holder.position.x = at * 3
+      holder.add(new Mesh(geometry, material), new Mesh(geometry, material))
+      markInstanceable(holder, true)
+      scene.add(holder)
+      return [node.id, holder]
+    }),
+  )
+  scene.updateMatrixWorld(true)
+  groups.rebuild(nodes, id => objects.get(id))
+
+  const moved = objects.get('model-5')
+  if (!moved) throw new Error('model fixture missing')
+  moved.position.set(500, 0, 0)
+  moved.updateWorldMatrix(true, false)
+  groups.moved(['model-5'], id => objects.get(id))
+
+  const raycaster = new Raycaster(new Vector3(500, 10, 0), new Vector3(0, -1, 0))
+  raycaster.layers.enableAll()
+  const hit = raycaster.intersectObjects([...groups.pickable()], false)[0]
+
+  expect(hit && groups.nodeIdOf(hit)).toBe('model-5')
+})

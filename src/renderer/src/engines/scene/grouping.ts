@@ -86,7 +86,10 @@ export type InstancedGroups = {
    * `nodeIdOf`, independently of the representation that draws it.
    */
   pickable: () => readonly Mesh[]
-  /** The cheapest representation that preserves this strategy's editor selection semantics. */
+  /**
+   * What the EDITOR casts against: every source, so a hit names its node by the object walk. It
+   * is not the cheap one — `pickable` is — and it has no bounds tree; a hot path wants that one.
+   */
   editorPickable: () => readonly Mesh[]
   nodeIdOf: (hit: Intersection) => string | null
   /**
@@ -186,11 +189,28 @@ export type HeldSourceFields = Pick<
 export type HeldOutOfDraw = {
   hold: (meshes: readonly Mesh[]) => void
   holds: (object: Object3D) => boolean
-  refresh: () => void
+  refresh: (under?: ReadonlySet<Object3D>) => void
   hang: () => void
   drop: () => void
   /** Disposal puts the sources back in the walk: nothing draws for them any more. */
   fields: (clear: () => void) => HeldSourceFields
+}
+
+/**
+ * The sources of what MOVED, composed against the parents the move has just written. A primitive
+ * of a grouped model hangs from no walk, so nothing else ever reaches it.
+ */
+export function refreshMovedSources(
+  sources: HeldOutOfDraw,
+  ids: Iterable<string>,
+  objectOf: (id: string) => Object3D | undefined,
+): void {
+  const parents = new Set<Object3D>()
+  for (const id of ids) {
+    const object = objectOf(id)
+    if (object) parents.add(object)
+  }
+  sources.refresh(parents)
 }
 
 /**
@@ -244,11 +264,12 @@ export function heldOutOfDraw(): HeldOutOfDraw {
   const holds = (object: Object3D): boolean => ours.has(object)
 
   // Nothing to compose while they are hung: the walk that just ran did it.
-  const refresh = (): void => {
+  const refresh = (under?: ReadonlySet<Object3D>): void => {
     if (hung) return
     for (const mesh of held) {
       const parent = mesh.parent
       if (!parent) continue
+      if (under && !under.has(parent)) continue
       if (mesh.matrixAutoUpdate) mesh.updateMatrix()
       mesh.matrixWorld.multiplyMatrices(parent.matrixWorld, mesh.matrix)
     }
