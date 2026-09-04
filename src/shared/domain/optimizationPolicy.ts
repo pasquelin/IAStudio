@@ -8,6 +8,8 @@ export type OptimizationPolicy = {
   maxObjectsPerBatch: number
   maxBatchBounds: number
   spatialCellTargetSize: number
+  spatialCellMinSize: number
+  spatialCellTargetObjects: number
   analysisChunkSize: number
   maxSynchronousContentBytes: number
   simplificationRatios: Readonly<Record<GeometrySimplification, number>>
@@ -26,6 +28,8 @@ export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = Object.freeze({
   maxObjectsPerBatch: 2_048,
   maxBatchBounds: 256,
   spatialCellTargetSize: 256,
+  spatialCellMinSize: 16,
+  spatialCellTargetObjects: 256,
   analysisChunkSize: 100,
   maxSynchronousContentBytes: 1_500_000,
   simplificationRatios: Object.freeze({
