@@ -13,6 +13,7 @@ import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import {
   DRAWN_TRIANGLES,
   heldOutOfDraw,
+  refreshMovedSources,
   flagsOf,
   spellingOf,
   sweep,
@@ -115,6 +116,7 @@ export function createBatchedGroups(
     },
 
     moved: (ids, objectOf) => {
+      refreshMovedSources(sources, ids, objectOf)
       let touched = false
       for (const id of ids) {
         const slots = placed.get(id)

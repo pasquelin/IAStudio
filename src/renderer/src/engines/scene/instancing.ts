@@ -2,6 +2,7 @@ import { InstancedMesh, type BufferGeometry, type Material, type Mesh, type Obje
 import { TRIANGLES_PER_REGION, regionsByGrid, type SpatialRegions } from './instanceRegions'
 import {
   heldOutOfDraw,
+  refreshMovedSources,
   shapeAndPaint,
   withFlags,
   trianglesOf,
@@ -67,7 +68,10 @@ export function createInstancedGroups(
       return instanced
     },
 
-    moved: (ids, objectOf) => writeMoved(placed, ids, objectOf),
+    moved: (ids, objectOf) => {
+      refreshMovedSources(sources, ids, objectOf)
+      return writeMoved(placed, ids, objectOf)
+    },
 
     drawn: () => drawn,
 
