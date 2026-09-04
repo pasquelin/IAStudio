@@ -11,6 +11,7 @@ import type { MissionStore } from './store'
 export type MissionScope = { readonly projectId?: string }
 export type MissionManager = {
   list: (scope: MissionScope) => Promise<readonly Mission[]>
+  read: (id: MissionId) => Promise<Mission | null>
   create: (goal: string, scope: MissionScope) => Promise<Mission>
   update: (
     id: MissionId,
@@ -65,6 +66,7 @@ export function createMissionManager(
 
   return {
     list: async scope => (await store.list()).filter(mission => inScope(mission, scope)),
+    read: store.read,
     create: async (goal, scope) =>
       await save({
         ...createMission(goal, clock),
