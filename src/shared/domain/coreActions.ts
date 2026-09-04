@@ -157,7 +157,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'both',
-    inputs: ['generationModelCandidates', 'generationModelFields'],
+    inputs: ['generationModelCandidates'],
     produces: ['preparedGeneration'],
     fields: [
       {
