@@ -11,12 +11,14 @@ import type { PaintedCells } from './canvasSurface'
 import type { MemoryGit } from './memoryGit'
 import type { MemoryShell } from './memoryShell'
 import type { ContextState } from '@shared/domain/projectContext'
+import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 
 export type Think = StudioBridge['assistant']['think']
 
 export type Studio = {
   run: (action: ActionName, input: Record<string, unknown>) => Promise<ActionOutcome>
   state: () => Promise<string>
+  snapshot: () => Promise<StudioSnapshot>
   documents: () => readonly DocumentDescriptor[]
   front: () => DocumentDescriptor | null
   files: () => readonly string[]

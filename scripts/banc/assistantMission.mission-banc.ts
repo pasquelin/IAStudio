@@ -16,6 +16,9 @@ const PROVIDER = process.env['EVAL_PROVIDER'] ?? 'deepseek'
 const cloud = CLOUD_PROVIDERS.find(provider => provider.id === PROVIDER)
 const chat = cloud?.chat !== undefined && cloud.chat.kind !== 'scenario' ? cloud.chat : null
 const MODEL = process.env['EVAL_MODEL'] ?? defaultChatModel(PROVIDER) ?? ''
+const TRACE_FOLDER =
+  process.env['MISSION_TRACE_DIR'] ??
+  `logs/mission-runtime/${new Date().toISOString().replace(/[:.]/g, '-')}`
 
 const MISSION_SCENARIOS = new Set([
   '1.1 names the open project and the open documents',
@@ -148,9 +151,12 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
 
     for (let run = 0; run < RUNS; run += 1) {
       const started = performance.now()
-      const played = await playMission(scenario, request => brain.think(request), {
-        search: async (query, limit) => actionIndex.search({ query, limit }),
-      })
+      const played = await playMission(
+        scenario,
+        async (request, watch) => await brain.think(request, watch),
+        { search: async (query, limit) => actionIndex.search({ query, limit }) },
+        { folder: TRACE_FOLDER, scenarioId: scenario.name, runId: run + 1 },
+      )
       try {
         result.milliseconds += performance.now() - started
         result.actions += played.called.length
@@ -196,6 +202,7 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
         `${sum(result => result.metrics.actionIndexSearches)} index searches · ` +
         `${sum(result => result.searches)} model action searches · ${Math.round(sum(result => result.milliseconds))} ms`,
     )
+    console.log(`  causal traces: ${TRACE_FOLDER}`)
   })
 })
 

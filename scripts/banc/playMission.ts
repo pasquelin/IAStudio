@@ -3,18 +3,30 @@ import type { Mission, MissionClock } from '@shared/domain/mission'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import type { ActionSearchService } from '@main/actionIndex/actionSearchService'
 import type { AssistantBrain } from '@main/assistant/brainPort'
-import { createAssistantContextBuilder } from '@main/mission/contextBuilder'
+import {
+  createAssistantContextBuilder,
+  type AssistantContextBuilder,
+} from '@main/mission/contextBuilder'
 import { createStudioEventBus } from '@main/mission/eventBus'
 import type { MissionJournal } from '@main/mission/journal'
 import { createMissionManager } from '@main/mission/manager'
 import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/metrics'
 import { createMissionRuntime } from '@main/mission/runtime'
+import { createMissionRevisionReader } from '@main/mission/resourceState'
 import { createMissionStore } from '@main/mission/store'
-import { PROJECT, WHEN } from './project'
+import { PROJECT } from './project'
 import type { Called, Run, Scenario } from './run'
-import { createStudio, type Think } from './studio'
+import { createStudio } from './studio'
+import type { Studio } from './studioContract'
+import { createMissionTraceRecorder, type MissionTraceRecorder } from './missionTrace'
 
-export type MissionRun = Run & { rounds: number; metrics: MissionRuntimeMetrics }
+export type MissionRun = Run & {
+  rounds: number
+  metrics: MissionRuntimeMetrics
+  traceFile?: string
+}
+
+type MissionTraceOptions = { folder: string; scenarioId: string; runId: number }
 
 function clock(): MissionClock {
   let sequence = 0
@@ -29,45 +41,6 @@ const memoryJournal = (): MissionJournal => ({
   append: async () => {},
   flush: async () => {},
 })
-
-async function snapshotOf(
-  studio: Awaited<ReturnType<typeof createStudio>>,
-): Promise<StudioSnapshot> {
-  const active = studio.front()
-  const state = await studio.state()
-  return {
-    project: {
-      path: `/bench/${studio.projectName()}`,
-      manifest: { version: 1, createdAt: WHEN, updatedAt: WHEN },
-    },
-    projectKnown: true,
-    workspace: active?.workspace ?? 'image',
-    surface: active?.workspace ?? 'image',
-    commandScope: null,
-    documents: studio.documents().map(document => ({
-      ...document,
-      active: document.id === active?.id,
-      modified: false,
-    })),
-    ...(active
-      ? {
-          activeDocumentState: {
-            documentId: active.id,
-            kind: active.kind,
-            incarnation: active.id,
-            revision: 0,
-            state,
-          },
-        }
-      : {}),
-    selection: null,
-    armedModels: {},
-    play: studio.playState(),
-    tasks: [],
-    authenticated: true,
-    authKnown: true,
-  }
-}
 
 const answersOf = (missions: readonly Mission[]): { said: string; asks: readonly string[] } => {
   const answers = missions.flatMap(mission =>
@@ -94,58 +67,132 @@ const answersOf = (missions: readonly Mission[]): { said: string; asks: readonly
   }
 }
 
+function tracedBrain(
+  think: AssistantBrain['think'],
+  recorder: MissionTraceRecorder | null,
+): AssistantBrain {
+  return {
+    capabilities: async () => ({ streaming: false, structuredJson: true, multimodalImages: false }),
+    window: async () => null,
+    think: async (request, watch) => {
+      const reflection = recorder?.beginReflection(request)
+      try {
+        const answer = await think(request, {
+          ...watch,
+          onNote: note => {
+            if (reflection) recorder?.note(reflection, note)
+            watch?.onNote?.(note)
+          },
+        })
+        if (reflection) recorder?.completeReflection(reflection, answer)
+        return answer
+      } catch (error) {
+        if (reflection) recorder?.failReflection(reflection, error)
+        throw error
+      }
+    },
+  }
+}
+
+function tracedContext(
+  studio: Studio,
+  actions: Pick<ActionSearchService, 'search'>,
+  recorder: MissionTraceRecorder | null,
+): AssistantContextBuilder {
+  return {
+    build: async request => {
+      let snapshot: StudioSnapshot | null = null
+      let retrieval = { query: '', candidates: [] as Awaited<ReturnType<typeof actions.search>> }
+      const builder = createAssistantContextBuilder({
+        snapshot: async () => (snapshot = await studio.snapshot()),
+        actions: {
+          search: async (query, limit) => {
+            const candidates = await actions.search(query, limit)
+            retrieval = { query, candidates }
+            return candidates
+          },
+        },
+        memories: { recall: async () => studio.memories() },
+        jobs: { list: () => [...studio.jobs()] },
+        projectContext: { read: async () => studio.projectContext() },
+      })
+      const context = await builder.build(request)
+      recorder?.context(request.mission.id, request.step.id, { ...retrieval, snapshot })
+      return context
+    },
+  }
+}
+
+function tracedActions(studio: Studio, called: Called[], recorder: MissionTraceRecorder | null) {
+  return {
+    run: async (call: AssistantCall) => {
+      let outcome
+      try {
+        outcome = await studio.run(call.action, call.input)
+      } catch (error) {
+        recorder?.actionError(call, error)
+        throw error
+      }
+      recorder?.action(call, outcome)
+      called.push({
+        action: call.action,
+        input: call.input,
+        answer: outcome.ok
+          ? outcome.data === undefined
+            ? 'ok'
+            : `ok ${JSON.stringify(outcome.data)}`
+          : `refused ${outcome.refusal}`,
+      })
+      return outcome
+    },
+    settle: () => {},
+  }
+}
+
+async function projectScope(studio: Studio): Promise<{ projectId: string }> {
+  const projectId = (await studio.snapshot()).project?.path
+  if (!projectId) throw new Error('mission bench requires an open project')
+  return { projectId }
+}
+
+async function writeFailure(
+  recorder: MissionTraceRecorder | null,
+  manager: ReturnType<typeof createMissionManager>,
+  studio: Studio,
+): Promise<void> {
+  if (!recorder) return
+  try {
+    recorder.write(await manager.list({}), await studio.snapshot())
+  } catch {
+    recorder.write([])
+  }
+}
+
 export async function playMission(
   scenario: Scenario,
-  think: Think,
+  think: AssistantBrain['think'],
   actions: Pick<ActionSearchService, 'search'>,
+  traceOptions?: MissionTraceOptions,
 ): Promise<MissionRun> {
-  const called: Called[] = []
-  const metrics = createMissionMetrics()
+  const called: Called[] = [],
+    metrics = createMissionMetrics()
   const studio = await createStudio(PROJECT, undefined, scenario.answers)
+  const recorder = traceOptions
+    ? createMissionTraceRecorder({ ...traceOptions, userRequest: scenario.said })
+    : null
   const time = clock()
   const manager = createMissionManager(
     createMissionStore(memoryJournal()),
     createStudioEventBus(),
     time,
   )
-  const brain: AssistantBrain = {
-    capabilities: async () => ({
-      streaming: false,
-      structuredJson: true,
-      multimodalImages: false,
-    }),
-    window: async () => null,
-    think: async request => await think(request),
-  }
-  const context = createAssistantContextBuilder({
-    snapshot: async () => await snapshotOf(studio),
-    actions,
-    memories: { recall: async () => studio.memories() },
-    jobs: { list: () => [...studio.jobs()] },
-    projectContext: { read: async () => studio.projectContext() },
-  })
   const runtime = createMissionRuntime({
     manager,
-    context,
-    brain,
-    actions: {
-      run: async (call: AssistantCall) => {
-        const outcome = await studio.run(call.action, call.input)
-        called.push({
-          action: call.action,
-          input: call.input,
-          answer: outcome.ok
-            ? outcome.data === undefined
-              ? 'ok'
-              : `ok ${JSON.stringify(outcome.data)}`
-            : `refused ${outcome.refusal}`,
-        })
-        return outcome
-      },
-      settle: () => {},
-    },
+    context: tracedContext(studio, actions, recorder),
+    brain: tracedBrain(think, recorder),
+    actions: tracedActions(studio, called, recorder),
     jobs: { list: () => [...studio.jobs()] },
-    revisions: { read: async () => ({ current: [], unavailable: [] }) },
+    revisions: createMissionRevisionReader(async () => await studio.snapshot()),
     clock: time,
     metrics,
   })
@@ -153,8 +200,11 @@ export async function playMission(
   try {
     await scenario.setup?.(studio)
     studio.settle()
-    for (const request of scenario.said) await runtime.create(request, {})
-    const response = answersOf(await manager.list({}))
+    const scope = await projectScope(studio)
+    for (const request of scenario.said) await runtime.create(request, scope)
+    const missions = await manager.list(scope)
+    const response = answersOf(missions)
+    const traceFile = recorder?.write(missions, await studio.snapshot())
     return {
       studio,
       called,
@@ -163,8 +213,10 @@ export async function playMission(
       asks: response.asks,
       rounds: metrics.read().llmCalls,
       metrics: metrics.read(),
+      ...(traceFile ? { traceFile } : {}),
     }
   } catch (error) {
+    await writeFailure(recorder, manager, studio)
     studio.close()
     throw error
   }

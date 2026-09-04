@@ -1,6 +1,63 @@
 import { describe, expect, it } from 'vitest'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
-import { playMission } from './playMission'
+import type { AssistantBrain } from '@main/assistant/brainPort'
+import type { AssistantAnswer } from '@shared/domain/assistant'
+import { isRecord } from '@shared/guards'
+import { blockScene } from './setups'
+import { playMission, type MissionRun } from './playMission'
+
+function causalThink(contexts: string[]): AssistantBrain['think'] {
+  let round = 0
+  return async (request, watch) => {
+    const context = request.context ?? ''
+    contexts.push(context)
+    round += 1
+    const answer: AssistantAnswer =
+      round > 1
+        ? { say: 'vu', calls: [], cost: 0 }
+        : {
+            say: 'Je lis la scène.',
+            calls: [{ action: 'scene.state', input: {} }],
+            cost: 0,
+          }
+    watch?.onNote?.({ kind: 'sent', door: 'test', model: 'test', text: 'prompt complet' })
+    watch?.onNote?.({ kind: 'answered', text: JSON.stringify(answer) })
+    return answer
+  }
+}
+
+async function firstReflection(played: MissionRun): Promise<Record<string, unknown>> {
+  if (!played.traceFile) throw new Error('trace absente')
+  const trace: unknown = JSON.parse(await readFile(played.traceFile, 'utf8'))
+  if (!isRecord(trace) || !Array.isArray(trace['reflections'])) throw new Error('trace invalide')
+  const reflection = trace['reflections'][0]
+  if (!isRecord(reflection)) throw new Error('réflexion absente')
+  const missions = trace['missions']
+  expect(Array.isArray(missions) && isRecord(missions[0]) && missions[0]['projectId']).toBe(
+    '/projets/Démo',
+  )
+  return reflection
+}
+
+function expectCausalReflection(reflection: Record<string, unknown>, context: string): void {
+  expect(reflection['contextSerialized']).toBe(context)
+  expect(reflection['actionIndex']).toMatchObject({
+    candidates: [{ action: { name: 'scene.state' }, lexicalScore: 3 }],
+  })
+  expect(reflection['providerAttempts']).toMatchObject([
+    { door: 'test', model: 'test', prompt: 'prompt complet' },
+  ])
+  const attempts = reflection['providerAttempts']
+  expect(
+    Array.isArray(attempts) && isRecord(attempts[0]) ? attempts[0]['rawResponse'] : '',
+  ).toContain('scene.state')
+  expect(reflection['actions']).toMatchObject([{ action: 'scene.state', outcome: { ok: true } }])
+  expect(reflection['refusals']).toEqual([])
+  expect(reflection['nextReflection']).toMatchObject({ reflection: 2 })
+}
 
 describe('parcours mission du banc', () => {
   it('garde le même studio et le même oracle tout en bornant les actions envoyées', async () => {
@@ -32,6 +89,67 @@ describe('parcours mission du banc', () => {
       expect(played.metrics.contextChars).toBeGreaterThan(0)
     } finally {
       played.studio.close()
+    }
+  })
+
+  it('persiste le contexte causal complet depuis un snapshot fidèle au studio', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'mission-trace-'))
+    const action = actionCorpus().actions.find(candidate => candidate.name === 'scene.state')
+    if (!action) throw new Error('scene.state est absente du registre')
+    const contexts: string[] = []
+    const played = await playMission(
+      {
+        name: 'matière rouge',
+        said: ['Change le matériau de Bloc en rouge.'],
+        setup: blockScene,
+        passed: () => false,
+      },
+      causalThink(contexts),
+      { search: async () => [{ action, score: 4, lexicalScore: 3, semanticScore: 1 }] },
+      { folder, scenarioId: '12.2', runId: 1 },
+    )
+
+    try {
+      expect(contexts[0]).toContain('Bloc')
+      expectCausalReflection(await firstReflection(played), contexts[0] ?? '')
+    } finally {
+      played.studio.close()
+      await rm(folder, { recursive: true, force: true })
+    }
+  })
+
+  it('persiste la tentative en cours quand le provider échoue', async () => {
+    const folder = await mkdtemp(join(tmpdir(), 'mission-trace-error-'))
+    let played: MissionRun | null = null
+    try {
+      played = await playMission(
+        { name: 'erreur provider', said: ['Continue.'], passed: () => false },
+        async (_request, watch) => {
+          watch?.onNote?.({
+            kind: 'sent',
+            door: 'test',
+            model: 'test',
+            text: 'prompt avant erreur',
+          })
+          throw new Error('provider indisponible')
+        },
+        { search: async () => [] },
+        { folder, scenarioId: 'provider error', runId: 1 },
+      )
+      const trace: unknown = JSON.parse(
+        await readFile(join(folder, 'provider-error-run-1.json'), 'utf8'),
+      )
+      expect(trace).toMatchObject({
+        reflections: [
+          {
+            providerError: 'provider indisponible',
+            providerAttempts: [{ prompt: 'prompt avant erreur' }],
+          },
+        ],
+      })
+    } finally {
+      played?.studio.close()
+      await rm(folder, { recursive: true, force: true })
     }
   })
 })

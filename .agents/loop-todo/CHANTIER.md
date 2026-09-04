@@ -18,6 +18,7 @@ protocole ; la spec prime sur le périmètre fonctionnel.
 | 8 | Capabilities et contexte visuel | terminé |
 | 9 | Flux d’activité UI | terminé |
 | 10 | Métriques et banc comparatif | terminé, objectif de score non atteint |
+| 10.1 | Instrumentation causale et campagne DeepSeek isolée | terminé, 12 échecs classés |
 
 ## Ce que tu ne tranches pas seul
 
