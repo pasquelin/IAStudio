@@ -63,6 +63,21 @@ export type AidSettings = {
   normalLength: number
 }
 
+type CageMap = Map<string, { line: LineSegments; body: AidBody; object: Object3D }>
+type ArmMap = Map<string, { line: Mesh; rig: ArmRig; object: Object3D }>
+
+function dropAid<T extends Object3D & { dispose: () => void }>(held: Map<string, T>, id: string) {
+  const helper = held.get(id)
+  if (!helper) return
+  helper.removeFromParent()
+  helper.dispose()
+  held.delete(id)
+}
+
+function dropAllAids<T extends Object3D & { dispose: () => void }>(held: Map<string, T>) {
+  for (const id of [...held.keys()]) dropAid(held, id)
+}
+
 export type ViewportAids = {
   /**
    * The one group they all hang from, so a render pass hides the lot with a single flag — a film
@@ -102,21 +117,9 @@ export function createViewportAids(): ViewportAids {
   /** Keyed by node, though a node may be a whole model: see `normalsFor`, which picks one mesh. */
   const normals = new Map<string, VertexNormalsHelper>()
   /** Keyed by node, and rebuilt only when the FIGURES change — see the sweep in `apply`. */
-  const cages = new Map<string, { line: LineSegments; body: AidBody; object: Object3D }>()
+  const cages: CageMap = new Map()
   /** The same bargain for the arms, whose shape is rebuilt only when the arm itself is retuned. */
-  const armsDrawn = new Map<string, { line: Mesh; rig: ArmRig; object: Object3D }>()
-
-  const drop = <T extends Object3D & { dispose: () => void }>(held: Map<string, T>, id: string) => {
-    const helper = held.get(id)
-    if (!helper) return
-    helper.removeFromParent()
-    helper.dispose()
-    held.delete(id)
-  }
-
-  const dropAll = <T extends Object3D & { dispose: () => void }>(held: Map<string, T>) => {
-    for (const id of [...held.keys()]) drop(held, id)
-  }
+  const armsDrawn: ArmMap = new Map()
 
   return {
     object: host,
@@ -129,81 +132,20 @@ export function createViewportAids(): ViewportAids {
       armsDrawn.size === 0,
 
     apply: (objects, selectedIds, settings, palette, rigs) => {
-      const { bodies, arms } = rigs
-      // Rebuilt on a change of FIGURE alone: `apply` runs on every selection and every frame of a
-      // slider drag, and a cage rebuilt there would re-upload its geometry each time.
-      for (const [id, held] of [...cages]) {
-        const wanted = bodies.get(id)
-        const same =
-          wanted && wanted.height === held.body.height && wanted.radius === held.body.radius
-        if (!same || objects.get(id) !== held.object) dropLine(cages, id)
-      }
-      for (const [id, body] of bodies) {
-        const object = objects.get(id)
-        if (cages.has(id) || !object) continue
-        const line = capsuleCage(body, palette.body)
-        cages.set(id, { line, body, object })
-        host.add(line)
-      }
-      for (const [id, held] of [...armsDrawn]) {
-        const wanted = arms.get(id)
-        const same = wanted && sameArm(wanted, held.rig)
-        if (!same || objects.get(held.rig.subjectId) !== held.object) dropLine(armsDrawn, id)
-      }
-      for (const [id, rig] of arms) {
-        const object = objects.get(rig.subjectId)
-        if (armsDrawn.has(id) || !object) continue
-        const line = armLine(rig, palette.arm)
-        armsDrawn.set(id, { line, rig, object })
-        host.add(line)
-      }
-
-      poseCages(cages)
-      poseArms(armsDrawn)
+      syncRigAids(host, cages, armsDrawn, objects, palette, rigs)
 
       const selected = new Set(selectedIds)
-      const wanted = (visibility: HelperVisibility, id: string): boolean =>
-        showsAid(visibility, selected, id) && (objects.get(id)?.visible ?? false)
+      syncBoxes(host, boxes, objects, selected, settings.boundingBoxes, palette.box)
 
-      // By IDENTITY and not by key: pointing a model at another asset releases the object and
-      // rebuilds one under the SAME id, so a helper compared on presence alone goes on holding
-      // the freed one — drawing a box around a dead object and keeping its buffers alive.
-      for (const [id, helper] of [...boxes]) {
-        if (helper.object !== objects.get(id) || !wanted(settings.boundingBoxes, id)) {
-          drop(boxes, id)
-        }
-      }
-      for (const [id, object] of objects) {
-        if (!wanted(settings.boundingBoxes, id) || boxes.has(id)) continue
-        const helper = new BoxHelper(standing(object), new Color(palette.box))
-        // A box is decoration: never picked, never in a shadow map, never exported.
-        helper.raycast = () => {}
-        boxes.set(id, helper)
-        host.add(helper)
-      }
-
-      // Visibility on all three, not on the boxes alone: axes left drawing at an object somebody
-      // hid are axes pointing at nothing, and they were repositioned on every apply.
-      for (const id of [...origins.keys()]) {
-        if (!settings.origins || !objects.get(id)?.visible) drop(origins, id)
-      }
-      if (settings.origins) {
-        for (const [id, object] of objects) {
-          if (origins.has(id) || !object.visible) continue
-          const helper = new AxesHelper(originSize(standing(object)))
-          helper.raycast = () => {}
-          origins.set(id, helper)
-          host.add(helper)
-        }
-      }
+      syncOrigins(host, origins, objects, settings.origins)
 
       // KEPT rather than rebuilt. The geometry is two vertices per normal of the mesh — 2,4 Mo
       // on a 100 000-vertex model — and `apply` runs on every state change, selection included:
       // dropping and rebuilding here re-uploaded that on each frame of any slider drag.
       for (const [id, helper] of [...normals]) {
         const shown = settings.normals && selected.has(id) && (objects.get(id)?.visible ?? false)
-        if (!shown || helper.object !== meshOf(objects.get(id))) drop(normals, id)
-        else if (helper.size !== settings.normalLength) drop(normals, id)
+        if (!shown || helper.object !== meshOf(objects.get(id))) dropAid(normals, id)
+        else if (helper.size !== settings.normalLength) dropAid(normals, id)
       }
       if (settings.normals) {
         for (const id of selected) {
@@ -216,12 +158,7 @@ export function createViewportAids(): ViewportAids {
         }
       }
 
-      for (const [id, helper] of origins) {
-        const object = objects.get(id)
-        if (object) helper.position.setFromMatrixPosition(standing(object).matrixWorld)
-      }
-      for (const helper of boxes.values()) refreshBox(helper)
-      for (const helper of normals.values()) helper.update()
+      refreshDrawnAids(origins, boxes, normals, objects)
     },
 
     // The boxes ALONE, and that is the point: `BoxHelper.update` re-reads a bounding box, while
@@ -239,10 +176,112 @@ export function createViewportAids(): ViewportAids {
       for (const id of [...armsDrawn.keys()]) dropLine(armsDrawn, id)
 
       host.removeFromParent()
-      dropAll(boxes)
-      dropAll(origins)
-      dropAll(normals)
+      dropAllAids(boxes)
+      dropAllAids(origins)
+      dropAllAids(normals)
     },
+  }
+}
+
+function syncRigAids(
+  host: Object3D,
+  cages: CageMap,
+  armsDrawn: ArmMap,
+  objects: ReadonlyMap<string, Object3D>,
+  palette: AidPalette,
+  rigs: AidRigs,
+): void {
+  for (const [id, held] of [...cages]) {
+    const wanted = rigs.bodies.get(id)
+    const same = wanted && wanted.height === held.body.height && wanted.radius === held.body.radius
+    if (!same || objects.get(id) !== held.object) dropLine(cages, id)
+  }
+  for (const [id, body] of rigs.bodies) {
+    const object = objects.get(id)
+    if (cages.has(id) || !object) continue
+    const line = capsuleCage(body, palette.body)
+    cages.set(id, { line, body, object })
+    host.add(line)
+  }
+  syncArmAids(host, armsDrawn, objects, palette.arm, rigs.arms)
+  poseCages(cages)
+  poseArms(armsDrawn)
+}
+
+function syncBoxes(
+  host: Object3D,
+  boxes: Map<string, BoxHelper>,
+  objects: ReadonlyMap<string, Object3D>,
+  selected: ReadonlySet<string>,
+  visibility: HelperVisibility,
+  colour: string,
+): void {
+  const wanted = (id: string): boolean =>
+    showsAid(visibility, selected, id) && (objects.get(id)?.visible ?? false)
+  for (const [id, helper] of [...boxes]) {
+    if (helper.object !== objects.get(id) || !wanted(id)) dropAid(boxes, id)
+  }
+  for (const [id, object] of objects) {
+    if (!wanted(id) || boxes.has(id)) continue
+    const helper = new BoxHelper(standing(object), new Color(colour))
+    helper.raycast = () => {}
+    boxes.set(id, helper)
+    host.add(helper)
+  }
+}
+
+function syncOrigins(
+  host: Object3D,
+  origins: Map<string, AxesHelper>,
+  objects: ReadonlyMap<string, Object3D>,
+  shown: boolean,
+): void {
+  for (const id of [...origins.keys()]) {
+    if (!shown || !objects.get(id)?.visible) dropAid(origins, id)
+  }
+  if (!shown) return
+  for (const [id, object] of objects) {
+    if (origins.has(id) || !object.visible) continue
+    const helper = new AxesHelper(originSize(standing(object)))
+    helper.raycast = () => {}
+    origins.set(id, helper)
+    host.add(helper)
+  }
+}
+
+function refreshDrawnAids(
+  origins: ReadonlyMap<string, AxesHelper>,
+  boxes: ReadonlyMap<string, BoxHelper>,
+  normals: ReadonlyMap<string, VertexNormalsHelper>,
+  objects: ReadonlyMap<string, Object3D>,
+): void {
+  for (const [id, helper] of origins) {
+    const object = objects.get(id)
+    if (object) helper.position.setFromMatrixPosition(standing(object).matrixWorld)
+  }
+  for (const helper of boxes.values()) refreshBox(helper)
+  for (const helper of normals.values()) helper.update()
+}
+
+function syncArmAids(
+  host: Object3D,
+  drawn: ArmMap,
+  objects: ReadonlyMap<string, Object3D>,
+  colour: string,
+  arms: ReadonlyMap<string, ArmRig>,
+): void {
+  for (const [id, held] of [...drawn]) {
+    const wanted = arms.get(id)
+    if (!wanted || !sameArm(wanted, held.rig) || objects.get(held.rig.subjectId) !== held.object) {
+      dropLine(drawn, id)
+    }
+  }
+  for (const [id, rig] of arms) {
+    const object = objects.get(rig.subjectId)
+    if (drawn.has(id) || !object) continue
+    const line = armLine(rig, colour)
+    drawn.set(id, { line, rig, object })
+    host.add(line)
   }
 }
 

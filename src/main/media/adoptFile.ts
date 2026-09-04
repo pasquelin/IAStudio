@@ -86,6 +86,39 @@ async function statOrAbsent(absolute: string): Promise<Stats | null> {
   }
 }
 
+async function createAdoptedAsset(
+  relative: string,
+  name: string,
+  type: Asset['type'],
+  stats: Stats,
+  fingerprint: string | null,
+  probe: MediaProbe | null,
+  deps: AdoptFileDeps,
+): Promise<Asset> {
+  const at = deps.now()
+  const asset = await deps.catalog().add({
+    id: deps.newAssetId(),
+    name: stemOf(name),
+    type,
+    location: 'local',
+    path: relative,
+    bytes: stats.size,
+    tags: [],
+    createdAt: at,
+    localChangedAt: at,
+    ...(fingerprint ? { hash: fingerprint } : {}),
+    ...(probe ? { probe } : {}),
+  })
+  deps.record({
+    level: 'info',
+    topic: 'project',
+    messageKey: 'activity.fileAdopted',
+    params: { name: asset.name },
+  })
+  deps.onAdopted(asset)
+  return asset
+}
+
 async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
   // What the studio keeps for itself is shown, never taken: `.index/` holds the previews and the
   // proxies it rewrites at will, and a row pointing into it would die at the next eviction.
@@ -115,29 +148,5 @@ async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | nul
     type === 'video' || type === 'audio' ? deps.probeFile(absolute) : null,
     deps.hash(absolute),
   ])
-  const at = deps.now()
-
-  const asset = await catalog.add({
-    id: deps.newAssetId(),
-    name: stemOf(name),
-    type,
-    location: 'local',
-    path: relative,
-    bytes: stats.size,
-    tags: [],
-    createdAt: at,
-    localChangedAt: at,
-    ...(fingerprint ? { hash: fingerprint } : {}),
-    ...(probe ? { probe } : {}),
-  })
-
-  deps.record({
-    level: 'info',
-    topic: 'project',
-    messageKey: 'activity.fileAdopted',
-    params: { name: asset.name },
-  })
-  deps.onAdopted(asset)
-
-  return asset
+  return await createAdoptedAsset(relative, name, type, stats, fingerprint, probe, deps)
 }

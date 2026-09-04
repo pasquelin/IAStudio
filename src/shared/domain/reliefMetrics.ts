@@ -1,0 +1,35 @@
+export const RELIEF_CHUNK_TEXELS = 64
+export const RELIEF_CHUNK_CANDIDATES: readonly number[] = [64, 128]
+
+export function chunkVerticesPerSide(grain: number): number {
+  return grain + 1
+}
+
+export function chunkCountAlong(samples: number, grain: number): number {
+  return Math.max(1, Math.ceil((Math.max(1, samples) - 1) / grain))
+}
+
+export type ChunkMemory = {
+  position: number
+  normal: number
+  uv: number
+  index: number
+  total: number
+}
+
+export function chunkMemoryBytes(grain: number): ChunkMemory {
+  const vertices = chunkVerticesPerSide(grain) ** 2
+  const position = vertices * 12
+  const normal = vertices * 12
+  const uv = vertices * 8
+  const index = grain * grain * 6 * 2
+  return { position, normal, uv, index, total: position + normal + uv + index }
+}
+
+export type RegionUpload = { position: number; normal: number; total: number }
+
+export function regionUploadBytes(texelsX: number, texelsZ: number): RegionUpload {
+  const position = (texelsX + 1) * (texelsZ + 1) * 12
+  const normal = (texelsX + 3) * (texelsZ + 3) * 12
+  return { position, normal, total: position + normal }
+}

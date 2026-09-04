@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
 
 /**
  * Who gives a shape back to the cache that lent it.
@@ -10,7 +10,7 @@ import source from './SceneRenderer.ts?raw'
  */
 describe('SceneRenderer and the shapes it borrows', () => {
   const body = (name: string): string =>
-    new RegExp(`private ${name}\\([^)]*\\): void \\{[\\s\\S]*?\\n {2}\\}`).exec(source)?.[0] ?? ''
+    new RegExp(`protected ${name}\\([^)]*\\): void \\{[\\s\\S]*?\\n {2}\\}`).exec(source)?.[0] ?? ''
 
   it('gives back the reference it took when the mesh already wore that shape', () => {
     // The comparison that leads here is by REFERENCE, so a descriptor minted again with the same

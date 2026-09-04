@@ -1,4 +1,4 @@
-import { refused } from '@shared/domain/assistant'
+import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
   GEOMETRY_SIMPLIFICATIONS,
   NO_LOSSY_OPTIMIZATION,
@@ -13,7 +13,14 @@ import type { ActionHandlers } from './actionHandler'
 import { boolOf, oneOf, textOf } from './actionInputs'
 
 export const EXPORT_HANDLERS: ActionHandlers = {
-  'game.export': async (input, wire, signal) => {
+  'game.export': exportGame,
+}
+
+async function exportGame(
+  input: Record<string, unknown>,
+  wire?: unknown,
+  signal?: AbortSignal,
+): Promise<ActionOutcome> {
     const folder = textOf(input, 'folder')
     if (wire && !folder)
       return refused(
@@ -21,18 +28,7 @@ export const EXPORT_HANDLERS: ActionHandlers = {
         'with no "folder" named the studio raises a picker of the operating system, which a caller on the wire can neither fill nor read — name "folder" and send this again',
       )
 
-    const lossyOptimization: LossyOptimization = {
-      generateLods: boolOf(input, 'generateLods'),
-      geometrySimplification:
-        oneOf(input, 'geometrySimplification', GEOMETRY_SIMPLIFICATIONS) ??
-        NO_LOSSY_OPTIMIZATION.geometrySimplification,
-      textureCompression:
-        oneOf(input, 'textureCompression', TEXTURE_COMPRESSIONS) ??
-        NO_LOSSY_OPTIMIZATION.textureCompression,
-      textureReduction:
-        oneOf(input, 'textureReduction', TEXTURE_REDUCTIONS) ??
-        NO_LOSSY_OPTIMIZATION.textureReduction,
-    }
+    const lossyOptimization = lossyOptimizationOf(input)
     const entryScene = textOf(input, 'entryScene')
     const title = textOf(input, 'title')
     try {
@@ -55,7 +51,21 @@ export const EXPORT_HANDLERS: ActionHandlers = {
     } catch (error) {
       return refused('failed', messageOf(error))
     }
-  },
+}
+
+function lossyOptimizationOf(input: Record<string, unknown>): LossyOptimization {
+  return {
+    generateLods: boolOf(input, 'generateLods'),
+    geometrySimplification:
+      oneOf(input, 'geometrySimplification', GEOMETRY_SIMPLIFICATIONS) ??
+      NO_LOSSY_OPTIMIZATION.geometrySimplification,
+    textureCompression:
+      oneOf(input, 'textureCompression', TEXTURE_COMPRESSIONS) ??
+      NO_LOSSY_OPTIMIZATION.textureCompression,
+    textureReduction:
+      oneOf(input, 'textureReduction', TEXTURE_REDUCTIONS) ??
+      NO_LOSSY_OPTIMIZATION.textureReduction,
+  }
 }
 
 function refusalOf(reason: string, entryScene: string | null) {

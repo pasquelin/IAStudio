@@ -66,8 +66,11 @@ function createQuickjsScripts(machine: Engine): ScriptPort {
     return null
   }
 
-  const fault = evaluate(KERNEL, 'kernel.js')
-  if (fault) throw new Error(`the sandbox kernel did not load: ${fault.message}`)
+  const loadKernel = (): void => {
+    const fault = evaluate(KERNEL, 'kernel.js')
+    if (fault) throw new Error(`the sandbox kernel did not load: ${fault.message}`)
+  }
+  loadKernel()
 
   /**
    * 🛑 Resolved ONCE. A handle costs a crossing to fetch and another to release, and these seven

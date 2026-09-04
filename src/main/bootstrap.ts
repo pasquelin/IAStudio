@@ -32,14 +32,7 @@ import { createMainWindow, showMainWindow } from '@main/window/windows'
  * splash surfaces once the work it covers is already finished.
  */
 function startUp(splash: Splash, settings: SettingsStore): void {
-  /**
-   * The API calls leave from here, so they never appear in the renderer's Network tab; the
-   * mirror is what makes them, and the failures behind a reduced code, visible in devtools.
-   *
-   * Development only. Every line carries what the user typed and filtered by, and `broadcast`
-   * sends to every window — including the settings window, which listens to none of it. The
-   * terminal keeps the log in a packaged build; nothing crosses IPC.
-   */
+  // Main-process API calls appear in devtools only through this development-only mirror.
   if (isDevelopment) mirrorLogsTo(entry => broadcast(EVENTS.log, entry))
 
   // An unpackaged run wears the Electron bundle's own identity, so the Dock shows Electron's
@@ -55,11 +48,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // a check that fails leaves the studio exactly as usable as it was.
   void services.updates.check()
 
-  /**
-   * The way in from outside follows the setting from here on — and is applied straight away with
-   * the settings as they stand. Subscribing alone would only ever hear a CHANGE, so a user who
-   * left it on would find nothing listening until they toggled it twice.
-   */
+  // Apply the current MCP setting before subscribing because subscriptions only report changes.
   services.mcp.apply(settings.read())
   settings.subscribe(services.mcp.apply)
 
@@ -69,14 +58,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
     // Not awaited with the rest: the recognition process holds no state worth settling, and a
     // model still loading would otherwise keep the studio on screen for seconds.
     services.dictation.dispose()
-    // The note of what is still running goes out with the journal: a job whose submission
-    // landed in the last moments would otherwise be lost, and it has already been paid for.
-    // The manifest stamp joins them — quitting right after a save is the ordinary way to do it.
-    //
-    // The MCP server is AWAITED among them, not fired off beside them: the file it removes names
-    // a port, and a removal racing `app.quit()` leaves that file pointing the next client at
-    // whatever takes the port after this process is gone. `void` here undid the very thing it
-    // claimed to do.
+    // Await MCP shutdown so its endpoint file cannot outlive the port it names.
     return Promise.all([
       services.disposeAiEngine(),
       services.journal.flush(),

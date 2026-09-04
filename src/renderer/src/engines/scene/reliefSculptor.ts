@@ -36,6 +36,9 @@ type Job = ReliefDiskStroke & {
   resolve: (edits: PackedReliefChunk[] | null) => void
   reject: (error: Error) => void
 }
+type SculptSession = ReturnType<
+  typeof createWorkerSession<ReliefSculptRequest, ReliefSculptResponse>
+>
 
 const CHUNK_ROWS_PER_WORKER = 2
 
@@ -72,36 +75,7 @@ export function createReliefSculptor(
     const token = generation
     const before = heldAfter ?? job.sculpt
     try {
-      const ranges = rowRanges(job, sessions.length)
-      const responses = await Promise.all(
-        ranges.map((rows, index) => {
-          const session = sessions[index]
-          if (!session) throw new Error('Relief sculpt worker is unavailable')
-          return session.send({
-            id: session.nextId(),
-            width: job.samples.width,
-            height: job.samples.height,
-            extent: job.extent,
-            grain: job.grain,
-            sculpt:
-              ranges.length === 1
-                ? before
-                : {
-                    chunks:
-                      before?.chunks.filter(
-                        chunk => chunk.row >= rows.from && chunk.row < rows.to,
-                      ) ?? [],
-                  },
-            operation: {
-              kind: 'raiseDisk',
-              disk: job.disk,
-              amount: job.amount,
-              falloff: job.falloff ?? 0,
-            },
-            rows: ranges.length === 1 ? undefined : rows,
-          })
-        }),
-      )
+      const responses = await sculptResponses(job, before, sessions)
       if (token !== generation) {
         job.resolve(null)
         return
@@ -143,6 +117,44 @@ export function createReliefSculptor(
       invalidate()
       sessions.forEach(session => session.dispose())
     },
+  }
+}
+
+async function sculptResponses(
+  job: Job,
+  before: ReliefSculpt | undefined,
+  sessions: readonly SculptSession[],
+): Promise<ReliefSculptResponse[]> {
+  const ranges = rowRanges(job, sessions.length)
+  return Promise.all(
+    ranges.map((rows, index) => {
+      const session = sessions[index]
+      if (!session) throw new Error('Relief sculpt worker is unavailable')
+      return session.send({
+        id: session.nextId(),
+        width: job.samples.width,
+        height: job.samples.height,
+        extent: job.extent,
+        grain: job.grain,
+        sculpt: ranges.length === 1 ? before : slicedSculpt(before, rows),
+        operation: {
+          kind: 'raiseDisk',
+          disk: job.disk,
+          amount: job.amount,
+          falloff: job.falloff ?? 0,
+        },
+        rows: ranges.length === 1 ? undefined : rows,
+      })
+    }),
+  )
+}
+
+function slicedSculpt(
+  before: ReliefSculpt | undefined,
+  rows: { from: number; to: number },
+): ReliefSculpt {
+  return {
+    chunks: before?.chunks.filter(chunk => chunk.row >= rows.from && chunk.row < rows.to) ?? [],
   }
 }
 

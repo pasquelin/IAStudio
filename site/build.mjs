@@ -81,6 +81,7 @@ for (const locale of locales) {
 }
 
 const template = await readFile(join(HERE, 'template.html'), 'utf8')
+const workspaces = await readFile(join(HERE, 'partials', 'workspaces.html'), 'utf8')
 const { version } = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
 
 /** Chemin public d'une langue, relatif à la racine du site. */
@@ -156,6 +157,7 @@ for (const locale of locales) {
     jsonld,
     ogLocale: locale.meta.ogLocale,
     localeAlternates,
+    workspaces,
   }
 
   const missing = []

@@ -8,13 +8,7 @@ import { WORTH_INSTANCING } from './grouping'
 import type { GeometryDescriptor } from '@shared/domain/geometry'
 import { EMPTY_SCENE, type MeshNode, type SceneNode, type SceneState } from './sceneState'
 
-/**
- * What a body drawn by something OTHER than itself must still answer to, seen from outside the
- * engine: the export, the graph after an edit and its undo, and where the copy stands.
- *
- * Under jsdom the renderer is never mounted: `apply` builds the whole graph and the grouping runs
- * on it, and only the drawing is missing.
- */
+/** External behavior required from bodies rendered through instancing. */
 
 const STRATEGIES: GroupingStrategy[] = ['instanced', 'batched']
 
@@ -33,7 +27,6 @@ type Drawing = {
 
 const GROUP_SIZES = [4, 12, 20, 45, 60]
 
-/** One group per size, two shapes each, one paint per group: five paints, two shapes apiece. */
 function bodies(): MeshNode[] {
   const nodes: MeshNode[] = []
   let at = 0
@@ -60,14 +53,10 @@ const sceneOf = (nodes: SceneNode[]): SceneState => ({
   nodes: [directionalLight('sun'), ...nodes],
 })
 
-/** `as`: reaching for what the engine drew is the whole point, and it is private by design. */
 const graphOf = (renderer: SceneRenderer): Object3D =>
   (renderer as unknown as { viewport: { scene: Object3D } }).viewport.scene
 
-/**
- * Where the group put the body of one slot, along x. Walked rather than read off the host's own
- * children: a partitioned engine hangs its meshes under one group per cell.
- */
+/** Finds a slot through partition groups and returns its x position. */
 const placedAt = (renderer: SceneRenderer, slot: number): number => {
   const held = new Matrix4()
   for (const child of walked(graphOf(renderer))) {
@@ -179,13 +168,7 @@ describe('editing a body a lot draws', () => {
   })
 })
 
-/**
- * The partition is out of this one, and only this one: it files a body under the CELL it stands
- * in, so a placement typed far away changes which mesh holds slot 3 — `placedAt` names a slot,
- * and would read another body's. What it does with a move is measured in `cellInstancing.test`.
- */
 describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
-  /** Bodies laid along x, of one shape and one paint, so they all land in a single group. */
   const inARow = (count: number): SceneNode[] =>
     Array.from({ length: count }, (_unused, at) => ({
       ...meshNode(`r${at}`),
@@ -196,11 +179,7 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
       },
     }))
 
-  /**
-   * A scene with NO directional light: the shadow pass is the one thing that used to refresh the
-   * world matrices before the grouping copied them, so without a lamp every copy of a fresh
-   * group was drawn at the origin — and nothing went red.
-   */
+  /** No directional light: grouping must refresh world matrices without the shadow pass. */
   it('stands where its node does, in a scene no light refreshes', () => {
     const nodes = inARow(WORTH_INSTANCING)
     const renderer = rendererOf({ grouping })
@@ -209,10 +188,6 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
     expect(placedAt(renderer, 3)).toBe(15)
   })
 
-  /**
-   * `moved` wrote the slots of the nodes of the pass and of nothing else, and a child whose own
-   * placement did not change is never one of them.
-   */
   it('follows the parent it hangs from, which moved without it', () => {
     const nodes: SceneNode[] = [
       // A paint of its own, so the crate is a group of one and falls under the floor: a lot keys
@@ -255,7 +230,6 @@ describe.each(STRATEGIES)('the copy a %s group draws', grouping => {
 describe.each(DRAWINGS)(
   'the sources a %s group draws for, from outside the engine',
   (_name, drawing) => {
-    /** One group's worth of copies, all hanging from a crate — the shape a decor really has. */
     const inACrate = (): SceneNode[] => [
       groupNodeFixture('crate'),
       ...Array.from({ length: WORTH_INSTANCING }, (_unused, at) => ({
@@ -350,7 +324,6 @@ describe.each(DRAWINGS)(
   },
 )
 
-/** A shape of its own, so the bodies hanging from the bodies form a group of their own. */
 const KNOB_SHAPE: GeometryDescriptor = {
   kind: 'sphere',
   radius: 0.5,
@@ -358,10 +331,7 @@ const KNOB_SHAPE: GeometryDescriptor = {
   heightSegments: 6,
 }
 
-/**
- * What reads the tree DOWNWARD from a node, which a body held out of the walk is no longer part
- * of. Every one of these came back EMPTY between the holding and its correction.
- */
+/** Exercises downward tree readers while grouped bodies leave the source walk. */
 describe.each(DRAWINGS)('a crate whose bodies a %s group draws', (_name, drawing) => {
   const inACrate = (): SceneNode[] => [
     groupNodeFixture('crate'),

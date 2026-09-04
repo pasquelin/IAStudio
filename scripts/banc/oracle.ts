@@ -1,5 +1,5 @@
 import type { CameraShot, Keyframe, TrackProperty } from '@shared/domain/animation'
-import { commitmentOfCall, type ActionName } from '@shared/domain/assistant'
+import { commitmentOfCall } from '@shared/domain/assistant'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { ModelFamily } from '@shared/domain/model'
@@ -39,6 +39,7 @@ import type { AnimationTimeline } from '@shared/domain/animation'
 import type { Run } from './run'
 
 export { SECOND }
+export { answerOf, declined, ranStudioCommand, searched, tried } from './oracleActions'
 
 /**
  * 🛑 An oracle reads the STATE, never the words the model wrote: every failure this bench exists
@@ -476,53 +477,6 @@ export const wrote = (run: Run, section: string, key: string): boolean =>
     const wanted = key.toLowerCase()
     return isRecord(written) && Object.keys(written).some(n => n.toLowerCase().includes(wanted))
   })
-
-/**
- * A menu command actually run, and the RIGHT one: `command.runStudioCommand` carries the whole
- * registry, so « any call to it » passes on a model that opened the preferences instead.
- */
-export const ranStudioCommand = (run: Run, command: string): boolean =>
-  run.called.some(
-    one =>
-      one.action === 'command.runStudioCommand' &&
-      // Both sides folded, as `wrote` folds its own: the ids are camelCase, and a model that
-      // echoes one back in another case would fail the scenario whatever it did.
-      String(one.input['command']).toLowerCase() === command.toLowerCase(),
-  )
-
-/** Whether a search was actually run, and on a word the sentence carries. */
-export const searched = (run: Run, word: string): boolean =>
-  run.called.some(
-    one =>
-      (one.action === 'files.search' || one.action === 'assets.searchProjectCatalogue') &&
-      Object.values(one.input).some(
-        value => typeof value === 'string' && value.toLowerCase().includes(word),
-      ),
-  )
-
-/**
- * The call the person said NO to — `answerShown` writes « refused declined », the name the
- * executor gives that one path. Both halves matter: a scenario reading only what the studio
- * still HOLDS passes on a model that never called, which is what the decor already held.
- */
-export const declined = (run: Run, name: ActionName): boolean =>
-  run.called.some(one => one.action === name && one.answer?.startsWith('refused declined') === true)
-
-/** Whether an action ran at all, refused or not — what an undo scenario has to see happen. */
-export const tried = (run: Run, name: ActionName): boolean =>
-  run.called.some(one => one.action === name)
-
-/**
- * What one action answered, for the readings whose whole EFFECT is their answer.
- *
- * 🛑 A refusal answers too — `answerShown` writes « refused wrongSurface » — so this rends only
- * what came back from a call that WORKED. Written the other way round first, and twelve of the
- * thirteen § 61 scenarios then passed on a studio that had refused every one of them.
- */
-export const answerOf = (run: Run, name: ActionName): string | null => {
-  const held = run.called.find(one => one.action === name)?.answer
-  return held === undefined || held.startsWith('refused') ? null : held
-}
 
 /** The timeline of the scene in front — what a game CUES, as the document holds it. */
 export const animation = (run: Run): AnimationTimeline | null => openScene(run)?.animation ?? null

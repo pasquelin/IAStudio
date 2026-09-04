@@ -55,13 +55,23 @@ function state(nodes: readonly SceneNode[]): SceneState {
 }
 
 export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
-  const small = Array.from({ length: 50 }, (_unused, index) =>
-    positioned(meshNode(`small-${index}`), index, 10),
+  return [
+    benchmark('S1', 'small-world overhead', repeatedMeshes('small', 50, 10)),
+    benchmark('S2', 'repeated-object instancing', repeatedMeshes('tree', 10_000, 100)),
+    benchmark('S3', 'different static props batching', batchedProps()),
+    benchmark('S4', 'city partitioning and culling', repeatedMeshes('building', 20_000, 200)),
+    mixedBenchmark(),
+  ]
+}
+
+function repeatedMeshes(prefix: string, length: number, width: number): MeshNode[] {
+  return Array.from({ length }, (_unused, index) =>
+    positioned(meshNode(`${prefix}-${index}`), index, width),
   )
-  const repetition = Array.from({ length: 10_000 }, (_unused, index) =>
-    positioned(meshNode(`tree-${index}`), index, 100),
-  )
-  const props = Array.from({ length: 10_000 }, (_unused, index): MeshNode => {
+}
+
+function batchedProps(): MeshNode[] {
+  return Array.from({ length: 10_000 }, (_unused, index): MeshNode => {
     const node = positioned(meshNode(`prop-${index}`), index, 100)
     return {
       ...node,
@@ -69,30 +79,11 @@ export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
       optimization: { mode: 'batch' },
     }
   })
-  const city = Array.from({ length: 20_000 }, (_unused, index) =>
-    positioned(meshNode(`building-${index}`), index, 200),
-  )
-  const mixed: SceneNode[] = [
-    {
-      id: 'validation-group',
-      parentId: null,
-      name: 'Validation group',
-      visible: true,
-      transform: IDENTITY_TRANSFORM,
-      ...shadowDefaults({ type: 'group' }),
-      type: 'group',
-    },
-    {
-      ...meshNode('validation-child'),
-      parentId: 'validation-group',
-      instances: [
-        {
-          sourceId: 'validation-instance',
-          name: 'Validation instance',
-          transform: IDENTITY_TRANSFORM,
-        },
-      ],
-    },
+}
+
+function mixedNodes(): SceneNode[] {
+  return [
+    ...validationNodes(),
     ...Array.from({ length: 300 }, (_unused, index) =>
       positioned(meshNode(`static-${index}`), index, 30),
     ),
@@ -137,26 +128,55 @@ export function worldBenchmarkScenes(): readonly WorldBenchmarkScene[] {
       light: SUN,
     },
   ]
+}
 
+function validationNodes(): SceneNode[] {
   return [
-    { id: 'S1', purpose: 'small-world overhead', state: state(small) },
-    { id: 'S2', purpose: 'repeated-object instancing', state: state(repetition) },
-    { id: 'S3', purpose: 'different static props batching', state: state(props) },
-    { id: 'S4', purpose: 'city partitioning and culling', state: state(city) },
     {
-      id: 'S5',
-      purpose: 'mixed gameplay compatibility',
-      state: {
-        ...state(mixed),
-        world: { ...DEFAULT_WORLD, play: { ...DEFAULT_WORLD.play, gravity: 9.81 } },
-        animation: {
-          ...EMPTY_TIMELINE,
-          events: [{ id: 'benchmark-event', at: 0, name: 'BenchmarkStarted' }],
-          transitions: [
-            { id: 'benchmark-cut', at: 0, kind: 'cut', duration: 0, scene: 'BenchmarkNext' },
-          ],
+      id: 'validation-group',
+      parentId: null,
+      name: 'Validation group',
+      visible: true,
+      transform: IDENTITY_TRANSFORM,
+      ...shadowDefaults({ type: 'group' }),
+      type: 'group',
+    },
+    {
+      ...meshNode('validation-child'),
+      parentId: 'validation-group',
+      instances: [
+        {
+          sourceId: 'validation-instance',
+          name: 'Validation instance',
+          transform: IDENTITY_TRANSFORM,
         },
-      },
+      ],
     },
   ]
+}
+
+function mixedBenchmark(): WorldBenchmarkScene {
+  return {
+    id: 'S5',
+    purpose: 'mixed gameplay compatibility',
+    state: {
+      ...state(mixedNodes()),
+      world: { ...DEFAULT_WORLD, play: { ...DEFAULT_WORLD.play, gravity: 9.81 } },
+      animation: {
+        ...EMPTY_TIMELINE,
+        events: [{ id: 'benchmark-event', at: 0, name: 'BenchmarkStarted' }],
+        transitions: [
+          { id: 'benchmark-cut', at: 0, kind: 'cut', duration: 0, scene: 'BenchmarkNext' },
+        ],
+      },
+    },
+  }
+}
+
+function benchmark(
+  id: WorldBenchmarkId,
+  purpose: string,
+  nodes: readonly SceneNode[],
+): WorldBenchmarkScene {
+  return { id, purpose, state: state(nodes) }
 }

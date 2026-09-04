@@ -24,7 +24,6 @@ import { secondsToUs } from '@shared/domain/time'
 import { answering, exportedJson, exportedText } from './exportedResponse'
 import { expandCompressedAssets } from './exportedAssets'
 import { createStartupRollback, failStartup } from './startupRollback'
-
 /**
  * A game running in a browser page, with no studio anywhere.
  *
@@ -40,55 +39,16 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     const assets = createBundledAssets(expandedAssets.files)
     const render = createWebRender(canvas, assets)
     rollback.add(render.dispose)
-    /** How far the running scene's own TIMELINE has veiled the picture, as of the last step. */
-    let veiled = 0
-    // 🛑 The host's port and not the renderer's own: read back off the renderer, the arrival fade
-    // would hear its own writes and lift itself against them.
-    const drawn: RenderPort = {
-      place: render.place,
-      view: render.view,
-      veil: amount => {
-        veiled = amount
-        render.veil(amount)
-      },
-    }
+    const drawn = createDrawnPort(render)
     const swap = createSceneSwap()
+    async function portsOf() {
+      return createPorts(canvas, game, assets, drawn.port, swap.port, rollback)
+    }
+    const { ports, modules } = await portsOf()
 
-    const physics = await loadJoltPhysics()
-    rollback.add(physics.dispose)
-    const script = await loadQuickjsScripts()
-    rollback.add(script.dispose)
-    const modules = await modulesOf(game)
-
-    const ports = createExportHost({
-      input: canvas,
-      player: { id: 'local', name: 'Player', local: true },
-      files: game.assets,
-      assets,
-      physics,
-      script,
-      render: drawn,
-      scenes: swap.port,
-    })
-    rollback.add(() => {
-      ports.input.detach()
-      ports.audio.stopAll()
-    })
-
-    const entry = exportedSceneNamed(game, game.entryScene)
-    if (!entry) throw new Error(`no scene "${game.entryScene}" in this game`)
-
-    const opening = sceneFromGltf(await exportedJson<unknown>(entry.file, entry.compression))
-    // 🛑 No `onFault`: the default writes to the log, which the export host echoes to the console.
-    // A game with nobody listening is exactly where a swallowed fault costs the most.
-    let world = worldFromScene(
-      entry.id,
-      opening,
-      ports,
-      { modules },
-      1,
-      await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id)),
-    )
+    const openingScene = await createOpeningScene(game, assets, ports, modules)
+    const { entry, opening } = openingScene
+    let { world } = openingScene
     rollback.add(() => world.dispose())
     let loop = createGameLoop(world)
     let warmed = false
@@ -171,7 +131,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       render.seek(secondsToUs(world.time.elapsed))
       // The veil the arrived scene came in under, on ITS clock, which a swap restarts at zero.
       if (fading > 0) {
-        const lift = veilLift(world.time.elapsed, fading, veiled)
+        const lift = veilLift(world.time.elapsed, fading, drawn.veiled())
         render.veil(lift.veil)
         if (lift.through) fading = 0
       }
@@ -198,6 +158,74 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   }
 }
 
+function createDrawnPort(render: ReturnType<typeof createWebRender>): {
+  port: RenderPort
+  veiled: () => number
+} {
+  let veiled = 0
+  return {
+    port: {
+      place: render.place,
+      view: render.view,
+      veil: amount => {
+        veiled = amount
+        render.veil(amount)
+      },
+    },
+    veiled: () => veiled,
+  }
+}
+
+async function createPorts(
+  canvas: HTMLCanvasElement,
+  game: ExportedGame,
+  assets: ReturnType<typeof createBundledAssets>,
+  render: RenderPort,
+  scenes: ReturnType<typeof createSceneSwap>['port'],
+  rollback: ReturnType<typeof createStartupRollback>,
+) {
+  const physics = await loadJoltPhysics()
+  rollback.add(physics.dispose)
+  const script = await loadQuickjsScripts()
+  rollback.add(script.dispose)
+  const modules = await modulesOf(game)
+  const ports = createExportHost({
+    input: canvas,
+    player: { id: 'local', name: 'Player', local: true },
+    files: game.assets,
+    assets,
+    physics,
+    script,
+    render,
+    scenes,
+  })
+  rollback.add(() => {
+    ports.input.detach()
+    ports.audio.stopAll()
+  })
+  return { ports, modules }
+}
+
+async function createOpeningScene(
+  game: ExportedGame,
+  assets: ReturnType<typeof createBundledAssets>,
+  ports: ReturnType<typeof createExportHost>,
+  modules: readonly ScriptModule[],
+) {
+  const entry = exportedSceneNamed(game, game.entryScene)
+  if (!entry) throw new Error(`no scene "${game.entryScene}" in this game`)
+  const opening = sceneFromGltf(await exportedJson<unknown>(entry.file, entry.compression))
+  const world = worldFromScene(
+    entry.id,
+    opening,
+    ports,
+    { modules },
+    1,
+    await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id)),
+  )
+  return { entry, opening, world }
+}
+
 function optimizationOf(
   scene: ExportedGame['scenes'][number]['optimization'],
   modelAssets: ExportedGame['modelAssets'],
@@ -205,7 +233,6 @@ function optimizationOf(
   if (!scene && !modelAssets) return undefined
   return { nodes: scene?.nodes ?? [], ...(modelAssets ? { modelAssets } : {}) }
 }
-
 /** Every script of the game, already JavaScript: the studio transpiled them at export time. */
 async function modulesOf(game: ExportedGame): Promise<readonly ScriptModule[]> {
   return await Promise.all(
@@ -215,7 +242,6 @@ async function modulesOf(game: ExportedGame): Promise<readonly ScriptModule[]> {
     })),
   )
 }
-
 async function heightmapFromBundle(assets: AssetPort, assetId: string) {
   const url = assets.urlOf({ kind: 'asset', id: assetId })
   if (!url) throw new Error(`no file for ${assetId}`)

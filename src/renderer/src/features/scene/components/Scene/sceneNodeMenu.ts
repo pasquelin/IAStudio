@@ -46,6 +46,21 @@ export type SceneNodeMenuProps = {
   onRename?: () => void
 }
 
+function commandRow(
+  id: CommandId,
+  icon: string,
+  t: TFunction,
+  run: (command: CommandId) => void,
+): ContextMenuRow {
+  const descriptor = commandDescriptor(id)
+  return {
+    label: descriptor ? t(descriptor.titleKey) : id,
+    icon,
+    tooltip: descriptor ? t(descriptor.helpKey) : id,
+    onSelect: () => run(id),
+  }
+}
+
 /**
  * What can be done with one node of a scene, right-clicked — in the outliner or in the viewport.
  *
@@ -62,28 +77,9 @@ export type SceneNodeMenuProps = {
  * Copy, cut and paste are deliberately absent — the four keys every editor shares already sit in
  * the native Édition menu, where a hand that lost them looks.
  */
-export function openSceneNodeMenu({
-  node,
-  canFrame,
-  t,
-  run,
-  onToggleVisible,
-  onSheet,
-  onRename,
-  onFileAsModule,
-}: SceneNodeMenuProps): void {
-  // Named by the registry rather than by keys written again here: the row then says exactly what
-  // the toolbar's tooltip and the native menu's entry say, and a renamed command cannot leave one
-  // of the three behind.
-  const command = (id: CommandId, icon: string): ContextMenuRow => {
-    const descriptor = commandDescriptor(id)
-    return {
-      label: descriptor ? t(descriptor.titleKey) : id,
-      icon,
-      tooltip: descriptor ? t(descriptor.helpKey) : id,
-      onSelect: () => run(id),
-    }
-  }
+export function openSceneNodeMenu(props: SceneNodeMenuProps): void {
+  const { node, canFrame, t, run, onToggleVisible, onSheet, onRename, onFileAsModule } = props
+  const command = (id: CommandId, icon: string): ContextMenuRow => commandRow(id, icon, t, run)
 
   void showContextMenu([
     ...(onFileAsModule
@@ -114,8 +110,6 @@ export function openSceneNodeMenu({
     // length whatever is under the pointer.
     { ...command('scene.negate', mdiSelectionEllipseRemove), disabled: !canNegate([node]) },
     { ...command('scene.invertCarve', mdiSwapHorizontal), disabled: !canInvertCarve([node]) },
-    // On or off the band, by the same shape the eye row takes: one row whose label flips, so the
-    // menu keeps its length. Both sides act on the selection, like every other row here.
     command(
       onSheet ? 'scene.removeFromSheet' : 'scene.addToSheet',
       onSheet ? mdiPlaylistRemove : mdiPlaylistPlus,
@@ -125,8 +119,6 @@ export function openSceneNodeMenu({
       label: node.visible ? t('scene.hide') : t('scene.show'),
       icon: node.visible ? mdiEyeOffOutline : mdiEyeOutline,
       tooltip: node.visible ? t('scene.hideHint') : t('scene.showHint'),
-      // The one row that stays on the node under the pointer: the eye of a row does the same, and
-      // a selection of six half hidden has no single state to flip.
       onSelect: onToggleVisible,
     },
     command('scene.delete', mdiTrashCanOutline),

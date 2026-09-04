@@ -9,12 +9,7 @@ import { currentModelFamily } from '@shared/domain/model'
 import { LANDING_CHOICES } from '@shared/domain/settings'
 import { isRecord, mapKeys } from '@shared/guards'
 import { z } from 'zod'
-import {
-  isCloudProviderId,
-  SCENARIO_CLOUD,
-  type CloudAuth,
-  type CloudProviderId,
-} from '@shared/domain/aiCloud'
+import { isCloudProviderId } from '@shared/domain/aiCloud'
 import { currentAiRoleKey, type RoleProvider } from '@shared/domain/aiRole'
 import { ASSISTANT_MODELS } from '@shared/domain/assistant'
 import { ASSISTANT_STEPS_DEFAULT, assistantStepsWithin } from '@shared/domain/assistantSteps'
@@ -29,7 +24,6 @@ import {
   type SettingsSectionId,
 } from '@shared/domain/settings'
 import { boundsOf, SETTING_ACTION_IDS, type SettingActionId } from '@shared/domain/settingsRegistry'
-import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
 import { DICTATION_MODES } from '@shared/domain/dictation'
 import { isSignature } from '@shared/domain/shortcut'
 import { HOME_SECTION_IDS } from '@shared/domain/home'
@@ -47,7 +41,14 @@ import {
 import { HEX_COLOR } from '@shared/domain/color'
 import { localModelSchema } from '@main/ai/localModelSchema'
 import { migratedRoleChoices } from './migratedRoleChoices'
-import type { AccountBook, Credentials } from './accounts'
+export {
+  parseAccountId,
+  parseAccountName,
+  parseCloudProviderId,
+  parseCredentials,
+  parseStoredAccounts,
+  parseStoredCredentials,
+} from './credentialsValidation'
 
 // Built from the shared unions, never retyped — the same reason `provider/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
@@ -461,99 +462,4 @@ const settingAction = z.enum(SETTING_ACTION_IDS)
 
 export function parseSettingAction(value: unknown): SettingActionId {
   return settingAction.parse(value)
-}
-
-// Trimmed before the length check: a key pasted from a web page carries a trailing newline,
-// and the API answers 401 to a credential that only differs by whitespace.
-const credential = z.string().trim().min(1)
-
-export function parseCredentials(
-  key: unknown,
-  secret: unknown,
-  auth: CloudAuth = 'key-secret',
-): Credentials {
-  if (auth === 'key') return { key: credential.parse(key), secret: '' }
-
-  return { key: credential.parse(key), secret: credential.parse(secret) }
-}
-
-/** Absent or Scenario: every caller written before clouds were a list. */
-export function parseCloudProviderId(value: unknown): CloudProviderId {
-  if (value === undefined || value === null || value === '') return SCENARIO_CLOUD
-  if (!isCloudProviderId(value)) throw new Error(`unknown cloud: ${String(value)}`)
-  return value
-}
-
-const storedCredentials = z.object({ key: credential, secret: z.string().trim() })
-
-/**
- * Reads back what this process wrote, on the same `credential` schema as the input path. A
- * hand-rolled guard accepting `{key:'',secret:''}` once made `hasCredentials()` answer true on
- * a blank pair: the account screen claimed to be configured while every call answered 401.
- */
-export function parseStoredCredentials(plain: string): Credentials | null {
-  const parsed = storedCredentials.safeParse(JSON.parse(plain))
-  return parsed.success ? parsed.data : null
-}
-
-const accountName = z.string().trim().min(1).max(ACCOUNT_NAME_MAX_LENGTH)
-const accountId = z.string().trim().min(1)
-
-/**
- * A type guard, not the rule. `checkAccountName` owns what makes a name acceptable, and it
- * answers a code the screen can translate — refusing here instead would surface a name that is
- * merely too long as an unexplained rejected call.
- */
-export function parseAccountName(value: unknown): string {
-  return z.string().parse(value)
-}
-
-/** Throws: the id names what gets written, and a renderer sends it. */
-export function parseAccountId(value: unknown): string {
-  return accountId.parse(value)
-}
-
-const storedAccount = z.object({
-  id: accountId,
-  name: accountName,
-  credentials: storedCredentials,
-  // Absent on every key written before clouds became a list, and `providerOf` reads that absence
-  // as Scenario — which is why no stored file has to be rewritten.
-  providerId: z.string().min(1).optional(),
-})
-
-const storedBook = z.object({
-  // `catch` per entry rather than on the array: one unreadable account costs its own row, not
-  // every key the user holds.
-  accounts: z.array(storedAccount.nullable().catch(null)),
-  // The shape written since clouds became a list. Caught like an entry: a corrupt pointer costs
-  // the pointer, not the whole book.
-  activeByProvider: z.record(z.string().min(1), z.string().min(1)).catch({}).optional(),
-  // What the same file held before. Read only to be MIGRATED below — never written again.
-  activeId: z.string().min(1).nullable().catch(null).optional(),
-})
-
-/**
- * Reads a book back from disk, keeping whatever still parses — and repairing nothing.
- *
- * The repair is `settleBook`, and it runs one step later. A pointer that names nothing is
- * repointed there, not here: this function only parses.
- *
- * A book written before clouds became a list carries `activeId` and no `providerId` anywhere: its
- * pointer is read as Scenario's, which is what it always was. Nothing is rewritten until the next
- * write, and `settleBook` repairs whatever the migration could not name.
- *
- * Null means the blob is not a book at all, which is what tells the caller to look for a lone
- * pair to migrate instead.
- */
-export function parseStoredAccounts(plain: string): AccountBook | null {
-  const parsed = storedBook.safeParse(JSON.parse(plain))
-  if (!parsed.success) return null
-
-  const migrated = parsed.data.activeId ? { [SCENARIO_CLOUD]: parsed.data.activeId } : {}
-
-  return {
-    accounts: parsed.data.accounts.filter(entry => entry !== null),
-    activeByProvider: parsed.data.activeByProvider ?? migrated,
-  }
 }

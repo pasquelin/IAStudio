@@ -49,6 +49,17 @@ function characterViewport(three: Settings['three']): Settings['three'] {
   }
 }
 
+function runCharacterCommand(
+  assetId: string,
+  command: CommandId,
+  setNavigating: (update: (current: boolean) => boolean) => void,
+): void {
+  const store = useCharacters.getState()
+  if (command === 'character.undo') store.undo(assetId)
+  if (command === 'character.redo') store.redo(assetId)
+  if (command === 'character.navigate') setNavigating(current => !current)
+}
+
 /**
  * One character, edited on its own tab: the model on a workshop floor, its skeleton in the
  * inspector and its motion along the band — both of them docks of the studio.
@@ -92,16 +103,10 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
   // Its OWN scope and not the scene's: ⌘Z on this tab must not reach the scene open beside it.
   // ⌘S is not here — `commandRouter` routes it to the document in front, and this kind writes
   // the model's own container.
-  const runCommand = (command: CommandId): void => {
-    const store = useCharacters.getState()
-    if (command === 'character.undo') store.undo(assetId)
-    if (command === 'character.redo') store.redo(assetId)
-    if (command === 'character.navigate') setNavigating(current => !current)
-  }
   useShortcuts({
     scope: 'character',
     enabled: inFront,
-    onCommand: runCommand,
+    onCommand: command => runCharacterCommand(assetId, command, setNavigating),
     // 🛑 The same camera as the studio's viewport. Without these two the keys reached no engine
     // at all: this surface orbited and nothing else, where every other 3D one flies.
     onMotionChange: held => engineRef.current?.setMotion(held),

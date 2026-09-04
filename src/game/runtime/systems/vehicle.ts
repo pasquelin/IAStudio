@@ -41,49 +41,49 @@ export function createVehicleSystem(
   const driving: Entity[] = []
   const heading = restingAxes()
 
+  const collect = (world: World): void => {
+    driving.length = 0
+    names.length = 0
+    for (const entity of world.entities.withComponent('Vehicle')) {
+      if (!componentOf(entity, 'Vehicle')) continue
+      driving.push(entity)
+      names.push(entity.id)
+    }
+  }
+
+  const drive = (world: World, asked: number, steer: number, handBrake: number): void => {
+    wanted.length = 0
+    const motions = world.ports.physics.motion(names)
+    let read = 0
+    for (const entity of driving) {
+      const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
+      const turned = (worldOf ? worldOf(entity) : entity.transform).rotation
+      const speed = motion ? dot(motion.linear, axesOfEuler(turned, heading).forward) : 0
+      const braking = asked * speed < 0 && Math.abs(speed) > STOPPED
+      const request = pooled(pool, wanted.length, freshDrive)
+      request.body = entity.id
+      request.forward = braking || handBrake === 1 ? 0 : asked
+      request.steer = steer
+      request.brake = braking ? 1 : 0
+      request.handBrake = handBrake
+      wanted.push(request)
+    }
+    world.ports.physics.drive(wanted)
+  }
+
   return {
     name: 'vehicle',
     reads: ['Vehicle'],
     writes: [],
 
     fixedUpdate: (world: World) => {
-      driving.length = 0
-      names.length = 0
-      for (const entity of world.entities.withComponent('Vehicle')) {
-        if (!componentOf(entity, 'Vehicle')) continue
-        driving.push(entity)
-        names.push(entity.id)
-      }
+      collect(world)
       if (driving.length === 0) return
-
-      // Read ONCE: there is one keyboard, and every car in the scene answers the same pedals.
       const input = world.input
       const asked = keysHeld(input, THROTTLE) - keysHeld(input, REVERSE)
       const steer = clamp(keysHeld(input, RIGHT) - keysHeld(input, LEFT), -1, 1)
       const handBrake = keyHeld(input, HAND_BRAKE)
-
-      wanted.length = 0
-      const motions = world.ports.physics.motion(names)
-      let read = 0
-      for (const entity of driving) {
-        // `motion` answers in the order it was asked, leaving out what the port does not hold.
-        const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
-        // 🛑 The WORLD rotation: the forces and the velocity are world-space, and a car hanging
-        // from a rotated group carries a local one — its nose would point in the parent's frame.
-        const turned = (worldOf ? worldOf(entity) : entity.transform).rotation
-        const speed = motion ? dot(motion.linear, axesOfEuler(turned, heading).forward) : 0
-        const braking = asked * speed < 0 && Math.abs(speed) > STOPPED
-
-        const drive = pooled(pool, wanted.length, freshDrive)
-        drive.body = entity.id
-        drive.forward = braking || handBrake === 1 ? 0 : asked
-        drive.steer = steer
-        drive.brake = braking ? 1 : 0
-        drive.handBrake = handBrake
-        wanted.push(drive)
-      }
-
-      world.ports.physics.drive(wanted)
+      drive(world, asked, steer, handBrake)
     },
 
     /**

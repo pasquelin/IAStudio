@@ -67,6 +67,37 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
     copyAxes(camera.transform.rotation, local?.rotation ?? rotation)
   }
 
+  const finish = (settings: Component, anchor: Transform, camera: Entity): void => {
+    const aimed = textOf(settings, 'lookAt', ARM.lookAt) === 'subject' ? anchor.position : PIVOT
+    BACK.x = aimed.x - PLACED.x
+    BACK.y = aimed.y - PLACED.y
+    BACK.z = aimed.z - PLACED.z
+    const towards = BACK.x === 0 && BACK.y === 0 && BACK.z === 0 ? AHEAD : BACK
+    turnTowards(TURNED, towards, 0)
+    place(camera, PLACED, TURNED)
+    if (filmable(camera)) rigs.take(camera)
+  }
+
+  const updateArm = (world: World, entity: Entity, alpha: number, dt: number): void => {
+    const settings = componentOf(entity, 'SpringArm')
+    if (!settings) return
+    const subject = subjects.of(world, entity, textOf(settings, 'subject', ARM.subject))
+    const camera = cameras.of(world, entity, textOf(settings, 'camera', ARM.camera))
+    if (!subject || !camera || camera === subject) return
+    const anchor = worldOf(subject, poseAt(subject, alpha, DRAWN))
+    const orientation = textOf(settings, 'orientation', ARM.orientation)
+    const wanted = aimedAt(orientation, anchor, entity)
+    let kept = held.get(entity)
+    const over = kept ? dt : 0
+    if (!kept) {
+      kept = { look: { yaw: 0, pitch: 0 }, at: { x: 0, y: 0, z: 0 }, aim: 1, free: 1 }
+      held.set(entity, kept)
+    }
+    aimAndPlace(settings, kept, wanted, orientation, anchor, over)
+    collide(world, settings, kept, subject.id, camera.id, over)
+    finish(settings, anchor, camera)
+  }
+
   return {
     name: 'springArm',
     reads: ['SpringArm'],
@@ -78,107 +109,88 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
       characters.aim(world.ports.input.pointer())
 
       for (const entity of world.entities.withComponent('SpringArm')) {
-        const settings = componentOf(entity, 'SpringArm')
-        if (!settings) continue
-
-        const subject = subjects.of(world, entity, textOf(settings, 'subject', ARM.subject))
-        const camera = cameras.of(world, entity, textOf(settings, 'camera', ARM.camera))
-        // A camera filming itself, or filming the thing it hangs behind, frames nothing.
-        if (!subject || !camera || camera === subject) continue
-
-        const anchor = worldOf(subject, poseAt(subject, alpha, DRAWN))
-        const orientation = textOf(settings, 'orientation', ARM.orientation)
-        const wanted = aimedAt(orientation, anchor, entity)
-
-        let kept = held.get(entity)
-        // A first frame snaps: there is nowhere to have lagged from, so no seconds to lag over.
-        const over = kept ? dt : 0
-        if (!kept) {
-          kept = { look: { yaw: 0, pitch: 0 }, at: { x: 0, y: 0, z: 0 }, aim: 1, free: 1 }
-          held.set(entity, kept)
-        }
-        const turn = approach(numberOf(settings, 'rotationLag', ARM.rotationLag), over)
-        kept.look.yaw = lerpAngle(kept.look.yaw, wanted.yaw, turn)
-        // 🛑 The POINTER's look alone, and bounded here rather than on `wanted`, which every arm
-        // shares: an authored node is where its author put it, and clamping `fixed` would re-aim a
-        // top-down shot saved before these fields existed.
-        const asked = orientation === 'pointer' ? tipped(settings, wanted.pitch) : wanted.pitch
-        kept.look.pitch += (asked - kept.look.pitch) * turn
-
-        // The pivot: the anchor lifted to the height asked for, and pushed off the centre line.
-        aheadOf(kept.look, AHEAD)
-        armPivot(
-          anchor.position,
-          numberOf(settings, 'height', ARM.height),
-          numberOf(settings, 'shoulder', ARM.shoulder),
-          kept.look.yaw,
-          PIVOT,
-        )
-        armSeat(PIVOT, AHEAD, numberOf(settings, 'length', ARM.length), WANTED)
-
-        const glide = approach(numberOf(settings, 'positionLag', ARM.positionLag), over)
-        kept.at.x += (WANTED.x - kept.at.x) * glide
-        kept.at.y += (WANTED.y - kept.at.y) * glide
-        kept.at.z += (WANTED.z - kept.at.z) * glide
-
-        copyAxes(PLACED, kept.at)
-        // 🛑 After the lag and never before: a wall must stop the camera on the frame it is met,
-        // where a lagged clamp would let the shot walk through it and crawl back out.
-        if (flagOf(settings, 'collision', ARM.collision)) {
-          IGNORED[0] = subject.id
-          IGNORED[1] = camera.id
-          const dx = PLACED.x - PIVOT.x
-          const dy = PLACED.y - PIVOT.y
-          const dz = PLACED.z - PIVOT.z
-          const reach = Math.sqrt(dx * dx + dy * dy + dz * dz)
-          const met = world.ports.physics.cast(
-            PIVOT,
-            PLACED,
-            numberOf(settings, 'probeRadius', ARM.probeRadius),
-            IGNORED,
-          )
-          const share = shortened(met, numberOf(settings, 'safetyMargin', ARM.safetyMargin), reach)
-
-          // Going out has to clear the hysteresis before it is even aimed at, or an obstacle
-          // sitting right on the edge flickers free and blocked.
-          // 🛑 `share >= 1` on its own line: an arm shorter than its own hysteresis could never
-          // clear the deadband in metres, and stayed pinned for the rest of the session.
-          if (
-            share < kept.aim ||
-            share >= 1 ||
-            (share - kept.aim) * reach > numberOf(settings, 'hysteresis', ARM.hysteresis)
-          ) {
-            kept.aim = share
-          }
-          // 🛑 Faster IN than out, and never instant either way: a snap read as a cut. The guard
-          // spares the read and the exponential, not the addition, which would be a plain zero.
-          if (kept.free !== kept.aim) {
-            const lag =
-              kept.aim < kept.free
-                ? numberOf(settings, 'collisionInLag', ARM.collisionInLag)
-                : numberOf(settings, 'collisionOutLag', ARM.collisionOutLag)
-            kept.free += (kept.aim - kept.free) * approach(lag, over)
-          }
-
-          PLACED.x = PIVOT.x + dx * kept.free
-          PLACED.y = PIVOT.y + dy * kept.free
-          PLACED.z = PIVOT.z + dz * kept.free
-        }
-
-        const aimed = textOf(settings, 'lookAt', ARM.lookAt) === 'subject' ? anchor.position : PIVOT
-        BACK.x = aimed.x - PLACED.x
-        BACK.y = aimed.y - PLACED.y
-        BACK.z = aimed.z - PLACED.z
-        // 🛑 The look itself when the camera sits ON the pivot — a probe that left no room, or an
-        // arm of no length. `turnTowards` leaves a rotation alone for a direction of nothing, and
-        // the camera would keep the one the frame before wrote.
-        const towards = BACK.x === 0 && BACK.y === 0 && BACK.z === 0 ? AHEAD : BACK
-        turnTowards(TURNED, towards, 0)
-        place(camera, PLACED, TURNED)
-        if (filmable(camera)) rigs.take(camera)
+        updateArm(world, entity, alpha, dt)
       }
     },
   }
+}
+
+function aimAndPlace(
+  settings: Component,
+  kept: Held,
+  wanted: Look,
+  orientation: string,
+  anchor: Transform,
+  over: number,
+): void {
+  const turn = approach(numberOf(settings, 'rotationLag', ARM.rotationLag), over)
+  kept.look.yaw = lerpAngle(kept.look.yaw, wanted.yaw, turn)
+  const asked = orientation === 'pointer' ? tipped(settings, wanted.pitch) : wanted.pitch
+  kept.look.pitch += (asked - kept.look.pitch) * turn
+  aheadOf(kept.look, AHEAD)
+  armPivot(
+    anchor.position,
+    numberOf(settings, 'height', ARM.height),
+    numberOf(settings, 'shoulder', ARM.shoulder),
+    kept.look.yaw,
+    PIVOT,
+  )
+  armSeat(PIVOT, AHEAD, numberOf(settings, 'length', ARM.length), WANTED)
+  const glide = approach(numberOf(settings, 'positionLag', ARM.positionLag), over)
+  kept.at.x += (WANTED.x - kept.at.x) * glide
+  kept.at.y += (WANTED.y - kept.at.y) * glide
+  kept.at.z += (WANTED.z - kept.at.z) * glide
+}
+
+function collide(
+  world: World,
+  settings: Component,
+  kept: Held,
+  subject: string,
+  camera: string,
+  over: number,
+): void {
+  copyAxes(PLACED, kept.at)
+  if (!flagOf(settings, 'collision', ARM.collision)) return
+  IGNORED[0] = subject
+  IGNORED[1] = camera
+  const dx = PLACED.x - PIVOT.x
+  const dy = PLACED.y - PIVOT.y
+  const dz = PLACED.z - PIVOT.z
+  const reach = Math.sqrt(dx * dx + dy * dy + dz * dz)
+  const met = world.ports.physics.cast(
+    PIVOT,
+    PLACED,
+    numberOf(settings, 'probeRadius', ARM.probeRadius),
+    IGNORED,
+  )
+  updateCollision(
+    settings,
+    kept,
+    shortened(met, numberOf(settings, 'safetyMargin', ARM.safetyMargin), reach),
+    reach,
+    over,
+  )
+  PLACED.x = PIVOT.x + dx * kept.free
+  PLACED.y = PIVOT.y + dy * kept.free
+  PLACED.z = PIVOT.z + dz * kept.free
+}
+
+function updateCollision(
+  settings: Component,
+  kept: Held,
+  share: number,
+  reach: number,
+  over: number,
+): void {
+  const hysteresis = numberOf(settings, 'hysteresis', ARM.hysteresis)
+  if (share < kept.aim || share >= 1 || (share - kept.aim) * reach > hysteresis) kept.aim = share
+  if (kept.free === kept.aim) return
+  const lag =
+    kept.aim < kept.free
+      ? numberOf(settings, 'collisionInLag', ARM.collisionInLag)
+      : numberOf(settings, 'collisionOutLag', ARM.collisionOutLag)
+  kept.free += (kept.aim - kept.free) * approach(lag, over)
 }
 
 /**

@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
 import { LIST_ONLY } from '@/helpers/collectionState'
 import { useExplorerView } from '@/stores/explorerView'
 import { useMedia } from '@/stores/media'
 import { useTreeFolds } from '@/stores/treeFolds'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { ExplorerActions } from './ExplorerActions'
 
 beforeEach(() => {

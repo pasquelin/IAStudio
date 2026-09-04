@@ -229,7 +229,7 @@ function shelfWithout(storage: Settings['storage'], path: string): Partial<Setti
  * The open project is owned by the main process; this is the renderer's replica, refreshed by
  * broadcast so every window agrees on which project is open.
  */
-export const useProject = create<ProjectState>()((set, get) => ({
+const projectState: ProjectState = {
   project: null,
   known: false,
 
@@ -238,7 +238,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // Nothing will ever answer, so the answer is "none": surfaces that wait to be told — the
     // home draws nothing until then — would otherwise wait for the rest of the session.
     if (!bridge) {
-      set({ known: true })
+      useProject.setState({ known: true })
       return () => {}
     }
 
@@ -252,8 +252,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // arrangement: nothing of the previous one may be left showing.
     const stop = bridge.project.onChange(project => {
       announced = true
-      const before = get().project?.path
-      set({ project, known: true })
+      const before = useProject.getState().project?.path
+      useProject.setState({ project, known: true })
 
       /**
        * Only when ANOTHER FOLDER is in front. A rename moves the folder, so it does follow — and
@@ -270,7 +270,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const current = await orElse(bridge.project.current(), null)
     if (announced) return stop
 
-    set({ project: current, known: true })
+    useProject.setState({ project: current, known: true })
     await followProject(current)
     return stop
   },
@@ -279,14 +279,14 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const bridge = getBridge()
     if (!bridge) return false
     // Already in front: the tick on the row said so, and choosing it means "yes, still".
-    if (path === get().project?.path) return true
+    if (path === useProject.getState().project?.path) return true
 
     // `refreshDocuments` drops every open document a beat from here, and no `beforeunload` sees
     // a project change — `guardUnsavedWork` says so itself, which is why this asks at all.
     if (!(await settleLeaving(bridge))) return false
 
     try {
-      set({ project: await bridge.project.open(path), known: true })
+      useProject.setState({ project: await bridge.project.open(path), known: true })
       return true
     } catch {
       // Forgotten here rather than by whoever clicked: an opening can fail from anywhere, and a
@@ -294,7 +294,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
       // Swallowed on the way: this is already the failing path, and `open` answers `false`
       // whether or not the shelf could be written.
       try {
-        await get().forget(path)
+        await useProject.getState().forget(path)
       } catch {
         // Already the failing path: `open` answers `false` either way, as the note above says.
       }
@@ -305,7 +305,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   close: async () => {
     const bridge = getBridge()
-    const leaving = get().project
+    const leaving = useProject.getState().project
     // Nothing to leave, and the settings below would then clear a `lastProject` this window has
     // no business clearing — a second window closing the same project reaches here too.
     if (!bridge || !leaving) return 'nothing'
@@ -324,7 +324,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
     // The broadcast has in fact already emptied every panel — the main process fires `onChange`
     // on its way past. Set here all the same, as `open` sets what it opened.
-    set({ project: null })
+    useProject.setState({ project: null })
 
     try {
       await useSettings.getState().write({ storage: { lastProject: undefined } })
@@ -348,7 +348,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // second time: the folder it is handed is the one the main process has already switched to.
     if (!created) return null
 
-    set({ project: created, known: true })
+    useProject.setState({ project: created, known: true })
     return created
   },
 
@@ -364,9 +364,9 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
     // Left through the same door every other exit takes, so the questions about running
     // generations and unsaved work are asked BEFORE the folder goes.
-    const wasOpen = get().project?.path === path
+    const wasOpen = useProject.getState().project?.path === path
     if (wasOpen) {
-      const left = await get().close()
+      const left = await useProject.getState().close()
       // The ENDING travels, never a sentence: the caller writes the words, as it does for a bin
       // the disk refused — see `trashProject`.
       if (left !== 'left') return { ok: false, declined: left === 'kept', why: left }
@@ -378,7 +378,7 @@ export const useProject = create<ProjectState>()((set, get) => ({
      * shut for a gesture that never happened, with `lastProject` cleared and nothing to reopen it.
      */
     const kept = async (why: string): Promise<ProjectTrashed> => {
-      if (wasOpen) await get().open(path)
+      if (wasOpen) await useProject.getState().open(path)
       return { ok: false, declined: false, why }
     }
 
@@ -429,8 +429,8 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // Only when it is the open one. The broadcast the handler sends reaches the OTHER windows;
     // this one is already past it, and waiting for a round trip would leave the title bar naming
     // the old name for a frame.
-    const wasOpen = get().project?.path === path
-    if (wasOpen) set({ project: renamed })
+    const wasOpen = useProject.getState().project?.path === path
+    if (wasOpen) useProject.setState({ project: renamed })
 
     /**
      * 🛑 Everything keyed BY FOLDER moves with it, and the account link above all: orphaned at the
@@ -458,13 +458,15 @@ export const useProject = create<ProjectState>()((set, get) => ({
 
   openPicked: async () => {
     const picked = await pickedProject((bridge, folder) => bridge.project.open(folder))
-    if (picked) set({ project: picked, known: true })
+    if (picked) useProject.setState({ project: picked, known: true })
   },
 
   createPicked: async () => {
     // The folder chosen IS the project, and it names itself. What the main process makes of it —
     // a fresh project, the one already there, or a refusal — is its call, not the window's.
     const picked = await pickedProject((bridge, folder) => bridge.project.create(folder))
-    if (picked) set({ project: picked, known: true })
+    if (picked) useProject.setState({ project: picked, known: true })
   },
-}))
+}
+
+export const useProject = create<ProjectState>()(() => projectState)

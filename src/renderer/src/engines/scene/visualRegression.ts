@@ -17,31 +17,15 @@ export function compareVisualFrames(
   optimized: VisualFrame,
   options: VisualRegressionOptions,
 ): VisualRegressionResult {
-  if (
-    !Number.isInteger(options.channelTolerance) ||
-    options.channelTolerance < 0 ||
-    options.channelTolerance > 255 ||
-    !Number.isFinite(options.maximumChangedPixelRatio) ||
-    options.maximumChangedPixelRatio < 0 ||
-    options.maximumChangedPixelRatio > 1
-  )
-    throw new Error('Visual regression tolerances are outside their valid range')
+  validateOptions(options)
   if (!sameDimensions(original, optimized) || !bothFramesComplete(original, optimized))
     throw new Error('Visual frames must have equal non-empty RGBA dimensions')
 
-  let changedPixels = 0
-  let maximumChannelDifference = 0
-  for (let offset = 0; offset < original.pixels.length; offset += 4) {
-    let changed = false
-    for (let channel = 0; channel < 4; channel += 1) {
-      const difference = Math.abs(
-        (original.pixels[offset + channel] ?? 0) - (optimized.pixels[offset + channel] ?? 0),
-      )
-      maximumChannelDifference = Math.max(maximumChannelDifference, difference)
-      if (difference > options.channelTolerance) changed = true
-    }
-    if (changed) changedPixels += 1
-  }
+  const { changedPixels, maximumChannelDifference } = differencesOf(
+    original,
+    optimized,
+    options.channelTolerance,
+  )
   const pixels = original.width * original.height
   const changedPixelRatio = changedPixels / pixels
   return {
@@ -50,6 +34,36 @@ export function compareVisualFrames(
     maximumChannelDifference,
     equivalent: changedPixelRatio <= options.maximumChangedPixelRatio,
   }
+}
+
+function validateOptions(options: VisualRegressionOptions): void {
+  const validChannel =
+    Number.isInteger(options.channelTolerance) &&
+    options.channelTolerance >= 0 &&
+    options.channelTolerance <= 255
+  const validRatio =
+    Number.isFinite(options.maximumChangedPixelRatio) &&
+    options.maximumChangedPixelRatio >= 0 &&
+    options.maximumChangedPixelRatio <= 1
+  if (!validChannel || !validRatio)
+    throw new Error('Visual regression tolerances are outside their valid range')
+}
+
+function differencesOf(
+  original: VisualFrame,
+  optimized: VisualFrame,
+  tolerance: number,
+): Pick<VisualRegressionResult, 'changedPixels' | 'maximumChannelDifference'> {
+  let changedPixels = 0
+  let maximumChannelDifference = 0
+  for (let offset = 0; offset < original.pixels.length; offset += 4) {
+    const differences = [0, 1, 2, 3].map(channel =>
+      Math.abs((original.pixels[offset + channel] ?? 0) - (optimized.pixels[offset + channel] ?? 0)),
+    )
+    maximumChannelDifference = Math.max(maximumChannelDifference, ...differences)
+    if (differences.some(difference => difference > tolerance)) changedPixels += 1
+  }
+  return { changedPixels, maximumChannelDifference }
 }
 
 function sameDimensions(original: VisualFrame, optimized: VisualFrame): boolean {

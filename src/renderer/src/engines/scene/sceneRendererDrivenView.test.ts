@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
 
 /**
  * Read as text for the reason `sceneRendererRedraw.test.ts` gives: the engine cannot be built
@@ -19,7 +19,7 @@ describe('SceneRenderer and the camera a running game writes', () => {
 
   /** The flag alone would freeze nothing: the freeze is composed in one place, and reads all four. */
   it('counts a driven view among the gestures that freeze the panes', () => {
-    const freeze = source.match(/private syncPaneFreeze\(\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
+    const freeze = source.match(/protected syncPaneFreeze\(\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
 
     expect(freeze).toContain('this.viewDriven')
   })

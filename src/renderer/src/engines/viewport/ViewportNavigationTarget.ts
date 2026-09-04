@@ -74,6 +74,7 @@ export class ViewportNavigationTarget {
     this.settling = setTimeout(() => {
       this.settling = null
       this.wheelAim = null
+      this.wheelAim = null
       this.options.onSettled(pane)
     }, WHEEL_SETTLES_MS)
   }

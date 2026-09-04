@@ -58,41 +58,7 @@ export function createInstancedGroups(
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
         const first = worn.meshes[0]
         if (!first) continue
-
-        const regions = splitOf(worn, first.geometry)
-        for (let region = 0; region + 1 < regions.starts.length; region += 1) {
-          const from = regions.starts[region] ?? 0
-          const to = regions.starts[region + 1] ?? 0
-          const instance = new InstancedMesh(first.geometry, worn.material, to - from)
-          const ids: string[] = []
-          let written = 0
-          for (let slot = from; slot < to; slot += 1) {
-            const at = regions.order[slot] ?? -1
-            const mesh = worn.meshes[at]
-            const id = worn.ids[at]
-            if (!mesh || id === undefined) continue
-            instance.setMatrixAt(written, mesh.matrixWorld)
-            pushSlot(placed, id, { instance, slot: written, source: mesh })
-            ids[written] = id
-            written += 1
-          }
-          // What was really written, so a region short of a mesh draws one fewer rather than
-          // leaving the constructor's identity matrix as a copy of the shape at the origin.
-          instance.count = written
-          // Read off the source, which `applyShadowFlags` has already written: the sources sit
-          // on a layer the shadow camera never looks at, so without this an instanced object
-          // would neither cast a shadow nor catch one.
-          instance.castShadow = first.castShadow
-          instance.receiveShadow = first.receiveShadow
-          instance.instanceMatrix.needsUpdate = true
-          // Its own bounds are what the frustum tests: without this the whole region is culled by
-          // the box of a single instance, and a scene disappears as soon as the camera turns.
-          instance.computeBoundingSphere()
-          host.add(instance)
-          drawn.push(instance)
-          idsByInstance.set(instance, ids)
-        }
-
+        buildRegions(worn, first, placed, host, drawn, idsByInstance)
         instanced += worn.meshes.length
       }
       return instanced
@@ -123,6 +89,53 @@ export function createInstancedGroups(
       sources.hang()
     },
   }
+}
+
+function buildRegions(
+  worn: Grouped,
+  first: Mesh,
+  placed: Placed,
+  host: Object3D,
+  drawn: InstancedMesh[],
+  idsByInstance: WeakMap<InstancedMesh, string[]>,
+): void {
+  const regions = splitOf(worn, first.geometry)
+  for (let region = 0; region + 1 < regions.starts.length; region += 1) {
+    const { instance, ids } = buildRegion(worn, regions, region, first, placed)
+    host.add(instance)
+    drawn.push(instance)
+    idsByInstance.set(instance, ids)
+  }
+}
+
+function buildRegion(
+  worn: Grouped,
+  regions: SpatialRegions,
+  region: number,
+  first: Mesh,
+  placed: Placed,
+): { instance: InstancedMesh; ids: string[] } {
+  const from = regions.starts[region] ?? 0
+  const to = regions.starts[region + 1] ?? 0
+  const instance = new InstancedMesh(first.geometry, worn.material, to - from)
+  const ids: string[] = []
+  let written = 0
+  for (let slot = from; slot < to; slot += 1) {
+    const at = regions.order[slot] ?? -1
+    const mesh = worn.meshes[at]
+    const id = worn.ids[at]
+    if (!mesh || id === undefined) continue
+    instance.setMatrixAt(written, mesh.matrixWorld)
+    pushSlot(placed, id, { instance, slot: written, source: mesh })
+    ids[written] = id
+    written += 1
+  }
+  instance.count = written
+  instance.castShadow = first.castShadow
+  instance.receiveShadow = first.receiveShadow
+  instance.instanceMatrix.needsUpdate = true
+  instance.computeBoundingSphere()
+  return { instance, ids }
 }
 
 /**

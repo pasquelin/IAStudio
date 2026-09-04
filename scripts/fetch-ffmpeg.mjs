@@ -239,6 +239,59 @@ function digestOf(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex')
 }
 
+function verifyDigest(key, name, seen, target) {
+  const expected = target.digests[name]
+  if (!expected) throw new Error(`No digest recorded for ${key}/${name}`)
+  if (expected === seen) return
+  throw new Error(
+    `${key}/${name} does not match its recorded digest.\n` +
+      `  expected ${expected}\n  got      ${seen}\n` +
+      'Rotate deliberately: update the URL and rerun with --digests.',
+  )
+}
+
+async function installArchives(target, key, work, destination, verify) {
+  const seen = {}
+  for (const archive of target.archives) {
+    const file = join(work, 'archive')
+    console.log(`Fetching ${archive.url}`)
+    await download(archive.url, file)
+    for (const [name, member] of Object.entries(archive.members)) {
+      const extracted = extract(file, member, work)
+      seen[name] = digestOf(extracted)
+      if (verify) verifyDigest(key, name, seen[name], target)
+      copyFileSync(extracted, join(destination, name))
+      rmSync(extracted)
+      chmodSync(join(destination, name), 0o755)
+      console.log(`  \u2192 ${name} ${seen[name].slice(0, 12)}`)
+    }
+    rmSync(file)
+  }
+  return seen
+}
+
+function writeNotice(destination, target, key, platform) {
+  const sources = target.sources
+  writeFileSync(
+    join(destination, 'NOTICE.txt'),
+    [
+      `FFmpeg ${target.version} for ${key}`,
+      `Licence: ${target.licence}`,
+      `Build: ${target.source}`,
+      '',
+      'FFmpeg is a separate program, spawned by IA Studio. It is not linked into it.',
+      '',
+      'Corresponding sources, as the licence requires:',
+      `  ${sources.url}`,
+      `  also attached to every release of IA Studio as ${sources.file}`,
+      '',
+      'The build configuration of this very binary is printed by:',
+      `  ${platform === 'win32' ? 'ffmpeg.exe' : './ffmpeg'} -buildconf`,
+      '',
+    ].join('\n'),
+  )
+}
+
 /**
  * Puts the binaries for one target in `resources/ffmpeg/`, replacing whatever was there.
  *
@@ -257,63 +310,14 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
 
   const destination = options.destination ?? DESTINATION
   const verify = options.verify ?? true
-  const seen = {}
-
   rmSync(destination, { recursive: true, force: true })
   mkdirSync(destination, { recursive: true })
   const work = mkdtempSync(join(tmpdir(), 'ia-studio-ffmpeg-'))
 
   try {
-    for (const archive of target.archives) {
-      const file = join(work, 'archive')
-      console.log(`Fetching ${archive.url}`)
-      await download(archive.url, file)
-
-      for (const [name, member] of Object.entries(archive.members)) {
-        const extracted = extract(file, member, work)
-        seen[name] = digestOf(extracted)
-
-        if (verify) {
-          const expected = target.digests[name]
-          if (!expected) throw new Error(`No digest recorded for ${key}/${name}`)
-          if (expected !== seen[name]) {
-            throw new Error(
-              `${key}/${name} does not match its recorded digest.\n` +
-                `  expected ${expected}\n  got      ${seen[name]}\n` +
-                `Rotate deliberately: update the URL and rerun with --digests.`,
-            )
-          }
-        }
-
-        // Copied, not renamed: the scratch dir is under the OS temp root, which on a Windows
-        // runner is a different volume from the checkout — `rename` answers EXDEV across those.
-        copyFileSync(extracted, join(destination, name))
-        rmSync(extracted)
-        chmodSync(join(destination, name), 0o755)
-        console.log(`  \u2192 ${name} ${seen[name].slice(0, 12)}`)
-      }
-      rmSync(file)
-    }
-
-    const sources = target.sources
-    writeFileSync(
-      join(destination, 'NOTICE.txt'),
-      [
-        `FFmpeg ${target.version} for ${key}`,
-        `Licence: ${target.licence}`,
-        `Build: ${target.source}`,
-        '',
-        'FFmpeg is a separate program, spawned by IA Studio. It is not linked into it.',
-        '',
-        'Corresponding sources, as the licence requires:',
-        `  ${sources.url}`,
-        `  also attached to every release of IA Studio as ${sources.file}`,
-        '',
-        'The build configuration of this very binary is printed by:',
-        `  ${platform === 'win32' ? 'ffmpeg.exe' : './ffmpeg'} -buildconf`,
-        '',
-      ].join('\n'),
-    )
+    const seen = await installArchives(target, key, work, destination, verify)
+    writeNotice(destination, target, key, platform)
+    return finishFetch(seen, destination, platform, arch)
   } catch (failure) {
     // Half a fetch looks like a whole one: an `ffmpeg` without its `ffprobe` resolves fine and
     // then fails per file. Leave nothing rather than something that reads as complete.
@@ -322,7 +326,9 @@ export async function fetchFfmpeg(platform, arch, options = {}) {
   } finally {
     rmSync(work, { recursive: true, force: true })
   }
+}
 
+function finishFetch(seen, destination, platform, arch) {
   const binary = join(destination, platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
   if (!existsSync(binary)) throw new Error(`Nothing landed at ${binary}`)
 

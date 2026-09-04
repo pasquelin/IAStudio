@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { WHOLE_PROJECT } from './sourceFiles'
@@ -49,7 +49,10 @@ function nulSitesIn(path: string, bytes: Buffer): string[] {
 const sweptFiles = (): string[] =>
   execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n')
-    .filter(path => path && !BINARY.test(path) && path !== VENDORED_ENGINE)
+    .filter(
+      path =>
+        path && existsSync(join(ROOT, path)) && !BINARY.test(path) && path !== VENDORED_ENGINE,
+    )
 
 /**
  * A literal NUL makes git call the file BINARY, and a binary file is one nobody reviews.

@@ -36,27 +36,36 @@ export async function compileLossyModels(
   try {
     for (const asset of uniqueAssets(assets)) {
       if (signal?.aborted) throw new DOMException('Model compilation aborted', 'AbortError')
-      const root = await active.load(asset.url, signal)
-      if (signal?.aborted) {
-        if (root) disposeTree(root)
-        throw new DOMException('Model compilation aborted', 'AbortError')
-      }
-      if (!root) continue
-      try {
-        const meshes: CompiledModelMesh[] = []
-        const candidates = analyzeModelOptimization(root, options.generateLods)
-        for (const candidate of candidates) {
-          const plan = await compiledModelMesh(candidate, options, signal, active.simplify)
-          if (plan) meshes.push(plan)
-        }
-        if (meshes.length > 0) compiled.set(asset.id, meshes)
-      } finally {
-        disposeTree(root)
-      }
+      const meshes = await compiledAssetMeshes(asset.url, options, signal, active)
+      if (meshes.length > 0) compiled.set(asset.id, meshes)
     }
     return compiled
   } finally {
     active.dispose()
+  }
+}
+
+async function compiledAssetMeshes(
+  url: string,
+  options: LossyOptimization,
+  signal: AbortSignal | undefined,
+  ports: LossyModelPorts,
+): Promise<readonly CompiledModelMesh[]> {
+  const root = await ports.load(url, signal)
+  if (signal?.aborted) {
+    if (root) disposeTree(root)
+    throw new DOMException('Model compilation aborted', 'AbortError')
+  }
+  if (!root) return []
+  try {
+    const meshes: CompiledModelMesh[] = []
+    for (const candidate of analyzeModelOptimization(root, options.generateLods)) {
+      const plan = await compiledModelMesh(candidate, options, signal, ports.simplify)
+      if (plan) meshes.push(plan)
+    }
+    return meshes
+  } finally {
+    disposeTree(root)
   }
 }
 

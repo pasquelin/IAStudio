@@ -191,7 +191,7 @@ export type SceneViewsState = {
 /** The pane addressed by surfaces that expose only one display-mode row. */
 export const MAIN_SCENE_PANE = 0
 
-export const useSceneViews = create<SceneViewsState>()(set => ({
+const sceneViewsStore = create<SceneViewsState>()(set => ({
   views: {},
 
   setProjection: (documentId, projection) =>
@@ -379,6 +379,8 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
       return { views: { ...state.views, [documentId]: { ...view, camera } } }
     }),
 }))
+
+export const useSceneViews = sceneViewsStore
 
 function samePlacement(left: CameraPlacement | null, right: CameraPlacement): boolean {
   if (!left) return false

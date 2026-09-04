@@ -29,6 +29,58 @@ export function seekTo(documentId: string, time: number): void {
   store.replace(documentId, { ...state, playhead: clamp(time, 0, sequenceDuration(state)) })
 }
 
+type SequenceCommand = (
+  documentId: string,
+  store: ReturnType<typeof useSequences.getState>,
+) => boolean
+
+const sequenceCommands = new Map<CommandId, SequenceCommand>([
+  [
+    'sequence.split',
+    (documentId, store) => {
+      const state = shownSequence(documentId, sequenceOf(store, documentId))
+      const target = clipUnderPlayhead(state)
+      if (!target) return false
+      store.runCommand(documentId, splitClip(target.id, state.playhead))
+      return true
+    },
+  ],
+  [
+    'sequence.delete',
+    (documentId, store) => {
+      const { selectedId } = shownSequence(documentId, sequenceOf(store, documentId))
+      if (!selectedId) return false
+      store.runCommand(documentId, removeClip(selectedId))
+      return true
+    },
+  ],
+  [
+    'sequence.unlink',
+    (documentId, store) => {
+      const state = shownSequence(documentId, sequenceOf(store, documentId))
+      const linked = state.selectedId ? clipById(state, state.selectedId) : null
+      if (!linked?.linkId) return false
+      store.runCommand(documentId, unlinkClip(linked.id))
+      return true
+    },
+  ],
+  [
+    'sequence.start',
+    documentId => {
+      seekTo(documentId, 0)
+      return true
+    },
+  ],
+  [
+    'sequence.end',
+    (documentId, store) => {
+      const state = shownSequence(documentId, sequenceOf(store, documentId))
+      seekTo(documentId, sequenceDuration(state))
+      return true
+    },
+  ],
+])
+
 /**
  * The commands of a montage that read nothing but its stores, reached the same way from the strip
  * and from a headless run. The zoom and the exports stay with the strip: the one knows its width,
@@ -36,39 +88,10 @@ export function seekTo(documentId: string, time: number): void {
  */
 export function runSequenceCommand(documentId: string, command: CommandId): CommandAnswer {
   const store = useSequences.getState()
-  const shown = (): SequenceState => shownSequence(documentId, sequenceOf(store, documentId))
-
-  switch (command) {
-    case 'sequence.split': {
-      const state = shown()
-      const target = clipUnderPlayhead(state)
-      if (!target) return false
-      store.runCommand(documentId, splitClip(target.id, state.playhead))
-      return true
-    }
-    case 'sequence.delete': {
-      const { selectedId } = shown()
-      if (!selectedId) return false
-      store.runCommand(documentId, removeClip(selectedId))
-      return true
-    }
-    case 'sequence.unlink': {
-      // Asked here rather than left to the command: every command run lands on the undo stack,
-      // so a ⌘L on a clip tied to nothing would mark the document modified for a ⌘Z that visibly
-      // does nothing.
-      const state = shown()
-      const linked = state.selectedId ? clipById(state, state.selectedId) : null
-      if (!linked?.linkId) return false
-      store.runCommand(documentId, unlinkClip(linked.id))
-      return true
-    }
-    case 'sequence.start':
-      seekTo(documentId, 0)
-      return true
-    case 'sequence.end':
-      seekTo(documentId, sequenceDuration(shown()))
-      return true
-    default:
-      return runHistoryCommand(sequenceStore, 'sequence', documentId, command) ?? false
-  }
+  const handler = sequenceCommands.get(command)
+  return (
+    handler?.(documentId, store) ??
+    runHistoryCommand(sequenceStore, 'sequence', documentId, command) ??
+    false
+  )
 }

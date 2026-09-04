@@ -60,25 +60,16 @@ export function aeroForces(
   const { forward, right, up } = axes
   const speed = Math.hypot(linear.x, linear.y, linear.z)
   const thrust = frame.maxThrust * clamp(stick.throttle, 0, 1)
-  into.force.x = forward.x * thrust
-  into.force.y = forward.y * thrust
-  into.force.z = forward.z * thrust
-  into.torque.x = 0
-  into.torque.y = 0
-  into.torque.z = 0
+  resetAero(into, forward, thrust)
   if (speed === 0) return into
 
   const ahead = dot(linear, forward)
   const above = dot(linear, up)
   const aside = dot(linear, right)
-  // The wing's angle to the air: positive with the nose above where the plane is going.
   const attack = Math.atan2(-above, ahead)
   const slip = Math.atan2(aside, ahead)
   const pressure = 0.5 * AIR_DENSITY * speed * speed * frame.wingArea
   const lift = liftCoefficient(attack, frame.stallAngle * DEGREES)
-
-  // Lift stands across the airflow, in the plane of the wing's up: the up with its along-flow
-  // part taken out.
   const alongX = linear.x / speed
   const alongY = linear.y / speed
   const alongZ = linear.z / speed
@@ -92,18 +83,24 @@ export function aeroForces(
   into.force.x += acrossX * lifting - alongX * dragging
   into.force.y += acrossY * lifting - alongY * dragging
   into.force.z += acrossZ * lifting - alongZ * dragging
-
-  // A lever the size of the wing, so a torque scales with the airframe like the forces do.
   const lever = pressure * Math.sqrt(frame.wingArea)
   const pitch = CONTROL * frame.agility * clamp(stick.pitch, -1, 1) - STABILITY * attack
   const roll = CONTROL * frame.agility * clamp(stick.roll, -1, 1)
-  // A turn to the right is a turn about −up: rotating about +Y carries the nose to −X.
   const yaw = -(CONTROL * frame.agility * clamp(stick.yaw, -1, 1)) - STABILITY * slip
   const damping = (lever / speed) * DAMPING
   into.torque.x = lever * (pitch * right.x + roll * forward.x + yaw * up.x) - damping * angular.x
   into.torque.y = lever * (pitch * right.y + roll * forward.y + yaw * up.y) - damping * angular.y
   into.torque.z = lever * (pitch * right.z + roll * forward.z + yaw * up.z) - damping * angular.z
   return into
+}
+
+function resetAero(into: Aero, forward: Vector3, thrust: number): void {
+  into.force.x = forward.x * thrust
+  into.force.y = forward.y * thrust
+  into.force.z = forward.z * thrust
+  into.torque.x = 0
+  into.torque.y = 0
+  into.torque.z = 0
 }
 
 /**

@@ -110,6 +110,13 @@ export function spatialDiameterOf(node: MeshNode): number {
 }
 
 function geometryDiameterOf(geometry: GeometryDescriptor): number {
+  if (geometry.kind === 'ribbon') return ribbonDiameterOf(geometry)
+  return primitiveGeometryDiameterOf(geometry)
+}
+
+function primitiveGeometryDiameterOf(
+  geometry: Exclude<GeometryDescriptor, { kind: 'ribbon' }>,
+): number {
   switch (geometry.kind) {
     case 'box':
       return Math.hypot(geometry.width, geometry.height, geometry.depth)
@@ -128,45 +135,46 @@ function geometryDiameterOf(geometry: GeometryDescriptor): number {
       return Math.hypot(geometry.width, geometry.height)
     case 'ring':
       return geometry.outerRadius * 2
-    case 'ribbon': {
-      const points = geometry.path.points
-      if (points.length === 0) return Math.hypot(geometry.width, geometry.height)
-      let lowX = Infinity
-      let lowY = Infinity
-      let lowZ = Infinity
-      let highX = -Infinity
-      let highY = -Infinity
-      let highZ = -Infinity
-      const include = (x: number, y: number, z: number): void => {
-        lowX = Math.min(lowX, x)
-        lowY = Math.min(lowY, y)
-        lowZ = Math.min(lowZ, z)
-        highX = Math.max(highX, x)
-        highY = Math.max(highY, y)
-        highZ = Math.max(highZ, z)
-      }
-      for (const [index, point] of points.entries()) {
-        include(point.x, point.y, point.z)
-        if (geometry.path.kind !== 'bezier') continue
-        const handles = geometry.path.handles[index]
-        if (!handles) continue
-        include(point.x + handles.in.x, point.y + handles.in.y, point.z + handles.in.z)
-        include(point.x + handles.out.x, point.y + handles.out.y, point.z + handles.out.z)
-      }
-      return Math.hypot(
-        highX - lowX + geometry.width,
-        highY - lowY + geometry.height,
-        highZ - lowZ + geometry.width,
-      )
-    }
     case 'torus':
     case 'torusKnot':
-      return (geometry.radius + geometry.tube) * 2
     case 'tube':
-      return (1 + geometry.radius) * 2
     case 'lathe':
-      return 4
+      return curvedGeometryDiameterOf(geometry)
   }
+}
+
+function curvedGeometryDiameterOf(
+  geometry: Extract<GeometryDescriptor, { kind: 'torus' | 'torusKnot' | 'tube' | 'lathe' }>,
+): number {
+  if (geometry.kind === 'lathe') return 4
+  if (geometry.kind === 'tube') return (1 + geometry.radius) * 2
+  return (geometry.radius + geometry.tube) * 2
+}
+
+function ribbonDiameterOf(geometry: Extract<GeometryDescriptor, { kind: 'ribbon' }>): number {
+  if (geometry.path.points.length === 0) return Math.hypot(geometry.width, geometry.height)
+  const low = { x: Infinity, y: Infinity, z: Infinity }
+  const high = { x: -Infinity, y: -Infinity, z: -Infinity }
+  const include = (x: number, y: number, z: number): void => {
+    low.x = Math.min(low.x, x)
+    low.y = Math.min(low.y, y)
+    low.z = Math.min(low.z, z)
+    high.x = Math.max(high.x, x)
+    high.y = Math.max(high.y, y)
+    high.z = Math.max(high.z, z)
+  }
+  for (const [index, point] of geometry.path.points.entries()) {
+    include(point.x, point.y, point.z)
+    const handles = geometry.path.kind === 'bezier' ? geometry.path.handles[index] : undefined
+    if (!handles) continue
+    include(point.x + handles.in.x, point.y + handles.in.y, point.z + handles.in.z)
+    include(point.x + handles.out.x, point.y + handles.out.y, point.z + handles.out.z)
+  }
+  return Math.hypot(
+    high.x - low.x + geometry.width,
+    high.y - low.y + geometry.height,
+    high.z - low.z + geometry.width,
+  )
 }
 
 function geometryCostOf(geometry: GeometryDescriptor): number {

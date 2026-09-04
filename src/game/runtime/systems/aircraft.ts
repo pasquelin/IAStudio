@@ -4,7 +4,7 @@ import { clamp } from '../../numeric'
 import { pooled } from '../../pooled'
 import { aeroForces, type Aero, type Airframe, type Stick } from '../../physics/aerodynamics'
 import { axesOfEuler, restingAxes } from '../../physics/quaternion'
-import type { BodyForce } from '../../ports/physicsPort'
+import type { BodyForce, BodyMotion } from '../../ports/physicsPort'
 import type { Component } from '@shared/domain/component'
 import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
@@ -54,22 +54,54 @@ export function createAircraftSystem(
   const frame: Airframe = { maxThrust: 0, wingArea: 0, stallAngle: 0, agility: 0, drag: 0 }
   const aero: Aero = { force: { x: 0, y: 0, z: 0 }, torque: { x: 0, y: 0, z: 0 } }
 
+  const collect = (world: World): void => {
+    flying.length = 0
+    names.length = 0
+    settings.length = 0
+    for (const entity of world.entities.withComponent('Aircraft')) {
+      const held = componentOf(entity, 'Aircraft')
+      if (!held) continue
+      flying.push(entity)
+      settings.push(held)
+      names.push(entity.id)
+    }
+  }
+
+  const pushForce = (
+    entity: Entity,
+    held: Component,
+    motion: BodyMotion,
+    lever: number,
+    dt: number,
+  ): void => {
+    stick.throttle = clamp(
+      (throttles.get(entity) ?? CRUISE_THROTTLE) + lever * THROTTLE_RATE * dt,
+      0,
+      1,
+    )
+    throttles.set(entity, stick.throttle)
+    readFrame(held, frame)
+    const transform = worldOf ? worldOf(entity) : entity.transform
+    aeroForces(
+      frame,
+      stick,
+      axesOfEuler(transform.rotation, axes),
+      motion.linear,
+      motion.angular,
+      aero,
+    )
+    const push = pooled(pool, forces.length, freshForce)
+    copyForce(push, entity.id, aero)
+    forces.push(push)
+  }
+
   return {
     name: 'aircraft',
     reads: ['Aircraft'],
     writes: [],
 
     fixedUpdate: (world: World, dt: number) => {
-      flying.length = 0
-      names.length = 0
-      settings.length = 0
-      for (const entity of world.entities.withComponent('Aircraft')) {
-        const held = componentOf(entity, 'Aircraft')
-        if (!held) continue
-        flying.push(entity)
-        settings.push(held)
-        names.push(entity.id)
-      }
+      collect(world)
       if (flying.length === 0) return
 
       // Read ONCE: there is one stick, and every plane in the scene answers it.
@@ -90,31 +122,7 @@ export function createAircraftSystem(
         const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
         if (!motion) continue
 
-        stick.throttle = clamp(
-          (throttles.get(entity) ?? CRUISE_THROTTLE) + lever * THROTTLE_RATE * dt,
-          0,
-          1,
-        )
-        throttles.set(entity, stick.throttle)
-        readFrame(held, frame)
-        aeroForces(
-          frame,
-          stick,
-          axesOfEuler((worldOf ? worldOf(entity) : entity.transform).rotation, axes),
-          motion.linear,
-          motion.angular,
-          aero,
-        )
-
-        const push = pooled(pool, forces.length, freshForce)
-        push.body = entity.id
-        push.force.x = aero.force.x
-        push.force.y = aero.force.y
-        push.force.z = aero.force.z
-        push.torque.x = aero.torque.x
-        push.torque.y = aero.torque.y
-        push.torque.z = aero.torque.z
-        forces.push(push)
+        pushForce(entity, held, motion, lever, dt)
       }
 
       if (forces.length > 0) world.ports.physics.push(forces)
@@ -131,6 +139,16 @@ export function createAircraftSystem(
       }
     },
   }
+}
+
+function copyForce(into: BodyForce, body: string, aero: Aero): void {
+  into.body = body
+  into.force.x = aero.force.x
+  into.force.y = aero.force.y
+  into.force.z = aero.force.z
+  into.torque.x = aero.torque.x
+  into.torque.y = aero.torque.y
+  into.torque.z = aero.torque.z
 }
 
 function readFrame(settings: Component, into: Airframe): Airframe {

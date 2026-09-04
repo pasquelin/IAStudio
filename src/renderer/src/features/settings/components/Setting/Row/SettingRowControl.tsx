@@ -66,7 +66,7 @@ export function SettingRowControl({
           data-sc={fieldHandle(scId)}
           aria-describedby={describedBy}
           className="w-full max-w-xs"
-          value={String(value ?? '')}
+          value={String(definedValue(value))}
           // Handed back as the option declared it, not as the string the DOM carries: a
           // numeric choice would otherwise be stored as `'3'` and refused by zod.
           onChange={event =>
@@ -95,7 +95,7 @@ export function SettingRowControl({
           min={descriptor.min}
           max={descriptor.max}
           step={descriptor.step}
-          value={typeof value === 'number' ? value : ''}
+          value={numberValue(value, '')}
           onChange={event => {
             const next = event.target.valueAsNumber
             if (writableNumber(descriptor, next)) onChange(next)
@@ -114,15 +114,13 @@ export function SettingRowControl({
             min={descriptor.min}
             max={descriptor.max}
             step={descriptor.step}
-            value={typeof value === 'number' ? value : 0}
+            value={numberValue(value, 0)}
             onChange={next => {
               if (writableNumber(descriptor, next)) onChange(next)
             }}
           />
           <span className={cn(WINDOW_CAPTION, 'w-10 text-right tabular-nums')}>
-            {typeof value === 'number'
-              ? formatDecimal(value, i18n.language, { digits: decimals, least: decimals })
-              : ''}
+            {displayNumber(value, i18n.language, decimals)}
           </span>
         </div>
       )
@@ -173,4 +171,25 @@ export function SettingRowControl({
         />
       )
   }
+}
+
+function definedValue(value: SettingValue | undefined): SettingValue | '' {
+  return value ?? ''
+}
+
+function numberValue<T extends number | ''>(
+  value: SettingValue | undefined,
+  fallback: T,
+): number | T {
+  return typeof value === 'number' ? value : fallback
+}
+
+function displayNumber(
+  value: SettingValue | undefined,
+  language: string,
+  decimals: number,
+): string {
+  return typeof value === 'number'
+    ? formatDecimal(value, language, { digits: decimals, least: decimals })
+    : ''
 }

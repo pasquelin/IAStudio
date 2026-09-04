@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
 
 const applyWorld =
-  source.match(/private applyWorld\(wanted: SceneWorld\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
+  source.match(/protected applyWorld\(wanted: SceneWorld\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
 
 describe('SceneRenderer.applyWorld and relief', () => {
   it('has a method to read at all, so the rules below cannot pass on an empty string', () => {

@@ -39,15 +39,7 @@ self.addEventListener('message', (event: MessageEvent<SkinIncoming>) => {
 
 async function run(request: SkinRequest): Promise<void> {
   try {
-    const vertices = vertexCountOf(request)
-    let wasm
-    try {
-      wasm = (await (wasmBinding ??= loadSkinVerticesWasm()))(request)
-    } catch {
-      // WebAssembly is an optimisation; unsupported runtimes and inputs keep the reference path.
-      wasm = undefined
-    }
-    const fallback = wasm ? undefined : emptyBinding(vertices)
+    const { fallback, vertices, wasm } = await bindingFor(request)
 
     for (let from = 0; from < vertices; from += SLICE) {
       if (cancels.stopped(request.id)) return
@@ -73,6 +65,16 @@ async function run(request: SkinRequest): Promise<void> {
     post({ id: request.id, done: true, ok: false, error: messageOf(error) })
   } finally {
     cancels.finish(request.id)
+  }
+}
+
+async function bindingFor(request: SkinRequest) {
+  const vertices = vertexCountOf(request)
+  try {
+    const wasm = (await (wasmBinding ??= loadSkinVerticesWasm()))(request)
+    return { fallback: undefined, vertices, wasm }
+  } catch {
+    return { fallback: emptyBinding(vertices), vertices, wasm: undefined }
   }
 }
 

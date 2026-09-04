@@ -78,6 +78,33 @@ const CAMERA: RuntimeRenderCamera = {
   cameraMask: 1,
 }
 
+const sourceScene = (): SceneState => ({
+  ...EMPTY_SCENE,
+  nodes: [
+    {
+      id: 'group', parentId: null, name: 'Group', type: 'group', visible: true,
+      transform: {
+        position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 },
+        scale: { x: 1, y: 1, z: 1 },
+      },
+      castShadow: false, receiveShadow: false,
+    },
+  ],
+})
+
+async function afterNextFrame<T>(build: () => Promise<T>, frames: FrameRequestCallback[]): Promise<T> {
+  let settled = false
+  const building = build().then(value => {
+    settled = true
+    return value
+  })
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(settled).toBe(false)
+  frames.shift()?.(0)
+  return building
+}
+
 describe('scene runtime validation driver', () => {
   afterEach(() => {
     calls.applied.length = 0
@@ -112,52 +139,12 @@ describe('scene runtime validation driver', () => {
       return 1
     })
     vi.stubGlobal('requestAnimationFrame', requestFrame)
-    const source: SceneState = {
-      ...EMPTY_SCENE,
-      nodes: [
-        {
-          id: 'group',
-          parentId: null,
-          name: 'Group',
-          type: 'group',
-          visible: true,
-          transform: {
-            position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-          },
-          castShadow: false,
-          receiveShadow: false,
-        },
-      ],
-    }
+    const source = sourceScene()
     const runtime: RuntimeWorld = { ...source, runtimeOptimization: { artifacts: [] } }
     const driver = createSceneRuntimeValidationDriver({ cameras: [CAMERA] })
 
-    let originalSettled = false
-    const observeOriginal = async () => {
-      const representation = await driver.buildOriginal(source)
-      originalSettled = true
-      return representation
-    }
-    const originalBuilding = observeOriginal()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(originalSettled).toBe(false)
-    frames.shift()?.(0)
-    const original = await originalBuilding
-    let optimizedSettled = false
-    const observeOptimized = async () => {
-      const representation = await driver.buildOptimized(runtime)
-      optimizedSettled = true
-      return representation
-    }
-    const optimizedBuilding = observeOptimized()
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(optimizedSettled).toBe(false)
-    frames.shift()?.(0)
-    const optimized = await optimizedBuilding
+    const original = await afterNextFrame(() => driver.buildOriginal(source), frames)
+    const optimized = await afterNextFrame(() => driver.buildOptimized(runtime), frames)
 
     expect(calls.applied[0]).toBe(source)
     expect(calls.applied[1]).toBe(runtime)

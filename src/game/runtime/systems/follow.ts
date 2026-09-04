@@ -22,6 +22,32 @@ export function createFollowSystem(): System {
   const paces = new WeakMap<Entity, number>()
   const targets = createTargets()
 
+  const update = (world: World, entity: Entity, dt: number): void => {
+    const settings = componentOf(entity, 'Follow')
+    if (!settings) return
+    const target = targets.of(world, entity, textOf(settings, 'target', FOLLOW.target))
+    if (!target || target === entity) return
+    const wanted = numberOf(settings, 'speed', FOLLOW.speed)
+    const stop = numberOf(settings, 'stopDistance', FOLLOW.stopDistance)
+    const acceleration = numberOf(settings, 'acceleration', FOLLOW.acceleration)
+    const at = entity.transform.position
+    const to = target.transform.position
+    const dx = to.x - at.x
+    const dy = to.y - at.y
+    const dz = to.z - at.z
+    const distance = Math.hypot(dx, dy, dz)
+    const asked = distance > stop ? wanted : 0
+    const held = paces.get(entity) ?? 0
+    const change = acceleration * dt
+    const pace = held < asked ? Math.min(asked, held + change) : Math.max(asked, held - change)
+    paces.set(entity, pace)
+    if (pace === 0 || distance === 0) return
+    const step = Math.min(pace * dt, Math.max(0, distance - stop))
+    at.x += (dx / distance) * step
+    at.y += (dy / distance) * step
+    at.z += (dz / distance) * step
+  }
+
   return {
     name: 'follow',
     reads: ['Follow'],
@@ -29,37 +55,7 @@ export function createFollowSystem(): System {
 
     fixedUpdate: (world: World, dt: number) => {
       for (const entity of world.entities.withComponent('Follow')) {
-        const settings = componentOf(entity, 'Follow')
-        if (!settings) continue
-
-        const target = targets.of(world, entity, textOf(settings, 'target', FOLLOW.target))
-        if (!target || target === entity) continue
-
-        const wanted = numberOf(settings, 'speed', FOLLOW.speed)
-        const stop = numberOf(settings, 'stopDistance', FOLLOW.stopDistance)
-        const acceleration = numberOf(settings, 'acceleration', FOLLOW.acceleration)
-
-        const at = entity.transform.position
-        const to = target.transform.position
-        const dx = to.x - at.x
-        const dy = to.y - at.y
-        const dz = to.z - at.z
-        const distance = Math.hypot(dx, dy, dz)
-
-        // Braked rather than stopped: the far side of the stop distance is where it slows down,
-        // and cutting the pace to nothing there is exactly the teleport the acceleration prevents.
-        const asked = distance > stop ? wanted : 0
-        const held = paces.get(entity) ?? 0
-        const change = acceleration * dt
-        const pace = held < asked ? Math.min(asked, held + change) : Math.max(asked, held - change)
-        paces.set(entity, pace)
-
-        if (pace === 0 || distance === 0) continue
-        // Never past the mark: a fast follower would otherwise overshoot and oscillate about it.
-        const step = Math.min(pace * dt, Math.max(0, distance - stop))
-        at.x += (dx / distance) * step
-        at.y += (dy / distance) * step
-        at.z += (dz / distance) * step
+        update(world, entity, dt)
       }
     },
   }

@@ -88,9 +88,6 @@ export function createBoneJoints(
   const attribute = new BufferAttribute(positions, 3)
   geometry.setAttribute('position', attribute)
 
-  // The accent says what is CHOSEN, exactly as the timeline's keys do — so the joints at rest
-  // are muted and the picked one alone takes it. Painted them all accent, a skeleton offered no
-  // way at all to see which bone a panel was editing.
   const colours = new Float32Array(bones.length * 3)
   const colour = new BufferAttribute(colours, 3)
   geometry.setAttribute('color', colour)
@@ -103,26 +100,17 @@ export function createBoneJoints(
   const material = new PointsMaterial({
     vertexColors: true,
     size: JOINT_SIZE,
-    // Screen-sized, and drawn THROUGH the mesh: a joint inside a body is exactly the one a user
-    // is looking for, and one that disappears under a shoulder cannot be aimed at.
     sizeAttenuation: false,
     depthTest: false,
     transparent: true,
-    // Cut rather than blended: these marks are drawn out of depth order, and a soft edge would
-    // let the ones behind show through the ones in front.
     ...(disc ? { alphaMap: disc, alphaTest: 0.5 } : {}),
   })
 
   const points = new Points(geometry, material)
-  // Off the raycaster, like the helper: a click has to land on the model, and bone picking runs
-  // off the projected bones rather than off anything drawn.
   points.raycast = () => {}
-  // Drawn after everything, so a joint is never hidden by what it sits in.
   points.renderOrder = 1
   points.frustumCulled = false
 
-  // One walk per root rather than one per bone: `getWorldPosition` re-composes the whole ancestor
-  // chain for the bone it is asked about, and every bone of a skeleton shares that chain.
   const held = new Set<Object3D>(bones)
   const roots = bones.filter(bone => !bone.parent || !held.has(bone.parent))
 

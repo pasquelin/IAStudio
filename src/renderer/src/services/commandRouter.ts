@@ -52,12 +52,44 @@ function toggleDictation(): CommandRouting {
   return 'ran'
 }
 
+function runProjectCommand(command: CommandId): CommandRouting | null {
+  if (command === 'project.new') {
+    void useProject.getState().createPicked()
+    return 'ran'
+  }
+  if (command === 'project.open') {
+    void useProject.getState().openPicked()
+    return 'ran'
+  }
+  if (command === 'montage.import') {
+    void importOtioz()
+    return 'ran'
+  }
+  return null
+}
+
+function runDocumentCommand(command: CommandId): CommandRouting | null {
+  if (command !== 'document.save' && command !== 'document.saveAs') return null
+  const documentId = useDocuments.getState().activeId
+  if (!documentId) return 'noSurface'
+  if (command === 'document.save') {
+    void saveDocument(documentId).catch(error => reportFailure('document.save', documentId, error))
+  } else {
+    void saveDocumentAs(documentId)
+  }
+  return 'ran'
+}
+
 /**
  * The commands the application performs itself, having no surface that listens for them.
  *
  * `null` means "not one of mine", which is the answer for everything a document owns.
  */
 function runHere(command: CommandId): CommandRouting | null {
+  const project = runProjectCommand(command)
+  if (project) return project
+  const document = runDocumentCommand(command)
+  if (document) return document
   switch (command) {
     case 'layout.reset':
       panelsStore.getState().reset()
@@ -66,17 +98,6 @@ function runHere(command: CommandId): CommandRouting | null {
     // from anywhere, and so is every kind of document.
     case 'app.new':
       void openNewDocument(toolSurface())
-      return 'ran'
-    case 'project.new':
-      void useProject.getState().createPicked()
-      return 'ran'
-    case 'project.open':
-      void useProject.getState().openPicked()
-      return 'ran'
-    // No document in front to belong to: an import is what makes one. Its own failures are
-    // journaled under `sequence.import`, so nothing is caught here.
-    case 'montage.import':
-      void importOtioz()
       return 'ran'
     // The section the window opens on when nothing named one — the same one its own row opens.
     case 'app.settings':
@@ -91,28 +112,6 @@ function runHere(command: CommandId): CommandRouting | null {
       return moveActiveSpace('left')
     case 'spaces.moveRight':
       return moveActiveSpace('right')
-    // These two answer `noSurface` with no document in front: reporting a save that had nothing
-    // to save is the very thing this module exists to stop.
-    case 'document.save': {
-      // The menu is application-wide and has no idea which tab is in front; the store does.
-      const documentId = useDocuments.getState().activeId
-      if (!documentId) return 'noSurface'
-
-      // The tab keeps its marker either way; the log is what says why it kept it.
-      void saveDocument(documentId).catch(error =>
-        reportFailure('document.save', documentId, error),
-      )
-      return 'ran'
-    }
-    case 'document.saveAs': {
-      const documentId = useDocuments.getState().activeId
-      if (!documentId) return 'noSurface'
-
-      // No `catch` here, unlike Save: `saveDocumentAs` journals its own failures under
-      // `assets.copy` and answers false — a second scope on the same failure would say it twice.
-      void saveDocumentAs(documentId)
-      return 'ran'
-    }
     default:
       return null
   }

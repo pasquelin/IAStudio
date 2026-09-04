@@ -229,31 +229,7 @@ export class SceneAnimations {
     const kept = new Set<string>()
 
     for (const ref of lanes.flatMap(lane => lane.clips)) {
-      const key = clipKeyOf(ref.source)
-      const source = player.clips.get(key)
-      // A block naming a clip nothing has filed plays nothing, rather than costing the whole
-      // model its animation — which is also the state a shipped animation is in while it loads.
-      if (!source) continue
-
-      kept.add(ref.id)
-      const travel = travelsWith(ref.rootMotion, onBand)
-      const part = ref.part ?? WHOLE_BODY
-      const held = player.bound.get(ref.id)
-      // Rebuilt only when what the clip HOLDS changes — the travel, the bones it drives, the clip
-      // itself. A speed, a fade or a move is written onto the action further down instead.
-      if (held && held.travel === travel && held.key === key && held.part === part) {
-        held.ref = ref
-        continue
-      }
-
-      if (held) player.mixer.uncacheClip(held.clip)
-      const clip = blockClip(
-        source,
-        player.rootTracks.get(key) ?? null,
-        travel,
-        drivenIn(player, part),
-      )
-      player.bound.set(ref.id, { ref, travel, key, part, clip })
+      if (this.bindClip(player, ref, onBand)) kept.add(ref.id)
     }
 
     for (const [id, held] of player.bound) {
@@ -337,5 +313,27 @@ export class SceneAnimations {
 
     // A pose has to show without waiting for a frame, and nothing here ever gets one.
     player.mixer.update(0)
+  }
+
+  private bindClip(player: Player, ref: ClipRef, onBand: boolean): boolean {
+    const key = clipKeyOf(ref.source)
+    const source = player.clips.get(key)
+    if (!source) return false
+    const travel = travelsWith(ref.rootMotion, onBand)
+    const part = ref.part ?? WHOLE_BODY
+    const held = player.bound.get(ref.id)
+    if (held && held.travel === travel && held.key === key && held.part === part) {
+      held.ref = ref
+      return true
+    }
+    if (held) player.mixer.uncacheClip(held.clip)
+    const clip = blockClip(
+      source,
+      player.rootTracks.get(key) ?? null,
+      travel,
+      drivenIn(player, part),
+    )
+    player.bound.set(ref.id, { ref, travel, key, part, clip })
+    return true
   }
 }

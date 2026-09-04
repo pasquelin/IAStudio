@@ -124,6 +124,18 @@ function callIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall |
   return { action: action.name satisfies ActionName, input: isRecord(input) ? input : {} }
 }
 
+function callsIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall[] | null {
+  if (value !== undefined && !Array.isArray(value)) return null
+
+  const calls: AssistantCall[] = []
+  for (const raw of Array.isArray(value) ? value : []) {
+    const call = callIn(raw, shown)
+    if (!call) return null
+    calls.push(call)
+  }
+  return calls
+}
+
 /**
  * The reply, or `null` when nothing usable came back.
  *
@@ -139,10 +151,8 @@ export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply 
   if (!isRecord(parsed)) return null
 
   const say = typeof parsed.say === 'string' ? parsed.say : ''
-  const rawCalls = parsed.calls
-
-  // Absent is allowed and means none; present and not a list is a shape nobody meant.
-  if (rawCalls !== undefined && !Array.isArray(rawCalls)) return null
+  const calls = callsIn(parsed.calls, shown)
+  if (!calls) return null
 
   /**
    * 🛑 Asking WINS, before the calls are even read: told to ask, a model asks and acts in the same
@@ -155,13 +165,6 @@ export function parseReply(text: string, shown: ReadonlySet<ActionName>): Reply 
   // 🛑 Content that cannot be read REFUSES the whole reply rather than running what stood beside
   // it: a model that meant to stop and ask had its question dropped and its plan carried out.
   if (!asksNothing(parsed.ask)) return null
-
-  const calls: AssistantCall[] = []
-  for (const raw of Array.isArray(rawCalls) ? rawCalls : []) {
-    const call = callIn(raw, shown)
-    if (!call) return null
-    calls.push(call)
-  }
 
   // Neither a word nor a deed, which is not an answer a person can be shown — and the check has
   // to sit at the end of EVERY path: an early return let `[1,2,3]` and `{}` through as empty.

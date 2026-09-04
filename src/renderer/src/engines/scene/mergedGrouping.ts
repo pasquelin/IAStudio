@@ -6,6 +6,8 @@ import type { RuntimeRenderArtifact } from './grouping'
 import type { SceneNode } from './sceneState'
 
 type FaceRange = { end: number; nodeId: string }
+type MergeGroup = { ids: string[]; meshes: Mesh[]; material: Material }
+type MergedGroup = { mesh: Mesh; ranges: readonly FaceRange[] }
 
 export function createMergedGroups(
   host: Object3D,
@@ -38,45 +40,13 @@ export function createMergedGroups(
     host.updateWorldMatrix(true, false)
     const worldToHost = new Matrix4().copy(host.matrixWorld).invert()
     for (const artifact of artifacts?.filter(one => one.strategy === 'merge') ?? []) {
-      const groups = new Map<string, { ids: string[]; meshes: Mesh[]; material: Material }>()
-      for (const id of artifact.sourceIds) {
-        const node = byId.get(id)
-        const mesh = objectOf(id)
-        if (!node || !(mesh instanceof Mesh) || excluded?.has(id)) continue
-        const material = ownMaterialOf(mesh)
-        if (Array.isArray(material)) continue
-        const key = keyOf(node, mesh)
-        const group = groups.get(key)
-        if (group) {
-          group.ids.push(id)
-          group.meshes.push(mesh)
-        } else groups.set(key, { ids: [id], meshes: [mesh], material })
-      }
-      for (const group of groups.values()) {
-        if (group.meshes.length < 2) continue
-        const geometries = group.meshes.map(mesh =>
-          mesh.geometry
-            .clone()
-            .applyMatrix4(new Matrix4().multiplyMatrices(worldToHost, mesh.matrixWorld)),
-        )
-        const geometry = mergeGeometries(geometries, false)
-        for (const source of geometries) source.dispose()
-        if (!geometry) continue
-
-        const mesh = new Mesh(geometry, group.material)
-        mesh.matrixAutoUpdate = false
-        mesh.castShadow = group.meshes[0]?.castShadow ?? false
-        mesh.receiveShadow = group.meshes[0]?.receiveShadow ?? false
-        const ranges: FaceRange[] = []
-        let end = 0
-        for (const [index, source] of group.meshes.entries()) {
-          end += trianglesOf(source.geometry)
-          const nodeId = group.ids[index]
-          if (nodeId) ranges.push({ end, nodeId })
-        }
-        members.set(mesh, ranges)
-        host.add(mesh)
-        drawn.push(mesh)
+      const groups = mergeGroupsOf(artifact, byId, objectOf, excluded, ownMaterialOf, keyOf)
+      for (const group of groups) {
+        const result = mergedGroupOf(group, worldToHost)
+        if (!result) continue
+        members.set(result.mesh, result.ranges)
+        host.add(result.mesh)
+        drawn.push(result.mesh)
         held.push(...group.meshes)
         merged += group.meshes.length
       }
@@ -113,4 +83,56 @@ export function createMergedGroups(
       sources.hang()
     },
   }
+}
+
+function mergeGroupsOf(
+  artifact: RuntimeRenderArtifact,
+  nodes: ReadonlyMap<string, SceneNode>,
+  objectOf: (id: string) => Object3D | undefined,
+  excluded: ReadonlySet<string> | undefined,
+  materialOf: (mesh: Mesh) => Material | Material[],
+  keyOf: (node: SceneNode, mesh: Mesh) => string,
+): readonly MergeGroup[] {
+  const groups = new Map<string, MergeGroup>()
+  for (const id of artifact.sourceIds) {
+    const node = nodes.get(id)
+    const mesh = objectOf(id)
+    if (!node || !(mesh instanceof Mesh) || excluded?.has(id)) continue
+    const material = materialOf(mesh)
+    if (Array.isArray(material)) continue
+    const key = keyOf(node, mesh)
+    const group = groups.get(key)
+    if (group) {
+      group.ids.push(id)
+      group.meshes.push(mesh)
+    } else groups.set(key, { ids: [id], meshes: [mesh], material })
+  }
+  return [...groups.values()].filter(group => group.meshes.length >= 2)
+}
+
+function mergedGroupOf(group: MergeGroup, worldToHost: Matrix4): MergedGroup | null {
+  const geometries = group.meshes.map(mesh =>
+    mesh.geometry
+      .clone()
+      .applyMatrix4(new Matrix4().multiplyMatrices(worldToHost, mesh.matrixWorld)),
+  )
+  const geometry = mergeGeometries(geometries, false)
+  for (const source of geometries) source.dispose()
+  if (!geometry) return null
+  const mesh = new Mesh(geometry, group.material)
+  mesh.matrixAutoUpdate = false
+  mesh.castShadow = group.meshes[0]?.castShadow ?? false
+  mesh.receiveShadow = group.meshes[0]?.receiveShadow ?? false
+  return { mesh, ranges: faceRangesOf(group) }
+}
+
+function faceRangesOf(group: MergeGroup): readonly FaceRange[] {
+  const ranges: FaceRange[] = []
+  let end = 0
+  for (const [index, source] of group.meshes.entries()) {
+    end += trianglesOf(source.geometry)
+    const nodeId = group.ids[index]
+    if (nodeId) ranges.push({ end, nodeId })
+  }
+  return ranges
 }

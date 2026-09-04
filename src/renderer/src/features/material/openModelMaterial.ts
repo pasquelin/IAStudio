@@ -14,6 +14,49 @@ import { unpackMaterialChannels } from './unpackChannels'
 /** Said of a picture no channel claims and nothing knows how to split. */
 const UNCLAIMED = new Error('this picture fits in no single channel')
 
+async function materialDocumentFor(model: {
+  id: string
+  name: string
+}): Promise<{ id: string; created: boolean } | null> {
+  const already = documentForAsset(useDocuments.getState(), model.id, 'material')
+  if (already) {
+    openDocument(already)
+    return { id: already.id, created: false }
+  }
+  if (!useProject.getState().project) {
+    reportFailure('assets.open', model.name, new Error('no project'))
+    return null
+  }
+  const created = await useDocuments
+    .getState()
+    .create('materials', { title: model.name, sourceAssetId: model.id })
+  if (!created) {
+    reportFailure('assets.open', model.name, new Error('no document'))
+    return null
+  }
+  return { id: created.id, created: true }
+}
+
+async function fillMaterial(
+  documentId: string,
+  pictures: readonly Asset[],
+  unpack?: UnpackPort,
+): Promise<void> {
+  for (const picture of pictures) {
+    if (hasChannel(picture)) placeMaterialChannel(documentId, picture, picture.map)
+  }
+  let split = 0
+  for (const picture of pictures.filter(one => !hasChannel(one))) {
+    const pieces = await unpackMaterialChannels(picture, unpack)
+    if (pieces.length === 0) reportFailure('material.channel', picture.name, UNCLAIMED)
+    split += pieces.length
+    for (const piece of pieces) {
+      if (hasChannel(piece)) placeMaterialChannel(documentId, piece, piece.map)
+    }
+  }
+  if (split > 0) await useAssets.getState().refresh()
+}
+
 /**
  * Assembles a model's own pictures into ONE material, opens it, and answers its document id — the
  * caller puts that id on the slot the gesture came from. A second call comes back to the tab
@@ -39,64 +82,19 @@ export async function openModelMaterial(
     return null
   }
 
-  const already = documentForAsset(useDocuments.getState(), model.id, 'material')
-  if (already) {
-    openDocument(already)
-    return already.id
-  }
-
-  // A document is a file in a project folder, so without one there is nowhere to write it.
-  if (!useProject.getState().project) {
-    reportFailure('assets.open', model.name, new Error('no project'))
-    return null
-  }
-
-  const created = await useDocuments
-    .getState()
-    // The source of this document is a MESH, not a picture — as a scene's is. Nothing reads it
-    // that way today: `IO_BY_KIND.material` has no `writeAsset`, so neither ⌘S nor ⌘⇧S touches the
-    // asset. This is the line to read again the day it gains one.
-    .create('materials', { title: model.name, sourceAssetId: model.id })
-
-  if (!created) {
-    reportFailure('assets.open', model.name, new Error('no document'))
-    return null
-  }
-  if (!(await readyForWriting(created.id))) return null
-
-  // One command per channel, so one undo step per channel: a material of five maps takes five ⌘Z
-  // to unwind. Stated rather than hidden — folding them into one is a command the texture engine
-  // does not have, and `runCoalescing` cannot merge these: each carries the id of ITS channel.
-  for (const picture of local) {
-    if (hasChannel(picture)) placeMaterialChannel(created.id, picture, picture.map)
-  }
-
-  // The packed ones after the plain ones, and one file at a time: each unpacking is a GPU pass
-  // and a write, and what it yields already names the channel it belongs in.
-  let split = 0
-  for (const picture of local.filter(one => !hasChannel(one))) {
-    const pieces = await unpackMaterialChannels(picture, unpack)
-    // Nothing came out, and the picture is lost to the material in silence otherwise: a project
-    // indexed before `packedSlot` existed says only in its NAME what its glTF slot was, and a
-    // `clearcoatTexture` names something the studio has no channel for at all.
-    if (pieces.length === 0) reportFailure('material.channel', picture.name, UNCLAIMED)
-
-    split += pieces.length
-    for (const piece of pieces) {
-      if (hasChannel(piece)) placeMaterialChannel(created.id, piece, piece.map)
-    }
-  }
-
-  // Once, after the whole set — see `unpackMaterialChannels`.
-  if (split > 0) await useAssets.getState().refresh()
+  const document = await materialDocumentFor(model)
+  if (!document) return null
+  if (!document.created) return document.id
+  if (!(await readyForWriting(document.id))) return null
+  await fillMaterial(document.id, local, unpack)
 
   // The tab can be closed while the GPU splits a packed picture, and `runCommand` is a no-op on a
   // document the store no longer holds: answering its id anyway would put an EMPTY material on
   // the slot the gesture came from.
-  if (!materialStore.hasState(useMaterials.getState(), created.id)) {
+  if (!materialStore.hasState(useMaterials.getState(), document.id)) {
     reportFailure('assets.open', model.name, new Error('the material was closed while it filled'))
     return null
   }
 
-  return created.id
+  return document.id
 }

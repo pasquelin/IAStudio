@@ -108,48 +108,21 @@ export function createGameStage(deps: GameStageDeps): GameStage {
     return { ok: true, ran: 0 }
   }
 
-  channel.onmessage = event => {
+  function handleMessage(event: MessageEvent<unknown>): void {
     const message = gameMessageOf(event.data)
     if (!message) return
-
     if (message.kind === 'play') {
-      // `drop` bumps the generation, which is the token this start is guarded by: a second Play
-      // arriving while the engines land drops this one on the floor rather than installing it.
-      drop()
-      documentId = message.documentId
-      authoring = message.scene
-      scene = compiler.compileRuntimeWorld(authoring)
-      compilationMs = compiler.getOptimizationReport().compilationMs
-      modules = message.modules
-      troubles = message.troubles
-      // 🛑 Applied whole, and it is what the studio's own viewport does on every edit: the render
-      // port only ever moves the nodes a step MOVED, so without this the window holds an engine
-      // that was never given the scene — measured, and it drew an empty grey window.
-      deps.renderer.apply(scene)
-      void begin(generation)
+      handlePlay(message)
       return
     }
-
     if (message.kind === 'clearOptimization') {
-      if (message.documentId !== documentId || !authoring) return
-      compiler.clearOptimizationCache()
-      scene = compiler.compileRuntimeWorld(structuredClone(authoring))
-      compilationMs = compiler.getOptimizationReport().compilationMs
-      deps.renderer.apply(scene)
+      handleClearOptimization(message.documentId)
       return
     }
-
     if (message.kind === 'edit') {
-      if (message.documentId !== documentId) return
-      if (authoring) authoring = worldWithRuntimePatch(authoring, message.patch)
-      const compiled = compiler.compileRuntimeRegion(message.patch)
-      if (!compiled) return
-      scene = compiled
-      compilationMs = compiler.getOptimizationReport().compilationMs
-      deps.renderer.apply(scene)
+      handleEdit(message.documentId, message.patch)
       return
     }
-
     if (message.kind === 'scene') {
       known.set(message.scene, compiledLookup(message.found))
       return
@@ -161,9 +134,41 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       return
     }
 
-    // The studio went away: there is nothing left to play for, and nobody to report to.
     if (message.kind === 'gone') drop()
   }
+
+  function handlePlay(
+    message: Extract<NonNullable<ReturnType<typeof gameMessageOf>>, { kind: 'play' }>,
+  ): void {
+    drop()
+    documentId = message.documentId
+    authoring = message.scene
+    scene = compiler.compileRuntimeWorld(authoring)
+    compilationMs = compiler.getOptimizationReport().compilationMs
+    modules = message.modules
+    troubles = message.troubles
+    deps.renderer.apply(scene)
+    void begin(generation)
+  }
+
+  function handleClearOptimization(id: string): void {
+    if (id !== documentId || !authoring) return
+    compiler.clearOptimizationCache()
+    scene = compiler.compileRuntimeWorld(structuredClone(authoring))
+    compilationMs = compiler.getOptimizationReport().compilationMs
+    deps.renderer.apply(scene)
+  }
+
+  function handleEdit(id: string, patch: Parameters<typeof worldWithRuntimePatch>[1]): void {
+    if (id !== documentId) return
+    if (authoring) authoring = worldWithRuntimePatch(authoring, patch)
+    const compiled = compiler.compileRuntimeRegion(patch)
+    if (!compiled) return
+    scene = compiled
+    compilationMs = compiler.getOptimizationReport().compilationMs
+    deps.renderer.apply(scene)
+  }
+  channel.onmessage = handleMessage
 
   // The window opens long after the studio pressed Play, and a channel replays nothing.
   channel.postMessage({ kind: 'ask' })

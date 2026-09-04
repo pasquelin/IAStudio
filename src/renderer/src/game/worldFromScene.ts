@@ -1,5 +1,6 @@
 import { COMPONENTS } from '@shared/domain/componentRegistry'
 import { enabledTerrains } from '@shared/domain/scene'
+import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
@@ -25,7 +26,6 @@ import { createVehicleSystem } from '@game/runtime/systems/vehicle'
 import { createScriptSystem, type ScriptSystemOptions } from '@game/runtime/systems/script'
 import { createTimelineSystem } from '@game/runtime/systems/timeline'
 import { createWorld, type System, type World } from '@game/runtime/world'
-import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { ColliderShape } from '@game/physics/shape'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
@@ -39,10 +39,8 @@ import { bakedRuntimeNodes } from '@/engines/scene/bakedRuntimeNodes'
  * nobody stands on is the first thing anyone tries. A dot keeps the name out of reach of a uuid.
  */
 const GROUND_BODY = 'world.ground'
-
 /** Deep enough that nothing falls through it in one step at terminal speed. */
 const GROUND_DEPTH = 5
-
 /**
  * The edit state, translated into something that runs.
  *
@@ -96,7 +94,10 @@ export function worldFromScene(
     play: state.world.play,
   })
   living = world
-
+  installEntities(world, state)
+  return world
+}
+function installEntities(world: World, state: SceneState): void {
   for (const node of state.nodes) {
     world.entities.add({
       id: node.id,
@@ -109,10 +110,7 @@ export function worldFromScene(
       components: structuredClone([...(node.components ?? [])]),
     })
   }
-
-  return world
 }
-
 /** Every system the studio runs today. A component gains its behaviour by joining this list. */
 function systemsFor(
   state: SceneState,
@@ -124,143 +122,121 @@ function systemsFor(
   const byId = new Map(state.nodes.map(node => [node.id, node]))
   const hierarchy = createHierarchy(byId, liveOf)
   const placedAt = (entity: Entity, own: Transform): Transform => hierarchy.worldOf(entity.id, own)
-  const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
-  const possessions = createPossessions()
-  const characters = createCharacters(possessions, placed)
-  const pilots = createPilots()
-  // The module's own eye takes the shot, where the sweep would have handed it to whichever arm
-  // it met first — a choice no outliner shows.
-  const player = playerPartsOf(state.nodes)
-  const rigs = createRigs(player?.eye?.id ?? null)
-
-  /**
-   * 🛑 A node hanging from another is FELT now, and that closed the hole this carried since the
-   * physics arrived: the body goes in at its composed place — see `hierarchy` — and what the step
-   * moves is written back into the frame the node hangs in.
-   *
-   * What stays true: the SHAPE is the node's own, so a scaled parent stretches the mesh and not
-   * the collider. Named here rather than discovered.
-   */
-  const shapeOf = (entity: Entity): ColliderShape | null => {
-    const node = byId.get(entity.id)
-    if (!node) return null
-
-    const collider = colliderFromNode(node)
-    if (!collider) {
-      ports.log.write('warn', `${node.name} has no shape the physics can feel`)
-      return null
+  const systemsForStep1 = () => {
+    const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
+    const possessions = createPossessions()
+    const characters = createCharacters(possessions, placed)
+    const systemsForStep2 = () => {
+      const pilots = createPilots()
+      const player = playerPartsOf(state.nodes)
+      const rigs = createRigs(player?.eye?.id ?? null)
+      const systemsForStep3 = () => {
+        /**
+         * 🛑 A node hanging from another is FELT now, and that closed the hole this carried since the
+         * physics arrived: the body goes in at its composed place — see `hierarchy` — and what the step
+         * moves is written back into the frame the node hangs in.
+         *
+         * What stays true: the SHAPE is the node's own, so a scaled parent stretches the mesh and not
+         * the collider. Named here rather than discovered.
+         */
+        const shapeOf = (entity: Entity): ColliderShape | null => {
+          const node = byId.get(entity.id)
+          if (!node) return null
+          const collider = colliderFromNode(node)
+          if (!collider) {
+            ports.log.write('warn', `${node.name} has no shape the physics can feel`)
+            return null
+          }
+          if (!collider.exact) {
+            ports.log.write(
+              'warn',
+              `${node.name} collides as a hull: its fidelity could not be met`,
+            )
+          }
+          return collider.shape
+        }
+        return [
+          createScriptSystem(scripts),
+          createTimelineSystem({
+            timeline: state.animation,
+            assetRef: id => ({ kind: 'asset', id }),
+          }),
+          createMovementSystem(),
+          createPathSystem(),
+          createPatrolSystem(),
+          createFollowSystem(),
+          createOrbitSystem(),
+          createSpinSystem(),
+          createLookAtSystem(),
+          createVehicleSystem(pilots, placed),
+          createAircraftSystem(pilots, placed),
+          createPossessionSystem({
+            possessions,
+            bodyIdOf: moduleId =>
+              moduleId === player?.module.id ? (player.body?.id ?? null) : null,
+            worldOf: placedAt,
+            localOf: (entity, position, rotation) =>
+              hierarchy.localOf(entity.id, position, rotation),
+          }),
+          createPhysicsSystem({
+            shapeOf,
+            characters,
+            possessions,
+            statics: groundOf(state, heightmaps, message => ports.log.write('warn', message)),
+            worldOf: placed,
+            localOf: (entity, position, rotation) =>
+              hierarchy.localOf(entity.id, position, rotation),
+          }),
+          createSpringArmSystem({
+            characters,
+            rigs,
+            worldOf: placedAt,
+            localOf: (entity, position, rotation) =>
+              hierarchy.localOf(entity.id, position, rotation),
+            filmable: entity => byId.get(entity.id)?.type === 'camera',
+          }),
+          createPlayCameraSystem({
+            characters,
+            worldOf: placedAt,
+            pilots,
+            rigs,
+            playerBodyId: player?.body?.id ?? null,
+          }),
+        ]
+      }
+      return systemsForStep3()
     }
-    // Said rather than swallowed: a pierced wall whose fidelity could not be honoured collides as
-    // a solid one, and nothing on screen would tell an author why the window stopped them.
-    if (!collider.exact) {
-      ports.log.write('warn', `${node.name} collides as a hull: its fidelity could not be met`)
-    }
-    return collider.shape
+    return systemsForStep2()
   }
-
-  return [
-    createScriptSystem(scripts),
-    // 🛑 Where it runs is decided by `SYSTEM_ORDER`, not by this list — and a row is heard one
-    // step LATE whatever the order: `emit` queues, and the bus drains at the end of a step.
-    createTimelineSystem({
-      timeline: state.animation,
-      assetRef: id => ({ kind: 'asset', id }),
-    }),
-    createMovementSystem(),
-    createPathSystem(),
-    createPatrolSystem(),
-    createFollowSystem(),
-    createOrbitSystem(),
-    createSpinSystem(),
-    createLookAtSystem(),
-    createVehicleSystem(pilots, placed),
-    createAircraftSystem(pilots, placed),
-    // Resolved here like `filmable` below: which node is a module's BODY is a question about the
-    // tree, which the window holds and the runtime does not.
-    createPossessionSystem({
-      possessions,
-      bodyIdOf: moduleId => (moduleId === player?.module.id ? (player.body?.id ?? null) : null),
-      worldOf: placedAt,
-      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
-    }),
-    createPhysicsSystem({
-      shapeOf,
-      characters,
-      possessions,
-      statics: groundOf(state, heightmaps, message => ports.log.write('warn', message)),
-      worldOf: placed,
-      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
-    }),
-    createSpringArmSystem({
-      characters,
-      rigs,
-      worldOf: placedAt,
-      localOf: (entity, position, rotation) => hierarchy.localOf(entity.id, position, rotation),
-      // The runtime holds no node TYPE, so what a camera is comes from the window — the same way
-      // the shape and the frame of a body do.
-      filmable: entity => byId.get(entity.id)?.type === 'camera',
-    }),
-    // Resolved here and not in the runtime, like `filmable` above: who hangs under what is a
-    // question about the TREE, which the window holds and the runtime does not.
-    createPlayCameraSystem({
-      characters,
-      worldOf: placedAt,
-      pilots,
-      rigs,
-      playerBodyId: player?.body?.id ?? null,
-    }),
-  ]
+  return systemsForStep1()
 }
-
-/**
- * The scene's ground. A relief, when its heightmap is in hand, replaces the cuboid slab — the
- * same choice the viewport makes when it hides the plane under a drawn relief.
- */
+/** The scene's ground as a slab, its top face at zero — where the studio draws it. */
 function groundOf(
   state: SceneState,
   heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
   warn: (message: string) => void,
 ): readonly BodyDescriptor[] {
-  const reliefs = enabledTerrains(state.world.layers)
   const bodies: BodyDescriptor[] = []
-  for (const relief of reliefs) {
+  for (const relief of enabledTerrains(state.world.layers)) {
     const samples = heightmaps?.get(relief.heightmap.assetId)
     const shape = samples ? colliderFromRelief(relief, samples) : null
-    if (shape) {
-      bodies.push(staticBody(`world.relief.${relief.id}`, shape))
-      continue
-    }
-    warn(`relief ${relief.heightmap.assetId} has no heightmap the physics can feel`)
+    if (shape) bodies.push(staticBody(`world.relief.${relief.id}`, shape))
+    else warn(`relief ${relief.heightmap.assetId} has no heightmap the physics can feel`)
   }
   if (bodies.length > 0) return bodies
-
   const ground = state.world.ground
   if (!ground.visible) return []
-
-  return [
-    staticBody(GROUND_BODY, {
-      kind: 'cuboid',
-      hx: ground.size / 2,
-      hy: GROUND_DEPTH / 2,
-      hz: ground.size / 2,
-      at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
-    }),
-  ]
+  return [staticBody(GROUND_BODY, {
+    kind: 'cuboid', hx: ground.size / 2, hy: GROUND_DEPTH / 2, hz: ground.size / 2,
+    at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
+  })]
 }
-
 function staticBody(body: string, shape: ColliderShape): BodyDescriptor {
   return {
-    body,
-    kind: 'fixed',
-    shape,
-    transform: IDENTITY_TRANSFORM,
+    body, kind: 'fixed', shape, transform: IDENTITY_TRANSFORM,
     friction: Number(COMPONENTS.Collider.defaults.friction),
     restitution: Number(COMPONENTS.Collider.defaults.restitution),
-    mass: 0,
-    gravityScale: 1,
-    lockRotation: false,
-    sensor: false,
-    character: null,
-    vehicle: null,
+    mass: 0, gravityScale: 1, lockRotation: false, sensor: false,
+    character: null, vehicle: null,
   }
 }

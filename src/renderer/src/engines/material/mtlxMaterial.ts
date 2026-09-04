@@ -180,14 +180,12 @@ function foreignMaterial(payload: MtlxDocument, channels: ChannelSet): MaterialS
     payload.values.find(value => value.input === input)
   const imageOf = (input: string): MtlxImage | undefined =>
     payload.images.find(image => image.input === input)
-
   const base = imageOf(MTLX_BASE_COLOR)
   const normal = imageOf(MTLX_NORMAL)
   const height = imageOf(MTLX_DISPLACEMENT)
   const fallback = DEFAULT_TEXTURE_MATERIAL
   const tiling = base?.tiling ?? normal?.tiling ?? height?.tiling
   const offset = base?.offset ?? normal?.offset ?? height?.offset
-
   return {
     ...newMaterial(),
     channels,

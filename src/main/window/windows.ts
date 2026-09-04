@@ -19,6 +19,7 @@ import { isDevelopment } from '@main/environment'
 import { trackWindowState } from './controls'
 import { windowLanguage } from './language'
 import { revealWindow } from './reveal'
+import { loadWindow } from './loadWindow'
 
 /**
  * The floor below which the layout stops being usable: the two rails take 96 px, the side
@@ -49,23 +50,7 @@ export const WEB_PREFERENCES: WebPreferences = {
  */
 const WINDOW_ICON = process.platform === 'darwin' ? undefined : APP_ICON_PATH
 
-/**
- * Where the renderer lives, in one place. Dev serves it, a packaged build reads it from disk,
- * and both assume `out/renderer/` sits beside `out/main/` — an assumption worth stating once.
- */
-export function load(window: BrowserWindow, options: { entry?: string; hash?: string } = {}): void {
-  const { entry = 'index.html', hash } = options
-  const devUrl = process.env['ELECTRON_RENDERER_URL']
-
-  if (isDevelopment && devUrl) {
-    const base = entry === 'index.html' ? devUrl : `${devUrl}/${entry}`
-    void window.loadURL(hash ? `${base}#${hash}` : base)
-    return
-  }
-
-  const file = join(import.meta.dirname, '../renderer', entry)
-  void window.loadFile(file, hash ? { hash } : {})
-}
+export const load = loadWindow
 
 /** What separates one window of a family from the next. Everything else about them is identical. */
 type WindowSize = { width: number; height: number; minWidth: number; minHeight: number }

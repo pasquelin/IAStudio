@@ -61,44 +61,71 @@ function compactViewsOf(json: JsonObject, binary: Uint8Array): CompactView[] {
     if (view !== null) references.set(view, (references.get(view) ?? 0) + 1)
   }
   const found = accessors.flatMap(accessor => {
-    const index = integer(accessor.bufferView)
-    const count = integer(accessor.count)
-    if (
-      index === null ||
-      count === null ||
-      accessor.componentType !== UNSIGNED_INT ||
-      accessor.type !== 'SCALAR' ||
-      accessor.byteOffset !== undefined ||
-      accessor.sparse !== undefined ||
-      accessor.extensions !== undefined ||
-      references.get(index) !== 1
-    ) {
-      return []
-    }
-    const view = views[index]
-    if (
-      !view ||
-      (view.buffer !== undefined && view.buffer !== 0) ||
-      view.target !== 34963 ||
-      view.extensions !== undefined ||
-      view.byteStride !== undefined
-    ) {
-      return []
-    }
-    const offset = integer(view.byteOffset) ?? 0
-    const length = integer(view.byteLength)
-    if (length !== count * 4 || offset + length > binary.byteLength) return []
-    const values = new DataView(binary.buffer, binary.byteOffset + offset, length)
-    for (let item = 0; item < count; item += 1) {
-      if (values.getUint32(item * 4, true) > 65_535) return []
-    }
-    return [{ index, offset, length, count, accessor, view }]
+    const candidate = compactViewOf(accessor, views, binary, references)
+    return candidate ? [candidate] : []
   })
   return found.some(candidate =>
     views.some((view, index) => index !== candidate.index && overlaps(candidate, view)),
   )
     ? []
     : found
+}
+
+function compactViewOf(
+  accessor: JsonObject,
+  views: readonly JsonObject[],
+  binary: Uint8Array,
+  references: ReadonlyMap<number, number>,
+): CompactView | null {
+  const index = integer(accessor.bufferView)
+  const count = integer(accessor.count)
+  if (index === null || count === null || !isCompactAccessor(accessor, index, references))
+    return null
+  const view = views[index]
+  if (!isCompactIndexView(view)) return null
+  const offset = integer(view.byteOffset) ?? 0
+  const length = integer(view.byteLength)
+  if (length !== count * 4 || !fitsUnsignedShort(binary, offset, length, count)) return null
+  return { index, offset, length, count, accessor, view }
+}
+
+function isCompactAccessor(
+  accessor: JsonObject,
+  index: number,
+  references: ReadonlyMap<number, number>,
+): boolean {
+  return (
+    accessor.componentType === UNSIGNED_INT &&
+    accessor.type === 'SCALAR' &&
+    accessor.byteOffset === undefined &&
+    accessor.sparse === undefined &&
+    accessor.extensions === undefined &&
+    references.get(index) === 1
+  )
+}
+
+function isCompactIndexView(view: JsonObject | undefined): view is JsonObject {
+  return (
+    view !== undefined &&
+    (view.buffer === undefined || view.buffer === 0) &&
+    view.target === 34963 &&
+    view.extensions === undefined &&
+    view.byteStride === undefined
+  )
+}
+
+function fitsUnsignedShort(
+  binary: Uint8Array,
+  offset: number,
+  length: number,
+  count: number,
+): boolean {
+  if (offset + length > binary.byteLength) return false
+  const values = new DataView(binary.buffer, binary.byteOffset + offset, length)
+  for (let item = 0; item < count; item += 1) {
+    if (values.getUint32(item * 4, true) > 65_535) return false
+  }
+  return true
 }
 
 function overlaps(candidate: CompactView, view: JsonObject): boolean {

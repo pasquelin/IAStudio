@@ -1,4 +1,3 @@
-import { DIRECT_PROPERTIES, type AnimationTrack } from '@shared/domain/animation'
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import {
   BODY_PARTS,
@@ -6,7 +5,6 @@ import {
   type BodyPart,
   type HumanoidRole,
 } from '@shared/domain/humanoid'
-import { speaksBundle } from '@/helpers/speaksBundle'
 import {
   assetClip,
   bundledClip,
@@ -15,21 +13,9 @@ import {
   ROOT_MOTIONS,
   type ClipRef,
 } from '@shared/domain/scene'
-import { secondsToUs, snapToFrame, type Us } from '@shared/domain/time'
-import {
-  keyNode,
-  keySubject,
-  moveAnimationKey,
-  recordingTracksFor,
-  removeAnimationTrack,
-  setTimelineSettings,
-  unkeySubject,
-  unkeySubjectWholly,
-} from '@/engines/scene/animationCommands'
+import { secondsToUs, snapToFrame } from '@shared/domain/time'
 import { clampPlayhead } from '@/engines/scene/animationEval'
 import { clipsEdited, clipsMoved, laneHolding, lanesWith } from '@/engines/scene/clipBlend'
-import { channelNames } from '@/helpers/channelNames'
-import { sceneKeyingAt } from '@/helpers/sceneKeyingAt'
 import { removeModelClip, setModelLanes } from '@/engines/scene/commands'
 import { rigFit, rigFitFaultOf, type Bounds } from '@/engines/scene/rigFit'
 import type { Command } from '@/engines/core/history'
@@ -48,19 +34,19 @@ import {
 } from '@/engines/character/characterCommands'
 import { workshopIdOf } from '@/character/characterStage'
 import { useCharacters } from '@/stores/character'
-import { nodeById, type ModelNode, type SceneState } from '@/engines/scene/sceneState'
+import { type ModelNode, type SceneState } from '@/engines/scene/sceneState'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { newId } from '@/helpers/ids'
 import { assetsById, useAssets } from '@/stores/assets'
-import { useAnimationViews } from '@/stores/animationView'
 import { getBridge } from '@/services/bridge'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { clipsOfNode, useModelFiles } from '@/stores/modelFiles'
-import { laySceneClip, sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
+import { laySceneClip, sceneOf, useScenes } from '@/stores/scenes'
 import { type ActionHandlers } from './actionHandler'
 import { NO_SCENE } from './sceneHandlers'
-import { boolOf, flagNamed, maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
+import { maybeBoolOf, numberOf, oneOf, textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
+import { RIG_KEY_HANDLERS } from './rigKeyHandlers'
 
 /**
  * The skeleton of a character, the handles its joints reach for, and the blocks laid on its band.
@@ -212,24 +198,7 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
   const assetId = textOf(input, 'assetId')
   const clipName = textOf(input, 'clipName')
 
-  if (source === 'asset') {
-    if (clipName !== null || assetId === null)
-      return refused('badInput', 'source "asset" wants "assetId" and no "clipName"')
-
-    const asset = assetsById(useAssets.getState()).get(assetId)
-    if (!asset)
-      return refused(
-        'notFound',
-        `no asset "${assetId}" in this library — assets.searchProjectCatalogue answers what is in it`,
-      )
-    if (asset.type !== 'animation')
-      return refused(
-        'badInput',
-        `asset "${assetId}" is of type "${asset.type}", and a block wants one of type "animation" — assets.searchProjectCatalogue with type "animation" answers which are`,
-      )
-
-    return layBlockOf(input, assetClip(newId(), asset.id, asset.name))
-  }
+  if (source === 'asset') return addAssetAnimation(input, assetId, clipName)
 
   if (assetId !== null || clipName === null)
     return refused('badInput', `source "${source}" wants "clipName" and no "assetId"`)
@@ -253,6 +222,29 @@ async function addAnimation(input: Record<string, unknown>): Promise<ActionOutco
     input,
     source === 'embedded' ? embeddedClip(newId(), clipName) : bundledClip(newId(), clipName),
   )
+}
+
+function addAssetAnimation(
+  input: Record<string, unknown>,
+  assetId: string | null,
+  clipName: string | null,
+): ActionOutcome {
+  if (clipName !== null || assetId === null)
+    return refused('badInput', 'source "asset" wants "assetId" and no "clipName"')
+
+  const asset = assetsById(useAssets.getState()).get(assetId)
+  if (!asset)
+    return refused(
+      'notFound',
+      `no asset "${assetId}" in this library — assets.searchProjectCatalogue answers what is in it`,
+    )
+  if (asset.type !== 'animation')
+    return refused(
+      'badInput',
+      `asset "${assetId}" is of type "${asset.type}", and a block wants one of type "animation" — assets.searchProjectCatalogue with type "animation" answers which are`,
+    )
+
+  return layBlockOf(input, assetClip(newId(), asset.id, asset.name))
 }
 
 /** Laid through the very gesture the panels use, so a block an assistant lays lands CHOSEN too. */
@@ -344,117 +336,8 @@ function editBlock(input: Record<string, unknown>): ActionOutcome {
   )
 }
 
-function timelineSettings(input: Record<string, unknown>): ActionOutcome {
-  const documentId = activeSceneId(useDocuments.getState())
-  if (documentId === null) return refused('wrongSurface', NO_SCENE)
-
-  const seconds = numberOf(input, 'durationSeconds')
-  const fps = numberOf(input, 'fps')
-  if (seconds === null && fps === null)
-    return refused(
-      'badInput',
-      'this call named neither "durationSeconds" nor "fps", and one of the two is what it writes',
-    )
-
-  useScenes.getState().runCommand(
-    documentId,
-    setTimelineSettings({
-      ...(seconds === null ? {} : { duration: secondsToUs(seconds) }),
-      ...(fps === null ? {} : { fps }),
-    }),
-  )
-  return { ok: true }
-}
-
-/** A key lands on a frame or on nothing: one laid between two is one nothing reads back. */
-function frameAt(state: SceneState, seconds: number): Us {
-  return snapToFrame(secondsToUs(seconds), state.animation.fps)
-}
-
-/** Runs a command built from the instant a key lands on, the head where none was named. */
-function editKeys(
-  input: Record<string, unknown>,
-  build: (open: { state: SceneState; at: Us }) => Command<SceneState> | null,
-  /** What a caller does when the scene IS in front and the build still declines. */
-  nothing: string,
-): ActionOutcome {
-  const documentId = activeSceneId(useDocuments.getState())
-  if (documentId === null) return refused('wrongSurface', NO_SCENE)
-
-  const keying = sceneKeyingAt(documentId)
-  const seconds = numberOf(input, 'timeSeconds')
-  const command = build({
-    state: keying.state,
-    at: seconds === null ? keying.at : frameAt(keying.state, seconds),
-  })
-  if (!command) return refused('badInput', nothing)
-
-  useScenes.getState().runCommand(documentId, command)
-  return { ok: true }
-}
-
-/** The channel a call names, on the scene in front — an id nobody answers to is a refusal. */
-function editTrack(
-  input: Record<string, unknown>,
-  build: (track: AnimationTrack, documentId: string) => ActionOutcome,
-): ActionOutcome {
-  const documentId = activeSceneId(useDocuments.getState())
-  if (documentId === null) return refused('wrongSurface', NO_SCENE)
-
-  const trackId = textOf(input, 'trackId') ?? ''
-  const track = sceneOf(useScenes.getState(), documentId).animation.tracks.find(
-    held => held.id === trackId,
-  )
-
-  return track
-    ? build(track, documentId)
-    : refused(
-        'notFound',
-        `no channel "${trackId}" on the scene in front — scene.state answers "tracks" with their ids`,
-      )
-}
-
-/** The subject a call names: a node of the scene, or one bone of the model it holds. */
-function subjectOf(input: Record<string, unknown>): { nodeId: string; bone?: string } {
-  const bone = textOf(input, 'bone')
-  const nodeId = textOf(input, 'nodeId') ?? ''
-  return bone === null ? { nodeId } : { nodeId, bone }
-}
-
-/** Its channels, by id — locked ones left out, as every gesture of the band leaves them out. */
-function tracksOfSubject(state: SceneState, subject: { nodeId: string; bone?: string }): string[] {
-  return recordingTracksFor(state.animation, subject.nodeId, subject.bone).map(track => track.id)
-}
-
-/**
- * A channel name is screen text, and one opened from outside must read like one opened by the
- * diamond. `i18next` answers nothing before a window has initialised it — a test — so the English
- * line stands in, never `undefined` written into a document.
- */
-function keyPose(input: Record<string, unknown>): ActionOutcome {
-  const only = oneOf(input, 'property', DIRECT_PROPERTIES) ?? undefined
-
-  return editKeys(
-    input,
-    ({ state, at }) => {
-      const subject = subjectOf(input)
-      const node = nodeById(state, subject.nodeId)
-      if (!node) return null
-
-      return keyNode(
-        state,
-        subject,
-        at,
-        channelNames(speaksBundle(), subject.bone ?? node.name),
-        () => `track_${newId()}`,
-        only,
-      )
-    },
-    '"nodeId" must name a node of the scene in front, and "bone" one of its rig — scene.state answers "nodes", rig.state answers "bones"',
-  )
-}
-
 export const RIG_HANDLERS: ActionHandlers = {
+  ...RIG_KEY_HANDLERS,
   'rig.state': rigState,
   'rig.fit': fitRig,
   'rig.clear': () =>
@@ -543,89 +426,4 @@ export const RIG_HANDLERS: ActionHandlers = {
       },
       '"clipId" names no block laid on this model — animations.list answers "lanes" with the clips on them',
     ),
-
-  'animation.setBandLengthAndRate': timelineSettings,
-
-  'animation.autoKey': input => {
-    const documentId = activeSceneId(useDocuments.getState())
-    if (documentId === null) return refused('wrongSurface', NO_SCENE)
-
-    useAnimationViews.getState().setAutoKey(documentId, boolOf(input, 'on'))
-    return { ok: true }
-  },
-
-  'key.writePoseKeys': keyPose,
-
-  /**
-   * 🛑 No instant named clears them ALL, and that is the difference from the window's own diamond:
-   * a client cannot see the playhead, so « efface toutes les clés » had no call to make.
-   */
-  'key.removeSubjectKeys': input =>
-    editKeys(
-      input,
-      ({ state, at }) => {
-        const tracks = tracksOfSubject(state, subjectOf(input))
-        return numberOf(input, 'timeSeconds') === null
-          ? unkeySubjectWholly(state, tracks)
-          : unkeySubject(state, tracks, at)
-      },
-      'nothing is keyed for that subject, or nothing at that instant — scene.state answers "tracks" with the instants each channel holds',
-    ),
-
-  'key.writeKeysOnOpenChannels': input =>
-    editKeys(
-      input,
-      ({ state, at }) =>
-        keySubject(
-          state,
-          state.animation.tracks.map(track => track.id),
-          at,
-        ),
-      'the scene in front holds no channel to key — key.writePoseKeys opens one on a node first',
-    ),
-
-  'key.move': input =>
-    editTrack(input, (track, documentId) => {
-      const state = sceneOf(useScenes.getState(), documentId)
-      const from = frameAt(state, numberOf(input, 'fromSeconds') ?? 0)
-
-      // Nothing standing where the drag began: the command hands the state back untouched, which
-      // without this reads as a key moved.
-      if (!track.keys.some(key => key.time === from))
-        return refused(
-          'badInput',
-          'that channel holds no key at "fromSeconds" — scene.state answers "tracks" with the instants each one holds, in microseconds',
-        )
-
-      const to = frameAt(state, numberOf(input, 'toSeconds') ?? 0)
-      useScenes.getState().runCommand(documentId, moveAnimationKey(track.id, from, to))
-      return { ok: true }
-    }),
-
-  'channel.remove': input =>
-    editTrack(input, (track, documentId) => {
-      // A locked channel is skipped by the command, which reads as removed.
-      if (track.locked)
-        return refused(
-          'badInput',
-          'that channel is locked — channel.setMuteSoloLock with locked false unlocks it, then send this again',
-        )
-
-      useScenes.getState().runCommand(documentId, removeAnimationTrack(track.id))
-      return { ok: true }
-    }),
-
-  'channel.setMuteSoloLock': input =>
-    editTrack(input, (track, documentId) => {
-      const flags = {
-        ...flagNamed(input, 'muted'),
-        ...flagNamed(input, 'solo'),
-        ...flagNamed(input, 'locked'),
-      }
-      if (Object.keys(flags).length === 0)
-        return refused('badInput', 'this call named none of muted, solo, locked')
-
-      writeAnimationTrack(documentId, track.id, held => ({ ...held, ...flags }))
-      return { ok: true }
-    }),
 }

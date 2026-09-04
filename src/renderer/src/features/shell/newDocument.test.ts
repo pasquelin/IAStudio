@@ -76,22 +76,22 @@ const answering = (
 
 const created = (): DocumentDescriptor[] => Object.values(useDocuments.getState().documents)
 
-describe('createDocumentIn', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    asks.length = 0
-    installFakeBridge()
-    useDocuments.setState({ documents: {}, stored: [] })
-    useSelection.getState().selectFiles([])
-    const stamp = '2026-08-16T10:00:00.000Z'
-    useProject.setState({
-      project: {
-        path: '/projects/One',
-        manifest: { version: 1, createdAt: stamp, updatedAt: stamp },
-      },
-    })
+beforeEach(() => {
+  vi.clearAllMocks()
+  asks.length = 0
+  installFakeBridge()
+  useDocuments.setState({ documents: {}, stored: [] })
+  useSelection.getState().selectFiles([])
+  const stamp = '2026-08-16T10:00:00.000Z'
+  useProject.setState({
+    project: {
+      path: '/projects/One',
+      manifest: { version: 1, createdAt: stamp, updatedAt: stamp },
+    },
   })
+})
 
+describe('createDocumentIn', () => {
   it('calls the document what the window answers, and opens it', async () => {
     answering([madeAs('Niveau', 'Modelling/Scenes')])
 
@@ -174,7 +174,9 @@ describe('createDocumentIn', () => {
     await vi.waitFor(() => expect(asks).toHaveLength(1))
     expect(asks[0]?.picked).toBeNull()
   })
+})
 
+describe('createDocumentIn results', () => {
   /**
    * The window is not the only door: a caller that supplies a title opens none — the assistant
    * and the MCP wire both do — and the fallback has to be the same one on both.

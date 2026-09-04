@@ -44,26 +44,29 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
   const results: WorldSafeValidationResult[] = []
   for (const benchmark of worldBenchmarkScenes()) {
     const cameras = camerasFor(benchmark.state)
-    const driver = createSceneRuntimeValidationDriver({
-      cameras,
-      renderer: {
-        loadModel: async () => benchmarkModel(),
-        loadTexture: async () => benchmarkTexture(),
-      },
-      functional:
-        benchmark.id === 'S5'
-          ? {
-              createPhysics: loadJoltPhysics,
-              createScripts: loadQuickjsScripts,
-              modules: [
-                {
-                  script: 'script:Benchmark.ts',
-                  code: 'exports.default = defineScript({ onUpdate(self) { self.moveBy(0.01, 0, 0) }, onMessage() {} })',
-                },
-              ],
-            }
-          : undefined,
-    })
+    function driverForBenchmark() {
+      return createSceneRuntimeValidationDriver({
+        cameras,
+        renderer: {
+          loadModel: async () => benchmarkModel(),
+          loadTexture: async () => benchmarkTexture(),
+        },
+        functional:
+          benchmark.id === 'S5'
+            ? {
+                createPhysics: loadJoltPhysics,
+                createScripts: loadQuickjsScripts,
+                modules: [
+                  {
+                    script: 'script:Benchmark.ts',
+                    code: 'exports.default = defineScript({ onUpdate(self) { self.moveBy(0.01, 0, 0) }, onMessage() {} })',
+                  },
+                ],
+              }
+            : undefined,
+      })
+    }
+    const driver = driverForBenchmark()
     let nonUniformFrames = 0
     let observedPickSamples = 0
     let executedScriptHooks = 0

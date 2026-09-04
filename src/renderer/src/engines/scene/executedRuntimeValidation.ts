@@ -32,6 +32,7 @@ type ScriptProbe = {
   faults: string[]
 }
 type PhysicsProbe = { port: PhysicsPort; bodies: BodyDescriptor[]; steps: number[] }
+type ValidationTimeline = { veils: number[]; scenes: { scene: string; fade: number }[] }
 const FIXED_STEP = 1 / 60
 const VALIDATION_STEPS = 10
 
@@ -43,7 +44,7 @@ export async function executeRuntimeFunctionalChecks(
   let physicsPort: PhysicsPort | undefined
   let host: GameApi | undefined
   let world: World | undefined
-  const timeline = { veils: [] as number[], scenes: [] as { scene: string; fade: number }[] }
+  const timeline: ValidationTimeline = { veils: [], scenes: [] }
 
   try {
     const scripts = scriptProbe(
@@ -52,20 +53,7 @@ export async function executeRuntimeFunctionalChecks(
     script = scripts.port
     const physics = physicsProbe((await options.createPhysics?.()) ?? createInertPhysics())
     physicsPort = physics.port
-    host = createStudioHost({
-      input: document.createElement('div'),
-      player: { id: 'runtime-validation', name: 'Runtime validation', local: true },
-      urlForAsset: id => id,
-      script,
-      physics: physicsPort,
-      render: { ...createInertRender(), veil: amount => timeline.veils.push(amount) },
-      scenes: {
-        kept: () => ({}),
-        keep: () => {},
-        load: (scene, fade) => timeline.scenes.push({ scene, fade }),
-      },
-      audio: createInertAudio(),
-    })
+    host = validationHost(script, physicsPort, timeline)
     world = worldFromScene('runtime-validation', state, host, { modules: options.modules ?? [] })
     for (let step = 0; step < VALIDATION_STEPS; step += 1) world.step(FIXED_STEP)
     world.lateUpdate(0, FIXED_STEP)
@@ -92,20 +80,50 @@ export async function executeRuntimeFunctionalChecks(
       undoRedo: edited.undoRedo,
     }
   } finally {
+    disposeValidationRuntime(world, host, physicsPort, script)
+  }
+}
+
+function validationHost(
+  script: ScriptPort,
+  physics: PhysicsPort,
+  timeline: ValidationTimeline,
+): GameApi {
+  return createStudioHost({
+    input: document.createElement('div'),
+    player: { id: 'runtime-validation', name: 'Runtime validation', local: true },
+    urlForAsset: id => id,
+    script,
+    physics,
+    render: { ...createInertRender(), veil: amount => timeline.veils.push(amount) },
+    scenes: {
+      kept: () => ({}),
+      keep: () => {},
+      load: (scene, fade) => timeline.scenes.push({ scene, fade }),
+    },
+    audio: createInertAudio(),
+  })
+}
+
+function disposeValidationRuntime(
+  world: World | undefined,
+  host: GameApi | undefined,
+  physics: PhysicsPort | undefined,
+  script: ScriptPort | undefined,
+): void {
+  try {
+    world?.dispose()
+  } finally {
     try {
-      world?.dispose()
+      host?.input.detach()
     } finally {
       try {
-        host?.input.detach()
+        host?.audio.stopAll()
       } finally {
         try {
-          host?.audio.stopAll()
+          physics?.dispose()
         } finally {
-          try {
-            physicsPort?.dispose()
-          } finally {
-            script?.dispose()
-          }
+          script?.dispose()
         }
       }
     }

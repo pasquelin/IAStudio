@@ -82,6 +82,9 @@ describe('pointing a client here', () => {
    * second to start took the first's file over — its clients drove the wrong studio, and its quit
    * removed the file from under a studio still listening.
    */
+})
+
+describe('persisting a client endpoint', () => {
   it('gives each checkout its own address file, and a packaged run the plain one', () => {
     expect(mcpEndpointPath('/profile', null)).toBe(ADDRESS)
     expect(mcpEndpointPath('/profile', '/one')).not.toBe(mcpEndpointPath('/profile', '/another'))

@@ -166,6 +166,22 @@ function publishIfGitChanged(): void {
   publishMenuContext()
 }
 
+function subscribeMenuPublishers(): Array<() => void> {
+  const stops = [useLayouts, useSettings, useDocuments, useProject].map(store =>
+    store.subscribe(publishMenuContext),
+  )
+  stops.push(
+    useModels.subscribe((state, previous) => {
+      if (state.selected !== previous.selected) publishMenuContext()
+    }),
+  )
+  for (const store of [useSceneViews, useScenes]) stops.push(store.subscribe(publishIfSceneChanged))
+  for (const store of [useCanvases, useCanvasViews])
+    stops.push(store.subscribe(publishIfCanvasChanged))
+  stops.push(useGit.subscribe(publishIfGitChanged))
+  return stops
+}
+
 /**
  * Wires the native menu to the shell. Without this listener, "View ▸ Tool windows" would emit
  * into the void and the menu entries would silently do nothing.
@@ -192,28 +208,7 @@ export function useNativeMenu(): void {
     // which scene is in front decides what the ticks read.
     // `useProject` is among them because the home offers the Explorer only while a project is
     // open: without it the row would stay in the menu until something else happened to publish.
-    const stopPublishing = [useLayouts, useSettings, useDocuments, useProject].map(store =>
-      store.subscribe(publishMenuContext),
-    )
-    // Search keystrokes used to rebuild the native menu: only the chosen model moves a row.
-    stopPublishing.push(
-      useModels.subscribe((state, previous) => {
-        if (state.selected === previous.selected) return
-        publishMenuContext()
-      }),
-    )
-    // The two written far too often are subscribed apart, through the guard that prices a tick
-    // and an ability before a context. `useScenes` is one of them because what is PICKED in a
-    // scene decides whether the menu offers to export a selection.
-    for (const store of [useSceneViews, useScenes])
-      stopPublishing.push(store.subscribe(publishIfSceneChanged))
-    // The image stores belong to that second family too: a layer drag writes `useCanvases` on
-    // every pointer move, and what the two Image rows need from it changes far more rarely.
-    for (const store of [useCanvases, useCanvasViews])
-      stopPublishing.push(store.subscribe(publishIfCanvasChanged))
-    // `useGit` belongs to that second family rather than the first: the history is offered only
-    // over a folder under version control, but `busy` flips on every command and moves no row.
-    stopPublishing.push(useGit.subscribe(publishIfGitChanged))
+    const stopPublishing = subscribeMenuPublishers()
 
     // Through `revealTool`, which resolves the zone: a tool sits in different ones depending on
     // the workspace, and the menu is built once for the whole app.

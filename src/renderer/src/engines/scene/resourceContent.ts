@@ -222,44 +222,66 @@ function sameMaterialValue(
 ): boolean {
   if (one === other) return true
   if (one instanceof Texture && other instanceof Texture) {
-    const oneContent = textureContent(one)
-    const otherContent = textureContent(other)
-    return (
-      oneContent !== null &&
-      otherContent !== null &&
-      oneContent.key(one) === otherContent.key(other) &&
-      oneContent.equals(one, other)
-    )
+    return sameTextureValue(one, other)
   }
   if (ArrayBuffer.isView(one) && ArrayBuffer.isView(other)) {
     return one.constructor === other.constructor && sameBytes(bytesOf(one), bytesOf(other))
   }
   if (Array.isArray(one) && Array.isArray(other)) {
-    return (
-      one.length === other.length &&
-      one.every((entry, index) => sameMaterialValue(entry, other[index], seen))
-    )
+    return sameMaterialArray(one, other, seen)
   }
-  if (
-    typeof one !== 'object' ||
-    one === null ||
-    typeof other !== 'object' ||
-    other === null ||
-    Array.isArray(one) ||
-    Array.isArray(other)
-  ) {
-    return Object.is(one, other)
-  }
+  const oneObject = materialObjectOf(one)
+  const otherObject = materialObjectOf(other)
+  if (!oneObject || !otherObject) return Object.is(one, other)
+  if (comparisonSeen(oneObject, otherObject, seen)) return true
+  return sameMaterialObject(oneObject, otherObject, seen)
+}
+
+function sameTextureValue(one: Texture, other: Texture): boolean {
+  const oneContent = textureContent(one)
+  const otherContent = textureContent(other)
+  return (
+    oneContent !== null &&
+    otherContent !== null &&
+    oneContent.key(one) === otherContent.key(other) &&
+    oneContent.equals(one, other)
+  )
+}
+
+function sameMaterialArray(
+  one: readonly unknown[],
+  other: readonly unknown[],
+  seen: WeakMap<object, WeakSet<object>>,
+): boolean {
+  return (
+    one.length === other.length &&
+    one.every((entry, index) => sameMaterialValue(entry, other[index], seen))
+  )
+}
+
+function materialObjectOf(value: unknown): object | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : null
+}
+
+function comparisonSeen(
+  one: object,
+  other: object,
+  seen: WeakMap<object, WeakSet<object>>,
+): boolean {
   const paired = seen.get(one)
   if (paired?.has(other)) return true
   if (paired) paired.add(other)
   else seen.set(one, new WeakSet([other]))
-  const oneKeys = Object.keys(one)
-    .filter(key => !MATERIAL_IDENTITY_KEYS.has(key))
-    .sort(byCodeUnit)
-  const otherKeys = Object.keys(other)
-    .filter(key => !MATERIAL_IDENTITY_KEYS.has(key))
-    .sort(byCodeUnit)
+  return false
+}
+
+function sameMaterialObject(
+  one: object,
+  other: object,
+  seen: WeakMap<object, WeakSet<object>>,
+): boolean {
+  const oneKeys = materialKeysOf(one)
+  const otherKeys = materialKeysOf(other)
   return (
     oneKeys.length === otherKeys.length &&
     oneKeys.every(
@@ -268,6 +290,12 @@ function sameMaterialValue(
         sameMaterialValue(Reflect.get(one, key), Reflect.get(other, key), seen),
     )
   )
+}
+
+function materialKeysOf(value: object): readonly string[] {
+  return Object.keys(value)
+    .filter(key => !MATERIAL_IDENTITY_KEYS.has(key))
+    .sort(byCodeUnit)
 }
 
 function fingerprint(parts: readonly BinaryPart[]): string {

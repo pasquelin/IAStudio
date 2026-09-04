@@ -16,7 +16,7 @@ import { paintRuler, readRulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timelineGeometry'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Size } from '../core/geometry'
-import type { AnimationRow, ClipBlock, ShotBar } from './bandRows'
+import type { AnimationRow, ChannelRow, ClipBlock, ShotBar, SubjectRow } from './bandRows'
 
 /** Half the diagonal of a key, in pixels. A diamond reads at this size and crowds beyond it. */
 const KEY_REACH = 4
@@ -190,37 +190,62 @@ function paintRows(
   for (const { item: row, offset } of placeRows(paint.rows)) {
     const top = RULER_HEIGHT + offset - paint.viewport.scrollTop
     if (top > size.height || top + row.height < RULER_HEIGHT) continue
+    paintRow(context, row, top, size.width, paint, palette)
+  }
+}
 
-    context.fillStyle = row.kind === 'subject' ? palette.row : palette.rowAlt
-    context.fillRect(0, top, size.width, row.height)
+function paintRow(
+  context: CanvasRenderingContext2D,
+  row: AnimationRow,
+  top: number,
+  width: number,
+  paint: AnimationPaint,
+  palette: Palette,
+): void {
+  context.fillStyle = row.kind === 'subject' ? palette.row : palette.rowAlt
+  context.fillRect(0, top, width, row.height)
+  context.fillStyle = palette.border
+  context.fillRect(0, top + row.height - 1, width, 1)
 
-    context.fillStyle = palette.border
-    context.fillRect(0, top + row.height - 1, size.width, 1)
+  if (row.kind === 'lane') {
+    for (const block of row.blocks)
+      paintBlock(
+        context,
+        block,
+        top,
+        row.height,
+        paint.viewport,
+        palette,
+        block.clipId === paint.picked,
+      )
+    return
+  }
+  if (row.kind === 'subject' && row.bars)
+    for (const bar of row.bars) paintShot(context, bar, top, row.height, paint)
 
-    if (row.kind === 'lane') {
-      for (const block of row.blocks) {
-        const chosen = block.clipId === paint.picked
-        paintBlock(context, block, top, row.height, paint.viewport, palette, chosen)
-      }
-      continue
-    }
+  paintKeys(context, row, top, width, paint, palette)
+}
 
-    // The bars first, the diamonds over them: a camera on air is a run of shots AND a subject
-    // whose lens can be keyed, and its line has to show both — folding it away loses neither.
-    if (row.kind === 'subject' && row.bars) {
-      for (const bar of row.bars) paintShot(context, bar, top, row.height, paint)
-    }
-
-    const middle = top + row.height / 2
-    const reach = reachOf(row)
-
-    for (const time of keysOf(row)) {
-      const x = timeToX(time, paint.viewport)
-      if (x < -reach || x > size.width + reach) continue
-
-      const chosen = paint.selected.has(keyId(row.id, time))
-      paintKey(context, x, middle, reach, chosen ? palette.keySelected : palette.key)
-    }
+function paintKeys(
+  context: CanvasRenderingContext2D,
+  row: SubjectRow | ChannelRow,
+  top: number,
+  width: number,
+  paint: AnimationPaint,
+  palette: Palette,
+): void {
+  const middle = top + row.height / 2
+  const reach = reachOf(row)
+  for (const time of keysOf(row)) {
+    const x = timeToX(time, paint.viewport)
+    if (x < -reach || x > width + reach) continue
+    paintKey(
+      context,
+      x,
+      middle,
+      reach,
+      paint.selected.has(keyId(row.id, time)) ? palette.keySelected : palette.key,
+    )
   }
 }
 

@@ -24,7 +24,7 @@ describe('finding the tests no import graph reaches', () => {
   })
 
   it('holds the one the narrow reading missed', () => {
-    expect(GUARDED).toContain('src/renderer/src/components/styles.test.ts')
+    expect(GUARDED).toContain('src/renderer/src/components/stylesRows.test.ts')
   })
 
   /**
@@ -70,7 +70,9 @@ describe('finding the tests no import graph reaches', () => {
     expect(readsTheTree("execFileSync(\n  'git',\n  ['grep', '-In', NEEDLE],\n)")).toBe(true)
     expect(readsTheTree("execFileSync('node', ['scripts/check.mjs'])")).toBe(false)
   })
+})
 
+describe('wide guard coverage', () => {
   it('leaves an ordinary suite alone, which is what keeps the selection worth making', () => {
     expect(readsTheTree("import { Tree } from './Tree'\nrender(<Tree />)")).toBe(false)
   })

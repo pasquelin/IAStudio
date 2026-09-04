@@ -26,6 +26,8 @@ import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation
 import { DEFAULT_FONT } from '@shared/domain/font'
 import { cachedOn } from '../core/cachedOn'
 
+export type { OptimizationSettings } from '@shared/domain/scene'
+
 export type BakedInstance = {
   sourceId: string
   name: string
@@ -419,8 +421,6 @@ export function canReparent(
 export function subtreesOf(nodes: readonly SceneNode[], ids: readonly string[]): SceneNode[] {
   const wanted = new Set(ids)
   const byParent = new Map<string | null, SceneNode[]>()
-  // Only the roots, never the whole scene by id: a second index of 40 000 entries doubled the
-  // cost of every fold, which asks for two shapes.
   const roots = new Map<string, SceneNode>()
   for (const node of nodes) {
     if (wanted.has(node.id)) roots.set(node.id, node)
@@ -428,7 +428,6 @@ export function subtreesOf(nodes: readonly SceneNode[], ids: readonly string[]):
     if (siblings) siblings.push(node)
     else byParent.set(node.parentId, [node])
   }
-
   const found: SceneNode[] = []
   const seen = new Set<string>()
   for (const id of ids) {
@@ -437,9 +436,6 @@ export function subtreesOf(nodes: readonly SceneNode[], ids: readonly string[]):
     seen.add(id)
     found.push(root)
   }
-
-  // Indexed rather than iterated: the loop appends as it walks, which is the descent itself. The
-  // `seen` set is also what ends it on a parent cycle, where the singular used to spin for ever.
   for (let at = 0; at < found.length; at += 1) {
     const node = found[at]
     if (!node) continue

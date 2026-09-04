@@ -90,6 +90,30 @@ export function createWorld(options: WorldOptions): World {
   // taken from `@shared/` would carry PolyForm code into an exported game.
   const said = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
+  const runFixed = (world: World, dt: number): void => {
+    for (const system of systems) {
+      if (!system.fixedUpdate) continue
+      try {
+        system.fixedUpdate(world, dt)
+      } catch (error) {
+        world.ports.log.write('error', `system ${system.name} threw: ${said(error)}`)
+      }
+    }
+  }
+
+  const applyPending = (world: World): void => {
+    for (const entity of born) world.entities.add(entity)
+    born.length = 0
+    bornIds.clear()
+    for (const wanted of attaching) world.entities.attach(wanted.entity, wanted.component)
+    attaching.length = 0
+    for (const wanted of detaching) world.entities.detach(wanted.entity, wanted.type)
+    detaching.length = 0
+    for (const id of doomed) world.entities.remove(id)
+    doomed.length = 0
+    doomedIds.clear()
+  }
+
   const world: World = {
     scene: options.scene,
     entities: createEntityStore(),
@@ -147,44 +171,8 @@ export function createWorld(options: WorldOptions): World {
       for (const entity of world.entities.all()) keepPose(entity)
       world.input = world.ports.input.state()
 
-      for (let index = 0; index < systems.length; index++) {
-        const system = systems[index]
-        if (!system?.fixedUpdate) continue
-        try {
-          system.fixedUpdate(world, dt)
-        } catch (error) {
-          // Reported rather than thrown on: a throw here would skip `endStep` and the tick, so
-          // the same frame would be retried and would throw again, for ever.
-          world.ports.log.write('error', `system ${system.name} threw: ${said(error)}`)
-        }
-      }
-
-      for (let index = 0; index < born.length; index++) {
-        const entity = born[index]
-        if (entity) world.entities.add(entity)
-      }
-      born.length = 0
-      bornIds.clear()
-
-      for (let index = 0; index < attaching.length; index++) {
-        const wanted = attaching[index]
-        if (wanted) world.entities.attach(wanted.entity, wanted.component)
-      }
-      attaching.length = 0
-
-      for (let index = 0; index < detaching.length; index++) {
-        const wanted = detaching[index]
-        if (wanted) world.entities.detach(wanted.entity, wanted.type)
-      }
-      detaching.length = 0
-
-      for (let index = 0; index < doomed.length; index++) {
-        const id = doomed[index]
-        if (id !== undefined) world.entities.remove(id)
-      }
-      doomed.length = 0
-      doomedIds.clear()
-
+      runFixed(world, dt)
+      applyPending(world)
       world.events.drain()
       world.ports.input.endStep()
 

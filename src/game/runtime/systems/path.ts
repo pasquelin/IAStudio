@@ -25,6 +25,30 @@ export function createPathSystem(): System {
   // added one parsed rail per keystroke and the map held them for the life of the system.
   const rails = new WeakMap<Entity, { said: string; rail: readonly Vector3[] }>()
 
+  const update = (entity: Entity, dt: number): void => {
+    const settings = componentOf(entity, 'Path')
+    if (!settings) return
+    const said = textOf(settings, 'waypoints', PATH.waypoints)
+    const kept = rails.get(entity)
+    const rail = kept?.said === said ? kept.rail : pointsOf(said)
+    rails.set(entity, { said, rail })
+    if (rail.length === 0) return
+    const run = runs.get(entity) ?? { at: 0, forward: true, done: false }
+    runs.set(entity, run)
+    if (run.done) return
+    const point = rail[Math.min(run.at, rail.length - 1)]
+    if (!point) return
+    if (flagOf(settings, 'orientToTangent', PATH.orientToTangent)) {
+      TOWARDS.x = point.x - entity.transform.position.x
+      TOWARDS.y = point.y - entity.transform.position.y
+      TOWARDS.z = point.z - entity.transform.position.z
+      turnTowards(entity.transform.rotation, TOWARDS, 0)
+    }
+    const reach = numberOf(settings, 'speed', PATH.speed) * dt
+    if (!stepTowards(entity.transform.position, point, reach)) return
+    advanced(run, rail.length, choiceOf(settings, 'mode', WAYPOINT_MODES, PATH.mode))
+  }
+
   return {
     name: 'path',
     reads: ['Path'],
@@ -32,34 +56,7 @@ export function createPathSystem(): System {
 
     fixedUpdate: (world: World, dt: number) => {
       for (const entity of world.entities.withComponent('Path')) {
-        const settings = componentOf(entity, 'Path')
-        if (!settings) continue
-
-        const said = textOf(settings, 'waypoints', PATH.waypoints)
-        const kept = rails.get(entity)
-        const rail = kept?.said === said ? kept.rail : pointsOf(said)
-        rails.set(entity, { said, rail })
-        if (rail.length === 0) continue
-
-        const run = runs.get(entity) ?? { at: 0, forward: true, done: false }
-        runs.set(entity, run)
-        if (run.done) continue
-
-        const point = rail[Math.min(run.at, rail.length - 1)]
-        if (!point) continue
-
-        if (flagOf(settings, 'orientToTangent', PATH.orientToTangent)) {
-          TOWARDS.x = point.x - entity.transform.position.x
-          TOWARDS.y = point.y - entity.transform.position.y
-          TOWARDS.z = point.z - entity.transform.position.z
-          // At once: a rail's tangent is where the cart is ALREADY going, so easing into it would
-          // point the cart somewhere it has just left.
-          turnTowards(entity.transform.rotation, TOWARDS, 0)
-        }
-
-        const reach = numberOf(settings, 'speed', PATH.speed) * dt
-        if (!stepTowards(entity.transform.position, point, reach)) continue
-        advanced(run, rail.length, choiceOf(settings, 'mode', WAYPOINT_MODES, PATH.mode))
+        update(entity, dt)
       }
     },
   }

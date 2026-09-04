@@ -120,18 +120,29 @@ function writeInfluences(
   skinWeight: Float32Array,
 ): void {
   const region = request.regions[nearest] ?? TRUNK
-  // Four slots kept in order by insertion, and nothing allocated: a sort per bone per vertex is
-  // twenty-six million calls on a real character, for a list that never exceeds four.
   const bones = CHOSEN_BONES
   const near = CHOSEN_DISTANCES
-  let held = 0
+  const held = nearestBones(request, distances, region, bones, near)
+  let total = 0
+  for (let slot = 0; slot < held; slot += 1) total += pull(near[slot] ?? 0)
+  for (let slot = 0; slot < held; slot += 1) {
+    skinIndex[vertex * INFLUENCES + slot] = bones[slot] ?? 0
+    skinWeight[vertex * INFLUENCES + slot] = pull(near[slot] ?? 0) / total
+  }
+}
 
+function nearestBones(
+  request: SkinRequest,
+  distances: Float64Array,
+  region: number,
+  bones: Uint16Array,
+  near: Float64Array,
+): number {
+  let held = 0
   for (let bone = 0; bone < distances.length; bone += 1) {
     if (!mayDrive(region, request.regions[bone] ?? TRUNK)) continue
-
     const distance = distances[bone] ?? 0
     if (held === INFLUENCES && distance >= (near[INFLUENCES - 1] ?? 0)) continue
-
     let slot = Math.min(held, INFLUENCES - 1)
     while (slot > 0 && (near[slot - 1] ?? 0) > distance) {
       bones[slot] = bones[slot - 1] ?? 0
@@ -142,14 +153,7 @@ function writeInfluences(
     near[slot] = distance
     if (held < INFLUENCES) held += 1
   }
-
-  let total = 0
-  for (let slot = 0; slot < held; slot += 1) total += pull(near[slot] ?? 0)
-
-  for (let slot = 0; slot < held; slot += 1) {
-    skinIndex[vertex * INFLUENCES + slot] = bones[slot] ?? 0
-    skinWeight[vertex * INFLUENCES + slot] = pull(near[slot] ?? 0) / total
-  }
+  return held
 }
 
 /**

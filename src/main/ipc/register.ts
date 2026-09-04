@@ -50,8 +50,7 @@ import { registerExternalFileHandlers } from '@main/externalFiles'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
 
-/** Single place where the IPC surface is wired. Registered once, before any window loads. */
-export function registerIpc(services: Services): void {
+function registerWindowIpc(): void {
   registerExternalFileHandlers()
   registerWindowControls()
   registerMirrorWindow()
@@ -62,15 +61,13 @@ export function registerIpc(services: Services): void {
   registerNewDocumentWindow()
   registerContextMenu()
   registerMenuHandlers()
-  registerDiagnosticsHandlers(() => services.journal)
-  // Wired here rather than held by `Services`: opening a window is not a service, and this is
-  // where the two sides of the boundary are already being joined.
+}
+
+function registerSettingsIpc(services: Services): void {
   registerSettingsHandlers({
     ...services,
     openSettings: openSettingsWindow,
     setPending: markSettingsPending,
-    // The setting says what was WANTED; this says what is listening. Both sides of the answer
-    // come from `mcpStateOf`, so the pull and the push cannot disagree.
     mcpState: () => mcpStateOf(services.mcp.endpoint()),
     runAction: runSettingAction({
       settings: services.settings,
@@ -89,6 +86,48 @@ export function registerIpc(services: Services): void {
       },
     }),
   })
+}
+
+function registerCreativeIpc(
+  services: Services,
+  running: ReturnType<typeof createRunningTasks>,
+): void {
+  registerStyleHandlers(services.styles)
+  registerMediaHandlers(services)
+  registerAssistantHandlers({
+    brain: services.assistant,
+    settleAction: services.remoteActions.settle,
+    running,
+    journal: () => services.journal,
+    transcribe: services.transcribe,
+    said: services.said,
+  })
+  registerMemoryHandlers({ host: services.memory, vectors: services.memoryVectors })
+  registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })
+  registerDictationHandlers({
+    session: services.dictation,
+    openPrivacySettings: services.openMicrophoneSettings,
+  })
+  registerDialogHandlers(services)
+  registerSceneHandlers(services)
+  registerPostPresetHandlers(services)
+  registerExportHandlers(services)
+  registerGameExportHandler(services)
+  registerMontageHandlers({ ...services, running })
+  registerMontageImportHandlers({ ...services, running })
+  registerTaskCancelHandler(running)
+  registerRenderHandlers({
+    ...services,
+    newId: () => `render_${randomUUID()}`,
+    encode: services.encodeVideo,
+  })
+}
+
+/** Single place where the IPC surface is wired. Registered once, before any window loads. */
+export function registerIpc(services: Services): void {
+  registerWindowIpc()
+  registerDiagnosticsHandlers(() => services.journal)
+  registerSettingsIpc(services)
   registerProviderHandlers(services)
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
   registerBundledTextureHandlers({
@@ -142,36 +181,7 @@ export function registerIpc(services: Services): void {
   // One table for every long task of this process: the caller names it, this side runs it under
   // that name, and the stop reaches it by the same name. Built here so no handler owns the door.
   const running = createRunningTasks()
-  registerStyleHandlers(services.styles)
-  registerMediaHandlers(services)
-  registerAssistantHandlers({
-    brain: services.assistant,
-    settleAction: services.remoteActions.settle,
-    running,
-    journal: () => services.journal,
-    transcribe: services.transcribe,
-    said: services.said,
-  })
-  registerMemoryHandlers({ host: services.memory, vectors: services.memoryVectors })
-  registerAiHandlers({ manager: services.ai, addOwnModel: services.addOwnAiModel })
-  registerDictationHandlers({
-    session: services.dictation,
-    openPrivacySettings: services.openMicrophoneSettings,
-  })
-  registerDialogHandlers(services)
-  registerSceneHandlers(services)
-  registerPostPresetHandlers(services)
-  registerExportHandlers(services)
-  registerGameExportHandler(services)
-  registerMontageHandlers({ ...services, running })
-  // The same table both ways: an unpack is as long as a pack, and the stop button is one button.
-  registerMontageImportHandlers({ ...services, running })
-  registerTaskCancelHandler(running)
-  registerRenderHandlers({
-    ...services,
-    newId: () => `render_${randomUUID()}`,
-    encode: services.encodeVideo,
-  })
+  registerCreativeIpc(services, running)
   registerNewsHandlers(services.news)
   registerUpdateHandlers(services)
   // Built here rather than held by `Services`: the index reads nothing until a picker asks, so

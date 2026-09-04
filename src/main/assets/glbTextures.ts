@@ -33,6 +33,36 @@ export type EmbeddedTexture = {
   slot: string
 }
 
+function slotsByImage(materials: unknown[], textures: unknown[]): Map<number, string[]> {
+  const slots = new Map<number, string[]>()
+  for (const material of materials) {
+    for (const found of textureSlotsOf(material)) {
+      const source = sourceOf(textures[found.index])
+      if (source === undefined) continue
+      const worn = slots.get(source)
+      if (worn) worn.push(found.slot)
+      else slots.set(source, [found.slot])
+    }
+  }
+  return slots
+}
+
+function texturesFrom(
+  slots: ReadonlyMap<number, string[]>,
+  images: unknown[],
+  bufferViews: unknown[],
+  bin: Uint8Array,
+): EmbeddedTexture[] {
+  const found: EmbeddedTexture[] = []
+  for (const [source, worn] of slots) {
+    const picture = pictureOf(images[source], bufferViews, bin)
+    if (!picture) continue
+    const channel = channelWornBy(worn)
+    found.push({ ...picture, slot: worn[0] ?? '', ...(channel ? { channel } : {}) })
+  }
+  return found
+}
+
 /**
  * Every picture a `.glb` carries, with the role its materials give it.
  *
@@ -53,33 +83,9 @@ export function embeddedTextures(file: Uint8Array): EmbeddedTexture[] {
   const images = Array.isArray(gltf.images) ? gltf.images : []
   const textures = Array.isArray(gltf.textures) ? gltf.textures : []
   const bufferViews = Array.isArray(gltf.bufferViews) ? gltf.bufferViews : []
-  const materials = Array.isArray(gltf.materials) ? gltf.materials : []
-
-  // Walked from the MATERIALS rather than over `images`: a picture's role is the slot that uses
-  // it, and a file may declare images no material ever wears. Every slot wearing one picture is
-  // collected before any of them decides what it IS — see `channelWornBy`.
-  const slotsPerImage = new Map<number, string[]>()
-  for (const material of materials) {
-    for (const { slot, index } of textureSlotsOf(material)) {
-      const source = sourceOf(textures[index])
-      if (source === undefined) continue
-
-      const worn = slotsPerImage.get(source)
-      if (worn) worn.push(slot)
-      else slotsPerImage.set(source, [slot])
-    }
-  }
-
-  const found: EmbeddedTexture[] = []
-  for (const [source, slots] of slotsPerImage) {
-    const picture = pictureOf(images[source], bufferViews, chunks.bin)
-    if (!picture) continue
-
-    const channel = channelWornBy(slots)
-    found.push({ ...picture, slot: slots[0] ?? '', ...(channel ? { channel } : {}) })
-  }
-
-  return found
+  // Roles come from material slots; unused images have no role to extract.
+  const slots = slotsByImage(Array.isArray(gltf.materials) ? gltf.materials : [], textures)
+  return texturesFrom(slots, images, bufferViews, chunks.bin)
 }
 
 /**
@@ -133,17 +139,7 @@ function pictureOf(
   if (!isRecord(image)) return null
 
   const declared = image.mimeType
-
-  if (typeof image.uri === 'string') {
-    const bytes = dataUriBytes(image.uri)
-    if (!bytes) return null
-
-    // The URI's own type first: `mimeType` is optional for a `uri` image precisely because the
-    // URI carries it, and defaulting to PNG there wrote JPEG bytes into a file named `.png` —
-    // served as a PNG afterwards, by a name the bytes do not answer to.
-    const carried = /^data:([^;,]+)/.exec(image.uri)?.[1]
-    return { bytes, mimeType: typeof declared === 'string' ? declared : (carried ?? 'image/png') }
-  }
+  if (typeof image.uri === 'string') return dataPicture(image.uri, declared)
 
   const mimeType = typeof declared === 'string' ? declared : 'image/png'
   if (typeof image.bufferView !== 'number') return null
@@ -156,6 +152,17 @@ function pictureOf(
   if (length <= 0 || offset + length > bin.byteLength) return null
 
   return { bytes: bin.subarray(offset, offset + length), mimeType }
+}
+
+function dataPicture(
+  uri: string,
+  declared: unknown,
+): { bytes: Uint8Array; mimeType: string } | null {
+  const bytes = dataUriBytes(uri)
+  if (!bytes) return null
+  // Prefer the URI type because glTF permits `mimeType` to be absent for data URIs.
+  const carried = /^data:([^;,]+)/.exec(uri)?.[1]
+  return { bytes, mimeType: typeof declared === 'string' ? declared : (carried ?? 'image/png') }
 }
 
 function dataUriBytes(uri: string): Uint8Array | null {

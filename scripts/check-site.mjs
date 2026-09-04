@@ -24,7 +24,9 @@ const ROOT = resolve(HERE, '..')
 const SITE = join(ROOT, 'site')
 
 const repo = JSON.parse(await readFile(join(ROOT, 'repo.config.json'), 'utf8'))
-const gabarit = await readFile(join(SITE, 'template.html'), 'utf8')
+const structure = await readFile(join(SITE, 'template.html'), 'utf8')
+const ateliers = await readFile(join(SITE, 'partials', 'workspaces.html'), 'utf8')
+const gabarit = structure.replace('{{workspaces}}', ateliers)
 
 const langues = []
 for (const f of (await readdir(join(SITE, 'i18n'))).filter((n) => n.endsWith('.json')).sort()) {
@@ -160,7 +162,7 @@ for (const { href } of liens) {
 /* Le moteur les vérifie au rendu ; ici on le sait avant d'avoir bâti, et sans les
    variables que le moteur fabrique lui-même. */
 const FOURNIES = new Set([
-  'lang', 'dir', 'docs', 'root', 'version', 'alternates', 'langSwitch', 'jsonld', 'ogLocale', 'localeAlternates',
+  'lang', 'dir', 'docs', 'root', 'version', 'alternates', 'langSwitch', 'jsonld', 'ogLocale', 'localeAlternates', 'workspaces',
 ])
 for (const [, cle] of gabarit.matchAll(/\{\{([\w.]+)\}\}/g)) {
   if (FOURNIES.has(cle)) continue

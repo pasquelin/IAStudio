@@ -101,8 +101,6 @@ export function createBoneShapes(
 
   const material = new MeshBasicMaterial({
     vertexColors: true,
-    // Drawn THROUGH the mesh, like the joints: a bone inside a body is exactly the one being
-    // aimed at, and one hidden under a shoulder cannot be picked at all.
     depthTest: false,
     transparent: true,
     opacity: 0.9,
@@ -110,8 +108,6 @@ export function createBoneShapes(
 
   const mesh = new Mesh(geometry, material)
   mesh.name = BONE_SHAPES
-  // Off the raycaster, like the helper it replaces: a click has to land on the model, and bone
-  // picking runs off the projected bones rather than off anything drawn.
   mesh.raycast = () => {}
   mesh.renderOrder = 1
   mesh.frustumCulled = false
@@ -225,13 +221,10 @@ function writeOctahedron(
     return
   }
   AXIS.divideScalar(length)
-
-  // Any vector not along the bone: `UP` is the world's, swapped where the bone runs up it.
   UP.set(0, 1, 0)
   if (Math.abs(AXIS.y) > 0.9) UP.set(1, 0, 0)
   SIDE.copy(UP).cross(AXIS).normalize()
   UP.copy(AXIS).cross(SIDE).normalize()
-
   const ring: Vector3[] = []
   for (const [side, up] of [
     [1, 0],
@@ -247,7 +240,6 @@ function writeOctahedron(
         .clone(),
     )
   }
-
   let cursor = at
   const write = (point: Vector3): void => {
     into[cursor] = point.x
@@ -255,7 +247,6 @@ function writeOctahedron(
     into[cursor + 2] = point.z
     cursor += 3
   }
-
   for (let corner = 0; corner < 4; corner += 1) {
     const one = ring[corner]
     const next = ring[(corner + 1) % 4]

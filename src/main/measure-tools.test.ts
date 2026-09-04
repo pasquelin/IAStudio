@@ -78,6 +78,13 @@ const dryTs = (): Record<string, unknown> => {
   return { ...config }
 }
 
+const KNIP_CONFIG = {
+  $schema: 'https://unpkg.com/knip@6/schema.json',
+  ignoreBinaries: ['sips', 'iconutil', 'uv'],
+  entry: ['scripts/before-pack.mjs', 'site/assets/js/*.js'],
+  ignore: ['site/assets/css/**', 'vendor/**', '.agents/**'],
+}
+
 describe('the structural duplicate detector still looking at the tree', () => {
   it('drops tests and fixtures, not the sources', () => {
     expect(dryTs()['excludeTests']).toBe(true)
@@ -114,44 +121,9 @@ describe('the structural duplicate detector still looking at the tree', () => {
  * none, because a clean run then reads as a clean repository.
  */
 describe('the dead-code detector still looking at the tree', () => {
-  /**
-   * Three binaries a script shells out to, and what knip cannot see is used.
-   *
-   * These are not a widening of the reach — the probe above shows nothing widens it. Each names
-   * a file reached by something other than an import:
-   *
-   * `uv` is the engine's own toolchain, and it is NOT installed by `pnpm install`: `engine-check.mjs`
-   * shells out to it and names it when it is missing. The two macOS ones belong to
-   * `dev-app-identity.mjs`.
-   *
-   * `before-pack.mjs` is called by `electron-builder.yml` through its `beforePack` hook, which is
-   * configuration. Deleting it on knip's word would stop ffmpeg being fetched at packaging time,
-   * and the build would ship without an encoder rather than fail.
-   *
-   * `site/assets/js/*.js` and the stylesheet beside them are loaded by `site/template.html` — the
-   * public site, which knip does not parse. The scripts are entry points because they hold code;
-   * the CSS is ignored outright, having no graph to enter.
-   *
-   * `vendor/**` is the physics engine we compile ourselves: a package the manifest depends on by
-   * `file:`, so what reaches it goes through `node_modules` and knip reads its files as orphans.
-   *
-   * `.agents/**` is git/info/exclude, copied into every worktree so the contract travels with the
-   * branch. Knip does not honour that exclude: 28 unused-file hits, every one a tool no import
-   * reaches, measured 2026-09-03 on a worktree that had only copied `.agents`.
-   *
-   * They are here because a detector that always reports the same false positives is a detector
-   * whose red gets read as normal. The three entry points for `src/main`, `src/preload` and the
-   * renderer are NOT here: knip finds them itself and reports each as redundant, which is what
-   * separates a genuine blind spot from a second description of the build drifting from the first.
-   */
   it('exempts the shelled-out binaries and what knip cannot see is used', () => {
     const config = readJson('knip.json')
-    expect(config).toEqual({
-      $schema: 'https://unpkg.com/knip@6/schema.json',
-      ignoreBinaries: ['sips', 'iconutil', 'uv'],
-      entry: ['scripts/before-pack.mjs', 'site/assets/js/*.js'],
-      ignore: ['site/assets/css/**', 'vendor/**', '.agents/**'],
-    })
+    expect(config).toEqual(KNIP_CONFIG)
   })
 
   /**

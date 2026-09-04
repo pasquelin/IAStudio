@@ -61,110 +61,107 @@ export function clearGameOptimizationCache(documentId: string): void {
   channel.close()
 }
 
+type WireMessage = Record<string, unknown>
+type Decoder = (data: WireMessage) => GameMessage | null
+
+const isRecord = (value: unknown): value is WireMessage =>
+  typeof value === 'object' && value !== null
+
+function playMessage(data: WireMessage): GameMessage | null {
+  const { documentId, scene, modules = [], troubles = [] } = data
+  if (
+    typeof documentId !== 'string' ||
+    !isScene(scene) ||
+    !Array.isArray(modules) ||
+    !Array.isArray(troubles)
+  )
+    return null
+  return { kind: 'play', documentId, scene, modules, troubles }
+}
+
+function editMessage(data: WireMessage): GameMessage | null {
+  const { documentId, patch } = data
+  return typeof documentId === 'string' && isRuntimePatch(patch)
+    ? { kind: 'edit', documentId, patch }
+    : null
+}
+
+function isRuntimePatch(value: unknown): value is RuntimeWorldPatch {
+  if (!isRecord(value)) return false
+  const { changedNodes, removedIds, order, world, animation } = value
+  return (
+    Array.isArray(changedNodes) &&
+    changedNodes.every(isNode) &&
+    Array.isArray(removedIds) &&
+    removedIds.every(id => typeof id === 'string') &&
+    (order === null || (Array.isArray(order) && order.every(id => typeof id === 'string'))) &&
+    (world === null || isRecord(world)) &&
+    (animation === null || isRecord(animation))
+  )
+}
+
+const isNode = (value: unknown): boolean => isRecord(value) && typeof value.id === 'string'
+
+function sceneMessage(data: WireMessage): GameMessage | null {
+  const { scene, found } = data
+  if (typeof scene !== 'string') return null
+  if (found === 'reading' || found === 'unknown') return { kind: 'scene', scene, found }
+  if (!isRecord(found)) return null
+  const { state, document } = found
+  return isScene(state) && typeof document === 'string'
+    ? { kind: 'scene', scene, found: { state, document } }
+    : null
+}
+
+function commandMessage(data: WireMessage): GameMessage | null {
+  const { id, command } = data
+  const asked = commandOf(command)
+  return typeof id === 'number' && asked ? { kind: 'command', id, command: asked } : null
+}
+
+function reportMessage(data: WireMessage): GameMessage | null {
+  const { documentId, report } = data
+  return typeof documentId === 'string' && isReport(report)
+    ? { kind: 'report', documentId, report }
+    : null
+}
+
+function wantMessage(data: WireMessage): GameMessage | null {
+  return typeof data.scene === 'string' ? { kind: 'want', scene: data.scene } : null
+}
+
+function doneMessage(data: WireMessage): GameMessage | null {
+  const { id, ok, ran } = data
+  return typeof id === 'number' && typeof ok === 'boolean' && typeof ran === 'number'
+    ? { kind: 'done', id, ok, ran }
+    : null
+}
+
+function clearOptimizationMessage(data: WireMessage): GameMessage | null {
+  return typeof data.documentId === 'string'
+    ? { kind: 'clearOptimization', documentId: data.documentId }
+    : null
+}
+
+const DECODERS = new Map<string, Decoder>([
+  ['ask', () => ({ kind: 'ask' })],
+  ['gone', () => ({ kind: 'gone' })],
+  ['play', playMessage],
+  ['edit', editMessage],
+  ['scene', sceneMessage],
+  ['command', commandMessage],
+  ['report', reportMessage],
+  ['want', wantMessage],
+  ['done', doneMessage],
+  ['clearOptimization', clearOptimizationMessage],
+])
 /**
  * Reads a message off the wire, or nothing. A `BroadcastChannel` is reachable by anything on this
  * origin, so what arrives is checked — a window would else hand a stranger to a game runtime.
  */
 export function gameMessageOf(data: unknown): GameMessage | null {
-  if (typeof data !== 'object' || data === null || !('kind' in data)) return null
-
-  if (data.kind === 'ask') return { kind: 'ask' }
-  if (data.kind === 'gone') return { kind: 'gone' }
-
-  if (data.kind === 'clearOptimization' && 'documentId' in data) {
-    return typeof data.documentId === 'string'
-      ? { kind: 'clearOptimization', documentId: data.documentId }
-      : null
-  }
-
-  if (data.kind === 'play' && 'documentId' in data && 'scene' in data) {
-    const { documentId, scene } = data
-    if (typeof documentId !== 'string' || !isScene(scene)) return null
-    const modules = 'modules' in data ? data.modules : []
-    const troubles = 'troubles' in data ? data.troubles : []
-    if (!Array.isArray(modules) || !Array.isArray(troubles)) return null
-    return { kind: 'play', documentId, scene, modules, troubles }
-  }
-
-  if (data.kind === 'edit' && 'documentId' in data && 'patch' in data) {
-    const { documentId, patch } = data
-    return typeof documentId === 'string' && isRuntimePatch(patch)
-      ? { kind: 'edit', documentId, patch }
-      : null
-  }
-
-  if (data.kind === 'scene' && 'scene' in data && 'found' in data) {
-    const { scene, found } = data
-    if (typeof scene !== 'string') return null
-    if (found === 'reading' || found === 'unknown') return { kind: 'scene', scene, found }
-    if (
-      typeof found !== 'object' ||
-      found === null ||
-      !('state' in found) ||
-      !('document' in found)
-    )
-      return null
-    const { state, document } = found
-    return isScene(state) && typeof document === 'string'
-      ? { kind: 'scene', scene, found: { state, document } }
-      : null
-  }
-
-  if (data.kind === 'command' && 'id' in data && 'command' in data) {
-    const { id, command } = data
-    const asked = commandOf(command)
-    return typeof id === 'number' && asked ? { kind: 'command', id, command: asked } : null
-  }
-
-  if (data.kind === 'report' && 'documentId' in data && 'report' in data) {
-    const { documentId, report } = data
-    return typeof documentId === 'string' && isReport(report)
-      ? { kind: 'report', documentId, report }
-      : null
-  }
-
-  if (data.kind === 'want' && 'scene' in data) {
-    const { scene } = data
-    return typeof scene === 'string' ? { kind: 'want', scene } : null
-  }
-
-  if (data.kind === 'done' && 'id' in data && 'ok' in data && 'ran' in data) {
-    const { id, ok, ran } = data
-    return typeof id === 'number' && typeof ok === 'boolean' && typeof ran === 'number'
-      ? { kind: 'done', id, ok, ran }
-      : null
-  }
-
-  return null
-}
-
-function isRuntimePatch(value: unknown): value is RuntimeWorldPatch {
-  if (typeof value !== 'object' || value === null) return false
-  const candidate = value as {
-    changedNodes?: unknown
-    removedIds?: unknown
-    order?: unknown
-    world?: unknown
-    animation?: unknown
-  }
-  return (
-    Array.isArray(candidate.changedNodes) &&
-    candidate.changedNodes.every(isNode) &&
-    Array.isArray(candidate.removedIds) &&
-    candidate.removedIds.every(id => typeof id === 'string') &&
-    (candidate.order === null ||
-      (Array.isArray(candidate.order) && candidate.order.every(id => typeof id === 'string'))) &&
-    (candidate.world === null || isRecord(candidate.world)) &&
-    (candidate.animation === null || isRecord(candidate.animation))
-  )
-}
-
-function isNode(value: unknown): boolean {
-  return isRecord(value) && typeof Reflect.get(value, 'id') === 'string'
-}
-
-function isRecord(value: unknown): value is object {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  if (!isRecord(data) || typeof data.kind !== 'string') return null
+  return DECODERS.get(data.kind)?.(data) ?? null
 }
 
 function commandOf(value: unknown): GameCommand | null {

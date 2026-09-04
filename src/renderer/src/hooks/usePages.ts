@@ -1,7 +1,7 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAutomaticPulls } from './useAutomaticPulls'
 import { useLatest } from './useLatest'
+import { usePageQuery } from './usePageQuery'
 
 /** One page of a listing walked by cursor. `cursor` is `null` once there is no page after it. */
 export type Page<T> = {
@@ -78,25 +78,20 @@ export function usePages<T extends { id: string }>(
   read: (from: { cursor?: string }) => Promise<Page<T>> | undefined,
   { enabled = true, once = false, fill, endsOnRepeats = true }: PagesOptions = {},
 ): Pages<T> {
-  const query = useInfiniteQuery<Page<T>>({
-    queryKey: key,
-    queryFn: ({ pageParam }) =>
-      read(typeof pageParam === 'string' ? { cursor: pageParam } : {}) ?? Promise.resolve(NO_PAGE),
-    getNextPageParam: (page, pages, asked) =>
-      nextCursor(page, pages, typeof asked === 'string' ? asked : undefined, endsOnRepeats),
-    initialPageParam: undefined,
+  const query = usePageQuery({
+    key,
+    read,
     enabled,
-    ...(once ? { staleTime: Number.POSITIVE_INFINITY } : {}),
+    once,
+    endsOnRepeats,
+    noPage: NO_PAGE,
+    nextCursor,
   })
 
   const byId = useMemo(() => onceEach(query.data?.pages), [query.data])
   const items = useMemo(() => [...byId.values()], [byId])
 
-  // Read through a ref rather than captured, so `more` never changes identity: a caller hands it
-  // to an end-of-list effect, and one that re-arms on every fetch spends its budget on itself.
   const state = useLatest(query)
-  // Marked here and not read off the query: a grid near its end asks on every frame, and three
-  // calls in one batch all see the same render's `isFetchingNextPage`.
   const asking = useRef(false)
   const more = useCallback(() => {
     if (asking.current || !state.current.hasNextPage || state.current.isFetchingNextPage) return
@@ -105,33 +100,19 @@ export function usePages<T extends { id: string }>(
     void state.current.fetchNextPage()
   }, [state])
 
-  // Released after every render, not by the promise's own `finally`: that one runs after React has
-  // re-rendered on the page that landed, hence after the effect that would ask for the next.
   useEffect(() => {
     asking.current = query.isFetchingNextPage
   })
 
-  /**
-   * 🛑 A listing nobody MAY read is not one still being read. React-query calls a disabled query
-   * pending — true as « no data yet », and a caller waiting on it waits for the whole session.
-   * Measured on the asset shelf, whose library half never arrived until the panel was reopened.
-   */
   const pending = enabled && query.isPending
-
-  // Never before the first page has answered: « nothing here » and « not read yet » look alike on
-  // screen, and a band that said the first would announce an emptiness about to be denied.
   const exhausted = !query.hasNextPage && !pending
 
   useAutomaticPulls({
-    // The query's own key, so the count starts afresh exactly when the listing changes question.
     key: JSON.stringify(key),
     drawn: items.length,
     fetching: query.isFetching,
     answered: query.data?.pages.length ?? 0,
     ask: fill && enabled && !exhausted ? more : null,
-    // A fill that names no ceiling takes the barren one, and the two must not drift apart: below
-    // it the surface stops pulling BEFORE the run of empty pages that is the only thing making the
-    // listing exhausted, and one with nothing drawn has no end left for a scroll to reach.
     ...(fill === true ? { max: BARREN_MAX } : fill),
   })
 

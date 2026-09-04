@@ -67,38 +67,36 @@ const summaryOf = (document: DocumentDescriptor, activeId: string | null): Snaps
 
 function selectionNow(documents: DocumentsSlice): SnapshotSelection | null {
   const imageId = activeImageId(documents)
-  if (imageId !== null) {
-    /**
-     * 🛑 Only once the store HOLDS this canvas. `canvasOf` answers `DEFAULT_CANVAS` for a
-     * document it has not loaded, and its active layer is the base one — so a freshly opened
-     * image reported "Background" as designated, and "delete it" aimed at a layer nobody chose.
-     */
-    const canvases = useCanvases.getState()
-    if (!canvasStore.hasState(canvases, imageId)) return null
-
-    const canvas = canvasOf(canvases, imageId)
-    const layer = layerById(canvas, canvas.activeLayerId)
-    return layer ? { kind: 'layer', items: [{ id: layer.id, name: layer.name }] } : null
-  }
+  if (imageId !== null) return imageSelection(imageId)
 
   const sceneId = activeSceneId(documents)
-  if (sceneId !== null) {
-    const scenes = useScenes.getState()
-    if (!sceneStore.hasState(scenes, sceneId)) return null
-
-    const scene = sceneOf(scenes, sceneId)
-    // The scene's own reader, which keeps the ORDER OF SELECTION — its last node is the anchor
-    // the inspector reads. Filtering the tree instead returned them in tree order, so the anchor
-    // could fall outside the four this briefing names.
-    const chosen = selectedNodes(scene.nodes, scene.selectedIds)
-    return chosen.length === 0
-      ? null
-      : { kind: 'node', items: chosen.map(node => ({ id: node.id, name: node.name })) }
-  }
+  if (sceneId !== null) return sceneSelection(sceneId)
 
   const montageId = activeMontageId(documents)
-  if (montageId === null) return null
+  return montageId === null ? null : montageSelection(montageId)
+}
 
+function imageSelection(imageId: string): SnapshotSelection | null {
+  const canvases = useCanvases.getState()
+  if (!canvasStore.hasState(canvases, imageId)) return null
+
+  const canvas = canvasOf(canvases, imageId)
+  const layer = layerById(canvas, canvas.activeLayerId)
+  return layer ? { kind: 'layer', items: [{ id: layer.id, name: layer.name }] } : null
+}
+
+function sceneSelection(sceneId: string): SnapshotSelection | null {
+  const scenes = useScenes.getState()
+  if (!sceneStore.hasState(scenes, sceneId)) return null
+
+  const scene = sceneOf(scenes, sceneId)
+  const chosen = selectedNodes(scene.nodes, scene.selectedIds)
+  return chosen.length === 0
+    ? null
+    : { kind: 'node', items: chosen.map(node => ({ id: node.id, name: node.name })) }
+}
+
+function montageSelection(montageId: string): SnapshotSelection | null {
   const sequences = useSequences.getState()
   if (!sequenceStore.hasState(sequences, montageId)) return null
 
@@ -347,53 +345,79 @@ async function exportOf(
   input: Record<string, unknown>,
 ): Promise<FolderExportRequest | null> {
   switch (document.kind) {
-    case 'image': {
-      const { imageExportFiles } = await import('@/features/image/imageExportFiles')
-      return imageExportFiles(document.id)
-    }
-    // Nothing goes out yet: what an interface would export is the game that shows it.
+    case 'image':
+    case 'scene':
+    case 'skybox':
+    case 'material':
+      return visualExportOf(document, input)
     case 'gui':
       return null
-    // Its file IS the model of the library, and ⌘S writes it: an export would be a copy of a
-    // container the project already holds.
     case 'character':
       return null
-    case 'scene': {
-      const { sceneExportFiles } =
-        await import('@/features/scene/components/Scene/Document/sceneExportFiles')
-      return sceneExportFiles(
-        document.id,
-        oneOf(input, 'format', EXPORT_FORMATS) ?? 'glb',
-        oneOf(input, 'scope', SCENE_SCOPES) ?? 'scene',
-      )
-    }
-    case 'skybox': {
-      const { skyboxExportFiles } =
-        await import('@/features/skybox/components/Skybox/Document/skyboxExportFiles')
-      // The six faces alone: a panorama is a menu row, and this door takes no target — offering
-      // one here would be a second place to keep the list of them in step.
-      return skyboxExportFiles(document.id, {
-        kind: 'faces',
-        size: numberOf(input, 'size') ?? DEFAULT_FACE,
-      })
-    }
-    case 'material': {
-      const { materialExportFiles } = await import('@/features/material/materialExportFiles')
-      return materialExportFiles(
-        document.id,
-        oneOf(input, 'target', MATERIAL_EXPORT_TARGETS) ?? 'raw',
-      )
-    }
     case 'sequence':
     case 'audio': {
       const { otioExportFiles } = await import('@/features/shell/components/otioExport')
       return otioExportFiles(document.id)
     }
-    // `null`, not a throw: a script is already a `.ts` of the project, so there is nothing to
-    // render — routing that through the failure path would journal an error and blame a rendering.
     case 'script':
       return null
   }
+}
+
+async function visualExportOf(
+  document: DocumentDescriptor,
+  input: Record<string, unknown>,
+): Promise<FolderExportRequest | null> {
+  switch (document.kind) {
+    case 'image':
+      return imageExportOf(document.id)
+    case 'scene':
+      return sceneExportOf(document.id, input)
+    case 'skybox':
+      return skyboxExportOf(document.id, input)
+    case 'material':
+      return materialExportOf(document.id, input)
+    default:
+      return null
+  }
+}
+
+async function imageExportOf(documentId: string): Promise<FolderExportRequest> {
+  const { imageExportFiles } = await import('@/features/image/imageExportFiles')
+  return imageExportFiles(documentId)
+}
+
+async function sceneExportOf(
+  documentId: string,
+  input: Record<string, unknown>,
+): Promise<FolderExportRequest> {
+  const { sceneExportFiles } =
+    await import('@/features/scene/components/Scene/Document/sceneExportFiles')
+  return sceneExportFiles(
+    documentId,
+    oneOf(input, 'format', EXPORT_FORMATS) ?? 'glb',
+    oneOf(input, 'scope', SCENE_SCOPES) ?? 'scene',
+  )
+}
+
+async function skyboxExportOf(
+  documentId: string,
+  input: Record<string, unknown>,
+): Promise<FolderExportRequest> {
+  const { skyboxExportFiles } =
+    await import('@/features/skybox/components/Skybox/Document/skyboxExportFiles')
+  return skyboxExportFiles(documentId, {
+    kind: 'faces',
+    size: numberOf(input, 'size') ?? DEFAULT_FACE,
+  })
+}
+
+async function materialExportOf(
+  documentId: string,
+  input: Record<string, unknown>,
+): Promise<FolderExportRequest> {
+  const { materialExportFiles } = await import('@/features/material/materialExportFiles')
+  return materialExportFiles(documentId, oneOf(input, 'target', MATERIAL_EXPORT_TARGETS) ?? 'raw')
 }
 
 /**

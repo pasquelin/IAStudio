@@ -135,6 +135,22 @@ export async function exportGameProject(options: GameExportOptions): Promise<Gam
     : projectScenes.scenes[0]
   if (!entry) return { ok: false, reason: 'unknownScene' }
 
+  const { request, troubles } = await compileExportRequest(
+    options,
+    project.path,
+    projectScenes,
+    entry.id,
+  )
+  const outcome = await bridge.game.export(request)
+  return outcome ? { ok: true, outcome, troubles } : { ok: false, reason: 'declined' }
+}
+
+async function compileExportRequest(
+  options: GameExportOptions,
+  projectPath: string,
+  projectScenes: CompiledProjectScenes,
+  entryScene: string,
+): Promise<{ request: GameExportRequest; troubles: readonly string[] }> {
   const [compiled, textureOverrides, modelTextureOverrides] = await Promise.all([
     compiledScripts(),
     compileLossyTextures(projectScenes.textureAssetIds, options.lossyOptimization, {
@@ -146,25 +162,39 @@ export async function exportGameProject(options: GameExportOptions): Promise<Gam
       options.signal,
     ),
   ])
-  const assetOverrides = [...textureOverrides, ...modelTextureOverrides]
-  const request: GameExportRequest = {
-    title: options.title ?? projectName(project.path),
-    entryScene: entry.id,
+  const request = exportRequestOf(
+    options,
+    projectPath,
+    projectScenes,
+    entryScene,
+    compiled.modules,
+    [...textureOverrides, ...modelTextureOverrides],
+  )
+  return { request, troubles: compiled.troubles.map(trouble => trouble.script) }
+}
+
+function exportRequestOf(
+  options: GameExportOptions,
+  projectPath: string,
+  projectScenes: CompiledProjectScenes,
+  entryScene: string,
+  modules: Awaited<ReturnType<typeof compiledScripts>>['modules'],
+  assetOverrides: GameExportRequest['assetOverrides'],
+): GameExportRequest {
+  return {
+    title: options.title ?? projectName(projectPath),
+    entryScene,
     scenes: projectScenes.scenes,
-    scripts: compiled.modules.map(module => ({ script: module.script, code: module.code })),
-    ...(Object.keys(projectScenes.modelAssets).length > 0
+    scripts: modules.map(module => ({ script: module.script, code: module.code })),
+    ...(Object.keys(projectScenes.modelAssets).length
       ? { modelAssets: projectScenes.modelAssets }
       : {}),
     ...(hasVisualChanges(options.lossyOptimization)
       ? { lossyOptimization: options.lossyOptimization }
       : {}),
-    ...(assetOverrides.length > 0 ? { assetOverrides } : {}),
+    ...(assetOverrides?.length ? { assetOverrides } : {}),
     ...(options.folder ? { folder: options.folder } : {}),
   }
-  const outcome = await bridge.game.export(request)
-  return outcome
-    ? { ok: true, outcome, troubles: compiled.troubles.map(trouble => trouble.script) }
-    : { ok: false, reason: 'declined' }
 }
 
 type CompiledProjectScenes = {

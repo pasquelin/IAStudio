@@ -2,58 +2,15 @@
  * How a relief heightmap is cut into chunks. Grain 64 rather than 128: a full-chunk fallback
  * uploads four times less — `reliefChunkCost.test.ts`. A 4K map would want 128 instead.
  */
-import { bytesFromBase64, bytesToBase64 } from '../base64'
 import { clamp } from '../numeric'
-import { isRecord, readString } from '../guards'
 import type { HeightmapSamples } from './heightmap'
+import { packDeltas, unpackDeltas } from './reliefPacking'
+import { readReliefGrain as readGrain } from './reliefParsing'
+import { chunkCountAlong, RELIEF_CHUNK_TEXELS } from './reliefMetrics'
 
-export const RELIEF_CHUNK_TEXELS = 64
-
-export const RELIEF_CHUNK_CANDIDATES: readonly number[] = [64, 128]
-
-/** Vertices along one edge, the shared border with the next chunk included. */
-export function chunkVerticesPerSide(grain: number): number {
-  return grain + 1
-}
-
-/** How many chunks cover `samples` texels on one axis. */
-export function chunkCountAlong(samples: number, grain: number): number {
-  return Math.max(1, Math.ceil((Math.max(1, samples) - 1) / grain))
-}
-
-export type ChunkMemory = {
-  position: number
-  normal: number
-  uv: number
-  index: number
-  total: number
-}
-
-/** Bytes of one full square chunk: position + normal + uv + uint16 indices. */
-export function chunkMemoryBytes(grain: number): ChunkMemory {
-  const vertices = chunkVerticesPerSide(grain) ** 2
-  const position = vertices * 12
-  const normal = vertices * 12
-  const uv = vertices * 8
-  const index = grain * grain * 6 * 2
-  return { position, normal, uv, index, total: position + normal + uv + index }
-}
-
-export type RegionUpload = {
-  position: number
-  normal: number
-  total: number
-}
-
-/**
- * Bytes a partial update of a rectangular texel region uploads, normals including the 1-ring
- * the finite difference reads.
- */
-export function regionUploadBytes(texelsX: number, texelsZ: number): RegionUpload {
-  const position = (texelsX + 1) * (texelsZ + 1) * 12
-  const normal = (texelsX + 3) * (texelsZ + 3) * 12
-  return { position, normal, total: position + normal }
-}
+export { packDeltas, unpackDeltas } from './reliefPacking'
+export { readReliefSculpt } from './reliefParsing'
+export * from './reliefMetrics'
 
 export type ReliefOrigin = { x: number; z: number }
 export type ReliefSize = { x: number; z: number }
@@ -175,44 +132,6 @@ export function chunkLayout(
     width: clamp(width - 1 - sampleX, 0, grain) + 1,
     height: clamp(height - 1 - sampleZ, 0, grain) + 1,
   }
-}
-
-const SPARSE = 0
-const DENSE = 1
-
-/** Empty string when every delta is zero — the chunk is then omitted from the sculpt. */
-export function packDeltas(deltas: Float32Array): string {
-  let nonzero = 0
-  for (let at = 0; at < deltas.length; at++) if (deltas[at] !== 0) nonzero += 1
-  if (nonzero === 0) return ''
-  return bytesToBase64(
-    nonzero * 8 + 5 <= deltas.byteLength + 1 ? sparseOf(deltas, nonzero) : denseOf(deltas),
-  )
-}
-
-export function unpackDeltas(payload: string, length: number): Float32Array {
-  const out = new Float32Array(length)
-  if (payload === '') return out
-  const bytes = bytesFromBase64(payload)
-  if (bytes.length < 1) return out
-  if (bytes[0] === DENSE) {
-    const body = bytes.subarray(1)
-    const count = Math.min(length, Math.floor(body.byteLength / 4))
-    const aligned = new Float32Array(count)
-    new Uint8Array(aligned.buffer).set(body.subarray(0, count * 4))
-    out.set(aligned)
-    return out
-  }
-  if (bytes[0] !== SPARSE || bytes.length < 5) return out
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-  const count = view.getUint32(1, true)
-  for (let at = 0; at < count; at++) {
-    const cursor = 5 + at * 8
-    if (cursor + 8 > bytes.length) break
-    const index = view.getUint32(cursor, true)
-    if (index < length) out[index] = view.getFloat32(cursor + 4, true)
-  }
-  return out
 }
 
 export function withChunkDelta(
@@ -409,7 +328,6 @@ export function raiseReliefDisk(
   rows?: ReliefChunkRows,
 ): ReliefSculpt {
   const span = diskSamples(samples, extent, disk)
-  const r2 = disk.radius * disk.radius
   const distanceX = Float64Array.from({ length: span.maxX - span.minX + 1 }, (_, at) => {
     const dx = extent.origin.x + (span.minX + at) * span.stepX - disk.x
     return dx * dx
@@ -421,45 +339,15 @@ export function raiseReliefDisk(
   const updated = new Map<string, PackedReliefChunk>()
   const touched = new Set<string>()
   const packed = payloadsOf(sculpt)
-
   const rowFrom = rows?.from ?? 0
   const rowTo = rows?.to ?? chunkCountAlong(samples.height, grain)
+  const context = { samples, span, disk, amount, falloff, grain, distanceX, distanceZ, packed }
   for (let row = rowFrom; row < rowTo; row += 1) {
     for (let column = 0; column < chunkCountAlong(samples.width, grain); column += 1) {
-      const layout = chunkLayout(column, row, samples.width, samples.height, grain)
-      const maxX = layout.sampleX + layout.width - 1
-      const maxZ = layout.sampleZ + layout.height - 1
-      if (
-        maxX < span.minX ||
-        layout.sampleX > span.maxX ||
-        maxZ < span.minZ ||
-        layout.sampleZ > span.maxZ
-      ) {
-        continue
-      }
-
       const key = `${column}:${row}`
+      const payload = raisedChunk(context, column, row, key)
+      if (payload === null) continue
       touched.add(key)
-      const held = packed.get(key)
-      const deltas = held
-        ? unpackDeltas(held.payload, layout.width * layout.height)
-        : new Float32Array(layout.width * layout.height)
-      for (let sz = Math.max(span.minZ, layout.sampleZ); sz <= Math.min(span.maxZ, maxZ); sz += 1) {
-        for (
-          let sx = Math.max(span.minX, layout.sampleX);
-          sx <= Math.min(span.maxX, maxX);
-          sx += 1
-        ) {
-          const d2 =
-            (distanceX[sx - span.minX] ?? Infinity) + (distanceZ[sz - span.minZ] ?? Infinity)
-          if (d2 > r2) continue
-          const at = (sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)
-          deltas[at] =
-            (deltas[at] ?? 0) +
-            (falloff <= 0 ? amount : amount * diskFalloff(Math.sqrt(d2), disk.radius, falloff))
-        }
-      }
-      const payload = packDeltas(deltas)
       if (payload !== '') updated.set(key, { column, row, payload })
     }
   }
@@ -473,25 +361,66 @@ export function raiseReliefDisk(
   return { chunks: [...chunks, ...updated.values()] }
 }
 
-export function readReliefSculpt(value: unknown): ReliefSculpt | undefined {
-  if (!isRecord(value) || !Array.isArray(value.chunks)) return undefined
-  return { chunks: value.chunks.flatMap(readPackedChunk) }
+type RaiseContext = {
+  samples: HeightmapSamples
+  span: ReturnType<typeof diskSamples>
+  disk: { x: number; z: number; radius: number }
+  amount: number
+  falloff: number
+  grain: number
+  distanceX: Float64Array
+  distanceZ: Float64Array
+  packed: ReadonlyMap<string, PackedReliefChunk>
+}
+
+function raisedChunk(
+  context: RaiseContext,
+  column: number,
+  row: number,
+  key: string,
+): string | null {
+  const { samples, grain, span } = context
+  const layout = chunkLayout(column, row, samples.width, samples.height, grain)
+  const maxX = layout.sampleX + layout.width - 1
+  const maxZ = layout.sampleZ + layout.height - 1
+  if (
+    maxX < span.minX ||
+    layout.sampleX > span.maxX ||
+    maxZ < span.minZ ||
+    layout.sampleZ > span.maxZ
+  )
+    return null
+  const held = context.packed.get(key)
+  const deltas = held
+    ? unpackDeltas(held.payload, layout.width * layout.height)
+    : new Float32Array(layout.width * layout.height)
+  raiseChunkSamples(context, layout, deltas, maxX, maxZ)
+  return packDeltas(deltas)
+}
+
+function raiseChunkSamples(
+  context: RaiseContext,
+  layout: ReliefChunkLayout,
+  deltas: Float32Array,
+  maxX: number,
+  maxZ: number,
+): void {
+  const { span, disk, distanceX, distanceZ, amount, falloff } = context
+  for (let sz = Math.max(span.minZ, layout.sampleZ); sz <= Math.min(span.maxZ, maxZ); sz += 1) {
+    for (let sx = Math.max(span.minX, layout.sampleX); sx <= Math.min(span.maxX, maxX); sx += 1) {
+      const d2 = (distanceX[sx - span.minX] ?? Infinity) + (distanceZ[sz - span.minZ] ?? Infinity)
+      if (d2 > disk.radius * disk.radius) continue
+      const at = (sz - layout.sampleZ) * layout.width + (sx - layout.sampleX)
+      const strength =
+        falloff <= 0 ? amount : amount * diskFalloff(Math.sqrt(d2), disk.radius, falloff)
+      deltas[at] = (deltas[at] ?? 0) + strength
+    }
+  }
 }
 
 /** Grain a payload names, or the fallback. Integer ≥ 1 — a 0 or a float is not a texel count. */
 export function readReliefGrain(value: unknown, fallback = RELIEF_CHUNK_TEXELS): number {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) return fallback
-  return value
-}
-
-function readPackedChunk(value: unknown): readonly PackedReliefChunk[] {
-  if (!isRecord(value)) return []
-  const column = value.column
-  const row = value.row
-  const payload = readString(value, 'payload', '')
-  if (typeof column !== 'number' || typeof row !== 'number') return []
-  if (!Number.isInteger(column) || !Number.isInteger(row) || payload === '') return []
-  return [{ column, row, payload }]
+  return readGrain(value, fallback)
 }
 
 function chunkIndexAt(sample: number, samples: number, grain: number): number {
@@ -543,27 +472,4 @@ function replaceChunk(
   return {
     chunks: payload === '' ? others : [...others, { column: at.column, row: at.row, payload }],
   }
-}
-
-function sparseOf(deltas: Float32Array, nonzero: number): Uint8Array {
-  const out = new Uint8Array(5 + nonzero * 8)
-  const view = new DataView(out.buffer)
-  out[0] = SPARSE
-  view.setUint32(1, nonzero, true)
-  let cursor = 5
-  for (let at = 0; at < deltas.length; at++) {
-    const delta = deltas[at]
-    if (delta === 0 || delta === undefined) continue
-    view.setUint32(cursor, at, true)
-    view.setFloat32(cursor + 4, delta, true)
-    cursor += 8
-  }
-  return out
-}
-
-function denseOf(deltas: Float32Array): Uint8Array {
-  const out = new Uint8Array(1 + deltas.byteLength)
-  out[0] = DENSE
-  out.set(new Uint8Array(deltas.buffer, deltas.byteOffset, deltas.byteLength), 1)
-  return out
 }

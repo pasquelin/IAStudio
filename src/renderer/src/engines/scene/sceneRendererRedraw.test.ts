@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import source from './SceneRenderer.ts?raw'
+import { sceneRendererSource as source } from './sceneRendererSource.testHelper'
 
 /**
  * What the camera preview's cache rests on, and what nothing else can hold.
  *
  * The engine reuses the picture it drew for the preview on every frame where what a scene camera
- * FILMS has not moved — an orbit, a fly, damping settling. Named intents say which is which:
+ * FILMS has not moved — an orbit, a fly, damping settling. Two named intents say which is which:
  * `redraw` for the scene, `repaint` for the workshop drawn over it. A bare `requestRender` is
  * neither, and would leave the monitor showing an instant that is gone with nothing to notice.
  *
@@ -14,11 +14,11 @@ import source from './SceneRenderer.ts?raw'
  * happened to take.
  */
 describe('SceneRenderer and the preview it invalidates', () => {
-  const REDRAW = /private redraw\(\): void \{[\s\S]*?\n {2}\}/
-  const REPAINT = /private repaint\(\): void \{[\s\S]*?\n {2}\}/
-  const REFRESH = /private refreshWithoutShadows\(\): void \{[\s\S]*?\n {2}\}/
-  const SELECTIVE = /private refreshChangedShadows\(\): void \{[\s\S]*?\n {2}\}/
-  const TEXTURE_REFRESH = /private refreshMaterialTexture\([\s\S]*?\n {2}\}/
+  const REDRAW = /protected redraw\(\): void \{[\s\S]*?\n {2}\}/
+  const REPAINT = /protected repaint\(\): void \{[\s\S]*?\n {2}\}/
+  const REFRESH = /protected refreshWithoutShadows\(\): void \{[\s\S]*?\n {2}\}/
+  const SELECTIVE = /protected refreshChangedShadows\(\): void \{[\s\S]*?\n {2}\}/
+  const TEXTURE_REFRESH = /protected refreshMaterialTexture\([\s\S]*?\n {2}\}/
 
   /**
    * The NAME and not the call: `createEnvironment` and the three texture binders are handed
@@ -26,7 +26,7 @@ describe('SceneRenderer and the preview it invalidates', () => {
    * just as much as an edit does. Reading only `requestRender()` left those four passing the
    * viewport's own method straight through, and the preview kept the instant before.
    */
-  it('asks for every frame through a named refresh intent', () => {
+  it('asks for every frame through `redraw` or `repaint`, never through the viewport directly', () => {
     const elsewhere = source
       .replace(REDRAW, '')
       .replace(REPAINT, '')

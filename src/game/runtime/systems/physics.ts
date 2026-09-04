@@ -94,6 +94,30 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
     }
   }
 
+  const discover = (world: World): void => {
+    for (const type of PHYSICAL) {
+      for (const entity of world.entities.withComponent(type)) {
+        if (seen.has(entity.id)) continue
+        seen.add(entity.id)
+        if (kinematic(entity)) driven.push(entity)
+        if (known.has(entity.id)) continue
+        known.add(entity.id)
+        const descriptor = bodyOf(entity, options, characters, world)
+        if (descriptor) fresh.push(descriptor)
+      }
+    }
+  }
+
+  const forgetGone = (): void => {
+    for (const name of known) if (!seen.has(name)) gone.push(name)
+    for (const name of gone) known.delete(name)
+    for (const name of gone) {
+      for (const pair of triggered) {
+        if (pair.startsWith(`${name}|`) || pair.endsWith(`|${name}`)) triggered.delete(pair)
+      }
+    }
+  }
+
   /** Bodies for the entities that gained one, names for those that went away. */
   const sync = (world: World): void => {
     seen.clear()
@@ -101,33 +125,8 @@ export function createPhysicsSystem(options: PhysicsSystemOptions): System {
     gone.length = 0
     driven.length = 0
 
-    for (const type of PHYSICAL) {
-      for (const entity of world.entities.withComponent(type)) {
-        if (seen.has(entity.id)) continue
-        seen.add(entity.id)
-        if (kinematic(entity)) driven.push(entity)
-        if (known.has(entity.id)) continue
-
-        // Known either way: a shape that could not be derived cannot be derived next frame
-        // either, and retrying would rebuild a geometry sixty times a second. Why it could not is
-        // the STUDIO's to say — `shapeOf` is the only thing here that ever answers nothing.
-        known.add(entity.id)
-        const descriptor = bodyOf(entity, options, characters, world)
-        if (descriptor) fresh.push(descriptor)
-      }
-    }
-
-    for (const name of known) if (!seen.has(name)) gone.push(name)
-    for (const name of gone) known.delete(name)
-
-    // No engine sends a parting event for a body it REMOVES, so a pair left in `triggered` would
-    // stay there for the life of the session — and a door would never close behind a corpse.
-    for (const name of gone) {
-      for (const pair of triggered) {
-        if (pair.startsWith(`${name}|`) || pair.endsWith(`|${name}`)) triggered.delete(pair)
-      }
-    }
-
+    discover(world)
+    forgetGone()
     if (gone.length > 0) world.ports.physics.remove(gone)
     if (fresh.length > 0) refuse(world, world.ports.physics.add(fresh))
   }

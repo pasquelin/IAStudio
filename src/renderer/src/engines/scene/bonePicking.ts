@@ -96,15 +96,10 @@ export function nearestSegment(
   let bestDepth = Infinity
 
   for (const segment of segments) {
-    // Behind the camera, or past the far plane, at BOTH ends: it is not on screen at all. Either
-    // end alone is not enough — a bone leaving the view is still half of it clickable.
     if (offScreen(segment.head) && offScreen(segment.tail)) continue
-
     const near = nearestOn(segment, pointer)
     if (near.distance > reach) continue
 
-    // At a joint two bones meet: the one that STARTS there owns it — the wrist is the hand's
-    // joint, not the forearm's end — so the nearer to its own head wins before depth does.
     if (
       near.distance < bestDistance ||
       (near.distance === bestDistance &&

@@ -112,6 +112,30 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     held.components = entity.components
   }
 
+  const discover = (world: World, remembering: boolean): void => {
+    for (const entity of world.entities.withComponent('Script')) {
+      seen.add(entity.id)
+      if (remembering) remember(entity)
+      if (known.has(entity.id)) continue
+      const held = componentOf(entity, 'Script')
+      const script = textOf(held, 'script', '')
+      if (script.length === 0) continue
+      known.add(entity.id)
+      fresh.push({ entity: entity.id, script, props: settingsOf(held, 'props') })
+      freshIds.add(entity.id)
+    }
+  }
+
+  const collectGone = (): void => {
+    for (const name of known) {
+      if (!seen.has(name)) gone.push(closing.get(name) ?? blank(name))
+    }
+    for (const one of gone) {
+      known.delete(one.entity)
+      closing.delete(one.entity)
+    }
+  }
+
   const sync = (world: World): void => {
     const port = world.ports.script
     const remembering = port.declares('onDestroy')
@@ -120,30 +144,8 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     freshIds.clear()
     gone.length = 0
 
-    for (const entity of world.entities.withComponent('Script')) {
-      seen.add(entity.id)
-      if (remembering) remember(entity)
-      if (known.has(entity.id)) continue
-
-      // Added only once it NAMES one: a `Script` component dropped and not yet filled in would
-      // otherwise be serialized into every frame and handed to `detach` on its way out.
-      const held = componentOf(entity, 'Script')
-      const script = textOf(held, 'script', '')
-      if (script.length === 0) continue
-      known.add(entity.id)
-      fresh.push({ entity: entity.id, script, props: settingsOf(held, 'props') })
-      freshIds.add(entity.id)
-    }
-
-    for (const name of known) {
-      if (seen.has(name)) continue
-      gone.push(closing.get(name) ?? blank(name))
-    }
-    for (const one of gone) {
-      known.delete(one.entity)
-      closing.delete(one.entity)
-    }
-
+    discover(world, remembering)
+    collectGone()
     if (gone.length > 0) took(world, port.detach(gone))
     if (fresh.length > 0) {
       for (const fault of port.attach(fresh)) onFault(fault)
@@ -228,48 +230,42 @@ const EVENT_HOOKS = ['onMessage', 'onCollision', 'onTriggerEnter', 'onTriggerExi
 /** What the scripts asked for, done through the world's own gestures and nothing else. */
 function apply(world: World, intents: readonly ScriptIntent[]): void {
   for (const intent of intents) {
-    if (intent.act === 'log') {
-      world.ports.log.write(intent.level, intent.message)
-      continue
-    }
-    if (intent.act === 'spawn') {
-      world.spawn({ name: intent.name, transform: placed(intent.at) })
-      continue
-    }
-    if (intent.act === 'emit') {
-      sayCustom(world, intent.name, intent.entity ?? undefined, intent.payload)
-      continue
-    }
-    if (intent.act === 'scene') {
-      world.ports.scenes.load(intent.scene, intent.fade)
-      continue
-    }
-    if (intent.act === 'keep') {
-      world.ports.scenes.keep(intent.key, intent.value)
-      continue
-    }
-
+    if (applyWorldIntent(world, intent)) continue
     const entity = world.entities.get(intent.entity)
     if (!entity) continue
-
-    if (intent.act === 'move') {
-      entity.transform.position.x += intent.by.x
-      entity.transform.position.y += intent.by.y
-      entity.transform.position.z += intent.by.z
-    } else if (intent.act === 'place') {
-      entity.transform.position.x = intent.at.x
-      entity.transform.position.y = intent.at.y
-      entity.transform.position.z = intent.at.z
-    } else if (intent.act === 'turn') {
-      entity.transform.rotation.x = intent.to.x
-      entity.transform.rotation.y = intent.to.y
-      entity.transform.rotation.z = intent.to.z
-    } else if (intent.act === 'field') {
-      write(world, entity, intent.type, intent.key, intent.value)
-    } else {
-      world.destroy(intent.entity)
-    }
+    applyEntityIntent(world, entity, intent)
   }
+}
+
+type WorldIntent = Extract<ScriptIntent, { act: 'log' | 'spawn' | 'emit' | 'scene' | 'keep' }>
+type EntityIntent = Exclude<ScriptIntent, WorldIntent>
+
+function applyWorldIntent(world: World, intent: ScriptIntent): intent is WorldIntent {
+  if (intent.act === 'log') world.ports.log.write(intent.level, intent.message)
+  else if (intent.act === 'spawn') world.spawn({ name: intent.name, transform: placed(intent.at) })
+  else if (intent.act === 'emit')
+    sayCustom(world, intent.name, intent.entity ?? undefined, intent.payload)
+  else if (intent.act === 'scene') world.ports.scenes.load(intent.scene, intent.fade)
+  else if (intent.act === 'keep') world.ports.scenes.keep(intent.key, intent.value)
+  else return false
+  return true
+}
+
+function applyEntityIntent(world: World, entity: Entity, intent: EntityIntent): void {
+  if (intent.act === 'move') {
+    entity.transform.position.x += intent.by.x
+    entity.transform.position.y += intent.by.y
+    entity.transform.position.z += intent.by.z
+  } else if (intent.act === 'place') {
+    entity.transform.position.x = intent.at.x
+    entity.transform.position.y = intent.at.y
+    entity.transform.position.z = intent.at.z
+  } else if (intent.act === 'turn') {
+    entity.transform.rotation.x = intent.to.x
+    entity.transform.rotation.y = intent.to.y
+    entity.transform.rotation.z = intent.to.z
+  } else if (intent.act === 'field') write(world, entity, intent.type, intent.key, intent.value)
+  else world.destroy(intent.entity)
 }
 
 /**

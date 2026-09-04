@@ -18,10 +18,14 @@ import {
   sweep,
   trianglesOf,
   widen,
+  type Grouped,
   type InstancedGroups,
 } from './grouping'
 import type { SceneNode } from './sceneState'
 import { contentKeyer, MATERIAL_CONTENT } from './resourceContent'
+
+type BatchedSlot = { lot: BatchedMesh; slot: number; source: Mesh }
+type BatchedPlaced = Map<string, BatchedSlot[]>
 
 /**
  * Draws every shape wearing one material in one call, whatever the shapes are.
@@ -43,7 +47,7 @@ export function createBatchedGroups(
 ): InstancedGroups {
   const drawn: BatchedMesh[] = []
   /** Where a node's matrix sits, so a move can be written without walking the scene again. */
-  const placed = new Map<string, { lot: BatchedMesh; slot: number; source: Mesh }[]>()
+  const placed: BatchedPlaced = new Map()
   /** The node each slot of each lot stands for — what a hit on the lot resolves to. */
   const members = new WeakMap<BatchedMesh, string[]>()
   /** Whether the lots have trees for a ray to walk. Built on the first pick, not per rebuild. */
@@ -88,37 +92,7 @@ export function createBatchedGroups(
       )) {
         const first = worn.meshes[0]
         if (!first) continue
-
-        const shapes = new Set<BufferGeometry>()
-        let vertices = 0
-        let indices = 0
-        let triangles = 0
-        for (const mesh of worn.meshes) {
-          triangles += trianglesOf(mesh.geometry)
-          if (shapes.has(mesh.geometry)) continue
-          shapes.add(mesh.geometry)
-          vertices += mesh.geometry.getAttribute('position')?.count ?? 0
-          indices += mesh.geometry.index?.count ?? 0
-        }
-
-        const lot = new BatchedMesh(worn.meshes.length, vertices, indices, worn.material)
-        lot.perObjectFrustumCulled = true
-        lot.sortObjects = true
-        const slotOf = new Map([...shapes].map(geometry => [geometry, lot.addGeometry(geometry)]))
-
-        const ids: string[] = []
-        for (let at = 0; at < worn.meshes.length; at += 1) {
-          const mesh = worn.meshes[at]
-          const id = worn.ids[at]
-          if (!mesh || id === undefined) continue
-          const slot = lot.addInstance(slotOf.get(mesh.geometry) ?? 0)
-          lot.setMatrixAt(slot, mesh.matrixWorld)
-          const held = placed.get(id)
-          const entry = { lot, slot, source: mesh }
-          if (held) held.push(entry)
-          else placed.set(id, [entry])
-          ids[slot] = id
-        }
+        const { lot, ids, triangles } = buildLot(worn, placed)
         members.set(lot, ids)
         // Read off the source, which `applyShadowFlags` has already written: the sources sit
         // on a layer the shadow camera never looks at.
@@ -203,6 +177,51 @@ export function batchKeyOf(
           : `material:${materialKeyOf(material)}`
     return `${paint}|${layoutOf(mesh.geometry)}|${flagsOf(node, mesh)}`
   }
+}
+
+function buildLot(
+  worn: Grouped,
+  placed: BatchedPlaced,
+): { lot: BatchedMesh; ids: string[]; triangles: number } {
+  const { shapes, vertices, indices, triangles } = geometryTotals(worn.meshes)
+  const lot = new BatchedMesh(worn.meshes.length, vertices, indices, worn.material)
+  lot.perObjectFrustumCulled = true
+  lot.sortObjects = true
+  const slotOf = new Map([...shapes].map(geometry => [geometry, lot.addGeometry(geometry)]))
+  const ids: string[] = []
+  for (let at = 0; at < worn.meshes.length; at += 1) {
+    const mesh = worn.meshes[at]
+    const id = worn.ids[at]
+    if (!mesh || id === undefined) continue
+    const slot = lot.addInstance(slotOf.get(mesh.geometry) ?? 0)
+    lot.setMatrixAt(slot, mesh.matrixWorld)
+    const entry = { lot, slot, source: mesh }
+    const held = placed.get(id)
+    if (held) held.push(entry)
+    else placed.set(id, [entry])
+    ids[slot] = id
+  }
+  return { lot, ids, triangles }
+}
+
+function geometryTotals(meshes: readonly Mesh[]): {
+  shapes: Set<BufferGeometry>
+  vertices: number
+  indices: number
+  triangles: number
+} {
+  const shapes = new Set<BufferGeometry>()
+  let vertices = 0
+  let indices = 0
+  let triangles = 0
+  for (const mesh of meshes) {
+    triangles += trianglesOf(mesh.geometry)
+    if (shapes.has(mesh.geometry)) continue
+    shapes.add(mesh.geometry)
+    vertices += mesh.geometry.getAttribute('position')?.count ?? 0
+    indices += mesh.geometry.index?.count ?? 0
+  }
+  return { shapes, vertices, indices, triangles }
 }
 
 /** The matrices a lot uploads. `_matricesTexture` is what r185 holds them in and its `.d.ts` hides. */

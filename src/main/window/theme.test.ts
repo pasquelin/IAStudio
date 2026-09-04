@@ -13,7 +13,9 @@ import { THEME_ATTRIBUTE } from '@shared/domain/settings'
  * jsdom, where `import.meta.url` is an http URL and no file can be read — and this IS a main
  * process contract, since the window chrome is painted from values it cannot read off the CSS.
  */
-const stylesheet = readFileSync(new URL('../../renderer/src/index.css', import.meta.url), 'utf8')
+const stylesheet = ['index-foundation.css', 'index-components.css', 'index-extras.css']
+  .map(name => readFileSync(new URL(`../../renderer/src/${name}`, import.meta.url), 'utf8'))
+  .join('\n')
 
 /** The declarations of one block, from its opening line to the brace in the first column. */
 function blockFrom(opening: string): string {

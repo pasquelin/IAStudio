@@ -172,7 +172,9 @@ describe('how much of the catalogue the model is shown', () => {
       }
     },
   )
+})
 
+describe('how the catalogue is presented to the model', () => {
   /** And the names ALONE: a manual nobody asked for is what put 90 994 characters on every turn. */
   it('describes no action until one is opened', () => {
     const bare = studioBriefing({ room: WIDE })
@@ -277,9 +279,9 @@ describe('how much of the catalogue the model is shown', () => {
   })
 })
 
-describe('asking for the rest of the catalogue', () => {
-  const expanded = (query: string) => studioBriefing({ room: NARROW }).expand?.(query)
+const expanded = (query: string) => studioBriefing({ room: NARROW }).expand?.(query)
 
+describe('asking for the rest of the catalogue', () => {
   /** A word rather than a name: what `actions.find` is still for once every name is shown. */
   it('opens the manual of what a query found', () => {
     const briefing = expanded('git branch')
@@ -320,7 +322,9 @@ describe('asking for the rest of the catalogue', () => {
       if (shown) expect(briefing?.text).toContain(`  ${action.name} —`)
     }
   })
+})
 
+describe('expanded catalogue results', () => {
   /**
    * 🛑 A wide door prints every manual from the start, so nothing is ever left to open and the
    * unprinted count is ALWAYS zero. Read as "nothing matched", it made the model tell the person
@@ -439,7 +443,9 @@ describe('what a briefing says about the memory', () => {
     expect(studioBriefing({ memories: 0, room: WIDE }).text).not.toContain('has a memory')
     expect(studioBriefing({ room: WIDE }).text).not.toContain('has a memory')
   })
+})
 
+describe('memory briefing budgets', () => {
   /**
    * 🛑 Overrunning is the ONE thing it yields to — a runtime truncates from the HEAD, where the
    * preamble sits (ADR-18).
