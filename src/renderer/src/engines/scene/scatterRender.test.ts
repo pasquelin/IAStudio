@@ -93,6 +93,22 @@ describe('scatterDrawnOf', () => {
       expect(first[index]?.poses.every(candidate => denser.has(candidate))).toBe(true)
     }
   })
+
+  it('switches grass batches at every configured distance threshold', () => {
+    const poses = Array.from({ length: 100 }, (_unused, index) => pose('grass', index, index))
+    const batch = scatterBatchesOf(poses, undefined, GRASS_CELL_SIZE, 'grass', 17)[0]
+    if (!batch) throw new Error('expected a batch')
+    const drawn = scatterDrawnOf(
+      batch,
+      new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial()),
+    )
+    expect(drawn.levels).toHaveLength(GRASS_DENSITY_LEVELS.length)
+    expect(drawn.levels.map(level => level.distance)).toEqual(
+      GRASS_DENSITY_LEVELS.map(level =>
+        expect.closeTo((drawn.levels[1]?.distance ?? 0) * (level.distanceMultiplier / 4), 5),
+      ),
+    )
+  })
 })
 
 describe('holdScatterCells', () => {

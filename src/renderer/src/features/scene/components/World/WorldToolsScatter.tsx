@@ -44,6 +44,7 @@ function collisionDemandOf(scatter: ScatterLayer): number {
 }
 
 type ScatterTool = 'paint' | 'paintGround'
+type WorldToolsScatterProps = { documentId: string; scatter: ScatterLayer }
 
 function toggleScatterTool(
   documentId: string,
@@ -57,13 +58,14 @@ function toggleScatterTool(
     views.setSculptMode(documentId, true)
 }
 
-export function WorldToolsScatter({
-  documentId,
-  scatter,
-}: {
-  documentId: string
-  scatter: ScatterLayer
-}) {
+function scatterCategoryOptions(t: ReturnType<typeof useTranslation>['t']) {
+  return SCATTER_CATEGORIES.map(category => ({
+    value: category,
+    label: t(`world.scatterCategory_${category}`),
+  }))
+}
+
+export function WorldToolsScatter({ documentId, scatter }: WorldToolsScatterProps) {
   const { t } = useTranslation()
   const run = useScenes.getState().runCommand
   const view = useSceneViews(state => sceneViewOf(state, documentId))
@@ -78,10 +80,7 @@ export function WorldToolsScatter({
       <SelectField
         label={t('world.scatterCategory')}
         value={scatter.category}
-        options={SCATTER_CATEGORIES.map(category => ({
-          value: category,
-          label: t(`world.scatterCategory_${category}`),
-        }))}
+        options={scatterCategoryOptions(t)}
         onChange={category => run(documentId, setScatterCategory(scatter.id, category))}
         scId="world.scatterCategory"
       />

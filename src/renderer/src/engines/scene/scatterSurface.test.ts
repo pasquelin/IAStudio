@@ -323,4 +323,31 @@ describe('createScatterSurface', () => {
     ]).toEqual([2, 2, 2, 2])
     surface.dispose()
   })
+
+  it('drops fine cells when a grass layer becomes props', async () => {
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    const grass = scatterLayer({
+      id: 'meadow',
+      category: 'grass',
+      assets: [{ assetId: 'blade', weight: 1 }],
+      size: { x: 64, z: 32 },
+      rules: { ...scatterLayer({ id: 'rules' }).rules, density: 1, spacing: 1 },
+    })
+    await surface.sync({ ...DEFAULT_WORLD, layers: [grass] })
+    expect(surface.objectsInCell('meadow', cellKey(1, 0))).not.toEqual([])
+
+    await surface.sync({
+      ...DEFAULT_WORLD,
+      layers: [scatterLayer({ ...grass, category: 'props' })],
+    })
+
+    expect(surface.objectsInCell('meadow', cellKey(1, 0))).toEqual([])
+    surface.dispose()
+  })
 })

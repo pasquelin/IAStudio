@@ -65,7 +65,10 @@ export function scatterDrawnOf(batch: ScatterBatch, source: Mesh): LOD {
   const full = instancesOf(batch.poses, centre, source)
   full.computeBoundingSphere()
   const radius = full.boundingSphere?.radius ?? 1
-  const levels = propsDensityLevels(batch.poses)
+  const levels =
+    batch.category === 'grass'
+      ? grassDensityLevels(batch.poses, batch.seed)
+      : propsDensityLevels(batch.poses)
   levels.forEach((level, index) => {
     const object =
       index === 0

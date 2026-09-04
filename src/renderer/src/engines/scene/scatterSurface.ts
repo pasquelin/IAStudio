@@ -2,6 +2,7 @@ import { Group, InstancedMesh, Vector3, type Camera, type Object3D, type Scene }
 import {
   enabledScatters,
   enabledTerrains,
+  SCATTER_CATEGORIES,
   type ReliefLayer,
   type ScatterCategory,
   type ScatterLayer,
@@ -76,23 +77,13 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
     assets: { revision: 0, sources: new Map(), held: new Set(), loading: new Map() },
     cells: {
       byLayer: new Map(),
-      references: new Map([
-        ['props', new Map()],
-        ['grass', new Map()],
-      ]),
-      partitions: new Map([
-        ['props', buildPartition()],
-        ['grass', buildPartition(scatterCellSize('grass'))],
-      ]),
+      references: new Map(SCATTER_CATEGORIES.map(category => [category, new Map()])),
+      partitions: new Map(
+        SCATTER_CATEGORIES.map(category => [category, buildPartition(scatterCellSize(category))]),
+      ),
       group,
-      queried: new Map([
-        ['props', []],
-        ['grass', []],
-      ]),
-      wanted: new Map([
-        ['props', new Set()],
-        ['grass', new Set()],
-      ]),
+      queried: new Map(SCATTER_CATEGORIES.map(category => [category, []])),
+      wanted: new Map(SCATTER_CATEGORIES.map(category => [category, new Set()])),
     },
     world: null,
     grounded: new Set(),
@@ -119,7 +110,7 @@ function updateScatterVisibility(cells: ScatterCells, camera: Camera): boolean {
     'far' in camera && typeof camera.far === 'number'
       ? Math.min(camera.far, MAX_SPATIAL_REACH)
       : MAX_SPATIAL_REACH
-  for (const category of ['props', 'grass'] satisfies readonly ScatterCategory[]) {
+  for (const category of SCATTER_CATEGORIES) {
     const queried = cells.queried.get(category) ?? []
     cells.partitions.get(category)?.query(SCATTER_EYE.x, SCATTER_EYE.z, reach, queried)
     const wanted = cells.wanted.get(category)
@@ -151,6 +142,7 @@ async function syncScatter(
   dropRemovedLayers(state.cells, new Set(enabledScatters(world.layers).map(layer => layer.id)))
   const jobs = enabledScatters(world.layers).map(layer => {
     const before = previous ? scatterLayerOf(previous, layer.id) : undefined
+    if (before && before.category !== layer.category) dropLayer(state.cells, layer.id)
     const rebuild: ScatterRebuild =
       before === layer && previous
         ? reliefRebuildOf(layer, previous, world, heightmaps, state.grounded)
@@ -312,10 +304,16 @@ function dropCell(cells: ScatterCells, layerId: string, key: CellKey): void {
 }
 
 function dropRemovedLayers(cells: ScatterCells, wanted: ReadonlySet<string>): void {
-  for (const [layerId, layerCells] of [...cells.byLayer]) {
+  for (const layerId of [...cells.byLayer.keys()]) {
     if (wanted.has(layerId)) continue
-    for (const key of [...layerCells.cells.keys()]) dropCell(cells, layerId, key)
+    dropLayer(cells, layerId)
   }
+}
+
+function dropLayer(cells: ScatterCells, layerId: string): void {
+  const layerCells = cells.byLayer.get(layerId)
+  if (!layerCells) return
+  for (const key of [...layerCells.cells.keys()]) dropCell(cells, layerId, key)
 }
 
 async function reconcileSources(
