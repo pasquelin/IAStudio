@@ -11,6 +11,7 @@ import {
   worldWithRuntimePatch,
 } from './runtimeWorldCompiler'
 import type { SceneNode, SceneState } from './sceneState'
+import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
 
 const stateOf = (...nodes: ReturnType<typeof meshNode>[]): SceneState => ({
   nodes,
@@ -86,6 +87,8 @@ describe('createRuntimeWorldCompiler', () => {
         rendered.push(`optimized:${camera.id}`)
         return { width: 1, height: 1, pixels: pixels.slice() }
       },
+      observeOriginal: async world => sceneRuntimeSnapshot(world),
+      observeOptimized: async world => sceneRuntimeSnapshot(world),
       visualOptions: { channelTolerance: 0, maximumChangedPixelRatio: 0 },
     })
 
@@ -93,6 +96,23 @@ describe('createRuntimeWorldCompiler', () => {
     expect(report.equivalent).toBe(true)
     expect(report.functional.every(result => result.equivalent)).toBe(true)
     expect(compiler.getOptimizationReport().cachedNodes).toBe(1)
+  })
+
+  it('reports a functional difference observed by the runtime driver', async () => {
+    const compiler = createRuntimeWorldCompiler()
+    const source = stateOf(meshNode('a'))
+
+    const report = await compiler.validateSafeWorld(source, {
+      cameras: [{ id: 'main' }],
+      renderOriginal: async () => ({ width: 1, height: 1, pixels: new Uint8Array(4) }),
+      renderOptimized: async () => ({ width: 1, height: 1, pixels: new Uint8Array(4) }),
+      observeOriginal: async world => sceneRuntimeSnapshot(world),
+      observeOptimized: async world => ({ ...sceneRuntimeSnapshot(world), picking: [] }),
+      visualOptions: { channelTolerance: 0, maximumChangedPixelRatio: 0 },
+    })
+
+    expect(report.equivalent).toBe(false)
+    expect(report.functional.find(result => result.check === 'picking')?.equivalent).toBe(false)
   })
 
   it('reuses unchanged runtime nodes and recompiles only a transported delta', () => {
