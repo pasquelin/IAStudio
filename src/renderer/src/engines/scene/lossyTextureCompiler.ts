@@ -26,13 +26,11 @@ export async function compileLossyTextures(
   assetIds: readonly string[],
   options: LossyOptimization,
   watch: LossyTextureWatch = {},
-  ports: TextureCompilerPorts = browserTexturePorts(),
+  ports?: TextureCompilerPorts,
 ): Promise<readonly ExportedAssetOverride[]> {
-  if (options.textureReduction === 'off' && options.textureCompression === 'off') {
-    ports.dispose?.()
-    return []
-  }
+  if (options.textureReduction === 'off' && options.textureCompression === 'off') return []
 
+  const active = ports ?? browserTexturePorts()
   const overrides: ExportedAssetOverride[] = []
   const quality =
     options.textureCompression === 'off'
@@ -41,12 +39,12 @@ export async function compileLossyTextures(
   try {
     for (const [index, assetId] of assetIds.entries()) {
       if (watch.signal?.aborted) throw new DOMException('Texture compilation aborted', 'AbortError')
-      const bytes = await ports.read(assetId)
+      const bytes = await active.read(assetId)
       if (!bytes) {
         watch.onProgress?.(index + 1, assetIds.length)
         continue
       }
-      const override = await ports.transform(
+      const override = await active.transform(
         assetId,
         bytes,
         DEFAULT_OPTIMIZATION_POLICY.textureScale[options.textureReduction],
@@ -58,7 +56,7 @@ export async function compileLossyTextures(
     }
     return overrides
   } finally {
-    ports.dispose?.()
+    active.dispose?.()
   }
 }
 

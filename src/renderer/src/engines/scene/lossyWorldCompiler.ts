@@ -1,5 +1,4 @@
 import { isCsgGraph, type CsgGraph, type CsgPart } from '@shared/domain/csg'
-import { bytesToBase64 } from '@shared/base64'
 import type { GeometryDescriptor } from '@shared/domain/geometry'
 import type {
   CompiledMeshGeometry,
@@ -8,8 +7,9 @@ import type {
   LossyOptimization,
 } from '@shared/domain/gameExport'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
-import { BufferAttribute, type BufferGeometry, type InterleavedBufferAttribute } from 'three'
+import type { BufferGeometry } from 'three'
 import type { SceneNode, SceneState } from './sceneState'
+import { compiledMeshOf } from './compiledGeometry'
 
 /** Compiles only runtime hints; the authoring state is neither mutated nor embedded in the plan. */
 export function compileLossyWorld(
@@ -57,43 +57,6 @@ async function compileGraphs(
   const geometries = await Promise.all(graphs.map(async graph => await carve(graph)))
   if (geometries.some(geometry => geometry === null)) return null
   return geometries.flatMap(geometry => (geometry ? [compiledMeshOf(geometry)] : []))
-}
-
-export function compiledMeshOf(geometry: BufferGeometry): CompiledMeshGeometry {
-  const index = geometry.getIndex()
-  return {
-    position: floatAttributeBase64(geometry.getAttribute('position')),
-    normal: floatAttributeBase64(geometry.getAttribute('normal')),
-    uv: floatAttributeBase64(geometry.getAttribute('uv')),
-    ...(index ? { index: attributeBase64(index) } : {}),
-    ...(geometry.getAttribute('tangent')
-      ? { tangent: floatAttributeBase64(geometry.getAttribute('tangent')) }
-      : {}),
-    ...(geometry.getAttribute('color')
-      ? { color: floatAttributeBase64(geometry.getAttribute('color')) }
-      : {}),
-  }
-}
-
-function attributeBase64(attribute: BufferAttribute): string {
-  return bytesToBase64(
-    new Uint8Array(attribute.array.buffer, attribute.array.byteOffset, attribute.array.byteLength),
-  )
-}
-
-function floatAttributeBase64(
-  attribute: BufferAttribute | InterleavedBufferAttribute | undefined,
-): string {
-  if (!attribute) return ''
-  if (attribute instanceof BufferAttribute) return attributeBase64(attribute)
-
-  const values = new Float32Array(attribute.count * attribute.itemSize)
-  for (let item = 0; item < attribute.count; item += 1) {
-    for (let component = 0; component < attribute.itemSize; component += 1) {
-      values[item * attribute.itemSize + component] = attribute.getComponent(item, component)
-    }
-  }
-  return attributeBase64(new BufferAttribute(values, attribute.itemSize))
 }
 
 function compiledNode(

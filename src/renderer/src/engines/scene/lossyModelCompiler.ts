@@ -13,16 +13,15 @@ import type {
   LossyOptimization,
 } from '@shared/domain/gameExport'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
-import { assetUrl } from '@shared/domain/asset'
 import { createWorkerPort } from '../core/workerPort'
 import { createGltfSource } from './gltfSource'
-import { compiledMeshOf } from './lossyWorldCompiler'
+import { compiledMeshOf } from './compiledGeometry'
 import LossyModelWorker from './lossyModel.worker?worker'
 import type { LossyModelResponse, ModelGeometryBuffers } from './lossyModelMessage'
 import { disposeTree } from './modelCache'
 
 type LossyModelPorts = {
-  load: (assetId: string) => Promise<Object3D | null>
+  load: (url: string) => Promise<Object3D | null>
   simplify: (
     geometry: BufferGeometry,
     ratio: number,
@@ -32,21 +31,19 @@ type LossyModelPorts = {
 }
 
 export async function compileLossyModels(
-  assetIds: readonly string[],
+  assets: readonly { id: string; url: string }[],
   options: LossyOptimization,
   signal?: AbortSignal,
-  ports: LossyModelPorts = browserModelPorts(),
+  ports?: LossyModelPorts,
 ): Promise<ReadonlyMap<string, readonly CompiledModelMesh[]>> {
-  if (!options.generateLods && options.geometrySimplification === 'off') {
-    ports.dispose()
-    return new Map()
-  }
+  if (!options.generateLods && options.geometrySimplification === 'off') return new Map()
 
+  const active = ports ?? browserModelPorts()
   const compiled = new Map<string, readonly CompiledModelMesh[]>()
   try {
-    for (const assetId of new Set(assetIds)) {
+    for (const asset of uniqueAssets(assets)) {
       if (signal?.aborted) throw new DOMException('Model compilation aborted', 'AbortError')
-      const root = await ports.load(assetId)
+      const root = await active.load(asset.url)
       if (!root) continue
       try {
         const meshes: CompiledModelMesh[] = []
@@ -62,18 +59,25 @@ export async function compileLossyModels(
           }
         })
         for (const candidate of candidates) {
-          const plan = await compiledModelMesh(candidate, options, signal, ports.simplify)
+          const plan = await compiledModelMesh(candidate, options, signal, active.simplify)
           if (plan) meshes.push(plan)
         }
-        if (meshes.length > 0) compiled.set(assetId, meshes)
+        if (meshes.length > 0) compiled.set(asset.id, meshes)
       } finally {
         disposeTree(root)
       }
     }
     return compiled
   } finally {
-    ports.dispose()
+    active.dispose()
   }
+}
+
+function uniqueAssets(assets: readonly { id: string; url: string }[]): readonly {
+  id: string
+  url: string
+}[] {
+  return [...new Map(assets.map(asset => [asset.id, asset])).values()]
 }
 
 async function compiledModelMesh(
@@ -158,9 +162,9 @@ function browserModelPorts(): LossyModelPorts {
     answer => geometryOf(answer.geometry),
   )
   return {
-    load: async assetId => {
+    load: async url => {
       try {
-        return await source.load(assetUrl(assetId))
+        return await source.load(url)
       } catch {
         // Missing or unsupported models remain original and are reported by the package writer.
         return null

@@ -30,6 +30,8 @@ import { compileLossyTextures } from '@/engines/scene/lossyTextureCompiler'
 import { compileLossyModels } from '@/engines/scene/lossyModelCompiler'
 import { createCsgEvaluator } from '@/engines/csg/csgEvaluator'
 import CsgWorker from '@/engines/csg/csg.worker?worker'
+import { assetMasterUrl, versionedUrl } from '@shared/domain/asset'
+import { assetVersionOf } from '@/stores/assets'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
@@ -157,7 +159,14 @@ async function scenesOfProject(
   for (const state of states.values()) {
     for (const id of runtimeModelAssetIds(state)) modelAssetIds.add(id)
   }
-  const modelPlans = await compileLossyModels([...modelAssetIds], lossyOptimization, signal)
+  const modelPlans = await compileLossyModels(
+    [...modelAssetIds].map(id => ({
+      id,
+      url: versionedUrl(assetMasterUrl(id), assetVersionOf(id)),
+    })),
+    lossyOptimization,
+    signal,
+  )
   const csg = createCsgEvaluator({ spawn: () => new CsgWorker(), onFailure: () => undefined })
   const abort = (): void => csg.dispose()
   signal?.addEventListener('abort', abort, { once: true })

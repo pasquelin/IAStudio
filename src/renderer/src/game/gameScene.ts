@@ -1,6 +1,4 @@
 import {
-  BufferAttribute,
-  BufferGeometry,
   Color,
   InstancedMesh,
   LOD,
@@ -11,17 +9,13 @@ import {
   SRGBColorSpace,
   Scene,
   type Texture,
+  type BufferGeometry,
 } from 'three'
-import { bytesFromBase64 } from '@shared/base64'
 import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
 import type { Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
-import type {
-  CompiledMeshGeometry,
-  CompiledNodeGeometry,
-  CompiledSceneOptimization,
-} from '@shared/domain/gameExport'
+import type { CompiledNodeGeometry, CompiledSceneOptimization } from '@shared/domain/gameExport'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import { createGeometryCache } from '@/engines/scene/geometryCache'
@@ -36,6 +30,7 @@ import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { bakedInstancesOf } from '@/engines/scene/bakedInstances'
 import { disposeTree, instanceOf, type ModelSource } from '@/engines/scene/modelCache'
+import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
 
 /**
  * A scene as three.js draws it in a GAME — no gizmo, no helper, no selection, no grid.
@@ -271,8 +266,8 @@ async function objectOf(
   }
   if (node.type === 'carved') {
     const geometries =
-      compiled?.lodMeshes?.map(compiledGeometryOf) ??
-      (compiled?.mesh ? [compiledGeometryOf(compiled.mesh)] : undefined)
+      compiled?.lodMeshes?.map(geometryOfCompiledMesh) ??
+      (compiled?.mesh ? [geometryOfCompiledMesh(compiled.mesh)] : undefined)
     const graphs = geometries ? [] : (compiled?.lodCarved ?? [compiled?.carved ?? node.carved])
     const object = renderedGeometry(
       geometries ?? graphs.map(graph => carve(graph)),
@@ -307,7 +302,7 @@ function applyCompiledModel(
     const mesh = meshes[item.meshIndex]
     if (!mesh) continue
     if (item.geometry) {
-      const geometry = compiledGeometryOf(item.geometry)
+      const geometry = geometryOfCompiledMesh(item.geometry)
       mesh.geometry = geometry
       owned.add(geometry)
       continue
@@ -328,7 +323,7 @@ function applyCompiledModel(
     mesh.geometry.computeBoundingSphere()
     const radius = mesh.geometry.boundingSphere?.radius ?? 1
     for (const [index, compiled] of item.lodMeshes.entries()) {
-      const geometry = compiledGeometryOf(compiled)
+      const geometry = geometryOfCompiledMesh(compiled)
       owned.add(geometry)
       const level = new Mesh(geometry, mesh.material)
       modelMeshes.add(level)
@@ -339,36 +334,6 @@ function applyCompiledModel(
     rememberLodDistances(lod)
   }
   return optimized
-}
-
-function compiledGeometryOf(mesh: CompiledMeshGeometry): BufferGeometry {
-  const geometry = new BufferGeometry()
-  geometry.setAttribute('position', new BufferAttribute(floatsFrom(mesh.position), 3))
-  if (mesh.normal) geometry.setAttribute('normal', new BufferAttribute(floatsFrom(mesh.normal), 3))
-  if (mesh.uv) geometry.setAttribute('uv', new BufferAttribute(floatsFrom(mesh.uv), 2))
-  if (mesh.tangent)
-    geometry.setAttribute('tangent', new BufferAttribute(floatsFrom(mesh.tangent), 4))
-  if (mesh.color) geometry.setAttribute('color', new BufferAttribute(floatsFrom(mesh.color), 3))
-  if (mesh.index) geometry.setIndex(new BufferAttribute(uintsFrom(mesh.index), 1))
-  return geometry
-}
-
-function floatsFrom(encoded: string): Float32Array {
-  const bytes = bytesFromBase64(encoded)
-  return new Float32Array(
-    bytes.buffer,
-    bytes.byteOffset,
-    bytes.byteLength / Float32Array.BYTES_PER_ELEMENT,
-  )
-}
-
-function uintsFrom(encoded: string): Uint32Array {
-  const bytes = bytesFromBase64(encoded)
-  return new Uint32Array(
-    bytes.buffer,
-    bytes.byteOffset,
-    bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT,
-  )
 }
 
 function renderedGeometry(
