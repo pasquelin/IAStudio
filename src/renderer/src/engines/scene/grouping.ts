@@ -6,6 +6,7 @@ import type { SceneNode } from './sceneState'
 import { isInstanceable, meshesOf, modelShapeKey } from './instanceableModel'
 import { isDrawn } from './groupPlacement'
 import { forcesGrouping } from './groupingExclusions'
+import { heldSourceAncestors } from './heldSourceAncestors'
 export {
   behavioralGroupingExclusions,
   excludesGrouping,
@@ -231,6 +232,7 @@ export function refreshMovedSources(
 export function heldOutOfDraw(): HeldOutOfDraw {
   let held: readonly Mesh[] = []
   let ours = new Set<Object3D>()
+  const sourceAncestors = heldSourceAncestors()
   /** Out of the walk is the resting state: a rebuild alone takes its sources out of it. */
   let hung = false
 
@@ -266,10 +268,15 @@ export function heldOutOfDraw(): HeldOutOfDraw {
   // Nothing to compose while they are hung: the walk that just ran did it.
   const refresh = (under?: ReadonlySet<Object3D>): void => {
     if (hung) return
-    for (const mesh of held) {
+    const wanted: Iterable<Mesh> = under ? sourceAncestors.beneath(under) : held
+    const updated = under ? new Set<Object3D>() : null
+    for (const mesh of wanted) {
       const parent = mesh.parent
       if (!parent) continue
-      if (under && !under.has(parent)) continue
+      if (updated && !updated.has(parent)) {
+        parent.updateWorldMatrix(true, false)
+        updated.add(parent)
+      }
       if (mesh.matrixAutoUpdate) mesh.updateMatrix()
       mesh.matrixWorld.multiplyMatrices(parent.matrixWorld, mesh.matrix)
     }
@@ -284,6 +291,7 @@ export function heldOutOfDraw(): HeldOutOfDraw {
       if (hung) {
         held = meshes
         ours = new Set<Object3D>(meshes)
+        sourceAncestors.replace(meshes)
         return
       }
       const out = new Set<Object3D>(meshes)
@@ -301,6 +309,7 @@ export function heldOutOfDraw(): HeldOutOfDraw {
       }
       held = meshes
       ours = out
+      sourceAncestors.replace(meshes)
     },
 
     holds,

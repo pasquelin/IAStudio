@@ -1,6 +1,6 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Object3D, Raycaster, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { WORTH_INSTANCING } from './grouping'
+import { WORTH_INSTANCING, type InstancedGroups } from './grouping'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
 import { createInstancedGroups } from './instancing'
@@ -218,4 +218,63 @@ it('draws a moved model primitive at its new position', () => {
   const hit = raycaster.intersectObjects([...groups.pickable()], false)[0]
 
   expect(hit && groups.nodeIdOf(hit)).toBe('model-5')
+})
+
+function movedNestedModel(group: (host: Object3D) => InstancedGroups) {
+  const scene = new Object3D()
+  const groups = group(scene)
+  const geometry = new BoxGeometry()
+  const material = new MeshStandardMaterial()
+  const nodes = Array.from({ length: WORTH_INSTANCING }, (_unused, at) =>
+    modelNodeFixture(`model-${at}`),
+  )
+  const objects = new Map(
+    nodes.map((node, at) => {
+      const holder = new Group()
+      const nested = new Group()
+      holder.name = node.id
+      holder.position.x = at * 3
+      nested.add(new Mesh(geometry, material))
+      holder.add(nested)
+      markInstanceable(holder, true)
+      scene.add(holder)
+      return [node.id, holder]
+    }),
+  )
+  scene.updateMatrixWorld(true)
+  groups.rebuild(nodes, id => objects.get(id))
+
+  const moved = objects.get('model-5')
+  if (!moved) throw new Error('model fixture missing')
+  moved.position.set(500, 0, 0)
+  moved.updateWorldMatrix(true, false)
+  groups.moved(['model-5'], id => objects.get(id))
+
+  return { groups, objects }
+}
+
+describe.each([
+  ['cells', createCellGroups],
+  ['batched', createBatchedGroups],
+  ['instanced', createInstancedGroups],
+])('%s: a moved primitive below nested model groups', (_strategy, group) => {
+  it('remains pickable at its new position', () => {
+    const { groups } = movedNestedModel(group)
+
+    const raycaster = new Raycaster(new Vector3(500, 10, 0), new Vector3(0, -1, 0))
+    raycaster.layers.enableAll()
+    const picked = raycaster.intersectObjects([...groups.editorPickable()], false)[0]
+
+    expect(picked?.object.parent?.parent?.name).toBe('model-5')
+  })
+
+  it('remains drawn at its new position', () => {
+    const { groups } = movedNestedModel(group)
+
+    const raycaster = new Raycaster(new Vector3(500, 10, 0), new Vector3(0, -1, 0))
+    raycaster.layers.enableAll()
+    const drawn = raycaster.intersectObjects([...groups.pickable()], false)[0]
+
+    expect(drawn && groups.nodeIdOf(drawn)).toBe('model-5')
+  })
 })
