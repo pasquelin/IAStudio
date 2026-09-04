@@ -20,6 +20,7 @@ import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { documentById, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import type { OptimizationPlan } from '@/engines/scene/worldAnalyzer'
+import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import { runAction } from '@/features/assistant/executor'
 import { Dialog } from '@/features/shell/components/Dialog'
 
@@ -69,6 +70,13 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
   const number = (value: number): string => formatDecimal(value, i18n.language, { digits: 0 })
   const bytes = (value: number): string =>
     formatBytes(value, unit => t(`units.${unit}`), i18n.language)
+  const geometryRatio =
+    DEFAULT_OPTIMIZATION_POLICY.simplificationRatios[options.geometrySimplification]
+  const imageScale = DEFAULT_OPTIMIZATION_POLICY.textureScale[options.textureReduction]
+  const imageCompression =
+    options.textureCompression === 'off'
+      ? 1
+      : DEFAULT_OPTIMIZATION_POLICY.jpegQuality[options.textureCompression] / 100
   const submit = async (): Promise<void> => {
     setExporting(true)
     setFailed(false)
@@ -139,14 +147,38 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
           />
           {plan && (
             <dl>
-              <dt>{t('optimization.measured')}</dt>
+              <dt>{t('game.export.currentSceneMeasured')}</dt>
               <dd>{t('optimization.drawCalls', { value: number(plan.measured.draws) })}</dd>
+              <dd>{t('optimization.triangles', { value: number(plan.measured.triangles) })}</dd>
               <dd>{t('optimization.geometry', { value: bytes(plan.measured.geometryBytes) })}</dd>
-              <dt>{t('optimization.estimated')}</dt>
+              <dd>{t('optimization.images', { value: bytes(plan.measured.textureBytes) })}</dd>
+              <dt>{t('game.export.currentSceneEstimated')}</dt>
               <dd>
                 {t('optimization.drawCallResult', {
                   before: number(plan.estimated.drawCallsBefore),
                   after: number(plan.estimated.drawCallsAfter),
+                })}
+              </dd>
+              <dd>
+                {t('game.export.triangleResult', {
+                  before: number(plan.measured.triangles),
+                  after: number(Math.round(plan.measured.triangles * (1 - geometryRatio))),
+                })}
+              </dd>
+              <dd>
+                {t('game.export.geometryResult', {
+                  before: bytes(plan.measured.geometryBytes),
+                  after: bytes(Math.round(plan.measured.geometryBytes * (1 - geometryRatio))),
+                })}
+              </dd>
+              <dd>
+                {t('game.export.imageResult', {
+                  before: bytes(plan.measured.textureBytes),
+                  after: bytes(
+                    Math.round(
+                      plan.measured.textureBytes * imageScale * imageScale * imageCompression,
+                    ),
+                  ),
                 })}
               </dd>
               <dd>

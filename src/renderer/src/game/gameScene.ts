@@ -278,9 +278,13 @@ function renderedGeometry(
   if (levels.length === 1) return levels[0] ?? new Object3D()
 
   const lod = new LOD()
-  const first = geometries[0]
-  first?.computeBoundingSphere()
-  const radius = first?.boundingSphere?.radius ?? 1
+  const first = levels[0]
+  if (first instanceof InstancedMesh) first.computeBoundingSphere()
+  else geometries[0]?.computeBoundingSphere()
+  const radius =
+    first instanceof InstancedMesh
+      ? (first.boundingSphere?.radius ?? 1)
+      : (geometries[0]?.boundingSphere?.radius ?? 1)
   levels.forEach((level, index) =>
     lod.addLevel(
       level,

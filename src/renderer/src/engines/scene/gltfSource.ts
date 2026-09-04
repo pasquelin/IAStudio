@@ -18,8 +18,8 @@ import { texturesOf } from './sceneStats'
  * Put there by `scripts/copy-decoders.mjs` on postinstall; a checkout that skipped it loads
  * plain `.glb` files and reports a failure for compressed ones, like any unreadable file.
  */
-const DRACO_PATH = '/decoders/draco/'
-const KTX2_PATH = '/decoders/basis/'
+const DRACO_PATH = './decoders/draco/'
+const KTX2_PATH = './decoders/basis/'
 
 /**
  * A source and the handle that shuts it down. Both decoders own Web Workers and nothing else can

@@ -25,6 +25,7 @@ function compiledNode(
   generateLods: boolean,
   ratio: number,
 ): readonly CompiledNodeGeometry[] {
+  if (node.optimization?.mode === 'exclude') return []
   if (node.type === 'mesh') {
     if (generateLods) {
       return [

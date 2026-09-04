@@ -3,7 +3,7 @@ import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { carvedNode, meshNode } from './nodeFactory'
 import { compileLossyWorld } from './lossyWorldCompiler'
 import { csgPartOf } from '@shared/domain/csg'
-import { DEFAULT_MATERIAL } from './sceneState'
+import { DEFAULT_MATERIAL, type SceneNode } from './sceneState'
 import type { GeometryDescriptor } from '@shared/domain/geometry'
 import type { CsgGraph } from '@shared/domain/csg'
 
@@ -32,6 +32,17 @@ describe('the LOSSY world compiled for an export', () => {
       heightSegments: 13,
     })
     expect(node.type === 'mesh' && node.geometry).toEqual(SPHERE)
+  })
+
+  it('leaves an object explicitly excluded from optimization unchanged', () => {
+    const node = { ...meshNode(SPHERE), optimization: { mode: 'exclude' } } satisfies SceneNode
+
+    expect(
+      compileLossyWorld(
+        { nodes: [node] },
+        { ...NO_LOSSY_OPTIMIZATION, geometrySimplification: 'aggressive' },
+      ),
+    ).toBeUndefined()
   })
 
   it('keeps LOD0 exact and lets the chosen level strengthen generated distant LODs', () => {

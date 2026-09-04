@@ -69,6 +69,7 @@ it('exports through the shared game action with the explicit choices', async () 
     screen.getByRole('combobox', { name: 'Simplification géométrique' }),
     'balanced',
   )
+  expect(screen.getByText('Triangles affichés 100 → 65')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Exporter' }))
 
   expect(runAction).toHaveBeenCalledWith('game.export', {

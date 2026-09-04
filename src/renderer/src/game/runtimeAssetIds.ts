@@ -6,6 +6,7 @@ export function runtimeAssetIds(state: SceneState): readonly string[] {
   const found = new Set<string>()
   for (const node of state.nodes) {
     if (node.type === 'mesh' || node.type === 'carved') assetOfMaterial(node.material, found)
+    if (node.type === 'model') found.add(node.model.assetId)
   }
   for (const layer of state.world.layers) found.add(layer.heightmap.assetId)
   for (const row of state.animation.audio ?? []) found.add(row.assetId)

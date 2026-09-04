@@ -125,8 +125,8 @@ describe('createGltfSource', () => {
   it('points both decoders at the folder the application ships them in', () => {
     createGltfSource(() => null)
 
-    expect(setDecoderPath).toHaveBeenCalledWith('/decoders/draco/')
-    expect(setTranscoderPath).toHaveBeenCalledWith('/decoders/basis/')
+    expect(setDecoderPath).toHaveBeenCalledWith('./decoders/draco/')
+    expect(setTranscoderPath).toHaveBeenCalledWith('./decoders/basis/')
   })
 
   it('hands both decoders to the loader that needs them', () => {

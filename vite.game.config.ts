@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import { basename, resolve } from 'node:path'
+import { cpSync } from 'node:fs'
 import type { Plugin } from 'vite'
 import { DECODER_MODULES, withoutDecoderUrls } from './src/main/decoderUrls'
 
@@ -25,9 +26,20 @@ function strippedDecoderUrls(): Plugin {
   }
 }
 
+function gameDecoders(): Plugin {
+  return {
+    name: 'game:decoders',
+    closeBundle() {
+      cpSync(resolve('src/renderer/public/decoders'), resolve('resources/gameRuntime/decoders'), {
+        recursive: true,
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  publicDir: resolve('src/renderer/public'),
-  plugins: [strippedDecoderUrls()],
+  publicDir: false,
+  plugins: [strippedDecoderUrls(), gameDecoders()],
   resolve: {
     alias: {
       '@': resolve('src/renderer/src'),

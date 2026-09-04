@@ -35,6 +35,6 @@ describe('assets reachable from an exported runtime', () => {
           video: [{ id: 'video', assetId: 'movie', start: 0, duration: 1 }],
         },
       }),
-    ).toEqual(['shared', 'height', 'sound', 'movie'])
+    ).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
   })
 })

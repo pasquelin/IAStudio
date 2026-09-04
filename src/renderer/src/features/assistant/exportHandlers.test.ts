@@ -5,6 +5,8 @@ import { installDocument } from '@/stores/document-fixtures'
 import { installScene } from '@/stores/scene-fixtures'
 import { useProject } from '@/stores/project'
 import { runAction } from './executor'
+import { modelNode } from '@/engines/scene/nodeFactory'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 
 const DOCUMENT = 'doc-1'
 
@@ -43,6 +45,15 @@ describe('a game written out of the studio', () => {
     expect(asked[0]?.scenes.map(one => one.id)).toEqual([DOCUMENT])
     expect(String(asked[0]?.scenes[0]?.content)).toContain('asset')
     expect(asked[0]?.scenes[0]?.assetIds).toEqual([])
+  })
+
+  it('hands model assets to the package writer', async () => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelNode('tree-glb', 'Tree')] })
+    const asked = exporting()
+
+    await runAction('game.export', {})
+
+    expect(asked[0]?.scenes[0]?.assetIds).toEqual(['tree-glb'])
   })
 
   /** 🛑 A caller that named a scene and got the FIRST one exported the wrong game, saying `ok`. */
