@@ -86,6 +86,8 @@ export type InstancedGroups = {
    * `nodeIdOf`, independently of the representation that draws it.
    */
   pickable: () => readonly Mesh[]
+  /** The cheapest representation that preserves this strategy's editor selection semantics. */
+  editorPickable: () => readonly Mesh[]
   nodeIdOf: (hit: Intersection) => string | null
   /**
    * Hangs every source back under the node it belongs to, for whoever reads the tree DOWNWARD.

@@ -58,6 +58,11 @@ export function createOptimizedGroups(
     },
     drawn: () => [...instances.drawn(), ...batches.drawn(), ...merges.drawn()],
     pickable: () => [...instances.pickable(), ...batches.pickable(), ...merges.pickable()],
+    editorPickable: () => [
+      ...instances.editorPickable(),
+      ...batches.editorPickable(),
+      ...merges.editorPickable(),
+    ],
     nodeIdOf: (hit: Intersection) =>
       instances.nodeIdOf(hit) ?? batches.nodeIdOf(hit) ?? merges.nodeIdOf(hit),
     hangSources: () => {

@@ -92,12 +92,10 @@ export abstract class SceneRendererPicking extends SceneRendererScreenPicking {
     // that the ray actually meets. Both they and the light carry the node's id. Only the ones on
     // SCREEN: three's raycaster does not read `visible`, so a hidden helper would go on catching
     // clicks over empty space and selecting a lamp nobody could see.
-    // And what draws the grouped bodies, where that names a hit by its slot: the lots. Their
-    // sources are met as well, on the layer instancing keeps them on, and answer the same.
     const targets = [
       ...[...this.objects.values()].filter(object => !this.instances.holdsSource(object)),
+      ...this.instances.editorPickable(),
       ...[...this.helpers.values()].filter(helper => helper.visible),
-      ...this.instances.pickable(),
     ]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
     if (!hit) return null

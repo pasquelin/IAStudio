@@ -46,6 +46,7 @@ export function createBatchedGroups(
   ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
 ): InstancedGroups {
   const drawn: BatchedMesh[] = []
+  const sourceMeshes: Mesh[] = []
   /** Where a node's matrix sits, so a move can be written without walking the scene again. */
   const placed: BatchedPlaced = new Map()
   /** The node each slot of each lot stands for — what a hit on the lot resolves to. */
@@ -63,6 +64,7 @@ export function createBatchedGroups(
       lot.dispose()
     }
     drawn.length = 0
+    sourceMeshes.length = 0
     placed.clear()
     treesStale = true
   }
@@ -90,6 +92,7 @@ export function createBatchedGroups(
         excluded,
         artifacts ? DEFAULT_OPTIMIZATION_POLICY.minBatchSize : undefined,
       )) {
+        sourceMeshes.push(...worn.meshes)
         const first = worn.meshes[0]
         if (!first) continue
         const { lot, ids, triangles } = buildLot(worn, placed)
@@ -139,6 +142,7 @@ export function createBatchedGroups(
       }
       return drawn
     },
+    editorPickable: () => sourceMeshes,
 
     // `batchId` is the field three r185 and three-mesh-bvh both write on a `BatchedMesh` hit.
     nodeIdOf: hit =>

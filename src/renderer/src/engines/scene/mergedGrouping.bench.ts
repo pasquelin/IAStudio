@@ -37,4 +37,9 @@ describe('picking among eight nearby static meshes', () => {
     const hit = raycaster.intersectObjects([...groups.pickable()], false)[0]
     if (hit) void groups.nodeIdOf(hit)
   })
+
+  bench('editor picking representation', () => {
+    const hit = raycaster.intersectObjects([...groups.editorPickable()], false)[0]
+    if (hit) void groups.nodeIdOf(hit)
+  })
 })

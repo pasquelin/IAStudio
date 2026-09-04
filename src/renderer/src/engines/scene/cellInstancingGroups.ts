@@ -76,6 +76,7 @@ export function createCellGroups(
   let queryReach = index.cellSize / 2
   let pass = 0
   let listed: InstancedMesh[] = []
+  let sourceMeshes: readonly Mesh[] = []
   let listStale = true
   const groupOf = (cell: CellKey | null): Object3D => {
     if (cell === null) return host
@@ -389,6 +390,7 @@ export function createCellGroups(
       /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
       const seen = new Map<string, string>()
       let instanced = 0
+      sourceMeshes = groups.flatMap(group => group.meshes)
       for (const worn of groups) {
         const first = worn.meshes[0]
         if (!first) continue
@@ -423,6 +425,7 @@ export function createCellGroups(
     },
     drawn: drawnMeshes,
     pickable: pickableMeshes,
+    editorPickable: () => sourceMeshes,
     nodeIdOf,
     follow: (camera, cast) =>
       followCells(
@@ -439,7 +442,10 @@ export function createCellGroups(
       const { nodesVisited, cellsReturned, cells: held, bytes } = index.stats()
       return { nodesVisited, cellsReturned, cellsStanding: standing.size, cells: held, bytes }
     },
-    ...sources.fields(clear),
+    ...sources.fields(() => {
+      clear()
+      sourceMeshes = []
+    }),
   }
 }
 /**

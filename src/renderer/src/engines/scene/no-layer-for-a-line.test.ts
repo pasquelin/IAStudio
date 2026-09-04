@@ -30,11 +30,11 @@ const OTHER_SENSES: Record<string, string> = {
   cellInstancingDynamics:
     'three.js `Layers`: the same one again, once a cell of the world draws it',
   grouping: 'three.js `Layers`: the constant itself, which both strategies share',
+  groupingPicking: 'three.js `Layers`: grouped sources remain available to the editor raycaster',
   optimizedGrouping: 'three.js render layers used by both runtime grouping strategies',
   modelInstancing: 'three.js `Layers`: the one the camera skips once an instance draws the mesh',
   SceneRendererGrouping:
     'three.js `Layers`: the raycasters read the one instancing hides meshes on',
-  SceneRendererPicking: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
   SceneRendererState: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
   SceneRendererWorld: 'three.js `Layers`: the raycasters read the one instancing hides meshes on',
   sceneRendererSupport2:

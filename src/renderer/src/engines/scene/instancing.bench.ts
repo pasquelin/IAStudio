@@ -24,10 +24,14 @@ const raycaster = new Raycaster(new Vector3(COUNT, 10, 0), new Vector3(0, -1, 0)
 raycaster.layers.enableAll()
 const sources = [...objects.values()]
 const instances = [...groups.pickable()]
+const editorTargets = [...groups.editorPickable()]
 
 describe('picking among 10,000 repeated meshes', () => {
   bench('individual source representation', () => {
     void raycaster.intersectObjects(sources, false)[0]?.object.name
+  })
+  bench('editor picking representation', () => {
+    void raycaster.intersectObjects(editorTargets, false)[0]?.object.name
   })
   bench('instanced runtime representation', () => {
     const hit = raycaster.intersectObjects(instances, false)[0]

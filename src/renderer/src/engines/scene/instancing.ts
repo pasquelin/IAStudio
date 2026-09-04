@@ -36,6 +36,7 @@ export function createInstancedGroups(
   ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
 ): InstancedGroups {
   const drawn: InstancedMesh[] = []
+  const sourceMeshes: Mesh[] = []
   const placed: Placed = new Map()
   const idsByInstance = new WeakMap<InstancedMesh, string[]>()
   const sources = heldOutOfDraw()
@@ -47,6 +48,7 @@ export function createInstancedGroups(
       instance.dispose()
     }
     drawn.length = 0
+    sourceMeshes.length = 0
     placed.clear()
   }
 
@@ -56,6 +58,7 @@ export function createInstancedGroups(
 
       let instanced = 0
       for (const worn of sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)) {
+        sourceMeshes.push(...worn.meshes)
         const first = worn.meshes[0]
         if (!first) continue
         buildRegions(worn, first, placed, host, drawn, idsByInstance)
@@ -69,6 +72,7 @@ export function createInstancedGroups(
     drawn: () => drawn,
 
     pickable: () => drawn,
+    editorPickable: () => sourceMeshes,
 
     nodeIdOf: hit => {
       if (!(hit.object instanceof InstancedMesh) || hit.instanceId === undefined) return null
