@@ -30,6 +30,7 @@ import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
 import { applyTransform } from '@/engines/scene/pivot'
 import type { BakedInstance, SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
+import { runtimeOptimizationOf } from '@/engines/scene/runtimeWorldCompiler'
 import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { bakedInstancesOf } from '@/engines/scene/bakedInstances'
@@ -222,7 +223,12 @@ export async function buildGameScene(
   for (const node of optimization?.nodes ?? []) {
     if (node.lodGeometries || node.lodCarved) excluded.add(node.nodeId)
   }
-  instances.rebuild(state.nodes, id => byEntity.get(id), excluded)
+  instances.rebuild(
+    state.nodes,
+    id => byEntity.get(id),
+    excluded,
+    runtimeOptimizationOf(state)?.artifacts,
+  )
 
   // 🛑 What a game shows of the world, and what it does NOT: the image-based environment is not
   // shipped, so `environment` falls back to a plain sky rather than to black. Written rather than

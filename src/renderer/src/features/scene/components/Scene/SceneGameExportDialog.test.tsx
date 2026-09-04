@@ -19,6 +19,10 @@ const PLAN: OptimizationPlan = {
   instances: [],
   bakeCandidates: [],
   batches: [],
+  merges: [],
+  sharedGeometry: [],
+  sharedMaterials: [],
+  spatialCells: [],
   warnings: [],
   measured: {
     triangles: 100,

@@ -73,6 +73,10 @@ const EMPTY_OPTIMIZATION_PLAN: OptimizationPlan = {
   instances: [],
   bakeCandidates: [],
   batches: [],
+  merges: [],
+  sharedGeometry: [],
+  sharedMaterials: [],
+  spatialCells: [],
   warnings: [],
   measured: {
     objects: 0,

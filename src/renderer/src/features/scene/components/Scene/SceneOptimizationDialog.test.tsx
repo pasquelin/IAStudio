@@ -18,6 +18,10 @@ const PLAN: OptimizationPlan = {
   instances: [],
   bakeCandidates: [],
   batches: [{ key: 'paint', sourceIds: ['group', 'child'], meshCount: 2 }],
+  merges: [],
+  sharedGeometry: [],
+  sharedMaterials: [],
+  spatialCells: [],
   warnings: [],
   measured: {
     triangles: 12,

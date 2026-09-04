@@ -286,6 +286,8 @@ import { createGeometryCache, type GeometryCache } from './geometryCache'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
 import { createOptimizedGroups } from './optimizedGrouping'
+import { runtimeOptimizationOf } from './runtimeWorldCompiler'
+import type { RuntimeRenderArtifact } from './grouping'
 import { bakedInstancesOf } from './bakedInstances'
 import {
   behavioralGroupingExclusions,
@@ -917,6 +919,7 @@ export class SceneRenderer {
   private readonly modelMaps = new Map<string, ModelTextures>()
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
+  private runtimeArtifacts: readonly RuntimeRenderArtifact[] | undefined
   private readonly textureCache: TextureCache
   private readonly modelCache: ModelCache
   private readonly gltf: GltfSource
@@ -1328,6 +1331,7 @@ export class SceneRenderer {
   }
 
   apply(state: SceneState): void {
+    this.runtimeArtifacts = runtimeOptimizationOf(state)?.artifacts
     let allShadowsChanged =
       state.animation !== this.timeline ||
       state.nodes.length !== this.applied.size ||
@@ -2139,6 +2143,7 @@ export class SceneRenderer {
               this.options.grouping === 'batched' ? 'batch' : 'instance',
             )
           : behavioralGroupingExclusions([...this.applied.values()], drivenNodes(this.timeline)),
+        this.runtimeArtifacts,
       )
       this.syncSourceWalk()
       // Read before the test, since asking CLEARS it: a lot the rebuild made must not leave the

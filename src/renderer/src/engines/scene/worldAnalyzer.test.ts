@@ -63,6 +63,16 @@ describe('analyzeOptimization', () => {
     )
 
     expect(plan.instances).toHaveLength(1)
+    expect(plan.sharedGeometry[0]?.sourceIds).toHaveLength(WORTH_INSTANCING)
+    expect(plan.sharedMaterials[0]?.sourceIds).toHaveLength(WORTH_INSTANCING)
+    expect(plan.spatialCells[0]?.sourceIds).toHaveLength(WORTH_INSTANCING)
+    expect(plan.merges).toEqual([])
+    expect(plan.classifications[0]?.classifications).toEqual([
+      'STATIC',
+      'INSTANCABLE',
+      'BATCHABLE',
+      'MERGEABLE',
+    ])
     expect(plan.measured.visibleObjects).toBe(WORTH_INSTANCING)
     expect(plan.instances[0]?.sourceIds).toHaveLength(WORTH_INSTANCING)
     const geometry = objects.values().next().value?.geometry

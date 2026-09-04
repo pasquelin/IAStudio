@@ -1,12 +1,17 @@
 import { stableKey } from '@shared/hash'
+import { byCodeUnit } from '@shared/text'
+import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import type { AnimationTimeline } from '@shared/domain/animation'
 import type { SceneWorld } from '@shared/domain/scene'
+import { behavioralGroupingExclusions, type RuntimeRenderArtifact } from './grouping'
 import type { SceneNode, SceneState } from './sceneState'
 import {
   validateSafeRuntime,
+  type SafeValidationCamera,
   type SafeRuntimeValidationInput,
   type SafeRuntimeValidationReport,
 } from './safeRuntimeValidation'
+import type { VisualFrame } from './visualRegression'
 import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
 
 export type OptimizationSignature = string
@@ -25,18 +30,36 @@ export type RuntimeCompilationReport = {
   readonly removedNodes: number
   readonly cachedNodes: number
   readonly compilationMs: number
+  readonly compiledArtifacts: number
+  readonly reusedArtifacts: number
+}
+
+export type RuntimeOptimization = {
+  readonly artifacts: readonly RuntimeRenderArtifact[]
+}
+
+export type RuntimeWorld = SceneState & {
+  readonly runtimeOptimization: RuntimeOptimization
 }
 
 export type RuntimeWorldCompiler = {
-  compileRuntimeWorld: (world: SceneState) => SceneState
-  compileRuntimeRegion: (patch: RuntimeWorldPatch) => SceneState | null
+  compileRuntimeWorld: (world: SceneState) => RuntimeWorld
+  compileRuntimeRegion: (patch: RuntimeWorldPatch) => RuntimeWorld | null
   invalidateOptimization: (entityIds: readonly string[]) => void
   getOptimizationReport: () => RuntimeCompilationReport
   clearOptimizationCache: () => void
   validateSafeWorld: (
     world: SceneState,
-    input: Omit<SafeRuntimeValidationInput, 'observeOriginal' | 'observeOptimized'>,
+    input: RuntimeWorldValidationInput,
   ) => Promise<SafeRuntimeValidationReport>
+}
+
+export type RuntimeWorldValidationInput = Pick<
+  SafeRuntimeValidationInput,
+  'cameras' | 'visualOptions'
+> & {
+  renderOriginal: (world: SceneState, camera: SafeValidationCamera) => Promise<VisualFrame>
+  renderOptimized: (world: RuntimeWorld, camera: SafeValidationCamera) => Promise<VisualFrame>
 }
 
 const EMPTY_REPORT: RuntimeCompilationReport = {
@@ -45,6 +68,8 @@ const EMPTY_REPORT: RuntimeCompilationReport = {
   removedNodes: 0,
   cachedNodes: 0,
   compilationMs: 0,
+  compiledArtifacts: 0,
+  reusedArtifacts: 0,
 }
 
 /** Describes one immutable authoring change without serializing the unchanged world. */
@@ -131,30 +156,38 @@ export function worldWithRuntimePatch(world: SceneState, patch: RuntimeWorldPatc
 export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
   const nodes = new Map<string, SceneNode>()
   const invalidated = new Set<string>()
-  let runtime: SceneState | null = null
+  let runtime: RuntimeWorld | null = null
+  let artifacts = new Map<string, RuntimeRenderArtifact>()
   let report = EMPTY_REPORT
 
-  const compileRuntimeWorld = (world: SceneState): SceneState => {
+  const compileRuntimeWorld = (world: SceneState): RuntimeWorld => {
     const started = performance.now()
     nodes.clear()
     for (const node of world.nodes) nodes.set(node.id, node)
     invalidated.clear()
-    runtime = runtimeState(world, world.nodes)
+    const compiledArtifacts = compileArtifacts(world.nodes, world.animation)
+    artifacts = new Map(compiledArtifacts.map(artifact => [artifact.signature, artifact]))
+    runtime = runtimeState(world, world.nodes, compiledArtifacts)
     report = {
       compiledNodes: world.nodes.length,
       reusedNodes: 0,
       removedNodes: 0,
       cachedNodes: nodes.size,
       compilationMs: performance.now() - started,
+      compiledArtifacts: compiledArtifacts.length,
+      reusedArtifacts: 0,
     }
     return runtime
   }
 
-  const compileRuntimeRegion = (patch: RuntimeWorldPatch): SceneState | null => {
+  const compileRuntimeRegion = (patch: RuntimeWorldPatch): RuntimeWorld | null => {
     if (!runtime) return null
     const started = performance.now()
     let compiledNodes = 0
+    let artifactInputsChanged = patch.removedIds.length > 0 || patch.animation !== null
+    const forceArtifactCompilation = invalidated.size > 0
     if (invalidated.size > 0) {
+      artifactInputsChanged = true
       const changedIds = new Set(patch.changedNodes.map(node => node.id))
       for (const id of invalidated) {
         const previous = nodes.get(id)
@@ -169,6 +202,9 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       if (previous && !invalidated.has(node.id) && stableKey(previous) === stableKey(node)) {
         continue
       }
+      if (!previous || artifactInputSignature(previous) !== artifactInputSignature(node)) {
+        artifactInputsChanged = true
+      }
       nodes.set(node.id, node)
       compiledNodes += 1
     }
@@ -176,8 +212,6 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
     for (const id of patch.removedIds) {
       if (nodes.delete(id)) removedNodes += 1
     }
-    invalidated.clear()
-
     const ordered = patch.order
       ? patch.order.flatMap(id => {
           const node = nodes.get(id)
@@ -187,6 +221,19 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
           const current = nodes.get(node.id)
           return current ? [current] : []
         })
+    let compiledArtifacts = 0
+    let reusedArtifacts = runtime.runtimeOptimization.artifacts.length
+    const heldArtifacts = artifactInputsChanged
+      ? compileArtifacts(ordered, patch.animation ?? runtime.animation).map(artifact => {
+          const held = forceArtifactCompilation ? undefined : artifacts.get(artifact.signature)
+          if (held) return held
+          compiledArtifacts += 1
+          return artifact
+        })
+      : runtime.runtimeOptimization.artifacts
+    invalidated.clear()
+    if (artifactInputsChanged) reusedArtifacts = heldArtifacts.length - compiledArtifacts
+    artifacts = new Map(heldArtifacts.map(artifact => [artifact.signature, artifact]))
     runtime = runtimeState(
       {
         ...runtime,
@@ -194,6 +241,7 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
         animation: patch.animation ?? runtime.animation,
       },
       ordered,
+      heldArtifacts,
     )
     report = {
       compiledNodes,
@@ -201,6 +249,8 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       removedNodes,
       cachedNodes: nodes.size,
       compilationMs: performance.now() - started,
+      compiledArtifacts,
+      reusedArtifacts,
     }
     return runtime
   }
@@ -216,12 +266,15 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       nodes.clear()
       invalidated.clear()
       runtime = null
+      artifacts.clear()
       report = EMPTY_REPORT
     },
     validateSafeWorld: async (world, input) => {
       const compiled = compileRuntimeWorld(world)
       return await validateSafeRuntime({
         ...input,
+        renderOriginal: async camera => await input.renderOriginal(world, camera),
+        renderOptimized: async camera => await input.renderOptimized(compiled, camera),
         observeOriginal: async () => sceneRuntimeSnapshot(world),
         observeOptimized: async () => sceneRuntimeSnapshot(compiled),
       })
@@ -229,24 +282,121 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
   }
 }
 
-function runtimeState(source: SceneState, nodes: readonly SceneNode[]): SceneState {
+function runtimeState(
+  source: SceneState,
+  nodes: readonly SceneNode[],
+  artifacts: readonly RuntimeRenderArtifact[],
+): RuntimeWorld {
   return {
     nodes,
     selectedIds: [],
     world: source.world,
     animation: source.animation,
+    runtimeOptimization: { artifacts },
   }
+}
+
+function compileArtifacts(
+  nodes: readonly SceneNode[],
+  animation: AnimationTimeline,
+): readonly RuntimeRenderArtifact[] {
+  const excluded = behavioralGroupingExclusions(
+    nodes,
+    new Set(animation.tracks.map(track => track.target.nodeId)),
+  )
+  const groups = new Map<string, { sourceIds: string[]; forced: boolean }>()
+  const batches = new Map<string, string[]>()
+  for (const node of nodes) {
+    if ((node.type !== 'mesh' && node.type !== 'model') || excluded.has(node.id) || !node.visible)
+      continue
+    const mode = node.optimization?.mode ?? 'auto'
+    if (mode === 'batch') {
+      const key = stableKey([
+        node.type === 'mesh' ? node.material : node.model.assetId,
+        node.castShadow,
+        node.receiveShadow,
+        node.optimization?.groupId ?? null,
+      ])
+      const members = batches.get(key)
+      if (members) members.push(node.id)
+      else batches.set(key, [node.id])
+      continue
+    }
+    if (mode !== 'auto' && mode !== 'instance') continue
+    const key = stableKey([
+      node.type === 'mesh' ? [node.geometry, node.material, node.negative] : [node.model],
+      node.castShadow,
+      node.receiveShadow,
+      node.optimization?.groupId ?? null,
+    ])
+    const members = groups.get(key)
+    if (members) {
+      members.sourceIds.push(node.id)
+      members.forced ||= mode === 'instance'
+    } else groups.set(key, { sourceIds: [node.id], forced: mode === 'instance' })
+  }
+  const instances = [...groups]
+    .filter(
+      ([, group]) =>
+        group.forced || group.sourceIds.length >= DEFAULT_OPTIMIZATION_POLICY.minInstancesPerGroup,
+    )
+    .map<RuntimeRenderArtifact>(([key, group]) => {
+      const ordered = group.sourceIds.sort(byCodeUnit)
+      return {
+        key,
+        strategy: 'instance',
+        sourceIds: ordered,
+        signature: stableKey(['instance', key, ordered]),
+      }
+    })
+  const batchArtifacts = [...batches].map<RuntimeRenderArtifact>(([key, sourceIds]) => {
+    const ordered = sourceIds.sort(byCodeUnit)
+    return {
+      key,
+      strategy: 'batch',
+      sourceIds: ordered,
+      signature: stableKey(['batch', key, ordered]),
+    }
+  })
+  return [...instances, ...batchArtifacts].sort((one, other) =>
+    byCodeUnit(one.signature, other.signature),
+  )
+}
+
+function artifactInputSignature(node: SceneNode): string {
+  return stableKey([
+    node.type,
+    node.parentId,
+    node.visible,
+    node.castShadow,
+    node.receiveShadow,
+    node.components ?? null,
+    node.optimization ?? null,
+    node.type === 'mesh' ? [node.geometry, node.material, node.negative] : null,
+    node.type === 'model' ? node.model : null,
+  ])
+}
+
+export function runtimeOptimizationOf(world: SceneState): RuntimeOptimization | null {
+  if (!('runtimeOptimization' in world)) return null
+  const optimization = world.runtimeOptimization
+  return isRuntimeOptimization(optimization) ? optimization : null
+}
+
+function isRuntimeOptimization(value: unknown): value is RuntimeOptimization {
+  if (!value || typeof value !== 'object' || !('artifacts' in value)) return false
+  return Array.isArray(value.artifacts)
 }
 
 export const compileRuntimeWorld = (
   compiler: RuntimeWorldCompiler,
   world: SceneState,
-): SceneState => compiler.compileRuntimeWorld(world)
+): RuntimeWorld => compiler.compileRuntimeWorld(world)
 
 export const compileRuntimeRegion = (
   compiler: RuntimeWorldCompiler,
   patch: RuntimeWorldPatch,
-): SceneState | null => compiler.compileRuntimeRegion(patch)
+): RuntimeWorld | null => compiler.compileRuntimeRegion(patch)
 
 export const invalidateOptimization = (
   compiler: RuntimeWorldCompiler,

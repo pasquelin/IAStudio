@@ -134,6 +134,10 @@ describe('optimizing the scene through the assistant', () => {
     instances: [],
     bakeCandidates: [],
     batches: [],
+    merges: [],
+    sharedGeometry: [],
+    sharedMaterials: [],
+    spatialCells: [],
     warnings: [],
     measured: {
       objects: 1,

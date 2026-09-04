@@ -3,6 +3,7 @@ import {
   Mesh,
   PropertyBinding,
   SkinnedMesh,
+  Vector3,
   type BufferGeometry,
   type Material,
   type Object3D,
@@ -25,9 +26,18 @@ import type { SceneNode, SceneState } from './sceneState'
 import type { LossyOptimization } from '@shared/domain/gameExport'
 import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
+import { CELL_SIZE, cellKey } from './worldPartition'
 
 export type OptimizationClassification =
-  'STATIC' | 'DYNAMIC' | 'SKINNED' | 'ANIMATED' | 'INSTANCABLE' | 'UNSAFE'
+  | 'STATIC'
+  | 'DYNAMIC'
+  | 'SKINNED'
+  | 'ANIMATED'
+  | 'PARTICLE'
+  | 'INSTANCABLE'
+  | 'BATCHABLE'
+  | 'MERGEABLE'
+  | 'UNSAFE'
 
 export type ClassifiedObject = {
   id: string
@@ -41,6 +51,23 @@ export type InstanceCandidate = {
 }
 
 export type BatchCandidate = InstanceCandidate
+export type MergeCandidate = InstanceCandidate
+
+export type GeometryDeduplication = {
+  key: string
+  sourceIds: readonly string[]
+  bytes: number
+}
+
+export type MaterialDeduplication = {
+  key: string
+  sourceIds: readonly string[]
+}
+
+export type SpatialCellPlan = {
+  key: number
+  sourceIds: readonly string[]
+}
 
 export type OptimizationWarningReason = 'animated' | 'dynamic' | 'skinned'
 
@@ -81,6 +108,10 @@ export type OptimizationPlan = {
   instances: readonly InstanceCandidate[]
   bakeCandidates: readonly BakeCandidate[]
   batches: readonly BatchCandidate[]
+  merges: readonly MergeCandidate[]
+  sharedGeometry: readonly GeometryDeduplication[]
+  sharedMaterials: readonly MaterialDeduplication[]
+  spatialCells: readonly SpatialCellPlan[]
   lodCandidates?: readonly LossyCandidate[]
   textureCandidates?: readonly TextureOptimizationCandidate[]
   warnings: readonly OptimizationWarning[]
@@ -181,11 +212,13 @@ function* optimizationSteps(
   const geometryArrays = new Set<ArrayBufferView>()
   const geometryUses = new Map<BufferGeometry, number>()
   const materialUses = new Map<Material, number>()
+  const geometrySources = new Map<BufferGeometry, Set<string>>()
+  const materialSources = new Map<Material, Set<string>>()
   const textureUses = new Map<Texture, number>()
   let geometryBytes = 0
   let avoidedGeometryBytes = 0
   let avoidedTextureBytes = 0
-  let sharedMaterials = 0
+  let sharedMaterialUses = 0
   const candidateGroups = new Map<string, CandidateGroup>()
   const batchGroups = new Map<string, CandidateGroup>()
   const keyOf = withFlags(shapeAndPaint())
@@ -210,6 +243,7 @@ function* optimizationSteps(
 
       const geometryUse = geometryUses.get(mesh.geometry) ?? 0
       geometryUses.set(mesh.geometry, geometryUse + 1)
+      collectSource(geometrySources, mesh.geometry, node.id)
       if (geometryUse > 0) avoidedGeometryBytes += geometryByteLength(mesh.geometry)
       for (const array of geometryArraysOf(mesh.geometry)) {
         if (geometryArrays.has(array)) continue
@@ -220,7 +254,8 @@ function* optimizationSteps(
       for (const material of worn) {
         const materialUse = materialUses.get(material) ?? 0
         materialUses.set(material, materialUse + 1)
-        if (materialUse > 0) sharedMaterials += 1
+        collectSource(materialSources, material, node.id)
+        if (materialUse > 0) sharedMaterialUses += 1
         for (const texture of texturesOf(material)) {
           const textureUse = textureUses.get(texture) ?? 0
           textureUses.set(texture, textureUse + 1)
@@ -294,12 +329,32 @@ function* optimizationSteps(
       const remaining = [...group.units].filter(unit => !instancedUnits.has(unit)).length
       return saved + Math.max(0, remaining - 1)
     }, 0)
+  const sharedGeometry = [...geometrySources]
+    .filter(([, sourceIds]) => sourceIds.size > 1)
+    .map(([geometry, sourceIds], index) => ({
+      key: stableKey(['geometry', index, [...sourceIds].sort(byCodeUnit)]),
+      sourceIds: [...sourceIds].sort(byCodeUnit),
+      bytes: geometryByteLength(geometry),
+    }))
+    .sort((one, other) => byCodeUnit(one.key, other.key))
+  const sharedMaterials = [...materialSources]
+    .filter(([, sourceIds]) => sourceIds.size > 1)
+    .map(([, sourceIds], index) => ({
+      key: stableKey(['material', index, [...sourceIds].sort(byCodeUnit)]),
+      sourceIds: [...sourceIds].sort(byCodeUnit),
+    }))
+    .sort((one, other) => byCodeUnit(one.key, other.key))
+  const spatialCells = spatialCellsOf(state.nodes, objectOf)
 
   return {
     classifications,
     instances,
     bakeCandidates,
     batches,
+    merges: [],
+    sharedGeometry,
+    sharedMaterials,
+    spatialCells,
     ...lossyCandidatesOf(state.nodes),
     warnings,
     measured: {
@@ -308,7 +363,7 @@ function* optimizationSteps(
       visibleObjects,
       meshes: drawn.size,
       geometryBytes,
-      sharedMaterials,
+      sharedMaterials: sharedMaterialUses,
     },
     estimated: {
       drawCallsBefore: sceneStats.draws,
@@ -317,6 +372,33 @@ function* optimizationSteps(
       avoidedTextureBytes,
     },
   }
+}
+
+function collectSource<T>(into: Map<T, Set<string>>, resource: T, nodeId: string): void {
+  const sourceIds = into.get(resource)
+  if (sourceIds) sourceIds.add(nodeId)
+  else into.set(resource, new Set([nodeId]))
+}
+
+function spatialCellsOf(
+  nodes: readonly SceneNode[],
+  objectOf: (id: string) => Object3D | undefined,
+): readonly SpatialCellPlan[] {
+  const cells = new Map<number, string[]>()
+  const position = new Vector3()
+  for (const node of nodes) {
+    const object = objectOf(node.id)
+    if (object) object.getWorldPosition(position)
+    else
+      position.set(node.transform.position.x, node.transform.position.y, node.transform.position.z)
+    const key = cellKey(Math.floor(position.x / CELL_SIZE), Math.floor(position.z / CELL_SIZE))
+    const sourceIds = cells.get(key)
+    if (sourceIds) sourceIds.push(node.id)
+    else cells.set(key, [node.id])
+  }
+  return [...cells]
+    .map(([key, sourceIds]) => ({ key, sourceIds: sourceIds.sort(byCodeUnit) }))
+    .sort((one, other) => one.key - other.key)
 }
 
 export function lossyCandidatesOf(
@@ -484,6 +566,9 @@ function classificationsOf(
   if (skinned) classifications.push('SKINNED')
   if (animated) classifications.push('ANIMATED')
   if (instancable) classifications.push('INSTANCABLE')
+  if (instancable) classifications.push('BATCHABLE')
+  if (instancable && !node.components?.length && node.parentId === null)
+    classifications.push('MERGEABLE')
   if (animated || dynamic || skinned) classifications.push('UNSAFE')
   return classifications
 }

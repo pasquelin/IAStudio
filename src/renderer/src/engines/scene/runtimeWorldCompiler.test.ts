@@ -55,17 +55,23 @@ describe('runtimeWorldPatch', () => {
 describe('createRuntimeWorldCompiler', () => {
   it('validates compiled worlds through concrete scene observations and rendered frames', async () => {
     const compiler = createRuntimeWorldCompiler()
-    const source = stateOf(meshNode('a'))
+    const node: ReturnType<typeof meshNode> = {
+      ...meshNode('a'),
+      optimization: { mode: 'instance' },
+    }
+    const source = stateOf(node)
     const pixels = new Uint8Array([10, 20, 30, 255])
     const rendered: string[] = []
 
     const report = await compiler.validateSafeWorld(source, {
       cameras: [{ id: 'main' }],
-      renderOriginal: async camera => {
+      renderOriginal: async (world, camera) => {
+        expect(world).toBe(source)
         rendered.push(`original:${camera.id}`)
         return { width: 1, height: 1, pixels }
       },
-      renderOptimized: async camera => {
+      renderOptimized: async (world, camera) => {
+        expect(world.runtimeOptimization.artifacts).toHaveLength(1)
         rendered.push(`optimized:${camera.id}`)
         return { width: 1, height: 1, pixels: pixels.slice() }
       },
@@ -101,6 +107,56 @@ describe('createRuntimeWorldCompiler', () => {
     })
   })
 
+  it('compiles repeated authoring nodes into a deterministic runtime instance artifact', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const source = stateOf(
+      ...Array.from({ length: 16 }, (_unused, index) => meshNode(`tree-${index}`)),
+    )
+
+    const runtime = compiler.compileRuntimeWorld(source)
+
+    expect(runtime).not.toBe(source)
+    expect(runtime.runtimeOptimization.artifacts).toHaveLength(1)
+    expect(runtime.runtimeOptimization.artifacts[0]).toMatchObject({
+      strategy: 'instance',
+      sourceIds: source.nodes.map(node => node.id).sort(),
+    })
+    expect(compiler.getOptimizationReport()).toMatchObject({
+      compiledArtifacts: 1,
+      reusedArtifacts: 0,
+    })
+  })
+
+  it('reuses unaffected runtime artifacts after a local transform change', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const nodes = Array.from({ length: 32 }, (_unused, index) => {
+      const node = meshNode(`mesh-${index}`)
+      return index < 16 ? node : { ...node, material: { ...node.material, roughness: 0.25 } }
+    })
+    const before = stateOf(...nodes)
+    const first = nodes[0]
+    if (!first) throw new Error('missing fixture')
+    const runtime = compiler.compileRuntimeWorld(before)
+    const changed = {
+      ...first,
+      transform: {
+        ...first.transform,
+        position: { ...first.transform.position, x: 3 },
+      },
+    }
+    const after = stateOf(changed, ...nodes.slice(1))
+
+    const next = compiler.compileRuntimeRegion(runtimeWorldPatch(before, after))
+
+    expect(next?.runtimeOptimization.artifacts).toEqual(runtime.runtimeOptimization.artifacts)
+    expect(next?.runtimeOptimization.artifacts[0]).toBe(runtime.runtimeOptimization.artifacts[0])
+    expect(compiler.getOptimizationReport()).toMatchObject({
+      compiledNodes: 1,
+      compiledArtifacts: 0,
+      reusedArtifacts: 2,
+    })
+  })
+
   it('does not trust an unchanged UUID after its render data changes', () => {
     const compiler = createRuntimeWorldCompiler()
     const source = meshNode('same')
@@ -127,13 +183,38 @@ describe('createRuntimeWorldCompiler', () => {
 
   it('invalidates a selected entity even when its signature is equal', () => {
     const compiler = createRuntimeWorldCompiler()
-    const source = stateOf(meshNode('a'))
+    const forced: ReturnType<typeof meshNode> = {
+      ...meshNode('a'),
+      optimization: { mode: 'instance' },
+    }
+    const source = stateOf(forced)
     const compiled = compiler.compileRuntimeWorld(structuredClone(source))
     compiler.invalidateOptimization(['a'])
 
     const next = compiler.compileRuntimeRegion(runtimeWorldPatch(source, source))
 
     expect(next?.nodes[0]).not.toBe(compiled.nodes[0])
+    expect(next?.runtimeOptimization.artifacts[0]).not.toBe(
+      compiled.runtimeOptimization.artifacts[0],
+    )
+  })
+
+  it('preserves forced instance and batch representations below automatic thresholds', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const instance: ReturnType<typeof meshNode> = {
+      ...meshNode('instance'),
+      optimization: { mode: 'instance' },
+    }
+    const batch: ReturnType<typeof meshNode> = {
+      ...meshNode('batch'),
+      optimization: { mode: 'batch' },
+    }
+
+    const runtime = compiler.compileRuntimeWorld(stateOf(instance, batch))
+
+    expect(runtime.runtimeOptimization.artifacts.map(artifact => artifact.strategy).sort()).toEqual(
+      ['batch', 'instance'],
+    )
   })
 
   it('evicts deleted entities and preserves the requested order', () => {
@@ -180,6 +261,8 @@ describe('createRuntimeWorldCompiler', () => {
       removedNodes: 0,
       cachedNodes: 0,
       compilationMs: 0,
+      compiledArtifacts: 0,
+      reusedArtifacts: 0,
     })
   })
 })
