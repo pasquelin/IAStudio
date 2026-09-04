@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { PICTURES } from '@shared/domain/asset'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import {
   MATERIAL_SLOTS,
   NOTHING_WORN,
@@ -16,6 +16,8 @@ import { openAssetById } from '@/helpers/openAsset'
 import { getBridge } from '@/services/bridge'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 import { openModelMaterial } from '@/features/material/openModelMaterial'
+import { reportFailure } from '@/services/diagnostics'
+import { useAssets } from '@/stores/assets'
 import { ModelDressSectionMaterials } from './ModelDressSectionMaterials'
 
 /** Derived, never restated: a third `kind` on the union has to answer here or it will not compile. */
@@ -52,11 +54,25 @@ export function ModelDressSection({
   const mode: DressMode = dress?.kind ?? 'own'
 
   const assemble = async (slot: number): Promise<void> => {
-    // Asked at the press, not subscribed to: nothing this panel DRAWS depends on the model's own
-    // pictures, and a query per selection would run in the two modes that never offer this.
-    const own = await (getBridge()?.assets.search({ derivedFrom: assetId, type: 'image' }) ?? [])
-    const materialId = await openModelMaterial({ id: assetId, name }, own)
-    if (materialId) onWearAt(slot, materialId)
+    let own: readonly Asset[]
+    try {
+      // The main pass is idempotent: it returns already extracted pictures for a recent model,
+      // and takes embedded GLB images out for an older one before the material editor opens.
+      own = await (getBridge()?.assets.extractTextures(assetId) ?? [])
+    } catch (error) {
+      reportFailure('assets.extract', name, error)
+      return
+    } finally {
+      // Extraction writes one image at a time, so even a partial failure changed the catalogue.
+      useAssets.getState().invalidate()
+    }
+
+    try {
+      const materialId = await openModelMaterial({ id: assetId, name }, own)
+      if (materialId) onWearAt(slot, materialId)
+    } catch (error) {
+      reportFailure('assets.open', name, error)
+    }
   }
 
   return (

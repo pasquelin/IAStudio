@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import type { Rig } from '@shared/domain/rig'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { withQueries } from '@/features/shell/components/query-fixtures'
@@ -13,6 +14,11 @@ import { workshopIdOf, workshopScene } from '@/character/characterStage'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useModelFiles } from '@/stores/modelFiles'
+import { useAssets } from '@/stores/assets'
+
+const openModelMaterial = vi.hoisted(() => vi.fn<() => Promise<string | null>>())
+
+vi.mock('@/features/material/openModelMaterial', () => ({ openModelMaterial }))
 
 const ASSET = 'asset-hero'
 const SAMPLE = {
@@ -42,6 +48,7 @@ beforeEach(() => {
   clearScenes()
   useModelFiles.setState({ materials: {}, materialNames: {}, stats: {} })
   useCharacterView.setState({ views: {} })
+  openModelMaterial.mockReset()
   installFakeBridge({})
 })
 
@@ -134,6 +141,35 @@ describe('what a character is made of', () => {
     show()
 
     expect(screen.getByText('Coat')).toBeInTheDocument()
+  })
+
+  it('extracts embedded pictures before opening them as an editable material', async () => {
+    const texture: Asset = {
+      id: 'texture-1',
+      name: 'Hero — Couleur de base',
+      type: 'image',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-09-04T00:00:00.000Z',
+      derivedFrom: ASSET,
+      map: 'baseColor',
+    }
+    const extractTextures = vi.fn(() => Promise.resolve([texture]))
+    const invalidate = vi.spyOn(useAssets.getState(), 'invalidate')
+    installFakeBridge({ assets: { extractTextures } })
+    openModelMaterial.mockResolvedValue('material-1')
+    seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: [''] } })
+    show()
+
+    fireEvent.contextMenu(screen.getByLabelText('Matière 1'))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Assembler depuis le fichier' }))
+
+    await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
+    expect(invalidate).toHaveBeenCalledOnce()
+    expect(openModelMaterial).toHaveBeenCalledWith({ id: ASSET, name: ASSET }, [texture])
+    await vi.waitFor(() =>
+      expect(held().dress).toEqual({ kind: 'materials', documentIds: ['material-1'] }),
+    )
   })
 
   // Asked for at the first sight of the panel: a joint could only be put right by eye, and there
