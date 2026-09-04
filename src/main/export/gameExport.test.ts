@@ -250,9 +250,23 @@ describe('a game written to run with no studio', () => {
       textureCompression: 'conservative',
     } satisfies NonNullable<GameExportRequest['lossyOptimization']>
 
-    await writeExportedGame(ports, { ...ASKED, lossyOptimization })
+    const optimization = {
+      nodes: [
+        {
+          nodeId: 'tree',
+          geometry: { kind: 'sphere', radius: 1, widthSegments: 8, heightSegments: 4 },
+        },
+      ],
+    } satisfies NonNullable<GameExportRequest['scenes'][number]['optimization']>
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: ASKED.scenes.map(scene => ({ ...scene, optimization })),
+      lossyOptimization,
+    })
 
     expect(manifestOf(written).lossyOptimization).toEqual(lossyOptimization)
+    expect(manifestOf(written).scenes[0]?.optimization).toEqual(optimization)
     expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/checker.jpg' })
     expect(written.get('assets/checker.jpg')).toEqual(new Uint8Array([7, 8]))
   })
