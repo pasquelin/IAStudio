@@ -31,7 +31,7 @@ import { blendChanged, dirtiedChunks } from './reliefSurfaceEdits'
 import { reliefSculptSourceOf, type ReliefSculptSource } from './reliefSculptSource'
 import type { GroundPaint } from '@shared/domain/groundPaint'
 import type { TextureSource } from './textureCache'
-import { applyGroundPaint, syncGroundMaterial } from './reliefGroundMaterial'
+import { applyGroundPaint, disposeGroundMaterial, syncGroundMaterial } from './reliefGroundMaterial'
 
 export { reliefGeometryData } from './reliefSurfaceGeometry'
 export type { ReliefSculptSource } from './reliefSculptSource'
@@ -187,7 +187,7 @@ function dropTerrain(state: SurfaceState, id: string, terrain: TerrainSurface): 
   terrain.groundGeneration += 1
   terrain.buildAbort?.abort()
   clearMeshes(terrain.meshes)
-  terrain.material.map?.dispose()
+  disposeGroundMaterial(terrain)
   terrain.material.dispose()
   terrain.group.removeFromParent()
   state.terrains.delete(id)
