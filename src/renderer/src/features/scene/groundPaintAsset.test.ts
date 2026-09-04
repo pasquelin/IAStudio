@@ -1,0 +1,65 @@
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { bytesFromBase64 } from '@shared/base64'
+import { emptyGroundPaint, type GroundPaint } from '@shared/domain/groundPaint'
+import { DEFAULT_WORLD, reliefLayer } from '@shared/domain/scene'
+import type { Asset } from '@shared/domain/asset'
+import { bridgeWatchingLogs } from '@/services/fakeBridge'
+import { useAssets } from '@/stores/assets'
+import { sceneOf, useScenes } from '@/stores/scenes'
+import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { loadGroundPaint, saveGroundPaint, type GroundPaintCodec } from './groundPaintAsset'
+
+const picture = (id: string): Asset => ({
+  id,
+  name: 'Ground.png',
+  type: 'image',
+  location: 'local',
+  path: `Images/${id}.png`,
+  tags: [],
+  createdAt: '2026-09-04T00:00:00.000Z',
+})
+
+beforeEach(() => {
+  useScenes.getState().replace('doc-1', {
+    ...EMPTY_SCENE,
+    world: {
+      ...DEFAULT_WORLD,
+      layers: [reliefLayer({ assetId: 'height' }, { id: 'terrain', name: 'Island' })],
+    },
+  })
+  useAssets.setState({ items: [] })
+})
+
+describe('ground paint assets', () => {
+  it('round-trips the painted RGBA bytes through the referenced project picture', async () => {
+    const stored = new Map<string, GroundPaint>()
+    const codec: GroundPaintCodec = {
+      encode: async paint => {
+        stored.set('paint-1', { ...paint, pixels: paint.pixels.slice() })
+        return Uint8Array.from(paint.pixels)
+      },
+      decode: async assetId => {
+        const paint = stored.get(assetId)
+        if (!paint) throw new Error('missing paint')
+        return { ...paint, pixels: paint.pixels.slice() }
+      },
+    }
+    const savePicture = vi.fn(async request => {
+      expect([...bytesFromBase64(request.png)]).toEqual([...paint.pixels])
+      return picture('paint-1')
+    })
+    bridgeWatchingLogs({
+      assets: { savePicture, search: async () => [picture('paint-1')] },
+    })
+    const paint = emptyGroundPaint(2, 2)
+    paint.pixels.set([12, 140, 32, 255], 4)
+
+    await expect(saveGroundPaint('doc-1', 'terrain', paint, codec)).resolves.toBe(true)
+    await expect(loadGroundPaint('doc-1', 'terrain', codec)).resolves.toEqual(paint)
+    const terrain = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
+    expect(terrain?.kind === 'relief' ? terrain.groundMaterials : []).toEqual([
+      { texture: { assetId: 'paint-1' }, weight: 1 },
+    ])
+  })
+})

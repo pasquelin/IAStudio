@@ -447,7 +447,8 @@
     "minScale": "Échelle min.",
     "maxScale": "Échelle max.",
     "slopeAlign": "Alignement à la pente",
-    "tilt": "Inclinaison"
+    "tilt": "Inclinaison",
+    "groundPaintName": "Peinture de sol — {{name}}"
   },
   "sceneNavigation": {
     "viewport": "Viewport 3D",

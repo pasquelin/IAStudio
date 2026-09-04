@@ -23,9 +23,12 @@ import {
   recordTransform,
 } from '../sceneRuntimeActions'
 import { useMountedSceneRenderer, type RuntimeSetters } from './useMountedSceneRenderer'
+import { loadGroundPaint, saveGroundPaint } from '@/features/scene/groundPaintAsset'
+import type { GroundPaint } from '@shared/domain/groundPaint'
 
 function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRenderer {
   const projectPath = useProject.getState().project?.path ?? null
+  let pendingGroundPaint: { terrainId: string; paint: GroundPaint } | null = null
   return new SceneRenderer({
     onSelect: (ids, mode) => selectIn(documentId, ids, mode),
     onTransform: moves => recordTransform(documentId, moves),
@@ -33,8 +36,18 @@ function sceneRendererFor(documentId: string, set: RuntimeSetters): SceneRendere
       useScenes.getState().runCommand(documentId, sculptRelief(terrainId, editId, chunks)),
     onReliefMask: (terrainId, editId, chunks) =>
       useScenes.getState().runCommand(documentId, paintTerrainEditMask(terrainId, editId, chunks)),
+    onGroundPaint: (terrainId, paint) => {
+      pendingGroundPaint = { terrainId, paint }
+    },
+    loadGroundPaint: terrainId => loadGroundPaint(documentId, terrainId),
     onReliefStrokeStart: () => useScenes.getState().beginGesture(documentId),
-    onReliefStrokeEnd: () => useScenes.getState().endGesture(documentId),
+    onReliefStrokeEnd: () => {
+      useScenes.getState().endGesture(documentId)
+      if (!pendingGroundPaint) return
+      const saved = pendingGroundPaint
+      pendingGroundPaint = null
+      void saveGroundPaint(documentId, saved.terrainId, saved.paint)
+    },
     onClips: (id, clips, lengths) =>
       useModelFiles.getState().report(documentId, id, clips, lengths),
     onRig: (id, rig) => useModelFiles.getState().reportRig(documentId, id, rig),

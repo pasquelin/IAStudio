@@ -60,6 +60,7 @@ export type SceneRendererOptions = {
   onReliefSculpt?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   onReliefMask?: (terrainId: string, editId: string, chunks: readonly PackedReliefChunk[]) => void
   onGroundPaint?: (terrainId: string, paint: GroundPaint) => void
+  loadGroundPaint?: (terrainId: string) => Promise<GroundPaint | null>
   onReliefStrokeStart?: () => void
   onReliefStrokeEnd?: () => void
   /**

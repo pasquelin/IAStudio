@@ -250,14 +250,16 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     )
   }
 
-  paintGroundDisk(terrainId: string, x: number, z: number): Promise<boolean> {
+  async paintGroundDisk(terrainId: string, x: number, z: number): Promise<boolean> {
     const terrain = this.world.layers.find(
       (layer): layer is Extract<WorldLayer, { kind: 'relief' }> =>
         layer.kind === 'relief' && layer.id === terrainId,
     )
-    if (!terrain || terrain.locked.sculpt) return Promise.resolve(false)
-    const before =
-      this.groundPaints.get(terrainId) ?? emptyGroundPaint(SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS)
+    if (!terrain || terrain.locked.sculpt) return false
+    const loaded = this.groundPaints.has(terrainId)
+      ? this.groundPaints.get(terrainId)
+      : await this.options.loadGroundPaint?.(terrainId)
+    const before = loaded ?? emptyGroundPaint(SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS)
     const paint = paintGroundDisk(
       before,
       { origin: terrain.origin, size: terrain.size, elevation: terrain.elevation },
@@ -272,7 +274,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     )
     this.groundPaints.set(terrainId, paint)
     this.options.onGroundPaint?.(terrainId, paint)
-    return Promise.resolve(true)
+    return true
   }
 
   private flattenTargetAt(

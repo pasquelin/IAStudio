@@ -447,7 +447,8 @@
     "minScale": "Min scale",
     "maxScale": "Max scale",
     "slopeAlign": "Slope align",
-    "tilt": "Tilt"
+    "tilt": "Tilt",
+    "groundPaintName": "{{name}} ground paint"
   },
   "sceneNavigation": {
     "viewport": "3D viewport",
