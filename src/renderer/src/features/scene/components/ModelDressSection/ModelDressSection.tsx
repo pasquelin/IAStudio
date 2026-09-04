@@ -19,6 +19,7 @@ import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
 import { openModelMaterial } from '@/features/material/openModelMaterial'
 import { reportFailure } from '@/services/diagnostics'
 import { useAssets } from '@/stores/assets'
+import { detachModelFileTexturesInScenes } from '@/stores/sceneEngines'
 import { ModelDressSectionMaterials } from './ModelDressSectionMaterials'
 
 type DressMode = Exclude<ModelDressRef['kind'], 'plain'> | 'own'
@@ -62,7 +63,9 @@ export function ModelDressSection({
 
   const extract = async (): Promise<readonly Asset[] | null> => {
     try {
-      return await (getBridge()?.assets.extractTextures(assetId) ?? [])
+      const extracted = await (getBridge()?.assets.extractTextures(assetId) ?? [])
+      detachModelFileTexturesInScenes(assetId)
+      return extracted
     } catch (error) {
       reportFailure('assets.extract', name, error)
       return null
@@ -133,16 +136,18 @@ export function ModelDressSection({
         value={mode}
         compactActions
         actions={
-          <ToolButton
-            icon={mdiImageMultipleOutline}
-            label={t('assets.extractTextures')}
-            description={t(
-              appliesImage ? 'inspector.modelExtractTextureHint' : 'assets.extractTexturesHint',
-            )}
-            tooltip={TIP_LEFT}
-            disabled={!extractable}
-            onClick={() => void extractFromHeader()}
-          />
+          mode === 'own' ? (
+            <ToolButton
+              icon={mdiImageMultipleOutline}
+              label={t('assets.extractTextures')}
+              description={t(
+                appliesImage ? 'inspector.modelExtractTextureHint' : 'assets.extractTexturesHint',
+              )}
+              tooltip={TIP_LEFT}
+              disabled={!extractable}
+              onClick={() => void extractFromHeader()}
+            />
+          ) : undefined
         }
         options={[
           { value: 'own', label: t('inspector.modelOwnMaterial') },

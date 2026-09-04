@@ -245,6 +245,9 @@ describe('what a character is made of', () => {
     expect(invalidate).toHaveBeenCalledOnce()
     expect(held().dress).toEqual({ kind: 'image', assetId: 'texture-1' })
     expect(screen.getByLabelText('Recouvert par')).toHaveValue('image')
+    expect(
+      screen.queryByRole('button', { name: 'Extraire les textures du modèle' }),
+    ).not.toBeInTheDocument()
   })
 
   it('keeps image mode without restoring the model file when the extracted image is removed', async () => {
@@ -316,7 +319,7 @@ describe('what a character is made of', () => {
     useScenes.getState().ensure(documentId, () => workshopScene(ASSET))
     const nodeId = sceneOf(useScenes.getState(), documentId).nodes[0]?.id ?? ''
     useModelFiles.getState().reportMaterials(documentId, nodeId, 2, ['Hair', 'Skin'])
-    seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: ['', ''] } })
+    seedCharacter(ASSET, RIG, {})
     show()
 
     await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))

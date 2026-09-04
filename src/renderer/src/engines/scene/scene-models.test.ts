@@ -1,11 +1,16 @@
 import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D, Texture } from 'three'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { nodeIdOf, SceneRenderer, type SceneRendererOptions } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
 import type { SkinWeights } from '../character/skinWeights'
 import type { SceneState } from './sceneState'
 import type { Rig } from '@shared/domain/rig'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import {
+  detachModelFileTexturesInScenes,
+  forgetSceneEngine,
+  registerSceneEngine,
+} from '@/stores/sceneEngines'
 
 /**
  * The model path, driven through the loader port — the whole point of that port existing. jsdom
@@ -45,6 +50,26 @@ function rendererDressing(asked: string[], wornDress?: SceneRendererOptions['wor
 }
 
 describe('a model node', () => {
+  it('detaches a replaced model from every mounted scene', () => {
+    const first = rendererLoading(async () => source())
+    const second = rendererLoading(async () => source())
+    const firstDetach = vi.spyOn(first, 'detachModelFileTextures')
+    const secondDetach = vi.spyOn(second, 'detachModelFileTextures')
+    registerSceneEngine('scene-a', first)
+    registerSceneEngine('scene-b', second)
+    onTestFinished(() => {
+      forgetSceneEngine('scene-a')
+      forgetSceneEngine('scene-b')
+      first.dispose()
+      second.dispose()
+    })
+
+    detachModelFileTexturesInScenes('shared-model')
+
+    expect(firstDetach).toHaveBeenCalledWith('shared-model')
+    expect(secondDetach).toHaveBeenCalledWith('shared-model')
+  })
+
   it('reads its file once, and puts what came back into the scene', async () => {
     const load = vi.fn(async () => source())
     const renderer = rendererLoading(load)

@@ -214,6 +214,14 @@ export abstract class SceneRendererMaterials extends SceneRendererFlight {
     // lighting it drives is what would otherwise stay on the image the edit replaced.
     void this.sky.refresh()
   }
+
+  /** Drops the in-memory copies after the model file's embedded textures were extracted. */
+  detachModelFileTextures(assetId: string): void {
+    for (const [nodeId, maps] of this.modelMaps) {
+      const node = this.applied.get(nodeId)
+      if (node?.type === 'model' && node.model.assetId === assetId) maps.detachFileTextures()
+    }
+  }
   /**
    * The models wearing one of these material documents ask again for what their dress is worth —
    * every model when none is named. The push behind « edit the material and the model follows »:

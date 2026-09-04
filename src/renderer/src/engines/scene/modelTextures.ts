@@ -21,6 +21,8 @@ export type ModelTextures = {
   parts: () => readonly ModelPart[]
   /** Keeps or removes every texture carried by the cloned file materials. */
   fileTextures: (enabled: boolean) => void
+  /** Forgets file textures after extraction, so no later mode can restore stale GPU copies. */
+  detachFileTextures: () => void
   /** The overrides one slot holds, or none. */
   apply: (slot: number, maps: ModelDress['textures']) => void
   /** The finish one slot wears over its file. Absent fields leave what the glTF put there. */
@@ -48,7 +50,7 @@ type Dressed = {
   fileTextures: boolean
 }
 
-type FileMaterial = { material: Material; maps: ReadonlyMap<string, Texture>; enabled: boolean }
+type FileMaterial = { material: Material; maps: Map<string, Texture>; enabled: boolean }
 
 /**
  * One material and the bindings that write into IT alone — one set per slot, never one shared.
@@ -156,6 +158,13 @@ export function createModelTextures(
       for (const held of fileMaterials) setFileTextures(held, enabled, onChange)
       for (const slot of slots) slot.held.fileTextures = enabled
     },
+    detachFileTextures: () => {
+      for (const held of fileMaterials) {
+        setFileTextures(held, false, onChange)
+        held.maps.clear()
+      }
+      for (const slot of slots) detachSlotFileTextures(slot.held, onChange)
+    },
     apply: (slot, maps) => {
       const held = slots[slot]
       if (held) {
@@ -198,6 +207,14 @@ export function createModelTextures(
   }
 }
 
+function detachSlotFileTextures(held: Dressed, onChange: () => void): void {
+  held.fileTextures = false
+  for (const map of TEXTURE_SLOTS) {
+    held.fileMaps.set(map, null)
+    if (!held.worn.has(map)) writeMap(held, map, null, onChange)
+  }
+}
+
 /** Writes one map into ONE material of the instance, freeing the clone the slot wore before. */
 function write(
   held: Dressed,
@@ -235,10 +252,7 @@ function writeMap(
   onChange()
 }
 
-function texturePropertiesOf(
-  material: Material,
-  standardSlots: boolean,
-): ReadonlyMap<string, Texture> {
+function texturePropertiesOf(material: Material, standardSlots: boolean): Map<string, Texture> {
   const maps = new Map<string, Texture>()
   for (const [name, value] of Object.entries(material)) {
     if (
