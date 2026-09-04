@@ -124,8 +124,10 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
     const stride = Math.max(1, Math.floor(objects.length / VALIDATION_PICK_SAMPLES))
     const targets = [
       ...[...this.objects.values()].filter(object => !this.instances.holdsSource(object)),
-      // The exact targets of `nodeAt`: the recipe must prove the editor's adaptive path.
-      ...this.instances.editorPickable(),
+      // The LOTS, never `editorPickable()`: below the adaptive threshold that answers the very
+      // sources the unoptimised scene draws, so the recipe would compare a thing to itself. What
+      // can lie is a slot standing for a node, and this is the only proof of it on a real scene.
+      ...this.instances.pickable(),
     ]
     const raycaster = withEveryLayer(new Raycaster())
     return objects

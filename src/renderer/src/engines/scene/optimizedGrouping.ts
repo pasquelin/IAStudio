@@ -5,6 +5,11 @@ import { createMergedGroups } from './mergedGrouping'
 import type { InstancedGroups, RuntimeRenderArtifact } from './grouping'
 import { meshesOf } from './instanceableModel'
 
+/**
+ * Above this many sources the editor casts against the LOTS, `nodeIdOf` naming the node by slot.
+ * Measured 2026-09-04, medians of five runs: 5.069 ms → 2.291 at 25 000 targets, 12.019 → 4.771
+ * at 50 000. Below it the sources answer by object identity, which no slot has to stand for.
+ */
 export const RUNTIME_PICKING_THRESHOLD = 25_000
 
 export function createOptimizedGroups(
