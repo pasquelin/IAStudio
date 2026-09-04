@@ -82,10 +82,18 @@ export type ReliefLayer = {
    * splat reservation — a later multi-layer blend reads the same field without a document migration.
    */
   groundMaterials: readonly GroundMaterialLayer[]
+  /** Shared RGBA splat weights. Null preserves the single-material legacy rendering path. */
+  groundWeights: TextureRef | null
 }
 
-/** One splat layer. Weight is unused in V1 (a single entry is the whole paint). */
-export type GroundMaterialLayer = { texture: TextureRef; weight: number }
+export type GroundMaterialChannel = 'r' | 'g' | 'b' | 'a'
+
+/** One appearance layer addressed by a channel of the terrain's shared weight texture. */
+export type GroundMaterialLayer = {
+  albedo: TextureRef
+  normal: TextureRef | null
+  channel: GroundMaterialChannel
+}
 
 /** Open union: a later kind does not migrate documents written with only Relief. */
 export type { ScatterLayer }

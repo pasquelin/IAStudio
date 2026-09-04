@@ -20,7 +20,7 @@ describe('relief ground material', () => {
       { assetId: 'height' },
       {
         id: 'terrain',
-        groundMaterials: [{ texture: { assetId: 'ground' }, weight: 1 }],
+        groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
       },
     )
 
@@ -43,7 +43,7 @@ describe('relief ground material', () => {
       { assetId: 'height' },
       {
         id: 'terrain',
-        groundMaterials: [{ texture: { assetId: 'ground' }, weight: 1 }],
+        groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
       },
     )
 

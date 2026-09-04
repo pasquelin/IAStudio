@@ -41,7 +41,7 @@ export function syncGroundMaterial(
   layer: ReliefLayer,
   options: Options,
 ): void {
-  const assetId = layer.groundMaterials[0]?.texture.assetId ?? null
+  const assetId = layer.groundMaterials[0]?.albedo.assetId ?? null
   if (assetId === terrain.groundAssetId) return
   terrain.groundAssetId = assetId
   const token = ++terrain.groundGeneration

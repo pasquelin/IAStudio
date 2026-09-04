@@ -19,7 +19,8 @@ beforeEach(() => {
           { assetId: 'height' },
           {
             id: 'terrain',
-            groundMaterials: [{ texture: { assetId: 'ground' }, weight: 1 }],
+            groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
+            groundWeights: { assetId: 'ground' },
           },
         ),
         scatterLayer({ id: 'trees', grain: 2 }),

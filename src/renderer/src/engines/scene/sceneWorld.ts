@@ -25,6 +25,7 @@ import {
   EYE_HEIGHT,
   FOG_DENSITY,
   GRAVITY,
+  GROUND_MATERIAL_CHANNELS,
   GROUND_SIZE,
   MOVE_SPEED,
   NO_FOG,
@@ -56,6 +57,7 @@ import {
   type SceneWorld,
   type TerrainEditLayer,
   type TerrainLocks,
+  type TextureRef,
   type WorldLayer,
   terrainEditLayer,
   UNLOCKED_TERRAIN,
@@ -176,35 +178,52 @@ function readWorldLayer(value: unknown): readonly WorldLayer[] {
   if (value.kind !== 'relief' || !isRecord(value.heightmap)) return []
   const assetId = value.heightmap.assetId
   if (typeof assetId !== 'string' || assetId === '') return []
+  return [readReliefLayer(value, assetId)]
+}
+
+function readReliefLayer(value: Record<string, unknown>, assetId: string): ReliefLayer {
   const legacySculpt = isRecord(value.sculpt) ? value.sculpt : undefined
-  return [
-    reliefLayer(
-      { assetId },
-      {
-        id: readString(value, 'id', '') || newId(),
-        name: readString(value, 'name', '') || DEFAULT_RELIEF_NAME,
-        enabled: readBoolean(value, 'enabled', true),
-        locked: readTerrainLocks(value.locked),
-        origin: readReliefOrigin(value.origin),
-        size: readReliefSize(value.size),
-        elevation: readReliefElevation(value.elevation),
-        grain: readReliefGrain('grain' in value ? value.grain : legacySculpt?.grain),
-        edits: Array.isArray(value.edits)
-          ? value.edits.flatMap(readTerrainEditLayer)
-          : [migratedSculptEdit(legacySculpt)],
-        groundMaterials: Array.isArray(value.groundMaterials)
-          ? value.groundMaterials.flatMap(readGroundMaterial)
-          : [],
-      },
-    ),
-  ]
+  return reliefLayer(
+    { assetId },
+    {
+      id: readString(value, 'id', '') || newId(),
+      name: readString(value, 'name', '') || DEFAULT_RELIEF_NAME,
+      enabled: readBoolean(value, 'enabled', true),
+      locked: readTerrainLocks(value.locked),
+      origin: readReliefOrigin(value.origin),
+      size: readReliefSize(value.size),
+      elevation: readReliefElevation(value.elevation),
+      grain: readReliefGrain('grain' in value ? value.grain : legacySculpt?.grain),
+      edits: Array.isArray(value.edits)
+        ? value.edits.flatMap(readTerrainEditLayer)
+        : [migratedSculptEdit(legacySculpt)],
+      groundMaterials: Array.isArray(value.groundMaterials)
+        ? value.groundMaterials.flatMap(readGroundMaterial)
+        : [],
+      groundWeights: readTextureRef(value.groundWeights),
+    },
+  )
 }
 
 function readGroundMaterial(value: unknown): readonly GroundMaterialLayer[] {
-  if (!isRecord(value) || !isRecord(value.texture)) return []
-  const assetId = value.texture.assetId
+  if (!isRecord(value)) return []
+  const source = isRecord(value.albedo) ? value.albedo : value.texture
+  if (!isRecord(source)) return []
+  const assetId = source.assetId
   if (typeof assetId !== 'string' || assetId === '') return []
-  return [{ texture: { assetId }, weight: readPositive(value, 'weight', 1) }]
+  const normal = readTextureRef(value.normal)
+  return [
+    {
+      albedo: { assetId },
+      normal,
+      channel: oneOf(GROUND_MATERIAL_CHANNELS, value.channel, 'r'),
+    },
+  ]
+}
+
+function readTextureRef(value: unknown): TextureRef | null {
+  if (!isRecord(value) || typeof value.assetId !== 'string' || value.assetId === '') return null
+  return { assetId: value.assetId }
 }
 
 function readScatterLayer(value: Record<string, unknown>): readonly ScatterLayer[] {

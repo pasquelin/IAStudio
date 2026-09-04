@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { bytesToBase64 } from '@shared/base64'
 import type { GroundPaint } from '@shared/domain/groundPaint'
-import type { ReliefLayer } from '@shared/domain/scene'
+import type { GroundMaterialLayer, ReliefLayer } from '@shared/domain/scene'
 import { encodePng } from '@/engines/material/derive/offscreen'
 import { setTerrainGroundMaterials } from '@/engines/scene/reliefCommands'
 import { fetchAsset } from '@/helpers/assetFetch'
@@ -57,7 +57,7 @@ export async function saveGroundPaint(
   if (!bridge || !terrain) return false
   try {
     const png = await codec.encode(paint)
-    const previous = terrain.groundMaterials[0]?.texture.assetId
+    const previous = terrain.groundMaterials[0]?.albedo.assetId
     const asset = await bridge.assets.savePicture({
       name: i18next.t('world.groundPaintName', { name: terrain.name }),
       png: bytesToBase64(png),
@@ -65,12 +65,12 @@ export async function saveGroundPaint(
     })
     await useAssets.getState().refresh()
     const current = terrainOf(documentId, terrainId)
-    if (!current || current.groundMaterials[0]?.texture.assetId !== previous) return false
-    const groundMaterials = current.groundMaterials.length
+    if (!current || current.groundMaterials[0]?.albedo.assetId !== previous) return false
+    const groundMaterials: readonly GroundMaterialLayer[] = current.groundMaterials.length
       ? current.groundMaterials.map((entry, index) =>
-          index === 0 ? { ...entry, texture: { assetId: asset.id } } : entry,
+          index === 0 ? { ...entry, albedo: { assetId: asset.id } } : entry,
         )
-      : [{ texture: { assetId: asset.id }, weight: 1 }]
+      : [{ albedo: { assetId: asset.id }, normal: null, channel: 'r' }]
     useScenes
       .getState()
       .runCommand(documentId, setTerrainGroundMaterials(terrainId, groundMaterials))
@@ -86,7 +86,8 @@ export async function loadGroundPaint(
   terrainId: string,
   codec: GroundPaintCodec = groundPaintCodec,
 ): Promise<GroundPaint | null> {
-  const assetId = terrainOf(documentId, terrainId)?.groundMaterials[0]?.texture.assetId
+  const terrain = terrainOf(documentId, terrainId)
+  const assetId = terrain?.groundWeights?.assetId ?? terrain?.groundMaterials[0]?.albedo.assetId
   if (!assetId) return null
   try {
     return await codec.decode(assetId)

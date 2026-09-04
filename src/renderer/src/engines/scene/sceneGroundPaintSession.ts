@@ -46,7 +46,9 @@ async function paintAfter(
   if (!paint) return false
   const terrain = world.layers.find(item => item.kind === 'relief' && item.id === terrainId)
   const assetId =
-    terrain?.kind === 'relief' ? terrain.groundMaterials[0]?.texture.assetId : undefined
+    terrain?.kind === 'relief'
+      ? (terrain.groundWeights?.assetId ?? terrain.groundMaterials[0]?.albedo.assetId)
+      : undefined
   held.set(terrainId, { assetId: assetId ?? null, paint })
   options.apply(terrainId, paint)
   return true

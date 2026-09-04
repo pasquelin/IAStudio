@@ -5,6 +5,7 @@ import type { Vector3 } from './transform'
 import type { GeometryDescriptor } from './geometry'
 import {
   UNLOCKED_TERRAIN,
+  type GroundMaterialChannel,
   type ReliefLayer,
   type ScatterLayer,
   type TerrainEditLayer,
@@ -166,6 +167,8 @@ export const DEFAULT_RELIEF_ELEVATION: ReliefLayer['elevation'] = Object.freeze(
 })
 export const DEFAULT_RELIEF_NAME = 'Terrain'
 export const DEFAULT_EDIT_NAME = 'Sculpt'
+export const GROUND_MATERIAL_CHANNELS: readonly GroundMaterialChannel[] = ['r', 'g', 'b', 'a']
+export const MAX_GROUND_MATERIALS = GROUND_MATERIAL_CHANNELS.length
 
 export function terrainEditLayer(
   patch: Partial<TerrainEditLayer> & { id: string },
@@ -205,7 +208,8 @@ export function reliefLayer(
     elevation: patch.elevation ?? DEFAULT_RELIEF_ELEVATION,
     grain: patch.grain ?? RELIEF_CHUNK_TEXELS,
     edits: patch.edits ?? [],
-    groundMaterials: patch.groundMaterials ?? [],
+    groundMaterials: (patch.groundMaterials ?? []).slice(0, MAX_GROUND_MATERIALS),
+    groundWeights: patch.groundWeights ?? null,
   }
 }
 

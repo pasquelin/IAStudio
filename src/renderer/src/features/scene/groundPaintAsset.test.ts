@@ -60,7 +60,7 @@ describe('ground paint assets', () => {
     await expect(loadGroundPaint('doc-1', 'terrain', codec)).resolves.toEqual(paint)
     const terrain = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
     expect(terrain?.kind === 'relief' ? terrain.groundMaterials : []).toEqual([
-      { texture: { assetId: 'paint-1' }, weight: 1 },
+      { albedo: { assetId: 'paint-1' }, normal: null, channel: 'r' },
     ])
   })
 
@@ -71,8 +71,8 @@ describe('ground paint assets', () => {
         id: 'terrain',
         name: 'Island',
         groundMaterials: [
-          { texture: { assetId: 'source' }, weight: 0.7 },
-          { texture: { assetId: 'detail' }, weight: 0.3 },
+          { albedo: { assetId: 'source' }, normal: null, channel: 'r' },
+          { albedo: { assetId: 'detail' }, normal: null, channel: 'g' },
         ],
       },
     )
@@ -99,8 +99,8 @@ describe('ground paint assets', () => {
     expect(requests[0]).not.toHaveProperty('replaces')
     const stored = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
     expect(stored?.kind === 'relief' ? stored.groundMaterials : []).toEqual([
-      { texture: { assetId: 'paint-1' }, weight: 0.7 },
-      { texture: { assetId: 'detail' }, weight: 0.3 },
+      { albedo: { assetId: 'paint-1' }, normal: null, channel: 'r' },
+      { albedo: { assetId: 'detail' }, normal: null, channel: 'g' },
     ])
   })
 })

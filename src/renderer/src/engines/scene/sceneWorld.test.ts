@@ -7,6 +7,7 @@ import {
   DEFAULT_SCATTER_RULES,
   DEFAULT_WORLD,
   enabledScatters,
+  GROUND_MATERIAL_CHANNELS,
   reliefLayer,
   scatterLayer,
   SCATTER_COLLISION_CAP,
@@ -352,14 +353,51 @@ describe('reading a world back', () => {
       { assetId: 'asset_height' },
       {
         id: 'island',
-        groundMaterials: [{ texture: { assetId: 'dirt' }, weight: 1 }],
+        groundMaterials: [{ albedo: { assetId: 'dirt' }, normal: null, channel: 'r' }],
       },
     )
     expect(readWorld({ layers: [written] }, undefined).layers).toEqual([written])
     expect(
       readWorld({ layers: [{ kind: 'relief', heightmap: { assetId: 'asset_height' } }] }, undefined)
         .layers[0],
-    ).toMatchObject({ groundMaterials: [] })
+    ).toMatchObject({ groundMaterials: [], groundWeights: null })
+  })
+
+  it('migrates a legacy ground picture without enabling splat blending', () => {
+    const layer = readWorld(
+      {
+        layers: [
+          {
+            kind: 'relief',
+            heightmap: { assetId: 'height' },
+            groundMaterials: [{ texture: { assetId: 'painted' }, weight: 1 }],
+          },
+        ],
+      },
+      undefined,
+    ).layers[0]
+
+    expect(layer).toMatchObject({
+      groundMaterials: [{ albedo: { assetId: 'painted' }, normal: null, channel: 'r' }],
+      groundWeights: null,
+    })
+  })
+
+  it('round-trips four channelled materials and shared weights', () => {
+    const written = reliefLayer(
+      { assetId: 'height' },
+      {
+        id: 'terrain',
+        groundMaterials: GROUND_MATERIAL_CHANNELS.map((channel, index) => ({
+          albedo: { assetId: `albedo-${index}` },
+          normal: index === 0 ? null : { assetId: `normal-${index}` },
+          channel,
+        })),
+        groundWeights: { assetId: 'weights' },
+      },
+    )
+
+    expect(readWorld({ layers: [written] }, undefined).layers).toEqual([written])
   })
 
   it('publishes the scatter collision cap and the painted-mask texel count', () => {

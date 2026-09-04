@@ -17,7 +17,8 @@ export async function groundPaintedAt(
 ): Promise<GroundPaint | null> {
   const terrain = world.layers.find(layer => layer.kind === 'relief' && layer.id === terrainId)
   if (!terrain || terrain.kind !== 'relief' || terrain.locked.sculpt) return null
-  const assetId = terrain.groundMaterials[0]?.texture.assetId ?? null
+  const assetId =
+    terrain.groundWeights?.assetId ?? terrain.groundMaterials[0]?.albedo.assetId ?? null
   const cached = held.get(terrainId)
   const loaded = cached?.assetId === assetId ? cached.paint : await load?.(terrainId)
   return paintGroundDisk(

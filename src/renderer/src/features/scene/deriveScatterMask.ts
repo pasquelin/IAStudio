@@ -19,7 +19,7 @@ export async function deriveScatterMask(
     (layer): layer is ReliefLayer =>
       layer.kind === 'relief' &&
       layer.enabled &&
-      layer.groundMaterials.length > 0 &&
+      layer.groundWeights !== null &&
       overlaps(layer, scatter),
   )
   if (!terrain) return false
