@@ -23,7 +23,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    requires: ['selectedGenerationModel'],
+    inputs: ['generationModelCandidates'],
     fields: [
       { key: 'modelId', kind: 'text', labelKey: 'assistant.fields.modelId', required: true },
     ],

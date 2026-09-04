@@ -1,7 +1,7 @@
 import { HEX_COLOR } from './color'
 import type { FieldKind } from './model'
 import { ENVIRONMENT_KINDS } from './scene'
-
+import type { ActionResource } from './actionResource'
 /**
  * Every action the studio publishes, in one list.
  *
@@ -11,9 +11,7 @@ import { ENVIRONMENT_KINDS } from './scene'
  * built leaves the registry and the handler table in perfect agreement about nothing.
  */
 import type { ActionName } from './assistantActionNames'
-
 export type { ActionName } from './assistantActionNames'
-
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
  *
@@ -58,14 +56,7 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
  * but neither decides anything today. A new action may be marked either way without a consequence.
  */
 export type ActionReach = 'both' | 'mcp'
-
-export type ActionResource =
-  | 'generationModelCandidates'
-  | 'selectedGenerationModel'
-  | 'preparedGeneration'
-
 export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
-
 /**
  * One input of an action.
  *
@@ -139,6 +130,8 @@ export type AssistantAction = {
   fields: readonly ActionField[]
   requires?: readonly ActionResource[]
   produces?: readonly ActionResource[]
+  inputs?: readonly ActionResource[]
+  returns?: readonly ActionResource[]
 }
 
 export function action(descriptor: AssistantAction): AssistantAction {

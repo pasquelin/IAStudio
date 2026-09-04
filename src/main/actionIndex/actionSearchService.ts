@@ -15,6 +15,7 @@ export type ActionSearchService = {
     query: string,
     limit?: number,
     available?: readonly ActionResource[],
+    scope?: { target?: string; document?: string },
   ) => Promise<readonly ActionHit[]>
   close: () => Promise<void>
 }
@@ -67,7 +68,7 @@ export function createActionSearchService({
   }
 
   return {
-    search: async (query, limit, available) => {
+    search: async (query, limit, available, scope) => {
       let index: AsyncActionIndex
       try {
         index = await holder()
@@ -82,14 +83,14 @@ export function createActionSearchService({
           await indexing
           const values = await embedder.embedQuery(query)
           if (values.length > 0 && embedder.chosen() === model)
-            return await index.search({ query, limit, available, embedding: { model, values } })
+            return await index.search({ query, limit, available, scope, embedding: { model, values } })
         } catch (error) {
           onTrouble(messageOf(error))
         } finally {
           indexing = null
         }
       }
-      return await index.search({ query, limit, available })
+      return await index.search({ query, limit, available, scope })
     },
     close: async () => {
       try {

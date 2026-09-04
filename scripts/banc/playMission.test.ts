@@ -46,6 +46,7 @@ function expectCausalReflection(reflection: Record<string, unknown>, context: st
   expect(reflection['contextSerialized']).toBe(context)
   expect(reflection['actionIndex']).toMatchObject({
     available: [],
+    scope: { target: 'node', document: 'scene' },
     candidates: [{ action: { name: 'scene.state' }, lexicalScore: 3 }],
   })
   expect(reflection['providerAttempts']).toMatchObject([

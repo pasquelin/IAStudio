@@ -1,5 +1,5 @@
 import type { ActionName } from '@shared/domain/assistant'
-import type { ActionResource } from '@shared/domain/assistantAction'
+import type { ActionResource } from '@shared/domain/actionResource'
 import { askExpression } from '@main/project/ftsMatch'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { bytes, number, optionalNumber, optionalText } from '@main/project/sqlRow'
@@ -23,6 +23,7 @@ export type ActionSearch = {
   limit?: number
   embedding?: { model: string; values: Float32Array }
   available?: readonly ActionResource[]
+  scope?: { target?: string; document?: string }
 }
 
 export type ActionHit = {
@@ -31,6 +32,7 @@ export type ActionHit = {
   lexicalScore: number
   semanticScore?: number
   workflowScore?: number
+  scopeScore?: number
 }
 
 export type ActionRebuild = {
@@ -104,6 +106,50 @@ function tokenScore(
   if (titleTokens.some(candidate => candidate.startsWith(prefix))) score += 2
   if (fieldTokens.some(candidate => candidate.startsWith(prefix))) score += 1.5
   return score
+}
+
+function actionScopeScore(action: IndexedAction, scope: ActionSearch['scope']): number {
+  const target = scope?.target?.toLocaleLowerCase('en')
+  const document = scope?.document?.toLocaleLowerCase('en')
+  return Number(action.name.split('.')[0] === target) * 3 + Number(action.family === document) * 0.5
+}
+
+function workflowScoresOf(
+  hits: readonly ActionHit[],
+  availableResources: readonly ActionResource[],
+): ReadonlyMap<ActionName, number> {
+  const available = new Set(availableResources)
+  const scores = new Map<ActionName, number>()
+  const ranked = hits
+    .filter(hit => hit.score >= 1)
+    .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
+  const producers = (resource: ActionResource): readonly IndexedAction[] =>
+    hits
+      .map(hit => hit.action)
+      .filter(action => action.produces.includes(resource) || action.returns.includes(resource))
+  const visit = (
+    action: IndexedAction,
+    score: number,
+    visited: ReadonlySet<ActionResource>,
+  ): void => {
+    for (const resource of [...action.requires, ...action.inputs]) {
+      if (available.has(resource) || visited.has(resource)) continue
+      const nextVisited = new Set(visited).add(resource)
+      for (const producer of producers(resource)) {
+        scores.set(producer.name, Math.max(scores.get(producer.name) ?? 0, score))
+        visit(producer, Math.max(1, score - 1), nextVisited)
+      }
+    }
+  }
+  for (const hit of ranked.slice(0, 3)) visit(hit.action, 6, new Set())
+  for (const resource of available) {
+    for (const hit of ranked.filter(
+      candidate =>
+        candidate.action.requires.includes(resource) || candidate.action.inputs.includes(resource),
+    ))
+      scores.set(hit.action.name, Math.max(scores.get(hit.action.name) ?? 0, 4))
+  }
+  return scores
 }
 
 export function createActionIndex(driver: SqliteDriver): ActionIndex {
@@ -234,43 +280,18 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         question && model === wanted.embedding?.model
           ? dotOfBytes(bytes(row, 'embedding'), question)
           : undefined
+      const scopeScore = actionScopeScore(action, wanted.scope)
       return [
         {
           action,
           lexicalScore: lexical,
+          ...(scopeScore === 0 ? {} : { scopeScore }),
           ...(semantic === undefined ? {} : { semanticScore: semantic }),
-          score: lexical + Math.max(0, semantic ?? 0) * 3,
+          score: lexical + Math.max(0, semantic ?? 0) * 3 + scopeScore,
         },
       ]
     })
-    const available = new Set(wanted.available ?? [])
-    const workflowScores = new Map<ActionName, number>()
-    const actions = hits.map(hit => hit.action)
-    const rankedHits = hits
-      .filter(hit => hit.score >= 1)
-      .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
-    const producers = (resource: ActionResource): readonly IndexedAction[] =>
-      actions.filter(action => action.produces.includes(resource))
-    const visitRequirements = (
-      action: IndexedAction,
-      score: number,
-      visited: ReadonlySet<ActionResource>,
-    ): void => {
-      for (const resource of action.requires) {
-        if (available.has(resource) || visited.has(resource)) continue
-        const nextVisited = new Set(visited).add(resource)
-        for (const producer of producers(resource)) {
-          workflowScores.set(producer.name, Math.max(workflowScores.get(producer.name) ?? 0, score))
-          visitRequirements(producer, Math.max(1, score - 1), nextVisited)
-        }
-      }
-    }
-    for (const hit of rankedHits.slice(0, MAX_LIMIT))
-      visitRequirements(hit.action, 6, new Set())
-    for (const resource of available) {
-      for (const action of actions.filter(candidate => candidate.requires.includes(resource)))
-        workflowScores.set(action.name, Math.max(workflowScores.get(action.name) ?? 0, 4))
-    }
+    const workflowScores = workflowScoresOf(hits, wanted.available ?? [])
     const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(wanted.limit ?? DEFAULT_LIMIT)))
     return hits
       .map(hit => {

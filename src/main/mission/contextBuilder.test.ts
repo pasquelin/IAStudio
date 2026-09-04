@@ -117,24 +117,41 @@ describe('AssistantContextBuilder', () => {
       expect.stringContaining('Rename the selected cube'),
       12,
       [],
+      { target: 'node', document: 'scene' },
     )
     expect(search.mock.calls[0]?.[0]).not.toContain('light_')
   })
 
-  it('tells action retrieval when a generation model is already selected', async () => {
-    const { mission, step } = missionOf('/projects/alpha')
-    const snapshot = snapshotOf()
-    snapshot.armedModels = { txt2img: 'model_1' }
+  it('only exposes resources returned with a non-empty result', async () => {
+    const base = missionOf('/projects/alpha')
+    const discovered: MissionStep = {
+      ...base.step,
+      id: 'step_search',
+      kind: 'action',
+      call: { action: 'models.search', input: { query: '3d' } },
+      state: 'completed',
+      result: [],
+    }
     const search = vi.fn(
       async (_query: string, _limit?: number, _available?: readonly ActionResource[]) => [],
     )
-    const builder = createAssistantContextBuilder(
-      dependencies({ snapshot: async () => snapshot, actions: { search } }),
-    )
+    const builder = createAssistantContextBuilder(dependencies({ actions: { search } }))
 
-    await builder.build({ mission, step, request: 'Generate an image' })
+    await builder.build({
+      mission: { ...base.mission, plan: { steps: [discovered, base.step] } },
+      step: base.step,
+      request: 'Generate an image',
+    })
+    await builder.build({
+      mission: {
+        ...base.mission,
+        plan: { steps: [{ ...discovered, result: [{ id: 'model-3d' }] }, base.step] },
+      },
+      step: base.step,
+      request: 'Generate an image',
+    })
 
-    expect(search).toHaveBeenCalledWith(expect.any(String), 12, ['selectedGenerationModel'])
+    expect(search.mock.calls.map(call => call[2])).toEqual([[], ['generationModelCandidates']])
   })
 
   it('builds a useful context without a window or project', async () => {

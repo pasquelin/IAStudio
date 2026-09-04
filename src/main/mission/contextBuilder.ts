@@ -96,16 +96,30 @@ function retrievalQuery(input: AssistantContextRequest): string {
 
 function availableActionResources(
   input: AssistantContextRequest,
-  snapshot: StudioSnapshot | null,
 ): readonly ActionResource[] {
   const resources = new Set<ActionResource>()
-  if (Object.keys(snapshot?.armedModels ?? {}).length > 0) resources.add('selectedGenerationModel')
   for (const step of input.mission.plan.steps) {
     if (step.kind !== 'action' || step.state !== 'completed') continue
     const descriptor = assistantAction(step.call.action)
     for (const resource of descriptor?.produces ?? []) resources.add(resource)
+    const hasReturnedValue = Array.isArray(step.result)
+      ? step.result.length > 0
+      : step.result !== undefined && step.result !== null
+    if (hasReturnedValue) {
+      for (const resource of descriptor?.returns ?? []) resources.add(resource)
+    }
   }
   return [...resources]
+}
+
+function actionScope(snapshot: StudioSnapshot | null): {
+  target?: string
+  document?: string
+} {
+  return {
+    ...(snapshot?.selection ? { target: snapshot.selection.kind } : {}),
+    ...(snapshot?.activeDocumentState ? { document: snapshot.activeDocumentState.kind } : {}),
+  }
 }
 
 function rankedCards(context: ContextState, query: string): ContextState {
@@ -160,7 +174,8 @@ async function collectContext(
       deps.actions.search(
         query,
         CONTEXT_BUDGETS.actions.maxItems,
-        availableActionResources(input, snapshot),
+        availableActionResources(input),
+        actionScope(snapshot),
       ),
       attached
         ? deps.memories.recall('project', {

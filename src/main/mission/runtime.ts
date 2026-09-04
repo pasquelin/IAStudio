@@ -73,7 +73,7 @@ const verificationStep = (): PlannedStep => ({
 
 const MAX_MISSION_STEPS = 48
 
-function dependsOnProduced(
+function dependsOnReturned(
   resource: ActionResource,
   produced: ReadonlySet<ActionResource>,
   visited: ReadonlySet<ActionResource> = new Set(),
@@ -81,8 +81,8 @@ function dependsOnProduced(
   if (produced.has(resource)) return true
   if (visited.has(resource)) return false
   const nextVisited = new Set(visited).add(resource)
-  return ACTION_REGISTRY.filter(action => action.produces?.includes(resource)).some(action =>
-    (action.requires ?? []).some(required => dependsOnProduced(required, produced, nextVisited)),
+  return ACTION_REGISTRY.filter(action => action.returns?.includes(resource)).some(action =>
+    (action.inputs ?? []).some(required => dependsOnReturned(required, produced, nextVisited)),
   )
 }
 
@@ -96,15 +96,15 @@ function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly P
       reasoningStep(),
     ]
   }
-  const produced = new Set<ActionResource>()
+  const returned = new Set<ActionResource>()
   const actions: PlannedStep[] = []
   for (const call of answer.calls) {
     const descriptor = assistantAction(call.action)
-    if ((descriptor?.requires ?? []).some(resource => dependsOnProduced(resource, produced))) {
+    if ((descriptor?.inputs ?? []).some(resource => dependsOnReturned(resource, returned))) {
       return [...actions, reasoningStep()]
     }
     actions.push(actionStep(call))
-    for (const resource of descriptor?.produces ?? []) produced.add(resource)
+    for (const resource of descriptor?.returns ?? []) returned.add(resource)
   }
   return actions.length > 0 ? [...actions, verificationStep()] : verification ? [] : actions
 }

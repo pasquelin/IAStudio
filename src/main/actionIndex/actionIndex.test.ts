@@ -112,19 +112,31 @@ describe('ActionIndex', () => {
 
     const discovery = index.search({ query: 'génère une image photoréaliste', limit: 12 })
     expect(discovery.map(hit => hit.action.name)).toEqual(
-      expect.arrayContaining(['models.search', 'models.select', 'generator.prepare']),
+      expect.arrayContaining(['models.search', 'generator.prepare']),
     )
     const continuation = index.search({
       query: 'génère une image photoréaliste',
       limit: 12,
       available: ['generationModelCandidates'],
     })
-    expect(continuation.find(hit => hit.action.name === 'models.select')?.workflowScore).toBeGreaterThan(
+    expect(continuation.find(hit => hit.action.name === 'generator.prepare')?.workflowScore).toBeGreaterThan(
       0,
     )
     expect(discovery.find(hit => hit.action.name === 'models.search')?.action.description).toContain(
       'not the content to generate',
     )
+  })
+
+  it('uses structural scope without mixing it into the lexical query', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const hits = index.search({ query: 'renomme la sélection', limit: 12, scope: { target: 'node' } })
+
+    expect(hits.map(hit => hit.action.name)).toContain('node.rename')
+    expect(hits.find(hit => hit.action.name === 'node.rename')?.scopeScore).toBe(3)
   })
 
   it('replaces fields, vectors and FTS words when the corpus changes', () => {

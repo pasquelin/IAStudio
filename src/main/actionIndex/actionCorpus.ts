@@ -27,6 +27,8 @@ export type IndexedAction = {
   localizedFieldLabels: readonly string[]
   requires: readonly ActionResource[]
   produces: readonly ActionResource[]
+  inputs: readonly ActionResource[]
+  returns: readonly ActionResource[]
 }
 
 export type ActionCorpus = {
@@ -63,6 +65,8 @@ export function actionCorpus(): ActionCorpus {
         localizedTitles: [title, frenchTitle],
         requires: action.requires ?? [],
         produces: action.produces ?? [],
+        inputs: action.inputs ?? [],
+        returns: action.returns ?? [],
         localizedFieldLabels: fields.flatMap(field => [
           englishText(field.labelKey),
           textAt(TRANSLATIONS.fr, field.labelKey),

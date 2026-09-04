@@ -47,6 +47,7 @@ import { STATE_ACTIONS } from './stateActions'
 
 export * from './assistantAction'
 export * from './assistantModel'
+export * from './actionResource'
 
 export { commitmentOfCommand } from './coreActions'
 

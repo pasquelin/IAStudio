@@ -105,14 +105,15 @@ function tracedContext(
       let retrieval = {
         query: '',
         available: [] as Parameters<typeof actions.search>[2],
+        scope: {} as NonNullable<Parameters<typeof actions.search>[3]>,
         candidates: [] as Awaited<ReturnType<typeof actions.search>>,
       }
       const builder = createAssistantContextBuilder({
         snapshot: async () => (snapshot = await studio.snapshot()),
         actions: {
-          search: async (query, limit, available) => {
-            const candidates = await actions.search(query, limit, available)
-            retrieval = { query, available: available ?? [], candidates }
+          search: async (query, limit, available, scope) => {
+            const candidates = await actions.search(query, limit, available, scope)
+            retrieval = { query, available: available ?? [], scope: scope ?? {}, candidates }
             return candidates
           },
         },
@@ -172,6 +173,25 @@ async function writeFailure(
   }
 }
 
+function completedRun(
+  studio: Studio,
+  called: readonly Called[],
+  metrics: ReturnType<typeof createMissionMetrics>,
+  response: ReturnType<typeof answersOf>,
+  traceFile?: string,
+): MissionRun {
+  return {
+    studio,
+    called,
+    refused: called.filter(call => call.answer?.startsWith('refused')).length,
+    said: response.said,
+    asks: response.asks,
+    rounds: metrics.read().llmCalls,
+    metrics: metrics.read(),
+    ...(traceFile ? { traceFile } : {}),
+  }
+}
+
 export async function playMission(
   scenario: Scenario,
   think: AssistantBrain['think'],
@@ -209,16 +229,7 @@ export async function playMission(
     const missions = await manager.list(scope)
     const response = answersOf(missions)
     const traceFile = recorder?.write(missions, await studio.snapshot())
-    return {
-      studio,
-      called,
-      refused: called.filter(call => call.answer?.startsWith('refused')).length,
-      said: response.said,
-      asks: response.asks,
-      rounds: metrics.read().llmCalls,
-      metrics: metrics.read(),
-      ...(traceFile ? { traceFile } : {}),
-    }
+    return completedRun(studio, called, metrics, response, traceFile)
   } catch (error) {
     await writeFailure(recorder, manager, studio)
     studio.close()

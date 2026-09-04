@@ -15,6 +15,7 @@ import type { ActionHit } from '@main/actionIndex/actionIndex'
 type Retrieval = {
   query: string
   available: readonly ActionResource[]
+  scope: { target?: string; document?: string }
   candidates: readonly ActionHit[]
 }
 type ProviderAttempt = { prompt: string; rawResponse?: string; door: string; model: string }
@@ -182,6 +183,7 @@ export function createMissionTraceRecorder(options: TraceOptions): MissionTraceR
       const evidence = contexts.get(`${mission['id']}:${step['id']}`) ?? {
         query: '',
         available: [],
+        scope: {},
         candidates: [],
         snapshot: null,
       }
