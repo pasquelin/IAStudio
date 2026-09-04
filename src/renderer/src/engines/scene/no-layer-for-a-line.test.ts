@@ -48,6 +48,7 @@ const OTHER_SENSES: Record<string, string> = {
   reliefReadCost: 'World relief: the heightmap layer a surface is built from, not a timeline line',
   sceneRendererRelief: 'World relief: applyWorld reads world.layers, not a timeline line',
   SceneRendererSculpt: 'World relief: which heightmap a stroke writes, not a timeline line',
+  SceneRendererOptimization: 'Three.js visibility layers shared by objects and cameras',
   'scene-renderer-relief':
     'World relief: the edit layers a sculptor is held for, not a timeline line',
   reliefStroke: 'World relief: which heightmap a stroke writes, not a timeline line',
