@@ -1,5 +1,6 @@
 import type { BodyPart } from './humanoid'
 import type { ReliefMask, ReliefSculpt } from './relief'
+import type { ScatterLayer } from './scatter'
 import type { Us } from './time'
 import type { CameraPost } from './postProcessing'
 import type { TextureSlot } from './sceneTexture'
@@ -79,7 +80,8 @@ export type ReliefLayer = {
 }
 
 /** Open union: a later kind does not migrate documents written with only Relief. */
-export type WorldLayer = ReliefLayer
+export type { ScatterLayer }
+export type WorldLayer = ReliefLayer | ScatterLayer
 
 /**
  * A camera the scene holds, as opposed to the one the viewport looks through. It is a node like

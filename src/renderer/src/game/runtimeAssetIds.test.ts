@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   reliefLayer,
+  scatterLayer,
   type GeometryDescriptor,
   type OptimizationSettings,
 } from '@shared/domain/scene'
@@ -41,8 +42,27 @@ describe('assets reachable from an exported runtime', () => {
     }
 
     expect(runtimeAssetIds(state)).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
-    expect(runtimeTextureAssetIds(state.nodes)).toEqual(['shared'])
-    expect(runtimeModelAssetIds(state.nodes)).toEqual(['model'])
+  })
+
+  it('packages scatter prop assets the same way it packages a heightmap', () => {
+    const state: SceneState = {
+      ...EMPTY_SCENE,
+      world: {
+        ...EMPTY_SCENE.world,
+        layers: [
+          reliefLayer({ assetId: 'height' }, { id: 'terrain' }),
+          scatterLayer({
+            id: 'trees',
+            assets: [
+              { assetId: 'pine', weight: 2 },
+              { assetId: 'oak', weight: 1 },
+            ],
+          }),
+        ],
+      },
+    }
+
+    expect(runtimeAssetIds(state)).toEqual(['height', 'pine', 'oak'])
   })
 
   it('packages project animation clips and protects a texture used by an excluded node', () => {

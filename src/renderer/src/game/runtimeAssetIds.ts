@@ -16,7 +16,12 @@ export function runtimeAssetIds(state: SceneState): readonly string[] {
       }
     }
   }
-  for (const layer of state.world.layers) found.add(layer.heightmap.assetId)
+  for (const layer of state.world.layers) {
+    if (layer.kind === 'relief') found.add(layer.heightmap.assetId)
+    if (layer.kind === 'scatter') {
+      for (const asset of layer.assets) found.add(asset.assetId)
+    }
+  }
   for (const row of state.animation.audio ?? []) found.add(row.assetId)
   for (const row of state.animation.video ?? []) found.add(row.assetId)
   found.delete('')

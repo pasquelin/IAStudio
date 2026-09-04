@@ -17,6 +17,8 @@ import {
   DEFAULT_RELIEF_NAME,
   DEFAULT_RELIEF_ORIGIN,
   DEFAULT_RELIEF_SIZE,
+  DEFAULT_SCATTER_NAME,
+  DEFAULT_SCATTER_RULES,
   DEFAULT_WORLD,
   ENV_INTENSITY,
   EXPOSURE,
@@ -29,6 +31,15 @@ import {
   PLAY_CAMERAS,
   readEnvironment,
   reliefLayer,
+  scatterLayer,
+  SCATTER_ALTITUDE,
+  SCATTER_DENSITY,
+  SCATTER_FOLLOW_RELIEF,
+  SCATTER_SCALE,
+  SCATTER_SLOPE,
+  SCATTER_SLOPE_ALIGN,
+  SCATTER_SPACING,
+  SCATTER_TILT,
   STUDIO_ENVIRONMENT,
   TONE_MAPPINGS,
   type BackgroundDescriptor,
@@ -36,6 +47,9 @@ import {
   type FogDescriptor,
   type GroundDescriptor,
   type ReliefLayer,
+  type ScatterAsset,
+  type ScatterLayer,
+  type ScatterRules,
   type ScenePlay,
   type SceneWorld,
   type TerrainEditLayer,
@@ -46,7 +60,15 @@ import {
 } from '@shared/domain/scene'
 import { readStack } from '@shared/domain/postProcessing'
 import { readReliefGrain, readReliefMask, readReliefSculpt } from '@shared/domain/relief'
-import { isRecord, oneOf, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
+import {
+  isRecord,
+  oneOf,
+  readBoolean,
+  readNumber,
+  readOptionalNumber,
+  readPositive,
+  readString,
+} from '@shared/guards'
 import { newId } from '@/helpers/ids'
 import { bound, type NumericBounds } from '@shared/numeric'
 
@@ -147,7 +169,9 @@ function readWorldLayers(value: unknown): readonly WorldLayer[] {
 }
 
 function readWorldLayer(value: unknown): readonly WorldLayer[] {
-  if (!isRecord(value) || value.kind !== 'relief' || !isRecord(value.heightmap)) return []
+  if (!isRecord(value)) return []
+  if (value.kind === 'scatter') return readScatterLayer(value)
+  if (value.kind !== 'relief' || !isRecord(value.heightmap)) return []
   const assetId = value.heightmap.assetId
   if (typeof assetId !== 'string' || assetId === '') return []
   const legacySculpt = isRecord(value.sculpt) ? value.sculpt : undefined
@@ -169,6 +193,71 @@ function readWorldLayer(value: unknown): readonly WorldLayer[] {
       },
     ),
   ]
+}
+
+function readScatterLayer(value: Record<string, unknown>): readonly ScatterLayer[] {
+  return [
+    scatterLayer({
+      id: readString(value, 'id', '') || newId(),
+      name: readString(value, 'name', '') || DEFAULT_SCATTER_NAME,
+      enabled: readBoolean(value, 'enabled', true),
+      locked: readBoolean(value, 'locked', false),
+      assets: Array.isArray(value.assets) ? value.assets.flatMap(readScatterAsset) : [],
+      seed: readNumber(value, 'seed', 1),
+      rules: readScatterRules(value.rules),
+      collision: readBoolean(value, 'collision', false),
+      followRelief: oneOf(SCATTER_FOLLOW_RELIEF, value.followRelief, 'brush'),
+      origin: readReliefOrigin(value.origin),
+      size: readReliefSize(value.size),
+      grain: readReliefGrain(value.grain),
+      mask: readReliefMask(value.mask),
+    }),
+  ]
+}
+
+function readScatterAsset(value: unknown): readonly ScatterAsset[] {
+  if (!isRecord(value)) return []
+  const assetId = readString(value, 'assetId', '')
+  if (assetId === '') return []
+  const weight = readPositive(value, 'weight', 1)
+  return [{ assetId, weight: weight > 0 ? weight : 1 }]
+}
+
+function readScatterRules(value: unknown): ScatterRules {
+  if (!isRecord(value)) return DEFAULT_SCATTER_RULES
+  const rules: ScatterRules = {
+    density: readBounded(value, 'density', DEFAULT_SCATTER_RULES.density, SCATTER_DENSITY),
+    spacing: readBounded(value, 'spacing', DEFAULT_SCATTER_RULES.spacing, SCATTER_SPACING),
+    minScale: readBounded(value, 'minScale', DEFAULT_SCATTER_RULES.minScale, SCATTER_SCALE),
+    maxScale: readBounded(value, 'maxScale', DEFAULT_SCATTER_RULES.maxScale, SCATTER_SCALE),
+    randomRotation: readBoolean(value, 'randomRotation', DEFAULT_SCATTER_RULES.randomRotation),
+    randomTilt: readBounded(value, 'randomTilt', DEFAULT_SCATTER_RULES.randomTilt, SCATTER_TILT),
+    slopeAlign: readBounded(
+      value,
+      'slopeAlign',
+      DEFAULT_SCATTER_RULES.slopeAlign,
+      SCATTER_SLOPE_ALIGN,
+    ),
+    altitudeMin: readBounded(
+      value,
+      'altitudeMin',
+      DEFAULT_SCATTER_RULES.altitudeMin,
+      SCATTER_ALTITUDE,
+    ),
+    altitudeMax: readBounded(
+      value,
+      'altitudeMax',
+      DEFAULT_SCATTER_RULES.altitudeMax,
+      SCATTER_ALTITUDE,
+    ),
+    slopeMin: readBounded(value, 'slopeMin', DEFAULT_SCATTER_RULES.slopeMin, SCATTER_SLOPE),
+    slopeMax: readBounded(value, 'slopeMax', DEFAULT_SCATTER_RULES.slopeMax, SCATTER_SLOPE),
+  }
+  const waterDistance = readOptionalNumber(value, 'waterDistance')
+  const roadDistance = readOptionalNumber(value, 'roadDistance')
+  if (waterDistance !== undefined) rules.waterDistance = waterDistance
+  if (roadDistance !== undefined) rules.roadDistance = roadDistance
+  return rules
 }
 
 /**

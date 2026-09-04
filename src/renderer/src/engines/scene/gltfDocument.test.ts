@@ -160,7 +160,8 @@ describe('sceneFromGltf', () => {
     const bytes = openExrFloatY(4, 4, values)
     const body = new ArrayBuffer(bytes.byteLength)
     new Uint8Array(body).set(bytes)
-    const assetId = back.world.layers[0]?.heightmap.assetId ?? ''
+    const first = back.world.layers[0]
+    const assetId = first?.kind === 'relief' ? first.heightmap.assetId : ''
     const samples = await loadHeightmap(assetId, async () => body)
     expect(samples.width).toBe(4)
     expect(samples.height).toBe(4)

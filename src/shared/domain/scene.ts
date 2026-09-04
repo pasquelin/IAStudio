@@ -6,6 +6,7 @@ import type { GeometryDescriptor } from './geometry'
 import {
   UNLOCKED_TERRAIN,
   type ReliefLayer,
+  type ScatterLayer,
   type TerrainEditLayer,
   type TextureRef,
   type WorldLayer,
@@ -14,6 +15,7 @@ import type { TextureSlot } from './sceneTexture'
 
 export * from './sceneModel'
 export * from './sceneTexture'
+export * from './scatter'
 export type { ReliefMask } from './relief'
 
 export type EnvironmentRef =
@@ -180,7 +182,11 @@ export function terrainEditLayer(
 }
 
 export function enabledTerrains(layers: readonly WorldLayer[]): readonly ReliefLayer[] {
-  return layers.filter(layer => layer.kind === 'relief' && layer.enabled)
+  return layers.filter((layer): layer is ReliefLayer => layer.kind === 'relief' && layer.enabled)
+}
+
+export function enabledScatters(layers: readonly WorldLayer[]): readonly ScatterLayer[] {
+  return layers.filter((layer): layer is ScatterLayer => layer.kind === 'scatter' && layer.enabled)
 }
 
 export function reliefLayer(

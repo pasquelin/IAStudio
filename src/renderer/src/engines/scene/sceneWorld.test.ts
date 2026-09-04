@@ -3,8 +3,14 @@ import { withChunkDelta } from '@shared/domain/relief'
 import {
   DEFAULT_EDIT_NAME,
   DEFAULT_RELIEF_NAME,
+  DEFAULT_SCATTER_NAME,
+  DEFAULT_SCATTER_RULES,
   DEFAULT_WORLD,
+  enabledScatters,
   reliefLayer,
+  scatterLayer,
+  SCATTER_COLLISION_CAP,
+  SCATTER_MASK_TEXELS,
   STUDIO_ENVIRONMENT,
   terrainEditLayer,
   UNLOCKED_TERRAIN,
@@ -261,6 +267,72 @@ describe('reading a world back', () => {
       opacity: 1,
       receiveShadow: true,
     })
+  })
+
+  it('round-trips a scatter layer, including inert water and road distances', () => {
+    const written = scatterLayer({
+      id: 'pines',
+      name: 'Pines',
+      assets: [
+        { assetId: 'tree-a', weight: 2 },
+        { assetId: 'tree-b', weight: 1 },
+      ],
+      seed: 17,
+      collision: true,
+      followRelief: 'layer',
+      mask: { kind: 'height', min: 4, max: 40 },
+      rules: {
+        ...DEFAULT_SCATTER_RULES,
+        density: 0.4,
+        spacing: 3,
+        slopeAlign: 60,
+        waterDistance: 8,
+        roadDistance: 2,
+      },
+    })
+    expect(readWorld({ layers: [written] }, undefined).layers).toEqual([written])
+  })
+
+  it('keeps a scatter with no assets, and fills the defaults a file omitted', () => {
+    const layers = readWorld({ layers: [{ kind: 'scatter' }] }, undefined).layers
+    expect(layers).toHaveLength(1)
+    expect(layers[0]).toMatchObject({
+      kind: 'scatter',
+      name: DEFAULT_SCATTER_NAME,
+      enabled: true,
+      locked: false,
+      assets: [],
+      seed: 1,
+      collision: false,
+      followRelief: 'brush',
+      rules: DEFAULT_SCATTER_RULES,
+    })
+    expect(layers[0]?.kind === 'scatter' ? layers[0].id.length : 0).toBeGreaterThan(0)
+  })
+
+  it('loads a relief-only document identically when a scatter kind exists', () => {
+    const written = reliefLayer(
+      { assetId: 'asset_height' },
+      {
+        id: 'island',
+        name: 'Island',
+        grain: 64,
+        edits: [terrainEditLayer({ id: 'hills', name: 'Hills' })],
+      },
+    )
+    expect(readWorld({ layers: [written] }, undefined).layers).toEqual([written])
+  })
+
+  it('keeps mixed relief and scatter in the order they were written', () => {
+    const terrain = reliefLayer({ assetId: 'asset_height' }, { id: 'ground' })
+    const scatter = scatterLayer({ id: 'rocks', assets: [{ assetId: 'boulder', weight: 1 }] })
+    expect(readWorld({ layers: [terrain, scatter] }, undefined).layers).toEqual([terrain, scatter])
+    expect(enabledScatters([terrain, scatter]).map(layer => layer.id)).toEqual(['rocks'])
+  })
+
+  it('publishes the scatter collision cap and the painted-mask texel count', () => {
+    expect(SCATTER_COLLISION_CAP).toBe(4096)
+    expect(SCATTER_MASK_TEXELS).toBe(256)
   })
 })
 
