@@ -16,10 +16,10 @@ export function useOptimizationAnalysis(
     const activeEngine = engine
     async function analyze() {
       try {
-        const [measured, project] = await Promise.all([
-          activeEngine.analyzeWorldOptimization(),
-          analyzeGameOptimization(),
-        ])
+        // 🛑 Measured FIRST and handed on: the project pass walks every scene of the project, this
+        // one included, so running the two at once analysed the open scene twice on one thread.
+        const measured = await activeEngine.analyzeWorldOptimization()
+        const project = await analyzeGameOptimization({ [documentId]: measured })
         if (active) {
           setPlan(measured)
           setProject(project)

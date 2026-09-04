@@ -117,6 +117,18 @@ describe('SAFE GLB geometry buffer optimization', () => {
     ]).toEqual([1.25, 2.5, 5])
   })
 
+  it('leaves an asset carrying a chunk it would drop exactly as it found it', () => {
+    const source = glbWithIndices([0, 1, 2])
+    const extended = new Uint8Array(source.byteLength + 8)
+    extended.set(source)
+    const data = new DataView(extended.buffer)
+    data.setUint32(8, extended.byteLength, true)
+    data.setUint32(source.byteLength, 0, true)
+    data.setUint32(source.byteLength + 4, 0x4e4b4e55, true)
+
+    expect(compactGlbGeometry(extended)).toBe(extended)
+  })
+
   it('refuses to compact an index buffer aliased by another view', () => {
     const source = glbWithFollowingFloats()
     const data = new DataView(source.buffer)

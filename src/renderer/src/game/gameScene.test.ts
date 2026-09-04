@@ -181,6 +181,32 @@ describe('a scene as a game draws it', () => {
     expect(matrix.elements.slice(12, 15)).toEqual([7, 1, -2])
   })
 
+  it('settles instanced bounds on the frame rather than on each placement', async () => {
+    const base = meshNode(BOX, { name: 'Baked crates' })
+    if (base.type !== 'mesh') throw new Error('expected a mesh fixture')
+    const node: SceneNode = {
+      ...base,
+      optimization: { mode: 'exclude' },
+      instances: [
+        { sourceId: 'first', name: 'First', transform: IDENTITY_TRANSFORM },
+        { sourceId: 'second', name: 'Second', transform: IDENTITY_TRANSFORM },
+      ],
+    }
+    const built = await buildGameScene(scene([node]), NOTHING)
+    const rendered = built.byEntity.get(node.id)
+    if (!(rendered instanceof InstancedMesh)) throw new Error('expected an instanced draw')
+    rendered.computeBoundingSphere()
+    const before = rendered.boundingSphere?.radius ?? 0
+    const uploaded = rendered.instanceMatrix.version
+
+    built.place('second', { ...IDENTITY_TRANSFORM, position: { x: 100, y: 0, z: 0 } })
+    expect(rendered.boundingSphere?.radius ?? 0).toBe(before)
+
+    built.flush()
+    expect(rendered.boundingSphere?.radius ?? 0).toBeGreaterThan(before)
+    expect(rendered.instanceMatrix.version).toBeGreaterThan(uploaded)
+  })
+
   it('builds every generated LOD level as an instanced draw for a baked group', async () => {
     const base = meshNode(
       { kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 },
@@ -218,6 +244,7 @@ describe('a scene as a game draws it', () => {
       scene([node]),
       { urlOf: () => 'assets/model.glb' },
       undefined,
+      undefined,
       async () => source,
     )
 
@@ -251,6 +278,7 @@ describe('a scene as a game draws it', () => {
       scene([node]),
       { urlOf: () => 'assets/model.glb' },
       undefined,
+      undefined,
       async () => source,
     )
 
@@ -272,10 +300,8 @@ describe('a scene as a game draws it', () => {
     const built = await buildGameScene(
       scene([node]),
       { urlOf: () => 'assets/model.glb' },
-      {
-        nodes: [{ nodeId: node.id, modelAssetId: 'model-1' }],
-        modelAssets: { 'model-1': [{ meshIndex: 0, lodMeshes: [triangle] }] },
-      },
+      { nodes: [{ nodeId: node.id, modelAssetId: 'model-1' }] },
+      { 'model-1': [{ meshIndex: 0, lodMeshes: [triangle] }] },
       async () => source,
     )
     const lods: LOD[] = []

@@ -94,6 +94,32 @@ describe('the LOSSY world compiled for an export', () => {
     })
   })
 
+  it('keeps the recipe and stops carving as soon as one level fails', async () => {
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array([1, 2, 3]), 3))
+    const node = carvedNode({
+      base: csgPartOf('Body', SPHERE, DEFAULT_MATERIAL),
+      steps: [],
+      collision: 'hull',
+    })
+    let carved = 0
+    const carve = async (): Promise<BufferGeometry | null> => {
+      carved += 1
+      return carved === 1 ? geometry : null
+    }
+
+    const compiled = await compileLossyWorldGeometry(
+      { nodes: [node] },
+      { ...NO_LOSSY_OPTIMIZATION, generateLods: true },
+      carve,
+      analyzeLossyWorld([node]),
+    )
+
+    expect(compiled?.nodes[0]?.lodCarved).toBeDefined()
+    expect(compiled?.nodes[0]?.lodMeshes).toBeUndefined()
+    expect(carved).toBe(2)
+  })
+
   it('stores evaluated CSG buffers instead of recipes in an exported plan', async () => {
     const geometry = new BufferGeometry()
     geometry.setAttribute('position', new BufferAttribute(new Float32Array([1, 2, 3]), 3))

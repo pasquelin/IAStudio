@@ -3,6 +3,7 @@ import { EXPORTED_GAME_FILE, type ExportedGame } from '@shared/domain/gameExport
 import type { GameExportRequest } from '@shared/domain/gameExport'
 import { gunzipSync, strFromU8 } from 'fflate'
 import { writeExportedGame, type GameExportPorts } from './gameExport'
+import { compactGlbGeometry } from './glbGeometry'
 
 const SCENE = (id: string, assetIds: readonly string[] = []): string =>
   JSON.stringify({ nodes: assetIds.map(assetId => ({ id, material: { map: { assetId } } })) })
@@ -37,6 +38,37 @@ function writing(over: Partial<GameExportPorts> = {}) {
     ...over,
   }
   return { ports, written }
+}
+
+/** A model whose uint32 index buffer fits in uint16, so the SAFE compaction has something to do. */
+function modelWithIndices(count: number): Uint8Array {
+  let seed = 1
+  const indices = Array.from({ length: count }, () => {
+    seed = (seed * 1_103_515_245 + 12_345) % 2_147_483_648
+    return seed % 65_536
+  })
+  const json = new TextEncoder().encode(
+    JSON.stringify({
+      asset: { version: '2.0' },
+      buffers: [{ byteLength: count * 4 }],
+      bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: count * 4, target: 34963 }],
+      accessors: [{ bufferView: 0, componentType: 5125, count, type: 'SCALAR' }],
+    }),
+  )
+  const jsonLength = Math.ceil(json.byteLength / 4) * 4
+  const file = new Uint8Array(12 + 8 + jsonLength + 8 + count * 4)
+  const data = new DataView(file.buffer)
+  data.setUint32(0, 0x46546c67, true)
+  data.setUint32(4, 2, true)
+  data.setUint32(8, file.byteLength, true)
+  data.setUint32(12, jsonLength, true)
+  data.setUint32(16, 0x4e4f534a, true)
+  file.fill(0x20, 20, 20 + jsonLength)
+  file.set(json, 20)
+  data.setUint32(20 + jsonLength, count * 4, true)
+  data.setUint32(24 + jsonLength, 0x004e4942, true)
+  indices.forEach((value, at) => data.setUint32(28 + jsonLength + at * 4, value, true))
+  return file
 }
 
 const manifestOf = (written: Map<string, string | Uint8Array>): ExportedGame =>
@@ -322,6 +354,20 @@ describe('a game written to run with no studio', () => {
     await writeExportedGame(ports, ASKED)
 
     expect(written.get('assets/checker.png')).toEqual(new Uint8Array([1]))
+  })
+
+  it('files a model compacted, and stores the gzip of the very bytes it chose', async () => {
+    const bytes = modelWithIndices(600)
+    const { ports, written } = writing({
+      assetFiles: () => Promise.resolve(new Map([['tex-1', { name: 'model.glb', bytes }]])),
+    })
+
+    await writeExportedGame(ports, ASKED)
+
+    expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/model.glb.gz' })
+    const stored = written.get('assets/model.glb.gz')
+    if (!(stored instanceof Uint8Array)) throw new Error('expected compressed model bytes')
+    expect(gunzipSync(stored)).toEqual(compactGlbGeometry(bytes))
   })
 
   it('writes the explicit LOSSY choices and packages the transformed image', async () => {

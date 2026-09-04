@@ -21,12 +21,8 @@ import {
 import { compileLossyModels } from '@/engines/scene/lossyModelCompiler'
 import { createCsgEvaluator } from '@/engines/csg/csgEvaluator'
 import CsgWorker from '@/engines/csg/csg.worker?worker'
-import { runtimeAssetIds } from './runtimeAssetIds'
-import {
-  analyzeLossyWorld,
-  lossyCandidatesOf,
-  type OptimizationPlan,
-} from '@/engines/scene/worldAnalyzer'
+import { runtimeAssetIds, runtimeModelAssetIds, runtimeTextureAssetIds } from './runtimeAssetIds'
+import { analyzeLossyWorld, type OptimizationPlan } from '@/engines/scene/worldAnalyzer'
 import { runtimeArtifactsOf } from '@/engines/scene/runtimeWorldCompiler'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 
@@ -37,19 +33,39 @@ export type GameOptimizationEstimate = {
   drawCallsAfter: number
 }
 
-export async function analyzeGameOptimization(): Promise<GameOptimizationEstimate> {
+type LoadedScene = {
+  id: string
+  title: string
+  state: NonNullable<ReturnType<typeof montageSceneOf>>
+}
+
+/** Every scene of the project, read off disk if need be, with the montage state each holds. */
+async function loadedScenes(): Promise<readonly LoadedScene[]> {
   const listed = documentsOfKind(useDocuments.getState(), 'scene')
   await Promise.all(listed.map(document => loadSceneSource(document.id)))
+  return listed.flatMap(document => {
+    const state = montageSceneOf(document.id)
+    return state ? [{ id: document.id, title: document.title, state }] : []
+  })
+}
+
+/**
+ * What the whole project weighs, for the dialogue's second figure.
+ *
+ * `known` carries the plans the caller already measured — the dialogue holds the open scene's, and
+ * measuring it a second time here ran two full analyses of the same scene on the one thread.
+ */
+export async function analyzeGameOptimization(
+  known: Readonly<Record<string, OptimizationPlan>> = {},
+): Promise<GameOptimizationEstimate> {
+  const scenes = await loadedScenes()
   const inputs = await Promise.all(
-    listed.map(async document => {
-      const engine = sceneEngineOf(document.id)
-      const state = montageSceneOf(document.id)
-      return state
-        ? { state, ...(engine ? { plan: await engine.analyzeWorldOptimization() } : {}) }
-        : null
+    scenes.map(async ({ id, state }) => {
+      const plan = known[id] ?? (await sceneEngineOf(id)?.analyzeWorldOptimization())
+      return { state, ...(plan ? { plan } : {}) }
     }),
   )
-  return gameOptimizationEstimate(inputs.flatMap(input => (input ? [input] : [])))
+  return gameOptimizationEstimate(inputs)
 }
 
 export function gameOptimizationEstimate(
@@ -74,16 +90,8 @@ export function gameOptimizationEstimate(
       drawCallsBefore: total.drawCallsBefore + estimate.drawCallsBefore,
       drawCallsAfter: total.drawCallsAfter + estimate.drawCallsAfter,
     }),
-    { scenes: 0, ...emptyEstimate() },
+    { scenes: 0, objects: 0, drawCallsBefore: 0, drawCallsAfter: 0 },
   )
-}
-
-function emptyEstimate(): Omit<GameOptimizationEstimate, 'scenes'> {
-  return {
-    objects: 0,
-    drawCallsBefore: 0,
-    drawCallsAfter: 0,
-  }
 }
 
 function estimateUnmountedScene(
@@ -156,11 +164,9 @@ async function compileExportRequest(
     compileLossyTextures(projectScenes.textureAssetIds, options.lossyOptimization, {
       signal: options.signal,
     }),
-    compileLossyModelTextures(
-      projectScenes.modelAssetIds,
-      options.lossyOptimization,
-      options.signal,
-    ),
+    compileLossyModelTextures(projectScenes.modelAssetIds, options.lossyOptimization, {
+      signal: options.signal,
+    }),
   ])
   const request = exportRequestOf(
     options,
@@ -208,74 +214,54 @@ async function compileProjectScenes(
   lossyOptimization: LossyOptimization,
   signal: AbortSignal | undefined,
 ): Promise<CompiledProjectScenes> {
-  const listed = documentsOfKind(useDocuments.getState(), 'scene')
-  await Promise.all(listed.map(document => loadSceneSource(document.id)))
-  const states = new Map(
-    listed.flatMap(document => {
-      const state = montageSceneOf(document.id)
-      return state ? [[document.id, state]] : []
-    }),
-  )
-  const modelAssetIds = new Set<string>()
-  const protectedModelAssetIds = new Set<string>()
-  for (const state of states.values()) {
-    for (const node of state.nodes) {
-      if (node.type !== 'model') continue
-      ;(node.optimization?.mode === 'exclude' ? protectedModelAssetIds : modelAssetIds).add(
-        node.model.assetId,
-      )
-    }
-  }
-  for (const id of protectedModelAssetIds) modelAssetIds.delete(id)
+  const loaded = await loadedScenes()
+  const allNodes = loaded.flatMap(one => one.state.nodes)
+  const modelAssetIds = runtimeModelAssetIds(allNodes)
   const modelPlans = await compileLossyModels(
-    [...modelAssetIds].map(id => ({
+    modelAssetIds.map(id => ({
       id,
       url: versionedUrl(assetMasterUrl(id), assetVersionOf(id)),
     })),
     lossyOptimization,
-    signal,
+    // 🛑 No `onProgress`: both lossy compilers expose one and nothing draws it — declared hole.
+    { signal },
   )
   const csg = createCsgEvaluator({ spawn: () => new CsgWorker(), onFailure: () => undefined })
   const abort = (): void => csg.dispose()
   signal?.addEventListener('abort', abort, { once: true })
   try {
     const scenes = await Promise.all(
-      listed.map(async document => {
-        const state = states.get(document.id)
-        if (!state) return null
+      loaded.map(async ({ id, title, state }) => {
         const geometryPlan = await compileLossyWorldGeometry(
           state,
           lossyOptimization,
-          async graph => await csg.acquire(graph),
+          csg.acquire,
           analyzeLossyWorld(state.nodes),
         )
-        const modelNodes = state.nodes.flatMap(node => {
-          if (node.type !== 'model' || node.optimization?.mode === 'exclude') return []
-          return modelPlans.has(node.model.assetId)
+        // No second exclusion test: a protected asset never entered `modelAssetIds`, so no plan
+        // was compiled for it.
+        const modelNodes = state.nodes.flatMap(node =>
+          node.type === 'model' && modelPlans.has(node.model.assetId)
             ? [{ nodeId: node.id, modelAssetId: node.model.assetId }]
-            : []
-        })
+            : [],
+        )
         const optimizedNodes = [...(geometryPlan?.nodes ?? []), ...modelNodes]
         const optimization = optimizedNodes.length > 0 ? { nodes: optimizedNodes } : undefined
         return {
-          id: document.id,
-          title: document.title,
-          content: JSON.stringify(scenePayloadOf(state, document.id)),
+          id,
+          title,
+          content: JSON.stringify(scenePayloadOf(state, id)),
           assetIds: runtimeAssetIds(state),
           ...(optimization ? { optimization } : {}),
         }
       }),
     )
     if (signal?.aborted) throw new DOMException('World compilation aborted', 'AbortError')
-    const allNodes = [...states.values()].flatMap(state => state.nodes)
-    const textureAssetIds = lossyCandidatesOf(allNodes).textureCandidates.map(
-      candidate => candidate.assetId,
-    )
     return {
-      scenes: scenes.flatMap(scene => (scene ? [scene] : [])),
-      textureAssetIds,
+      scenes,
+      textureAssetIds: runtimeTextureAssetIds(allNodes),
       modelAssets: Object.fromEntries(modelPlans),
-      modelAssetIds: [...modelAssetIds],
+      modelAssetIds,
     }
   } finally {
     signal?.removeEventListener('abort', abort)

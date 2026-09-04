@@ -6,8 +6,14 @@ import type {
 } from './runtimeRepresentationValidation'
 import {
   executeRuntimeFunctionalChecks,
+  type ExecutedChecks,
   type RuntimeFunctionalValidationOptions,
 } from './executedRuntimeValidation'
+import type { RenderedRuntimeSnapshot } from './sceneRuntimeSnapshot'
+
+/** What a mounted engine shows, with the five checks a real run OVERWRITES by executing them. */
+export type SceneRuntimeObservation = Omit<RenderedRuntimeSnapshot, keyof ExecutedChecks> &
+  ExecutedChecks
 
 export type SceneRuntimeValidationRepresentation = {
   engine: SceneRenderer
@@ -27,7 +33,7 @@ const OFFSCREEN_HOST_OFFSET_PX = -100_000
 
 export function createSceneRuntimeValidationDriver(
   options: SceneRuntimeValidationDriverOptions,
-): RuntimeValidationDriver<SceneRuntimeValidationRepresentation> {
+): RuntimeValidationDriver<SceneRuntimeValidationRepresentation, SceneRuntimeObservation> {
   const build = async (
     world: SceneState,
     optimization: 'auto' | 'off',

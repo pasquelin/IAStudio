@@ -1,11 +1,17 @@
 import { Mesh, type Camera, type Intersection, type Material, type Object3D } from 'three'
 import { stableKey } from '@shared/hash'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
-import { movesOnItsOwn } from '@shared/domain/component'
 import { cachedOn } from '../core/cachedOn'
 import type { SceneNode } from './sceneState'
 import { isInstanceable, meshesOf, modelShapeKey } from './instanceableModel'
 import { isDrawn } from './groupPlacement'
+import { forcesGrouping } from './groupingExclusions'
+export {
+  behavioralGroupingExclusions,
+  excludesGrouping,
+  groupingExclusions,
+  type GroupingStrategy,
+} from './groupingExclusions'
 
 export {
   dropSlotsOf,
@@ -166,12 +172,23 @@ export type GroupingStats = {
   bytes: number
 }
 
+/**
+ * The five fields every strategy answers with once it holds sources — written here rather than in
+ * each of the four, where they were the same nine lines.
+ */
+export type HeldSourceFields = Pick<
+  InstancedGroups,
+  'hangSources' | 'dropSources' | 'refreshSources' | 'holdsSource' | 'dispose'
+>
+
 export type HeldOutOfDraw = {
   hold: (meshes: readonly Mesh[]) => void
   holds: (object: Object3D) => boolean
   refresh: () => void
   hang: () => void
   drop: () => void
+  /** Disposal puts the sources back in the walk: nothing draws for them any more. */
+  fields: (clear: () => void) => HeldSourceFields
 }
 
 /**
@@ -222,6 +239,19 @@ export function heldOutOfDraw(): HeldOutOfDraw {
     }
   }
 
+  const holds = (object: Object3D): boolean => ours.has(object)
+
+  // Nothing to compose while they are hung: the walk that just ran did it.
+  const refresh = (): void => {
+    if (hung) return
+    for (const mesh of held) {
+      const parent = mesh.parent
+      if (!parent) continue
+      if (mesh.matrixAutoUpdate) mesh.updateMatrix()
+      mesh.matrixWorld.multiplyMatrices(parent.matrixWorld, mesh.matrix)
+    }
+  }
+
   return {
     // Nothing to move while they are hung: whichever set the rebuild settled on is in the walk
     // already, since a source only ever leaves it here. Otherwise ONE pass over each parent's
@@ -250,21 +280,23 @@ export function heldOutOfDraw(): HeldOutOfDraw {
       ours = out
     },
 
-    holds: object => ours.has(object),
+    holds,
 
-    // Nothing to compose while they are hung: the walk that just ran did it.
-    refresh: () => {
-      if (hung) return
-      for (const mesh of held) {
-        const parent = mesh.parent
-        if (!parent) continue
-        if (mesh.matrixAutoUpdate) mesh.updateMatrix()
-        mesh.matrixWorld.multiplyMatrices(parent.matrixWorld, mesh.matrix)
-      }
-    },
+    refresh,
 
     hang: () => walkThem(true),
     drop: () => walkThem(false),
+
+    fields: clear => ({
+      hangSources: () => walkThem(true),
+      dropSources: () => walkThem(false),
+      refreshSources: refresh,
+      holdsSource: holds,
+      dispose: () => {
+        clear()
+        walkThem(true)
+      },
+    }),
   }
 }
 
@@ -288,68 +320,6 @@ export type Grouped = {
   meshes: Mesh[]
   nodes: SceneNode[]
   material: Material
-}
-
-export type GroupingStrategy = 'instance' | 'batch'
-
-export function excludesGrouping(node: SceneNode, strategy: GroupingStrategy): boolean {
-  const mode = node.optimization?.mode ?? 'auto'
-  return (
-    mode === 'exclude' ||
-    mode === 'individual' ||
-    (mode === 'instance' && strategy === 'batch') ||
-    (mode === 'batch' && strategy === 'instance')
-  )
-}
-
-function forcesGrouping(node: SceneNode): boolean {
-  return node.optimization?.mode === 'instance' || node.optimization?.mode === 'batch'
-}
-
-export function groupingExclusions(
-  nodes: readonly SceneNode[],
-  driven: ReadonlySet<string>,
-  strategy: GroupingStrategy = 'instance',
-): ReadonlySet<string> {
-  return collectGroupingExclusions(nodes, driven, node => excludesGrouping(node, strategy))
-}
-
-function collectGroupingExclusions(
-  nodes: readonly SceneNode[],
-  driven: ReadonlySet<string>,
-  excludes: (node: SceneNode) => boolean,
-): ReadonlySet<string> {
-  const excluded = new Set(driven)
-  const children = new Map<string, string[]>()
-  for (const node of nodes) {
-    if (
-      excludes(node) ||
-      movesOnItsOwn(node.components) ||
-      node.components?.some(component => component.type === 'Script')
-    ) {
-      excluded.add(node.id)
-    }
-    if (!node.parentId) continue
-    const siblings = children.get(node.parentId)
-    if (siblings) siblings.push(node.id)
-    else children.set(node.parentId, [node.id])
-  }
-  const roots = [...excluded]
-  for (let at = 0; at < roots.length; at += 1) {
-    for (const child of children.get(roots[at] ?? '') ?? []) {
-      if (excluded.has(child)) continue
-      excluded.add(child)
-      roots.push(child)
-    }
-  }
-  return excluded
-}
-
-export function behavioralGroupingExclusions(
-  nodes: readonly SceneNode[],
-  driven: ReadonlySet<string>,
-): ReadonlySet<string> {
-  return collectGroupingExclusions(nodes, driven, () => false)
 }
 
 export function sweep(

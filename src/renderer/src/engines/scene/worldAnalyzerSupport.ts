@@ -1,15 +1,16 @@
 import { LOD, Mesh, PropertyBinding, SkinnedMesh, Vector3 } from 'three'
 import type { Object3D } from 'three'
 import { byCodeUnit } from '@shared/text'
-import { stableKey } from '@shared/hash'
 import { movesOnItsOwn } from '@shared/domain/component'
 import type { LossyOptimization } from '@shared/domain/gameExport'
-import { DEFAULT_OPTIMIZATION_POLICY, type OptimizationPolicy } from '@shared/domain/optimizationPolicy'
-import { adaptiveCellsOf } from './adaptivePartition'
+import {
+  DEFAULT_OPTIMIZATION_POLICY,
+  type OptimizationPolicy,
+} from '@shared/domain/optimizationPolicy'
+import { adaptiveCellsOf, cellKeyOf, maximumCellSize, nodeAtWorld } from './adaptivePartition'
 import { isInstanceable } from './instanceableModel'
 import type { SceneNode } from './sceneState'
 import type {
-  AnalyzerPolicy,
   LossyOptimizationImpact,
   LossyWorldPlan,
   ModelOptimizationCandidate,
@@ -22,7 +23,7 @@ import type {
 export function spatialCellsOf(
   nodes: readonly SceneNode[],
   objectOf: (id: string) => Object3D | undefined,
-  policy: AnalyzerPolicy,
+  policy: OptimizationPolicy,
 ): readonly SpatialCellPlan[] {
   const position = new Vector3()
   const scale = new Vector3()
@@ -32,42 +33,28 @@ export function spatialCellsOf(
     if (!object) return [node]
     object.getWorldPosition(position)
     object.getWorldScale(scale)
-    return [
-      {
-        ...node,
-        transform: {
-          ...node.transform,
-          position: { x: position.x, y: position.y, z: position.z },
-          scale: { x: scale.x, y: scale.y, z: scale.z },
-        },
-      },
-    ]
+    return [nodeAtWorld(node, position, scale)]
   })
-  const resolved = { ...DEFAULT_OPTIMIZATION_POLICY, ...policy }
   const cells = new Map<string, string[]>()
-  for (const { cell, nodes: members } of adaptiveCellsOf(meshes, resolved)) {
-    const key = stableKey([cell.size, cell.x, cell.y, cell.z])
+  for (const { cell, nodes: members } of adaptiveCellsOf(meshes, policy)) {
     cells.set(
-      key,
+      cellKeyOf(cell),
       members.map(node => node.id),
     )
   }
-  const fallbackSize = Math.max(
-    1,
-    Math.min(resolved.maxBatchBounds / 4, resolved.spatialCellTargetSize),
-  )
+  const fallbackSize = maximumCellSize(policy)
   for (const node of nodes) {
     if (node.type === 'mesh') continue
     const object = objectOf(node.id)
     if (object) object.getWorldPosition(position)
     else
       position.set(node.transform.position.x, node.transform.position.y, node.transform.position.z)
-    const key = stableKey([
-      fallbackSize,
-      Math.floor(position.x / fallbackSize),
-      Math.floor(position.y / fallbackSize),
-      Math.floor(position.z / fallbackSize),
-    ])
+    const key = cellKeyOf({
+      size: fallbackSize,
+      x: Math.floor(position.x / fallbackSize),
+      y: Math.floor(position.y / fallbackSize),
+      z: Math.floor(position.z / fallbackSize),
+    })
     const sourceIds = cells.get(key)
     if (sourceIds) sourceIds.push(node.id)
     else cells.set(key, [node.id])
@@ -168,8 +155,8 @@ function animatedModelNodeNames(root: Object3D): ReadonlySet<string> {
 export function estimatedLossyImpact(
   plan: OptimizationPlan,
   options: LossyOptimization,
-  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
 ): LossyOptimizationImpact {
+  const policy = DEFAULT_OPTIMIZATION_POLICY
   const geometryRatio = policy.simplificationRatios[options.geometrySimplification]
   const textureScale = policy.textureScale[options.textureReduction]
   const textureQuality =
@@ -189,29 +176,35 @@ export function classificationsOf(
   animated: boolean,
   meshes: readonly Mesh[],
 ): OptimizationClassification[] {
-  const classifications: OptimizationClassification[] = []
   const skinned = meshes.some(mesh => mesh instanceof SkinnedMesh)
   const dynamic =
     movesOnItsOwn(node.components) ||
-    node.components?.some(component => component.type === 'Script')
-  const instancable =
-    !animated &&
-    !dynamic &&
-    !skinned &&
-    object !== undefined &&
-    ((node.type === 'mesh' && object instanceof Mesh && !(object instanceof SkinnedMesh)) ||
-      (node.type === 'model' && isInstanceable(object)))
+    node.components?.some(component => component.type === 'Script') === true
+  if (animated || dynamic || skinned) return unsafeClassifications(animated, dynamic, skinned)
+  const classifications: OptimizationClassification[] = ['STATIC']
+  if (!isInstancable(node, object)) return classifications
+  classifications.push('INSTANCABLE', 'BATCHABLE')
+  if (!node.components?.length && node.parentId === null) classifications.push('MERGEABLE')
+  return classifications
+}
 
-  if (!animated && !dynamic && !skinned) classifications.push('STATIC')
+function unsafeClassifications(
+  animated: boolean,
+  dynamic: boolean,
+  skinned: boolean,
+): OptimizationClassification[] {
+  const classifications: OptimizationClassification[] = []
   if (dynamic) classifications.push('DYNAMIC')
   if (skinned) classifications.push('SKINNED')
   if (animated) classifications.push('ANIMATED')
-  if (instancable) classifications.push('INSTANCABLE')
-  if (instancable) classifications.push('BATCHABLE')
-  if (instancable && !node.components?.length && node.parentId === null)
-    classifications.push('MERGEABLE')
-  if (animated || dynamic || skinned) classifications.push('UNSAFE')
+  classifications.push('UNSAFE')
   return classifications
+}
+
+function isInstancable(node: SceneNode, object: Object3D | undefined): boolean {
+  if (!object) return false
+  if (node.type === 'mesh') return object instanceof Mesh && !(object instanceof SkinnedMesh)
+  return node.type === 'model' && isInstanceable(object)
 }
 
 export function warningOf(

@@ -16,6 +16,7 @@ export function createMergedGroups(
   const drawn: Mesh[] = []
   const members = new WeakMap<Mesh, readonly FaceRange[]>()
   const sources = heldOutOfDraw()
+  let keyOf = batchKeyOf(ownMaterialOf)
   let lastNodes: readonly SceneNode[] = []
   let lastArtifacts: readonly RuntimeRenderArtifact[] | undefined
   let lastExcluded: ReadonlySet<string> | undefined
@@ -28,7 +29,7 @@ export function createMergedGroups(
     drawn.length = 0
   }
 
-  const rebuild: InstancedGroups['rebuild'] = (nodes, objectOf, excluded, artifacts) => {
+  const regroup: InstancedGroups['rebuild'] = (nodes, objectOf, excluded, artifacts) => {
     lastNodes = nodes
     lastArtifacts = artifacts
     lastExcluded = excluded
@@ -36,7 +37,6 @@ export function createMergedGroups(
     let merged = 0
     const held: Mesh[] = []
     const byId = new Map(nodes.map(node => [node.id, node]))
-    const keyOf = batchKeyOf(ownMaterialOf)
     host.updateWorldMatrix(true, false)
     const worldToHost = new Matrix4().copy(host.matrixWorld).invert()
     for (const artifact of artifacts?.filter(one => one.strategy === 'merge') ?? []) {
@@ -56,14 +56,22 @@ export function createMergedGroups(
   }
 
   return {
-    rebuild,
+    // A keyer of its own per rebuild: `applyMaterial` mutates a three material in PLACE, and the
+    // keyer answers by material identity — one kept across an edit would hand back a stale key.
+    rebuild: (nodes, objectOf, excluded, artifacts) => {
+      keyOf = batchKeyOf(ownMaterialOf)
+      return regroup(nodes, objectOf, excluded, artifacts)
+    },
+
+    // The keyer is NOT remade here: a move changes transforms and nothing else, and this path runs
+    // once per `pointermove` of a drag — where remaking it rehashes every pixel of every texture.
     moved: (ids, objectOf) => {
       const moved = [...ids].some(id => {
         const object = objectOf(id)
         return object ? sources.holds(object) : false
       })
       if (!moved) return false
-      rebuild(lastNodes, objectOf, lastExcluded, lastArtifacts)
+      regroup(lastNodes, objectOf, lastExcluded, lastArtifacts)
       return true
     },
     drawn: () => drawn,
@@ -74,14 +82,7 @@ export function createMergedGroups(
       const faceIndex = hit.faceIndex
       return members.get(hit.object)?.find(range => faceIndex < range.end)?.nodeId ?? null
     },
-    hangSources: sources.hang,
-    dropSources: sources.drop,
-    refreshSources: sources.refresh,
-    holdsSource: sources.holds,
-    dispose: () => {
-      clear()
-      sources.hang()
-    },
+    ...sources.fields(clear),
   }
 }
 

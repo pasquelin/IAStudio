@@ -114,11 +114,7 @@ export abstract class SceneRendererGrouping extends SceneRendererViews {
             this.options.grouping === 'batched' ? 'batch' : 'instance',
           )
         : behavioralGroupingExclusions(nodes, drivenNodes(this.timeline))
-      const instanced = this.instances.rebuild(
-        nodes,
-        id => this.objects.get(id),
-        excluded,
-      )
+      const instanced = this.instances.rebuild(nodes, id => this.objects.get(id), excluded)
       this.syncSourceWalk()
       // Read before the test, since asking CLEARS it: a lot the rebuild made must not leave the
       // flag standing for the next move to find.

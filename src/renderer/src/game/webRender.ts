@@ -14,14 +14,18 @@ import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
 import type { SceneState } from '@/engines/scene/sceneState'
-import type { CompiledSceneOptimization } from '@shared/domain/gameExport'
+import type { CompiledModelMesh, CompiledSceneOptimization } from '@shared/domain/gameExport'
 import { buildGameScene, type GameScene } from './gameScene'
 import { createGltfSource } from '@/engines/scene/gltfSource'
 import type { Us } from '@shared/domain/time'
 
 export type WebRender = RenderPort & {
   /** Puts another scene on. What a `game.scene.load` lands as, outside the studio. */
-  show: (state: SceneState, optimization?: CompiledSceneOptimization) => Promise<void>
+  show: (
+    state: SceneState,
+    optimization?: CompiledSceneOptimization,
+    modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>,
+  ) => Promise<void>
   resize: (width: number, height: number) => void
   draw: () => void
   seek: (time: Us) => void
@@ -51,9 +55,9 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
   let building = 0
 
   return {
-    show: async (state, optimization) => {
+    show: async (state, optimization, modelAssets) => {
       const mine = (building += 1)
-      const built = await buildGameScene(state, assets, optimization, gltf.load)
+      const built = await buildGameScene(state, assets, optimization, modelAssets, gltf.load)
       if (mine !== building) {
         built.dispose()
         return
@@ -103,6 +107,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
     draw: () => {
       if (!held) return
 
+      held.flush()
       renderer.render(held.scene, camera)
       // A second pass rather than a DOM layer: the port owns a canvas and nothing above it.
       if (veil.material.opacity > 0) {

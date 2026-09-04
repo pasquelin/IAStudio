@@ -75,19 +75,7 @@ export function createInstancedGroups(
       return idsByInstance.get(hit.object)?.[hit.instanceId] ?? null
     },
 
-    hangSources: sources.hang,
-
-    dropSources: sources.drop,
-
-    refreshSources: sources.refresh,
-
-    holdsSource: sources.holds,
-
-    // The sources back in the walk with it: nothing draws for them any more.
-    dispose: () => {
-      clear()
-      sources.hang()
-    },
+    ...sources.fields(clear),
   }
 }
 

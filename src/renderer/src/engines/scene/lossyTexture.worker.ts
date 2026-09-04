@@ -1,5 +1,9 @@
 /// <reference lib="webworker" />
-import type { LossyTextureRequest, LossyTextureResponse } from './lossyTextureMessage'
+import {
+  writableFormat,
+  type LossyTextureRequest,
+  type LossyTextureResponse,
+} from './lossyTextureMessage'
 
 declare const self: DedicatedWorkerGlobalScope
 
@@ -10,9 +14,7 @@ self.addEventListener('message', (event: MessageEvent<LossyTextureRequest>) => {
 async function optimize(request: LossyTextureRequest): Promise<void> {
   try {
     self.postMessage({ id: request.id, done: false, progress: 0.1 } satisfies LossyTextureResponse)
-    const source = new ArrayBuffer(request.bytes.byteLength)
-    new Uint8Array(source).set(request.bytes)
-    const bitmap = await createImageBitmap(new Blob([source]))
+    const bitmap = await createImageBitmap(new Blob([request.bytes]))
     const canvas = new OffscreenCanvas(
       Math.max(1, Math.round(bitmap.width * request.scale)),
       Math.max(1, Math.round(bitmap.height * request.scale)),
@@ -25,10 +27,14 @@ async function optimize(request: LossyTextureRequest): Promise<void> {
     }
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
     bitmap.close()
-    const extension = request.quality === undefined ? 'png' : 'jpg'
+    const format = writableFormat(
+      request.format,
+      context.getImageData(0, 0, canvas.width, canvas.height).data,
+    )
+    const quality = format === 'jpg' ? request.quality : undefined
     const blob = await canvas.convertToBlob({
-      type: extension === 'png' ? 'image/png' : 'image/jpeg',
-      ...(request.quality === undefined ? {} : { quality: request.quality }),
+      type: format === 'png' ? 'image/png' : 'image/jpeg',
+      ...(quality === undefined ? {} : { quality }),
     })
     const bytes = new Uint8Array(await blob.arrayBuffer())
     self.postMessage(
@@ -36,7 +42,7 @@ async function optimize(request: LossyTextureRequest): Promise<void> {
         id: request.id,
         done: true,
         ok: true,
-        override: { id: request.assetId, bytes, extension },
+        override: { id: request.assetId, bytes, extension: format },
       } satisfies LossyTextureResponse,
       [bytes.buffer],
     )

@@ -113,6 +113,7 @@ export abstract class SceneRendererOptimization extends SceneRendererSculpt {
     )
   }
 
+  /** Reads `profileFrustum`, which `runtimePerformance` refreshes before asking. */
   private isProfiledObjectVisible(object: Mesh): boolean {
     const camera = this.viewport.camera
     return (

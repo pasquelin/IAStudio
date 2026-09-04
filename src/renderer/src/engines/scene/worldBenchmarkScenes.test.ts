@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { worldBenchmarkScenes } from './worldBenchmarkScenes.fixture'
+import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import { newComponent } from '@shared/domain/componentRegistry'
+import { DEFAULT_WORLD } from '@shared/domain/scene'
+import { meshNode } from './scene-fixtures'
+import { benchmarkExpectations, worldBenchmarkScenes } from './worldBenchmarkScenes.fixture'
 import { runtimeArtifactsOf } from './runtimeWorldCompiler'
 
 describe('the reproducible world benchmark suite', () => {
@@ -21,6 +25,43 @@ describe('the reproducible world benchmark suite', () => {
     ).toBe(true)
     expect(mixed?.animation.events).not.toHaveLength(0)
     expect(mixed?.animation.transitions).not.toHaveLength(0)
+  })
+
+  it('asks of each workload only what the workload declares', () => {
+    const expects = new Map(worldBenchmarkScenes().map(scene => [scene.id, scene.expects]))
+
+    expect(expects.get('S1')).toEqual(['successfulDuplications', 'successfulUndoRedo'])
+    expect(expects.get('S5')).toEqual([
+      'executedScriptHooks',
+      'successfulScriptEffects',
+      'simulatedPhysicsBodies',
+      'simulatedPhysicsSteps',
+      'simulatedPhysicsEffects',
+      'executedTimelineActions',
+      'successfulDuplications',
+      'successfulUndoRedo',
+    ])
+  })
+
+  it('claims the script and physics measures for a workload it has never seen', () => {
+    const scripted = {
+      ...meshNode('sixth'),
+      components: [{ ...newComponent('Script'), script: 'script:Sixth.ts' }],
+    }
+
+    expect(
+      benchmarkExpectations({
+        nodes: [scripted],
+        selectedIds: [],
+        world: DEFAULT_WORLD,
+        animation: EMPTY_TIMELINE,
+      }),
+    ).toEqual([
+      'executedScriptHooks',
+      'successfulScriptEffects',
+      'successfulDuplications',
+      'successfulUndoRedo',
+    ])
   })
 
   it('rebuilds identical deterministic inputs', () => {

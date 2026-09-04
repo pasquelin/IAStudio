@@ -6,12 +6,19 @@ import { meshNode } from './scene-fixtures'
 import {
   createRuntimeWorldCompiler,
   runtimeArtifactsOf,
+  runtimeOptimizationOf,
   runtimeWorldPatch,
   runtimeWorldPatchIsEmpty,
   worldWithRuntimePatch,
 } from './runtimeWorldCompiler'
 import type { SceneNode, SceneState } from './sceneState'
 import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
+import {
+  validateRuntimeRepresentation,
+  type RuntimeRenderCamera,
+  type RuntimeValidationDriver,
+} from './runtimeRepresentationValidation'
+import type { SafeRuntimeSnapshot } from './safeRuntimeValidation'
 
 const stateOf = (...nodes: ReturnType<typeof meshNode>[]): SceneState => ({
   nodes,
@@ -64,55 +71,94 @@ describe('runtimeWorldPatch', () => {
   })
 })
 
+const MAIN_CAMERA: RuntimeRenderCamera = {
+  id: 'main',
+  position: { x: 0, y: 0, z: 10 },
+  target: { x: 0, y: 0, z: 0 },
+  projection: 'perspective',
+  fieldOfView: 50,
+  near: 0.1,
+  far: 100,
+  width: 1,
+  height: 1,
+  cameraMask: 1,
+}
+
+/** The world itself as its own representation: what the driver hands back is what was compiled. */
+type Held = { role: 'original' | 'optimized'; world: SceneState }
+
+function identityDriver(
+  render: RuntimeValidationDriver<Held>['render'],
+  observe: (held: Held) => SafeRuntimeSnapshot,
+): RuntimeValidationDriver<Held> {
+  return {
+    buildOriginal: async world => ({ role: 'original', world }),
+    buildOptimized: async world => ({ role: 'optimized', world }),
+    render,
+    observe: async held => observe(held),
+    dispose: () => {},
+  }
+}
+
 describe('createRuntimeWorldCompiler', () => {
-  it('validates compiled worlds through concrete scene observations and rendered frames', async () => {
-    const compiler = createRuntimeWorldCompiler()
-    const node: ReturnType<typeof meshNode> = {
-      ...meshNode('a'),
-      optimization: { mode: 'instance' },
-    }
-    const source = stateOf(node)
+  it('hands the validation path an optimized world carrying the compiled artifacts', async () => {
+    const source = stateOf({ ...meshNode('a'), optimization: { mode: 'instance' } })
     const pixels = new Uint8Array([10, 20, 30, 255])
     const rendered: string[] = []
 
-    const report = await compiler.validateSafeWorld(source, {
-      cameras: [{ id: 'main' }],
-      renderOriginal: async (world, camera) => {
-        expect(world).toBe(source)
-        rendered.push(`original:${camera.id}`)
-        return { width: 1, height: 1, pixels }
-      },
-      renderOptimized: async (world, camera) => {
-        expect(world.runtimeOptimization.artifacts).toHaveLength(1)
-        rendered.push(`optimized:${camera.id}`)
-        return { width: 1, height: 1, pixels: pixels.slice() }
-      },
-      observeOriginal: async world => sceneRuntimeSnapshot(world),
-      observeOptimized: async world => sceneRuntimeSnapshot(world),
+    const report = await validateRuntimeRepresentation(source, {
+      cameras: [MAIN_CAMERA],
       visualOptions: { channelTolerance: 0, maximumChangedPixelRatio: 0 },
+      driver: identityDriver(
+        async (held, camera) => {
+          rendered.push(`${held.role}:${camera.id}`)
+          if (held.role === 'original') {
+            expect(held.world).toBe(source)
+            expect(runtimeOptimizationOf(held.world)).toBeNull()
+          } else {
+            expect(runtimeOptimizationOf(held.world)?.artifacts).toHaveLength(1)
+          }
+          return { width: 1, height: 1, pixels: pixels.slice() }
+        },
+        held => sceneRuntimeSnapshot(held.world),
+      ),
     })
 
     expect(rendered).toEqual(['original:main', 'optimized:main'])
     expect(report.equivalent).toBe(true)
     expect(report.functional.every(result => result.equivalent)).toBe(true)
-    expect(compiler.getOptimizationReport().cachedNodes).toBe(1)
   })
 
-  it('reports a functional difference observed by the runtime driver', async () => {
-    const compiler = createRuntimeWorldCompiler()
-    const source = stateOf(meshNode('a'))
-
-    const report = await compiler.validateSafeWorld(source, {
-      cameras: [{ id: 'main' }],
-      renderOriginal: async () => ({ width: 1, height: 1, pixels: new Uint8Array(4) }),
-      renderOptimized: async () => ({ width: 1, height: 1, pixels: new Uint8Array(4) }),
-      observeOriginal: async world => sceneRuntimeSnapshot(world),
-      observeOptimized: async world => ({ ...sceneRuntimeSnapshot(world), picking: [] }),
+  it('reports a functional difference observed on the compiled world', async () => {
+    const report = await validateRuntimeRepresentation(stateOf(meshNode('a')), {
+      cameras: [MAIN_CAMERA],
       visualOptions: { channelTolerance: 0, maximumChangedPixelRatio: 0 },
+      driver: identityDriver(
+        async () => ({ width: 1, height: 1, pixels: new Uint8Array(4) }),
+        held =>
+          held.role === 'optimized'
+            ? { ...sceneRuntimeSnapshot(held.world), picking: [] }
+            : sceneRuntimeSnapshot(held.world),
+      ),
     })
 
     expect(report.equivalent).toBe(false)
     expect(report.functional.find(result => result.check === 'picking')?.equivalent).toBe(false)
+  })
+
+  it('drops removed nodes from a patch that carries no order', () => {
+    const compiler = createRuntimeWorldCompiler()
+    compiler.compileRuntimeWorld(stateOf(meshNode('a'), meshNode('b')))
+
+    const next = compiler.compileRuntimeRegion({
+      changedNodes: [],
+      removedIds: ['a'],
+      order: null,
+      world: null,
+      animation: null,
+    })
+
+    expect(next?.nodes.map(node => node.id)).toEqual(['b'])
   })
 
   it('reuses unchanged runtime nodes and recompiles only a transported delta', () => {
@@ -391,5 +437,4 @@ describe('createRuntimeWorldCompiler', () => {
 
     expect(runtime.runtimeOptimization.artifacts).toEqual(runtimeArtifactsOf(nodes, EMPTY_TIMELINE))
   })
-
 })

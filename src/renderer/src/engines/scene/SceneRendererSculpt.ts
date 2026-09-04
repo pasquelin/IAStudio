@@ -102,9 +102,13 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
   protected aimReliefBrush(event: PointerEvent): void {
     const hit = this.reliefHitAt(event)
     this.brushCursor.set({
-      x: hit?.x ?? 0, y: hit?.y ?? 0, z: hit?.z ?? 0,
-      radius: this.sculptRadius, falloff: this.sculptFalloff,
-      visible: hit !== null, color: this.startColor,
+      x: hit?.x ?? 0,
+      y: hit?.y ?? 0,
+      z: hit?.z ?? 0,
+      radius: this.sculptRadius,
+      falloff: this.sculptFalloff,
+      visible: hit !== null,
+      color: this.startColor,
     })
   }
 

@@ -20,18 +20,30 @@ function optimizationActions(): AssistantAction[] {
     ] satisfies readonly (readonly [ActionName, string])[]
   ).map(([name, key]) => optimizationAction(name, key, []))
   const nodeIds: Omit<ActionField, 'required'> = {
-    key: 'nodeIds', kind: 'text', labelKey: 'assistant.fields.nodeIds', repeated: true,
+    key: 'nodeIds',
+    kind: 'text',
+    labelKey: 'assistant.fields.nodeIds',
+    repeated: true,
   }
   return [
-    optimizationAction('optimization.analyze', 'optimizationAnalyze', [{ ...nodeIds, required: false }]),
-    optimizationAction('optimization.report', 'optimizationReport', [{ ...nodeIds, required: false }]),
+    optimizationAction('optimization.analyze', 'optimizationAnalyze', [
+      { ...nodeIds, required: false },
+    ]),
+    optimizationAction('optimization.report', 'optimizationReport', [
+      { ...nodeIds, required: false },
+    ]),
     ...simple,
-    optimizationAction('optimization.exclude', 'optimizationExclude', [{ ...nodeIds, required: true }]),
+    optimizationAction('optimization.exclude', 'optimizationExclude', [
+      { ...nodeIds, required: true },
+    ]),
     optimizationAction('optimization.setMode', 'optimizationSetMode', [
       { ...nodeIds, required: true },
       {
-        key: 'mode', kind: 'choice', labelKey: 'assistant.fields.optimizationMode',
-        required: true, options: OPTIMIZATION_MODES,
+        key: 'mode',
+        kind: 'choice',
+        labelKey: 'assistant.fields.optimizationMode',
+        required: true,
+        options: OPTIMIZATION_MODES,
       },
     ]),
   ]

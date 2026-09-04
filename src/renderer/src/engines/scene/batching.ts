@@ -146,19 +146,7 @@ export function createBatchedGroups(
         ? (members.get(hit.object)?.[hit.batchId] ?? null)
         : null,
 
-    hangSources: sources.hang,
-
-    dropSources: sources.drop,
-
-    refreshSources: sources.refresh,
-
-    holdsSource: sources.holds,
-
-    // The sources back in the walk with it: nothing draws for them any more.
-    dispose: () => {
-      clear()
-      sources.hang()
-    },
+    ...sources.fields(clear),
   }
 }
 

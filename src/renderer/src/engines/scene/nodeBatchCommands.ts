@@ -68,9 +68,7 @@ export function setNodesOptimization(
   nodes: readonly SceneNode[],
   optimization: OptimizationSettings | undefined,
 ): Command<SceneState> {
-  return batch('optimization', nodes, node =>
-    editNode('optimization', node.id, { optimization }),
-  )
+  return batch('optimization', nodes, node => editNode('optimization', node.id, { optimization }))
 }
 
 type ShadowPatch = Partial<Pick<SceneNode, 'castShadow' | 'receiveShadow'>>

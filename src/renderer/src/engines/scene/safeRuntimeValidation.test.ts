@@ -37,6 +37,26 @@ describe('SAFE runtime validation', () => {
     expect(report.equivalent).toBe(true)
     expect(report.visual.map(result => result.cameraId)).toEqual(['A', 'B', 'C'])
     expect(report.functional.map(result => result.check)).toEqual(SAFE_FUNCTIONAL_CHECKS)
+    expect(report.renderedFrames).toBe(6)
+  })
+
+  it('leaves no declared check out of the compared list', () => {
+    const declared: Record<SafeFunctionalCheck, true> = {
+      picking: true,
+      animation: true,
+      timeline: true,
+      scripts: true,
+      physics: true,
+      shadows: true,
+      cameras: true,
+      visibility: true,
+      postProcessing: true,
+      transforms: true,
+      duplication: true,
+      undoRedo: true,
+    }
+
+    expect(SAFE_FUNCTIONAL_CHECKS).toEqual(Object.keys(declared))
   })
 
   it.each(SAFE_FUNCTIONAL_CHECKS)('detects an observed %s difference', async check => {

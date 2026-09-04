@@ -1,9 +1,10 @@
-import { stableKey } from '@shared/hash'
 import {
   artifactInputSignature,
   compileArtifactWorld,
+  drivenNodeIdsOf,
   forcedMeshKeyOf,
   membersWithForcedInstances,
+  nodeKeyOf,
   removeArtifactRegion,
   runtimeArtifactsOf,
   runtimeState,
@@ -11,28 +12,17 @@ import {
 } from './runtimeWorldArtifacts'
 export { runtimeArtifactsOf, runtimeOptimizationOf } from './runtimeWorldArtifacts'
 import { byCodeUnit } from '@shared/text'
-import type { AnimationTimeline } from '@shared/domain/animation'
-import type { SceneWorld } from '@shared/domain/scene'
 import type { RuntimeRenderArtifact } from './grouping'
 import type { SceneNode, SceneState } from './sceneState'
-import {
-  validateSafeRuntime,
-  type SafeValidationCamera,
-  type SafeRuntimeSnapshot,
-  type SafeRuntimeValidationInput,
-  type SafeRuntimeValidationReport,
-} from './safeRuntimeValidation'
-import type { VisualFrame } from './visualRegression'
+import type { RuntimeWorldPatch } from './runtimeWorldPatch'
+export {
+  runtimeWorldPatch,
+  runtimeWorldPatchIsEmpty,
+  worldWithRuntimePatch,
+  type RuntimeWorldPatch,
+} from './runtimeWorldPatch'
 
 export type OptimizationSignature = string
-
-export type RuntimeWorldPatch = {
-  readonly changedNodes: readonly SceneNode[]
-  readonly removedIds: readonly string[]
-  readonly order: readonly string[] | null
-  readonly world: SceneWorld | null
-  readonly animation: AnimationTimeline | null
-}
 
 export type RuntimeCompilationReport = {
   readonly compiledNodes: number
@@ -59,20 +49,6 @@ export type RuntimeWorldCompiler = {
   invalidateOptimization: (entityIds: readonly string[]) => void
   getOptimizationReport: () => RuntimeCompilationReport
   clearOptimizationCache: () => void
-  validateSafeWorld: (
-    world: SceneState,
-    input: RuntimeWorldValidationInput,
-  ) => Promise<SafeRuntimeValidationReport>
-}
-
-export type RuntimeWorldValidationInput = Pick<
-  SafeRuntimeValidationInput,
-  'cameras' | 'visualOptions'
-> & {
-  renderOriginal: (world: SceneState, camera: SafeValidationCamera) => Promise<VisualFrame>
-  renderOptimized: (world: RuntimeWorld, camera: SafeValidationCamera) => Promise<VisualFrame>
-  observeOriginal: (world: SceneState) => Promise<SafeRuntimeSnapshot>
-  observeOptimized: (world: RuntimeWorld) => Promise<SafeRuntimeSnapshot>
 }
 
 const EMPTY_REPORT: RuntimeCompilationReport = {
@@ -84,86 +60,6 @@ const EMPTY_REPORT: RuntimeCompilationReport = {
   compiledArtifacts: 0,
   reusedArtifacts: 0,
   analyzedArtifactNodes: 0,
-}
-
-/** Describes one immutable authoring change without serializing the unchanged world. */
-export function runtimeWorldPatch(previous: SceneState, next: SceneState): RuntimeWorldPatch {
-  const changedNodes: SceneNode[] = []
-  if (previous.nodes.length === next.nodes.length) {
-    let sameOrder = true
-    for (let index = 0; index < next.nodes.length; index += 1) {
-      const before = previous.nodes[index]
-      const after = next.nodes[index]
-      if (!before || !after || before.id !== after.id) {
-        sameOrder = false
-        break
-      }
-      if (before !== after) changedNodes.push(after)
-    }
-    if (sameOrder) return patchOf(previous, next, changedNodes, [], null)
-  }
-
-  changedNodes.length = 0
-  const before = new Map(previous.nodes.map(node => [node.id, node]))
-  for (const node of next.nodes) if (before.get(node.id) !== node) changedNodes.push(node)
-  const alive = new Set(next.nodes.map(node => node.id))
-  const removedIds = previous.nodes.flatMap(node => (alive.has(node.id) ? [] : [node.id]))
-  return patchOf(
-    previous,
-    next,
-    changedNodes,
-    removedIds,
-    next.nodes.map(node => node.id),
-  )
-}
-
-function patchOf(
-  previous: SceneState,
-  next: SceneState,
-  changedNodes: readonly SceneNode[],
-  removedIds: readonly string[],
-  order: readonly string[] | null,
-): RuntimeWorldPatch {
-  return {
-    changedNodes,
-    removedIds,
-    order,
-    world: previous.world === next.world ? null : next.world,
-    animation: previous.animation === next.animation ? null : next.animation,
-  }
-}
-
-export function runtimeWorldPatchIsEmpty(patch: RuntimeWorldPatch): boolean {
-  return (
-    patch.changedNodes.length === 0 &&
-    patch.removedIds.length === 0 &&
-    patch.order === null &&
-    patch.world === null &&
-    patch.animation === null
-  )
-}
-
-export function worldWithRuntimePatch(world: SceneState, patch: RuntimeWorldPatch): SceneState {
-  const changed = new Map(patch.changedNodes.map(node => [node.id, node]))
-  const removed = new Set(patch.removedIds)
-  const nodes = world.nodes
-    .filter(node => !removed.has(node.id))
-    .map(node => changed.get(node.id) ?? node)
-  const held = new Set(nodes.map(node => node.id))
-  for (const node of patch.changedNodes) if (!held.has(node.id)) nodes.push(node)
-  const byId = new Map(nodes.map(node => [node.id, node]))
-
-  return {
-    ...world,
-    nodes: patch.order
-      ? patch.order.flatMap(id => {
-          const node = byId.get(id)
-          return node ? [node] : []
-        })
-      : nodes,
-    world: patch.world ?? world.world,
-    animation: patch.animation ?? world.animation,
-  }
 }
 
 /** Owns the disposable runtime state and applies only deltas proven by the authoring store. */
@@ -231,20 +127,25 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       if (removedIds.has(id)) continue
       const previous = nodes.get(id)
       if (!previous || changedIds.has(id)) continue
-      nodes.set(id, structuredClone(previous))
+      // A fresh reference is the whole point — the renderer compares nodes by identity — and
+      // nothing ever mutates one, so copying the members underneath would buy nothing.
+      nodes.set(id, { ...previous })
       compiledNodes += 1
     }
     return compiledNodes
   }
 
-  const applyChangedNodes = (patch: RuntimeWorldPatch, driven: ReadonlySet<string>,
-    affectedRegions: Set<string>): { compiled: number; artifactsChanged: boolean; forcedChanged: boolean } => {
+  const applyChangedNodes = (
+    patch: RuntimeWorldPatch,
+    driven: ReadonlySet<string>,
+    affectedRegions: Set<string>,
+  ): { compiled: number; artifactsChanged: boolean; forcedChanged: boolean } => {
     let compiled = 0
     let artifactsChanged = false
     let forcedChanged = false
     for (const node of patch.changedNodes) {
       const previous = nodes.get(node.id)
-      if (previous && !invalidated.has(node.id) && stableKey(previous) === stableKey(node)) {
+      if (previous && !invalidated.has(node.id) && nodeKeyOf(previous) === nodeKeyOf(node)) {
         continue
       }
       if (!previous || artifactInputSignature(previous) !== artifactInputSignature(node)) {
@@ -253,12 +154,7 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       if (forcedMeshKeyOf(previous, driven) !== forcedMeshKeyOf(node, driven)) {
         forcedChanged = true
       }
-      if (previous) {
-        if (previous.parentId !== null && node.parentId === null) parentedNodes -= 1
-        if (previous.parentId === null && node.parentId !== null) parentedNodes += 1
-      } else if (node.parentId !== null) {
-        parentedNodes += 1
-      }
+      parentedNodes += parentedDelta(previous, node)
       nodes.set(node.id, node)
       updateArtifactRegion(node, artifactRegionByNode, artifactRegionMembers, affectedRegions)
       compiled += 1
@@ -290,20 +186,28 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
     current: RuntimeWorld,
     invalidatedIds: ReadonlySet<string>,
   ): SceneNode[] => {
+    // A removal without an `order` shifts every index below it, so the fast path — copy the array
+    // and overwrite the touched slots — cannot serve it. `gameChannel` accepts that shape.
+    const removes = patch.removedIds.length > 0
     const ordered = patch.order
       ? patch.order.flatMap(id => {
           const node = nodes.get(id)
           return node ? [node] : []
         })
-      : current.nodes.slice()
-    if (!patch.order) {
+      : removes
+        ? current.nodes.flatMap(node => {
+            const held = nodes.get(node.id)
+            return held ? [held] : []
+          })
+        : current.nodes.slice()
+    if (patch.order || removes) {
+      nodePositions = new Map(ordered.map((node, index) => [node.id, index]))
+    } else {
       for (const id of [...patch.changedNodes.map(node => node.id), ...invalidatedIds]) {
         const index = nodePositions.get(id)
         const node = nodes.get(id)
         if (index !== undefined && node) ordered[index] = node
       }
-    } else {
-      nodePositions = new Map(ordered.map((node, index) => [node.id, index]))
     }
     return ordered
   }
@@ -312,13 +216,15 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
     affectedRegions: ReadonlySet<string>,
     invalidatedIds: ReadonlySet<string>,
     animation: RuntimeWorld['animation'],
+    driven: ReadonlySet<string>,
   ): { held: readonly RuntimeRenderArtifact[]; compiled: number; analyzed: number } => {
     let compiledArtifacts = 0
     let analyzedArtifactNodes = 0
     const previousArtifacts = artifacts
     const nextArtifacts = new Map(artifacts)
     for (const region of affectedRegions) {
-      for (const artifact of artifactRegions.get(region) ?? []) nextArtifacts.delete(artifact.signature)
+      for (const artifact of artifactRegions.get(region) ?? [])
+        nextArtifacts.delete(artifact.signature)
       const members = [...(artifactRegionMembers.get(region) ?? [])].flatMap(id => {
         const node = nodes.get(id)
         return node ? [node] : []
@@ -328,34 +234,34 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
         artifactRegions.delete(region)
         continue
       }
-      const compiledRegion = runtimeArtifactsOf(
-        membersWithForcedInstances(members, forcedMeshKeys, animation), animation,
-      ).map(artifact => {
-          const forced = artifact.sourceIds.some(id => invalidatedIds.has(id))
-          const held = invalidatedIds.size > 0 && forced ? undefined : previousArtifacts.get(artifact.signature)
-          if (held) return held
-          compiledArtifacts += 1
-          return artifact
-      })
-      artifactRegions.set(region, compiledRegion)
-      for (const artifact of compiledRegion) nextArtifacts.set(artifact.signature, artifact)
+      const recompiled = reusedArtifacts(
+        runtimeArtifactsOf(membersWithForcedInstances(members, forcedMeshKeys, driven), animation),
+        previousArtifacts,
+        invalidatedIds,
+      )
+      compiledArtifacts += recompiled.compiled
+      artifactRegions.set(region, recompiled.held)
+      for (const artifact of recompiled.held) nextArtifacts.set(artifact.signature, artifact)
     }
     artifacts = nextArtifacts
-    return { held: [...artifacts.values()].sort((a, b) => byCodeUnit(a.signature, b.signature)), compiled: compiledArtifacts, analyzed: analyzedArtifactNodes }
+    return {
+      held: [...artifacts.values()].sort((a, b) => byCodeUnit(a.signature, b.signature)),
+      compiled: compiledArtifacts,
+      analyzed: analyzedArtifactNodes,
+    }
   }
 
   const compileWholeArtifacts = (
-    ordered: readonly SceneNode[], animation: RuntimeWorld['animation'], invalidatedIds: ReadonlySet<string>,
+    ordered: readonly SceneNode[],
+    animation: RuntimeWorld['animation'],
+    invalidatedIds: ReadonlySet<string>,
   ): { held: readonly RuntimeRenderArtifact[]; compiled: number; analyzed: number } => {
     const compiled = compileArtifactWorld(ordered, animation)
-    let compiledCount = 0
-    const held = compiled.artifacts.map(artifact => {
-      const forced = artifact.sourceIds.some(id => invalidatedIds.has(id))
-      const cached = invalidatedIds.size > 0 && forced ? undefined : artifacts.get(artifact.signature)
-      if (cached) return cached
-      compiledCount += 1
-      return artifact
-    })
+    const { held, compiled: compiledCount } = reusedArtifacts(
+      compiled.artifacts,
+      artifacts,
+      invalidatedIds,
+    )
     artifactRegions = compiled.regions
     artifactRegionByNode = compiled.regionByNode
     artifactRegionMembers = compiled.regionMembers
@@ -365,22 +271,38 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
     return { held, compiled: compiledCount, analyzed: ordered.length }
   }
 
-  const artifactUpdate = (patch: RuntimeWorldPatch, current: RuntimeWorld,
-    ordered: readonly SceneNode[], affectedRegions: ReadonlySet<string>,
-    invalidatedIds: ReadonlySet<string>, changed: boolean, forcedChanged: boolean) => {
+  const artifactUpdate = (
+    patch: RuntimeWorldPatch,
+    current: RuntimeWorld,
+    ordered: readonly SceneNode[],
+    affectedRegions: ReadonlySet<string>,
+    invalidatedIds: ReadonlySet<string>,
+    changed: boolean,
+    forcedChanged: boolean,
+    driven: ReadonlySet<string>,
+  ) => {
     if (!changed) return { held: current.runtimeOptimization.artifacts, compiled: 0, analyzed: 0 }
-    const regional = regionalArtifacts && parentedNodes === 0 && patch.animation === null && !forcedChanged
+    const regional =
+      regionalArtifacts && parentedNodes === 0 && patch.animation === null && !forcedChanged
     return regional
-      ? compileRegionalArtifacts(affectedRegions, invalidatedIds, current.animation)
+      ? compileRegionalArtifacts(affectedRegions, invalidatedIds, current.animation, driven)
       : compileWholeArtifacts(ordered, patch.animation ?? current.animation, invalidatedIds)
   }
 
-  const updateRuntimeReport = (started: number, ordered: readonly SceneNode[], compiledNodes: number,
-    removedNodes: number, update: { held: readonly RuntimeRenderArtifact[]; compiled: number; analyzed: number },
-    artifactsChanged: boolean): void => {
+  const updateRuntimeReport = (
+    started: number,
+    ordered: readonly SceneNode[],
+    compiledNodes: number,
+    removedNodes: number,
+    update: { held: readonly RuntimeRenderArtifact[]; compiled: number; analyzed: number },
+    artifactsChanged: boolean,
+  ): void => {
     report = {
-      compiledNodes, reusedNodes: ordered.length - compiledNodes, removedNodes,
-      cachedNodes: nodes.size, compilationMs: performance.now() - started,
+      compiledNodes,
+      reusedNodes: ordered.length - compiledNodes,
+      removedNodes,
+      cachedNodes: nodes.size,
+      compilationMs: performance.now() - started,
       compiledArtifacts: update.compiled,
       reusedArtifacts: artifactsChanged ? update.held.length - update.compiled : update.held.length,
       analyzedArtifactNodes: update.analyzed,
@@ -393,14 +315,26 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
     const current = runtime
     const invalidatedIds = new Set(invalidated)
     const affectedRegions = affectedRegionsOf(patch)
-    const driven = new Set((patch.animation ?? current.animation).tracks.map(track => track.target.nodeId))
+    const driven = drivenNodeIdsOf(patch.animation ?? current.animation)
     const cloned = cloneInvalidatedNodes(patch)
     const changed = applyChangedNodes(patch, driven, affectedRegions)
     const removed = removePatchedNodes(patch, current, driven)
     const ordered = orderedPatchedNodes(patch, current, invalidatedIds)
-    const artifactsChanged = patch.removedIds.length > 0 || patch.animation !== null || invalidated.size > 0 || changed.artifactsChanged
-    const update = artifactUpdate(patch, current, ordered, affectedRegions, invalidatedIds,
-      artifactsChanged, changed.forcedChanged || removed.forcedChanged)
+    const artifactsChanged =
+      patch.removedIds.length > 0 ||
+      patch.animation !== null ||
+      invalidated.size > 0 ||
+      changed.artifactsChanged
+    const update = artifactUpdate(
+      patch,
+      current,
+      ordered,
+      affectedRegions,
+      invalidatedIds,
+      artifactsChanged,
+      changed.forcedChanged || removed.forcedChanged,
+      driven,
+    )
     invalidated.clear()
     runtime = runtimeState(
       {
@@ -411,7 +345,14 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       ordered,
       update.held,
     )
-    updateRuntimeReport(started, ordered, cloned + changed.compiled, removed.removed, update, artifactsChanged)
+    updateRuntimeReport(
+      started,
+      ordered,
+      cloned + changed.compiled,
+      removed.removed,
+      update,
+      artifactsChanged,
+    )
     return runtime
   }
 
@@ -436,17 +377,32 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
       parentedNodes = 0
       report = EMPTY_REPORT
     },
-    validateSafeWorld: async (world, input) => {
-      const compiled = compileRuntimeWorld(world)
-      return await validateSafeRuntime({
-        ...input,
-        renderOriginal: async camera => await input.renderOriginal(world, camera),
-        renderOptimized: async camera => await input.renderOptimized(compiled, camera),
-        observeOriginal: async () => await input.observeOriginal(world),
-        observeOptimized: async () => await input.observeOptimized(compiled),
-      })
-    },
   }
+}
+
+/** How a change moves the count of parented nodes, which gates the regional artifact path. */
+function parentedDelta(previous: SceneNode | undefined, node: SceneNode): number {
+  if (!previous) return node.parentId === null ? 0 : 1
+  if (previous.parentId !== null && node.parentId === null) return -1
+  if (previous.parentId === null && node.parentId !== null) return 1
+  return 0
+}
+
+/** One reuse rule for both artifact paths: a held artifact stands unless a source was invalidated. */
+function reusedArtifacts(
+  compiled: readonly RuntimeRenderArtifact[],
+  previous: ReadonlyMap<string, RuntimeRenderArtifact>,
+  invalidatedIds: ReadonlySet<string>,
+): { held: readonly RuntimeRenderArtifact[]; compiled: number } {
+  let count = 0
+  const held = compiled.map(artifact => {
+    const forced = artifact.sourceIds.some(id => invalidatedIds.has(id))
+    const cached = invalidatedIds.size > 0 && forced ? undefined : previous.get(artifact.signature)
+    if (cached) return cached
+    count += 1
+    return artifact
+  })
+  return { held, compiled: count }
 }
 
 export const compileRuntimeWorld = (

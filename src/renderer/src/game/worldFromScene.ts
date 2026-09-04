@@ -226,17 +226,29 @@ function groundOf(
   if (bodies.length > 0) return bodies
   const ground = state.world.ground
   if (!ground.visible) return []
-  return [staticBody(GROUND_BODY, {
-    kind: 'cuboid', hx: ground.size / 2, hy: GROUND_DEPTH / 2, hz: ground.size / 2,
-    at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
-  })]
+  return [
+    staticBody(GROUND_BODY, {
+      kind: 'cuboid',
+      hx: ground.size / 2,
+      hy: GROUND_DEPTH / 2,
+      hz: ground.size / 2,
+      at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
+    }),
+  ]
 }
 function staticBody(body: string, shape: ColliderShape): BodyDescriptor {
   return {
-    body, kind: 'fixed', shape, transform: IDENTITY_TRANSFORM,
+    body,
+    kind: 'fixed',
+    shape,
+    transform: IDENTITY_TRANSFORM,
     friction: Number(COMPONENTS.Collider.defaults.friction),
     restitution: Number(COMPONENTS.Collider.defaults.restitution),
-    mass: 0, gravityScale: 1, lockRotation: false, sensor: false,
-    character: null, vehicle: null,
+    mass: 0,
+    gravityScale: 1,
+    lockRotation: false,
+    sensor: false,
+    character: null,
+    vehicle: null,
   }
 }

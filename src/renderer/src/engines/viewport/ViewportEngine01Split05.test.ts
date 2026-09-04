@@ -13,6 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   contextLost,
   disposed,
+  queryBegun,
+  queryEnded,
   rendered,
   resetShadowDraws,
   setDisplayRatio,
@@ -197,6 +199,25 @@ describe('a viewport', () => {
 
       expect(() => drawFrames()).toThrow('overlay')
       expect(engine.gl?.autoClear).toBe(true)
+    })
+
+    /**
+     * `begin` early-returns while a query is open, so a frame that threw between `begin` and
+     * `end` leaves its own query open — and the next frame closes it instead of one of its own,
+     * timing two frames as if they were one.
+     */
+    it('closes the timer query of a frame whose overlay throws', () => {
+      mounted({
+        controls: 'none',
+        onOverlay: () => {
+          throw new Error('overlay')
+        },
+      })
+
+      expect(() => drawFrames()).toThrow('overlay')
+
+      expect(queryBegun).toHaveBeenCalledTimes(1)
+      expect(queryEnded).toHaveBeenCalledTimes(1)
     })
   })
 

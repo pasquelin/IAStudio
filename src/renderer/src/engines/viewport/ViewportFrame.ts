@@ -48,6 +48,30 @@ export class ViewportFrame extends ViewportInset {
   }
 
   /**
+   * The whole draw inside one query: `begin` early-returns while a query is open, so a frame
+   * that threw would leave its own for the NEXT one to close, timing two frames as if they
+   * were one.
+   */
+  private drawTimedFrame(
+    renderer: WebGLRenderer,
+    panesDrawn: boolean,
+    refreshAllShadows: () => void,
+  ): void {
+    this.gpuTimer?.begin()
+    try {
+      try {
+        if (panesDrawn) this.renderPanes(renderer, refreshAllShadows)
+        this.renderInset(renderer, panesDrawn)
+      } finally {
+        refreshAllShadows()
+      }
+      this.renderOverlay(renderer)
+    } finally {
+      this.gpuTimer?.end()
+    }
+  }
+
+  /**
    * On demand, not on a permanent loop: a studio whose viewport burns a frame at rest heats the
    * machine for nothing. The loop keeps going only while something is actually moving.
    */
@@ -82,15 +106,7 @@ export class ViewportFrame extends ViewportInset {
     }
     const panesDrawn = !this.insetCoversAll()
     const renderStarted = performance.now()
-    this.gpuTimer?.begin()
-    try {
-      if (panesDrawn) this.renderPanes(renderer, refreshAllShadows)
-      this.renderInset(renderer, panesDrawn)
-    } finally {
-      refreshAllShadows()
-    }
-    this.renderOverlay(renderer)
-    this.gpuTimer?.end()
+    this.drawTimedFrame(renderer, panesDrawn, refreshAllShadows)
     recordFrame(renderer.info, this.stats, performance.now() - renderStarted)
     this.stats.gpuFrameMs = this.gpuTimer?.read() ?? null
     renderer.shadowMap.needsUpdate = true

@@ -9,8 +9,14 @@ import {
 } from 'three'
 import { loadJoltPhysics } from '@game/host/joltPhysics'
 import { loadQuickjsScripts } from '@game/host/quickjsScripts'
-import { worldBenchmarkScenes, type WorldBenchmarkId } from './worldBenchmarkScenes.fixture'
-import type { SceneState } from './sceneState'
+import {
+  worldBenchmarkScenes,
+  type WorldBenchmarkId,
+  type WorldBenchmarkMeasure,
+} from './worldBenchmarkScenes.fixture'
+import { nodesDeclaring, PHYSICS_COMPONENT_TYPES } from './sceneRuntimeSnapshot'
+import type { SceneNode, SceneState } from './sceneState'
+import type { ValidationEntity } from './executedRuntimeValidation'
 import {
   validateRuntimeRepresentation,
   type RuntimeRenderCamera,
@@ -23,7 +29,7 @@ type WorldSafeValidationResult = {
   changedPixelRatios: readonly number[]
   maximumChannelDifferences: readonly number[]
   nonUniformFrames: number
-  cameraCount: number
+  renderedFrames: number
   observedPickSamples: number
   executedScriptHooks: number
   successfulScriptEffects: number
@@ -35,7 +41,11 @@ type WorldSafeValidationResult = {
   successfulDuplications: number
   successfulUndoRedo: number
   failedChecks: readonly string[]
+  expects: readonly WorldBenchmarkMeasure[]
 }
+
+const BENCHMARK_SCRIPT =
+  'exports.default = defineScript({ onUpdate(self) { self.moveBy(0.01, 0, 0) }, onMessage() {} })'
 
 const MAXIMUM_RASTER_CHANGED_PIXEL_RATIO = 0.002
 const VALIDATION_FRAME_SIZE = 128
@@ -44,29 +54,9 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
   const results: WorldSafeValidationResult[] = []
   for (const benchmark of worldBenchmarkScenes()) {
     const cameras = camerasFor(benchmark.state)
-    function driverForBenchmark() {
-      return createSceneRuntimeValidationDriver({
-        cameras,
-        renderer: {
-          loadModel: async () => benchmarkModel(),
-          loadTexture: async () => benchmarkTexture(),
-        },
-        functional:
-          benchmark.id === 'S5'
-            ? {
-                createPhysics: loadJoltPhysics,
-                createScripts: loadQuickjsScripts,
-                modules: [
-                  {
-                    script: 'script:Benchmark.ts',
-                    code: 'exports.default = defineScript({ onUpdate(self) { self.moveBy(0.01, 0, 0) }, onMessage() {} })',
-                  },
-                ],
-              }
-            : undefined,
-      })
-    }
-    const driver = driverForBenchmark()
+    const scripted = nodesDeclaring(benchmark.state, ['Script'])
+    const physical = nodesDeclaring(benchmark.state, PHYSICS_COMPONENT_TYPES)
+    const driver = benchmarkDriver(cameras, scripted, physical)
     let nonUniformFrames = 0
     let observedPickSamples = 0
     let executedScriptHooks = 0
@@ -93,33 +83,24 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
         },
         observe: async representation => {
           const snapshot = await driver.observe(representation)
-          observedPickSamples += renderedPickCount(snapshot.picking)
-          executedScriptHooks += arrayFieldLength(snapshot.scripts, 'hooks')
-          successfulScriptEffects += movedEntityCount(snapshot.scripts, 'scripted', {
-            x: 0,
-            y: 0,
-            z: 0,
-          })
-          scriptFaults += arrayFieldLength(snapshot.scripts, 'faults')
-          simulatedPhysicsBodies += arrayFieldLength(snapshot.physics, 'bodies')
-          simulatedPhysicsSteps += arrayFieldLength(snapshot.physics, 'steps')
-          simulatedPhysicsEffects += movedEntityCount(snapshot.physics, 'physical', {
-            x: 0,
-            y: 5,
-            z: 0,
-          })
-          executedTimelineActions += arrayFieldLength(snapshot.timeline, 'scenes')
+          observedPickSamples += snapshot.picking.rendered.reduce(
+            (count, [, picks]) => count + picks.length,
+            0,
+          )
+          executedScriptHooks += snapshot.scripts.hooks.length
+          successfulScriptEffects += movedFromStart(snapshot.scripts.entities, scripted) ? 1 : 0
+          scriptFaults += snapshot.scripts.faults.length
+          simulatedPhysicsBodies += snapshot.physics.bodies.length
+          simulatedPhysicsSteps += snapshot.physics.steps.length
+          simulatedPhysicsEffects += movedFromStart(snapshot.physics.entities, physical) ? 1 : 0
+          executedTimelineActions += snapshot.timeline.scenes.length
           successfulDuplications +=
-            booleanField(snapshot.duplication, 'equivalent') &&
-            booleanField(snapshot.duplication, 'freshIds') &&
-            booleanField(snapshot.duplication, 'freshInstanceIds')
+            snapshot.duplication.equivalent &&
+            snapshot.duplication.freshIds &&
+            snapshot.duplication.freshInstanceIds
               ? 1
               : 0
-          successfulUndoRedo +=
-            booleanField(snapshot.undoRedo, 'restored') &&
-            booleanField(snapshot.undoRedo, 'replayed')
-              ? 1
-              : 0
+          successfulUndoRedo += snapshot.undoRedo.restored && snapshot.undoRedo.replayed ? 1 : 0
           return snapshot
         },
       },
@@ -130,7 +111,7 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
       changedPixelRatios: report.visual.map(result => result.changedPixelRatio),
       maximumChannelDifferences: report.visual.map(result => result.maximumChannelDifference),
       nonUniformFrames,
-      cameraCount: cameras.length,
+      renderedFrames: report.renderedFrames,
       observedPickSamples,
       executedScriptHooks,
       successfulScriptEffects,
@@ -142,55 +123,59 @@ async function validateWorldBenchmarksInBrowser(): Promise<readonly WorldSafeVal
       successfulDuplications,
       successfulUndoRedo,
       failedChecks: report.functional.flatMap(result => (result.equivalent ? [] : [result.check])),
+      expects: benchmark.expects,
     })
   }
   return results
 }
 
-function arrayFieldLength(value: unknown, field: string): number {
-  if (typeof value !== 'object' || value === null) return 0
-  const entries = Reflect.get(value, field)
-  return Array.isArray(entries) ? entries.length : 0
-}
-
-function booleanField(value: unknown, field: string): boolean {
-  return typeof value === 'object' && value !== null && Reflect.get(value, field) === true
-}
-
-function movedEntityCount(
-  value: unknown,
-  id: string,
-  initial: { x: number; y: number; z: number },
-): number {
-  if (typeof value !== 'object' || value === null) return 0
-  const entities = Reflect.get(value, 'entities')
-  if (!Array.isArray(entities)) return 0
-  return entities.some(entity => {
-    if (typeof entity !== 'object' || entity === null || Reflect.get(entity, 'id') !== id)
-      return false
-    const transform = Reflect.get(entity, 'transform')
-    if (typeof transform !== 'object' || transform === null) return false
-    const position = Reflect.get(transform, 'position')
-    if (typeof position !== 'object' || position === null) return false
-    return (
-      Reflect.get(position, 'x') !== initial.x ||
-      Reflect.get(position, 'y') !== initial.y ||
-      Reflect.get(position, 'z') !== initial.z
-    )
+/** Jolt and QuickJS are loaded only for a scene that declares physics or scripts. */
+function benchmarkDriver(
+  cameras: readonly RuntimeRenderCamera[],
+  scripted: readonly SceneNode[],
+  physical: readonly SceneNode[],
+): ReturnType<typeof createSceneRuntimeValidationDriver> {
+  return createSceneRuntimeValidationDriver({
+    cameras,
+    renderer: {
+      loadModel: async () => benchmarkModel(),
+      loadTexture: async () => benchmarkTexture(),
+    },
+    functional: {
+      createPhysics: physical.length > 0 ? loadJoltPhysics : undefined,
+      createScripts: scripted.length > 0 ? loadQuickjsScripts : undefined,
+      modules: scriptIdsOf(scripted).map(script => ({ script, code: BENCHMARK_SCRIPT })),
+    },
   })
-    ? 1
-    : 0
 }
 
-function renderedPickCount(value: unknown): number {
-  if (typeof value !== 'object' || value === null) return 0
-  const rendered = Reflect.get(value, 'rendered')
-  if (!Array.isArray(rendered)) return 0
-  return rendered.reduce(
-    (count, entry) =>
-      count + (Array.isArray(entry) && Array.isArray(entry[1]) ? entry[1].length : 0),
-    0,
-  )
+/** Deduplicated: two nodes may name the same script, and one module per name is what loads. */
+function scriptIdsOf(nodes: readonly SceneNode[]): readonly string[] {
+  return [
+    ...new Set(
+      nodes.flatMap(node =>
+        (node.components ?? []).flatMap(component =>
+          component.type === 'Script' && typeof component.script === 'string'
+            ? [component.script]
+            : [],
+        ),
+      ),
+    ),
+  ]
+}
+
+/** Each node is compared against ITS OWN starting position — no scene states where it began. */
+function movedFromStart(
+  entities: readonly ValidationEntity[],
+  nodes: readonly SceneNode[],
+): boolean {
+  return nodes.some(node => {
+    const entity = entities.find(candidate => candidate.id === node.id)
+    if (!entity) return false
+    const start = node.transform.position
+    const now = entity.transform.position
+    return now.x !== start.x || now.y !== start.y || now.z !== start.z
+  })
 }
 
 function benchmarkModel(): Group {

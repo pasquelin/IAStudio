@@ -1,12 +1,22 @@
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
 import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
-import { DEFAULT_OPTIMIZATION_POLICY, type OptimizationPolicy } from '@shared/domain/optimizationPolicy'
+import {
+  DEFAULT_OPTIMIZATION_POLICY,
+  type OptimizationPolicy,
+} from '@shared/domain/optimizationPolicy'
 import type { AnimationTimeline } from '@shared/domain/animation'
+import { movesOnItsOwn } from '@shared/domain/component'
+import { cachedOn } from '../core/cachedOn'
 import { behavioralGroupingExclusions, type RuntimeRenderArtifact } from './grouping'
 import type { SceneNode, SceneState } from './sceneState'
 import type { RuntimeOptimization, RuntimeWorld } from './runtimeWorldCompiler'
-import { adaptiveCellsOf, adaptiveRootCellKeyOf } from './adaptivePartition'
+import { adaptiveCellsOf, adaptiveRootCellKeyOf, nodeAtWorld } from './adaptivePartition'
+import {
+  automaticStaticArtifacts,
+  compatibilityTailOf,
+  pushArtifacts,
+} from './automaticStaticArtifacts'
 
 export type ArtifactWorldCompilation = {
   artifacts: readonly RuntimeRenderArtifact[]
@@ -33,16 +43,9 @@ export function compileArtifactWorld(
   }
   const regionByNode = new Map<string, string>()
   const regionMembers = new Map<string, Set<string>>()
-  const excluded = behavioralGroupingExclusions(
-    nodes,
-    new Set(animation.tracks.map(track => track.target.nodeId)),
-  )
-  const forcedMeshKeys = new Set(
-    nodes.flatMap(node => {
-      const key = forcedMeshKeyOf(node, excluded)
-      return key ? [key] : []
-    }),
-  )
+  const driven = drivenNodeIdsOf(animation)
+  const excluded = behavioralGroupingExclusions(nodes, driven)
+  const forcedMeshKeys = forcedMeshKeysOf(nodes, excluded)
   for (const node of nodes) {
     const region = artifactRegionOf(node)
     if (!region) continue
@@ -60,7 +63,7 @@ export function compileArtifactWorld(
     })
     regions.set(
       region,
-      runtimeArtifactsOf(membersWithForcedInstances(members, forcedMeshKeys, animation), animation),
+      runtimeArtifactsOf(membersWithForcedInstances(members, forcedMeshKeys, driven), animation),
     )
   }
   return {
@@ -75,30 +78,45 @@ export function compileArtifactWorld(
   }
 }
 
+export function drivenNodeIdsOf(animation: AnimationTimeline): ReadonlySet<string> {
+  return new Set(animation.tracks.map(track => track.target.nodeId))
+}
+
+function forcedMeshKeysOf(
+  nodes: readonly SceneNode[],
+  excludedOrDriven: ReadonlySet<string>,
+): Set<string> {
+  return new Set(
+    nodes.flatMap(node => {
+      const key = forcedMeshKeyOf(node, excludedOrDriven)
+      return key ? [key] : []
+    }),
+  )
+}
+
+/**
+ * What `behavioralGroupingExclusions` says of ONE node, without the Map, Set and array it allocated
+ * per node: a drag emits a patch per `pointermove`, and every changed node was paying that twice.
+ */
 export function forcedMeshKeyOf(
   node: SceneNode | undefined,
   excludedOrDriven: ReadonlySet<string>,
 ): string | null {
   if (node?.type !== 'mesh' || !node.visible || node.optimization?.mode !== 'instance') return null
-  const excluded = behavioralGroupingExclusions([node], excludedOrDriven)
-  return excluded.has(node.id) ? null : instanceCompatibilityKeyOf(node)
+  if (excludedOrDriven.has(node.id)) return null
+  if (node.parentId !== null && excludedOrDriven.has(node.parentId)) return null
+  if (movesOnItsOwn(node.components)) return null
+  if (node.components?.some(component => component.type === 'Script')) return null
+  return instanceCompatibilityKeyOf(node)
 }
 
 export function membersWithForcedInstances(
   nodes: readonly SceneNode[],
   forcedKeys: ReadonlySet<string>,
-  animation: AnimationTimeline,
+  driven: ReadonlySet<string>,
 ): readonly SceneNode[] {
-  const excluded = behavioralGroupingExclusions(
-    nodes,
-    new Set(animation.tracks.map(track => track.target.nodeId)),
-  )
-  const forcedInRegion = new Set(
-    nodes.flatMap(node => {
-      const key = forcedMeshKeyOf(node, excluded)
-      return key ? [key] : []
-    }),
-  )
+  const excluded = behavioralGroupingExclusions(nodes, driven)
+  const forcedInRegion = forcedMeshKeysOf(nodes, excluded)
   const promoted = new Set<string>()
   return nodes.map(node => {
     if (
@@ -175,13 +193,17 @@ export function runtimeArtifactsOf(
   policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
 ): readonly RuntimeRenderArtifact[] {
   const spatialNodes = spatialNodesOf(nodes)
-  const excluded = behavioralGroupingExclusions(
-    nodes,
-    new Set(animation.tracks.map(track => track.target.nodeId)),
-  )
+  const excluded = behavioralGroupingExclusions(nodes, drivenNodeIdsOf(animation))
   const { groups, batches } = explicitGroups(nodes, spatialNodes, excluded)
-  const instances = instanceArtifacts(groups, policy)
-  const batchArtifacts = forcedBatchArtifacts(batches, policy)
+  const instances = groupedArtifacts(groups, 'instance', policy)
+  const batchArtifacts = groupedArtifacts(
+    [...batches].map((entry): [string, CompatibilityGroup] => [
+      entry[0],
+      { nodes: entry[1], forced: true },
+    ]),
+    'batch',
+    policy,
+  )
   const selected = new Set(
     [...instances, ...batchArtifacts].flatMap(artifact => artifact.sourceIds),
   )
@@ -226,32 +248,45 @@ function addExplicitNode(
   if (mode !== 'auto' && mode !== 'instance') return
   const key = instanceCompatibilityKeyOf(node)
   const group = groups.get(key)
-  if (group) { group.nodes.push(spatial); group.forced ||= mode === 'instance' }
-  else groups.set(key, { nodes: [spatial], forced: mode === 'instance' })
+  if (group) {
+    group.nodes.push(spatial)
+    group.forced ||= mode === 'instance'
+  } else groups.set(key, { nodes: [spatial], forced: mode === 'instance' })
 }
+
+type CompatibilityGroup = { nodes: readonly SceneNode[]; forced: boolean }
+
+const BATCH_KEYS = new WeakMap<SceneNode, string>()
 
 function batchCompatibilityKeyOf(node: Extract<SceneNode, { type: 'mesh' | 'model' }>): string {
-  return stableKey([
-    node.type,
-    node.type === 'mesh' ? node.material : node.model.assetId,
-    node.castShadow,
-    node.receiveShadow,
-    node.optimization?.groupId ?? null,
-  ])
+  return cachedOn(BATCH_KEYS, node, () =>
+    stableKey([
+      node.type,
+      node.type === 'mesh' ? node.material : node.model.assetId,
+      ...compatibilityTailOf(node),
+    ]),
+  )
 }
+
+const INSTANCE_KEYS = new WeakMap<SceneNode, string>()
 
 function instanceCompatibilityKeyOf(node: Extract<SceneNode, { type: 'mesh' | 'model' }>): string {
-  return stableKey([
-    node.type,
-    node.type === 'mesh' ? [node.geometry, node.material, node.negative] : [node.model],
-    node.castShadow,
-    node.receiveShadow,
-    node.optimization?.groupId ?? null,
-  ])
+  return cachedOn(INSTANCE_KEYS, node, () =>
+    stableKey([
+      node.type,
+      node.type === 'mesh' ? [node.geometry, node.material, node.negative] : [node.model],
+      ...compatibilityTailOf(node),
+    ]),
+  )
 }
 
-function instanceArtifacts(
-  groups: ReadonlyMap<string, { nodes: readonly SceneNode[]; forced: boolean }>,
+/**
+ * Instances and forced batches partition the same way; only the strategy and the floor differ, and
+ * a forced group has no floor.
+ */
+function groupedArtifacts(
+  groups: Iterable<readonly [string, CompatibilityGroup]>,
+  strategy: 'instance' | 'batch',
   policy: OptimizationPolicy,
 ): readonly RuntimeRenderArtifact[] {
   const artifacts: RuntimeRenderArtifact[] = []
@@ -263,154 +298,13 @@ function instanceArtifacts(
     if (meshes.length === group.nodes.length) {
       for (const { cell, nodes } of adaptiveCellsOf(meshes, policy)) {
         if (!group.forced && nodes.length < policy.minInstancesPerGroup) continue
-        pushArtifacts(artifacts, 'instance', stableKey([compatibilityKey, cell]), nodes, policy)
+        pushArtifacts(artifacts, () => strategy, stableKey([compatibilityKey, cell]), nodes, policy)
       }
       continue
     }
-    pushArtifacts(artifacts, 'instance', compatibilityKey, group.nodes, policy)
+    pushArtifacts(artifacts, () => strategy, compatibilityKey, group.nodes, policy)
   }
   return artifacts
-}
-
-function forcedBatchArtifacts(
-  batches: ReadonlyMap<string, readonly SceneNode[]>,
-  policy: OptimizationPolicy,
-): readonly RuntimeRenderArtifact[] {
-  const artifacts: RuntimeRenderArtifact[] = []
-  for (const [compatibilityKey, candidates] of batches) {
-    const meshes = candidates.filter(
-      (node): node is Extract<SceneNode, { type: 'mesh' }> => node.type === 'mesh',
-    )
-    if (meshes.length === candidates.length) {
-      for (const { cell, nodes } of adaptiveCellsOf(meshes, policy)) {
-        pushArtifacts(artifacts, 'batch', stableKey([compatibilityKey, cell]), nodes, policy)
-      }
-      continue
-    }
-    pushArtifacts(artifacts, 'batch', compatibilityKey, candidates, policy)
-  }
-  return artifacts
-}
-
-function pushArtifacts(
-  into: RuntimeRenderArtifact[],
-  strategy: RuntimeRenderArtifact['strategy'],
-  key: string,
-  nodes: readonly SceneNode[],
-  policy: OptimizationPolicy,
-): void {
-  const ordered = nodes.map(node => node.id).sort(byCodeUnit)
-  for (let offset = 0; offset < ordered.length; offset += policy.maxObjectsPerBatch) {
-    const sourceIds = ordered.slice(offset, offset + policy.maxObjectsPerBatch)
-    into.push({ key, strategy, sourceIds, signature: stableKey([strategy, key, sourceIds]) })
-  }
-}
-
-function automaticStaticArtifacts(
-  nodes: readonly SceneNode[],
-  spatialNodes: ReadonlyMap<string, SceneNode>,
-  excluded: ReadonlySet<string>,
-  selected: ReadonlySet<string>,
-  policy: OptimizationPolicy,
-): readonly RuntimeRenderArtifact[] {
-  const parentIds = new Set(nodes.flatMap(node => (node.parentId ? [node.parentId] : [])))
-  const compatible = compatibleStaticNodes(nodes, spatialNodes, excluded, selected, parentIds)
-  const groups = spatialStaticGroups(compatible, policy)
-  return staticArtifacts(groups, parentIds, policy)
-}
-
-function compatibleStaticNodes(
-  nodes: readonly SceneNode[],
-  spatialNodes: ReadonlyMap<string, SceneNode>,
-  excluded: ReadonlySet<string>,
-  selected: ReadonlySet<string>,
-  parentIds: ReadonlySet<string>,
-): Map<string, Extract<SceneNode, { type: 'mesh' }>[]> {
-  const compatible = new Map<string, Extract<SceneNode, { type: 'mesh' }>[]>()
-  for (const node of nodes) {
-    if (!isAutomaticStatic(node, excluded, selected, parentIds)) continue
-    const key = automaticCompatibilityKey(node)
-    const members = compatible.get(key)
-    const spatial = spatialNodes.get(node.id) ?? node
-    if (spatial.type !== 'mesh') continue
-    if (members) members.push(spatial)
-    else compatible.set(key, [spatial])
-  }
-  return compatible
-}
-
-function isAutomaticStatic(
-  node: SceneNode,
-  excluded: ReadonlySet<string>,
-  selected: ReadonlySet<string>,
-  parentIds: ReadonlySet<string>,
-): node is Extract<SceneNode, { type: 'mesh' }> {
-  return node.type === 'mesh' &&
-    (node.optimization?.mode === undefined || node.optimization.mode === 'auto') &&
-    !excluded.has(node.id) && !selected.has(node.id) && !parentIds.has(node.id) && node.visible
-}
-
-function automaticCompatibilityKey(node: Extract<SceneNode, { type: 'mesh' }>): string {
-  return stableKey([
-    node.material, node.castShadow, node.receiveShadow, node.negative ?? false,
-    mergeLayoutOf(node), node.optimization?.groupId ?? null,
-  ])
-}
-
-function spatialStaticGroups(
-  compatible: ReadonlyMap<string, Extract<SceneNode, { type: 'mesh' }>[]>,
-  policy: OptimizationPolicy,
-): Map<string, Extract<SceneNode, { type: 'mesh' }>[]> {
-  const groups = new Map<string, Extract<SceneNode, { type: 'mesh' }>[]>()
-  for (const [compatibilityKey, candidates] of compatible) {
-    for (const { cell, nodes: members } of adaptiveCellsOf(candidates, policy)) {
-      groups.set(stableKey([compatibilityKey, cell]), members)
-    }
-  }
-  return groups
-}
-
-function staticArtifacts(
-  groups: ReadonlyMap<string, Extract<SceneNode, { type: 'mesh' }>[]>,
-  parentIds: ReadonlySet<string>,
-  policy: OptimizationPolicy,
-): RuntimeRenderArtifact[] {
-  const artifacts: RuntimeRenderArtifact[] = []
-  for (const [key, unordered] of groups) {
-    const members = unordered.sort((one, other) => byCodeUnit(one.id, other.id))
-    if (members.length < policy.minBatchSize) continue
-    for (let offset = 0; offset < members.length; offset += policy.maxObjectsPerBatch) {
-      const chunk = members.slice(offset, offset + policy.maxObjectsPerBatch)
-      const canMerge =
-        chunk.length >= policy.minMergeSize &&
-        chunk.length <= policy.maxObjectsPerMerge &&
-        chunk.every(
-          node => node.parentId === null && !parentIds.has(node.id) && !node.components?.length,
-        )
-      const strategy = canMerge ? 'merge' : 'batch'
-      const sourceIds = chunk.map(node => node.id).sort(byCodeUnit)
-      artifacts.push({
-        key,
-        strategy,
-        sourceIds,
-        signature: stableKey([strategy, key, sourceIds]),
-      })
-    }
-  }
-  return artifacts
-}
-
-function mergeLayoutOf(node: SceneNode): string {
-  if (node.type !== 'mesh') return ''
-  switch (node.geometry.kind) {
-    case 'dodecahedron':
-    case 'icosahedron':
-    case 'octahedron':
-    case 'tetrahedron':
-      return 'non-indexed'
-    default:
-      return 'indexed'
-  }
 }
 
 function spatialNodesOf(nodes: readonly SceneNode[]): ReadonlyMap<string, SceneNode> {
@@ -439,36 +333,43 @@ function spatialNodesOf(nodes: readonly SceneNode[]): ReadonlyMap<string, SceneN
   return new Map(
     nodes.map(node => {
       const matrix = matrixOf(node)
-      const position = new Vector3().setFromMatrixPosition(matrix)
       const scale = matrix.getMaxScaleOnAxis()
       return [
         node.id,
-        {
-          ...node,
-          transform: {
-            ...node.transform,
-            position: { x: position.x, y: position.y, z: position.z },
-            scale: { x: scale, y: scale, z: scale },
-          },
-        },
+        nodeAtWorld(node, new Vector3().setFromMatrixPosition(matrix), {
+          x: scale,
+          y: scale,
+          z: scale,
+        }),
       ]
     }),
   )
 }
 
+const NODE_KEYS = new WeakMap<SceneNode, string>()
+
+/** Nodes are immutable, so their serializations are worth keeping for as long as they live. */
+export function nodeKeyOf(node: SceneNode): string {
+  return cachedOn(NODE_KEYS, node, () => stableKey(node))
+}
+
+const ARTIFACT_INPUT_SIGNATURES = new WeakMap<SceneNode, string>()
+
 export function artifactInputSignature(node: SceneNode): string {
-  return stableKey([
-    node.type,
-    node.parentId,
-    node.visible,
-    node.castShadow,
-    node.receiveShadow,
-    node.components ?? null,
-    node.optimization ?? null,
-    node.transform,
-    node.type === 'mesh' ? [node.geometry, node.material, node.negative] : null,
-    node.type === 'model' ? node.model : null,
-  ])
+  return cachedOn(ARTIFACT_INPUT_SIGNATURES, node, () =>
+    stableKey([
+      node.type,
+      node.parentId,
+      node.visible,
+      node.castShadow,
+      node.receiveShadow,
+      node.components ?? null,
+      node.optimization ?? null,
+      node.transform,
+      node.type === 'mesh' ? [node.geometry, node.material, node.negative] : null,
+      node.type === 'model' ? node.model : null,
+    ]),
+  )
 }
 
 export function runtimeOptimizationOf(world: SceneState): RuntimeOptimization | null {

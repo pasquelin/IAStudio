@@ -32,8 +32,9 @@ describe('compressed exported assets', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:asset')
   })
 
-  it('revokes already expanded assets when a later one cannot be read', async () => {
-    const revokeObjectURL = vi.fn()
+  it('leaves no object URL live when one asset cannot be read', async () => {
+    const live = new Set<string>()
+    let next = 0
     vi.stubGlobal(
       'fetch',
       vi
@@ -42,8 +43,12 @@ describe('compressed exported assets', () => {
         .mockResolvedValueOnce(new Response(Uint8Array.of(2))),
     )
     vi.stubGlobal('URL', {
-      createObjectURL: vi.fn(() => 'blob:first'),
-      revokeObjectURL,
+      createObjectURL: vi.fn(() => {
+        next += 1
+        live.add(`blob:${next}`)
+        return `blob:${next}`
+      }),
+      revokeObjectURL: vi.fn((url: string) => live.delete(url)),
     })
 
     await expect(
@@ -53,6 +58,6 @@ describe('compressed exported assets', () => {
       ]),
     ).rejects.toThrow()
 
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:first')
+    expect([...live]).toEqual([])
   })
 })

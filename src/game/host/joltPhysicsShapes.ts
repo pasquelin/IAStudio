@@ -131,12 +131,13 @@ function fillHeightSamples(
 ): void {
   settings.mHeightSamples.reserve(count * count)
   const finite: number[] = []
-  for (let z = 0; z < count; z++) for (let x = 0; x < count; x++) {
-    const held = x < shape.width && z < shape.height ? shape.heights[z * shape.width + x] : NaN
-    const height = Number.isFinite(held) ? (held ?? 0) : HEIGHTFIELD_HOLE
-    settings.mHeightSamples.push_back(height)
-    if (height !== HEIGHTFIELD_HOLE) finite.push(height)
-  }
+  for (let z = 0; z < count; z++)
+    for (let x = 0; x < count; x++) {
+      const held = x < shape.width && z < shape.height ? shape.heights[z * shape.width + x] : NaN
+      const height = Number.isFinite(held) ? (held ?? 0) : HEIGHTFIELD_HOLE
+      settings.mHeightSamples.push_back(height)
+      if (height !== HEIGHTFIELD_HOLE) finite.push(height)
+    }
   if (finite.length === 0) return
   settings.mMinHeightValue = Math.min(...finite)
   settings.mMaxHeightValue = Math.max(...finite)

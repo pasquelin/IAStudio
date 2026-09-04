@@ -81,10 +81,10 @@ export function SceneTree({ documentId }: { documentId: string }) {
     if (collection.sort === SCENE_ORDER) return shown
     const descending = collection.sort === 'nameDesc'
     return shown.sort((one, other) => {
-        if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
-        const order = one.node.name.localeCompare(other.node.name, language)
-        return descending ? -order : order
-      })
+      if (!one.node || !other.node) return one.node ? 1 : other.node ? -1 : 0
+      const order = one.node.name.localeCompare(other.node.name, language)
+      return descending ? -order : order
+    })
   }, [collection.search, collection.sort, items, language])
 
   const expandableIds = useMemo(() => {

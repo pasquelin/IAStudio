@@ -10,8 +10,8 @@ import {
 import type { SelectOption } from '@/components/SelectField'
 import type { OptimizationPlan } from '@/engines/scene/worldAnalyzer'
 import { exportGameProject, type GameOptimizationEstimate } from '@/game/gameExportCompiler'
-import { formatBytes, formatDecimal } from '@/helpers/format'
-import { documentById, useDocuments } from '@/stores/documents'
+import { formatDecimal } from '@/helpers/format'
+import { useBytes } from '@/hooks/useBytes'
 import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { useOptimizationAnalysis } from '@/hooks/useOptimizationAnalysis'
 
@@ -23,7 +23,7 @@ const choices = <V extends string>(
 export function useExportDialogState(documentId: string) {
   const { t, i18n } = useTranslation()
   const close = useGameExportDialog(state => state.close)
-  const title = useDocuments(state => documentById(state, documentId)?.title ?? '')
+  const bytes = useBytes()
   const [options, setOptions] = useState<LossyOptimization>(NO_LOSSY_OPTIMIZATION)
   const [plan, setPlan] = useState<OptimizationPlan | null>(null)
   const [projectEstimate, setProjectEstimate] = useState<GameOptimizationEstimate | null>(null)
@@ -44,7 +44,6 @@ export function useExportDialogState(documentId: string) {
     [t],
   )
   const number = (value: number) => formatDecimal(value, i18n.language, { digits: 0 })
-  const bytes = (value: number) => formatBytes(value, unit => t(`units.${unit}`), i18n.language)
   async function submit(): Promise<void> {
     const current = new AbortController()
     controller.current = current
@@ -52,7 +51,9 @@ export function useExportDialogState(documentId: string) {
     setFailed(false)
     try {
       const outcome = await exportGameProject({
-        entryScene: title,
+        // 🛑 The id, never the title: an untitled scene sent `''`, which `exportGameProject` reads
+        // as « no scene named » and answers with the project's FIRST scene, silently.
+        entryScene: documentId,
         lossyOptimization: options,
         signal: current.signal,
       })

@@ -18,7 +18,7 @@ export function compareVisualFrames(
   options: VisualRegressionOptions,
 ): VisualRegressionResult {
   validateOptions(options)
-  if (!sameDimensions(original, optimized) || !bothFramesComplete(original, optimized))
+  if (!sameDimensions(original, optimized) || !completeFrame(original) || !completeFrame(optimized))
     throw new Error('Visual frames must have equal non-empty RGBA dimensions')
 
   const { changedPixels, maximumChannelDifference } = differencesOf(
@@ -58,7 +58,9 @@ function differencesOf(
   let maximumChannelDifference = 0
   for (let offset = 0; offset < original.pixels.length; offset += 4) {
     const differences = [0, 1, 2, 3].map(channel =>
-      Math.abs((original.pixels[offset + channel] ?? 0) - (optimized.pixels[offset + channel] ?? 0)),
+      Math.abs(
+        (original.pixels[offset + channel] ?? 0) - (optimized.pixels[offset + channel] ?? 0),
+      ),
     )
     maximumChannelDifference = Math.max(maximumChannelDifference, ...differences)
     if (differences.some(difference => difference > tolerance)) changedPixels += 1
@@ -68,10 +70,6 @@ function differencesOf(
 
 function sameDimensions(original: VisualFrame, optimized: VisualFrame): boolean {
   return original.width === optimized.width && original.height === optimized.height
-}
-
-function bothFramesComplete(original: VisualFrame, optimized: VisualFrame): boolean {
-  return completeFrame(original) && completeFrame(optimized)
 }
 
 function completeFrame(frame: VisualFrame): boolean {

@@ -12,26 +12,23 @@ const result = await evaluate(
 
 console.log(JSON.stringify(result, null, 2))
 
-const EXPECTED_SCENES = ['S1', 'S2', 'S3', 'S4', 'S5']
-if (
-  !Array.isArray(result) ||
-  result.map(entry => entry.id).join(',') !== EXPECTED_SCENES.join(',') ||
-  result.some(
-    entry =>
-      entry.equivalent !== true ||
-      entry.nonUniformFrames !== entry.cameraCount * 2 ||
-      entry.observedPickSamples === 0 ||
-      (entry.id === 'S5' &&
-        (entry.executedScriptHooks === 0 ||
-          entry.successfulScriptEffects === 0 ||
-          entry.scriptFaults !== 0 ||
-          entry.simulatedPhysicsBodies === 0 ||
-          entry.simulatedPhysicsSteps === 0 ||
-          entry.simulatedPhysicsEffects === 0 ||
-          entry.executedTimelineActions === 0 ||
-          entry.successfulDuplications === 0 ||
-          entry.successfulUndoRedo === 0)),
-  )
-) {
-  throw new Error('la validation SAFE S1–S5 a détecté une différence')
+// Aucune liste de scènes ici : chaque entrée porte ses propres attentes, tirées de ce que le décor
+// DÉCLARE (`worldBenchmarkScenes.fixture`), et `worldBenchmarkScenes.test.ts` tient le recensement.
+if (!Array.isArray(result) || result.length === 0) {
+  throw new Error('la validation SAFE n’a mesuré aucune scène')
 }
+
+const failures = result.flatMap(entry => {
+  const missing = (entry.expects ?? []).filter(measure => !(entry[measure] > 0))
+  return [
+    ...(entry.equivalent === true ? [] : [`${entry.id} : une différence détectée`]),
+    ...(entry.nonUniformFrames === entry.renderedFrames
+      ? []
+      : [`${entry.id} : ${entry.nonUniformFrames}/${entry.renderedFrames} images non uniformes`]),
+    ...(entry.observedPickSamples > 0 ? [] : [`${entry.id} : aucun pick observé`]),
+    ...(entry.scriptFaults === 0 ? [] : [`${entry.id} : ${entry.scriptFaults} fautes de script`]),
+    ...missing.map(measure => `${entry.id} : ${measure} attendu non nul`),
+  ]
+})
+
+if (failures.length > 0) throw new Error(`la validation SAFE a échoué —\n${failures.join('\n')}`)

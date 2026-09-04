@@ -8,13 +8,13 @@ export type JoltModule = Awaited<ReturnType<typeof startJolt>>
 export type JoltBodyId = InstanceType<JoltModule['BodyID']>
 export type JoltShape = InstanceType<JoltModule['Shape']>
 export type JoltShapeSettings = InstanceType<JoltModule['ShapeSettings']>
-export type JoltCharacter = InstanceType<JoltModule['CharacterVirtual']>
-export type JoltUpdate = InstanceType<JoltModule['ExtendedUpdateSettings']>
+type JoltCharacter = InstanceType<JoltModule['CharacterVirtual']>
+type JoltUpdate = InstanceType<JoltModule['ExtendedUpdateSettings']>
 export type JoltVector = InstanceType<JoltModule['Vec3']>
-export type JoltQuat = InstanceType<JoltModule['Quat']>
+type JoltQuat = InstanceType<JoltModule['Quat']>
 export type JoltPlace = InstanceType<JoltModule['RVec3']>
 export type JoltBody = InstanceType<JoltModule['Body']>
-export type JoltVehicle = InstanceType<JoltModule['VehicleConstraint']>
+type JoltVehicle = InstanceType<JoltModule['VehicleConstraint']>
 
 export type Scratch = {
   place: JoltPlace

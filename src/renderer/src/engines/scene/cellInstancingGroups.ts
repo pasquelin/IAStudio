@@ -424,15 +424,7 @@ export function createCellGroups(
       const { nodesVisited, cellsReturned, cells: held, bytes } = index.stats()
       return { nodesVisited, cellsReturned, cellsStanding: standing.size, cells: held, bytes }
     },
-    hangSources: sources.hang,
-    dropSources: sources.drop,
-    refreshSources: sources.refresh,
-    holdsSource: sources.holds,
-    // The sources back in the walk with it: nothing draws for them any more.
-    dispose: () => {
-      clear()
-      sources.hang()
-    },
+    ...sources.fields(clear),
   }
 }
 function cellGroupState() {
