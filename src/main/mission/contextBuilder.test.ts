@@ -92,6 +92,28 @@ function dependencies(
 }
 
 describe('AssistantContextBuilder', () => {
+  it('retrieves actions from the mission intent without structural serialization noise', async () => {
+    const { mission, step } = missionOf('/projects/alpha')
+    const scene = snapshotOf()
+    scene.activeDocumentState = {
+      documentId: 'document_1',
+      kind: 'scene',
+      incarnation: 'scene_1',
+      revision: 4,
+      state: { nodes: Array.from({ length: 20 }, (_, at) => ({ id: `light_${at}` })) },
+    }
+    scene.selection = { kind: 'node', items: [{ id: 'node_1', name: 'Cube' }] }
+    const search = vi.fn(async () => [])
+    const builder = createAssistantContextBuilder(
+      dependencies({ snapshot: async () => scene, actions: { search } }),
+    )
+
+    await builder.build({ mission, step, request: 'Rename the selected cube' })
+
+    expect(search).toHaveBeenCalledWith(expect.stringContaining('Rename the selected cube'), 12)
+    expect(search.mock.calls[0]?.[0]).not.toContain('light_')
+  })
+
   it('builds a useful context without a window or project', async () => {
     const { mission, step } = missionOf()
     const builder = createAssistantContextBuilder(dependencies({ snapshot: async () => null }))

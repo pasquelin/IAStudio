@@ -71,6 +71,22 @@ describe('ActionIndex', () => {
       const names = index.search({ query: query ?? '', limit: 12 }).map(hit => hit.action.name)
       expect(names, `${query}: ${JSON.stringify(names)}`).toContain(expected)
     }
+    const renameHits = index.search({
+      query: 'Renomme le cube Cube Test.\nPlan mission',
+      limit: 12,
+    })
+    expect(
+      renameHits.map(hit => hit.action.name),
+      JSON.stringify(renameHits.map(hit => [hit.action.name, hit.score, hit.lexicalScore])),
+    ).toContain('node.rename')
+    expect(
+      index
+        .search({
+          query: 'Change la couleur de base du premier matériau en rouge.\nPlan mission',
+          limit: 12,
+        })
+        .map(hit => hit.action.name),
+    ).toContain('node.setMeshMaterial')
   })
 
   it('lets BM25 rank descriptive matches before registry order', () => {
