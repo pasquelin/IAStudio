@@ -1665,6 +1665,24 @@
     "completing": "{{sentence}} — {{accept}} ou {{arrow}} pour compléter",
     "suggested_one": "{{count, number}} demande proposée",
     "suggested_many": "{{count, number}} demandes proposées",
-    "suggested_other": "{{count, number}} demandes proposées"
+    "suggested_other": "{{count, number}} demandes proposées",
+    "missionEvent": {
+      "mission": {
+        "created": "Mission créée",
+        "planning": "Planification de la mission",
+        "ready": "Mission prête",
+        "running": "Mission en cours",
+        "waiting": "Mission en attente",
+        "completed": "Mission terminée",
+        "failed": "Mission en erreur",
+        "cancelled": "Mission annulée"
+      },
+      "step": "Tâche",
+      "action": "Action du studio",
+      "job": "Génération",
+      "user": "En attente de votre réponse",
+      "child": "Sous-mission",
+      "verify": "Vérification"
+    }
   }
 }

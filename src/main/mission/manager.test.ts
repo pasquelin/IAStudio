@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createMission, type Mission, type MissionClock } from '@shared/domain/mission'
+import {
+  addMissionStep,
+  createMission,
+  createMissionStep,
+  type Mission,
+  type MissionClock,
+} from '@shared/domain/mission'
 import type { MissionJournal } from './journal'
 import { createMissionManager } from './manager'
 import { createMissionStore } from './store'
@@ -55,5 +61,26 @@ describe('mission manager', () => {
         goal: 'Overwrite',
       })),
     ).rejects.toThrow(`mission ${mission.id} changed`)
+  })
+
+  it('publishes typed step events beside mission state changes', async () => {
+    const time = clock()
+    const events = createStudioEventBus()
+    const manager = createMissionManager(createMissionStore(journalWith([])), events, time)
+    const types: string[] = []
+    events.subscribe({}, event => types.push(event.type))
+    const mission = await manager.create('Generate', {})
+    const step = createMissionStep(
+      mission.id,
+      'Start generation',
+      { kind: 'job', jobId: 'job_1' },
+      time,
+    )
+
+    await manager.update(mission.id, mission.revision, current =>
+      addMissionStep(current, step, time.now()),
+    )
+
+    expect(types).toContain('mission.step.job')
   })
 })

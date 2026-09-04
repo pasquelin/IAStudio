@@ -2,12 +2,32 @@ import { create } from 'zustand'
 import type { Mission } from '@shared/domain/mission'
 import type { MissionScope } from '@shared/studioBridgeMissions'
 import { getBridge } from '@/services/bridge'
+import { studioEventsForMission } from '@shared/domain/studioEvent'
+import type { StudioEvent } from '@shared/domain/studioEvent'
 
 type MissionsState = {
   missions: readonly Mission[]
+  events: readonly StudioEvent[]
   connectMissions: (scope: MissionScope) => Promise<() => void>
   disconnectMissions: () => void
   createMission: (goal: string) => Promise<void>
+}
+
+function missionEvents(missions: readonly Mission[]): readonly StudioEvent[] {
+  let sequence = 0
+  return missions.flatMap(mission =>
+    studioEventsForMission(mission, null, {
+      now: () => mission.updatedAt,
+      newId: () => `${mission.id}_${sequence++}`,
+    }),
+  )
+}
+
+function mergedEvents(
+  seed: readonly StudioEvent[],
+  live: readonly StudioEvent[],
+): readonly StudioEvent[] {
+  return [...new Map([...seed, ...live].map(event => [event.id, event])).values()].slice(-200)
 }
 
 export const useMissions = create<MissionsState>()((set, get) => {
@@ -22,6 +42,7 @@ export const useMissions = create<MissionsState>()((set, get) => {
   }
   return {
     missions: [],
+    events: [],
     connectMissions: async scope => {
       activeStop()
       activeStop = () => {}
@@ -31,28 +52,35 @@ export const useMissions = create<MissionsState>()((set, get) => {
       if (!bridge) return () => {}
       const belongsToScope = (mission: Mission): boolean => mission.projectId === scope.projectId
       const pushed = new Map<string, Mission>()
+      const liveEvents: StudioEvent[] = []
       const unsubscribe = bridge.missions.onChanged(changed => {
         if (connection !== activeConnection || !belongsToScope(changed)) return
         pushed.set(changed.id, changed)
-        set(state => ({
-          missions: [...state.missions.filter(mission => mission.id !== changed.id), changed],
-        }))
+        set(state => {
+          const missions = [...state.missions.filter(mission => mission.id !== changed.id), changed]
+          return { missions }
+        })
+      })
+      const unsubscribeEvents = bridge.missions.onEvent(event => {
+        if (connection !== activeConnection) return
+        liveEvents.push(event)
+        set(state => ({ events: [...state.events.slice(-199), event] }))
       })
       let stopped = false
       const stop = (): void => {
         if (stopped) return
         stopped = true
         unsubscribe()
+        unsubscribeEvents()
       }
       activeStop = stop
       const missions = await bridge.missions.watch(scope)
       if (connection === activeConnection) {
-        set({
-          missions: [
-            ...missions.filter(mission => belongsToScope(mission) && !pushed.has(mission.id)),
-            ...pushed.values(),
-          ],
-        })
+        const projected = [
+          ...missions.filter(mission => belongsToScope(mission) && !pushed.has(mission.id)),
+          ...pushed.values(),
+        ]
+        set({ missions: projected, events: mergedEvents(missionEvents(projected), liveEvents) })
       }
       return () => {
         if (connection === activeConnection) disconnectMissions()
@@ -71,7 +99,10 @@ export const useMissions = create<MissionsState>()((set, get) => {
         created.projectId === scope.projectId &&
         !get().missions.some(mission => mission.id === created.id)
       ) {
-        set(state => ({ missions: [...state.missions, created] }))
+        set(state => {
+          const missions = [...state.missions, created]
+          return { missions }
+        })
       }
     },
   }

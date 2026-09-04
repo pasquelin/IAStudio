@@ -1,4 +1,5 @@
 import type { JobProgress } from '@shared/domain/job'
+import type { StudioEvent } from '@shared/domain/studioEvent'
 import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { log } from '@main/log'
@@ -21,6 +22,43 @@ async function resumeMissionsForJob(
     }
   } catch (error) {
     log.warn('assistant', `could not resume missions for job ${jobId}: ${String(error)}`)
+  }
+}
+
+async function publishMissionJobProgress(
+  missions: MissionManager,
+  events: ReturnType<typeof createStudioEventBus>,
+  progress: JobProgress,
+  now: () => string,
+): Promise<void> {
+  for (const mission of await missions.list({})) {
+    for (const wait of mission.waits) {
+      if (wait.kind !== 'job' || wait.jobId !== progress.id) continue
+      events.publish(jobProgressEvent(mission.id, wait.stepId, progress, now))
+    }
+  }
+}
+
+function jobProgressEvent(
+  missionId: string,
+  stepId: string,
+  progress: JobProgress,
+  now: () => string,
+): StudioEvent {
+  const terminal = progress.status === 'succeeded' ? 'completed' : progress.status
+  const state = terminal === 'queued' ? 'running' : terminal
+  return {
+    id: `event_${randomUUID()}`,
+    at: now(),
+    state,
+    category: 'generation',
+    type: 'mission.job.progress',
+    priority: state === 'failed' ? 'important' : 'normal',
+    missionId,
+    stepId,
+    messageKey: 'activity.missionStateChanged',
+    params: { label: progress.id, ...(progress.error ? { error: progress.error } : {}) },
+    progress: { ratio: progress.progress },
   }
 }
 
@@ -51,6 +89,14 @@ export function createMissionServices(now: () => string) {
       void start()
     },
     onJobProgress: (progress: JobProgress): void => {
+      const publish = async (): Promise<void> => {
+        try {
+          await publishMissionJobProgress(missions, events, progress, now)
+        } catch (error) {
+          log.warn('assistant', `could not publish mission job ${progress.id}: ${String(error)}`)
+        }
+      }
+      void publish()
       if (progress.status !== 'queued' && progress.status !== 'running') {
         void resumeMissionsForJob(missions, runtime, progress.id)
       }

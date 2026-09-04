@@ -1665,6 +1665,24 @@
     "completing": "{{sentence}} — {{accept}} or {{arrow}} to complete",
     "suggested_one": "{{count, number}} request suggested",
     "suggested_many": "{{count, number}} requests suggested",
-    "suggested_other": "{{count, number}} requests suggested"
+    "suggested_other": "{{count, number}} requests suggested",
+    "missionEvent": {
+      "mission": {
+        "created": "Mission created",
+        "planning": "Planning mission",
+        "ready": "Mission ready",
+        "running": "Mission in progress",
+        "waiting": "Mission waiting",
+        "completed": "Mission completed",
+        "failed": "Mission failed",
+        "cancelled": "Mission cancelled"
+      },
+      "step": "Task",
+      "action": "Studio action",
+      "job": "Generation",
+      "user": "Waiting for your answer",
+      "child": "Sub-mission",
+      "verify": "Verification"
+    }
   }
 }

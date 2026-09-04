@@ -54,6 +54,7 @@ export const EVENTS = {
   gameWindowClosed: 'evt:game-window-closed',
   activity: 'evt:activity',
   missionChanged: 'evt:mission-changed',
+  missionEvent: 'evt:mission-event',
 }
 
 export type Unsubscribe = () => void

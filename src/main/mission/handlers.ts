@@ -5,6 +5,8 @@ import { sendToSender } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { missionBelongsToScope, type MissionManager } from './manager'
 import type { MissionRuntime } from './runtime'
+import type { StudioEvent } from '@shared/domain/studioEvent'
+import type { StudioEventBus } from './eventBus'
 
 function parseScope(value: unknown): MissionScope {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -31,7 +33,11 @@ function parseAnswer(value: unknown): string {
   return value
 }
 
-export function registerMissionHandlers(manager: MissionManager, runtime?: MissionRuntime): void {
+export function registerMissionHandlers(
+  manager: MissionManager,
+  runtime?: MissionRuntime,
+  events?: StudioEventBus,
+): void {
   const scopes = new Map<number, { readonly sender: WebContents; readonly scope: MissionScope }>()
   manager.subscribe(mission => {
     for (const projection of scopes.values()) {
@@ -39,6 +45,26 @@ export function registerMissionHandlers(manager: MissionManager, runtime?: Missi
         sendToSender(projection.sender, EVENTS.missionChanged, mission)
       }
     }
+  })
+  const forwardEvent = async (studioEvent: StudioEvent): Promise<void> => {
+    if (!studioEvent.missionId) return
+    const mission = await manager.read(studioEvent.missionId)
+    if (!mission) return
+    for (const projection of scopes.values()) {
+      if (!projection.sender.isDestroyed() && missionBelongsToScope(mission, projection.scope)) {
+        sendToSender(projection.sender, EVENTS.missionEvent, studioEvent)
+      }
+    }
+  }
+  events?.subscribe({}, studioEvent => {
+    const forward = async (): Promise<void> => {
+      try {
+        await forwardEvent(studioEvent)
+      } catch {
+        // A window may close between the mission read and the send.
+      }
+    }
+    void forward()
   })
 
   handle(CHANNELS.missionsWatch, async (event, value) => {

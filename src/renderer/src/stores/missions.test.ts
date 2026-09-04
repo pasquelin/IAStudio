@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Mission } from '@shared/domain/mission'
+import type { StudioEvent } from '@shared/domain/studioEvent'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useMissions } from './missions'
 
@@ -37,6 +38,33 @@ describe('mission projection', () => {
     expect(useMissions.getState().missions.map(item => item.id)).toEqual(['mission_1', 'mission_2'])
   })
 
+  it('keeps live studio events in the same bounded assistant projection', async () => {
+    let push: ((event: StudioEvent) => void) | undefined
+    installFakeBridge({
+      missions: {
+        watch: async () => [mission('mission_1', 'project_a')],
+        onEvent: listener => {
+          push = listener
+          return () => {}
+        },
+      },
+    })
+    await useMissions.getState().connectMissions({ projectId: 'project_a' })
+    const seed = useMissions.getState().events[0]
+    if (!seed) throw new Error('mission seed event is missing')
+    const event = {
+      ...seed,
+      id: 'event_live',
+      type: 'mission.step.action',
+    }
+
+    push?.(event)
+
+    expect(useMissions.getState().events.at(-1)).toEqual(event)
+    for (let at = 0; at < 205; at += 1) push?.({ ...event, id: `event_${at}` })
+    expect(useMissions.getState().events).toHaveLength(200)
+  })
+
   it('replaces the projection when the workspace changes', async () => {
     installFakeBridge({
       missions: {
@@ -67,6 +95,36 @@ describe('mission projection', () => {
     await connecting
 
     expect(useMissions.getState().missions.map(item => item.id)).toEqual(['mission_1', 'mission_2'])
+  })
+
+  it('preserves a live event arriving while the initial projection is in flight', async () => {
+    let answer: ((missions: readonly Mission[]) => void) | undefined
+    let push: ((event: StudioEvent) => void) | undefined
+    installFakeBridge({
+      missions: {
+        watch: () => new Promise(resolve => (answer = resolve)),
+        onEvent: listener => {
+          push = listener
+          return () => {}
+        },
+      },
+    })
+    const connecting = useMissions.getState().connectMissions({ projectId: 'project_a' })
+    const seed = {
+      id: 'event_live',
+      at: '2026-09-04T10:00:00.000Z',
+      state: 'running',
+      category: 'action',
+      type: 'mission.step.action',
+      priority: 'normal',
+      missionId: 'mission_1',
+      messageKey: 'activity.missionStateChanged',
+    } satisfies StudioEvent
+    push?.(seed)
+    answer?.([mission('mission_1', 'project_a')])
+    await connecting
+
+    expect(useMissions.getState().events).toContainEqual(seed)
   })
 
   it('ignores a stale project response and its late pushes', async () => {

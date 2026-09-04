@@ -33,6 +33,7 @@ type Choice = ComponentProps<typeof AssistantConversationChoice>
 
 type Props = {
   turns: readonly Turn[]
+  hasMissionEvents?: boolean
   asked: { id: number; request: Asked } | null
   choosing: Choice | null
   setThreadElement: (element: HTMLOListElement | null) => void
@@ -205,7 +206,9 @@ function ghostTail(ghost: Props['ghost']): string {
 }
 
 function conversationIsEmpty(props: Props): boolean {
-  return props.turns.length === 0 && !props.asked && !props.choosing
+  return [props.turns.length === 0, !props.hasMissionEvents, !props.asked, !props.choosing].every(
+    Boolean,
+  )
 }
 
 function suggestionAttributes(

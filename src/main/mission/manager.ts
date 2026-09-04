@@ -4,7 +4,7 @@ import {
   type MissionClock,
   type MissionId,
 } from '@shared/domain/mission'
-import type { StudioEvent } from '@shared/domain/studioEvent'
+import { studioEventsForMission } from '@shared/domain/studioEvent'
 import type { StudioEventBus } from './eventBus'
 import type { MissionStore } from './store'
 
@@ -27,40 +27,14 @@ const inScope = (mission: Mission, scope: MissionScope): boolean =>
     ? mission.projectId === undefined
     : mission.projectId === scope.projectId
 
-function eventOf(mission: Mission, clock: MissionClock): StudioEvent {
-  return {
-    id: `event_${clock.newId()}`,
-    at: clock.now(),
-    state: eventStateOf(mission),
-    category: 'mission',
-    type: 'mission.state.changed',
-    priority: mission.state === 'failed' ? 'important' : 'normal',
-    missionId: mission.id,
-    messageKey: 'activity.missionStateChanged',
-  }
-}
-
-function eventStateOf(mission: Mission): StudioEvent['state'] {
-  if (
-    mission.state === 'completed' ||
-    mission.state === 'failed' ||
-    mission.state === 'cancelled'
-  ) {
-    return mission.state
-  }
-  if (mission.state === 'running') return 'running'
-  if (mission.state === 'paused' || mission.state.startsWith('waiting_')) return 'waiting'
-  return 'created'
-}
-
 export function createMissionManager(
   store: MissionStore,
   events: StudioEventBus,
   clock: MissionClock,
 ): MissionManager {
-  const save = async (mission: Mission): Promise<Mission> => {
+  const save = async (mission: Mission, previous: Mission | null = null): Promise<Mission> => {
     await store.save(mission)
-    events.publish(eventOf(mission, clock))
+    for (const event of studioEventsForMission(mission, previous, clock)) events.publish(event)
     return mission
   }
 
@@ -73,8 +47,9 @@ export function createMissionManager(
         ...(scope.projectId === undefined ? {} : { projectId: scope.projectId }),
       }),
     update: async (id, expectedRevision, change) => {
+      const previous = await store.read(id)
       const next = await store.update(id, expectedRevision, change)
-      events.publish(eventOf(next, clock))
+      for (const event of studioEventsForMission(next, previous, clock)) events.publish(event)
       return next
     },
     subscribe: store.subscribe,

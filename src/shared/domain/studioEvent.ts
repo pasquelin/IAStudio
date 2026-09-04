@@ -1,4 +1,5 @@
-import type { MissionId, MissionStepId } from './mission'
+import type { Mission, MissionId, MissionStep, MissionStepId } from './mission'
+import { isRecord } from '../guards'
 import type { ActivityMessageKey, ActivityParams } from './activity'
 import type { Ref } from './ref'
 
@@ -40,4 +41,68 @@ export type StudioEvent = {
   params?: ActivityParams
   progress?: StudioEventProgress
   refs?: readonly Ref[]
+}
+
+type StudioEventClock = { now: () => string; newId: () => string }
+
+function stateOf(state: Mission['state'] | MissionStep['state']): StudioEventState {
+  if (state === 'completed' || state === 'failed' || state === 'cancelled') return state
+  if (
+    state === 'waiting' ||
+    state === 'waiting_user' ||
+    state === 'waiting_job' ||
+    state === 'waiting_dependency' ||
+    state === 'paused'
+  )
+    return 'waiting'
+  if (state === 'running') return 'running'
+  return 'created'
+}
+
+function eventForStep(mission: Mission, step: MissionStep, clock: StudioEventClock): StudioEvent {
+  const ratio =
+    isRecord(step.result) && typeof step.result['progress'] === 'number'
+      ? step.result['progress']
+      : undefined
+  return {
+    id: `event_${clock.newId()}`,
+    at: clock.now(),
+    state: stateOf(step.state),
+    category: step.kind === 'action' ? 'action' : step.kind === 'job' ? 'generation' : 'step',
+    type: `mission.step.${step.kind}`,
+    priority: step.state === 'failed' ? 'important' : 'normal',
+    missionId: mission.id,
+    stepId: step.id,
+    messageKey: 'activity.missionStateChanged',
+    params: { label: step.title, ...(step.error ? { error: step.error } : {}) },
+    ...(ratio === undefined ? {} : { progress: { ratio } }),
+  }
+}
+
+export function studioEventsForMission(
+  mission: Mission,
+  previous: Mission | null,
+  clock: StudioEventClock,
+): readonly StudioEvent[] {
+  const before = new Map(previous?.plan.steps.map(step => [step.id, step.state]) ?? [])
+  const changed = mission.plan.steps.filter(step => before.get(step.id) !== step.state)
+  const missionChanged = previous === null || previous.state !== mission.state
+  return [
+    ...(missionChanged
+      ? [
+          {
+            id: `event_${clock.newId()}`,
+            at: clock.now(),
+            state: stateOf(mission.state),
+            category: 'mission',
+            type: `mission.${mission.state}`,
+            priority: mission.state === 'failed' ? 'critical' : 'normal',
+            missionId: mission.id,
+            messageKey: 'activity.missionStateChanged',
+            params: { label: mission.goal, ...(mission.summary ? { error: mission.summary } : {}) },
+          } satisfies StudioEvent,
+        ]
+      : []),
+    ...changed.map(step => eventForStep(mission, step, clock)),
+  ]
 }

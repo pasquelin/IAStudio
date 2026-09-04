@@ -19,6 +19,7 @@ import type { UpdateState } from '@shared/domain/update'
 import type { WindowState } from '@shared/domain/window'
 import type { AssistantProgress } from '@shared/domain/assistant'
 import type { Mission } from '@shared/domain/mission'
+import type { StudioEvent } from '@shared/domain/studioEvent'
 import type { AssistantVisualCaptureRequest, AssistantVisualCaptureResult } from '@shared/ipcEvents'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import {
@@ -314,6 +315,7 @@ const bridge: StudioBridge = {
     create: goal => ipcRenderer.invoke(CHANNELS.missionsCreate, goal),
     resume: (stepId, answer) => ipcRenderer.invoke(CHANNELS.missionsResume, stepId, answer),
     onChanged: callback => subscribe<Mission>(EVENTS.missionChanged, callback),
+    onEvent: callback => subscribe<StudioEvent>(EVENTS.missionEvent, callback),
   },
   ai: {
     overview: () => ipcRenderer.invoke(CHANNELS.aiOverview),
