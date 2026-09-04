@@ -15,8 +15,13 @@
 export type DragLike = { dataTransfer: DataTransfer | null }
 export type DropTone = 'accepted' | 'partial' | 'refused' | 'neutral'
 
+/**
+ * `neutral` copies like the rest: `none` stops the browser from sending `drop` at all, and
+ * Chromium protects the drag store during `dragover` — no name is readable there, so EVERY real
+ * desktop drag is neutral until it lands. Only an averred refusal forbids.
+ */
 export const copiesDropTone = (tone: DropTone | null | undefined): boolean =>
-  tone === 'accepted' || tone === 'partial'
+  tone === 'accepted' || tone === 'partial' || tone === 'neutral'
 
 export const warnsDropTone = (tone: DropTone | null | undefined): boolean =>
   tone === 'partial' || tone === 'refused'

@@ -144,6 +144,24 @@ describe('importFiles', () => {
     expect(imported.refused).toEqual([{ name, extension: 'gltf' }])
   })
 
+  it('names the file that was dropped in a refusal, not the free name its copy took', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const source = `${root}.gltf`
+    const name = basename(source)
+    await writeFile(source, '{"asset":{"version":"2.0"}}')
+    await writeFile(join(root, name), 'held')
+
+    const imported = await importFiles([source], '', {
+      projectPath: () => root,
+      names: async () => [name],
+      adopt: async () => null,
+      documents: async () => [],
+      importBundle: async () => null,
+    })
+
+    expect(imported.refused).toEqual([{ name, extension: 'gltf' }])
+  })
+
   it('hands an outside montage bundle to its unpacker', async () => {
     const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
     await mkdir(join(root, 'Edits'))

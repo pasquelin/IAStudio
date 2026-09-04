@@ -90,6 +90,16 @@ describe('opensInStudio', () => {
     })
   })
 
+  it('catalogues a broadcast rush without opening a player that cannot decode it', () => {
+    // Chromium decodes no MXF: opened as a tab it shows a blank player, where handing the file
+    // to the system opened the one that reads it.
+    expect(sourceNatureOf('rush.mxf')).toEqual({
+      domain: 'video',
+      openable: false,
+      catalogable: true,
+    })
+  })
+
   // A montage IS a document now, whichever application wrote it — the studio reads the standard
   // rather than a spelling of its own, so a cut from Resolve opens where its own do.
   it('opens a cut as the document it is, whoever wrote it', () => {

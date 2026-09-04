@@ -134,6 +134,9 @@ export function opensInStudio(fileName: string): boolean {
   return sourceNatureOf(fileName).openable
 }
 
+/** Chromium decodes no MXF: opened as a tab, a rush shows a blank player instead of the system's. */
+const UNDRAWABLE_EXTENSIONS = ['.tif', '.tiff', '.exr', '.hdr', '.mxf']
+
 /**
  * What a file could be as BYTES to look at, whatever a document of that name would be. The two
  * questions came apart the day a document took the extension of an open format: an `.ora` from
@@ -149,7 +152,7 @@ export function sourceNatureOf(fileName: string): SourceNature {
   const extension = documentExtensionOf(fileName).toLowerCase()
   const importable = importableAssetTypeOf(fileName)
   const domain = importable ?? DOMAIN_BY_EXTENSION[extension] ?? 'other'
-  const openable = importable !== null && !['.tif', '.tiff', '.exr', '.hdr'].includes(extension)
+  const openable = importable !== null && !UNDRAWABLE_EXTENSIONS.includes(extension)
   return {
     domain,
     openable,

@@ -199,11 +199,26 @@ describe('Tree, a drag that did not start in it', () => {
   it('draws no acceptance while the operating system still hides the file name', () => {
     renderForeign(vi.fn(), undefined, { tone: () => 'neutral' })
     const row = screen.getAllByRole('treeitem')[1]!
+    const dataTransfer = foreignTransfer()
 
-    fireEvent.dragOver(row, { dataTransfer: foreignTransfer() })
+    fireEvent.dragOver(row, { dataTransfer })
 
     expect(row.className).not.toContain('outline-accent')
     expect(row.className).not.toContain('outline-danger')
+    // Drawn as nothing, but never FORBIDDEN: `none` stops the browser sending `drop` at all, and
+    // the name stays hidden for the whole of every real dragover.
+    expect(dataTransfer.dropEffect).toBe('copy')
+  })
+
+  it('keeps the blank below the rows droppable while the file name is still hidden', () => {
+    renderForeign(vi.fn(), undefined, { tone: () => 'neutral' })
+    const blank = screen.getByRole('tree').parentElement!
+    const dataTransfer = foreignTransfer()
+
+    fireEvent.dragOver(blank, { dataTransfer })
+
+    expect(dataTransfer.dropEffect).toBe('copy')
+    expect(blank.className).not.toContain('outline-2')
   })
 
   /**

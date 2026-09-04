@@ -103,7 +103,9 @@ async function importAssetOrDocument(
   if (!(await copyExternalFile(source, destination, watch))) return
   try {
     if (IMPORTABLE_DOCUMENT_EXTENSIONS.includes(extension)) {
-      state.documentPaths.set(relative, name)
+      // The name the user DROPPED, not the free one its copy took: both notices this feeds —
+      // refused and failed — name a file that is no longer on disk under either.
+      state.documentPaths.set(relative, sourceName)
       return
     }
     if (importableAssetTypeOf(source)) {

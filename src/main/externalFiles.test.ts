@@ -3,6 +3,7 @@ import {
   authoriseExternalFiles,
   claimExternalFiles,
   externalPathsFromArguments,
+  launchedPaths,
 } from './externalFiles'
 
 describe('externalPathsFromArguments', () => {
@@ -32,6 +33,20 @@ describe('externalPathsFromArguments', () => {
         new Set(['/Applications/IA Studio']),
       ),
     ).toEqual(['/work/model.obj'])
+  })
+})
+
+describe('launchedPaths', () => {
+  it('cuts the binary whatever path invoked it, so no launch announces a refused executable', () => {
+    expect(launchedPaths(['/usr/local/bin/ia-studio', '/work/model.obj'], '/repo/app')).toEqual([
+      '/work/model.obj',
+    ])
+  })
+
+  it('drops the application folder a development launch passes after the binary', () => {
+    expect(launchedPaths([process.execPath, '/repo/app', '/work/image.png'], '/repo/app')).toEqual([
+      '/work/image.png',
+    ])
   })
 })
 
