@@ -15,12 +15,12 @@ export async function assetBytes(assetId: string): Promise<Uint8Array> {
 }
 
 /** The original, for an export that must not play the 720p proxy. */
-export async function fetchOriginalAsset(assetId: string): Promise<Response> {
-  return fetchOver(assetMasterUrl(assetId), assetId)
+export async function fetchOriginalAsset(assetId: string, signal?: AbortSignal): Promise<Response> {
+  return fetchOver(assetMasterUrl(assetId), assetId, signal)
 }
 
-async function fetchOver(url: string, assetId: string): Promise<Response> {
-  const response = await fetch(url)
+async function fetchOver(url: string, assetId: string, signal?: AbortSignal): Promise<Response> {
+  const response = await fetch(url, { signal })
   if (!response.ok) throw new Error(`asset ${assetId} could not be read`)
   return response
 }

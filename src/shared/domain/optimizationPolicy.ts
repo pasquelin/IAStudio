@@ -2,6 +2,7 @@ import type { GeometrySimplification, TextureCompression, TextureReduction } fro
 
 export type OptimizationPolicy = {
   minInstancesPerGroup: number
+  minBatchSize: number
   analysisChunkSize: number
   simplificationRatios: Readonly<Record<GeometrySimplification, number>>
   lodDistanceMultipliers: readonly number[]
@@ -13,6 +14,7 @@ export type OptimizationPolicy = {
 /** All strategy thresholds share one contract so benchmarks can move them without a code hunt. */
 export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = Object.freeze({
   minInstancesPerGroup: 16,
+  minBatchSize: 2,
   analysisChunkSize: 100,
   simplificationRatios: Object.freeze({
     off: 0,

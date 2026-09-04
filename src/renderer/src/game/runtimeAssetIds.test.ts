@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { reliefLayer, type GeometryDescriptor } from '@shared/domain/scene'
+import {
+  reliefLayer,
+  type GeometryDescriptor,
+  type OptimizationSettings,
+} from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import { meshNode, modelNode, spriteNode } from '@/engines/scene/nodeFactory'
+import { assetClip, clipLane } from '@shared/domain/scene'
 import { runtimeAssetIds, runtimeModelAssetIds, runtimeTextureAssetIds } from './runtimeAssetIds'
 
 describe('assets reachable from an exported runtime', () => {
@@ -36,7 +41,34 @@ describe('assets reachable from an exported runtime', () => {
     }
 
     expect(runtimeAssetIds(state)).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
-    expect(runtimeTextureAssetIds(state)).toEqual(['shared', 'height'])
+    expect(runtimeTextureAssetIds(state)).toEqual(['shared'])
     expect(runtimeModelAssetIds(state)).toEqual(['model'])
+  })
+
+  it('packages project animation clips and protects a texture used by an excluded node', () => {
+    const geometry: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
+    const first = meshNode(geometry)
+    const second = meshNode(geometry)
+    const model = modelNode('model', 'Model')
+    if (first.type !== 'mesh' || second.type !== 'mesh' || model.type !== 'model')
+      throw new Error('expected render nodes')
+    const material = { ...first.material, map: { assetId: 'shared' } }
+    const state = {
+      ...EMPTY_SCENE,
+      nodes: [
+        { ...first, material },
+        { ...second, material, optimization: { mode: 'exclude' } satisfies OptimizationSettings },
+        {
+          ...model,
+          model: {
+            ...model.model,
+            lanes: [clipLane('main', [assetClip('walk', 'animation', 'Walk')])],
+          },
+        },
+      ],
+    }
+
+    expect(runtimeAssetIds(state)).toContain('animation')
+    expect(runtimeTextureAssetIds(state)).toEqual([])
   })
 })

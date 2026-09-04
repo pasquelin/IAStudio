@@ -73,11 +73,13 @@ export type CompiledNodeGeometry = {
   lodCarved?: readonly CsgGraph[]
   mesh?: CompiledMeshGeometry
   lodMeshes?: readonly CompiledMeshGeometry[]
-  modelMeshes?: readonly CompiledModelMesh[]
+  modelAssetId?: string
 }
 
 /** Tight runtime buffers encoded once during export, never recomputed by the shipped game. */
 export type CompiledMeshGeometry = {
+  encoding: 'float32-base64'
+  indexEncoding?: 'uint32-base64'
   position: string
   normal: string
   uv: string
@@ -95,6 +97,7 @@ export type CompiledModelMesh = {
 
 export type CompiledSceneOptimization = {
   nodes: readonly CompiledNodeGeometry[]
+  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
 }
 
 export type ExportedScript = {

@@ -17,12 +17,14 @@ import type { SceneState } from '@/engines/scene/sceneState'
 import type { CompiledSceneOptimization } from '@shared/domain/gameExport'
 import { buildGameScene, type GameScene } from './gameScene'
 import { createGltfSource } from '@/engines/scene/gltfSource'
+import type { Us } from '@shared/domain/time'
 
 export type WebRender = RenderPort & {
   /** Puts another scene on. What a `game.scene.load` lands as, outside the studio. */
   show: (state: SceneState, optimization?: CompiledSceneOptimization) => Promise<void>
   resize: (width: number, height: number) => void
   draw: () => void
+  seek: (time: Us) => void
   dispose: () => void
 }
 
@@ -82,6 +84,8 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
     veil: amount => {
       veil.material.opacity = clamp(amount, 0, 1)
     },
+
+    seek: time => held?.seek(time),
 
     // 🛑 Only when it CHANGED: `setSize` reassigns `canvas.width`, which reallocates and clears
     // the framebuffer — sixty times a second at a size nobody touched.

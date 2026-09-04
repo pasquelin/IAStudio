@@ -8,10 +8,10 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { SceneGameExportDialog } from './SceneGameExportDialog'
 
-const { runAction } = vi.hoisted(() => ({
-  runAction: vi.fn(async (..._arguments: unknown[]) => ({ ok: true })),
+const { exportGameProject } = vi.hoisted(() => ({
+  exportGameProject: vi.fn(async (..._arguments: unknown[]) => ({ ok: true })),
 }))
-vi.mock('@/features/assistant/executor', () => ({ runAction }))
+vi.mock('@/game/gameExportCompiler', () => ({ exportGameProject }))
 
 const DOCUMENT = 'Forest'
 const PLAN: OptimizationPlan = {
@@ -45,7 +45,7 @@ beforeEach(() => {
     analyzeWorldOptimization: async () => PLAN,
   } as unknown as SceneRenderer)
   useGameExportDialog.getState().open(DOCUMENT)
-  runAction.mockClear()
+  exportGameProject.mockClear()
 })
 
 afterEach(() => {
@@ -74,23 +74,21 @@ it('exports through the shared game action with the explicit choices', async () 
   expect(screen.getByText('Triangles affichés 100 → 65')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Exporter' }))
 
-  expect(runAction).toHaveBeenCalledWith(
-    'game.export',
-    {
-      entryScene: DOCUMENT,
+  expect(exportGameProject).toHaveBeenCalledWith({
+    entryScene: DOCUMENT,
+    lossyOptimization: {
       generateLods: false,
       geometrySimplification: 'balanced',
       textureCompression: 'off',
       textureReduction: 'off',
     },
-    undefined,
-    expect.any(AbortSignal),
-  )
+    signal: expect.any(AbortSignal),
+  })
 })
 
 it('aborts export preparation when the user cancels the dialog', async () => {
   let finish: ((outcome: { ok: false }) => void) | undefined
-  runAction.mockImplementationOnce(
+  exportGameProject.mockImplementationOnce(
     async () =>
       await new Promise<{ ok: false }>(resolve => {
         finish = resolve
@@ -101,7 +99,8 @@ it('aborts export preparation when the user cancels the dialog', async () => {
 
   await screen.findByText('Appels de rendu 20 → 2')
   await user.click(screen.getByRole('button', { name: 'Exporter' }))
-  const signal: unknown = runAction.mock.calls[0]?.[3]
+  const options: unknown = exportGameProject.mock.calls[0]?.[0]
+  const signal = typeof options === 'object' && options ? Reflect.get(options, 'signal') : undefined
   if (!(signal instanceof AbortSignal)) throw new Error('expected an export abort signal')
   await user.click(screen.getByRole('button', { name: 'Annuler' }))
 

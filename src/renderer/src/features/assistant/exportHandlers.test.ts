@@ -75,7 +75,7 @@ describe('a game written out of the studio', () => {
           [
             {
               meshIndex: 0,
-              lodMeshes: [{ position: '', normal: '', uv: '' }],
+              lodMeshes: [{ encoding: 'float32-base64', position: '', normal: '', uv: '' }],
             },
           ],
         ],
@@ -88,7 +88,15 @@ describe('a game written out of the studio', () => {
 
     expect(asked[0]?.scenes[0]?.optimization?.nodes).toContainEqual({
       nodeId: node.id,
-      modelMeshes: [{ meshIndex: 0, lodMeshes: [{ position: '', normal: '', uv: '' }] }],
+      modelAssetId: 'tree-glb',
+    })
+    expect(asked[0]?.scenes[0]?.optimization?.modelAssets).toEqual({
+      'tree-glb': [
+        {
+          meshIndex: 0,
+          lodMeshes: [{ encoding: 'float32-base64', position: '', normal: '', uv: '' }],
+        },
+      ],
     })
   })
 

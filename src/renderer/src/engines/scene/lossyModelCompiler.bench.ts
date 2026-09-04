@@ -1,4 +1,4 @@
-import { BufferGeometry, Mesh, MeshStandardMaterial, SphereGeometry } from 'three'
+import { Mesh, MeshStandardMaterial, SphereGeometry, type BufferGeometry } from 'three'
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js'
 import { bench, describe } from 'vitest'
 import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'

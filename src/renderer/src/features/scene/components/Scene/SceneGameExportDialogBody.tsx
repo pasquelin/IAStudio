@@ -19,9 +19,8 @@ import { formatBytes, formatDecimal } from '@/helpers/format'
 import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { documentById, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
-import type { OptimizationPlan } from '@/engines/scene/worldAnalyzer'
-import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
-import { runAction } from '@/features/assistant/executor'
+import { estimatedLossyImpact, type OptimizationPlan } from '@/engines/scene/worldAnalyzer'
+import { exportGameProject } from '@/game/gameExportCompiler'
 import { Dialog } from '@/features/shell/components/Dialog'
 
 const fixedChoice = (label: string) => (
@@ -71,28 +70,27 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
   const number = (value: number): string => formatDecimal(value, i18n.language, { digits: 0 })
   const bytes = (value: number): string =>
     formatBytes(value, unit => t(`units.${unit}`), i18n.language)
-  const geometryRatio =
-    DEFAULT_OPTIMIZATION_POLICY.simplificationRatios[options.geometrySimplification]
-  const imageScale = DEFAULT_OPTIMIZATION_POLICY.textureScale[options.textureReduction]
-  const imageCompression =
-    options.textureCompression === 'off'
-      ? 1
-      : DEFAULT_OPTIMIZATION_POLICY.jpegQuality[options.textureCompression] / 100
+  const lossyImpact = plan ? estimatedLossyImpact(plan, options) : null
   const submit = async (): Promise<void> => {
     const controller = new AbortController()
     exportController.current = controller
     setExporting(true)
     setFailed(false)
-    const outcome = await runAction(
-      'game.export',
-      { entryScene: title, ...options },
-      undefined,
-      controller.signal,
-    )
+    let succeeded: boolean
+    try {
+      const outcome = await exportGameProject({
+        entryScene: title,
+        lossyOptimization: options,
+        signal: controller.signal,
+      })
+      succeeded = outcome.ok
+    } catch {
+      succeeded = false
+    }
     exportController.current = null
     if (controller.signal.aborted) return
     setExporting(false)
-    if (outcome.ok) close()
+    if (succeeded) close()
     else setFailed(true)
   }
   const cancel = (): void => {
@@ -176,23 +174,19 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
               <dd>
                 {t('game.export.triangleResult', {
                   before: number(plan.measured.triangles),
-                  after: number(Math.round(plan.measured.triangles * (1 - geometryRatio))),
+                  after: number(lossyImpact?.trianglesAfter ?? plan.measured.triangles),
                 })}
               </dd>
               <dd>
                 {t('game.export.geometryResult', {
                   before: bytes(plan.measured.geometryBytes),
-                  after: bytes(Math.round(plan.measured.geometryBytes * (1 - geometryRatio))),
+                  after: bytes(lossyImpact?.geometryBytesAfter ?? plan.measured.geometryBytes),
                 })}
               </dd>
               <dd>
                 {t('game.export.imageResult', {
                   before: bytes(plan.measured.textureBytes),
-                  after: bytes(
-                    Math.round(
-                      plan.measured.textureBytes * imageScale * imageScale * imageCompression,
-                    ),
-                  ),
+                  after: bytes(lossyImpact?.textureBytesAfter ?? plan.measured.textureBytes),
                 })}
               </dd>
               <dd>

@@ -20,6 +20,7 @@ import {
   type SceneStats,
 } from './sceneStats'
 import type { SceneNode, SceneState } from './sceneState'
+import type { LossyOptimization } from '@shared/domain/gameExport'
 import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
 
@@ -68,11 +69,16 @@ export type OptimizationImpact = {
   avoidedTextureBytes: number
 }
 
+export type LossyCandidate = { nodeId: string }
+export type TextureOptimizationCandidate = { assetId: string }
+
 export type OptimizationPlan = {
   classifications: readonly ClassifiedObject[]
   instances: readonly InstanceCandidate[]
   bakeCandidates: readonly BakeCandidate[]
   batches: readonly BatchCandidate[]
+  lodCandidates?: readonly LossyCandidate[]
+  textureCandidates?: readonly TextureOptimizationCandidate[]
   warnings: readonly OptimizationWarning[]
   measured: OptimizationMetrics
   estimated: OptimizationImpact
@@ -86,6 +92,12 @@ export type OptimizationReport = {
   visualChanges: 'NONE'
 }
 
+export type LossyOptimizationImpact = {
+  trianglesAfter: number
+  geometryBytesAfter: number
+  textureBytesAfter: number
+}
+
 import {
   DEFAULT_OPTIMIZATION_POLICY,
   type OptimizationPolicy,
@@ -95,7 +107,9 @@ export {
   type OptimizationPolicy,
 } from '@shared/domain/optimizationPolicy'
 
-type AnalyzerPolicy = Pick<OptimizationPolicy, 'minInstancesPerGroup' | 'analysisChunkSize'>
+type AnalyzerPolicy = Pick<OptimizationPolicy, 'minInstancesPerGroup' | 'analysisChunkSize'> & {
+  minBatchSize?: number
+}
 
 type CandidateGroup = { ids: Set<string>; units: Set<string>; forced: boolean }
 
@@ -250,7 +264,11 @@ function* optimizationSteps(
     ? bakeCandidatesOf(state.nodes, runtimeNodes, animated)
     : []
   const batches = [...batchGroups]
-    .filter(([, group]) => group.forced || group.units.size >= 2)
+    .filter(
+      ([, group]) =>
+        group.forced ||
+        group.units.size >= (policy.minBatchSize ?? DEFAULT_OPTIMIZATION_POLICY.minBatchSize),
+    )
     .map(([key, group]) => ({
       key,
       sourceIds: [...group.ids].sort(byCodeUnit),
@@ -278,6 +296,7 @@ function* optimizationSteps(
     instances,
     bakeCandidates,
     batches,
+    ...lossyCandidatesOf(state.nodes),
     warnings,
     measured: {
       ...sceneStats,
@@ -296,6 +315,32 @@ function* optimizationSteps(
   }
 }
 
+export function lossyCandidatesOf(
+  nodes: readonly SceneNode[],
+): Pick<Required<OptimizationPlan>, 'lodCandidates' | 'textureCandidates'> {
+  const lodCandidates = nodes
+    .filter(
+      node =>
+        node.optimization?.mode !== 'exclude' &&
+        (node.type === 'mesh' || node.type === 'carved' || node.type === 'model'),
+    )
+    .map(node => ({ nodeId: node.id }))
+    .sort((one, other) => byCodeUnit(one.nodeId, other.nodeId))
+  const textures = new Set<string>()
+  const protectedTextures = new Set<string>()
+  for (const node of nodes) {
+    if (node.type !== 'mesh' && node.type !== 'carved') continue
+    const assetId = node.material.map?.assetId
+    if (!assetId) continue
+    ;(node.optimization?.mode === 'exclude' ? protectedTextures : textures).add(assetId)
+  }
+  for (const assetId of protectedTextures) textures.delete(assetId)
+  return {
+    lodCandidates,
+    textureCandidates: [...textures].sort(byCodeUnit).map(assetId => ({ assetId })),
+  }
+}
+
 function nextTask(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0))
 }
@@ -307,6 +352,24 @@ export function optimizationReport(plan: OptimizationPlan): OptimizationReport {
     instanceCandidates: plan.instances.reduce((count, group) => count + group.meshCount, 0),
     batchCandidates: plan.batches.reduce((count, group) => count + group.meshCount, 0),
     visualChanges: 'NONE',
+  }
+}
+
+export function estimatedLossyImpact(
+  plan: OptimizationPlan,
+  options: LossyOptimization,
+  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+): LossyOptimizationImpact {
+  const geometryRatio = policy.simplificationRatios[options.geometrySimplification]
+  const textureScale = policy.textureScale[options.textureReduction]
+  const textureQuality =
+    options.textureCompression === 'off' ? 1 : policy.jpegQuality[options.textureCompression] / 100
+  return {
+    trianglesAfter: Math.round(plan.measured.triangles * (1 - geometryRatio)),
+    geometryBytesAfter: Math.round(plan.measured.geometryBytes * (1 - geometryRatio)),
+    textureBytesAfter: Math.round(
+      plan.measured.textureBytes * textureScale * textureScale * textureQuality,
+    ),
   }
 }
 

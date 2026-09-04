@@ -10,6 +10,7 @@ import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import type { BufferGeometry } from 'three'
 import type { SceneNode, SceneState } from './sceneState'
 import { compiledMeshOf } from './compiledGeometry'
+import { lossyCandidatesOf } from './worldAnalyzer'
 
 /** Compiles only runtime hints; the authoring state is neither mutated nor embedded in the plan. */
 export function compileLossyWorld(
@@ -19,7 +20,10 @@ export function compileLossyWorld(
   if (!options.generateLods && options.geometrySimplification === 'off') return undefined
 
   const ratio = DEFAULT_OPTIMIZATION_POLICY.simplificationRatios[options.geometrySimplification]
-  const nodes = state.nodes.flatMap(node => compiledNode(node, options.generateLods, ratio))
+  const candidates = new Set(lossyCandidatesOf(state.nodes).lodCandidates.map(one => one.nodeId))
+  const nodes = state.nodes.flatMap(node =>
+    candidates.has(node.id) ? compiledNode(node, options.generateLods, ratio) : [],
+  )
   return nodes.length > 0 ? { nodes } : undefined
 }
 
@@ -64,7 +68,6 @@ function compiledNode(
   generateLods: boolean,
   ratio: number,
 ): readonly CompiledNodeGeometry[] {
-  if (node.optimization?.mode === 'exclude') return []
   if (node.type === 'mesh') {
     if (generateLods) {
       return [

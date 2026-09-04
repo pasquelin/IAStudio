@@ -4,15 +4,20 @@ import {
   BoxGeometry,
   InstancedMesh,
   LOD,
+  AnimationClip,
   Matrix4,
   Mesh,
   MeshStandardMaterial,
-  type Object3D,
+  NumberKeyframeTrack,
+  Object3D,
 } from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
+import { embeddedClip } from '@shared/domain/scene'
+import { SECOND } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
 import { csgPartOf, type CsgGraph } from '@shared/domain/csg'
+import type { CompiledMeshGeometry } from '@shared/domain/gameExport'
 import { carvedNode, groupNode, lightNode, meshNode, modelNode } from '@/engines/scene/nodeFactory'
 import {
   DEFAULT_MATERIAL,
@@ -180,7 +185,10 @@ describe('a scene as a game draws it', () => {
     const source = new LOD()
     source.addLevel(new Mesh(), 0)
     source.addLevel(new Mesh(), 20)
-    const node = modelNode('model-1', 'Model')
+    const node = {
+      ...modelNode('model-1', 'Model'),
+      transform: { ...IDENTITY_TRANSFORM, scale: { x: 4, y: 4, z: 4 } },
+    }
     const built = await buildGameScene(
       scene([node]),
       { urlOf: () => 'assets/model.glb' },
@@ -195,10 +203,42 @@ describe('a scene as a game draws it', () => {
     ])
   })
 
+  it('seeks embedded model animation from the exported scene clock', async () => {
+    const source = new Object3D()
+    source.animations = [
+      new AnimationClip('walk', 1, [new NumberKeyframeTrack('.position[x]', [0, 1], [0, 6])]),
+    ]
+    const base = modelNode('model-1', 'Model')
+    if (base.type !== 'model') throw new Error('expected a model')
+    const node = {
+      ...base,
+      model: {
+        ...base.model,
+        lanes: [
+          {
+            id: 'main',
+            clips: [embeddedClip('walk-block', 'walk', { duration: SECOND })],
+          },
+        ],
+      },
+    }
+    const built = await buildGameScene(
+      scene([node]),
+      { urlOf: () => 'assets/model.glb' },
+      undefined,
+      async () => source,
+    )
+
+    built.seek(SECOND / 2)
+
+    expect(built.byEntity.get(node.id)?.position.x).toBeCloseTo(3)
+  })
+
   it('adds exported distant levels to a static mesh while preserving its exact model LOD0', async () => {
     const source = new Mesh(new BoxGeometry(), new MeshStandardMaterial())
     const node = modelNode('model-1', 'Model')
-    const triangle = {
+    const triangle: CompiledMeshGeometry = {
+      encoding: 'float32-base64',
       position: 'AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA',
       normal: '',
       uv: '',
@@ -207,7 +247,10 @@ describe('a scene as a game draws it', () => {
     const built = await buildGameScene(
       scene([node]),
       { urlOf: () => 'assets/model.glb' },
-      { nodes: [{ nodeId: node.id, modelMeshes: [{ meshIndex: 0, lodMeshes: [triangle] }] }] },
+      {
+        nodes: [{ nodeId: node.id, modelAssetId: 'model-1' }],
+        modelAssets: { 'model-1': [{ meshIndex: 0, lodMeshes: [triangle] }] },
+      },
       async () => source,
     )
     const lods: LOD[] = []
@@ -255,6 +298,7 @@ describe('a scene as a game draws it', () => {
         {
           nodeId: node.id,
           mesh: {
+            encoding: 'float32-base64',
             position: 'AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA',
             normal: '',
             uv: '',

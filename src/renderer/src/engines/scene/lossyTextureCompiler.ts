@@ -11,7 +11,7 @@ export type LossyTextureWatch = {
 }
 
 type TextureCompilerPorts = {
-  read: (assetId: string) => Promise<Uint8Array | null>
+  read: (assetId: string, signal: AbortSignal | undefined) => Promise<Uint8Array | null>
   transform: (
     assetId: string,
     bytes: Uint8Array,
@@ -39,7 +39,8 @@ export async function compileLossyTextures(
   try {
     for (const [index, assetId] of assetIds.entries()) {
       if (watch.signal?.aborted) throw new DOMException('Texture compilation aborted', 'AbortError')
-      const bytes = await active.read(assetId)
+      const bytes = await active.read(assetId, watch.signal)
+      if (watch.signal?.aborted) throw new DOMException('Texture compilation aborted', 'AbortError')
       if (!bytes) {
         watch.onProgress?.(index + 1, assetIds.length)
         continue
@@ -67,9 +68,9 @@ function browserTexturePorts(): TextureCompilerPorts {
     answer => answer.override,
   )
   return {
-    read: async assetId => {
+    read: async (assetId, signal) => {
       try {
-        return new Uint8Array(await (await fetchOriginalAsset(assetId)).arrayBuffer())
+        return new Uint8Array(await (await fetchOriginalAsset(assetId, signal)).arrayBuffer())
       } catch {
         // The package writer reports missing catalogue assets; optimization must not mask that report.
         return null

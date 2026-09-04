@@ -15,7 +15,11 @@ import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
 import type { Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
-import type { CompiledNodeGeometry, CompiledSceneOptimization } from '@shared/domain/gameExport'
+import type {
+  CompiledModelMesh,
+  CompiledNodeGeometry,
+  CompiledSceneOptimization,
+} from '@shared/domain/gameExport'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import { createGeometryCache } from '@/engines/scene/geometryCache'
@@ -31,6 +35,10 @@ import { drivenNodes } from '@/engines/scene/animationEval'
 import { bakedInstancesOf } from '@/engines/scene/bakedInstances'
 import { disposeTree, instanceOf, type ModelSource } from '@/engines/scene/modelCache'
 import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
+import { SceneAnimations } from '@/engines/scene/animation'
+import { clipKeyOf } from '@shared/domain/scene'
+import type { ModelRef } from '@shared/domain/scene'
+import type { Us } from '@shared/domain/time'
 
 /**
  * A scene as three.js draws it in a GAME — no gizmo, no helper, no selection, no grid.
@@ -45,6 +53,7 @@ export type GameScene = {
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
   place: (entityId: string, transform: Transform) => void
+  seek: (time: Us) => void
   dispose: () => void
 }
 
@@ -83,22 +92,44 @@ export async function buildGameScene(
   const models = new Map<string, Promise<Object3D>>()
   const modelMeshes = new WeakSet<Mesh>()
   const ownedModelGeometries = new Set<BufferGeometry>()
+  const animations = new SceneAnimations()
+  animations.setTimeline(state.animation)
 
   const modelOf = async (
-    assetId: string,
-    modelPlan: CompiledNodeGeometry['modelMeshes'],
+    nodeId: string,
+    model: ModelRef,
+    modelPlan: readonly CompiledModelMesh[] | undefined,
   ): Promise<Object3D | null> => {
+    const assetId = model.assetId
     const url = assets.urlOf({ kind: 'asset', id: assetId })
     if (!url || !loadModel) return null
     try {
       const held = models.get(assetId) ?? loadModel(url)
       models.set(assetId, held)
-      const object = instanceOf(await held)
+      const source = await held
+      const object = instanceOf(source)
       object.traverse(child => {
         if (child instanceof Mesh) modelMeshes.add(child)
-        if (child instanceof LOD) rememberLodDistances(child)
       })
-      return applyCompiledModel(object, modelPlan, ownedModelGeometries, modelMeshes)
+      const optimized = applyCompiledModel(object, modelPlan, ownedModelGeometries, modelMeshes)
+      animations.add(nodeId, optimized, source.animations)
+      for (const lane of model.lanes ?? []) {
+        for (const clip of lane.clips) {
+          if (clip.source.kind !== 'asset') continue
+          const clipUrl = assets.urlOf({ kind: 'asset', id: clip.source.assetId })
+          if (!clipUrl) continue
+          try {
+            const clipSource = await loadModel(clipUrl)
+            const animation = clipSource.animations[0]
+            if (animation) animations.addClip(nodeId, clipKeyOf(clip.source), animation)
+            disposeTree(clipSource)
+          } catch {
+            // A missing optional animation leaves its block silent without hiding the model.
+          }
+        }
+      }
+      animations.apply(nodeId, model.lanes ?? [])
+      return optimized
     } catch {
       return null
     }
@@ -138,7 +169,15 @@ export async function buildGameScene(
   const objects = await Promise.all(
     state.nodes.map(
       async node =>
-        await objectOf(node, compiled.get(node.id), geometries.acquire, dress, carve, modelOf),
+        await objectOf(
+          node,
+          compiled.get(node.id),
+          geometries.acquire,
+          dress,
+          carve,
+          modelOf,
+          optimization,
+        ),
     ),
   )
   for (const [index, node] of state.nodes.entries()) {
@@ -202,7 +241,9 @@ export async function buildGameScene(
     world: state.world,
     byEntity,
     place: (entityId, transform) => placements.get(entityId)?.(transform),
+    seek: time => animations.seek(time),
     dispose: () => {
+      animations.clear()
       instances.dispose()
       ground.dispose()
       for (const held of textures.values()) void disposeWhenLoaded(held)
@@ -245,9 +286,11 @@ async function objectOf(
   dress: (material: MeshStandardMaterial, assetId: string) => void,
   carve: Carve,
   modelOf: (
-    assetId: string,
-    modelPlan: CompiledNodeGeometry['modelMeshes'],
+    nodeId: string,
+    model: ModelRef,
+    modelPlan: readonly CompiledModelMesh[] | undefined,
   ) => Promise<Object3D | null>,
+  optimization: CompiledSceneOptimization | undefined,
 ): Promise<Object3D | null> {
   if (node.type === 'mesh') {
     const material = materialOf(node.material, dress)
@@ -281,14 +324,19 @@ async function objectOf(
     return object
   }
   if (node.type === 'light') return lightFor(node.light)
-  if (node.type === 'model') return await modelOf(node.model.assetId, compiled?.modelMeshes)
+  if (node.type === 'model') {
+    const modelPlan = compiled?.modelAssetId
+      ? optimization?.modelAssets?.[compiled.modelAssetId]
+      : undefined
+    return await modelOf(node.id, node.model, modelPlan)
+  }
   // A group carries children. Cameras, paths, sprites and text belong to the editor renderer.
   return node.type === 'group' ? new Object3D() : null
 }
 
 function applyCompiledModel(
   root: Object3D,
-  plan: CompiledNodeGeometry['modelMeshes'],
+  plan: readonly CompiledModelMesh[] | undefined,
   owned: Set<BufferGeometry>,
   modelMeshes: WeakSet<Mesh>,
 ): Object3D {

@@ -107,10 +107,12 @@ describe('the LOSSY world compiled for an export', () => {
       {
         nodeId: node.id,
         mesh: {
+          encoding: 'float32-base64',
           position: 'AACAPwAAAEAAAEBA',
           normal: 'AAAAAAAAgD8AAAAA',
           uv: 'AAAAAAAAAAA=',
           index: 'AAAAAA==',
+          indexEncoding: 'uint32-base64',
         },
       },
     ])

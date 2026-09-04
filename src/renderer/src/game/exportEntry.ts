@@ -20,6 +20,7 @@ import { veilLift } from './veilLift'
 import { createWebRender } from './webRender'
 import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
+import { secondsToUs } from '@shared/domain/time'
 
 /**
  * A game running in a browser page, with no studio anywhere.
@@ -154,6 +155,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     if (swap.pending()) void asked()
 
     render.place(placementsOf(world, placements, loop.alpha()))
+    render.seek(secondsToUs(world.time.elapsed))
     // The veil the arrived scene came in under, on ITS clock, which a swap restarts at zero.
     if (fading > 0) {
       const lift = veilLift(world.time.elapsed, fading, veiled)

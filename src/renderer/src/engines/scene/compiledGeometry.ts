@@ -5,10 +5,11 @@ import type { CompiledMeshGeometry } from '@shared/domain/gameExport'
 export function compiledMeshOf(geometry: BufferGeometry): CompiledMeshGeometry {
   const index = geometry.getIndex()
   return {
+    encoding: 'float32-base64',
     position: floatAttributeBase64(geometry.getAttribute('position')),
     normal: floatAttributeBase64(geometry.getAttribute('normal')),
     uv: floatAttributeBase64(geometry.getAttribute('uv')),
-    ...(index ? { index: attributeBase64(index) } : {}),
+    ...(index ? { index: attributeBase64(index), indexEncoding: 'uint32-base64' } : {}),
     ...(geometry.getAttribute('tangent')
       ? { tangent: floatAttributeBase64(geometry.getAttribute('tangent')) }
       : {}),
