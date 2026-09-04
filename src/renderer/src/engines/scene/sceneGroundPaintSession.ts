@@ -6,6 +6,7 @@ type Disk = { x: number; z: number; radius: number; amount: number; falloff: num
 
 export type SceneGroundPaintSession = {
   clear: () => void
+  rebind: (world: SceneWorld) => void
   paint: (terrainId: string, disk: Disk, channel: GroundMaterialChannel) => Promise<boolean>
   finish: () => Promise<void>
 }
@@ -19,6 +20,11 @@ export function createSceneGroundPaintSession(options: {
   let task: Promise<boolean> = Promise.resolve(false)
   return {
     clear: () => held.clear(),
+    rebind: world => {
+      for (const [terrainId, entry] of held) {
+        held.set(terrainId, { ...entry, assetId: assetIdOf(world, terrainId) })
+      }
+    },
     paint: (terrainId, disk, channel) => {
       task = paintAfter(task, options, held, terrainId, disk, channel)
       return task
@@ -45,12 +51,13 @@ async function paintAfter(
   const world = options.world()
   const paint = await groundPaintedAt(world, held, options.load, terrainId, disk, channel)
   if (!paint) return false
-  const terrain = world.layers.find(item => item.kind === 'relief' && item.id === terrainId)
-  const assetId =
-    terrain?.kind === 'relief'
-      ? (terrain.groundWeights?.assetId ?? terrain.groundMaterials[0]?.albedo.assetId)
-      : undefined
-  held.set(terrainId, { assetId: assetId ?? null, paint })
+  held.set(terrainId, { assetId: assetIdOf(world, terrainId), paint })
   options.apply(terrainId, paint)
   return true
+}
+
+function assetIdOf(world: SceneWorld, terrainId: string): string | null {
+  const terrain = world.layers.find(item => item.kind === 'relief' && item.id === terrainId)
+  if (terrain?.kind !== 'relief') return null
+  return terrain.groundWeights?.assetId ?? terrain.groundMaterials[0]?.albedo.assetId ?? null
 }

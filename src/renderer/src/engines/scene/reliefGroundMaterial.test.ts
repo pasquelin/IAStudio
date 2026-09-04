@@ -1,4 +1,4 @@
-import { MeshStandardMaterial, Texture } from 'three'
+import { DataTexture, MeshStandardMaterial, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { emptyGroundPaint } from '@shared/domain/groundPaint'
 import { reliefLayer } from '@shared/domain/scene'
@@ -186,4 +186,114 @@ describe('relief ground material', () => {
 
     expect(terrain.groundGeneration).toBe(generation + 1)
   })
+
+  it('decodes persisted weights the way a live DataTexture samples them', async () => {
+    const loadGround = vi.fn(async () => new Texture())
+    const terrain: ReliefGroundMaterial = {
+      material: new MeshStandardMaterial(),
+      groundAssetId: null,
+      groundGeneration: 0,
+    }
+    const layer = splatLayer('weights')
+
+    syncGroundMaterial(terrain, layer, { loadGround })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+
+    expect(loadGround).toHaveBeenCalledWith(expect.stringContaining('ground'), 'flipY')
+    expect(loadGround).toHaveBeenCalledWith(expect.stringContaining('weights'), 'from-image')
+  })
+
+  it('keeps a texel painted at the origin after the persisted weights arrive', async () => {
+    const terrain: ReliefGroundMaterial = {
+      material: new MeshStandardMaterial(),
+      groundAssetId: null,
+      groundGeneration: 0,
+    }
+    const layer = splatLayer('weights')
+    syncGroundMaterial(terrain, layer, { loadGround: async () => new Texture() })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+
+    const paint = emptyGroundPaint(2, 2)
+    paint.pixels[0] = 77
+    applyGroundPaint(terrain, paint)
+    const painted = terrain.groundUniforms?.weights.value
+    const loadGround = vi.fn(async () => new Texture())
+    syncGroundMaterial(terrain, splatLayer('weights-saved'), {
+      loadGround,
+      keepLiveWeights: true,
+    })
+    await Promise.resolve()
+
+    expect(loadGround).not.toHaveBeenCalled()
+    expect(painted instanceof DataTexture).toBe(true)
+    if (painted instanceof DataTexture) {
+      expect(painted.image.data?.[0]).toBe(77)
+      expect(painted.flipY).toBe(false)
+    }
+    expect(terrain.groundUniforms?.weights.value).toBe(painted)
+  })
+
+  it('keeps a live paint when a slower splat load lands afterwards', async () => {
+    let finish!: (texture: Texture) => void
+    const loading = new Promise<Texture>(resolve => {
+      finish = resolve
+    })
+    const terrain: ReliefGroundMaterial = {
+      material: new MeshStandardMaterial(),
+      groundAssetId: null,
+      groundGeneration: 0,
+    }
+    const first = splatLayer('weights')
+    syncGroundMaterial(terrain, first, { loadGround: async () => new Texture() })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+
+    syncGroundMaterial(
+      terrain,
+      {
+        ...first,
+        groundMaterials: [{ albedo: { assetId: 'other' }, normal: null, channel: 'r' }],
+      },
+      { loadGround: () => loading },
+    )
+    applyGroundPaint(terrain, emptyGroundPaint(2, 2))
+    const painted = terrain.groundUniforms?.weights.value
+    finish(new Texture())
+    await vi.waitFor(() => expect(terrain.groundUniforms?.weights.value).toBe(painted))
+  })
+
+  it('reloads splat pictures after a paint once the stroke no longer holds them', async () => {
+    const terrain: ReliefGroundMaterial = {
+      material: new MeshStandardMaterial(),
+      groundAssetId: null,
+      groundGeneration: 0,
+    }
+    const first = splatLayer('weights')
+    syncGroundMaterial(terrain, first, { loadGround: async () => new Texture() })
+    await vi.waitFor(() => expect(terrain.groundUniforms).toBeDefined())
+    applyGroundPaint(terrain, emptyGroundPaint(2, 2))
+    const loadGround = vi.fn(async () => new Texture())
+
+    syncGroundMaterial(
+      terrain,
+      {
+        ...first,
+        groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'g' }],
+      },
+      { loadGround },
+    )
+
+    expect(loadGround).toHaveBeenCalled()
+    await vi.waitFor(() => expect(terrain.groundUniforms?.albedos[0]?.value).toBeDefined())
+  })
 })
+
+function splatLayer(weights: string) {
+  return reliefLayer(
+    { assetId: 'height' },
+    {
+      id: 'terrain',
+      groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
+      groundWeights: { assetId: weights },
+    },
+  )
+}

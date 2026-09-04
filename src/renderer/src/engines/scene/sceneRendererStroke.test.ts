@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
+import { emptyGroundWeights } from '@shared/domain/groundPaint'
 import type { PackedReliefChunk, ReliefSculpt } from '@shared/domain/relief'
 import { DEFAULT_WORLD, reliefLayer, scatterLayer, terrainEditLayer } from '@shared/domain/scene'
 import type { ReliefSurface } from './reliefSurface'
@@ -37,6 +38,22 @@ function worldWithTerrain() {
       reliefLayer(
         { assetId: 'h' },
         { id: 'terrain', edits: [terrainEditLayer({ id: 'hills', name: 'Hills' })] },
+      ),
+    ],
+  }
+}
+
+function worldWithWeights(assetId: string) {
+  return {
+    ...DEFAULT_WORLD,
+    layers: [
+      reliefLayer(
+        { assetId: 'h' },
+        {
+          id: 'terrain',
+          groundMaterials: [{ albedo: { assetId: 'ground' }, normal: null, channel: 'r' }],
+          groundWeights: { assetId },
+        },
       ),
     ],
   }
@@ -163,6 +180,26 @@ describe('a sculpt drag through the scene renderer', () => {
     await vi.waitFor(() => expect(ended).toHaveBeenCalledOnce())
 
     expect(painted).toHaveBeenCalledOnce()
+    renderer.dispose()
+  })
+
+  it('keeps an in-flight ground paint when the persisted weights land', async () => {
+    const load = vi.fn(async () => emptyGroundWeights(4, 4))
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      onGroundPaint: vi.fn(),
+      loadGroundPaint: load,
+      relief: reliefStub(),
+    })
+    renderer['applyWorld'](worldWithWeights('weights-1'))
+    renderer.setSculptTool('paintGround')
+
+    await renderer['startGroundStroke']('terrain', 1, 0)
+    renderer['applyWorld'](worldWithWeights('weights-2'))
+    await renderer.paintGroundDisk('terrain', 1, 0)
+
+    expect(load).toHaveBeenCalledOnce()
     renderer.dispose()
   })
 

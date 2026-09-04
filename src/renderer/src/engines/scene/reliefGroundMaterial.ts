@@ -13,7 +13,7 @@ import {
   type GroundMaterialLayer,
   type ReliefLayer,
 } from '@shared/domain/scene'
-import { loadTexture, type TextureSource } from './textureCache'
+import { loadTexture, type PictureOrientation, type TextureSource } from './textureCache'
 import { bindReliefSplat, clearReliefSplat, type ReliefSplatUniforms } from './reliefSplatShader'
 
 export type ReliefGroundMaterial = {
@@ -29,6 +29,7 @@ type Options = {
   assetVersion?: (assetId: string) => string | undefined
   onReady?: () => void
   onFailure?: (assetId: string, error: unknown) => void
+  keepLiveWeights?: boolean
 }
 
 export function applyGroundPaint(
@@ -36,6 +37,7 @@ export function applyGroundPaint(
   paint: GroundPaint,
 ): void {
   if (!terrain?.groundUniforms) return
+  terrain.groundGeneration += 1
   const texture = paintTexture(paint)
   const previous = terrain.groundUniforms.weights.value
   previous.dispose()
@@ -53,6 +55,16 @@ export function syncGroundMaterial(
 ): void {
   const signature = groundSignature(layer)
   if (signature === terrain.groundAssetId) return
+  if (
+    options.keepLiveWeights &&
+    terrain.groundUniforms?.weights.value instanceof DataTexture &&
+    layer.groundWeights &&
+    layer.groundMaterials.length > 0
+  ) {
+    terrain.groundAssetId = signature
+    terrain.groundGeneration += 1
+    return
+  }
   terrain.groundAssetId = signature
   const token = ++terrain.groundGeneration
   if (!layer.groundWeights || layer.groundMaterials.length === 0) {
@@ -131,11 +143,13 @@ async function loadSplat(
 }
 
 async function loadGroundTextures(
-  ids: readonly { id: string; color: boolean }[],
+  ids: readonly GroundTextureId[],
   options: Options,
 ): Promise<readonly Texture[]> {
   const results = await Promise.allSettled(
-    ids.map(({ id, color }) => groundTexture(id, options, color ? SRGBColorSpace : NoColorSpace)),
+    ids.map(({ id, color, orientation }) =>
+      groundTexture(id, options, color ? SRGBColorSpace : NoColorSpace, orientation),
+    ),
   )
   const loaded: Texture[] = []
   let failed = false
@@ -194,24 +208,40 @@ function installSplat(
   bindReliefSplat(terrain.material, uniforms)
 }
 
+type GroundTextureId = {
+  id: string
+  color: boolean
+  orientation: PictureOrientation
+}
+
 function splatIds(
   layers: readonly GroundMaterialLayer[],
   weights: string | undefined,
-): readonly { id: string; color: boolean }[] {
-  return [
-    ...layers.map(layer => ({ id: layer.albedo.assetId, color: true })),
-    ...layers.flatMap(layer => (layer.normal ? [{ id: layer.normal.assetId, color: false }] : [])),
-    ...(weights ? [{ id: weights, color: false }] : []),
+): readonly GroundTextureId[] {
+  const pictures: GroundTextureId[] = [
+    ...layers.map((layer): GroundTextureId => ({
+      id: layer.albedo.assetId,
+      color: true,
+      orientation: 'flipY',
+    })),
+    ...layers.flatMap((layer): GroundTextureId[] =>
+      layer.normal ? [{ id: layer.normal.assetId, color: false, orientation: 'flipY' }] : [],
+    ),
   ]
+  if (!weights) return pictures
+  // Row 0 of the PNG is min-Z, matching DataTexture.flipY = false; flipY would mirror it along Z.
+  return [...pictures, { id: weights, color: false, orientation: 'from-image' }]
 }
 
 async function groundTexture(
   assetId: string,
   options: Options,
   colorSpace: Texture['colorSpace'],
+  orientation: PictureOrientation = 'flipY',
 ): Promise<Texture> {
   const texture = await (options.loadGround ?? loadTexture)(
     versionedUrl(assetUrl(assetId), options.assetVersion?.(assetId)),
+    orientation,
   )
   texture.colorSpace = colorSpace
   return texture
@@ -237,6 +267,7 @@ function paintTexture(paint: GroundPaint): DataTexture {
     RGBAFormat,
   )
   texture.colorSpace = NoColorSpace
+  texture.flipY = false
   texture.needsUpdate = true
   return texture
 }

@@ -43,6 +43,7 @@ export type ReliefSurface = {
   meshOf: (terrainId: string, column: number, row: number) => Mesh | undefined
   sculptSource: (terrainId: string, editId: string) => ReliefSculptSource | null
   paintGround?: (terrainId: string, paint: GroundPaint) => void
+  holdGroundPaint?: (hold: boolean) => void
   dispose: () => void
 }
 
@@ -101,6 +102,7 @@ type SurfaceState = {
   options: ReliefSurfaceOptions
   load: (assetId: string) => Promise<HeightmapSamples>
   builder: ReliefBuilder | undefined
+  keepLiveWeights: boolean
 }
 
 export function createReliefSurface(
@@ -114,6 +116,7 @@ export function createReliefSurface(
     options,
     load: options.load ?? (assetId => loadHeightmap(assetId)),
     builder: options.builder,
+    keepLiveWeights: false,
   }
   state.group.name = RELIEF_NAME
   scene.add(state.group)
@@ -134,6 +137,9 @@ export function createReliefSurface(
       return held && edit ? reliefSculptSourceOf(held, edit) : null
     },
     paintGround: (terrainId, paint) => applyGroundPaint(state.terrains.get(terrainId), paint),
+    holdGroundPaint: hold => {
+      state.keepLiveWeights = hold
+    },
     dispose: () => disposeRelief(state),
   }
 }
@@ -199,7 +205,10 @@ function applyLayer(
   layer: ReliefLayer,
   samples: HeightmapSamples,
 ): boolean {
-  syncGroundMaterial(terrain, layer, state.options)
+  syncGroundMaterial(terrain, layer, {
+    ...state.options,
+    keepLiveWeights: state.keepLiveWeights,
+  })
   const extent: ReliefExtent = {
     origin: layer.origin,
     size: layer.size,

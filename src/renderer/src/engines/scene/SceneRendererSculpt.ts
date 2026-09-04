@@ -91,7 +91,15 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     held.sculptor.note(held.paint ? source?.maskWeights : source?.sculpt)
   }
 
+  protected holdingGroundPaint(): boolean {
+    return this.sculptStroke !== null && this.sculptTool === 'paintGround'
+  }
+
   protected noteGroundPaint(): void {
+    if (this.holdingGroundPaint()) {
+      this.groundPaintSession?.rebind(this.world)
+      return
+    }
     this.groundPaintSession?.clear()
   }
 
