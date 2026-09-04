@@ -22,7 +22,90 @@ import { compileLossyModels } from '@/engines/scene/lossyModelCompiler'
 import { createCsgEvaluator } from '@/engines/csg/csgEvaluator'
 import CsgWorker from '@/engines/csg/csg.worker?worker'
 import { runtimeAssetIds } from './runtimeAssetIds'
-import { analyzeLossyWorld, lossyCandidatesOf } from '@/engines/scene/worldAnalyzer'
+import {
+  analyzeLossyWorld,
+  lossyCandidatesOf,
+  type OptimizationPlan,
+} from '@/engines/scene/worldAnalyzer'
+import { runtimeArtifactsOf } from '@/engines/scene/runtimeWorldCompiler'
+import { sceneEngineOf } from '@/stores/sceneEngines'
+
+export type GameOptimizationEstimate = {
+  scenes: number
+  objects: number
+  drawCallsBefore: number
+  drawCallsAfter: number
+}
+
+export async function analyzeGameOptimization(): Promise<GameOptimizationEstimate> {
+  const listed = documentsOfKind(useDocuments.getState(), 'scene')
+  await Promise.all(listed.map(document => loadSceneSource(document.id)))
+  const inputs = await Promise.all(
+    listed.map(async document => {
+      const engine = sceneEngineOf(document.id)
+      const state = montageSceneOf(document.id)
+      return state
+        ? { state, ...(engine ? { plan: await engine.analyzeWorldOptimization() } : {}) }
+        : null
+    }),
+  )
+  return gameOptimizationEstimate(inputs.flatMap(input => (input ? [input] : [])))
+}
+
+export function gameOptimizationEstimate(
+  inputs: readonly {
+    state: NonNullable<ReturnType<typeof montageSceneOf>>
+    plan?: OptimizationPlan
+  }[],
+): GameOptimizationEstimate {
+  const estimates = inputs.map(({ state, plan }) =>
+    plan
+      ? {
+          objects: plan.measured.objects,
+          drawCallsBefore: plan.estimated.drawCallsBefore,
+          drawCallsAfter: plan.estimated.drawCallsAfter,
+        }
+      : estimateUnmountedScene(state),
+  )
+  return estimates.reduce<GameOptimizationEstimate>(
+    (total, estimate) => ({
+      scenes: total.scenes + 1,
+      objects: total.objects + estimate.objects,
+      drawCallsBefore: total.drawCallsBefore + estimate.drawCallsBefore,
+      drawCallsAfter: total.drawCallsAfter + estimate.drawCallsAfter,
+    }),
+    { scenes: 0, ...emptyEstimate() },
+  )
+}
+
+function emptyEstimate(): Omit<GameOptimizationEstimate, 'scenes'> {
+  return {
+    objects: 0,
+    drawCallsBefore: 0,
+    drawCallsAfter: 0,
+  }
+}
+
+function estimateUnmountedScene(
+  state: NonNullable<ReturnType<typeof montageSceneOf>>,
+): Omit<GameOptimizationEstimate, 'scenes'> {
+  const drawn = state.nodes.filter(node => node.visible && rendersIndividually(node.type))
+  const artifacts = runtimeArtifactsOf(state.nodes, state.animation)
+  const grouped = new Set(artifacts.flatMap(artifact => artifact.sourceIds))
+  return {
+    objects: state.nodes.length,
+    drawCallsBefore: drawn.length,
+    drawCallsAfter: drawn.filter(node => !grouped.has(node.id)).length + artifacts.length,
+  }
+}
+
+function rendersIndividually(
+  type: NonNullable<ReturnType<typeof montageSceneOf>>['nodes'][number]['type'],
+): boolean {
+  return (
+    type === 'mesh' || type === 'model' || type === 'sprite' || type === 'text' || type === 'carved'
+  )
+}
 
 export type GameExportFailure = 'noBridge' | 'noProject' | 'noScene' | 'unknownScene' | 'declined'
 

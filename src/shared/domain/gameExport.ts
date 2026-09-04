@@ -61,6 +61,8 @@ export type ExportedScene = {
   title: string
   /** Where the glTF sits, relative to the page. */
   file: string
+  /** SAFE storage compression; decoded before the glTF parser sees the bytes. */
+  compression?: 'gzip'
   /** Runtime-only geometry plan compiled from the authoring scene before it crossed IPC. */
   optimization?: CompiledSceneOptimization
 }
@@ -79,7 +81,7 @@ export type CompiledNodeGeometry = {
 /** Tight runtime buffers encoded once during export, never recomputed by the shipped game. */
 export type CompiledMeshGeometry = {
   encoding: 'float32-base64'
-  indexEncoding?: 'uint32-base64'
+  indexEncoding?: 'uint16-base64' | 'uint32-base64'
   position: string
   normal: string
   uv: string
@@ -104,6 +106,8 @@ export type ExportedScript = {
   /** The reference a `Script` component carries, as `refToString` spells one. */
   script: string
   file: string
+  /** SAFE storage compression; decoded before the sandbox receives the source. */
+  compression?: 'gzip'
 }
 
 export type ExportedGame = {
@@ -115,6 +119,8 @@ export type ExportedGame = {
   scripts: readonly ExportedScript[]
   /** Asset id → the file beside the page. What `createBundledAssets` is handed. */
   assets: Readonly<Record<string, string>>
+  /** Asset ids stored as gzip because doing so reduced their exact byte representation. */
+  compressedAssets?: readonly string[]
   modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
   /** Absent in older exports and equivalent to every LOSSY option being off. */
   lossyOptimization?: LossyOptimization

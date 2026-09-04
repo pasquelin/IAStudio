@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EXPORTED_GAME_FILE, type ExportedGame } from '@shared/domain/gameExport'
 import type { GameExportRequest } from '@shared/domain/gameExport'
+import { gunzipSync, strFromU8 } from 'fflate'
 import { writeExportedGame, type GameExportPorts } from './gameExport'
 
 const SCENE = (id: string, assetIds: readonly string[] = []): string =>
@@ -59,6 +60,73 @@ describe('a game written to run with no studio', () => {
       'scripts/Walk.js',
     ])
     expect(report).toMatchObject({ scenes: 1, scripts: 1, assets: 1, missing: [] })
+    expect(written.get('scenes/doc-1.gltf')).toBe(ASKED.scenes[0]?.content)
+    expect(written.get('scripts/Walk.js')).toBe(ASKED.scripts[0]?.code)
+  })
+
+  it('losslessly reduces repetitive scene and script storage', async () => {
+    const content = JSON.stringify({
+      nodes: Array.from({ length: 1_000 }, () => ({ type: 'mesh' })),
+    })
+    const code = 'runtime.step()\n'.repeat(1_000)
+    const { ports, written } = writing()
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: [{ id: 'doc-1', title: 'Menu', content }],
+      scripts: [{ script: 'script:levels/Walk.ts', code }],
+    })
+
+    const scene = written.get('scenes/doc-1.gltf.gz')
+    const script = written.get('scripts/Walk.js.gz')
+    if (!(scene instanceof Uint8Array) || !(script instanceof Uint8Array)) {
+      throw new Error('expected compressed export bytes')
+    }
+    expect(scene.byteLength).toBeLessThan(new TextEncoder().encode(content).byteLength)
+    expect(script.byteLength).toBeLessThan(new TextEncoder().encode(code).byteLength)
+    expect(manifestOf(written).scenes[0]?.compression).toBe('gzip')
+    expect(manifestOf(written).scripts[0]?.compression).toBe('gzip')
+    expect(strFromU8(gunzipSync(scene))).toBe(content)
+    expect(strFromU8(gunzipSync(script))).toBe(code)
+  })
+
+  it('compresses a resource only when gzip makes its exact bytes smaller', async () => {
+    const pixels = new Uint8Array(8_192)
+    const { ports, written } = writing({
+      assetFiles: () => Promise.resolve(new Map([['tex-1', { name: 'raw.rgba', bytes: pixels }]])),
+    })
+
+    await writeExportedGame(ports, ASKED)
+
+    expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/raw.rgba.gz' })
+    expect(manifestOf(written).compressedAssets).toEqual(['tex-1'])
+    const stored = written.get('assets/raw.rgba.gz')
+    if (!(stored instanceof Uint8Array)) throw new Error('expected compressed asset bytes')
+    expect(gunzipSync(stored)).toEqual(pixels)
+  })
+
+  it('does not mark an incompressible source whose name already ends in gzip', async () => {
+    const bytes = Uint8Array.of(1)
+    const { ports, written } = writing({
+      assetFiles: () =>
+        Promise.resolve(
+          new Map([
+            ['first', { name: 'noise.gz', bytes }],
+            ['second', { name: 'copy.gz', bytes }],
+          ]),
+        ),
+    })
+
+    await writeExportedGame(ports, {
+      ...ASKED,
+      scenes: [{ id: 'doc-1', title: 'Menu', content: SCENE('a', ['first', 'second']) }],
+    })
+
+    expect(manifestOf(written).assets).toEqual({
+      first: 'assets/noise.gz',
+      second: 'assets/noise.gz',
+    })
+    expect(manifestOf(written).compressedAssets).toBeUndefined()
   })
 
   /** 🛑 § 19.3: only what is reached is copied, and what is missed is LISTED. */
@@ -210,18 +278,41 @@ describe('a game written to run with no studio', () => {
 
     expect(manifestOf(written)).toMatchObject({
       entryScene: 'doc-1',
-      scenes: [{ id: 'doc-1', title: 'Menu', file: 'scenes/doc-1.gltf' }],
-      scripts: [{ script: 'script:levels/Walk.ts', file: 'scripts/Walk.js' }],
+      scenes: [
+        {
+          id: 'doc-1',
+          title: 'Menu',
+          file: 'scenes/doc-1.gltf',
+        },
+      ],
+      scripts: [
+        {
+          script: 'script:levels/Walk.ts',
+          file: 'scripts/Walk.js',
+        },
+      ],
     })
   })
 
   it('writes byte-equivalent packages twice from the same request', async () => {
     const first = writing()
     const second = writing()
+    const repetitive = {
+      ...ASKED,
+      scenes: [
+        {
+          id: 'doc-1',
+          title: 'Menu',
+          content: JSON.stringify({ nodes: Array.from({ length: 1_000 }, () => ({ id: 'tree' })) }),
+        },
+      ],
+      scripts: [{ script: 'script:levels/Walk.ts', code: 'runtime.step()\n'.repeat(1_000) }],
+    }
 
-    await writeExportedGame(first.ports, ASKED)
-    await writeExportedGame(second.ports, ASKED)
+    await writeExportedGame(first.ports, repetitive)
+    await writeExportedGame(second.ports, repetitive)
 
+    expect(manifestOf(first.written).scenes[0]?.compression).toBe('gzip')
     expect([...first.written.entries()].sort()).toEqual([...second.written.entries()].sort())
   })
 

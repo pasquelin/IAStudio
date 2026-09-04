@@ -121,8 +121,8 @@ describe('the LOSSY world compiled for an export', () => {
           position: 'AACAPwAAAEAAAEBA',
           normal: 'AAAAAAAAgD8AAAAA',
           uv: 'AAAAAAAAAAA=',
-          index: 'AAAAAA==',
-          indexEncoding: 'uint32-base64',
+          index: 'AAA=',
+          indexEncoding: 'uint16-base64',
         },
       },
     ])

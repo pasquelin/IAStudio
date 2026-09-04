@@ -20,7 +20,11 @@ import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { documentById, useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { estimatedLossyImpact, type OptimizationPlan } from '@/engines/scene/worldAnalyzer'
-import { exportGameProject } from '@/game/gameExportCompiler'
+import {
+  analyzeGameOptimization,
+  exportGameProject,
+  type GameOptimizationEstimate,
+} from '@/game/gameExportCompiler'
 import { Dialog } from '@/features/shell/components/Dialog'
 
 const fixedChoice = (label: string) => (
@@ -33,6 +37,7 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
   const title = useDocuments(state => documentById(state, documentId)?.title ?? '')
   const [options, setOptions] = useState<LossyOptimization>(NO_LOSSY_OPTIMIZATION)
   const [plan, setPlan] = useState<OptimizationPlan | null>(null)
+  const [projectEstimate, setProjectEstimate] = useState<GameOptimizationEstimate | null>(null)
   const [exporting, setExporting] = useState(false)
   const [failed, setFailed] = useState(false)
   const exportController = useRef<AbortController | null>(null)
@@ -55,8 +60,14 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
     if (!engine) return
     const analyze = async (): Promise<void> => {
       try {
-        const measured = await engine.analyzeWorldOptimization()
-        if (active) setPlan(measured)
+        const [measured, project] = await Promise.all([
+          engine.analyzeWorldOptimization(),
+          analyzeGameOptimization(),
+        ])
+        if (active) {
+          setPlan(measured)
+          setProjectEstimate(project)
+        }
       } catch {
         if (active) setFailed(true)
       }
@@ -157,38 +168,29 @@ export function SceneGameExportDialogBody({ documentId }: { documentId: string }
               setOptions(current => ({ ...current, textureReduction }))
             }
           />
-          {plan && (
+          {plan && projectEstimate && (
             <dl>
               <dt>{t('game.export.currentSceneMeasured')}</dt>
               <dd>{t('optimization.drawCalls', { value: number(plan.measured.draws) })}</dd>
               <dd>{t('optimization.triangles', { value: number(plan.measured.triangles) })}</dd>
               <dd>{t('optimization.geometry', { value: bytes(plan.measured.geometryBytes) })}</dd>
               <dd>{t('optimization.images', { value: bytes(plan.measured.textureBytes) })}</dd>
-              <dt>{t('game.export.currentSceneEstimated')}</dt>
+              <dt>{t('game.export.projectEstimated', { count: projectEstimate.scenes })}</dt>
               <dd>
                 {t('optimization.drawCallResult', {
-                  before: number(plan.estimated.drawCallsBefore),
-                  after: number(plan.estimated.drawCallsAfter),
+                  before: number(projectEstimate.drawCallsBefore),
+                  after: number(projectEstimate.drawCallsAfter),
                 })}
               </dd>
-              <dd>
-                {t('game.export.triangleResult', {
-                  before: number(plan.measured.triangles),
-                  after: number(lossyImpact?.trianglesAfter ?? plan.measured.triangles),
-                })}
-              </dd>
-              <dd>
-                {t('game.export.geometryResult', {
-                  before: bytes(plan.measured.geometryBytes),
-                  after: bytes(lossyImpact?.geometryBytesAfter ?? plan.measured.geometryBytes),
-                })}
-              </dd>
-              <dd>
-                {t('game.export.imageResult', {
-                  before: bytes(plan.measured.textureBytes),
-                  after: bytes(lossyImpact?.textureBytesAfter ?? plan.measured.textureBytes),
-                })}
-              </dd>
+              {hasVisualChanges(options) && lossyImpact && (
+                <dd>
+                  {t('game.export.currentSceneLossyEstimate', {
+                    triangles: number(lossyImpact.trianglesAfter),
+                    geometry: bytes(lossyImpact.geometryBytesAfter),
+                    images: bytes(lossyImpact.textureBytesAfter),
+                  })}
+                </dd>
+              )}
               <dd>
                 {t(
                   hasVisualChanges(options)
