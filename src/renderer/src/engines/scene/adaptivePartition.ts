@@ -21,12 +21,10 @@ export function adaptiveCellsOf(
   nodes: readonly MeshNode[],
   policy: OptimizationPolicy,
 ): readonly AdaptiveCellGroup[] {
-  const rootSize = maximumCellSize(policy)
   const roots = new Map<string, MeshNode[]>()
   for (const node of nodes) {
-    if (spatialDiameterOf(node) > rootSize) continue
-    const position = node.transform.position
-    const key = `${Math.floor(position.x / rootSize)}:${Math.floor(position.y / rootSize)}:${Math.floor(position.z / rootSize)}`
+    const key = adaptiveRootCellKeyOf(node, policy)
+    if (!key) continue
     const members = roots.get(key)
     if (members) members.push(node)
     else roots.set(key, [node])
@@ -44,6 +42,13 @@ export function adaptiveCellsOf(
     }
   }
   return [...cells.values()]
+}
+
+export function adaptiveRootCellKeyOf(node: MeshNode, policy: OptimizationPolicy): string | null {
+  const rootSize = maximumCellSize(policy)
+  if (spatialDiameterOf(node) > rootSize) return null
+  const position = node.transform.position
+  return `${Math.floor(position.x / rootSize)}:${Math.floor(position.y / rootSize)}:${Math.floor(position.z / rootSize)}`
 }
 
 export function adaptiveCellOf(
