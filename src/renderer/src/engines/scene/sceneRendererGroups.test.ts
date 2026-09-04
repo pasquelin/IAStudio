@@ -25,7 +25,11 @@ const DRAWINGS: [string, Drawing][] = [
   ['partitioned', {}],
 ]
 
-type Drawing = { grouping?: GroupingStrategy; partition?: PartitionMode }
+type Drawing = {
+  grouping?: GroupingStrategy
+  partition?: PartitionMode
+  optimization?: 'auto' | 'off'
+}
 
 const GROUP_SIZES = [4, 12, 20, 45, 60]
 
@@ -90,6 +94,31 @@ const namesOf = async (renderer: SceneRenderer): Promise<string[]> =>
   (await gltfNodesOf(renderer)).flatMap(node => node.name ?? [])
 
 describe('editing a body a lot draws', () => {
+  it('keeps every source individually drawn when SAFE validation disables optimization', () => {
+    const nodes = bodies()
+    const renderer = rendererOf({ optimization: 'off' })
+    renderer.apply(sceneOf(nodes))
+
+    const graph = walked(graphOf(renderer))
+    for (const node of nodes) expect(graph.map(object => object.name)).toContain(node.id)
+    expect(
+      graph.some(object => object instanceof InstancedMesh || object instanceof BatchedMesh),
+    ).toBe(false)
+  })
+
+  it('keeps logical identity beside the picking observations of rendered cameras', () => {
+    const nodes = bodies()
+    const renderer = rendererOf()
+    renderer.apply(sceneOf(nodes))
+
+    expect(renderer.runtimeValidationSnapshot().picking).toEqual({
+      logical: expect.arrayContaining(
+        nodes.map(node => ({ sourceId: node.id, runtimeId: node.id })),
+      ),
+      rendered: [],
+    })
+  })
+
   it('exports the scene with every body, whatever draws it', async () => {
     const nodes = bodies()
     const renderer = rendererOf()
