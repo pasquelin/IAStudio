@@ -14,11 +14,9 @@ import {
 } from 'three'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import {
-  changedChunks,
   chunkCountAlong,
   chunkLayout,
   reliefReader,
-  type PackedReliefChunk,
   type ReliefChunkKey,
   type ReliefChunkLayout,
   type ReliefExtent,
@@ -30,6 +28,7 @@ import { loadHeightmap } from './heightmap'
 import type { ReliefBuilder } from './reliefBuilder'
 import type { ReliefGeometryData } from './reliefBuildMessage'
 import { reliefGeometryData, writeChunkNormals, writeChunkRegion } from './reliefSurfaceGeometry'
+import { blendChanged, dirtiedChunks } from './reliefSurfaceEdits'
 import { reliefSculptSourceOf, type ReliefSculptSource } from './reliefSculptSource'
 
 export { reliefGeometryData } from './reliefSurfaceGeometry'
@@ -267,18 +266,6 @@ function needsRebuild(
   )
 }
 
-function blendChanged(
-  before: readonly TerrainEditLayer[],
-  after: readonly TerrainEditLayer[],
-): boolean {
-  const previous = new Map(before.map(edit => [edit.id, edit]))
-  for (const edit of after) {
-    const held = previous.get(edit.id)
-    if (held && (held.enabled !== edit.enabled || held.alpha !== edit.alpha)) return true
-  }
-  return false
-}
-
 async function loadLayer(
   state: SurfaceState,
   terrain: TerrainSurface,
@@ -441,23 +428,6 @@ function changedRect(
     }
   }
   return rect
-}
-
-function dirtiedChunks(
-  before: readonly TerrainEditLayer[],
-  after: readonly TerrainEditLayer[],
-): PackedReliefChunk[] {
-  const keys = new Map<string, PackedReliefChunk>()
-  const previous = new Map(before.map(edit => [edit.id, edit]))
-  const next = new Map(after.map(edit => [edit.id, edit]))
-  for (const id of new Set([...previous.keys(), ...next.keys()])) {
-    const left = previous.get(id)?.sculpt
-    const right = next.get(id)?.sculpt ?? { chunks: [] }
-    for (const chunk of changedChunks(left, right)) {
-      keys.set(`${chunk.column}:${chunk.row}`, chunk)
-    }
-  }
-  return [...keys.values()]
 }
 
 function clearChunkRanges(mesh: Mesh): void {

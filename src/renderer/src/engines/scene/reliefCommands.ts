@@ -170,42 +170,39 @@ export function paintTerrainEditMask(
   editId: string,
   edits: readonly PackedReliefChunk[],
 ): Command<SceneState> {
-  let previous: PackedReliefChunk[] | null = null
+  let held: { mask: ReliefMask | undefined } | null = null
 
   return {
     id: `world:layers:${terrainId}:edits:${editId}:mask:paint`,
     apply: state => {
       const target = targetedEdit(state, terrainId, editId)
-      if (!target || target.terrain.locked.sculpt || target.edit.locked) return state
-      const weights =
-        target.edit.mask?.kind === 'painted' ? target.edit.mask.weights : { chunks: [] }
-      previous = edits.map(edit => ({
-        column: edit.column,
-        row: edit.row,
-        payload: chunkPayload(weights, edit.column, edit.row),
-      }))
+      if (!target || paintBlocked(target)) return state
+      held = { mask: target.edit.mask }
       return withEditMask(state, terrainId, editId, {
         kind: 'painted',
-        weights: withPackedChunks(weights, edits),
+        weights: withPackedChunks(paintedWeightsOf(target.edit.mask), edits),
       })
     },
-    revert: state => {
-      const target = targetedEdit(state, terrainId, editId)
-      if (!target || !previous) return state
-      const weights =
-        target.edit.mask?.kind === 'painted' ? target.edit.mask.weights : { chunks: [] }
-      return withEditMask(state, terrainId, editId, {
-        kind: 'painted',
-        weights: withPackedChunks(weights, previous),
-      })
-    },
+    revert: state => (held ? withEditMask(state, terrainId, editId, held.mask) : state),
     refuses: state => {
       const target = targetedEdit(state, terrainId, editId)
-      if (!target || target.terrain.locked.sculpt || target.edit.locked) return true
-      const weights = target.edit.mask?.kind === 'painted' ? target.edit.mask.weights : undefined
+      if (!target || paintBlocked(target)) return true
+      const weights = paintedWeightsOf(target.edit.mask)
       return edits.every(edit => chunkPayload(weights, edit.column, edit.row) === edit.payload)
     },
   }
+}
+
+function paintBlocked(target: { terrain: ReliefLayer; edit: TerrainEditLayer }): boolean {
+  if (target.terrain.locked.sculpt || target.edit.locked) return true
+  // A height or slope mask carries bounds a painted one cannot hold, and nothing on screen says
+  // the mask brush is armed — so the brush refuses rather than converting silently. Held that way
+  // until the masking feature is finished; converting and announcing it would be a window lot.
+  return target.edit.mask !== undefined && target.edit.mask.kind !== 'painted'
+}
+
+function paintedWeightsOf(mask: ReliefMask | undefined): ReliefSculpt | undefined {
+  return mask?.kind === 'painted' ? mask.weights : undefined
 }
 
 export function sculptRelief(
@@ -332,7 +329,7 @@ function withEditMask(
   state: SceneState,
   terrainId: string,
   editId: string,
-  mask: ReliefMask,
+  mask: ReliefMask | undefined,
 ): SceneState {
   const layers = mapTerrain(state.world.layers, terrainId, terrain => ({
     ...terrain,
