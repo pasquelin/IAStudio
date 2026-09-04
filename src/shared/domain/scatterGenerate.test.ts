@@ -1,0 +1,102 @@
+import { describe, expect, it } from 'vitest'
+import { scatterLayer } from './scatter'
+import { scatterHash, scatterPosesOf, type ScatterGround } from './scatterGenerate'
+
+const flat: ScatterGround = {
+  heightAt: () => 2,
+  slopeAt: () => ({ degrees: 0, nx: 0, ny: 1, nz: 0 }),
+}
+
+const region = { minX: 0, minZ: 0, maxX: 10, maxZ: 10 }
+
+function pines(seed = 7) {
+  return scatterLayer({
+    id: 'pines',
+    seed,
+    origin: { x: 0, z: 0 },
+    size: { x: 20, z: 20 },
+    assets: [
+      { assetId: 'pine', weight: 2 },
+      { assetId: 'oak', weight: 1 },
+    ],
+    rules: {
+      density: 0.5,
+      spacing: 2,
+      minScale: 0.8,
+      maxScale: 1.2,
+      randomRotation: true,
+      randomTilt: 5,
+      slopeAlign: 0,
+      altitudeMin: -10,
+      altitudeMax: 10,
+      slopeMin: 0,
+      slopeMax: 90,
+    },
+  })
+}
+
+describe('scatterHash', () => {
+  it('answers the same unit for the same cell, independently of call order', () => {
+    expect(scatterHash(7, 3, 4, 1)).toBe(scatterHash(7, 3, 4, 1))
+    expect(scatterHash(7, 3, 4, 1)).not.toBe(scatterHash(7, 3, 5, 1))
+    expect(scatterHash(7, 3, 4, 1)).not.toBe(scatterHash(8, 3, 4, 1))
+  })
+})
+
+describe('scatterPosesOf', () => {
+  it('reproduces the same poses for the same seed, rules and region', () => {
+    const first = scatterPosesOf(pines(), region, flat)
+    const second = scatterPosesOf(pines(), region, flat)
+    expect(first.length).toBeGreaterThan(0)
+    expect(second).toEqual(first)
+  })
+
+  it('keeps poses in one region when a neighbour is generated alone', () => {
+    const layer = pines()
+    const left = { minX: 0, minZ: 0, maxX: 10, maxZ: 10 }
+    const right = { minX: 10, minZ: 0, maxX: 20, maxZ: 10 }
+    const together = scatterPosesOf(layer, { minX: 0, minZ: 0, maxX: 20, maxZ: 10 }, flat)
+    const onlyRight = scatterPosesOf(layer, right, flat)
+    const leftTogether = together.filter(pose => pose.x < 10)
+    const rightTogether = together.filter(pose => pose.x >= 10)
+    expect(scatterPosesOf(layer, left, flat)).toEqual(leftTogether)
+    expect(onlyRight).toEqual(rightTogether)
+  })
+
+  it('drops points outside the altitude and slope windows', () => {
+    expect(
+      scatterPosesOf(pines(), region, {
+        heightAt: () => 50,
+        slopeAt: () => ({ degrees: 0, nx: 0, ny: 1, nz: 0 }),
+      }),
+    ).toEqual([])
+    expect(
+      scatterPosesOf(
+        scatterLayer({ ...pines(), rules: { ...pines().rules, slopeMax: 10 } }),
+        region,
+        {
+          heightAt: () => 2,
+          slopeAt: () => ({ degrees: 80, nx: 0.8, ny: 0.6, nz: 0 }),
+        },
+      ),
+    ).toEqual([])
+  })
+
+  it('picks no pose when density is zero or no asset is named', () => {
+    expect(
+      scatterPosesOf(
+        scatterLayer({ ...pines(), rules: { ...pines().rules, density: 0 } }),
+        region,
+        flat,
+      ),
+    ).toEqual([])
+    expect(scatterPosesOf(scatterLayer({ ...pines(), assets: [] }), region, flat)).toEqual([])
+  })
+
+  it('keeps the same asset at a cell when the neighbour is rebuilt', () => {
+    const layer = pines()
+    const left = scatterPosesOf(layer, region, flat)
+    scatterPosesOf(layer, { minX: 10, minZ: 0, maxX: 20, maxZ: 10 }, flat)
+    expect(scatterPosesOf(layer, region, flat)).toEqual(left)
+  })
+})
