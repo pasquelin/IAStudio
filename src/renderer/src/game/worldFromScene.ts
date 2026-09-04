@@ -33,6 +33,8 @@ import { colliderFromRelief } from './colliderFromRelief'
 import { createHierarchy } from './hierarchy'
 import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
 import { bakedRuntimeNodes } from '@/engines/scene/bakedRuntimeNodes'
+import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
+import { scatterCollisionOf } from './scatterCollision'
 
 /**
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
@@ -182,7 +184,7 @@ function systemsFor(
             shapeOf,
             characters,
             possessions,
-            statics: groundOf(state, heightmaps, message => ports.log.write('warn', message)),
+            statics: staticsOf(state, heightmaps, message => ports.log.write('warn', message)),
             worldOf: placed,
             localOf: (entity, position, rotation) =>
               hierarchy.localOf(entity.id, position, rotation),
@@ -211,7 +213,7 @@ function systemsFor(
   return systemsForStep1()
 }
 /** The scene's ground as a slab, its top face at zero — where the studio draws it. */
-function groundOf(
+function staticsOf(
   state: SceneState,
   heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
   warn: (message: string) => void,
@@ -223,18 +225,27 @@ function groundOf(
     if (shape) bodies.push(staticBody(`world.relief.${relief.id}`, shape))
     else warn(`relief ${relief.heightmap.assetId} has no heightmap the physics can feel`)
   }
-  if (bodies.length > 0) return bodies
   const ground = state.world.ground
-  if (!ground.visible) return []
-  return [
-    staticBody(GROUND_BODY, {
-      kind: 'cuboid',
-      hx: ground.size / 2,
-      hy: GROUND_DEPTH / 2,
-      hz: ground.size / 2,
-      at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
-    }),
-  ]
+  if (bodies.length === 0 && ground.visible) {
+    bodies.push(
+      staticBody(GROUND_BODY, {
+        kind: 'cuboid',
+        hx: ground.size / 2,
+        hy: GROUND_DEPTH / 2,
+        hz: ground.size / 2,
+        at: { x: 0, y: -GROUND_DEPTH / 2, z: 0 },
+      }),
+    )
+  }
+  const scatter = scatterCollisionOf(
+    state.world,
+    scatterGroundOf(scatterTerrainsOf(state.world, heightmaps ?? new Map())),
+  )
+  bodies.push(...scatter.bodies)
+  for (const refused of scatter.refused) {
+    warn(`scatter ${refused.layerId} collision refused for ${refused.count} instances`)
+  }
+  return bodies
 }
 function staticBody(body: string, shape: ColliderShape): BodyDescriptor {
   return {
