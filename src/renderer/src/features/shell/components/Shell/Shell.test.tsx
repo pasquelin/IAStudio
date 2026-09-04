@@ -274,12 +274,13 @@ describe('the right column with a document in front', () => {
 })
 
 describe('the tools beside a standalone model', () => {
-  it('keeps scene-only panels out of the column and its rail', () => {
+  it('offers its mesh hierarchy without offering scene-only editors', () => {
     useLayouts.setState({ activeWorkspace: '3d' })
     installCharacterDocument('character-1', 'asset-hero')
     renderShell()
 
-    for (const name of ['Scène', 'Interface', 'Lumières', 'Mailles']) {
+    expect(screen.getByRole('button', { name: 'Scène' })).toBeInTheDocument()
+    for (const name of ['Interface', 'Lumières', 'Mailles']) {
       expect(drawn()).not.toContain(name)
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }

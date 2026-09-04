@@ -110,7 +110,8 @@ export type ToolPlacement = {
    * The state itself is not answered here — `shared/` holds no runtime dependency — but which
    * question to ask is a property of the panel, and it belongs beside the panel.
    */
-  requires?: 'project' | 'git' | 'cloud' | 'centreTaken' | 'sceneDocument' | 'guiDocument'
+  requires?:
+    'project' | 'git' | 'cloud' | 'centreTaken' | 'sceneContents' | 'sceneDocument' | 'guiDocument'
   /**
    * Whether the panel takes its zone WHOLE: shown, the other half draws nothing. Only a
    * `primary` may ask for it — `tool.test.ts` holds that, the resolver silencing the second half
@@ -197,7 +198,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
     zone: 'right',
     slot: 'primary',
     surfaces: ['3d'],
-    requires: 'sceneDocument',
+    requires: 'sceneContents',
   },
   // The outliner of an interface, beside the scene's rather than folded into it: the 3D
   // space opens two kinds now, and one panel answering for both would answer for neither.

@@ -154,6 +154,8 @@ function meets(requires: ToolPlacement['requires'], state: ToolState): boolean {
   if (requires === 'git') return state.hasProject && state.hasGit
   if (requires === 'cloud') return state.hasCloud
   if (requires === 'centreTaken') return state.centreTaken
+  if (requires === 'sceneContents')
+    return state.documentKind === 'scene' || state.documentKind === 'character'
   if (requires === 'sceneDocument') return state.documentKind === 'scene'
   if (requires === 'guiDocument') return state.documentKind === 'gui'
   return true
