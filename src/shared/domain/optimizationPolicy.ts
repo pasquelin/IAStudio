@@ -43,3 +43,10 @@ export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = Object.freeze({
   jpegQuality: Object.freeze({ conservative: 88, balanced: 75, aggressive: 55 }),
   textureScale: Object.freeze({ off: 1, half: 0.5, quarter: 0.25 }),
 })
+
+/** Fills a caller's partial thresholds so nothing downstream has to know which ones are optional. */
+export function resolveOptimizationPolicy(
+  partial: Partial<OptimizationPolicy> | undefined,
+): OptimizationPolicy {
+  return partial ? { ...DEFAULT_OPTIMIZATION_POLICY, ...partial } : DEFAULT_OPTIMIZATION_POLICY
+}

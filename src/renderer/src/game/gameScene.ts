@@ -8,6 +8,7 @@ import {
   Scene,
   type Texture,
   type BufferGeometry,
+  type InstancedMesh,
 } from 'three'
 import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
@@ -19,7 +20,7 @@ import type {
   CompiledSceneOptimization,
 } from '@shared/domain/gameExport'
 import { uncutGeometry } from '@/engines/csg/uncutGeometry'
-import { createGeometryCache } from '@/engines/scene/geometryCache'
+import type { createGeometryCache } from '@/engines/scene/geometryCache'
 import { createGroundPlane } from '@/engines/scene/groundPlane'
 import { applyFog } from '@/engines/scene/worldBinding'
 import { loadTexture } from '@/engines/scene/textureCache'
@@ -32,7 +33,8 @@ import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { disposeTree, instanceOf, type ModelSource } from '@/engines/scene/modelCache'
 import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
-import { SceneAnimations } from '@/engines/scene/animation'
+import type { SceneAnimations } from '@/engines/scene/animation'
+import { createSceneResources, type SceneResources } from './gameSceneResources'
 import { clipKeyOf } from '@shared/domain/scene'
 import type { ModelRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
@@ -40,6 +42,7 @@ import {
   applyCompiledModel,
   applyGameTransform,
   instancedMeshesIn,
+  rememberOwnLods,
   renderedGeometry,
 } from './gameSceneOptimization'
 
@@ -56,6 +59,8 @@ export type GameScene = {
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
   place: (entityId: string, transform: Transform) => void
+  /** Settles what a whole frame of `place` left stale — the instanced bounds, once, not per call. */
+  flush: () => void
   seek: (time: Us) => void
   dispose: () => void
 }
@@ -76,6 +81,7 @@ export async function buildGameScene(
   state: SceneState,
   assets: AssetPort,
   optimization?: CompiledSceneOptimization,
+  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>,
   loadModel?: ModelSource,
 ): Promise<GameScene> {
   const compiled = new Map(optimization?.nodes.map(node => [node.nodeId, node]) ?? [])
@@ -87,55 +93,24 @@ export async function buildGameScene(
   const scene = new Scene()
   const byEntity = new Map<string, Object3D>()
   const placements = new Map<string, (transform: Transform) => void>()
-  const geometries = createGeometryCache()
-  // The PROMISE, not the texture: two nodes wearing one picture must decode it once.
-  const textures = new Map<string, Promise<Texture>>()
-  const models = new Map<string, Promise<Object3D>>()
-  const modelMeshes = new WeakSet<Mesh>()
-  const ownedModelGeometries = new Set<BufferGeometry>()
-  const animations = new SceneAnimations()
-  animations.setTimeline(state.animation)
+  const resources = createSceneResources(state.animation)
+  const dress = createDress(assets, resources.textures)
 
-  const modelOf = createModelOf({
-    assets,
-    loadModel,
-    models,
-    modelMeshes,
-    ownedModelGeometries,
-    animations,
-  })
-
-  const dress = createDress(assets, textures)
-
-  async function populate(): Promise<void> {
-    await populateScene(
-      state.nodes,
-      scene,
-      byEntity,
-      placements,
-      compiled,
-      geometries.acquire,
-      dress,
-      carve,
-      modelOf,
-      optimization,
-    )
-  }
-  await populate()
-
-  return finalizeGameScene({
-    state,
-    optimization,
+  await populateScene(
+    state.nodes,
     scene,
     byEntity,
     placements,
-    animations,
-    textures,
-    models,
-    ownedModelGeometries,
-    modelMeshes,
-    geometries,
-  })
+    compiled,
+    resources.geometries.acquire,
+    dress,
+    carve,
+    createModelOf(assets, loadModel, resources),
+    modelAssets,
+    resources.staleInstances,
+  )
+
+  return finalizeGameScene({ state, optimization, scene, byEntity, placements, resources })
 }
 
 function createDress(assets: AssetPort, textures: Map<string, Promise<Texture>>) {
@@ -171,16 +146,12 @@ type FinalizeContext = {
   scene: Scene
   byEntity: Map<string, Object3D>
   placements: Map<string, (transform: Transform) => void>
-  animations: SceneAnimations
-  textures: Map<string, Promise<Texture>>
-  models: Map<string, Promise<Object3D>>
-  ownedModelGeometries: Set<BufferGeometry>
-  modelMeshes: WeakSet<Mesh>
-  geometries: ReturnType<typeof createGeometryCache>
+  resources: SceneResources
 }
 
 function finalizeGameScene(context: FinalizeContext): GameScene {
-  const { state, optimization, scene, byEntity, placements, animations } = context
+  const { state, optimization, scene, byEntity, placements, resources } = context
+  const { staleInstances, animations } = resources
   scene.updateMatrixWorld()
   const instances = createOptimizedGroups(scene)
   const excluded = new Set(behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)))
@@ -211,20 +182,29 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     world: state.world,
     byEntity,
     place: (entityId, transform) => placements.get(entityId)?.(transform),
+    // 🛑 Once a frame, never per instance: `computeBoundingSphere` walks every slot of the mesh,
+    // so recomputing it inside the placement made a 1 000-instance node quadratic per frame.
+    flush: () => {
+      for (const mesh of staleInstances) {
+        mesh.instanceMatrix.needsUpdate = true
+        mesh.computeBoundingSphere()
+      }
+      staleInstances.clear()
+    },
     seek: time => animations.seek(time),
     dispose: () => {
       animations.clear()
       instances.dispose()
       ground.dispose()
-      for (const held of context.textures.values()) void disposeWhenLoaded(held)
-      for (const held of context.models.values()) void disposeModelWhenLoaded(held)
-      for (const geometry of context.ownedModelGeometries) geometry.dispose()
+      for (const held of resources.textures.values()) void disposeWhenLoaded(held)
+      for (const held of resources.models.values()) void disposeModelWhenLoaded(held)
+      for (const geometry of resources.ownedModelGeometries) geometry.dispose()
       scene.traverse(one => {
         if (!(one instanceof Mesh)) return
-        if (context.modelMeshes.has(one)) return
+        if (resources.modelMeshes.has(one)) return
         // 🛑 RELEASED, never disposed: the same buffers are drawn by every node of that shape.
         // A carved solid is cut for itself and no cache lends it, so it is freed here or never.
-        if (context.geometries.owns(one.geometry)) context.geometries.release(one.geometry)
+        if (resources.geometries.owns(one.geometry)) resources.geometries.release(one.geometry)
         else one.geometry.dispose()
         if (one.material instanceof MeshStandardMaterial) one.material.dispose()
       })
@@ -232,46 +212,35 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
   }
 }
 
-type ModelContext = {
-  assets: AssetPort
-  loadModel: ModelSource | undefined
-  models: Map<string, Promise<Object3D>>
-  modelMeshes: WeakSet<Mesh>
-  ownedModelGeometries: Set<BufferGeometry>
-  animations: SceneAnimations
-}
-
-function createModelOf(context: ModelContext) {
+function createModelOf(
+  assets: AssetPort,
+  loadModel: ModelSource | undefined,
+  resources: SceneResources,
+) {
   return async (
     nodeId: string,
     model: ModelRef,
     modelPlan: readonly CompiledModelMesh[] | undefined,
   ): Promise<Object3D | null> => {
-    const url = context.assets.urlOf({ kind: 'asset', id: model.assetId })
-    if (!url || !context.loadModel) return null
+    const url = assets.urlOf({ kind: 'asset', id: model.assetId })
+    if (!url || !loadModel) return null
     try {
-      const held = context.models.get(model.assetId) ?? context.loadModel(url)
-      context.models.set(model.assetId, held)
+      const held = resources.models.get(model.assetId) ?? loadModel(url)
+      resources.models.set(model.assetId, held)
       const source = await held
       const object = instanceOf(source)
       object.traverse(child => {
-        if (child instanceof Mesh) context.modelMeshes.add(child)
+        if (child instanceof Mesh) resources.modelMeshes.add(child)
       })
       const optimized = applyCompiledModel(
         object,
         modelPlan,
-        context.ownedModelGeometries,
-        context.modelMeshes,
+        resources.ownedModelGeometries,
+        resources.modelMeshes,
       )
-      context.animations.add(nodeId, optimized, source.animations)
-      await loadModelAnimations(
-        nodeId,
-        model,
-        context.assets,
-        context.loadModel,
-        context.animations,
-      )
-      context.animations.apply(nodeId, model.lanes ?? [])
+      resources.animations.add(nodeId, optimized, source.animations)
+      await loadModelAnimations(nodeId, model, assets, loadModel, resources.animations)
+      resources.animations.apply(nodeId, model.lanes ?? [])
       return optimized
     } catch {
       return null
@@ -293,11 +262,12 @@ async function populateScene(
     model: ModelRef,
     modelPlan: readonly CompiledModelMesh[] | undefined,
   ) => Promise<Object3D | null>,
-  optimization: CompiledSceneOptimization | undefined,
+  modelAssets: Readonly<Record<string, readonly CompiledModelMesh[]>> | undefined,
+  staleInstances: Set<InstancedMesh>,
 ): Promise<void> {
   const objects = await Promise.all(
     nodes.map(async node =>
-      objectOf(node, compiled.get(node.id), acquire, dress, carve, modelOf, optimization),
+      objectOf(node, compiled.get(node.id), acquire, dress, carve, modelOf, modelAssets),
     ),
   )
   for (const [index, node] of nodes.entries()) {
@@ -305,10 +275,12 @@ async function populateScene(
     if (!object) continue
     object.name = node.name
     object.visible = node.visible
+    // Its OWN levels, before parenting hangs other nodes under it: a child rescales its own.
+    rememberOwnLods(object)
     applyGameTransform(object, node.transform)
     byEntity.set(node.id, object)
     placements.set(node.id, transform => applyGameTransform(object, transform))
-    registerBakedPlacements(node, object, byEntity, placements)
+    registerBakedPlacements(node, object, byEntity, placements, staleInstances)
   }
   for (const node of nodes) {
     const object = byEntity.get(node.id)
@@ -323,6 +295,7 @@ function registerBakedPlacements(
   object: Object3D,
   byEntity: Map<string, Object3D>,
   placements: Map<string, (transform: Transform) => void>,
+  staleInstances: Set<InstancedMesh>,
 ): void {
   if (node.type !== 'mesh' || !node.instances) return
   const renderedInstances = instancedMeshesIn(object)
@@ -334,8 +307,7 @@ function registerBakedPlacements(
       placement.updateMatrix()
       for (const mesh of renderedInstances) {
         mesh.setMatrixAt(slot, placement.matrix)
-        mesh.instanceMatrix.needsUpdate = true
-        mesh.computeBoundingSphere()
+        staleInstances.add(mesh)
       }
     })
   }
@@ -369,15 +341,13 @@ async function objectOf(
     model: ModelRef,
     modelPlan: readonly CompiledModelMesh[] | undefined,
   ) => Promise<Object3D | null>,
-  optimization: CompiledSceneOptimization | undefined,
+  modelAssets: Readonly<Record<string, readonly CompiledModelMesh[]>> | undefined,
 ): Promise<Object3D | null> {
   if (node.type === 'mesh') return meshObject(node, compiled, acquire, dress)
   if (node.type === 'carved') return carvedObject(node, compiled, carve, dress)
   if (node.type === 'light') return lightFor(node.light)
   if (node.type === 'model') {
-    const modelPlan = compiled?.modelAssetId
-      ? optimization?.modelAssets?.[compiled.modelAssetId]
-      : undefined
+    const modelPlan = compiled?.modelAssetId ? modelAssets?.[compiled.modelAssetId] : undefined
     return await modelOf(node.id, node.model, modelPlan)
   }
   // A group carries children. Cameras, paths, sprites and text belong to the editor renderer.

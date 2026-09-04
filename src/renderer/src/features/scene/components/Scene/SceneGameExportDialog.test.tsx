@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { OptimizationPlan } from '@/engines/scene/worldAnalyzer'
-import { installDocument } from '@/stores/document-fixtures'
+import { installDocument, retitleDocument } from '@/stores/document-fixtures'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { useGameExportDialog } from '@/hooks/useGameExportDialog'
 import { SceneGameExportDialog } from './SceneGameExportDialog'
@@ -95,6 +95,17 @@ it('exports through the shared game action with the explicit choices', async () 
     },
     signal: expect.any(AbortSignal),
   })
+})
+
+it('names the entry scene by document id, whatever the document is titled', async () => {
+  retitleDocument(DOCUMENT, '')
+  const user = userEvent.setup()
+  render(<SceneGameExportDialog documentId={DOCUMENT} />)
+
+  await screen.findByText('Appels de rendu 45 → 5')
+  await user.click(screen.getByRole('button', { name: 'Exporter' }))
+
+  expect(exportGameProject).toHaveBeenCalledWith(expect.objectContaining({ entryScene: DOCUMENT }))
 })
 
 it('aborts export preparation when the user cancels the dialog', async () => {

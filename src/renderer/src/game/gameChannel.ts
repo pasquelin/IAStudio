@@ -1,3 +1,4 @@
+import { isRecord } from '@shared/guards'
 import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
@@ -63,9 +64,6 @@ export function clearGameOptimizationCache(documentId: string): void {
 
 type WireMessage = Record<string, unknown>
 type Decoder = (data: WireMessage) => GameMessage | null
-
-const isRecord = (value: unknown): value is WireMessage =>
-  typeof value === 'object' && value !== null
 
 function playMessage(data: WireMessage): GameMessage | null {
   const { documentId, scene, modules = [], troubles = [] } = data
@@ -184,24 +182,15 @@ function commandOf(value: unknown): GameCommand | null {
 
 /** The shape a game runtime reads, checked at the depth it is read at — nodes and the animation. */
 function isScene(value: unknown): value is SceneState {
-  if (typeof value !== 'object' || value === null) return false
-  // The cast asserts NOTHING: it names the fields as `unknown` so they can be read, and both are
-  // tested below before this answers true.
-  const candidate = value as { nodes?: unknown; animation?: unknown }
-  return (
-    Array.isArray(candidate.nodes) &&
-    typeof candidate.animation === 'object' &&
-    candidate.animation !== null
-  )
+  return isRecord(value) && Array.isArray(value.nodes) && isRecord(value.animation)
 }
 
 /** The shape the transport draws, checked at the depth it draws from. */
 function isReport(value: unknown): value is RuntimeReport {
-  if (typeof value !== 'object' || value === null) return false
-  const candidate = value as { state?: unknown; logs?: unknown; errors?: unknown }
   return (
-    (candidate.state === 'edit' || candidate.state === 'playing' || candidate.state === 'paused') &&
-    Array.isArray(candidate.logs) &&
-    Array.isArray(candidate.errors)
+    isRecord(value) &&
+    (value.state === 'edit' || value.state === 'playing' || value.state === 'paused') &&
+    Array.isArray(value.logs) &&
+    Array.isArray(value.errors)
   )
 }

@@ -155,3 +155,44 @@ it('builds compiled merge and sub-instancing-threshold batch artifacts', () => {
   ).toHaveLength(1)
   expect(groups.drawn().filter(mesh => mesh instanceof BatchedMesh)).toHaveLength(1)
 })
+
+it('rebuilds a merged group when a member moves beside a batched one', () => {
+  const host = new Object3D()
+  const material = new MeshStandardMaterial()
+  const nodes: SceneNode[] = Array.from({ length: 11 }, (_unused, index) => ({
+    ...meshNode(`node-${index}`),
+    geometry: { kind: 'box', width: index + 1, height: 1, depth: 1 },
+  }))
+  const objects = new Map(
+    nodes.map((node, index) => [node.id, new Mesh(new BoxGeometry(index + 1, 1, 1), material)]),
+  )
+  for (const object of objects.values()) {
+    host.add(object)
+    object.updateMatrixWorld(true)
+  }
+  const artifacts: readonly RuntimeRenderArtifact[] = [
+    {
+      key: 'small-props',
+      strategy: 'merge',
+      sourceIds: nodes.slice(0, 2).map(node => node.id),
+      signature: 'small-props',
+    },
+    {
+      key: 'large-props',
+      strategy: 'batch',
+      sourceIds: nodes.slice(2).map(node => node.id),
+      signature: 'large-props',
+    },
+  ]
+  const merged = (groups: ReturnType<typeof createOptimizedGroups>): Object3D | undefined =>
+    groups.drawn().find(mesh => !(mesh instanceof BatchedMesh) && !(mesh instanceof InstancedMesh))
+
+  const groups = createOptimizedGroups(host)
+  groups.rebuild(nodes, id => objects.get(id), undefined, artifacts)
+  const before = merged(groups)
+  objects.get('node-0')?.position.set(50, 0, 0)
+  objects.get('node-0')?.updateWorldMatrix(true, false)
+
+  expect(groups.moved(['node-0', 'node-2'], id => objects.get(id))).toBe(true)
+  expect(merged(groups)).not.toBe(before)
+})

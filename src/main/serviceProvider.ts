@@ -18,7 +18,6 @@ import { createUsageReader } from './provider/usage'
 import { clientFor, createClientProvider } from './provider/client'
 import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
 import type { SettingsStore } from './settings/store'
-import type { AssistantBrain } from './assistant/brainPort'
 
 const USAGE_CONCURRENCY = 4
 const NOTHING_DISCOVERED: readonly LocalModel[] = []
@@ -109,5 +108,3 @@ export class ProviderServices {
     return this.merged.all
   }
 }
-
-export type CloudBrains = Record<string, { brain: () => AssistantBrain }>

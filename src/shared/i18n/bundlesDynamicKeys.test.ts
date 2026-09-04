@@ -10,6 +10,7 @@ import { COMMAND_SCOPES } from '../domain/command'
 import { COMPONENTS } from '../domain/componentRegistry'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import { FILE_DOMAINS } from '../domain/fileRole'
+import { SAFE_EXPORT_STEPS } from '../domain/gameExport'
 import { GIT_CHANGES, GIT_FAILURE_KEYS, GIT_REF_KINDS, GIT_STAGES } from '../domain/git'
 import { HOME_SECTION_IDS } from '../domain/home'
 import { JOB_STATUSES } from '../domain/job'
@@ -119,6 +120,9 @@ function explained(prefix: string, values: readonly string[]): string[] {
  * amount of typechecking sees it: the key exists only once the template has run.
  */
 const DYNAMIC_KEYS: readonly string[] = [
+  // Every SAFE step the export dialogue lists, read off the exporter's own list rather than
+  // written out as seven literals beside it. A step gained without its line reads as its key.
+  ...SAFE_EXPORT_STEPS.map(step => `game.export.${step}`),
   // The three sentences `tripoRigCheckNote` composes for a job's row. Nothing reads them as a
   // literal any more — the runner names one, and the window translates whatever it is handed.
   'tripoRigCheck.riggable',

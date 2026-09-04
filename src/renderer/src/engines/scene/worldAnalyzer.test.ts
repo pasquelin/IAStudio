@@ -55,6 +55,23 @@ describe('analyzeOptimization', () => {
     expect(pause).toHaveBeenCalledTimes(6)
     expect(plan.measured).toMatchObject({ objects: 1, meshes: 201 })
   })
+  it('lands a non-mesh node in the cell the adaptive partition made for the same place', () => {
+    const at = (node: SceneNode): SceneNode => ({
+      ...node,
+      transform: { ...node.transform, position: { x: 100, y: 0, z: 0 } },
+    })
+    const nodes = [at(meshNode('mesh')), at(groupNodeFixture('group'))]
+
+    const plan = analyzeOptimization(
+      { nodes, animation: EMPTY_TIMELINE },
+      new Object3D(),
+      () => undefined,
+    )
+
+    expect(plan.spatialCells).toHaveLength(1)
+    expect(plan.spatialCells[0]?.sourceIds).toEqual(['group', 'mesh'])
+  })
+
   it('reports repeated static meshes without changing their render state', () => {
     const { nodes, objects } = repeated(WORTH_INSTANCING)
     const visibility = [...objects.values()].map(mesh => mesh.visible)

@@ -22,7 +22,7 @@ import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
 import { secondsToUs } from '@shared/domain/time'
 import { answering, exportedJson, exportedText } from './exportedResponse'
-import { expandCompressedAssets } from './exportedAssets'
+import { expandCompressedAssets, type ExpandedAssets } from './exportedAssets'
 import { createStartupRollback, failStartup } from './startupRollback'
 /**
  * A game running in a browser page, with no studio anywhere.
@@ -36,18 +36,18 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   const rollback = createStartupRollback()
   rollback.add(expandedAssets.dispose)
   try {
-    const assets = createBundledAssets(expandedAssets.files)
-    const render = createWebRender(canvas, assets)
-    rollback.add(render.dispose)
-    const drawn = createDrawnPort(render)
-    const swap = createSceneSwap()
-    async function portsOf() {
-      return createPorts(canvas, game, assets, drawn.port, swap.port, rollback)
-    }
-    const { ports, modules } = await portsOf()
+    const { assets, render, drawn, swap, entry } = openStage(canvas, game, expandedAssets, rollback)
 
-    const openingScene = await createOpeningScene(game, assets, ports, modules)
-    const { entry, opening } = openingScene
+    // 🛑 Together: awaited in turn, the page paid the SUM of two WebAssembly runtimes and two
+    // fetches before its first frame. A sibling of a load that rejects goes undisposed — that
+    // startup has already failed, and the page shows nothing.
+    const [{ ports, modules }, openingSource] = await Promise.all([
+      createPorts(canvas, game, assets, drawn.port, swap.port, rollback),
+      exportedJson<unknown>(entry.file, entry.compression),
+    ])
+
+    const openingScene = await createOpeningScene(entry, openingSource, assets, ports, modules)
+    const { opening } = openingScene
     let { world } = openingScene
     rollback.add(() => world.dispose())
     let loop = createGameLoop(world)
@@ -57,7 +57,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     let stopped = false
     /** Seconds of veil the scene that has just arrived still owes. */
     let fading = 0
-    await render.show(opening, optimizationOf(entry.optimization, game.modelAssets))
+    await render.show(opening, entry.optimization, game.modelAssets)
 
     /**
      * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -102,7 +102,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         // stepping the arrived world over the picture of the one just left — and the veil would
         // lift onto it.
         fading = request.fade
-        await render.show(found, optimizationOf(wanted.optimization, game.modelAssets))
+        await render.show(found, wanted.optimization, game.modelAssets)
         // A second suspension point, so a second look: the stop above threw this world away.
         if (stopped) return
 
@@ -158,6 +158,21 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   }
 }
 
+/** Everything a game draws THROUGH, and the scene it opens on — nothing that runs yet. */
+function openStage(
+  canvas: HTMLCanvasElement,
+  game: ExportedGame,
+  expanded: ExpandedAssets,
+  rollback: ReturnType<typeof createStartupRollback>,
+) {
+  const assets = createBundledAssets(expanded.files)
+  const render = createWebRender(canvas, assets)
+  rollback.add(render.dispose)
+  const entry = exportedSceneNamed(game, game.entryScene)
+  if (!entry) throw new Error(`no scene "${game.entryScene}" in this game`)
+  return { assets, render, drawn: createDrawnPort(render), swap: createSceneSwap(), entry }
+}
+
 function createDrawnPort(render: ReturnType<typeof createWebRender>): {
   port: RenderPort
   veiled: () => number
@@ -184,11 +199,13 @@ async function createPorts(
   scenes: ReturnType<typeof createSceneSwap>['port'],
   rollback: ReturnType<typeof createStartupRollback>,
 ) {
-  const physics = await loadJoltPhysics()
+  const [physics, script, modules] = await Promise.all([
+    loadJoltPhysics(),
+    loadQuickjsScripts(),
+    modulesOf(game),
+  ])
   rollback.add(physics.dispose)
-  const script = await loadQuickjsScripts()
   rollback.add(script.dispose)
-  const modules = await modulesOf(game)
   const ports = createExportHost({
     input: canvas,
     player: { id: 'local', name: 'Player', local: true },
@@ -207,14 +224,13 @@ async function createPorts(
 }
 
 async function createOpeningScene(
-  game: ExportedGame,
+  entry: ExportedGame['scenes'][number],
+  source: unknown,
   assets: ReturnType<typeof createBundledAssets>,
   ports: ReturnType<typeof createExportHost>,
   modules: readonly ScriptModule[],
 ) {
-  const entry = exportedSceneNamed(game, game.entryScene)
-  if (!entry) throw new Error(`no scene "${game.entryScene}" in this game`)
-  const opening = sceneFromGltf(await exportedJson<unknown>(entry.file, entry.compression))
+  const opening = sceneFromGltf(source)
   const world = worldFromScene(
     entry.id,
     opening,
@@ -223,16 +239,9 @@ async function createOpeningScene(
     1,
     await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id)),
   )
-  return { entry, opening, world }
+  return { opening, world }
 }
 
-function optimizationOf(
-  scene: ExportedGame['scenes'][number]['optimization'],
-  modelAssets: ExportedGame['modelAssets'],
-) {
-  if (!scene && !modelAssets) return undefined
-  return { nodes: scene?.nodes ?? [], ...(modelAssets ? { modelAssets } : {}) }
-}
 /** Every script of the game, already JavaScript: the studio transpiled them at export time. */
 async function modulesOf(game: ExportedGame): Promise<readonly ScriptModule[]> {
   return await Promise.all(

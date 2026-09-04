@@ -21,11 +21,14 @@ export type RuntimeRenderCamera = {
   cameraMask: number
 }
 
-export type RuntimeValidationDriver<Representation> = {
+export type RuntimeValidationDriver<
+  Representation,
+  Snapshot extends SafeRuntimeSnapshot = SafeRuntimeSnapshot,
+> = {
   buildOriginal: (world: SceneState) => Promise<Representation>
   buildOptimized: (world: RuntimeWorld) => Promise<Representation>
   render: (representation: Representation, camera: RuntimeRenderCamera) => Promise<VisualFrame>
-  observe: (representation: Representation) => Promise<SafeRuntimeSnapshot>
+  observe: (representation: Representation) => Promise<Snapshot>
   dispose: (representation: Representation) => void
 }
 

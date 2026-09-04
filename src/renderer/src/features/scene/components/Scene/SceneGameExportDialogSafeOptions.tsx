@@ -1,22 +1,19 @@
-import { ToggleField } from '@/components/ToggleField'
+import { mdiCheck } from '@mdi/js'
+import { SAFE_EXPORT_STEPS } from '@shared/domain/gameExport'
+import { PropertyLine } from '@/components/PropertyLine'
+import { UiIcon } from '@/components/UiIcon'
 import type { ExportDialogState } from '@/hooks/useExportDialogState'
-
-const fixedChoice = (label: string) => (
-  <ToggleField label={label} value disabled onChange={() => undefined} />
-)
 
 export function SceneGameExportDialogSafeOptions({ state }: { state: ExportDialogState }) {
   const { t } = state
   return (
     <>
       <h4 className="font-semibold">{t('game.export.safeTitle')}</h4>
-      {fixedChoice(t('game.export.safeRuntime'))}
-      {fixedChoice(t('game.export.instancing'))}
-      {fixedChoice(t('game.export.batching'))}
-      {fixedChoice(t('game.export.deduplication'))}
-      {fixedChoice(t('game.export.geometryBuffers'))}
-      {fixedChoice(t('game.export.losslessCompression'))}
-      {fixedChoice(t('game.export.removeUnused'))}
+      {SAFE_EXPORT_STEPS.map(step => (
+        <PropertyLine key={step} label={t(`game.export.${step}`)} root="div" actions={false}>
+          <UiIcon path={mdiCheck} className="mr-auto shrink-0" />
+        </PropertyLine>
+      ))}
     </>
   )
 }

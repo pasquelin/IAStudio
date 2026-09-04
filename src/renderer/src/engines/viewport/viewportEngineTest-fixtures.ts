@@ -24,6 +24,8 @@ const scissorTest = vi.fn()
 const clearColor = vi.fn()
 const cleared = vi.fn()
 const renderTarget = vi.fn()
+const queryBegun = vi.fn()
+const queryEnded = vi.fn()
 /** Whether the shadow maps were drawn again, one entry per `render` — three.js reads it once. */
 let shadowDraws: boolean[] = []
 /** What the display is worth. Two is a laptop retina screen, which is where the fault showed. */
@@ -75,9 +77,19 @@ vi.mock('three', async importOriginal => ({
       renderTarget(target)
     }
     getRenderTarget = (): unknown => this.bound
-    getContext = (): { SAMPLES: number; getParameter: () => number } => ({
+    // The timer query API is here so a frame can be timed at all. `4` answers `SAMPLES`, and
+    // reads as false for `GPU_DISJOINT_EXT`, which is what a sound frame reports.
+    getContext = (): Record<string, unknown> => ({
       SAMPLES: 0x80a9,
       getParameter: () => 4,
+      QUERY_RESULT_AVAILABLE: 3,
+      QUERY_RESULT: 4,
+      getExtension: () => ({ TIME_ELAPSED_EXT: 1, GPU_DISJOINT_EXT: 2 }),
+      createQuery: () => ({}),
+      beginQuery: queryBegun,
+      endQuery: queryEnded,
+      getQueryParameter: (_query: unknown, field: number) => (field === 3 ? true : 2_500_000),
+      deleteQuery: () => {},
     })
     render = (...args: unknown[]): void => {
       if (this.info.autoReset) this.info.reset()
@@ -117,6 +129,8 @@ export {
   HOST_WIDTH,
   INSET_CADENCE_MS,
   pixelRatio,
+  queryBegun,
+  queryEnded,
   rendered,
   renderTarget,
   resetShadowDraws,

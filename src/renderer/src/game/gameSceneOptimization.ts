@@ -16,6 +16,15 @@ import { applyTransform } from '@/engines/scene/pivot'
 
 const BASE_LOD_DISTANCES = new WeakMap<LOD, readonly number[]>()
 
+/**
+ * The levels a node's OWN subtree holds, read once at build time. `traverse` per placement is a
+ * whole imported model walked per entity per frame, and a subtree with no level is the common case.
+ */
+const OWN_LODS = new WeakMap<Object3D, readonly LOD[]>()
+
+/** The scale those distances were last written for: an entity that has not resized rewrites none. */
+const LOD_SCALE = new WeakMap<Object3D, number>()
+
 export function applyCompiledModel(
   root: Object3D,
   plan: readonly CompiledModelMesh[] | undefined,
@@ -57,10 +66,11 @@ function applyCompiledMesh(
   if (!item.lodMeshes?.length) return root
   const replacesRoot = mesh.parent === null
   const lod = createModelLod(mesh)
-  for (const [index, compiled] of item.lodMeshes.entries()) {
-    addCompiledLevel(lod, mesh, compiled, index, owned, modelMeshes)
-  }
-  rememberLodDistances(lod)
+  addLodLevels(
+    lod,
+    item.lodMeshes.map(compiled => compiledLevel(mesh, compiled, owned, modelMeshes)),
+    mesh.geometry.boundingSphere?.radius ?? 1,
+  )
   return replacesRoot ? lod : root
 }
 
@@ -80,22 +90,19 @@ function createModelLod(mesh: Mesh): LOD {
   return lod
 }
 
-function addCompiledLevel(
-  lod: LOD,
+function compiledLevel(
   source: Mesh,
   compiled: NonNullable<CompiledModelMesh['lodMeshes']>[number],
-  index: number,
   owned: Set<BufferGeometry>,
   modelMeshes: WeakSet<Mesh>,
-): void {
+): Mesh {
   const geometry = geometryOfCompiledMesh(compiled)
   owned.add(geometry)
   const level = new Mesh(geometry, source.material)
   modelMeshes.add(level)
   level.castShadow = source.castShadow
   level.receiveShadow = source.receiveShadow
-  const radius = source.geometry.boundingSphere?.radius ?? 1
-  lod.addLevel(level, radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index] ?? 1))
+  return level
 }
 
 export function renderedGeometry(
@@ -106,11 +113,12 @@ export function renderedGeometry(
   const levels = geometries.map(geometry =>
     baked ? bakedInstancesOf(geometry, material, baked) : new Mesh(geometry, material),
   )
-  if (levels.length === 1) return levels[0] ?? new Object3D()
+  const exact = levels[0]
+  if (levels.length === 1) return exact ?? new Object3D()
   const lod = new LOD()
-  const radius = radiusOf(levels[0], geometries[0])
-  levels.forEach((level, index) => lod.addLevel(level, distanceOf(radius, index)))
-  rememberLodDistances(lod)
+  const radius = radiusOf(exact, geometries[0])
+  if (exact) lod.addLevel(exact, 0)
+  addLodLevels(lod, levels.slice(1), radius)
   return lod
 }
 
@@ -123,32 +131,53 @@ function radiusOf(level: Object3D | undefined, geometry: BufferGeometry | undefi
   return geometry?.boundingSphere?.radius ?? 1
 }
 
-function distanceOf(radius: number, index: number): number {
-  return index === 0
-    ? 0
-    : radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index - 1] ?? 1)
-}
-
-function rememberLodDistances(lod: LOD): void {
+/**
+ * The DISTANT levels of a shape whose exact one the caller has already added at zero, and the base
+ * distances a scaled entity reads back.
+ *
+ * 🛑 The multipliers are the runtime's own, not the artifact's: an export compiled under one policy
+ * and played by a build whose policy moved switches level at distances unrelated to its ratios. The
+ * fix is a distance written into `CompiledMeshGeometry` at export time, which the lossy compilers
+ * this file does not own would have to emit.
+ */
+function addLodLevels(lod: LOD, levels: readonly Object3D[], radius: number): void {
+  for (const [index, level] of levels.entries())
+    lod.addLevel(level, radius * (DEFAULT_OPTIMIZATION_POLICY.lodDistanceMultipliers[index] ?? 1))
   BASE_LOD_DISTANCES.set(
     lod,
     lod.levels.map(level => level.distance),
   )
 }
 
-export function applyGameTransform(object: Object3D, transform: Transform): void {
-  applyTransform(object, transform)
-  const scale = Math.max(...Object.values(transform.scale).map(Math.abs))
-  object.traverse(child => scaleLod(child, scale))
+/**
+ * Indexes what a node's own subtree holds, BEFORE parenting hangs other nodes under it — so each
+ * node rescales its own levels. The old `traverse` also rewrote its parented children's, from the
+ * PARENT's scale, and the last node placed in the frame won.
+ */
+export function rememberOwnLods(object: Object3D): void {
+  const found: LOD[] = []
+  object.traverse(child => {
+    if (child instanceof LOD) found.push(child)
+  })
+  OWN_LODS.set(object, found)
 }
 
-function scaleLod(object: Object3D, scale: number): void {
-  if (!(object instanceof LOD)) return
-  const distances = BASE_LOD_DISTANCES.get(object)
-  if (!distances) return
-  object.levels.forEach((level, index) => {
-    level.distance = (distances[index] ?? level.distance) * scale
-  })
+export function applyGameTransform(object: Object3D, transform: Transform): void {
+  applyTransform(object, transform)
+  const lods = OWN_LODS.get(object)
+  if (!lods || lods.length === 0) return
+
+  const scale = Math.max(...Object.values(transform.scale).map(Math.abs))
+  if (LOD_SCALE.get(object) === scale) return
+
+  LOD_SCALE.set(object, scale)
+  for (const lod of lods) {
+    const distances = BASE_LOD_DISTANCES.get(lod)
+    if (!distances) continue
+    lod.levels.forEach((level, index) => {
+      level.distance = (distances[index] ?? level.distance) * scale
+    })
+  }
 }
 
 export function instancedMeshesIn(object: Object3D): readonly InstancedMesh[] {

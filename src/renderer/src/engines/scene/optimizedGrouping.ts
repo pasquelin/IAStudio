@@ -25,24 +25,19 @@ export function createOptimizedGroups(
       }
       const modeById = new Map(nodes.map(node => [node.id, node.optimization?.mode ?? 'auto']))
       const compiled = selectionsOf(artifacts)
+      const picked = (id: string, chosen: boolean): Object3D | undefined =>
+        chosen ? objectOf(id) : undefined
       const forInstances = (id: string): Object3D | undefined =>
-        compiled
-          ? compiled.instances.has(id)
-            ? objectOf(id)
-            : undefined
-          : modeById.get(id) === 'auto' || modeById.get(id) === 'instance'
-            ? objectOf(id)
-            : undefined
+        picked(
+          id,
+          compiled
+            ? compiled.instances.has(id)
+            : modeById.get(id) === 'auto' || modeById.get(id) === 'instance',
+        )
       const forBatches = (id: string): Object3D | undefined =>
-        compiled
-          ? compiled.batches.has(id)
-            ? objectOf(id)
-            : undefined
-          : modeById.get(id) === 'batch'
-            ? objectOf(id)
-            : undefined
+        picked(id, compiled ? compiled.batches.has(id) : modeById.get(id) === 'batch')
       const forMerges = (id: string): Object3D | undefined =>
-        compiled?.merges.has(id) ? objectOf(id) : undefined
+        picked(id, compiled?.merges.has(id) ?? false)
       const grouped =
         instances.rebuild(nodes, forInstances, excluded) +
         batches.rebuild(nodes, forBatches, excluded, artifacts) +
@@ -52,11 +47,14 @@ export function createOptimizedGroups(
       merges.dropSources()
       return grouped
     },
+    // The three are ASKED, never short-circuited: a merged group bakes world matrices into its
+    // geometry, so it has to rebuild whenever a member moves — whatever the other two answered.
     moved: (ids, objectOf) => {
       const movedIds = [...ids]
       const movedInstances = instances.moved(movedIds, objectOf)
       const movedBatches = batches.moved(movedIds, objectOf)
-      return movedInstances || movedBatches || merges.moved(movedIds, objectOf)
+      const movedMerges = merges.moved(movedIds, objectOf)
+      return movedInstances || movedBatches || movedMerges
     },
     drawn: () => [...instances.drawn(), ...batches.drawn(), ...merges.drawn()],
     pickable: () => [...instances.pickable(), ...batches.pickable(), ...merges.pickable()],

@@ -2,6 +2,7 @@ import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { DEFAULT_WORLD, type LightDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { nodesDeclaring, PHYSICS_COMPONENT_TYPES } from './sceneRuntimeSnapshot'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
@@ -13,10 +14,52 @@ import {
 
 export type WorldBenchmarkId = 'S1' | 'S2' | 'S3' | 'S4' | 'S5'
 
+/** A count the SAFE recipe requires above zero, named as the result field that carries it. */
+export type WorldBenchmarkMeasure =
+  | 'executedScriptHooks'
+  | 'successfulScriptEffects'
+  | 'simulatedPhysicsBodies'
+  | 'simulatedPhysicsSteps'
+  | 'simulatedPhysicsEffects'
+  | 'executedTimelineActions'
+  | 'successfulDuplications'
+  | 'successfulUndoRedo'
+
 export type WorldBenchmarkScene = {
   id: WorldBenchmarkId
   purpose: string
   state: SceneState
+  /**
+   * What this scene must be SEEN doing, read off what it declares — so a sixth workload carrying
+   * scripts is checked for them without the recipe naming it.
+   */
+  expects: readonly WorldBenchmarkMeasure[]
+}
+
+const SCRIPT_MEASURES: readonly WorldBenchmarkMeasure[] = [
+  'executedScriptHooks',
+  'successfulScriptEffects',
+]
+const PHYSICS_MEASURES: readonly WorldBenchmarkMeasure[] = [
+  'simulatedPhysicsBodies',
+  'simulatedPhysicsSteps',
+  'simulatedPhysicsEffects',
+]
+const TIMELINE_MEASURES: readonly WorldBenchmarkMeasure[] = ['executedTimelineActions']
+/** Editing answers for any scene holding a node: nothing has to be declared to duplicate one. */
+const EDITING_MEASURES: readonly WorldBenchmarkMeasure[] = [
+  'successfulDuplications',
+  'successfulUndoRedo',
+]
+
+/** Read off the scene rather than off its name: a sixth workload is checked for what it holds. */
+export function benchmarkExpectations(state: SceneState): readonly WorldBenchmarkMeasure[] {
+  return [
+    ...(nodesDeclaring(state, ['Script']).length > 0 ? SCRIPT_MEASURES : []),
+    ...(nodesDeclaring(state, PHYSICS_COMPONENT_TYPES).length > 0 ? PHYSICS_MEASURES : []),
+    ...((state.animation.transitions ?? []).length > 0 ? TIMELINE_MEASURES : []),
+    ...(state.nodes.length > 0 ? EDITING_MEASURES : []),
+  ]
 }
 
 const SUN: LightDescriptor = {
@@ -156,21 +199,17 @@ function validationNodes(): SceneNode[] {
 }
 
 function mixedBenchmark(): WorldBenchmarkScene {
-  return {
-    id: 'S5',
-    purpose: 'mixed gameplay compatibility',
-    state: {
-      ...state(mixedNodes()),
-      world: { ...DEFAULT_WORLD, play: { ...DEFAULT_WORLD.play, gravity: 9.81 } },
-      animation: {
-        ...EMPTY_TIMELINE,
-        events: [{ id: 'benchmark-event', at: 0, name: 'BenchmarkStarted' }],
-        transitions: [
-          { id: 'benchmark-cut', at: 0, kind: 'cut', duration: 0, scene: 'BenchmarkNext' },
-        ],
-      },
+  return declaring('S5', 'mixed gameplay compatibility', {
+    ...state(mixedNodes()),
+    world: { ...DEFAULT_WORLD, play: { ...DEFAULT_WORLD.play, gravity: 9.81 } },
+    animation: {
+      ...EMPTY_TIMELINE,
+      events: [{ id: 'benchmark-event', at: 0, name: 'BenchmarkStarted' }],
+      transitions: [
+        { id: 'benchmark-cut', at: 0, kind: 'cut', duration: 0, scene: 'BenchmarkNext' },
+      ],
     },
-  }
+  })
 }
 
 function benchmark(
@@ -178,5 +217,9 @@ function benchmark(
   purpose: string,
   nodes: readonly SceneNode[],
 ): WorldBenchmarkScene {
-  return { id, purpose, state: state(nodes) }
+  return declaring(id, purpose, state(nodes))
+}
+
+function declaring(id: WorldBenchmarkId, purpose: string, state: SceneState): WorldBenchmarkScene {
+  return { id, purpose, state, expects: benchmarkExpectations(state) }
 }

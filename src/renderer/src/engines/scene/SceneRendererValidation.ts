@@ -11,15 +11,18 @@ import {
 import type { ViewportCamera } from '../viewport/ViewportEngine'
 import type { VisualFrame } from './visualRegression'
 import type { RuntimeRenderCamera } from './runtimeRepresentationValidation'
-import type { SafeRuntimeSnapshot } from './safeRuntimeValidation'
-import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
+import {
+  sceneRuntimeSnapshot,
+  type RenderedRuntimeSnapshot,
+  type RuntimeValidationPick,
+} from './sceneRuntimeSnapshot'
 import { nodeIdOf, withEveryLayer } from './sceneRendererSupport2'
 import { SceneRendererOptimization } from './SceneRendererOptimization'
 
 const VALIDATION_PICK_SAMPLES = 32
 
 export abstract class SceneRendererValidation extends SceneRendererOptimization {
-  private readonly runtimeValidationPicks = new Map<string, { sample: string; resolved: string | null }[]>()
+  private readonly runtimeValidationPicks = new Map<string, RuntimeValidationPick[]>()
 
   async captureRuntimeValidationFrame(spec: RuntimeRenderCamera): Promise<VisualFrame> {
     const gl = this.viewport.gl
@@ -31,8 +34,15 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
     const restore = this.hideWorkshop(camera)
     try {
       this.viewport.drawScene({
-        scene: this.viewport.scene, camera, surface: 'offscreen', paneIndex: 0,
-        cameraNodeId: spec.id, target, rect: null, width: spec.width, height: spec.height,
+        scene: this.viewport.scene,
+        camera,
+        surface: 'offscreen',
+        paneIndex: 0,
+        cameraNodeId: spec.id,
+        target,
+        rect: null,
+        width: spec.width,
+        height: spec.height,
       })
       gl.readRenderTargetPixels(target, 0, 0, spec.width, spec.height, pixels)
       this.observeRuntimeValidationPicks(spec.id, camera)
@@ -44,11 +54,14 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
     }
   }
 
-  runtimeValidationSnapshot(): SafeRuntimeSnapshot {
+  runtimeValidationSnapshot(): RenderedRuntimeSnapshot {
     this.regroupInstances()
     this.viewport.scene.updateMatrixWorld(true)
     const logical = sceneRuntimeSnapshot({
-      nodes: this.documentOrder, selectedIds: [], world: this.world, animation: this.timeline,
+      nodes: this.documentOrder,
+      selectedIds: [],
+      world: this.world,
+      animation: this.timeline,
     })
     return {
       ...logical,
@@ -73,13 +86,15 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
       visibility: {
         logical: logical.visibility,
         rendered: this.documentOrder.map(node => ({
-          id: node.id, visible: this.objects.get(node.id)?.visible ?? false,
+          id: node.id,
+          visible: this.objects.get(node.id)?.visible ?? false,
         })),
       },
       transforms: {
         logical: logical.transforms,
         rendered: this.documentOrder.map(node => ({
-          id: node.id, matrix: this.objects.get(node.id)?.matrixWorld.toArray() ?? null,
+          id: node.id,
+          matrix: this.objects.get(node.id)?.matrixWorld.toArray() ?? null,
         })),
       },
     }
@@ -87,29 +102,34 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
 
   private observeRuntimeValidationPicks(id: string, camera: ViewportCamera): void {
     const objects = [...this.objects].map(([nodeId, object]) => ({
-      id: nodeId, object, point: object.getWorldPosition(new Vector3()),
+      id: nodeId,
+      object,
+      point: object.getWorldPosition(new Vector3()),
     }))
     const occupancy = new Map<string, number>()
     for (const { point } of objects) {
       const key = `${point.x}:${point.y}:${point.z}`
       occupancy.set(key, (occupancy.get(key) ?? 0) + 1)
     }
-    const unambiguous = objects.filter(({ point }) =>
-      occupancy.get(`${point.x}:${point.y}:${point.z}`) === 1)
+    const unambiguous = objects.filter(
+      ({ point }) => occupancy.get(`${point.x}:${point.y}:${point.z}`) === 1,
+    )
     this.runtimeValidationPicks.set(id, this.pickSamples(unambiguous, camera))
   }
 
   private pickSamples(
     objects: readonly { id: string; object: unknown; point: Vector3 }[],
     camera: ViewportCamera,
-  ): { sample: string; resolved: string | null }[] {
+  ): RuntimeValidationPick[] {
     const stride = Math.max(1, Math.floor(objects.length / VALIDATION_PICK_SAMPLES))
     const targets = [
       ...[...this.objects.values()].filter(object => !this.instances.holdsSource(object)),
       ...this.instances.pickable(),
     ]
     const raycaster = withEveryLayer(new Raycaster())
-    return objects.filter((_entry, index) => index % stride === 0).slice(0, VALIDATION_PICK_SAMPLES)
+    return objects
+      .filter((_entry, index) => index % stride === 0)
+      .slice(0, VALIDATION_PICK_SAMPLES)
       .flatMap(({ id, point }) => this.pickedNode(id, point, camera, raycaster, targets))
   }
 
@@ -119,7 +139,7 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
     camera: ViewportCamera,
     raycaster: Raycaster,
     targets: Object3D[],
-  ): { sample: string; resolved: string | null }[] {
+  ): RuntimeValidationPick[] {
     const ndc = point.clone().project(camera)
     if (Math.abs(ndc.x) > 1 || Math.abs(ndc.y) > 1 || Math.abs(ndc.z) > 1) return []
     raycaster.setFromCamera(new Vector2(ndc.x, ndc.y), camera)
@@ -134,9 +154,17 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
 function validationCamera(spec: RuntimeRenderCamera): ViewportCamera {
   const aspect = spec.width / spec.height
   const size = spec.orthographicSize ?? 10
-  const camera = spec.projection === 'orthographic'
-    ? new OrthographicCamera(-(size * aspect) / 2, (size * aspect) / 2, size / 2, -size / 2, spec.near, spec.far)
-    : new PerspectiveCamera(spec.fieldOfView ?? 50, aspect, spec.near, spec.far)
+  const camera =
+    spec.projection === 'orthographic'
+      ? new OrthographicCamera(
+          -(size * aspect) / 2,
+          (size * aspect) / 2,
+          size / 2,
+          -size / 2,
+          spec.near,
+          spec.far,
+        )
+      : new PerspectiveCamera(spec.fieldOfView ?? 50, aspect, spec.near, spec.far)
   camera.position.set(spec.position.x, spec.position.y, spec.position.z)
   camera.lookAt(spec.target.x, spec.target.y, spec.target.z)
   return camera

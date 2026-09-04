@@ -3,7 +3,7 @@ import { OPTIMIZATION_MODES, type OptimizationMode } from '@shared/domain/scene'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { setNodesOptimization } from '@/engines/scene/commands'
 import { optimizationReport } from '@/engines/scene/worldAnalyzer'
-import { clearGameOptimizationCache } from '@/game/gameChannel'
+import { dropCompiledScene } from '@/game/dropCompiledScene'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { useScenes } from '@/stores/scenes'
 import type { ActionHandlers } from './actionHandler'
@@ -24,19 +24,21 @@ async function optimizationAnalysis(
 ): Promise<ActionOutcome> {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_SCENE)
+  const named = textsOf(input, 'nodeIds')
+  const nodes = aimedNodes(open.state, input)
+  if (nodes.length !== named.length)
+    return refused('notFound', 'one or more requested scene nodes do not exist')
+
+  // 🛑 Raised AFTER the refusal above: it returns without entering the `try`, so an engine built
+  // over it was never disposed — one whole three.js scene leaked per unknown node id.
   const mountedEngine = sceneEngineOf(open.documentId)
   const engine = mountedEngine ?? new SceneRenderer({ onSelect: () => {}, onTransform: () => {} })
   if (!mountedEngine) engine.apply(open.state)
-  const named = textsOf(input, 'nodeIds')
-  const nodes = aimedNodes(open.state, input)
-  if (nodes.length !== named.length) {
-    if (!mountedEngine) engine.dispose()
-    return refused('notFound', 'one or more requested scene nodes do not exist')
-  }
   try {
-    const plan = named.length === 0
-      ? await engine.analyzeWorldOptimization()
-      : engine.analyzeOptimization(nodes.map(node => node.id))
+    const plan =
+      named.length === 0
+        ? await engine.analyzeWorldOptimization()
+        : engine.analyzeOptimization(nodes.map(node => node.id))
     return { ok: true, data: reportOnly ? optimizationReport(plan) : plan }
   } finally {
     if (!mountedEngine) engine.dispose()
@@ -46,12 +48,14 @@ async function optimizationAnalysis(
 function optimizeNodes(scope: 'selection' | 'world'): ActionOutcome {
   const open = mounted()
   if (!open) return refused('wrongSurface', NO_SCENE)
-  const candidates = scope === 'world'
-    ? open.state.nodes
-    : open.state.nodes.filter(node => open.state.selectedIds.includes(node.id))
-  const nodes = scope === 'world'
-    ? candidates.filter(node => !node.optimization || node.optimization.mode === 'auto')
-    : candidates
+  const candidates =
+    scope === 'world'
+      ? open.state.nodes
+      : open.state.nodes.filter(node => open.state.selectedIds.includes(node.id))
+  const nodes =
+    scope === 'world'
+      ? candidates.filter(node => !node.optimization || node.optimization.mode === 'auto')
+      : candidates
   if (nodes.length === 0) return refused('badInput', `the ${scope} holds no node to optimize`)
   useScenes.getState().runCommand(open.documentId, setNodesOptimization(nodes, { mode: 'auto' }))
   return { ok: true, data: { nodeIds: nodes.map(node => node.id), mode: 'auto' } }
@@ -84,8 +88,7 @@ export const SCENE_HANDLERS: ActionHandlers = {
   'optimization.clearCache': () => {
     const open = mounted()
     if (!open) return refused('wrongSurface', NO_SCENE)
-    sceneEngineOf(open.documentId)?.clearOptimizationCache()
-    clearGameOptimizationCache(open.documentId)
+    dropCompiledScene(open.documentId)
     return { ok: true }
   },
   ...SCENE_WORLD_HANDLERS,

@@ -54,6 +54,21 @@ export function hasVisualChanges(options: LossyOptimization | undefined): boolea
   )
 }
 
+/**
+ * What an export does to every game, whatever the caller asks — the list the dialogue reads its
+ * rows off, so a step gained or lost by the exporter cannot leave the window saying otherwise.
+ * Each name is the last part of a `game.export.*` label key.
+ */
+export const SAFE_EXPORT_STEPS: readonly string[] = [
+  'safeRuntime',
+  'instancing',
+  'batching',
+  'deduplication',
+  'geometryBuffers',
+  'losslessCompression',
+  'removeUnused',
+]
+
 export type ExportedScene = {
   /** The document id, which every reference of a scene already carries. */
   id: string
@@ -97,9 +112,13 @@ export type CompiledModelMesh = {
   lodMeshes?: readonly CompiledMeshGeometry[]
 }
 
+/**
+ * One STOREY, on purpose: the model plans are a dictionary of the project, named once beside the
+ * game rather than repeated under each scene — a second copy per scene would have said nothing
+ * about which of the two the reader obeys.
+ */
 export type CompiledSceneOptimization = {
   nodes: readonly CompiledNodeGeometry[]
-  modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
 }
 
 export type ExportedScript = {

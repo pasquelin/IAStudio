@@ -5,6 +5,7 @@ import { createInertScripts } from '@game/host/inertScripts'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { DEFAULT_WORLD } from '@shared/domain/scene'
+import { messageOf } from '@shared/guards'
 import { meshNode } from './scene-fixtures'
 import type { SceneNode, SceneState } from './sceneState'
 import {
@@ -67,16 +68,12 @@ describe('executed runtime validation', () => {
         }),
       ]),
     })
-    const scripts = checks.scripts
-    if (typeof scripts !== 'object' || scripts === null) throw new Error('missing script result')
-    expect(Reflect.get(scripts, 'hooks')).toHaveLength(10)
-    expect(Reflect.get(scripts, 'frames')).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    expect(checks.scripts.hooks).toHaveLength(10)
+    expect(checks.scripts.frames).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
     expect(checks.physics).toMatchObject({
       bodies: [{ body: 'physical', kind: 'dynamic' }],
     })
-    const physics = checks.physics
-    if (typeof physics !== 'object' || physics === null) throw new Error('missing physics result')
-    expect(Reflect.get(physics, 'steps')).toHaveLength(10)
+    expect(checks.physics.steps).toHaveLength(10)
     expect(checks.timeline).toEqual({
       veils: Array.from({ length: 10 }, () => 0),
       scenes: [{ scene: 'Next', fade: 0 }],
@@ -86,18 +83,13 @@ describe('executed runtime validation', () => {
       freshIds: true,
       freshInstanceIds: true,
     })
-    const duplication = checks.duplication
-    if (typeof duplication !== 'object' || duplication === null)
-      throw new Error('missing duplication result')
-    expect(Reflect.get(duplication, 'copies')).toEqual(Reflect.get(duplication, 'originals'))
-    const undoRedo = checks.undoRedo
-    if (typeof undoRedo !== 'object' || undoRedo === null) throw new Error('missing history result')
-    expect(Reflect.get(Reflect.get(undoRedo, 'applied'), 'nodes')).toHaveLength(6)
-    expect(Reflect.get(Reflect.get(undoRedo, 'undone'), 'nodes')).toHaveLength(3)
-    expect(Reflect.get(Reflect.get(undoRedo, 'applied'), 'selected')).toEqual([3, 4, 5])
-    expect(Reflect.get(Reflect.get(undoRedo, 'undone'), 'selected')).toEqual([])
-    expect(undoRedo).toMatchObject({ restored: true, replayed: true })
-    expect(Reflect.get(undoRedo, 'applied')).toEqual(Reflect.get(undoRedo, 'redone'))
+    expect(checks.duplication.copies).toEqual(checks.duplication.originals)
+    expect(checks.undoRedo.applied.nodes).toHaveLength(6)
+    expect(checks.undoRedo.undone.nodes).toHaveLength(3)
+    expect(checks.undoRedo.applied.selected).toEqual([3, 4, 5])
+    expect(checks.undoRedo.undone.selected).toEqual([])
+    expect(checks.undoRedo).toMatchObject({ restored: true, replayed: true })
+    expect(checks.undoRedo.applied).toEqual(checks.undoRedo.redone)
   })
 
   it('records only successful engines and releases every acquired port', async () => {
@@ -135,12 +127,17 @@ describe('executed runtime validation', () => {
       dispose: physicsDispose,
     }
 
-    await expect(
-      executeRuntimeFunctionalChecks(executableScene(), {
+    let thrown: unknown = null
+    try {
+      await executeRuntimeFunctionalChecks(executableScene(), {
         createScripts: async () => scripts,
         createPhysics: async () => physics,
-      }),
-    ).rejects.toThrow('physics cleanup failed')
+      })
+    } catch (error) {
+      thrown = error
+    }
+    if (!(thrown instanceof AggregateError)) throw new Error('a disposal failure was swallowed')
+    expect(thrown.errors.map(error => messageOf(error))).toEqual(['physics cleanup failed'])
     expect(physicsDispose).toHaveBeenCalledOnce()
     expect(scriptDispose).toHaveBeenCalledOnce()
 

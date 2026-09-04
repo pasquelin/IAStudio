@@ -82,7 +82,10 @@ const KNIP_CONFIG = {
   $schema: 'https://unpkg.com/knip@6/schema.json',
   ignoreBinaries: ['sips', 'iconutil', 'uv'],
   entry: ['scripts/before-pack.mjs', 'site/assets/js/*.js'],
-  ignore: ['site/assets/css/**', 'vendor/**', '.agents/**'],
+  // `scripts/*.d.mts`: knip reads a declaration file as unimported, never as the types OF the
+  // sibling it declares. Measured on `check-sizes.d.mts` — deleting it fails the typecheck with
+  // TS7016 on `check-sizes.test.ts`, which imports the `.mjs`.
+  ignore: ['site/assets/css/**', 'vendor/**', '.agents/**', 'scripts/*.d.mts'],
 }
 
 describe('the structural duplicate detector still looking at the tree', () => {

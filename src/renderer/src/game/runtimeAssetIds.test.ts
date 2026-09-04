@@ -41,8 +41,8 @@ describe('assets reachable from an exported runtime', () => {
     }
 
     expect(runtimeAssetIds(state)).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
-    expect(runtimeTextureAssetIds(state)).toEqual(['shared'])
-    expect(runtimeModelAssetIds(state)).toEqual(['model'])
+    expect(runtimeTextureAssetIds(state.nodes)).toEqual(['shared'])
+    expect(runtimeModelAssetIds(state.nodes)).toEqual(['model'])
   })
 
   it('packages project animation clips and protects a texture used by an excluded node', () => {
@@ -69,6 +69,16 @@ describe('assets reachable from an exported runtime', () => {
     }
 
     expect(runtimeAssetIds(state)).toContain('animation')
-    expect(runtimeTextureAssetIds(state)).toEqual([])
+    expect(runtimeTextureAssetIds(state.nodes)).toEqual([])
+  })
+
+  it('protects a model asset one excluded node uses, wherever else it is used', () => {
+    const shared = modelNode('model', 'Model')
+    const other = modelNode('other', 'Other')
+    if (shared.type !== 'model') throw new Error('expected a model')
+
+    expect(
+      runtimeModelAssetIds([shared, { ...shared, optimization: { mode: 'exclude' } }, other]),
+    ).toEqual(['other'])
   })
 })

@@ -1,5 +1,5 @@
 import type { MaterialDescriptor } from '@shared/domain/scene'
-import type { SceneState } from '@/engines/scene/sceneState'
+import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { lossyCandidatesOf } from '@/engines/scene/worldAnalyzer'
 
 /** Asset ids the standalone runtime can reach, in deterministic first-use order. */
@@ -23,18 +23,30 @@ export function runtimeAssetIds(state: SceneState): readonly string[] {
   return [...found]
 }
 
-/** Pixel assets whose resolution or encoding an explicitly LOSSY export may replace. */
-export function runtimeTextureAssetIds(state: SceneState): readonly string[] {
-  return lossyCandidatesOf(state.nodes).textureCandidates.map(candidate => candidate.assetId)
+/**
+ * Pixel assets whose resolution or encoding an explicitly LOSSY export may replace. Nodes rather
+ * than a scene, so an export weighs the whole project at once: an asset shared by two scenes is
+ * one asset, and one verdict.
+ */
+export function runtimeTextureAssetIds(nodes: readonly SceneNode[]): readonly string[] {
+  return lossyCandidatesOf(nodes).textureCandidates.map(candidate => candidate.assetId)
 }
 
-/** Imported geometry assets eligible for an explicit model simplification pass. */
-export function runtimeModelAssetIds(state: SceneState): readonly string[] {
+/**
+ * Imported geometry assets eligible for an explicit model simplification pass.
+ *
+ * 🛑 One `exclude` protects the asset EVERYWHERE, as it already does for textures: the bytes are
+ * shared, so simplifying them for the ten nodes that allow it would rewrite them for the one that
+ * does not.
+ */
+export function runtimeModelAssetIds(nodes: readonly SceneNode[]): readonly string[] {
   const found = new Set<string>()
-  for (const node of state.nodes) {
-    if (node.type === 'model' && node.optimization?.mode !== 'exclude')
-      found.add(node.model.assetId)
+  const protectedIds = new Set<string>()
+  for (const node of nodes) {
+    if (node.type !== 'model') continue
+    ;(node.optimization?.mode === 'exclude' ? protectedIds : found).add(node.model.assetId)
   }
+  for (const id of protectedIds) found.delete(id)
   found.delete('')
   return [...found]
 }

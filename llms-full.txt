@@ -190,6 +190,14 @@ enforces — `package.json` is where they are listed, so that no second list can
 and the suite it runs is **north of 9,000 tests** (9,315 across 686 files on 2026-08-17). Unit
 tests are colocated with the code they cover and written in the same movement, never after.
 
+`pnpm sizes:check` enforces strict physical-line limits on every tracked maintained source,
+including tests: files `< 500`, classes `< 300`, ordinary functions `< 50`, React components
+`< 250`, and hooks named `use…` `< 150`. A function with cyclomatic complexity 10 or more is
+instead limited to `< 30` lines. Complexity starts at 1 and adds a path for each conditional,
+loop, catch, non-empty switch/match arm, and short-circuit boolean operator. Nested functions are
+measured separately. Vendored code, copied three.js decoders, and generated outputs are excluded.
+The same guard runs in both `pnpm check` and `pnpm validate`; there is no debt baseline.
+
 Every change also goes through a reuse-and-simplification pass and an automated review before
 it is called done.
 

@@ -82,17 +82,26 @@ const sourceScene = (): SceneState => ({
   ...EMPTY_SCENE,
   nodes: [
     {
-      id: 'group', parentId: null, name: 'Group', type: 'group', visible: true,
+      id: 'group',
+      parentId: null,
+      name: 'Group',
+      type: 'group',
+      visible: true,
       transform: {
-        position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 },
+        position: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
       },
-      castShadow: false, receiveShadow: false,
+      castShadow: false,
+      receiveShadow: false,
     },
   ],
 })
 
-async function afterNextFrame<T>(build: () => Promise<T>, frames: FrameRequestCallback[]): Promise<T> {
+async function afterNextFrame<T>(
+  build: () => Promise<T>,
+  frames: FrameRequestCallback[],
+): Promise<T> {
   let settled = false
   const building = build().then(value => {
     settled = true

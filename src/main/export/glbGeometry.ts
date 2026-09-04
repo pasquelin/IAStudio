@@ -1,13 +1,15 @@
-const GLB_MAGIC = 0x46546c67
-const JSON_CHUNK = 0x4e4f534a
-const BINARY_CHUNK = 0x004e4942
+import { glbChunksOf, glbFrom, glbJson } from '@shared/domain/glbContainer'
+
+const GLB_VERSION = 2
+const HEADER_BYTES = 12
+const CHUNK_HEADER_BYTES = 8
 const UNSIGNED_SHORT = 5123
 const UNSIGNED_INT = 5125
+const ELEMENT_ARRAY_BUFFER = 34963
 
 type JsonObject = Record<string, unknown>
 
 type CompactView = {
-  index: number
   offset: number
   length: number
   count: number
@@ -15,41 +17,46 @@ type CompactView = {
   view: JsonObject
 }
 
+/** What the candidates before each one drop, and what they all drop, in their sorted order. */
+type RemovedBytes = { before: readonly number[]; total: number }
+
+/** Both edges of every bufferView, each list sorted: two searches count what a range meets. */
+type ViewBounds = { offsets: readonly number[]; ends: readonly number[] }
+
 export function compactGlbGeometry(source: Uint8Array): Uint8Array {
   const parsed = parsedGlb(source)
   if (!parsed) return source
   const candidates = compactViewsOf(parsed.json, parsed.binary)
   if (candidates.length === 0) return source
 
-  const binary = compactBinary(parsed.binary, candidates)
-  updateOffsets(parsed.json, candidates)
-  const result = encodedGlb(parsed.json, binary)
+  const removed = removedBytesOf(candidates)
+  const binary = compactBinary(parsed.binary, candidates, removed.total)
+  updateOffsets(parsed.json, candidates, removed)
+  const result = glbFrom({
+    json: new TextEncoder().encode(JSON.stringify(parsed.json)),
+    bin: binary,
+  })
   return result.byteLength < source.byteLength ? result : source
 }
 
 function parsedGlb(source: Uint8Array): { json: JsonObject; binary: Uint8Array } | null {
-  if (source.byteLength < 20) return null
-  const data = new DataView(source.buffer, source.byteOffset, source.byteLength)
-  if (data.getUint32(0, true) !== GLB_MAGIC || data.getUint32(4, true) !== 2) return null
-  const jsonLength = data.getUint32(12, true)
-  if (data.getUint32(16, true) !== JSON_CHUNK) return null
-  const binaryHeader = 20 + jsonLength
-  if (binaryHeader + 8 > source.byteLength) return null
-  const binaryLength = data.getUint32(binaryHeader, true)
-  if (data.getUint32(binaryHeader + 4, true) !== BINARY_CHUNK) return null
-  if (binaryHeader + 8 + binaryLength !== source.byteLength) return null
-  try {
-    const decoded: unknown = JSON.parse(withoutChunkPadding(source.subarray(20, binaryHeader)))
-    if (!isObject(decoded)) return null
-    return {
-      json: decoded,
-      binary: source.subarray(binaryHeader + 8, binaryHeader + 8 + binaryLength),
-    }
-  } catch {
-    return null
-  }
+  if (source.byteLength < HEADER_BYTES + CHUNK_HEADER_BYTES) return null
+  const header = new DataView(source.buffer, source.byteOffset, source.byteLength)
+  if (header.getUint32(4, true) !== GLB_VERSION) return null
+
+  const chunks = glbChunksOf(source)
+  if (!chunks || chunks.bin.byteLength === 0) return null
+  // The rewrite recomposes the file from these two chunks alone: a third chunk, or bytes past
+  // them, would be dropped without a word, so refuse anything the two do not account for.
+  const accounted =
+    HEADER_BYTES + 2 * CHUNK_HEADER_BYTES + chunks.json.byteLength + chunks.bin.byteLength
+  if (accounted !== source.byteLength) return null
+
+  const decoded = glbJson(chunks.json)
+  return isObject(decoded) ? { json: decoded, binary: chunks.bin } : null
 }
 
+/** The index buffers that fit in uint16, sorted by where they sit in the binary chunk. */
 function compactViewsOf(json: JsonObject, binary: Uint8Array): CompactView[] {
   const accessors = objectArray(json.accessors)
   const views = objectArray(json.bufferViews)
@@ -64,11 +71,12 @@ function compactViewsOf(json: JsonObject, binary: Uint8Array): CompactView[] {
     const candidate = compactViewOf(accessor, views, binary, references)
     return candidate ? [candidate] : []
   })
-  return found.some(candidate =>
-    views.some((view, index) => index !== candidate.index && overlaps(candidate, view)),
-  )
+  if (found.length === 0) return found
+
+  const bounds = viewBoundsOf(views)
+  return found.some(candidate => aliased(bounds, candidate))
     ? []
-    : found
+    : found.sort((left, right) => left.offset - right.offset)
 }
 
 function compactViewOf(
@@ -86,7 +94,7 @@ function compactViewOf(
   const offset = integer(view.byteOffset) ?? 0
   const length = integer(view.byteLength)
   if (length !== count * 4 || !fitsUnsignedShort(binary, offset, length, count)) return null
-  return { index, offset, length, count, accessor, view }
+  return { offset, length, count, accessor, view }
 }
 
 function isCompactAccessor(
@@ -108,7 +116,7 @@ function isCompactIndexView(view: JsonObject | undefined): view is JsonObject {
   return (
     view !== undefined &&
     (view.buffer === undefined || view.buffer === 0) &&
-    view.target === 34963 &&
+    view.target === ELEMENT_ARRAY_BUFFER &&
     view.extensions === undefined &&
     view.byteStride === undefined
   )
@@ -128,23 +136,60 @@ function fitsUnsignedShort(
   return true
 }
 
-function overlaps(candidate: CompactView, view: JsonObject): boolean {
-  const offset = integer(view.byteOffset) ?? 0
-  const length = integer(view.byteLength)
-  return (
-    length !== null &&
-    offset < candidate.offset + candidate.length &&
-    candidate.offset < offset + length
-  )
+function viewBoundsOf(views: readonly JsonObject[]): ViewBounds {
+  const offsets: number[] = []
+  const ends: number[] = []
+  for (const view of views) {
+    const length = integer(view.byteLength)
+    if (length === null) continue
+    const offset = integer(view.byteOffset) ?? 0
+    offsets.push(offset)
+    ends.push(offset + length)
+  }
+  return { offsets: offsets.sort(ascending), ends: ends.sort(ascending) }
 }
 
-function compactBinary(binary: Uint8Array, candidates: readonly CompactView[]): Uint8Array {
-  const ordered = [...candidates].sort((left, right) => left.offset - right.offset)
-  const removed = ordered.reduce((total, candidate) => total + removedBytes(candidate), 0)
+/** Whether a second bufferView reads bytes this candidate is about to rewrite. */
+function aliased(bounds: ViewBounds, candidate: CompactView): boolean {
+  const met =
+    countBelow(bounds.offsets, candidate.offset + candidate.length) -
+    countBelow(bounds.ends, candidate.offset + 1)
+  // Its own view is one of them, unless the accessor is empty and so meets nothing at all.
+  return met > (candidate.length > 0 ? 1 : 0)
+}
+
+/** How many of an ascending list fall strictly under a bound. */
+function countBelow(sorted: readonly number[], bound: number): number {
+  let low = 0
+  let high = sorted.length
+  while (low < high) {
+    const middle = (low + high) >> 1
+    const at = sorted[middle]
+    if (at !== undefined && at < bound) low = middle + 1
+    else high = middle
+  }
+  return low
+}
+
+function removedBytesOf(candidates: readonly CompactView[]): RemovedBytes {
+  const before: number[] = []
+  let total = 0
+  for (const candidate of candidates) {
+    before.push(total)
+    total += candidate.length - alignedLength(candidate.count * 2)
+  }
+  return { before, total }
+}
+
+function compactBinary(
+  binary: Uint8Array,
+  candidates: readonly CompactView[],
+  removed: number,
+): Uint8Array {
   const result = new Uint8Array(binary.byteLength - removed)
   let sourceOffset = 0
   let targetOffset = 0
-  for (const candidate of ordered) {
+  for (const candidate of candidates) {
     const before = binary.subarray(sourceOffset, candidate.offset)
     result.set(before, targetOffset)
     targetOffset += before.byteLength
@@ -165,67 +210,35 @@ function compactBinary(binary: Uint8Array, candidates: readonly CompactView[]): 
   return result
 }
 
-function updateOffsets(json: JsonObject, candidates: readonly CompactView[]): void {
-  const views = objectArray(json.bufferViews) ?? []
-  const ordered = [...candidates].sort((left, right) => left.offset - right.offset)
-  for (const candidate of ordered) {
+function updateOffsets(
+  json: JsonObject,
+  candidates: readonly CompactView[],
+  removed: RemovedBytes,
+): void {
+  for (const candidate of candidates) {
     candidate.accessor.componentType = UNSIGNED_SHORT
     candidate.view.byteLength = candidate.count * 2
   }
-  for (const view of views) {
+  const starts = candidates.map(candidate => candidate.offset)
+  for (const view of objectArray(json.bufferViews) ?? []) {
     const offset = integer(view.byteOffset) ?? 0
-    const removed = ordered
-      .filter(candidate => candidate.offset < offset)
-      .reduce((total, candidate) => total + removedBytes(candidate), 0)
-    if (offset > 0 || removed > 0) view.byteOffset = offset - removed
+    // `before` stops at the last candidate: a view sitting past them all has lost every byte.
+    const dropped = removed.before[countBelow(starts, offset)] ?? removed.total
+    if (offset > 0 || dropped > 0) view.byteOffset = offset - dropped
   }
   const buffers = objectArray(json.buffers)
-  if (buffers?.[0]) {
-    const length = integer(buffers[0].byteLength)
-    if (length !== null) {
-      buffers[0].byteLength = length - ordered.reduce((total, one) => total + removedBytes(one), 0)
-    }
+  const first = buffers?.[0]
+  if (first) {
+    const length = integer(first.byteLength)
+    if (length !== null) first.byteLength = length - removed.total
   }
-}
-
-function encodedGlb(json: JsonObject, binary: Uint8Array): Uint8Array {
-  const encodedJson = new TextEncoder().encode(JSON.stringify(json))
-  const jsonLength = alignedLength(encodedJson.byteLength)
-  const binaryLength = alignedLength(binary.byteLength)
-  const result = new Uint8Array(12 + 8 + jsonLength + 8 + binaryLength)
-  const data = new DataView(result.buffer)
-  data.setUint32(0, GLB_MAGIC, true)
-  data.setUint32(4, 2, true)
-  data.setUint32(8, result.byteLength, true)
-  data.setUint32(12, jsonLength, true)
-  data.setUint32(16, JSON_CHUNK, true)
-  result.fill(0x20, 20, 20 + jsonLength)
-  result.set(encodedJson, 20)
-  const binaryHeader = 20 + jsonLength
-  data.setUint32(binaryHeader, binaryLength, true)
-  data.setUint32(binaryHeader + 4, BINARY_CHUNK, true)
-  result.set(binary, binaryHeader + 8)
-  return result
 }
 
 function alignedLength(length: number): number {
   return Math.ceil(length / 4) * 4
 }
 
-function removedBytes(candidate: CompactView): number {
-  return candidate.length - alignedLength(candidate.count * 2)
-}
-
-function withoutChunkPadding(bytes: Uint8Array): string {
-  const decoded = new TextDecoder().decode(bytes)
-  let end = decoded.length
-  while (end > 0) {
-    const last = decoded.charCodeAt(end - 1)
-    if (last !== 0 && last !== 32) break
-    end -= 1
-  }
-  return decoded.slice(0, end)
-}
+const ascending = (left: number, right: number): number => left - right
 
 function objectArray(value: unknown): JsonObject[] | null {
   return Array.isArray(value) && value.every(isObject) ? value : null

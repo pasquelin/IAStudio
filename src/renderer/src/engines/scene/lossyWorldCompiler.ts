@@ -60,9 +60,13 @@ async function compileGraphs(
   graphs: readonly CsgGraph[],
   carve: CarvedGeometryCompiler,
 ): Promise<readonly CompiledMeshGeometry[] | null> {
-  const geometries = await Promise.all(graphs.map(async graph => await carve(graph)))
-  if (geometries.some(geometry => geometry === null)) return null
-  return geometries.flatMap(geometry => (geometry ? [compiledMeshOf(geometry)] : []))
+  const meshes: CompiledMeshGeometry[] = []
+  for (const graph of graphs) {
+    const geometry = await carve(graph)
+    if (!geometry) return null
+    meshes.push(compiledMeshOf(geometry))
+  }
+  return meshes
 }
 
 function compiledNode(
@@ -137,9 +141,8 @@ function reducedGeometry(geometry: GeometryDescriptor, ratio: number): GeometryD
       }
     case 'circle':
     case 'cylinder':
-    case 'ring':
-      return { ...geometry, segments: segments(geometry.segments, 3) }
     case 'lathe':
+    case 'ring':
       return { ...geometry, segments: segments(geometry.segments, 3) }
     case 'sphere':
       return {

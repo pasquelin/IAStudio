@@ -6,19 +6,51 @@ import { createInertScripts } from '@game/host/inertScripts'
 import { createStudioHost } from '@game/host/studioHost'
 import type { BodyDescriptor, PhysicsPort } from '@game/ports/physicsPort'
 import type { ScriptModule, ScriptPort } from '@game/ports/scriptPort'
-import type { World } from '@game/runtime/world'
 import { NO_OUTCOME, type ScriptHook } from '@game/script/frame'
+import type { Transform } from '@shared/domain/scene'
 import { stableKey } from '@shared/hash'
 import { emptyHistory, redo, run, undo } from '@/engines/core/history'
+import { createStartupRollback } from '@/game/startupRollback'
 import { worldFromScene } from '@/game/worldFromScene'
 import { addNodes, copiesOf } from './commands'
 import { subtreesOf, type SceneNode, type SceneState } from './sceneState'
-import type { SafeRuntimeSnapshot } from './safeRuntimeValidation'
 
-type ExecutedChecks = Pick<
-  SafeRuntimeSnapshot,
-  'scripts' | 'physics' | 'timeline' | 'duplication' | 'undoRedo'
->
+export type ValidationEntity = { id: string; transform: Transform }
+type NormalizedNodes = ReturnType<typeof normalizedNodes>
+type NormalizedState = ReturnType<typeof normalizedState>
+
+/** The five checks a real run answers by EXECUTING, where a scene snapshot only declares them. */
+export type ExecutedChecks = {
+  scripts: {
+    hooks: readonly ScriptHook[]
+    frames: readonly number[]
+    events: readonly string[]
+    faults: readonly string[]
+    entities: readonly ValidationEntity[]
+    disarmed: readonly string[]
+  }
+  physics: {
+    bodies: readonly Pick<BodyDescriptor, 'body' | 'kind'>[]
+    steps: readonly number[]
+    entities: readonly ValidationEntity[]
+  }
+  timeline: { veils: readonly number[]; scenes: readonly { scene: string; fade: number }[] }
+  duplication: {
+    originals: NormalizedNodes
+    copies: NormalizedNodes
+    equivalent: boolean
+    freshIds: boolean
+    freshInstanceIds: boolean
+  }
+  undoRedo: {
+    applied: NormalizedState
+    undone: NormalizedState
+    redone: NormalizedState
+    restored: boolean
+    replayed: boolean
+  }
+}
+
 export type RuntimeFunctionalValidationOptions = {
   modules?: readonly ScriptModule[]
   createPhysics?: () => Promise<PhysicsPort>
@@ -40,21 +72,24 @@ export async function executeRuntimeFunctionalChecks(
   state: SceneState,
   options: RuntimeFunctionalValidationOptions = {},
 ): Promise<ExecutedChecks> {
-  let script: ScriptPort | undefined
-  let physicsPort: PhysicsPort | undefined
-  let host: GameApi | undefined
-  let world: World | undefined
   const timeline: ValidationTimeline = { veils: [], scenes: [] }
+  const rollback = createStartupRollback()
 
   try {
     const scripts = scriptProbe(
       (await options.createScripts?.()) ?? deterministicValidationScripts(),
     )
-    script = scripts.port
+    const script = scripts.port
+    rollback.add(() => script.dispose())
     const physics = physicsProbe((await options.createPhysics?.()) ?? createInertPhysics())
-    physicsPort = physics.port
-    host = validationHost(script, physicsPort, timeline)
-    world = worldFromScene('runtime-validation', state, host, { modules: options.modules ?? [] })
+    rollback.add(() => physics.port.dispose())
+    const host = validationHost(script, physics.port, timeline)
+    rollback.add(() => host.audio.stopAll())
+    rollback.add(() => host.input.detach())
+    const world = worldFromScene('runtime-validation', state, host, {
+      modules: options.modules ?? [],
+    })
+    rollback.add(() => world.dispose())
     for (let step = 0; step < VALIDATION_STEPS; step += 1) world.step(FIXED_STEP)
     world.lateUpdate(0, FIXED_STEP)
     const entities = [...world.entities.all()]
@@ -80,7 +115,7 @@ export async function executeRuntimeFunctionalChecks(
       undoRedo: edited.undoRedo,
     }
   } finally {
-    disposeValidationRuntime(world, host, physicsPort, script)
+    rollback.dispose()
   }
 }
 
@@ -103,31 +138,6 @@ function validationHost(
     },
     audio: createInertAudio(),
   })
-}
-
-function disposeValidationRuntime(
-  world: World | undefined,
-  host: GameApi | undefined,
-  physics: PhysicsPort | undefined,
-  script: ScriptPort | undefined,
-): void {
-  try {
-    world?.dispose()
-  } finally {
-    try {
-      host?.input.detach()
-    } finally {
-      try {
-        host?.audio.stopAll()
-      } finally {
-        try {
-          physics?.dispose()
-        } finally {
-          script?.dispose()
-        }
-      }
-    }
-  }
 }
 
 function scriptProbe(base: ScriptPort): ScriptProbe {
@@ -204,27 +214,32 @@ function editingChecks(state: SceneState): Pick<ExecutedChecks, 'duplication' | 
     state.nodes.find(node => state.nodes.some(candidate => candidate.parentId === node.id)) ??
     state.nodes.find(node => node.type === 'mesh' && (node.instances?.length ?? 0) > 0) ??
     state.nodes[0]
-  if (!picked) return { duplication: [], undoRedo: [] }
-
-  const originals = subtreesOf(state.nodes, [picked.id])
-  const copies = copiesOf(state.nodes, [picked])
+  // A scene with no node duplicates nothing, and `addNodes([])` is a declared no-op: the checks
+  // below then compare emptiness against emptiness rather than branching on it.
+  const originals = picked ? subtreesOf(state.nodes, [picked.id]) : []
+  const copies = picked ? copiesOf(state.nodes, [picked]) : []
   const [applied, afterApply] = run(state, emptyHistory<SceneState>(), addNodes(copies))
   const [undone, afterUndo] = undo(applied, afterApply)
   const [redone] = redo(undone, afterUndo)
+  const normalizedOriginals = normalizedNodes(originals)
+  const normalizedCopies = normalizedNodes(copies)
+  const normalizedApplied = normalizedState(applied)
+  const normalizedUndone = normalizedState(undone)
+  const normalizedRedone = normalizedState(redone)
   return {
     duplication: {
-      originals: normalizedNodes(originals),
-      copies: normalizedNodes(copies),
-      equivalent: stableKey(normalizedNodes(originals)) === stableKey(normalizedNodes(copies)),
+      originals: normalizedOriginals,
+      copies: normalizedCopies,
+      equivalent: stableKey(normalizedOriginals) === stableKey(normalizedCopies),
       freshIds: copies.every(copy => !state.nodes.some(node => node.id === copy.id)),
       freshInstanceIds: copiedInstanceIdsAreFresh(state.nodes, copies),
     },
     undoRedo: {
-      applied: normalizedState(applied),
-      undone: normalizedState(undone),
-      redone: normalizedState(redone),
-      restored: stableKey(normalizedState(state)) === stableKey(normalizedState(undone)),
-      replayed: stableKey(normalizedState(applied)) === stableKey(normalizedState(redone)),
+      applied: normalizedApplied,
+      undone: normalizedUndone,
+      redone: normalizedRedone,
+      restored: stableKey(normalizedState(state)) === stableKey(normalizedUndone),
+      replayed: stableKey(normalizedApplied) === stableKey(normalizedRedone),
     },
   }
 }
@@ -248,7 +263,7 @@ function instanceSourceIds(nodes: readonly SceneNode[]): string[] {
   )
 }
 
-function normalizedState(state: SceneState): unknown {
+function normalizedState(state: SceneState) {
   const positions = new Map(state.nodes.map((node, index) => [node.id, index]))
   return {
     nodes: normalizedNodes(state.nodes),
@@ -256,7 +271,7 @@ function normalizedState(state: SceneState): unknown {
   }
 }
 
-function normalizedNodes(nodes: readonly SceneNode[]): unknown {
+function normalizedNodes(nodes: readonly SceneNode[]) {
   const positions = new Map(nodes.map((node, index) => [node.id, index]))
   return nodes.map(node => ({
     name: node.name,

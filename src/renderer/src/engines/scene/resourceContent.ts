@@ -57,14 +57,18 @@ export function textureContent(
 ): ResourceContent<Texture> | null {
   const parts = textureParts(texture)
   if (!parts || byteLengthOf(parts) > maxBytes) return null
+  // The reading taken above is carried, not retaken: one material comparison read the same
+  // texture three times over.
+  const partsOf = (candidate: Texture): readonly BinaryPart[] | null =>
+    candidate === texture ? parts : textureParts(candidate)
   return {
     key: candidate => {
-      const candidateParts = textureParts(candidate)
+      const candidateParts = partsOf(candidate)
       return candidateParts ? fingerprint(candidateParts) : ''
     },
     equals: (one, other) => {
-      const oneParts = textureParts(one)
-      const otherParts = textureParts(other)
+      const oneParts = partsOf(one)
+      const otherParts = partsOf(other)
       return oneParts !== null && otherParts !== null && sameParts(oneParts, otherParts)
     },
   }
@@ -200,7 +204,7 @@ function materialValue(value: unknown, seen: WeakSet<object>): unknown {
     return { texture: content ? content.key(value) : `identity:${value.uuid}` }
   }
   if (ArrayBuffer.isView(value)) {
-    return { array: value.constructor.name, bytes: [...bytesOf(value)] }
+    return { array: value.constructor.name, bytes: bytesFingerprint(bytesOf(value)) }
   }
   if (Array.isArray(value)) return value.map(entry => materialValue(entry, seen))
   if (typeof value !== 'object' || value === null) return value
@@ -239,13 +243,9 @@ function sameMaterialValue(
 
 function sameTextureValue(one: Texture, other: Texture): boolean {
   const oneContent = textureContent(one)
-  const otherContent = textureContent(other)
-  return (
-    oneContent !== null &&
-    otherContent !== null &&
-    oneContent.key(one) === otherContent.key(other) &&
-    oneContent.equals(one, other)
-  )
+  // No fingerprint first: `equals` already answers exactly, and stops at the first byte that
+  // differs, where two keys hash every pixel of both textures before agreeing to compare them.
+  return oneContent !== null && textureContent(other) !== null && oneContent.equals(one, other)
 }
 
 function sameMaterialArray(
@@ -305,7 +305,10 @@ function fingerprint(parts: readonly BinaryPart[]): string {
 function bytesFingerprint(bytes: Uint8Array): string {
   let first = 0x811c9dc5
   let second = 0x9e3779b9
-  for (const byte of bytes) {
+  // Indexed, not iterated: the iterator protocol on a typed array costs several times as much
+  // over the megabytes a texture holds.
+  for (let index = 0; index < bytes.length; index += 1) {
+    const byte = bytes[index] ?? 0
     first = Math.imul(first ^ byte, 0x01000193)
     second = Math.imul(second ^ byte, 0x85ebca6b)
   }

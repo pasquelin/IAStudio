@@ -6,7 +6,21 @@ import {
   type VisualRegressionResult,
 } from './visualRegression'
 
-export const SAFE_FUNCTIONAL_CHECKS = [
+export type SafeFunctionalCheck =
+  | 'picking'
+  | 'animation'
+  | 'timeline'
+  | 'scripts'
+  | 'physics'
+  | 'shadows'
+  | 'cameras'
+  | 'visibility'
+  | 'postProcessing'
+  | 'transforms'
+  | 'duplication'
+  | 'undoRedo'
+
+export const SAFE_FUNCTIONAL_CHECKS: readonly SafeFunctionalCheck[] = [
   'picking',
   'animation',
   'timeline',
@@ -19,9 +33,13 @@ export const SAFE_FUNCTIONAL_CHECKS = [
   'transforms',
   'duplication',
   'undoRedo',
-] satisfies readonly string[]
+]
 
-export type SafeFunctionalCheck = (typeof SAFE_FUNCTIONAL_CHECKS)[number]
+/**
+ * Every check answered, once. What sits BEHIND a check is the producer's own type, declared by the
+ * producer and carried through `RuntimeValidationDriver` — both sides of a comparison come from
+ * the same producer, and `stableKey` asks nothing more than that it serialise.
+ */
 export type SafeRuntimeSnapshot = Record<SafeFunctionalCheck, unknown>
 export type SafeValidationCamera = { id: string }
 export type SafeFunctionalResult = { check: SafeFunctionalCheck; equivalent: boolean }
@@ -29,6 +47,8 @@ export type SafeVisualResult = VisualRegressionResult & { cameraId: string }
 export type SafeRuntimeValidationReport = {
   visual: readonly SafeVisualResult[]
   functional: readonly SafeFunctionalResult[]
+  /** Frames actually captured, so a recipe counting them never restates how many are taken. */
+  renderedFrames: number
   equivalent: boolean
 }
 
@@ -46,6 +66,7 @@ export async function validateSafeRuntime(
 ): Promise<SafeRuntimeValidationReport> {
   if (input.cameras.length === 0) throw new Error('SAFE validation requires at least one camera')
   const visual: SafeVisualResult[] = []
+  let renderedFrames = 0
   for (const camera of input.cameras) {
     visual.push({
       cameraId: camera.id,
@@ -55,6 +76,7 @@ export async function validateSafeRuntime(
         input.visualOptions,
       ),
     })
+    renderedFrames += 2
   }
 
   const original = await input.observeOriginal()
@@ -66,6 +88,7 @@ export async function validateSafeRuntime(
   return {
     visual,
     functional,
+    renderedFrames,
     equivalent:
       visual.every(result => result.equivalent) && functional.every(result => result.equivalent),
   }

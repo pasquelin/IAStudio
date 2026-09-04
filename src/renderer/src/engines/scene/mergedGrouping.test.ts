@@ -1,7 +1,8 @@
 import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, Raycaster, Vector3 } from 'three'
 import { expect, it } from 'vitest'
-import { meshNode } from './scene-fixtures'
+import { meshNode, modelNodeFixture } from './scene-fixtures'
 import { createMergedGroups } from './mergedGrouping'
+import type { RuntimeRenderArtifact } from './grouping'
 import type { SceneNode } from './sceneState'
 
 it('merges nearby static shapes while resolving a picked face to its source UUID', () => {
@@ -45,4 +46,26 @@ it('merges nearby static shapes while resolving a picked face to its source UUID
   const moved = groups.pickable().flatMap(object => ray.intersectObject(object))[0]
   if (!moved) throw new Error('missing moved hit')
   expect(groups.nodeIdOf(moved)).toBe('second')
+})
+
+it('regroups a material mutated in place between two rebuilds', () => {
+  const host = new Object3D()
+  const first = new MeshStandardMaterial({ color: '#ffffff' })
+  const second = new MeshStandardMaterial({ color: '#ffffff' })
+  const nodes: SceneNode[] = [modelNodeFixture('first'), modelNodeFixture('second')]
+  const objects = new Map<string, Mesh>([
+    ['first', new Mesh(new BoxGeometry(), first)],
+    ['second', new Mesh(new BoxGeometry(), second)],
+  ])
+  for (const object of objects.values()) host.add(object)
+  host.updateMatrixWorld(true)
+  const artifacts: readonly RuntimeRenderArtifact[] = [
+    { key: 'props', strategy: 'merge', sourceIds: ['first', 'second'], signature: 'props' },
+  ]
+  const groups = createMergedGroups(host)
+
+  expect(groups.rebuild(nodes, id => objects.get(id), undefined, artifacts)).toBe(2)
+  second.color.set('#ff0000')
+
+  expect(groups.rebuild(nodes, id => objects.get(id), undefined, artifacts)).toBe(0)
 })

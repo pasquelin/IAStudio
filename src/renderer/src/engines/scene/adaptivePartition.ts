@@ -17,6 +17,32 @@ export type AdaptiveCellGroup = {
   nodes: MeshNode[]
 }
 
+export type WorldPoint = { x: number; y: number; z: number }
+
+/**
+ * One spelling of a cell, for everyone. The analyzer's non-mesh fallback has to land in the cell
+ * `adaptiveCellsOf` produced for the same place, and nothing would go red if the two drifted.
+ */
+export function cellKeyOf(cell: AdaptiveCell): string {
+  return `${cell.size}:${cell.x}:${cell.y}:${cell.z}`
+}
+
+/** The same node stood at its world placement — what both the analyzer and the compiler partition. */
+export function nodeAtWorld<N extends SceneNode>(
+  node: N,
+  position: WorldPoint,
+  scale: WorldPoint,
+): N {
+  return {
+    ...node,
+    transform: {
+      ...node.transform,
+      position: { x: position.x, y: position.y, z: position.z },
+      scale: { x: scale.x, y: scale.y, z: scale.z },
+    },
+  }
+}
+
 export function adaptiveCellsOf(
   nodes: readonly MeshNode[],
   policy: OptimizationPolicy,
@@ -35,7 +61,7 @@ export function adaptiveCellsOf(
     for (const node of members) {
       const cell = adaptiveCellOf(node, size, policy)
       if (!cell) continue
-      const key = `${cell.size}:${cell.x}:${cell.y}:${cell.z}`
+      const key = cellKeyOf(cell)
       const group = cells.get(key)
       if (group) group.nodes.push(node)
       else cells.set(key, { cell, nodes: [node] })
@@ -97,7 +123,7 @@ export function adaptiveCellSize(nodes: readonly MeshNode[], policy: Optimizatio
   return size
 }
 
-function maximumCellSize(policy: OptimizationPolicy): number {
+export function maximumCellSize(policy: OptimizationPolicy): number {
   return Math.max(1, Math.min(policy.maxBatchBounds / 4, policy.spatialCellTargetSize))
 }
 
@@ -183,7 +209,6 @@ function geometryCostOf(geometry: GeometryDescriptor): number {
       return Math.max(1, (geometry.widthSegments * geometry.heightSegments) / 12)
     case 'torus':
     case 'torusKnot':
-      return Math.max(1, (geometry.radialSegments * geometry.tubularSegments) / 12)
     case 'tube':
       return Math.max(1, (geometry.radialSegments * geometry.tubularSegments) / 12)
     case 'capsule':
@@ -192,7 +217,6 @@ function geometryCostOf(geometry: GeometryDescriptor): number {
     case 'circle':
     case 'ring':
     case 'lathe':
-      return Math.max(1, geometry.segments / 12)
     case 'ribbon':
       return Math.max(1, geometry.segments / 12)
     default:

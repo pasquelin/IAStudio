@@ -14,7 +14,7 @@ describe('imported model LOSSY compilation', () => {
       undefined,
       {
         load: async () => new Mesh(new SphereGeometry(1, 32, 32), new MeshStandardMaterial()),
-        simplify: async (geometry, ratio) => simplified(geometry, ratio),
+        simplify: async (geometry, ratios) => ratios.map(ratio => simplified(geometry, ratio)),
         dispose: () => undefined,
       },
     )

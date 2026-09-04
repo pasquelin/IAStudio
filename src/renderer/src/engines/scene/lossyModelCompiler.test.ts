@@ -11,6 +11,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { compileLossyModels } from './lossyModelCompiler'
 
+async function reducedLevels(
+  _geometry: BufferGeometry,
+  ratios: readonly number[],
+): Promise<BufferGeometry[]> {
+  return ratios.map(() => new BoxGeometry())
+}
+
 describe('LOSSY imported models compiled for an export', () => {
   it('does not duplicate model buffers when SAFE mode has no measured storage benefit', async () => {
     const load = vi.fn()
@@ -35,7 +42,7 @@ describe('LOSSY imported models compiled for an export', () => {
     await compileLossyModels(
       [{ id: 'tree', url: 'ia-studio://master/tree?v=1' }],
       { ...NO_LOSSY_OPTIMIZATION, generateLods: true },
-      controller.signal,
+      { signal: controller.signal },
       { load, simplify: vi.fn(), dispose: vi.fn() },
     )
 
@@ -45,10 +52,7 @@ describe('LOSSY imported models compiled for an export', () => {
   it('keeps exact LOD0 outside the plan and compiles only distant levels', async () => {
     const root = new Group()
     root.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()))
-    const simplify = vi.fn(
-      async (_geometry: BufferGeometry, _ratio: number, _signal: AbortSignal | undefined) =>
-        new BoxGeometry(),
-    )
+    const simplify = vi.fn(reducedLevels)
 
     const compiled = await compileLossyModels(
       [{ id: 'tree', url: 'ia-studio://master/tree?v=1' }],
@@ -60,7 +64,29 @@ describe('LOSSY imported models compiled for an export', () => {
     expect(compiled.get('tree')?.[0]).toMatchObject({ meshIndex: 0 })
     expect(compiled.get('tree')?.[0]?.geometry).toBeUndefined()
     expect(compiled.get('tree')?.[0]?.lodMeshes).toHaveLength(2)
-    expect(simplify.mock.calls.map(call => call[1])).toEqual([0.35, 0.65])
+    expect(simplify).toHaveBeenCalledTimes(1)
+    expect(simplify.mock.calls[0]?.[1]).toEqual([0.35, 0.65])
+  })
+
+  it('uploads a mesh once for every level it is asked for', async () => {
+    const root = new Group()
+    root.add(new Mesh(new BoxGeometry(), new MeshStandardMaterial()))
+    const onProgress = vi.fn()
+    const simplify = vi.fn(reducedLevels)
+
+    await compileLossyModels(
+      [
+        { id: 'tree', url: 'ia-studio://master/tree?v=1' },
+        { id: 'tree', url: 'ia-studio://master/tree?v=1' },
+      ],
+      { ...NO_LOSSY_OPTIMIZATION, generateLods: true, geometrySimplification: 'aggressive' },
+      { onProgress },
+      { load: async () => root, simplify, dispose: vi.fn() },
+    )
+
+    expect(simplify).toHaveBeenCalledTimes(1)
+    expect(simplify.mock.calls[0]?.[1]).toEqual([0.6, 0.65])
+    expect(onProgress.mock.calls).toEqual([[1, 1]])
   })
 
   it('does not simplify skinned geometry whose animation attributes must survive', async () => {

@@ -154,7 +154,12 @@ export function createGameStage(deps: GameStageDeps): GameStage {
   function handleClearOptimization(id: string): void {
     if (id !== documentId || !authoring) return
     compiler.clearOptimizationCache()
-    scene = compiler.compileRuntimeWorld(structuredClone(authoring))
+    // A fresh REFERENCE is all this needs — `SceneRenderer` skips what compares equal by identity.
+    // A deep clone copied the whole scene state, instance transforms included.
+    scene = compiler.compileRuntimeWorld({
+      ...authoring,
+      nodes: authoring.nodes.map(node => ({ ...node })),
+    })
     compilationMs = compiler.getOptimizationReport().compilationMs
     deps.renderer.apply(scene)
   }
