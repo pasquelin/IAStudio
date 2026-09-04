@@ -75,6 +75,7 @@ export function CharacterInspectorModel({
         name={asset?.name ?? assetId}
         dress={character.dress}
         slots={slots}
+        extractable={asset?.location === 'local'}
         names={names}
         slotIndices={selectedPart?.materialSlots}
         onChange={dress => run(assetId, dressCharacter(dress))}

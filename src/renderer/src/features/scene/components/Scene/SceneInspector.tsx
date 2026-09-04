@@ -44,6 +44,7 @@ import { SpriteSection } from '../SpriteSection'
 import { TextSection } from '../TextSection'
 import { TransformSection } from '../TransformSection'
 import { useSceneEdit } from '@/hooks/useSceneEdit'
+import { assetsById, useAssets } from '@/stores/assets'
 
 export type SceneInspectorProps = { documentId: string }
 type SelectedNode = ReturnType<typeof selectedNodes>[number]
@@ -99,6 +100,9 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const model = useMemo(() => modelOf(node), [node])
   const modelSlots = useModelFiles(state =>
     model ? materialSlotsOfNode(state, documentId, model.id) : 0,
+  )
+  const modelAsset = useAssets(state =>
+    model ? assetsById(state).get(model.model.assetId) : undefined,
   )
   const camera = useMemo(() => cameraOf(node), [node])
   const path = useMemo(() => pathOf(node), [node])
@@ -241,6 +245,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               name={model.name}
               dress={model.model.dress}
               slots={modelSlots}
+              extractable={modelAsset?.location === 'local'}
               onChange={dress => edit.run(dressModel(model.id, dress))}
               // A COMMAND, so the list it edits is the one the document holds when it lands — not
               // the one this panel was drawn with, several awaits earlier.

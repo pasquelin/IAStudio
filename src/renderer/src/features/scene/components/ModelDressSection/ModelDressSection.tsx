@@ -9,6 +9,7 @@ import {
 import { mdiMinus, mdiPlus } from '@mdi/js'
 import { LinkField } from '@/components/LinkField/LinkField'
 import { ToolButton } from '@/components/ToolButton'
+import { Button } from '@/components/Button'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { PropertySection } from '@/components/PropertySection'
 import { SelectField } from '@/components/SelectField'
@@ -31,6 +32,8 @@ export type ModelDressSectionProps = {
   dress: ModelDressRef | undefined
   /** How many materials this model's own file carries — see `ModelTextures.count`. */
   slots: number
+  /** Only a local model has a file the main process can extract from. */
+  extractable: boolean
   /** Material names read from the model file, in slot order. */
   names?: readonly string[]
   slotIndices?: readonly number[]
@@ -46,6 +49,7 @@ export function ModelDressSection({
   name,
   dress,
   slots,
+  extractable,
   names = [],
   slotIndices,
   onChange,
@@ -55,19 +59,20 @@ export function ModelDressSection({
   const pictures = useProjectPictures(PICTURES)
   const mode: DressMode = dress?.kind ?? 'own'
 
-  const assemble = async (slot: number): Promise<void> => {
-    let own: readonly Asset[]
+  const extract = async (): Promise<readonly Asset[] | null> => {
     try {
-      // The main pass is idempotent: it returns already extracted pictures for a recent model,
-      // and takes embedded GLB images out for an older one before the material editor opens.
-      own = await (getBridge()?.assets.extractTextures(assetId) ?? [])
+      return await (getBridge()?.assets.extractTextures(assetId) ?? [])
     } catch (error) {
       reportFailure('assets.extract', name, error)
-      return
+      return null
     } finally {
-      // Extraction writes one image at a time, so even a partial failure changed the catalogue.
       useAssets.getState().invalidate()
     }
+  }
+
+  const assemble = async (slot: number): Promise<void> => {
+    const own = await extract()
+    if (own === null) return
 
     try {
       const materialId = await openModelMaterial({ id: assetId, name }, own)
@@ -124,6 +129,10 @@ export function ModelDressSection({
         // is in is the dress being there, so an empty one is what makes the choice stick.
         onChange={next => onChange(dressFor(next))}
       />
+
+      <Button disabled={!extractable} onClick={() => void extract()}>
+        {t('assets.extractTextures')}
+      </Button>
 
       {dress?.kind === 'image' && (
         <LinkField

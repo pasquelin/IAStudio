@@ -17,10 +17,20 @@ import { useModelFiles } from '@/stores/modelFiles'
 import { useAssets } from '@/stores/assets'
 
 const openModelMaterial = vi.hoisted(() => vi.fn<() => Promise<string | null>>())
+const reportFailure = vi.hoisted(() => vi.fn())
 
 vi.mock('@/features/material/openModelMaterial', () => ({ openModelMaterial }))
+vi.mock('@/services/diagnostics', () => ({ reportFailure }))
 
 const ASSET = 'asset-hero'
+const LOCAL_MODEL: Asset = {
+  id: ASSET,
+  name: 'Hero',
+  type: 'mesh',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-09-04T00:00:00.000Z',
+}
 const SAMPLE = {
   bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
   points: new Float32Array(),
@@ -46,6 +56,7 @@ const held = () => characterOf(useCharacters.getState(), ASSET)
 beforeEach(() => {
   clearCharacters()
   clearScenes()
+  useAssets.setState({ items: [] })
   useModelFiles.setState({
     materials: {},
     materialNames: {},
@@ -55,6 +66,7 @@ beforeEach(() => {
   })
   useCharacterView.setState({ views: {} })
   openModelMaterial.mockReset()
+  reportFailure.mockReset()
   installFakeBridge({})
 })
 
@@ -199,6 +211,46 @@ describe('what a character is made of', () => {
     await vi.waitFor(() =>
       expect(held().dress).toEqual({ kind: 'materials', documentIds: ['material-1'] }),
     )
+  })
+
+  it('extracts embedded pictures directly from the inspector', async () => {
+    const extractTextures = vi.fn(() => Promise.resolve([]))
+    const invalidate = vi.spyOn(useAssets.getState(), 'invalidate')
+    installFakeBridge({ assets: { extractTextures } })
+    useAssets.setState({ items: [LOCAL_MODEL] })
+    seedCharacter(ASSET, RIG, {})
+    show()
+    invalidate.mockClear()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+
+    await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
+    expect(invalidate).toHaveBeenCalledOnce()
+  })
+
+  it('disables texture extraction when the model has no local file', () => {
+    useAssets.setState({ items: [{ ...LOCAL_MODEL, location: 'cloud' }] })
+    seedCharacter(ASSET, RIG, {})
+    show()
+
+    expect(screen.getByRole('button', { name: 'Extraire les textures du modèle' })).toBeDisabled()
+  })
+
+  it('reports a failed extraction and still refreshes the catalogue', async () => {
+    const failure = new Error('broken glb')
+    const invalidate = vi.spyOn(useAssets.getState(), 'invalidate')
+    installFakeBridge({ assets: { extractTextures: () => Promise.reject(failure) } })
+    useAssets.setState({ items: [LOCAL_MODEL] })
+    seedCharacter(ASSET, RIG, {})
+    show()
+    invalidate.mockClear()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+
+    await vi.waitFor(() =>
+      expect(reportFailure).toHaveBeenCalledWith('assets.extract', 'Hero', failure),
+    )
+    expect(invalidate).toHaveBeenCalledOnce()
   })
 
   // Asked for at the first sight of the panel: a joint could only be put right by eye, and there
