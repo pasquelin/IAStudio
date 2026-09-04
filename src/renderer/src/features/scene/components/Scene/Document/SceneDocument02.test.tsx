@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { EVERYTHING_SNAPPED, NOTHING_SNAPPED } from '@shared/domain/snap'
 import { forgetReportedFailures } from '@/services/diagnostics'
+import { publishCommand } from '@/services/commandBus'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { useDocuments } from '@/stores/documents'
@@ -187,6 +188,45 @@ describe('snapping and the coordinate frame', () => {
     rerender(<SceneDocument documentId="doc-1" />)
 
     expect(setNavigating).toHaveBeenLastCalledWith(false)
+  })
+
+  // A refusal that armed anything would come back the moment the tab did: the command was
+  // declined, and a document brought forward on its own would enter navigation nobody asked for.
+  it('does not pre-arm navigation addressed to a hidden document', () => {
+    useDocuments.setState({ activeId: 'doc-2' })
+    const { rerender } = render(<SceneDocument documentId="doc-1" />)
+
+    expect(publishCommand('scene.navigate', 'doc-1')).toBe(false)
+
+    act(() => useDocuments.setState({ activeId: 'doc-1' }))
+    rerender(<SceneDocument documentId="doc-1" />)
+    expect(setNavigating).not.toHaveBeenCalledWith(true)
+  })
+
+  // The hint is drawn for the eye and hidden from the reader, which is what keeps the flight
+  // from being read out twice — once as a hint, once as the status this composes.
+  it('announces navigation state and speed without exposing the visual hint twice', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    expect(screen.getByRole('status')).toHaveTextContent('Navigation désactivée')
+
+    await userEvent.click(screen.getByRole('button', { name: /Naviguer/ }))
+    act(() => built[0]?.onFlySpeedChange?.(4.5))
+
+    expect(screen.getByRole('status')).toHaveTextContent(/Navigation activée.*4,5 m\/s.*Échap/)
+    expect(screen.getByText('déplacer').closest('[aria-hidden="true"]')).toBeInTheDocument()
+  })
+
+  // The frame is session state held per document, not per mount: a detached panel put back, or a
+  // tab left and returned to, would else show « local » on the bar and a world gizmo underneath.
+  it('keeps the local transform frame when the same document remounts', async () => {
+    const first = render(<SceneDocument documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Repère local/ }))
+    expect(setSpace).toHaveBeenLastCalledWith('local')
+
+    first.unmount()
+    render(<SceneDocument documentId="doc-1" />)
+
+    expect(setSpace).toHaveBeenLastCalledWith('local')
   })
 
   // The magnet of the vertical bar is a master switch since the snap bar split the four apart:

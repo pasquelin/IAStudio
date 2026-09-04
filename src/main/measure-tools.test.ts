@@ -78,13 +78,44 @@ const dryTs = (): Record<string, unknown> => {
   return { ...config }
 }
 
+/**
+ * What knip is told to overlook, and why each line is there.
+ *
+ * These are not a widening of the reach — the probe below shows nothing widens it. Each names a
+ * file reached by something other than an import:
+ *
+ * `uv` is the engine's own toolchain, and it is NOT installed by `pnpm install`: `engine-check.mjs`
+ * shells out to it and names it when it is missing. The two macOS ones belong to
+ * `dev-app-identity.mjs`.
+ *
+ * `before-pack.mjs` is called by `electron-builder.yml` through its `beforePack` hook, which is
+ * configuration. Deleting it on knip's word would stop ffmpeg being fetched at packaging time, and
+ * the build would ship without an encoder rather than fail.
+ *
+ * `site/assets/js/*.js` and the stylesheet beside them are loaded by `site/template.html` — the
+ * public site, which knip does not parse. The scripts are entry points because they hold code; the
+ * CSS is ignored outright, having no graph to enter.
+ *
+ * `vendor/**` is the physics engine we compile ourselves: a package the manifest depends on by
+ * `file:`, so what reaches it goes through `node_modules` and knip reads its files as orphans.
+ *
+ * `.agents/**` is in `.git/info/exclude`, copied into every worktree so the contract travels with
+ * the branch. Knip does not honour that exclude: 28 unused-file hits, every one a tool no import
+ * reaches, measured 2026-09-03 on a worktree that had only copied `.agents`.
+ *
+ * `scripts/*.d.mts`: knip reads a declaration file as unimported, never as the types OF the
+ * sibling it declares. Measured on `check-sizes.d.mts` — deleting it fails the typecheck with
+ * TS7016 on `check-sizes.test.ts`, which imports the `.mjs`.
+ *
+ * They are here because a detector that always reports the same false positives is a detector
+ * whose red gets read as normal. The three entry points for `src/main`, `src/preload` and the
+ * renderer are NOT here: knip finds them itself and reports each as redundant, which is what
+ * separates a genuine blind spot from a second description of the build drifting from the first.
+ */
 const KNIP_CONFIG = {
   $schema: 'https://unpkg.com/knip@6/schema.json',
   ignoreBinaries: ['sips', 'iconutil', 'uv'],
   entry: ['scripts/before-pack.mjs', 'site/assets/js/*.js'],
-  // `scripts/*.d.mts`: knip reads a declaration file as unimported, never as the types OF the
-  // sibling it declares. Measured on `check-sizes.d.mts` — deleting it fails the typecheck with
-  // TS7016 on `check-sizes.test.ts`, which imports the `.mjs`.
   ignore: ['site/assets/css/**', 'vendor/**', '.agents/**', 'scripts/*.d.mts'],
 }
 

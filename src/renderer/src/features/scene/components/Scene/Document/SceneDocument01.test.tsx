@@ -136,6 +136,20 @@ beforeEach(() => {
 })
 
 describe('SceneDocument', () => {
+  // A canvas cannot hold focus, so the host carries the tab stop: without it a running game and
+  // keyboard-only navigation have nothing to fire their key events at, and a screen reader has no
+  // name for the surface.
+  it('exposes the viewport as a named keyboard-focusable region', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    const viewport = screen.getByRole('region', { name: 'Viewport 3D' })
+    await userEvent.tab()
+
+    expect(viewport).toHaveAttribute('tabindex', '0')
+    expect(viewport).toHaveFocus()
+    expect(viewport).not.toHaveClass('outline-none')
+  })
+
   it('renders the shared toolbar with the scene tools', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()

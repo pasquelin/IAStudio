@@ -5,23 +5,19 @@
 import { clamp } from '../numeric'
 import type { HeightmapSamples } from './heightmap'
 import { packDeltas, payloadsOf, unpackDeltas } from './reliefPacking'
+import type { PackedReliefChunk, ReliefSculpt } from './reliefPacking'
 import { readReliefGrain as readGrain } from './reliefParsing'
 import { chunkLayout, RELIEF_CHUNK_TEXELS, texelStep, worldY } from './reliefMetrics'
+import type { ReliefChunkKey, ReliefExtent } from './reliefMetrics'
+import type { ReliefOverlay } from './reliefOverlay'
 import { reliefReader } from './reliefRead'
 
 export { packDeltas, unpackDeltas, payloadsOf } from './reliefPacking'
+export type { PackedReliefChunk, ReliefSculpt } from './reliefPacking'
 export { readReliefSculpt, readReliefMask } from './reliefParsing'
 export * from './reliefMetrics'
+export * from './reliefOverlay'
 export * from './reliefRead'
-
-export type ReliefOrigin = { x: number; z: number }
-export type ReliefSize = { x: number; z: number }
-
-export type ReliefExtent = {
-  origin: ReliefOrigin
-  size: ReliefSize
-  elevation: { min: number; max: number }
-}
 
 /** Whether (x, z) sits on the rectangle, edges included. Outside is false — never clamped in. */
 export function containsXZ(extent: ReliefExtent, x: number, z: number): boolean {
@@ -32,42 +28,6 @@ export function containsXZ(extent: ReliefExtent, x: number, z: number): boolean 
     z <= extent.origin.z + extent.size.z
   )
 }
-
-export type ReliefChunkKey = { column: number; row: number }
-
-export type ReliefChunkLayout = ReliefChunkKey & {
-  sampleX: number
-  sampleZ: number
-  width: number
-  height: number
-}
-
-/** One chunk's deltas as the file holds them: base64 of sparse or dense float32, never JSON floats. */
-export type PackedReliefChunk = ReliefChunkKey & { payload: string }
-
-export type ReliefSculpt = {
-  chunks: readonly PackedReliefChunk[]
-}
-
-/**
- * One edit's contribution to a combined height. Identity (id, name, locked) lives on
- * `TerrainEditLayer` — this is the blend the height functions read.
- */
-export type ReliefOverlay = {
-  enabled: boolean
-  alpha: number
-  sculpt?: ReliefSculpt
-  mask?: ReliefMask
-}
-
-/**
- * Per-texel weight on an overlay. Absent mask = 1 everywhere. Painted missing chunks = 0
- * (paint-in). Height and slope are procedural on the incoming unmasked combined of the others.
- */
-export type ReliefMask =
-  | { kind: 'painted'; weights: ReliefSculpt }
-  | { kind: 'height'; min: number; max: number }
-  | { kind: 'slope'; min: number; max: number }
 
 /**
  * A height query: the spatial half of a relief plus the samples the heightmap asset holds.

@@ -3,6 +3,7 @@ import type { FolderRole } from './folderRole'
 import type { PbrChannel } from './material'
 
 import type { AssetLocation, AssetType, SyncStatus } from './assetTypes'
+import { PICTURES } from './assetAccess'
 
 export type { AssetLocation, AssetType, SyncStatus } from './assetTypes'
 
@@ -269,23 +270,6 @@ export type Asset = {
   generation?: AssetGeneration
 }
 
-/** The kinds that decode as an image — the only ones a thumbnail or a texture slot can use. */
-export const PICTURES: readonly AssetType[] = ['image', 'skybox']
-
-/**
- * Whether this asset is a picture the studio can serve from disk. One answer to the question,
- * because a browser that draws a thumbnail and a texture slot that offers one must not disagree
- * about which assets qualify.
- *
- * The file is not named here: the main process resolves it from the id, for a still copied into
- * the project as much as for one linked where it lies — and the renderer is never told where
- * either sits (`withoutSourcePath`). A file gone missing answers 404, which every consumer of
- * `posterUrl` already falls back from.
- */
-export function isLocalPicture(asset: Asset): boolean {
-  return PICTURES.includes(asset.type) && asset.location === 'local'
-}
-
 /**
  * What the browser paints in the corner of a cell. One name per state the user can act on.
  *
@@ -476,6 +460,7 @@ export function hasSound(asset: Asset | null): boolean {
 export {
   ASSET_HOST,
   ASSET_PATHS_MAX,
+  PICTURES,
   ASSET_SCHEME,
   ASSET_SEARCH_LIMIT_MAX,
   MASTER_HOST,
@@ -488,6 +473,7 @@ export {
   hostedIdFromUrl,
   hostedParts,
   hostedUrl,
+  isLocalPicture,
   posterUrl,
   thumbnailUrl,
   versionedUrl,

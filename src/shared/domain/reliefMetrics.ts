@@ -1,5 +1,30 @@
 import { clamp } from '../numeric'
-import type { ReliefChunkLayout, ReliefSize } from './relief'
+
+/**
+ * Which chunk, by grid address. Here rather than beside either half that wears it: the layout
+ * and the packed payload both extend it, and a type re-imported from a parent is a cycle.
+ */
+export type ReliefChunkKey = { column: number; row: number }
+
+export type ReliefChunkLayout = ReliefChunkKey & {
+  sampleX: number
+  sampleZ: number
+  width: number
+  height: number
+}
+
+export type ReliefOrigin = { x: number; z: number }
+export type ReliefSize = { x: number; z: number }
+
+/**
+ * Where a relief sits and what its samples are worth. Down here with the arithmetic that reads
+ * it — `relief.ts` republishes it, and declaring it up there is what closed the loop.
+ */
+export type ReliefExtent = {
+  origin: ReliefOrigin
+  size: ReliefSize
+  elevation: { min: number; max: number }
+}
 
 export const RELIEF_CHUNK_TEXELS = 64
 export const RELIEF_CHUNK_CANDIDATES: readonly number[] = [64, 128]

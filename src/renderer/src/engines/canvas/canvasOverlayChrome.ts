@@ -101,6 +101,13 @@ function drawCrop(context: OverlayContext, scene: OverlayScene, phase: number): 
   drawGrips(context, scene, corners)
 }
 
+/** The box a caption is being sized into: a frame, drawn in the same ants a marquee is. */
+function drawTextBox(context: OverlayContext, scene: OverlayScene, phase: number): void {
+  const rect = scene.tools.textBox
+  if (!rect) return
+  drawOutline(context, scene, cornersOfRect(rect), phase)
+}
+
 function drawTextOverflow(context: OverlayContext, scene: OverlayScene): void {
   if (!scene.tools.handles || !scene.tools.overflowing) return
   const corner = toScreen(scene.viewport, scene.tools.handles.se)
@@ -137,6 +144,7 @@ function drawBrush(context: OverlayContext, scene: OverlayScene): void {
 export function drawTools(context: OverlayContext, scene: OverlayScene, phase: number): void {
   drawSelection(context, scene, phase)
   drawPending(context, scene)
+  drawTextBox(context, scene, phase)
   drawCrop(context, scene, phase)
   if (scene.tools.handles) {
     drawOutline(context, scene, scene.tools.handles, phase)

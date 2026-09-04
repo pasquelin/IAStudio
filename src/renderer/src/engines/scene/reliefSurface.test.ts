@@ -6,6 +6,7 @@ import {
   combinedAt,
   raiseReliefDisk,
   withChunkDelta,
+  type ReliefMask,
   type ReliefSculpt,
 } from '@shared/domain/relief'
 import {
@@ -28,15 +29,15 @@ function samplesOf() {
   }
 }
 
-function layerOf(sculpt?: ReliefSculpt): ReliefLayer {
+function layerOf(sculpt?: ReliefSculpt, mask?: ReliefMask): ReliefLayer {
   return reliefLayer(
     { assetId: 'asset_height' },
-    { id: 'terrain', edits: sculpt ? [terrainEditLayer({ id: 'sculpt', sculpt })] : [] },
+    { id: 'terrain', edits: sculpt ? [terrainEditLayer({ id: 'sculpt', sculpt, mask })] : [] },
   )
 }
 
-function worldOf(sculpt?: ReliefSculpt) {
-  return { ...DEFAULT_WORLD, layers: [layerOf(sculpt)] }
+function worldOf(sculpt?: ReliefSculpt, mask?: ReliefMask) {
+  return { ...DEFAULT_WORLD, layers: [layerOf(sculpt, mask)] }
 }
 
 function positionOf(
@@ -430,5 +431,54 @@ describe('relief surface chunks', () => {
     expect(surface.meshOf('range', 0, 0)).toBeDefined()
     expect(positionOf(surface, 0, 0, 'isle').array[0]).toBeCloseTo(0)
     expect(positionOf(surface, 0, 0, 'range').array[0]).toBeCloseTo(200)
+  })
+})
+
+describe('a mask change on a drawn terrain', () => {
+  const samples = samplesOf()
+  const sculpt = withChunkDelta(samples, undefined, {
+    column: 0,
+    row: 0,
+    localX: 1,
+    localZ: 0,
+    delta: 5,
+  })
+
+  it('lowers the surface when a height mask newly excludes what the edit sculpted', () => {
+    const surface = createReliefSurface(new Scene())
+    surface.sync(worldOf(sculpt), samples)
+    expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(5.01)
+
+    surface.sync(worldOf(sculpt, { kind: 'height', min: 100, max: 200 }), samples)
+
+    expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(0.01)
+  })
+
+  it('raises it again when a bound moves back over the terrain, as a slider does', () => {
+    const surface = createReliefSurface(new Scene())
+    surface.sync(worldOf(sculpt, { kind: 'height', min: 100, max: 200 }), samples)
+
+    surface.sync(worldOf(sculpt, { kind: 'height', min: 0, max: 200 }), samples)
+
+    expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(5.01)
+  })
+
+  it('patches the chunk a painted mask now covers rather than building the terrain again', () => {
+    const surface = createReliefSurface(new Scene())
+    surface.sync(worldOf(sculpt, { kind: 'painted', weights: { chunks: [] } }), samples)
+    const held = surface.meshOf(TERRAIN, 0, 0)
+    expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(0.01)
+
+    const weights = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 0,
+      delta: 1,
+    })
+    surface.sync(worldOf(sculpt, { kind: 'painted', weights }), samples)
+
+    expect(positionOf(surface, 0, 0).array[4]).toBeCloseTo(5.01)
+    expect(surface.meshOf(TERRAIN, 0, 0)).toBe(held)
   })
 })

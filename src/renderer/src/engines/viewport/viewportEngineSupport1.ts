@@ -174,6 +174,9 @@ export type ViewportOutput = {
   alpha?: boolean
 }
 
+/** Frames measured after one read: enough to cover a reader polling a few times a second. */
+export const GPU_TIMED_FRAMES = 30
+
 /** Seconds. Longer than this and a background tab would fly the camera across the scene. */
 export const MAX_DELTA = 0.1
 

@@ -62,6 +62,13 @@ export function clearGameOptimizationCache(documentId: string): void {
   channel.close()
 }
 
+/**
+ * Fields, and NOT an array — which `isRecord` alone lets through. A `world` that arrives as `[]`
+ * becomes the whole of `state.world`, and the first frame reads `background.kind` off it.
+ */
+const isFields = (value: unknown): value is Record<string, unknown> =>
+  isRecord(value) && !Array.isArray(value)
+
 type WireMessage = Record<string, unknown>
 type Decoder = (data: WireMessage) => GameMessage | null
 
@@ -85,7 +92,7 @@ function editMessage(data: WireMessage): GameMessage | null {
 }
 
 function isRuntimePatch(value: unknown): value is RuntimeWorldPatch {
-  if (!isRecord(value)) return false
+  if (!isFields(value)) return false
   const { changedNodes, removedIds, order, world, animation } = value
   return (
     Array.isArray(changedNodes) &&
@@ -93,18 +100,18 @@ function isRuntimePatch(value: unknown): value is RuntimeWorldPatch {
     Array.isArray(removedIds) &&
     removedIds.every(id => typeof id === 'string') &&
     (order === null || (Array.isArray(order) && order.every(id => typeof id === 'string'))) &&
-    (world === null || isRecord(world)) &&
-    (animation === null || isRecord(animation))
+    (world === null || isFields(world)) &&
+    (animation === null || isFields(animation))
   )
 }
 
-const isNode = (value: unknown): boolean => isRecord(value) && typeof value.id === 'string'
+const isNode = (value: unknown): boolean => isFields(value) && typeof value.id === 'string'
 
 function sceneMessage(data: WireMessage): GameMessage | null {
   const { scene, found } = data
   if (typeof scene !== 'string') return null
   if (found === 'reading' || found === 'unknown') return { kind: 'scene', scene, found }
-  if (!isRecord(found)) return null
+  if (!isFields(found)) return null
   const { state, document } = found
   return isScene(state) && typeof document === 'string'
     ? { kind: 'scene', scene, found: { state, document } }
@@ -158,7 +165,7 @@ const DECODERS = new Map<string, Decoder>([
  * origin, so what arrives is checked — a window would else hand a stranger to a game runtime.
  */
 export function gameMessageOf(data: unknown): GameMessage | null {
-  if (!isRecord(data) || typeof data.kind !== 'string') return null
+  if (!isFields(data) || typeof data.kind !== 'string') return null
   return DECODERS.get(data.kind)?.(data) ?? null
 }
 
@@ -182,13 +189,13 @@ function commandOf(value: unknown): GameCommand | null {
 
 /** The shape a game runtime reads, checked at the depth it is read at — nodes and the animation. */
 function isScene(value: unknown): value is SceneState {
-  return isRecord(value) && Array.isArray(value.nodes) && isRecord(value.animation)
+  return isFields(value) && Array.isArray(value.nodes) && isFields(value.animation)
 }
 
 /** The shape the transport draws, checked at the depth it draws from. */
 function isReport(value: unknown): value is RuntimeReport {
   return (
-    isRecord(value) &&
+    isFields(value) &&
     (value.state === 'edit' || value.state === 'playing' || value.state === 'paused') &&
     Array.isArray(value.logs) &&
     Array.isArray(value.errors)

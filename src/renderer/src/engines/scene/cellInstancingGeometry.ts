@@ -15,7 +15,7 @@ import {
 import { movesOnItsOwn } from '@shared/domain/component'
 import { toRadians } from '@shared/domain/angles'
 import { worldReach, type Grouped, type ShadowThrow } from './grouping'
-import type { CellKey, WorldPartition } from './worldPartition'
+import { MAX_SPATIAL_REACH, type CellKey, type WorldPartition } from './worldPartition'
 
 export type Bucket = {
   /** The map it hangs in — its group's own, so dropping it needs no lookup by name. */
@@ -88,7 +88,7 @@ export function splitByCell(
     // The translation read straight off the world matrix, never `decompose`: a non-uniform scale
     // inside a rotated parent shears, and a decomposed translation of a sheared matrix drifts.
     const stands = mesh.matrixWorld.elements
-    const spills = !index.fitsACell(worldReach(shape, mesh.matrixWorld))
+    const spills = worldReach(shape, mesh.matrixWorld) > MAX_SPATIAL_REACH
     // Filed under the cell ITSELF, never under a name: naming here spelled and hashed one string
     // per body, 5 000 of them a rebuild on 5 000 bodies.
     const cell = spills ? null : index.cellAt(stands[12] ?? 0, stands[14] ?? 0)

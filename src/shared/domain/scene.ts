@@ -1,45 +1,20 @@
 import type { FontRef } from './font'
 import { EMPTY_STACK, type PostStack } from './postProcessing'
-import { RELIEF_CHUNK_TEXELS, type ReliefMask, type ReliefSculpt } from './relief'
+import { RELIEF_CHUNK_TEXELS } from './relief'
 import type { Vector3 } from './transform'
 import type { GeometryDescriptor } from './geometry'
+import {
+  UNLOCKED_TERRAIN,
+  type ReliefLayer,
+  type TerrainEditLayer,
+  type TextureRef,
+  type WorldLayer,
+} from './sceneModel'
 import type { TextureSlot } from './sceneTexture'
 
 export * from './sceneModel'
 export * from './sceneTexture'
 export type { ReliefMask } from './relief'
-
-export type TextureRef = { assetId: string }
-
-export type TerrainLocks = { sculpt: boolean; placement: boolean }
-
-export const UNLOCKED_TERRAIN: TerrainLocks = Object.freeze({ sculpt: false, placement: false })
-
-export type TerrainEditLayer = {
-  id: string
-  name: string
-  enabled: boolean
-  locked: boolean
-  alpha: number
-  sculpt?: ReliefSculpt
-  mask?: ReliefMask
-}
-
-export type ReliefLayer = {
-  kind: 'relief'
-  id: string
-  name: string
-  enabled: boolean
-  locked: TerrainLocks
-  heightmap: TextureRef
-  origin: { x: number; z: number }
-  size: { x: number; z: number }
-  elevation: { min: number; max: number }
-  grain: number
-  edits: readonly TerrainEditLayer[]
-}
-
-export type WorldLayer = ReliefLayer
 
 export type EnvironmentRef =
   { kind: 'studio' } | { kind: 'skybox'; assetId: string } | { kind: 'sky'; documentId: string }

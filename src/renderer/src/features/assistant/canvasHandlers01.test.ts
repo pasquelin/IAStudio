@@ -317,4 +317,18 @@ describe('reading the image in front', () => {
       refusal: 'wrongSurface',
     })
   })
+
+  // The sentence is read by whoever is being refused, so the three families have to say the same
+  // thing: written twice, one copy drifts at the first rewording and nothing goes red.
+  it('says the same thing whichever family refuses', async () => {
+    useDocuments.setState({ documents: {}, activeId: null })
+
+    const said = async (name: ActionName, input = {}): Promise<string | undefined> => {
+      const outcome = await runAction(name, input)
+      return outcome.ok ? undefined : outcome.detail
+    }
+
+    expect(await said('layer.lock', { layerId: 'layer-a' })).toBe(await said('canvas.state'))
+    expect(await said('canvas.setPixelArt', { enabled: true })).toBe(await said('canvas.state'))
+  })
 })

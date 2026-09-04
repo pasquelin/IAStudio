@@ -32,19 +32,23 @@ describe('relief sculpt cost', () => {
     }
 
     // What the worker does, packing included: `applyReliefSculpt` already writes base64.
-    const started = performance.now()
     const after = applyReliefSculpt(samples, extent, undefined, operation)
     const edits = changedChunks(undefined, after)
-    const workerMs = performance.now() - started
-
-    // What the UI thread has left once the answer lands: hanging the chunks off the sculpt.
-    const applyStarted = performance.now()
-    withPackedChunks(undefined, edits)
-    const mainMs = performance.now() - applyStarted
 
     // 1024² full disk, 2026-09-03: worker 177 ms, UI thread 0,5 ms. It was 94 ms while the worker
     // decoded each dirty chunk to transfer it and this side re-encoded what it had just decoded.
     expect(edits.length).toBeGreaterThan(0)
-    expect(mainMs * 20).toBeLessThan(workerMs)
+    expect(withPackedChunks(undefined, edits).chunks).toEqual(edits)
+  })
+
+  /**
+   * The cost above is a wall clock, which a loaded suite distorts — measured 783 ms against 110
+   * on a full run, green in isolation. What actually keeps this side cheap is that it never reads
+   * a payload, so a byte no decoder would accept must travel through untouched.
+   */
+  it('hangs a payload no decoder would accept, because it decodes none', () => {
+    const opaque = { column: 0, row: 0, payload: 'not base64 at all !!' }
+
+    expect(withPackedChunks(undefined, [opaque]).chunks).toEqual([opaque])
   })
 })

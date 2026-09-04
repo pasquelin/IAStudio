@@ -1,17 +1,12 @@
 import { clamp } from '../numeric'
 import type { HeightmapSamples } from './heightmap'
 import { packDeltas, payloadsOf, unpackDeltas } from './reliefPacking'
+import type { PackedReliefChunk, ReliefSculpt } from './reliefPacking'
 import { chunkCountAlong, chunkLayout, RELIEF_CHUNK_TEXELS, texelStep } from './reliefMetrics'
+import type { ReliefChunkLayout, ReliefExtent } from './reliefMetrics'
+import type { ReliefMask, ReliefOverlay } from './reliefOverlay'
 import { reliefReader } from './reliefRead'
-import type {
-  PackedReliefChunk,
-  ReliefChunkLayout,
-  ReliefExtent,
-  ReliefMask,
-  ReliefOverlay,
-  ReliefRead,
-  ReliefSculpt,
-} from './relief'
+import type { ReliefRead } from './reliefRead'
 
 export type ReliefDisk = { x: number; z: number; radius: number }
 

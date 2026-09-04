@@ -116,11 +116,14 @@ export const FORMAT = [
 /**
  * 🛑 What replaced the eleven-action catalogue, and the whole reason the names fit: an action the
  * briefing did not spell used to cost the entire answer, so a model was told to ask before acting
- * — and, measured, answered « je ne peux pas » instead.
+ * — and, measured, answered « je ne peux pas » instead: 20 of the 121 failures of 2026-09-01.
+ *
+ * Held under 137 characters: at `roomFor(4096)` the briefing is already at its floor, the
+ * catalogue given up whole, and the room leaves four to spare.
  */
 const NAMES_RULE = [
-  '  - Catalogue: every action name. Manual: fields for opened actions.',
-  '    Call the exact name; missing fields return in the same turn.',
+  '  - Catalogue: all names; Manual: fields of opened ones, others return same turn.',
+  '    Never invent a name, never say you cannot.',
 ]
 
 export const RULES = [

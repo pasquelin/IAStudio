@@ -45,6 +45,19 @@ describe('SceneRenderer and the preview it invalidates', () => {
     expect(elsewhere).toEqual([])
   })
 
+  /**
+   * The half this file was missing, and the half a 1 013-file split walked straight through: the
+   * three cheaper intents stayed DEFINED and tested while every caller became `redraw`, so a
+   * selection paid a full depth pass and every gate stayed green.
+   */
+  it('leaves no named refresh intent without a caller', () => {
+    const orphans = ['refreshWithoutShadows', 'refreshChangedShadows', 'repaint'].filter(
+      intent => !source.includes(`this.${intent}()`),
+    )
+
+    expect(orphans).toEqual([])
+  })
+
   it('refreshes filmed pixels without invalidating unchanged shadow maps', () => {
     const refresh = REFRESH.exec(source)?.[0] ?? ''
 

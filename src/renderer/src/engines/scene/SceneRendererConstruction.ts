@@ -14,6 +14,10 @@ import { createBvhBuilder } from './bvhBuilder'
 import './bvhPatches'
 import { createCsgEvaluator } from '../csg/csgEvaluator'
 import { createTextureCache, loadTexture } from './textureCache'
+import { createReliefSurface } from './reliefSurface'
+import { createReliefBuilder } from './reliefBuilder'
+import { loadHeightmap } from './heightmap'
+import ReliefBuildWorker from './reliefBuild.worker?worker'
 import type { SceneRendererOptions } from './sceneRendererSupport1'
 import { groupsFor } from './sceneRendererSupport2'
 import { SceneRendererFrame } from './SceneRendererFrame'
@@ -21,10 +25,18 @@ export class SceneRendererConstruction extends SceneRendererFrame {
   constructor(options: SceneRendererOptions) {
     super()
     this.options = options
-    if (options.relief) {
-      this.relief.dispose()
-      this.relief = options.relief
-    }
+    // The seam a test substitutes through, and the reason it is a `??`: building the real surface
+    // only to dispose it would spawn and tear down a worker port on every injected one.
+    this.relief =
+      options.relief ??
+      createReliefSurface(this.viewport.scene, {
+        load: assetId => loadHeightmap(assetId, undefined, options.assetVersion?.(assetId)),
+        // 🛑 Invariant 6: cutting the terrain is the longest thing this engine does. Without the
+        // builder `reliefSurface` falls back to an inline build and the window freezes.
+        builder: createReliefBuilder(() => new ReliefBuildWorker()),
+        onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
+        onReady: () => this.redraw(),
+      })
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.
@@ -43,7 +55,12 @@ export class SceneRendererConstruction extends SceneRendererFrame {
             loadAnimation: options.loadAnimation ?? options.loadModel,
             dispose: () => {},
           }
-        : createGltfSource(() => this.viewport.gl)
+        : createGltfSource(
+            () => this.viewport.gl,
+            // A `.glb` whose textures do not resolve arrives bare either way; without this line
+            // it is indistinguishable from a model that never had one.
+            (scope, error) => reportFailure('scene.texture', scope, error),
+          )
       this.modelCache = createModelCache(
         this.gltf.load,
         // The node stays in the outliner and draws nothing: a corrupt or compressed GLB is

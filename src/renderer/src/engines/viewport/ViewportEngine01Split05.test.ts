@@ -20,6 +20,7 @@ import {
   setDisplayRatio,
   ViewportEngine,
 } from './viewportEngineTest-fixtures'
+import { GPU_TIMED_FRAMES } from './viewportEngineSupport1'
 
 describe('a viewport', () => {
   let host: HTMLElement
@@ -207,17 +208,37 @@ describe('a viewport', () => {
      * timing two frames as if they were one.
      */
     it('closes the timer query of a frame whose overlay throws', () => {
-      mounted({
+      const engine = mounted({
         controls: 'none',
         onOverlay: () => {
           throw new Error('overlay')
         },
       })
+      engine.wantsGpuTiming()
 
       expect(() => drawFrames()).toThrow('overlay')
 
       expect(queryBegun).toHaveBeenCalledTimes(1)
       expect(queryEnded).toHaveBeenCalledTimes(1)
+    })
+
+    /** A query is a synchronous round trip to the driver, paid by every viewport that mounts one. */
+    it('times no frame while nobody is reading the figure', () => {
+      const engine = mounted({ controls: 'none' })
+
+      drawFrames()
+
+      expect(queryBegun).not.toHaveBeenCalled()
+      expect(engine.stats.gpuFrameMs).toBeNull()
+    })
+
+    it('stops timing once the frames one read armed have been drawn', () => {
+      const engine = mounted({ controls: 'none', onFrame: () => true })
+      engine.wantsGpuTiming()
+
+      for (let frame = 0; frame <= GPU_TIMED_FRAMES; frame += 1) drawFrames()
+
+      expect(queryBegun).toHaveBeenCalledTimes(GPU_TIMED_FRAMES)
     })
   })
 

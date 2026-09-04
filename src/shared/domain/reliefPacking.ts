@@ -1,5 +1,12 @@
 import { bytesFromBase64, bytesToBase64 } from '../base64'
-import type { PackedReliefChunk, ReliefSculpt } from './relief'
+import type { ReliefChunkKey } from './reliefMetrics'
+
+/** One chunk's deltas as the file holds them: base64 of sparse or dense float32, never JSON floats. */
+export type PackedReliefChunk = ReliefChunkKey & { payload: string }
+
+export type ReliefSculpt = {
+  chunks: readonly PackedReliefChunk[]
+}
 
 const SPARSE = 0
 const DENSE = 1

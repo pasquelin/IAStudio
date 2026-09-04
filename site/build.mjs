@@ -80,8 +80,16 @@ for (const locale of locales) {
   }
 }
 
-const template = await readFile(join(HERE, 'template.html'), 'utf8')
-const workspaces = await readFile(join(HERE, 'partials', 'workspaces.html'), 'utf8')
+/* Les partiels sont inlinés AVANT la passe de valeurs : `String.replace` ne re-balaie jamais son
+   remplacement, donc un partiel passé comme VALEUR publiait ses marqueurs en clair — 141 par page,
+   121 distincts, dans les 15 langues (04/09). La forme fonction neutralise les `$&` du HTML injecté. */
+const PARTIALS = join(HERE, 'partials')
+let template = await readFile(join(HERE, 'template.html'), 'utf8')
+for (const file of existsSync(PARTIALS) ? await readdir(PARTIALS) : []) {
+  if (!file.endsWith('.html')) continue
+  const partial = await readFile(join(PARTIALS, file), 'utf8')
+  template = template.replaceAll(`{{${file.slice(0, -'.html'.length)}}}`, () => partial)
+}
 const { version } = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8'))
 
 /** Chemin public d'une langue, relatif à la racine du site. */
@@ -157,7 +165,6 @@ for (const locale of locales) {
     jsonld,
     ogLocale: locale.meta.ogLocale,
     localeAlternates,
-    workspaces,
   }
 
   const missing = []

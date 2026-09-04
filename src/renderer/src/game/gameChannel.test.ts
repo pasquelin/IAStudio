@@ -99,6 +99,20 @@ describe('what the two windows accept off the wire', () => {
     ).toBeNull()
   })
 
+  /**
+   * An array IS an object, so a bare record test takes one. `worldWithRuntimePatch` writes
+   * `patch.world` over `state.world` whole, and the first frame reads `background.kind` off it.
+   */
+  it('refuses a patch whose world or animation arrived as an array', () => {
+    expect(
+      gameMessageOf({ kind: 'edit', documentId: 'd', patch: { ...patch, world: [] } }),
+    ).toBeNull()
+    expect(
+      gameMessageOf({ kind: 'edit', documentId: 'd', patch: { ...patch, animation: [] } }),
+    ).toBeNull()
+    expect(gameMessageOf({ kind: 'edit', documentId: 'd', patch: [] })).toBeNull()
+  })
+
   /** A scene the studio HOLDS travels whole; the other two answers are words. */
   it('reads the three answers a scene lookup has', () => {
     expect(gameMessageOf({ kind: 'scene', scene: 'a', found: 'reading' })?.kind).toBe('scene')

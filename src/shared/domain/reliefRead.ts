@@ -1,15 +1,10 @@
 import { clamp } from '../numeric'
 import type { HeightmapSamples } from './heightmap'
 import { unpackDeltas } from './reliefPacking'
+import type { ReliefSculpt } from './reliefPacking'
 import { chunkCountAlong, chunkLayout, texelStep, worldY } from './reliefMetrics'
-import type {
-  ReliefChunkKey,
-  ReliefChunkLayout,
-  ReliefExtent,
-  ReliefMask,
-  ReliefOverlay,
-  ReliefSculpt,
-} from './relief'
+import type { ReliefChunkKey, ReliefChunkLayout, ReliefExtent } from './reliefMetrics'
+import type { ReliefMask, ReliefOverlay } from './reliefOverlay'
 
 export type ReliefRead = (sx: number, sz: number) => number
 

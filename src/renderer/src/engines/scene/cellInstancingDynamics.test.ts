@@ -1,8 +1,17 @@
-import { BoxGeometry, InstancedMesh, Mesh, MeshStandardMaterial, Object3D } from 'three'
+import {
+  BoxGeometry,
+  InstancedMesh,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+  Raycaster,
+  Vector3,
+} from 'three'
 import { describe, expect, it } from 'vitest'
 import { meshNode, walked } from './scene-fixtures'
 import { WORTH_INSTANCING } from './grouping'
 import { createCellGroups } from './cellInstancing'
+import type { Component } from '@shared/domain/component'
 import type { SceneNode } from './sceneState'
 
 /** Bodies of one shape, laid out by the caller — which is the whole of what a cell is decided by. */
@@ -152,6 +161,54 @@ describe('a body that moves without declaring it', () => {
 
     // Emptied AND given back: a lot nobody is on leaves the scene and the GPU with it.
     expect(moverLot(scene)).toBeUndefined()
+  })
+})
+
+describe('a lot whose bodies travel past the sphere three cached', () => {
+  /** What a body says of itself when a system drives it — the declared path. */
+  const MOVES: Component = { type: 'Movement' }
+
+  const raysAt = (from: number): Raycaster =>
+    new Raycaster(new Vector3(from, 10, 0), new Vector3(0, -1, 0))
+
+  it('stays clickable once a rebuild carries it past the sphere a ray cached', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+    const declared = nodes.map(node => ({ ...node, components: [MOVES] }))
+    const groups = createCellGroups(scene)
+    groups.rebuild(declared, id => objects.get(id))
+    // 🛑 The FIRST ray is what freezes the sphere: three computes it once and never invalidates it.
+    raysAt(2).intersectObjects([...(groups.pickable?.() ?? [])])
+
+    const travelled = objects.get('n2')
+    if (!travelled) throw new Error('no body to move')
+    travelled.position.set(400, 0, 0)
+    travelled.updateMatrixWorld(true)
+    groups.rebuild(declared, id => objects.get(id))
+
+    const hit = raysAt(400).intersectObjects([...(groups.pickable?.() ?? [])])[0]
+    expect(hit && groups.nodeIdOf?.(hit)).toBe('n2')
+  })
+
+  it('stays clickable when a body JOINS the lot beyond that sphere', () => {
+    const scene = host()
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING + 1, 0))
+    const declared = nodes.map(node => ({ ...node, components: [MOVES] }))
+    const groups = createCellGroups(scene)
+    const arriving = declared.at(-1)
+    if (!arriving) throw new Error('no body to bring in')
+    groups.rebuild(
+      declared.filter(node => node !== arriving),
+      id => objects.get(id),
+    )
+    raysAt(2).intersectObjects([...(groups.pickable?.() ?? [])])
+
+    objects.get(arriving.id)?.position.set(400, 0, 0)
+    objects.get(arriving.id)?.updateMatrixWorld(true)
+    groups.rebuild(declared, id => objects.get(id))
+
+    const hit = raysAt(400).intersectObjects([...(groups.pickable?.() ?? [])])[0]
+    expect(hit && groups.nodeIdOf?.(hit)).toBe(arriving.id)
   })
 })
 

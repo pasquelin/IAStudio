@@ -6,10 +6,16 @@ import { clipLane, embeddedClip, type ClipRef } from '@shared/domain/scene'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvhBuilder'
 import type * as ModelCache from './modelCache'
-import { meshNode, modelNodeFixture } from './scene-fixtures'
+import { cameraNodeFixture, meshNode, modelNodeFixture } from './scene-fixtures'
 import { STUDIO_METADATA_KEY } from '@shared/domain/studioMetadata'
-import { EMPTY_SCENE, IDENTITY_TRANSFORM } from './sceneState'
-import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
+import { EMPTY_SCENE, IDENTITY_TRANSFORM, type SceneNode } from './sceneState'
+import {
+  EMPTY_TIMELINE,
+  type AnimationTimeline,
+  type AnimationTrack,
+} from '@shared/domain/animation'
+import { SECOND } from '@shared/domain/time'
+import { animationTrack } from './animation-fixtures'
 
 /**
  * The instance the scene mounts is a clone, which nothing outside the engine can reach. Handing
@@ -345,6 +351,90 @@ describe('SceneRenderer and the timeline over the scene', () => {
     engine.setPlayhead(3)
 
     expect(objectOf(engine, 'cube-1')?.position.x).toBe(0)
+    engine.dispose()
+  })
+})
+
+/**
+ * A shadow map is drawn from a light, never from a camera: a head that moves only what is looked
+ * FROM can reuse the maps of the frame before, which a scrub pays on every frame otherwise.
+ */
+describe('SceneRenderer shadow maps during playback', () => {
+  const travelling = (nodeId: string): AnimationTrack =>
+    animationTrack(
+      `${nodeId}-position`,
+      'position',
+      [
+        { time: 0, value: { x: 0, y: 0, z: 0 } },
+        { time: SECOND, value: { x: 1, y: 0, z: 0 } },
+      ],
+      { target: { nodeId, property: 'position' } },
+    )
+
+  const played = (nodes: SceneNode[], track: AnimationTrack): SceneRenderer => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    engine.apply({
+      ...EMPTY_SCENE,
+      nodes,
+      animation: { ...EMPTY_TIMELINE, tracks: [track] },
+    })
+    return engine
+  }
+
+  it('reuses unchanged shadow maps when only a camera moves', () => {
+    const engine = played(
+      [cameraNodeFixture('camera-1'), meshNode('cube-1')],
+      travelling('camera-1'),
+    )
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+    const refresh = vi.spyOn(engine['viewport'], 'requestCameraRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
+  it('refreshes shadow maps when an animated mesh moves', () => {
+    const engine = played([cameraNodeFixture('camera-1'), meshNode('cube-1')], travelling('cube-1'))
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
+  it('refreshes shadow maps when a camera carries a shadow caster', () => {
+    const engine = played(
+      [cameraNodeFixture('camera-1'), meshNode('cube-1', 'camera-1')],
+      travelling('camera-1'),
+    )
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).toHaveBeenCalledOnce()
+    engine.dispose()
+  })
+
+  it('refreshes shadow maps while a model clip can deform a caster', async () => {
+    const onClips = vi.fn()
+    const engine = new SceneRenderer({
+      onSelect: () => {},
+      onTransform: () => {},
+      onClips,
+      loadModel: () => Promise.resolve(animatedModel([walk()])),
+      bvh,
+    })
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(walkBlock())] })
+    await vi.waitFor(() => expect(onClips).toHaveBeenCalled())
+    const redraw = vi.spyOn(engine['viewport'], 'requestRender')
+
+    engine.setPlayhead(SECOND / 2)
+
+    expect(redraw).toHaveBeenCalledOnce()
     engine.dispose()
   })
 })

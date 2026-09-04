@@ -216,10 +216,49 @@ const NOT_PUBLISHED: readonly string[] = [
   'resizeCaption',
 ]
 
+/**
+ * A module that declares no command because it re-exports other modules' ones — legal, and the one
+ * shape that may answer nothing. Told by its TEXT rather than by a list: a barrel named here would
+ * go stale the day the next one is written.
+ */
+const reExportsOnly = (source: string): boolean =>
+  !/export function \w+\(/.test(source) && /export \{[\s\S]*?\} from '/.test(source)
+
 describe('what edits a document, and what an outside client may ask for', () => {
-  /** A regex that reads nothing prints the same green as one that works. */
-  it('finds the commands at all', () => {
-    expect(COMMANDS.flatMap(([, names]) => names).length).toBeGreaterThan(40)
+  /**
+   * A regex that reads nothing prints the same green as one that works — so the floor is PER
+   * MODULE. Over the total it is not a floor at all: measured 2026-09-04, `animationCommands.ts`
+   * answered ZERO after becoming a re-export barrel while the sum of sixteen modules read ~149
+   * against a floor of 40. A module rewritten to `export const name = (…): Command =>` would leave
+   * the reachability audit the same silent way.
+   *
+   * A barrel is allowed its zero, and pays for it: what stands BEHIND it must itself be audited,
+   * or it hides a module this suite never reads.
+   */
+  it('finds the commands of every module, and not merely of their total', () => {
+    const sourceOf = new Map(SOURCES)
+
+    for (const [module, names] of COMMANDS) {
+      const source = sourceOf.get(module) ?? ''
+      if (!reExportsOnly(source)) {
+        // Not a higher floor: the size split left modules of THREE commands —
+        // `animationRecordingCommands.ts`, measured 2026-09-04. Zero is what a regex reading
+        // nothing answers, and zero is what a module declaring anything at all may never say.
+        expect(names.length, module).toBeGreaterThan(0)
+        continue
+      }
+
+      const folder = module.slice(0, module.lastIndexOf('/') + 1)
+      const behind = [...source.matchAll(/\} from '\.\/(\w+)'/g)].map(
+        match => `${folder}${match[1]}.ts`,
+      )
+      expect(behind.length, module).toBeGreaterThan(0)
+      expect(
+        behind.filter(path => !COMMAND_MODULES.includes(path)),
+        module,
+      ).toEqual([])
+    }
+
     expect(HANDLERS.length).toBeGreaterThan(10_000)
   })
 

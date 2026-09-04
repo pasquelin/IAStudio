@@ -1,5 +1,6 @@
 import { isRecord, readString } from '../guards'
-import type { PackedReliefChunk, ReliefMask, ReliefSculpt } from './relief'
+import type { ReliefMask } from './reliefOverlay'
+import type { PackedReliefChunk, ReliefSculpt } from './reliefPacking'
 
 export function readReliefSculpt(value: unknown): ReliefSculpt | undefined {
   if (!isRecord(value) || !Array.isArray(value.chunks)) return undefined

@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
+import type { Page } from './page'
 import { useAutomaticPulls } from './useAutomaticPulls'
 import { useLatest } from './useLatest'
 import { usePageQuery } from './usePageQuery'
-
-/** One page of a listing walked by cursor. `cursor` is `null` once there is no page after it. */
-export type Page<T> = {
-  items: readonly T[]
-  cursor: string | null
-}
 
 const NO_PAGE: Page<never> = { items: [], cursor: null }
 

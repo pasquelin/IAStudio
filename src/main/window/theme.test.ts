@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { WINDOW_CHROME_COLOR } from '@shared/constants'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
@@ -13,9 +13,28 @@ import { THEME_ATTRIBUTE } from '@shared/domain/settings'
  * jsdom, where `import.meta.url` is an http URL and no file can be read — and this IS a main
  * process contract, since the window chrome is painted from values it cannot read off the CSS.
  */
-const stylesheet = ['index-foundation.css', 'index-components.css', 'index-extras.css']
-  .map(name => readFileSync(new URL(`../../renderer/src/${name}`, import.meta.url), 'utf8'))
-  .join('\n')
+const SHEETS = new URL('../../renderer/src/', import.meta.url)
+
+/** Every piece of the token layer, from the folder rather than from a list that would go stale. */
+const pieces = readdirSync(SHEETS)
+  .filter(name => /^index-.*\.css$/.test(name))
+  .sort()
+
+const stylesheet = pieces.map(name => readFileSync(new URL(name, SHEETS), 'utf8')).join('\n')
+
+/**
+ * The window loads `index.css`, which is nothing but `@import` lines since the split. A piece on
+ * disk that it does not import is dead to the application while every guard here still reads it —
+ * and a piece it imports that is gone breaks the window with the whole suite green.
+ */
+describe('the pieces of the stylesheet', () => {
+  it('is exactly what index.css imports', () => {
+    const index = readFileSync(new URL('index.css', SHEETS), 'utf8')
+    const imported = [...index.matchAll(/@import '\.\/([^']+)'/g)].map(match => match[1]).sort()
+
+    expect(imported).toEqual(pieces)
+  })
+})
 
 /** The declarations of one block, from its opening line to the brace in the first column. */
 function blockFrom(opening: string): string {

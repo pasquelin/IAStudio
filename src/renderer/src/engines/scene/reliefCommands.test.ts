@@ -5,6 +5,7 @@ import {
   changedChunks,
   combinedAt,
   withChunkDelta,
+  type ReliefMask,
   type ReliefSculpt,
 } from '@shared/domain/relief'
 import { DEFAULT_WORLD, reliefLayer, terrainEditLayer } from '@shared/domain/scene'
@@ -48,6 +49,11 @@ function sceneOf(sculpt?: ReliefSculpt): SceneState {
       ],
     },
   }
+}
+
+function maskOf(state: SceneState): ReliefMask | undefined {
+  const layer = state.world.layers[0]
+  return layer?.kind === 'relief' ? layer.edits[0]?.mask : undefined
 }
 
 function payload(state: SceneState, column: number, row: number): string {
@@ -324,20 +330,14 @@ describe('terrain edit masks', () => {
       emptyHistory(),
       setTerrainEditMask('terrain', 'sculpt', { kind: 'height', min: 100, max: 800 }),
     )
-    const layer = masked.world.layers[0]
-    expect(layer && layer.kind === 'relief' ? layer.edits[0]?.mask : undefined).toEqual({
-      kind: 'height',
-      min: 100,
-      max: 800,
-    })
+    expect(maskOf(masked)).toEqual({ kind: 'height', min: 100, max: 800 })
 
     const [cleared] = run(
       masked,
       emptyHistory(),
       setTerrainEditMask('terrain', 'sculpt', undefined),
     )
-    const next = cleared.world.layers[0]
-    expect(next && next.kind === 'relief' ? next.edits[0]?.mask : undefined).toBeUndefined()
+    expect(maskOf(cleared)).toBeUndefined()
   })
 
   it('paints packed weights onto a painted mask', () => {
@@ -353,10 +353,62 @@ describe('terrain edit masks', () => {
       emptyHistory(),
       paintTerrainEditMask('terrain', 'sculpt', weights.chunks),
     )
-    const layer = painted.world.layers[0]
-    expect(layer && layer.kind === 'relief' ? layer.edits[0]?.mask : undefined).toEqual({
-      kind: 'painted',
-      weights,
+    expect(maskOf(painted)).toEqual({ kind: 'painted', weights })
+  })
+
+  it('refuses to paint over a height mask, whose bounds a painted mask cannot hold', () => {
+    const [masked] = run(
+      sceneOf(),
+      emptyHistory(),
+      setTerrainEditMask('terrain', 'sculpt', { kind: 'height', min: 2, max: 7 }),
+    )
+    const weights = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 1,
+      delta: 1,
     })
+
+    const [after, history] = run(
+      masked,
+      emptyHistory(),
+      paintTerrainEditMask('terrain', 'sculpt', weights.chunks),
+    )
+
+    expect(maskOf(after)).toEqual({ kind: 'height', min: 2, max: 7 })
+    expect(history.past).toHaveLength(0)
+  })
+
+  it('gives back the mask a paint stroke found, never an empty painted one', () => {
+    const first = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 1,
+      localZ: 1,
+      delta: 1,
+    })
+    const second = withChunkDelta(samples, first, {
+      column: 0,
+      row: 0,
+      localX: 2,
+      localZ: 1,
+      delta: 1,
+    })
+    const [painted, once] = run(
+      sceneOf(),
+      emptyHistory(),
+      paintTerrainEditMask('terrain', 'sculpt', first.chunks),
+    )
+    const [twice, both] = run(
+      painted,
+      once,
+      paintTerrainEditMask('terrain', 'sculpt', second.chunks),
+    )
+
+    const [back, rest] = undo(twice, both)
+    expect(maskOf(back)).toEqual({ kind: 'painted', weights: first })
+
+    expect(maskOf(undo(back, rest)[0])).toBeUndefined()
   })
 })

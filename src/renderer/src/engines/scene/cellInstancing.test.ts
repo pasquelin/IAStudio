@@ -6,6 +6,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  Vector3,
 } from 'three'
 import { PerspectiveCamera } from 'three'
 import { describe, expect, it } from 'vitest'
@@ -189,17 +190,60 @@ describe('createCellGroups', () => {
     expect(instancesIn(scene)[0]?.matrixWorld.equals(new Matrix4())).toBe(true)
   })
 
-  it('draws a body too wide for a cell apart from the cells', () => {
+  it('keeps repeated wide bodies in distant spatial zones', () => {
     const scene = host()
     const wide = new BoxGeometry(4 * CELL_SIZE, 1, 4 * CELL_SIZE)
-    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0), wide)
+    const places = [
+      ...inOneCell(WORTH_INSTANCING / 2, 3 * CELL_SIZE),
+      ...inOneCell(WORTH_INSTANCING / 2, 20 * CELL_SIZE),
+    ]
+    const { nodes, objects } = bodies(places, wide)
+    const groups = createCellGroups(scene)
+
+    groups.rebuild(nodes, id => objects.get(id))
+
+    // A building, a terrain slab, a scenery rock: wider than a cell, and still worth culling. Put
+    // on the global fallback they would draw whatever the view, which is what the grid is for.
+    expect(cellsIn(scene)).toHaveLength(2)
+    expect(scene.children.filter(child => child instanceof InstancedMesh)).toHaveLength(0)
+    groups.follow?.(looking(0, 500))
+    expect(standingIn(scene)).toEqual([3 * CELL_SIZE])
+  })
+
+  it('keeps an extreme body on the conservative global fallback', () => {
+    const scene = host()
+    const extreme = new BoxGeometry(32 * CELL_SIZE, 1, 32 * CELL_SIZE)
+    const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0), extreme)
 
     createCellGroups(scene).rebuild(nodes, id => objects.get(id))
 
-    // Filed in one cell, it would stand across four and go with the first of them to leave the
-    // zone — taking its shadow with it. It hangs from the host instead, which no zone turns off.
+    // Past `MAX_SPATIAL_REACH` a query would have to reach that far around every eye, and the
+    // grid stops partitioning. It hangs from the host instead, which no zone turns off.
     expect(cellsIn(scene)).toHaveLength(0)
     expect(scene.children.filter(child => child instanceof InstancedMesh)).toHaveLength(1)
+  })
+
+  describe('a hit no lot owns', () => {
+    const hitOn = (object: Object3D, instanceId?: number) => ({
+      object,
+      distance: 1,
+      point: new Vector3(),
+      instanceId,
+    })
+
+    it('answers nothing for an object or slot no lot owns', () => {
+      const scene = host()
+      const { nodes, objects } = bodies(inOneCell(WORTH_INSTANCING, 0))
+      const groups = createCellGroups(scene)
+      groups.rebuild(nodes, id => objects.get(id))
+      const drawn = groups.pickable?.()[0]
+
+      // A gizmo or a helper over a lot answers `null`, never the node beneath: a click that lands
+      // on a tool must not select what it was drawn on top of.
+      expect(groups.nodeIdOf?.(hitOn(new Mesh(), 0))).toBeNull()
+      expect(drawn && groups.nodeIdOf?.(hitOn(drawn, 999))).toBeNull()
+      expect(drawn && groups.nodeIdOf?.(hitOn(drawn))).toBeNull()
+    })
   })
 })
 

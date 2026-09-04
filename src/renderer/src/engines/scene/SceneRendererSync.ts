@@ -7,6 +7,7 @@ import { applyShadowFlags } from './shadows'
 import './bvhPatches'
 import { keepsItsGroup } from './instancing'
 import { GRID_SINKAGE, receivesShadow, pointsElsewhere } from './sceneRendererSupport2'
+import { shadowOfNodeMoved } from './shadowChanges'
 import { SceneRendererWorld } from './SceneRendererWorld'
 export abstract class SceneRendererSync extends SceneRendererWorld {
   protected abstract release(id: string): void
@@ -70,7 +71,9 @@ export abstract class SceneRendererSync extends SceneRendererWorld {
     else this.markContentChanged()
     const syncNodeStep1 = () => {
       const syncNodeStep1 = () => {
-        this.placementChanged = true
+        // `tuneShadowsIfMoved` walks every object of the scene off this flag: a lamp whose colour
+        // alone changed must not pay a resize and a reach measurement for it.
+        if (shadowOfNodeMoved(previous, node)) this.placementChanged = true
         // A model is its file: pointing a node at another asset is a different object, not an edit
         // of this one. Released and rebuilt — patching it would leave the old file on screen and
         // its reference held for good, since `release` only ever knows the asset applied last.

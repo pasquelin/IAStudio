@@ -401,6 +401,19 @@ describe('expanded catalogue results', () => {
   })
 })
 
+describe('what the briefing says about naming an action', () => {
+  /**
+   * 🛑 The half-sentence is the whole rule: without it a model asked to name an action the
+   * briefing had not spelt answered « je ne peux pas » rather than call it — 20 of the 121
+   * failures of the 2026-09-01 pass.
+   */
+  it('tells the model to call an unopened action rather than refuse', () => {
+    expect(studioBriefing({ room: WIDE }).text).toContain(
+      'Never invent a name, never say you cannot.',
+    )
+  })
+})
+
 describe('a door that refused the briefing it was given', () => {
   /**
    * The room a chat cloud holds is an assumption — its model is typed by hand — so the wide

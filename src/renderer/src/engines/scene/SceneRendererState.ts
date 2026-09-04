@@ -20,8 +20,7 @@ import {
   type Transform,
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
-import { loadHeightmap } from './heightmap'
-import { createReliefSurface } from './reliefSurface'
+import { type ReliefSurface } from './reliefSurface'
 import { createViewportAids, type AidRigs } from './viewportAids'
 import { NOTHING_ISOLATED, type Isolation } from './isolation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -35,7 +34,6 @@ import { type MaterialTextures, type SpriteTexture } from './materialTextures'
 import type { EnvironmentDress } from '@shared/domain/skybox'
 import { type ModelTextures } from './modelTextures'
 import { createSkySun, type SkySun } from './skySun'
-import { reportFailure } from '@/services/diagnostics'
 import { type GltfSource } from './gltfSource'
 import { SceneAnimations } from './animation'
 import { postAt } from './animationEval'
@@ -72,6 +70,9 @@ export abstract class SceneRendererState {
 
   protected abstract redraw(): void
 
+  /** Narrows the shadow pass of ONE frame to the lights that moved, then puts the scene back. */
+  protected abstract limitShadowFrame(refreshAll: boolean): () => void
+
   protected refreshChangedShadows(): void {
     this.viewport.invalidateInset()
     this.viewport.requestShadowRender()
@@ -101,6 +102,7 @@ export abstract class SceneRendererState {
     // Every surface — the panes, the preview, the film — reaches ONE composer through here, so
     // an effect cannot differ between the editor and the render. See § 26 of the specification.
     onDraw: request => this.compose(request),
+    onShadowFrame: refreshAll => this.limitShadowFrame(refreshAll),
     // Read back rather than computed here: only the controls know where an orbit ended up.
     onCameraSettled: pane => this.reportCameraSettled(pane),
     // The nodes alone, and the helpers on purpose: a lamp's glyph is a place one looks AT, never
@@ -177,6 +179,9 @@ export abstract class SceneRendererState {
 
   protected helpers = new Map<string, LightHelper>()
 
+  /** The lights whose map the next pass has to draw again, when it is not all of them. */
+  protected changedShadowLights = new Set<Object3D>()
+
   /** The frustum drawn under each camera of the scene — what makes one clickable. */
   protected frustums = new Map<string, CameraHelper>()
 
@@ -240,6 +245,9 @@ export abstract class SceneRendererState {
   /** The tracks of the document, and where the head stands over them. */
   protected timeline: AnimationTimeline = EMPTY_TIMELINE
 
+  /** Whether moving the head can move a shadow at all, read off the timeline by `apply`. */
+  protected playheadMovesShadows = false
+
   /** Built at mount, when there is a renderer to build passes with. */
   protected post: PostComposer | null = null
 
@@ -287,11 +295,8 @@ export abstract class SceneRendererState {
   /** The document's own ground. Beside the nodes like the grid, and never one of them. */
   protected ground = createGroundPlane()
 
-  protected relief = createReliefSurface(this.viewport.scene, {
-    load: assetId => loadHeightmap(assetId, undefined, this.options.assetVersion?.(assetId)),
-    onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
-    onReady: () => this.redraw(),
-  })
+  /** Built by the constructor, which alone knows whether one was handed in — see there. */
+  protected relief!: ReliefSurface
 
   /** The sun the sky it names describes. A node of the scene, so it is born with the renderer. */
   protected sun: SkySun = createSkySun(this.viewport.scene)

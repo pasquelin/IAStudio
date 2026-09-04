@@ -39,6 +39,8 @@ export abstract class SceneRendererOptimization extends SceneRendererSculpt {
   }
 
   runtimePerformance(): Omit<RuntimePerformance, 'cpuFrameMs' | 'compilationMs'> {
+    // Asking IS what arms the GPU timer: a query per frame is paid only while a panel reads it.
+    this.viewport.wantsGpuTiming()
     this.refreshRuntimeProfile()
     const grouped = this.groupedPerformance()
     const ordinary = this.ordinaryPerformance()
