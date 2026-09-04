@@ -46,6 +46,8 @@ describe('Auto Rig release runtime', () => {
     expect(fetchEngine).not.toContain('readFileSync(stamp')
     expect(builder).not.toContain('Contents/Resources/engine/python/lib/**/*.dylib')
     expect(builder).not.toContain('Contents/Resources/engine/python/lib/**/*.so')
+    expect(builder).toContain("'!src/ia_studio_engine/autorig/make_it_animatable.py'")
+    expect(builder).toContain("'!src/ia_studio_engine/vendor/make_it_animatable/**'")
   })
 
   it('keeps all checkpoint deserialisation behind digest verification and safe loading', () => {

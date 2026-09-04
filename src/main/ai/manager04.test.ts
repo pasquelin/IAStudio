@@ -127,8 +127,20 @@ describe('what a compose costs', () => {
    * on the next compose, so admission over-committed and idle never freed it.
    */
   it('keeps both doors of one loader after a compose', async () => {
-    const sana = localModel({ id: 'sana', loader: 'diffusers', modality: 'image' })
-    const shap = localModel({ id: 'shap', loader: 'diffusers', modality: 'mesh' })
+    const sana = localModel({
+      id: 'sana',
+      format: 'safetensors',
+      loader: 'diffusers',
+      modality: 'image',
+      files: [],
+    })
+    const shap = localModel({
+      id: 'shap',
+      format: 'safetensors',
+      loader: 'diffusers',
+      modality: 'mesh',
+      files: [],
+    })
     const ai = manager({
       settings: () => ({
         ...DEFAULT_SETTINGS,

@@ -121,12 +121,16 @@ function autoRigBindingFaultOf(
     binding.skinIndex.length !== vertexCount * 4
   )
     return 'invalid-binding-size'
-  if (binding.skinIndex.some(index => index >= boneCount)) return 'invalid-joint-index'
   for (let vertex = 0; vertex < binding.skinWeight.length; vertex += 4) {
-    const weights = binding.skinWeight.slice(vertex, vertex + 4)
-    if (weights.some(weight => !Number.isFinite(weight) || weight < 0)) return 'invalid-weight'
-    if (Math.abs(1 - weights.reduce((sum, weight) => sum + weight, 0)) > 1e-5)
-      return 'invalid-weight'
+    let sum = 0
+    for (let influence = 0; influence < 4; influence += 1) {
+      const offset = vertex + influence
+      if ((binding.skinIndex[offset] ?? boneCount) >= boneCount) return 'invalid-joint-index'
+      const weight = binding.skinWeight[offset]
+      if (weight === undefined || !Number.isFinite(weight) || weight < 0) return 'invalid-weight'
+      sum += weight
+    }
+    if (Math.abs(1 - sum) > 1e-5) return 'invalid-weight'
   }
   return null
 }

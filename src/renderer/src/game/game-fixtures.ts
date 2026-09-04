@@ -45,7 +45,7 @@ export const PNG_HEAD = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a
  * for the rest would mean a WebGL context no suite has got — apart from the two that only have to
  * hand BYTES back, which is what `PNG_HEAD` is for.
  */
-export function drawing(over: Partial<SceneDraw> = {}): SceneRenderer {
+export function drawing(over: Partial<SceneRenderer> = {}): SceneRenderer {
   let placed = AT_REST
 
   return {

@@ -1,153 +1,189 @@
-# Rig / Auto Rig — phase corrective avant merge
+# Rig / Auto Rig — fermeture des gates avant merge
 
-Date de recette : 4 septembre 2026. Base finale : `develop@13a2c1661`.
+Date de recette : 5 septembre 2026. Base : `develop@13a2c1661`. Candidat initial :
+`feat/rig-integration-clean@b9145e8d7`.
 
 ## Verdict
 
 `NOT READY TO MERGE`
 
-Le patch corrige les cinq blockers techniques de code. Le merge reste bloqué par l'absence de
-recette produit P0 complète et par l'échec du packaging public macOS arm64. Les droits des
-checkpoints MIA restent non établis ; le modèle est donc bloqué par une politique centrale et le
-runtime lourd n'est pas distribué.
+Les gates dépôt et package public sont closes. La recette P0 automatisée est verte, mais le parcours
+utilisateur réel complet sur B6KV, JRPG et le personnage multi-mesh n'a pas été exécuté jusqu'au
+round-trip GLB et aux smokes IK/timeline/retargeting. Il reste l'unique blocker de merge.
 
-## Statut des blockers
+| Gate | Verdict |
+| --- | --- |
+| Repository validation | PASS — `pnpm validate` intégralement vert |
+| Public package | PASS — package macOS arm64 construit et inspecté |
+| P0 Simple | BLOCKER — contrats automatisés verts, recette utilisateur complète non démontrée |
+| P0 MIA dev | N/A — environnement développeur MIA non matérialisé pendant cette recette |
+| GLB | PASS automatisé ; recette réelle A/B/C non démontrée |
+| Undo/Redo | PASS automatisé ; recette réelle A/B/C non démontrée |
+| Animation/IK/Timeline | BLOCKER — smokes utilisateur non exécutés |
+| Security/races | PASS automatisé |
+| Performance Simple | PASS — médianes à cinq runs, écart inférieur à 1 % après correction |
 
-| Blocker | Avant | Correction | Test ou mesure | Statut |
-| --- | --- | --- | --- | --- |
-| Gate MIA | `restricted` informatif | `distributionStatus: blocked` alimente `modelRefusalOf`; sélection, installation, chargement et host refusent sous les surfaces | tests domaine, manager, host et release | RESOLVED |
-| Simple bypass | hook et assistant appelaient directement `rigFit` | backend Simple enregistré ; UI et `rig.fit` passent par `AutoRigService` | tests service/backend/assistant | RESOLVED |
-| Atomicité | remplacement progressif des meshes | préparation complète, commit groupé et rollback inverse de tous les meshes | succès, propriétés préservées, échec injecté au mesh 2 | RESOLVED au niveau `applyRig` |
-| IPC | forme superficielle | contrôle composantes, finitude, indices, partitions et budget avant host/Python | tests payload malformé et budget | RESOLVED |
-| Path confinement | noms de fichiers fournis par le résultat | noms attendus stricts, `O_NOFOLLOW`, fichier régulier, taille exacte, backend et dimensions vérifiés | traversal, absolu, symlink, backend incohérent | RESOLVED |
-| Recette/performance | non démontrée sur la même base | mesure comparative B6KV/JRPG effectuée ; tests automatisés renforcés | voir section performance | BLOCKER : recette UI/GLB/IK/timeline et multi-mesh réel non rejoués |
-| Droits checkpoints | provenance non établie | aucun checkpoint embarqué ou téléchargeable ; modèle bloqué indépendamment des fichiers présents | tests du catalogue et du host | SAFELY EXCLUDED FROM PUBLIC BUILD |
-| Runtime distribution | risque de Torch dans le paquet public | hook de préparation MIA retiré du packaging ; runtime public mesuré sans Torch/checkpoint | build applicatif et inspection des ressources | SAFELY EXCLUDED, mais packaging final en échec |
+## Gate A — validation du dépôt
 
-## Corrections techniques
+La comparaison a été faite dans le même environnement sur `develop` et sur le candidat avant toute
+correction.
 
-- `AutoRigService` possède les backends Simple et MIA, et rejette un backend inconnu ou un résultat
-  invalide. Simple reste CPU local : aucun appel bridge, Python, modèle ou réseau dans son test.
-- `AutoRigResult` centralise la validation du Rig, des cibles et des quatre influences par vertex.
-  Les transforms non finies, parents invalides et cycles sont refusés avant application.
-- `applyRig` construit bones, géométries et `SkinnedMesh` hors scène. Le commit multi-mesh restaure
-  parents, ordre, enfants et géométries si une mutation échoue.
-- Les propriétés conservées explicitement couvrent transforms/Object3D, visibilité, layers,
-  shadows, ordre de rendu, frustum, `userData`, enfants, matériaux, callbacks et morph targets.
-- Le main valide le payload avant création du dossier temporaire. Le budget par défaut réutilise
-  `MAX_MESH_BYTES` (1 Gio) et peut être abaissé dans les tests.
-- Le résultat Python n'ouvre que les quatre fichiers binaires attendus dans le dossier contrôlé ;
-  symlinks et tailles incohérentes sont rejetés.
-- Un lease du Model Manager interdit désormais la suppression d'un modèle pendant son utilisation.
-- Le fallback « Simple » transmet explicitement `simple` au lieu de réutiliser la sélection capturée
-  par le rendu précédent. Une identité holder/géométries et l'identité du state sont vérifiées avant
-  commit afin qu'un résultat tardif ne remplace ni une édition/Undo ni un mesh remplacé.
-- Les lectures Python sont bornées à `maximumBytes + 1` sur le handle déjà contrôlé et refusent la
-  plateforme lorsque `O_NOFOLLOW` n'est pas disponible.
-- `fetchEngine` rematérialise toujours l'interpréteur public depuis l'archive épinglée : un runtime
-  MIA installé lors d'une recette ne peut plus survivre via le stamp de cache.
-- La passe de simplification a supprimé les wrappers asynchrones imbriqués du skinning et ramené
-  les fonctions modifiées sous les budgets de taille et de complexité.
+| Test en échec | `develop` | candidat initial | Conclusion |
+| --- | --- | --- | --- |
+| MCP | 30 échecs sur 75, `listen EPERM 127.0.0.1` | identique | ENVIRONMENT |
+| `pythonProcess` | 8 échecs sur 8, socket Unix refusée | identique | ENVIRONMENT |
+| watcher | 1 échec sur 10 | identique | ENVIRONMENT |
+| integration bench | 22/22 | 2 échecs `rig.fit` | REGRESSION |
+| timeout | conséquence des sockets refusées | identique | ENVIRONMENT |
 
-## Gate MIA public
+La régression du banc venait d'une scène factice qui ne matérialisait pas le nouveau chemin
+`AutoRigService`. La fixture construit désormais un renderer headless minimal avec une cible et un
+binding valides. Une seconde régression de test utilisait des modèles Diffusers/ONNX désormais
+refusés par la gate de sécurité ; la fixture déclare maintenant le format sûr attendu.
 
-La politique commune dérive le refus depuis la fiche du modèle. La fiche MIA porte
-`licenceStatus: restricted` et `distributionStatus: blocked`. Cette dernière propriété prévaut
-sur l'état installé :
+Résultat final isolé, avec les sockets locales autorisées :
 
-- `choose`/`chooseMany` refusent la sélection locale ;
-- `installModel` refuse avant de contacter le runtime ;
-- `runLoad` refuse le chargement ;
-- `AutoRigHost` refuse avant le contrôle des fichiers installés ;
-- une ancienne préférence ne devient pas le provider effectif, car le candidat est `refused` ;
-- l'action assistant ne demande que le backend Simple.
+- `pnpm validate` : PASS ;
+- Vitest : 1 605 fichiers, 16 550 tests verts ;
+- Python : 202 tests verts, 1 test conditionnel ignoré ;
+- Knip : aucune anomalie ;
+- licences : 73 paquets permissifs, mentions présentes ;
+- typecheck, lint, format, tailles et build moteur : PASS.
 
-Le runtime public matérialisé par `beforePack` mesure 69 600 Kio. Il contient le moteur Python et
-104 Kio de source Auto Rig/MIA, mais ni Torch, ni checkpoint `.pth`/`.ckpt`, ni ressource d'un
-candidat NO-GO. La source expérimentale seule ne rend pas MIA exécutable et le gate reste appliqué
-même si des fichiers privés sont présents.
+## Gate B — package public
 
-## Validation et sécurité
+L'échec Electron Builder initial n'était pas une régression Rig. Le binaire global
+`/usr/local/bin/pnpm` était en version 8.15.4 alors que le projet exige `pnpm@11.21.0`, ce qui
+faisait échouer le collecteur avec `reference.startsWith is not a function`. Le même échec existait
+sur `develop`. Le package a été reconstruit avec Corepack/pnpm 11.21.0 et la signature automatique
+désactivée pour cette recette locale.
 
-- Tests ciblés après correction : 158/158 verts.
-- Suite Python : 202 tests verts, 1 test conditionnel ignoré.
-- Typecheck : vert.
-- Lint : vert.
-- Gate de taille/complexité : 4 109 fichiers conformes.
-- Licences : 73 paquets, tous permissifs et mentions présentes.
-- `pnpm build` : vert ; 419 fichiers de sortie, aucun doublon empaqueté.
-- `pnpm validate` : les gates site, documentation, licences, tailles, typecheck, lint et format sont
-  vertes. La suite Vitest complète échoue ensuite sur des tests d'infrastructure hors Rig (serveurs
-  MCP, subprocess Python, watchers et banc) par timeouts/permissions ; la porte complète n'est donc
-  pas verte.
-- Aucun `InstanceRig`, BodyPix, SkinTokens, TokenRig ou Motius dans `src/`, `engine/` ou les manifests.
-- Aucun checkpoint, `.npz`, GLB/FBX de recette ou capture dans le patch.
+Commande validée :
+
+```text
+corepack pnpm exec electron-builder --dir --mac --arm64
+```
+
+Artefact : `release/mac-arm64/IA Studio.app`.
+
+| Élément | Mesure |
+| --- | ---: |
+| Package public candidate | 776 584 Kio |
+| Moteur Python public | 75 116 Kio |
+| Checkpoints MIA | 0 octet |
+| Runtime lourd MIA / Torch | 0 octet |
+| Implémentation Python MIA | 0 octet |
+| Instance Rig / BodyPix / SkinTokens / TokenRig / Motius | 0 octet |
+
+Le filtre de packaging conserve seulement le point d'enregistrement Python générique requis au
+démarrage du worker et exclut l'implémentation MIA ainsi que son code vendored. Le code TypeScript
+léger du backend peut rester compilé, mais la politique
+centrale refuse sélection, installation et exécution sous les surfaces UI, Command/MCP et host.
+Les tests confirment aussi qu'une ancienne préférence MIA retombe sur Simple, même si runtime et
+checkpoints sont physiquement présents.
+
+Un smoke exécuté avec l'interpréteur et le `PYTHONPATH` du package importe réellement
+`ia_studio_engine.workers.door`. Il a détecté puis permis de corriger une première exclusion trop
+large du dossier `autorig`, qui cassait le worker avant même son démarrage.
+
+Un package `develop` de 1 667 104 Kio a été produit avec un cache moteur historique contenant
+956 448 Kio de Torch. Il n'est pas comparable au candidat propre : aucun delta develop/candidate
+n'est donc publié.
+
+## Gate C — recette P0
+
+Les trois assets réels ont été retrouvés :
+
+| Corpus | Caractéristiques mesurées |
+| --- | --- |
+| B6KV | 11 020 vertices, mono-mesh |
+| JRPG / Tripo | 716 371 vertices, mono-mesh |
+| Multi-mesh | 6 meshes, 12 primitives, 30 414 vertices uniques, accessors partagés, 8 matériaux, 6 transforms non identité |
+
+Les tests P0 automatisés Auto Rig, transaction multi-mesh, adapter MIA, skin GLB et round-trip Rig
+sont verts : 50/50. Ils couvrent notamment validation, échec injecté au milieu du commit,
+Undo/Redo sans nouvelle inférence, cancellation tardive, document/objet disparu, crash Python,
+accessors partagés, confinement des chemins et transforms locales.
+
+La tentative de recette via l'application de développement a démarré Electron et le port DevTools,
+mais aucune fenêtre renderer n'a été publiée dans la liste CDP. Le parcours complet Open → Auto Rig
+→ pose → Undo/Redo → Save/Reopen → export/réimport, ainsi que les smokes IK, timeline et
+retargeting, ne sont donc pas mesurés. Ces contrôles ne sont pas remplacés par une supposition : la
+Gate C reste ouverte.
+
+Une seconde tentative a utilisé le package public lui-même avec un profil utilisateur isolé. Le
+projet réel et B6KV ont été ouverts depuis l'explorateur ; le document a été créé, mais le personnage
+n'a pas pu être sélectionné de manière vérifiable dans le viewport instrumenté. Aucune étape aval
+n'est donc marquée comme réussie.
+
+| Parcours | B6KV | JRPG | Multi |
+| --- | --- | --- | --- |
+| Auto Rig | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Skeleton | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Pose | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Undo | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Redo | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Save/Reopen | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Export/Reimport | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Materials | NON MESURÉ | NON MESURÉ | NON MESURÉ |
+| Transforms | N/A mono-mesh | N/A mono-mesh | NON MESURÉ |
+
+| Smoke | Verdict |
+| --- | --- |
+| Bone edit | NON MESURÉ |
+| IK | NON MESURÉ |
+| Timeline | NON MESURÉ |
+| Playback | NON MESURÉ |
+| Retargeting | NON MESURÉ |
 
 ## Performance Simple
 
-Mesure locale M2 Max sur les deux assets réels, dans le même processus et sur la même base Git.
-Le chemin « avant » appelle directement les algorithmes existants ; le chemin « après » exécute
-exactement ces calculs par `AutoRigService`. Les chiffres RSS sont des deltas de processus et non
-des pics isolés reproductibles.
+Mesure locale M2 Max, cinq runs par chemin, mêmes données et mêmes calculs. Une première mesure a
+révélé +11,1 % sur JRPG, causé par une allocation `slice()` pour chaque vertex dans la validation
+commune. La boucle a été remplacée par une validation sans allocation intermédiaire.
 
-| Asset | Vertices | Bones | Bindings | Direct | Via service | Écart observé | RSS direct | RSS service |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| B6KV | 11 020 | 22 | 1 | 551,6 ms | 271,1 ms | -280,5 ms | +55,4 Mo | +31,5 Mo |
-| JRPG | 716 371 | 22 | 1 | 23 007,3 ms | 23 334,2 ms | +326,9 ms (+1,42 %) | +17,3 Mo | +17,3 Mo |
+| Asset | Médiane directe | Médiane `AutoRigService` | Écart final |
+| --- | ---: | ---: | ---: |
+| B6KV | 30,777 ms | 30,668 ms | -0,35 % |
+| JRPG | 836,035 ms | 841,396 ms | +0,64 % |
 
-La mesure B6KV est dominée par l'échauffement JIT et ne constitue pas un gain mesuré. Le JRPG ne
-montre pas de copie ou de coût MIA ; l'écart observé reste faible devant le skinning géométrique.
-Le corpus multi-mesh réel n'est plus présent localement : aucune cellule n'est inventée.
+Ces résultats ne montrent plus de régression significative du chemin Simple.
 
-## Build et taille
+## Corrections de cette fermeture
 
-| Élément | Mesure candidate |
-| --- | ---: |
-| Sortie `pnpm build` | 74 216 Kio |
-| Runtime Python public téléchargé | 69 600 Kio |
-| FFmpeg/ffprobe public | 98 436 Kio |
-| STT public | 636 Kio |
-| Runtime MIA lourd | 0 octet |
-| Checkpoints MIA | 0 octet |
+- fixtures du banc alignées sur le vrai contrat `AutoRigService` ;
+- fixture Model Manager rendue conforme à la politique de format sûr ;
+- validation top-4 réécrite sans allocations par vertex ;
+- runtime Python MIA exclu du package public ;
+- import du worker public restauré en conservant uniquement son point d'enregistrement Auto Rig
+  sans l'implémentation MIA ;
+- test de garde du filtre Electron Builder ajouté ;
+- type de la factory de renderer de test élargi au contrat réellement surchargé.
 
-Le build de `develop` n'a pas pu être reconstruit avant rebase : son ancien
-`pnpm-workspace.yaml` était refusé par pnpm 11. Le delta binaire exact n'est donc pas mesuré. Le
-packaging `electron-builder --dir --mac --arm64` atteint l'étape de collecte des dépendances puis
-échoue dans le collecteur pnpm. Le répertoire partiel `release/` (313 900 Kio) n'est pas un paquet
-public validé et ne doit pas servir de baseline.
+## Dette et blocker restant
 
-## Recette restante et dettes
+### Blocker
 
-### Blockers de merge
+Exécuter la recette utilisateur complète Simple sur B6KV, JRPG et multi-mesh, puis au moins un
+smoke bone/IK/timeline/playback/retargeting. Tant que cette preuve n'existe pas, le verdict ne peut
+pas devenir `READY TO MERGE`.
 
-1. Corriger/reproduire l'échec du collecteur pnpm d'`electron-builder`, puis produire et inspecter
-   un bundle public complet.
-2. Rejouer la recette P0 utilisateur B6KV, JRPG et multi-mesh : Auto Rig, skeleton, pose,
-   Undo/Redo, sauvegarde, réouverture, export/réimport GLB, IK, timeline et retargeting.
-3. Retrouver le corpus multi-mesh réel ou fournir un remplacement de provenance équivalente pour
-   mesurer l'atomicité et les performances hors tests synthétiques.
+### Dettes non bloquantes
 
-### Dette explicite non bloquante pour le code
+- l'annulation ne peut pas interrompre un kernel tiers déjà engagé ; tout résultat tardif reste
+  rejeté avant mutation ;
+- les droits des checkpoints MIA restent non établis ; ils sont techniquement exclus du package
+  public et leur distribution reste bloquée ;
+- le package `develop` historique ne fournit pas de baseline de taille comparable à cause de son
+  cache Torch contaminé.
 
-- L'annulation ne peut pas interrompre un kernel Python tiers déjà engagé ; le contrat garantit
-  cependant que tout résultat tardif est rejeté.
-- Les sources MIA expérimentales (104 Kio) restent dans le runtime Python public de base. Elles
-  sont inertes sans Torch/checkpoints et protégées sous les surfaces, mais pourraient être retirées
-  du runtime public lors d'un futur travail de packaging différencié.
-- Les droits des checkpoints MIA restent à clarifier en amont. Aucune activation publique ne peut
-  précéder cette clarification et le passage de `distributionStatus` à `public`.
+## Commits proposés au merge
 
-## Patch proposé
+Ne merger aucune branche historique complète. Après fermeture de la recette P0, proposer seulement :
 
-Ne merger aucune branche historique complète. Le patch doit provenir uniquement de
-`feat/rig-integration-clean`, organisé par responsabilités :
+1. `b9145e8d7` — patch Rig/Auto Rig correctif propre ;
+2. le commit de fermeture courant — corrections des gates, exclusion du runtime MIA public, tests
+   et présent rapport.
 
-1. contrats Auto Rig, validation et convergence Simple ;
-2. transaction `applyRig`, bindings multi-mesh et Undo ;
-3. IPC, host Python et confinement des résultats ;
-4. politique de distribution et Model Manager ;
-5. backend MIA expérimental désactivé, runtime et licences ;
-6. tests et audits.
-
-Les branches SkinTokens, Instance Rig, Motius et les harnais/captures/assets de recette n'apportent
-aucun code au patch.
+Les branches SkinTokens, Instance Rig, Motius et les assets/captures de recette n'apportent aucun
+code au patch.
