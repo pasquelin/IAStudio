@@ -72,12 +72,20 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     expect(body('markContentChanged')).toContain('this.groupingStale = true')
   })
 
-  it('picks grouped bodies through their individual sources', () => {
+  it('leaves the grouping to choose what a click is cast against', () => {
     expect(body('nodeAt')).toContain('!this.instances.holdsSource(object)')
     expect(body('nodeAt')).toContain('this.instances.editorPickable()')
     expect(body('nodeAt')).not.toContain('this.instances.pickable()')
     expect(body('nodeAt')).toContain('this.instances.nodeIdOf(hit) ??')
     expect(body('nodeAt')).not.toContain('bakedSourceIdOf')
+  })
+
+  it('proves the LOTS in the runtime recipe, the one representation that can lie', () => {
+    // Below the adaptive threshold `editorPickable()` answers the sources the unoptimised scene
+    // already draws: aimed at those, the recipe would compare a thing to itself and pass.
+    const samples = /private pickSamples\([\s\S]*?\n {2}\}/.exec(source)?.[0] ?? ''
+    expect(samples).toContain('this.instances.pickable()')
+    expect(samples).not.toContain('this.instances.editorPickable()')
   })
 
   it('tells the zone where the camera stands before the pane it is about to draw', () => {
