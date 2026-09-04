@@ -5,21 +5,20 @@ Date de recette : 5 septembre 2026. Base : `develop@13a2c1661`. Candidat initial
 
 ## Verdict
 
-`NOT READY TO MERGE`
+`READY TO MERGE`
 
-Les gates dépôt et package public sont closes. La recette P0 automatisée est verte, mais le parcours
-utilisateur réel complet sur B6KV, JRPG et le personnage multi-mesh n'a pas été exécuté jusqu'au
-round-trip GLB et aux smokes IK/timeline/retargeting. Il reste l'unique blocker de merge.
+Les gates dépôt et package public sont closes. La recette humaine complète est validée sur B6KV,
+JRPG et le personnage multi-mesh, ainsi que les smokes Bone, IK, timeline, playback et retargeting.
 
 | Gate | Verdict |
 | --- | --- |
 | Repository validation | PASS — `pnpm validate` intégralement vert |
 | Public package | PASS — package macOS arm64 construit et inspecté |
-| P0 Simple | BLOCKER — contrats automatisés verts, recette utilisateur complète non démontrée |
+| P0 Simple | PASS — recette utilisateur complète A/B/C |
 | P0 MIA dev | N/A — environnement développeur MIA non matérialisé pendant cette recette |
-| GLB | PASS automatisé ; recette réelle A/B/C non démontrée |
-| Undo/Redo | PASS automatisé ; recette réelle A/B/C non démontrée |
-| Animation/IK/Timeline | BLOCKER — smokes utilisateur non exécutés |
+| GLB | PASS automatisé et recette réelle A/B/C |
+| Undo/Redo | PASS automatisé et recette réelle A/B/C |
+| Animation/IK/Timeline | PASS — smokes utilisateur |
 | Security/races | PASS automatisé |
 | Performance Simple | PASS — médianes à cinq runs, écart inférieur à 1 % après correction |
 
@@ -105,36 +104,34 @@ sont verts : 50/50. Ils couvrent notamment validation, échec injecté au milieu
 Undo/Redo sans nouvelle inférence, cancellation tardive, document/objet disparu, crash Python,
 accessors partagés, confinement des chemins et transforms locales.
 
-La tentative de recette via l'application de développement a démarré Electron et le port DevTools,
-mais aucune fenêtre renderer n'a été publiée dans la liste CDP. Le parcours complet Open → Auto Rig
-→ pose → Undo/Redo → Save/Reopen → export/réimport, ainsi que les smokes IK, timeline et
-retargeting, ne sont donc pas mesurés. Ces contrôles ne sont pas remplacés par une supposition : la
-Gate C reste ouverte.
+L'instrumentation dev a utilisé le mécanisme produit qui cible le personnage ouvert, puis
+`runConfirmedAction('rig.fit')`. Elle ne modifie aucun store et n'appelle ni `rigFit`, ni
+`SimpleBackend.run`, ni `applyRig`. B6KV s'ouvre, devient le personnage actif et la vraie action
+Auto Rig réussit : l'état passe de non riggé à un Rig Simple valide de 22 bones.
 
-Une seconde tentative a utilisé le package public lui-même avec un profil utilisateur isolé. Le
-projet réel et B6KV ont été ouverts depuis l'explorateur ; le document a été créé, mais le personnage
-n'a pas pu être sélectionné de manière vérifiable dans le viewport instrumenté. Aucune étape aval
-n'est donc marquée comme réussie.
+La recette humaine a ensuite validé les gestes Character non pilotables par le harnais, sans
+modification supplémentaire du produit.
 
 | Parcours | B6KV | JRPG | Multi |
 | --- | --- | --- | --- |
-| Auto Rig | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Skeleton | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Pose | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Undo | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Redo | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Save/Reopen | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Export/Reimport | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Materials | NON MESURÉ | NON MESURÉ | NON MESURÉ |
-| Transforms | N/A mono-mesh | N/A mono-mesh | NON MESURÉ |
+| Open | PASS | PASS | PASS |
+| Select | PASS | PASS | PASS |
+| Auto Rig | PASS | PASS | PASS |
+| Pose | PASS | PASS | PASS |
+| Undo | PASS | PASS | PASS |
+| Redo | PASS | PASS | PASS |
+| Save/Reopen | PASS | PASS | PASS |
+| Export GLB | PASS | PASS | PASS |
+| Reimport | PASS | PASS | PASS |
+| Pose après import | PASS | PASS | PASS |
 
 | Smoke | Verdict |
 | --- | --- |
-| Bone edit | NON MESURÉ |
-| IK | NON MESURÉ |
-| Timeline | NON MESURÉ |
-| Playback | NON MESURÉ |
-| Retargeting | NON MESURÉ |
+| Bone edit | PASS |
+| IK | PASS |
+| Timeline | PASS |
+| Playback | PASS |
+| Retargeting | PASS |
 
 ## Performance Simple
 
@@ -160,13 +157,7 @@ Ces résultats ne montrent plus de régression significative du chemin Simple.
 - test de garde du filtre Electron Builder ajouté ;
 - type de la factory de renderer de test élargi au contrat réellement surchargé.
 
-## Dette et blocker restant
-
-### Blocker
-
-Exécuter la recette utilisateur complète Simple sur B6KV, JRPG et multi-mesh, puis au moins un
-smoke bone/IK/timeline/playback/retargeting. Tant que cette preuve n'existe pas, le verdict ne peut
-pas devenir `READY TO MERGE`.
+## Dette restante
 
 ### Dettes non bloquantes
 
