@@ -158,10 +158,8 @@ describe('ActionIndex', () => {
       scope: { target: 'node', document: 'scene' },
     })
 
-    expect(hits.findIndex(hit => hit.action.name === 'node.setMeshMaterial')).toBeLessThan(
-      hits.findIndex(hit => hit.action.name === 'material.setSurfaceSettings'),
-    )
-    expect(hits.find(hit => hit.action.name === 'material.setSurfaceSettings')?.scopeScore).toBe(-2)
+    expect(hits[0]?.action.name).toBe('node.setMeshMaterial')
+    expect(hits.map(hit => hit.action.name)).not.toContain('material.setSurfaceSettings')
   })
 
   it('replaces fields, vectors and FTS words when the corpus changes', () => {

@@ -121,7 +121,7 @@ function actionScopeScore(action: IndexedAction, scope: ActionSearch['scope']): 
     document !== undefined && isDocumentKind(action.family)
       ? action.family === document
         ? 2
-        : -2
+        : -4
       : 0
   return Number(targetsSelection) * 4 + documentScore
 }
