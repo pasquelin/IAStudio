@@ -2,6 +2,7 @@ import type { ReliefLayer, ScatterLayer } from '@shared/domain/scene'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { WorldToolsBrushes } from './WorldToolsBrushes'
+import { WorldToolsGroundMaterials } from './WorldToolsGroundMaterials'
 import { WorldToolsMask } from './WorldToolsMask'
 import { WorldToolsScatter } from './WorldToolsScatter'
 
@@ -24,6 +25,7 @@ export function WorldTools({ documentId }: { documentId: string }) {
   return (
     <>
       <WorldToolsBrushes documentId={documentId} terrain={terrain} edit={edit} />
+      <WorldToolsGroundMaterials documentId={documentId} terrain={terrain} />
       {edit ? <WorldToolsMask documentId={documentId} terrain={terrain} edit={edit} /> : null}
     </>
   )

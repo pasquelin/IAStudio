@@ -47,18 +47,7 @@ export function paintGroundDisk(
   const pixels = before.pixels.slice()
   const stepX = extent.size.x / Math.max(1, before.width - 1)
   const stepZ = extent.size.z / Math.max(1, before.height - 1)
-  const minX = clamp(Math.floor((disk.x - disk.radius - extent.origin.x) / stepX), 0, before.width)
-  const maxX = clamp(
-    Math.ceil((disk.x + disk.radius - extent.origin.x) / stepX),
-    0,
-    before.width - 1,
-  )
-  const minZ = clamp(Math.floor((disk.z - disk.radius - extent.origin.z) / stepZ), 0, before.height)
-  const maxZ = clamp(
-    Math.ceil((disk.z + disk.radius - extent.origin.z) / stepZ),
-    0,
-    before.height - 1,
-  )
+  const { minX, maxX, minZ, maxZ } = diskBounds(before, extent, disk, stepX, stepZ)
 
   for (let z = minZ; z <= maxZ; z += 1) {
     for (let x = minX; x <= maxX; x += 1) {
@@ -67,18 +56,43 @@ export function paintGroundDisk(
         extent.origin.z + z * stepZ - disk.z,
       )
       if (distance > disk.radius) continue
-      const edge = disk.radius === 0 ? 1 : 1 - distance / disk.radius
-      const strength = clamp(disk.amount * (disk.falloff === 0 ? 1 : edge ** disk.falloff), 0, 1)
-      const offset = (z * before.width + x) * 4
-      const [red, green, blue, alpha] = disk.color
-      const colors = [red, green, blue, alpha]
-      for (let channel = 0; channel < 4; channel += 1) {
-        if (onlyChannel !== undefined && channel !== onlyChannel) continue
-        pixels[offset + channel] = blend(pixels[offset + channel], colors[channel] ?? 0, strength)
-      }
+      paintPixel(pixels, before.width, x, z, disk, distance, onlyChannel)
     }
   }
   return { ...before, pixels }
+}
+
+function diskBounds(
+  paint: GroundPaint,
+  extent: ReliefExtent,
+  disk: GroundPaintDisk,
+  stepX: number,
+  stepZ: number,
+) {
+  return {
+    minX: clamp(Math.floor((disk.x - disk.radius - extent.origin.x) / stepX), 0, paint.width),
+    maxX: clamp(Math.ceil((disk.x + disk.radius - extent.origin.x) / stepX), 0, paint.width - 1),
+    minZ: clamp(Math.floor((disk.z - disk.radius - extent.origin.z) / stepZ), 0, paint.height),
+    maxZ: clamp(Math.ceil((disk.z + disk.radius - extent.origin.z) / stepZ), 0, paint.height - 1),
+  }
+}
+
+function paintPixel(
+  pixels: Uint8ClampedArray,
+  width: number,
+  x: number,
+  z: number,
+  disk: GroundPaintDisk,
+  distance: number,
+  onlyChannel?: number,
+): void {
+  const edge = disk.radius === 0 ? 1 : 1 - distance / disk.radius
+  const strength = clamp(disk.amount * (disk.falloff === 0 ? 1 : edge ** disk.falloff), 0, 1)
+  const offset = (z * width + x) * 4
+  for (let channel = 0; channel < 4; channel += 1) {
+    if (onlyChannel !== undefined && channel !== onlyChannel) continue
+    pixels[offset + channel] = blend(pixels[offset + channel], disk.color[channel] ?? 0, strength)
+  }
 }
 
 function channelOffset(channel: GroundMaterialChannel): number {

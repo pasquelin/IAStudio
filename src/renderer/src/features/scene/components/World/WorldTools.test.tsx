@@ -21,6 +21,7 @@ function sceneWithTerrain() {
             id: 'island',
             name: 'Island',
             edits: [terrainEditLayer({ id: 'hills', name: 'Hills' })],
+            groundMaterials: [{ albedo: { assetId: 'soil' }, normal: null, channel: 'r' }],
           },
         ),
       ],
@@ -78,6 +79,21 @@ describe('WorldTools sculpt session', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Aplanir' }))
 
     expect(sceneViewOf(useSceneViews.getState(), 'doc-1').sculptMode).toBe(false)
+  })
+
+  it('adds and arms the next ground material channel', async () => {
+    render(<WorldPanel />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter une matière' }))
+
+    const layer = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
+    expect(layer?.kind === 'relief' ? layer.groundMaterials : []).toEqual([
+      { albedo: { assetId: 'soil' }, normal: null, channel: 'r' },
+      { albedo: { assetId: 'soil' }, normal: null, channel: 'g' },
+    ])
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').armedWorld).toMatchObject({
+      materialChannel: 'g',
+    })
   })
 
   it('assigns a height mask to the armed edit', async () => {

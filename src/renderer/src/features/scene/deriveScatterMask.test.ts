@@ -31,16 +31,21 @@ beforeEach(() => {
 })
 
 describe('automatic scatter generation', () => {
-  it('derives from RGBA paint and leaves that source intact when the mask is erased', async () => {
+  it('derives from any requested material channel and leaves that source intact', async () => {
     const paint = emptyGroundPaint(2, 2)
-    paint.pixels.set([0, 255, 0, 255], 0)
+    paint.pixels.set([0, 0, 255, 0], 0)
     const source = paint.pixels.slice()
 
     await expect(
-      deriveScatterMask('doc-1', 'trees', {
-        encode: async () => new Uint8Array(),
-        decode: async () => paint,
-      }),
+      deriveScatterMask(
+        'doc-1',
+        'trees',
+        {
+          encode: async () => new Uint8Array(),
+          decode: async () => paint,
+        },
+        'b',
+      ),
     ).resolves.toBe(true)
 
     const derived = scatterMask()

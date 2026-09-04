@@ -12,7 +12,7 @@ import type { ReliefDiskStroke } from './reliefSculptor'
 
 export type ArmedWorld =
   | { kind: 'relief'; id: string; editId: string | null; materialChannel?: GroundMaterialChannel }
-  | { kind: 'scatter'; id: string }
+  | { kind: 'scatter'; id: string; materialChannel?: GroundMaterialChannel }
   | null
 
 type SurfaceDisk = { x: number; z: number; radius: number; amount: number; falloff: number }

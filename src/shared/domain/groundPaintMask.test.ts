@@ -5,7 +5,7 @@ import { chunkLayout, unpackDeltas } from './relief'
 import { SCATTER_MASK_TEXELS } from './scatter'
 
 describe('ground paint scatter mask', () => {
-  it('derives placement weights from the painted alpha alone', () => {
+  it('derives placement weights from the requested painted channel', () => {
     const paint = emptyGroundPaint(2, 2)
     paint.pixels.set([200, 255, 20, 255], 0)
     paint.pixels.set([0, 128, 0, 128], 4)
@@ -17,7 +17,6 @@ describe('ground paint scatter mask', () => {
     const south = unpackDeltas(mask.chunks[12]?.payload ?? '', 64 * 64)
 
     expect(west[0]).toBeCloseTo(1)
-    // Alpha alone, never times the brush's fixed green: that capped a full paint at 0.753.
     expect(east[63]).toBeCloseTo(128 / 255)
     expect(south[0]).toBe(0)
   })

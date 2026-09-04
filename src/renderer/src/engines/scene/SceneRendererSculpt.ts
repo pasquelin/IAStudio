@@ -170,7 +170,8 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
 
   protected beginReliefStrokeFrom(event: PointerEvent): boolean {
     const hit = this.reliefHitAt(event)
-    if (hit && this.armedWorld?.kind === 'scatter' && this.sculptTool === 'paintGround') {
+    if (hit && this.sculptTool === 'paintGround' && this.armedWorld) {
+      if (this.armedWorld.kind === 'relief' && this.armedWorld.id !== hit.terrainId) return false
       void this.startGroundStroke(hit.terrainId, hit.x, hit.z)
       return true
     }
@@ -282,7 +283,7 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     return this.groundPainter().paint(
       terrainId,
       surfaceDisk(x, z, this.sculptRadius, this.sculptAmount, this.sculptFalloff),
-      this.armedWorld?.kind === 'relief' ? (this.armedWorld.materialChannel ?? 'r') : 'r',
+      this.armedWorld?.materialChannel ?? 'r',
     )
   }
 

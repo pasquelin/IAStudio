@@ -27,7 +27,7 @@ export type WatchedPreview = PreviewWatch & { laid?: ClipRef }
 
 export type ArmedWorld =
   | { kind: 'relief'; id: string; editId: string | null; materialChannel?: GroundMaterialChannel }
-  | { kind: 'scatter'; id: string }
+  | { kind: 'scatter'; id: string; materialChannel?: GroundMaterialChannel }
   | null
 
 export type SceneView = {

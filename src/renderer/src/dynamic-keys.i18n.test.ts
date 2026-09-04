@@ -7,7 +7,7 @@ import { FOLDER_ROLES } from '@shared/domain/folderRole'
 import { roleLabelKey } from '@/helpers/workspaces'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { BODY_PARTS } from '@shared/domain/humanoid'
-import { ROOT_MOTIONS, SCATTER_CATEGORIES } from '@shared/domain/scene'
+import { GROUND_MATERIAL_CHANNELS, ROOT_MOTIONS, SCATTER_CATEGORIES } from '@shared/domain/scene'
 import { EASINGS } from '@shared/domain/animation'
 import { OPTIMIZATION_MODES } from '@shared/domain/scene'
 import { OPTIMIZATION_WARNING_REASONS } from '@/engines/scene/worldAnalyzer'
@@ -75,6 +75,7 @@ function explained(prefix: string, values: readonly string[]): string[] {
  */
 const COMPOSED_KEYS: readonly string[] = [
   ...SCATTER_CATEGORIES.map(category => `world.scatterCategory_${category}`),
+  ...GROUND_MATERIAL_CHANNELS.map(channel => `world.groundChannel_${channel}`),
   // Every optimization mode a person can choose, and every reason a node is left out of one.
   // Both are template literals, which `known-keys.i18n.test.ts` writes off as a blind spot.
   ...OPTIMIZATION_MODES.map(mode => `optimization.modes.${mode}`),

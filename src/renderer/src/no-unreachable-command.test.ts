@@ -142,6 +142,8 @@ const SPREAD_OVER_A_SELECTION: readonly string[] = ['setGeometryOn', 'setLightOn
 const THROUGH_A_GESTURE: Readonly<Record<string, string>> = {
   // Laying a block also CHOOSES it — `stores/scenes.ts`, and `animation.addBlock` performs it.
   addModelClip: 'laySceneClip',
+  // Saving a ground stroke creates its picture asset before the document can point at it.
+  setTerrainGroundWeights: 'saveGroundPaint',
 }
 
 /**

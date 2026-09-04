@@ -1,5 +1,5 @@
 import { scatterMaskFromGroundPaint } from '@shared/domain/groundPaintMask'
-import type { ReliefLayer, ScatterLayer } from '@shared/domain/scene'
+import type { GroundMaterialChannel, ReliefLayer, ScatterLayer } from '@shared/domain/scene'
 import { setScatterMask } from '@/engines/scene/scatterCommands'
 import { reportFailure } from '@/services/diagnostics'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -9,6 +9,7 @@ export async function deriveScatterMask(
   documentId: string,
   scatterId: string,
   codec?: GroundPaintCodec,
+  channel: GroundMaterialChannel = 'r',
 ): Promise<boolean> {
   const world = sceneOf(useScenes.getState(), documentId).world
   const scatter = world.layers.find(
@@ -30,7 +31,7 @@ export async function deriveScatterMask(
       documentId,
       setScatterMask(scatterId, {
         kind: 'painted',
-        weights: scatterMaskFromGroundPaint(paint, terrain, scatter, scatter.grain),
+        weights: scatterMaskFromGroundPaint(paint, terrain, scatter, scatter.grain, channel),
       }),
     )
     return true

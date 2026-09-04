@@ -7,7 +7,12 @@ import { deriveScatterMask } from '@/features/scene/deriveScatterMask'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
-import { SCATTER_CATEGORIES, type ScatterLayer } from '@shared/domain/scene'
+import {
+  GROUND_MATERIAL_CHANNELS,
+  SCATTER_CATEGORIES,
+  type GroundMaterialChannel,
+  type ScatterLayer,
+} from '@shared/domain/scene'
 
 type ScatterTool = 'paint' | 'paintGround'
 type Props = { documentId: string; scatter: ScatterLayer }
@@ -29,6 +34,7 @@ export function WorldToolsScatterActions({ documentId, scatter }: Props) {
   const { t } = useTranslation()
   const run = useScenes.getState().runCommand
   const view = useSceneViews(state => sceneViewOf(state, documentId))
+  const channel = view.armedWorld?.materialChannel ?? 'r'
   const categories = SCATTER_CATEGORIES.map(category => ({
     value: category,
     label: t(`world.scatterCategory_${category}`),
@@ -42,6 +48,20 @@ export function WorldToolsScatterActions({ documentId, scatter }: Props) {
         options={categories}
         onChange={category => run(documentId, setScatterCategory(scatter.id, category))}
         scId="world.scatterCategory"
+      />
+      <SelectField
+        label={t('world.groundMaterial')}
+        value={channel}
+        options={GROUND_MATERIAL_CHANNELS.map(value => ({
+          value,
+          label: t(`world.groundChannel_${value}`),
+        }))}
+        onChange={(materialChannel: GroundMaterialChannel) =>
+          useSceneViews
+            .getState()
+            .setArmedWorld(documentId, { kind: 'scatter', id: scatter.id, materialChannel })
+        }
+        scId="world.scatterGroundMaterial"
       />
       <div className="flex">
         <ToolButton
@@ -80,7 +100,7 @@ export function WorldToolsScatterActions({ documentId, scatter }: Props) {
           tooltip={TIP_TOP}
           variant="bar"
           disabled={scatter.locked}
-          onClick={() => void deriveScatterMask(documentId, scatter.id)}
+          onClick={() => void deriveScatterMask(documentId, scatter.id, undefined, channel)}
         />
         <ToolButton
           icon={mdiRefresh}
