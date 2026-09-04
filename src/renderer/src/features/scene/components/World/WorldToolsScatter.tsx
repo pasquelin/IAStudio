@@ -11,6 +11,7 @@ import { ToggleField } from '@/components/ToggleField'
 import { ToolButton } from '@/components/ToolButton'
 import {
   SCATTER_ALTITUDE,
+  SCATTER_CATEGORIES,
   SCATTER_COLLISION_CAP,
   SCATTER_DENSITY,
   SCATTER_SCALE,
@@ -25,6 +26,7 @@ import { scatterPosesOf } from '@shared/domain/scatterGenerate'
 import { FLAT_SCATTER_GROUND } from '@shared/domain/scatterGround'
 import {
   setScatterAssets,
+  setScatterCategory,
   setScatterCollision,
   setScatterFollowRelief,
   setScatterMask,
@@ -41,6 +43,20 @@ function collisionDemandOf(scatter: ScatterLayer): number {
   return scatterPosesOf(scatter, layerRegion(scatter), FLAT_SCATTER_GROUND).length
 }
 
+type ScatterTool = 'paint' | 'paintGround'
+
+function toggleScatterTool(
+  documentId: string,
+  view: ReturnType<typeof sceneViewOf>,
+  tool: ScatterTool,
+): void {
+  const views = useSceneViews.getState()
+  if (view.sculptMode && view.sculptTool === tool) views.setSculptMode(documentId, false)
+  else {
+    views.setSculptTool(documentId, tool)
+    views.setSculptMode(documentId, true)
+}
+
 export function WorldToolsScatter({
   documentId,
   scatter,
@@ -55,18 +71,20 @@ export function WorldToolsScatter({
   const patch = (next: Partial<typeof rules>): void => {
     run(documentId, setScatterRules(scatter.id, { ...rules, ...next }))
   }
-  const arm = (tool: 'paint' | 'paintGround'): void => {
-    const views = useSceneViews.getState()
-    if (view.sculptMode && view.sculptTool === tool) views.setSculptMode(documentId, false)
-    else {
-      views.setSculptTool(documentId, tool)
-      views.setSculptMode(documentId, true)
-    }
-  }
   const collisionEstimate = collisionDemandOf(scatter)
 
   return (
     <PropertySection title={t('world.tools')} scId="world.scatterTools" defaultOpen>
+      <SelectField
+        label={t('world.scatterCategory')}
+        value={scatter.category}
+        options={SCATTER_CATEGORIES.map(category => ({
+          value: category,
+          label: t(`world.scatterCategory_${category}`),
+        }))}
+        onChange={category => run(documentId, setScatterCategory(scatter.id, category))}
+        scId="world.scatterCategory"
+      />
       <div className="flex">
         <ToolButton
           icon={mdiFormatPaint}
@@ -76,7 +94,7 @@ export function WorldToolsScatter({
           variant="bar"
           active={view.sculptMode && view.sculptTool === 'paintGround'}
           disabled={scatter.locked}
-          onClick={() => arm('paintGround')}
+          onClick={() => toggleScatterTool(documentId, view, 'paintGround')}
         />
         <ToolButton
           icon={mdiBrush}
@@ -86,7 +104,7 @@ export function WorldToolsScatter({
           variant="bar"
           active={view.sculptMode && view.sculptTool === 'paint'}
           disabled={scatter.locked}
-          onClick={() => arm('paint')}
+          onClick={() => toggleScatterTool(documentId, view, 'paint')}
         />
         <ToolButton
           icon={mdiEraser}
@@ -275,13 +293,17 @@ export function WorldToolsScatter({
         onChange={follow => run(documentId, setScatterFollowRelief(scatter.id, follow))}
         scId="world.followRelief"
       />
-      <ToggleField
-        label={t('world.collision')}
-        value={scatter.collision}
-        onChange={collision => run(documentId, setScatterCollision(scatter.id, collision))}
-        scId="world.collision"
-      />
-      {scatter.collision && collisionEstimate > SCATTER_COLLISION_CAP ? (
+      {scatter.category === 'props' ? (
+        <ToggleField
+          label={t('world.collision')}
+          value={scatter.collision}
+          onChange={collision => run(documentId, setScatterCollision(scatter.id, collision))}
+          scId="world.collision"
+        />
+      ) : null}
+      {scatter.category === 'props' &&
+      scatter.collision &&
+      collisionEstimate > SCATTER_COLLISION_CAP ? (
         <p role="alert" className="text-warning text-tiny m-0">
           {t('world.collisionCapWarning', { cap: SCATTER_COLLISION_CAP })}
         </p>

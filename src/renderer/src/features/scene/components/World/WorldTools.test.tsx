@@ -118,4 +118,15 @@ describe('WorldTools scatter session', () => {
     const layer = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
     expect(layer?.kind === 'scatter' ? layer.rules.randomRotation : true).toBe(false)
   })
+
+  it('removes collision controls when the scatter category becomes grass', async () => {
+    render(<WorldPanel />)
+
+    expect(screen.getByLabelText('Collision')).toBeInTheDocument()
+    await userEvent.selectOptions(screen.getByLabelText('Catégorie'), 'grass')
+
+    expect(screen.queryByLabelText('Collision')).not.toBeInTheDocument()
+    const layer = sceneOf(useScenes.getState(), 'doc-1').world.layers[0]
+    expect(layer).toMatchObject({ kind: 'scatter', category: 'grass', collision: false })
+  })
 })

@@ -203,6 +203,7 @@ const NOT_PUBLISHED: readonly string[] = [
   'setScatterRules',
   'setScatterSeed',
   'setScatterAssets',
+  'setScatterCategory',
   'setScatterCollision',
   'setScatterFollowRelief',
   'setTerrainEditEnabled',

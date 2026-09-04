@@ -469,6 +469,9 @@
     "followRelief_none": "Ne pas suivre",
     "followRelief_brush": "Sous le pinceau",
     "followRelief_layer": "Tout le calque",
+    "scatterCategory": "Catégorie",
+    "scatterCategory_props": "Accessoires",
+    "scatterCategory_grass": "Herbe",
     "collision": "Collision",
     "collisionCapWarning": "Collision refusée au-delà de {{cap}} instances"
   },

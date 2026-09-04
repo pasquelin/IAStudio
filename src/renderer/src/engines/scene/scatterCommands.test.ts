@@ -12,6 +12,7 @@ import {
   setScatterLocked,
   setScatterMask,
   setScatterAssets,
+  setScatterCategory,
   setScatterCollision,
   setScatterFollowRelief,
 } from './scatterCommands'
@@ -79,6 +80,13 @@ describe('scatter layer commands', () => {
       collision: true,
       followRelief: 'none',
     })
+  })
+
+  it('makes collision impossible when a scatter becomes grass', () => {
+    const [colliding] = run(sceneOf(), emptyHistory(), setScatterCollision('trees', true))
+    const [grass] = run(colliding, emptyHistory(), setScatterCategory('trees', 'grass'))
+    const [stillGrass] = run(grass, emptyHistory(), setScatterCollision('trees', true))
+    expect(scatterIn(stillGrass)).toMatchObject({ category: 'grass', collision: false })
   })
 
   it('reorders mixed relief and scatter layers by id', () => {

@@ -15,6 +15,10 @@ export type ScatterFollowRelief = 'none' | 'brush' | 'layer'
 
 export const SCATTER_FOLLOW_RELIEF: readonly ScatterFollowRelief[] = ['none', 'brush', 'layer']
 
+export type ScatterCategory = 'props' | 'grass'
+
+export const SCATTER_CATEGORIES: readonly ScatterCategory[] = ['props', 'grass']
+
 /**
  * Placement rules for one scatter layer. `waterDistance` and `roadDistance` are stored so a later
  * Water/Spline lot can consume them — the generator ignores both until those layers exist.
@@ -44,7 +48,7 @@ export type ScatterRules = {
  * Instances are not scene nodes: they are edited in bulk, like a sculpt. Origin/size/grain give
  * the painted mask its world mapping; they are not a second heightmap.
  */
-export type ScatterLayer = {
+type ScatterLayerBase = {
   kind: 'scatter'
   id: string
   name: string
@@ -54,12 +58,14 @@ export type ScatterLayer = {
   mask?: ReliefMask
   seed: number
   rules: ScatterRules
-  collision: boolean
   followRelief: ScatterFollowRelief
   origin: { x: number; z: number }
   size: { x: number; z: number }
   grain: number
 }
+
+export type ScatterLayer = ScatterLayerBase &
+  ({ category: 'props'; collision: boolean } | { category: 'grass'; collision: false })
 
 export const DEFAULT_SCATTER_NAME = 'Scatter'
 
@@ -99,9 +105,13 @@ const DEFAULT_ORIGIN = Object.freeze({ x: 0, z: 0 })
 const DEFAULT_SIZE = Object.freeze({ x: 20, z: 20 })
 
 export function scatterLayer(
-  patch: Partial<Omit<ScatterLayer, 'kind'>> & { id: string },
+  patch: Partial<Omit<ScatterLayerBase, 'kind' | 'id'>> & {
+    id: string
+    category?: ScatterCategory
+    collision?: boolean
+  },
 ): ScatterLayer {
-  return {
+  const shared: ScatterLayerBase = {
     kind: 'scatter',
     id: patch.id,
     name: patch.name ?? DEFAULT_SCATTER_NAME,
@@ -110,13 +120,15 @@ export function scatterLayer(
     assets: patch.assets ?? [],
     seed: patch.seed ?? 1,
     rules: scatterRules(patch.rules),
-    collision: patch.collision ?? false,
     followRelief: patch.followRelief ?? 'brush',
     origin: patch.origin ?? DEFAULT_ORIGIN,
     size: patch.size ?? DEFAULT_SIZE,
     grain: patch.grain ?? RELIEF_CHUNK_TEXELS,
     ...(patch.mask ? { mask: patch.mask } : {}),
   }
+  return patch.category === 'grass'
+    ? { ...shared, category: 'grass', collision: false }
+    : { ...shared, category: 'props', collision: patch.collision ?? false }
 }
 
 function scatterRules(patch: Partial<ScatterRules> | undefined): ScatterRules {

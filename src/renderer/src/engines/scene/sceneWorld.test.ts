@@ -303,11 +303,28 @@ describe('reading a world back', () => {
       locked: false,
       assets: [],
       seed: 1,
+      category: 'props',
       collision: false,
       followRelief: 'brush',
       rules: DEFAULT_SCATTER_RULES,
     })
     expect(layers[0]?.kind === 'scatter' ? layers[0].id.length : 0).toBeGreaterThan(0)
+  })
+
+  it('normalizes stored grass collision while existing scatters remain props', () => {
+    const layers = readWorld(
+      {
+        layers: [
+          { kind: 'scatter', id: 'legacy', collision: true },
+          { kind: 'scatter', id: 'meadow', category: 'grass', collision: true },
+        ],
+      },
+      undefined,
+    ).layers
+    expect(layers).toMatchObject([
+      { id: 'legacy', category: 'props', collision: true },
+      { id: 'meadow', category: 'grass', collision: false },
+    ])
   })
 
   it('loads a relief-only document identically when a scatter kind exists', () => {

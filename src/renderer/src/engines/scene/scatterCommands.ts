@@ -5,7 +5,12 @@ import {
   type ReliefMask,
   type ReliefSculpt,
 } from '@shared/domain/relief'
-import { scatterLayer, type ScatterLayer, type ScatterRules } from '@shared/domain/scene'
+import {
+  scatterLayer,
+  type ScatterCategory,
+  type ScatterLayer,
+  type ScatterRules,
+} from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import type { Command } from '../core/history'
 import type { SceneState } from './sceneState'
@@ -56,8 +61,17 @@ export function setScatterAssets(id: string, assets: ScatterLayer['assets']): Co
   return patchScatter(`world:layers:${id}:assets`, id, { assets }, layer => layer.locked)
 }
 
+export function setScatterCategory(id: string, category: ScatterCategory): Command<SceneState> {
+  return patchScatter(`world:layers:${id}:category`, id, { category })
+}
+
 export function setScatterCollision(id: string, collision: boolean): Command<SceneState> {
-  return patchScatter(`world:layers:${id}:collision`, id, { collision }, layer => layer.locked)
+  return patchScatter(
+    `world:layers:${id}:collision`,
+    id,
+    { collision },
+    layer => layer.locked || layer.category === 'grass',
+  )
 }
 
 export function setScatterFollowRelief(
@@ -122,7 +136,9 @@ function patchScatter(
     id,
     layers =>
       layers.map(layer =>
-        layer.kind === 'scatter' && layer.id === scatterId ? { ...layer, ...patch } : layer,
+        layer.kind === 'scatter' && layer.id === scatterId
+          ? scatterLayer({ ...layer, ...patch })
+          : layer,
       ),
     state => {
       const layer = scatterOf(state, scatterId)

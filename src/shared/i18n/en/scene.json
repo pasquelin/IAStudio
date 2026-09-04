@@ -469,6 +469,9 @@
     "followRelief_none": "Do not follow",
     "followRelief_brush": "Under the brush",
     "followRelief_layer": "Whole layer",
+    "scatterCategory": "Category",
+    "scatterCategory_props": "Props",
+    "scatterCategory_grass": "Grass",
     "collision": "Collision",
     "collisionCapWarning": "Collision is refused above {{cap}} instances"
   },
