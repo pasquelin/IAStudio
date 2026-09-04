@@ -1,16 +1,145 @@
 import {
   BatchedMesh,
   BoxGeometry,
+  Group,
   InstancedMesh,
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  Raycaster,
+  Vector3,
 } from 'three'
-import { expect, it } from 'vitest'
-import { meshNode } from './scene-fixtures'
-import { createOptimizedGroups } from './optimizedGrouping'
-import type { RuntimeRenderArtifact } from './grouping'
+import { describe, expect, it } from 'vitest'
+import { meshNode, modelNodeFixture } from './scene-fixtures'
+import { createOptimizedGroups, RUNTIME_PICKING_THRESHOLD } from './optimizedGrouping'
+import { WORTH_INSTANCING, type RuntimeRenderArtifact } from './grouping'
+import { markInstanceable } from './instanceableModel'
 import type { SceneNode } from './sceneState'
+
+function repeated(count: number): { nodes: SceneNode[]; objects: Map<string, Object3D> } {
+  const geometry = new BoxGeometry(1, 1, 1)
+  const material = new MeshStandardMaterial()
+  const nodes = Array.from({ length: count }, (_, index) => meshNode(`pick-${index}`))
+  const objects = new Map(
+    nodes.map((node, index) => {
+      const mesh = new Mesh(geometry, material)
+      mesh.name = node.id
+      mesh.position.set(index * 2, 0, 0)
+      mesh.updateMatrixWorld(true)
+      return [node.id, mesh]
+    }),
+  )
+  return { nodes, objects }
+}
+
+function addNestedModels(host: Object3D, nodes: SceneNode[], objects: Map<string, Object3D>): void {
+  const geometry = new BoxGeometry()
+  const material = new MeshStandardMaterial()
+  for (let index = 0; index < WORTH_INSTANCING; index += 1) {
+    const node = modelNodeFixture(`nested-${index}`)
+    const holder = new Group()
+    const nested = new Group()
+    holder.name = node.id
+    holder.position.set(index * 3, 0, 300)
+    nested.add(new Mesh(geometry, material))
+    holder.add(nested)
+    markInstanceable(holder, true)
+    host.add(holder)
+    nodes.push(node)
+    objects.set(node.id, holder)
+  }
+}
+
+function addDiverseMeshes(
+  prefix: string,
+  count: number,
+  z: number,
+  nodes: SceneNode[],
+  objects: Map<string, Object3D>,
+): string[] {
+  const ids = Array.from({ length: count }, (_, index) => `${prefix}-${index}`)
+  const material = new MeshStandardMaterial()
+  for (const [index, id] of ids.entries()) {
+    const node: SceneNode = {
+      ...meshNode(id),
+      geometry: { kind: 'box', width: index + 2, height: 1, depth: 1 },
+    }
+    const mesh = new Mesh(new BoxGeometry(index + 2, 1, 1), material)
+    mesh.name = id
+    mesh.position.set(index * 20, 0, z)
+    mesh.updateMatrixWorld(true)
+    nodes.push(node)
+    objects.set(id, mesh)
+  }
+  return ids
+}
+
+describe('optimized editor picking targets', () => {
+  it('keeps individual sources below the measured runtime threshold', () => {
+    const groups = createOptimizedGroups(new Object3D())
+    const { nodes, objects } = repeated(WORTH_INSTANCING)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    expect(groups.editorPickable()).toEqual([...objects.values()])
+  })
+
+  it('uses the grouped runtime representation without losing identity at the measured threshold', () => {
+    const groups = createOptimizedGroups(new Object3D())
+    const { nodes, objects } = repeated(RUNTIME_PICKING_THRESHOLD)
+    groups.rebuild(nodes, id => objects.get(id))
+
+    const targets = groups.editorPickable()
+    expect(targets.length).toBeLessThan(RUNTIME_PICKING_THRESHOLD)
+    const selected = objects.get(`pick-${Math.floor(RUNTIME_PICKING_THRESHOLD / 2)}`)
+    if (!selected) throw new Error('source fixture missing')
+    const hit = new Raycaster(
+      new Vector3(selected.position.x, 10, selected.position.z),
+      new Vector3(0, -1, 0),
+    ).intersectObjects([...targets], false)[0]
+
+    expect(hit && groups.nodeIdOf(hit)).toBe(selected.name)
+  })
+
+  it('keeps mixed runtime identities and a moved nested model across rebuilds', () => {
+    const host = new Object3D()
+    const groups = createOptimizedGroups(host)
+    const { nodes, objects } = repeated(RUNTIME_PICKING_THRESHOLD - 9 - WORTH_INSTANCING)
+    addNestedModels(host, nodes, objects)
+    const batchIds = addDiverseMeshes('batch', 9, 100, nodes, objects)
+    const mergeIds = addDiverseMeshes('merge', 2, 200, nodes, objects)
+    host.updateMatrixWorld(true)
+    const instanceIds = nodes.slice(0, RUNTIME_PICKING_THRESHOLD - 9).map(node => node.id)
+    const artifacts: readonly RuntimeRenderArtifact[] = [
+      { key: 'instances', strategy: 'instance', sourceIds: instanceIds, signature: 'instances' },
+      { key: 'batches', strategy: 'batch', sourceIds: batchIds, signature: 'batches' },
+      { key: 'merges', strategy: 'merge', sourceIds: mergeIds, signature: 'merges' },
+    ]
+    const rebuild = () => groups.rebuild(nodes, id => objects.get(id), undefined, artifacts)
+    const pickedAt = (x: number, z: number) => {
+      const raycaster = new Raycaster(new Vector3(x, 10, z), new Vector3(0, -1, 0))
+      raycaster.layers.enableAll()
+      const hit = raycaster.intersectObjects([...groups.editorPickable()], false)[0]
+      return hit ? groups.nodeIdOf(hit) : null
+    }
+
+    rebuild()
+    expect(pickedAt(0, 100)).toBe('batch-0')
+    expect(pickedAt(0, 200)).toBe('merge-0')
+    const nestedNode = modelNodeFixture('nested-5')
+    const nestedHolder = objects.get(nestedNode.id)
+    if (!nestedHolder) throw new Error('nested model fixture missing')
+    nestedHolder.position.set(100, 0, 300)
+    nestedHolder.updateWorldMatrix(true, false)
+    groups.moved([nestedNode.id], id => objects.get(id))
+    expect(pickedAt(100, 300)).toBe(nestedNode.id)
+    expect(pickedAt(15, 300)).toBeNull()
+
+    groups.rebuild([], () => undefined)
+    expect(groups.editorPickable()).toEqual([])
+    rebuild()
+    expect(pickedAt(100, 300)).toBe(nestedNode.id)
+  })
+})
 
 it('draws automatic repetitions as instances and forced batches as BatchedMesh together', () => {
   const host = new Object3D()

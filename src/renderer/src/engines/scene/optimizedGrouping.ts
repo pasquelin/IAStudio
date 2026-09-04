@@ -5,6 +5,8 @@ import { createMergedGroups } from './mergedGrouping'
 import type { InstancedGroups, RuntimeRenderArtifact } from './grouping'
 import { meshesOf } from './instanceableModel'
 
+export const RUNTIME_PICKING_THRESHOLD = 25_000
+
 export function createOptimizedGroups(
   host: Object3D,
   ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
@@ -58,11 +60,15 @@ export function createOptimizedGroups(
     },
     drawn: () => [...instances.drawn(), ...batches.drawn(), ...merges.drawn()],
     pickable: () => [...instances.pickable(), ...batches.pickable(), ...merges.pickable()],
-    editorPickable: () => [
-      ...instances.editorPickable(),
-      ...batches.editorPickable(),
-      ...merges.editorPickable(),
-    ],
+    editorPickable: () => {
+      const instanceSources = instances.editorPickable()
+      const batchSources = batches.editorPickable()
+      const mergeSources = merges.editorPickable()
+      return instanceSources.length + batchSources.length + mergeSources.length <
+        RUNTIME_PICKING_THRESHOLD
+        ? [...instanceSources, ...batchSources, ...mergeSources]
+        : [...instances.pickable(), ...batches.pickable(), ...merges.pickable()]
+    },
     nodeIdOf: (hit: Intersection) =>
       instances.nodeIdOf(hit) ?? batches.nodeIdOf(hit) ?? merges.nodeIdOf(hit),
     hangSources: () => {

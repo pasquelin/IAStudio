@@ -88,8 +88,8 @@ export type InstancedGroups = {
    */
   pickable: () => readonly Mesh[]
   /**
-   * What the EDITOR casts against: every source, so a hit names its node by the object walk. It
-   * is not the cheap one — `pickable` is — and it has no bounds tree; a hot path wants that one.
+   * What the EDITOR casts against. A strategy may return sources for direct object identity or
+   * its runtime representation when `nodeIdOf` preserves that identity more efficiently.
    */
   editorPickable: () => readonly Mesh[]
   nodeIdOf: (hit: Intersection) => string | null
