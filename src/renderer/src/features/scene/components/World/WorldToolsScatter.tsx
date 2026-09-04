@@ -20,6 +20,9 @@ import {
   SCATTER_TILT,
   type ScatterLayer,
 } from '@shared/domain/scene'
+import { layerRegion } from '@shared/domain/scatterFollow'
+import { scatterPosesOf } from '@shared/domain/scatterGenerate'
+import { FLAT_SCATTER_GROUND } from '@shared/domain/scatterGround'
 import {
   setScatterAssets,
   setScatterCollision,
@@ -32,6 +35,11 @@ import { deriveScatterMask } from '@/features/scene/deriveScatterMask'
 import { TIP_LEFT, TIP_TOP } from '@/helpers/tooltip'
 import { useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+
+function collisionDemandOf(scatter: ScatterLayer): number {
+  if (!scatter.collision) return 0
+  return scatterPosesOf(scatter, layerRegion(scatter), FLAT_SCATTER_GROUND).length
+}
 
 export function WorldToolsScatter({
   documentId,
@@ -55,7 +63,7 @@ export function WorldToolsScatter({
       views.setSculptMode(documentId, true)
     }
   }
-  const collisionEstimate = rules.density * scatter.size.x * scatter.size.z
+  const collisionEstimate = collisionDemandOf(scatter)
 
   return (
     <PropertySection title={t('world.tools')} scId="world.scatterTools" defaultOpen>

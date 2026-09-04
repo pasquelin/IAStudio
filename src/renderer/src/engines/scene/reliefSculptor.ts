@@ -147,14 +147,9 @@ async function sculptResponses(
         sculpt: ranges.length === 1 ? before : slicedSculpt(before, rows),
         operation: operationOf(job),
         rows: ranges.length === 1 ? undefined : rows,
-        ...(readsCombined(job.kind)
-          ? {
-              values: job.samples.values,
-              overlays: job.overlays,
-              overlayAlpha: job.overlayAlpha,
-              overlayMask: job.overlayMask,
-            }
-          : {}),
+        overlayAlpha: job.overlayAlpha,
+        overlayMask: job.overlayMask,
+        ...(readsCombined(job.kind) ? { values: job.samples.values, overlays: job.overlays } : {}),
       })
     }),
   )

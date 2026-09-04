@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { scatterLayer } from './scatter'
 import { scatterHash, scatterPosesOf, type ScatterGround } from './scatterGenerate'
+import { layerRegion } from './scatterFollow'
+import { FLAT_SCATTER_GROUND } from './scatterGround'
 
 const flat: ScatterGround = {
   heightAt: () => 2,
@@ -110,5 +112,17 @@ describe('scatterPosesOf', () => {
     const left = scatterPosesOf(layer, region, flat)
     scatterPosesOf(layer, { minX: 10, minZ: 0, maxX: 20, maxZ: 10 }, flat)
     expect(scatterPosesOf(layer, region, flat)).toEqual(left)
+  })
+
+  it('places fewer poses than density times area when spacing is coarse', () => {
+    const layer = scatterLayer({
+      id: 'trees',
+      assets: [{ assetId: 'pine', weight: 1 }],
+      size: { x: 100, z: 100 },
+      rules: { ...pines().rules, density: 1, spacing: 10 },
+    })
+    const count = scatterPosesOf(layer, layerRegion(layer), FLAT_SCATTER_GROUND).length
+    expect(count).toBeGreaterThan(0)
+    expect(count).toBeLessThan(layer.rules.density * layer.size.x * layer.size.z)
   })
 })

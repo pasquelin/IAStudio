@@ -4,6 +4,9 @@ import {
   RELIEF_CHUNK_TEXELS,
   applyReliefSculpt,
   changedChunks,
+  combinedAt,
+  withChunkDelta,
+  withPackedChunks,
   type ReliefSculpt,
   type ReliefSculptOperation,
 } from '@shared/domain/relief'
@@ -202,6 +205,37 @@ describe('createReliefSculptor', () => {
     expect(request.values).toBe(samples.values)
     expect(request.rows).toBeUndefined()
     expect(await pending).not.toBeNull()
+  })
+
+  it('writes no raise delta where the armed painted mask is zero', async () => {
+    const fake = fakeWorker()
+    const sculptor = createReliefSculptor(() => fake.worker)
+    const paint = withChunkDelta(samples, undefined, {
+      column: 0,
+      row: 0,
+      localX: 2,
+      localZ: 2,
+      delta: 1,
+    })
+    const pending = sculptor.raiseDisk({
+      ...diskAt(2, 1),
+      disk: {
+        x: extent.origin.x + 2 * stepX,
+        z: extent.origin.z + 2 * (extent.size.z / (samples.height - 1)),
+        radius: extent.size.x,
+      },
+      overlayAlpha: 1,
+      overlayMask: { kind: 'painted', weights: paint },
+    })
+    const request = fake.posted[0]
+    if (!request) throw new Error('raise was not sent')
+    answer(fake, request)
+    const edits = await pending
+    if (!edits) throw new Error('raise was dropped')
+    const sculpt = withPackedChunks(undefined, edits)
+    const overlay = [{ enabled: true, alpha: 1, sculpt }]
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlay, 2, 2)).toBeGreaterThan(0)
+    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlay, 4, 2)).toBeCloseTo(0)
   })
 })
 

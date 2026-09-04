@@ -14,6 +14,11 @@ export function scatterTerrainsOf(
   })
 }
 
+export const FLAT_SCATTER_GROUND: ScatterGround = {
+  heightAt: () => 0,
+  slopeAt: () => ({ degrees: 0, nx: 0, ny: 1, nz: 0 }),
+}
+
 export function scatterGroundOf(terrains: readonly ReliefHeightLayer[]): ScatterGround {
   return {
     heightAt: (x, z) => getHeightAt(terrains, x, z),

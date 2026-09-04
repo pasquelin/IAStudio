@@ -129,22 +129,35 @@ async function syncScatter(
   heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
   options: ScatterSurfaceOptions,
 ): Promise<void> {
-  const revision = await reconcileSources(world, state.assets, options)
-  if (revision !== state.assets.revision) return
-  const ground = scatterGroundOf(scatterTerrainsOf(world, heightmaps ?? new Map()))
   const previous = state.world
   dropRemovedLayers(state.cells, new Set(enabledScatters(world.layers).map(layer => layer.id)))
-  for (const layer of enabledScatters(world.layers)) {
+  const jobs = enabledScatters(world.layers).map(layer => {
     const before = previous ? scatterLayerOf(previous, layer.id) : undefined
     const rebuild: ScatterRebuild =
       before === layer && previous
         ? reliefRebuildOf(layer, previous, world, heightmaps, state.grounded)
         : { kind: 'all' }
+    return { layer, rebuild }
+  })
+  for (const { layer, rebuild } of jobs) {
+    for (const key of keysToRebuild(layer, rebuild)) dropCell(state.cells, layer.id, key)
+  }
+  const revision = await reconcileSources(world, state.assets, options)
+  if (revision !== state.assets.revision) return
+  const ground = scatterGroundOf(scatterTerrainsOf(world, heightmaps ?? new Map()))
+  for (const { layer, rebuild } of jobs) {
     rebuildLayer(state.cells, layer, rebuild, ground, state.assets.sources)
   }
   rememberGrounded(state.grounded, world, heightmaps)
   state.world = world
   options.onReady?.()
+}
+
+function keysToRebuild(layer: ScatterLayer, rebuild: ScatterRebuild): readonly CellKey[] {
+  if (rebuild.kind === 'none') return []
+  return rebuild.kind === 'all'
+    ? cellKeysIn(layerRegion(layer))
+    : cellKeysIn(intersection(layerRegion(layer), rebuild.region))
 }
 
 function rebuildLayer(
@@ -154,12 +167,7 @@ function rebuildLayer(
   ground: ScatterGround,
   sources: ReadonlyMap<string, Object3D>,
 ): void {
-  if (rebuild.kind === 'none') return
-  const keys =
-    rebuild.kind === 'all'
-      ? cellKeysIn(layerRegion(layer))
-      : cellKeysIn(intersection(layerRegion(layer), rebuild.region))
-  for (const key of keys) rebuildCell(cells, layer, key, ground, sources)
+  for (const key of keysToRebuild(layer, rebuild)) rebuildCell(cells, layer, key, ground, sources)
 }
 
 function rebuildCell(
