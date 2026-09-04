@@ -77,6 +77,7 @@ function main(command: string): MainViteConfig {
         // resolved beside the bundled main, so each has to land there as a file of its own.
         input: {
           index: resolve('src/main/index.ts'),
+          pickingValidation: resolve('src/main/pickingValidation.ts'),
           catalogWorker: resolve('src/main/project/catalogWorker.ts'),
           memoryWorker: resolve('src/main/memory/memoryWorker.ts'),
           peaksWorker: resolve('src/main/media/peaksWorker.ts'),
@@ -118,6 +119,7 @@ const renderer: RendererViteConfig = {
     rollupOptions: {
       input: {
         index: resolve('src/renderer/index.html'),
+        pickingValidation: resolve('src/renderer/pickingValidation.html'),
         splash: resolve('src/renderer/splash.html'),
       },
     },
