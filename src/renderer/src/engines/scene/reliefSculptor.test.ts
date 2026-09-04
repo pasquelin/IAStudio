@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { ReliefOverlay } from '@shared/domain/relief'
 import { emptyHistory, run, undo } from '../core/history'
 import {
   RELIEF_CHUNK_TEXELS,
@@ -207,7 +208,7 @@ describe('createReliefSculptor', () => {
     expect(await pending).not.toBeNull()
   })
 
-  it('writes no raise delta where the armed painted mask is zero', async () => {
+  it('writes the whole raise delta and lets the mask hold it back at read time', async () => {
     const fake = fakeWorker()
     const sculptor = createReliefSculptor(() => fake.worker)
     const paint = withChunkDelta(samples, undefined, {
@@ -233,9 +234,18 @@ describe('createReliefSculptor', () => {
     const edits = await pending
     if (!edits) throw new Error('raise was dropped')
     const sculpt = withPackedChunks(undefined, edits)
-    const overlay = [{ enabled: true, alpha: 1, sculpt }]
-    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlay, 2, 2)).toBeGreaterThan(0)
-    expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, overlay, 4, 2)).toBeCloseTo(0)
+    const bare: ReliefOverlay[] = [{ enabled: true, alpha: 1, sculpt }]
+    const masked: ReliefOverlay[] = [
+      { enabled: true, alpha: 1, sculpt, mask: { kind: 'painted', weights: paint } },
+    ]
+    const at = (overlays: ReliefOverlay[], sx: number): number =>
+      combinedAt(samples, RELIEF_CHUNK_TEXELS, overlays, sx, 2)
+
+    // The mask holds the stroke back at READ time and the delta stays whole underneath: applied
+    // at both ends it squared the weight, and lowering the mask gave nothing back.
+    expect(at(masked, 2)).toBeGreaterThan(0)
+    expect(at(masked, 4)).toBeCloseTo(0)
+    expect(at(bare, 4)).toBeGreaterThan(0)
   })
 })
 
