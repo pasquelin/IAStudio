@@ -5,13 +5,18 @@ import type {
   AssistantCall,
   AssistantThought,
   ActionOutcome,
+  ActionResource,
 } from '@shared/domain/assistant'
 import type { AssistantNote } from '@shared/domain/assistantNote'
 import type { Mission } from '@shared/domain/mission'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import type { ActionHit } from '@main/actionIndex/actionIndex'
 
-type Retrieval = { query: string; candidates: readonly ActionHit[] }
+type Retrieval = {
+  query: string
+  available: readonly ActionResource[]
+  candidates: readonly ActionHit[]
+}
 type ProviderAttempt = { prompt: string; rawResponse?: string; door: string; model: string }
 type TracedAction = AssistantCall & { outcome?: ActionOutcome; executionError?: string }
 type ContextEvidence = Retrieval & { snapshot: StudioSnapshot | null }
@@ -176,6 +181,7 @@ export function createMissionTraceRecorder(options: TraceOptions): MissionTraceR
       const step = recordOf(mission['step'])
       const evidence = contexts.get(`${mission['id']}:${step['id']}`) ?? {
         query: '',
+        available: [],
         candidates: [],
         snapshot: null,
       }

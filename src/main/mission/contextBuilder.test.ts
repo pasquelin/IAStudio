@@ -6,6 +6,7 @@ import {
   type MissionStep,
 } from '@shared/domain/mission'
 import type { Memory, MemoryRecallAsk, MemoryScope } from '@shared/domain/assistantMemory'
+import type { ActionResource } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
@@ -103,7 +104,9 @@ describe('AssistantContextBuilder', () => {
       state: { nodes: Array.from({ length: 20 }, (_, at) => ({ id: `light_${at}` })) },
     }
     scene.selection = { kind: 'node', items: [{ id: 'node_1', name: 'Cube' }] }
-    const search = vi.fn(async () => [])
+    const search = vi.fn(
+      async (_query: string, _limit?: number, _available?: readonly ActionResource[]) => [],
+    )
     const builder = createAssistantContextBuilder(
       dependencies({ snapshot: async () => scene, actions: { search } }),
     )
@@ -122,7 +125,9 @@ describe('AssistantContextBuilder', () => {
     const { mission, step } = missionOf('/projects/alpha')
     const snapshot = snapshotOf()
     snapshot.armedModels = { txt2img: 'model_1' }
-    const search = vi.fn(async () => [])
+    const search = vi.fn(
+      async (_query: string, _limit?: number, _available?: readonly ActionResource[]) => [],
+    )
     const builder = createAssistantContextBuilder(
       dependencies({ snapshot: async () => snapshot, actions: { search } }),
     )

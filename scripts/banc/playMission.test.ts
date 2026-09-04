@@ -45,6 +45,7 @@ async function firstReflection(played: MissionRun): Promise<Record<string, unkno
 function expectCausalReflection(reflection: Record<string, unknown>, context: string): void {
   expect(reflection['contextSerialized']).toBe(context)
   expect(reflection['actionIndex']).toMatchObject({
+    available: [],
     candidates: [{ action: { name: 'scene.state' }, lexicalScore: 3 }],
   })
   expect(reflection['providerAttempts']).toMatchObject([

@@ -250,7 +250,12 @@ describe('mission runtime', () => {
       { say: '', calls: [grounded], cost: 0 },
       { say: 'Done.', calls: [], cost: 0 },
     ])
-    const run = vi.fn(async (): Promise<ActionOutcome> => ({ ok: true, data: [{ id: 'model-3d' }] }))
+    const run = vi.fn(
+      async (_call: AssistantCall): Promise<ActionOutcome> => ({
+        ok: true,
+        data: [{ id: 'model-3d' }],
+      }),
+    )
     const runtime = createMissionRuntime({
       manager,
       context: { build: async ({ mission }) => contextFor(mission) },

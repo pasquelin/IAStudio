@@ -102,13 +102,17 @@ function tracedContext(
   return {
     build: async request => {
       let snapshot: StudioSnapshot | null = null
-      let retrieval = { query: '', candidates: [] as Awaited<ReturnType<typeof actions.search>> }
+      let retrieval = {
+        query: '',
+        available: [] as Parameters<typeof actions.search>[2],
+        candidates: [] as Awaited<ReturnType<typeof actions.search>>,
+      }
       const builder = createAssistantContextBuilder({
         snapshot: async () => (snapshot = await studio.snapshot()),
         actions: {
-          search: async (query, limit) => {
-            const candidates = await actions.search(query, limit)
-            retrieval = { query, candidates }
+          search: async (query, limit, available) => {
+            const candidates = await actions.search(query, limit, available)
+            retrieval = { query, available: available ?? [], candidates }
             return candidates
           },
         },

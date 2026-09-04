@@ -154,7 +154,9 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
       const played = await playMission(
         scenario,
         async (request, watch) => await brain.think(request, watch),
-        { search: async (query, limit) => actionIndex.search({ query, limit }) },
+        {
+          search: async (query, limit, available) => actionIndex.search({ query, limit, available }),
+        },
         { folder: TRACE_FOLDER, scenarioId: scenario.name, runId: run + 1 },
       )
       try {
