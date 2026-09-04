@@ -74,8 +74,8 @@ function regionOf(
     const z0 = terrain.origin.z + layout.sampleZ * step.z
     minX = Math.min(minX, x0)
     minZ = Math.min(minZ, z0)
-    maxX = Math.max(maxX, x0 + layout.width * step.x)
-    maxZ = Math.max(maxZ, z0 + layout.height * step.z)
+    maxX = Math.max(maxX, x0 + (layout.width - 1) * step.x)
+    maxZ = Math.max(maxZ, z0 + (layout.height - 1) * step.z)
   }
   return { minX, minZ, maxX, maxZ }
 }
