@@ -143,7 +143,15 @@ describe('sceneFromPayload', () => {
     expect(node?.type === 'model' && node.model.materialDocumentId).toBeUndefined()
   })
 
-  // The two modes exclude each other, and a file spelling neither kind means something this
+  it('keeps an explicit textureless material on an imported model', () => {
+    const plain = { ...modelNodeFixture('m'), model: { assetId: 'x', dress: { kind: 'plain' } } }
+
+    const node = sceneFromPayload({ nodes: [plain] }).nodes[0]
+
+    expect(node?.type === 'model' && node.model.dress).toEqual({ kind: 'plain' })
+  })
+
+  // The three modes exclude each other, and a file spelling none of their kinds means something this
   // reader cannot name: refusing the node says so, where undressing it in silence would not.
   it('drops a model whose dress names neither mode', () => {
     const nodes: unknown[] = [

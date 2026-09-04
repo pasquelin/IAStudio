@@ -166,7 +166,7 @@ export type ModelRef = {
 }
 
 /**
- * What covers a model: ONE picture, or the material documents it wears — never both.
+ * What covers a model: no file texture, one picture, or the material documents it wears.
  *
  * A union rather than two fields, so a model dressed BOTH ways cannot be written at all: the two
  * modes contradict each other, and holding them apart by convention is how they would drift.
@@ -184,13 +184,16 @@ export type ModelRef = {
  * Both ride in `extras[studio]` verbatim, so no glTF reader sees them and no format head changes.
  */
 export type ModelDressRef =
-  { kind: 'image'; assetId: string } | { kind: 'materials'; documentIds: readonly string[] }
+  | { kind: 'plain' }
+  | { kind: 'image'; assetId: string }
+  | { kind: 'materials'; documentIds: readonly string[] }
 
 /** A persisted model dress, or `null` when the value names no complete supported mode. */
 export function modelDressRefOf(value: unknown): ModelDressRef | null {
   if (typeof value !== 'object' || value === null) return null
 
   const held: { kind?: unknown; assetId?: unknown; documentIds?: unknown } = value
+  if (held.kind === 'plain') return { kind: 'plain' }
   if (held.kind === 'image' && typeof held.assetId === 'string') {
     return { kind: 'image', assetId: held.assetId }
   }
@@ -264,6 +267,8 @@ export function withMaterialAt(
  */
 export type ModelDress = {
   textures: Partial<Record<TextureSlot, TextureRef>>
+  /** False removes the maps carried by the model file instead of restoring them. */
+  fileTextures?: boolean
   /** Absent where nothing is set — an empty finish still costs a `needsUpdate` per material. */
   material?: ModelMaterial
 }

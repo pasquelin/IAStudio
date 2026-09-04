@@ -1,5 +1,7 @@
 import {
   Mesh,
+  MeshBasicMaterial,
+  MeshPhysicalMaterial,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
@@ -135,6 +137,60 @@ describe('createModelTextures', () => {
 
     expect(scripted.released).toEqual(['tex-1'])
     expect(materialOf(instance).map).toBe(fileMap)
+  })
+
+  it('removes the file map in textureless mode and restores it when that mode ends', () => {
+    const scripted = scriptedTextureCache()
+    const { source, fileMap } = loadedModel()
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+
+    textures.fileTextures(false)
+    textures.apply(0, {})
+    expect(materialOf(instance).map).toBeNull()
+
+    textures.fileTextures(true)
+    textures.apply(0, {})
+    expect(materialOf(instance).map).toBe(fileMap)
+  })
+
+  it('removes and restores a texture carried by an unlit glTF material', () => {
+    const scripted = scriptedTextureCache()
+    const fileMap = new Texture()
+    const material = new MeshBasicMaterial({ map: fileMap })
+    const source = new Object3D()
+    source.add(new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }), material))
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+    const object = instance.children[0]
+    if (!(object instanceof Mesh) || !(object.material instanceof MeshBasicMaterial)) {
+      throw new Error('the fixture builds one unlit material')
+    }
+    const clone = object.material
+
+    textures.fileTextures(false)
+    expect(clone.map).toBeNull()
+
+    textures.fileTextures(true)
+    expect(clone.map).toBe(fileMap)
+  })
+
+  it('removes and restores extension maps carried by a physical material', () => {
+    const scripted = scriptedTextureCache()
+    const clearcoatMap = new Texture()
+    const material = new MeshPhysicalMaterial({ clearcoatMap })
+    const source = new Object3D()
+    source.add(new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 }), material))
+    const instance = instanceOf(source)
+    const textures = createModelTextures(scripted.cache, instance, onChange)
+    const clone = materialOf(instance)
+
+    textures.fileTextures(false)
+    expect(clone).toBeInstanceOf(MeshPhysicalMaterial)
+    expect(Reflect.get(clone, 'clearcoatMap')).toBeNull()
+
+    textures.fileTextures(true)
+    expect(Reflect.get(clone, 'clearcoatMap')).toBe(clearcoatMap)
   })
 
   it('gives every reference back when the node goes', async () => {

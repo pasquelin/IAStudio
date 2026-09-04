@@ -169,6 +169,8 @@ export abstract class SceneRendererMaterials extends SceneRendererFlight {
     const node = this.applied.get(nodeId)
     if (!maps || node?.type !== 'model') return
     const dress = node.model.dress
+    const first = dress ? (this.options.wornDress?.(dress, 0) ?? null) : null
+    maps.fileTextures(first?.fileTextures !== false)
     // Every slot, always: a slot dropped from the list goes back to its own material. And one
     // pass for a model that carries NO material to write into — `apply` is what says so out loud,
     // and a loop bounded by zero never reaches it.

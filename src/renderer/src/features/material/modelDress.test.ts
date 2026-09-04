@@ -90,6 +90,10 @@ describe('what a material is worth to a model', () => {
 })
 
 describe('what a model’s dress is worth to one of its slots', () => {
+  it('removes the textures carried by the model file in plain mode', () => {
+    expect(wornModelDress({ kind: 'plain' }, 0)).toEqual({ textures: {}, fileTextures: false })
+  })
+
   /**
    * The simple mode covers the WHOLE model, so every slot answers the same thing — a car body and
    * its glass both take the picture. Answering it for slot 0 alone is how the rest of a

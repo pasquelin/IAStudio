@@ -18,6 +18,7 @@ import { loadMaterialSource, wornMaterialOf } from '@/stores/materialSources'
  * The cavity, the two ranges and the green flip are dropped — a scene draws no such shader.
  */
 export function wornModelDress(dress: ModelDressRef, slot: number): ModelDress | null {
+  if (dress.kind === 'plain') return PLAIN_DRESS
   if (dress.kind === 'image') return coveredBy(dress.assetId)
 
   const materialId = dress.documentIds[slot]
@@ -29,6 +30,8 @@ export function wornModelDress(dress: ModelDressRef, slot: number): ModelDress |
   void loadMaterialSource(materialId)
   return null
 }
+
+const PLAIN_DRESS: ModelDress = Object.freeze({ textures: {}, fileTextures: false })
 
 /** Asked once per SLOT of every model wearing it, on every refresh — held against its state. */
 const dresses = new WeakMap<MaterialState, ModelDress>()

@@ -141,6 +141,7 @@ export function ModelDressSection({
         actions={false}
         options={[
           { value: 'own', label: t('inspector.modelOwnMaterial') },
+          { value: 'plain', label: t('inspector.modelDressPlain') },
           { value: 'image', label: t('inspector.modelDressImage') },
           { value: 'materials', label: t('inspector.modelDressMaterials') },
         ]}
@@ -154,7 +155,7 @@ export function ModelDressSection({
           label={t('inspector.modelDressImageField')}
           value={dress.assetId || null}
           options={pictures}
-          onChange={assetId => onChange(assetId ? { kind: 'image', assetId } : null)}
+          onChange={assetId => onChange(assetId ? { kind: 'image', assetId } : { kind: 'plain' })}
           emptyLabel={t('inspector.modelDressNoImage')}
           missingLabel={t('inspector.modelDressMissingImage')}
           clearLabel={t('inspector.modelDressClearImage')}
@@ -194,6 +195,7 @@ function withSlots(dress: ModelDressRef, by: number): ModelDressRef {
 }
 
 function dressFor(mode: DressMode): ModelDressRef | null {
+  if (mode === 'plain') return { kind: 'plain' }
   if (mode === 'image') return { kind: 'image', assetId: NOTHING_WORN }
   if (mode === 'materials') return { kind: 'materials', documentIds: [NOTHING_WORN] }
   return null

@@ -236,7 +236,7 @@ describe('what a character is made of', () => {
     show()
     invalidate.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
     expect(invalidate).toHaveBeenCalledOnce()
@@ -263,8 +263,8 @@ describe('what a character is made of', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Retirer l’image' }))
 
-    expect(held().dress).toBeUndefined()
-    expect(screen.getByLabelText('Recouvert par')).toHaveValue('own')
+    expect(held().dress).toEqual({ kind: 'plain' })
+    expect(screen.getByLabelText('Recouvert par')).toHaveValue('plain')
   })
 
   it('does not apply a data texture as the model image', async () => {
@@ -288,7 +288,7 @@ describe('what a character is made of', () => {
     seedCharacter(ASSET, RIG, {})
     show()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
     expect(held().dress).toBeUndefined()
@@ -315,7 +315,7 @@ describe('what a character is made of', () => {
     seedCharacter(ASSET, RIG, { dress: { kind: 'materials', documentIds: ['', ''] } })
     show()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
 
     await vi.waitFor(() => expect(extractTextures).toHaveBeenCalledWith(ASSET))
     expect(held().dress).toEqual({ kind: 'materials', documentIds: ['', ''] })
@@ -326,7 +326,7 @@ describe('what a character is made of', () => {
     seedCharacter(ASSET, RIG, {})
     show()
 
-    expect(screen.getByRole('button', { name: 'Extraire les textures du modèle' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Extraire les images du modèle' })).toBeDisabled()
   })
 
   it('reports a failed extraction and still refreshes the catalogue', async () => {
@@ -338,7 +338,7 @@ describe('what a character is made of', () => {
     show()
     invalidate.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Extraire les textures du modèle' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Extraire les images du modèle' }))
 
     await vi.waitFor(() =>
       expect(reportFailure).toHaveBeenCalledWith('assets.extract', 'Hero', failure),
