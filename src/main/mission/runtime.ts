@@ -1,5 +1,6 @@
 import {
   ACTION_REGISTRY,
+  assistantAction,
   type ActionResource,
   type AssistantAnswer,
   type AssistantCall,
@@ -98,7 +99,7 @@ function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly P
   const produced = new Set<ActionResource>()
   const actions: PlannedStep[] = []
   for (const call of answer.calls) {
-    const descriptor = ACTION_REGISTRY.find(action => action.name === call.action)
+    const descriptor = assistantAction(call.action)
     if ((descriptor?.requires ?? []).some(resource => dependsOnProduced(resource, produced))) {
       return [...actions, reasoningStep()]
     }

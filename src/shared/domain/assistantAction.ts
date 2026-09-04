@@ -63,7 +63,6 @@ export type ActionResource =
   | 'generationModelCandidates'
   | 'selectedGenerationModel'
   | 'preparedGeneration'
-  | 'gitRepository'
 
 export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
 

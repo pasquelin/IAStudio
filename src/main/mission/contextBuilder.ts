@@ -6,7 +6,7 @@ import type { JobManager } from '@main/provider/jobManager'
 import type { Memory, MemoryRef } from '@shared/domain/assistantMemory'
 import type { Job } from '@shared/domain/job'
 import type { Mission, MissionStep } from '@shared/domain/mission'
-import { ACTION_REGISTRY, type ActionResource } from '@shared/domain/assistant'
+import { assistantAction, type ActionResource } from '@shared/domain/assistant'
 import { noContext, type ContextState } from '@shared/domain/projectContext'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import type {
@@ -102,7 +102,7 @@ function availableActionResources(
   if (Object.keys(snapshot?.armedModels ?? {}).length > 0) resources.add('selectedGenerationModel')
   for (const step of input.mission.plan.steps) {
     if (step.kind !== 'action' || step.state !== 'completed') continue
-    const descriptor = ACTION_REGISTRY.find(action => action.name === step.call.action)
+    const descriptor = assistantAction(step.call.action)
     for (const resource of descriptor?.produces ?? []) resources.add(resource)
   }
   return [...resources]
