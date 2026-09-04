@@ -1,6 +1,6 @@
 import type { SceneRenderer, TransformMode } from '@/engines/scene/SceneRenderer'
 import type { sceneOf } from '@/stores/scenes'
-import type { sceneViewChromeOf } from '@/stores/sceneViews'
+import type { sceneViewChromeOf } from '@/stores/sceneViewChrome'
 import { useSceneDocumentExports } from './useSceneDocumentExports'
 import { useSceneRendererResources } from './useSceneRendererResources'
 import { useSceneRendererState } from './useSceneRendererState'

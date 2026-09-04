@@ -14,7 +14,8 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
+import { displayOfPane } from '@/stores/sceneViewChrome'
+import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))

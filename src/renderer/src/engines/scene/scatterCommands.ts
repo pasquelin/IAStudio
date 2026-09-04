@@ -5,7 +5,7 @@ import {
   type ReliefMask,
   type ReliefSculpt,
 } from '@shared/domain/relief'
-import { scatterLayer, type ScatterLayer } from '@shared/domain/scene'
+import { scatterLayer, type ScatterLayer, type ScatterRules } from '@shared/domain/scene'
 import { newId } from '@/helpers/ids'
 import type { Command } from '../core/history'
 import type { SceneState } from './sceneState'
@@ -42,6 +42,14 @@ export function setScatterEnabled(id: string, enabled: boolean): Command<SceneSt
 
 export function setScatterLocked(id: string, locked: boolean): Command<SceneState> {
   return patchScatter(`world:layers:locks:${id}`, id, { locked })
+}
+
+export function setScatterRules(id: string, rules: ScatterRules): Command<SceneState> {
+  return patchScatter(`world:layers:${id}:rules`, id, { rules }, layer => layer.locked)
+}
+
+export function setScatterSeed(id: string, seed: number): Command<SceneState> {
+  return patchScatter(`world:layers:${id}:seed`, id, { seed }, layer => layer.locked)
 }
 
 export function setScatterMask(id: string, mask: ReliefMask | undefined): Command<SceneState> {

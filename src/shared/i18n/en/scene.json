@@ -392,9 +392,13 @@
   },
   "world": {
     "noDocument": "Open a scene to see its terrain.",
-    "empty": "No terrain yet. Add one to get started.",
-    "add": "Add a terrain",
-    "addHint": "Places a terrain in the scene’s world",
+    "empty": "No terrain or scatter yet. Add one to get started.",
+    "add": "Add",
+    "addHint": "Places a terrain or scatter in the scene’s world",
+    "addTerrain": "Terrain",
+    "addTerrainHint": "Places a terrain in the scene’s world",
+    "addScatter": "Scatter",
+    "addScatterHint": "Places a prop scatter layer in the world",
     "addEdit": "Add an edit",
     "addEditHint": "Adds an edit on the selected terrain",
     "remove": "Delete",
@@ -435,7 +439,15 @@
     "maskMin": "Minimum",
     "maskMax": "Maximum",
     "paintMask": "Paint mask",
-    "paintMaskHint": "Paints where this edit contributes"
+    "paintMaskHint": "Paints where this edit contributes",
+    "regenerate": "Regenerate",
+    "regenerateHint": "Rebuilds this layer’s instances",
+    "density": "Density",
+    "spacing": "Spacing",
+    "minScale": "Min scale",
+    "maxScale": "Max scale",
+    "slopeAlign": "Slope align",
+    "tilt": "Tilt"
   },
   "sceneNavigation": {
     "viewport": "3D viewport",

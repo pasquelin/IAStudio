@@ -24,9 +24,17 @@ describe('WorldActions', () => {
 
   it('adds a terrain', async () => {
     render(<WorldActions />)
-    await userEvent.click(screen.getByRole('button', { name: 'Ajouter un terrain' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Terrain' }))
     expect(sceneOf(useScenes.getState(), 'doc-1').world.layers).toHaveLength(1)
     expect(sceneOf(useScenes.getState(), 'doc-1').world.layers[0]?.kind).toBe('relief')
+  })
+
+  it('adds a scatter layer from the same add menu', async () => {
+    render(<WorldActions />)
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Dispersion' }))
+    expect(sceneOf(useScenes.getState(), 'doc-1').world.layers[0]?.kind).toBe('scatter')
   })
 
   it('adds an edit on the armed terrain', async () => {
@@ -43,7 +51,7 @@ describe('WorldActions', () => {
         ],
       },
     })
-    useSceneViews.getState().setArmedRelief('doc-1', { terrainId: 'island', editId: null })
+    useSceneViews.getState().setArmedWorld('doc-1', { kind: 'relief', id: 'island', editId: null })
     render(<WorldActions />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Ajouter une retouche' }))

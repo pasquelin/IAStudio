@@ -392,9 +392,13 @@
   },
   "world": {
     "noDocument": "Ouvrez une scène pour voir son relief.",
-    "empty": "Aucun terrain. Ajoutez-en un pour commencer.",
-    "add": "Ajouter un terrain",
-    "addHint": "Pose un terrain dans le monde de la scène",
+    "empty": "Aucun terrain ni dispersion. Ajoutez-en un pour commencer.",
+    "add": "Ajouter",
+    "addHint": "Pose un terrain ou une dispersion dans le monde",
+    "addTerrain": "Terrain",
+    "addTerrainHint": "Pose un terrain dans le monde de la scène",
+    "addScatter": "Dispersion",
+    "addScatterHint": "Pose un calque de props dans le monde",
     "addEdit": "Ajouter une retouche",
     "addEditHint": "Ajoute une retouche sur le terrain sélectionné",
     "remove": "Supprimer",
@@ -435,7 +439,15 @@
     "maskMin": "Minimum",
     "maskMax": "Maximum",
     "paintMask": "Peindre le masque",
-    "paintMaskHint": "Peint où cette retouche contribue"
+    "paintMaskHint": "Peint où cette retouche contribue",
+    "regenerate": "Régénérer",
+    "regenerateHint": "Recalcule les instances de ce calque",
+    "density": "Densité",
+    "spacing": "Espacement",
+    "minScale": "Échelle min.",
+    "maxScale": "Échelle max.",
+    "slopeAlign": "Alignement à la pente",
+    "tilt": "Inclinaison"
   },
   "sceneNavigation": {
     "viewport": "Viewport 3D",

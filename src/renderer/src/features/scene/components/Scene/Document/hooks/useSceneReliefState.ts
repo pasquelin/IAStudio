@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
-import type { sceneViewChromeOf } from '@/stores/sceneViews'
+import type { sceneViewChromeOf } from '@/stores/sceneViewChrome'
 
 export function useSceneReliefState(
   engine: { current: SceneRenderer | null },

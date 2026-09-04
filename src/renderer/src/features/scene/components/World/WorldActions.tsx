@@ -1,5 +1,7 @@
-import { mdiPlus, mdiTrashCanOutline } from '@mdi/js'
+import { mdiPineTree, mdiPlus, mdiTerrain, mdiTrashCanOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import { MenuButton } from '@/components/MenuButton'
+import { MenuRow } from '@/components/MenuRow'
 import { ToolButton } from '@/components/ToolButton'
 import {
   addTerrain,
@@ -7,8 +9,9 @@ import {
   removeTerrain,
   removeTerrainEdit,
 } from '@/engines/scene/reliefCommands'
+import { addScatter, removeScatter } from '@/engines/scene/scatterCommands'
 import { newId } from '@/helpers/ids'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { activeSceneId, useDocuments } from '@/stores/documents'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/sceneViews'
@@ -21,46 +24,80 @@ export function WorldActions() {
   const { t } = useTranslation()
   const documentId = useDocuments(activeSceneId)
   const armed = useSceneViews(state =>
-    documentId ? sceneViewOf(state, documentId).armedRelief : null,
+    documentId ? sceneViewOf(state, documentId).armedWorld : null,
   )
 
   if (!documentId) return null
 
   const run = useScenes.getState().runCommand
-  const arm = useSceneViews.getState().setArmedRelief
+  const arm = useSceneViews.getState().setArmedWorld
 
   const createTerrain = (): void => {
     const id = newId()
     run(documentId, addTerrain({ assetId: '' }, id))
-    arm(documentId, { terrainId: id, editId: 'sculpt' })
+    arm(documentId, { kind: 'relief', id, editId: 'sculpt' })
+  }
+
+  const createScatter = (): void => {
+    const id = newId()
+    run(documentId, addScatter(id))
+    arm(documentId, { kind: 'scatter', id })
   }
 
   const createEdit = (): void => {
-    if (!armed) return
+    if (armed?.kind !== 'relief') return
     const id = newId()
-    run(documentId, addTerrainEdit(armed.terrainId, id))
-    arm(documentId, { terrainId: armed.terrainId, editId: id })
+    run(documentId, addTerrainEdit(armed.id, id))
+    arm(documentId, { kind: 'relief', id: armed.id, editId: id })
   }
 
   const remove = (): void => {
     if (!armed) return
-    if (armed.editId) run(documentId, removeTerrainEdit(armed.terrainId, armed.editId))
-    else run(documentId, removeTerrain(armed.terrainId))
+    if (armed.kind === 'scatter') {
+      run(documentId, removeScatter(armed.id))
+      arm(documentId, null)
+      return
+    }
+    if (armed.editId) run(documentId, removeTerrainEdit(armed.id, armed.editId))
+    else run(documentId, removeTerrain(armed.id))
     const layers = sceneOf(useScenes.getState(), documentId).world.layers
-    const still = layers.find(layer => layer.kind === 'relief' && layer.id === armed.terrainId)
-    if (armed.editId && still) arm(documentId, { terrainId: armed.terrainId, editId: null })
+    const still = layers.find(layer => layer.kind === 'relief' && layer.id === armed.id)
+    if (armed.editId && still) arm(documentId, { kind: 'relief', id: armed.id, editId: null })
     else arm(documentId, null)
   }
 
   return (
     <>
-      <ToolButton
+      <MenuButton
         icon={mdiPlus}
         label={t('world.add')}
         description={t('world.addHint')}
         tooltip={TIP_BOTTOM}
         variant="header"
-        onClick={createTerrain}
+        rowCount={2}
+        opensOnClick
+        rows={close => (
+          <>
+            <MenuRow
+              label={t('world.addTerrain')}
+              icon={mdiTerrain}
+              tip={HINT_RIGHT(t('world.addTerrainHint'))}
+              onSelect={() => {
+                createTerrain()
+                close()
+              }}
+            />
+            <MenuRow
+              label={t('world.addScatter')}
+              icon={mdiPineTree}
+              tip={HINT_RIGHT(t('world.addScatterHint'))}
+              onSelect={() => {
+                createScatter()
+                close()
+              }}
+            />
+          </>
+        )}
       />
       <ToolButton
         icon={mdiPlus}
@@ -68,7 +105,7 @@ export function WorldActions() {
         description={t('world.addEditHint')}
         tooltip={TIP_BOTTOM}
         variant="header"
-        disabled={armed === null}
+        disabled={armed?.kind !== 'relief'}
         onClick={createEdit}
       />
       <ToolButton

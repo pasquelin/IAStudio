@@ -13,7 +13,7 @@ import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useBindingOverrides } from '@/stores/bindings'
 import { useSceneClipboard } from '@/stores/sceneClipboard'
 import type { sceneOf } from '@/stores/scenes'
-import type { sceneViewChromeOf } from '@/stores/sceneViews'
+import type { sceneViewChromeOf } from '@/stores/sceneViewChrome'
 
 export type ToolbarFacts = {
   bindings: ReturnType<typeof useBindingOverrides>

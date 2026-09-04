@@ -25,6 +25,9 @@ import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
  */
 export type WatchedPreview = PreviewWatch & { laid?: ClipRef }
 
+export type ArmedWorld =
+  { kind: 'relief'; id: string; editId: string | null } | { kind: 'scatter'; id: string } | null
+
 export type SceneView = {
   projection: ProjectionKind
   /** Whether transform handles use the selected object's axes rather than the world's. */
@@ -47,10 +50,9 @@ export type SceneView = {
   sculptAmount: number
   /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
   pickedBone: { nodeId: string; bone: string } | null
-  /**
-   * The terrain (and optional edit) the World panel has armed. Session, like `pickedBone`:
-   * it is not the document, and ⌘Z must not move it.
-   */
+  /** The World panel's armed layer. Session, like `pickedBone`: not the document, not undone. */
+  armedWorld: ArmedWorld
+  /** Relief half of `armedWorld`, which the sculpt engine still reads by terrainId. */
   armedRelief: { terrainId: string; editId: string | null } | null
   /** The control point or tangent of a rail the gizmo holds. Never a node — see `PathDescriptor`. */
   pickedPathPoint: PickedPathPoint | null
@@ -135,6 +137,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   sculptFalloff: 0,
   sculptAmount: 0.1,
   pickedBone: null,
+  armedWorld: null,
   armedRelief: null,
   pickedPathPoint: null,
   quad: false,
@@ -173,6 +176,7 @@ export type SceneViewsState = {
   setSculptFalloff: (documentId: string, sculptFalloff: number) => void
   setSculptAmount: (documentId: string, sculptAmount: number) => void
   setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
+  setArmedWorld: (documentId: string, armedWorld: ArmedWorld) => void
   setArmedRelief: (documentId: string, armedRelief: SceneView['armedRelief']) => void
   setPickedPathPoint: (documentId: string, pickedPathPoint: SceneView['pickedPathPoint']) => void
   setQuad: (documentId: string, quad: boolean) => void
@@ -280,9 +284,33 @@ const sceneViewsStore = create<SceneViewsState>()(set => ({
       views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), pickedBone } },
     })),
 
+  setArmedWorld: (documentId, armedWorld) =>
+    set(state => ({
+      views: {
+        ...state.views,
+        [documentId]: {
+          ...sceneViewOf(state, documentId),
+          armedWorld,
+          armedRelief:
+            armedWorld?.kind === 'relief'
+              ? { terrainId: armedWorld.id, editId: armedWorld.editId }
+              : null,
+        },
+      },
+    })),
+
   setArmedRelief: (documentId, armedRelief) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), armedRelief } },
+      views: {
+        ...state.views,
+        [documentId]: {
+          ...sceneViewOf(state, documentId),
+          armedRelief,
+          armedWorld: armedRelief
+            ? { kind: 'relief', id: armedRelief.terrainId, editId: armedRelief.editId }
+            : null,
+        },
+      },
     })),
 
   setPickedPathPoint: (documentId, pickedPathPoint) =>
@@ -407,43 +435,9 @@ function samePlacement(left: CameraPlacement | null, right: CameraPlacement): bo
   )
 }
 
-/** How a given view draws. A pane nobody has set draws the way the studio opens: shaded. */
-export function displayOfPane(displays: readonly DisplayMode[], pane: number): DisplayMode {
-  return displays[pane] ?? 'shaded'
-}
-
 /** A document nobody has looked at yet is looked at the default way. */
 export function sceneViewOf(state: SceneViewsState, documentId: string): SceneView {
   return state.views[documentId] ?? DEFAULT_SCENE_VIEW
-}
-
-/**
- * Everything a viewport document paints, minus the clock. Used with `useShallow` so a playhead
- * write does not rebuild the toolbar host.
- */
-export function sceneViewChromeOf(state: SceneViewsState, documentId: string) {
-  const view = sceneViewOf(state, documentId)
-  return {
-    snapping: view.snapping,
-    isolation: view.isolation,
-    poseMode: view.poseMode,
-    sculptMode: view.sculptMode,
-    sculptTool: view.sculptTool,
-    sculptRadius: view.sculptRadius,
-    sculptFalloff: view.sculptFalloff,
-    sculptAmount: view.sculptAmount,
-    armedRelief: view.armedRelief,
-    pickedBone: view.pickedBone,
-    pickedPathPoint: view.pickedPathPoint,
-    projection: view.projection,
-    localFrame: view.localFrame,
-    displays: view.displays,
-    quadEdges: view.quadEdges,
-    skeletons: view.skeletons,
-    quad: view.quad,
-    panes: view.panes,
-    activePane: view.activePane,
-  }
 }
 
 /**
@@ -465,35 +459,4 @@ export function useSceneFrameHead(documentId: string, fps: number): Us {
 
 export function useScenePreview(documentId: string): WatchedPreview | null {
   return useSceneViews(state => sceneViewOf(state, documentId).preview)
-}
-
-/**
- * Whether a view write should refresh a montage looking through that scene.
- *
- * Playhead, playing and preview are the scene's OWN clock: a live clip on a sequence seeks at
- * the sequence's head, and redrawing it sixty times a second for a clock it does not show is
- * two extra 3D frames per tick.
- */
-export function sceneViewAffectsMontage(previous: SceneView, next: SceneView): boolean {
-  return (
-    previous.panes !== next.panes ||
-    previous.camera !== next.camera ||
-    previous.projection !== next.projection ||
-    previous.displays !== next.displays ||
-    previous.quad !== next.quad ||
-    previous.quadEdges !== next.quadEdges ||
-    previous.skeletons !== next.skeletons ||
-    previous.isolation !== next.isolation
-  )
-}
-
-/** Walks every open view: a sequence may composite several scenes. */
-export function sceneViewsAffectMontage(previous: SceneViewsState, next: SceneViewsState): boolean {
-  if (previous.views === next.views) return false
-
-  const ids = new Set([...Object.keys(previous.views), ...Object.keys(next.views)])
-  for (const id of ids) {
-    if (sceneViewAffectsMontage(sceneViewOf(previous, id), sceneViewOf(next, id))) return true
-  }
-  return false
 }

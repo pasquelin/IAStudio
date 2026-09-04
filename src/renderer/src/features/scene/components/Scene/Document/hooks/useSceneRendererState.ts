@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import type { SceneRenderer, TransformMode } from '@/engines/scene/SceneRenderer'
 import type { sceneOf } from '@/stores/scenes'
-import { useSceneViews, type sceneViewChromeOf } from '@/stores/sceneViews'
+import type { sceneViewChromeOf } from '@/stores/sceneViewChrome'
+import { useSceneViews } from '@/stores/sceneViews'
 
 export function useSceneRendererState(
   engine: { current: SceneRenderer | null },

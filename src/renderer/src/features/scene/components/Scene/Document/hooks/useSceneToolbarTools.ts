@@ -3,7 +3,7 @@ import { bindingOf, type CommandId } from '@shared/domain/command'
 import { isSnapping } from '@shared/domain/snap'
 import { canInvertCarve } from '@/engines/csg/carve'
 import type { sceneOf } from '@/stores/scenes'
-import { displayOfPane, type sceneViewChromeOf } from '@/stores/sceneViews'
+import { displayOfPane, type sceneViewChromeOf } from '@/stores/sceneViewChrome'
 import { ADD_TOOLS, SCENE_TOOLS } from '../../sceneTools'
 import { useToolbarFacts, type ToolbarFacts } from './useToolbarFacts'
 
