@@ -373,40 +373,19 @@ describe('overlay masks', () => {
     expect(combinedAt(samples, RELIEF_CHUNK_TEXELS, [painted], 2, 2)).toBeCloseTo(1)
   })
 
-  it('writes no raise or flatten delta where the armed painted mask is zero', () => {
+  it('writes the whole delta and lets the mask hold it back at read time', () => {
     const { placed, disk, armed } = paintedArm(samples)
-    const raised = raiseReliefDisk(
-      samples,
-      placed,
-      undefined,
-      disk,
-      1,
-      0,
-      RELIEF_CHUNK_TEXELS,
-      undefined,
-      armed,
-    )
-    const flattened = flattenReliefDisk(
-      samples,
-      placed,
-      undefined,
-      disk,
-      10,
-      1,
-      0,
-      RELIEF_CHUNK_TEXELS,
-      undefined,
-      [],
-      armed,
-    )
-    for (const sculpt of [raised, flattened]) {
-      expect(
-        combinedAt(samples, RELIEF_CHUNK_TEXELS, [{ enabled: true, alpha: 1, sculpt }], 2, 2),
-      ).toBeGreaterThan(0)
-      expect(
-        combinedAt(samples, RELIEF_CHUNK_TEXELS, [{ enabled: true, alpha: 1, sculpt }], 4, 2),
-      ).toBeCloseTo(0)
-    }
+    const raised = raiseReliefDisk(samples, placed, undefined, disk, 1, 0, RELIEF_CHUNK_TEXELS)
+    const bare: ReliefOverlay = { enabled: true, alpha: 1, sculpt: raised }
+    const masked: ReliefOverlay = { ...bare, mask: armed.mask }
+    const at = (overlay: ReliefOverlay, sx: number): number =>
+      combinedAt(samples, RELIEF_CHUNK_TEXELS, [overlay], sx, 2)
+
+    // Outside the mask nothing shows, and the delta is still there: reopening the mask gives the
+    // stroke back. Applied at BOTH ends, a painted weight of 0.5 rendered 0.25 and never returned.
+    expect(at(masked, 4)).toBeCloseTo(0)
+    expect(at(bare, 4)).toBeGreaterThan(0)
+    expect(at(masked, 2)).toBeCloseTo(at(bare, 2))
   })
 })
 
