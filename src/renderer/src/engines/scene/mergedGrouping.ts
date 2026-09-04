@@ -77,6 +77,7 @@ export function createMergedGroups(
     drawn: () => drawn,
     pickable: () => drawn,
     editorPickable: () => drawn,
+    editorSourceCount: () => 0,
     nodeIdOf: (hit: Intersection) => {
       if (!(hit.object instanceof Mesh) || hit.faceIndex === undefined || hit.faceIndex === null)
         return null

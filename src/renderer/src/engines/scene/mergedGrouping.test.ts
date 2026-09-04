@@ -25,6 +25,7 @@ it('merges nearby static shapes while resolving a picked face to its source UUID
     ]),
   ).toBe(2)
   expect(groups.drawn()).toHaveLength(1)
+  expect(groups.editorSourceCount()).toBe(0)
   host.updateMatrixWorld(true)
   const merged = groups.drawn()[0]
   if (!merged) throw new Error('missing merged mesh')

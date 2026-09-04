@@ -76,7 +76,8 @@ export function createCellGroups(
   } = cellGroupState()
   /** The widest body still held in a cell, so a query reaches the ones straddling its edge. */
   let queryReach = index.cellSize / 2
-  let pass = 0
+  let pass = 0,
+    sourceCount = 0
   let listed: InstancedMesh[] = []
   let sourcesById: ReadonlyMap<string, Mesh[]> = new Map()
   let listStale = true
@@ -394,13 +395,14 @@ export function createCellGroups(
       const seen = new Map<string, string>()
       let instanced = 0
       sourcesById = sourcesByNode(groups)
+      sourceCount = 0
       for (const worn of groups) {
+        sourceCount += worn.meshes.length
         const first = worn.meshes[0]
         if (!first) continue
         const movers: Members = { ids: [], meshes: [] }
         const split = splitByCell(worn, index, first.geometry, seen, movers, promoted)
-        // Only once the group HAS a cell: a group whose bodies all move leaves no bucket, and
-        // hanging an empty map for it would allocate one the sweep below drops the same pass.
+        // An all-moving group has no cell and would allocate a bucket only to drop it this pass.
         if (split.size > 0) {
           const into = buckets.get(worn.key) ?? new Map<CellKey | null, Bucket>()
           buckets.set(worn.key, into)
@@ -426,6 +428,7 @@ export function createCellGroups(
     drawn: drawnMeshes,
     pickable: () => standingLots(everyBucket(), standing, mobiles.values()),
     editorPickable: () => standingSources(everyBucket(), standing, mobiles.values(), sourcesById),
+    editorSourceCount: () => sourceCount,
     nodeIdOf,
     follow: (camera, cast) =>
       followCells(
@@ -445,6 +448,7 @@ export function createCellGroups(
     ...sources.fields(() => {
       clear()
       sourcesById = new Map()
+      sourceCount = 0
     }),
   }
 }

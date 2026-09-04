@@ -12,6 +12,22 @@ import { meshesOf } from './instanceableModel'
  */
 export const RUNTIME_PICKING_THRESHOLD = 25_000
 
+export type EditorPickingGroup = Pick<
+  InstancedGroups,
+  'editorPickable' | 'editorSourceCount' | 'pickable'
+>
+
+export function editorPickingTargets(groups: readonly EditorPickingGroup[]): readonly Mesh[] {
+  const sourceCount = groups.reduce((total, group) => total + group.editorSourceCount(), 0)
+  const targets: Mesh[] = []
+  for (const group of groups) {
+    const meshes =
+      sourceCount < RUNTIME_PICKING_THRESHOLD ? group.editorPickable() : group.pickable()
+    for (const mesh of meshes) targets.push(mesh)
+  }
+  return targets
+}
+
 export function createOptimizedGroups(
   host: Object3D,
   ownMaterialOf: (mesh: Mesh) => Material | Material[] = mesh => mesh.material,
@@ -19,6 +35,7 @@ export function createOptimizedGroups(
   const instances = createCellGroups(host, ownMaterialOf)
   const batches = createBatchedGroups(host, ownMaterialOf)
   const merges = createMergedGroups(host, ownMaterialOf)
+  const pickingGroups = [instances, batches, merges]
 
   return {
     rebuild: (nodes, objectOf, excluded, artifacts) => {
@@ -65,15 +82,8 @@ export function createOptimizedGroups(
     },
     drawn: () => [...instances.drawn(), ...batches.drawn(), ...merges.drawn()],
     pickable: () => [...instances.pickable(), ...batches.pickable(), ...merges.pickable()],
-    editorPickable: () => {
-      const instanceSources = instances.editorPickable()
-      const batchSources = batches.editorPickable()
-      const mergeSources = merges.editorPickable()
-      return instanceSources.length + batchSources.length + mergeSources.length <
-        RUNTIME_PICKING_THRESHOLD
-        ? [...instanceSources, ...batchSources, ...mergeSources]
-        : [...instances.pickable(), ...batches.pickable(), ...merges.pickable()]
-    },
+    editorPickable: () => editorPickingTargets(pickingGroups),
+    editorSourceCount: () => instances.editorSourceCount() + batches.editorSourceCount(),
     nodeIdOf: (hit: Intersection) =>
       instances.nodeIdOf(hit) ?? batches.nodeIdOf(hit) ?? merges.nodeIdOf(hit),
     hangSources: () => {

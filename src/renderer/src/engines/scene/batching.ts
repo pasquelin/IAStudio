@@ -147,6 +147,7 @@ export function createBatchedGroups(
       return drawn
     },
     editorPickable: () => sourceMeshes,
+    editorSourceCount: () => sourceMeshes.length,
 
     // `batchId` is the field three r185 and three-mesh-bvh both write on a `BatchedMesh` hit.
     nodeIdOf: hit =>

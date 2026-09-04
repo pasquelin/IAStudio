@@ -77,6 +77,7 @@ export function createInstancedGroups(
 
     pickable: () => drawn,
     editorPickable: () => sourceMeshes,
+    editorSourceCount: () => sourceMeshes.length,
 
     nodeIdOf: hit => {
       if (!(hit.object instanceof InstancedMesh) || hit.instanceId === undefined) return null

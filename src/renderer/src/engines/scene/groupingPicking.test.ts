@@ -66,6 +66,7 @@ describe.each([
 
     const targets = [...groups.editorPickable()]
     expect(targets).toHaveLength(WORTH_INSTANCING)
+    expect(groups.editorSourceCount()).toBe(WORTH_INSTANCING)
     for (const [id, mesh] of objects) {
       const raycaster = new Raycaster(
         new Vector3(mesh.position.x, 10, mesh.position.z),

@@ -87,11 +87,9 @@ export type InstancedGroups = {
    * `nodeIdOf`, independently of the representation that draws it.
    */
   pickable: () => readonly Mesh[]
-  /**
-   * What the EDITOR casts against. A strategy may return sources for direct object identity or
-   * its runtime representation when `nodeIdOf` preserves that identity more efficiently.
-   */
+  /** Editor ray targets, resolved through `nodeIdOf` when they are runtime representations. */
   editorPickable: () => readonly Mesh[]
+  editorSourceCount: () => number
   nodeIdOf: (hit: Intersection) => string | null
   /**
    * Hangs every source back under the node it belongs to, for whoever reads the tree DOWNWARD.

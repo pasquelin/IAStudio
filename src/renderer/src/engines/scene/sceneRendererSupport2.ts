@@ -328,6 +328,7 @@ function individualGroups(): InstancedGroups {
     drawn: () => [],
     pickable: () => [],
     editorPickable: () => [],
+    editorSourceCount: () => 0,
     nodeIdOf: () => null,
     hangSources: () => {},
     dropSources: () => {},

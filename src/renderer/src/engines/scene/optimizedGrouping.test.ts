@@ -9,9 +9,14 @@ import {
   Raycaster,
   Vector3,
 } from 'three'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { meshNode, modelNodeFixture } from './scene-fixtures'
-import { createOptimizedGroups, RUNTIME_PICKING_THRESHOLD } from './optimizedGrouping'
+import {
+  createOptimizedGroups,
+  editorPickingTargets,
+  RUNTIME_PICKING_THRESHOLD,
+  type EditorPickingGroup,
+} from './optimizedGrouping'
 import { WORTH_INSTANCING, type RuntimeRenderArtifact } from './grouping'
 import { markInstanceable } from './instanceableModel'
 import type { SceneNode } from './sceneState'
@@ -75,6 +80,27 @@ function addDiverseMeshes(
 }
 
 describe('optimized editor picking targets', () => {
+  const pickingGroup = (count: number) => {
+    const source = new Mesh()
+    const runtime = new Mesh()
+    const editorPickable = vi.fn(() => Array.from({ length: count }, () => source))
+    const pickable = vi.fn(() => [runtime])
+    const group: EditorPickingGroup = { editorPickable, editorSourceCount: () => count, pickable }
+    return { group, editorPickable, pickable, source, runtime }
+  }
+
+  it('materializes sources only below the measured threshold', () => {
+    const below = pickingGroup(RUNTIME_PICKING_THRESHOLD - 1)
+    expect(editorPickingTargets([below.group])).toHaveLength(RUNTIME_PICKING_THRESHOLD - 1)
+    expect(below.editorPickable).toHaveBeenCalledOnce()
+    expect(below.pickable).not.toHaveBeenCalled()
+
+    const threshold = pickingGroup(RUNTIME_PICKING_THRESHOLD)
+    expect(editorPickingTargets([threshold.group])).toEqual([threshold.runtime])
+    expect(threshold.editorPickable).not.toHaveBeenCalled()
+    expect(threshold.pickable).toHaveBeenCalledOnce()
+  })
+
   it('keeps individual sources below the measured runtime threshold', () => {
     const groups = createOptimizedGroups(new Object3D())
     const { nodes, objects } = repeated(WORTH_INSTANCING)
@@ -136,7 +162,9 @@ describe('optimized editor picking targets', () => {
 
     groups.rebuild([], () => undefined)
     expect(groups.editorPickable()).toEqual([])
+    expect(groups.editorSourceCount()).toBe(0)
     rebuild()
+    expect(groups.editorSourceCount()).toBe(RUNTIME_PICKING_THRESHOLD)
     expect(pickedAt(100, 300)).toBe(nestedNode.id)
   })
 })
