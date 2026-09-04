@@ -140,7 +140,7 @@ export function createLocalAiServices(deps: LocalAiDeps) {
     installedIds: () => ai.installedIds(),
     discovered: () => ai.discovered(),
   } satisfies FromManager)
-  const memoryVectors = createVectors(deps, ai, modelOf, weightsOf)
+  const { memoryVectors, embedder } = createVectors(deps, ai, modelOf, weightsOf)
   const autoRig = createAutoRigHost({
     models: () => catalogueWith(deps.settings.read().ai.ownModels, ai.discovered()),
     installedIds: ai.installedIds,
@@ -163,6 +163,7 @@ export function createLocalAiServices(deps: LocalAiDeps) {
     isLocalTarget,
     notReady,
     memoryVectors,
+    embedder,
     addOwnAiModel,
     dictation,
     autoRig,
@@ -417,19 +418,24 @@ function createVectors(
     installedIds: () => ai.installedIds(),
     modelOf,
   }
-  return createMemoryVectors({
-    host: deps.memory,
-    embedder: createEmbedder({
-      chosenId: () => embedModelId(choices),
-      weightsFor: id => embedWeightsOf(choices, id, weightsOf),
-      open: openEmbedProcess,
-      onTrouble: why => log.warn('memory', why),
-      idleMs: EMBEDDER_IDLE_MS,
-      schedule: deps.schedule,
-    }),
-    onProgress: (scope, progress) => broadcast(EVENTS.memoryIndexed, { scope, ...progress }),
+  const embedder = createEmbedder({
+    chosenId: () => embedModelId(choices),
+    weightsFor: id => embedWeightsOf(choices, id, weightsOf),
+    open: openEmbedProcess,
     onTrouble: why => log.warn('memory', why),
+    idleMs: EMBEDDER_IDLE_MS,
+    schedule: deps.schedule,
   })
+  return {
+    embedder,
+    memoryVectors: createMemoryVectors({
+      host: deps.memory,
+      embedder,
+      onProgress: (scope, progress) => broadcast(EVENTS.memoryIndexed, { scope, ...progress }),
+      onTrouble: why => log.warn('memory', why),
+      closeEmbedder: false,
+    }),
+  }
 }
 
 function createOwnModelAdder(deps: LocalAiDeps, ai: AiManager) {

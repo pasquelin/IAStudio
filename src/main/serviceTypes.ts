@@ -53,6 +53,7 @@ import type { AskUser } from './project/documentDialogs'
 import type { AutoRigHost } from './ai/autoRigHost'
 import type { MissionManager } from './mission/manager'
 import type { StudioEventBus } from './mission/eventBus'
+import type { ActionSearchService } from './actionIndex/actionSearchService'
 
 export type Services = {
   missions: MissionManager
@@ -93,6 +94,10 @@ export type Services = {
   memory: MemoryHost
   /** The embeddings of both memories, and the one process that computes them. */
   memoryVectors: MemoryVectors
+  /** Reconstructible action retrieval, backed by SQLite outside the UI thread. */
+  actionIndex: ActionSearchService
+  /** Settles retrieval consumers before closing their shared embedding process. */
+  closeRetrieval: () => Promise<void>
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
   /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */

@@ -383,6 +383,13 @@ deux lecteurs, et **aucun des deux ne décide** :
 - **`main/mcp/tools.ts`**, qui republie **tout**, champs compris, en outils MCP pour un client
   extérieur.
 
+Le main dérive aussi de ce registre un `ActionIndex` reconstructible dans `<userData>/actions.db`.
+Les actions, leurs champs, le FTS5 et les vecteurs y sont séparés ; une empreinte du corpus évite
+les reconstructions inutiles. Toute lecture SQLite s’exécute dans `actionIndexWorker`. Le service
+réutilise l’unique modèle d’embedding déjà partagé avec la mémoire et retombe sur FTS5 lorsqu’il
+n’y en a pas. Cet index prépare le runtime de missions ; le briefing historique conserve encore
+ses noms jusqu’au raccord complet du nouveau chemin.
+
 **Le briefing porte les noms, jamais les modes d’emploi.** Les 283 actions groupées par famille
 coûtent 4 225 caractères, là où leurs descriptions et leurs champs en coûtent 90 994 — que seule la
 porte la plus large tenait, à chaque tour. Ce qu’une action EST et ce qu’elle prend n’est composé

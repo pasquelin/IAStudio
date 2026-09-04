@@ -80,6 +80,7 @@ function main(command: string): MainViteConfig {
           pickingValidation: resolve('src/main/pickingValidation.ts'),
           catalogWorker: resolve('src/main/project/catalogWorker.ts'),
           memoryWorker: resolve('src/main/memory/memoryWorker.ts'),
+          actionIndexWorker: resolve('src/main/actionIndex/actionIndexWorker.ts'),
           peaksWorker: resolve('src/main/media/peaksWorker.ts'),
           bundleWorker: resolve('src/main/bundle/bundleWorker.ts'),
           sttWorker: resolve('src/main/dictation/sttWorker.ts'),

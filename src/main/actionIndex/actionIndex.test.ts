@@ -1,0 +1,136 @@
+import { describe, expect, it, onTestFinished } from 'vitest'
+import { ACTION_REGISTRY } from '@shared/domain/assistant'
+import { openMemoryDatabase } from '@main/project/sqliteMemory'
+import { actionCorpus, actionFingerprint } from './actionCorpus'
+import { createActionIndex } from './actionIndex'
+
+describe('ActionIndex', () => {
+  it('derives every registered action without maintaining another action list', () => {
+    const corpus = actionCorpus()
+    expect(ACTION_REGISTRY).toHaveLength(297)
+    expect(corpus.actions).toHaveLength(ACTION_REGISTRY.length)
+    expect(corpus.actions.map(action => action.name)).toEqual(
+      ACTION_REGISTRY.map(action => action.name),
+    )
+  })
+
+  it('keeps its fingerprint stable until a descriptor changes', () => {
+    const first = actionCorpus()
+    const second = actionCorpus()
+    expect(second.fingerprint).toBe(first.fingerprint)
+    expect(actionFingerprint(first.actions.slice(1))).not.toBe(first.fingerprint)
+  })
+
+  it('rebuilds only when the registry fingerprint changes', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    const corpus = actionCorpus()
+    expect(index.rebuild(corpus)).toMatchObject({ rebuilt: true, count: 297 })
+    expect(index.rebuild(corpus)).toMatchObject({ rebuilt: false, count: 297 })
+
+    const changed = { ...corpus, fingerprint: 'changed' }
+    expect(index.rebuild(changed).rebuilt).toBe(true)
+    expect(index.fingerprint()).toBe('changed')
+    expect(index.count()).toBe(297)
+  })
+
+  it('uses FTS5 to rank close action names and descriptions', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    const hits = index.search({ query: 'create project' })
+    expect(hits[0]?.action.name).toBe('project.create')
+    expect(hits.length).toBeLessThanOrEqual(5)
+    expect(index.search({ query: 'layer' }).some(hit => hit.action.name.includes('layer'))).toBe(
+      true,
+    )
+  })
+
+  it('lets BM25 rank descriptive matches before registry order', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const source = actionCorpus().actions.slice(0, 2)
+    const actions = source.map((action, at) => ({
+      ...action,
+      title: '',
+      description: at === 0 ? 'quasar' : 'quasar quasar quasar quasar',
+      searchable: at === 0 ? 'quasar' : 'quasar quasar quasar quasar',
+    }))
+    const index = createActionIndex(database)
+    index.rebuild({ actions, fingerprint: actionFingerprint(actions) })
+    expect(index.search({ query: 'quasar' })[0]?.action.name).toBe(actions[1]?.name)
+  })
+
+  it('replaces fields, vectors and FTS words when the corpus changes', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const original = actionCorpus()
+    const first = original.actions[0]
+    if (!first) throw new Error('the action corpus is empty')
+    const changedAction = { ...first, searchable: `${first.searchable} ultramarineindexword` }
+    const changedActions = [changedAction, ...original.actions.slice(1)]
+    const index = createActionIndex(database)
+    index.rebuild({ actions: changedActions, fingerprint: actionFingerprint(changedActions) })
+    index.writeEmbeddings([{ name: first.name, model: 'fixture', values: new Float32Array([1]) }])
+    expect(index.search({ query: 'ultramarineindexword' })[0]?.action.name).toBe(first.name)
+    expect(database.prepare('SELECT count(*) AS count FROM action_fields').get()).toBeDefined()
+
+    index.rebuild(original)
+    expect(index.search({ query: 'ultramarineindexword' })).toEqual([])
+    expect(index.embeddingModel()).toBeNull()
+  })
+
+  it('bounds an ambiguous query and keeps close names ordered by intent', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    const ambiguous = index.search({ query: 'open', limit: 3 })
+    expect(ambiguous).toHaveLength(3)
+    expect(index.search({ query: 'project open' })[0]?.action.name).toBe('project.open')
+  })
+
+  it('bounds requested results and rejects punctuation-only questions', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    expect(index.search({ query: 'scene', limit: 100 })).toHaveLength(12)
+    expect(index.search({ query: '---', limit: 4 })).toEqual([])
+  })
+
+  it('adds semantic ranking when compatible embeddings exist', () => {
+    const corpus = actionCorpus()
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(corpus)
+    const target = corpus.actions.find(action => action.name === 'project.create')
+    if (!target) throw new Error('project.create is absent')
+    index.writeEmbeddings([
+      { name: target.name, model: 'fixture', values: new Float32Array([1, 0]) },
+    ])
+    const hits = index.search({
+      query: 'make something new',
+      embedding: { model: 'fixture', values: new Float32Array([1, 0]) },
+    })
+    expect(hits[0]?.action.name).toBe('project.create')
+    expect(hits[0]?.semanticScore).toBe(1)
+  })
+
+  it('falls back to lexical results without embeddings or with another model', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    expect(index.search({ query: 'project create' })[0]?.action.name).toBe('project.create')
+    const incompatible = index.search({
+      query: 'project create',
+      embedding: { model: 'other', values: new Float32Array([1, 0]) },
+    })
+    expect(incompatible[0]?.action.name).toBe('project.create')
+    expect(incompatible[0]?.semanticScore).toBeUndefined()
+  })
+})

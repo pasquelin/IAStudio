@@ -16,6 +16,7 @@ import { createMissionJournal } from '@main/mission/journal'
 import { createMissionManager } from '@main/mission/manager'
 import { createMissionStore } from '@main/mission/store'
 import { createStudioEventBus } from '@main/mission/eventBus'
+import { createActionSearchService } from '@main/actionIndex/actionSearchService'
 import { createUpdates } from '@main/updater'
 import { bundledGameRuntime, resourcesRoot } from './resources'
 import { createMcpControl } from './mcp/control'
@@ -178,7 +179,17 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
   // prettier-ignore
-  const { clouds, runtimes, ai, engine: localEngine, llama, modelOf, isLocalTarget, notReady, memoryVectors, addOwnAiModel, dictation, autoRig } = buildLocalAi()
+  const { clouds, runtimes, ai, engine: localEngine, llama, modelOf, isLocalTarget, notReady, memoryVectors, embedder, addOwnAiModel, dictation, autoRig } = buildLocalAi()
+  const actionIndex = createActionSearchService({
+    userData: app.getPath('userData'),
+    embedder,
+    onTrouble: why => log.warn('assistant', `action index: ${why}`),
+  })
+  const closeRetrieval = async (): Promise<void> => {
+    await actionIndex.close()
+    await memoryVectors.close()
+    await embedder.close()
+  }
   function buildJobServices(): JobServices {
     return createJobServices({
       settings,
@@ -215,6 +226,7 @@ export function createServices(settings: SettingsStore): Services {
       project,
       context,
       memoryVectors,
+      actionIndex,
       runtimes,
       ai,
       modelOf,
@@ -287,6 +299,8 @@ export function createServices(settings: SettingsStore): Services {
       project,
       memory,
       memoryVectors,
+      actionIndex,
+      closeRetrieval,
       // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
       // here, and an export named against nothing is a refusal rather than a failure.
       projectPath: () => project.current()?.path ?? null,
