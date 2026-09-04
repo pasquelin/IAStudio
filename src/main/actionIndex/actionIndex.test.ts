@@ -143,7 +143,7 @@ describe('ActionIndex', () => {
     })
 
     expect(hits.map(hit => hit.action.name)).toContain('node.rename')
-    expect(hits.find(hit => hit.action.name === 'node.rename')?.scopeScore).toBe(4)
+    expect(hits.find(hit => hit.action.name === 'node.rename')?.compatibilityScore).toBe(4)
   })
 
   it('ranks an action targeting the selection above a similarly worded document action', () => {
@@ -239,6 +239,24 @@ describe('ActionIndex', () => {
     index.rebuild(actionCorpus())
     expect(index.search({ query: 'scene', limit: 100 })).toHaveLength(12)
     expect(index.search({ query: '---', limit: 4 })).toEqual([])
+  })
+
+  it('explains every action rank before applying the result limit', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    const ranking = index.inspect({ query: 'open project', limit: 3 })
+
+    expect(ranking).toHaveLength(297)
+    expect(ranking.find(hit => hit.action.name === 'project.open')).toMatchObject({
+      included: true,
+      rank: 1,
+    })
+    expect(ranking.filter(hit => hit.included)).toHaveLength(3)
+    expect(ranking.find(hit => hit.action.name === 'actions.find')?.exclusion).toBe(
+      'reservedDiscoveryAction',
+    )
   })
 
   it('adds semantic ranking when compatible embeddings exist', () => {

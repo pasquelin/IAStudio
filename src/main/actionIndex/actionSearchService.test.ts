@@ -26,6 +26,10 @@ function indexFixture(model: string | null): {
         searches.push(search)
         return []
       },
+      inspect: async search => {
+        searches.push(search)
+        return []
+      },
       fingerprint: async () => 'fixture',
       embeddingModel: async () => model,
       count: async () => 297,

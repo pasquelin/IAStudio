@@ -29,7 +29,7 @@ const actionsByRank = (): ReadonlyMap<string, readonly ActionName[]> => {
   return actions
 }
 
-function expectedActions(scenario: Scenario): readonly ActionName[] {
+export function expectedMissionActions(scenario: Scenario): readonly ActionName[] {
   return actionsByRank().get(rankOf(scenario)) ?? []
 }
 
@@ -37,7 +37,11 @@ export function scenarioFamilies(scenario: Scenario): readonly string[] {
   const familyByAction = new Map(
     ACTION_FAMILIES.flatMap(family => family.actions.map(action => [action.name, family.name])),
   )
-  return [...new Set(expectedActions(scenario).flatMap(action => familyByAction.get(action) ?? []))]
+  return [
+    ...new Set(
+      expectedMissionActions(scenario).flatMap(action => familyByAction.get(action) ?? []),
+    ),
+  ]
 }
 
 function balancedScenarios(scenarios: readonly Scenario[], perFamily: number): readonly Scenario[] {

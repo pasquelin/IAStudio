@@ -54,6 +54,7 @@ export function createActionIndexClient(port: ActionIndexPort): AsyncActionIndex
     rebuild: corpus => ask<'rebuild'>({ op: 'rebuild', corpus }),
     writeEmbeddings: embeddings => ask<'writeEmbeddings'>({ op: 'writeEmbeddings', embeddings }),
     search: search => ask<'search'>({ op: 'search', search }),
+    inspect: search => ask<'inspect'>({ op: 'inspect', search }),
     fingerprint: () => ask<'fingerprint'>({ op: 'fingerprint' }),
     embeddingModel: () => ask<'embeddingModel'>({ op: 'embeddingModel' }),
     count: () => ask<'count'>({ op: 'count' }),

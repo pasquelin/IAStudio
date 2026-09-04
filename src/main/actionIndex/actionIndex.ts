@@ -34,7 +34,15 @@ export type ActionHit = {
   lexicalScore: number
   semanticScore?: number
   workflowScore?: number
+  resourceScore?: number
   scopeScore?: number
+  compatibilityScore?: number
+}
+
+export type ActionRanking = ActionHit & {
+  rank: number
+  included: boolean
+  exclusion?: 'belowMinimumScore' | 'outsideLimit' | 'reservedDiscoveryAction'
 }
 
 export type ActionRebuild = {
@@ -47,6 +55,7 @@ export type ActionIndex = {
   rebuild: (corpus: ActionCorpus) => ActionRebuild
   writeEmbeddings: (embeddings: readonly ActionEmbedding[]) => void
   search: (search: ActionSearch) => readonly ActionHit[]
+  inspect: (search: ActionSearch) => readonly ActionRanking[]
   fingerprint: () => string | null
   embeddingModel: () => string | null
   count: () => number
@@ -110,7 +119,10 @@ function tokenScore(
   return score
 }
 
-function actionScopeScore(action: IndexedAction, scope: ActionSearch['scope']): number {
+function actionScopeScores(
+  action: IndexedAction,
+  scope: ActionSearch['scope'],
+): { scope: number; compatibility: number } {
   const target = scope?.target?.toLocaleLowerCase('en')
   const document = scope?.document?.toLocaleLowerCase('en')
   const targetsSelection =
@@ -124,15 +136,16 @@ function actionScopeScore(action: IndexedAction, scope: ActionSearch['scope']): 
         ? 2
         : -4
       : 0
-  return Number(targetsSelection) * 4 + documentScore
+  return { scope: documentScore, compatibility: Number(targetsSelection) * 4 }
 }
 
 function workflowScoresOf(
   hits: readonly ActionHit[],
   availableResources: readonly ActionResource[],
-): ReadonlyMap<ActionName, number> {
+): { workflow: ReadonlyMap<ActionName, number>; resources: ReadonlyMap<ActionName, number> } {
   const available = new Set(availableResources)
   const scores = new Map<ActionName, number>()
+  const resources = new Map<ActionName, number>()
   const ranked = hits
     .filter(hit => hit.score >= 1)
     .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
@@ -172,12 +185,12 @@ function workflowScoresOf(
       candidate =>
         candidate.action.requires.includes(resource) || candidate.action.inputs.includes(resource),
     ))
-      scores.set(
+      resources.set(
         hit.action.name,
-        Math.max(scores.get(hit.action.name) ?? 0, AVAILABLE_RESOURCE_SCORE),
+        Math.max(resources.get(hit.action.name) ?? 0, AVAILABLE_RESOURCE_SCORE),
       )
   }
-  return scores
+  return { workflow: scores, resources }
 }
 
 export function createActionIndex(driver: SqliteDriver): ActionIndex {
@@ -263,25 +276,27 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
     })
   }
 
-  const search = (wanted: ActionSearch): readonly ActionHit[] => {
+  const inspect = (wanted: ActionSearch): readonly ActionRanking[] => {
     const expression = askExpression(wanted.query)
-    if (expression === null) return []
-    const lexicalRows = driver
-      .prepare(
-        `SELECT a.descriptor, v.embedding, v.model AS embedding_model, a.ordinal,
+    const lexicalRows =
+      expression === null
+        ? []
+        : driver
+            .prepare(
+              `SELECT a.descriptor, v.embedding, v.model AS embedding_model, a.ordinal,
                 bm25(indexed_actions_fts) AS rank
          FROM indexed_actions_fts f JOIN indexed_actions a ON a.rowid = f.rowid
          LEFT JOIN action_vectors v ON v.action_name = a.name
-         WHERE indexed_actions_fts MATCH ? AND a.name <> 'actions.find'
+         WHERE indexed_actions_fts MATCH ?
          ORDER BY rank, a.ordinal LIMIT ?`,
-      )
-      .all(expression, FTS_CANDIDATES)
+            )
+            .all(expression, FTS_CANDIDATES)
     const semanticRows = wanted.embedding
       ? driver
           .prepare(
             `SELECT a.descriptor, v.embedding, v.model AS embedding_model, a.ordinal, NULL AS rank
              FROM indexed_actions a JOIN action_vectors v ON v.action_name = a.name
-             WHERE a.name <> 'actions.find' AND v.model = ?`,
+             WHERE v.model = ?`,
           )
           .all(wanted.embedding.model)
       : []
@@ -289,7 +304,7 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
       .prepare(
         `SELECT a.descriptor, v.embedding, v.model AS embedding_model, a.ordinal, NULL AS rank
          FROM indexed_actions a LEFT JOIN action_vectors v ON v.action_name = a.name
-         WHERE a.name <> 'actions.find'`,
+         `,
       )
       .all()
     const rows = new Map(
@@ -308,35 +323,66 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         question && model === wanted.embedding?.model
           ? dotOfBytes(bytes(row, 'embedding'), question)
           : undefined
-      const scopeScore = actionScopeScore(action, wanted.scope)
+      const scope = actionScopeScores(action, wanted.scope)
+      const totalScopeScore = scope.scope + scope.compatibility
       return [
         {
           action,
           lexicalScore: lexical,
-          ...(scopeScore === 0 ? {} : { scopeScore }),
+          ...(scope.scope === 0 ? {} : { scopeScore: scope.scope }),
+          ...(scope.compatibility === 0 ? {} : { compatibilityScore: scope.compatibility }),
           ...(semantic === undefined ? {} : { semanticScore: semantic }),
-          score: lexical + Math.max(0, semantic ?? 0) * 3 + scopeScore,
+          score: lexical + Math.max(0, semantic ?? 0) * 3 + totalScopeScore,
         },
       ]
     })
-    const workflowScores = workflowScoresOf(hits, wanted.available ?? [])
+    const signals = workflowScoresOf(hits, wanted.available ?? [])
     const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(wanted.limit ?? DEFAULT_LIMIT)))
-    return hits
+    const ranked = hits
       .map(hit => {
-        const workflowScore = workflowScores.get(hit.action.name) ?? 0
-        return workflowScore === 0
-          ? hit
-          : { ...hit, workflowScore, score: hit.score + workflowScore }
+        const workflowScore = signals.workflow.get(hit.action.name) ?? 0
+        const resourceScore = signals.resources.get(hit.action.name) ?? 0
+        return {
+          ...hit,
+          ...(workflowScore === 0 ? {} : { workflowScore }),
+          ...(resourceScore === 0 ? {} : { resourceScore }),
+          score: hit.score + workflowScore + resourceScore,
+        }
       })
-      .filter(hit => hit.score >= 1)
       .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
-      .slice(0, limit)
+    let visibleRank = 0
+    return ranked.map(hit => {
+      const reserved = hit.action.name === 'actions.find'
+      if (!reserved) visibleRank += 1
+      const included = !reserved && hit.score >= 1 && visibleRank <= limit
+      const exclusion = reserved
+        ? 'reservedDiscoveryAction'
+        : hit.score < 1
+          ? 'belowMinimumScore'
+          : visibleRank > limit
+            ? 'outsideLimit'
+            : undefined
+      return {
+        ...hit,
+        rank: reserved ? ranked.length : visibleRank,
+        included,
+        ...(exclusion ? { exclusion } : {}),
+      }
+    })
   }
+
+  const search = (wanted: ActionSearch): readonly ActionHit[] =>
+    askExpression(wanted.query) === null
+      ? []
+      : inspect(wanted)
+          .filter(hit => hit.included)
+          .map(({ rank: _rank, included: _included, exclusion: _exclusion, ...hit }) => hit)
 
   return {
     rebuild,
     writeEmbeddings,
     search,
+    inspect,
     fingerprint,
     embeddingModel: () => {
       const row = driver

@@ -9,6 +9,8 @@ export function dispatchActionIndex(index: ActionIndex, request: ActionIndexRequ
       return index.writeEmbeddings(request.embeddings)
     case 'search':
       return index.search(request.search)
+    case 'inspect':
+      return index.inspect(request.search)
     case 'fingerprint':
       return index.fingerprint()
     case 'embeddingModel':

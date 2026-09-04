@@ -4,7 +4,7 @@ import { messageOf } from '@shared/guards'
 import type { Embedder } from '@main/memory/embedder'
 import { actionCorpus } from './actionCorpus'
 import type { ActionResource } from '@shared/domain/assistant'
-import type { ActionEmbedding, ActionHit } from './actionIndex'
+import type { ActionEmbedding, ActionHit, ActionRanking } from './actionIndex'
 import type { AsyncActionIndex } from './actionIndexClient'
 import { openActionIndexThread } from './actionIndexThread'
 
@@ -17,6 +17,12 @@ export type ActionSearchService = {
     available?: readonly ActionResource[],
     scope?: { target?: string; document?: string },
   ) => Promise<readonly ActionHit[]>
+  inspect: (
+    query: string,
+    limit?: number,
+    available?: readonly ActionResource[],
+    scope?: { target?: string; document?: string },
+  ) => Promise<readonly ActionRanking[]>
   close: () => Promise<void>
 }
 
@@ -67,37 +73,66 @@ export function createActionSearchService({
     await index.writeEmbeddings(embeddings)
   }
 
-  return {
-    search: async (query, limit, available, scope) => {
-      let index: AsyncActionIndex
+  const run = async <Result>(
+    query: string,
+    limit: number | undefined,
+    available: readonly ActionResource[] | undefined,
+    scope: { target?: string; document?: string } | undefined,
+    failed: Result,
+    operation: (
+      index: AsyncActionIndex,
+      search: Parameters<AsyncActionIndex['search']>[0],
+    ) => Promise<Result>,
+  ): Promise<Result> => {
+    let index: AsyncActionIndex
+    try {
+      index = await holder()
+    } catch (error) {
+      onTrouble(messageOf(error))
+      return failed
+    }
+    const model = embedder.chosen()
+    if (model !== null) {
       try {
-        index = await holder()
+        indexing ??= catchUp(index, model)
+        await indexing
+        const values = await embedder.embedQuery(query)
+        if (values.length > 0 && embedder.chosen() === model)
+          return await operation(index, {
+            query,
+            limit,
+            available,
+            scope,
+            embedding: { model, values },
+          })
       } catch (error) {
         onTrouble(messageOf(error))
-        return []
+      } finally {
+        indexing = null
       }
-      const model = embedder.chosen()
-      if (model !== null) {
-        try {
-          indexing ??= catchUp(index, model)
-          await indexing
-          const values = await embedder.embedQuery(query)
-          if (values.length > 0 && embedder.chosen() === model)
-            return await index.search({
-              query,
-              limit,
-              available,
-              scope,
-              embedding: { model, values },
-            })
-        } catch (error) {
-          onTrouble(messageOf(error))
-        } finally {
-          indexing = null
-        }
-      }
-      return await index.search({ query, limit, available, scope })
-    },
+    }
+    return await operation(index, { query, limit, available, scope })
+  }
+
+  return {
+    search: async (query, limit, available, scope) =>
+      await run(
+        query,
+        limit,
+        available,
+        scope,
+        [],
+        async (index, search) => await index.search(search),
+      ),
+    inspect: async (query, limit, available, scope) =>
+      await run(
+        query,
+        limit,
+        available,
+        scope,
+        [],
+        async (index, search) => await index.inspect(search),
+      ),
     close: async () => {
       try {
         await indexing
