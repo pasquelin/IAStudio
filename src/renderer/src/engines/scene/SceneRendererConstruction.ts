@@ -15,6 +15,7 @@ import './bvhPatches'
 import { createCsgEvaluator } from '../csg/csgEvaluator'
 import { createTextureCache, loadTexture } from './textureCache'
 import { createReliefSurface } from './reliefSurface'
+import { createScatterSurface } from './scatterSurface'
 import { createReliefBuilder } from './reliefBuilder'
 import { loadHeightmap } from './heightmap'
 import ReliefBuildWorker from './reliefBuild.worker?worker'
@@ -37,6 +38,7 @@ export class SceneRendererConstruction extends SceneRendererFrame {
         onFailure: (assetId, error) => reportFailure('scene.texture', assetId, error),
         onReady: () => this.redraw(),
       })
+    this.scatter = createScatterSurface(this.viewport.scene)
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.

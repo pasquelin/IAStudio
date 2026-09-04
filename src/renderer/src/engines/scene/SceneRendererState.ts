@@ -21,6 +21,7 @@ import {
 } from '@shared/domain/scene'
 import { createGroundPlane } from './groundPlane'
 import { type ReliefSurface } from './reliefSurface'
+import { type ScatterSurface } from './scatterSurface'
 import { createViewportAids, type AidRigs } from './viewportAids'
 import { NOTHING_ISOLATED, type Isolation } from './isolation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
@@ -297,6 +298,7 @@ export abstract class SceneRendererState {
 
   /** Built by the constructor, which alone knows whether one was handed in — see there. */
   protected relief!: ReliefSurface
+  protected scatter!: ScatterSurface
 
   /** The sun the sky it names describes. A node of the scene, so it is born with the renderer. */
   protected sun: SkySun = createSkySun(this.viewport.scene)

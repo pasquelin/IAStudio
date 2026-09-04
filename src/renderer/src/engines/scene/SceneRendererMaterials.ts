@@ -118,6 +118,7 @@ export abstract class SceneRendererMaterials extends SceneRendererFlight {
                                       this.grid = null
                                       this.ground.dispose()
                                       this.relief.dispose()
+                                      this.scatter.dispose()
                                       const disposeStep17 = () => {
                                         this.sun.dispose()
                                         this.aids.dispose()

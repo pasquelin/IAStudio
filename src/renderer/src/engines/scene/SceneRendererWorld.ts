@@ -96,6 +96,7 @@ export abstract class SceneRendererWorld extends SceneRendererAids {
     if (wanted.ground !== held.ground || wanted.layers !== held.layers) this.applyGround()
     if (wanted.layers !== held.layers) {
       this.relief.sync(wanted)
+      this.scatter.sync(wanted)
       this.noteReliefSculpt()
     }
     if (this.relief.object.children.length > 0) this.ground.object.visible = false
