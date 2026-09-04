@@ -44,12 +44,13 @@ export function LinkFieldThumbnail(props: LinkThumbnailProps) {
   const { badge, chosen, label, open, press, shown } = props
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const resting = useForgettableTimeout()
-  const gestures = useDeferredPress(press?.run, open?.run)
-  const named = press ?? open
+  const availableOpen = chosen ? open : undefined
+  const gestures = useDeferredPress(press?.run, availableOpen?.run)
+  const named = press ?? availableOpen
   const thumbnail = picture(props)
   return (
     <span className="relative flex shrink-0">
-      {named && chosen ? (
+      {named ? (
         <button
           type="button"
           {...gestures}

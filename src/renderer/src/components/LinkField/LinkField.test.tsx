@@ -205,6 +205,33 @@ describe('LinkField', () => {
       expect(screen.queryByRole('button', { name: 'Ouvrir' })).not.toBeInTheDocument()
     })
 
+    it('lets an empty slot choose its first picture from its thumbnail', async () => {
+      const pick = vi.fn()
+      render(<Slot value={null} onChange={vi.fn()} press={{ ...PRESS, run: pick }} open={OPEN} />)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Choisir' }))
+
+      expect(pick).toHaveBeenCalledOnce()
+    })
+
+    it('does not try to open a missing picture on a double-click', async () => {
+      const pick = vi.fn()
+      const open = vi.fn()
+      render(
+        <Slot
+          value="tex-gone"
+          onChange={vi.fn()}
+          press={{ ...PRESS, run: pick }}
+          open={{ ...OPEN, run: open }}
+        />,
+      )
+
+      await userEvent.dblClick(screen.getByRole('button', { name: 'Choisir' }))
+
+      expect(pick).toHaveBeenCalledOnce()
+      expect(open).not.toHaveBeenCalled()
+    })
+
     /** A document outlives the picture it points at: nothing rewrites a material on deletion. */
     it('offers nothing to open for an id the project no longer holds', () => {
       render(<Slot value="tex-gone" onChange={vi.fn()} open={OPEN} />)
