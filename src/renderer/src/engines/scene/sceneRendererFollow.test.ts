@@ -14,11 +14,21 @@ describe('SceneRenderer and the selection it follows', () => {
 
   const frameFollow = method('frameFollow\\(\\): void')
   const follow = method('protected followSelection\\(\\): boolean')
-  const apply = source.match(/apply\(state: SceneState\): void \{[\s\S]*?\n {2}\}/)?.[0] ?? ''
+  const applyEntry = method('apply\\(state: SceneState\\): void')
+  const runtimeEntry = method(
+    'applyRuntimeTransforms\\(placements: readonly RuntimePlacement\\[\\]\\): boolean',
+  )
+  const apply = method(
+    'private applyState\\(state: SceneState, changed: readonly SceneNode\\[\\] \\| null\\): void',
+  )
 
   // A regex that matched nothing would make every assertion below vacuously true.
-  it('finds the three paths the rest of this file reads', () => {
-    expect([frameFollow, follow, apply].map(found => found.length > 0)).toEqual([true, true, true])
+  it('finds the paths and both application entries the rest of this file reads', () => {
+    expect(
+      [frameFollow, follow, apply, applyEntry, runtimeEntry].every(found => found.length > 0),
+    ).toBe(true)
+    expect(applyEntry).toContain('this.applyState(state, null)')
+    expect(runtimeEntry).toContain('this.applyState(delta.state, delta.changed)')
   })
 
   /** The same press that took hold lets go, as `scene.isolate` already does. */

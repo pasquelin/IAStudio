@@ -14,7 +14,7 @@ import { shadowOfLightMoved, shadowOfNodeMoved } from './shadowChanges'
 import type { RuntimeRenderArtifact } from './grouping'
 import { runtimeOptimizationOf } from './runtimeWorldArtifacts'
 import { SceneRendererResources } from './SceneRendererResources'
-import { RuntimeTransformState, type RuntimePlacement } from './runtimeTransformState'
+import { RuntimeTransformState, type RuntimePlacement } from './RuntimeTransformState'
 export abstract class SceneRendererLifecycle extends SceneRendererResources {
   private readonly runtimeTransforms = new RuntimeTransformState()
   /** Read here because `apply` is the only step handed the state the compiler wrote it into. */
