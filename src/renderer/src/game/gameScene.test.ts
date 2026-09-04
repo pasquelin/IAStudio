@@ -28,6 +28,7 @@ import {
 import { colliderFromNode } from './colliderFromNode'
 import { buildGameScene } from './gameScene'
 import { WORTH_INSTANCING } from '@/engines/scene/grouping'
+import type { RuntimeWorld } from '@/engines/scene/runtimeWorldCompiler'
 import { compileLossyWorld as compilePlannedWorld } from '@/engines/scene/lossyWorldCompiler'
 import { analyzeLossyWorld } from '@/engines/scene/worldAnalyzer'
 import type { LossyOptimization } from '@shared/domain/gameExport'
@@ -89,6 +90,24 @@ describe('a scene as a game draws it', () => {
     expect(instances.reduce((count, instance) => count + instance.count, 0)).toBe(WORTH_INSTANCING)
     expect(instances.length).toBeLessThan(WORTH_INSTANCING)
     expect(nodes.every(node => built.byEntity.has(node.id))).toBe(true)
+  })
+
+  it('draws only the representations selected by the compiled runtime world', async () => {
+    const nodes = Array.from({ length: WORTH_INSTANCING }, (_unused, index) =>
+      meshNode(BOX, { name: `Individual crate ${index}` }),
+    )
+    const runtime: RuntimeWorld = {
+      ...scene(nodes),
+      runtimeOptimization: { artifacts: [] },
+    }
+
+    const built = await buildGameScene(runtime, NOTHING)
+    const instances: InstancedMesh[] = []
+    built.scene.traverse(object => {
+      if (object instanceof InstancedMesh) instances.push(object)
+    })
+
+    expect(instances).toEqual([])
   })
 
   it('keeps a gameplay-driven repetition individual', async () => {

@@ -1,7 +1,7 @@
 import { Mesh, type Intersection, type Material, type Object3D } from 'three'
 import { createBatchedGroups } from './batching'
 import { createCellGroups } from './cellInstancing'
-import type { InstancedGroups } from './grouping'
+import type { InstancedGroups, RuntimeRenderArtifact } from './grouping'
 import { meshesOf } from './instanceableModel'
 
 export function createOptimizedGroups(
@@ -12,7 +12,7 @@ export function createOptimizedGroups(
   const batches = createBatchedGroups(host, ownMaterialOf)
 
   return {
-    rebuild: (nodes, objectOf, excluded) => {
+    rebuild: (nodes, objectOf, excluded, artifacts) => {
       instances.hangSources()
       batches.hangSources()
       for (const node of nodes) {
@@ -21,10 +21,23 @@ export function createOptimizedGroups(
         else if (object) for (const mesh of meshesOf(object)) mesh.layers.set(0)
       }
       const modeById = new Map(nodes.map(node => [node.id, node.optimization?.mode ?? 'auto']))
+      const compiled = selectionsOf(artifacts)
       const forInstances = (id: string): Object3D | undefined =>
-        modeById.get(id) === 'auto' || modeById.get(id) === 'instance' ? objectOf(id) : undefined
+        compiled
+          ? compiled.instances.has(id)
+            ? objectOf(id)
+            : undefined
+          : modeById.get(id) === 'auto' || modeById.get(id) === 'instance'
+            ? objectOf(id)
+            : undefined
       const forBatches = (id: string): Object3D | undefined =>
-        modeById.get(id) === 'batch' ? objectOf(id) : undefined
+        compiled
+          ? compiled.batches.has(id)
+            ? objectOf(id)
+            : undefined
+          : modeById.get(id) === 'batch'
+            ? objectOf(id)
+            : undefined
       const grouped =
         instances.rebuild(nodes, forInstances, excluded) +
         batches.rebuild(nodes, forBatches, excluded)
@@ -69,4 +82,19 @@ export function createOptimizedGroups(
       batches.dispose()
     },
   }
+}
+
+function selectionsOf(
+  artifacts: readonly RuntimeRenderArtifact[] | undefined,
+): { instances: ReadonlySet<string>; batches: ReadonlySet<string> } | null {
+  if (!artifacts) return null
+  const instances = new Set<string>()
+  const batches = new Set<string>()
+  for (const artifact of artifacts) {
+    const target =
+      artifact.strategy === 'instance' ? instances : artifact.strategy === 'batch' ? batches : null
+    if (!target) continue
+    for (const id of artifact.sourceIds) target.add(id)
+  }
+  return { instances, batches }
 }

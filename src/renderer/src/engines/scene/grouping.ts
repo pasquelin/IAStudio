@@ -56,6 +56,7 @@ export type InstancedGroups = {
     nodes: readonly SceneNode[],
     objectOf: (id: string) => Object3D | undefined,
     excluded?: ReadonlySet<string>,
+    artifacts?: readonly RuntimeRenderArtifact[],
   ) => number
   /**
    * Writes the matrices of nodes that just moved, without rebuilding a thing — and says whether
@@ -120,6 +121,13 @@ export type InstancedGroups = {
   stats?: () => GroupingStats
   /** The engine is going away, and so are the meshes it built. */
   dispose: () => void
+}
+
+export type RuntimeRenderArtifact = {
+  readonly key: string
+  readonly strategy: 'instance' | 'batch' | 'merge'
+  readonly sourceIds: readonly string[]
+  readonly signature: string
 }
 
 /**

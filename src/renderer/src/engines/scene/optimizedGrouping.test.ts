@@ -9,6 +9,7 @@ import {
 import { expect, it } from 'vitest'
 import { meshNode } from './scene-fixtures'
 import { createOptimizedGroups } from './optimizedGrouping'
+import type { RuntimeRenderArtifact } from './grouping'
 import type { SceneNode } from './sceneState'
 
 it('draws automatic repetitions as instances and forced batches as BatchedMesh together', () => {
@@ -89,4 +90,33 @@ it('restores a grouped source when its override changes to individual', () => {
   expect(groups.drawn()).toHaveLength(0)
   expect(host.children).toEqual([...objects.values()])
   expect([...objects.values()].every(mesh => mesh.layers.isEnabled(0))).toBe(true)
+})
+
+it('builds only the representations selected by compiled runtime artifacts', () => {
+  const host = new Object3D()
+  const material = new MeshStandardMaterial()
+  const firstGeometry = new BoxGeometry()
+  const secondGeometry = new BoxGeometry(2, 1, 1)
+  const nodes = Array.from({ length: 32 }, (_unused, index) => meshNode(`node-${index}`))
+  const objects = new Map(
+    nodes.map((node, index) => [
+      node.id,
+      new Mesh(index < 16 ? firstGeometry : secondGeometry, material),
+    ]),
+  )
+  for (const object of objects.values()) object.updateMatrixWorld(true)
+  const artifacts: readonly RuntimeRenderArtifact[] = [
+    {
+      key: 'trees',
+      strategy: 'instance',
+      sourceIds: nodes.slice(0, 16).map(node => node.id),
+      signature: 'compiled-trees',
+    },
+  ]
+
+  const groups = createOptimizedGroups(host)
+
+  expect(groups.rebuild(nodes, id => objects.get(id), undefined, artifacts)).toBe(16)
+  expect(groups.drawn()).toHaveLength(1)
+  expect(groups.drawn()[0]?.geometry).toBe(firstGeometry)
 })
