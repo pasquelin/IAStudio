@@ -19,10 +19,11 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  OrthographicCamera,
   PerspectiveCamera,
   Quaternion,
   Raycaster,
-  type Camera,
+  Camera,
   SkinnedMesh,
   SpotLight,
   Sprite,
@@ -106,6 +107,10 @@ import { pixelRatioFor, shadowMapSizeFor } from './viewportQuality'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { aspectLoan } from '../viewport/aspectLoan'
+import type { VisualFrame } from './visualRegression'
+import type { RuntimeRenderCamera } from './runtimeRepresentationValidation'
+import type { SafeRuntimeSnapshot } from './safeRuntimeValidation'
+import { sceneRuntimeSnapshot } from './sceneRuntimeSnapshot'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { screenScale } from '../viewport/screenScale'
 import { createSkyBinding, type SkyBinding } from '../viewport/skyBinding'
@@ -474,6 +479,8 @@ export type SceneRendererOptions = {
    * default; `off` groups the whole world as the studio did before the cells.
    */
   partition?: PartitionMode
+  /** Builds source representations for SAFE validation without replacing any authored draw. */
+  optimization?: 'auto' | 'off'
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for a file read for its animation alone — which may be an FBX. See `GltfSource`. */
@@ -622,6 +629,7 @@ const RAIL_FACING = new Vector3()
 /** Where the surface snap looks, and what turns a face's own normal into the world's. */
 const DOWNWARD = new Vector3(0, -1, 0)
 const SURFACE_NORMAL = new Matrix3()
+const VALIDATION_PICK_SAMPLES = 32
 
 /** A raycaster that sees what the camera does not — the layer `instancing.ts` hides meshes on. */
 function withEveryLayer(raycaster: Raycaster): Raycaster {
@@ -899,6 +907,10 @@ export class SceneRenderer {
   private readonly gizmoSpot = new Vector3()
   private readonly pointer = new Vector2()
   private readonly objects = new Map<string, Object3D>()
+  private readonly runtimeValidationPicks = new Map<
+    string,
+    readonly { sample: string; resolved: string | null }[]
+  >()
   /** A shadow walk stops here: what hangs under a node carries that node's flags, not its parent's. */
   private readonly belongsToAnotherNode = ownedByAnotherNode(id => this.objects.get(id))
   private readonly helpers = new Map<string, LightHelper>()
@@ -3201,6 +3213,125 @@ export class SceneRenderer {
       restore()
     }
     return canvas
+  }
+
+  /** Reads the real offscreen RGBA result used to compare authoring and compiled worlds. */
+  async captureRuntimeValidationFrame(cameraSpec: RuntimeRenderCamera): Promise<VisualFrame> {
+    const gl = this.viewport.gl
+    if (!gl) throw new Error('this scene has no viewport mounted for runtime validation')
+
+    this.regroupInstances()
+    const camera = validationCamera(cameraSpec)
+    const target = new WebGLRenderTarget(cameraSpec.width, cameraSpec.height)
+    const pixels = new Uint8Array(cameraSpec.width * cameraSpec.height * 4)
+    const restore = this.hideWorkshop(camera)
+    try {
+      this.viewport.drawScene({
+        scene: this.viewport.scene,
+        camera,
+        surface: 'offscreen',
+        paneIndex: 0,
+        cameraNodeId: cameraSpec.id,
+        target,
+        rect: null,
+        width: cameraSpec.width,
+        height: cameraSpec.height,
+      })
+      gl.readRenderTargetPixels(target, 0, 0, cameraSpec.width, cameraSpec.height, pixels)
+      this.observeRuntimeValidationPicks(cameraSpec.id, camera)
+      return { width: cameraSpec.width, height: cameraSpec.height, pixels }
+    } finally {
+      gl.setRenderTarget(null)
+      target.dispose()
+      restore()
+    }
+  }
+
+  runtimeValidationSnapshot(): SafeRuntimeSnapshot {
+    this.regroupInstances()
+    this.viewport.scene.updateMatrixWorld(true)
+    const logical = sceneRuntimeSnapshot({
+      nodes: this.documentOrder,
+      selectedIds: [],
+      world: this.world,
+      animation: this.timeline,
+    })
+    return {
+      ...logical,
+      picking: { logical: logical.picking, rendered: [...this.runtimeValidationPicks] },
+      shadows: {
+        logical: logical.shadows,
+        rendered: this.documentOrder.map(node => {
+          const object = this.objects.get(node.id)
+          return {
+            id: node.id,
+            cast: object?.castShadow ?? false,
+            receive: object?.receiveShadow ?? false,
+          }
+        }),
+      },
+      cameras: {
+        logical: logical.cameras,
+        rendered: this.documentOrder.flatMap(node => {
+          const object = this.objects.get(node.id)
+          return node.type === 'camera' && object instanceof Camera
+            ? [{ id: node.id, projection: object.projectionMatrix.toArray() }]
+            : []
+        }),
+      },
+      visibility: {
+        logical: logical.visibility,
+        rendered: this.documentOrder.map(node => ({
+          id: node.id,
+          visible: this.objects.get(node.id)?.visible ?? false,
+        })),
+      },
+      transforms: {
+        logical: logical.transforms,
+        rendered: this.documentOrder.map(node => ({
+          id: node.id,
+          matrix: this.objects.get(node.id)?.matrixWorld.toArray() ?? null,
+        })),
+      },
+    }
+  }
+
+  private observeRuntimeValidationPicks(id: string, camera: ViewportCamera): void {
+    const objects = [...this.objects].map(([nodeId, object]) => ({
+      id: nodeId,
+      object,
+      point: object.getWorldPosition(new Vector3()),
+    }))
+    const occupancy = new Map<string, number>()
+    for (const { point } of objects) {
+      const key = `${point.x}:${point.y}:${point.z}`
+      occupancy.set(key, (occupancy.get(key) ?? 0) + 1)
+    }
+    const unambiguous = objects.filter(
+      ({ point }) => occupancy.get(`${point.x}:${point.y}:${point.z}`) === 1,
+    )
+    const stride = Math.max(1, Math.floor(unambiguous.length / VALIDATION_PICK_SAMPLES))
+    const sampled = unambiguous
+      .filter((_entry, index) => index % stride === 0)
+      .slice(0, VALIDATION_PICK_SAMPLES)
+    const targets = [
+      ...[...this.objects.values()].filter(object => !this.instances.holdsSource(object)),
+      ...this.instances.pickable(),
+    ]
+    const raycaster = withEveryLayer(new Raycaster())
+    this.runtimeValidationPicks.set(
+      id,
+      sampled.flatMap(({ id: sample, point }) => {
+        const ndc = point.clone().project(camera)
+        if (Math.abs(ndc.x) > 1 || Math.abs(ndc.y) > 1 || Math.abs(ndc.z) > 1) return []
+        raycaster.setFromCamera(new Vector2(ndc.x, ndc.y), camera)
+        const hit = raycaster.intersectObjects(targets, true)[0]
+        const resolved = hit
+          ? (this.instances.nodeIdOf(hit) ?? nodeIdOf(hit.object, name => this.objects.has(name)))
+          : null
+        return [{ sample, resolved }]
+      }),
+    )
   }
 
   /**
@@ -6363,9 +6494,46 @@ const NO_RIGS: AidRigs = { bodies: new Map(), arms: new Map() }
 function groupsFor(
   options: SceneRendererOptions,
 ): (host: Object3D, ownMaterialOf: (mesh: Mesh) => Material | Material[]) => InstancedGroups {
+  if (options.optimization === 'off') return individualGroups
   if (!options.grouping && options.partition !== 'off') return createOptimizedGroups
   if (options.partition === 'grid') return createCellGroups
   return options.grouping === 'batched' ? createBatchedGroups : createInstancedGroups
+}
+
+function individualGroups(): InstancedGroups {
+  return {
+    rebuild: () => 0,
+    moved: () => false,
+    drawn: () => [],
+    pickable: () => [],
+    nodeIdOf: () => null,
+    hangSources: () => {},
+    dropSources: () => {},
+    refreshSources: () => {},
+    holdsSource: () => false,
+    dispose: () => {},
+  }
+}
+
+function validationCamera(spec: RuntimeRenderCamera): ViewportCamera {
+  const aspect = spec.width / spec.height
+  const size = spec.orthographicSize ?? 10
+  const camera =
+    spec.projection === 'orthographic'
+      ? new OrthographicCamera(
+          -(size * aspect) / 2,
+          (size * aspect) / 2,
+          size / 2,
+          -size / 2,
+          spec.near,
+          spec.far,
+        )
+      : new PerspectiveCamera(spec.fieldOfView ?? 50, aspect, spec.near, spec.far)
+  camera.position.set(spec.position.x, spec.position.y, spec.position.z)
+  camera.lookAt(spec.target.x, spec.target.y, spec.target.z)
+  camera.layers.mask = spec.cameraMask
+  camera.updateMatrixWorld(true)
+  return camera
 }
 
 /**

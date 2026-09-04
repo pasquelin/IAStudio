@@ -84,6 +84,7 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 |---|---|
 | `pnpm start` | electron-vite in watch mode, hot reload on main, preload and renderer |
 | `pnpm start:debug` | same, with the remote debugging port on 9222 — what drives the app from outside |
+| `pnpm world:validate` | with `pnpm start:debug` already running, compares real WebGL frames and runtime observations for benchmark scenes S1–S5; this is separate from `pnpm validate` |
 | `pnpm build` | typecheck, then build the three targets |
 | `pnpm dist` | build, then package and sign with electron-builder |
 | `pnpm typecheck` | `tsc --noEmit` across the three targets |

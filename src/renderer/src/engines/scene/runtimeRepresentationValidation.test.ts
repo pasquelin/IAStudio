@@ -14,7 +14,7 @@ import { meshNode } from './scene-fixtures'
 import type { SceneState } from './sceneState'
 import { createOptimizedGroups } from './optimizedGrouping'
 import { runtimeOptimizationOf, type RuntimeWorld } from './runtimeWorldCompiler'
-import { SAFE_FUNCTIONAL_CHECKS, type SafeRuntimeSnapshot } from './safeRuntimeValidation'
+import type { SafeRuntimeSnapshot } from './safeRuntimeValidation'
 import {
   validateRuntimeRepresentation,
   type RuntimeRenderCamera,
@@ -83,10 +83,11 @@ function representationOf(world: SceneState | RuntimeWorld, optimized: boolean) 
     runtimeOptimizationOf(world)?.artifacts,
   )
   host.updateMatrixWorld(true)
-  return { host, geometry, material, objects, groups }
+  return { host, geometry, material, objects, groups, world }
 }
 
 function snapshot(representation: Representation): SafeRuntimeSnapshot {
+  representation.host.updateMatrixWorld(true)
   const ray = new Raycaster()
   const picks = [...representation.objects].map(([id, mesh]) => {
     ray.set(new Vector3(mesh.position.x, 10, 0), new Vector3(0, -1, 0))
@@ -95,8 +96,33 @@ function snapshot(representation: Representation): SafeRuntimeSnapshot {
     const resolved = hit ? (representation.groups?.nodeIdOf(hit) ?? sourceIdOf(hit.object)) : null
     return { expected: id, resolved }
   })
-  return Object.fromEntries(
-    SAFE_FUNCTIONAL_CHECKS.map(check => [check, check === 'picking' ? picks : check]),
+  const nodes = representation.world.nodes
+  return {
+    picking: picks,
+    animation: representation.world.animation.tracks,
+    timeline: representation.world.animation,
+    scripts: componentsOf(nodes, 'Script'),
+    physics: componentsOf(nodes, 'RigidBody'),
+    shadows: [...representation.objects].map(([id, mesh]) => ({
+      id,
+      cast: mesh.castShadow,
+      receive: mesh.receiveShadow,
+    })),
+    cameras: nodes.flatMap(node => (node.type === 'camera' ? [node.camera] : [])),
+    visibility: [...representation.objects].map(([id, mesh]) => ({ id, visible: mesh.visible })),
+    postProcessing: representation.world.world.post,
+    transforms: [...representation.objects].map(([id, mesh]) => ({
+      id,
+      matrix: mesh.matrixWorld.toArray(),
+    })),
+    duplication: nodes.map(node => node.id),
+    undoRedo: nodes.map(node => ({ id: node.id, parentId: node.parentId })),
+  }
+}
+
+function componentsOf(nodes: SceneState['nodes'], type: string): unknown {
+  return nodes.flatMap(node =>
+    (node.components ?? []).flatMap(component => (component.type === type ? [component] : [])),
   )
 }
 
@@ -121,7 +147,7 @@ function driver(
 }
 
 describe('runtime representation validation driver', () => {
-  it('renders three full camera descriptors and observes a real InstancedMesh', async () => {
+  it('passes three full camera descriptors and observes a real InstancedMesh', async () => {
     const rendered: string[] = []
     const report = await validateRuntimeRepresentation(state(), {
       cameras: CAMERAS,
