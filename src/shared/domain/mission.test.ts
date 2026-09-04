@@ -7,6 +7,7 @@ import {
   missionCanComplete,
   resumeMission,
   resolveMissionWait,
+  recoverInterruptedMission,
   transitionMission,
   transitionMissionStep,
   waitMission,
@@ -178,6 +179,18 @@ describe('mission domain', () => {
     ).toMatchObject({
       waits: [],
       plan: { steps: [{ state: 'failed' }] },
+    })
+  })
+
+  it('pauses an interrupted action for verification without replaying it', () => {
+    const { mission, step, time } = runningMission()
+    const ready = transitionMissionStep(mission, step.id, 'ready', time.now())
+    const interrupted = transitionMissionStep(ready, step.id, 'running', time.now())
+
+    expect(recoverInterruptedMission(interrupted, time.now())).toMatchObject({
+      state: 'paused',
+      waits: [{ kind: 'recovery', stepId: step.id, reason: 'action_outcome_unknown' }],
+      plan: { steps: [{ id: step.id, state: 'waiting' }] },
     })
   })
 

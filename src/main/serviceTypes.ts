@@ -51,8 +51,12 @@ import type { Updates } from './updater'
 import type { AiManager } from './ai/manager'
 import type { AskUser } from './project/documentDialogs'
 import type { AutoRigHost } from './ai/autoRigHost'
+import type { MissionManager } from './mission/manager'
+import type { StudioEventBus } from './mission/eventBus'
 
 export type Services = {
+  missions: MissionManager
+  studioEvents: StudioEventBus
   settings: SettingsStore
   client: ClientProvider
   models: ModelRegistry
@@ -101,6 +105,7 @@ export type Services = {
   said: Said
   /** Settles the note of what is still running. Awaited at quit, beside the journal. */
   flushJobs: () => Promise<void>
+  flushMissions: () => Promise<void>
   documents: DocumentFiles
   assets: LocalBackend
   /**

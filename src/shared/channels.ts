@@ -188,6 +188,8 @@ export type Channels = {
   assistantNote: 'assistant:note'
   assistantSaid: 'assistant:said'
   assistantWindow: 'assistant:window'
+  missionsWatch: 'missions:watch'
+  missionsCreate: 'missions:create'
 
   dictationState: 'dictation:state'
   dictationStart: 'dictation:start'

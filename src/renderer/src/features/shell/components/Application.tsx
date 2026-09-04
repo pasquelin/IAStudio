@@ -5,6 +5,7 @@ import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useConnections } from '@/hooks/useConnections'
 import { useMainLogs } from '@/hooks/useMainLogs'
 import { useNativeMenu } from '@/hooks/useNativeMenu'
+import { useMissionProjection } from '@/hooks/useMissionProjection'
 import { useDictationShortcut } from '@/hooks/useDictationShortcut'
 import { useAccounts } from '@/stores/accounts'
 import { useAiModels } from '@/stores/aiModels'
@@ -34,6 +35,8 @@ import { StudioQueries } from './StudioQueries'
 export function Application() {
   useMainLogs()
   useNativeMenu()
+  const missionProjectId = useProject(state => state.project?.path)
+  useMissionProjection(missionProjectId)
 
   const connectSettings = useSettings(state => state.connect)
   const connectAccounts = useAccounts(state => state.connect)

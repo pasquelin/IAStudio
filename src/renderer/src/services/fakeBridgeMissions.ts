@@ -1,0 +1,12 @@
+import type { StudioBridge } from '@shared/ipc'
+
+export function fakeBridgeMissions(
+  overrides: Partial<StudioBridge['missions']> | undefined,
+): StudioBridge['missions'] {
+  return {
+    watch: () => Promise.resolve([]),
+    create: () => Promise.reject(new Error('fake mission creation is not configured')),
+    onChanged: () => () => {},
+    ...overrides,
+  }
+}

@@ -24,6 +24,7 @@ export type FakeWindow = {
     id: number
     send: (channel: string, payload: unknown) => void
     isDestroyed: () => boolean
+    once: (event: string, listener: () => void) => void
   }
   isFocusable: () => boolean
   isDestroyed: () => boolean
@@ -37,6 +38,7 @@ const windows: FakeWindow[] = []
 let focused: FakeWindow | null = null
 const appListeners = new Map<string, Listener[]>()
 const closedListeners = new Map<FakeWindow, (() => void)[]>()
+const contentsDestroyedListeners = new Map<FakeWindow, (() => void)[]>()
 /** Still listed by `getAllWindows`, but gone — what an `isDestroyed` guard is written for. */
 const destroyed = new Set<FakeWindow>()
 /** Off the list, and its web contents with it: reading their id throws, as it does for real. */
@@ -123,6 +125,13 @@ export function openWindow({ focusable = true } = {}): FakeWindow {
       },
       send: (channel, payload) => void sent.push({ channel, payload }),
       isDestroyed: () => destroyed.has(window) || closed.has(window),
+      once: (event, listener) => {
+        if (event !== 'destroyed') return
+        contentsDestroyedListeners.set(window, [
+          ...(contentsDestroyedListeners.get(window) ?? []),
+          listener,
+        ])
+      },
     },
     isFocusable: () => focusable,
     isDestroyed: () => destroyed.has(window),
@@ -149,6 +158,8 @@ export function closeWindow(window: FakeWindow): void {
   const at = windows.indexOf(window)
   if (at !== -1) windows.splice(at, 1)
   if (focused === window) focused = null
+  for (const listener of contentsDestroyedListeners.get(window) ?? []) listener()
+  contentsDestroyedListeners.delete(window)
   closed.add(window)
   for (const listener of closedListeners.get(window) ?? []) listener()
   closedListeners.delete(window)
@@ -157,6 +168,8 @@ export function closeWindow(window: FakeWindow): void {
 /** Gone but still listed — the state a `isDestroyed` guard exists for. */
 export function destroyWindow(window: FakeWindow): void {
   destroyed.add(window)
+  for (const listener of contentsDestroyedListeners.get(window) ?? []) listener()
+  contentsDestroyedListeners.delete(window)
 }
 
 /** Private: a case drives the app through `openWindow`, `focusWindow` and `closeWindow`. */
@@ -177,6 +190,7 @@ export function resetHandlers(): void {
   registered.clear()
   windows.length = 0
   closedListeners.clear()
+  contentsDestroyedListeners.clear()
   appListeners.clear()
   destroyed.clear()
   closed.clear()

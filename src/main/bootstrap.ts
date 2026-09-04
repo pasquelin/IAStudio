@@ -65,6 +65,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
       services.disposeAiEngine(),
       services.journal.flush(),
       services.flushJobs(),
+      services.flushMissions(),
       services.project.settled(),
       services.mcp.stop(),
       // Awaited among them: what is still queued is an append to a file the next launch reads

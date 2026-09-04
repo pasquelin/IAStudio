@@ -163,27 +163,12 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           renvoie des données typées
 ```
 
-**83 canaux dans `CHANNELS`, plus 18 événements dans `EVENTS`** — relevé le 9 août 2026 au soir, et
-le chiffre bouge à chaque chantier : **il a bougé deux fois dans la journée où cette phrase a été
-écrite**. Le compter (`CHANNELS`, deux espaces d’indentation) coûte moins que de le croire.
-Vingt et un préfixes, dont les plus chargés :
+Les registres `CHANNELS` et `EVENTS` font foi ; aucun compte recopié dans la documentation n’est
+stable. `missions:watch` et `missions:create` montent vers le main. `evt:mission-changed` redescend
+uniquement vers la fenêtre abonnée, avec une projection filtrée sur son projet.
 
-| Famille | Nb | Ce qu’elle porte |
-|---|---|---|
-| `provider:*` | 13 | recherche de modèles, description, génération, contrôle des jobs |
-| `assets:*` / `cloud:*` | 9 + 6 | catalogue du projet, ingestion, et la bibliothèque du compte |
-| `dictation:*` | 8 | permissions du micro, modèle, session de reconnaissance |
-| `settings:*` / `accounts:*` | 6 + 5 | lecture, écriture, identifiants, état d’authentification |
-| `document:*` | 6 | ouvrir, écrire, lister les documents du projet |
-| `styles:*` | 4 | les réglages de matière, enregistrés et rejoués |
-| `favorites:*`, `project:*`, `media:*`, `window:*` | 3 chacun | — |
-| `dialog:*`, `fonts:*`, `update:*` | 2 chacun | — |
-| `activity:*`, `diagnostics:*`, `scene:*`, `material:*`, `skybox:*` | 1 chacun | — |
-
-**`EVENTS` est l’autre sens** — le main poussant vers le renderer, dix-huit entrées : progression
-des jobs et des imports, lignes de journal, changements de projet et de réglages, état de fenêtre,
-aperçus de dictée, et le menu natif qui demande à l’UI d’ouvrir un outil ou une section de réglages,
-d’exécuter une commande, ou de déposer un nœud dans la scène.
+**`EVENTS` est l’autre sens** — le main pousse notamment la progression, les changements de projet
+et de réglages, les missions, l’état des fenêtres, la dictée et les commandes du menu natif.
 
 La séparation n’est pas cosmétique : **chaque `on…` du pont s’abonne à exactement une entrée de
 `EVENTS`**, et chaque méthode d’appel à exactement une de `CHANNELS`.
@@ -236,6 +221,7 @@ src/main/
 │   └── protocol.ts          le protocole ia-studio://
 ├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
 ├── assistant/               la pensée de l'assistant, derrière un port, et ce qu'on en relit
+├── mission/                 autorité, store, journal versionné, événements et handlers des missions
 ├── mcp/                     le même catalogue d'actions, offert à un client extérieur
 ├── settings/                le store chiffré, son adaptateur, ses handlers
 ├── favorites/               les recettes épinglées, gardées hors des projets
@@ -259,6 +245,15 @@ src/main/
 > dossier de l'utilisateur, ce qui n'appartient qu'à lui. **Le nom du fichier de transit est un
 > paramètre et non une constante** : les trois stores sérialisent leurs écritures, mais plusieurs
 > fenêtres écrivent dans le même dossier de projet.
+
+### Les missions survivent au processus
+
+Le main est l’unique autorité des missions. Le Store sérialise leurs révisions et les projette aux
+fenêtres ; le Manager publie les événements métier. Le journal append-only version 1 vit dans
+`<userData>/missions.ndjson` et restaure la dernière révision valide de chaque identifiant. Une
+ligne invalide est ignorée, une version future est refusée. Une action retrouvée `running` est mise
+en pause avec `action_outcome_unknown` et n’est jamais rejouée automatiquement. L’arrêt attend le
+flush du Store, puis celui du journal.
 
 ### Le JobManager est le seul à poller
 

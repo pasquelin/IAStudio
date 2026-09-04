@@ -27,6 +27,7 @@ export type ResourceRevision = {
 
 export type MissionWaiting =
   | { kind: 'user'; stepId: MissionStepId }
+  | { kind: 'recovery'; stepId: MissionStepId; reason: 'action_outcome_unknown' }
   | { kind: 'job'; stepId: MissionStepId; jobId: string }
   | { kind: 'dependency'; stepId: MissionStepId; missionId: MissionId }
 
@@ -70,6 +71,7 @@ export type MissionPlan = {
 
 export type Mission = {
   readonly id: MissionId
+  readonly revision: number
   readonly parentId?: MissionId
   readonly childIds: readonly MissionId[]
   readonly goal: string
@@ -129,6 +131,7 @@ export function createMission(goal: string, clock: MissionClock, parentId?: Miss
   const at = clock.now()
   return {
     id: `mission_${clock.newId()}`,
+    revision: 0,
     ...(parentId ? { parentId } : {}),
     childIds: [],
     goal,
@@ -288,7 +291,7 @@ function missionStepsAtEnd(
 }
 
 function waitingStateOf(waiting: MissionWaiting): MissionState {
-  if (waiting.kind === 'user') return 'waiting_user'
+  if (waiting.kind === 'user' || waiting.kind === 'recovery') return 'waiting_user'
   if (waiting.kind === 'job') return 'waiting_job'
   return 'waiting_dependency'
 }
@@ -301,6 +304,7 @@ function validateMissionWait(mission: Mission, waiting: MissionWaiting): void {
   }
   if (
     (waiting.kind === 'user' && step.kind !== 'user_input') ||
+    (waiting.kind === 'recovery' && step.kind !== 'action') ||
     (waiting.kind === 'job' && step.kind !== 'job') ||
     (waiting.kind === 'dependency' && step.kind !== 'sub_mission')
   ) {
@@ -318,6 +322,32 @@ function validateMissionWait(mission: Mission, waiting: MissionWaiting): void {
   }
   if (waiting.kind === 'dependency' && !mission.childIds.includes(waiting.missionId)) {
     throw new Error(`mission does not own child ${waiting.missionId}`)
+  }
+}
+
+export function recoverInterruptedMission(mission: Mission, now: string): Mission {
+  const interrupted = mission.plan.steps.filter(
+    step => step.kind === 'action' && step.state === 'running',
+  )
+  if (interrupted.length === 0) return mission
+  const waits = [
+    ...mission.waits,
+    ...interrupted.map<MissionWaiting>(step => ({
+      kind: 'recovery',
+      stepId: step.id,
+      reason: 'action_outcome_unknown',
+    })),
+  ]
+  return {
+    ...mission,
+    state: 'paused',
+    updatedAt: now,
+    plan: {
+      steps: mission.plan.steps.map(step =>
+        interrupted.includes(step) ? missionStepInState(step, 'waiting', now) : step,
+      ),
+    },
+    waits,
   }
 }
 

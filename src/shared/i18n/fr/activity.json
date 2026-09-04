@@ -56,6 +56,7 @@
     "jobCancelled": "Génération « {{name}} » annulée",
     "jobFailed": "La génération « {{name}} » a échoué",
     "jobWaitsForProject": "« {{label}} » est terminée. Son résultat vous attend dans le projet {{project}} : rouvrez-le dans les sept jours pour le récupérer.",
+    "missionStateChanged": "L’état de la mission a changé.",
     "levels": {
       "info": "Information",
       "warn": "Avertissement",
