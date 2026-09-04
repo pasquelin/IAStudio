@@ -11,8 +11,7 @@ import {
   NumberKeyframeTrack,
   Object3D,
 } from 'three'
-import type { GeometryDescriptor } from '@shared/domain/scene'
-import { embeddedClip } from '@shared/domain/scene'
+import { embeddedClip, type GeometryDescriptor } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'

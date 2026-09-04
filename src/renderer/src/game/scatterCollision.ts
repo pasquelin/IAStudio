@@ -3,6 +3,7 @@ import { enabledScatters, type SceneWorld } from '@shared/domain/scene'
 import { SCATTER_COLLISION_CAP } from '@shared/domain/scatter'
 import type { ScatterGround } from '@shared/domain/scatterGenerate'
 import { scatterPosesOf } from '@shared/domain/scatterGenerate'
+import { layerRegion } from '@shared/domain/scatterFollow'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 
 export type ScatterCollision = {
@@ -15,21 +16,16 @@ export function scatterCollisionOf(world: SceneWorld, ground: ScatterGround): Sc
   const refused: { layerId: string; count: number }[] = []
   for (const layer of enabledScatters(world.layers)) {
     if (!layer.collision) continue
-    const poses = scatterPosesOf(
-      layer,
-      {
-        minX: layer.origin.x,
-        minZ: layer.origin.z,
-        maxX: layer.origin.x + layer.size.x,
-        maxZ: layer.origin.z + layer.size.z,
-      },
-      ground,
-    )
-    if (bodies.length + poses.length > SCATTER_COLLISION_CAP) {
+    const poses = scatterPosesOf(layer, layerRegion(layer), ground)
+    const room = SCATTER_COLLISION_CAP - bodies.length
+    if (room <= 0) {
       refused.push({ layerId: layer.id, count: poses.length })
       continue
     }
-    bodies.push(...poses.map((pose, index) => bodyOf(layer.id, index, pose)))
+    const taken = poses.slice(0, room)
+    const overflow = poses.length - taken.length
+    bodies.push(...taken.map((pose, index) => bodyOf(layer.id, index, pose)))
+    if (overflow > 0) refused.push({ layerId: layer.id, count: overflow })
   }
   return { bodies, refused }
 }

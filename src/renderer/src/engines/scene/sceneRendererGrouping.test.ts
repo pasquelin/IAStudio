@@ -53,7 +53,7 @@ describe('SceneRenderer and the grouping of repeated shapes', () => {
     // born of a promotion mid-gesture wore the document's material through a whole solid view.
     expect(body('writeMovedSlots')).toContain('instances.moved')
     expect(body('writeMovedSlots')).toContain('builtAnew')
-    expect(source).toContain('this.writeMovedSlots(this.selectedIds)')
+    expect(source).toContain('this.writeMovedSlots(this.descendantsOf(this.selectedIds))')
   })
 
   it('never lets a changed node mark neither the grouping nor its own slot', () => {

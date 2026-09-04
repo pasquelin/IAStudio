@@ -27,19 +27,8 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..')
  * It matched `madge --circular` exactly on the day it was written. That is an observation about
  * this tree, not a property of this detector: the two disagree the moment one sees an edge the
  * other does not.
- *
- * **The three below are TYPE cycles born of the size split, measured 2026-09-04.** Each is a
- * module and the half just extracted from it re-importing a type the parent still declares — the
- * trap `.agents/rules/nommage.md` names. They are debt WRITTEN rather than a guard gone quiet:
- * `engines/scene/` is being worked on elsewhere, so the shared type moves to a sibling module in a
- * later batch. The four others of the same day (LinkField, canvasState, relief, usePages) were
- * broken rather than listed.
  */
-const KNOWN: readonly string[] = [
-  'renderer/src/engines/scene/runtimeWorldArtifacts.ts -> renderer/src/engines/scene/runtimeWorldCompiler.ts',
-  'renderer/src/engines/scene/worldAnalyzer.ts -> renderer/src/engines/scene/worldAnalyzerCollection.ts',
-  'renderer/src/engines/scene/worldAnalyzer.ts -> renderer/src/engines/scene/worldAnalyzerSupport.ts',
-]
+const KNOWN: readonly string[] = []
 
 const sources = (from: string): string[] => {
   const found: string[] = []

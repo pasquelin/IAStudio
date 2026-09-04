@@ -18,7 +18,7 @@ import type {
   OptimizationPlan,
   OptimizationWarning,
   SpatialCellPlan,
-} from './worldAnalyzer'
+} from './worldAnalyzerTypes'
 
 export function spatialCellsOf(
   nodes: readonly SceneNode[],

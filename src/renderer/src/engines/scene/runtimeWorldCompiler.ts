@@ -15,6 +15,8 @@ import { byCodeUnit } from '@shared/text'
 import type { RuntimeRenderArtifact } from './grouping'
 import type { SceneNode, SceneState } from './sceneState'
 import type { RuntimeWorldPatch } from './runtimeWorldPatch'
+import type { RuntimeWorld } from './runtimeWorldTypes'
+export type { RuntimeOptimization, RuntimeWorld } from './runtimeWorldTypes'
 export {
   runtimeWorldPatch,
   runtimeWorldPatchIsEmpty,
@@ -33,14 +35,6 @@ export type RuntimeCompilationReport = {
   readonly compiledArtifacts: number
   readonly reusedArtifacts: number
   readonly analyzedArtifactNodes: number
-}
-
-export type RuntimeOptimization = {
-  readonly artifacts: readonly RuntimeRenderArtifact[]
-}
-
-export type RuntimeWorld = SceneState & {
-  readonly runtimeOptimization: RuntimeOptimization
 }
 
 export type RuntimeWorldCompiler = {

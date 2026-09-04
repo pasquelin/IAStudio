@@ -171,4 +171,73 @@ describe('createScatterSurface', () => {
     expect(surface.objectsInCell('trees', cellKey(1, 0))[0]?.visible).toBe(false)
     surface.dispose()
   })
+
+  it('disposes instanced batches when a cell is rebuilt or the surface is dropped', async () => {
+    const disposed: InstancedMesh[] = []
+    const original = InstancedMesh.prototype.dispose
+    InstancedMesh.prototype.dispose = function disposeMesh(this: InstancedMesh) {
+      disposed.push(this)
+      original.call(this)
+    }
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    const world = {
+      ...DEFAULT_WORLD,
+      layers: [
+        scatterLayer({
+          id: 'trees',
+          assets: [{ assetId: 'pine', weight: 1 }],
+          origin: { x: 0, z: 0 },
+          size: { x: 10, z: 10 },
+          rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.5, spacing: 2 },
+        }),
+      ],
+    }
+    try {
+      await surface.sync(world)
+      expect(disposed).toEqual([])
+      await surface.sync({
+        ...world,
+        layers: world.layers.map(layer =>
+          layer.kind === 'scatter' ? { ...layer, seed: layer.seed + 1 } : layer,
+        ),
+      })
+      expect(disposed.length).toBeGreaterThan(0)
+      const afterRebuild = disposed.length
+      surface.dispose()
+      expect(disposed.length).toBeGreaterThan(afterRebuild)
+    } finally {
+      InstancedMesh.prototype.dispose = original
+    }
+  })
+
+  it('rebuilds poses when a heightmap arrives after the first sync', async () => {
+    const scatter = scatterLayer({
+      id: 'trees',
+      assets: [{ assetId: 'pine', weight: 1 }],
+      origin: { x: 0, z: 0 },
+      size: { x: 32, z: 32 },
+      rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.05, spacing: 8 },
+    })
+    const terrain = reliefLayer({ assetId: 'height' }, { id: 'ground' })
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    const world = { ...DEFAULT_WORLD, layers: [terrain, scatter] }
+    await surface.sync(world)
+    const before = surface.objectsInCell('trees', cellKey(0, 0))[0]
+    const samples = { width: 5, height: 5, values: new Float32Array(25).fill(8) }
+    await surface.sync(world, new Map([['height', samples]]))
+    expect(surface.objectsInCell('trees', cellKey(0, 0))[0]).not.toBe(before)
+    surface.dispose()
+  })
 })

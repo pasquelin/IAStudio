@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { AssetDropTarget } from '@/components/AssetDropTarget'
 import { NumberField } from '@/components/NumberField'
 import { PropertyLine } from '@/components/PropertyLine'
+import { Row } from '@/components/Row'
 import { PropertySection } from '@/components/PropertySection'
 import { SelectField } from '@/components/SelectField'
 import { SliderField } from '@/components/SliderField'
@@ -108,40 +109,45 @@ export function WorldToolsScatter({
         />
       </div>
       <PropertyLine label={t('world.assets')} root="div">
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col">
           {scatter.assets.map((entry, index) => (
-            <NumberField
-              key={`${entry.assetId}:${index}`}
-              label={entry.assetId}
-              value={entry.weight}
-              min={0}
-              max={100}
-              step={0.1}
-              layout="inline"
-              onChange={weight =>
-                run(
-                  documentId,
-                  setScatterAssets(
-                    scatter.id,
-                    scatter.assets.map((asset, at) =>
-                      at === index ? { ...asset, weight } : asset,
-                    ),
-                  ),
-                )
-              }
+            <Row
+              key={entry.assetId}
+              title={entry.assetId}
               actions={
-                <ToolButton
-                  icon={mdiClose}
-                  label={t('world.removeAsset')}
-                  tooltip={TIP_LEFT}
-                  onClick={() =>
+                <NumberField
+                  label={entry.assetId}
+                  value={entry.weight}
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  layout="inline"
+                  onChange={weight =>
                     run(
                       documentId,
                       setScatterAssets(
                         scatter.id,
-                        scatter.assets.filter((_, at) => at !== index),
+                        scatter.assets.map((asset, at) =>
+                          at === index ? { ...asset, weight } : asset,
+                        ),
                       ),
                     )
+                  }
+                  actions={
+                    <ToolButton
+                      icon={mdiClose}
+                      label={t('world.removeAsset')}
+                      tooltip={TIP_LEFT}
+                      onClick={() =>
+                        run(
+                          documentId,
+                          setScatterAssets(
+                            scatter.id,
+                            scatter.assets.filter(asset => asset.assetId !== entry.assetId),
+                          ),
+                        )
+                      }
+                    />
                   }
                 />
               }
@@ -159,7 +165,7 @@ export function WorldToolsScatter({
                 ]),
               )
             }
-            className="text-muted min-w-0 rounded text-xs"
+            className="text-muted text-tiny min-w-0 rounded"
           >
             {t('world.dropAsset')}
           </AssetDropTarget>
@@ -268,7 +274,7 @@ export function WorldToolsScatter({
         scId="world.collision"
       />
       {scatter.collision && collisionEstimate > SCATTER_COLLISION_CAP ? (
-        <p role="alert" className="text-warning m-0 text-xs">
+        <p role="alert" className="text-warning text-tiny m-0">
           {t('world.collisionCapWarning', { cap: SCATTER_COLLISION_CAP })}
         </p>
       ) : null}

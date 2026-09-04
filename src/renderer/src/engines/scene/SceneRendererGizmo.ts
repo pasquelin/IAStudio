@@ -108,7 +108,7 @@ export abstract class SceneRendererGizmo extends SceneRendererHierarchy {
     // grouping left it for the whole gesture. `TransformControls` has already written the world
     // matrices this reads. The moved slots alone, never a regrouping: that costs 47.5 ms on
     // 40 000 nodes, which per pointer move is three dropped frames.
-    this.writeMovedSlots(this.selectedIds)
+    this.writeMovedSlots(this.descendantsOf(this.selectedIds))
     this.previewRail()
     this.redraw()
   }
