@@ -447,8 +447,8 @@ the files that did not enter. In a mixed batch, accepted files enter and the res
 together.
 
 > An `.obj` enters with its geometry. Its optional `.mtl` and referenced textures are not gathered
-> with it yet. A `.gltf` model that is not an IA Studio document, `.dae` or `.usd` that references neighbouring files is not
-> imported yet for the same reason.
+> with it yet. A `.gltf` model that is not an IA Studio document, or a `.dae` or `.usd` model that
+> references neighbouring files, is not imported yet for the same reason.
 
 ### The file is not copied — on import
 

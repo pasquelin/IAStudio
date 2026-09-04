@@ -1,14 +1,20 @@
 import { useState, type DragEventHandler } from 'react'
+import type { AssetType } from '@shared/domain/asset'
 import { carriesAsset } from '@/helpers/assetDrag'
 import { cn } from '@/helpers/cn'
-import type { DropTone } from '@/helpers/drag'
+import { copiesDropTone, warnsDropTone, type DropTone } from '@/helpers/drag'
 import { carriesScene } from '@/helpers/sceneDrag'
 import {
   carriesExternalFiles,
   externalFileTargetTone,
   importExternalFilesInto,
 } from '@/services/externalFiles'
-import { placeTimelineAsset } from '@/features/video/components/TimelineCanvas/timelineDrop'
+import {
+  placeTimelineAsset,
+  timelineTakesType,
+} from '@/features/video/components/TimelineCanvas/timelineDrop'
+
+const TIMELINE_ASSET_TYPES = ['video', 'audio', 'image'] satisfies readonly AssetType[]
 
 type TimelineDropContext = Parameters<typeof placeTimelineAsset>[0]
 type TimelineDropHandlers = {
@@ -25,7 +31,7 @@ export function useExternalTimelineDrop(
   return {
     className: cn(
       tone === 'accepted' && 'outline-accent outline-2 -outline-offset-2',
-      tone === 'refused' && 'outline-danger outline-2 -outline-offset-2',
+      warnsDropTone(tone) && 'outline-danger outline-2 -outline-offset-2',
     ),
     handlers: {
       onDragOver: event => {
@@ -34,20 +40,28 @@ export function useExternalTimelineDrop(
           event.preventDefault()
           return
         }
-        const externalTone = externalFileTargetTone(event, ['video', 'audio', 'image'])
+        const point = context.pointAt(event)
+        const accepted = TIMELINE_ASSET_TYPES.filter(type =>
+          timelineTakesType(context, type, point),
+        )
+        const externalTone = externalFileTargetTone(event, accepted)
         if (!externalTone) return
         setTone(externalTone)
         event.preventDefault()
-        event.dataTransfer.dropEffect = externalTone === 'accepted' ? 'copy' : 'none'
+        event.dataTransfer.dropEffect = copiesDropTone(externalTone) ? 'copy' : 'none'
       },
       onDragLeave: () => setTone(null),
       onDrop: event => {
         setTone(null)
         if (!carriesExternalFiles(event)) return fallback(event)
+        const point = context.pointAt(event)
+        const accepted = TIMELINE_ASSET_TYPES.filter(type =>
+          timelineTakesType(context, type, point),
+        )
+        if (externalFileTargetTone(event, accepted) === 'refused') return
         event.preventDefault()
         event.stopPropagation()
-        const point = context.pointAt(event)
-        void importExternalFilesInto(event.dataTransfer.files, ['video', 'audio', 'image'], asset =>
+        void importExternalFilesInto(event.dataTransfer.files, accepted, asset =>
           placeTimelineAsset(context, asset, point),
         )
       },

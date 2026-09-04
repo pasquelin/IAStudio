@@ -15,11 +15,14 @@ import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { runTask } from '@/stores/tasks'
 import type { DragLike, DropTone } from '@/helpers/drag'
+
+type ExternalAssetReceiver = (asset: Asset) => boolean | void
 
 type WaitingExternalFiles = {
   offer: ExternalFileOffer
-  onImported?: (asset: Asset) => void
+  onImported?: ExternalAssetReceiver
 }
 
 const waiting: WaitingExternalFiles[] = []
@@ -71,7 +74,7 @@ async function chooseProject(): Promise<boolean> {
 
 async function importRequest(
   request: ExternalFileRequest,
-  onImported?: (asset: Asset) => void,
+  onImported?: ExternalAssetReceiver,
 ): Promise<void> {
   const bridge = getBridge()
   if (!bridge) return
@@ -81,14 +84,20 @@ async function importRequest(
     return
   }
 
-  await handImported(await bridge.media.ingestPaths(request.id, request.folder ?? ''), onImported)
+  const imported = await runTask(i18next.t('activity.importingFiles'), id =>
+    bridge.media.ingestPaths(request.id, request.folder ?? '', id),
+  )
+  if (imported) await handImported(imported, onImported)
 }
 
 async function handImported(
   imported: ExternalFileImport,
-  onImported?: (asset: Asset) => void,
+  onImported?: ExternalAssetReceiver,
 ): Promise<void> {
   reportRefusedExternalFiles({ request: null, refused: imported.refused })
+  for (const name of imported.failed) {
+    reportNotice('assets.copy', i18next.t('activity.importFailed', { name }))
+  }
   if (imported.montages.length > 0) {
     const { openImportedOtioz } = await import('@/features/shell/otioImport')
     for (const montage of imported.montages) await openImportedOtioz(montage)
@@ -101,11 +110,17 @@ async function handImported(
     for (const document of imported.documents) openDocument(document)
   }
   if (onImported) {
-    for (const asset of imported.assets) onImported(asset)
+    const unhandled = imported.assets.filter(asset => onImported(asset) === false)
+    if (unhandled.length === 0) return
+    await openExternalAssets(unhandled)
     return
   }
+  await openExternalAssets(imported.assets)
+}
+
+async function openExternalAssets(assets: readonly Asset[]): Promise<void> {
   const { openAsset } = await import('@/helpers/openAsset')
-  for (const asset of imported.assets) {
+  for (const asset of assets) {
     if (sourceNatureOf(asset.path ?? asset.name).openable) await openAsset(asset)
   }
 }
@@ -140,7 +155,7 @@ async function drain(): Promise<void> {
 
 export function queueExternalFiles(
   offers: readonly ExternalFileOffer[],
-  onImported?: (asset: Asset) => void,
+  onImported?: ExternalAssetReceiver,
 ): void {
   waiting.push(...offers.map(offer => ({ offer, ...(onImported ? { onImported } : {}) })))
   void drain()
@@ -166,36 +181,24 @@ export async function offerExternalFiles(
 
 export async function importExternalFiles(
   files: readonly File[] | FileList,
-  onImported: (asset: Asset) => void,
+  onImported: ExternalAssetReceiver,
 ): Promise<void> {
   const offer = await offerExternalFiles(files)
   if (!offer) return
-  queueExternalFiles(
-    [externalFileOfferInto(offer, '', useProject.getState().project?.path ?? null)],
-    onImported,
-  )
+  queueExternalFiles([externalFileOfferForCurrentProject(offer)], onImported)
 }
 
 export async function importExternalFilesInto(
   files: readonly File[] | FileList,
   accepts: readonly AssetType[],
-  onImported: (asset: Asset) => void,
+  onImported: ExternalAssetReceiver,
 ): Promise<void> {
-  const compatible = [...files].filter(file => {
-    const type = importableAssetTypeOf(file.name)
-    return type !== null && accepts.includes(type)
+  const offer = await offerExternalFiles(files)
+  if (!offer) return
+  queueExternalFiles([externalFileOfferForCurrentProject(offer)], asset => {
+    if (!accepts.includes(asset.type)) return false
+    return onImported(asset)
   })
-  const remaining = [...files].filter(file => !compatible.includes(file))
-
-  if (compatible.length > 0) await importExternalFiles(compatible, onImported)
-  if (remaining.length > 0) {
-    const offer = await offerExternalFiles(remaining)
-    if (offer) {
-      queueExternalFiles([
-        externalFileOfferInto(offer, '', useProject.getState().project?.path ?? null),
-      ])
-    }
-  }
 }
 
 export function carriesExternalFiles(event: DragLike): boolean {
@@ -206,7 +209,7 @@ export function externalFileDropTone(event: DragLike): DropTone | null {
   if (!carriesExternalFiles(event)) return null
   const names = externalFileNames(event)
   if (names.length === 0) return 'neutral'
-  return names.every(isImportableFile) ? 'accepted' : 'refused'
+  return dropToneOf(names.map(isImportableFile))
 }
 
 export function externalFileTargetTone(
@@ -216,12 +219,17 @@ export function externalFileTargetTone(
   if (!carriesExternalFiles(event)) return null
   const names = externalFileNames(event)
   if (names.length === 0) return 'neutral'
-  return names.every(name => {
-    const type = importableAssetTypeOf(name)
-    return type !== null && accepts.includes(type)
-  })
-    ? 'accepted'
-    : 'refused'
+  return dropToneOf(
+    names.map(name => {
+      const type = importableAssetTypeOf(name)
+      return type !== null && accepts.includes(type)
+    }),
+  )
+}
+
+function dropToneOf(accepted: readonly boolean[]): DropTone {
+  if (accepted.every(Boolean)) return 'accepted'
+  return accepted.some(Boolean) ? 'partial' : 'refused'
 }
 
 export function externalFileNames(event: DragLike): string[] {
@@ -244,6 +252,11 @@ export function externalFileOfferInto(
     ...offer,
     request: offer.request ? { ...offer.request, folder, ...(project ? { project } : {}) } : null,
   }
+}
+
+function externalFileOfferForCurrentProject(offer: ExternalFileOffer): ExternalFileOffer {
+  const project = useProject.getState().project
+  return project ? externalFileOfferInto(offer, '', project.path) : offer
 }
 
 function reportRefusedExternalFiles(offer: ExternalFileOffer): void {

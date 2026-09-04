@@ -4,6 +4,7 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 import type { ExternalFileImport } from '@shared/domain/externalFile'
 import type { AuthState } from '@shared/domain/settings'
 import type { MediaCapabilities } from '@shared/domain/media'
+import type { TaskWatch } from '@shared/domain/taskProgress'
 import type { PathKind } from '@shared/domain/settingsRegistry'
 import type { Language } from '@shared/i18n'
 import type { AssistantBrain } from './assistant/brainPort'
@@ -143,7 +144,11 @@ export type Services = {
   link: (source: string, type: AssetType) => Promise<Asset>
   /** The same for a file the project already holds, `null` when nothing here opens it. */
   adopt: (relative: string) => Promise<Asset | null>
-  importPaths: (paths: readonly string[], folder: string) => Promise<ExternalFileImport>
+  importPaths: (
+    paths: readonly string[],
+    folder: string,
+    watch: TaskWatch,
+  ) => Promise<ExternalFileImport>
   claimExternalFiles: (id: string) => readonly string[]
   capabilities: () => Promise<MediaCapabilities>
   /** The language in force. Injected where it is needed, so no module reads the source itself. */

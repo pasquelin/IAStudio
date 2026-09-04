@@ -1,4 +1,5 @@
 import { cn } from '@/helpers/cn'
+import { copiesDropTone, warnsDropTone } from '@/helpers/drag'
 import { isTyping } from '@/helpers/typing'
 import { rowDrag } from './rowDrag'
 import { RowChevron } from './RowChevron'
@@ -50,7 +51,7 @@ function treeRowClass<T extends TreeNode>(
     rowSkin(picked, { surface: 'row' }),
     state.over?.id === row.node.id &&
       state.over.target.zone === 'into' &&
-      (state.over.tone === 'refused'
+      (warnsDropTone(state.over.tone)
         ? 'outline-danger outline -outline-offset-1'
         : state.over.tone === 'neutral'
           ? undefined
@@ -100,7 +101,7 @@ export function TreeViewRow<T extends TreeNode>({ state, virtual }: TreeVirtualR
             if (!state.foreign.accepts(row.node)) return
             event.preventDefault()
             const tone = state.foreign.tone?.(event) ?? 'accepted'
-            event.dataTransfer.dropEffect = tone === 'accepted' ? 'copy' : 'none'
+            event.dataTransfer.dropEffect = copiesDropTone(tone) ? 'copy' : 'none'
             state.setOver({ id: row.node.id, target: { zone: 'into' }, tone })
             return
           }

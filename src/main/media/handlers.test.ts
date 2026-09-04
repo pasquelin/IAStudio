@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
+import type { ExternalFileImport } from '@shared/domain/externalFile'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/testHarness'
+import { createRunningTasks } from '@main/task/runningTasks'
 import { registerMediaHandlers, type MediaHandlerDeps } from './handlers'
 import { linkedAsset } from './link'
 
@@ -25,8 +27,9 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
     adopt: vi.fn(async () => null),
     pickMedia: vi.fn(async () => ['/Volumes/Rushes/A001.mov']),
     capabilities: async () => ({ ffmpeg: true }),
-    importPaths: async () => ({ assets: [], documents: [], montages: [], refused: [] }),
+    importPaths: async () => ({ assets: [], documents: [], montages: [], refused: [], failed: [] }),
     claimExternalFiles: () => [],
+    running: createRunningTasks(),
     ...overrides,
   }
 }
@@ -104,18 +107,45 @@ describe('media handlers', () => {
       documents: [],
       montages: [],
       refused: [],
+      failed: [],
     }))
     registerMediaHandlers(deps({ importPaths, claimExternalFiles: () => ['/outside/model.glb'] }))
 
-    const result = await invoke(CHANNELS.mediaIngestPaths, 'request-1', 'Models')
+    const result = await invoke(CHANNELS.mediaIngestPaths, 'request-1', 'Models', 'task-1')
 
-    expect(importPaths).toHaveBeenCalledWith(['/outside/model.glb'], 'Models')
+    expect(importPaths).toHaveBeenCalledWith(
+      ['/outside/model.glb'],
+      'Models',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
     expect(result).toEqual({
       assets: [expect.not.objectContaining({ sourcePath: expect.anything() })],
       documents: [],
       montages: [],
       refused: [],
+      failed: [],
     })
+  })
+
+  it('stops an external import through the shared task table', async () => {
+    const running = createRunningTasks()
+    const importPaths = vi.fn(
+      async (_paths: readonly string[], _folder: string, watch: { signal?: AbortSignal }) =>
+        await new Promise<ExternalFileImport>(resolve => {
+          watch.signal?.addEventListener(
+            'abort',
+            () => resolve({ assets: [], documents: [], montages: [], refused: [], failed: [] }),
+            { once: true },
+          )
+        }),
+    )
+    registerMediaHandlers(deps({ importPaths, running }))
+
+    const importing = invoke(CHANNELS.mediaIngestPaths, 'request-2', '', 'task-2')
+    await vi.waitFor(() => expect(importPaths).toHaveBeenCalledOnce())
+
+    expect(running.cancel('task-2')).toBe(true)
+    await expect(importing).resolves.toMatchObject({ failed: [] })
   })
 
   it('adopts a file of the project, and answers the row without its whereabouts', async () => {

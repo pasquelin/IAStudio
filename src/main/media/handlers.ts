@@ -1,10 +1,13 @@
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import type { ExternalFileImport } from '@shared/domain/externalFile'
-import { CHANNELS } from '@shared/ipc'
+import { taskRatio, type TaskWatch } from '@shared/domain/taskProgress'
+import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { sendToSender } from '@main/ipc/broadcast'
 import { parseAssetId } from '@main/assets/validation'
 import { parseFolderPath } from '@main/project/validation'
+import type { RunningTasks } from '@main/task/runningTasks'
 import { assetTypeOf } from './link'
 import type { MediaService } from './service'
 
@@ -17,8 +20,13 @@ export type MediaHandlerDeps = {
   /** Injected rather than imported: `dialog` needs a live app, which no test has. */
   pickMedia: () => Promise<string[]>
   capabilities: () => Promise<MediaCapabilities>
-  importPaths: (paths: readonly string[], folder: string) => Promise<ExternalFileImport>
+  importPaths: (
+    paths: readonly string[],
+    folder: string,
+    watch: TaskWatch,
+  ) => Promise<ExternalFileImport>
   claimExternalFiles: (id: string) => readonly string[]
+  running: RunningTasks
 }
 
 export function registerMediaHandlers({
@@ -29,6 +37,7 @@ export function registerMediaHandlers({
   capabilities,
   importPaths,
   claimExternalFiles,
+  running,
 }: MediaHandlerDeps): void {
   handle(CHANNELS.mediaAdopt, async (_event, relative) => {
     // A row the window never needs the absolute path of, exactly as the ingest answers.
@@ -53,9 +62,19 @@ export function registerMediaHandlers({
     return assets
   })
 
-  handle(CHANNELS.mediaIngestPaths, async (_event, requestId, folder) => {
-    const imported = await importPaths(claimExternalFiles(requestId), parseFolderPath(folder))
-    return { ...imported, assets: imported.assets.map(withoutSourcePath) }
+  handle(CHANNELS.mediaIngestPaths, async (event, requestId, folder, taskId) => {
+    const paths = claimExternalFiles(requestId)
+    return await running.run(taskId, async signal => {
+      const imported = await importPaths(paths, parseFolderPath(folder), {
+        signal,
+        onStep: (done, total) =>
+          sendToSender(event.sender, EVENTS.taskProgress, {
+            id: taskId,
+            ratio: taskRatio(done, total),
+          }),
+      })
+      return { ...imported, assets: imported.assets.map(withoutSourcePath) }
+    })
   })
 
   handle(CHANNELS.mediaCancel, (_event, assetId) => media.cancel(parseAssetId(assetId)))

@@ -31,7 +31,7 @@ import type { StudioBridgeShell } from './studioBridgeShell'
 
 type CreationBridge = Omit<StudioBridgeCreation, 'media'> & {
   media: StudioBridgeCreation['media'] & {
-    ingestPaths: (requestId: string, folder: string) => Promise<ExternalFileImport>
+    ingestPaths: (requestId: string, folder: string, taskId: string) => Promise<ExternalFileImport>
   }
 }
 

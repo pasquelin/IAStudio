@@ -24,4 +24,5 @@ export type ExternalFileImport = {
   documents: readonly DocumentDescriptor[]
   montages: readonly MontageImportResult[]
   refused: readonly ExternalFileRefusal[]
+  failed: readonly string[]
 }

@@ -1,7 +1,11 @@
 import { basename, extname, isAbsolute } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { App } from 'electron'
-import type { ExternalFileOffer, ExternalFileRequest } from '@shared/domain/externalFile'
+import type {
+  ExternalFileOffer,
+  ExternalFileRefusal,
+  ExternalFileRequest,
+} from '@shared/domain/externalFile'
 import { isImportableFile } from '@shared/domain/importFormat'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { broadcast } from '@main/ipc/broadcast'
@@ -27,13 +31,17 @@ export function offerExternalFiles(paths: readonly string[]): void {
 export function authoriseExternalFiles(paths: unknown): ExternalFileOffer {
   if (!Array.isArray(paths)) return { request: null, refused: [] }
   const candidates = paths.filter(one => typeof one === 'string' && isAbsolute(one))
-  const acceptedPaths = candidates.filter(isImportableFile)
-  const refused = candidates
-    .filter(path => !isImportableFile(path))
-    .map(path => ({
-      name: basename(path),
-      extension: extname(path).slice(1).toLowerCase(),
-    }))
+  const acceptedPaths: string[] = []
+  const refused: ExternalFileRefusal[] = []
+  for (const path of candidates) {
+    if (isImportableFile(path)) acceptedPaths.push(path)
+    else {
+      refused.push({
+        name: basename(path),
+        extension: extname(path).slice(1).toLowerCase(),
+      })
+    }
+  }
   if (acceptedPaths.length === 0) return { request: null, refused }
 
   const request: ExternalFileRequest = { id: randomUUID() }

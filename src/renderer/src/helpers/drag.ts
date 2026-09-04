@@ -13,7 +13,13 @@
  * double.
  */
 export type DragLike = { dataTransfer: DataTransfer | null }
-export type DropTone = 'accepted' | 'refused' | 'neutral'
+export type DropTone = 'accepted' | 'partial' | 'refused' | 'neutral'
+
+export const copiesDropTone = (tone: DropTone | null | undefined): boolean =>
+  tone === 'accepted' || tone === 'partial'
+
+export const warnsDropTone = (tone: DropTone | null | undefined): boolean =>
+  tone === 'partial' || tone === 'refused'
 
 export type DragChannel = {
   start: (event: DragLike, id: string) => void

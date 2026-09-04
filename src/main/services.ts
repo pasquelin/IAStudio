@@ -311,18 +311,26 @@ export function createServices(settings: SettingsStore): Services {
           .catalog()
           .add(linkedAsset(source, { id: newAssetId(), type, now: timestamp() })),
       adopt,
-      importPaths: (paths, target) =>
-        importFiles(paths, target, {
-          projectPath: () => project.path(),
-          names: folder.names,
-          adopt,
-          documents: documents.list,
-          importBundle: (source, target) =>
-            importMontageArchive(source, project.path(), target, new AbortController().signal, {
-              bundles,
-              adopt,
-            }),
-        }),
+      importPaths: (paths, target, watch) =>
+        importFiles(
+          paths,
+          target,
+          {
+            projectPath: () => project.path(),
+            names: folder.names,
+            adopt,
+            documents: documents.list,
+            importBundle: (source, root, target, bundleWatch) =>
+              importMontageArchive(
+                source,
+                root,
+                target,
+                bundleWatch.signal ?? new AbortController().signal,
+                { bundles, adopt, onProgress: bundleWatch.onStep },
+              ),
+          },
+          watch,
+        ),
       claimExternalFiles,
       // Asked, not cached: this is what the settings pane consults after the user installed the
       // binary it just said was missing. Run rather than looked for — a half-written download and

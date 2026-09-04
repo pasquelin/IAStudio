@@ -19,6 +19,7 @@ import { exportSequence } from './sequenceExport'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { usePlayback } from '@/stores/playback'
+import { useProject } from '@/stores/project'
 import { useTimelineView } from '@/stores/timelineView'
 import { TIMELESS_DURATION } from '@/engines/timeline/insert'
 import { TimelineCanvas } from './TimelineCanvas'
@@ -47,12 +48,16 @@ function dataTransfer(assetId: string): DataTransfer {
   return transfer
 }
 
-function desktopFile(name = 'rush.mp4'): DataTransfer {
+function desktopFiles(...names: string[]): DataTransfer {
   const transfer = dragTransfer()
   transfer.setData('Files', '')
-  Object.defineProperty(transfer, 'files', { value: [new File(['video'], name)] })
+  Object.defineProperty(transfer, 'files', {
+    value: names.map(name => new File(['content'], name)),
+  })
   return transfer
 }
+
+const desktopFile = (name = 'rush.mp4'): DataTransfer => desktopFiles(name)
 
 function paint(tool: VideoToolId = 'select') {
   const view = render(<TimelineCanvas documentId="doc-1" tool={tool} />)
@@ -73,6 +78,17 @@ describe('TimelineCanvas', () => {
     installSequence('doc-1')
     useAssets.setState({ items: [asset()] })
     useSelection.getState().selectFiles([])
+    useProject.setState({
+      known: true,
+      project: {
+        path: '/projects/one',
+        manifest: {
+          version: 1,
+          createdAt: '2026-09-04T00:00:00.000Z',
+          updatedAt: '2026-09-04T00:00:00.000Z',
+        },
+      },
+    })
     menu = fakeMenu()
     installFakeBridge({ menu: menu.bridge })
   })
@@ -97,7 +113,13 @@ describe('TimelineCanvas', () => {
     installFakeBridge({
       externalFiles: { offer: async () => ({ request: { id: 'request-1' }, refused: [] }) },
       media: {
-        ingestPaths: async () => ({ assets: [imported], documents: [], montages: [], refused: [] }),
+        ingestPaths: async () => ({
+          assets: [imported],
+          documents: [],
+          montages: [],
+          refused: [],
+          failed: [],
+        }),
       },
     })
 
@@ -114,10 +136,63 @@ describe('TimelineCanvas', () => {
     const canvas = paint()
     const transfer = desktopFile('notes.txt')
 
-    fireEvent.dragOver(canvas, { dataTransfer: transfer })
+    fireEvent.dragOver(canvas, {
+      clientX: 200,
+      clientY: RULER_HEIGHT + 10,
+      dataTransfer: transfer,
+    })
 
     expect(canvas.className).toContain('outline-danger')
     expect(transfer.dropEffect).toBe('none')
+  })
+
+  it('warns in red while allowing a mixed desktop batch', () => {
+    const canvas = paint()
+    const transfer = desktopFiles('rush.mp4', 'notes.txt')
+
+    fireEvent.dragOver(canvas, {
+      clientX: 200,
+      clientY: RULER_HEIGHT + 10,
+      dataTransfer: transfer,
+    })
+
+    expect(canvas.className).toContain('outline-danger')
+    expect(transfer.dropEffect).toBe('copy')
+  })
+
+  it('leaves a desktop video dropped on the ruler to the shell', () => {
+    const ingestPaths = vi.fn()
+    installFakeBridge({ media: { ingestPaths } })
+    const shell = vi.fn()
+    document.body.addEventListener('drop', shell)
+
+    fireEvent.drop(paint(), {
+      clientX: 200,
+      clientY: 4,
+      dataTransfer: desktopFile(),
+    })
+    document.body.removeEventListener('drop', shell)
+
+    expect(shell).toHaveBeenCalled()
+    expect(ingestPaths).not.toHaveBeenCalled()
+  })
+
+  it('leaves a desktop video below a sound montage to the shell', () => {
+    act(() => useSequences.getState().replace('doc-1', EMPTY_SOUND_SEQUENCE))
+    const ingestPaths = vi.fn()
+    installFakeBridge({ media: { ingestPaths } })
+    const shell = vi.fn()
+    document.body.addEventListener('drop', shell)
+
+    fireEvent.drop(paint(), {
+      clientX: 200,
+      clientY: RULER_HEIGHT + tracksHeight(EMPTY_SOUND_SEQUENCE) + 20,
+      dataTransfer: desktopFile(),
+    })
+    document.body.removeEventListener('drop', shell)
+
+    expect(shell).toHaveBeenCalled()
+    expect(ingestPaths).not.toHaveBeenCalled()
   })
 
   it('gives a clip the probed duration of its asset', async () => {

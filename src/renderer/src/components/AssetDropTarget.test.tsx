@@ -170,6 +170,7 @@ describe('a surface an asset can be dropped onto', () => {
       documents: [],
       montages: [],
       refused: [],
+      failed: [],
     }))
     installFakeBridge({
       externalFiles: {
@@ -193,29 +194,36 @@ describe('a surface an asset can be dropped onto', () => {
     fireEvent.drop(surface, { dataTransfer: desktopFile('chair.obj') })
 
     await waitFor(() => expect(onDrop).toHaveBeenCalledWith(model))
-    expect(ingestPaths).toHaveBeenCalledWith('request-1', '')
+    expect(ingestPaths).toHaveBeenCalledWith('request-1', '', expect.any(String))
   })
 
   it('hands the compatible part of a mixed desktop batch to the target', async () => {
     const model: Asset = { ...asset, id: 'asset_3', name: 'table', type: 'mesh' }
-    const offer = vi
-      .fn()
-      .mockResolvedValueOnce({ request: { id: 'request-2' }, refused: [] })
-      .mockResolvedValueOnce({
-        request: null,
-        refused: [{ name: 'notes.txt', extension: 'txt' }],
-      })
+    const offer = vi.fn(async () => ({
+      request: { id: 'request-2' },
+      refused: [{ name: 'notes.txt', extension: 'txt' }],
+    }))
     installFakeBridge({
       externalFiles: { offer },
       media: {
-        ingestPaths: async () => ({ assets: [model], documents: [], montages: [], refused: [] }),
+        ingestPaths: async () => ({
+          assets: [model],
+          documents: [],
+          montages: [],
+          refused: [],
+          failed: [],
+        }),
       },
     })
     const { surface, onDrop } = target(['mesh'])
+    const transfer = desktopFiles(['table.obj', 'notes.txt'])
 
-    fireEvent.drop(surface, { dataTransfer: desktopFiles(['table.obj', 'notes.txt']) })
+    fireEvent.dragOver(surface, { dataTransfer: transfer })
+    expect(surface.className).toContain('outline-danger')
+    expect(transfer.dropEffect).toBe('copy')
+    fireEvent.drop(surface, { dataTransfer: transfer })
 
     await waitFor(() => expect(onDrop).toHaveBeenCalledWith(model))
-    expect(offer).toHaveBeenCalledTimes(2)
+    expect(offer).toHaveBeenCalledOnce()
   })
 })

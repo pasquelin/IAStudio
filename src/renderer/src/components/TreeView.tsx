@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { offerBlankDrop, type DropTone } from '@/helpers/drag'
+import { copiesDropTone, offerBlankDrop, warnsDropTone, type DropTone } from '@/helpers/drag'
 import { cn } from '@/helpers/cn'
 import type { TreeNode } from './treeTypes'
 import { rowDrag } from './rowDrag'
@@ -27,9 +27,9 @@ export function TreeView<T extends TreeNode>({ state }: TreeViewProps<T>) {
       ref={scroller}
       className={cn(
         'h-full overflow-auto p-2',
-        (foreignTone === 'accepted' || foreignTone === 'refused') && 'outline-2 -outline-offset-2',
+        (copiesDropTone(foreignTone) || foreignTone === 'refused') && 'outline-2 -outline-offset-2',
         foreignTone === 'accepted' && 'outline-accent',
-        foreignTone === 'refused' && 'outline-danger',
+        warnsDropTone(foreignTone) && 'outline-danger',
       )}
       onPointerDownCapture={() => {
         reducingRef.current = null
@@ -56,7 +56,7 @@ export function TreeView<T extends TreeNode>({ state }: TreeViewProps<T>) {
         const tone = carries ? (foreign?.tone?.(event) ?? 'accepted') : null
         setForeignTone(tone)
         offerBlankDrop(event, {
-          copies: tone === 'accepted',
+          copies: copiesDropTone(tone),
           refuses: tone === 'refused' || tone === 'neutral',
           moves: onDropRoot !== undefined && rowDrag.carries(event),
         })

@@ -21,8 +21,11 @@ export const IMPORTABLE_DOCUMENT_EXTENSIONS: readonly string[] = ['ora', 'gltf',
 export const IMPORTABLE_BUNDLE_EXTENSIONS: readonly string[] = ['otioz']
 
 export const IMPORTABLE_FILE_EXTENSIONS: readonly string[] = [
-  ...new Set([...Object.values(IMPORTABLE_EXTENSIONS).flat(), ...IMPORTABLE_DOCUMENT_EXTENSIONS]),
-  ...IMPORTABLE_BUNDLE_EXTENSIONS,
+  ...new Set([
+    ...Object.values(IMPORTABLE_EXTENSIONS).flat(),
+    ...IMPORTABLE_DOCUMENT_EXTENSIONS,
+    ...IMPORTABLE_BUNDLE_EXTENSIONS,
+  ]),
 ]
 
 export function importableAssetTypeOf(fileName: string): ImportableAssetType | null {

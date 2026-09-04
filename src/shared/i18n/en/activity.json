@@ -47,6 +47,7 @@
     "generated_one": "{{count, number}} asset generated",
     "generated_other": "{{count, number}} assets generated",
     "importFailed": "Could not import “{{name}}”",
+    "importingFiles": "Importing files",
     "importUnreadable": "“{{name}}” is unreadable",
     "unsupportedFiles_one": "“{{names}}” was not imported: the {{extensions}} format is not supported",
     "unsupportedFiles_many": "“{{names}}” were not imported: the {{extensions}} formats are not supported",

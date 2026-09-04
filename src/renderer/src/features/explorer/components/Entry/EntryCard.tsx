@@ -6,7 +6,7 @@ import { MediaTile } from '@/components/MediaTile'
 import { rowDrag } from '@/components/rowDrag'
 import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
-import type { DragLike, DropTone } from '@/helpers/drag'
+import { copiesDropTone, warnsDropTone, type DragLike, type DropTone } from '@/helpers/drag'
 
 /**
  * What the card stands for, which decides the SHAPE it draws: a folder, a plain file, or a file
@@ -105,7 +105,7 @@ export function EntryCard({
           if (!foreign.accepts) return
           event.preventDefault()
           const tone = foreign.tone?.(event) ?? 'accepted'
-          event.dataTransfer.dropEffect = tone === 'accepted' ? 'copy' : 'none'
+          event.dataTransfer.dropEffect = copiesDropTone(tone) ? 'copy' : 'none'
           return setOver(tone)
         }
         if (!accepts || !rowDrag.carries(event)) return
@@ -137,7 +137,7 @@ export function EntryCard({
         'size-full',
         // The outline the tree draws on the row a drop lands in, so one gesture reads alike in both.
         over === 'accepted' && 'outline-accent rounded-(--radius-sc-md) outline -outline-offset-1',
-        over === 'refused' && 'outline-danger rounded-(--radius-sc-md) outline -outline-offset-1',
+        warnsDropTone(over) && 'outline-danger rounded-(--radius-sc-md) outline -outline-offset-1',
         // Cut, and on its way out. An opacity rather than a quiet ink: what dims is a PICTURE, and
         // there is no ink to quieten on one — exempted by name in `tokens.test.ts`.
         waiting && 'opacity-50',

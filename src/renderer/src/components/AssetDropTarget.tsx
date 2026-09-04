@@ -7,6 +7,7 @@ import {
   importExternalFilesInto,
 } from '@/services/externalFiles'
 import { cn } from '@/helpers/cn'
+import { copiesDropTone, warnsDropTone } from '@/helpers/drag'
 
 export type AssetDropTargetProps = {
   /** The kinds this target takes. A drag announcing none is taken anyway — see below. */
@@ -67,11 +68,11 @@ export function AssetDropTarget({
       )}
       onDragOver={event => {
         if (carriesExternalFiles(event)) {
-          if (exclusive) event.stopPropagation()
           const tone = externalFileTargetTone(event, accepts)
+          if (exclusive && tone !== 'refused') event.stopPropagation()
           event.preventDefault()
-          event.dataTransfer.dropEffect = tone === 'accepted' ? 'copy' : 'none'
-          setState(tone === 'accepted' ? 'over' : tone === 'refused' ? 'refused' : 'idle')
+          event.dataTransfer.dropEffect = copiesDropTone(tone) ? 'copy' : 'none'
+          setState(tone === 'accepted' ? 'over' : warnsDropTone(tone) ? 'refused' : 'idle')
           return
         }
         if (!carriesAsset(event)) return
@@ -100,6 +101,7 @@ export function AssetDropTarget({
 
         if (carriesExternalFiles(event)) {
           if (event.dataTransfer.files.length === 0) return
+          if (externalFileTargetTone(event, accepts) === 'refused') return
           event.preventDefault()
           event.stopPropagation()
           void importExternalFilesInto(event.dataTransfer.files, accepts, onDrop)

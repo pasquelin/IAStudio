@@ -452,15 +452,12 @@ PROJET et non une ligne, ce qui est pourquoi il vit sous le blanc, à côté de 
 | **Documents** | `ora` `gltf` `otio` `mtlx` |
 | **Montage avec médias** | `otioz` |
 
-La même liste vaut pour le glisser depuis le bureau, l’icône de l’application et **Ouvrir avec**.
-Un document standard est copié dans le projet puis ouvert. Un `.otioz` est dépaqueté avec ses
-médias comme par **Fichier › Importer**. Un modèle `.gltf` à fichiers voisins
-reste refusé si son contenu n’est pas un document du studio.
-
-La même liste vaut pour le sélecteur, le dépôt depuis le bureau, l’icône de l’application et
-« Ouvrir avec ». Une cible compatible se dessine en bleu ; un format refusé se dessine en rouge
-et le journal nomme les fichiers qui ne sont pas entrés. Dans un lot mélangé, les fichiers
-acceptés entrent et les autres sont signalés ensemble.
+La liste des assets vaut aussi pour le sélecteur. Le dépôt depuis le bureau, l’icône de
+l’application et **Ouvrir avec** acceptent également les documents standard et les montages
+groupés du tableau. Un document est copié dans le projet puis ouvert ; un `.otioz` est dépaqueté
+avec ses médias comme par **Fichier › Importer**. Une cible compatible se dessine en bleu ; un
+format refusé se dessine en rouge et le journal nomme les fichiers qui ne sont pas entrés. Dans un
+lot mélangé, les fichiers acceptés entrent et les autres sont signalés ensemble.
 
 > Un `.obj` entre avec sa géométrie. Son éventuel `.mtl` et les textures qu’il référence ne sont
 > pas encore rassemblés avec lui. Un `.gltf` séparé, un `.dae` ou un `.usd` qui référence des

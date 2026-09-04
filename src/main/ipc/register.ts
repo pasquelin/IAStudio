@@ -93,7 +93,7 @@ function registerCreativeIpc(
   running: ReturnType<typeof createRunningTasks>,
 ): void {
   registerStyleHandlers(services.styles)
-  registerMediaHandlers(services)
+  registerMediaHandlers({ ...services, running })
   registerAssistantHandlers({
     brain: services.assistant,
     settleAction: services.remoteActions.settle,

@@ -44,6 +44,7 @@ import {
   offerExternalFiles,
   queueExternalFiles,
 } from '@/services/externalFiles'
+import { copiesDropTone } from '@/helpers/drag'
 import { ShellPanelButton } from './ShellPanelButton'
 import 'dockview-react/dist/styles/dockview.css'
 import '../dockview-theme.css'
@@ -86,7 +87,8 @@ export function Shell() {
       if (!carriesExternalFiles(event)) return
       event.preventDefault()
       if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = externalFileDropTone(event) === 'accepted' ? 'copy' : 'none'
+        const tone = externalFileDropTone(event)
+        event.dataTransfer.dropEffect = copiesDropTone(tone) ? 'copy' : 'none'
       }
     }
     const takeFileDrop = async (event: DragEvent): Promise<void> => {

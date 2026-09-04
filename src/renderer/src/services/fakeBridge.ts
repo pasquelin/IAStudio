@@ -304,7 +304,8 @@ const fakeAnimations = (overrides: BridgeOverrides): StudioBridge['animations'] 
 
 const fakeMedia = (overrides: BridgeOverrides): StudioBridge['media'] => ({
   ingest: () => Promise.resolve([]),
-  ingestPaths: () => Promise.resolve({ assets: [], documents: [], montages: [], refused: [] }),
+  ingestPaths: () =>
+    Promise.resolve({ assets: [], documents: [], montages: [], refused: [], failed: [] }),
   adopt: () => Promise.resolve(null),
   cancel: () => Promise.resolve(),
   capabilities: () => Promise.resolve({ ffmpeg: true }),
@@ -444,7 +445,6 @@ const fakeUpdates = (overrides: BridgeOverrides): StudioBridge['updates'] => ({
   onState: noSubscription,
   ...overrides.updates,
 })
-
 export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge {
   const bridge: StudioBridge = {
     settings: fakeSettings(overrides),
