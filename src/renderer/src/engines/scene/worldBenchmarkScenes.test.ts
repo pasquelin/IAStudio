@@ -10,7 +10,17 @@ describe('the reproducible world benchmark suite', () => {
     expect(scenes.slice(0, 4).map(scene => scene.state.nodes.length)).toEqual([
       50, 10_000, 10_000, 20_000,
     ])
-    expect(scenes[4]?.state.nodes.some(node => (node.components?.length ?? 0) > 0)).toBe(true)
+    const mixed = scenes[4]?.state
+    expect(
+      mixed?.nodes.some(node =>
+        node.components?.some(component => component.type === 'Script' && component.script),
+      ),
+    ).toBe(true)
+    expect(
+      mixed?.nodes.some(node => node.components?.some(component => component.type === 'RigidBody')),
+    ).toBe(true)
+    expect(mixed?.animation.events).not.toHaveLength(0)
+    expect(mixed?.animation.transitions).not.toHaveLength(0)
   })
 
   it('rebuilds identical deterministic inputs', () => {

@@ -4,17 +4,23 @@ import type {
   RuntimeRenderCamera,
   RuntimeValidationDriver,
 } from './runtimeRepresentationValidation'
+import {
+  executeRuntimeFunctionalChecks,
+  type RuntimeFunctionalValidationOptions,
+} from './executedRuntimeValidation'
 
 export type SceneRuntimeValidationRepresentation = {
   engine: SceneRenderer
   host: HTMLDivElement
   optimized: boolean
+  world: SceneState
 }
 
 export type SceneRuntimeValidationDriverOptions = {
   cameras: readonly RuntimeRenderCamera[]
   renderer?: Omit<SceneRendererOptions, 'onSelect' | 'onTransform' | 'chrome'>
   settle?: (engine: SceneRenderer, world: SceneState) => Promise<void>
+  functional?: RuntimeFunctionalValidationOptions
 }
 
 const OFFSCREEN_HOST_OFFSET_PX = -100_000
@@ -45,7 +51,7 @@ export function createSceneRuntimeValidationDriver(
       engine.apply(world)
       if (options.settle) await options.settle(engine, world)
       await paintedFrame()
-      return { engine, host, optimized: optimization === 'auto' }
+      return { engine, host, optimized: optimization === 'auto', world }
     } catch (error: unknown) {
       engine.dispose()
       host.remove()
@@ -58,7 +64,10 @@ export function createSceneRuntimeValidationDriver(
     buildOptimized: async world => await build(world, 'auto'),
     render: async (representation, camera) =>
       await representation.engine.captureRuntimeValidationFrame(camera),
-    observe: async representation => representation.engine.runtimeValidationSnapshot(),
+    observe: async representation => ({
+      ...representation.engine.runtimeValidationSnapshot(),
+      ...(await executeRuntimeFunctionalChecks(representation.world, options.functional)),
+    }),
     dispose: representation => {
       representation.engine.dispose()
       representation.host.remove()
