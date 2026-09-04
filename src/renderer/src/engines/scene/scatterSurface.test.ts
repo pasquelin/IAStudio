@@ -240,4 +240,57 @@ describe('createScatterSurface', () => {
     expect(surface.objectsInCell('trees', cellKey(0, 0))[0]).not.toBe(before)
     surface.dispose()
   })
+
+  it('keeps shared source geometry until instanced batches leave the scene', async () => {
+    const pine = staticTree()
+    const geometries: Mesh['geometry'][] = []
+    pine.traverse(object => {
+      if (object instanceof Mesh) geometries.push(object.geometry)
+    })
+    const disposed: Mesh['geometry'][] = []
+    for (const geometry of geometries) {
+      const original = geometry.dispose.bind(geometry)
+      geometry.dispose = () => {
+        disposed.push(geometry)
+        original()
+      }
+    }
+    let revealBirch: ((tree: Object3D) => void) | undefined
+    const birch = new Promise<Object3D>(resolve => {
+      revealBirch = resolve
+    })
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async url => (url.includes('pine') ? pine : birch),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    const pineWorld = {
+      ...DEFAULT_WORLD,
+      layers: [
+        scatterLayer({
+          id: 'trees',
+          assets: [{ assetId: 'pine', weight: 1 }],
+          origin: { x: 0, z: 0 },
+          size: { x: 10, z: 10 },
+          rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.5, spacing: 2 },
+        }),
+      ],
+    }
+    await surface.sync(pineWorld)
+    expect(surface.object.children.length).toBeGreaterThan(0)
+    const pending = surface.sync({
+      ...pineWorld,
+      layers: pineWorld.layers.map(layer =>
+        layer.kind === 'scatter' ? { ...layer, assets: [{ assetId: 'birch', weight: 1 }] } : layer,
+      ),
+    })
+    await Promise.resolve()
+    expect(surface.object.children).toEqual([])
+    expect(disposed.length).toBeGreaterThan(0)
+    revealBirch?.(staticTree())
+    await pending
+    surface.dispose()
+  })
 })

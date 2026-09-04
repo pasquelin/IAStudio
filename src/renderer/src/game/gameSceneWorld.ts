@@ -46,17 +46,25 @@ async function drapeRelief(
   const wanted = enabledTerrains(world.layers).filter(terrain =>
     heightmaps?.has(terrain.heightmap.assetId),
   ).length
+  let settle: () => void = () => undefined
+  const ready = new Promise<void>(resolve => {
+    settle = resolve
+  })
+  const finish = (): void => {
+    if (wanted === 0 || relief.heightmaps().size >= wanted) settle()
+  }
   const relief = createReliefSurface(scene, {
     load: async assetId => {
       const samples = heightmaps?.get(assetId)
       if (!samples) throw new Error(assetId)
       return samples
     },
+    onReady: finish,
+    onFailure: settle,
   })
   relief.sync(world)
-  for (let turn = 0; turn < 32 && relief.heightmaps().size < wanted; turn += 1) {
-    await Promise.resolve()
-  }
+  finish()
+  await ready
   return relief
 }
 
