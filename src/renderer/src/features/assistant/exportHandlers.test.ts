@@ -82,6 +82,34 @@ describe('a game written out of the studio', () => {
     expect(asked[0]?.folder).toBe('Builds')
   })
 
+  it('keeps visual changes off unless the caller explicitly names LOSSY choices', async () => {
+    const asked = exporting()
+
+    const safe = await runAction('game.export', {})
+
+    expect(asked[0]?.lossyOptimization).toBeUndefined()
+    expect(safe).toMatchObject({ ok: true, data: { visualChanges: 'NONE' } })
+  })
+
+  it('marks and forwards explicitly requested LOSSY choices', async () => {
+    const asked = exporting()
+
+    const outcome = await runAction('game.export', {
+      generateLods: true,
+      geometrySimplification: 'balanced',
+      textureCompression: 'aggressive',
+      textureReduction: 'half',
+    })
+
+    expect(asked[0]?.lossyOptimization).toEqual({
+      generateLods: true,
+      geometrySimplification: 'balanced',
+      textureCompression: 'aggressive',
+      textureReduction: 'half',
+    })
+    expect(outcome).toMatchObject({ ok: true, data: { visualChanges: 'POSSIBLE' } })
+  })
+
   /** 🛑 `resources/gameRuntime` is git-ignored, so the main process throws where an assistant is
    * owed an answer. */
   it('answers a refusal when the main process throws instead of writing', async () => {

@@ -28,6 +28,8 @@ function writing(over: Partial<GameExportPorts> = {}) {
       Promise.resolve([
         { name: 'runtime.js', body: new Uint8Array([2]) },
         { name: 'jolt-abc.js', body: new Uint8Array([3]) },
+        { name: 'geometrySimplifierWorker-abc.js', body: new Uint8Array([4]) },
+        { name: 'SimplifyModifier-abc.js', body: new Uint8Array([5]) },
       ]),
     write: (relative, body) => {
       written.set(relative, body)
@@ -223,5 +225,39 @@ describe('a game written to run with no studio', () => {
     await writeExportedGame(second.ports, ASKED)
 
     expect([...first.written.entries()].sort()).toEqual([...second.written.entries()].sort())
+  })
+
+  it('does not touch an asset when no visual change was explicitly requested', async () => {
+    let optimized = 0
+    const { ports } = writing({
+      optimizeAsset: asset => {
+        optimized += 1
+        return Promise.resolve(asset)
+      },
+    })
+
+    await writeExportedGame(ports, ASKED)
+
+    expect(optimized).toBe(0)
+  })
+
+  it('writes the explicit LOSSY choices and packages the transformed image', async () => {
+    const { ports, written } = writing({
+      optimizeAsset: () => Promise.resolve({ name: 'checker.jpg', bytes: new Uint8Array([7, 8]) }),
+    })
+    const lossyOptimization = {
+      generateLods: true,
+      geometrySimplification: 'balanced',
+      textureReduction: 'half',
+      textureCompression: 'conservative',
+    } satisfies NonNullable<GameExportRequest['lossyOptimization']>
+
+    await writeExportedGame(ports, { ...ASKED, lossyOptimization })
+
+    expect(manifestOf(written).lossyOptimization).toEqual(lossyOptimization)
+    expect(manifestOf(written).assets).toEqual({ 'tex-1': 'assets/checker.jpg' })
+    expect(written.get('assets/checker.jpg')).toEqual(new Uint8Array([7, 8]))
+    expect(written.has('geometrySimplifierWorker-abc.js')).toBe(true)
+    expect(written.has('SimplifyModifier-abc.js')).toBe(true)
   })
 })

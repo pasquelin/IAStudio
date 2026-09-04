@@ -34,6 +34,11 @@ export type GameExportPorts = {
    * imports by name — and a page shipped with the entry alone is a page that loads nothing.
    */
   runtime: () => Promise<readonly { name: string; body: Uint8Array }[]>
+  /** Re-encodes one picture only when the request explicitly carries LOSSY texture choices. */
+  optimizeAsset?: (
+    asset: ExportedAsset,
+    options: NonNullable<GameExportRequest['lossyOptimization']>,
+  ) => Promise<ExportedAsset>
   /** Writes one file of the exported folder, at a path relative to its root. */
   write: (relative: string, body: string | Uint8Array) => Promise<void>
 }
@@ -73,20 +78,25 @@ export async function writeExportedGame(
       continue
     }
 
-    const contentKey = file.hash ?? `bytes:${file.bytes.byteLength}`
+    const optimized =
+      request.lossyOptimization && ports.optimizeAsset
+        ? await ports.optimizeAsset(file, request.lossyOptimization)
+        : file
+    const contentKey =
+      optimized === file && file.hash ? file.hash : `bytes:${optimized.bytes.byteLength}`
     const candidates = contentPaths.get(contentKey) ?? []
-    const shared = await matchingContent(candidates, file.bytes)
+    const shared = await matchingContent(candidates, optimized.bytes)
     if (shared) {
       assets[id] = shared.path
       continue
     }
 
-    const name = freeName(safeFileName(file.name, 'asset'), taken)
+    const name = freeName(safeFileName(optimized.name, 'asset'), taken)
     taken.add(name)
     assets[id] = `assets/${name}`
-    candidates.push({ body: file.bytes, path: assets[id] })
+    candidates.push({ body: optimized.bytes, path: assets[id] })
     contentPaths.set(contentKey, candidates)
-    assetWrites.push(ports.write(assets[id], file.bytes))
+    assetWrites.push(ports.write(assets[id], optimized.bytes))
   }
 
   // 🛑 Through `safeFileName` and deduplicated: an id comes from the WINDOW over IPC, so `../../x`
@@ -113,11 +123,12 @@ export async function writeExportedGame(
     scenes: scenes.map(one => ({ id: one.id, title: one.title, file: files.get(one.id) ?? '' })),
     scripts: scripts.map(one => ({ script: one.script, file: `scripts/${named.get(one.script)}` })),
     assets,
+    ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
   }
 
   // Names are allocated above, in order, because `freeName` is pure; only the writing is
   // independent, and a hundred assets paid two syscalls each strictly one after another.
-  const runtime = await ports.runtime()
+  const runtime = runtimeFilesFor(await ports.runtime(), request.lossyOptimization)
   await Promise.all([
     ...assetWrites,
     ...scenes.map(scene => ports.write(files.get(scene.id) ?? '', scene.content)),
@@ -133,6 +144,18 @@ export async function writeExportedGame(
     assets: Object.keys(assets).length,
     missing,
   }
+}
+
+function runtimeFilesFor(
+  files: readonly { name: string; body: Uint8Array }[],
+  options: GameExportRequest['lossyOptimization'],
+): readonly { name: string; body: Uint8Array }[] {
+  if (options?.generateLods || (options && options.geometrySimplification !== 'off')) return files
+  return files.filter(
+    file =>
+      !file.name.startsWith('geometrySimplifierWorker-') &&
+      !file.name.startsWith('SimplifyModifier-'),
+  )
 }
 
 const COMPARISON_CHUNK_BYTES = 1024 * 1024

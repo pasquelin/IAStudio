@@ -1,5 +1,12 @@
 import { refused } from '@shared/domain/assistant'
-import type { GameExportRequest } from '@shared/domain/gameExport'
+import {
+  GEOMETRY_SIMPLIFICATIONS,
+  NO_LOSSY_OPTIMIZATION,
+  TEXTURE_COMPRESSIONS,
+  TEXTURE_REDUCTIONS,
+  hasVisualChanges,
+  type GameExportRequest,
+} from '@shared/domain/gameExport'
 import { scenePayloadOf } from '@/features/shell/sceneDocument'
 
 import { getBridge } from '@/services/bridge'
@@ -9,7 +16,7 @@ import { useProject } from '@/stores/project'
 import { compiledScripts } from '@/stores/play'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import type { ActionHandlers } from './actionHandler'
-import { textOf } from './actionInputs'
+import { boolOf, oneOf, textOf } from './actionInputs'
 import { messageOf } from '@shared/guards'
 import { projectName } from '@shared/domain/project'
 import { runtimeAssetIds } from '@/game/runtimeAssetIds'
@@ -51,11 +58,25 @@ export const EXPORT_HANDLERS: ActionHandlers = {
     if (!entry) return refused('badInput', `no scene named "${wanted}"`)
 
     const compiled = await compiledScripts()
+    const lossyOptimization = {
+      generateLods: boolOf(input, 'generateLods'),
+      geometrySimplification:
+        oneOf(input, 'geometrySimplification', GEOMETRY_SIMPLIFICATIONS) ??
+        NO_LOSSY_OPTIMIZATION.geometrySimplification,
+      textureCompression:
+        oneOf(input, 'textureCompression', TEXTURE_COMPRESSIONS) ??
+        NO_LOSSY_OPTIMIZATION.textureCompression,
+      textureReduction:
+        oneOf(input, 'textureReduction', TEXTURE_REDUCTIONS) ??
+        NO_LOSSY_OPTIMIZATION.textureReduction,
+    }
+    const visualChanges = hasVisualChanges(lossyOptimization) ? 'POSSIBLE' : 'NONE'
     const request: GameExportRequest = {
       title: textOf(input, 'title') ?? projectName(project.path),
       entryScene: entry.id,
       scenes,
       scripts: compiled.modules.map(one => ({ script: one.script, code: one.code })),
+      ...(visualChanges === 'POSSIBLE' ? { lossyOptimization } : {}),
       ...(folder ? { folder } : {}),
     }
 
@@ -79,7 +100,14 @@ export const EXPORT_HANDLERS: ActionHandlers = {
 
     // 🛑 What would NOT compile, said: a script missing from a game with no word about why is
     // the defect this whole family exists to make impossible.
-    return { ok: true, data: { ...outcome, troubles: compiled.troubles.map(one => one.script) } }
+    return {
+      ok: true,
+      data: {
+        ...outcome,
+        visualChanges,
+        troubles: compiled.troubles.map(one => one.script),
+      },
+    }
   },
 }
 

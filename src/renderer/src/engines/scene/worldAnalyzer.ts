@@ -9,13 +9,7 @@ import {
 import { movesOnItsOwn } from '@shared/domain/component'
 import { byCodeUnit } from '@shared/text'
 import { stableKey } from '@shared/hash'
-import {
-  WORTH_INSTANCING,
-  behavioralGroupingExclusions,
-  isDrawn,
-  shapeAndPaint,
-  withFlags,
-} from './grouping'
+import { behavioralGroupingExclusions, isDrawn, shapeAndPaint, withFlags } from './grouping'
 import { isInstanceable } from './instanceableModel'
 import {
   EMPTY_STATS,
@@ -92,15 +86,10 @@ export type OptimizationReport = {
   visualChanges: 'NONE'
 }
 
-export type OptimizationPolicy = {
-  minInstancesPerGroup: number
-  analysisChunkSize: number
-}
+import { DEFAULT_OPTIMIZATION_POLICY, type OptimizationPolicy } from './optimizationPolicy'
+export { DEFAULT_OPTIMIZATION_POLICY, type OptimizationPolicy } from './optimizationPolicy'
 
-export const DEFAULT_OPTIMIZATION_POLICY: OptimizationPolicy = {
-  minInstancesPerGroup: WORTH_INSTANCING,
-  analysisChunkSize: 100,
-}
+type AnalyzerPolicy = Pick<OptimizationPolicy, 'minInstancesPerGroup' | 'analysisChunkSize'>
 
 type CandidateGroup = { ids: Set<string>; units: Set<string>; forced: boolean }
 
@@ -116,7 +105,7 @@ export function analyzeOptimization(
   state: Pick<SceneState, 'nodes' | 'animation'>,
   host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
-  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+  policy: AnalyzerPolicy = DEFAULT_OPTIMIZATION_POLICY,
   runtimeNodes: readonly SceneNode[] = state.nodes,
 ): OptimizationPlan {
   return complete(optimizationSteps(state, host, objectOf, policy, runtimeNodes, true))
@@ -126,7 +115,7 @@ export async function analyzeOptimizationAsync(
   state: Pick<SceneState, 'nodes' | 'animation'>,
   host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
-  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
+  policy: AnalyzerPolicy = DEFAULT_OPTIMIZATION_POLICY,
   runtimeNodes: readonly SceneNode[] = state.nodes,
   pause: () => Promise<void> = nextTask,
 ): Promise<OptimizationPlan> {
@@ -154,7 +143,7 @@ function* optimizationSteps(
   state: Pick<SceneState, 'nodes' | 'animation'>,
   host: Object3D,
   objectOf: (id: string) => Object3D | undefined,
-  policy: OptimizationPolicy,
+  policy: AnalyzerPolicy,
   runtimeNodes: readonly SceneNode[],
   includeBakeCandidates: boolean,
 ): Generator<void, OptimizationPlan> {

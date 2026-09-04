@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BatchedMesh, InstancedMesh, Matrix4, Mesh } from 'three'
+import { BatchedMesh, InstancedMesh, LOD, Matrix4, Mesh } from 'three'
 import type { MeshStandardMaterial } from 'three'
 import type { GeometryDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
@@ -178,6 +178,48 @@ describe('a scene as a game draws it', () => {
     )
 
     expect(built.scene.background).not.toBeNull()
+  })
+
+  it('keeps the original geometry as LOD0 and simplifies only the distant levels', async () => {
+    const node = meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 })
+    const built = await buildGameScene(scene([node]), NOTHING, {
+      generateLods: true,
+      geometrySimplification: 'off',
+      textureCompression: 'off',
+      textureReduction: 'off',
+    })
+    const object = built.byEntity.get(node.id)
+
+    expect(object).toBeInstanceOf(LOD)
+    if (!(object instanceof LOD)) throw new Error('expected generated LOD')
+    expect(object.levels).toHaveLength(3)
+    expect(object.levels[0]?.object instanceof Mesh && object.levels[0].object.geometry.type).toBe(
+      'SphereGeometry',
+    )
+    const counts = object.levels.map(level =>
+      level.object instanceof Mesh ? level.object.geometry.getAttribute('position').count : 0,
+    )
+    expect(counts[0]).toBeGreaterThan(counts[1] ?? 0)
+    expect(counts[1]).toBeGreaterThan(counts[2] ?? 0)
+  })
+
+  it('simplifies one mesh only when a LOSSY geometry level is named', async () => {
+    const node = meshNode({ kind: 'sphere', radius: 1, widthSegments: 24, heightSegments: 16 })
+    const original = await buildGameScene(scene([node]), NOTHING)
+    const reduced = await buildGameScene(scene([node]), NOTHING, {
+      generateLods: false,
+      geometrySimplification: 'aggressive',
+      textureCompression: 'off',
+      textureReduction: 'off',
+    })
+    const before = original.byEntity.get(node.id)
+    const after = reduced.byEntity.get(node.id)
+
+    expect(before instanceof Mesh && after instanceof Mesh).toBe(true)
+    if (!(before instanceof Mesh) || !(after instanceof Mesh)) return
+    expect(after.geometry.getAttribute('position').count).toBeLessThan(
+      before.geometry.getAttribute('position').count,
+    )
   })
 })
 

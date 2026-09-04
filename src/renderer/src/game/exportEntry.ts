@@ -30,7 +30,7 @@ import { worldFromScene } from './worldFromScene'
 export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() => void> {
   const game = await fetched<ExportedGame>(EXPORTED_GAME_FILE)
   const assets = createBundledAssets(game.assets)
-  const render = createWebRender(canvas, assets)
+  const render = createWebRender(canvas, assets, game.lossyOptimization)
   /** How far the running scene's own TIMELINE has veiled the picture, as of the last step. */
   let veiled = 0
   // 🛑 The host's port and not the renderer's own: read back off the renderer, the arrival fade

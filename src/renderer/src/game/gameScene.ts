@@ -14,6 +14,7 @@ import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
 import type { Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
+import type { LossyOptimization } from '@shared/domain/gameExport'
 import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import { createGeometryCache } from '@/engines/scene/geometryCache'
 import { createGroundPlane } from '@/engines/scene/groundPlane'
@@ -26,6 +27,7 @@ import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
 import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { bakedInstancesOf } from '@/engines/scene/bakedInstances'
+import { lossyGeometryFor } from './lossyGeometry'
 
 /**
  * A scene as three.js draws it in a GAME — no gizmo, no helper, no selection, no grid.
@@ -55,7 +57,11 @@ const NO_ENVIRONMENT = '#9fb2c8'
 /** How a carved solid's shape is worked out — see `carver`. */
 type Carve = (graph: CsgGraph) => BufferGeometry
 
-export async function buildGameScene(state: SceneState, assets: AssetPort): Promise<GameScene> {
+export async function buildGameScene(
+  state: SceneState,
+  assets: AssetPort,
+  lossyOptimization?: LossyOptimization,
+): Promise<GameScene> {
   const carve = state.nodes.some(node => node.type === 'carved') ? await carver() : uncutGeometry
   const scene = new Scene()
   const byEntity = new Map<string, Object3D>()
@@ -63,6 +69,7 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
   const geometries = createGeometryCache()
   // The PROMISE, not the texture: two nodes wearing one picture must decode it once.
   const textures = new Map<string, Promise<Texture>>()
+  const lossyGeometry = await lossyGeometryFor(lossyOptimization)
 
   /**
    * 🛑 Through `loadTexture`, never three's own loader: a PNG decoded on the UI thread is a frame
@@ -95,8 +102,28 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     }
   }
 
-  for (const node of state.nodes) {
-    const object = objectOf(node, geometries.acquire, dress, carve)
+  let objects: readonly (Object3D | null)[]
+  try {
+    objects = await Promise.all(
+      state.nodes.map(
+        async node =>
+          await objectOf(
+            node,
+            geometries.acquire,
+            geometries.release,
+            dress,
+            carve,
+            lossyGeometry.build,
+          ),
+      ),
+    )
+  } catch (error) {
+    lossyGeometry.dispose()
+    geometries.dispose()
+    throw error
+  }
+  for (const [index, node] of state.nodes.entries()) {
+    const object = objects[index]
     if (!object) continue
 
     object.name = node.name
@@ -130,11 +157,12 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
 
   scene.updateMatrixWorld()
   const instances = createOptimizedGroups(scene)
-  instances.rebuild(
-    state.nodes,
-    id => byEntity.get(id),
-    behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)),
-  )
+  const excluded = new Set(behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)))
+  if (lossyOptimization?.generateLods) {
+    for (const node of state.nodes)
+      if (node.type === 'mesh' || node.type === 'carved') excluded.add(node.id)
+  }
+  instances.rebuild(state.nodes, id => byEntity.get(id), excluded)
 
   // 🛑 What a game shows of the world, and what it does NOT: the image-based environment is not
   // shipped, so `environment` falls back to a plain sky rather than to black. Written rather than
@@ -155,6 +183,7 @@ export async function buildGameScene(state: SceneState, assets: AssetPort): Prom
     place: (entityId, transform) => placements.get(entityId)?.(transform),
     dispose: () => {
       instances.dispose()
+      lossyGeometry.dispose()
       ground.dispose()
       for (const held of textures.values()) void disposeWhenLoaded(held)
       scene.traverse(one => {
@@ -178,27 +207,38 @@ async function disposeWhenLoaded(held: Promise<Texture>): Promise<void> {
   }
 }
 
-function objectOf(
+async function objectOf(
   node: SceneNode,
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
+  release: ReturnType<typeof createGeometryCache>['release'],
   dress: (material: MeshStandardMaterial, assetId: string) => void,
   carve: Carve,
-): Object3D | null {
+  geometryObject: (geometry: BufferGeometry, material: MeshStandardMaterial) => Promise<Object3D>,
+): Promise<Object3D | null> {
   if (node.type === 'mesh') {
     const geometry = acquire(node.geometry, node.material.tilesPerMetre)
     const material = materialOf(node.material, dress)
     const mesh = node.instances
       ? bakedInstancesOf(geometry, material, node.instances)
-      : new Mesh(geometry, material)
-    mesh.castShadow = node.castShadow
-    mesh.receiveShadow = node.receiveShadow
+      : await geometryObject(geometry, material)
+    if (!usesGeometry(mesh, geometry)) release(geometry)
+    mesh.traverse(object => {
+      if (!(object instanceof Mesh)) return
+      object.castShadow = node.castShadow
+      object.receiveShadow = node.receiveShadow
+    })
     return mesh
   }
   if (node.type === 'carved') {
-    const mesh = new Mesh(carve(node.carved), materialOf(node.material, dress))
-    mesh.castShadow = node.castShadow
-    mesh.receiveShadow = node.receiveShadow
-    return mesh
+    const geometry = carve(node.carved)
+    const object = await geometryObject(geometry, materialOf(node.material, dress))
+    if (!usesGeometry(object, geometry)) geometry.dispose()
+    object.traverse(mesh => {
+      if (!(mesh instanceof Mesh)) return
+      mesh.castShadow = node.castShadow
+      mesh.receiveShadow = node.receiveShadow
+    })
+    return object
   }
   if (node.type === 'light') return lightFor(node.light)
   // A group carries children and nothing else. A camera and a path ARE an editor's business.
@@ -208,6 +248,14 @@ function objectOf(
   // has the arrival motif they need. Nothing invisible is walked into either way, `colliderFromNode`
   // feeling none of the three.
   return node.type === 'group' ? new Object3D() : null
+}
+
+function usesGeometry(object: Object3D, geometry: BufferGeometry): boolean {
+  let used = false
+  object.traverse(child => {
+    if (child instanceof Mesh && child.geometry === geometry) used = true
+  })
+  return used
 }
 
 /**

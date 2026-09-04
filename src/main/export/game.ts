@@ -11,6 +11,7 @@ import { folderInsideProject } from '@main/project/folderInsideProject'
 import { pathSegment } from '@main/validation'
 import { writeExportedGame, type ExportedAsset, type GameExportPorts } from './gameExport'
 import { pathIsInside } from './pathIsInside'
+import { optimizeLossyAsset } from './lossyAsset'
 
 export type GameExportDeps = {
   /** Injected, like every dialog: `dialog` needs a live app, which no test has. */
@@ -134,6 +135,7 @@ async function folderFor(
 
 function portsFor(deps: GameExportDeps, project: string, root: string): GameExportPorts {
   return {
+    optimizeAsset: optimizeLossyAsset,
     assetFiles: async ids => {
       const found = new Map<string, ExportedAsset>()
       // One round trip, in slices the catalogue accepts — see `ASSET_SEARCH_LIMIT_MAX`.

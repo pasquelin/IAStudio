@@ -14,6 +14,7 @@ import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
 import type { SceneState } from '@/engines/scene/sceneState'
+import type { LossyOptimization } from '@shared/domain/gameExport'
 import { buildGameScene, type GameScene } from './gameScene'
 
 export type WebRender = RenderPort & {
@@ -33,7 +34,11 @@ const FAR = 2000
  * 🛑 One `apply`-free port: outside the studio nothing edits, so the scene is built once per
  * load and only the entity poses move. That is what makes an exported frame cheap.
  */
-export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): WebRender {
+export function createWebRender(
+  canvas: HTMLCanvasElement,
+  assets: AssetPort,
+  lossyOptimization?: LossyOptimization,
+): WebRender {
   const renderer = new WebGLRenderer({ canvas, antialias: true })
   renderer.shadowMap.enabled = true
   const camera = new PerspectiveCamera(60, 1, NEAR, FAR)
@@ -48,7 +53,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
   return {
     show: async state => {
       const mine = (building += 1)
-      const built = await buildGameScene(state, assets)
+      const built = await buildGameScene(state, assets, lossyOptimization)
       if (mine !== building) {
         built.dispose()
         return
