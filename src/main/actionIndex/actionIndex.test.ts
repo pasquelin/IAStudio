@@ -122,6 +122,9 @@ describe('ActionIndex', () => {
     expect(continuation.find(hit => hit.action.name === 'models.select')?.workflowScore).toBeGreaterThan(
       0,
     )
+    expect(discovery.find(hit => hit.action.name === 'models.search')?.action.description).toContain(
+      'not the content to generate',
+    )
   })
 
   it('replaces fields, vectors and FTS words when the corpus changes', () => {
