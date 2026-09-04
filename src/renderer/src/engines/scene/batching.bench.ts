@@ -35,14 +35,12 @@ raycaster.layers.enableAll()
 const sources = [...objects.values()]
 const instances = [...instanced.pickable()]
 const batches = [...batched.pickable()]
-const editorTargets = [...batched.editorPickable()]
+// Both shapes are held, so `editorPickable()` answers exactly `objects.values()` — the editor's
+// own cost is `individual source representation` below, not a bench of its own.
 
 describe('picking among 10,000 compatible static meshes of two shapes', () => {
   bench('individual source representation', () => {
     void raycaster.intersectObjects(sources, false)[0]?.object.name
-  })
-  bench('editor picking representation', () => {
-    void raycaster.intersectObjects(editorTargets, false)[0]?.object.name
   })
   bench('instanced runtime representation', () => {
     const hit = raycaster.intersectObjects(instances, false)[0]

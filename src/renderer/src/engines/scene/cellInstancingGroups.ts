@@ -9,6 +9,7 @@ import {
   type Object3D,
   type Intersection,
 } from 'three'
+import { sourcesByNode, standingLots, standingSources } from './cellInstancingPicking'
 import {
   dropSlotsOf,
   heldOutOfDraw,
@@ -77,7 +78,7 @@ export function createCellGroups(
   let queryReach = index.cellSize / 2
   let pass = 0
   let listed: InstancedMesh[] = []
-  let sourceMeshes: readonly Mesh[] = []
+  let sourcesById: ReadonlyMap<string, Mesh[]> = new Map()
   let listStale = true
   const groupOf = (cell: CellKey | null): Object3D => {
     if (cell === null) return host
@@ -376,13 +377,14 @@ export function createCellGroups(
     const ids = lotOf.get(hit.object)?.ids ?? bucketOf.get(hit.object)?.ids
     return ids?.[hit.instanceId] ?? null
   }
-  const pickableMeshes = (): InstancedMesh[] => {
-    const pickable = [...mobiles.values()].map(lot => lot.mesh)
-    for (const bucket of everyBucket()) {
-      if (bucket.cell === null || standing.has(bucket.cell)) pickable.push(bucket.mesh)
-    }
-    return pickable
+  /** What nothing settled on holds bodies that left, were hidden, or changed group. */
+  const dropWhatThePassMissed = (seen: Map<string, string>): void => {
+    for (const bucket of everyBucket()) if (bucket.seenAt !== pass) drop(bucket)
+    for (const [key, byCell] of buckets) if (byCell.size === 0) buckets.delete(key)
+    // A mover the sweep no longer met is gone from the document — the despawn half of a spawn.
+    shed(seen)
   }
+
   return {
     rebuild: (nodes, objectOf, excluded) => {
       const groups = sweep(nodes, objectOf, host, ownMaterialOf, keyOf, sources, excluded)
@@ -391,7 +393,7 @@ export function createCellGroups(
       /** Which lot each mover belongs to THIS pass, by group key — see `shed`. */
       const seen = new Map<string, string>()
       let instanced = 0
-      sourceMeshes = groups.flatMap(group => group.meshes)
+      sourcesById = sourcesByNode(groups)
       for (const worn of groups) {
         const first = worn.meshes[0]
         if (!first) continue
@@ -407,15 +409,11 @@ export function createCellGroups(
         settleMobile(worn.key, movers, first, worn.material)
         instanced += worn.meshes.length
       }
-      // What nothing settled on holds bodies that left, were hidden, or changed group.
-      for (const bucket of everyBucket()) if (bucket.seenAt !== pass) drop(bucket)
-      for (const [key, byCell] of buckets) if (byCell.size === 0) buckets.delete(key)
-      // A mover the sweep no longer met is gone from the document — the despawn half of a spawn.
-      shed(seen)
+      dropWhatThePassMissed(seen)
       return instanced
     },
-    moved: (ids, objectOf) => {
-      refreshMovedSources(sources, ids, objectOf)
+    moved: (rawIds, objectOf) => {
+      const ids = refreshMovedSources(sources, rawIds, objectOf)
       // Promoted BEFORE the write, so the matrix lands in the lot the body now belongs to.
       for (const id of ids) if (!onLot(id)) promote(id, objectOf)
       const touched = writeMoved(placed, ids, objectOf)
@@ -426,8 +424,8 @@ export function createCellGroups(
       return touched
     },
     drawn: drawnMeshes,
-    pickable: pickableMeshes,
-    editorPickable: () => sourceMeshes,
+    pickable: () => standingLots(everyBucket(), standing, mobiles.values()),
+    editorPickable: () => standingSources(everyBucket(), standing, mobiles.values(), sourcesById),
     nodeIdOf,
     follow: (camera, cast) =>
       followCells(
@@ -446,7 +444,7 @@ export function createCellGroups(
     },
     ...sources.fields(() => {
       clear()
-      sourceMeshes = []
+      sourcesById = new Map()
     }),
   }
 }
