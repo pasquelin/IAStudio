@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import type { ScatterPose } from '@shared/domain/scatterGenerate'
 import {
   GRASS_CELL_SIZE,
+  GRASS_DENSITY_LEVELS,
+  grassDensityLevels,
   holdScatterCells,
   scatterBatchesOf,
   scatterDrawnOf,
@@ -77,6 +79,19 @@ describe('scatterDrawnOf', () => {
       new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial()),
     )
     expect(drawn.position.toArray()).toEqual([GRASS_CELL_SIZE * 1.5, 0, GRASS_CELL_SIZE / 2])
+  })
+
+  it('builds stable nested grass subsets for every configured distance', () => {
+    const poses = Array.from({ length: 100 }, (_unused, index) => pose('grass', index, index * 2))
+    const first = grassDensityLevels(poses, 17)
+    const again = grassDensityLevels(poses, 17)
+
+    expect(first).toEqual(again)
+    expect(first).toHaveLength(GRASS_DENSITY_LEVELS.length)
+    for (let index = 1; index < first.length; index += 1) {
+      const denser = new Set(first[index - 1]?.poses)
+      expect(first[index]?.poses.every(candidate => denser.has(candidate))).toBe(true)
+    }
   })
 })
 

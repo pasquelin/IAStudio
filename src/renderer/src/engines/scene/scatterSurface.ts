@@ -204,7 +204,7 @@ function rebuildCell(
     ground,
   )
   const drawn: Object3D[] = []
-  for (const batch of scatterBatchesOf(poses, () => key, cellSize)) {
+  for (const batch of scatterBatchesOf(poses, () => key, cellSize, layer.category, layer.seed)) {
     const source = sources.get(batch.assetId)
     if (!source) continue
     for (const mesh of meshesOf(source)) drawn.push(scatterDrawnOf(batch, mesh))
