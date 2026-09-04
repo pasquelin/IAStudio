@@ -28,6 +28,12 @@ import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
 import { CELL_SIZE, cellKey } from './worldPartition'
 import { runtimeArtifactsOf } from './runtimeWorldCompiler'
+import {
+  GEOMETRY_CONTENT,
+  MATERIAL_CONTENT,
+  textureContent,
+  type ResourceContent,
+} from './resourceContent'
 
 export type OptimizationClassification =
   | 'STATIC'
@@ -145,9 +151,16 @@ export {
 
 type AnalyzerPolicy = Pick<OptimizationPolicy, 'minInstancesPerGroup' | 'analysisChunkSize'> & {
   minBatchSize?: number
+  maxSynchronousContentBytes?: number
 }
 
 type CandidateGroup = { ids: Set<string>; units: Set<string>; forced: boolean }
+type ContentGroup<T> = {
+  canonical: T
+  key: string
+  sourceIds: Set<string>
+  uses: number
+}
 
 /**
  * What the authoring world would draw. A runtime group parks its sources on another layer but
@@ -204,6 +217,8 @@ function* optimizationSteps(
   includeBakeCandidates: boolean,
 ): Generator<void, OptimizationPlan> {
   const animated = new Set(state.animation.tracks.map(track => track.target.nodeId))
+  const maxContentBytes =
+    policy.maxSynchronousContentBytes ?? DEFAULT_OPTIMIZATION_POLICY.maxSynchronousContentBytes
   const excluded = behavioralGroupingExclusions(runtimeNodes, animated)
   // Enumerated ONCE per node: read again for the classification and again for the grouping, a
   // model of P primitives paid three full `traverse` walks for one pass.
@@ -211,11 +226,15 @@ function* optimizationSteps(
   const seenStats = { geometries: new Set<unknown>(), textures: new Set<unknown>() }
   const sceneStats = { ...EMPTY_STATS }
   const geometryArrays = new Set<ArrayBufferView>()
-  const geometryUses = new Map<BufferGeometry, number>()
-  const materialUses = new Map<Material, number>()
-  const geometrySources = new Map<BufferGeometry, Set<string>>()
-  const materialSources = new Map<Material, Set<string>>()
-  const textureUses = new Map<Texture, number>()
+  const geometryGroups = new Map<string, ContentGroup<BufferGeometry>[]>()
+  const identityGeometryGroups = new WeakMap<BufferGeometry, ContentGroup<BufferGeometry>>()
+  const largeGeometryGroups: ContentGroup<BufferGeometry>[] = []
+  const materialGroups = new Map<string, ContentGroup<Material>[]>()
+  const textureGroups = new Map<string, ContentGroup<Texture>[]>()
+  const geometryKeys = new WeakMap<BufferGeometry, string>()
+  const materialKeys = new WeakMap<Material, string>()
+  const textureKeys = new WeakMap<Texture, string>()
+  const opaqueTextureUses = new Map<Texture, number>()
   let geometryBytes = 0
   let avoidedGeometryBytes = 0
   let avoidedTextureBytes = 0
@@ -242,10 +261,19 @@ function* optimizationSteps(
       sceneStats.draws += added.draws
       sceneStats.textureBytes += added.textureBytes
 
-      const geometryUse = geometryUses.get(mesh.geometry) ?? 0
-      geometryUses.set(mesh.geometry, geometryUse + 1)
-      collectSource(geometrySources, mesh.geometry, node.id)
-      if (geometryUse > 0) avoidedGeometryBytes += geometryByteLength(mesh.geometry)
+      const geometryGroup =
+        geometryByteLength(mesh.geometry) <= maxContentBytes
+          ? collectContent(geometryGroups, geometryKeys, mesh.geometry, node.id, GEOMETRY_CONTENT)
+          : collectIdentity(
+              identityGeometryGroups,
+              largeGeometryGroups,
+              mesh.geometry,
+              node.id,
+              'geometry',
+            )
+      if (geometryGroup.uses > 1) {
+        avoidedGeometryBytes += geometryByteLength(mesh.geometry)
+      }
       for (const array of geometryArraysOf(mesh.geometry)) {
         if (geometryArrays.has(array)) continue
         geometryArrays.add(array)
@@ -253,14 +281,17 @@ function* optimizationSteps(
       }
       const worn = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       for (const material of worn) {
-        const materialUse = materialUses.get(material) ?? 0
-        materialUses.set(material, materialUse + 1)
-        collectSource(materialSources, material, node.id)
-        if (materialUse > 0) sharedMaterialUses += 1
+        if (
+          collectContent(materialGroups, materialKeys, material, node.id, MATERIAL_CONTENT).uses > 1
+        ) {
+          sharedMaterialUses += 1
+        }
         for (const texture of texturesOf(material)) {
-          const textureUse = textureUses.get(texture) ?? 0
-          textureUses.set(texture, textureUse + 1)
-          if (textureUse > 0) avoidedTextureBytes += textureBytesOf(texture)
+          const content = textureContent(texture, maxContentBytes)
+          const uses = content
+            ? collectContent(textureGroups, textureKeys, texture, node.id, content).uses
+            : countIdentity(opaqueTextureUses, texture)
+          if (uses > 1) avoidedTextureBytes += textureBytesOf(texture)
         }
       }
       yield
@@ -338,19 +369,20 @@ function* optimizationSteps(
     (saved, group) => saved + Math.max(0, group.meshCount - 1),
     0,
   )
-  const sharedGeometry = [...geometrySources]
-    .filter(([, sourceIds]) => sourceIds.size > 1)
-    .map(([geometry, sourceIds], index) => ({
-      key: stableKey(['geometry', index, [...sourceIds].sort(byCodeUnit)]),
-      sourceIds: [...sourceIds].sort(byCodeUnit),
-      bytes: geometryByteLength(geometry),
+  const sharedGeometry = [...[...geometryGroups.values()].flat(), ...largeGeometryGroups]
+    .filter(group => group.uses > 1)
+    .map(group => ({
+      key: group.key,
+      sourceIds: [...group.sourceIds].sort(byCodeUnit),
+      bytes: geometryByteLength(group.canonical),
     }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
-  const sharedMaterials = [...materialSources]
-    .filter(([, sourceIds]) => sourceIds.size > 1)
-    .map(([, sourceIds], index) => ({
-      key: stableKey(['material', index, [...sourceIds].sort(byCodeUnit)]),
-      sourceIds: [...sourceIds].sort(byCodeUnit),
+  const sharedMaterials = [...materialGroups.values()]
+    .flat()
+    .filter(group => group.uses > 1)
+    .map(group => ({
+      key: group.key,
+      sourceIds: [...group.sourceIds].sort(byCodeUnit),
     }))
     .sort((one, other) => byCodeUnit(one.key, other.key))
   const spatialCells = spatialCellsOf(state.nodes, objectOf)
@@ -383,10 +415,57 @@ function* optimizationSteps(
   }
 }
 
-function collectSource<T>(into: Map<T, Set<string>>, resource: T, nodeId: string): void {
-  const sourceIds = into.get(resource)
-  if (sourceIds) sourceIds.add(nodeId)
-  else into.set(resource, new Set([nodeId]))
+function collectContent<T extends object>(
+  groups: Map<string, ContentGroup<T>[]>,
+  keys: WeakMap<T, string>,
+  resource: T,
+  nodeId: string,
+  content: ResourceContent<T>,
+): ContentGroup<T> {
+  const held = keys.get(resource)
+  const key = held ?? content.key(resource)
+  if (held === undefined) keys.set(resource, key)
+  const bucket = groups.get(key) ?? []
+  let group = bucket.find(
+    candidate => candidate.canonical === resource || content.equals(candidate.canonical, resource),
+  )
+  if (!group) {
+    group = { canonical: resource, key: `${key}:${bucket.length}`, sourceIds: new Set(), uses: 0 }
+    bucket.push(group)
+    groups.set(key, bucket)
+  }
+  group.sourceIds.add(nodeId)
+  group.uses += 1
+  return group
+}
+
+function collectIdentity<T extends object>(
+  groups: WeakMap<T, ContentGroup<T>>,
+  list: ContentGroup<T>[],
+  resource: T,
+  nodeId: string,
+  kind: string,
+): ContentGroup<T> {
+  let group = groups.get(resource)
+  if (!group) {
+    group = {
+      canonical: resource,
+      key: stableKey([kind, list.length]),
+      sourceIds: new Set(),
+      uses: 0,
+    }
+    groups.set(resource, group)
+    list.push(group)
+  }
+  group.sourceIds.add(nodeId)
+  group.uses += 1
+  return group
+}
+
+function countIdentity<T>(uses: Map<T, number>, resource: T): number {
+  const count = (uses.get(resource) ?? 0) + 1
+  uses.set(resource, count)
+  return count
 }
 
 function spatialCellsOf(

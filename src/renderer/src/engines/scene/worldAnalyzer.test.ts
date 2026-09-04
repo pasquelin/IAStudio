@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   BufferGeometry,
+  DataTexture,
   InterleavedBuffer,
   InterleavedBufferAttribute,
   Mesh,
@@ -246,6 +247,71 @@ describe('analyzeOptimization', () => {
     expect(plan.estimated.avoidedGeometryBytes).toBe(expectedBytes)
   })
 
+  it('detects equal geometry buffers and materials held by distinct Three resources', () => {
+    const first = meshNode('first')
+    const second = meshNode('second')
+    const firstGeometry = new BoxGeometry()
+    const secondGeometry = new BoxGeometry()
+    const objects = new Map<string, Mesh>([
+      [first.id, new Mesh(firstGeometry, new MeshStandardMaterial({ roughness: 0.35 }))],
+      [second.id, new Mesh(secondGeometry, new MeshStandardMaterial({ roughness: 0.35 }))],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes: [first, second], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+    )
+
+    expect(secondGeometry).not.toBe(firstGeometry)
+    expect(plan.sharedGeometry[0]?.key.endsWith(':0')).toBe(true)
+    expect(plan.sharedGeometry[0]?.sourceIds).toEqual(['first', 'second'])
+    expect(plan.sharedMaterials[0]?.sourceIds).toEqual(['first', 'second'])
+    expect(plan.estimated.avoidedGeometryBytes).toBeGreaterThan(0)
+    expect(plan.measured.sharedMaterials).toBe(1)
+  })
+
+  it('does not classify buffers with one different value as shared content', () => {
+    const first = meshNode('first')
+    const second = meshNode('second')
+    const firstGeometry = new BoxGeometry()
+    const secondGeometry = new BoxGeometry()
+    const position = secondGeometry.getAttribute('position')
+    position.setX(0, position.getX(0) + 0.25)
+    const objects = new Map<string, Mesh>([
+      [first.id, new Mesh(firstGeometry, new MeshStandardMaterial())],
+      [second.id, new Mesh(secondGeometry, new MeshStandardMaterial())],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes: [first, second], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+    )
+
+    expect(plan.sharedGeometry).toEqual([])
+  })
+
+  it('only reports identity sharing above the synchronous content budget', () => {
+    const shared = new BoxGeometry()
+    const nodes = [meshNode('first'), meshNode('second'), meshNode('third')]
+    const objects = new Map<string, Mesh>([
+      ['first', new Mesh(shared, new MeshStandardMaterial())],
+      ['second', new Mesh(shared, new MeshStandardMaterial())],
+      ['third', new Mesh(new BoxGeometry(), new MeshStandardMaterial())],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes, animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+      { minInstancesPerGroup: 16, analysisChunkSize: 100, maxSynchronousContentBytes: 1 },
+    )
+
+    expect(plan.sharedGeometry).toHaveLength(1)
+    expect(plan.sharedGeometry[0]?.sourceIds).toEqual(['first', 'second'])
+  })
+
   it('counts an interleaved geometry buffer once when estimating avoided memory', () => {
     const geometry = new BufferGeometry()
     const interleaved = new InterleavedBuffer(new Float32Array(18), 6)
@@ -343,7 +409,28 @@ describe('analyzeOptimization', () => {
     )
 
     expect(plan.estimated.avoidedTextureBytes).toBe(16 * 8 * 4)
-    expect(plan.measured.sharedMaterials).toBe(0)
+    expect(plan.measured.sharedMaterials).toBe(1)
+  })
+
+  it('detects identical readable pixels across distinct textures and materials', () => {
+    const firstTexture = new DataTexture(new Uint8Array([10, 20, 30, 255]), 1, 1)
+    const secondTexture = new DataTexture(new Uint8Array([10, 20, 30, 255]), 1, 1)
+    const first = meshNode('first')
+    const second = meshNode('second')
+    const objects = new Map<string, Mesh>([
+      [first.id, new Mesh(new BoxGeometry(), new MeshStandardMaterial({ map: firstTexture }))],
+      [second.id, new Mesh(new BoxGeometry(), new MeshStandardMaterial({ map: secondTexture }))],
+    ])
+
+    const plan = analyzeOptimization(
+      { nodes: [first, second], animation: EMPTY_TIMELINE },
+      new Object3D(),
+      id => objects.get(id),
+    )
+
+    expect(secondTexture).not.toBe(firstTexture)
+    expect(plan.estimated.avoidedTextureBytes).toBe(4)
+    expect(plan.sharedMaterials[0]?.sourceIds).toEqual(['first', 'second'])
   })
 
   it('counts a parented mesh once and leaves hidden branches out of measured render costs', () => {
