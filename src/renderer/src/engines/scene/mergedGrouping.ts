@@ -14,7 +14,6 @@ export function createMergedGroups(
   const drawn: Mesh[] = []
   const members = new WeakMap<Mesh, readonly FaceRange[]>()
   const sources = heldOutOfDraw()
-  const keyOf = batchKeyOf(ownMaterialOf)
   let lastNodes: readonly SceneNode[] = []
   let lastArtifacts: readonly RuntimeRenderArtifact[] | undefined
   let lastExcluded: ReadonlySet<string> | undefined
@@ -35,6 +34,7 @@ export function createMergedGroups(
     let merged = 0
     const held: Mesh[] = []
     const byId = new Map(nodes.map(node => [node.id, node]))
+    const keyOf = batchKeyOf(ownMaterialOf)
     host.updateWorldMatrix(true, false)
     const worldToHost = new Matrix4().copy(host.matrixWorld).invert()
     for (const artifact of artifacts?.filter(one => one.strategy === 'merge') ?? []) {
