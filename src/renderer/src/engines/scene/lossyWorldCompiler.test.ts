@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { BufferAttribute, BufferGeometry } from 'three'
 import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { carvedNode, meshNode } from './nodeFactory'
-import { compileLossyWorld } from './lossyWorldCompiler'
+import { compileLossyWorld, compileLossyWorldGeometry } from './lossyWorldCompiler'
 import { csgPartOf } from '@shared/domain/csg'
 import { DEFAULT_MATERIAL, type SceneNode } from './sceneState'
 import type { GeometryDescriptor } from '@shared/domain/geometry'
@@ -82,5 +83,36 @@ describe('the LOSSY world compiled for an export', () => {
       base: { geometry: { widthSegments: 34, heightSegments: 17 } },
       steps: [{ part: { geometry: { widthSegments: 34, heightSegments: 17 } } }],
     })
+  })
+
+  it('stores evaluated CSG buffers instead of recipes in an exported plan', async () => {
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array([1, 2, 3]), 3))
+    geometry.setAttribute('normal', new BufferAttribute(new Float32Array([0, 1, 0]), 3))
+    geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0]), 2))
+    geometry.setIndex(new BufferAttribute(new Uint32Array([0]), 1))
+    const node = carvedNode({
+      base: csgPartOf('Body', SPHERE, DEFAULT_MATERIAL),
+      steps: [],
+      collision: 'hull',
+    })
+
+    const compiled = await compileLossyWorldGeometry(
+      { nodes: [node] },
+      { ...NO_LOSSY_OPTIMIZATION, geometrySimplification: 'balanced' },
+      async () => geometry,
+    )
+
+    expect(compiled?.nodes).toEqual([
+      {
+        nodeId: node.id,
+        mesh: {
+          position: 'AACAPwAAAEAAAEBA',
+          normal: 'AAAAAAAAgD8AAAAA',
+          uv: 'AAAAAAAAAAA=',
+          index: 'AAAAAA==',
+        },
+      },
+    ])
   })
 })

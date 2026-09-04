@@ -21,7 +21,9 @@ import { boolOf, oneOf, textOf } from './actionInputs'
 import { messageOf } from '@shared/guards'
 import { projectName } from '@shared/domain/project'
 import { runtimeAssetIds } from '@/game/runtimeAssetIds'
-import { compileLossyWorld } from '@/engines/scene/lossyWorldCompiler'
+import { compileLossyWorldGeometry } from '@/engines/scene/lossyWorldCompiler'
+import { createCsgEvaluator } from '@/engines/csg/csgEvaluator'
+import CsgWorker from '@/engines/csg/csg.worker?worker'
 
 /** Composed HERE and written by the main process — the split is on the channel, in `ipc.ts`. */
 export const EXPORT_HANDLERS: ActionHandlers = {
@@ -119,20 +121,28 @@ async function scenesOfProject(
 ): Promise<GameExportRequest['scenes']> {
   const listed = documentsOfKind(useDocuments.getState(), 'scene')
   await Promise.all(listed.map(one => loadSceneSource(one.id)))
-
-  return listed.flatMap(one => {
-    const state = montageSceneOf(one.id)
-    if (!state) return []
-    const optimization = compileLossyWorld(state, lossyOptimization)
-
-    return [
-      {
-        id: one.id,
-        title: one.title,
-        content: JSON.stringify(scenePayloadOf(state, one.id)),
-        assetIds: runtimeAssetIds(state),
-        ...(optimization ? { optimization } : {}),
-      },
-    ]
-  })
+  const csg = createCsgEvaluator({ spawn: () => new CsgWorker(), onFailure: () => undefined })
+  try {
+    const scenes = await Promise.all(
+      listed.map(async one => {
+        const state = montageSceneOf(one.id)
+        if (!state) return null
+        const optimization = await compileLossyWorldGeometry(
+          state,
+          lossyOptimization,
+          async graph => await csg.acquire(graph),
+        )
+        return {
+          id: one.id,
+          title: one.title,
+          content: JSON.stringify(scenePayloadOf(state, one.id)),
+          assetIds: runtimeAssetIds(state),
+          ...(optimization ? { optimization } : {}),
+        }
+      }),
+    )
+    return scenes.flatMap(scene => (scene ? [scene] : []))
+  } finally {
+    csg.dispose()
+  }
 }

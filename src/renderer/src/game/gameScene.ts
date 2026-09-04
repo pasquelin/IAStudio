@@ -1,4 +1,6 @@
 import {
+  BufferAttribute,
+  BufferGeometry,
   Color,
   InstancedMesh,
   LOD,
@@ -8,14 +10,18 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   Scene,
-  type BufferGeometry,
   type Texture,
 } from 'three'
+import { bytesFromBase64 } from '@shared/base64'
 import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
 import type { Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
-import type { CompiledNodeGeometry, CompiledSceneOptimization } from '@shared/domain/gameExport'
+import type {
+  CompiledMeshGeometry,
+  CompiledNodeGeometry,
+  CompiledSceneOptimization,
+} from '@shared/domain/gameExport'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import { createGeometryCache } from '@/engines/scene/geometryCache'
@@ -65,14 +71,18 @@ export async function buildGameScene(
   optimization?: CompiledSceneOptimization,
   loadModel?: ModelSource,
 ): Promise<GameScene> {
-  const carve = state.nodes.some(node => node.type === 'carved') ? await carver() : uncutGeometry
+  const compiled = new Map(optimization?.nodes.map(node => [node.nodeId, node]) ?? [])
+  const needsCarver = state.nodes.some(
+    node =>
+      node.type === 'carved' && !compiled.get(node.id)?.mesh && !compiled.get(node.id)?.lodMeshes,
+  )
+  const carve = needsCarver ? await carver() : uncutGeometry
   const scene = new Scene()
   const byEntity = new Map<string, Object3D>()
   const placements = new Map<string, (transform: Transform) => void>()
   const geometries = createGeometryCache()
   // The PROMISE, not the texture: two nodes wearing one picture must decode it once.
   const textures = new Map<string, Promise<Texture>>()
-  const compiled = new Map(optimization?.nodes.map(node => [node.nodeId, node]) ?? [])
   const models = new Map<string, Promise<Object3D>>()
   const modelMeshes = new WeakSet<Mesh>()
 
@@ -249,9 +259,12 @@ async function objectOf(
     return object
   }
   if (node.type === 'carved') {
-    const graphs = compiled?.lodCarved ?? [compiled?.carved ?? node.carved]
+    const geometries =
+      compiled?.lodMeshes?.map(compiledGeometryOf) ??
+      (compiled?.mesh ? [compiledGeometryOf(compiled.mesh)] : undefined)
+    const graphs = geometries ? [] : (compiled?.lodCarved ?? [compiled?.carved ?? node.carved])
     const object = renderedGeometry(
-      graphs.map(graph => carve(graph)),
+      geometries ?? graphs.map(graph => carve(graph)),
       materialOf(node.material, dress),
     )
     object.traverse(mesh => {
@@ -265,6 +278,33 @@ async function objectOf(
   if (node.type === 'model') return await modelOf(node.model.assetId)
   // A group carries children. Cameras, paths, sprites and text belong to the editor renderer.
   return node.type === 'group' ? new Object3D() : null
+}
+
+function compiledGeometryOf(mesh: CompiledMeshGeometry): BufferGeometry {
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(floatsFrom(mesh.position), 3))
+  if (mesh.normal) geometry.setAttribute('normal', new BufferAttribute(floatsFrom(mesh.normal), 3))
+  if (mesh.uv) geometry.setAttribute('uv', new BufferAttribute(floatsFrom(mesh.uv), 2))
+  if (mesh.index) geometry.setIndex(new BufferAttribute(uintsFrom(mesh.index), 1))
+  return geometry
+}
+
+function floatsFrom(encoded: string): Float32Array {
+  const bytes = bytesFromBase64(encoded)
+  return new Float32Array(
+    bytes.buffer,
+    bytes.byteOffset,
+    bytes.byteLength / Float32Array.BYTES_PER_ELEMENT,
+  )
+}
+
+function uintsFrom(encoded: string): Uint32Array {
+  const bytes = bytesFromBase64(encoded)
+  return new Uint32Array(
+    bytes.buffer,
+    bytes.byteOffset,
+    bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT,
+  )
 }
 
 function renderedGeometry(

@@ -71,6 +71,16 @@ export type CompiledNodeGeometry = {
   carved?: CsgGraph
   lodGeometries?: readonly GeometryDescriptor[]
   lodCarved?: readonly CsgGraph[]
+  mesh?: CompiledMeshGeometry
+  lodMeshes?: readonly CompiledMeshGeometry[]
+}
+
+/** Tight runtime buffers encoded once during export, never recomputed by the shipped game. */
+export type CompiledMeshGeometry = {
+  position: string
+  normal: string
+  uv: string
+  index?: string
 }
 
 export type CompiledSceneOptimization = {

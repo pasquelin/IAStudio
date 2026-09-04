@@ -214,6 +214,28 @@ describe('a scene as a game draws it', () => {
     expect(object.geometry.getAttribute('position').count).toBeGreaterThan(0)
   })
 
+  it('uploads an exported CSG buffer without evaluating its authoring recipe again', async () => {
+    const node = carvedNode(pierced())
+    const built = await buildGameScene(scene([node]), NOTHING, {
+      nodes: [
+        {
+          nodeId: node.id,
+          mesh: {
+            position: 'AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA',
+            normal: '',
+            uv: '',
+            index: 'AAAAAAEAAAACAAAA',
+          },
+        },
+      ],
+    })
+    const object = built.byEntity.get(node.id)
+
+    if (!(object instanceof Mesh)) throw new Error('expected a mesh')
+    expect(object.geometry.getAttribute('position').count).toBe(3)
+    expect(object.geometry.getIndex()?.count).toBe(3)
+  })
+
   it('paints the background a scene asked for', async () => {
     const built = await buildGameScene(
       {

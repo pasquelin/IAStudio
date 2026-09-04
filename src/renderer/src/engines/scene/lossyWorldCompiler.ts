@@ -1,11 +1,14 @@
 import { isCsgGraph, type CsgGraph, type CsgPart } from '@shared/domain/csg'
+import { bytesToBase64 } from '@shared/base64'
 import type { GeometryDescriptor } from '@shared/domain/geometry'
 import type {
+  CompiledMeshGeometry,
   CompiledNodeGeometry,
   CompiledSceneOptimization,
   LossyOptimization,
 } from '@shared/domain/gameExport'
 import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
+import { BufferAttribute, type BufferGeometry, type InterleavedBufferAttribute } from 'three'
 import type { SceneNode, SceneState } from './sceneState'
 
 /** Compiles only runtime hints; the authoring state is neither mutated nor embedded in the plan. */
@@ -18,6 +21,73 @@ export function compileLossyWorld(
   const ratio = DEFAULT_OPTIMIZATION_POLICY.simplificationRatios[options.geometrySimplification]
   const nodes = state.nodes.flatMap(node => compiledNode(node, options.generateLods, ratio))
   return nodes.length > 0 ? { nodes } : undefined
+}
+
+export type CarvedGeometryCompiler = (graph: CsgGraph) => Promise<BufferGeometry | null>
+
+/** Evaluates requested CSG levels before packaging so the exported runtime only uploads them. */
+export async function compileLossyWorldGeometry(
+  state: Pick<SceneState, 'nodes'>,
+  options: LossyOptimization,
+  carve: CarvedGeometryCompiler,
+): Promise<CompiledSceneOptimization | undefined> {
+  const plan = compileLossyWorld(state, options)
+  if (!plan) return undefined
+
+  const nodes = await Promise.all(
+    plan.nodes.map(async node => {
+      if (node.lodCarved) {
+        const meshes = await compileGraphs(node.lodCarved, carve)
+        return meshes ? { nodeId: node.nodeId, lodMeshes: meshes } : node
+      }
+      if (node.carved) {
+        const geometry = await carve(node.carved)
+        return geometry ? { nodeId: node.nodeId, mesh: compiledMeshOf(geometry) } : node
+      }
+      return node
+    }),
+  )
+  return { nodes }
+}
+
+async function compileGraphs(
+  graphs: readonly CsgGraph[],
+  carve: CarvedGeometryCompiler,
+): Promise<readonly CompiledMeshGeometry[] | null> {
+  const geometries = await Promise.all(graphs.map(async graph => await carve(graph)))
+  if (geometries.some(geometry => geometry === null)) return null
+  return geometries.flatMap(geometry => (geometry ? [compiledMeshOf(geometry)] : []))
+}
+
+function compiledMeshOf(geometry: BufferGeometry): CompiledMeshGeometry {
+  const index = geometry.getIndex()
+  return {
+    position: floatAttributeBase64(geometry.getAttribute('position')),
+    normal: floatAttributeBase64(geometry.getAttribute('normal')),
+    uv: floatAttributeBase64(geometry.getAttribute('uv')),
+    ...(index ? { index: attributeBase64(index) } : {}),
+  }
+}
+
+function attributeBase64(attribute: BufferAttribute): string {
+  return bytesToBase64(
+    new Uint8Array(attribute.array.buffer, attribute.array.byteOffset, attribute.array.byteLength),
+  )
+}
+
+function floatAttributeBase64(
+  attribute: BufferAttribute | InterleavedBufferAttribute | undefined,
+): string {
+  if (!attribute) return ''
+  if (attribute instanceof BufferAttribute) return attributeBase64(attribute)
+
+  const values = new Float32Array(attribute.count * attribute.itemSize)
+  for (let item = 0; item < attribute.count; item += 1) {
+    for (let component = 0; component < attribute.itemSize; component += 1) {
+      values[item * attribute.itemSize + component] = attribute.getComponent(item, component)
+    }
+  }
+  return attributeBase64(new BufferAttribute(values, attribute.itemSize))
 }
 
 function compiledNode(
