@@ -58,3 +58,32 @@ export function standingLots(
   }
   return lots
 }
+
+/** What `standingSources` would return, counted over the buckets rather than materialised. */
+export function standingSourceCount(
+  buckets: Iterable<Bucket>,
+  standing: ReadonlySet<CellKey>,
+  movers: Iterable<Mobile>,
+): number {
+  let count = 0
+  for (const bucket of buckets) {
+    if (bucket.cell === null || standing.has(bucket.cell)) count += bucket.ids.length
+  }
+  for (const mover of movers) count += mover.ids.length
+  return count
+}
+
+/** The three readings a click makes of the cells, which only differ by what they materialise. */
+export function cellPicking(
+  buckets: () => Iterable<Bucket>,
+  standing: ReadonlySet<CellKey>,
+  // The MAP, never `values()`: an iterator is walked once, and the second click read no mover.
+  movers: ReadonlyMap<string, Mobile>,
+  sourcesById: () => ReadonlyMap<string, Mesh[]>,
+) {
+  return {
+    pickable: () => standingLots(buckets(), standing, movers.values()),
+    editorPickable: () => standingSources(buckets(), standing, movers.values(), sourcesById()),
+    editorSourceCount: () => standingSourceCount(buckets(), standing, movers.values()),
+  }
+}

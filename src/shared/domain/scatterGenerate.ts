@@ -1,7 +1,9 @@
 import { clamp } from '../numeric'
 import { chunkLayout, unpackDeltas } from './relief'
+import { standingAngles } from './scatterRotation'
 import {
   SCATTER_MASK_TEXELS,
+  SCATTER_SPACING,
   type ScatterAsset,
   type ScatterLayer,
   type ScatterRules,
@@ -47,7 +49,9 @@ export function scatterPosesOf(
 ): readonly ScatterPose[] {
   if (!layer.enabled || layer.assets.length === 0) return []
   const rules = layer.rules
-  const step = Math.max(rules.spacing, 1e-3)
+  // Never below the slider's own step: at 1e-3 a 256 m cell walked 65 billion cells and hung the
+  // renderer thread, and the slider reaches 0.
+  const step = Math.max(rules.spacing, SCATTER_SPACING.step)
   const chance = clamp(rules.density * step * step, 0, 1)
   if (chance === 0) return []
 
@@ -127,14 +131,14 @@ function rotationOf(
   tilt: number,
 ): { x: number; y: number; z: number } {
   const align = clamp(slopeAlign, 0, 100) / 100
-  const upx = slope.nx * align
-  const upy = 1 - align + slope.ny * align
-  const upz = slope.nz * align
-  const length = Math.hypot(upx, upy, upz) || 1
-  const horizontal = Math.hypot(upx, upz)
-  const pitch = Math.atan2(horizontal, upy / length) + tilt
-  const heading = horizontal > 1e-6 ? Math.atan2(upx, upz) : 0
-  return { x: pitch, y: yaw + heading, z: 0 }
+  const up = {
+    x: slope.nx * align,
+    y: 1 - align + slope.ny * align,
+    z: slope.nz * align,
+  }
+  const angles = standingAngles(up, yaw)
+  // The extra tilt rides on the pitch, as it did: it is a wobble, not a second alignment.
+  return { ...angles, x: angles.x + tilt }
 }
 
 function pickAsset(assets: readonly ScatterAsset[], unit: number): string | null {

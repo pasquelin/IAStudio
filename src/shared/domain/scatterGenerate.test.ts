@@ -126,3 +126,13 @@ describe('scatterPosesOf', () => {
     expect(count).toBeLessThan(layer.rules.density * layer.size.x * layer.size.z)
   })
 })
+
+describe('what the ground says about a pose', () => {
+  it('walks the slider own step when the spacing is zero', () => {
+    const zero = scatterLayer({ ...pines(), rules: { ...pines().rules, spacing: 0 } })
+    const stepped = scatterLayer({ ...pines(), rules: { ...pines().rules, spacing: 0.1 } })
+
+    // A step of 1e-3 walked 65 billion cells of a 256 m region and hung the renderer thread.
+    expect(scatterPosesOf(zero, region, flat)).toEqual(scatterPosesOf(stepped, region, flat))
+  })
+})

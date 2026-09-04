@@ -1,5 +1,5 @@
 import type { GroundPaint } from './groundPaint'
-import { packDeltas, type ReliefSculpt } from './relief'
+import { chunkLayout, packDeltas, type ReliefSculpt } from './relief'
 import { SCATTER_MASK_TEXELS } from './scatter'
 
 export type PaintExtent = { origin: { x: number; z: number }; size: { x: number; z: number } }
@@ -32,20 +32,25 @@ function paintedWeightAt(
   if (u < 0 || u > 1 || v < 0 || v > 1) return 0
   const x = Math.round(u * (paint.width - 1))
   const z = Math.round(v * (paint.height - 1))
-  const offset = (z * paint.width + x) * 4
-  return ((paint.pixels[offset + 1] ?? 0) / 255) * ((paint.pixels[offset + 3] ?? 0) / 255)
+  // Alpha alone: the brush writes ONE colour, whose green is 192, so weighting by it capped a
+  // fully painted texel at 0.753 and threw away a quarter of the props it stood for.
+  return (paint.pixels[(z * paint.width + x) * 4 + 3] ?? 0) / 255
 }
 
+/**
+ * Packed by `chunkLayout`, which is what every reader decodes with — chunks SHARE their edge, so
+ * an inner one is `grain + 1` wide. Packing them `grain` wide sheared every row of the mask.
+ */
 function packedWeights(weights: Float32Array, grain: number): ReliefSculpt {
   const chunks: ReliefSculpt['chunks'][number][] = []
-  for (let row = 0; row < Math.ceil(SCATTER_MASK_TEXELS / grain); row += 1) {
-    for (let column = 0; column < Math.ceil(SCATTER_MASK_TEXELS / grain); column += 1) {
-      const width = Math.min(grain, SCATTER_MASK_TEXELS - column * grain)
-      const height = Math.min(grain, SCATTER_MASK_TEXELS - row * grain)
-      const chunk = new Float32Array(width * height)
-      for (let z = 0; z < height; z += 1) {
-        const start = (row * grain + z) * SCATTER_MASK_TEXELS + column * grain
-        chunk.set(weights.subarray(start, start + width), z * width)
+  const along = Math.ceil(SCATTER_MASK_TEXELS / grain)
+  for (let row = 0; row < along; row += 1) {
+    for (let column = 0; column < along; column += 1) {
+      const layout = chunkLayout(column, row, SCATTER_MASK_TEXELS, SCATTER_MASK_TEXELS, grain)
+      const chunk = new Float32Array(layout.width * layout.height)
+      for (let z = 0; z < layout.height; z += 1) {
+        const start = (layout.sampleZ + z) * SCATTER_MASK_TEXELS + layout.sampleX
+        chunk.set(weights.subarray(start, start + layout.width), z * layout.width)
       }
       chunks.push({ column, row, payload: packDeltas(chunk) })
     }

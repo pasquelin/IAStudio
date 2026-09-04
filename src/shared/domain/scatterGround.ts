@@ -26,16 +26,20 @@ export function scatterGroundOf(terrains: readonly ReliefHeightLayer[]): Scatter
   }
 }
 
+/** Metres between the two samples a slope is read from. */
+const SLOPE_REACH = 0.5
+
 function slopeAt(
   terrains: readonly ReliefHeightLayer[],
   x: number,
   z: number,
 ): { degrees: number; nx: number; ny: number; nz: number } {
   const height = getHeightAt(terrains, x, z) ?? 0
-  const east = getHeightAt(terrains, x + 0.5, z) ?? height
-  const north = getHeightAt(terrains, x, z + 0.5) ?? height
-  const nx = height - east
-  const nz = height - north
+  const east = getHeightAt(terrains, x + SLOPE_REACH, z) ?? height
+  const north = getHeightAt(terrains, x, z + SLOPE_REACH) ?? height
+  // Divided by the reach: read as a rise over one metre, a true 45° slope came back as 26.57°.
+  const nx = (height - east) / SLOPE_REACH
+  const nz = (height - north) / SLOPE_REACH
   const length = Math.hypot(nx, 1, nz) || 1
   return {
     degrees: Math.acos(clamp(1 / length, -1, 1)) * (180 / Math.PI),
