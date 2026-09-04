@@ -27,6 +27,7 @@ import type { LossyOptimization } from '@shared/domain/gameExport'
 import { batchKeyOf } from './batching'
 import { bakeCandidatesOf, type BakeCandidate } from './bakeCandidates'
 import { CELL_SIZE, cellKey } from './worldPartition'
+import { runtimeArtifactsOf } from './runtimeWorldCompiler'
 
 export type OptimizationClassification =
   | 'STATIC'
@@ -302,33 +303,41 @@ function* optimizationSteps(
   const bakeCandidates = includeBakeCandidates
     ? bakeCandidatesOf(state.nodes, runtimeNodes, animated)
     : []
-  const batches = [...batchGroups]
-    .filter(
-      ([, group]) =>
-        group.forced ||
-        group.units.size >= (policy.minBatchSize ?? DEFAULT_OPTIMIZATION_POLICY.minBatchSize),
-    )
+  const runtimeArtifacts = runtimeArtifactsOf(runtimeNodes, state.animation, {
+    ...DEFAULT_OPTIMIZATION_POLICY,
+    ...policy,
+  })
+  const forcedBatchIds = new Set(
+    state.nodes.flatMap(node => (node.optimization?.mode === 'batch' ? [node.id] : [])),
+  )
+  const candidatesFor = (strategy: 'batch' | 'merge'): readonly InstanceCandidate[] =>
+    runtimeArtifacts
+      .filter(artifact => artifact.strategy === strategy)
+      .map(artifact => ({
+        key: artifact.key,
+        sourceIds: artifact.sourceIds,
+        meshCount: artifact.sourceIds.length,
+      }))
+      .sort((one, other) => byCodeUnit(one.key, other.key))
+  const automaticBatches = candidatesFor('batch').filter(group =>
+    group.sourceIds.every(id => !forcedBatchIds.has(id)),
+  )
+  const forcedBatches = [...batchGroups]
+    .filter(([, group]) => group.forced)
     .map(([key, group]) => ({
       key,
       sourceIds: [...group.ids].sort(byCodeUnit),
       meshCount: group.units.size,
     }))
-    .sort((one, other) => byCodeUnit(one.key, other.key))
-  const instancedUnits = new Set(
-    allInstanceCandidates
-      .filter(group => group.forced || group.meshCount >= policy.minInstancesPerGroup)
-      .flatMap(group => [...group.units]),
+  const batches = [...forcedBatches, ...automaticBatches].sort((one, other) =>
+    byCodeUnit(one.key, other.key),
   )
+  const merges = candidatesFor('merge')
   const instanceSavings = instances.reduce((saved, group) => saved + group.meshCount - 1, 0)
-  // 🛑 The FORCED ones alone. `createOptimizedGroups` sends a node to the batcher only when its
-  // mode says `batch`; `auto` — the default — never batches. Counting those here promised a draw
-  // call saving the renderer does not make, on a figure a person reads before deciding.
-  const batchSavings = [...batchGroups.values()]
-    .filter(group => group.forced)
-    .reduce((saved, group) => {
-      const remaining = [...group.units].filter(unit => !instancedUnits.has(unit)).length
-      return saved + Math.max(0, remaining - 1)
-    }, 0)
+  const groupedSavings = [...batches, ...merges].reduce(
+    (saved, group) => saved + Math.max(0, group.meshCount - 1),
+    0,
+  )
   const sharedGeometry = [...geometrySources]
     .filter(([, sourceIds]) => sourceIds.size > 1)
     .map(([geometry, sourceIds], index) => ({
@@ -351,7 +360,7 @@ function* optimizationSteps(
     instances,
     bakeCandidates,
     batches,
-    merges: [],
+    merges,
     sharedGeometry,
     sharedMaterials,
     spatialCells,
@@ -367,7 +376,7 @@ function* optimizationSteps(
     },
     estimated: {
       drawCallsBefore: sceneStats.draws,
-      drawCallsAfter: Math.max(0, sceneStats.draws - instanceSavings - batchSavings),
+      drawCallsAfter: Math.max(0, sceneStats.draws - instanceSavings - groupedSavings),
       avoidedGeometryBytes,
       avoidedTextureBytes,
     },

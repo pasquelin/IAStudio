@@ -1,6 +1,9 @@
 import { stableKey } from '@shared/hash'
 import { byCodeUnit } from '@shared/text'
-import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
+import {
+  DEFAULT_OPTIMIZATION_POLICY,
+  type OptimizationPolicy,
+} from '@shared/domain/optimizationPolicy'
 import type { AnimationTimeline } from '@shared/domain/animation'
 import type { SceneWorld } from '@shared/domain/scene'
 import { behavioralGroupingExclusions, type RuntimeRenderArtifact } from './grouping'
@@ -165,7 +168,7 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
     nodes.clear()
     for (const node of world.nodes) nodes.set(node.id, node)
     invalidated.clear()
-    const compiledArtifacts = compileArtifacts(world.nodes, world.animation)
+    const compiledArtifacts = runtimeArtifactsOf(world.nodes, world.animation)
     artifacts = new Map(compiledArtifacts.map(artifact => [artifact.signature, artifact]))
     runtime = runtimeState(world, world.nodes, compiledArtifacts)
     report = {
@@ -224,7 +227,7 @@ export function createRuntimeWorldCompiler(): RuntimeWorldCompiler {
     let compiledArtifacts = 0
     let reusedArtifacts = runtime.runtimeOptimization.artifacts.length
     const heldArtifacts = artifactInputsChanged
-      ? compileArtifacts(ordered, patch.animation ?? runtime.animation).map(artifact => {
+      ? runtimeArtifactsOf(ordered, patch.animation ?? runtime.animation).map(artifact => {
           const held = forceArtifactCompilation ? undefined : artifacts.get(artifact.signature)
           if (held) return held
           compiledArtifacts += 1
@@ -296,9 +299,10 @@ function runtimeState(
   }
 }
 
-function compileArtifacts(
+export function runtimeArtifactsOf(
   nodes: readonly SceneNode[],
   animation: AnimationTimeline,
+  policy: OptimizationPolicy = DEFAULT_OPTIMIZATION_POLICY,
 ): readonly RuntimeRenderArtifact[] {
   const excluded = behavioralGroupingExclusions(
     nodes,
@@ -336,10 +340,7 @@ function compileArtifacts(
     } else groups.set(key, { sourceIds: [node.id], forced: mode === 'instance' })
   }
   const instances = [...groups]
-    .filter(
-      ([, group]) =>
-        group.forced || group.sourceIds.length >= DEFAULT_OPTIMIZATION_POLICY.minInstancesPerGroup,
-    )
+    .filter(([, group]) => group.forced || group.sourceIds.length >= policy.minInstancesPerGroup)
     .map<RuntimeRenderArtifact>(([key, group]) => {
       const ordered = group.sourceIds.sort(byCodeUnit)
       return {
@@ -358,12 +359,93 @@ function compileArtifacts(
       signature: stableKey(['batch', key, ordered]),
     }
   })
-  return [...instances, ...batchArtifacts].sort((one, other) =>
+  const selected = new Set(
+    [...instances, ...batchArtifacts].flatMap(artifact => artifact.sourceIds),
+  )
+  const automatic = automaticStaticArtifacts(nodes, excluded, selected, policy)
+  return [...instances, ...batchArtifacts, ...automatic].sort((one, other) =>
     byCodeUnit(one.signature, other.signature),
   )
 }
 
+function automaticStaticArtifacts(
+  nodes: readonly SceneNode[],
+  excluded: ReadonlySet<string>,
+  selected: ReadonlySet<string>,
+  policy: OptimizationPolicy,
+): readonly RuntimeRenderArtifact[] {
+  const groups = new Map<string, SceneNode[]>()
+  const cellSize = Math.min(policy.maxBatchBounds, policy.spatialCellTargetSize)
+  const parentIds = new Set(nodes.flatMap(node => (node.parentId ? [node.parentId] : [])))
+  for (const node of nodes) {
+    if (
+      node.type !== 'mesh' ||
+      (node.optimization?.mode !== undefined && node.optimization.mode !== 'auto') ||
+      excluded.has(node.id) ||
+      selected.has(node.id) ||
+      parentIds.has(node.id) ||
+      !node.visible
+    )
+      continue
+    const key = stableKey([
+      node.material,
+      node.castShadow,
+      node.receiveShadow,
+      node.negative ?? false,
+      mergeLayoutOf(node),
+      Math.floor(node.transform.position.x / cellSize),
+      Math.floor(node.transform.position.y / cellSize),
+      Math.floor(node.transform.position.z / cellSize),
+      node.optimization?.groupId ?? null,
+    ])
+    const members = groups.get(key)
+    if (members) members.push(node)
+    else groups.set(key, [node])
+  }
+
+  const artifacts: RuntimeRenderArtifact[] = []
+  for (const [key, unordered] of groups) {
+    const members = unordered.sort((one, other) => byCodeUnit(one.id, other.id))
+    if (members.length < policy.minBatchSize) continue
+    for (let offset = 0; offset < members.length; offset += policy.maxObjectsPerBatch) {
+      const chunk = members.slice(offset, offset + policy.maxObjectsPerBatch)
+      const canMerge =
+        chunk.length >= policy.minMergeSize &&
+        chunk.length <= policy.maxObjectsPerMerge &&
+        chunk.every(
+          node => node.parentId === null && !parentIds.has(node.id) && !node.components?.length,
+        )
+      const strategy = canMerge ? 'merge' : 'batch'
+      const sourceIds = chunk.map(node => node.id).sort(byCodeUnit)
+      artifacts.push({
+        key,
+        strategy,
+        sourceIds,
+        signature: stableKey([strategy, key, sourceIds]),
+      })
+    }
+  }
+  return artifacts
+}
+
+function mergeLayoutOf(node: SceneNode): string {
+  if (node.type !== 'mesh') return ''
+  switch (node.geometry.kind) {
+    case 'dodecahedron':
+    case 'icosahedron':
+    case 'octahedron':
+    case 'tetrahedron':
+      return 'non-indexed'
+    default:
+      return 'indexed'
+  }
+}
+
 function artifactInputSignature(node: SceneNode): string {
+  const cellSize = Math.min(
+    DEFAULT_OPTIMIZATION_POLICY.maxBatchBounds,
+    DEFAULT_OPTIMIZATION_POLICY.spatialCellTargetSize,
+  )
   return stableKey([
     node.type,
     node.parentId,
@@ -372,6 +454,13 @@ function artifactInputSignature(node: SceneNode): string {
     node.receiveShadow,
     node.components ?? null,
     node.optimization ?? null,
+    node.type === 'mesh'
+      ? [
+          Math.floor(node.transform.position.x / cellSize),
+          Math.floor(node.transform.position.y / cellSize),
+          Math.floor(node.transform.position.z / cellSize),
+        ]
+      : null,
     node.type === 'mesh' ? [node.geometry, node.material, node.negative] : null,
     node.type === 'model' ? node.model : null,
   ])

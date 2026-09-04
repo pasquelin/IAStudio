@@ -387,6 +387,7 @@ export function sweep(
   keyOf: (node: SceneNode, mesh: Mesh) => string,
   sources: HeldOutOfDraw,
   excluded?: ReadonlySet<string>,
+  minimumSize = WORTH_INSTANCING,
 ): Grouped[] {
   const parented = new Set<string>()
   for (const node of nodes) if (node.parentId) parented.add(node.parentId)
@@ -433,7 +434,7 @@ export function sweep(
   for (const group of groups.values()) {
     // Back to the camera's layer: a group that shrank below the floor since the last pass would
     // otherwise stay invisible with nothing drawing it.
-    if (group.meshes.length < WORTH_INSTANCING && !group.nodes.some(forcesGrouping)) {
+    if (group.meshes.length < minimumSize && !group.nodes.some(forcesGrouping)) {
       for (const mesh of group.meshes) mesh.layers.set(0)
       continue
     }

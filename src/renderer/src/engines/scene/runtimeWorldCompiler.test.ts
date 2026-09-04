@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { DEFAULT_WORLD } from '@shared/domain/scene'
+import { DEFAULT_OPTIMIZATION_POLICY } from '@shared/domain/optimizationPolicy'
 import { meshNode } from './scene-fixtures'
 import {
   createRuntimeWorldCompiler,
+  runtimeArtifactsOf,
   runtimeWorldPatch,
   runtimeWorldPatchIsEmpty,
   worldWithRuntimePatch,
@@ -16,6 +18,15 @@ const stateOf = (...nodes: ReturnType<typeof meshNode>[]): SceneState => ({
   world: DEFAULT_WORLD,
   animation: EMPTY_TIMELINE,
 })
+
+function boxNode(id: string, width: number, x: number): ReturnType<typeof meshNode> {
+  const node = meshNode(id)
+  return {
+    ...node,
+    geometry: { kind: 'box', width, height: 1, depth: 1 },
+    transform: { ...node.transform, position: { x, y: 0, z: 0 } },
+  }
+}
 
 describe('runtimeWorldPatch', () => {
   it('applies a transported delta to the authoring world without using runtime state', () => {
@@ -215,6 +226,114 @@ describe('createRuntimeWorldCompiler', () => {
     expect(runtime.runtimeOptimization.artifacts.map(artifact => artifact.strategy).sort()).toEqual(
       ['batch', 'instance'],
     )
+  })
+
+  it('chooses a measured merge for a small cell and a batch for a larger compatible cell', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const nodes = Array.from({ length: 11 }, (_unused, index) =>
+      boxNode(
+        `prop-${index}`,
+        index + 1,
+        index < 2 ? index : DEFAULT_OPTIMIZATION_POLICY.maxBatchBounds + index,
+      ),
+    )
+
+    const runtime = compiler.compileRuntimeWorld(stateOf(...nodes))
+
+    const merge = runtime.runtimeOptimization.artifacts.find(
+      artifact => artifact.strategy === 'merge',
+    )
+    const batch = runtime.runtimeOptimization.artifacts.find(
+      artifact => artifact.strategy === 'batch',
+    )
+    expect(merge?.sourceIds).toEqual(['prop-0', 'prop-1'])
+    expect(batch?.sourceIds).toHaveLength(9)
+  })
+
+  it('keeps explicit individual and excluded nodes out of automatic artifacts', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const individual: ReturnType<typeof meshNode>[] = Array.from(
+      { length: 2 },
+      (_unused, index) => ({
+        ...boxNode(`individual-${index}`, index + 1, index),
+        optimization: { mode: 'individual' },
+      }),
+    )
+    const excluded: ReturnType<typeof meshNode>[] = Array.from({ length: 2 }, (_unused, index) => ({
+      ...boxNode(`excluded-${index}`, index + 3, index),
+      optimization: { mode: 'exclude' },
+    }))
+
+    const runtime = compiler.compileRuntimeWorld(stateOf(...individual, ...excluded))
+
+    expect(runtime.runtimeOptimization.artifacts).toEqual([])
+  })
+
+  it('keeps compatible objects in distant spatial cells out of one batch', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const first = meshNode('first')
+    const second = boxNode('second', 2, DEFAULT_OPTIMIZATION_POLICY.maxBatchBounds * 2)
+
+    const runtime = compiler.compileRuntimeWorld(stateOf(first, second))
+
+    expect(runtime.runtimeOptimization.artifacts).toEqual([])
+  })
+
+  it('recompiles spatial artifacts when a node crosses a cell boundary', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const first = meshNode('first')
+    const second = boxNode('second', 2, 1)
+    const before = stateOf(first, second)
+    compiler.compileRuntimeWorld(before)
+    const after = stateOf(
+      first,
+      boxNode('second', 2, DEFAULT_OPTIMIZATION_POLICY.spatialCellTargetSize * 2),
+    )
+
+    const runtime = compiler.compileRuntimeRegion(runtimeWorldPatch(before, after))
+
+    expect(runtime?.runtimeOptimization.artifacts).toEqual([])
+    expect(compiler.getOptimizationReport().compiledArtifacts).toBe(0)
+  })
+
+  it('keeps mesh parents individual so their document subtree remains reachable', () => {
+    const compiler = createRuntimeWorldCompiler()
+    const parent = meshNode('parent')
+    const peer = boxNode('peer', 2, 1)
+    const child = { ...meshNode('child'), parentId: parent.id }
+
+    const runtime = compiler.compileRuntimeWorld(stateOf(parent, peer, child))
+
+    expect(
+      runtime.runtimeOptimization.artifacts.some(artifact =>
+        artifact.sourceIds.includes(parent.id),
+      ),
+    ).toBe(false)
+  })
+
+  it('chunks artifact members deterministically before signing them', () => {
+    const nodes = Array.from({ length: 5 }, (_unused, index) =>
+      boxNode(`prop-${index}`, index + 1, 0),
+    )
+    const policy = { ...DEFAULT_OPTIMIZATION_POLICY, maxObjectsPerBatch: 2 }
+
+    const forward = runtimeArtifactsOf(nodes, EMPTY_TIMELINE, policy)
+    const reversed = runtimeArtifactsOf([...nodes].reverse(), EMPTY_TIMELINE, policy)
+
+    expect(reversed).toEqual(forward)
+  })
+
+  it('separates indexed and non-indexed primitives before merge', () => {
+    const boxes = [boxNode('box-a', 1, 0), boxNode('box-b', 2, 1)]
+    const polyhedra: ReturnType<typeof meshNode>[] = ['poly-a', 'poly-b'].map(id => ({
+      ...meshNode(id),
+      geometry: { kind: 'icosahedron', radius: 1 },
+    }))
+
+    const artifacts = runtimeArtifactsOf([...boxes, ...polyhedra], EMPTY_TIMELINE)
+
+    expect(artifacts).toHaveLength(2)
+    expect(artifacts.every(artifact => artifact.strategy === 'merge')).toBe(true)
   })
 
   it('evicts deleted entities and preserves the requested order', () => {
