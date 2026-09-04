@@ -2,6 +2,7 @@ import {
   ACTION_RESOURCES,
   ACTION_REGISTRY,
   assistantAction,
+  type ActionOutcome,
   type ActionResource,
   type AssistantAnswer,
   type AssistantCall,
@@ -173,6 +174,17 @@ function dependsOnReturned(
   )
 }
 
+function nextStepAfter(call: AssistantCall | undefined): PlannedStep {
+  const descriptor = call ? assistantAction(call.action) : null
+  const continues = [...(descriptor?.produces ?? []), ...(descriptor?.returns ?? [])].some(
+    resource =>
+      ACTION_REGISTRY.some(
+        action => action.inputs?.includes(resource) || action.requires?.includes(resource),
+      ),
+  )
+  return continues ? reasoningStep() : verificationStep()
+}
+
 function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly PlannedStep[] {
   if (answer.ask) {
     return [
@@ -193,18 +205,8 @@ function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly P
     actions.push(actionStep(call))
     for (const resource of descriptor?.returns ?? []) returned.add(resource)
   }
-  const last = answer.calls.at(-1)
-  const descriptor = last ? assistantAction(last.action) : null
-  const enablesContinuation = [
-    ...(descriptor?.produces ?? []),
-    ...(descriptor?.returns ?? []),
-  ].some(resource =>
-    ACTION_REGISTRY.some(
-      action => action.inputs?.includes(resource) || action.requires?.includes(resource),
-    ),
-  )
   return actions.length > 0
-    ? [...actions, enablesContinuation ? reasoningStep() : verificationStep()]
+    ? [...actions, nextStepAfter(answer.calls.at(-1))]
     : verification
       ? []
       : actions
@@ -218,6 +220,36 @@ const jobIdOf = (value: unknown): string | null => {
 const terminalJob = (jobs: readonly Job[], jobId: string): Job | null => {
   const job = jobs.find(candidate => candidate.id === jobId)
   return job && job.status !== 'queued' && job.status !== 'running' ? job : null
+}
+
+function missingResourceOutcome(missing: readonly ActionResource[]): MissionStepOutcome {
+  return {
+    kind: 'planned',
+    result: {
+      ok: false,
+      refusal: 'missingResources',
+      resources: missing,
+      producers: ACTION_REGISTRY.filter(action =>
+        missing.some(
+          resource => action.produces?.includes(resource) || action.returns?.includes(resource),
+        ),
+      ).map(action => action.name),
+    },
+    steps: [reasoningStep()],
+  }
+}
+
+function refusedActionOutcome(
+  step: Extract<Mission['plan']['steps'][number], { kind: 'action' }>,
+  outcome: Extract<ActionOutcome, { ok: false }>,
+): MissionStepOutcome {
+  return outcome.refusal === 'badInput' || outcome.refusal === 'notFound'
+    ? {
+        kind: 'planned',
+        result: { ...outcome, action: step.call.action, input: step.call.input },
+        steps: [reasoningStep()],
+      }
+    : { kind: 'failed', error: `action ${step.call.action}: ${outcome.refusal}` }
 }
 
 export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
@@ -294,37 +326,13 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       }
     }
     const missing = missingResources(mission, step)
-    if (missing.length > 0) {
-      return {
-        kind: 'planned',
-        result: {
-          ok: false,
-          refusal: 'missingResources',
-          resources: missing,
-          producers: ACTION_REGISTRY.filter(action =>
-            missing.some(
-              resource => action.produces?.includes(resource) || action.returns?.includes(resource),
-            ),
-          ).map(action => action.name),
-        },
-        steps: [reasoningStep()],
-      }
-    }
+    if (missing.length > 0) return missingResourceOutcome(missing)
     const refused = referenceRefusal(mission, step)
     if (refused) {
       return { kind: 'planned', result: refused, steps: [reasoningStep()] }
     }
     const outcome = await deps.actions.run(step.call, signal)
-    if (!outcome.ok) {
-      if (outcome.refusal === 'badInput' || outcome.refusal === 'notFound') {
-        return {
-          kind: 'planned',
-          result: { ...outcome, action: step.call.action, input: step.call.input },
-          steps: [reasoningStep()],
-        }
-      }
-      return { kind: 'failed', error: `action ${step.call.action}: ${outcome.refusal}` }
-    }
+    if (!outcome.ok) return refusedActionOutcome(step, outcome)
     const jobId = jobIdOf(outcome.data)
     return jobId
       ? {

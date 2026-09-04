@@ -45,12 +45,10 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
   'studio',
   'credits',
 ]
-
 /**
  * 🛑 VESTIGIAL, and said so rather than left to be discovered: the briefing shows every NAME on
  * every door since `studioBriefing` stopped composing manuals it was not asked for, so nothing
  * reads this but `actionsReaching('mcp')` — which both values answer. The wire carries all of it.
- *
  * `both` still reads as "the vocabulary of a spoken request" and `mcp` as "what a program drives",
  * but neither decides anything today. A new action may be marked either way without a consequence.
  */
