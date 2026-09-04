@@ -119,7 +119,8 @@ function inRange(value: number, min: number, max: number): boolean {
   return value >= Math.min(min, max) && value <= Math.max(min, max)
 }
 
-function overlayDeltaReader(
+/** Packed sculpt or painted-mask deltas at a sample; each chunk is decoded once per reader. */
+export function overlayDeltaReader(
   samples: HeightmapSamples,
   grain: number,
   sculpt: ReliefSculpt | undefined,

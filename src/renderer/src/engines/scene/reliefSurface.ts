@@ -4,11 +4,9 @@
  */
 import {
   BufferAttribute,
-  BufferGeometry,
-  DynamicDrawUsage,
   Group,
-  Mesh,
   MeshStandardMaterial,
+  type Mesh,
   type Object3D,
   type Scene,
 } from 'three'
@@ -28,6 +26,7 @@ import { loadHeightmap } from './heightmap'
 import type { ReliefBuilder } from './reliefBuilder'
 import type { ReliefGeometryData } from './reliefBuildMessage'
 import { reliefGeometryData, writeChunkNormals, writeChunkRegion } from './reliefSurfaceGeometry'
+import { addReliefChunk, writeMaskOverlay } from './reliefMaskOverlay'
 import { blendChanged, dirtiedChunks } from './reliefSurfaceEdits'
 import { reliefSculptSourceOf, type ReliefSculptSource } from './reliefSculptSource'
 import type { GroundPaint } from '@shared/domain/groundPaint'
@@ -110,7 +109,7 @@ export function createReliefSurface(
 ): ReliefSurface {
   const state: SurfaceState = {
     group: new Group(),
-    material: new MeshStandardMaterial({ roughness: 0.9, metalness: 0 }),
+    material: new MeshStandardMaterial({ roughness: 0.9, metalness: 0, vertexColors: true }),
     terrains: new Map(),
     options,
     load: options.load ?? (assetId => loadHeightmap(assetId)),
@@ -255,7 +254,7 @@ async function buildMeshesAway(
     const chunks = await builder.build(samples, extent, layer.grain, layer.edits, abort.signal)
     if (!chunks || token !== terrain.generation) return
     clearMeshes(terrain.meshes)
-    buildMeshesFromData(state, terrain, chunks)
+    buildMeshesFromData(state, terrain, chunks, samples, layer.grain, layer.edits)
     terrain.held = {
       assetId: layer.heightmap.assetId,
       samples,
@@ -334,7 +333,13 @@ function buildMeshes(
   for (let row = 0; row < rows; row++) {
     for (let column = 0; column < columns; column++) {
       const layout = chunkLayout(column, row, samples.width, samples.height, grain)
-      addMesh(state, terrain, reliefGeometryData(samples, extent, layout, grain, edits))
+      addReliefChunk(
+        terrain,
+        reliefGeometryData(samples, extent, layout, grain, edits),
+        samples,
+        grain,
+        edits,
+      )
     }
   }
   if (terrain.group.parent !== state.group) state.group.add(terrain.group)
@@ -344,26 +349,12 @@ function buildMeshesFromData(
   state: SurfaceState,
   terrain: TerrainSurface,
   chunks: readonly ReliefGeometryData[],
+  samples: HeightmapSamples,
+  grain: number,
+  edits: readonly TerrainEditLayer[],
 ): void {
-  for (const chunk of chunks) addMesh(state, terrain, chunk)
+  for (const chunk of chunks) addReliefChunk(terrain, chunk, samples, grain, edits)
   if (terrain.group.parent !== state.group) state.group.add(terrain.group)
-}
-
-function addMesh(_state: SurfaceState, terrain: TerrainSurface, data: ReliefGeometryData): void {
-  const geometry = new BufferGeometry()
-  geometry.setAttribute(
-    'position',
-    new BufferAttribute(data.position, 3).setUsage(DynamicDrawUsage),
-  )
-  geometry.setAttribute('normal', new BufferAttribute(data.normal, 3).setUsage(DynamicDrawUsage))
-  geometry.setAttribute('uv', new BufferAttribute(data.uv, 2))
-  geometry.setIndex(new BufferAttribute(data.index, 1))
-  const mesh = new Mesh(geometry, terrain.material)
-  mesh.name = `relief-chunk-${data.column}-${data.row}`
-  mesh.castShadow = false
-  mesh.receiveShadow = true
-  terrain.group.add(mesh)
-  terrain.meshes.set(keyOf(data.column, data.row), mesh)
 }
 
 function patchMeshes(
@@ -385,6 +376,7 @@ function patchMeshes(
     if (!mesh) continue
     const layout = chunkLayout(column, row, samples.width, samples.height, grain)
     const rect = changedRect(layout, beforeRead, afterRead)
+    writeMaskOverlay(mesh.geometry, samples, layout, grain, after)
     if (!rect) continue
     dirty.set(keyOf(column, row), { layout, rect })
     writeChunkRegion(mesh.geometry, samples, extent, layout, afterRead, rect)
@@ -457,8 +449,10 @@ function changedRect(
 function clearChunkRanges(mesh: Mesh): void {
   const position = mesh.geometry.getAttribute('position')
   const normal = mesh.geometry.getAttribute('normal')
+  const color = mesh.geometry.getAttribute('color')
   if (position instanceof BufferAttribute) position.clearUpdateRanges()
   if (normal instanceof BufferAttribute) normal.clearUpdateRanges()
+  if (color instanceof BufferAttribute) color.clearUpdateRanges()
 }
 
 function keyOf(column: number, row: number): string {

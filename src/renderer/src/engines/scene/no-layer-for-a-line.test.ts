@@ -56,6 +56,7 @@ const OTHER_SENSES: Record<string, string> = {
   sceneSurfacePaint: 'World relief and scatter surfaces, not timeline lines',
   sceneGroundPaintSession: 'World relief ground paint, not a timeline line',
   reliefGroundMaterial: 'World relief ground material, not a timeline line',
+  reliefMaskOverlay: 'World relief: painted mask on a heightmap, not a timeline line',
   SceneRendererOptimization: 'Three.js visibility layers shared by objects and cameras',
   'scene-renderer-relief':
     'World relief: the edit layers a sculptor is held for, not a timeline line',
