@@ -7,12 +7,11 @@ import {
   type ModelDressRef,
 } from '@shared/domain/scene'
 import { mdiImageMultipleOutline, mdiMinus, mdiPlus } from '@mdi/js'
-import { LinkField } from '@/components/LinkField/LinkField'
+import { PictureField } from '@/components/PictureField'
 import { ToolButton } from '@/components/ToolButton'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { PropertySection } from '@/components/PropertySection'
 import { SelectField } from '@/components/SelectField'
-import { openAssetById } from '@/helpers/openAsset'
 import { getBridge } from '@/services/bridge'
 import { useProjectPictures } from '@/hooks/useProjectPictures'
 import { useProjectPictureAssets } from '@/hooks/useProjectPictureAssets'
@@ -160,21 +159,11 @@ export function ModelDressSection({
       />
 
       {mode === 'image' && (
-        <LinkField
+        <PictureField
           label={t('inspector.modelDressImageField')}
           value={imageAssetId}
-          options={pictures}
           onChange={assetId => onChange(assetId ? { kind: 'image', assetId } : { kind: 'plain' })}
           emptyLabel={t('inspector.modelDressNoImage')}
-          missingLabel={t('inspector.modelDressMissingImage')}
-          clearLabel={t('inspector.modelDressClearImage')}
-          clearHint={t('inspector.modelDressClearImageHint')}
-          accepts={PICTURES}
-          open={{
-            label: t('inspector.modelDressOpenImage'),
-            hint: t('inspector.modelDressOpenImageHint'),
-            run: () => openAssetById(imageAssetId),
-          }}
           scId="model.dressImage"
         />
       )}

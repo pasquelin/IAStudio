@@ -25,7 +25,6 @@ export const SETTLED_WORDS: Record<
         'assets.extractTextures',
         'assets.extractTexturesHint',
         'inspector.modelExtractTextureHint',
-        'inspector.modelDressClearImageHint',
       ],
     },
     /**
