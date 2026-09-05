@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { AA_NON_TEXT, blend, contrastRatio } from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import { stylesheet } from '../indexCss-fixtures'
+import { WRITTEN_SOURCES } from './testHarness'
 
 const THEMES = [
   { name: 'dark', from: stylesheet.indexOf('@theme {') },
@@ -73,6 +74,29 @@ describe('the hue each section is inked in', () => {
             ([, ground]) => contrastRatio(tokens[`domain-${section}`] ?? '', ground) < AA_NON_TEXT,
           )
           .map(([name]) => `domain-${section} on ${name}`),
+      )
+
+      expect(under).toEqual([])
+    })
+  }
+
+  /**
+   * The grid tints the FOLDER, so a section's ink becomes a GROUND — one the sweep above never
+   * measures, its own being the panel's. The token is READ from the source: named here, this
+   * would go on measuring chassis the day `EntryFace` wore something else.
+   */
+  for (const theme of THEMES) {
+    it(`clears what the emblem of a tinted folder owes, ${theme.name}`, () => {
+      const tokens = palette(theme.from)
+      const face = WRITTEN_SOURCES.find(([path]) => path.endsWith('/EntryFace.tsx'))
+      const [, written = ''] = /folder-emblem text-([^"\s]+)/.exec(face?.[1] ?? '') ?? []
+      // Up to the quote rather than to the token name: `text-chassis/70` would otherwise be read
+      // as `chassis` and measured at full opacity, which is the very thing this holds.
+      expect(tokens[written]).toBeDefined()
+
+      const under = SECTIONS.filter(
+        section =>
+          contrastRatio(tokens[written] ?? '', tokens[`domain-${section}`] ?? '') < AA_NON_TEXT,
       )
 
       expect(under).toEqual([])

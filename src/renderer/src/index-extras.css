@@ -233,6 +233,16 @@
   }
 }
 
+/*
+ * Where a section's glyph sits inside the folder silhouette of a grid tile. A utility rather than
+ * classes on the element: these are the coordinates of the `mdiFolder` path, whose body spans
+ * 6 to 20 of a 24 viewBox — so the middle of the folder is BELOW the middle of its box.
+ */
+@utility folder-emblem {
+  position: absolute;
+  inset: 38.2% 34% 29.8%;
+}
+
 body {
   margin: 0;
   background: var(--color-chassis);

@@ -1,4 +1,4 @@
-import { mdiCircleMedium, mdiFile, mdiFolder } from '@mdi/js'
+import { mdiCircleMedium } from '@mdi/js'
 import { useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InlineRename } from '@/components/InlineRename'
@@ -7,21 +7,16 @@ import { rowDrag } from '@/components/rowDrag'
 import { UiIcon } from '@/components/UiIcon'
 import { cn } from '@/helpers/cn'
 import { copiesDropTone, warnsDropTone, type DragLike, type DropTone } from '@/helpers/drag'
-
-/**
- * What the card stands for, which decides the SHAPE it draws: a folder, a plain file, or a file
- * the studio opens as a document and which keeps the glyph of its own space.
- */
-export type EntryKind = 'folder' | 'file' | 'document'
-
-/** The tile draws a filled silhouette where the tree draws an outline. */
-const SOLID: Record<Exclude<EntryKind, 'document'>, string> = { folder: mdiFolder, file: mdiFile }
+import { EntryFace } from './EntryFace'
+import type { EntryKind } from './entryKind'
 
 export type EntryCardProps = {
   /** What the card is called — the document's own name where there is one, the file name else. */
   name: string
-  /** The glyph of a document's space, drawn in place of the file silhouette. */
+  /** The glyph of a document's space, and of the section a folder serves — see `EntryFace`. */
   icon: string
+  /** The section's hue. Only a folder silhouette wears it — see `EntryFace`. */
+  ink?: string
   /** A preview of the file, asked of the main process and rendered there. */
   preview?: string
   /**
@@ -71,6 +66,7 @@ export type EntryCardProps = {
 export function EntryCard({
   name,
   icon,
+  ink,
   preview,
   kind,
   open,
@@ -150,15 +146,7 @@ export function EntryCard({
         // A thumbnail is cut to the file silhouette rather than framed: the tile then says what
         // the entry IS as plainly as the folder next to it, without hiding what it holds.
         cutout={kind === 'file'}
-        // The alpha `MediaTile` draws its own fallback at — below it, `tokens.test.ts`
-        // refuses the ratio a glyph that INFORMS owes (WCAG 1.4.11).
-        face={
-          <UiIcon
-            path={kind === 'document' ? icon : SOLID[kind]}
-            size="fill"
-            className="text-muted/80"
-          />
-        }
+        face={<EntryFace kind={kind} icon={icon} ink={ink} />}
         {...(onRename
           ? {
               captionField: (

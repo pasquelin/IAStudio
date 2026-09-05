@@ -162,6 +162,7 @@ export function ExplorerBody(props: ExplorerBodyProps) {
                 <EntryCard
                   name={documentOf(node)?.title ?? node.name}
                   icon={iconFor(node, false)}
+                  ink={inkFor(node)}
                   kind={kindOf(node)}
                   preview={previewFor(node)}
                   open={isOpen(node)}
