@@ -103,9 +103,12 @@ export const BUILD_ONLY: string[] = [
   'jscpd',
   'jsdom',
   'knip',
+  'oxlint',
+  'oxlint-tsgolint',
   'prettier',
   'prettier-plugin-tailwindcss',
   'typescript-eslint',
+  'typescript-7',
   'vite',
   'vitest',
 ]

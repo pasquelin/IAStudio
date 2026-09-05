@@ -1,6 +1,7 @@
+import { bench } from '@shared/vitestBench'
 import { Mesh, MeshStandardMaterial, SphereGeometry, type BufferGeometry } from 'three'
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js'
-import { bench, describe } from 'vitest'
+import { describe } from 'vitest'
 import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { compileLossyModels } from './lossyModelCompiler'
 

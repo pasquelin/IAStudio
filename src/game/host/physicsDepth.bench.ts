@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+
+import { describe } from 'vitest'
 import { DEPTH_SCENES, loadScene } from '../physics/benchScenes'
 import { loadJoltPhysics } from './joltPhysics'
 

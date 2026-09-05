@@ -16,7 +16,7 @@ declare module '@studio' {
    * An interface so the project's declaration MERGES into it; empty here so a script still types
    * with no project loaded, and every name below then widens back to `string`.
    */
-  /* eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/consistent-type-definitions -- an INTERFACE and empty on purpose: only an interface merges with the project's own declaration, and a member here would be one the project cannot override */
+  /* oxlint-disable-next-line typescript/no-empty-object-type, typescript/consistent-type-definitions -- an INTERFACE and empty on purpose: only an interface merges with the project's own declaration, and a member here would be one the project cannot override */
   export interface StudioNames {}
 
   /** A family of the project, or a plain string while nothing declared it. */

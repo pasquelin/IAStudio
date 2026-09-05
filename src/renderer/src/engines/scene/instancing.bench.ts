@@ -1,5 +1,6 @@
+import { bench } from '@shared/vitestBench'
 import { BoxGeometry, Mesh, MeshStandardMaterial, Object3D, Raycaster, Vector3 } from 'three'
-import { bench, describe } from 'vitest'
+import { describe } from 'vitest'
 import { meshNode } from './scene-fixtures'
 import { createInstancedGroups } from './instancing'
 

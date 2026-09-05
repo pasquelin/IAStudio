@@ -1,5 +1,6 @@
+import { bench } from '@shared/vitestBench'
 import { PerspectiveCamera, Vector3, type Object3D } from 'three'
-import { bench } from 'vitest'
+
 import { SCATTER_CATEGORIES, type ScatterCategory } from '@shared/domain/scene'
 import { updateScatterVisibility } from './scatterVisibility'
 import { buildPartition, cellKey, MAX_SPATIAL_REACH, type CellKey } from './worldPartition'

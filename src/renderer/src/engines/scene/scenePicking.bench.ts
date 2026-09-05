@@ -1,3 +1,4 @@
+import { bench } from '@shared/vitestBench'
 import {
   BoxGeometry,
   Mesh,
@@ -9,7 +10,7 @@ import {
   Vector2,
 } from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
-import { bench, describe } from 'vitest'
+import { describe } from 'vitest'
 // The studio's own patches, never a copy: this bench listed three of the four, so it timed the
 // slow path for a skinned mesh while the app took the fast one.
 import './bvhPatches'

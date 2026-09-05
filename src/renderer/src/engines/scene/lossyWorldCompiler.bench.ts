@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+import { describe } from 'vitest'
 import { NO_LOSSY_OPTIMIZATION } from '@shared/domain/gameExport'
 import { meshNode } from './scene-fixtures'
 import { compileLossyWorld } from './lossyWorldCompiler'

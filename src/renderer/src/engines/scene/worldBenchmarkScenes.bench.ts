@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+import { describe } from 'vitest'
 import { createRuntimeWorldCompiler } from './runtimeWorldCompiler'
 import { worldBenchmarkScenes } from './worldBenchmarkScenes.fixture'
 import { buildGameScene } from '@/game/gameScene'

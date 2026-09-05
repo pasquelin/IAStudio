@@ -1,5 +1,6 @@
+import { bench } from '@shared/vitestBench'
 import { Scene } from 'three'
-import { bench, describe } from 'vitest'
+import { describe } from 'vitest'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { applyReliefSculpt, chunkCountAlong, chunkLayout } from '@shared/domain/relief'
 import {
