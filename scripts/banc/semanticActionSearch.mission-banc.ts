@@ -7,7 +7,7 @@ import {
   type ActionIndex,
   type ActionRanking,
 } from '@main/actionIndex/actionIndex'
-import { actionCorpus, actionFingerprint, type ActionCorpus } from '@main/actionIndex/actionCorpus'
+import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import { actionSearchScope, availableActionTargets } from '@main/actionIndex/actionSearchContext'
 import { normalised } from '@main/memory/vectors'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
@@ -16,6 +16,19 @@ import { expectedMissionActions } from './missionCatalogue'
 import { PROJECT } from './project'
 import { SCENARIOS } from './scenarios'
 import { CONTROL_CASES, DIFFICULT_SCENARIOS } from './semanticActionSearchCases'
+import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
+import {
+  candidateUnionRank,
+  diagnosticMarkdown,
+  expandedQueries,
+  metricsOfRanks,
+  queryVariantResults,
+  representedCorpus,
+  semanticCandidatesOf,
+  semanticScoresOf,
+  type SemanticRepresentation,
+  type SemanticQueryVariant,
+} from './semanticActionSearchDiagnostic'
 import { createStudio } from './studio'
 
 const MODEL_PATH = process.env['SEMANTIC_ACTION_MODEL']
@@ -24,9 +37,9 @@ const MODEL_ID = 'intfloat/multilingual-e5-small@fd1525a-q8_0'
 const RRF_K = 60
 
 type Variant = 'algorithmic' | 'semantic' | 'rrf' | 'hybrid'
-type Representation = 'short' | 'business'
+type Representation = SemanticRepresentation
 
-const REPRESENTATIONS: readonly Representation[] = ['short', 'business']
+const REPRESENTATIONS: readonly Representation[] = ['name', 'brief', 'compact', 'business']
 const VARIANTS: readonly Variant[] = ['algorithmic', 'semantic', 'rrf', 'hybrid']
 type CaseResult = {
   scenarioId: string
@@ -37,17 +50,24 @@ type CaseResult = {
   control: boolean
   ranks: Record<Variant, number>
   semanticScore: number
+  semanticQuery: string
+  semanticTop: readonly { name: ActionName; cosine: number }[]
+  semanticTop50: readonly { name: ActionName; cosine: number }[]
+  semanticAll: readonly { name: ActionName; cosine: number; family: string }[]
+  candidateUnionRanks: Record<'6' | '8' | '12', number>
+  oracleUnionContainsExpected: boolean
+  runtimeSnapshot?: StudioSnapshot
+  queryVariants?: Record<
+    SemanticQueryVariant,
+    {
+      text: string
+      rank: number
+      cosine: number
+      top5: readonly { name: ActionName; cosine: number }[]
+      all: readonly { name: ActionName; cosine: number; family: string }[]
+    }
+  >
   top12: Record<Variant, readonly ActionName[]>
-}
-
-type Metrics = {
-  evaluations: number
-  recallAt1: number
-  recallAt3: number
-  recallAt5: number
-  recallAt12: number
-  mrr: number
-  meanRank: number
 }
 
 type Llama = Awaited<ReturnType<typeof getLlama>>
@@ -57,6 +77,7 @@ type Scenario = (typeof SCENARIOS)[number]
 type Report = {
   representation: Representation
   results: readonly CaseResult[]
+  documents: readonly { name: ActionName; text: string; characters: number }[]
   timings: object
 }
 type LoadedRuntime = {
@@ -69,52 +90,6 @@ type LoadedRuntime = {
 }
 
 const scenarioIdOf = (name: string): string => name.split(' ')[0] ?? name
-
-function shortText(action: ActionCorpus['actions'][number]): string {
-  return [
-    action.name,
-    action.family,
-    ...action.localizedTitles,
-    ...(action.capabilities.targets ?? []),
-    ...(action.capabilities.intents ?? []),
-  ].join(' ')
-}
-
-function businessText(action: ActionCorpus['actions'][number]): string {
-  return [
-    action.searchable,
-    ...(action.capabilities.documentKinds ?? []),
-    action.capabilities.documentAffinity ?? 'transversal',
-    ...action.requires,
-    ...action.produces,
-    ...action.inputs,
-    ...action.uses,
-    ...action.returns,
-  ].join(' ')
-}
-
-function represented(corpus: ActionCorpus, representation: Representation): ActionCorpus {
-  const actions = corpus.actions.map(action => ({
-    ...action,
-    searchable: representation === 'short' ? shortText(action) : businessText(action),
-  }))
-  return { actions, fingerprint: actionFingerprint(actions) }
-}
-
-function metricsOf(results: readonly CaseResult[], variant: Variant): Metrics {
-  const ranks = results.map(result => result.ranks[variant])
-  const recall = (limit: number): number =>
-    ranks.filter(rank => rank <= limit).length / ranks.length
-  return {
-    evaluations: ranks.length,
-    recallAt1: recall(1),
-    recallAt3: recall(3),
-    recallAt5: recall(5),
-    recallAt12: recall(12),
-    mrr: ranks.reduce((sum, rank) => sum + 1 / rank, 0) / ranks.length,
-    meanRank: ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length,
-  }
-}
 
 function namesOf(ranking: readonly ActionRanking[]): readonly ActionName[] {
   return ranking
@@ -180,7 +155,7 @@ async function embeddedCorpus(
   representation: Representation,
 ): Promise<readonly { name: ActionName; model: string; values: Float32Array }[]> {
   const embeddings = []
-  for (const action of represented(actionCorpus(), representation).actions) {
+  for (const action of representedCorpus(actionCorpus(), representation).actions) {
     const answer = await context.getEmbeddingFor(boundedPassage(model, action.searchable))
     embeddings.push({
       name: action.name,
@@ -192,23 +167,25 @@ async function embeddedCorpus(
 }
 
 function resultOf(
-  scenario: Scenario,
+  scenario: Pick<Scenario, 'name' | 'said'>,
   expectedAction: ActionName,
   algorithmic: readonly ActionRanking[],
   semantic: readonly ActionRanking[],
   rrf: readonly ActionRanking[],
   hybrid: readonly ActionRanking[],
+  global: boolean,
+  runtimeSnapshot?: StudioSnapshot,
 ): CaseResult | null {
   const algorithmicRank = actionRankOf(algorithmic, expectedAction)
   const difficult = DIFFICULT_SCENARIOS.has(scenarioIdOf(scenario.name)) && algorithmicRank > 12
-  if (expectedMissionActions(scenario).length !== 1 && !difficult) return null
+  if (!global && !difficult) return null
   const expected = semantic.find(hit => hit.action.name === expectedAction)
   if (!expected) throw new Error(`${expectedAction} is absent from the corpus`)
   return {
     scenarioId: scenarioIdOf(scenario.name),
     request: scenario.said.join('\n'),
     expectedAction,
-    global: expectedMissionActions(scenario).length === 1,
+    global,
     difficult,
     control: false,
     ranks: {
@@ -218,6 +195,19 @@ function resultOf(
       hybrid: positionOf(hybrid, expectedAction),
     },
     semanticScore: expected.semanticScore ?? 0,
+    semanticQuery: `query: ${scenario.said.join('\n')}`,
+    semanticTop: semanticCandidatesOf(semantic),
+    semanticTop50: semanticCandidatesOf(semantic, 50),
+    semanticAll: semanticScoresOf(semantic),
+    candidateUnionRanks: {
+      '6': candidateUnionRank(algorithmic, semantic, 6, expectedAction),
+      '8': candidateUnionRank(algorithmic, semantic, 8, expectedAction),
+      '12': candidateUnionRank(algorithmic, semantic, 12, expectedAction),
+    },
+    oracleUnionContainsExpected: new Set([...namesOf(algorithmic), ...namesOf(semantic)]).has(
+      expectedAction,
+    ),
+    ...(runtimeSnapshot ? { runtimeSnapshot } : {}),
     top12: {
       algorithmic: namesOf(algorithmic),
       semantic: namesOf(semantic),
@@ -246,29 +236,80 @@ async function evaluateControl(
   )
   const rrf = rrfRanking(algorithmic, semantic, 1)
   const hybrid = rrfRanking(algorithmic, semantic, 2)
-  const expected = semantic.find(hit => hit.action.name === expectedAction)
-  if (!expected) throw new Error(`${expectedAction} is absent from the corpus`)
-  return {
-    scenarioId: request,
-    request,
+  const result = resultOf(
+    { name: request, said: [request] },
     expectedAction,
-    global: false,
-    difficult: false,
-    control: true,
-    ranks: {
-      algorithmic: actionRankOf(algorithmic, expectedAction),
-      semantic: positionOf(semantic, expectedAction),
-      rrf: positionOf(rrf, expectedAction),
-      hybrid: positionOf(hybrid, expectedAction),
-    },
-    semanticScore: expected.semanticScore ?? 0,
-    top12: {
-      algorithmic: namesOf(algorithmic),
-      semantic: namesOf(semantic),
-      rrf: namesOf(rrf),
-      hybrid: namesOf(hybrid),
-    },
+    algorithmic,
+    semantic,
+    rrf,
+    hybrid,
+    true,
+  )
+  if (!result) throw new Error(`${expectedAction} is absent from the corpus`)
+  return { ...result, global: false, difficult: false, control: true }
+}
+
+async function scenarioResults(
+  scenario: Scenario,
+  actions: readonly ActionName[],
+  algorithmic: readonly ActionRanking[],
+  semantic: readonly ActionRanking[],
+  rrf: readonly ActionRanking[],
+  hybrid: readonly ActionRanking[],
+  snapshot: StudioSnapshot,
+  variants: Record<SemanticQueryVariant, string>,
+  rankingFor: (text: string) => Promise<readonly ActionRanking[]>,
+): Promise<readonly CaseResult[]> {
+  const results: CaseResult[] = []
+  for (const action of actions) {
+    const result = resultOf(
+      scenario,
+      action,
+      algorithmic,
+      semantic,
+      rrf,
+      hybrid,
+      actions.length === 1,
+      snapshot,
+    )
+    if (!result) continue
+    if (!result.difficult) {
+      results.push(result)
+      continue
+    }
+    results.push({
+      ...result,
+      queryVariants: await queryVariantResults(variants, action, rankingFor),
+    })
   }
+  return results
+}
+
+async function semanticFor(
+  index: ActionIndex,
+  context: EmbeddingContext,
+  request: string,
+  scope: ReturnType<typeof actionSearchScope>,
+): Promise<{
+  ranking: readonly ActionRanking[]
+  queryMilliseconds: number
+  searchMilliseconds: number
+}> {
+  const started = performance.now()
+  const values = normalised(
+    Float32Array.from((await context.getEmbeddingFor(`query: ${request}`)).vector),
+  )
+  const queryMilliseconds = performance.now() - started
+  const searchStarted = performance.now()
+  const ranking = semanticRanking(
+    index.inspect({
+      query: `${request}\nPlan mission`,
+      limit: 12,
+      scope,
+      embedding: { model: MODEL_ID, values },
+    }),
+  )
+  return { ranking, queryMilliseconds, searchMilliseconds: performance.now() - searchStarted }
 }
 
 async function evaluateScenario(
@@ -288,37 +329,31 @@ async function evaluateScenario(
   try {
     await scenario.setup?.(studio)
     studio.settle()
+    const runtimeSnapshot = await studio.snapshot()
     const scope = actionSearchScope(
-      await studio.snapshot(),
+      runtimeSnapshot,
       request,
       availableActionTargets(studio.projectContext(), request),
     )
     const algorithmic = index.inspect({ query: `${request}\nPlan mission`, limit: 12, scope })
-    const started = performance.now()
-    const query = normalised(
-      Float32Array.from((await context.getEmbeddingFor(`query: ${request}`)).vector),
-    )
-    const queryMilliseconds = performance.now() - started
-    const searchStarted = performance.now()
-    const semantic = semanticRanking(
-      index.inspect({
-        query: `${request}\nPlan mission`,
-        limit: 12,
-        scope,
-        embedding: { model: MODEL_ID, values: query },
-      }),
-    )
-    const searchMilliseconds = performance.now() - searchStarted
+    const measured = await semanticFor(index, context, request, scope)
+    const { ranking: semantic, queryMilliseconds, searchMilliseconds } = measured
     const rrf = rrfRanking(algorithmic, semantic, 1)
     const hybrid = rrfRanking(algorithmic, semantic, 2)
-    return {
-      queryMilliseconds,
-      searchMilliseconds,
-      results: expectedActions.flatMap(action => {
-        const result = resultOf(scenario, action, algorithmic, semantic, rrf, hybrid)
-        return result ? [result] : []
-      }),
-    }
+    const variants = expandedQueries(request, runtimeSnapshot)
+    const results = await scenarioResults(
+      scenario,
+      expectedActions,
+      algorithmic,
+      semantic,
+      rrf,
+      hybrid,
+      runtimeSnapshot,
+      variants,
+      async text =>
+        text === request ? semantic : (await semanticFor(index, context, text, scope)).ranking,
+    )
+    return { queryMilliseconds, searchMilliseconds, results }
   } finally {
     studio.close()
   }
@@ -371,6 +406,7 @@ async function disposeRuntime(runtime: LoadedRuntime, index: ActionIndex): Promi
 async function measureRepresentation(representation: Representation): Promise<Report> {
   const runtime = await loadRuntime()
   const index = createActionIndex(openMemoryDatabase())
+  const corpus = representedCorpus(actionCorpus(), representation)
   index.rebuild(actionCorpus())
   const corpusStarted = performance.now()
   index.writeEmbeddings(await embeddedCorpus(runtime.context, runtime.model, representation))
@@ -380,6 +416,11 @@ async function measureRepresentation(representation: Representation): Promise<Re
   const report = {
     representation,
     results: measured.results,
+    documents: corpus.actions.map(action => ({
+      name: action.name,
+      text: `passage: ${action.searchable}`,
+      characters: action.searchable.length,
+    })),
     timings: {
       loadMilliseconds: runtime.loadMilliseconds,
       corpusMilliseconds,
@@ -421,18 +462,30 @@ describe.skipIf(MODEL_PATH === undefined)('semantic Action Search spike', () => 
           VARIANTS.map(variant => [
             variant,
             {
-              global: metricsOf(global, variant),
-              difficult: metricsOf(difficult, variant),
-              control: metricsOf(control, variant),
+              global: metricsOfRanks(global.map(result => result.ranks[variant])),
+              difficult: metricsOfRanks(difficult.map(result => result.ranks[variant])),
+              control: metricsOfRanks(control.map(result => result.ranks[variant])),
             },
           ]),
         ),
       }
     })
     mkdirSync(OUTPUT, { recursive: true })
-    writeFileSync(
-      join(OUTPUT, 'semantic-action-search-results.json'),
-      `${JSON.stringify({ model: MODEL_ID, reports: output }, null, 2)}\n`,
-    )
+    if (process.env['SEMANTIC_DEEP_DIAGNOSTIC'] === '1') {
+      writeFileSync(
+        join(OUTPUT, 'semantic-deep-diagnostic.json'),
+        `${JSON.stringify({ model: MODEL_ID, reports: output }, null, 2)}\n`,
+      )
+      const business = reports.find(report => report.representation === 'business')
+      if (business)
+        writeFileSync(
+          join(OUTPUT, 'semantic-deep-diagnostic.md'),
+          diagnosticMarkdown(business.documents, business.results),
+        )
+    } else
+      writeFileSync(
+        join(OUTPUT, 'semantic-action-search-results.json'),
+        `${JSON.stringify({ model: MODEL_ID, reports: output }, null, 2)}\n`,
+      )
   })
 })
