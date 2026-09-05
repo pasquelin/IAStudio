@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 import { breathe } from '@/engines/core/breathe'
-import { gltfDocumentOf } from '@/engines/scene/gltfDocument'
 import type { SceneNode } from '@/engines/scene/sceneState'
 import { messageOf } from '@shared/guards'
 import {
@@ -9,6 +8,7 @@ import {
   type SceneDocumentCodecResponse,
   type SceneDocumentState,
 } from './sceneDocumentCodecMessage'
+import { sceneDocumentText } from './sceneDocumentText'
 import { yieldSceneDocument } from './sceneDocumentYield'
 
 declare const self: DedicatedWorkerGlobalScope
@@ -69,12 +69,7 @@ async function finishEncode(
   pending.nodes.push(...nodes)
   if (!done) return
   encoding.delete(id)
-  const content = JSON.stringify(
-    gltfDocumentOf(
-      { ...pending.state, nodes: pending.nodes },
-      { documentId: pending.documentId, documentKind: 'scene' },
-    ),
-  )
+  const content = sceneDocumentText(pending.state, pending.nodes, pending.documentId)
   active.add(id)
   try {
     let contentIndex = 0

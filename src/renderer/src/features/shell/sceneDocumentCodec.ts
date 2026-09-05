@@ -153,6 +153,8 @@ export function createSceneDocumentCodec(
   }
 }
 
+// Only the NODES are chunked; everything else crosses in one `encodeStart` clone. These bounds
+// keep that single clone small — they are a guess, not a measurement.
 function shouldEncodeOffThread(state: SceneState, options: CodecOptions): boolean {
   if (state.nodes.length < options.nodes) return false
   if (state.world.layers.length > 100 || state.animation.tracks.length > 2_000) return false
