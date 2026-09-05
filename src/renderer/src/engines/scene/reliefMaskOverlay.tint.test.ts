@@ -39,9 +39,7 @@ describe('how far a painted mask carries the accent', () => {
             { assetId: 'asset_height' },
             {
               id: TERRAIN,
-              edits: [
-                terrainEditLayer({ id: 'sculpt', mask: { kind: 'painted', weights } }),
-              ],
+              edits: [terrainEditLayer({ id: 'sculpt', mask: { kind: 'painted', weights } })],
             },
           ),
         ],
