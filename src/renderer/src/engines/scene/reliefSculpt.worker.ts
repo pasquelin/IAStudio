@@ -10,37 +10,40 @@ declare const self: DedicatedWorkerGlobalScope
  * absent, this empty field keeps the historical raiseDisk path.
  */
 const NO_VALUES = new Float32Array(0)
+let base: { id: number; width: number; height: number; values: Float32Array } | null = null
 
-self.addEventListener('message', (event: MessageEvent<ReliefSculptRequest>) => {
-  const {
-    id,
-    width,
-    height,
-    extent,
-    grain,
-    sculpt,
-    operation,
-    rows,
-    values,
-    overlays,
-    overlayAlpha,
-    overlayMask,
-  } = event.data
+self.addEventListener('message', (event: MessageEvent<ReliefSculptRequest>) => run(event.data))
 
+function run(request: ReliefSculptRequest): void {
   try {
+    const { id, width, height, extent, grain, sculpt, operation, rows, overlays } = request
     const after = applyReliefSculpt(
-      { width, height, values: values ?? NO_VALUES },
+      { width, height, values: valuesOf(request) },
       extent,
       sculpt,
       operation,
       grain,
       rows,
       overlays,
-      overlayAlpha === undefined ? undefined : { alpha: overlayAlpha, mask: overlayMask },
+      request.overlayAlpha === undefined
+        ? undefined
+        : { alpha: request.overlayAlpha, mask: request.overlayMask },
     )
     const chunks = changedChunks(sculpt, after)
     self.postMessage({ id, ok: true, grain, chunks } satisfies ReliefSculptResponse)
   } catch (error) {
-    self.postMessage({ id, ok: false, error: messageOf(error) } satisfies ReliefSculptResponse)
+    self.postMessage({
+      id: request.id,
+      ok: false,
+      error: messageOf(error),
+    } satisfies ReliefSculptResponse)
   }
-})
+}
+
+function valuesOf(request: ReliefSculptRequest): Float32Array {
+  const { baseId, values, width, height } = request
+  if (baseId === undefined) return NO_VALUES
+  if (values) base = { id: baseId, width, height, values }
+  if (base?.id === baseId && base.width === width && base.height === height) return base.values
+  throw new Error('relief sculpt base heightfield is unavailable')
+}

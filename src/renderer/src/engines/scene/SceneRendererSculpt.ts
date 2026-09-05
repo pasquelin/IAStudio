@@ -149,6 +149,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     this.sculptAmount = amount
   }
   setSculptTool(tool: SculptTool): void {
+    if (readsCombinedHeight(this.sculptTool) && !readsCombinedHeight(tool)) {
+      this.reliefSculptor?.sculptor.dispose()
+      this.reliefSculptor = null
+    }
     this.sculptTool = tool
   }
 
@@ -311,6 +315,10 @@ export abstract class SceneRendererSculpt extends SceneRendererMaterials {
     await task
     this.options.onReliefStrokeEnd?.()
   }
+}
+
+function readsCombinedHeight(tool: SculptTool): boolean {
+  return tool === 'smooth' || tool === 'flatten'
 }
 
 function flattenTargetAt(

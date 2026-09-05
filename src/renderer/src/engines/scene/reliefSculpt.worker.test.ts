@@ -98,6 +98,7 @@ describe('the relief sculpt worker', () => {
       grain: RELIEF_CHUNK_TEXELS,
       sculpt: undefined,
       operation: { kind: 'flatten', disk, amount: 1, target: 0.4 },
+      baseId: 1,
       values: peaked.values,
     }
     self.dispatchEvent(new MessageEvent('message', { data }))
@@ -105,6 +106,33 @@ describe('the relief sculpt worker', () => {
     const message = posted[0]?.[0] as ReliefSculptResponse
     if (!message || !message.ok) throw new Error('worker did not answer')
     const direct = applyReliefSculpt(peaked, extent, undefined, data.operation)
+    expect(packedOf(message).chunks).toEqual(changedChunks(undefined, direct))
+  })
+
+  it('reuses a bound heightfield without receiving its values again', () => {
+    const peaked = {
+      width: samples.width,
+      height: samples.height,
+      values: new Float32Array(samples.width * samples.height).fill(0.75),
+    }
+    const bind: ReliefSculptRequest = {
+      id: 7,
+      width: peaked.width,
+      height: peaked.height,
+      extent,
+      grain: RELIEF_CHUNK_TEXELS,
+      sculpt: undefined,
+      operation: { kind: 'smooth', disk, amount: 0.5, falloff: 0 },
+      baseId: 2,
+      values: peaked.values,
+    }
+    self.dispatchEvent(new MessageEvent('message', { data: bind }))
+    const reuse: ReliefSculptRequest = { ...bind, id: 8, values: undefined }
+    self.dispatchEvent(new MessageEvent('message', { data: reuse }))
+
+    const message = posted[1]?.[0] as ReliefSculptResponse
+    if (!message || !message.ok) throw new Error('worker did not reuse its base')
+    const direct = applyReliefSculpt(peaked, extent, undefined, reuse.operation)
     expect(packedOf(message).chunks).toEqual(changedChunks(undefined, direct))
   })
 })

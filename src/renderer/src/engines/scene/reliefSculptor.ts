@@ -47,6 +47,10 @@ type Job = ReliefDiskStroke & {
 type SculptSession = ReturnType<
   typeof createWorkerSession<ReliefSculptRequest, ReliefSculptResponse>
 >
+type BaseBindings = {
+  nextId: number
+  bySession: Map<SculptSession, { id: number; width: number; height: number; values: Float32Array }>
+}
 
 const CHUNK_ROWS_PER_WORKER = 2
 
@@ -62,6 +66,7 @@ export function createReliefSculptor(
   let bound: ReliefSculpt | undefined
   let heldAfter: ReliefSculpt | undefined
   let busy = false
+  const bases: BaseBindings = { nextId: 0, bySession: new Map() }
 
   const dropQueue = (): void => {
     for (const job of queue) job.resolve(null)
@@ -83,14 +88,14 @@ export function createReliefSculptor(
     const token = generation
     const before = heldAfter ?? job.sculpt
     try {
-      const responses = await sculptResponses(job, before, sessions)
+      const responses = await sculptResponses(job, before, sessions, bases)
       if (token !== generation) {
         job.resolve(null)
         return
       }
       const failed = responses.find(response => !response.ok)
       if (failed && !failed.ok) {
-        job.reject(new Error(failed.error))
+        rejectWorkerFailure(job, failed.error, bases)
         return
       }
       const edits = responses.flatMap(response => (response.ok ? response.chunks : []))
@@ -124,35 +129,102 @@ export function createReliefSculptor(
     dispose: () => {
       invalidate()
       sessions.forEach(session => session.dispose())
+      bases.bySession.clear()
     },
   }
+}
+
+function rejectWorkerFailure(job: Job, error: string, bases: BaseBindings): void {
+  bases.bySession.clear()
+  job.reject(new Error(error))
 }
 
 async function sculptResponses(
   job: Job,
   before: ReliefSculpt | undefined,
   sessions: readonly SculptSession[],
+  bases: BaseBindings,
 ): Promise<ReliefSculptResponse[]> {
   const ranges = rowRanges(job, sessions.length)
   return Promise.all(
-    ranges.map((rows, index) => {
-      const session = sessions[index]
-      if (!session) throw new Error('Relief sculpt worker is unavailable')
-      return session.send({
-        id: session.nextId(),
-        width: job.samples.width,
-        height: job.samples.height,
-        extent: job.extent,
-        grain: job.grain,
-        sculpt: ranges.length === 1 ? before : slicedSculpt(before, rows),
-        operation: operationOf(job),
-        rows: ranges.length === 1 ? undefined : rows,
-        overlayAlpha: job.overlayAlpha,
-        overlayMask: job.overlayMask,
-        ...(readsCombined(job.kind) ? { values: job.samples.values, overlays: job.overlays } : {}),
-      })
-    }),
+    ranges.map((rows, index) =>
+      sculptResponse(job, before, rows, ranges.length, sessions[index], bases),
+    ),
   )
+}
+
+async function sculptResponse(
+  job: Job,
+  before: ReliefSculpt | undefined,
+  rows: { from: number; to: number },
+  rangeCount: number,
+  session: SculptSession | undefined,
+  bases: BaseBindings,
+): Promise<ReliefSculptResponse> {
+  if (!session) throw new Error('Relief sculpt worker is unavailable')
+  const held = bases.bySession.get(session)
+  const binding = bindingOf(job, held, bases)
+  if (binding) bases.bySession.set(session, binding)
+  try {
+    return await session.send(requestOf(job, before, rows, rangeCount, session, held, binding))
+  } catch (error) {
+    bases.bySession.delete(session)
+    throw error
+  }
+}
+
+type BaseBinding =
+  BaseBindings['bySession'] extends Map<SculptSession, infer Binding> ? Binding : never
+
+function bindingOf(
+  job: Job,
+  held: BaseBinding | undefined,
+  bases: BaseBindings,
+): BaseBinding | undefined {
+  if (!readsCombined(job.kind)) return undefined
+  if (
+    held?.values === job.samples.values &&
+    held.width === job.samples.width &&
+    held.height === job.samples.height
+  ) {
+    return held
+  }
+  return {
+    id: (bases.nextId += 1),
+    width: job.samples.width,
+    height: job.samples.height,
+    values: job.samples.values,
+  }
+}
+
+function requestOf(
+  job: Job,
+  before: ReliefSculpt | undefined,
+  rows: { from: number; to: number },
+  rangeCount: number,
+  session: SculptSession,
+  held: BaseBinding | undefined,
+  binding: BaseBinding | undefined,
+): ReliefSculptRequest {
+  return {
+    id: session.nextId(),
+    width: job.samples.width,
+    height: job.samples.height,
+    extent: job.extent,
+    grain: job.grain,
+    sculpt: rangeCount === 1 ? before : slicedSculpt(before, rows),
+    operation: operationOf(job),
+    rows: rangeCount === 1 ? undefined : rows,
+    overlayAlpha: job.overlayAlpha,
+    overlayMask: job.overlayMask,
+    ...(binding
+      ? {
+          baseId: binding.id,
+          ...(binding !== held ? { values: job.samples.values } : {}),
+          overlays: job.overlays,
+        }
+      : {}),
+  }
 }
 
 function slicedSculpt(

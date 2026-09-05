@@ -49,16 +49,21 @@ function diskAt(sampleX: number, amount: number) {
 
 function fakeWorker() {
   const listeners: ((event: MessageEvent<ReliefSculptResponse>) => void)[] = []
+  const errorListeners: ((event: ErrorEvent) => void)[] = []
   const posted: ReliefSculptRequest[] = []
+  let baseValues: Float32Array | undefined
   const worker = {
     postMessage: (message: unknown) => {
       posted.push(message as ReliefSculptRequest)
     },
     addEventListener: (
       type: string,
-      listener: (event: MessageEvent<ReliefSculptResponse>) => void,
+      listener: (event: MessageEvent<ReliefSculptResponse> | ErrorEvent) => void,
     ) => {
-      if (type === 'message') listeners.push(listener)
+      if (type === 'message') {
+        listeners.push(listener as (event: MessageEvent<ReliefSculptResponse>) => void)
+      }
+      if (type === 'error') errorListeners.push(listener as (event: ErrorEvent) => void)
     },
     terminate: vi.fn(),
   } as unknown as Worker
@@ -66,15 +71,27 @@ function fakeWorker() {
   return {
     worker,
     posted,
+    baseValues: () => baseValues,
+    holdBase: (values: Float32Array) => {
+      baseValues = values
+    },
     reply: (data: ReliefSculptResponse) => {
       for (const listener of listeners) listener({ data } as MessageEvent<ReliefSculptResponse>)
+    },
+    crash: () => {
+      for (const listener of errorListeners) listener({ message: 'worker died' } as ErrorEvent)
     },
   }
 }
 
 function answer(fake: ReturnType<typeof fakeWorker>, request: ReliefSculptRequest): void {
+  if (request.values) fake.holdBase(request.values)
   const after = applyReliefSculpt(
-    { width: request.width, height: request.height, values: request.values ?? new Float32Array(0) },
+    {
+      width: request.width,
+      height: request.height,
+      values: request.values ?? fake.baseValues() ?? new Float32Array(0),
+    },
     request.extent,
     request.sculpt,
     request.operation,
@@ -206,6 +223,93 @@ describe('createReliefSculptor', () => {
     expect(request.values).toBe(samples.values)
     expect(request.rows).toBeUndefined()
     expect(await pending).not.toBeNull()
+  })
+
+  it('binds a smooth heightfield once and reuses it for the next stroke', async () => {
+    const fake = fakeWorker()
+    const sculptor = createReliefSculptor(() => fake.worker)
+    const first = sculptor.raiseDisk({ ...diskAt(1, 0.1), kind: 'smooth' })
+    const request1 = fake.posted[0]
+    if (!request1) throw new Error('first smooth stroke was not sent')
+    answer(fake, request1)
+    await first
+
+    const second = sculptor.raiseDisk({ ...diskAt(2, 0.1), kind: 'smooth' })
+    const request2 = fake.posted[1]
+    if (!request2) throw new Error('second smooth stroke was not sent')
+    answer(fake, request2)
+
+    expect(request1.values).toBe(samples.values)
+    expect(request1.baseId).toBeTypeOf('number')
+    expect(request2.values).toBeUndefined()
+    expect(request2.baseId).toBe(request1.baseId)
+    await expect(second).resolves.not.toBeNull()
+  })
+
+  it('rebinds when the heightmap changes or the worker refuses its base', async () => {
+    const fake = fakeWorker()
+    const sculptor = createReliefSculptor(() => fake.worker)
+    const first = sculptor.raiseDisk({ ...diskAt(1, 0.1), kind: 'smooth' })
+    const request1 = fake.posted[0]
+    if (!request1) throw new Error('first smooth stroke was not sent')
+    fake.reply({ id: request1.id, ok: false, error: 'base unavailable' })
+    await expect(first).rejects.toThrow('base unavailable')
+
+    const retry = sculptor.raiseDisk({ ...diskAt(1, 0.1), kind: 'smooth' })
+    const request2 = fake.posted[1]
+    if (!request2) throw new Error('retried smooth stroke was not sent')
+    expect(request2.values).toBe(samples.values)
+    expect(request2.baseId).not.toBe(request1.baseId)
+    answer(fake, request2)
+    await retry
+
+    const changed = { ...samples, values: new Float32Array(samples.values.length).fill(2) }
+    const rebound = sculptor.raiseDisk({ ...diskAt(2, 0.1), samples: changed, kind: 'flatten' })
+    const request3 = fake.posted[2]
+    if (!request3) throw new Error('changed heightmap stroke was not sent')
+    expect(request3.values).toBe(changed.values)
+    expect(request3.baseId).not.toBe(request2.baseId)
+    answer(fake, request3)
+    await rebound
+  })
+
+  it('resends the heightfield after the worker restarts', async () => {
+    const workers = [fakeWorker(), fakeWorker()]
+    let opened = 0
+    const sculptor = createReliefSculptor(() => {
+      const fake = workers[opened]
+      opened += 1
+      if (!fake) throw new Error('no restarted worker')
+      return fake.worker
+    })
+    const first = sculptor.raiseDisk({ ...diskAt(1, 0.1), kind: 'smooth' })
+    const request1 = workers[0]?.posted[0]
+    if (!request1 || !workers[0]) throw new Error('first stroke was not sent')
+    answer(workers[0], request1)
+    await first
+
+    const interrupted = sculptor.raiseDisk({ ...diskAt(2, 0.1), kind: 'smooth' })
+    expect(workers[0].posted[1]?.values).toBeUndefined()
+    workers[0].crash()
+    await expect(interrupted).rejects.toThrow('worker died')
+
+    const retried = sculptor.raiseDisk({ ...diskAt(2, 0.1), kind: 'smooth' })
+    const request2 = workers[1]?.posted[0]
+    if (!request2 || !workers[1]) throw new Error('retry was not sent to the new worker')
+    expect(request2.values).toBe(samples.values)
+    answer(workers[1], request2)
+    await expect(retried).resolves.not.toBeNull()
+  })
+
+  it('terminates its worker and drops the in-flight stroke on dispose', async () => {
+    const fake = fakeWorker()
+    const sculptor = createReliefSculptor(() => fake.worker)
+    const pending = sculptor.raiseDisk({ ...diskAt(1, 0.1), kind: 'smooth' })
+
+    sculptor.dispose()
+
+    await expect(pending).resolves.toBeNull()
+    expect(fake.worker.terminate).toHaveBeenCalledOnce()
   })
 
   it('writes the whole raise delta and lets the mask hold it back at read time', async () => {

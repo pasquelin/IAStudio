@@ -21,7 +21,9 @@ export type ReliefSculptRequest = {
   sculpt: ReliefSculpt | undefined
   operation: ReliefSculptOperation
   rows?: ReliefChunkRows
-  /** Base heightfield. raiseDisk ignores it; smooth and flatten read combined height. */
+  /** Identity of the base heightfield kept by this worker for smooth and flatten. */
+  baseId?: number
+  /** Base heightfield, sent only when `baseId` is first bound on this worker. */
   values?: Float32Array
   /** Enabled overlays other than the armed sculpt, so combined height sees them. */
   overlays?: readonly ReliefOverlay[]
