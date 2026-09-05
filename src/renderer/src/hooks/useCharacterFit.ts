@@ -11,14 +11,14 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { characterOf, useCharacters } from '@/stores/character'
 import { useAiModels } from '@/stores/aiModels'
 import { AUTO_RIG_ROLE } from '@shared/domain/aiRole'
-import { canServe, writeScopeFor } from '@shared/domain/aiOverview'
+import { canServe, writeScopeFor, type RoleRow } from '@shared/domain/aiOverview'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { getBridge } from '@/services/bridge'
 import { autoRigServiceFor } from '@/engines/character/autoRigBackends'
 import { runTask } from '@/stores/tasks'
 import {
   AUTO_RIG_PRODUCT_ERRORS,
-  DEFAULT_AUTO_RIG_OPTIONS,
+  autoRigOptionsOf,
   type AutoRigInferenceOptions,
   type AutoRigProductError,
 } from '@shared/domain/autoRigInference'
@@ -37,31 +37,15 @@ export function useCharacterFit(
   const bytes = useAssets(state => assetsById(state).get(assetId)?.bytes ?? 0)
   const refusal = providersRefusalOf(services, plan, { bytes, maxSize })
   const overview = useAiModels(state => state.overview)
-  const row = overview?.roles.find(candidate => candidate.role === AUTO_RIG_ROLE)
-  const configured = row?.chosen.project ?? row?.chosen.app
-  const candidate =
-    configured?.kind === 'local'
-      ? row?.candidates.find(one => one.model.id === configured.modelId)
-      : undefined
-  const advanced = candidate?.model.backendId
-  const needsDownload = advanced !== undefined && !candidate?.installed
-  // Two escapes from `canServe`, and they answer different questions. What SERVES stays listed
-  // whatever the machine now says of it — the assistant's list does the same. What is CHOSEN stays
-  // listed while it is missing from the disk, so the download button below names something.
-  const serving = row?.provider?.kind === 'local' ? row.provider.modelId : null
-  const rigBackends =
-    row?.candidates.flatMap(one =>
-      (canServe(one) || one.model.id === serving || one === candidate) && one.model.backendId
-        ? [{ backendId: one.model.backendId, modelId: one.model.id, name: one.model.name }]
-        : [],
-    ) ?? []
-  // The CHOSEN one first, even absent from the disk: the field names what Create will attempt, so
-  // the refusal and the download button below agree with it. Otherwise, what serves.
-  const servingBackend = row?.candidates.find(one => one.model.id === serving)?.model.backendId
-  const selectedBackend = (needsDownload ? advanced : undefined) ?? servingBackend ?? 'simple'
+  const row = overview?.roles.find(one => one.role === AUTO_RIG_ROLE)
+  const { candidate, needsDownload, rigBackends, selectedBackend } = rigOfferOf(row)
   const [failure, setFailure] = useState<AutoRigProductError | null>(null)
   const [running, setRunning] = useState(false)
-  const [miaOptions, setMiaOptions] = useState<AutoRigInferenceOptions>(DEFAULT_AUTO_RIG_OPTIONS)
+  // Derived rather than initialised: the rig lands after this hook first runs, and a state seeded
+  // once would have offered « simplified » over a rig whose fingers the first pass had asked for.
+  const rigBones = useCharacters(state => characterOf(state, assetId)?.rig?.bones)
+  const [chosenOptions, setMiaOptions] = useState<AutoRigInferenceOptions | null>(null)
+  const miaOptions = chosenOptions ?? autoRigOptionsOf(rigBones)
   const chooseBackend = async (backendId: string): Promise<void> => {
     if (!row) return
     const picked = rigBackends.find(one => one.backendId === backendId)
@@ -160,6 +144,39 @@ export function useCharacterFit(
     download,
     useSimple,
     fit,
+  }
+}
+
+/**
+ * What the field may offer for the role, and which of them it names.
+ *
+ * Two escapes from `canServe`, answering different questions: what SERVES stays listed whatever
+ * the machine now says of it — the assistant's list does the same — and what is CHOSEN stays
+ * listed while it is missing from the disk, so the download button beside it names something.
+ * The chosen one names the field first, so the refusal and that button agree with it.
+ */
+function rigOfferOf(row: RoleRow | undefined) {
+  const configured = row?.chosen.project ?? row?.chosen.app
+  const candidate =
+    configured?.kind === 'local'
+      ? row?.candidates.find(one => one.model.id === configured.modelId)
+      : undefined
+  const advanced = candidate?.model.backendId
+  const needsDownload = advanced !== undefined && !candidate?.installed
+  const serving = row?.provider?.kind === 'local' ? row.provider.modelId : null
+  const rigBackends =
+    row?.candidates.flatMap(one =>
+      (canServe(one) || one.model.id === serving || one === candidate) && one.model.backendId
+        ? [{ backendId: one.model.backendId, modelId: one.model.id, name: one.model.name }]
+        : [],
+    ) ?? []
+  const servingBackend = row?.candidates.find(one => one.model.id === serving)?.model.backendId
+
+  return {
+    candidate,
+    needsDownload,
+    rigBackends,
+    selectedBackend: (needsDownload ? advanced : undefined) ?? servingBackend ?? 'simple',
   }
 }
 

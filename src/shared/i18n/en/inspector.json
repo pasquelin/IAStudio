@@ -249,6 +249,7 @@
     "rigNotHumanoid": "The studio only lays a humanoid skeleton — hips, spine, two arms and two legs.",
     "rigCreate": "Create the skeleton",
     "rigRegenerate": "Regenerate the skeleton",
+  "rigRegenerateConfirm": "Regenerating replaces the whole skeleton: IK chains, hand-added bones and renamings will be lost. Continue?",
     "autoRigAdvanced": "Advanced Auto Rig",
     "autoRigMiaSettings": "Make-It-Animatable settings",
     "autoRigFingers": "Fingers",

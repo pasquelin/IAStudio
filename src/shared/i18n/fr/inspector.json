@@ -249,6 +249,7 @@
     "rigNotHumanoid": "Le studio ne sait poser qu’un squelette humanoïde — hanches, colonne, deux bras et deux jambes.",
     "rigCreate": "Créer le squelette",
     "rigRegenerate": "Régénérer le squelette",
+  "rigRegenerateConfirm": "Régénérer remplace le squelette entier : les chaînes IK, les os ajoutés à la main et les renommages seront perdus. Continuer ?",
     "autoRigAdvanced": "Squelettage avancé",
     "autoRigMiaSettings": "Réglages Make-It-Animatable",
     "autoRigFingers": "Doigts",

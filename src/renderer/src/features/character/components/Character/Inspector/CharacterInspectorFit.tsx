@@ -149,7 +149,11 @@ function fitActions(state: CharacterFit, hasRig: boolean) {
       )}
       <Button
         disabled={!HUMANOID_KINDS.includes(state.kind) || state.running}
-        onClick={() => void state.fit()}
+        // Asked for once, plainly: what a regeneration drops of the rig in place, no Cancel covers
+        // — only the undo stack does, and nothing on screen says so.
+        onClick={() => {
+          if (!hasRig || window.confirm(state.t('inspector.rigRegenerateConfirm'))) void state.fit()
+        }}
       >
         {state.t(hasRig ? 'inspector.rigRegenerate' : 'inspector.rigCreate')}
       </Button>

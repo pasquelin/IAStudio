@@ -1,3 +1,6 @@
+import { isFingerRole } from './humanoid'
+import type { RigBone } from './rig'
+
 export type AutoRigInferencePrimitive = {
   mesh: number
   primitive: number
@@ -18,6 +21,15 @@ export const DEFAULT_AUTO_RIG_OPTIONS: AutoRigInferenceOptions = {
   fingers: 'simplified',
   useSurfaceNormals: false,
   weightPostProcessing: true,
+}
+
+/**
+ * The settings that would rebuild the rig already in place, so regenerating one with untouched
+ * settings does not silently drop the thirty finger bones the first pass had asked for.
+ */
+export function autoRigOptionsOf(bones: readonly RigBone[] | undefined): AutoRigInferenceOptions {
+  const detailed = bones?.some(bone => bone.role !== undefined && isFingerRole(bone.role))
+  return detailed ? { ...DEFAULT_AUTO_RIG_OPTIONS, fingers: 'detailed' } : DEFAULT_AUTO_RIG_OPTIONS
 }
 
 export type AutoRigInferenceRequest = {

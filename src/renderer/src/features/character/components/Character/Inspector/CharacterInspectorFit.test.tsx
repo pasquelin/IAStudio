@@ -12,6 +12,7 @@ vi.mock('@/hooks/useCharacterFit', () => ({ useCharacterFit }))
 
 const chooseBackend = vi.fn()
 const setMiaOptions = vi.fn()
+const fit = vi.fn()
 const sample = {
   bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
   points: new Float32Array(),
@@ -20,6 +21,7 @@ const sample = {
 beforeEach(() => {
   chooseBackend.mockReset()
   setMiaOptions.mockReset()
+  fit.mockReset()
   useCharacterFit.mockReturnValue({
     // Branded types this stub cannot forge; everything else in the mock is checked.
     t: ((key: string) =>
@@ -29,6 +31,7 @@ beforeEach(() => {
         'inspector.rigServiceLocal': 'Automatique — le studio',
         'inspector.rigCreate': 'Créer le squelette',
         'inspector.rigRegenerate': 'Régénérer le squelette',
+        'inspector.rigRegenerateConfirm': 'Le squelette entier sera remplacé. Continuer ?',
         'inspector.autoRigFingers': 'Doigts',
         'inspector.autoRigFingerDetailed': 'Détaillés',
         'inspector.autoRigFingerSimplified': 'Simplifiés',
@@ -61,7 +64,7 @@ beforeEach(() => {
     running: false,
     download: vi.fn(),
     useSimple: vi.fn(),
-    fit: vi.fn(),
+    fit,
   })
 })
 
@@ -129,5 +132,46 @@ describe('the Auto Rig selector', () => {
     ]) {
       expect(screen.getByText(text)).toHaveClass('alert', 'alert-info', 'alert-soft', 'text-tiny')
     }
+  })
+})
+
+describe('regenerating a rig that already exists', () => {
+  /** What it drops — IK chains, hand-added bones, renamings — only the undo stack covers. */
+  it('asks first, and leaves the rig alone when the person says no', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(
+      <CharacterInspectorFit
+        assetId="asset"
+        documentId="document"
+        nodeId="node"
+        sample={sample}
+        hasRig
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Régénérer le squelette' }))
+
+    expect(confirm).toHaveBeenCalledWith('Le squelette entier sera remplacé. Continuer ?')
+    expect(fit).not.toHaveBeenCalled()
+
+    confirm.mockReturnValue(true)
+    await userEvent.click(screen.getByRole('button', { name: 'Régénérer le squelette' }))
+
+    expect(fit).toHaveBeenCalled()
+    confirm.mockRestore()
+  })
+
+  // A first rig destroys nothing, so it must not put a question in the way.
+  it('asks nothing when there is no rig yet', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(
+      <CharacterInspectorFit assetId="asset" documentId="document" nodeId="node" sample={sample} />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Créer le squelette' }))
+
+    expect(confirm).not.toHaveBeenCalled()
+    expect(fit).toHaveBeenCalled()
+    confirm.mockRestore()
   })
 })
