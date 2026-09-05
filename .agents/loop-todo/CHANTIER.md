@@ -106,6 +106,15 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   littérale « photoréaliste marine » et refuse son équivalent anglais. Classé `BENCHMARK`, oracle
   inchangé. Gate complète : 16 760 tests TypeScript, 195 Python et `pnpm validate` verts. Prochaine
   gate produit : Palier B.
+- Palier B sur `487d614d2` : 61/91 selon l'oracle et 65/91 fonctionnels, contre 43/91 en 10.4.
+  1 259 984 tokens, 1 306 603 caractères de contexte, 289 rounds, 313 appels provider, 243
+  actions dont 97 inutiles et 3 401 candidats, top-K 12. Causes des 30 rouges historiques : 19
+  Retrieval, 0 Context, 2 Planning, 1 Execution, 4 Model, 3 Benchmark et 1 Harness. Les trois
+  Benchmark sont 1.5, 1.8 et 44.2 : le contexte ou `jobs.list` donne déjà la réponse fraîche.
+  13.3 est Harness : le snapshot final porte bien la clé demandée à 10 secondes alors que l'oracle
+  exécuté rend faux. Artefacts : `logs/mission-runtime/phase-10-5g-expanded-intra-batch-baseline`.
+  Recommandation : NOT READY FOR FULL BENCHMARK ; corriger d'abord les 19 défauts de retrieval,
+  la validation numérique de `usage.report` et les familles montage/post/rig.
 
 ## Ce que tu ne tranches pas seul
 
