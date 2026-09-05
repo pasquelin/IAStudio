@@ -6,8 +6,14 @@ import type { Project, RescanState } from './domain/project'
 import type { ContextCard, ContextState } from './domain/projectContext'
 import type { ProjectBinned, Unsubscribe } from './ipcEvents'
 import type { FolderExportRequest } from './ipcExports'
+import type { InputMap } from './domain/inputMap'
 
 export type StudioBridgeProject = {
+  inputMaps: {
+    list: () => Promise<string[]>
+    read: (path: string) => Promise<InputMap | null>
+    write: (path: string, map: InputMap) => Promise<boolean>
+  }
   project: {
     /**
      * Turns the CHOSEN folder into a project — it becomes the root, and the studio's folders are

@@ -43,4 +43,22 @@ describe('input maps', () => {
       }),
     ).toThrow()
   })
+
+  it('refuses a single stick axis on a button action', () => {
+    expect(() =>
+      inputMapOf({
+        version: 1,
+        id: 'vehicle',
+        priority: 0,
+        defaultActive: true,
+        actions: [
+          {
+            id: 'accelerate',
+            kind: 'button',
+            bindings: [{ device: 'gamepad', control: 'leftStickY' }],
+          },
+        ],
+      }),
+    ).toThrow()
+  })
 })

@@ -156,7 +156,7 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
   // prettier-ignore
-  const { assets, extractTextures, folder, documents, game, scripts, files, ffmpeg, media, catchUpProject, probeLocalFile, onAssetLanded, bundles } = buildMediaServices()
+  const { assets, extractTextures, folder, documents, game, scripts, inputMaps, files, ffmpeg, media, catchUpProject, probeLocalFile, onAssetLanded, bundles } = buildMediaServices()
   function buildLocalAi(): LocalAiServices {
     return createLocalAiServices({
       settings,
@@ -424,6 +424,7 @@ export function createServices(settings: SettingsStore): Services {
       files,
       game,
       scripts,
+      inputMaps,
       reconciler,
       context,
       promptContext,

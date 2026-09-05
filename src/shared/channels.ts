@@ -127,6 +127,10 @@ export type Channels = {
   gameScripts: 'game:scripts'
   gameWriteScript: 'game:write-script'
 
+  inputMapList: 'input:list'
+  inputMapRead: 'input:read'
+  inputMapWrite: 'input:write'
+
   documentList: 'document:list'
   documentRead: 'document:read'
   documentWrite: 'document:write'

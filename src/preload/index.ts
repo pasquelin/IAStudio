@@ -151,6 +151,11 @@ const bridge: StudioBridge = {
     fileHistory: () => ipcRenderer.invoke(CHANNELS.projectFileHistory),
     onFilesChanged: callback => subscribe<FileOutcome>(EVENTS.filesChanged, callback),
   },
+  inputMaps: {
+    list: () => ipcRenderer.invoke(CHANNELS.inputMapList),
+    read: path => ipcRenderer.invoke(CHANNELS.inputMapRead, path),
+    write: (path, map) => ipcRenderer.invoke(CHANNELS.inputMapWrite, path, map),
+  },
   git: {
     read: () => ipcRenderer.invoke(CHANNELS.gitRead),
     init: () => ipcRenderer.invoke(CHANNELS.gitInit),

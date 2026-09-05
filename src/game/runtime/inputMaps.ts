@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 import type { GamepadBinding, InputAction, InputMap } from '@shared/domain/inputMap'
 
 export type InputVector = { x: number; y: number }
@@ -58,7 +60,10 @@ export function resolveInputMaps(
 function valueOf(action: InputAction, input: RawInput): Value {
   if (action.kind === 'button') return action.bindings.some(binding => buttonOf(binding, input))
   if (action.kind === 'axis1')
-    return action.bindings.reduce((strongest, binding) => stronger(strongest, axisOf(binding, input)), 0)
+    return action.bindings.reduce(
+      (strongest, binding) => stronger(strongest, axisOf(binding, input)),
+      0,
+    )
 
   const vector = action.bindings.reduce<InputVector>(
     (strongest, binding) => strongerVector(strongest, vectorOf(binding, input)),
@@ -92,8 +97,14 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
   )
   const deadZone = binding.deadZone ?? DEAD_ZONE
   return {
-    x: Math.abs(vector.x) <= deadZone ? 0 : (binding.invert ? -vector.x : vector.x) * (binding.scale ?? 1),
-    y: Math.abs(vector.y) <= deadZone ? 0 : (binding.invert ? -vector.y : vector.y) * (binding.scale ?? 1),
+    x:
+      Math.abs(vector.x) <= deadZone
+        ? 0
+        : (binding.invert ? -vector.x : vector.x) * (binding.scale ?? 1),
+    y:
+      Math.abs(vector.y) <= deadZone
+        ? 0
+        : (binding.invert ? -vector.y : vector.y) * (binding.scale ?? 1),
   }
 }
 

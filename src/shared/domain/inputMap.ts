@@ -4,7 +4,10 @@ export const INPUT_MAP_EXTENSION = '.input.json'
 export type InputActionKind = 'button' | 'axis1' | 'axis2'
 
 export type KeyboardBinding = { device: 'keyboard'; code: string }
-export type MouseBinding = { device: 'mouse'; control: 'primary' | 'secondary' | 'middle' | 'wheel' }
+export type MouseBinding = {
+  device: 'mouse'
+  control: 'primary' | 'secondary' | 'middle' | 'wheel'
+}
 export type GamepadBinding = {
   device: 'gamepad'
   control: string
@@ -34,7 +37,8 @@ export function inputMapOf(value: unknown): InputMap {
   const { version, id, priority, defaultActive, actions } = value
   if (version !== INPUT_MAP_VERSION) throw new Error('unsupported input map version')
   if (typeof id !== 'string' || id.length === 0) throw new Error('input map id is required')
-  if (typeof priority !== 'number' || !Number.isFinite(priority)) throw new Error('invalid input priority')
+  if (typeof priority !== 'number' || !Number.isFinite(priority))
+    throw new Error('invalid input priority')
   if (typeof defaultActive !== 'boolean') throw new Error('input defaultActive is required')
   if (!Array.isArray(actions)) throw new Error('input actions must be an array')
 
@@ -89,7 +93,10 @@ function numericOptions(value: Record<string, unknown>): { deadZone?: number; sc
     throw new Error('invalid gamepad dead zone')
   if (scale !== undefined && (typeof scale !== 'number' || !Number.isFinite(scale)))
     throw new Error('invalid gamepad scale')
-  return { ...(typeof deadZone === 'number' ? { deadZone } : {}), ...(typeof scale === 'number' ? { scale } : {}) }
+  return {
+    ...(typeof deadZone === 'number' ? { deadZone } : {}),
+    ...(typeof scale === 'number' ? { scale } : {}),
+  }
 }
 
 function isActionKind(value: unknown): value is InputActionKind {
@@ -101,7 +108,12 @@ function isMouseControl(value: unknown): value is MouseBinding['control'] {
 }
 
 function isAxisBinding(binding: InputBinding): binding is GamepadBinding {
-  return binding.device === 'gamepad' && binding.control.endsWith('Stick')
+  return (
+    binding.device === 'gamepad' &&
+    (binding.control.endsWith('Stick') ||
+      binding.control.endsWith('StickX') ||
+      binding.control.endsWith('StickY'))
+  )
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 import { describe, expect, it } from 'vitest'
 import type { InputMap } from '@shared/domain/inputMap'
 import { resolveInputMaps } from './inputMaps'

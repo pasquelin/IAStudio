@@ -122,6 +122,10 @@ type ChannelMethod = {
   [CHANNELS.gameScripts]: StudioBridge['game']['scripts']
   [CHANNELS.gameWriteScript]: StudioBridge['game']['writeScript']
 
+  [CHANNELS.inputMapList]: StudioBridge['inputMaps']['list']
+  [CHANNELS.inputMapRead]: StudioBridge['inputMaps']['read']
+  [CHANNELS.inputMapWrite]: StudioBridge['inputMaps']['write']
+
   [CHANNELS.documentList]: StudioBridge['documents']['list']
   [CHANNELS.documentRead]: StudioBridge['documents']['read']
   [CHANNELS.documentWrite]: StudioBridge['documents']['write']

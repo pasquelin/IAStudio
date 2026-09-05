@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 import type { InputMap } from '@shared/domain/inputMap'
 
 export type InputContexts = {

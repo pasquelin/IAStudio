@@ -125,6 +125,13 @@ const fakeProject = (overrides: BridgeOverrides): StudioBridge['project'] => ({
   ...overrides.project,
 })
 
+const fakeInputMaps = (overrides: BridgeOverrides): StudioBridge['inputMaps'] => ({
+  list: () => Promise.resolve([]),
+  read: () => Promise.resolve(null),
+  write: () => Promise.resolve(false),
+  ...overrides.inputMaps,
+})
+
 const fakeGit = (overrides: BridgeOverrides): StudioBridge['git'] => ({
   read: () => Promise.resolve({ kind: 'no-project' }),
   init: () => Promise.resolve({ kind: 'no-project' }),
@@ -441,6 +448,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     accounts: fakeAccounts(overrides),
     provider: fakeProvider(overrides),
     project: fakeProject(overrides),
+    inputMaps: fakeInputMaps(overrides),
     git: fakeGit(overrides),
     dialog: fakeDialog(overrides),
     game: fakeGame(overrides),

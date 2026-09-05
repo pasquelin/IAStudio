@@ -23,6 +23,7 @@ import { createCredentialVault } from '@main/git/credentials'
 import { registerGitHandlers } from '@main/git/handlers'
 import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
+import { registerInputMapHandlers } from '@main/project/inputMapHandlers'
 import { registerProviderHandlers } from '@main/provider/handlers'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CURRENT } from '@main/logFile'
@@ -90,6 +91,28 @@ function registerSettingsIpc(services: Services): void {
   })
 }
 
+function registerProjectIpc(services: Services): void {
+  registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
+  registerInputMapHandlers(services.inputMaps)
+}
+
+function registerGitIpc(services: Services): void {
+  const git = registerGitHandlers({
+    // The same file and the same keychain the API key already uses. A second store would be a
+    // second place a secret can be left behind on a machine somebody stops trusting.
+    vault: createCredentialVault(createElectronAdapter()),
+    project: services.project,
+    binaryPath: () => services.settings.read().git.binary || undefined,
+    // Both halves or neither: git wants a name AND an address, and handing it one would make
+    // every commit fail on the other. Left out, git reads the machine's own configuration.
+    identity: () => {
+      const { userName, userEmail } = services.settings.read().git
+      return userName && userEmail ? { name: userName, email: userEmail } : undefined
+    },
+  })
+  services.settings.subscribe(() => git.forget())
+}
+
 function registerCreativeIpc(
   services: Services,
   running: ReturnType<typeof createRunningTasks>,
@@ -134,7 +157,7 @@ export function registerIpc(services: Services): void {
   registerDiagnosticsHandlers(() => services.journal)
   registerSettingsIpc(services)
   registerProviderHandlers(services)
-  registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
+  registerProjectIpc(services)
   registerBundledTextureHandlers({
     catalog: () => services.project.catalog(),
     assets: services.assets,
@@ -144,27 +167,7 @@ export function registerIpc(services: Services): void {
     roles: () => services.project.roles(),
     exists: services.exists,
   })
-  const git = registerGitHandlers({
-    // The same file and the same keychain the API key already uses. A second store would be a
-    // second place a secret can be left behind on a machine somebody stops trusting.
-    vault: createCredentialVault(createElectronAdapter()),
-    project: services.project,
-    binaryPath: () => services.settings.read().git.binary || undefined,
-    // Both halves or neither: git wants a name AND an address, and handing it one would make
-    // every commit fail on the other. Left out, git reads the machine's own configuration.
-    identity: () => {
-      const { userName, userEmail } = services.settings.read().git
-      return userName && userEmail ? { name: userName, email: userEmail } : undefined
-    },
-  })
-
-  /**
-   * A changed binary has to reach the service, which holds both the detection and the port bound
-   * to it. Without this the preference could be edited and nothing would read it until the next
-   * launch — the service would go on saying git is missing on a machine that has just been told
-   * where it is.
-   */
-  services.settings.subscribe(() => git.forget())
+  registerGitIpc(services)
   registerAssetHandlers({
     catalog: () => services.project.catalog(),
     remote: services.remote,
