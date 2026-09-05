@@ -13,6 +13,7 @@ const ASKED: GameExportRequest = {
   entryScene: 'doc-1',
   scenes: [{ id: 'doc-1', title: 'Menu', content: SCENE('a', ['tex-1']) }],
   scripts: [{ script: 'script:levels/Walk.ts', code: 'export {}' }],
+  inputMaps: [{ version: 1, id: 'character', priority: 0, defaultActive: true, actions: [] }],
 }
 
 function writing(over: Partial<GameExportPorts> = {}) {
@@ -75,6 +76,14 @@ const manifestOf = (written: Map<string, string | Uint8Array>): ExportedGame =>
   JSON.parse(String(written.get(EXPORTED_GAME_FILE) ?? '{}'))
 
 describe('a game written to run with no studio', () => {
+  it('keeps the project input maps in the runtime manifest', async () => {
+    const { ports, written } = writing()
+
+    await writeExportedGame(ports, ASKED)
+
+    expect(manifestOf(written).inputMaps).toEqual(ASKED.inputMaps)
+  })
+
   it('writes the page, the bundle, the manifest, the scenes and the scripts', async () => {
     const { ports, written } = writing()
 

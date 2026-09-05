@@ -1,5 +1,6 @@
 import { digest } from '@shared/hash'
 import type { ScriptModule } from '@game/ports/scriptPort'
+import type { InputMapModule } from '@shared/domain/inputMap'
 import { createWorkerSession } from '../core/workerSession'
 import type { CodeRequest, CodeResponse } from './codeMessage'
 
@@ -10,6 +11,7 @@ export type ScriptCompiler = {
   /** Every script, compiled once. What came back unchanged is served from the cache. */
   compile: (
     sources: readonly { script: string; source: string }[],
+    inputMaps?: readonly InputMapModule[],
   ) => Promise<{ modules: ScriptModule[]; troubles: ScriptTrouble[] }>
 }
 
@@ -26,8 +28,9 @@ export function createScriptCompiler(open: () => Worker = spawn): ScriptCompiler
   const compiled = new Map<string, string>()
 
   return {
-    compile: async sources => {
-      const keyed = sources.map(one => ({ ...one, key: digest(one.source) }))
+    compile: async (sources, inputMaps = []) => {
+      const inputsKey = JSON.stringify(inputMaps)
+      const keyed = sources.map(one => ({ ...one, key: digest(one.source + inputsKey) }))
       const asked = new Set<string>()
       // Sent TOGETHER: the worker answers by `id`, so what is waiting is one round trip rather
       // than one per script — a project of thirty would otherwise queue thirty latencies.
@@ -36,7 +39,12 @@ export function createScriptCompiler(open: () => Worker = spawn): ScriptCompiler
           .filter(one => !compiled.has(one.key) && !asked.has(one.key) && asked.add(one.key))
           .map(async one => ({
             ...one,
-            answer: await session.send({ id: session.nextId(), source: one.source }),
+            answer: await session.send({
+              id: session.nextId(),
+              script: one.script,
+              source: one.source,
+              inputMaps,
+            }),
           })),
       )
 

@@ -10,6 +10,7 @@ import { animationFrames } from './frameDriver'
 import { heightmapsOf } from './heightmapsOf'
 import { startPlay, type PlaySession, type SceneLookup } from './playSession'
 import type { SceneDraw } from './studioRender'
+import type { InputMap } from '@shared/domain/inputMap'
 
 export type GameHostDeps = {
   documentId: string
@@ -24,6 +25,7 @@ export type GameHostDeps = {
   sceneNamed: (scene: string) => SceneLookup
   onReport: (report: RuntimeReport) => void
   compilationMs?: () => number
+  inputMaps: readonly InputMap[]
 }
 
 /**
@@ -53,5 +55,6 @@ export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
     onReport: deps.onReport,
     heightmaps,
     compilationMs: deps.compilationMs,
+    inputMaps: deps.inputMaps,
   })
 }

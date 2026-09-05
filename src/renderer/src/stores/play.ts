@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { NOT_PLAYING, type RuntimeReport } from '@shared/domain/gameRuntime'
 import { orElse } from '@shared/promises'
 import type { ScriptModule } from '@game/ports/scriptPort'
+import type { InputMap } from '@shared/domain/inputMap'
 import {
   createScriptCompiler,
   type ScriptCompiler,
@@ -18,6 +19,7 @@ import { documentById, sceneDocumentNamed, useDocuments } from './documents'
 import { sceneEngineOf } from './sceneEngines'
 import { loadSceneSource, montageSceneOf } from './sceneSources'
 import { sceneOf, useScenes } from './scenes'
+import { projectInputMaps } from '@/engines/code/projectInputMaps'
 
 /** How long a command may wait on the game window. A `step` runs up to 120 fixed steps there. */
 const COMMAND_MS = 2_000
@@ -61,6 +63,7 @@ type PublishedGame = {
   documentId: string
   modules: readonly ScriptModule[]
   troubles: readonly ScriptTrouble[]
+  inputMaps: readonly InputMap[]
 }
 
 export const usePlay = create<PlayStoreState>()(() => ({
@@ -133,7 +136,12 @@ async function begin(documentId: string): Promise<void> {
   // a file is a fade that stalls on black, and the timeline names them in advance.
   for (const scene of scenesAhead(sceneOf(useScenes.getState(), documentId))) sceneNamed(scene)
 
-  published = { documentId, modules: compiled.modules, troubles: compiled.troubles }
+  published = {
+    documentId,
+    modules: compiled.modules,
+    troubles: compiled.troubles,
+    inputMaps: compiled.inputMaps,
+  }
   publishGame()
   watchTheScene(documentId)
 
@@ -156,6 +164,7 @@ function publishGame(): void {
     scene: sceneOf(useScenes.getState(), published.documentId),
     modules: published.modules,
     troubles: published.troubles,
+    inputMaps: published.inputMaps,
   })
 }
 
@@ -251,9 +260,13 @@ const NOT_ANSWERED: CommandAnswer = { ok: false, ran: 0 }
  */
 let compiler: ScriptCompiler | null = null
 
-type CompiledScripts = { modules: readonly ScriptModule[]; troubles: readonly ScriptTrouble[] }
+type CompiledScripts = {
+  modules: readonly ScriptModule[]
+  troubles: readonly ScriptTrouble[]
+  inputMaps: readonly InputMap[]
+}
 
-const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [] }
+const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [], inputMaps: [] }
 
 /**
  * Whether that text would compile, said the way a fault is — or nothing when it would.
@@ -275,12 +288,16 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   // 🛑 Through the EDITOR's own reading, never a second walk of the disk: what a Play compiles
   // has to be what the screen shows, or an author watches the script from before their last
   // keystroke run — without a word.
-  await useCode.getState().reload()
+  const [, inputMaps] = await Promise.all([useCode.getState().reload(), projectInputMaps()])
   const files = codeFilesOf(useCode.getState())
-  if (files.length === 0) return NO_SCRIPTS
+  if (files.length === 0) return { ...NO_SCRIPTS, inputMaps: inputMaps.map(input => input.map) }
 
   compiler ??= createScriptCompiler()
-  return await compiler.compile(files.map(file => ({ script: file.script, source: file.source })))
+  const compiled = await compiler.compile(
+    files.map(file => ({ script: file.script, source: file.source })),
+    inputMaps,
+  )
+  return { ...compiled, inputMaps: inputMaps.map(input => input.map) }
 }
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */

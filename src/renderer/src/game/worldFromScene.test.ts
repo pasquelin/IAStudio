@@ -10,6 +10,7 @@ import type { GameApi } from '@game/api/gameApi'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/sceneState'
 import type { World } from '@game/runtime/world'
+import type { InputMap } from '@shared/domain/inputMap'
 import { playerModuleNodes } from '@/engines/scene/nodeFactory'
 import { worldFromScene } from './worldFromScene'
 
@@ -31,6 +32,24 @@ const scene = (): SceneState => ({
 })
 
 describe('the edit state, translated into something that runs', () => {
+  it('starts the runtime with the default input contexts from the project', () => {
+    const inputMaps: readonly InputMap[] = [
+      {
+        version: 1,
+        id: 'character',
+        priority: 0,
+        defaultActive: true,
+        actions: [],
+      },
+      { version: 1, id: 'vehicle', priority: 10, defaultActive: false, actions: [] },
+    ]
+
+    const world = worldFromScene('doc-1', scene(), ports(), {}, 1, undefined, inputMaps)
+
+    expect(world.inputMaps).toEqual(inputMaps)
+    expect(world.inputContexts.active()).toEqual(['character'])
+  })
+
   it('carries every object, with its name and what it does', () => {
     const world = worldFromScene('doc-1', scene(), ports())
 

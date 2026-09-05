@@ -35,6 +35,7 @@ import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
 import { bakedRuntimeNodes } from '@/engines/scene/bakedRuntimeNodes'
 import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
 import { scatterCollisionOf } from './scatterCollision'
+import type { InputMap } from '@shared/domain/inputMap'
 
 /**
  * The scene's own floor is not a node, so it is not an entity either — and a game whose ground
@@ -78,6 +79,7 @@ export function worldFromScene(
   scripts: Partial<ScriptSystemOptions> = {},
   seed = 1,
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
+  inputMaps: readonly InputMap[] = [],
 ): World {
   // A module's arm reads the TREE rather than its two written names. It rewrites the STATE where
   // `filmable` and the seat stay closure arguments: `springArm` reads its two fields off the
@@ -111,6 +113,7 @@ export function worldFromScene(
     seed,
     step: STEP_SECONDS,
     play: state.world.play,
+    inputMaps,
   })
   living = world
   installEntities(world, state)

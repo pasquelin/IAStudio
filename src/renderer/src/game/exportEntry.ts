@@ -45,8 +45,9 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       createPorts(canvas, game, assets, drawn.port, swap.port, rollback),
       exportedJson<unknown>(entry.file, entry.compression),
     ])
+    const runtime = { modules, inputMaps: game.inputMaps ?? [] }
 
-    const openingScene = await createOpeningScene(entry, openingSource, assets, ports, modules)
+    const openingScene = await createOpeningScene(entry, openingSource, assets, ports, runtime)
     const { opening, heightmaps } = openingScene
     let { world } = openingScene
     rollback.add(() => world.dispose())
@@ -90,7 +91,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         const nextMaps = await heightmapsOf(found.world.layers, id =>
           heightmapFromBundle(assets, id),
         )
-        world = worldFromScene(wanted.id, found, ports, { modules }, 1, nextMaps)
+        world = worldFromScene(wanted.id, found, ports, runtime, 1, nextMaps, runtime.inputMaps)
         loop = createGameLoop(world)
         // The first step of the arrived scene derives every collider — not a gap to catch up on.
         warmed = false
@@ -224,11 +225,11 @@ async function createOpeningScene(
   source: unknown,
   assets: ReturnType<typeof createBundledAssets>,
   ports: ReturnType<typeof createExportHost>,
-  modules: readonly ScriptModule[],
+  runtime: { modules: readonly ScriptModule[]; inputMaps: ExportedGame['inputMaps'] },
 ) {
   const opening = sceneFromGltf(source)
   const heightmaps = await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id))
-  const world = worldFromScene(entry.id, opening, ports, { modules }, 1, heightmaps)
+  const world = worldFromScene(entry.id, opening, ports, runtime, 1, heightmaps, runtime.inputMaps)
   return { opening, world, heightmaps }
 }
 

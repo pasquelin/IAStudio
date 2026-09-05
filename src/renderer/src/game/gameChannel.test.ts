@@ -8,6 +8,7 @@ import { gameMessageOf } from './gameChannel'
  */
 describe('what the two windows accept off the wire', () => {
   const scene = { nodes: [], animation: { duration: 5 } }
+  const inputMaps = [{ version: 1, id: 'character', priority: 0, defaultActive: true, actions: [] }]
   const patch = {
     changedNodes: [],
     removedIds: [],
@@ -18,13 +19,14 @@ describe('what the two windows accept off the wire', () => {
 
   it('takes the messages the studio publishes', () => {
     expect(
-      gameMessageOf({ kind: 'play', documentId: 'd', scene, modules: [], troubles: [] }),
+      gameMessageOf({ kind: 'play', documentId: 'd', scene, modules: [], troubles: [], inputMaps }),
     ).toEqual({
       kind: 'play',
       documentId: 'd',
       scene,
       modules: [],
       troubles: [],
+      inputMaps,
     })
     expect(gameMessageOf({ kind: 'edit', documentId: 'd', patch })).toEqual({
       kind: 'edit',

@@ -5,6 +5,7 @@ import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { RuntimeWorldPatch } from '@/engines/scene/runtimeWorldCompiler'
 import type { SceneLookup } from './playSession'
+import { inputMapOf, type InputMap } from '@shared/domain/inputMap'
 
 /**
  * What the studio and the game window say to each other. A `BroadcastChannel` and not the bridge,
@@ -19,6 +20,7 @@ export type GameMessage =
       scene: SceneState
       modules: readonly ScriptModule[]
       troubles: readonly ScriptTrouble[]
+      inputMaps: readonly InputMap[]
     }
   /** The document was edited under a running game — `createStudioRender` follows it per frame. */
   | { kind: 'edit'; documentId: string; patch: RuntimeWorldPatch }
@@ -74,14 +76,25 @@ type Decoder = (data: WireMessage) => GameMessage | null
 
 function playMessage(data: WireMessage): GameMessage | null {
   const { documentId, scene, modules = [], troubles = [] } = data
+  const inputMaps = inputMapsOf(data.inputMaps ?? [])
   if (
     typeof documentId !== 'string' ||
     !isScene(scene) ||
     !Array.isArray(modules) ||
-    !Array.isArray(troubles)
+    !Array.isArray(troubles) ||
+    inputMaps === null
   )
     return null
-  return { kind: 'play', documentId, scene, modules, troubles }
+  return { kind: 'play', documentId, scene, modules, troubles, inputMaps }
+}
+
+function inputMapsOf(value: unknown): InputMap[] | null {
+  if (!Array.isArray(value)) return null
+  try {
+    return value.map(inputMapOf)
+  } catch {
+    return null
+  }
 }
 
 function editMessage(data: WireMessage): GameMessage | null {

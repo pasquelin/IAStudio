@@ -11,6 +11,7 @@ import {
   createRuntimeWorldCompiler,
   worldWithRuntimePatch,
 } from '@/engines/scene/runtimeWorldCompiler'
+import type { InputMap } from '@shared/domain/inputMap'
 
 export type GameStageDeps = {
   /** What draws. The game window's own engine — a WebGL context never crosses a window. */
@@ -38,6 +39,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
   let authoring: SceneState | null = null
   let modules: readonly ScriptModule[] = []
   let troubles: readonly ScriptTrouble[] = []
+  let inputMaps: readonly InputMap[] = []
   let compilationMs = 0
   /** Scenes the studio has answered for, by the name the game asked with. */
   const known = new Map<string, SceneLookup>()
@@ -86,6 +88,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       sceneNamed,
       onReport: report,
       compilationMs: () => compilationMs,
+      inputMaps,
     })
 
     // Overtaken by a later Play, or stopped while the engines were landing.
@@ -147,6 +150,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
     compilationMs = compiler.getOptimizationReport().compilationMs
     modules = message.modules
     troubles = message.troubles
+    inputMaps = message.inputMaps
     deps.renderer.apply(scene)
     void begin(generation)
   }

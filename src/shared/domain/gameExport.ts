@@ -1,5 +1,6 @@
 import type { CsgGraph } from './csg'
 import type { GeometryDescriptor } from './geometry'
+import type { InputMap } from './inputMap'
 
 /**
  * What an exported game ships beside its page, and the one thing its writer and its reader both
@@ -143,6 +144,7 @@ export type ExportedGame = {
   modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
   /** Absent in older exports and equivalent to every LOSSY option being off. */
   lossyOptimization?: LossyOptimization
+  inputMaps?: readonly InputMap[]
 }
 
 /** Which scene a name stands for — its title first, as a person says it, then its id. */
@@ -175,6 +177,7 @@ export type GameExportRequest = {
   entryScene: string
   scenes: readonly SceneToExport[]
   scripts: readonly ScriptToExport[]
+  inputMaps?: readonly InputMap[]
   /** Must be named by the caller: no export path enables a visual change on its behalf. */
   lossyOptimization?: LossyOptimization
   /** Image bytes prepared off the UI and main threads, keyed by their logical asset identity. */

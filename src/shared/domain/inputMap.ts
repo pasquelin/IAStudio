@@ -32,6 +32,8 @@ export type InputMap = {
   actions: readonly InputAction[]
 }
 
+export type InputMapModule = { path: string; map: InputMap }
+
 export function inputMapOf(value: unknown): InputMap {
   if (!isRecord(value)) throw new Error('input map must be an object')
   const { version, id, priority, defaultActive, actions } = value

@@ -26,6 +26,7 @@ import { createStudioRender, type SceneDraw } from './studioRender'
 import { veilLift } from './veilLift'
 import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
+import type { InputMap } from '@shared/domain/inputMap'
 /** How often the game says what it is doing. Six times a second, and that is a decision — see
  * `publish`. */
 const REPORT_MS = 160
@@ -113,6 +114,7 @@ export type PlaySessionDeps = {
    */
   sceneNamed?: (scene: string) => SceneLookup
   compilationMs?: () => number
+  inputMaps?: readonly InputMap[]
 }
 /**
  * What a project answers about a scene a game asked for.
@@ -205,6 +207,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
             { modules: deps.modules ?? [], onFault: noted },
             1,
             heightmaps,
+            deps.inputMaps,
           )
         const startPlayStep4 = () => {
           let world = build(deps.editState())

@@ -7,6 +7,8 @@ import type { Transform } from '@shared/domain/transform'
 import type { GameApi } from '../api/gameApi'
 import { createEventBus, type EventBus } from '../events/eventBus'
 import type { InputState } from '../ports/inputPort'
+import type { InputMap } from '@shared/domain/inputMap'
+import { createInputContexts, type InputContexts } from './inputContexts'
 import { clonedTransform, copyTransformInto, restingTransform, type Entity } from './entity'
 import { createEntityStore, type EntityStore } from './entityStore'
 import { createRandom, type Random } from './random'
@@ -41,6 +43,8 @@ export type World = {
   readonly time: { tick: number; elapsed: number; readonly step: number }
   /** The input as of the step being run — DATA of the tick, never a live read. */
   input: InputState
+  readonly inputMaps: readonly InputMap[]
+  readonly inputContexts: InputContexts
   /**
    * The four gestures a SYSTEM uses, all of them landing at the END of the step.
    *
@@ -74,6 +78,7 @@ export type WorldOptions = {
   seed: number
   step: number
   play: ScenePlay
+  inputMaps?: readonly InputMap[]
 }
 
 export function createWorld(options: WorldOptions): World {
@@ -126,6 +131,8 @@ export function createWorld(options: WorldOptions): World {
     play: options.play,
     time: { tick: 0, elapsed: 0, step: options.step },
     input: options.ports.input.state(),
+    inputMaps: options.inputMaps ?? [],
+    inputContexts: createInputContexts(options.inputMaps ?? []),
 
     spawn: request => {
       // Counted rather than drawn from `crypto.randomUUID`: two runs of one seed must mint the
