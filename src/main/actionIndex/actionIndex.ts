@@ -48,6 +48,8 @@ export type ActionHit = {
   compatibilityScore?: number
   intentScore?: number
   fusionScore?: number
+  relevanceScore: number
+  applicabilityScore: number
 }
 
 export type ActionRanking = ActionHit & {
@@ -94,14 +96,18 @@ function actionScopeScores(
   const document = scope?.document?.toLocaleLowerCase('en')
   const targetsSelection =
     target !== undefined &&
-    action.fields.some(
-      field => field.picks === target || field.key.toLocaleLowerCase('en') === `${target}id`,
-    )
+    (action.capabilities.targets?.some(candidate => candidate.toLocaleLowerCase('en') === target) ||
+      action.fields.some(
+        field => field.picks === target || field.key.toLocaleLowerCase('en') === `${target}id`,
+      ))
+  const compatibleDocuments = action.capabilities.documentKinds
   const documentScore =
-    document !== undefined && isDocumentKind(action.family)
+    document !== undefined && (compatibleDocuments?.length || isDocumentKind(action.family))
       ? action.family === document
         ? 2
-        : -4
+        : compatibleDocuments?.some(kind => kind === document)
+          ? 0
+          : -4
       : 0
   return { scope: documentScore, compatibility: Number(targetsSelection) * 4 }
 }
@@ -158,6 +164,17 @@ function workflowScoresOf(
       )
   }
   return { workflow: scores, resources }
+}
+
+function semanticScoreOf(
+  row: SqlRow,
+  question: Float32Array | null,
+  embedding: ActionSearch['embedding'],
+): number | undefined {
+  const model = optionalText(row, 'embedding_model')
+  return question && model === embedding?.model
+    ? dotOfBytes(bytes(row, 'embedding'), question)
+    : undefined
 }
 
 export function createActionIndex(driver: SqliteDriver): ActionIndex {
@@ -294,17 +311,15 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
     const hits = indexedRows.map(({ action, row }) => {
       const rank = optionalNumber(row, 'rank')
       const lexical = actionLexicalScore(wanted.query, action, rank)
-      const model = optionalText(row, 'embedding_model')
-      const semantic =
-        question && model === wanted.embedding?.model
-          ? dotOfBytes(bytes(row, 'embedding'), question)
-          : undefined
+      const semantic = semanticScoreOf(row, question, wanted.embedding)
       const scope = actionScopeScores(action, wanted.scope)
       const totalScopeScore = scope.scope + scope.compatibility
       const intentScore = actionIntentScore(wanted.query, action)
       const ftsRank = ftsRanks.get(action.name)
       const fusionScore =
         ftsRank === undefined || scope.scope < 0 ? 0 : FTS_RRF_WEIGHT * (RRF_K / (RRF_K + ftsRank))
+      const relevanceScore = lexical + Math.max(0, semantic ?? 0) * 3 + intentScore + fusionScore
+      const applicabilityScore = totalScopeScore
       return {
         action,
         lexicalScore: lexical,
@@ -314,8 +329,9 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         ...(semantic === undefined ? {} : { semanticScore: semantic }),
         ...(intentScore === 0 ? {} : { intentScore }),
         ...(fusionScore === 0 ? {} : { fusionScore }),
-        score:
-          lexical + Math.max(0, semantic ?? 0) * 3 + totalScopeScore + intentScore + fusionScore,
+        relevanceScore,
+        applicabilityScore,
+        score: relevanceScore + applicabilityScore,
       }
     })
     const signals = workflowScoresOf(hits, wanted.available ?? [])

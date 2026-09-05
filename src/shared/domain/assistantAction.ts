@@ -11,6 +11,8 @@ import type { ActionReferenceKind, ActionResource } from './actionResource'
  * built leaves the registry and the handler table in perfect agreement about nothing.
  */
 import type { ActionName } from './assistantActionNames'
+import type { ActionCapabilities } from './actionCapabilities'
+import type { ActionReach } from './actionReach'
 export type { ActionName } from './assistantActionNames'
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
@@ -45,15 +47,6 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
   'studio',
   'credits',
 ]
-/**
- * 🛑 VESTIGIAL, and said so rather than left to be discovered: the briefing shows every NAME on
- * every door since `studioBriefing` stopped composing manuals it was not asked for, so nothing
- * reads this but `actionsReaching('mcp')` — which both values answer. The wire carries all of it.
- * `both` still reads as "the vocabulary of a spoken request" and `mcp` as "what a program drives",
- * but neither decides anything today. A new action may be marked either way without a consequence.
- */
-export type ActionReach = 'both' | 'mcp'
-export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
 /**
  * One input of an action.
  *
@@ -130,12 +123,12 @@ export type AssistantAction = {
   produces?: readonly ActionResource[]
   inputs?: readonly ActionResource[]
   returns?: readonly ActionResource[]
+  capabilities?: ActionCapabilities
 }
 
 export function action(descriptor: AssistantAction): AssistantAction {
   return descriptor
 }
-
 /** The node in front, named the same way in every family that points at one. */
 export const NODE_ID: ActionField = {
   key: 'nodeId',

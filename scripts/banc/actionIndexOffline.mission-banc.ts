@@ -5,11 +5,14 @@ import { createActionIndex, type ActionIndex } from '@main/actionIndex/actionInd
 import type { AsyncActionIndex } from '@main/actionIndex/actionIndexClient'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import { createActionSearchService } from '@main/actionIndex/actionSearchService'
+import { actionSearchScope } from '@main/actionIndex/actionSearchContext'
 import type { Embedder } from '@main/memory/embedder'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { ACTION_FAMILIES, type ActionName } from '@shared/domain/assistant'
 import { expectedMissionActions } from './missionCatalogue'
 import { SCENARIOS } from './scenarios'
+import { PROJECT } from './project'
+import { createStudio } from './studio'
 
 const OUTPUT = process.env['ACTION_RETRIEVAL_DIR'] ?? 'logs/mission-runtime/phase-10-5-offline'
 
@@ -69,6 +72,8 @@ type RankedSignals = {
   compatibilityScore: number
   intentScore: number
   fusionScore: number
+  relevanceScore: number
+  applicabilityScore: number
   score: number
   rank: number
   included: boolean
@@ -100,9 +105,10 @@ async function evaluate(
   request: string,
   expected: ActionName,
   scenario: string,
+  scope?: { target?: string; document?: string },
 ): Promise<Evaluation> {
   const started = performance.now()
-  const ranking = await service.inspect(`${request}\nPlan mission`, 12)
+  const ranking = await service.inspect(`${request}\nPlan mission`, 12, [], scope)
   const milliseconds = performance.now() - started
   const hit = ranking.find(candidate => candidate.action.name === expected)
   if (!hit) throw new Error(`${expected} is absent from the action corpus`)
@@ -129,6 +135,8 @@ async function evaluate(
       compatibilityScore: candidate.compatibilityScore ?? 0,
       intentScore: candidate.intentScore ?? 0,
       fusionScore: candidate.fusionScore ?? 0,
+      relevanceScore: candidate.relevanceScore,
+      applicabilityScore: candidate.applicabilityScore,
       score: candidate.score,
       rank: candidate.rank,
       included: candidate.included,
@@ -145,7 +153,21 @@ describe('ActionIndex offline retrieval', () => {
     if (!action) continue
     it(scenario.name, async () => {
       const request = scenario.said.join('\n')
-      evaluations.push(await evaluate(request, action, scenario.name))
+      const studio = await createStudio(PROJECT)
+      try {
+        await scenario.setup?.(studio)
+        studio.settle()
+        evaluations.push(
+          await evaluate(
+            request,
+            action,
+            scenario.name,
+            actionSearchScope(await studio.snapshot(), request),
+          ),
+        )
+      } finally {
+        studio.close()
+      }
     })
   }
 

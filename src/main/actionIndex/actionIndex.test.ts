@@ -12,6 +12,9 @@ describe('ActionIndex', () => {
     expect(corpus.actions.map(action => action.name)).toEqual(
       ACTION_REGISTRY.map(action => action.name),
     )
+    expect(corpus.actions.find(action => action.name === 'clip.add')?.capabilities).toMatchObject({
+      documentKinds: ['sequence'],
+    })
   })
 
   it('keeps its fingerprint stable until a descriptor changes', () => {
@@ -143,7 +146,29 @@ describe('ActionIndex', () => {
     })
 
     expect(hits.map(hit => hit.action.name)).toContain('node.rename')
-    expect(hits.find(hit => hit.action.name === 'node.rename')?.compatibilityScore).toBe(4)
+    expect(hits.find(hit => hit.action.name === 'node.rename')).toMatchObject({
+      compatibilityScore: 4,
+      applicabilityScore: 4,
+    })
+    expect(hits.find(hit => hit.action.name === 'node.rename')?.relevanceScore).toBeGreaterThan(0)
+  })
+
+  it('uses canonical document compatibility for a family whose name differs from its document', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const clip = index
+      .inspect({ query: 'ajoute un média', limit: 12, scope: { document: 'sequence' } })
+      .find(hit => hit.action.name === 'clip.add')
+
+    expect(clip).toMatchObject({ applicabilityScore: 0 })
+    expect(
+      index
+        .inspect({ query: 'ajoute un média', limit: 12, scope: { document: 'scene' } })
+        .find(hit => hit.action.name === 'clip.add'),
+    ).toMatchObject({ scopeScore: -4, applicabilityScore: -4 })
   })
 
   it('ranks an action targeting the selection above a similarly worded document action', () => {

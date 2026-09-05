@@ -20,6 +20,7 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [],
+    capabilities: { intents: ['read'] },
   }),
   action({
     /**
@@ -34,6 +35,7 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     raises: input => ('title' in input || 'body' in input ? 'files' : 'none'),
     reach: 'mcp',
+    capabilities: { intents: ['mutate'] },
     fields: [
       {
         key: 'cardId',
@@ -70,6 +72,7 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { intents: ['delete'] },
     fields: [
       {
         key: 'cardId',

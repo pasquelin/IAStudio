@@ -1,5 +1,6 @@
 import type { ActionSearchService } from '@main/actionIndex/actionSearchService'
 import type { ActionHit } from '@main/actionIndex/actionIndex'
+import { actionSearchScope } from '@main/actionIndex/actionSearchContext'
 import type { MemoryVectors } from '@main/memory/memoryVectors'
 import type { ProjectContextStore } from '@main/project/context'
 import type { JobManager } from '@main/provider/jobManager'
@@ -9,7 +10,6 @@ import type { Mission, MissionStep } from '@shared/domain/mission'
 import { assistantAction, type ActionResource } from '@shared/domain/assistant'
 import { noContext, type ContextState } from '@shared/domain/projectContext'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
-import { foldForSearch } from '@shared/text'
 import type {
   AssistantContext,
   ContextBudgetReport,
@@ -111,24 +111,6 @@ function availableActionResources(input: AssistantContextRequest): readonly Acti
   return [...resources]
 }
 
-function actionScope(
-  snapshot: StudioSnapshot | null,
-  query: string,
-): {
-  target?: string
-  document?: string
-} {
-  const request = foldForSearch(query)
-  const targetsSelection = snapshot?.selection?.items.some(item => {
-    const name = foldForSearch(item.name)
-    return name !== '' && request.includes(name)
-  })
-  return {
-    ...(snapshot?.selection && targetsSelection ? { target: snapshot.selection.kind } : {}),
-    ...(snapshot?.activeDocumentState ? { document: snapshot.activeDocumentState.kind } : {}),
-  }
-}
-
 function rankedCards(context: ContextState, query: string): ContextState {
   const words = query.toLocaleLowerCase('en').match(/[\p{L}\p{N}_]+/gu) ?? []
   const cards = context.cards
@@ -182,7 +164,7 @@ async function collectContext(
         query,
         CONTEXT_BUDGETS.actions.maxItems,
         availableActionResources(input),
-        actionScope(snapshot, input.request),
+        actionSearchScope(snapshot, input.request),
       ),
       attached
         ? deps.memories.recall('project', {

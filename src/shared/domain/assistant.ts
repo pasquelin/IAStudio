@@ -2,12 +2,9 @@ import { defined } from '../guards'
 import { englishText } from '../i18n'
 import type { Target } from './target'
 import { searchWords } from '../text'
-import {
-  type ActionCommitment,
-  type ActionName,
-  type AssistantAction,
-  type ActionReach,
-} from './assistantAction'
+import { type ActionCommitment, type ActionName, type AssistantAction } from './assistantAction'
+import type { ActionCapabilities } from './actionCapabilities'
+import type { ActionReach } from './actionReach'
 import { ASSET_ACTIONS } from './assetActions'
 import { CANVAS_ACTIONS } from './canvasActions'
 import { CLOUD_ACTIONS } from './cloudActions'
@@ -46,10 +43,22 @@ import { STATE_ACTIONS } from './stateActions'
  */
 
 export * from './assistantAction'
+export * from './actionCapabilities'
+export * from './actionReach'
 export * from './assistantModel'
 export * from './actionResource'
 
 export { commitmentOfCommand } from './coreActions'
+
+function actionsWithCapabilities(
+  actions: readonly AssistantAction[],
+  capabilities: ActionCapabilities,
+): readonly AssistantAction[] {
+  return actions.map(entry => ({
+    ...entry,
+    capabilities: { ...capabilities, ...entry.capabilities },
+  }))
+}
 
 /**
  * Every action the studio publishes, one family after another.
@@ -69,22 +78,49 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'job', actions: JOB_ACTIONS },
   { name: 'asset', actions: ASSET_ACTIONS },
   { name: 'cloud', actions: CLOUD_ACTIONS },
-  { name: 'canvas', actions: CANVAS_ACTIONS },
-  { name: 'montage', actions: SEQUENCE_ACTIONS },
-  { name: 'material', actions: MATERIAL_ACTIONS },
-  { name: 'scene', actions: SCENE_ACTIONS },
-  { name: 'post', actions: POST_ACTIONS },
-  { name: 'rig', actions: RIG_ACTIONS },
+  {
+    name: 'canvas',
+    actions: actionsWithCapabilities(CANVAS_ACTIONS, { documentKinds: ['image'] }),
+  },
+  {
+    name: 'montage',
+    actions: actionsWithCapabilities(SEQUENCE_ACTIONS, { documentKinds: ['sequence'] }),
+  },
+  {
+    name: 'material',
+    actions: actionsWithCapabilities(MATERIAL_ACTIONS, { documentKinds: ['material'] }),
+  },
+  { name: 'scene', actions: actionsWithCapabilities(SCENE_ACTIONS, { documentKinds: ['scene'] }) },
+  { name: 'post', actions: actionsWithCapabilities(POST_ACTIONS, { documentKinds: ['scene'] }) },
+  {
+    name: 'rig',
+    actions: actionsWithCapabilities(RIG_ACTIONS, { documentKinds: ['scene', 'character'] }),
+  },
   { name: 'git', actions: GIT_ACTIONS },
-  { name: 'game', actions: GAME_ACTIONS },
+  {
+    name: 'game',
+    actions: actionsWithCapabilities(GAME_ACTIONS, { documentKinds: ['scene'], targets: ['node'] }),
+  },
   { name: 'play', actions: PLAY_ACTIONS },
-  { name: 'script', actions: SCRIPT_ACTIONS },
-  { name: 'studio', actions: STUDIO_ACTIONS },
-  { name: 'timeline', actions: TIMELINE_ACTIONS },
+  {
+    name: 'script',
+    actions: actionsWithCapabilities(SCRIPT_ACTIONS, { documentKinds: ['script'] }),
+  },
+  { name: 'studio', actions: actionsWithCapabilities(STUDIO_ACTIONS, { targets: ['studio'] }) },
+  {
+    name: 'timeline',
+    actions: actionsWithCapabilities(TIMELINE_ACTIONS, {
+      documentKinds: ['scene'],
+      targets: ['timeline'],
+    }),
+  },
   { name: 'assembly', actions: ASSEMBLY_ACTIONS },
   { name: 'export', actions: EXPORT_ACTIONS },
-  { name: 'context', actions: CONTEXT_ACTIONS },
-  { name: 'memory', actions: MEMORY_ACTIONS },
+  {
+    name: 'context',
+    actions: actionsWithCapabilities(CONTEXT_ACTIONS, { targets: ['projectContext'] }),
+  },
+  { name: 'memory', actions: actionsWithCapabilities(MEMORY_ACTIONS, { targets: ['memory'] }) },
   { name: 'settings', actions: SETTINGS_ACTIONS },
   { name: 'shell', actions: SHELL_ACTIONS },
 ]

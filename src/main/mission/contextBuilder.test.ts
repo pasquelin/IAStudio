@@ -271,6 +271,8 @@ describe('AssistantContextBuilder', () => {
         action,
         score: 8 - at,
         lexicalScore: 8 - at,
+        relevanceScore: 8 - at,
+        applicabilityScore: 0,
       }))
     const builder = createAssistantContextBuilder(
       dependencies({

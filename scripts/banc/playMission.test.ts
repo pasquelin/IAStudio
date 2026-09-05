@@ -80,7 +80,9 @@ describe('parcours mission du banc', () => {
           : { say: 'Terminé.', calls: [], cost: 0 }
       },
       {
-        search: async () => [{ action, score: 1, lexicalScore: 1 }],
+        search: async () => [
+          { action, score: 1, lexicalScore: 1, relevanceScore: 1, applicabilityScore: 0 },
+        ],
       },
     )
 
@@ -107,7 +109,18 @@ describe('parcours mission du banc', () => {
         passed: () => false,
       },
       causalThink(contexts),
-      { search: async () => [{ action, score: 4, lexicalScore: 3, semanticScore: 1 }] },
+      {
+        search: async () => [
+          {
+            action,
+            score: 4,
+            lexicalScore: 3,
+            semanticScore: 1,
+            relevanceScore: 4,
+            applicabilityScore: 0,
+          },
+        ],
+      },
       { folder, scenarioId: '12.2', runId: 1 },
     )
 

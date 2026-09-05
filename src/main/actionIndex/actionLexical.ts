@@ -1,3 +1,4 @@
+import type { ActionIntent } from '@shared/domain/assistant'
 import type { IndexedAction } from './actionCorpus'
 
 const INTENT_MATCH_SCORE = 2
@@ -47,8 +48,7 @@ const STOP_WORDS = new Set([
   'with',
 ])
 
-type SearchIntent = 'read' | 'create' | 'mutate' | 'delete' | 'search' | 'execute'
-const SEARCH_INTENTS: readonly SearchIntent[] = [
+const SEARCH_INTENTS: readonly ActionIntent[] = [
   'read',
   'create',
   'mutate',
@@ -57,7 +57,7 @@ const SEARCH_INTENTS: readonly SearchIntent[] = [
   'execute',
 ]
 
-const QUERY_INTENTS: Readonly<Record<SearchIntent, readonly string[]>> = {
+const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
   read: [
     'quel',
     'combien',
@@ -98,13 +98,16 @@ const QUERY_INTENTS: Readonly<Record<SearchIntent, readonly string[]>> = {
     'update',
     'adjust',
     'activ',
+    'retien',
+    'remember',
+    'retain',
   ],
   delete: ['supprim', 'retire', 'efface', 'oublie', 'delete', 'remove', 'trash', 'forget', 'clear'],
   search: ['cherch', 'trouve', 'find', 'search', 'browse'],
   execute: ['lance', 'execute', 'ouvre', 'ferme', 'run', 'open', 'close', 'submit', 'play'],
 }
 
-const ACTION_INTENTS: Readonly<Record<SearchIntent, readonly string[]>> = {
+const ACTION_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
   read: [
     'state',
     'list',
@@ -153,10 +156,10 @@ const wordsOf = (value: string): readonly string[] => folded(value).match(/[\p{L
 
 function intentOf(
   value: string,
-  vocabulary: Readonly<Record<SearchIntent, readonly string[]>>,
-): SearchIntent | null {
+  vocabulary: Readonly<Record<ActionIntent, readonly string[]>>,
+): ActionIntent | null {
   const tokens = wordsOf(value)
-  let found: { intent: SearchIntent; position: number } | null = null
+  let found: { intent: ActionIntent; position: number } | null = null
   for (const intent of SEARCH_INTENTS) {
     const position = tokens.findIndex(token =>
       vocabulary[intent].some(prefix => token.startsWith(prefix)),
@@ -169,6 +172,8 @@ function intentOf(
 export function actionIntentScore(query: string, action: IndexedAction): number {
   const queryIntent = intentOf(query, QUERY_INTENTS)
   if (queryIntent === null) return 0
+  if (action.capabilities.intents?.includes(queryIntent)) return INTENT_MATCH_SCORE
+  if (action.capabilities.intents?.length) return INTENT_MISMATCH_SCORE
   const actionIntent = intentOf(action.name.split('.')[1] ?? '', ACTION_INTENTS)
   if (actionIntent === null) return 0
   return actionIntent === queryIntent ? INTENT_MATCH_SCORE : INTENT_MISMATCH_SCORE
