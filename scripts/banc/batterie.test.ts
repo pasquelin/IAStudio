@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { play } from './play'
 import { createStudio, type Studio, type Think } from './studio'
 import { rankOf } from './coverage'
-import { assetOf, boatImage, montage, opened } from './setups'
+import { assetOf, boatImage, montage, named, opened } from './setups'
 import { PROJECT } from './project'
 import type { Scenario } from './run'
 import { SCENARIOS } from './scenarios'
@@ -121,6 +121,21 @@ describe('the batterie and the bench', () => {
     )
 
     expect(mute.map(one => one.name)).toEqual([])
+  })
+
+  it('judges scene key times in the microseconds stored by the timeline', async () => {
+    const scenario = SCENARIOS.find(one => one.name.startsWith('13.3 '))
+    if (!scenario) throw new Error('scenario 13.3 is missing')
+    const studio = await createStudio(PROJECT)
+    await scenario.setup?.(studio)
+    await studio.run('key.writePoseKeys', {
+      nodeId: named(studio, 'Cube Test'),
+      timeSeconds: 10,
+      property: 'position',
+    })
+
+    expect(scenario.passed({ studio, called: [], refused: 0, said: '', asks: [] })).toBe(true)
+    studio.close()
   })
 })
 
