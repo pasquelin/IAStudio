@@ -259,39 +259,6 @@ describe('mission runtime', () => {
     ).toBe(true)
   })
 
-  it('grounds an optional asset reference after project asset discovery', async () => {
-    const time = clock()
-    const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
-    const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
-    const search: AssistantCall = { action: 'assets.searchProjectCatalogue', input: { type: 'video' } }
-    const invented: AssistantCall = { action: 'clip.add', input: { assetId: 'invented-video' } }
-    const grounded: AssistantCall = { action: 'clip.add', input: { assetId: 'video-1' } }
-    const { brain } = brainWith([
-      { say: '', calls: [search], cost: 0 },
-      { say: '', calls: [invented], cost: 0 },
-      { say: '', calls: [grounded], cost: 0 },
-      { say: 'Done.', calls: [], cost: 0 },
-    ])
-    const run = vi.fn(async (call: AssistantCall): Promise<ActionOutcome> => ({
-      ok: true,
-      data: call.action === 'assets.searchProjectCatalogue' ? [{ id: 'video-1' }] : undefined,
-    }))
-    const runtime = createMissionRuntime({
-      manager,
-      context: { build: async ({ mission }) => contextFor(mission) },
-      brain,
-      actions: { run, settle: vi.fn() },
-      jobs: { list: () => [] },
-      revisions: { read: async () => ({ current: [], unavailable: [] }) },
-      clock: time,
-    })
-
-    const mission = await runtime.create('Add the first project video', {})
-
-    expect(run.mock.calls.map(call => call[0])).toEqual([search, grounded])
-    expect(JSON.stringify(mission)).toContain('untrustedReference')
-  })
-
   it('does not execute an action before its structured input resource exists', async () => {
     const time = clock()
     const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }

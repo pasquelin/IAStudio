@@ -8,6 +8,7 @@ import type {
   ActionCapabilities,
 } from '@shared/domain/assistant'
 import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
+import { COMPONENTS, COMPONENT_TYPES } from '@shared/domain/componentRegistry'
 import { digestOf } from '@main/memory/vectors'
 
 export type IndexedAction = {
@@ -41,6 +42,31 @@ export type ActionCorpus = {
 
 export function actionFingerprint(actions: readonly IndexedAction[]): string {
   return digestOf(JSON.stringify(actions))
+}
+
+function componentTerms(fields: readonly ActionField[]): readonly string[] {
+  const hasComponentChoice = fields.some(
+    field =>
+      field.options?.length === COMPONENT_TYPES.length &&
+      field.options.every(
+        option =>
+          typeof option === 'string' &&
+          COMPONENT_TYPES.some(componentType => componentType === option),
+      ),
+  )
+  if (!hasComponentChoice) return []
+  return Object.values(COMPONENTS).flatMap(component => [
+    component.type,
+    englishText(component.titleKey),
+    textAt(TRANSLATIONS.fr, component.titleKey),
+    englishText(component.descriptionKey),
+    textAt(TRANSLATIONS.fr, component.descriptionKey),
+    ...component.fields.flatMap(field => [
+      field.key,
+      englishText(field.labelKey),
+      textAt(TRANSLATIONS.fr, field.labelKey),
+    ]),
+  ])
 }
 
 export function actionCorpus(): ActionCorpus {
@@ -83,6 +109,7 @@ export function actionCorpus(): ActionCorpus {
           description,
           frenchTitle,
           frenchDescription,
+          ...componentTerms(action.fields),
           ...fields.flatMap(field => [
             field.key,
             englishText(field.labelKey),

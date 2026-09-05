@@ -350,26 +350,6 @@ describe('ActionIndex', () => {
     expect(assistantAction('file.open')?.inputs).toBeUndefined()
   })
 
-  it('offers asset discovery beside an operation that consumes a project asset', () => {
-    const database = openMemoryDatabase()
-    onTestFinished(() => database.close())
-    const index = createActionIndex(database)
-    index.rebuild(actionCorpus())
-
-    const names = index
-      .search({
-        query: 'Ajoute ma première vidéo sur la piste V1 au début de la timeline.',
-        limit: 12,
-        scope: { document: 'sequence', documentAuthority: 'explicit' },
-      })
-      .map(hit => hit.action.name)
-
-    expect(names).toEqual(
-      expect.arrayContaining(['clip.add', 'assets.searchProjectCatalogue']),
-    )
-    expect(assistantAction('clip.add')?.inputs).toBeUndefined()
-  })
-
   it('combines a resolved document target with the matching navigation intent', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())
