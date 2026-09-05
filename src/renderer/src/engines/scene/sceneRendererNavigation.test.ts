@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { Group } from 'three'
+import { Group, Vector3 } from 'three'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SceneRenderer } from './SceneRenderer'
 
@@ -39,6 +39,17 @@ describe('SceneRenderer mouse-look navigation', () => {
     renderer['onPointerMove'](pointer('pointermove', { clientX: 140, clientY: 120 }))
 
     expect(camera.quaternion.equals(before)).toBe(false)
+  })
+
+  it('keeps the camera aimed at the subject on the first pixel of a right-button look', () => {
+    const renderer = rendererOf()
+    const camera = renderer['viewport'].camera
+    const before = camera.getWorldDirection(new Vector3())
+
+    renderer['startFlight'](pointer('pointerdown'))
+    renderer['onPointerMove'](pointer('pointermove', { clientX: 101, clientY: 100 }))
+
+    expect(camera.getWorldDirection(new Vector3()).dot(before)).toBeGreaterThan(0.99)
   })
 
   it('uses the wheel to tune flight speed while the right button owns navigation', () => {

@@ -61,6 +61,7 @@ export abstract class SceneRendererPointer extends SceneRendererPose {
     }
     this.flownWith = event.button
     this.flew = false
+    this.catchLook()
     // The RIGHT button only. `freezePanes` ends in `armOrbits(null)`, which sets
     // `controls.enabled = false` on the main orbit — freezing under the left button would cost
     // that button the rotation it is held down for.

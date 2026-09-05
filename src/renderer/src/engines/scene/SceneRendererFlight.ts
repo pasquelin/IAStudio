@@ -109,7 +109,7 @@ export abstract class SceneRendererFlight extends SceneRendererFilm {
     if (on) {
       if (!canvas) return
       this.navigating = true
-      this.look = anglesFromDirection(this.viewport.camera.getWorldDirection(flightGaze), this.look)
+      this.catchLook()
       document.addEventListener('pointerlockchange', this.onPointerLockChange)
       canvas.addEventListener('pointermove', this.onLookMove)
       // Before the first turn: an orbit left running ends its frame on `lookAt(target)`, which
@@ -137,6 +137,14 @@ export abstract class SceneRendererFlight extends SceneRendererFilm {
     this.options.onNavigatingChange?.(false)
     this.repaint()
   }
+  /**
+   * Heading off the camera. `this.look` starts at DEFAULT_LOOK (+Z, level); a right-button drag
+   * that skipped this aimed there on the first pixel and the framed subject left the view.
+   */
+  protected catchLook(): void {
+    this.look = anglesFromDirection(this.viewport.camera.getWorldDirection(flightGaze), this.look)
+  }
+
   /**
    * Put back ahead of the camera: left where a flight walked away from it, the first drag
    * afterwards orbits a point off screen — the trap `turnToViewHelper` guards the trihedron against.
