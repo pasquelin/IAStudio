@@ -11,7 +11,13 @@ import { unsavedDocumentIds } from './documentIo'
 import { guardUnsavedWork } from './unsavedGuard'
 
 // The real one needs a live Dockview; this file only checks what the guard asks of the document.
-vi.mock('./components/dockviewApi', () => ({ closePanel: vi.fn() }))
+const fileViewEdits = { held: false }
+const settleFileViews = vi.fn(() => Promise.resolve(true))
+vi.mock('./components/dockviewApi', () => ({
+  closePanel: vi.fn(),
+  fileViewsHoldEdits: () => fileViewEdits.held,
+  settleFileViews: () => settleFileViews(),
+}))
 
 const box = meshNode('box-1')
 
@@ -52,6 +58,7 @@ beforeEach(() => {
   resumeLeave.mockClear()
   localStorage.clear()
   clearScenes()
+  fileViewEdits.held = false
   forgetReportedFailures()
   useDocuments.setState({ documents: {}, activeId: null })
 })
@@ -66,6 +73,29 @@ describe('guardUnsavedWork', () => {
     arm(window)
 
     expect(leave(window).defaultPrevented).toBe(false)
+  })
+
+  // A file view keeps its edits outside the documents store, so the count of dirty documents
+  // says nothing about it — and ⌘Q took the window with them, without a question.
+  it('refuses to let the window go while a file view holds unsaved work', async () => {
+    install({})
+    arm(window)
+    fileViewEdits.held = true
+
+    expect(leave(window).defaultPrevented).toBe(true)
+    await vi.waitFor(() => expect(settleFileViews).toHaveBeenCalled())
+  })
+
+  // A cancelled file view stops the leave as a cancelled document does: the window stays.
+  it('holds the window when the file view question is cancelled', async () => {
+    install({})
+    arm(window)
+    fileViewEdits.held = true
+    settleFileViews.mockResolvedValueOnce(false)
+
+    leave(window)
+
+    await vi.waitFor(() => expect(resumeLeave).toHaveBeenCalledWith(false))
   })
 
   it('refuses to let the window go while a document holds unsaved work', async () => {

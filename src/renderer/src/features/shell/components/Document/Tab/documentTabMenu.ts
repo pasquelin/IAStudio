@@ -4,8 +4,8 @@ import { isFiledKind } from '@shared/domain/document'
 import { showContextMenu } from '@/helpers/contextMenu'
 import { useDocuments } from '@/stores/documents'
 import { reportFailure } from '@/services/diagnostics'
-import { closeTab } from './closeTab'
-import { closeDocument, deleteDocument } from '../../../documentIo'
+import { closeTab, closeTabAsking } from './closeTab'
+import { deleteDocument } from '../../../documentIo'
 import { openPanelIds } from '../../dockviewApi'
 
 export type DocumentTabMenuProps = {
@@ -76,6 +76,6 @@ export function openDocumentTabMenu({ documentId, t, onRename }: DocumentTabMenu
 async function closeOthers(keptId: string): Promise<void> {
   for (const id of openPanelIds()) {
     if (id === keptId) continue
-    if (!(await closeDocument(id))) return
+    if (!(await closeTabAsking(id))) return
   }
 }

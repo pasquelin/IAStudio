@@ -24,7 +24,7 @@ import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { getBridge } from '@/services/bridge'
 import { newId } from '@/helpers/ids'
-import { homeIsVisible, useLayouts } from './layouts'
+import { useLayouts } from './layouts'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
@@ -377,15 +377,6 @@ function asNameFailure(error: unknown): DocumentNameFailure {
 
 export function useDocumentIsInFront(documentId: string): boolean {
   return useDocuments(state => state.activeId === documentId)
-}
-
-// The tab ⌘W acts on, read by the router AND by the menu that greys its row. A DOCUMENT, not
-// whatever panel is in front: `closeDocument` on a file view's `file:` id finds no io, so it
-// asks nothing and drops the edits. Nor one the home covers, which nobody is looking at.
-export function closableDocumentId(): string | null {
-  const { activeId, documents } = useDocuments.getState()
-  if (homeIsVisible() || activeId === null) return null
-  return documents[activeId] ? activeId : null
 }
 
 /**

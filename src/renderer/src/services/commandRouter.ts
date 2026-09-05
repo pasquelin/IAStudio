@@ -1,6 +1,8 @@
 import { commandDescriptor, type CommandId } from '@shared/domain/command'
 import type { StudioBridge } from '@shared/ipc'
-import { closeDocument, saveDocument, saveDocumentAs } from '@/features/shell/documentIo'
+import { saveDocument, saveDocumentAs } from '@/features/shell/documentIo'
+import { closableTabId } from '@/features/shell/components/dockviewApi'
+import { closeTab } from '@/features/shell/components/Document/Tab/closeTab'
 import { openNewDocument } from '@/features/shell/newDocument'
 import { importOtioz } from '@/features/shell/otioImport'
 import { revealChat } from '@/features/assistant/components/Assistant/Toast/revealChat'
@@ -9,7 +11,7 @@ import { getBridge } from '@/services/bridge'
 import { commandScopeIsArmed, publishCommand } from '@/services/commandBus'
 import { reportFailure } from '@/services/diagnostics'
 import { useDictation } from '@/stores/dictation'
-import { closableDocumentId, useDocuments } from '@/stores/documents'
+import { useDocuments } from '@/stores/documents'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { panelsStore } from '@/stores/panels'
@@ -70,11 +72,9 @@ function runProjectCommand(command: CommandId): CommandRouting | null {
 
 function runDocumentCommand(command: CommandId): CommandRouting | null {
   if (command === 'document.close') {
-    const documentId = closableDocumentId()
-    if (documentId === null) return 'noSurface'
-    void closeDocument(documentId).catch(error =>
-      reportFailure('document.close', documentId, error),
-    )
+    const tabId = closableTabId()
+    if (tabId === null) return 'noSurface'
+    closeTab(tabId)
     return 'ran'
   }
   if (command !== 'document.save' && command !== 'document.saveAs') return null

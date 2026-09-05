@@ -15,7 +15,7 @@ import {
   showWorkspace,
   documentIsMarkedModified,
   registerFileViewSave,
-  settleFileViewsForProjectChange,
+  settleFileViews,
 } from './dockviewApi'
 import { installFakeBridge } from '@/services/fakeBridge'
 
@@ -317,7 +317,7 @@ describe('a file view tab', () => {
     openFileView(controls)
     setDocumentTitle('file:Controls/character.input.json', 'character', true)
 
-    await expect(settleFileViewsForProjectChange()).resolves.toBe(false)
+    await expect(settleFileViews()).resolves.toBe(false)
 
     expect(panels[0]?.api.close).not.toHaveBeenCalled()
     setDocumentTitle('file:Controls/character.input.json', 'character', false)
@@ -327,7 +327,7 @@ describe('a file view tab', () => {
     const { panels } = mount()
     openFileView(controls)
 
-    await expect(settleFileViewsForProjectChange()).resolves.toBe(true)
+    await expect(settleFileViews()).resolves.toBe(true)
 
     expect(panels[0]?.api.close).toHaveBeenCalled()
   })
