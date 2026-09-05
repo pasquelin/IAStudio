@@ -32,3 +32,10 @@ it('derives localized command semantics from the command registry', () => {
     search("Suis la sélection pour qu'elle reste visible pendant son mouvement.", 'scene'),
   ).toContain('command.runStudioCommand')
 })
+
+it('derives localized post-processing semantics from the effect registry', () => {
+  expect(search("Augmente l'intensité du flou lumineux.", 'scene')).toContain('post.set')
+  expect(search("Éteins l'effet de halo sans le supprimer.", 'scene')).toContain(
+    'post.setEffectEnabled',
+  )
+})

@@ -10,6 +10,7 @@ import type {
 import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
 import { COMPONENTS, COMPONENT_TYPES } from '@shared/domain/componentRegistry'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
+import { POST_EFFECTS, POST_EFFECT_IDS } from '@shared/domain/postProcessing'
 import { digestOf } from '@main/memory/vectors'
 
 export type IndexedAction = {
@@ -90,6 +91,27 @@ function commandTerms(fields: readonly ActionField[]): readonly string[] {
   ])
 }
 
+function localizedTerms(key: string): readonly string[] {
+  return [englishText(key), textAt(TRANSLATIONS.fr, key)]
+}
+
+function postEffectTerms(fields: readonly ActionField[]): readonly string[] {
+  const addressesEffect =
+    fields.some(field => field.key === 'effectId') || includesClosedChoice(fields, POST_EFFECT_IDS)
+  if (!addressesEffect) return []
+  const addressesParameter = fields.some(field => field.key === 'param')
+  return POST_EFFECT_IDS.flatMap(effect => [
+    effect,
+    ...localizedTerms(`postfx.effect_${effect}`),
+    ...(addressesParameter
+      ? Object.keys(POST_EFFECTS[effect].params).flatMap(parameter => [
+          parameter,
+          ...localizedTerms(`postfx.param_${parameter}`),
+        ])
+      : []),
+  ])
+}
+
 export function actionCorpus(): ActionCorpus {
   let ordinal = 0
   const actions = ACTION_FAMILIES.flatMap(family =>
@@ -132,6 +154,7 @@ export function actionCorpus(): ActionCorpus {
           frenchDescription,
           ...componentTerms(action.fields),
           ...commandTerms(action.fields),
+          ...postEffectTerms(action.fields),
           ...fields.flatMap(field => [
             field.key,
             englishText(field.labelKey),
