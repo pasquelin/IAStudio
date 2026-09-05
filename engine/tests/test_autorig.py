@@ -73,6 +73,78 @@ def test_skinning_stops_between_large_vertex_chunks():
     assert completed == [chunks[0]]
 
 
+def test_the_normal_net_reads_the_normals_of_the_very_chunk_it_weighs():
+    """Nothing else exercises `use_normals`: the chunk alignment and the protected splice both
+    fail silently, on a path one click reaches."""
+
+    class Bw:
+        def __init__(self, value):
+            self.values = np.full((1, 2, len(JOINT_NAMES)), value, dtype=np.float32)
+
+        def __getitem__(self, key):
+            return self.values[key]
+
+        def __setitem__(self, key, value):
+            self.values[key] = value
+
+        def cpu(self):
+            return self
+
+    class Tensor:
+        def __init__(self, name):
+            self.name = name
+
+        def to(self, _device):
+            return self
+
+    vertex_chunks = [Tensor("v0"), Tensor("v1")]
+    body_chunks = [Tensor("b0"), Tensor("b1")]
+    weighed: list[tuple[str, str]] = []
+
+    class Models:
+        device = "cpu"
+
+        def skin(self, _points, _chunk):
+            return type("Result", (), {"bw": Bw(1.0)})()
+
+        def skin_normal(self, _points, chunk):
+            weighed.append(chunk)
+            return type("Result", (), {"bw": Bw(2.0)})()
+
+    class Torch:
+        @staticmethod
+        def split(tensor, _size, dim):
+            assert dim == 1
+            return vertex_chunks if tensor.name == "normals" else body_chunks
+
+        @staticmethod
+        def cat(parts, dim):
+            if dim == 1:
+                return parts
+            return tuple(part.name for part in parts)
+
+    weights = _skin_weights(
+        Models(),
+        Tensor("points"),
+        Tensor("body"),
+        lambda: False,
+        Torch(),
+        (Tensor("point-normals"), Tensor("normals")),
+    )
+
+    assert weighed == [("b0", "v0"), ("b1", "v1")]
+    protected = [
+        index
+        for index, name in enumerate(JOINT_NAMES)
+        if any(part in name for part in ("Spine", "Shoulder", "Arm"))
+    ]
+    free = [index for index in range(len(JOINT_NAMES)) if index not in protected]
+    assert (
+        weights[0].values[..., protected].tolist() == np.full((1, 2, len(protected)), 1.0).tolist()
+    )
+    assert weights[0].values[..., free].tolist() == np.full((1, 2, len(free)), 2.0).tolist()
+
+
 def test_second_pass_reserves_half_of_its_surface_samples_for_the_hands():
     vertices = np.array(
         (

@@ -170,8 +170,6 @@ class Models:
     pose: Any
     tree: KinematicTree
     device: str
-    root: Path
-    pcae: Any
 
 
 def load(folder: str, device: str) -> Models:
@@ -190,30 +188,26 @@ def load(folder: str, device: str) -> Models:
         "hierarchical_ratio": 0.5,
         "output_dim": 52,
     }
-    skin, joints, coarse, pose = _load_networks(upstream_model.PCAE, root, device, tree, common)
-    return Models(skin, None, joints, coarse, pose, tree, device, root, upstream_model.PCAE)
+    skin, normal, joints, coarse, pose = _load_networks(
+        upstream_model.PCAE, root, device, tree, common
+    )
+    return Models(skin, normal, joints, coarse, pose, tree, device)
 
 
-def _normal_skin_model(models: Models):
-    if models.skin_normal is None:
-        models.skin_normal = (
-            models.pcae(
-                N=32768,
-                input_normal=True,
-                input_attention=True,
-                deterministic=True,
-                hierarchical_ratio=0.5,
-                output_dim=52,
-            )
-            .load(str(models.root / "bw_normal.pth"))
-            .to(models.device)
-            .eval()
-        )
-    return models.skin_normal
+def _normal_network(pcae, root: Path, device: str, common: dict):
+    """Derived from `common`, and loaded with the four others rather than on first use: a lazy
+    429 MB read landed mid-job and left `heldBytes` short of what the door holds."""
+    return (
+        pcae(**{**common, "input_normal": True, "input_attention": True})
+        .load(str(root / "bw_normal.pth"))
+        .to(device)
+        .eval()
+    )
 
 
 def _load_networks(pcae, root: Path, device: str, tree: KinematicTree, common: dict):
     skin = pcae(**common).load(str(root / "bw.pth")).to(device).eval()
+    normal = _normal_network(pcae, root, device, common)
     joints = (
         pcae(
             **common,
@@ -255,7 +249,7 @@ def _load_networks(pcae, root: Path, device: str, tree: KinematicTree, common: d
         .to(device)
         .eval()
     )
-    return skin, joints, coarse, pose
+    return skin, normal, joints, coarse, pose
 
 
 def _transform(points, matrix):
@@ -348,7 +342,7 @@ def _infer(models, vertices, triangles, report, stopping, options):
         report(3, 6, "skeleton")
         coarse_in_model = _transform(coarse[..., 3:], orientation)
         hand_centers = coarse_in_model[0, [9, 28]].numpy()
-        detailed_points, point_normals, vertex_normals = _detailed_surface(
+        detailed_points, normals = _detailed_surface(
             transformed, triangles, hand_centers, options, torch
         )
         second_scale = 1 / detailed_points.abs().amax(dim=1, keepdim=True).amax(
@@ -362,16 +356,7 @@ def _infer(models, vertices, triangles, report, stopping, options):
         pose = models.pose(device_points, joints=joints.to(models.device).clone()).pose_trans.cpu()
         if stopping():
             raise InterruptedError("CANCELLED")
-        weights = _skin_weights(
-            models,
-            device_points,
-            transformed,
-            stopping,
-            torch,
-            point_normals=point_normals,
-            vertex_normals=vertex_normals,
-            use_normals=options.get("useSurfaceNormals", False),
-        )
+        weights = _skin_weights(models, device_points, transformed, stopping, torch, normals)
     report(5, 6, "skinning")
     return _result_arrays(
         orientation, center, scale, second_scale, joints, weights, pose, options, torch
@@ -379,15 +364,15 @@ def _infer(models, vertices, triangles, report, stopping, options):
 
 
 def _detailed_surface(transformed, triangles, hand_centers, options, torch):
+    """The cloud, and the pair of normal fields beside it — `None` when nothing asked for them."""
     vertices = transformed[0].numpy()
     if not options.get("useSurfaceNormals", False):
         points = _focus_surface_on_hands(vertices, triangles, 32768, hand_centers)
-        return torch.from_numpy(points), None, None
+        return torch.from_numpy(points), None
     points, point_normals, vertex_normals = focus_surface_on_hands_with_normals(
         vertices, triangles, 32768, hand_centers
     )
-    return (
-        torch.from_numpy(points),
+    return torch.from_numpy(points), (
         torch.from_numpy(point_normals),
         torch.from_numpy(vertex_normals),
     )
@@ -418,18 +403,11 @@ def _result_arrays(orientation, center, scale, second_scale, joints, weights, po
     }
 
 
-def _skin_weights(
-    models,
-    device_points,
-    transformed,
-    stopping,
-    torch,
-    *,
-    point_normals=None,
-    vertex_normals=None,
-    use_normals=False,
-):
+def _skin_weights(models, device_points, transformed, stopping, torch, normals=None):
+    """`normals` is the pair or nothing: asking for the normal net without it was representable,
+    and it died on an `AttributeError` several minutes into a job."""
     weight_chunks = []
+    point_normals, vertex_normals = normals if normals is not None else (None, None)
     vertex_normal_chunks = (
         torch.split(vertex_normals, 100000, dim=1) if vertex_normals is not None else []
     )
@@ -437,8 +415,8 @@ def _skin_weights(
         if stopping():
             raise InterruptedError("CANCELLED")
         base = models.skin(device_points, chunk.to(models.device)).bw
-        if use_normals:
-            normal = _normal_skin_model(models)(
+        if normals is not None:
+            normal = models.skin_normal(
                 torch.cat((device_points, point_normals.to(models.device)), dim=-1),
                 torch.cat(
                     (chunk.to(models.device), vertex_normal_chunks[index].to(models.device)),
