@@ -258,5 +258,7 @@ describe('a choice that moves while the weights are loading', () => {
       `/models/${GEMMA}.gguf`,
       '/models/another-model.gguf',
     ])
+    // The first process finished loading a model nobody holds any more: closed, not leaked.
+    expect(stood.closed()).toBe(1)
   })
 })

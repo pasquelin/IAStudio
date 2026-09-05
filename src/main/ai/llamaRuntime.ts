@@ -81,9 +81,11 @@ export function llamaLocalRuntime(deps: LlamaRuntimeDeps): LocalRuntime {
       // Raised rather than answered empty: an empty answer reads as a model that had nothing to add.
       if (model === null) throw new Error(`${request.model} is not in the catalogue`)
 
-      await deps.ensureLoaded(model.id)
+      // Held BEFORE the load, as `serviceJobs` does: an endpoint not yet marked working is one an
+      // idle sweep or another turn's `admit` may reclaim from under the weights arriving.
       const done = deps.onUsed?.(model.id)
       try {
+        await deps.ensureLoaded(model.id)
         return await deps.port.chat(request, deps.weightsOf(model))
       } finally {
         done?.()

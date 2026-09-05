@@ -6,7 +6,7 @@ import type { EmbedAsk, EmbedRequest, EmbedResponse } from './embedProtocol'
 export type EmbedPort = ProcessPort<EmbedRequest, EmbedResponse> & { kill: () => void }
 
 export const EMBEDDER_GONE = 'the embedding process is gone'
-const CLOSE_GRACE_MS = 15_000
+export const CLOSE_GRACE_MS = 15_000
 
 export type EmbedClient = {
   /** Loads the weights and answers how many dimensions they produce. Rejects where it cannot. */

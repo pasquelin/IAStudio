@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createEmbedClient, EMBEDDER_GONE, type EmbedPort } from './embedClient'
+import { CLOSE_GRACE_MS, createEmbedClient, EMBEDDER_GONE, type EmbedPort } from './embedClient'
 import type { EmbedRequest, EmbedResponse } from './embedProtocol'
 
 /** The process, replaced by a list of what was asked and a hand on when each answer comes back. */
@@ -188,7 +188,7 @@ describe('when the process is gone', () => {
       await vi.advanceTimersByTimeAsync(0)
       expect(fake.asked[0]).toMatchObject({ op: 'close' })
 
-      await vi.advanceTimersByTimeAsync(14_999)
+      await vi.advanceTimersByTimeAsync(CLOSE_GRACE_MS - 1)
       expect(fake.killed()).toBe(0)
       await vi.advanceTimersByTimeAsync(1)
       expect(fake.killed()).toBe(1)

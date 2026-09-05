@@ -98,6 +98,11 @@ export function createEmbedder({
         wanted.queryPrefix,
         wanted.contextTokens,
       )
+      // Loaded for a choice that moved meanwhile: nobody will hold it, so it goes here, once.
+      if (loading !== modelId) {
+        releasing = client.close()
+        return null
+      }
       return { modelId, client }
     } catch (error) {
       // A model that will not load costs the vectors, never the studio: the retrieval falls back
