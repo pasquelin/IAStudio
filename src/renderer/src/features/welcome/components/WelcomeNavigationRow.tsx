@@ -2,14 +2,10 @@ import { mdiBlenderSoftware, mdiCubeOutline, mdiUnity, mdiUnreal } from '@mdi/js
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { UiIcon } from '@/components/UiIcon'
-import { WINDOW_ROW_BUTTON } from '@/components/windowStyles'
 import type { DeclaredPreset } from '@shared/domain/navigationPreset'
 import { WelcomeMark } from './WelcomeMark'
 
-/**
- * The mark of each application, as far as the icon set goes. Roblox publishes no glyph here and
- * takes the cube its own logo is built on — named rather than left to look like an oversight.
- */
+/** Roblox publishes no glyph here and takes the cube its own logo is built on. */
 const GLYPH: Record<Exclude<DeclaredPreset, 'studio'>, string> = {
   unreal: mdiUnreal,
   unity: mdiUnity,
@@ -18,12 +14,8 @@ const GLYPH: Record<Exclude<DeclaredPreset, 'studio'>, string> = {
 }
 
 /**
- * One application in the navigation list. A row and not a chip (Alban): five names wrapped onto
- * two lines of chips, the fifth sat alone under the others, and a logo has nowhere to go on a
- * control whose height is a text gauge.
- *
- * Chosen is `accent-soft`, the token for what is DESIGNATED — the studio's own is the one row
- * that carries a colour icon, because the studio's own is the one whose mark we ship.
+ * One application in the navigation list. A row and not a chip (Alban): five names wrapped onto two
+ * lines of chips, and a logo has nowhere to go on a control whose height is a text gauge.
  */
 export function WelcomeNavigationRow({
   preset,
@@ -45,9 +37,11 @@ export function WelcomeNavigationRow({
       onClick={onClick}
       {...HINT_RIGHT(hint)}
       className={cn(
-        WINDOW_ROW_BUTTON,
-        'items-center gap-3 rounded-(--radius-sc-sm) border-b-0 px-3 py-2',
-        chosen && 'bg-accent-soft hover:bg-accent-soft',
+        'flex w-full items-center gap-3 rounded-(--radius-sc-sm) px-3 py-2 text-left',
+        // Not the row constant of these windows: its hover fill paints straight over a chosen row,
+        // and hovering the accent instead is a `color-mix` where `tokensSurfaces.test.ts` measures
+        // a hexadecimal.
+        chosen ? 'bg-accent-soft' : 'hover:bg-base-200',
       )}
     >
       {preset === 'studio' ? (

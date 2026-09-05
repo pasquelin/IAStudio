@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { WELCOME_VERSION } from '@shared/domain/welcome'
+import { WELCOME_SLIDES, WELCOME_VERSION } from '@shared/domain/welcome'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { WelcomeWindow } from './WelcomeWindow'
 
@@ -40,6 +40,60 @@ describe('WelcomeWindow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Continuer' }))
     expect(screen.getByRole('heading', { name: 'L’apparence' })).toBeInTheDocument()
     expect(document.querySelector('.overflow-hidden')).not.toBeNull()
+  })
+
+  /**
+   * The dots and the screens both come off `WELCOME_SLIDES` now. They were two positional arrays,
+   * so a screen inserted mid-list moved every title after it onto the wrong dot — and no case saw
+   * it, the count still matching.
+   */
+  it('names each step with the screen that step opens', async () => {
+    render(<WelcomeWindow />)
+    await userEvent.click(
+      // The step number carries the locale's own space before the dash, which is not the one a
+      // literal here would hold.
+      screen.getByRole('button', { name: /Aller à l’étape 5.*Les modèles, section par section/ }),
+    )
+
+    expect(
+      screen.getByRole('heading', { name: 'Les modèles, section par section' }),
+    ).toBeInTheDocument()
+  })
+
+  it('slides with the arrows, and stops rather than closing on the last screen', async () => {
+    const close = vi.spyOn(window, 'close').mockImplementation(() => {})
+    render(<WelcomeWindow />)
+
+    for (let step = 0; step < WELCOME_SLIDES.length + 1; step += 1) {
+      await userEvent.keyboard('{ArrowRight}')
+    }
+
+    expect(screen.getByRole('heading', { name: 'Votre premier projet' })).toBeInTheDocument()
+    expect(close).not.toHaveBeenCalled()
+    close.mockRestore()
+  })
+
+  /** Escape inside a field is the reflex for closing a select — it closed the window on a
+   * half-typed API key instead. */
+  it('leaves Escape alone while a field has the focus', async () => {
+    const write = vi.fn().mockResolvedValue(DEFAULT_SETTINGS)
+    installFakeBridge({ settings: { write } })
+    render(<WelcomeWindow />)
+
+    const field = document.querySelector('input')
+    field?.focus()
+    await userEvent.keyboard('{Escape}')
+
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  /** The rail clips, it does not remove: tab used to walk into a slide six steps away. */
+  it('takes the slides it is not showing out of the tab order', () => {
+    render(<WelcomeWindow />)
+    const sections = [...document.querySelectorAll('section')]
+
+    expect(sections[0]?.hasAttribute('inert')).toBe(false)
+    expect(sections.slice(1).every(section => section.hasAttribute('inert'))).toBe(true)
   })
 
   it('skips the rest and records that the welcome is done', async () => {

@@ -1,6 +1,6 @@
 import { ProgressBar } from '@/components/ProgressBar'
 import { HINT_LEFT } from '@/helpers/tooltip'
-import { WindowButton } from '@/components/WindowButton'
+import { WindowButton, type WindowButtonProps } from '@/components/WindowButton'
 
 export type AiFlightRowProps = {
   /** From 0 to 1. */
@@ -9,6 +9,7 @@ export type AiFlightRowProps = {
   stop: string
   stopHint: string
   onStop: () => void
+  size?: WindowButtonProps['size']
 }
 
 /**
@@ -17,11 +18,11 @@ export type AiFlightRowProps = {
  * Local to this window rather than in `design/`: the preferences are the surface where the studio
  * is an ordinary application, so these are DaisyUI buttons and not `ToolButton`s.
  */
-export function AiFlightRow({ ratio, label, stop, stopHint, onStop }: AiFlightRowProps) {
+export function AiFlightRow({ ratio, label, stop, stopHint, onStop, size }: AiFlightRowProps) {
   return (
     <span className="flex items-center gap-2">
       <ProgressBar ratio={ratio} label={label} className="w-24" />
-      <WindowButton {...HINT_LEFT(stopHint)} onClick={onStop}>
+      <WindowButton size={size} {...HINT_LEFT(stopHint)} onClick={onStop}>
         {stop}
       </WindowButton>
     </span>

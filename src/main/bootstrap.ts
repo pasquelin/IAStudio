@@ -5,7 +5,7 @@
  * 241 ms to the way in's first answer before, 131 ms after, which is a bare Electron's own time.
  * The entry it leaves behind is 17 Ko, against 1,6 Mo.
  */
-import { app, session } from 'electron'
+import { type BrowserWindow, app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/aboutPanel'
@@ -27,7 +27,11 @@ import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splashWindow'
 import { quitsOnLastWindow } from '@main/window/lastWindow'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
-import { bindWelcomeSettings, openWelcomeWindow } from '@main/window/welcomeWindow'
+import {
+  bindWelcomeSettings,
+  discardWelcomeWindow,
+  openWelcomeWindow,
+} from '@main/window/welcomeWindow'
 import { needsWelcome } from '@shared/domain/welcome'
 
 /**
@@ -61,17 +65,26 @@ function openStudioWindows(splash: Splash, settings: SettingsStore): void {
   const reveal = (): void => void showOnceSplashIsGone()
 
   // Whichever of the two is meant to be seen first — the other stays hidden behind it.
-  const gate = welcome ?? main
-  gate.once('ready-to-show', reveal)
+  ;(welcome ?? main).once('ready-to-show', reveal)
 
-  // Without this the window would stay hidden forever: `window-all-closed` never fires, so
-  // the process lives on with no UI and macOS `activate` refuses to reopen anything. A welcome
-  // that failed is destroyed rather than shown: it would reveal nothing and hide the studio.
-  gate.webContents.once('did-fail-load', (_event, code, description) => {
-    log.error('renderer', `startup window failed to load (${code}): ${description}`)
-    if (welcome && !welcome.isDestroyed()) welcome.destroy()
-    reveal()
-  })
+  // Without this a window stays hidden forever: `window-all-closed` never fires, so the process
+  // lives on with no UI and macOS `activate` refuses to reopen anything. Both are watched — the
+  // studio is revealed by the welcome's close, and a failure there would leave a painted-over box.
+  const failed = (window: BrowserWindow, andThen: () => void): void => {
+    window.webContents.once('did-fail-load', (_event, code: number, description: string) => {
+      log.error('renderer', `startup window failed to load (${code}): ${description}`)
+      andThen()
+    })
+  }
+
+  // Discarded rather than destroyed: `destroy()` emits `closed`, which stamps the onboarding as
+  // seen — a transient load failure would bury the welcome for good.
+  if (welcome)
+    failed(welcome, () => {
+      discardWelcomeWindow()
+      reveal()
+    })
+  failed(main, reveal)
 }
 
 /**

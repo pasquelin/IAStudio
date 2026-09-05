@@ -9,11 +9,8 @@ const DECLARED = NAVIGATION_PRESETS.filter((value): value is DeclaredPreset => v
 
 /**
  * The one question a first launch cannot answer for anyone: which 3D software's gestures the
- * viewport should imitate.
- *
- * It used to open with seven chips ordering the workspaces, and that half is gone (Alban): the bar
- * shows every space anyway, so the question moved nothing a reader could not undo by clicking a
- * tab — and it was the tallest half of the slide.
+ * viewport imitates. The seven workspace chips that opened it are gone (Alban) — the bar shows
+ * every space anyway.
  */
 export function WelcomeSlideCraft() {
   const { t } = useTranslation()

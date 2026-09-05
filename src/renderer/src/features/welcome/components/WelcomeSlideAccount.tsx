@@ -11,15 +11,11 @@ import { WelcomeAccountRow } from './WelcomeAccountRow'
 import { WelcomeCopy } from './WelcomeCopy'
 
 /**
- * What a reader already has, or the form — never both (Alban). The difference is the point of the
- * screen: with keys stored it opens on THEM, where an empty form read as though nothing had been
- * kept; with nothing stored the form IS the screen, a first install having one thing to do here.
+ * The stored keys OR the form, never both (Alban): stacked they ran 536px into a 486px sheet.
+ * Adding REPLACES the list, so no state of this screen scrolls.
  *
- * Stacked, the list and the four fields ran 536px into a 486px sheet and the submit was cut off.
- * Adding REPLACES the list rather than pushing it, so no state of this screen ever scrolls.
- *
- * Read-only rows: renaming and deleting belong to the preferences, where the credit balance that
- * goes with them is refreshed. A first launch shows what is there and offers to add to it.
+ * Rows are read-only — renaming and deleting belong to the preferences, where the credit balance
+ * that goes with them is refreshed.
  */
 export function WelcomeSlideAccount() {
   const { t } = useTranslation()

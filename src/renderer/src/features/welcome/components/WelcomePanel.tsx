@@ -1,21 +1,23 @@
 import type { ReactNode } from 'react'
+import { cn } from '@/helpers/cn'
 
 /**
- * What a slide stands on: a frosted sheet posed over the viewport, the way an inspector is posed
- * over the scene it inspects.
+ * A frosted sheet posed over the viewport. Without it the light theme left the account form as four
+ * white boxes on a light floor, with nothing holding them.
  *
- * Written after the slides were tried WITHOUT one. On the dark theme they read; on the light one
- * the account form was four white boxes floating on a light floor with nothing holding them, and
- * a caption at `/70` sat on whatever the key light happened to be doing under it. A sheet answers
- * both, and it is not the empty rectangle this window was rebuilt to escape — the room around it
- * is the 3D, and the sheet is IN it.
- *
- * The ground is a surface token at an alpha, which is a scrim and owes no ratio; what is written
- * on it is measured against `base-100` as anywhere else in the application windows.
+ * The ground is a surface token at an alpha — a scrim owes no ratio; what is written on it is
+ * measured against `base-100`.
  */
-export function WelcomePanel({ children }: { children: ReactNode }) {
+export function WelcomePanel({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
-    <div className="bg-base-100/85 border-base-300/70 w-full max-w-md rounded-(--radius-sc-lg) border px-8 py-6 shadow-(--sc-shadow-floating) backdrop-blur-md">
+    <div
+      className={cn(
+        'bg-base-100/85 border-base-300/70 w-full rounded-(--radius-sc-lg) border px-8 py-6 shadow-(--sc-shadow-floating) backdrop-blur-md',
+        // Two columns of models need the room; a question with three chips under it does not, and
+        // read the same width it would be a band rather than a sheet.
+        wide ? 'max-w-3xl' : 'max-w-md',
+      )}
+    >
       {children}
     </div>
   )

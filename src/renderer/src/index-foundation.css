@@ -265,7 +265,7 @@
    * in its own sheet — a separate Vite entry that reaches no token — so this is the copy the
    * application itself renders, not a second value.
    */
-  --tracking-mark: 0.34em;
+  --tracking-mark: 0.2em;
 
   /*
    * The text ladder — every size the studio writes, and the only thing `--sc-font-scale` can

@@ -1,9 +1,9 @@
 import { Children, type ReactNode } from 'react'
-import { WelcomePanel } from './WelcomePanel'
 
 export function WelcomeStage({ index, children }: { index: number; children: ReactNode }) {
   const slides = Children.toArray(children)
-
+  // Named rather than written in the template: `no-composed-percent.test.ts` reads a `%` composed
+  // inside a string as a figure shown to a reader, and this one is a transform.
   const left = `${-index * 100}%`
 
   return (
@@ -18,11 +18,14 @@ export function WelcomeStage({ index, children }: { index: number; children: Rea
         {slides.map((slide, slideIndex) => (
           <section
             key={slideIndex}
-            // `py-8` and not `py-4`: the rail clips, as a carousel must, and the sheet's floating shadow
-            // reaches 24px past its own box — at four it was sliced off along the bottom edge.
+            // Clipped is not removed: without this, tab walked into the account form six slides
+            // away, focus left the screen, and typing landed where nobody could see it.
+            inert={slideIndex !== index}
+            // `py-8` and not `py-4`: the rail clips, as a carousel must, and the sheet's floating
+            // shadow reaches 24px past its own box — at four it was sliced along the bottom edge.
             className="flex h-full w-full shrink-0 flex-col items-center justify-center px-14 py-8"
           >
-            <WelcomePanel>{slide}</WelcomePanel>
+            {slide}
           </section>
         ))}
       </div>

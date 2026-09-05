@@ -1,6 +1,6 @@
 import { isRecord } from '../guards'
 
-/** Bump when a new first-launch slide must be shown to people who already finished an older one. */
+/** Bump to replay the welcome ENTIRELY for people who finished an older one — never one slide. */
 export const WELCOME_VERSION = 1
 
 export const WELCOME_ROUTE = 'welcome'
@@ -9,7 +9,7 @@ export function isWelcomeRoute(hash: string): boolean {
   return hash.replace(/^#/, '') === WELCOME_ROUTE
 }
 
-export type WelcomeSlideId = 'language' | 'look' | 'craft' | 'account' | 'project'
+export type WelcomeSlideId = 'language' | 'look' | 'craft' | 'ai' | 'models' | 'account' | 'project'
 
 /**
  * A greeting slide opened this list until Alban dropped it: the masthead spells the product's name
@@ -19,6 +19,8 @@ export const WELCOME_SLIDES: readonly WelcomeSlideId[] = [
   'language',
   'look',
   'craft',
+  'ai',
+  'models',
   'account',
   'project',
 ]
@@ -46,7 +48,8 @@ export function completedOnboarding(now: string): OnboardingSettings {
  */
 export function grandfatherOnboarding(stored: object, now: string): OnboardingSettings | undefined {
   if (Object.keys(stored).length === 0) return undefined
-  const onboarding = isRecord(stored) && isRecord(stored.onboarding) ? stored.onboarding : undefined
-  if (typeof onboarding?.completedAt === 'string' && onboarding.completedAt !== '') return undefined
+  // The KEY, not its `completedAt`: a reader on slide one writes the whole settings back, this
+  // member included, and reading the date alone stamped the welcome done under their hands.
+  if (isRecord(stored) && 'onboarding' in stored) return undefined
   return completedOnboarding(now)
 }

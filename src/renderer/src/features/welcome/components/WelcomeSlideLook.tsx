@@ -6,9 +6,8 @@ import { useSettings } from '@/stores/settings'
 import { WelcomeCopy } from './WelcomeCopy'
 
 /**
- * The theme, and nothing else. Reducing motion and the control density each sat here as a second
- * row and each went the same way (Alban): neither is a taste a first launch has an opinion about,
- * and both read as restrictions the studio was imposing. They live in the preferences.
+ * The theme, and nothing else: reduced motion and control density both left (Alban) — neither is a
+ * taste a first launch has, and both read as restrictions. They live in the preferences.
  */
 export function WelcomeSlideLook() {
   const { t } = useTranslation()

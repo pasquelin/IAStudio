@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { WindowButton } from '@/components/WindowButton'
 import { WELCOME_SLIDES, type WelcomeSlideId } from '@shared/domain/welcome'
@@ -12,7 +13,8 @@ export function WelcomeFooter({
   onGoTo,
 }: {
   index: number
-  titles: readonly string[]
+  /** Keyed by slide, never by position: a screen inserted mid-list renamed every dot after it. */
+  titles: Record<WelcomeSlideId, string>
   onBack: () => void
   onNext: () => void
   onSkip: () => void
@@ -40,13 +42,12 @@ export function WelcomeFooter({
             aria-current={slideIndex === index ? 'step' : undefined}
             aria-label={t('welcome.goToStep', {
               current: slideIndex + 1,
-              title: titles[slideIndex] ?? id,
+              title: titles[id],
             })}
-            className={
-              slideIndex === index
-                ? 'bg-primary h-2 w-2 rounded-full'
-                : 'bg-base-300 h-2 w-2 rounded-full'
-            }
+            className={cn(
+              'h-2 w-2 rounded-full',
+              slideIndex === index ? 'bg-primary' : 'bg-base-300',
+            )}
             onClick={() => onGoTo(slideIndex)}
           />
         ))}

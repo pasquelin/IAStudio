@@ -25,6 +25,32 @@
       "body": "La vue 3D imite les gestes du logiciel que vous connaissez déjà. Vous pourrez en changer dans les réglages.",
       "navigationHint": "Imite les gestes de {{name}} dans la vue 3D"
     },
+    "ai": {
+      "title": "Une IA, par toutes les portes",
+      "body": "Le studio ne dépend d’aucune IA en particulier : elles se branchent, se remplacent, et peuvent même le piloter.",
+      "local": {
+        "title": "Sur cette machine",
+        "body": "Le studio télécharge les poids et les fait tourner ici. Rien ne part, rien ne se facture."
+      },
+      "ollama": {
+        "title": "Avec Ollama",
+        "body": "Déjà installé ? Le studio lit vos modèles et s’en sert tels quels."
+      },
+      "cloud": {
+        "title": "Chez un prestataire",
+        "body": "Une clé, et la génération part au loin. Interchangeables : aucun n’est le produit."
+      },
+      "mcp": {
+        "title": "Et dans l’autre sens",
+        "body": "Le studio publie ses outils : Claude Code, ou tout agent MCP, ouvre un projet et génère à votre place."
+      }
+    },
+    "models": {
+      "title": "Les modèles, section par section",
+      "body": "Le studio télécharge les poids et les fait tourner ici : ni compte, ni connexion. La taille dit ce que votre machine peut tenir.",
+      "sectionHint": "Montre les modèles de : {{name}}",
+      "more": "Le catalogue complet est dans les réglages."
+    },
     "account": {
       "title": "Un service, si vous en avez un",
       "body": "Le studio fonctionne sans compte, sur vos fichiers. Une clé débloque la génération et la bibliothèque partagée.",

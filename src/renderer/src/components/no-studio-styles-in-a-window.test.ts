@@ -47,6 +47,7 @@ const ALLOWED: readonly string[] = [
   './features/document/components/NewDocument/NewDocumentForm.tsx',
   './features/document/components/NewDocument/NewDocumentTemplateTile.tsx',
   './features/settings/components/Ai/AiCandidateRow.tsx',
+  './features/welcome/components/WelcomeModelRow.tsx',
 ]
 
 describe('a window that is not a dock', () => {

@@ -2,15 +2,14 @@ import { useTranslation } from 'react-i18next'
 import markUrl from '../../../../../../build/icon.svg?url'
 
 /**
- * The Dock icon, TILE included — where the splash strips it, because that surface paints the tile
- * colour itself and a second tile would have shown as a square on a square. Here the ground is the
- * viewport grey, so the dark tile is what makes the mark read as an object standing in the room.
+ * The Dock icon, TILE included — the splash strips it, painting that colour itself. Here the ground
+ * is the viewport grey, and the dark tile is what makes the mark stand in the room.
  *
- * The file draws on Apple's grid, so roughly a tenth of each side is transparent margin: the box
- * is a fifth larger than the tile a reader sees.
+ * Apple's grid leaves roughly a tenth of each side transparent: the box is a fifth larger than the
+ * tile a reader sees.
  */
 export function WelcomeMark({
-  className = 'size-24',
+  className = 'size-36',
   decorative = false,
 }: {
   className?: string

@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   CHOICE_SCOPES,
+  aiDiskBusy,
   writeScopeFor,
   type AiOverview,
   type ChoiceScope,
@@ -110,9 +111,9 @@ export function AiSettings({ family }: AiSettingsProps) {
   // Never `project` with no project open: the select is gone then, and every click would be
   // refused by the main process without a word.
   const writesTo = overview.projectPath === null ? 'app' : (scope ?? scopeOf(overview))
-  // Announced to every row rather than derived per row: what it says is that the disk is taken,
-  // which is true of the whole screen.
-  const busy = overview.installing !== null || overview.ollama.progress !== null
+  // Announced to every row rather than derived per row: the disk is taken, which is true of the
+  // whole screen.
+  const busy = aiDiskBusy(overview)
 
   function Content({ overview }: { overview: AiOverview }) {
     return (

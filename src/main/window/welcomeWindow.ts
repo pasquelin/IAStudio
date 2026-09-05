@@ -1,24 +1,22 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, screen } from 'electron'
 import { APP_ICON_PATH } from '@main/resources'
 import { completedOnboarding, needsWelcome, WELCOME_ROUTE } from '@shared/domain/welcome'
 import type { SettingsStore } from '@main/settings/store'
 import { splashColor } from './theme'
 import { revealWindow } from './reveal'
+import { centredIn } from './placement'
 import { load, studioWindow, WEB_PREFERENCES } from './windows'
 
 /**
  * A splash-shaped window: no chrome, native rounded corners, the mark's tile colour underneath.
- * Framed windows of this family keep a title bar; this one is the first thing a new install sees.
- *
- * 720 and not the 640 it opened with: the masthead took the height the carousel used to have, and
- * the account slide — four fields and a button, the tallest of the six — was clipped at both ends.
- * NOTHING scrolls here (Alban): a slide that does not fit is a slide to shorten, not to scroll.
+ * NOTHING scrolls here (Alban) — a slide that does not fit is a slide to shorten.
  */
-const WELCOME_SIZE = { width: 960, height: 720 }
+const WELCOME_SIZE = { width: 960, height: 760 }
 
 const WINDOW_ICON = process.platform === 'darwin' ? undefined : APP_ICON_PATH
 
 let welcomeWindow: BrowserWindow | null = null
+let discarded = false
 let settingsStore: SettingsStore | null = null
 
 export function bindWelcomeSettings(store: SettingsStore): void {
@@ -41,6 +39,16 @@ function dismissed(): void {
   revealStudio()
 }
 
+/**
+ * Closes a welcome nobody read — a renderer that failed to load. `destroy()` alone emits `closed`,
+ * which stamps the onboarding as seen and buries the screen for good on a transient failure.
+ */
+export function discardWelcomeWindow(): void {
+  if (!welcomeWindow || welcomeWindow.isDestroyed()) return
+  discarded = true
+  welcomeWindow.destroy()
+}
+
 export function openWelcomeWindow(options: { deferShow?: boolean } = {}): BrowserWindow {
   if (welcomeWindow && !welcomeWindow.isDestroyed()) {
     revealWindow(welcomeWindow)
@@ -48,13 +56,13 @@ export function openWelcomeWindow(options: { deferShow?: boolean } = {}): Browse
   }
 
   const window = new BrowserWindow({
-    ...WELCOME_SIZE,
+    // The primary display, as `createMainWindow` takes: this window opens OVER the studio.
+    ...centredIn(screen.getPrimaryDisplay().workArea, WELCOME_SIZE),
     resizable: false,
     frame: false,
     roundedCorners: true,
     fullscreenable: false,
     show: false,
-    center: true,
     backgroundColor: splashColor(),
     icon: WINDOW_ICON,
     webPreferences: WEB_PREFERENCES,
@@ -66,6 +74,11 @@ export function openWelcomeWindow(options: { deferShow?: boolean } = {}): Browse
   welcomeWindow = window
   window.on('closed', () => {
     if (welcomeWindow === window) welcomeWindow = null
+    if (discarded) {
+      discarded = false
+      revealStudio()
+      return
+    }
     dismissed()
   })
   return window

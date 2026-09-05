@@ -48,6 +48,17 @@ describe('grandfathering an existing profile', () => {
     ).toEqual(completedOnboarding('2026-09-05T10:00:00.000Z'))
   })
 
+  /** The reader is ON slide one: picking a language writes the whole settings back, this member
+   * included, and stamping there buried the welcome under their hands. */
+  it('leaves a profile that is going through the welcome right now', () => {
+    expect(
+      grandfatherOnboarding(
+        { general: { language: 'fr' }, onboarding: { version: 0 } },
+        '2026-09-05T10:00:00.000Z',
+      ),
+    ).toBeUndefined()
+  })
+
   it('leaves a profile that already finished it', () => {
     const onboarding = completedOnboarding('2026-01-01T00:00:00.000Z')
     expect(grandfatherOnboarding({ onboarding }, '2026-09-05T10:00:00.000Z')).toBeUndefined()

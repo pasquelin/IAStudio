@@ -25,6 +25,32 @@
       "body": "The 3D view mirrors the gestures of the software you already know. You can change it later in the settings.",
       "navigationHint": "Uses {{name}} viewport gestures in the 3D view"
     },
+    "ai": {
+      "title": "AI, through every door",
+      "body": "The studio depends on no AI in particular: they plug in, they swap out, and they can even drive it.",
+      "local": {
+        "title": "On this machine",
+        "body": "The studio downloads the weights and runs them here. Nothing leaves, nothing is billed."
+      },
+      "ollama": {
+        "title": "With Ollama",
+        "body": "Already installed? The studio reads your models and uses them as they are."
+      },
+      "cloud": {
+        "title": "At a provider",
+        "body": "One key, and generation goes out. Interchangeable: none of them is the product."
+      },
+      "mcp": {
+        "title": "And the other way round",
+        "body": "The studio publishes its tools: Claude Code, or any MCP agent, opens a project and generates for you."
+      }
+    },
+    "models": {
+      "title": "Models, section by section",
+      "body": "The studio downloads the weights and runs them here: no account, no connection. The size says what your machine can hold.",
+      "sectionHint": "Shows the models of: {{name}}",
+      "more": "The full catalogue lives in the settings."
+    },
     "account": {
       "title": "A cloud, if you have one",
       "body": "The studio works without an account, on your own files. A key unlocks generation and the shared library.",
