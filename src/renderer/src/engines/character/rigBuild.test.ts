@@ -3,7 +3,15 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Rig } from '@shared/domain/rig'
 import { INFLUENCES } from './skinMessage'
 import { emptyBinding } from './skinVertices'
-import { applyRig, bonesOfRig, positionsIn, restRig, skinnableMeshesOf, wearsRig } from './rigBuild'
+import {
+  applyRig,
+  bonesOfRig,
+  positionsIn,
+  removeRig,
+  restRig,
+  skinnableMeshesOf,
+  wearsRig,
+} from './rigBuild'
 
 const REST = (x: number, y: number, z: number) => ({
   position: { x, y, z },
@@ -242,6 +250,42 @@ describe('putting a rig on a model', () => {
     applyRig(holder, RIG, [])
 
     expect(holder.children.some(child => child.name === 'Hips')).toBe(false)
+  })
+})
+
+describe('taking a rig off a model', () => {
+  it('hands back a plain mesh with no skin left on its geometry', () => {
+    const mesh = plainMesh()
+    const holder = modelWith(mesh)
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
+
+    removeRig(holder)
+
+    const plain = holder.children.find((child): child is Mesh => child instanceof Mesh)
+    expect(plain).toBeDefined()
+    expect(plain).not.toBeInstanceOf(SkinnedMesh)
+    // `Mesh.prototype.copy` ends on `this.geometry = source.geometry`: used here it handed the
+    // SKINNED geometry back, and the dispose that follows freed the one the mesh was left with.
+    expect(plain?.geometry.getAttribute('skinIndex')).toBeUndefined()
+    expect(plain?.geometry.getAttribute('skinWeight')).toBeUndefined()
+  })
+
+  it('keeps what hung under the mesh, and the place it stood in', () => {
+    const first = plainMesh()
+    const mesh = plainMesh()
+    const child = new Object3D()
+    mesh.add(child)
+    const holder = modelWith(first, mesh)
+    applyRig(holder, RIG, [{ mesh, binding: bindingFor(mesh) }])
+    const before = holder.children.indexOf(skinnedIn(holder) as Object3D)
+
+    removeRig(holder)
+
+    const plain = holder.children.find(
+      (candidate): candidate is Mesh => candidate instanceof Mesh && candidate !== first,
+    )
+    expect(plain?.children).toContain(child)
+    expect(holder.children.indexOf(plain as Object3D)).toBe(before)
   })
 })
 

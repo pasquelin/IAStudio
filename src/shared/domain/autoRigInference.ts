@@ -31,6 +31,16 @@ export type AutoRigInferenceResult = {
 export type AutoRigProgressPhase =
   'prepare' | 'load' | 'analyse' | 'skeleton' | 'pose' | 'skinning' | 'apply'
 
+export const AUTO_RIG_PROGRESS_PHASES: readonly AutoRigProgressPhase[] = [
+  'prepare',
+  'load',
+  'analyse',
+  'skeleton',
+  'pose',
+  'skinning',
+  'apply',
+]
+
 export type AutoRigProductError =
   | 'MODEL_NOT_INSTALLED'
   | 'MODEL_INVALID'
@@ -41,3 +51,15 @@ export type AutoRigProductError =
   | 'INFERENCE_FAILED'
   | 'OUT_OF_MEMORY'
   | 'CANCELLED'
+
+export const AUTO_RIG_PRODUCT_ERRORS: readonly AutoRigProductError[] = [
+  'MODEL_NOT_INSTALLED',
+  'MODEL_INVALID',
+  'ENGINE_UNAVAILABLE',
+  'UNSUPPORTED_PLATFORM',
+  'INVALID_MESH',
+  'NOT_HUMANOID',
+  'INFERENCE_FAILED',
+  'OUT_OF_MEMORY',
+  'CANCELLED',
+]

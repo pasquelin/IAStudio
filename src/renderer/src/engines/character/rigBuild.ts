@@ -65,10 +65,22 @@ export function removeRig(holder: Object3D): void {
     geometry.deleteAttribute('skinIndex')
     geometry.deleteAttribute('skinWeight')
     const plain = new Mesh(geometry, mesh.material)
-    plain.copy(mesh, false)
+    // `Object3D`'s copy, never `Mesh`'s: that one ends on `this.geometry = source.geometry`, so
+    // the cleaned clone was thrown away, the skin came back, and the dispose below freed the
+    // geometry the mesh had just been handed.
+    Object3D.prototype.copy.call(plain, mesh, false)
+    plain.castShadow = mesh.castShadow
+    plain.receiveShadow = mesh.receiveShadow
+    plain.updateMorphTargets()
+    if (mesh.morphTargetInfluences) plain.morphTargetInfluences = [...mesh.morphTargetInfluences]
+    if (mesh.morphTargetDictionary) plain.morphTargetDictionary = { ...mesh.morphTargetDictionary }
     const parent = mesh.parent ?? holder
-    mesh.removeFromParent()
+    const index = parent.children.indexOf(mesh)
+    const children = [...mesh.children]
     parent.add(plain)
+    for (const child of children) plain.add(child)
+    mesh.removeFromParent()
+    moveChildTo(parent, plain, index)
     mesh.geometry.dispose()
   }
 }

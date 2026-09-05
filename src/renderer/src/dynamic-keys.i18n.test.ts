@@ -34,6 +34,12 @@ import { SHADOW_LEVELS } from '@/engines/scene/shadowLevels'
 import { INPUT_ORIGINS, type InputOrigin } from '@/generation/generationInputs'
 import { RIG_STATUSES, type RigStatus } from '@/engines/scene/rigState'
 import { RIG_FIT_FAULTS, type RigFitFault } from '@/engines/scene/rigFit'
+import {
+  AUTO_RIG_PRODUCT_ERRORS,
+  AUTO_RIG_PROGRESS_PHASES,
+  type AutoRigProductError,
+  type AutoRigProgressPhase,
+} from '@shared/domain/autoRigInference'
 import { NAVIGATION_HINT_GROUPS } from '@/features/scene/components/Scene/SceneNavigationHint'
 import { CHARACTER_KINDS } from '@shared/domain/character'
 import { ASSET_INTENTS } from '@/helpers/assetIntents'
@@ -138,6 +144,11 @@ const COMPOSED_KEYS: readonly string[] = [
   // Why a mesh cannot take a skeleton. Composed the same way, and it stands in for the button
   // itself: a fault with no sentence would leave the user a raw key where the offer used to be.
   ...RIG_FIT_FAULTS.map(fault => `inspector.rigFault_${fault}`),
+  // Why an automatic rig gave up, composed from the code the engine answers. The inspector paints
+  // it with NO fallback, so a key missing from a bundle shows the code itself to the person.
+  ...AUTO_RIG_PRODUCT_ERRORS.map(code => `inspector.autoRigErrors.${code}`),
+  // What that rig is busy with, on the status line's row.
+  ...AUTO_RIG_PROGRESS_PHASES.map(phase => `tasks.phases.${phase}`),
   // The four answers to « what is this », in the dialogue that lays a skeleton.
   ...CHARACTER_KINDS.map(kind => `inspector.characterKinds.${kind}`),
   // Which half of a body a block drives. A part with no sentence would read as a raw key inside
@@ -252,6 +263,36 @@ describe('the lists behind those keys', () => {
     const all: Record<RigFitFault, true> = { noGeometry: true, lyingDown: true }
 
     expect([...RIG_FIT_FAULTS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  it('holds every reason an automatic rig gives up', () => {
+    const all: Record<AutoRigProductError, true> = {
+      MODEL_NOT_INSTALLED: true,
+      MODEL_INVALID: true,
+      ENGINE_UNAVAILABLE: true,
+      UNSUPPORTED_PLATFORM: true,
+      INVALID_MESH: true,
+      NOT_HUMANOID: true,
+      INFERENCE_FAILED: true,
+      OUT_OF_MEMORY: true,
+      CANCELLED: true,
+    }
+
+    expect([...AUTO_RIG_PRODUCT_ERRORS].sort()).toEqual(Object.keys(all).sort())
+  })
+
+  it('holds every phase an automatic rig passes through', () => {
+    const all: Record<AutoRigProgressPhase, true> = {
+      prepare: true,
+      load: true,
+      analyse: true,
+      skeleton: true,
+      pose: true,
+      skinning: true,
+      apply: true,
+    }
+
+    expect([...AUTO_RIG_PROGRESS_PHASES].sort()).toEqual(Object.keys(all).sort())
   })
 
   it('holds every state an imported model can be in', () => {
