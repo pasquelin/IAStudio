@@ -31,7 +31,7 @@ export abstract class SceneRendererSkinning extends SceneRendererRig {
   async autoRigInput(
     nodeId: string,
     signal?: AbortSignal,
-  ): Promise<Omit<AutoRigInferenceRequest, 'id' | 'backendId'> | null> {
+  ): Promise<Omit<AutoRigInferenceRequest, 'id' | 'backendId' | 'options'> | null> {
     const holder = this.objects.get(nodeId)
     if (!holder) return null
     return await autoRigInputFor(holder, undefined, signal)

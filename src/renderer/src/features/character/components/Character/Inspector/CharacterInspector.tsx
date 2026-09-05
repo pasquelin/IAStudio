@@ -93,18 +93,15 @@ export function CharacterInspector({ assetId }: CharacterInspectorProps) {
       />
 
       <PropertySection title={t('character.skeleton')} scId="character.skeleton">
-        {!rig && (
-          <>
-            <QuietNote>{t('inspector.rigStatus_staticMesh')}</QuietNote>
-            <CharacterInspectorFit
-              assetId={assetId}
-              documentId={documentId}
-              nodeId={nodeId}
-              sample={sample}
-            />
-          </>
-        )}
+        {!rig && <QuietNote>{t('inspector.rigStatus_staticMesh')}</QuietNote>}
         {rig && <QuietNote>{t('inspector.rigReady')}</QuietNote>}
+        <CharacterInspectorFit
+          assetId={assetId}
+          documentId={documentId}
+          nodeId={nodeId}
+          sample={sample}
+          hasRig={Boolean(rig)}
+        />
 
         {rig && picked && (
           <>

@@ -3,6 +3,7 @@ import { formatBytes } from '@/helpers/format'
 import { Button } from '@/components/Button'
 import { QuietNote } from '@/components/QuietNote'
 import { SelectField } from '@/components/SelectField'
+import { ToggleField } from '@/components/ToggleField'
 import { rigFitFaultOf } from '@/engines/scene/rigFit'
 import type { MeshSample } from '@/engines/scene/rigSnap'
 import { rigServiceNote } from '@/helpers/rigServiceNote'
@@ -14,6 +15,40 @@ export type CharacterInspectorFitProps = {
   nodeId: string
   /** What the engine measured of this mesh, or `null` while the file is still landing. */
   sample: MeshSample | null
+  /** A successful regeneration replaces this rig only after the new result is complete. */
+  hasRig?: boolean
+}
+
+function miaSettings(state: CharacterFit) {
+  if (state.selectedBackend !== 'make-it-animatable') return null
+  return (
+    <details className="border-border border-y py-1" open>
+      <summary className="text-muted text-tiny cursor-pointer py-1 font-medium">
+        {state.t('inspector.autoRigMiaSettings')}
+      </summary>
+      <SelectField
+        label={state.t('inspector.autoRigFingers')}
+        value={state.miaOptions.fingers}
+        options={[
+          { value: 'detailed', label: state.t('inspector.autoRigFingerDetailed') },
+          { value: 'simplified', label: state.t('inspector.autoRigFingerSimplified') },
+        ]}
+        onChange={fingers => state.setMiaOptions({ ...state.miaOptions, fingers })}
+        scId="character.mia.fingers"
+        actions={false}
+      />
+      <ToggleField
+        label={state.t('inspector.autoRigWeightPostProcessing')}
+        value={state.miaOptions.weightPostProcessing}
+        onChange={weightPostProcessing =>
+          state.setMiaOptions({ ...state.miaOptions, weightPostProcessing })
+        }
+        scId="character.mia.weightPostProcessing"
+        actions={false}
+      />
+      <QuietNote>{state.t('inspector.autoRigMiaSettingsHint')}</QuietNote>
+    </details>
+  )
 }
 
 function fitSelectors(state: CharacterFit) {
@@ -84,27 +119,9 @@ function fitNotices(state: CharacterFit) {
   )
 }
 
-/**
- * Making a bare mesh animatable: the studio's own rigger, or a service that does it for credits.
- *
- * 🛑 The chain a service needs — the file, its id, a job to follow — is only verifiable here: the
- * inspector could offer none of it, which is why every service was shown greyed out over there.
- */
-export function CharacterInspectorFit({
-  assetId,
-  documentId,
-  nodeId,
-  sample,
-}: CharacterInspectorFitProps) {
-  const state = useCharacterFit(assetId, documentId, nodeId, sample)
-  const fault = sample ? rigFitFaultOf(sample.bounds) : null
-  if (fault) return <QuietNote>{state.t(`inspector.rigFault_${fault}`)}</QuietNote>
-  if (!sample) return null
-
+function fitActions(state: CharacterFit, hasRig: boolean) {
   return (
     <>
-      {fitSelectors(state)}
-      {fitNotices(state)}
       {state.failure && (
         <QuietNote>{state.t(`inspector.autoRigErrors.${state.failure}`)}</QuietNote>
       )}
@@ -122,8 +139,36 @@ export function CharacterInspectorFit({
         disabled={!HUMANOID_KINDS.includes(state.kind) || state.running}
         onClick={() => void state.fit()}
       >
-        {state.t('inspector.rigCreate')}
+        {state.t(hasRig ? 'inspector.rigRegenerate' : 'inspector.rigCreate')}
       </Button>
+    </>
+  )
+}
+
+/**
+ * Making a bare mesh animatable: the studio's own rigger, or a service that does it for credits.
+ *
+ * 🛑 The chain a service needs — the file, its id, a job to follow — is only verifiable here: the
+ * inspector could offer none of it, which is why every service was shown greyed out over there.
+ */
+export function CharacterInspectorFit({
+  assetId,
+  documentId,
+  nodeId,
+  sample,
+  hasRig = false,
+}: CharacterInspectorFitProps) {
+  const state = useCharacterFit(assetId, documentId, nodeId, sample)
+  const fault = sample ? rigFitFaultOf(sample.bounds) : null
+  if (fault) return <QuietNote>{state.t(`inspector.rigFault_${fault}`)}</QuietNote>
+  if (!sample) return null
+
+  return (
+    <>
+      {fitSelectors(state)}
+      {miaSettings(state)}
+      {fitNotices(state)}
+      {fitActions(state, hasRig)}
     </>
   )
 }

@@ -41,7 +41,7 @@ describe('Auto Rig backend registry', () => {
 
     await service.run(
       'simple',
-      {},
+      { fingers: 'detailed', weightPostProcessing: true },
       {
         signal: new AbortController().signal,
         onProgress: vi.fn(),

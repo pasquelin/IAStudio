@@ -135,7 +135,12 @@ async function stageInput(folder: string, request: AutoRigInferenceRequest): Pro
   const source = join(folder, 'input.json')
   await writeFile(
     source,
-    JSON.stringify({ positions, triangles, primitives: request.primitives }),
+    JSON.stringify({
+      positions,
+      triangles,
+      primitives: request.primitives,
+      options: request.options,
+    }),
     'utf8',
   )
   return source

@@ -1,4 +1,5 @@
-import { mkdir, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
+import type { AutoRigInferenceRequest } from '@shared/domain/autoRigInference'
 import { describe, expect, it, vi } from 'vitest'
 import { shippedModel } from './catalogue'
 import { createAutoRigHost, type AutoRigFailure } from './autoRigHost'
@@ -10,12 +11,13 @@ const MODEL = (() => {
   return model
 })()
 
-const request = {
+const request: AutoRigInferenceRequest = {
   id: 'rig-1',
   backendId: 'make-it-animatable',
   positions: Float32Array.from([0, 0, 0, 1, 0, 0, 0, 1, 0]),
   triangles: Uint32Array.from([0, 1, 2]),
   primitives: [{ mesh: 0, primitive: 0, vertexOffset: 0, vertexCount: 3 }],
+  options: { fingers: 'detailed', weightPostProcessing: true },
 }
 
 function engineThatWritesResult(
@@ -97,6 +99,22 @@ describe('AutoRigHost', () => {
     expect(result.primitives).toEqual(request.primitives)
     expect(result.device).toBe('cpu')
     expect(progress).toHaveBeenCalledWith(0.5, 'skeleton')
+  })
+
+  it('stages the selected quality options for the Python backend', async () => {
+    const engine = engineThatWritesResult()
+    const job = engine.job
+    let staged: unknown
+    engine.job = async (...arguments_) => {
+      const source = arguments_[1].source
+      if (typeof source !== 'string') throw new Error('missing source')
+      staged = JSON.parse(await readFile(source, 'utf8'))
+      return job(...arguments_)
+    }
+
+    await host(true, engine).run(request, new AbortController().signal, vi.fn())
+
+    expect(staged).toMatchObject({ options: request.options })
   })
 
   it('refuses an unavailable model before starting the engine', async () => {

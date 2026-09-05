@@ -16,7 +16,7 @@ export async function autoRigInputFor(
   holder: Object3D,
   yieldWork: () => Promise<void> = yieldToUi,
   signal?: AbortSignal,
-): Promise<Omit<AutoRigInferenceRequest, 'id' | 'backendId'> | null> {
+): Promise<Omit<AutoRigInferenceRequest, 'id' | 'backendId' | 'options'> | null> {
   const meshes = reskinnableMeshesOf(holder)
   if (meshes.length === 0) return null
   holder.updateWorldMatrix(true, true)

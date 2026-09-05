@@ -8,6 +8,7 @@ const useCharacterFit = vi.hoisted(() => vi.fn())
 vi.mock('@/hooks/useCharacterFit', () => ({ useCharacterFit }))
 
 const chooseBackend = vi.fn()
+const setMiaOptions = vi.fn()
 const sample = {
   bounds: { min: { x: -0.3, y: 0, z: -0.2 }, max: { x: 0.3, y: 1.8, z: 0.2 } },
   points: new Float32Array(),
@@ -15,6 +16,7 @@ const sample = {
 
 beforeEach(() => {
   chooseBackend.mockReset()
+  setMiaOptions.mockReset()
   useCharacterFit.mockReturnValue({
     t: (key: string) =>
       ({
@@ -22,6 +24,11 @@ beforeEach(() => {
         'inspector.rigService': 'Service',
         'inspector.rigServiceLocal': 'Automatique — le studio',
         'inspector.rigCreate': 'Créer le squelette',
+        'inspector.rigRegenerate': 'Régénérer le squelette',
+        'inspector.autoRigFingers': 'Doigts',
+        'inspector.autoRigFingerDetailed': 'Détaillés',
+        'inspector.autoRigFingerSimplified': 'Simplifiés',
+        'inspector.autoRigWeightPostProcessing': 'Nettoyer les influences',
       })[key] ?? key,
     i18n: { language: 'fr' },
     kind: 'human',
@@ -34,6 +41,8 @@ beforeEach(() => {
     rigBackends: [{ backendId: 'make-it-animatable', name: 'Make-It-Animatable' }],
     selectedBackend: 'make-it-animatable',
     chooseBackend,
+    miaOptions: { fingers: 'detailed', weightPostProcessing: true },
+    setMiaOptions,
     needsDownload: false,
     failure: null,
     running: false,
@@ -61,5 +70,30 @@ describe('the Auto Rig selector', () => {
     await userEvent.selectOptions(screen.getByLabelText('Service'), 'simple')
 
     expect(chooseBackend).toHaveBeenCalledWith('simple')
+  })
+
+  it('shows MIA quality settings and can regenerate an existing rig', async () => {
+    render(
+      <CharacterInspectorFit
+        assetId="asset"
+        documentId="document"
+        nodeId="node"
+        sample={sample}
+        hasRig
+      />,
+    )
+
+    await userEvent.selectOptions(screen.getByLabelText('Doigts'), 'simplified')
+    await userEvent.click(screen.getByLabelText('Nettoyer les influences'))
+
+    expect(screen.getByRole('button', { name: 'Régénérer le squelette' })).toBeInTheDocument()
+    expect(setMiaOptions).toHaveBeenCalledWith({
+      fingers: 'simplified',
+      weightPostProcessing: true,
+    })
+    expect(setMiaOptions).toHaveBeenCalledWith({
+      fingers: 'detailed',
+      weightPostProcessing: false,
+    })
   })
 })

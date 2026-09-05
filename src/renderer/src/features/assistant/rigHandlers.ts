@@ -33,6 +33,7 @@ import {
   setCharacterRig,
 } from '@/engines/character/characterCommands'
 import { autoRigServiceFor } from '@/engines/character/autoRigBackends'
+import { DEFAULT_AUTO_RIG_OPTIONS } from '@shared/domain/autoRigInference'
 import { workshopIdOf } from '@/character/characterStage'
 import { useCharacters } from '@/stores/character'
 import { type ModelNode, type SceneState } from '@/engines/scene/sceneState'
@@ -192,7 +193,11 @@ async function fitMeasuredRig(
       throw new Error('ENGINE_UNAVAILABLE')
     },
   )
-  const result = await service.run('simple', {}, { signal, onProgress: () => {}, targets })
+  const result = await service.run('simple', DEFAULT_AUTO_RIG_OPTIONS, {
+    signal,
+    onProgress: () => {},
+    targets,
+  })
   if (sceneEngineOf(documentId) !== engine || engine.autoRigTargets(nodeId).length === 0)
     return refused('notFound', 'the character changed before Auto Rig completed')
   useCharacters.getState().runCommand(open.assetId, setCharacterAutoRig(result))

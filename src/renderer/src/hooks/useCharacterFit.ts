@@ -16,7 +16,12 @@ import { sceneEngineOf } from '@/stores/sceneEngines'
 import { getBridge } from '@/services/bridge'
 import { autoRigServiceFor } from '@/engines/character/autoRigBackends'
 import { runTask } from '@/stores/tasks'
-import { AUTO_RIG_PRODUCT_ERRORS, type AutoRigProductError } from '@shared/domain/autoRigInference'
+import {
+  AUTO_RIG_PRODUCT_ERRORS,
+  DEFAULT_AUTO_RIG_OPTIONS,
+  type AutoRigInferenceOptions,
+  type AutoRigProductError,
+} from '@shared/domain/autoRigInference'
 
 export function useCharacterFit(
   assetId: string,
@@ -50,6 +55,7 @@ export function useCharacterFit(
     advanced && rigBackends.some(one => one.backendId === advanced) ? advanced : 'simple'
   const [failure, setFailure] = useState<AutoRigProductError | null>(null)
   const [running, setRunning] = useState(false)
+  const [miaOptions, setMiaOptions] = useState<AutoRigInferenceOptions>(DEFAULT_AUTO_RIG_OPTIONS)
   const chooseBackend = async (backendId: string): Promise<void> => {
     if (!row) return
     const picked = rigBackends.find(one => one.backendId === backendId)
@@ -91,23 +97,19 @@ export function useCharacterFit(
             if (!result) throw new Error(context.signal.aborted ? 'CANCELLED' : 'INVALID_MESH')
             return result
           },
-          async (backendId, backendSignal) => {
+          async (backendId, options, backendSignal) => {
             const bridge = getBridge()
             if (!bridge) throw new Error('ENGINE_UNAVAILABLE')
             const input = await engine.autoRigInput(nodeId, backendSignal)
             if (!input) throw new Error('INVALID_MESH')
-            return await bridge.autoRig.run({ id, backendId, ...input })
+            return await bridge.autoRig.run({ id, backendId, options, ...input })
           },
         )
-        const result = await service.run(
-          requestedBackend,
-          {},
-          {
-            signal,
-            onProgress: progress => watch.onStep?.(progress, 1),
-            targets,
-          },
-        )
+        const result = await service.run(requestedBackend, miaOptions, {
+          signal,
+          onProgress: progress => watch.onStep?.(progress, 1),
+          targets,
+        })
         if (
           sceneEngineOf(documentId) !== engine ||
           engine.autoRigIdentity(nodeId) !== identity ||
@@ -148,6 +150,8 @@ export function useCharacterFit(
     rigBackends,
     selectedBackend,
     chooseBackend,
+    miaOptions,
+    setMiaOptions,
     needsDownload,
     failure,
     running,

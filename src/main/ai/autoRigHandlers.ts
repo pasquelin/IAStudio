@@ -14,12 +14,18 @@ const primitive = z.object({
   vertexCount: z.number().int().positive(),
 })
 
+const options = z.object({
+  fingers: z.enum(['detailed', 'simplified']),
+  weightPostProcessing: z.boolean(),
+})
+
 const autoRigRequest = z.object({
   id: z.string().min(1),
   backendId: z.string().min(1),
   positions: z.instanceof(Float32Array).refine(values => values.length >= 9),
   triangles: z.instanceof(Uint32Array).refine(values => values.length >= 3),
   primitives: z.array(primitive).min(1),
+  options,
 })
 
 type ParsedAutoRigRequest = z.infer<typeof autoRigRequest>

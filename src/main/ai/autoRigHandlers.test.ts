@@ -7,6 +7,7 @@ const valid = () => ({
   positions: Float32Array.from([0, 0, 0, 1, 0, 0, 0, 1, 0]),
   triangles: Uint32Array.from([0, 1, 2]),
   primitives: [{ mesh: 0, primitive: 0, vertexOffset: 0, vertexCount: 3 }],
+  options: { fingers: 'detailed', weightPostProcessing: true },
 })
 
 describe('Auto Rig IPC request validation', () => {
@@ -47,5 +48,13 @@ describe('Auto Rig IPC request validation', () => {
 
   it('reuses the product mesh budget for the IPC payload', () => {
     expect(() => parseAutoRigRequest(valid(), 16)).toThrow()
+  })
+
+  it('accepts only the supported MIA quality settings', () => {
+    expect(parseAutoRigRequest(valid()).options).toEqual({
+      fingers: 'detailed',
+      weightPostProcessing: true,
+    })
+    expect(() => parseAutoRigRequest({ ...valid(), options: { fingers: 'invented' } })).toThrow()
   })
 })

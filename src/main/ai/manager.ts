@@ -110,7 +110,6 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     stored: Settings,
     models: (role: AiRoleId) => readonly LocalModel[],
   ): OverviewInput => {
-    reconcile(readings)
     return {
       facts: machine,
       snapshot: deps.snapshotOf(machine, Object.fromEntries(occupancy)),
@@ -138,6 +137,7 @@ export function createAiManager(deps: ManagerDeps): AiManager {
     const own = stored.ai.ownModels
     const [machine, discovered] = await Promise.all([facts(), discover()])
     const readings = await readingsOf(catalogueWith(own, discovered))
+    reconcile(readings)
     const ollamaNames = discovered
       .filter(model => model.loader === 'ollama')
       .map(model => model.name)

@@ -123,6 +123,37 @@ describe('what a compose costs', () => {
   })
 
   /**
+   * A role-specific lookup only reads the models useful to that role. It must not erase the
+   * installed models owned by other loaders: inference hosts consult this inventory directly.
+   */
+  it('keeps installed models that a narrowed role reading never asked about', async () => {
+    const image = localModel({
+      id: 'image-local',
+      format: 'safetensors',
+      loader: 'diffusers',
+      modality: 'image',
+      files: [],
+    })
+    const ai = manager({
+      settings: () => ({
+        ...DEFAULT_SETTINGS,
+        ai: { ...DEFAULT_SETTINGS.ai, ownModels: [image] },
+      }),
+      runtimes: {
+        'sherpa-onnx': holdingRuntime(),
+        diffusers: holdingRuntime(),
+      },
+    })
+
+    await ai.overview()
+    expect(ai.installedIds().has(STT_MODEL.id)).toBe(true)
+
+    await ai.providerOf(aiRoleId('image', 'txt2img'))
+
+    expect(ai.installedIds().has(STT_MODEL.id)).toBe(true)
+  })
+
+  /**
    * A loader answers on several doors. One `loaded` id used to drop the other door from occupancy
    * on the next compose, so admission over-committed and idle never freed it.
    */

@@ -13,6 +13,18 @@ from typing import Any
 import numpy as np
 
 from ia_studio_engine.adapters.loading import LoadRefusedError
+from ia_studio_engine.autorig.quality import (
+    focus_surface_on_hands as _focus_surface_on_hands,
+)
+from ia_studio_engine.autorig.quality import (
+    post_process_weights as _post_process_weights,
+)
+from ia_studio_engine.autorig.quality import (
+    sample_surface_points,
+)
+from ia_studio_engine.autorig.quality import (
+    simplify_fingers as _simplify_fingers,
+)
 from ia_studio_engine.autorig.support import Joint
 
 JOINT_NAMES = (
@@ -271,21 +283,7 @@ def _hips_transform(joints):
 def _surface(vertices: np.ndarray, triangles: np.ndarray, count: int):
     import torch
 
-    corner = vertices[triangles]
-    areas = np.linalg.norm(
-        np.cross(corner[:, 1] - corner[:, 0], corner[:, 2] - corner[:, 0]), axis=1
-    )
-    if not np.isfinite(areas).all() or areas.sum() <= 0:
-        raise ValueError("INVALID_MESH: mesh has no finite triangle surface")
-    picked = np.random.default_rng(0).choice(len(triangles), count, p=areas / areas.sum())
-    uv = np.random.default_rng(1).random((count, 2), dtype=np.float32)
-    reflected = uv.sum(axis=1) > 1
-    uv[reflected] = 1 - uv[reflected]
-    face = corner[picked]
-    points = (
-        face[:, 0] + uv[:, :1] * (face[:, 1] - face[:, 0]) + uv[:, 1:] * (face[:, 2] - face[:, 0])
-    )
-    return torch.from_numpy(points.astype(np.float32)).unsqueeze(0)
+    return torch.from_numpy(sample_surface_points(vertices, triangles, count)).unsqueeze(0)
 
 
 def run(
@@ -301,7 +299,8 @@ def run(
     triangles = np.fromfile(source.parent / manifest["triangles"], dtype="<u4").reshape(-1, 3)
     if len(vertices) < 3 or len(triangles) < 1 or triangles.max(initial=0) >= len(vertices):
         raise ValueError("INVALID_MESH: invalid geometry")
-    arrays = _infer(models, vertices, triangles, report, stopping)
+    options = manifest.get("options", {})
+    arrays = _infer(models, vertices, triangles, report, stopping, options)
     if stopping():
         raise InterruptedError("CANCELLED")
     _write_result(Path(destination), arrays, len(vertices))
@@ -310,7 +309,7 @@ def run(
     return {"peakRssBytes": peak if sys.platform == "darwin" else peak * 1024}
 
 
-def _infer(models, vertices, triangles, report, stopping):
+def _infer(models, vertices, triangles, report, stopping, options):
     import torch
 
     report(1, 6, "prepare")
@@ -325,7 +324,11 @@ def _infer(models, vertices, triangles, report, stopping):
         all_vertices = torch.from_numpy(vertices.astype(np.float32)).unsqueeze(0)
         transformed = _transform((all_vertices - center) * scale, orientation)
         report(3, 6, "skeleton")
-        detailed_points = _surface(transformed[0].numpy(), triangles, 32768)
+        coarse_in_model = _transform(coarse[..., 3:], orientation)
+        hand_centers = coarse_in_model[0, [9, 28]].numpy()
+        detailed_points = torch.from_numpy(
+            _focus_surface_on_hands(transformed[0].numpy(), triangles, 32768, hand_centers)
+        )
         second_scale = 1 / detailed_points.abs().amax(dim=1, keepdim=True).amax(
             dim=-1, keepdim=True
         )
@@ -339,13 +342,32 @@ def _infer(models, vertices, triangles, report, stopping):
             raise InterruptedError("CANCELLED")
         weights = _skin_weights(models, device_points, transformed, stopping, torch)
     report(5, 6, "skinning")
+    return _result_arrays(
+        orientation, center, scale, second_scale, joints, weights, pose, options, torch
+    )
+
+
+def _result_arrays(orientation, center, scale, second_scale, joints, weights, pose, options, torch):
     inverse = torch.linalg.inv(orientation)
     heads = _transform(joints[..., :3] / second_scale, inverse) / scale + center
     tails = _transform(joints[..., 3:] / second_scale, inverse) / scale + center
+    names = JOINT_NAMES
+    parents = PARENTS
+    heads_array = heads[0].numpy().astype("<f4")
+    tails_array = tails[0].numpy().astype("<f4")
+    weights_array = weights[0].numpy().astype("<f4")
+    if options.get("weightPostProcessing", True):
+        weights_array = _post_process_weights(weights_array, names)
+    if options.get("fingers") == "simplified":
+        names, parents, heads_array, tails_array, weights_array = _simplify_fingers(
+            names, parents, heads_array, tails_array, weights_array
+        )
     return {
-        "heads": heads[0].numpy().astype("<f4"),
-        "tails": tails[0].numpy().astype("<f4"),
-        "weights": weights[0].numpy().astype("<f4"),
+        "jointNames": names,
+        "parents": parents,
+        "heads": heads_array,
+        "tails": tails_array,
+        "weights": weights_array,
         "pose": pose[0].numpy().astype("<f4"),
     }
 
@@ -361,18 +383,18 @@ def _skin_weights(models, device_points, transformed, stopping, torch):
     return torch.cat(weight_chunks, dim=1)
 
 
-def _write_result(output: Path, arrays: dict[str, np.ndarray], vertices: int) -> None:
+def _write_result(output: Path, arrays: dict[str, Any], vertices: int) -> None:
     output.mkdir(parents=True, exist_ok=True)
-    for name, values in arrays.items():
-        values.tofile(output / f"{name}.bin")
+    for name in ("heads", "tails", "weights", "pose"):
+        arrays[name].tofile(output / f"{name}.bin")
     (output / "result.json").write_text(
         json.dumps(
             {
                 "backendId": "make-it-animatable",
-                "jointNames": JOINT_NAMES,
-                "parents": PARENTS,
+                "jointNames": arrays["jointNames"],
+                "parents": arrays["parents"],
                 "vertices": vertices,
-                "files": {name: f"{name}.bin" for name in arrays},
+                "files": {name: f"{name}.bin" for name in ("heads", "tails", "weights", "pose")},
             }
         )
     )
