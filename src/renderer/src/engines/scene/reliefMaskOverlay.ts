@@ -11,7 +11,7 @@ import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { clamp } from '@shared/numeric'
 import { chunkLayout, overlayDeltaReader, type ReliefChunkLayout } from '@shared/domain/relief'
 import type { TerrainEditLayer } from '@shared/domain/scene'
-import { rootColour } from '../core/palette'
+import { rootColour, rootRatio } from '../core/palette'
 import type { ReliefGeometryData } from './reliefBuildMessage'
 
 type OverlayHost = {
@@ -50,7 +50,11 @@ export function addReliefChunk(
   host.meshes.set(`${data.column}:${data.row}`, mesh)
 }
 
-/** Vertex tint of a painted mask: white where the stencil is empty, accent where it is full. */
+/**
+ * Vertex tint of a painted mask: white where the stencil is empty, softened accent where it is
+ * full. A mask is a CHOSEN content, so it carries `accent-soft` rather than the solid accent the
+ * contract keeps for what one actions.
+ */
 export function writeMaskOverlay(
   geometry: BufferGeometry,
   samples: HeightmapSamples,
@@ -68,10 +72,11 @@ export function writeMaskOverlay(
   const into = color.array
   if (!(into instanceof Float32Array)) return
   const [red, green, blue] = accentRgb()
+  const tint = rootRatio('--sc-relief-mask-tint', 1)
   const weightAt = paintedOverlayAt(painted, samples, grain)
   for (let z = 0; z < layout.height; z++) {
     for (let x = 0; x < layout.width; x++) {
-      const weight = weightAt(layout.sampleX + x, layout.sampleZ + z)
+      const weight = weightAt(layout.sampleX + x, layout.sampleZ + z) * tint
       const at = (z * layout.width + x) * 3
       into[at] = 1 - weight + weight * red
       into[at + 1] = 1 - weight + weight * green
@@ -119,7 +124,10 @@ function colorAttribute(geometry: BufferGeometry, vertices: number): BufferAttri
 /**
  * Through `Color`, never a hand-rolled parse: a vertex colour is read as already linear, so the
  * raw sRGB of `#346ef2` (0.204, 0.431, 0.949) paints 0.034, 0.156, 0.888 — a washed-out blue.
- * It also reads `color-mix()` and `rgb()`, which a hex parse silently turned black.
+ * It also reads `rgb()`, which a hex parse silently turned black.
+ *
+ * 🛑 It does NOT read `color-mix()`: measured 2026-09-05, `new Color()` renders that WHITE. Hence
+ * the softening rides a ratio gauge rather than the `--color-accent-soft` token.
  */
 function accentRgb(): [number, number, number] {
   const accent = new Color(rootColour('--color-accent'))

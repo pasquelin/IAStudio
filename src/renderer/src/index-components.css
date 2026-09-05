@@ -163,6 +163,11 @@
      because the browser's own slider honours neither: its track is white on one field and blue
      on the next, at a thickness nothing here chose. `slider-handle` drops it and the rail is
      drawn behind as a div, so a single pair of values answers every slider of the studio. */
+  /* How far a painted relief mask carries the accent over the terrain. A gauge because it IS the
+     `accent-soft` ratio, and a vertex colour cannot read that token: three renders `color-mix()`
+     as WHITE, so reading `--color-accent-soft` would erase the stencil rather than soften it.
+     Measured 2026-09-05 with `new Color()`. */
+  --sc-relief-mask-tint: 0.22;
   --sc-slider-rail: 4px;
   --sc-slider-thumb: 14px;
   /* Every menu of figures the studio offers — snap steps, turn divisions, fly speeds. The COUNT
