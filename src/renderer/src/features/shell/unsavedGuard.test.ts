@@ -86,16 +86,21 @@ describe('guardUnsavedWork', () => {
     await vi.waitFor(() => expect(settleFileViews).toHaveBeenCalled())
   })
 
-  // A cancelled file view stops the leave as a cancelled document does: the window stays.
-  it('holds the window when the file view question is cancelled', async () => {
-    install({})
+  // A cancelled file view stops the leave as a cancelled document does: the window stays — with
+  // its documents. Asked after them, the cancel came once they had been settled and forgotten.
+  it('holds the window, and its documents, when the file view question is cancelled', async () => {
+    const confirmClose = vi.fn(() => Promise.resolve<'discard'>('discard'))
+    install({ documents: { confirmClose } })
     arm(window)
+    const documentId = await openDirtyScene()
     fileViewEdits.held = true
     settleFileViews.mockResolvedValueOnce(false)
 
     leave(window)
 
     await vi.waitFor(() => expect(resumeLeave).toHaveBeenCalledWith(false))
+    expect(confirmClose).not.toHaveBeenCalled()
+    expect(useDocuments.getState().documents[documentId]).toBeDefined()
   })
 
   it('refuses to let the window go while a document holds unsaved work', async () => {

@@ -29,7 +29,9 @@ export function guardUnsavedWork(target: Window): () => void {
     try {
       // A write that throws — a project on a volume that went away — would otherwise close the
       // dialog and say nothing, leaving every attempt to leave to replay the same silent scene.
-      proceed = (await settleUnsavedWork()) && (await settleFileViews())
+      // File views FIRST: settling the documents forgets them, and a cancel on a file view asked
+      // after that kept the window with the document tabs already gone.
+      proceed = (await settleFileViews()) && (await settleUnsavedWork())
     } catch (error) {
       reportFailure('document.close', '', error)
     }

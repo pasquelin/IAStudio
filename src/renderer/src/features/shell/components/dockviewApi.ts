@@ -38,6 +38,13 @@ export function setDockviewApi(api: DockviewApi): void {
   const { documents, activeId } = useDocuments.getState()
   for (const document of Object.values(documents)) ensurePanel(api, document)
   for (const view of fileViews.values()) ensureFileViewPanel(api, view)
+  // The layout restored `file:` panels nothing opened here: unregistered, a restored view was
+  // neither askable nor closable, and ⌘Q let its edits go.
+  for (const panel of api.panels) {
+    if (!panelIsFileView(panel.id) || fileViews.has(panel.id)) continue
+    const view = fileViewOf(panel.id.slice(FILE_VIEW_PREFIX.length))
+    if (view) fileViews.set(panel.id, view)
+  }
 
   const focus = pendingFocus ?? activeId
   pendingFocus = null
@@ -80,20 +87,12 @@ export async function closeFileView(id: string): Promise<boolean> {
   return true
 }
 
-// Every file view on screen: the registry holds what was opened here, the panels what the
-// layout restored — a restored view was neither askable nor closable while only the first spoke.
-function fileViewIds(): string[] {
-  const ids = new Set(fileViews.keys())
-  for (const panel of current?.panels ?? []) if (panelIsFileView(panel.id)) ids.add(panel.id)
-  return [...ids]
-}
-
 function modifiedFileViewIds(): string[] {
-  return fileViewIds().filter(id => documentIsMarkedModified(id))
+  return [...fileViews.keys()].filter(id => documentIsMarkedModified(id))
 }
 
 async function settleFileView(id: string): Promise<boolean> {
-  const view = fileViews.get(id) ?? fileViewOf(id.slice(FILE_VIEW_PREFIX.length))
+  const view = fileViews.get(id)
   const bridge = getBridge()
   if (!view || !bridge) return false
   const choice = await bridge.documents.confirmClose(view.title)
@@ -124,7 +123,7 @@ export function registerFileViewSave(id: string, save: () => Promise<boolean>): 
 
 export async function settleFileViews(): Promise<boolean> {
   for (const id of modifiedFileViewIds()) if (!(await settleFileView(id))) return false
-  for (const id of fileViewIds()) finishFileViewClose(id)
+  for (const id of [...fileViews.keys()]) finishFileViewClose(id)
   return true
 }
 
