@@ -40,11 +40,7 @@ const FLOOR = 200
 
 const GRID = 64
 
-/**
- * Lines start fading a stride ahead of the camera and are gone before the copy sits on them. The
- * band the reader reads over is therefore flat ground, and the 3D lives at the bottom and the back
- * — which is the composition, written as two numbers.
- */
+/** Lines fade a stride ahead of the camera, so the band the copy sits on is flat ground. */
 const FOG_NEAR = 6
 const FOG_FAR = 20
 
@@ -108,15 +104,8 @@ export type WelcomeBackdropOptions = {
 }
 
 /**
- * The studio's own viewport, opened as the first thing a new install sees: a grid floor running to
- * a horizon, two faceted volumes standing on it, an accent lamp behind the near one, motes in the
- * air between.
- *
- * 🛑 The floor and the grid are `toneMapped: false`, and that is the whole reason this reads as a
- * viewport rather than as a wash. They ARE `--color-viewport` and `--color-viewport-line`, so the
- * unlit ground has to leave the pipeline at the value the stylesheet declares — the filmic curve
- * would take it a third darker and swallow the lines it stands against. ACES stays on the renderer
- * for the meshes, which is what it is for: the roll-off on a lit facet.
+ * 🛑 Floor and grid are `toneMapped: false`: they ARE `--color-viewport` and
+ * `--color-viewport-line`, so they must leave the pipeline at the value the stylesheet declares.
  */
 export class WelcomeBackdrop {
   private readonly renderer: WebGLRenderer
@@ -125,11 +114,8 @@ export class WelcomeBackdrop {
   private readonly clock = new Clock()
   private readonly ground = new Color(FALLBACK_VIEWPORT)
   /**
-   * What stands BEHIND the floor, and it is deliberately not the floor's own colour. Painted
-   * alike there is no horizon at all: on a light theme the lit floor and the sky both landed on
-   * `--color-viewport` and the upper half went flat. The chassis is the room's wall to the
-   * floor's viewport, and it falls the RIGHT side of it in both themes — darker on the dark one,
-   * lighter on the light one, so the horizon reads either way.
+   * Deliberately NOT the floor's colour: painted alike, a light theme loses its horizon entirely.
+   * The chassis falls the right side of the floor in both themes.
    */
   private readonly wall = new Color(FALLBACK_CHASSIS)
   private readonly floor = makeFloor()
@@ -138,16 +124,11 @@ export class WelcomeBackdrop {
   private readonly satellite = makeVolume(0.5)
   private readonly motes = makeMotes()
   private readonly sky = new HemisphereLight(0xffffff, 0xffffff, 1.15)
-  /**
-   * WHITE, in both themes, and it is the theme bug this lot was handed: it took `--color-text`,
-   * which is near-black on a light one — a sun the colour of ink lights nothing, and every volume
-   * in the room came back black. A light is not an ink; only the SURFACES read tokens here.
-   */
+  /** WHITE in both themes: a light is not an ink, and only the SURFACES read tokens here. */
   private readonly key = new DirectionalLight(0xffffff, 2)
   /**
-   * The bounce off the lit floor, and it comes from UNDER the volumes on purpose. Placed above
-   * with the key it reached nothing the key had not already lit, and every facet the heroes turn
-   * downward stayed a black wedge — the one thing a reader noticed in the first still.
+   * From UNDER the volumes: placed with the key it reached nothing new, and every facet the heroes
+   * turn downward stayed a black wedge.
    */
   private readonly fill = new DirectionalLight(0xffffff, 0.85)
   private readonly lamp = new PointLight(FALLBACK_ACCENT, 42, 16, 2)

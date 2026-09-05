@@ -18,10 +18,8 @@ const OFFERED = 6
 const PAIRED = 2
 
 /**
- * The models a first launch can put on this machine, section by section — assistant first. Chips
- * and not a column (Alban): one click, and the screen stays skippable.
- *
- * Downloading is the whole gesture: a model on the disk with nothing chosen already serves.
+ * The models a first launch can put on this machine, assistant first. Chips and not a column
+ * (Alban): one click, and the screen stays skippable.
  */
 export function WelcomeSlideModels() {
   const { t } = useTranslation()

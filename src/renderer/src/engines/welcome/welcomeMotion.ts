@@ -4,9 +4,8 @@ export type WelcomePoint = { x: number; y: number; z: number }
 export type WelcomePose = { eye: WelcomePoint; target: WelcomePoint }
 
 /**
- * The camera ORBITS this point, and it stands below the eye: the horizon then lands in the upper
- * third and the floor fills the rest. A still of this backdrop has to read as a viewport, which a
- * level camera never does — it renders a band of nothing.
+ * The camera ORBITS this point, which stands below the eye: a level camera renders a band of
+ * nothing where the floor has to read as a viewport.
  */
 export const WELCOME_TARGET: WelcomePoint = { x: 0, y: 1.15, z: 0 }
 
@@ -15,9 +14,8 @@ export const WELCOME_HEIGHT = 2.6
 export const WELCOME_RADIUS = 8.6
 
 /**
- * How far the whole viewpoint swings for ONE step of the carousel, in radians — about seven
- * degrees. The first pass slid the eye sideways by a unit and the change was invisible; a floor
- * seen in perspective, swung, moves every line on screen.
+ * How far the viewpoint swings for ONE carousel step, in radians — about seven degrees. Sliding
+ * the eye sideways by a unit instead was invisible.
  */
 export const WELCOME_SWING = 0.13
 
@@ -47,11 +45,8 @@ export function welcomeHeroTurn(slide: number): number {
 }
 
 /**
- * The camera for a moment of the welcome, from an angle the engine has already eased toward its
- * slide. `elapsed` is the idle drift and arrives frozen when motion is reduced, so the same call
- * serves the animated backdrop and the single still.
- *
- * The target never moves: tipping it would tip the horizon, and the horizon is what says 3D.
+ * The camera for a moment of the welcome. `elapsed` is the idle drift and arrives frozen when
+ * motion is reduced. The target never moves: tipping it tips the horizon, which is what says 3D.
  */
 export function welcomePose(elapsed: number, azimuth: number): WelcomePose {
   const angle = azimuth + Math.sin(elapsed * 0.09) * WELCOME_DRIFT_ANGLE
