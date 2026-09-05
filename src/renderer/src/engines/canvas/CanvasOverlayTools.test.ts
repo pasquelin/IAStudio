@@ -110,6 +110,7 @@ const NO_TOOL: ToolChrome = {
   pending: null,
   selection: null,
   brushMark: null,
+  commentDraft: null,
 }
 
 const RECT = { x: 10, y: 20, width: 30, height: 40 }
@@ -246,6 +247,23 @@ describe('the tool chrome', () => {
     expect(opsOf(calls, 'strokeRect')).toEqual([[7.5, 11.5, 200, 200]])
     expect(opsOf(calls, 'fillRect')).toEqual([])
     expect(opsOf(calls, 'stroke')).toEqual([])
+  })
+
+  it('shows the area while a generation comment is being traced', () => {
+    const { context, calls } = recorder()
+    drawOverlay(
+      context,
+      toolScene({
+        commentDraft: [
+          { x: 10, y: 20 },
+          { x: 40, y: 60 },
+        ],
+      }),
+    )
+
+    expect(opsOf(calls, 'moveTo')).toEqual([[27, 51]])
+    expect(opsOf(calls, 'lineTo')).toEqual([[87, 131]])
+    expect(opsOf(calls, 'strokeStyle')).toEqual([['#frame'], ['#accent']])
   })
 
   /**

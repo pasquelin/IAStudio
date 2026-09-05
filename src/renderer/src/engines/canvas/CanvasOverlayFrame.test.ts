@@ -107,6 +107,7 @@ const NO_TOOL: ToolChrome = {
   pending: null,
   selection: null,
   brushMark: null,
+  commentDraft: null,
 }
 
 const RECT = { x: 10, y: 20, width: 30, height: 40 }

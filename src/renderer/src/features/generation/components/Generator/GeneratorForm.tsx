@@ -20,6 +20,7 @@ import { GeneratorOperation } from './GeneratorOperation'
 import { GeneratorPixelArt } from './GeneratorPixelArt'
 import { GeneratorRun } from './GeneratorRun'
 import { GeneratorSources } from './GeneratorSources'
+import { GeneratorComments } from './GeneratorComments'
 
 type FormProps = ComponentProps<typeof DynamicForm>
 type OperationProps = ComponentProps<typeof GeneratorOperation>
@@ -85,6 +86,7 @@ function generatorFormSetup(props: GeneratorFormProps, t: ReturnType<typeof useT
         <EmptyState icon={mdiCreationOutline} message={t(failureKeyOf(props.descriptor.error))} />
       )}
       <GeneratorSources {...props.sourcesInput} />
+      <GeneratorComments fields={props.form.fields} />
       {props.descriptor.ready && props.model.modelId !== null && (
         <GeneratorContext {...props.context} />
       )}

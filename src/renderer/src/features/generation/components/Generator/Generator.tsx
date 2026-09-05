@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { isFinished, type Job } from '@shared/domain/job'
 import { partsOfRole, type AiRoleId } from '@shared/domain/aiRole'
-import { CATALOGUE_FAMILIES } from '@shared/domain/model'
+import { CATALOGUE_FAMILIES, type FieldDescriptor, type ModelFamily } from '@shared/domain/model'
 import type { ContextUse } from '@shared/domain/projectContext'
 import { useDescriptor } from '@/hooks/useDescriptor'
 import { useTaskChoices } from '@/hooks/useTaskChoices'
@@ -14,15 +14,30 @@ import { usePlanAccess } from '@/hooks/usePlanAccess'
 import { usePlanRefusal } from '@/hooks/usePlanRefusal'
 import { modelIsOnThisMachine } from '@/helpers/modelForCapability'
 import { referencePictures, type FormValues } from '@/helpers/dynamicForm'
-import { fillSourceFields } from '@/features/image/components/aiFields'
+import {
+  prepareCommentedImage,
+  withoutGenerationCanvasSource,
+  type PreparedCommentedImage,
+} from '@/features/image/commentedImage'
 import { withBodyExtras } from '@/generation/bodyExtras'
+import type { GenerationInput } from '@/generation/generationInputs'
 import { landingChoiceOf, landingCreatesOf, landingSiblingsOf } from '@/generation/landingChoice'
 import { roleFolderOf, useFolderRoles } from '@/stores/folderRoles'
 import { registerGenerator } from '@/features/assistant/generatorBridge'
 import { useJobs } from '@/stores/jobs'
 import { useGeneration } from '@/stores/generation'
 import { useModels } from '@/stores/models'
-import { useDocuments } from '@/stores/documents'
+import { activeImageId, useDocuments } from '@/stores/documents'
+import { canvasHost } from '@/features/image/canvasHosts'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
+import { generationCommentsOf, useGenerationComments } from '@/stores/generationComments'
+import {
+  generationCommentLayerId,
+  supportsGenerationComments,
+  writtenGenerationComments,
+} from '@/features/image/generationComments'
+import { useCommentedImageSources } from '@/hooks/useCommentedImageSources'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit, documentAwaits } from '@/stores/generationClaims'
 import type { LandingTarget } from '@shared/domain/landingTarget'
@@ -71,12 +86,9 @@ export function Generator() {
   )
   const catalogueRead = useAiModels(state => state.overview !== null)
   const submit = useJobs(state => state.submit)
-
   const descriptor = useDescriptor(modelId)
-
   const fields = useTaskChoices(descriptor.data?.fields, modelId)
-
-  const sources = useMemo(() => fillSourceFields(fields, inputs), [fields, inputs])
+  const sources = useCommentedImageSources(fields, inputs)
   const preset = useMemo(() => ({ ...sources, ...prepared }), [sources, prepared])
   const [contextUse, setContextUse] = useState<ContextUse>('apply')
   // Held OUTSIDE `values`, like the context's own: it must never reach `buildBody`, and
@@ -116,20 +128,39 @@ export function Generator() {
    * settled at the click, and a second path that skipped it would land generations nowhere.
    */
   const runGeneration = useCallback(
-    async (values: FormValues, into?: LandingTarget): Promise<Job | null> => {
+    async (
+      values: FormValues,
+      into?: LandingTarget,
+      scopedImage?: ScopedImageComments,
+    ): Promise<Job | null> => {
       if (!modelId) return null
-      const claim = claimOnSubmit(into, role)
+      const image = claimedImageContext(into, role, scopedImage)
       setSubmitting(true)
 
       try {
+        const prepared = await valuesWithCommentedImage(
+          values,
+          fields,
+          image.documentId,
+          image.comments,
+        )
+        if (!prepared) return null
         // What the workspace holds and no model schema publishes — `bodyExtras` owns the table.
         const job = await submit(
           { id: modelId },
-          withBodyExtras(role, values, { fields, pixelArt }),
+          withBodyExtras(role, prepared.values, {
+            fields,
+            pixelArt,
+            imageDocumentId: image.documentId,
+            imageComments: prepared.consumed ? image.comments : [],
+          }),
           contextUse,
         )
-        claim(job)
+        image.claim(job)
         setRunningId(job?.id ?? null)
+        if (job && image.documentId && prepared.consumed) {
+          useGenerationComments.getState().removeSubmitted(image.documentId, image.comments)
+        }
         return job
       } finally {
         setSubmitting(false)
@@ -138,53 +169,15 @@ export function Generator() {
     [modelId, submit, contextUse, role, fields, pixelArt],
   )
 
-  useEffect(() => {
-    const armedBody = (): { modelId: string; values: FormValues } | null =>
-      modelId ? { modelId, values: body.current } : null
-
-    return registerGenerator({
-      body: armedBody,
-      armed: () => {
-        const armed = armedBody()
-        if (!armed || !role) return null
-
-        return {
-          modelId: armed.modelId,
-          operation: role,
-          family,
-          sources: inputs,
-          // 🛑 `landing` over `choice.target`: what the control shows is what the button sends,
-          // and `null` is kept for the one case a caller must answer rather than inherit.
-          landing: {
-            ...choice,
-            target: landing ?? choice.target,
-            // On DEMAND, never on the render path — `landingCreatesOf` says what it costs.
-            creates: landingCreatesOf(
-              role,
-              landingSiblingsOf(
-                role,
-                useDocuments.getState(),
-                roleFolderOf(useFolderRoles.getState(), 'script'),
-              ),
-            ),
-          },
-          parameters: armed.values,
-        }
-      },
-      submit: into => runGeneration(body.current, into),
-      // Which fields hold a picture is a fact of the model's schema, and this panel is the
-      // only place that has it — see `GeneratorBridge`.
-      references: () => referencePictures(fields, body.current),
-    })
-  }, [modelId, role, family, inputs, choice, landing, runGeneration, fields])
-
-  const watchValues = cost.onValuesChange
-  const onValuesChange = useCallback(
-    (values: FormValues) => {
-      body.current = values
-      watchValues(values)
+  const submitComment = useCallback(
+    async (documentId: string, commentId: string): Promise<Job | null> => {
+      const comments = writtenGenerationComments(
+        generationCommentsOf(useGenerationComments.getState(), documentId),
+      ).filter(comment => comment.id === commentId)
+      if (comments.length === 0) return null
+      return await runGeneration(body.current, undefined, { documentId, comments })
     },
-    [watchValues],
+    [runGeneration],
   )
 
   /**
@@ -194,6 +187,42 @@ export function Generator() {
    * 403.
    */
   const refusal = refusalFor(descriptor.data?.requiredPlanLevel)
+
+  useEffect(() => {
+    return registerActiveGenerator({
+      modelId,
+      role,
+      family,
+      inputs,
+      choice,
+      landing,
+      fields,
+      values: () => body.current,
+      runGeneration,
+      submitComment,
+      commentSubmissionAvailable: refusal === undefined,
+    })
+  }, [
+    modelId,
+    role,
+    family,
+    inputs,
+    choice,
+    landing,
+    runGeneration,
+    submitComment,
+    fields,
+    refusal,
+  ])
+
+  const watchValues = cost.onValuesChange
+  const onValuesChange = useCallback(
+    (values: FormValues) => {
+      body.current = values
+      watchValues(values)
+    },
+    [watchValues],
+  )
 
   /**
    * 🛑 Whether ANY held cloud serves this family, never the Scenario key alone: a model of this
@@ -278,6 +307,110 @@ export function Generator() {
       }}
     />
   )
+}
+
+type ScopedImageComments = {
+  documentId: string
+  comments: ReturnType<typeof writtenGenerationComments>
+}
+
+type GeneratorRegistration = {
+  modelId: string | null
+  role: AiRoleId | null
+  family: ModelFamily | null
+  inputs: readonly GenerationInput[]
+  choice: ReturnType<typeof landingChoiceOf>
+  landing: LandingTarget | null
+  fields: readonly FieldDescriptor[]
+  values: () => FormValues
+  runGeneration: (
+    values: FormValues,
+    into?: LandingTarget,
+    scopedImage?: ScopedImageComments,
+  ) => Promise<Job | null>
+  submitComment: (documentId: string, commentId: string) => Promise<Job | null>
+  commentSubmissionAvailable: boolean
+}
+
+function registerActiveGenerator(input: GeneratorRegistration): () => void {
+  const body = (): { modelId: string; values: FormValues } | null =>
+    input.modelId ? { modelId: input.modelId, values: input.values() } : null
+  return registerGenerator({
+    body,
+    armed: () => {
+      const prepared = body()
+      if (!prepared || !input.role) return null
+      return {
+        modelId: prepared.modelId,
+        operation: input.role,
+        family: input.family,
+        sources: input.inputs,
+        landing: {
+          ...input.choice,
+          target: input.landing ?? input.choice.target,
+          creates: landingCreatesOf(
+            input.role,
+            landingSiblingsOf(
+              input.role,
+              useDocuments.getState(),
+              roleFolderOf(useFolderRoles.getState(), 'script'),
+            ),
+          ),
+        },
+        parameters: prepared.values,
+      }
+    },
+    submit: into => input.runGeneration(input.values(), into),
+    submitComment:
+      input.commentSubmissionAvailable &&
+      input.modelId &&
+      input.role &&
+      supportsGenerationComments(input.fields)
+        ? input.submitComment
+        : undefined,
+    references: () => referencePictures(input.fields, input.values()),
+  })
+}
+
+function claimedImageContext(
+  into: LandingTarget | undefined,
+  role: AiRoleId | null,
+  scoped?: ScopedImageComments,
+) {
+  const documentId = scoped?.documentId ?? activeImageId(useDocuments.getState())
+  const comments =
+    scoped?.comments ??
+    writtenGenerationComments(generationCommentsOf(useGenerationComments.getState(), documentId))
+  const layerId = generationCommentLayerId(comments)
+  const claim = claimOnSubmit(into, role, layerId ?? undefined)
+  return { documentId, comments, claim }
+}
+
+async function valuesWithCommentedImage(
+  values: FormValues,
+  fields: readonly FieldDescriptor[],
+  documentId: string | null,
+  comments: ReturnType<typeof writtenGenerationComments>,
+): Promise<PreparedCommentedImage | null> {
+  const bridge = getBridge()
+  const host = documentId === null ? null : canvasHost(documentId)
+  if (!bridge || !host || documentId === null) {
+    return { values: withoutGenerationCanvasSource(values, fields), consumed: false }
+  }
+
+  try {
+    return await prepareCommentedImage(
+      values,
+      fields,
+      comments,
+      host,
+      (name, image) => bridge.provider.uploadAsset(name, image),
+      documentId,
+    )
+  } catch (error) {
+    reportFailure('canvas.edit', documentId, error)
+    return null
+  }
 }
 
 function familyOf(role: AiRoleId | null) {

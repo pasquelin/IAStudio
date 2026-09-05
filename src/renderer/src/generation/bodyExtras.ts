@@ -12,6 +12,12 @@ import { CODE_API_FIELD, CODE_SOURCE_FIELD } from '@shared/domain/codeGeneration
 import type { FormValues } from '@/helpers/dynamicForm'
 import { codeFileOf } from '@/stores/code'
 import { activeImageId, activeScriptId, useDocuments } from '@/stores/documents'
+import { generationCommentsOf, useGenerationComments } from '@/stores/generationComments'
+import {
+  promptWithComments,
+  supportsGenerationComments,
+  type GenerationComment,
+} from '@/features/image/generationComments'
 
 /** The grid of the image in front — `null` when no image is there, or it is not on one. */
 export function gridInFront(): { columns: number; rows: number } | null {
@@ -39,13 +45,15 @@ const EXTRAS: Record<ModelFamily, Extra | null> = {
    */
   image: (_role, values, fields, pixelArt) => {
     const grid = pixelArt ? gridInFront() : null
-    const key = grid && promptKeyOf(fields)
-    if (!key || !grid) return values
-
-    const written = values[key]
-    return typeof written === 'string'
-      ? { ...values, [key]: withPixelArtPrompt(written, grid.columns, grid.rows) }
-      : values
+    const promptKey = promptKeyOf(fields)
+    if (!promptKey || typeof values[promptKey] !== 'string') return values
+    return {
+      ...values,
+      [promptKey]:
+        grid === null
+          ? values[promptKey]
+          : withPixelArtPrompt(values[promptKey], grid.columns, grid.rows),
+    }
   },
   video: null,
   '3d': null,
@@ -70,6 +78,29 @@ const EXTRAS: Record<ModelFamily, Extra | null> = {
   other: null,
 }
 
+function withImageComments(
+  values: FormValues,
+  fields: readonly FieldDescriptor[],
+  documentId: string | null,
+  comments: readonly GenerationComment[] | undefined,
+): FormValues {
+  const promptKey = promptKeyOf(fields)
+  if (!promptKey || !supportsGenerationComments(fields)) {
+    return values
+  }
+
+  if (documentId === null) return values
+  const canvas = canvasOf(useCanvases.getState(), documentId)
+  return {
+    ...values,
+    [promptKey]: promptWithComments(
+      typeof values[promptKey] === 'string' ? values[promptKey] : '',
+      comments ?? generationCommentsOf(useGenerationComments.getState(), documentId),
+      canvas,
+    ),
+  }
+}
+
 /** The body as it is sent: the form, plus whatever the family adds to it. */
 export function withBodyExtras(
   role: AiRoleId | null,
@@ -77,9 +108,17 @@ export function withBodyExtras(
   {
     fields = [],
     pixelArt = true,
-  }: { fields?: readonly FieldDescriptor[]; pixelArt?: boolean } = {},
+    imageDocumentId = activeImageId(useDocuments.getState()),
+    imageComments,
+  }: {
+    fields?: readonly FieldDescriptor[]
+    pixelArt?: boolean
+    imageDocumentId?: string | null
+    imageComments?: readonly GenerationComment[]
+  } = {},
 ): FormValues {
   const family = role === null ? null : partsOfRole(role)?.family
   const extras = family ? EXTRAS[family] : null
-  return extras && role ? extras(role, values, fields, pixelArt) : values
+  const extended = extras && role ? extras(role, values, fields, pixelArt) : values
+  return withImageComments(extended, fields, imageDocumentId, imageComments)
 }

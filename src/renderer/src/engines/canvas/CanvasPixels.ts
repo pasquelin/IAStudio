@@ -172,6 +172,7 @@ export abstract class CanvasPixels extends CanvasBrush {
   protected async pngOf(
     target: Container | Texture,
     frame?: Rectangle,
+    onExtracted?: () => void,
   ): Promise<Uint8Array<ArrayBuffer> | null> {
     const renderer = this.app?.renderer
     // `null` for an engine that is not up yet, which every caller already treats as "not ready".
@@ -182,6 +183,7 @@ export abstract class CanvasPixels extends CanvasBrush {
       ...(frame ? { frame } : {}),
       resolution: 1,
     })
+    onExtracted?.()
     const blob = await blobOf(canvas)
     /**
      * THROWS rather than answering nothing, and the difference is a document.

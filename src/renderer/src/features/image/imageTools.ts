@@ -276,10 +276,6 @@ export const IMAGE_TOOLS: readonly ImageTool[] = [
   },
   {
     id: 'comment',
-    // Greyed on the group, not only on its rows: `Toolbar` does not inherit a mode's `disabled`,
-    // so the button armed a tool the engine drops every pointer event of — a live-looking button
-    // that changed the cursor and did nothing.
-    disabled: true,
     tool: 'comment',
     labelKey: 'imageTools.comment',
     descriptionKey: 'imageTools.commentHint',

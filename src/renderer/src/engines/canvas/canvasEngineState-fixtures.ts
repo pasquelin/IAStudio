@@ -12,6 +12,7 @@ type Placed = {
   skew: Pair
   rotation: number
   visible: boolean
+  renderable: boolean
   alpha: number
   blendMode: string
   label: string

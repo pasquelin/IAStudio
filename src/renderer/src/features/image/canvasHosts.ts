@@ -1,5 +1,6 @@
 import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
 import type { Rect } from '@/engines/canvas/canvasState'
+import type { Point } from '@/engines/core/geometry'
 import { createHostRegistry } from '@/helpers/hostRegistry'
 
 /** The engine, seen from the disk: it hands its pixels over, and takes them back. */
@@ -21,6 +22,10 @@ export type CanvasHost = {
    * lands on disk is what was judged.
    */
   snapshot: () => Promise<string | null>
+  /** One pixel layer, still framed and transformed in document coordinates. */
+  layerSnapshot: (layerId: string) => Promise<string | null>
+  /** Comment outlines as a document-sized white-on-black generation mask. */
+  outlineMaskSnapshot: (outlines: readonly (readonly Point[])[]) => Promise<string | null>
   /**
    * Forgets a picture the loader had cached, once its asset has been rewritten.
    *

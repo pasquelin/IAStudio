@@ -11,6 +11,7 @@ import {
   isGroup,
   layerById,
   mapLayers,
+  updateSiblings,
   wholeBox,
   type CanvasState,
   type Guide,
@@ -28,14 +29,22 @@ import { restructure } from './commandsStructure'
  *
  * A command captures what it needs to revert as it is applied, not as it is built.
  */
-export function addLayer(layer: Layer): Command<CanvasState> {
+export function addLayer(layer: Layer, targetId?: string): Command<CanvasState> {
   return {
     id: `layer:add:${layer.id}`,
-    apply: state => ({
-      ...state,
-      layers: [...state.layers, layer],
-      activeLayerId: layer.id,
-    }),
+    apply: state => {
+      const layers =
+        targetId && layerById(state, targetId)
+          ? updateSiblings(state.layers, targetId, (siblings, index) =>
+              insertedAt(siblings, layer, index + 1),
+            )
+          : [...state.layers, layer]
+      return {
+        ...state,
+        layers,
+        activeLayerId: layer.id,
+      }
+    },
     revert: state => withoutLayer(state, layer.id),
   }
 }

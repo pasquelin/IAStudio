@@ -78,6 +78,7 @@ type Harness = {
   faces: string[]
   /** Every colour the eyedropper handed back, packed as the document stores one. */
   picks: number[]
+  comments: { at: Point; outline?: readonly Point[] }[]
 }
 
 /**
@@ -106,7 +107,7 @@ async function mounted(
   const layers: string[] = []
   const faces: string[] = []
   const picks: number[] = []
-  const defaultFace: FaceRegistrar = async family => void faces.push(family)
+  const comments: Harness['comments'] = []
   const harness: Harness = {
     engine: new CanvasEngine({
       onPick: color => picks.push(color),
@@ -114,6 +115,7 @@ async function mounted(
       onPixelsDropped: patchId => dropped.push(patchId),
       onViewport: viewport => viewports.push(viewport),
       onSelection: selection => selections.push(selection),
+      onComment: (at, outline) => comments.push({ at, ...(outline ? { outline } : {}) }),
       onText: asked => captions.push(asked),
       onTextBox: (layerId, box, at) => boxes.push({ layerId, box, at }),
       onShape: (at, drawn) => shapes.push({ at, drawn }),
@@ -139,7 +141,7 @@ async function mounted(
         beginDrag: () => layers.push('begin'),
         endDrag: () => layers.push('end'),
       },
-      addFace: addFace ?? defaultFace,
+      addFace: addFace ?? (async family => void faces.push(family)),
     }),
     host,
     viewports,
@@ -155,6 +157,7 @@ async function mounted(
     layers,
     faces,
     picks,
+    comments,
   }
 
   await finishMount(harness, state, tool)
@@ -319,6 +322,7 @@ function silentOptions(): ConstructorParameters<typeof CanvasEngine>[0] {
     onPixelsDropped: nothing,
     onViewport: nothing,
     onSelection: nothing,
+    onComment: nothing,
     onCropFrame: nothing,
     onHost: nothing,
     onText: nothing,

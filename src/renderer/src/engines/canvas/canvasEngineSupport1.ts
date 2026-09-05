@@ -67,6 +67,7 @@ export type CanvasEngineOptions = {
   onViewport: (viewport: Viewport) => void
   /** So is the selection: the engine carves it out, React holds it. */
   onSelection: (selection: CanvasSelection) => void
+  onComment: (at: Point, outline?: readonly Point[]) => void
   /** The host's size, which the zoom commands need: they centre on a panel they cannot see. */
   onHost: (size: Size) => void
   /**
@@ -104,7 +105,7 @@ export type CanvasEngineOptions = {
  * Exported so the bar's registry can be crossed against it: a tool listed here whose button is
  * not greyed arms a gesture `onPointerDown` drops on the floor.
  */
-export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>(['comment'])
+export const UNBUILT_TOOLS: ReadonlySet<CanvasTool> = new Set<CanvasTool>()
 
 /**
  * Pixi's own name for each mode. Total on purpose: a mode added to `BlendMode` and forgotten here

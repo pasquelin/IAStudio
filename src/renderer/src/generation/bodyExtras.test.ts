@@ -10,6 +10,7 @@ import { DEFAULT_CANVAS } from '@/engines/canvas/canvasState'
 import { canvasStore } from '@/stores/canvases'
 import { installIn } from '@/stores/document-fixtures'
 import { withBodyExtras } from './bodyExtras'
+import { useGenerationComments } from '@/stores/generationComments'
 
 // Where `installDocument` files a script — read off the domain, never spelt out: the folder is
 // the user's to rename, and a literal here would pin the test to today's default.
@@ -18,11 +19,18 @@ const WALK = `script:${documentFolderOf('script')}/doc-1.ts`
 const CODE2CODE = aiRoleId('code', 'code2code')
 const TXT2CODE = aiRoleId('code', 'txt2code')
 const TXT2IMG = aiRoleId('image', 'txt2img')
+const IMG2VIDEO = aiRoleId('video', 'img2video')
 
 /** The field the API itself marks — never one guessed at by name, which lands in the negative. */
 const PROMPT: FieldDescriptor[] = [
   { key: 'prompt', kind: 'longText', label: 'Prompt', required: true, promptSpark: true },
 ]
+const IMAGE_SOURCE: FieldDescriptor = {
+  key: 'image',
+  kind: 'image',
+  label: 'Image',
+  required: true,
+}
 
 const onGrid = (cell: number | null): void =>
   installIn(
@@ -35,6 +43,7 @@ const onGrid = (cell: number | null): void =>
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
   useCode.setState({ files: {}, problems: [], goto: null })
+  useGenerationComments.setState({ comments: {} })
 })
 
 describe('what a family adds to a generation beyond the form', () => {
@@ -71,6 +80,44 @@ describe('what a family adds to a generation beyond the form', () => {
     expect(withBodyExtras(TXT2IMG, { prompt: 'a cat' }, { fields: PROMPT })).toEqual({
       prompt: 'a cat',
     })
+  })
+
+  it('sends image notes with a compatible generation form', () => {
+    onGrid(null)
+    useGenerationComments.getState().add('doc-image', {
+      id: 'note-1',
+      at: { x: 128, y: 256 },
+      text: 'Keep the car still',
+    })
+
+    expect(
+      withBodyExtras(IMG2VIDEO, { prompt: 'Drive away' }, { fields: [...PROMPT, IMAGE_SOURCE] }),
+    ).toEqual({
+      prompt:
+        'Drive away\n\nImage comments:\n1. Keep the car still (whole image, anchored at 25% × 50%)',
+    })
+  })
+
+  it('keeps spatial comments out of a schema that only exposes a mask field', () => {
+    onGrid(null)
+    useGenerationComments.getState().add('doc-image', {
+      id: 'note-1',
+      at: { x: 128, y: 256 },
+      text: 'Keep the car still',
+    })
+
+    expect(
+      withBodyExtras(
+        IMG2VIDEO,
+        { prompt: 'Drive away' },
+        {
+          fields: [
+            ...PROMPT,
+            { key: 'mask', kind: 'image', label: 'Mask', maskFrom: 'image', required: true },
+          ],
+        },
+      ),
+    ).toEqual({ prompt: 'Drive away' })
   })
 
   // The grid is what the studio holds and no model schema publishes — the whole reason for the table.

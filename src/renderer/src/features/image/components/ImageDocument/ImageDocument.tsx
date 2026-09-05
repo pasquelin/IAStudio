@@ -33,6 +33,10 @@ import { useDocuments } from '@/stores/documents'
 import { useImageDocumentEngine } from '@/hooks/useImageDocumentEngine'
 import { useImageDocumentCommands } from '@/hooks/useImageDocumentCommands'
 import { ImageDocumentView } from './ImageDocumentView'
+import { generationCommentsOf, useGenerationComments } from '@/stores/generationComments'
+import { useCanvasGenerationComments } from '@/hooks/useCanvasGenerationComments'
+import { useGeneratorCommentSubmission } from '@/hooks/useGeneratorCommentSubmission'
+import { reportFailure } from '@/services/diagnostics'
 
 export type ImageDocumentProps = { documentId: string }
 
@@ -64,6 +68,11 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const [brush, setBrush] = useState<BrushSettings>(DEFAULT_BRUSH)
   /** Whether a model edit is being flattened and uploaded — the AI group is greyed while it is. */
   const [preparing, setPreparing] = useState(false)
+  const comments = useGenerationComments(state => generationCommentsOf(state, documentId))
+  const updateComment = useGenerationComments(state => state.update)
+  const removeComment = useGenerationComments(state => state.remove)
+  const addCanvasComment = useCanvasGenerationComments(documentId)
+  const submitComment = useGeneratorCommentSubmission()
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
   const view = useCanvasViews(state => canvasViewOf(state, documentId))
@@ -80,7 +89,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     engineRef: engine,
     editing,
     setEditing,
-  } = useImageDocumentEngine(documentId, setBrush)
+  } = useImageDocumentEngine(documentId, setBrush, addCanvasComment)
 
   // After the engine is registered, never before: the pixels are handed to it, and it has to be
   // reachable.
@@ -277,6 +286,25 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       shortcuts={shortcuts}
       onDrop={onDrop}
       checker={CHECKER}
+      comments={comments}
+      commentSize={canvas}
+      onCommentChange={(id, text) => updateComment(documentId, id, text)}
+      onCommentRemove={id => removeComment(documentId, id)}
+      onCommentGenerate={
+        submitComment ? id => void submitCanvasComment(submitComment, documentId, id) : undefined
+      }
     />
   )
+}
+
+async function submitCanvasComment(
+  submit: NonNullable<ReturnType<typeof useGeneratorCommentSubmission>>,
+  documentId: string,
+  commentId: string,
+): Promise<void> {
+  try {
+    await submit(documentId, commentId)
+  } catch (error) {
+    reportFailure('canvas.edit', documentId, error)
+  }
 }

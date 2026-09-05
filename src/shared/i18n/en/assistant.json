@@ -241,6 +241,10 @@
         "title": "Read the image being edited",
         "description": "Answers the image in front — its size, its resolution, its guides, and every layer of the stack flattened: id, name, kind, and what each carries. A field STANDING AT ITS DEFAULT is left out, and absent means that default: a layer is drawn, whole, unlocked, blended normally, uncut and untransformed."
       },
+      "canvasGenerationComment": {
+        "title": "Manage image generation comments",
+        "description": "Adds, updates or removes an instruction for the next generation on the image in front. Coordinates and an optional polygon use document pixels. A layer id scopes a new note to that layer; without one it applies to the whole image. canvas.state returns pending comments and their identifiers."
+      },
       "canvasResize": {
         "title": "Resize the image",
         "description": "Changes the frame of the image in front. Rescales the layers with it when asked to, and otherwise leaves them where they are, which is the difference between image size and canvas size."
@@ -1236,6 +1240,10 @@
       "landing": "Where the result goes",
       "draft": "Sentence to rework",
       "text": "Text to translate",
+      "generationInstruction": "Instruction for the next generation",
+      "commentAction": "Add, update or remove",
+      "commentId": "Generation comment identifier",
+      "commentOutline": "Optional polygon as a list of {x, y} document points",
       "documentId": "Document identifier",
       "title": "Title",
       "name": "Name",

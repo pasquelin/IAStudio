@@ -1,12 +1,19 @@
 import { orElse } from '@shared/promises'
-import { Assets, Container, Rectangle, Sprite } from 'pixi.js'
+import { Assets, Container, Graphics, Rectangle, Sprite } from 'pixi.js'
 import { assetUrl } from '@shared/domain/asset'
 import { bytesToBase64 } from '@shared/base64'
 import { reportFailure } from '@/services/diagnostics'
-import { allLayers, layerById, type Rect, type ShapeKind, type Transform } from './canvasState'
+import {
+  allLayers,
+  layerById,
+  type Rect,
+  type ShapeKind,
+  type Transform,
+  WHITE,
+} from './canvasState'
 import { type CanvasSelection, type SelectionShape } from './canvasSelection'
 import { maskKey } from './compositor'
-import type { Size } from '../core/geometry'
+import type { Point, Size } from '../core/geometry'
 import { surfaceTransform } from './canvasEngineSupport1'
 import type { LayerSurface, PaintSurface, LayerPixels } from './canvasEngineSupport1'
 import { released } from './canvasEngineSupport2'
@@ -49,6 +56,61 @@ export abstract class CanvasEditing extends CanvasPixels {
     placed.destroy({ texture: false, textureSource: false })
     holder.destroy()
 
+    return png && bytesToBase64(png)
+  }
+
+  /** One layer as the composited tree draws it, including its ancestors, mask and adjustments. */
+  async layerSnapshot(layerId: string): Promise<string | null> {
+    const surface = this.surfaces.get(layerId)
+    const frame = this.documentRect()
+    const layer = this.state && layerById(this.state, layerId)
+    if (!surface || !frame || !layer || layer.kind === 'group' || layer.kind === 'adjustment') {
+      return null
+    }
+
+    const visible = new Map<string, boolean>()
+    for (const [key, held] of this.surfaces) {
+      visible.set(key, held.sprite.renderable)
+      held.sprite.renderable = key === layerId || key === maskKey(layerId)
+    }
+
+    const restore = (): void => {
+      for (const [key, renderable] of visible) {
+        const held = this.surfaces.get(key)
+        if (held) held.sprite.renderable = renderable
+      }
+    }
+    try {
+      const png = await this.pngOf(
+        this.world,
+        new Rectangle(frame.x, frame.y, frame.width, frame.height),
+        restore,
+      )
+      return png && bytesToBase64(png)
+    } finally {
+      restore()
+    }
+  }
+
+  /** White polygons on black, framed like the document the generation will edit. */
+  async outlineMaskSnapshot(outlines: readonly (readonly Point[])[]): Promise<string | null> {
+    const frame = this.documentRect()
+    if (!frame || outlines.length === 0) return null
+
+    const mask = new Graphics()
+    mask.rect(frame.x, frame.y, frame.width, frame.height)
+    mask.fill({ color: 0x000000 })
+    for (const outline of outlines) {
+      const first = outline[0]
+      if (!first) continue
+      mask.moveTo(first.x, first.y)
+      for (const point of outline.slice(1)) mask.lineTo(point.x, point.y)
+      mask.lineTo(first.x, first.y)
+      mask.fill({ color: WHITE })
+    }
+
+    const png = await this.pngOf(mask, new Rectangle(frame.x, frame.y, frame.width, frame.height))
+    mask.destroy()
     return png && bytesToBase64(png)
   }
 

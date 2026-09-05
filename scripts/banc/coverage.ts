@@ -100,6 +100,7 @@ export const COVERAGE: Record<ActionName, readonly string[]> = {
   'assets.removeFromLibrary': ['43.2'],
 
   'canvas.state': ['39.1', '68.2'],
+  'img.pin': ['70.1', '70.2', '70.3', '70.4'],
   'canvas.resize': ['39.2'],
   'canvas.setPixelArt': ['68.1', '68.9'],
   // 🛑 68.7 is a DECLARED blind spot in one direction: its own decor lays the cell with

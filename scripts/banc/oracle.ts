@@ -37,6 +37,7 @@ import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { materialOf, useMaterials } from '@/stores/materials'
 import type { AnimationTimeline } from '@shared/domain/animation'
 import type { Run } from './run'
+import { generationCommentsOf, useGenerationComments } from '@/stores/generationComments'
 
 export { SECOND }
 export { answerOf, declined, ranStudioCommand, searched, tried } from './oracleActions'
@@ -74,6 +75,9 @@ export const openedFile = (run: Run, ending: string): boolean =>
   documents(run).some(one => one.title.endsWith(ending) || (one.path ?? '').endsWith(ending))
 
 export const front = (run: Run): DocumentDescriptor | null => run.studio.front()
+
+export const generationComments = (run: Run) =>
+  generationCommentsOf(useGenerationComments.getState(), front(run)?.id ?? null)
 
 export const nodes = (run: Run): readonly SceneNode[] =>
   inSpace(run, '3d').flatMap(one => sceneOf(useScenes.getState(), one.id).nodes)

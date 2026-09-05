@@ -32,7 +32,7 @@ function indexFixture(model: string | null): {
       },
       fingerprint: async () => 'fixture',
       embeddingModel: async () => model,
-      count: async () => 297,
+      count: async () => 298,
       close: async () => undefined,
     },
   }
@@ -57,7 +57,7 @@ describe('Action search service', () => {
       onTrouble: vi.fn(),
     })
     await service.search('make a project')
-    expect(fixture.written.count).toBe(297)
+    expect(fixture.written.count).toBe(298)
     expect(fixture.searches[0]).toMatchObject({
       query: 'make a project',
       embedding: { model: 'fixture-model' },

@@ -19,6 +19,9 @@ import {
 import { ImageDocumentBrush } from './ImageDocumentBrush'
 import { ImageDocumentText } from './ImageDocumentText'
 import { ZoomBar } from '../ZoomBar'
+import { ImageDocumentComments } from './ImageDocumentComments'
+import type { GenerationComment } from '../../generationComments'
+import type { Size } from '@/engines/core/geometry'
 
 type Shortcuts = { zoomIn: string; zoomOut: string; fit: string; actual: string }
 type BrushKeys = { smaller: string; larger: string }
@@ -44,6 +47,11 @@ type ImageDocumentViewProps = {
   shortcuts: Shortcuts
   onDrop: (asset: Asset) => void
   checker: string
+  comments: readonly GenerationComment[]
+  commentSize: Size
+  onCommentChange: (id: string, text: string) => void
+  onCommentRemove: (id: string) => void
+  onCommentGenerate?: (id: string) => void
 }
 
 export function ImageDocumentView(props: ImageDocumentViewProps) {
@@ -57,6 +65,14 @@ export function ImageDocumentView(props: ImageDocumentViewProps) {
         className={cn('relative min-w-0 flex-1 overflow-hidden', props.checker)}
       >
         <div ref={hostRef} className="absolute inset-0" style={{ cursor: cursorFor(tool, mode) }} />
+        <ImageDocumentComments
+          comments={props.comments}
+          view={view}
+          size={props.commentSize}
+          onChange={props.onCommentChange}
+          onRemove={props.onCommentRemove}
+          onGenerate={props.onCommentGenerate}
+        />
         {typing && (
           <ImageDocumentText
             documentId={documentId}

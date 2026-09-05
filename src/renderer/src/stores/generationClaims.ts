@@ -18,7 +18,11 @@ import { claimScriptOnSubmit } from './codeGeneration'
  * `Record<DocumentKind, …>` so the compiler asks for the seventh workspace's line rather than a
  * test noticing it later. The generator serves all of them and knows none.
  */
-type Claim = (into: LandingTarget | undefined, role: AiRoleId | null) => (job: Job | null) => void
+type Claim = (
+  into: LandingTarget | undefined,
+  role: AiRoleId | null,
+  imageLayerId: string | undefined,
+) => (job: Job | null) => void
 
 /**
  * The employment is carried beside the destination because one workspace ACTS on it: a claim is
@@ -47,10 +51,11 @@ const CLAIMS: Record<DocumentKind, Claim | null> = {
 export function claimOnSubmit(
   into?: LandingTarget,
   role: AiRoleId | null = null,
+  imageLayerId?: string,
 ): (job: Job | null) => void {
   const claims = Object.values(CLAIMS)
     .filter(claim => claim !== null)
-    .map(claim => claim(into, role))
+    .map(claim => claim(into, role, imageLayerId))
 
   return job => {
     for (const claim of claims) claim(job)

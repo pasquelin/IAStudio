@@ -9,6 +9,12 @@ import { installIn } from '@/stores/document-fixtures'
 import { assistantAction } from '@shared/domain/assistant'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { runAction } from './executor'
+import { generationCommentsOf, useGenerationComments } from '@/stores/generationComments'
+import {
+  GENERATION_COMMENT_OUTLINE_MAX,
+  GENERATION_COMMENT_TEXT_MAX,
+} from '@shared/domain/generationComment'
+import { isRecord } from '@shared/guards'
 
 const DOCUMENT = 'doc-image'
 
@@ -26,6 +32,7 @@ const layerNamed = (name: string): CanvasState['layers'][number] | undefined =>
 
 beforeEach(() => {
   withLayers(pixelLayer('layer-a', 'Fond'), pixelLayer('layer-b', 'Sujet'))
+  useGenerationComments.setState({ comments: {} })
 })
 
 /**
@@ -272,5 +279,143 @@ describe('what a refused mask says', () => {
     expect(outcome).toMatchObject({ ok: false, refusal: 'notFound' })
     expect(detailOf(outcome)).toContain('layer-nowhere')
     expect(detailOf(outcome)).toContain('canvas.state')
+  })
+})
+
+describe('generation comments through the assistant boundary', () => {
+  it('adds a traced instruction to a named layer and exposes it in canvas state', async () => {
+    const added = await runAction('img.pin', {
+      action: 'add',
+      x: 10,
+      y: 20,
+      text: 'Extraire la voiture',
+      layerId: 'layer-b',
+      outline: [
+        { x: 10, y: 20 },
+        { x: 30, y: 20 },
+        { x: 30, y: 40 },
+      ],
+    })
+
+    expect(added).toMatchObject({ ok: true })
+    expect(await runAction('canvas.state', {})).toMatchObject({
+      ok: true,
+      data: {
+        generationComments: [
+          {
+            at: { x: 10, y: 20 },
+            text: 'Extraire la voiture',
+            layerId: 'layer-b',
+          },
+        ],
+      },
+    })
+  })
+
+  it('updates and removes a generation comment before submission', async () => {
+    const added = await runAction('img.pin', {
+      action: 'add',
+      x: 10,
+      y: 20,
+      text: 'Old instruction',
+    })
+    if (!added.ok || !isRecord(added.data) || typeof added.data.commentId !== 'string') {
+      throw new Error('the comment was not added')
+    }
+    const commentId = added.data.commentId
+
+    expect(
+      await runAction('img.pin', {
+        action: 'update',
+        commentId,
+        text: 'New instruction',
+      }),
+    ).toEqual({ ok: true })
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)[0]?.text).toBe(
+      'New instruction',
+    )
+
+    expect(await runAction('img.pin', { action: 'remove', commentId })).toEqual({ ok: true })
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toEqual([])
+  })
+
+  it('refuses an outline too large to render and send safely', async () => {
+    const outcome = await runAction('img.pin', {
+      action: 'add',
+      x: 10,
+      y: 20,
+      text: 'Trace this',
+      outline: Array.from({ length: GENERATION_COMMENT_OUTLINE_MAX + 1 }, (_, x) => ({ x, y: 20 })),
+    })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'badInput' })
+  })
+
+  it('refuses anchors and outlines outside the image or without a polygon', async () => {
+    const inputs = [
+      { action: 'add', x: -1, y: 20, text: 'Outside' },
+      {
+        action: 'add',
+        x: 10,
+        y: 20,
+        text: 'Outside outline',
+        outline: [
+          { x: 10, y: 20 },
+          { x: 30, y: 20 },
+          { x: DEFAULT_CANVAS.width + 1, y: 40 },
+        ],
+      },
+      {
+        action: 'add',
+        x: 10,
+        y: 20,
+        text: 'Open line',
+        outline: [
+          { x: 10, y: 20 },
+          { x: 30, y: 20 },
+        ],
+      },
+      {
+        action: 'add',
+        x: 10,
+        y: 20,
+        text: 'Flat polygon',
+        outline: [
+          { x: 10, y: 20 },
+          { x: 20, y: 20 },
+          { x: 30, y: 20 },
+        ],
+      },
+    ]
+
+    for (const input of inputs) {
+      await expect(runAction('img.pin', input)).resolves.toMatchObject({
+        ok: false,
+        refusal: 'badInput',
+      })
+    }
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toEqual([])
+  })
+
+  it('refuses empty and oversized instructions without storing a comment', async () => {
+    for (const text of ['   ', 'x'.repeat(GENERATION_COMMENT_TEXT_MAX + 1)]) {
+      await expect(
+        runAction('img.pin', { action: 'add', x: 10, y: 20, text }),
+      ).resolves.toMatchObject({ ok: false, refusal: 'badInput' })
+    }
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toEqual([])
+  })
+
+  it('refuses a layer that is not in the open image', async () => {
+    const outcome = await runAction('img.pin', {
+      action: 'add',
+      x: 10,
+      y: 20,
+      text: 'Keep it',
+      layerId: 'missing-layer',
+    })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'notFound' })
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toEqual([])
   })
 })

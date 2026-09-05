@@ -37,6 +37,14 @@ function drawSelection(context: OverlayContext, scene: OverlayScene, phase: numb
   ants(context, () => tracePoints(context, scene, points, true), phase, scene.colors)
 }
 
+function drawCommentDraft(context: OverlayContext, scene: OverlayScene): void {
+  const points = scene.tools.commentDraft
+  if (!points || points.length < 2) return
+  context.strokeStyle = scene.colors.accent
+  tracePoints(context, scene, points, false, false)
+  context.stroke()
+}
+
 function drawPending(context: OverlayContext, scene: OverlayScene): void {
   const pending = scene.tools.pending
   if (!pending) return
@@ -143,6 +151,7 @@ function drawBrush(context: OverlayContext, scene: OverlayScene): void {
 
 export function drawTools(context: OverlayContext, scene: OverlayScene, phase: number): void {
   drawSelection(context, scene, phase)
+  drawCommentDraft(context, scene)
   drawPending(context, scene)
   drawTextBox(context, scene, phase)
   drawCrop(context, scene, phase)

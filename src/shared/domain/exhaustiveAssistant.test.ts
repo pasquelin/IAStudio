@@ -161,6 +161,7 @@ const ALL_ACTIONS: Record<ActionName, true> = {
   'asset.extractTextures': true,
   'assets.removeFromLibrary': true,
   'canvas.state': true,
+  'img.pin': true,
   'canvas.resize': true,
   'canvas.setPixelArt': true,
   'canvas.drawPixels': true,

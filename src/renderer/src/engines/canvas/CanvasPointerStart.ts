@@ -91,6 +91,10 @@ export abstract class CanvasPointerStart extends CanvasHitArea {
 
   private startTool(event: PointerEvent, point: Point): void {
     if (this.tool === 'picker') return this.pick(point)
+    if (this.tool === 'comment') {
+      this.gesture = { kind: 'comment', at: point, points: [point] }
+      return
+    }
     if (this.tool === 'fill') return this.startFill()
     if (UNBUILT_TOOLS.has(this.tool)) return
     if (this.tool === 'move') return this.startMove(point)

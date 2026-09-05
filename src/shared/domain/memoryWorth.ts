@@ -133,6 +133,7 @@ export const MEMORY_WORTH: Record<ActionName, MemoryRule> = {
   'asset.extractTextures': null,
   'assets.removeFromLibrary': null,
   'canvas.state': null,
+  'img.pin': null,
   'canvas.resize': null,
   'canvas.setPixelArt': null,
   'canvas.drawPixels': null,

@@ -4,11 +4,18 @@ import {
   type LayerLocks,
   type Transform as LayerTransform,
   allLayers,
+  layerById,
   canMoveLayer,
   GUIDE_AXES,
   type CanvasState,
   type Guide,
 } from '@/engines/canvas/canvasState'
+import type { Point } from '@/engines/core/geometry'
+import {
+  GENERATION_COMMENT_OUTLINE_MAX,
+  GENERATION_COMMENT_TEXT_MAX,
+} from '@shared/domain/generationComment'
+import { isRecord } from '@shared/guards'
 import { gridOf } from '@/engines/canvas/pixelGrid'
 import {
   addGuide,
@@ -44,6 +51,8 @@ import {
 } from './canvasHandlerContext'
 import { CANVAS_LAYER_HANDLERS } from './canvasLayerHandlers'
 import { CANVAS_PIXEL_HANDLERS } from './canvasPixelHandlers'
+import { useGenerationComments, generationCommentsOf } from '@/stores/generationComments'
+import { commentFor } from '@/features/image/generationComments'
 
 /**
  * The layer stack, driven by value.
@@ -82,6 +91,7 @@ function readState(): ActionOutcome {
       ...(grid === null ? {} : { pixelArt: grid }),
       activeLayerId: open.state.activeLayerId,
       guides: open.state.guides,
+      generationComments: generationCommentsOf(useGenerationComments.getState(), open.documentId),
       // Flattened: a client that had to walk a tree to find a layer id would walk it wrong the
       // first time a group was collapsed.
       /**
@@ -119,6 +129,125 @@ function readState(): ActionOutcome {
           : {}),
       })),
     },
+  }
+}
+
+function pointOf(value: unknown): Point | null {
+  if (!isRecord(value)) return null
+  const x = value.x
+  const y = value.y
+  return typeof x === 'number' && Number.isFinite(x) && typeof y === 'number' && Number.isFinite(y)
+    ? { x, y }
+    : null
+}
+
+function commentOutlineOf(input: Record<string, unknown>): readonly Point[] | null {
+  const value = input.outline
+  if (value === undefined) return null
+  if (!Array.isArray(value)) return null
+  const points = value.map(pointOf)
+  if (
+    points.length < 3 ||
+    points.length > GENERATION_COMMENT_OUTLINE_MAX ||
+    !points.every((point): point is Point => point !== null)
+  ) {
+    return null
+  }
+  const area = points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length]
+    return next ? sum + point.x * next.y - next.x * point.y : sum
+  }, 0)
+  return area === 0 ? null : points
+}
+
+function generationCommentInput(
+  input: Record<string, unknown>,
+  width: number,
+  height: number,
+): { at: Point; text: string; outline: readonly Point[] | null } | null {
+  const x = numberOf(input, 'x')
+  const y = numberOf(input, 'y')
+  const text = textOf(input, 'text')?.trim() ?? ''
+  const outline = commentOutlineOf(input)
+  const inside = (point: Point): boolean =>
+    point.x >= 0 && point.y >= 0 && point.x <= width && point.y <= height
+  if (
+    x === null ||
+    y === null ||
+    text.length === 0 ||
+    text.length > GENERATION_COMMENT_TEXT_MAX ||
+    !inside({ x, y }) ||
+    (input.outline !== undefined && (!outline || !outline.every(inside)))
+  ) {
+    return null
+  }
+  return { at: { x, y }, text, outline }
+}
+
+function addGenerationComment(input: Record<string, unknown>): ActionOutcome {
+  const open = mountedCanvas()
+  if (!open) return refused('wrongSurface', NO_IMAGE)
+  const comment = generationCommentInput(input, open.state.width, open.state.height)
+  if (!comment) {
+    return refused(
+      'badInput',
+      `x and y must sit inside the image, text must not be empty, and outline — when named — must enclose an area with 3 to ${GENERATION_COMMENT_OUTLINE_MAX} finite {x, y} points`,
+    )
+  }
+
+  const namedLayerId = textOf(input, 'layerId')
+  if (namedLayerId && !layerById(open.state, namedLayerId)) {
+    return refused('notFound', noSuchLayer(namedLayerId))
+  }
+  const commentId = newId()
+  useGenerationComments.getState().add(open.documentId, {
+    ...commentFor(commentId, comment.at, namedLayerId),
+    text: comment.text,
+    ...(comment.outline ? { outline: comment.outline } : {}),
+  })
+  return { ok: true, data: { commentId } }
+}
+
+function updateGenerationComment(input: Record<string, unknown>): ActionOutcome {
+  const open = mountedCanvas()
+  if (!open) return refused('wrongSurface', NO_IMAGE)
+  const commentId = textOf(input, 'commentId') ?? ''
+  const text = textOf(input, 'text')?.trim() ?? ''
+  const comments = generationCommentsOf(useGenerationComments.getState(), open.documentId)
+  if (!comments.some(comment => comment.id === commentId)) {
+    return refused('notFound', `no generation comment "${commentId}" in the image in front`)
+  }
+  if (text.length === 0 || text.length > GENERATION_COMMENT_TEXT_MAX) {
+    return refused('badInput', `text must contain 1 to ${GENERATION_COMMENT_TEXT_MAX} characters`)
+  }
+
+  useGenerationComments.getState().update(open.documentId, commentId, text)
+  return { ok: true }
+}
+
+function removeGenerationComment(input: Record<string, unknown>): ActionOutcome {
+  const open = mountedCanvas()
+  if (!open) return refused('wrongSurface', NO_IMAGE)
+  const commentId = textOf(input, 'commentId') ?? ''
+  const comments = generationCommentsOf(useGenerationComments.getState(), open.documentId)
+  if (!comments.some(comment => comment.id === commentId)) {
+    return refused('notFound', `no generation comment "${commentId}" in the image in front`)
+  }
+
+  useGenerationComments.getState().remove(open.documentId, commentId)
+  return { ok: true }
+}
+
+function generationComment(input: Record<string, unknown>): ActionOutcome {
+  switch (oneOf(input, 'action', ['add', 'update', 'remove'])) {
+    case 'add':
+      return addGenerationComment(input)
+    case 'update':
+      return updateGenerationComment(input)
+    case 'remove':
+      return removeGenerationComment(input)
+    default:
+      return refused('badInput', 'action wants one of: add, update, remove')
   }
 }
 
@@ -254,6 +383,7 @@ export const CANVAS_HANDLERS: ActionHandlers = {
   ...CANVAS_LAYER_HANDLERS,
   ...CANVAS_PIXEL_HANDLERS,
   'canvas.state': readState,
+  'img.pin': generationComment,
   'canvas.resize': resize,
   'canvas.crop': crop,
   'canvas.flipOrRotate': input => {

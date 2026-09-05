@@ -306,3 +306,45 @@ describe('a stroke on a pixel grid', () => {
     ])
   })
 })
+
+describe('generation comments', () => {
+  it('places a point comment where the canvas was clicked', async () => {
+    const { host, comments } = await mounted(undefined, 'comment')
+
+    press(host, 40, 80)
+    release(40, 80)
+
+    expect(comments).toEqual([{ at: { x: 40, y: 80 } }])
+  })
+
+  it('keeps the area traced before the comment is opened', async () => {
+    const { host, comments } = await mounted(undefined, 'comment')
+
+    press(host, 40, 80)
+    drag(host, 80, 80)
+    drag(host, 80, 120)
+    release(40, 120)
+
+    expect(comments).toEqual([
+      {
+        at: { x: 40, y: 80 },
+        outline: [
+          { x: 40, y: 80 },
+          { x: 80, y: 80 },
+          { x: 80, y: 120 },
+        ],
+      },
+    ])
+  })
+
+  it('keeps a bounded long outline attached to the pointer', async () => {
+    const { host, comments } = await mounted(undefined, 'comment')
+
+    press(host, 40, 80)
+    for (let x = 41; x <= 640; x += 1) drag(host, x, 80)
+    release(640, 80)
+
+    expect(comments[0]?.outline?.length).toBeLessThanOrEqual(512)
+    expect(comments[0]?.outline?.at(-1)).toEqual({ x: 640, y: 80 })
+  })
+})

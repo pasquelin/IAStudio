@@ -35,7 +35,8 @@ export type GenerationLanding = {
   /** Where a catalogue read that fails is journalled — one space per scope, or the reader is sent
    * to the wrong one. */
   scope: LogScope
-  land: (documentId: string, asset: Asset) => void
+  land: (documentId: string, asset: Asset, jobId: string) => void
+  onSettled?: (jobId: string) => void
 }
 
 /** Hands over the jobs that SUCCEEDED, each with the document it was claimed for. */
@@ -140,15 +141,17 @@ function landRows(
   accepts: (asset: Asset) => boolean,
   takes: GenerationLanding['takes'],
   land: GenerationLanding['land'],
+  onSettled: GenerationLanding['onSettled'],
 ): void {
   for (const [jobId, claimed] of settled) {
     const into = landingInto(claimed)
     for (const asset of rows) {
       if (asset.jobId !== jobId || !accepts(asset)) continue
       if (into === null) void openGeneratedAsset(asset)
-      else land(into, asset)
+      else land(into, asset, jobId)
       if (takes === 'first') break
     }
+    onSettled?.(jobId)
   }
 }
 
@@ -169,6 +172,7 @@ export function createGenerationLanding({
   takes,
   scope,
   land,
+  onSettled,
 }: GenerationLanding): LandingChannel {
   const claims = createLandingClaims(kind)
 
@@ -181,8 +185,11 @@ export function createGenerationLanding({
    * collector wrote, so the two are joined on `jobId` — the only identifier both sides share.
    */
   const settleInto = async (settled: ReadonlyMap<string, string | null>): Promise<void> => {
+    const finish = (): void => {
+      for (const jobId of settled.keys()) onSettled?.(jobId)
+    }
     const bridge = getBridge()
-    if (!bridge) return
+    if (!bridge) return finish()
 
     // Asked of the catalogue directly, never of `useAssets.items`. Two reasons, and each one
     // loses the result on its own: that list is FILTERED by the space in front — a generation
@@ -197,14 +204,14 @@ export function createGenerationLanding({
       rows = await bridge.assets.search({ types: [...types], limit: SETTLE_LIMIT })
     } catch (error) {
       reportFailure(scope, kind, error)
-      return
+      return finish()
     }
 
-    if (!rows) return
+    if (!rows) return finish()
     // The shelf still has to hear about them: it is what the browser shows.
     void useAssets.getState().refresh()
 
-    landRows(settled, rows, accepts, takes, land)
+    landRows(settled, rows, accepts, takes, land, onSettled)
   }
 
   return {

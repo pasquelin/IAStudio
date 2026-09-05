@@ -61,6 +61,7 @@ export type ToolChrome = {
   pending: PendingShape | null
   selection: CanvasSelection
   brushMark: BrushMark | null
+  commentDraft: readonly Point[] | null
 }
 export type OverlayScene = {
   viewport: Viewport

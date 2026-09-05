@@ -42,6 +42,7 @@ class Container {
   readonly pivot = new Pair()
   readonly skew = new Pair()
   visible = true
+  renderable = true
   alpha = 1
   rotation = 0
   blendMode = 'normal'

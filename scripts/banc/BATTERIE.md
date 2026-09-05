@@ -1031,3 +1031,13 @@ rien d'autre.
 - [ ] « Vide le cache d’optimisation de cette scène. »
 - [ ] « Optimise tout sauf Cube Test. »
 - [ ] « Force les deux sphères à utiliser des instances. »
+
+## 70. Annoter une image pour la prochaine génération
+
+Ces notes sont un brouillon de session : elles apparaissent sur l’image et dans le générateur,
+visent l’image entière ou un calque, puis disparaissent après l’envoi.
+
+- [ ] « Ajoute une note pour la prochaine génération : rends l'arrière-plan nocturne. »
+- [ ] « Sur le calque Bateau, note pour la génération : garde exactement cette coque. »
+- [ ] « Remplace la note de génération par : éclaire seulement l'arrière-plan. »
+- [ ] « Retire la note de génération en attente. »

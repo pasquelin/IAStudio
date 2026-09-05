@@ -61,6 +61,7 @@ export type ActionName =
   | 'asset.extractTextures'
   | 'assets.removeFromLibrary'
   | 'canvas.state'
+  | 'img.pin'
   | 'canvas.resize'
   | 'canvas.setPixelArt'
   | 'canvas.drawPixels'

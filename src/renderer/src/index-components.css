@@ -40,6 +40,11 @@
   /* Darkened from the dark theme's amber: #e0a350 on white carries no text and reads as beige. */
   --color-warning: #885606;
   --color-warning-content: #ffffff;
+  --color-comment-note: #fff0a6;
+  --color-comment-note-border: #c5a548;
+  --color-comment-note-content: #2f2915;
+  --color-comment-note-fold: #dcc15c;
+  --color-comment-mark: #5978e8;
   /* Same reason: the dark theme's coral is a highlight on black and a pastel on white. */
   --color-error: #b72e27;
   --color-error-content: #ffffff;
@@ -159,6 +164,10 @@
      exception: these are the only targets on their line, and the row itself answers everywhere
      they do not. Chosen on 2026-08-14, not derived. */
   --sc-control-inline: 20px;
+  --sc-comment-outline: 3px;
+  --sc-comment-note-width: calc(220px * var(--sc-font-scale));
+  --sc-comment-note-text: calc(44px * var(--sc-font-scale));
+  --sc-comment-note-fold: 10px;
   /* The rail a slider runs on, and the handle that runs along it. Gauges rather than classes
      because the browser's own slider honours neither: its track is white on one field and blue
      on the next, at a thickness nothing here chose. `slider-handle` drops it and the rail is
@@ -303,6 +312,27 @@
   --sc-spectrum: 72px;
   --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
+}
+
+.generation-comment-note {
+  width: var(--sc-comment-note-width);
+  min-height: var(--sc-comment-note-text);
+  gap: calc(var(--sc-control-inline) / 4);
+  padding: calc(var(--sc-control-inline) / 2);
+  border-radius: var(--radius-sc-sm);
+  box-shadow: var(--sc-shadow-floating);
+}
+
+.generation-comment-note::after {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 0;
+  height: 0;
+  border-width: var(--sc-comment-note-fold) var(--sc-comment-note-fold) 0 0;
+  border-style: solid;
+  border-color: var(--color-comment-note-fold) transparent transparent transparent;
+  content: '';
 }
 
 :root[data-density='compact'] {

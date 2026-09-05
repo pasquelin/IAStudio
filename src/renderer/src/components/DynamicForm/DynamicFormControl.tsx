@@ -11,6 +11,7 @@ import { AssetDropList } from '../AssetDropList'
 import { fieldHandle } from '../scHandle'
 import { CHECKBOX, FIELD, FIELD_FILL } from '../styles'
 import { ToolButton } from '../ToolButton'
+import { isGenerationCanvasSource } from '@shared/domain/generationComment'
 export type DynamicFormControlProps = {
   field: FieldDescriptor
   id: string
@@ -116,6 +117,11 @@ function assetControl(input: ControlInput, t: Translate) {
       id={input.id}
       registration={input.registration}
       initial={initialAssetId(input.initial)}
+      implicitLabel={
+        isGenerationCanvasSource(initialAssetId(input.initial))
+          ? t('generation.currentImage')
+          : undefined
+      }
       placeholder={t(
         input.field.kind === 'mesh' ? 'generation.dropModel' : 'generation.dropPicture',
       )}

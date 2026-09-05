@@ -1,5 +1,5 @@
 import { describe, expect, it, onTestFinished } from 'vitest'
-import { DEFAULT_CANVAS, groupLayer, pixelLayer, type CanvasState } from './canvasState'
+import { DEFAULT_CANVAS, groupLayer, pixelLayer, textLayer, type CanvasState } from './canvasState'
 
 /**
  * jsdom has no WebGL context, so Pixi is doubled. What is tested here is what the engine
@@ -313,6 +313,46 @@ describe('flattening the document', () => {
     const { engine } = await mounted()
 
     await expect(engine.maskSnapshot('layer-1')).resolves.toBeNull()
+  })
+
+  it('extracts one pixel layer without the rest of the document', async () => {
+    const { engine } = await mounted()
+
+    await expect(engine.layerSnapshot('layer-1')).resolves.toBe(
+      btoa(String.fromCharCode(...extractedBytes())),
+    )
+    expect(canvasGpu().extracted[0]?.frame).toBeDefined()
+  })
+
+  it('extracts a drawn layer through its group and restores the visible stack', async () => {
+    const { engine } = await mounted({
+      ...DEFAULT_CANVAS,
+      layers: [
+        pixelLayer('background', 'Background'),
+        groupLayer('group', 'Labels', [textLayer('caption', 'Hello', { x: 20, y: 30 })]),
+      ],
+      activeLayerId: 'caption',
+    })
+
+    const snapshot = engine.layerSnapshot('caption')
+    expect(canvasGpu().sprites.every(sprite => sprite.renderable)).toBe(true)
+    await expect(snapshot).resolves.toBe(btoa(String.fromCharCode(...extractedBytes())))
+    expect(canvasGpu().sprites.every(sprite => sprite.renderable)).toBe(true)
+  })
+
+  it('turns comment outlines into one document-sized mask', async () => {
+    const { engine } = await mounted()
+
+    await expect(
+      engine.outlineMaskSnapshot([
+        [
+          { x: 10, y: 20 },
+          { x: 30, y: 20 },
+          { x: 30, y: 40 },
+        ],
+      ]),
+    ).resolves.toBe(btoa(String.fromCharCode(...extractedBytes())))
+    expect(canvasGpu().extracted[0]?.frame).toBeDefined()
   })
 })
 

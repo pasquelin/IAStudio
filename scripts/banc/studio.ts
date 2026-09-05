@@ -19,6 +19,7 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/sceneEngines'
 import { createGameStage } from '@/game/gameStage'
 import { lendPictureMeasure } from '@/features/image/pictureSize'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
+import { useGenerationComments } from '@/stores/generationComments'
 import { useAssistant } from '@/stores/assistant'
 import { useJobs } from '@/stores/jobs'
 import { useModels } from '@/stores/models'
@@ -188,6 +189,7 @@ async function resetBench(shell: MemoryShell): Promise<void> {
   useProject.setState({ project: shell.projectAt('/projets/Démo'), known: true })
   resetDocumentStoresForTests()
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
+  useGenerationComments.setState({ comments: {} })
   useJobs.setState({ jobs: [], bodies: {} })
   useModels.setState({ selected: {}, preset: {} })
   useTasks.setState({ running: {} })

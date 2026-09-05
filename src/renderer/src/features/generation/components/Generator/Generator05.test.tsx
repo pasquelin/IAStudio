@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 
@@ -10,7 +10,7 @@ import { useAiModels } from '@/stores/aiModels'
 
 import userEvent from '@testing-library/user-event'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 
@@ -20,7 +20,9 @@ import { withQueries } from '@/features/shell/components/query-fixtures'
 
 import { installFakeBridge } from '@/services/fakeBridge'
 
-import { installCanvas } from '@/stores/canvas-fixtures'
+import { canvasHostStub, installCanvas } from '@/stores/canvas-fixtures'
+import { holdCanvas } from '@/features/image/canvasHosts'
+import { generationCommentsOf, useGenerationComments } from '@/stores/generationComments'
 
 import { useDocuments } from '@/stores/documents'
 
@@ -41,6 +43,7 @@ import { useSettings } from '@/stores/settings'
 import { chooseModels } from '@/stores/models-fixtures'
 
 import { Generator } from './Generator'
+import { mountedGenerator } from '@/features/assistant/generatorBridge'
 
 export const DOCUMENT = 'doc-1'
 
@@ -49,6 +52,14 @@ export const PICTURE: FieldDescriptor = {
   kind: 'image',
   label: 'Image',
   required: true,
+}
+
+const PROMPT: FieldDescriptor = {
+  key: 'prompt',
+  kind: 'longText',
+  label: 'Prompt',
+  required: false,
+  promptSpark: true,
 }
 
 export const DESCRIPTORS: Record<string, ModelDescriptor> = {
@@ -111,6 +122,7 @@ describe('a generation in flight', () => {
     useGeneration.setState({ forcedCapability: aiRoleId('image', 'txt2img') })
     chooseModels({ [aiRoleId('image', 'txt2img')]: 'model_flux' })
     useJobs.setState({ jobs: [], bodies: {} })
+    useGenerationComments.setState({ comments: {} })
 
     installFakeBridge({
       provider: {
@@ -128,6 +140,188 @@ describe('a generation in flight', () => {
     await userEvent.type(await screen.findByLabelText(/Image/), 'asset-source')
     await userEvent.click(screen.getByRole('button', { name: /Générer/ }))
   }
+
+  it('uses pending image comments once, then clears them after submission', async () => {
+    useGenerationComments.getState().add(DOCUMENT, {
+      id: 'note-1',
+      at: { x: 10, y: 20 },
+      text: 'Keep the subject',
+    })
+    const snapshot = vi.fn(async () => 'COMMENTED-IMAGE')
+    const release = holdCanvas(DOCUMENT, () => canvasHostStub({ snapshot }))
+    onTestFinished(release)
+    installFakeBridge({
+      provider: {
+        describeModel: async () => ({
+          ...descriptor('model_flux', 'Flux', 'image'),
+          fields: [PROMPT, PICTURE],
+        }),
+        uploadAsset: async () => 'commented-source',
+        generate: async () => job({ id: 'job_1', status: 'running', progress: 0.4 }),
+      },
+    })
+    renderPanel()
+
+    expect(await screen.findByLabelText(/Image/)).toHaveValue('Image ouverte')
+    expect(snapshot).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: /Générer/ }))
+    await screen.findByText('En cours')
+
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toEqual([])
+  })
+
+  it('submits and consumes only the comment launched from its post-it', async () => {
+    useGenerationComments.getState().add(DOCUMENT, {
+      id: 'launched-note',
+      at: { x: 10, y: 20 },
+      text: 'Remove the reflection',
+    })
+    useGenerationComments.getState().add(DOCUMENT, {
+      id: 'later-note',
+      at: { x: 30, y: 40 },
+      text: 'Keep this for later',
+    })
+    const release = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({ snapshot: async () => 'COMMENTED-IMAGE' }),
+    )
+    onTestFinished(release)
+    let sentBody: Record<string, unknown> = {}
+    const generate = vi.fn(async (_modelId: string, body: Record<string, unknown>) => {
+      sentBody = body
+      return job({ id: 'job_1', status: 'running', progress: 0.4 })
+    })
+    installFakeBridge({
+      provider: {
+        describeModel: async () => ({
+          ...descriptor('model_flux', 'Flux', 'image'),
+          fields: [PROMPT, PICTURE],
+        }),
+        uploadAsset: async () => 'commented-source',
+        generate,
+      },
+    })
+    renderPanel()
+
+    await screen.findByDisplayValue('Image ouverte')
+    await waitFor(() => expect(mountedGenerator()?.submitComment).toBeTypeOf('function'))
+    await act(async () => {
+      await mountedGenerator()?.submitComment?.(DOCUMENT, 'launched-note')
+    })
+
+    expect(generate).toHaveBeenCalledWith(
+      'model_flux',
+      expect.objectContaining({
+        prompt: expect.stringContaining('Remove the reflection'),
+      }),
+      'apply',
+    )
+    expect(sentBody).not.toEqual(
+      expect.objectContaining({ prompt: expect.stringContaining('Keep this for later') }),
+    )
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toEqual([
+      expect.objectContaining({ id: 'later-note' }),
+    ])
+  })
+
+  it('offers no post-it submission when the active plan blocks generation', async () => {
+    useGenerationComments.getState().add(DOCUMENT, {
+      id: 'note-1',
+      at: { x: 10, y: 20 },
+      text: 'Remove the reflection',
+    })
+    installFakeBridge({
+      provider: {
+        describeModel: async () => ({
+          ...descriptor('model_flux', 'Flux', 'image'),
+          fields: [PROMPT, PICTURE],
+          requiredPlanLevel: 50,
+        }),
+        plan: async () => ({ name: 'cu-basic', level: 25 }),
+      },
+    })
+    renderPanel()
+
+    await screen.findByText(/cu-basic/)
+    await waitFor(() => expect(mountedGenerator()?.submitComment).toBeUndefined())
+  })
+
+  it('keeps a note added while the submitted snapshot is uploading', async () => {
+    useGenerationComments.getState().add(DOCUMENT, {
+      id: 'submitted-note',
+      at: { x: 10, y: 20 },
+      text: 'Keep the subject',
+    })
+    const release = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({ snapshot: async () => 'COMMENTED-IMAGE' }),
+    )
+    onTestFinished(release)
+    let finishUpload = (_assetId: string): void => undefined
+    const upload = new Promise<string>(resolve => {
+      finishUpload = resolve
+    })
+    const uploadAsset = vi.fn(async () => await upload)
+    installFakeBridge({
+      provider: {
+        describeModel: async () => ({
+          ...descriptor('model_flux', 'Flux', 'image'),
+          fields: [PROMPT, PICTURE],
+        }),
+        uploadAsset,
+        generate: async () => job({ id: 'job_1', status: 'running', progress: 0.4 }),
+      },
+    })
+    renderPanel()
+
+    expect(await screen.findByLabelText(/Image/)).toHaveValue('Image ouverte')
+    await userEvent.click(screen.getByRole('button', { name: /Générer/ }))
+    await waitFor(() => expect(uploadAsset).toHaveBeenCalled())
+    useGenerationComments.getState().update(DOCUMENT, 'submitted-note', 'Keep the new wording')
+    useGenerationComments.getState().add(DOCUMENT, {
+      id: 'later-note',
+      at: { x: 30, y: 40 },
+      text: 'Make the sky brighter',
+    })
+    finishUpload('commented-source')
+    await screen.findByText('En cours')
+
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toEqual([
+      expect.objectContaining({ id: 'submitted-note', text: 'Keep the new wording' }),
+      expect.objectContaining({ id: 'later-note' }),
+    ])
+  })
+
+  it('keeps comments and submits nothing when their image upload fails', async () => {
+    useGenerationComments.getState().add(DOCUMENT, {
+      id: 'note-1',
+      at: { x: 10, y: 20 },
+      text: 'Keep the subject',
+    })
+    const release = holdCanvas(DOCUMENT, () =>
+      canvasHostStub({ snapshot: async () => 'COMMENTED-IMAGE' }),
+    )
+    onTestFinished(release)
+    const generate = vi.fn(async () => job({ id: 'job_1', status: 'running', progress: 0.4 }))
+    installFakeBridge({
+      provider: {
+        describeModel: async () => ({
+          ...descriptor('model_flux', 'Flux', 'image'),
+          fields: [PROMPT, PICTURE],
+        }),
+        uploadAsset: async () => {
+          throw new Error('upload failed')
+        },
+        generate,
+      },
+    })
+    renderPanel()
+
+    await screen.findByDisplayValue('Image ouverte')
+    await userEvent.click(screen.getByRole('button', { name: /Générer/ }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Générer/ })).toBeEnabled())
+
+    expect(generate).not.toHaveBeenCalled()
+    expect(generationCommentsOf(useGenerationComments.getState(), DOCUMENT)).toHaveLength(1)
+  })
 
   /**
    * 🛑 Asked BEFORE the run, never after: the answer decides where minutes of compute land, and

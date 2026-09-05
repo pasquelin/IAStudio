@@ -9,6 +9,7 @@ import { onCellBoundary } from './pixelGrid'
 import { toDocument } from './viewport'
 import type { BrushTarget } from './canvasEngineSupport1'
 import { CanvasPainting } from './CanvasPainting'
+import { GENERATION_COMMENT_OUTLINE_MAX } from '@shared/domain/generationComment'
 
 export abstract class CanvasPointerTracking extends CanvasPainting {
   protected abstract hovering(host: Point): void
@@ -49,6 +50,11 @@ export abstract class CanvasPointerTracking extends CanvasPainting {
         return this.trackMove(gesture, point)
       case 'select':
         return this.trackSelection(gesture, point, constrained)
+      case 'comment':
+        if (gesture.points.length < GENERATION_COMMENT_OUTLINE_MAX) gesture.points.push(point)
+        else gesture.points[gesture.points.length - 1] = point
+        this.overlay.invalidate()
+        return
       case 'paint':
         return this.trackPaint(gesture, point)
       case 'handle':

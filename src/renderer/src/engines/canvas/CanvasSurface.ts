@@ -5,7 +5,7 @@ import { tokenAsFont } from '../core/palette'
 import { type Rect, onPixelGrid } from './canvasState'
 import { selectionOutline } from './canvasSelection'
 import { type Corners } from './handles'
-import { RULER_SIZE, type OverlayScene, type PendingShape } from './CanvasOverlay'
+import { RULER_SIZE, type OverlayScene, type PendingShape, type ToolChrome } from './CanvasOverlay'
 import { fitTo, onDevicePixels, type Viewport } from './viewport'
 import { strokeWidth } from './canvasEngineSupport1'
 import { RULER_FAMILY, RULER_FONT_SIZE, readColors, released } from './canvasEngineSupport2'
@@ -166,6 +166,21 @@ export abstract class CanvasSurface extends CanvasEditing {
     )
   }
 
+  private toolChrome(): ToolChrome {
+    return {
+      crop: this.cropping,
+      handles: this.activeCorners(),
+      lit: this.hover?.kind === 'handle' ? this.hover.id : null,
+      pending: this.pendingShape(),
+      textBox: this.textBox,
+      overflowing: this.overflowing.has(this.state?.activeLayerId ?? ''),
+      selection: this.selection,
+      brushMark:
+        this.pointer && this.ringed() && !this.refuses() ? this.brushMark(this.pointer) : null,
+      commentDraft: this.gesture.kind === 'comment' ? this.gesture.points : null,
+    }
+  }
+
   protected scene(): OverlayScene | null {
     if (!this.state) return null
 
@@ -188,18 +203,7 @@ export abstract class CanvasSurface extends CanvasEditing {
       // Handed over whole rather than gated here: every painter already returns on nothing to
       // draw, and a gate repeating those guards is one a new decoration gets forgotten from —
       // silently, since nothing would fail, it would simply never appear.
-      tools: {
-        crop: this.cropping,
-        handles: this.activeCorners(),
-        lit: this.hover?.kind === 'handle' ? this.hover.id : null,
-        pending: this.pendingShape(),
-        textBox: this.textBox,
-        overflowing: this.overflowing.has(this.state.activeLayerId ?? ''),
-        selection: this.selection,
-        // Not while the tool is refusing: a ring is a promise that a dab lands there.
-        brushMark:
-          this.pointer && this.ringed() && !this.refuses() ? this.brushMark(this.pointer) : null,
-      },
+      tools: this.toolChrome(),
     }
   }
 

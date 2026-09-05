@@ -1,5 +1,6 @@
 import { action, RELATIVE_FIELD, type AssistantAction } from './assistantAction'
 import { BLEND_MODES } from './canvasBlend'
+import { GENERATION_COMMENT_TEXT_MAX } from './generationComment'
 
 /**
  * The image workspace, driven by value rather than by gesture.
@@ -323,7 +324,50 @@ const CANVAS_ACTIONS_FIRST: readonly AssistantAction[] = [
   }),
 ]
 
+const CANVAS_COMMENT_ACTIONS: readonly AssistantAction[] = [
+  action({
+    name: 'img.pin',
+    titleKey: 'assistant.actions.canvasGenerationComment.title',
+    descriptionKey: 'assistant.actions.canvasGenerationComment.description',
+    commitment: 'none',
+    repeatable: true,
+    reach: 'mcp',
+    fields: [
+      {
+        key: 'action',
+        kind: 'choice',
+        labelKey: 'assistant.fields.commentAction',
+        required: true,
+        options: ['add', 'update', 'remove'],
+      },
+      { key: 'x', kind: 'number', labelKey: 'assistant.fields.x', required: false },
+      { key: 'y', kind: 'number', labelKey: 'assistant.fields.y', required: false },
+      {
+        key: 'text',
+        kind: 'longText',
+        labelKey: 'assistant.fields.generationInstruction',
+        required: false,
+        max: GENERATION_COMMENT_TEXT_MAX,
+      },
+      { ...LAYER, required: false },
+      {
+        key: 'outline',
+        kind: 'raw',
+        labelKey: 'assistant.fields.commentOutline',
+        required: false,
+      },
+      {
+        key: 'commentId',
+        kind: 'text',
+        labelKey: 'assistant.fields.commentId',
+        required: false,
+      },
+    ],
+  }),
+]
+
 export const CANVAS_ACTIONS: readonly AssistantAction[] = [
   ...CANVAS_ACTIONS_FIRST,
   ...CANVAS_ACTIONS_MORE,
+  ...CANVAS_COMMENT_ACTIONS,
 ]

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CanvasEngine } from '@/engines/canvas/CanvasEngine'
+import type { Point } from '@/engines/core/geometry'
 import { registerFace } from '@/engines/canvas/canvasFonts'
 import type { BrushSettings } from '@/engines/canvas/brush'
 import { addLayer, cropToRect, resizeCaption } from '@/engines/canvas/commands'
@@ -24,6 +25,7 @@ type EngineHandle = {
 export function useImageDocumentEngine(
   documentId: string,
   setBrush: Dispatch<SetStateAction<BrushSettings>>,
+  onComment: (at: Point, outline?: readonly Point[]) => void,
 ): EngineHandle {
   const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
@@ -43,6 +45,7 @@ export function useImageDocumentEngine(
       onPixelsDropped: pixels.drop,
       onViewport: viewport => views().setViewport(documentId, viewport),
       onSelection: selection => views().setSelection(documentId, selection),
+      onComment,
       onHost: size => views().setHost(documentId, size),
       onText: asked => {
         if ('layerId' in asked) return setEditing(asked.layerId)
@@ -74,7 +77,7 @@ export function useImageDocumentEngine(
       created.dispose()
       engineRef.current = null
     }
-  }, [documentId, caption, shapeName, setBrush])
+  }, [documentId, caption, shapeName, setBrush, onComment])
 
   return { hostRef, engineRef, editing, setEditing }
 }

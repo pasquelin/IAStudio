@@ -241,6 +241,10 @@
         "title": "Lire l’image en cours d’édition",
         "description": "Répond l’image en avant — sa taille, sa résolution, ses repères, et chaque calque de la pile à plat : identifiant, nom, sorte, et ce que chacun porte. Un champ À SON DÉFAUT est omis, et son absence signifie ce défaut : un calque est visible, opaque, déverrouillé, en fondu normal, non rogné et non transformé."
       },
+      "canvasGenerationComment": {
+        "title": "Gérer les commentaires de génération sur l’image",
+        "description": "Ajoute, modifie ou retire une instruction pour la prochaine génération sur l’image devant. Les coordonnées et le polygone facultatif sont en pixels du document. Un identifiant de calque limite une nouvelle note à ce calque ; sans lui, elle porte sur l’image entière. canvas.state rend les commentaires en attente et leurs identifiants."
+      },
       "canvasResize": {
         "title": "Redimensionner l’image",
         "description": "Change le cadre de l’image devant. Redimensionne les calques avec lui quand on le demande, et les laisse en place sinon, ce qui est toute la différence entre taille de l’image et taille du canevas."
@@ -1236,6 +1240,10 @@
       "landing": "Où va le résultat",
       "draft": "Phrase à retravailler",
       "text": "Texte à traduire",
+      "generationInstruction": "Instruction pour la prochaine génération",
+      "commentAction": "Ajouter, modifier ou retirer",
+      "commentId": "Identifiant du commentaire de génération",
+      "commentOutline": "Polygone facultatif, liste de points {x, y} du document",
       "documentId": "Identifiant du document",
       "title": "Titre",
       "name": "Nom",
