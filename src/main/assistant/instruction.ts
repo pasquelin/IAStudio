@@ -1,6 +1,5 @@
 import {
   ACTION_REGISTRY,
-  DISCOVERY_ACTION,
   findActions,
   MOST_LOADED,
   type AssistantThought,
@@ -12,11 +11,12 @@ import { linesWithin, STATE_MAX } from './studioState'
 import {
   actionBlock,
   allNames,
-  CONTINUING,
+  continuingText,
   FORMAT,
   manualPrinted,
   manualText,
   MEMORY_CALL,
+  MISSION_RULES,
   namesPrinted,
   roleWith,
   RULES,
@@ -27,8 +27,12 @@ import {
 
 export { recentHistory } from './instructionCatalogue'
 export type BriefingParts = {
-  catalogue?: readonly ActionName[]
-  /** A round after the first on one sentence — see `CONTINUING`, which is what it adds. */
+  /**
+   * A mission round: `context` is then the mission JSON, and `MISSION_RULES` tells the model how
+   * to read it. The names are shown whole either way — the candidates only pick the MANUALS.
+   */
+  mission?: boolean
+  /** A round after the first on one sentence — see `continuingText`, which is what it adds. */
   continuing?: boolean
   /** The spaces nothing can generate in, so the model says so before promising a picture. */
   notReady?: readonly string[]
@@ -75,9 +79,9 @@ export type BriefingParts = {
 /**
  * What the model is shown, and what an answer is then held to.
  *
- * `allowed` is what this bounded catalogue names, while `loaded` is narrower still: what the
- * model has the FIELDS of. `answeredTurn` never executes a registered action outside either set;
- * it opens its manual and asks for the plan again first.
+ * `allowed` is every name the registry declares — printed whole on every door, 4 225 characters
+ * — while `loaded` is narrower: what the model has the FIELDS of. `answeredTurn` never executes
+ * an action outside `loaded`; it opens its manual and asks for the plan again first.
  */
 export type Briefing = {
   readonly text: string
@@ -194,17 +198,17 @@ function composed(
   return [
     roleWith(one.rules),
     '',
-    ...labelled('Project context:', parts.context),
+    ...labelled(parts.mission ? 'Mission:' : 'Project context:', parts.context),
     ...labelled('Folders on this machine:', parts.folders),
     ...plain(state),
     ...notReadyLines(parts.notReady),
     'Catalogue:',
-    namesPrinted(parts.catalogue),
+    namesPrinted(),
     '',
     ...labelled(MANUAL_HEAD, manual),
     ...labelled('Targets in the open document:', targets.map(targetLine).join('\n')),
     ...plain(found),
-    ...plain(parts.continuing ? CONTINUING : ''),
+    ...plain(parts.continuing ? continuingText(parts.mission === true) : ''),
     FORMAT,
   ].join('\n')
 }
@@ -291,18 +295,10 @@ function briefingOf(one: Composition): Briefing {
   const opened = (one.parts.opened ?? asked).filter(name => held.has(name))
   return {
     text: written.text,
-    allowed: one.parts.catalogue ? new Set([...one.parts.catalogue, DISCOVERY_ACTION]) : allNames(),
+    allowed: allNames(),
     loaded: written.held,
     opened,
-    withLoaded: names => {
-      const askedForNames = askedFor(one, names)
-      const expanded = one.parts.catalogue
-        ? withParts(askedForNames, {
-            catalogue: [...new Set([...one.parts.catalogue, ...names])],
-          })
-        : askedForNames
-      return briefingOf(expanded)
-    },
+    withLoaded: names => briefingOf(askedFor(one, names)),
     expand: one.found === undefined ? query => expandedWith(one, query) : null,
     narrow: one.narrow,
   }
@@ -318,12 +314,16 @@ export function studioBriefing(parts: BriefingParts): Briefing {
   // its state and its context instead, which are what the wide set would take.
   if (parts.room < wideFloor()) return narrow()
 
-  const wide = briefingOf({ parts, rules: WIDE_ALL, narrow })
+  const wide = briefingOf({ parts, rules: rulesFor(WIDE_ALL, parts), narrow })
 
   return wide.text.length > parts.room ? narrow() : wide
 }
 
 const WIDE_ALL: readonly string[] = [...RULES, ...WIDE_RULES]
+
+/** The mission rules ride with BOTH sets: a door too tight for the wide ones still reads a JSON. */
+const rulesFor = (rules: readonly string[], parts: BriefingParts): readonly string[] =>
+  parts.mission ? [...rules, ...MISSION_RULES] : rules
 
 /**
  * The room the wide rules ASK FOR: their own bare briefing, plus what has to fit beside it — the
@@ -352,7 +352,7 @@ const meanManual = (): number =>
 function narrowBriefing(declared: BriefingParts): Briefing {
   return briefingOf({
     parts: { ...declared, room: declared.fallbackRoom ?? declared.room },
-    rules: RULES,
+    rules: rulesFor(RULES, declared),
     narrow: null,
   })
 }
@@ -377,14 +377,16 @@ export async function briefingFor(
      * and `loaded` reports what it printed, so a narrow door asks the rest back. Measured
      * 2026-08-31 over the 437 scenarios of `pnpm banc`: opened on demand instead, the same
      * scenarios passed 56% against 65%, and reached 214 actions against 243.
+     *
+     * 🛑 A mission opens the CANDIDATES' manuals alone, and never narrows the names: shown 12
+     * names of 283, the model could not ask for what it did not know existed — 55 of 440
+     * scenarios never had the expected action among the candidates (measured 2026-09-05).
      */
     loaded: request.candidates
       ? [...new Set([...request.candidates, ...(request.loaded ?? [])])]
       : withChainLast(request.loaded ?? []),
     opened: request.loaded ?? [],
-    catalogue: request.candidates
-      ? [...new Set([...request.candidates, DISCOVERY_ACTION])]
-      : undefined,
+    mission: request.candidates !== undefined,
     room,
     fallbackRoom,
   })
@@ -465,10 +467,7 @@ function expandedWith(one: Composition, query: string): Briefing {
    * described the poorest answers.
    */
   const opened = [...matched].reverse()
-  const asked = askedFor(one, opened)
-  const expanded = one.parts.catalogue
-    ? withParts(asked, { catalogue: [...new Set([...one.parts.catalogue, ...opened])] })
-    : asked
+  const expanded = askedFor(one, opened)
   const widest = widestFound(query, matched)
   const probe = briefingOf({ ...expanded, found: widest })
   const kept = matched.filter(name => probe.loaded.includes(name)).length

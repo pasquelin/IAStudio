@@ -185,13 +185,6 @@ const unloadedIn = (reply: Reply | null, loaded: readonly ActionName[]): readonl
   ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !loaded.includes(name))),
 ]
 
-const unshownIn = (
-  reply: Reply | null,
-  allowed: ReadonlySet<ActionName>,
-): readonly ActionName[] => [
-  ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !allowed.has(name))),
-]
-
 // Said plainly rather than thrown: the caller has a person waiting, and "I did not understand"
 // is a better answer than a stack trace — and the cost was still incurred.
 const answerOf = (read: Read, spentBefore: number, shown: Briefing): AssistantAnswer => {
@@ -228,14 +221,15 @@ export async function answeredTurn(
     const before = spent
     spent += read.cost
 
-    const unshown = unshownIn(read.reply, shown.allowed)
-    if (unshown.length > 0) {
-      if (budget.left <= 0) return answerOf({ ...read, reply: null }, before, shown)
-      log.info('assistant', `opening the requested action ${unshown.join(', ')}`)
-      shown = shown.withLoaded(unshown)
-      continue
+    const missing = unloadedIn(read.reply, shown.loaded)
+    if (budget.left <= 0) {
+      // Sent on guessed fields rather than dropped: the calls are registered, and a turn that
+      // answers nothing after four round trips reads as a model that had nothing to say.
+      if (missing.length > 0) {
+        log.warn('assistant', `out of attempts, calling ${missing.join(', ')} unopened`)
+      }
+      return answerOf(read, before, shown)
     }
-    if (budget.left <= 0) return answerOf(read, before, shown)
 
     const query = discoveryIn(read.reply)
     if (query !== null && shown.expand !== null) {
@@ -244,7 +238,6 @@ export async function answeredTurn(
       continue
     }
 
-    const missing = unloadedIn(read.reply, shown.loaded)
     if (missing.length === 0) return answerOf(read, before, shown)
 
     log.info('assistant', `opening the manual of ${missing.join(', ')}`)

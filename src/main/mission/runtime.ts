@@ -229,6 +229,9 @@ function plannedFrom(
   return verificationPlanned && next.draft.kind === 'verify' ? actions : [...actions, next]
 }
 
+const unreadable = (answer: AssistantAnswer): boolean =>
+  answer.say.trim() === '' && answer.calls.length === 0 && answer.ask === undefined
+
 function hasDependentVerification(mission: Mission, stepId: string): boolean {
   return mission.plan.steps.some(
     step => step.kind === 'verify' && step.state === 'pending' && step.dependsOn.includes(stepId),
@@ -317,6 +320,9 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       {
         utterance,
         history: [],
+        // 🛑 Without it the model is handed the bare goal after each action and does it again:
+        // 6.1 wants ONE cube, and a second `node.add` on the "Continue mission" round killed it.
+        continuing: mission.plan.steps.some(step => step.state === 'completed'),
         context: serialized,
         candidates: context.actions.map(hit => hit.action.name),
         images: context.visual?.map(({ mimeType, bytes }) => ({ mimeType, bytes })),
@@ -431,6 +437,11 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         ? `Verify whether this mission is complete from the current state: ${mission.goal}`
         : mission.goal,
     )
+    // 🛑 `parseReply` gave up: neither a word, a question nor a call. Planned as zero steps it
+    // closed the mission « completed » with nothing done — a failure nobody could read.
+    if (unreadable(answer)) {
+      return { kind: 'failed', error: 'the model answered nothing readable' }
+    }
     const steps = plannedFrom(
       answer,
       step.kind === 'verify',

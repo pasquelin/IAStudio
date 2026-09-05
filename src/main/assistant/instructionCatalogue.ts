@@ -73,18 +73,10 @@ export const manualText = (manuals: readonly Manual[]): string =>
  */
 let namesHeld: string | null = null
 
-export const namesPrinted = (only?: readonly ActionName[]): string => {
-  if (!only) {
-    return (namesHeld ??= ACTION_FAMILIES.map(
-      family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
-    ).join('\n'))
-  }
-  const wanted = new Set(only)
-  return ACTION_FAMILIES.flatMap(family => {
-    const names = family.actions.map(action => action.name).filter(name => wanted.has(name))
-    return names.length > 0 ? [`  [${family.name}] ${names.join(', ')}`] : []
-  }).join('\n')
-}
+export const namesPrinted = (): string =>
+  (namesHeld ??= ACTION_FAMILIES.map(
+    family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
+  ).join('\n'))
 
 /**
  * 🛑 Every name of the registry, and that is the point of showing names: a model may call anything
@@ -157,7 +149,10 @@ export const RULES = [
  * shown `RULES` and these are what it does without — see `studioBriefing`, which decides on room.
  */
 export const WIDE_RULES = [
-  '  - If nothing in the catalogue fits, return no calls and say so in "say".',
+  // 🛑 The catalogue names 297 actions and the model still wrote « aucune action de miroir
+  // n'existe » about one of them (55.7, 69.4 — measured 2026-09-05). A search first, then the no.
+  `  - Nothing in the catalogue seems to fit? Call ${DISCOVERY_ACTION} with the words of the request`,
+  '    first. Only when it answers nothing, return no calls and say so in "say".',
   /**
    * The three that place a NAMED file, and they are one story: a model shown two hundred actions
    * reached for documents.list, which holds documents alone, then said it had found a picture.
@@ -261,12 +256,29 @@ export const MEMORY_CALL = `  - This project has a memory: ${MEMORY_RECALL_ACTIO
  * the last, it never stops: answering with no calls is the ONLY way it says a request is done,
  * and nothing else in the briefing asks it to.
  */
-export const CONTINUING = [
-  'You are still working on the same request. What you have already done is in the history',
-  'above, with what each action answered — build on it, and never redo a call that has answered.',
-  'Answer with NO calls when the request is done. When you need something only the person can',
-  'tell you, that is what "ask" is for.',
-].join('\n')
+export const continuingText = (mission: boolean): string =>
+  [
+    'You are still working on the same request. What you have already done is in',
+    mission
+      ? 'previousResults of the Mission block, with what each action answered — build on it, and'
+      : 'the history above, with what each action answered — build on it, and',
+    'never redo a call that has answered. Answer with NO calls when the request is done. When you',
+    'need something only the person can tell you, that is what "ask" is for.',
+  ].join('\n')
+
+/**
+ * 🛑 How to READ the mission JSON, which no schema travels with: `previousResults`, `verify` and
+ * the scored `actions` list were inferred by the model, and the scores meant nothing to it.
+ */
+export const MISSION_RULES = [
+  '  - The "Mission" block is JSON. mission.goal is the request. mission.step.kind says what this',
+  '    round is for: "reason" = plan the next calls; "verify" = check from the state whether the',
+  '    goal is reached, and answer with NO calls if it is. Never claim it is without reading.',
+  '  - previousResults lists what already RAN in this mission and what each call answered. Build',
+  '    on it, never send a call that is already there.',
+  '  - actions is a shortlist the studio picked for this step; their fields are in the Manual.',
+  '    The Catalogue names every other action — name one and its fields come back next round.',
+]
 
 export const roleWith = (rules: readonly string[]): string =>
   [
