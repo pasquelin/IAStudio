@@ -20,6 +20,7 @@ const MAX_LIMIT = 12
 const FTS_CANDIDATES = 40
 const AVAILABLE_RESOURCE_SCORE = 8
 const AVAILABLE_TARGET_SCORE = 8
+const TARGET_SCORE = 4
 const RRF_K = 60
 const FTS_RRF_WEIGHT = 2
 
@@ -112,8 +113,9 @@ function actionScopeScores(
         field => field.picks === target || field.key.toLocaleLowerCase('en') === `${target}id`,
       ))
   const targetScore = targetsSelection
-    ? 4
+    ? TARGET_SCORE
     : target !== undefined &&
+        ['document', 'layer', 'node'].includes(target) &&
         action.capabilities.documentAffinity === 'required' &&
         action.capabilities.targets?.length
       ? -6

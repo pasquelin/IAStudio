@@ -98,6 +98,24 @@ describe('action search context', () => {
     })
   })
 
+  it.each([
+    ['Ajoute un brouillard léger', 'world'],
+    ['Renomme la piste audio', 'track'],
+    ['Quels sont mes favoris ?', 'favorite'],
+    ['Jette ce stash Git', 'git'],
+  ])('recognises the named business target in %s', (query, target) => {
+    expect(actionSearchScope(null, query)).toMatchObject({ target })
+  })
+
+  it('gives a named business target authority over the current selection', () => {
+    const snapshot: StudioSnapshot = {
+      ...SNAPSHOT,
+      selection: { kind: 'node', items: [{ id: 'bone', name: 'Arm' }] },
+    }
+
+    expect(actionSearchScope(snapshot, 'Supprime cet os')).toMatchObject({ target: 'bone' })
+  })
+
   it('only exposes project context as a target when an active card matches the request', () => {
     const context = {
       cards: [{ id: 'style', title: 'Style', body: 'Photorealistic', active: true, pictures: [] }],

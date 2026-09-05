@@ -1,17 +1,19 @@
 import type { SnapshotDocument, StudioSnapshot } from '@shared/domain/studioSnapshot'
-import type { ActionTarget } from '@shared/domain/actionCapabilities'
+import { ACTION_TARGET_DESCRIPTORS, type ActionTarget } from '@shared/domain/actionCapabilities'
 import type { ContextState } from '@shared/domain/projectContext'
 import { foldForSearch, searchWords } from '@shared/text'
 import type { ActionSearchScope } from './actionIndex'
 import { actionQueryIntent } from './actionLexical'
 
-function namedDomainTarget(
+export function namedActionTarget(
   query: string,
   activeDocument: SnapshotDocument['kind'] | undefined,
-): 'component' | 'timeline' | null {
+): ActionTarget | null {
   const words = new Set(searchWords(query))
-  if (words.has('component') || words.has('composant')) return 'component'
-  if (words.has('timeline') || words.has('cinematique')) return 'timeline'
+  const matched = ACTION_TARGET_DESCRIPTORS.filter(domain =>
+    domain.names.some(word => words.has(word)),
+  )
+  if (matched.length === 1) return matched[0]?.target ?? null
   if (activeDocument === 'scene' && (words.has('fade') || words.has('fondu'))) return 'timeline'
   return null
 }
@@ -50,13 +52,13 @@ export function actionSearchScope(
       return name !== '' && request.includes(name)
     })
   const targetDocument = namedDocument(snapshot?.documents ?? [], query)
-  const domainTarget = namedDomainTarget(query, snapshot?.activeDocumentState?.kind)
+  const domainTarget = namedActionTarget(query, snapshot?.activeDocumentState?.kind)
   return {
     ...(availableTargets.length > 0 ? { availableTargets } : {}),
-    ...(snapshot?.selection && targetsSelection
-      ? { target: snapshot.selection.kind }
-      : domainTarget
-        ? { target: domainTarget }
+    ...(domainTarget
+      ? { target: domainTarget }
+      : snapshot?.selection && targetsSelection
+        ? { target: snapshot.selection.kind }
         : targetDocument
           ? { target: 'document' }
           : {}),

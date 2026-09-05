@@ -2,6 +2,7 @@ import { describe, expect, it, onTestFinished } from 'vitest'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { actionCorpus } from './actionCorpus'
 import { createActionIndex } from './actionIndex'
+import { actionSearchScope } from './actionSearchContext'
 
 describe('ActionIndex structural retrieval', () => {
   const index = () => {
@@ -32,5 +33,13 @@ describe('ActionIndex structural retrieval', () => {
 
     expect(contextDelete?.rank).toBeLessThanOrEqual(12)
     expect(contextDelete).toMatchObject({ included: true, compatibilityScore: 8 })
+  })
+
+  it('uses a named business target derived from canonical action namespaces', () => {
+    const query = 'Quels sont mes favoris ?'
+    const hits = index().search({ query, limit: 12, scope: actionSearchScope(null, query) })
+
+    expect(hits[0]?.action.name).toBe('favorites.listPinnedRecipes')
+    expect(hits[0]).toMatchObject({ compatibilityScore: 4 })
   })
 })

@@ -1,4 +1,4 @@
-import { ACTION_FAMILIES } from '@shared/domain/assistant'
+import { ACTION_FAMILIES, ACTION_TARGET_DESCRIPTORS } from '@shared/domain/assistant'
 import type {
   ActionCommitment,
   ActionField,
@@ -12,6 +12,19 @@ import { COMPONENTS, COMPONENT_TYPES } from '@shared/domain/componentRegistry'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { POST_EFFECTS, POST_EFFECT_IDS } from '@shared/domain/postProcessing'
 import { digestOf } from '@main/memory/vectors'
+
+function capabilitiesOf(
+  action: (typeof ACTION_FAMILIES)[number]['actions'][number],
+): ActionCapabilities {
+  const explicit = action.capabilities ?? {}
+  const namespace = action.name.split('.')[0] ?? ''
+  const inferredTarget = ACTION_TARGET_DESCRIPTORS.find(descriptor =>
+    descriptor.namespaces.includes(namespace),
+  )?.target
+  return inferredTarget === undefined || explicit.targets?.includes(inferredTarget)
+    ? explicit
+    : { ...explicit, targets: [...(explicit.targets ?? []), inferredTarget] }
+}
 
 export type IndexedAction = {
   name: ActionName
@@ -129,6 +142,7 @@ export function actionCorpus(): ActionCorpus {
       const frenchTitle = textAt(TRANSLATIONS.fr, action.titleKey)
       const frenchDescription = textAt(TRANSLATIONS.fr, action.descriptionKey)
       const fields = action.fields.map(field => ({ ...field }))
+      const capabilities = capabilitiesOf(action)
       const indexed: IndexedAction = {
         name: action.name,
         family: family.name,
@@ -148,7 +162,7 @@ export function actionCorpus(): ActionCorpus {
         inputs: action.inputs ?? [],
         uses: action.uses ?? [],
         returns: action.returns ?? [],
-        capabilities: action.capabilities ?? {},
+        capabilities,
         localizedFieldLabels: fields.flatMap(field => [
           englishText(field.labelKey),
           textAt(TRANSLATIONS.fr, field.labelKey),
@@ -161,7 +175,7 @@ export function actionCorpus(): ActionCorpus {
           frenchTitle,
           frenchDescription,
           ...componentTerms(action.fields),
-          ...(action.capabilities?.targets?.includes('component') ? componentNameTerms() : []),
+          ...(capabilities.targets?.includes('component') ? componentNameTerms() : []),
           ...commandTerms(action.fields),
           ...postEffectTerms(action.fields),
           ...fields.flatMap(field => [
