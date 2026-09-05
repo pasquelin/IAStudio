@@ -18,6 +18,7 @@ import {
   type AccountBook,
   type Credentials,
 } from './accounts'
+import { grandfatherOnboarding } from '@shared/domain/welcome'
 import { parseStoredAccounts, parseStoredCredentials, salvagePartialSettings } from './validation'
 export type PersistenceAdapter = {
   read: <T>(key: string) => T | undefined
@@ -84,6 +85,7 @@ export function mergedSettings(base: Settings, partial: PartialSettings): Settin
     advanced: { ...base.advanced, ...partial.advanced },
     assistant: { ...base.assistant, ...partial.assistant },
     mcp: { ...base.mcp, ...partial.mcp },
+    onboarding: { ...base.onboarding, ...partial.onboarding },
     dictation: { ...base.dictation, ...partial.dictation },
   }
 }
@@ -106,7 +108,15 @@ export function createSettingsStore(
     return Object.freeze(settings)
   }
   const read = (): Settings => {
-    cached ??= frozen(mergedSettings(defaults, salvagePartialSettings(adapter.read(SETTINGS_KEY))))
+    if (cached) return cached
+    const salvaged = salvagePartialSettings(adapter.read(SETTINGS_KEY))
+    let settings = frozen(mergedSettings(defaults, salvaged))
+    const stamp = grandfatherOnboarding(salvaged, new Date().toISOString())
+    if (stamp) {
+      settings = frozen(mergedSettings(settings, { onboarding: stamp }))
+      adapter.write(SETTINGS_KEY, settings)
+    }
+    cached = settings
     return cached
   }
   const forgetSettings = (): void => {

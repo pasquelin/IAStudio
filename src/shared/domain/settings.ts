@@ -17,6 +17,7 @@ import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentDocument, RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } from './scene'
+import { DEFAULT_ONBOARDING, type OnboardingSettings } from './welcome'
 
 /**
  * Spelled exactly as Electron's `nativeTheme.themeSource`, which takes these three words: the
@@ -347,17 +348,14 @@ export type Settings = {
      */
     delegateBudget: number
   }
+  onboarding: OnboardingSettings
   /** Speaking a prompt instead of typing it. Everything runs on this machine — see `domain/dictation.ts`. */
   dictation: {
     enabled: boolean
     mode: DictationMode
     /** Silence that closes a segment, in milliseconds. Longer suits someone who pauses to think. */
     silenceMs: number
-    /**
-     * How often the segment in flight is decoded again to show a preview. The model is not a
-     * streaming one, so a preview costs a full decode of what has been said so far; `0` turns
-     * previews off and leaves only the text of each closed segment.
-     */
+    /** Preview decode interval in ms; `0` turns previews off. */
     previewMs: number
     /** Inference threads. More is faster up to a point, and every one of them is a core taken. */
     threads: number
@@ -435,6 +433,7 @@ export const DEFAULT_SETTINGS: Settings = {
     delegateRemote: false,
     delegateBudget: 0,
   },
+  onboarding: DEFAULT_ONBOARDING,
   dictation: {
     enabled: true,
     mode: 'pushToTalk',

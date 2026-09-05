@@ -11,6 +11,7 @@ import { isNewDocumentRoute } from '@shared/domain/newDocument'
 import { isPlayerModuleRoute } from '@shared/domain/playerModuleWindow'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
+import { isWelcomeRoute } from '@shared/domain/welcome'
 import { UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
 import { Application } from '@/features/shell/components/Application'
 import { getBridge } from '@/services/bridge'
@@ -94,6 +95,10 @@ const NewDocumentWindow = lazy(async () => ({
     .NewDocumentWindow,
 }))
 
+const WelcomeWindow = lazy(async () => ({
+  default: (await import('@/features/welcome/components/WelcomeWindow')).WelcomeWindow,
+}))
+
 /**
  * Every application window loads the same bundle and reads the route from the fragment: the
  * i18n bootstrap, the tokens and the bridge are shared, and navigation is locked, so the
@@ -116,6 +121,7 @@ function windowFor(hash: string): ReactNode {
   if (isManualRoute(hash)) return <ManualWindow />
   if (isFileInfoRoute(hash)) return <FileInfoWindow />
   if (isNewDocumentRoute(hash)) return <NewDocumentWindow />
+  if (isWelcomeRoute(hash)) return <WelcomeWindow />
   return null
 }
 

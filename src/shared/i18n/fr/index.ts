@@ -22,6 +22,7 @@ import settings from './settings.json'
 import shell from './shell.json'
 import ui from './ui.json'
 import usage from './usage.json'
+import welcome from './welcome.json'
 
 /**
  * The source bundle, split by functional surface. One flat file was the most contested path of
@@ -57,6 +58,7 @@ export const fr = {
   ...material,
   ...ui,
   ...usage,
+  ...welcome,
 }
 
 /** The shape every other locale must have, in full. Named here because `fr` defines it. */

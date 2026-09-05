@@ -43,6 +43,9 @@ export const UNLISTED_PATHS = paths(
   'three.normals',
   'three.normalLength',
   'three.stats',
+  // Written by finishing or skipping the first-launch welcome, never offered as a control.
+  'onboarding.version',
+  'onboarding.completedAt',
 )
 
 /**

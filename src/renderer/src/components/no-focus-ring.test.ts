@@ -16,7 +16,16 @@ import { WRITTEN_SOURCES } from './testHarness'
  */
 describe('keyboard focus', () => {
   it('draws no browser outline on focused elements', () => {
-    expect(stylesheet).toMatch(/:focus\s*\{\s*outline: none !important;/)
+    expect(stylesheet).toMatch(/:focus,[\s\S]*?:focus-within\s*\{\s*outline: none !important;/)
+  })
+
+  /**
+   * `:focus-within` is not a second way of saying the same thing: daisyUI writes its field ring on
+   * that selector alone, so the rule read as held while the windows built on its components — the
+   * welcome's account form, first of them — drew the outline anyway.
+   */
+  it('covers the selector a component library reaches for, not only the bare one', () => {
+    expect(stylesheet).toContain(':focus-within {')
   })
 
   it('is not overridden one component at a time', () => {

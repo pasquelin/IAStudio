@@ -27,6 +27,7 @@ import {
   openSettingsWindow,
   openUsageWindow,
 } from '@main/window/windows'
+import { openWelcomeWindow } from '@main/window/welcomeWindow'
 import { menuTemplate } from './template'
 
 /** Everything one window reported about itself, which is everything the menu draws from it. */
@@ -174,6 +175,7 @@ export function buildMenu(remapped: BindingOverrides = overrides): void {
       openLicences: () => void openLicencesWindow(),
       openManual: () => void openManualWindow(),
       openUsage: () => void openUsageWindow(),
+      openWelcome: () => void openWelcomeWindow(),
       toggleFullScreen: () => toggleFullScreen(BrowserWindow.getFocusedWindow()),
       openTool: request => sendToFront(EVENTS.openTool, request),
       runCommand: command => sendToFront(EVENTS.menuCommand, command),

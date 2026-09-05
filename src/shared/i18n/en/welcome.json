@@ -1,0 +1,40 @@
+{
+  "welcome": {
+    "skip": "Skip",
+    "skipHint": "Closes this introduction and opens the studio with the current settings",
+    "back": "Back",
+    "backHint": "Returns to the previous screen",
+    "next": "Continue",
+    "nextHint": "Goes to the next screen",
+    "done": "Get started",
+    "doneHint": "Closes this introduction and opens the studio",
+    "steps": "Step {{current, number}} of {{total, number}}",
+    "goToStep": "Go to step {{current, number}} — {{title}}",
+    "language": {
+      "title": "Choose your language",
+      "body": "Every menu, button and message uses this language. You can change it later in Settings.",
+      "hint": "Shows the application in {{name}}"
+    },
+    "look": {
+      "title": "How it looks",
+      "body": "Dark is the studio’s own theme. Switch it if you work in daylight.",
+      "themeHint": "Switches the application to the {{name}} theme"
+    },
+    "craft": {
+      "title": "Your 3D navigation",
+      "body": "The 3D view mirrors the gestures of the software you already know. You can change it later in the settings.",
+      "navigationHint": "Uses {{name}} viewport gestures in the 3D view"
+    },
+    "account": {
+      "title": "A cloud, if you have one",
+      "body": "The studio works without an account, on your own files. A key unlocks generation and the shared library.",
+      "connected": "An account is saved. You can continue."
+    },
+    "project": {
+      "title": "Your first project",
+      "body": "A project is a folder on your disk. Create one, open one, or skip and start from Home.",
+      "createHint": "Picks an empty folder and makes it the project",
+      "openHint": "Opens a project folder already on this disk"
+    }
+  }
+}

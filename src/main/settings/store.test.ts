@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_ACCOUNT_NAME } from '@shared/domain/account'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
+import { WELCOME_VERSION } from '@shared/domain/welcome'
 import { memoryAdapter, type MemoryAdapter } from './memoryAdapter'
 import { createSettingsStore, type SettingsStore } from './store'
 
@@ -24,6 +25,15 @@ describe('settings store', () => {
 
   it('returns the defaults when nothing is stored', () => {
     expect(createSettingsStore(adapter).read()).toEqual(DEFAULT_SETTINGS)
+  })
+
+  it('stamps a stored profile that never saw the welcome, so it is not shown again', () => {
+    adapter.raw.set('settings', { general: { language: 'en' } })
+    const stored = createSettingsStore(adapter).read()
+
+    expect(stored.general.language).toBe('en')
+    expect(stored.onboarding.version).toBe(WELCOME_VERSION)
+    expect(stored.onboarding.completedAt).toEqual(expect.any(String))
   })
 
   it('falls back to the defaults when the stored settings are unusable', () => {

@@ -261,6 +261,13 @@
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
   /*
+   * The wordmark's tracking, and the only place it is written. The splash spells the same lockup
+   * in its own sheet — a separate Vite entry that reaches no token — so this is the copy the
+   * application itself renders, not a second value.
+   */
+  --tracking-mark: 0.34em;
+
+  /*
    * The text ladder — every size the studio writes, and the only thing `--sc-font-scale` can
    * reach. Pixels times the scale, NOT `rem`: `rem` answers to the root element, which this
    * stylesheet never sizes, so Tailwind's steps shipped frozen at a 16px root while the

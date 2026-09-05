@@ -27,6 +27,7 @@ export type MenuActions = {
   openLicences: () => void
   openManual: () => void
   openUsage: () => void
+  openWelcome: () => void
   toggleFullScreen: () => void
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void

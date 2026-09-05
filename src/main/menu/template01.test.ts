@@ -13,6 +13,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   openLicences: () => {},
   openManual: () => {},
   openUsage: () => {},
+  openWelcome: () => {},
   toggleFullScreen: () => {},
   openTool: () => {},
   runCommand: () => {},

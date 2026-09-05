@@ -1,0 +1,40 @@
+{
+  "welcome": {
+    "skip": "Passer",
+    "skipHint": "Ferme cette présentation et ouvre le studio avec les réglages actuels",
+    "back": "Précédent",
+    "backHint": "Revient à l’écran précédent",
+    "next": "Continuer",
+    "nextHint": "Passe à l’écran suivant",
+    "done": "Terminer",
+    "doneHint": "Ferme cette présentation et ouvre le studio",
+    "steps": "Étape {{current, number}} sur {{total, number}}",
+    "goToStep": "Aller à l’étape {{current, number}} — {{title}}",
+    "language": {
+      "title": "Choisissez votre langue",
+      "body": "Tous les menus, boutons et messages s’affichent dans cette langue. Vous pourrez la changer plus tard dans les réglages.",
+      "hint": "Affiche l’application en {{name}}"
+    },
+    "look": {
+      "title": "L’apparence",
+      "body": "Le thème sombre est celui du studio. Changez-le si vous travaillez en plein jour.",
+      "themeHint": "Passe l’application en thème {{name}}"
+    },
+    "craft": {
+      "title": "Votre navigation 3D",
+      "body": "La vue 3D imite les gestes du logiciel que vous connaissez déjà. Vous pourrez en changer dans les réglages.",
+      "navigationHint": "Imite les gestes de {{name}} dans la vue 3D"
+    },
+    "account": {
+      "title": "Un service, si vous en avez un",
+      "body": "Le studio fonctionne sans compte, sur vos fichiers. Une clé débloque la génération et la bibliothèque partagée.",
+      "connected": "Compte enregistré. Vous pouvez continuer."
+    },
+    "project": {
+      "title": "Votre premier projet",
+      "body": "Un projet est un dossier sur votre disque. Créez-en un, ouvrez-en un, ou passez et commencez depuis l’accueil.",
+      "createHint": "Choisit un dossier vide et en fait le projet",
+      "openHint": "Ouvre un dossier de projet déjà sur ce disque"
+    }
+  }
+}

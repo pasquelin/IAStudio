@@ -128,7 +128,14 @@
   font-size: var(--text-mini) !important;
 }
 
-:focus {
+:focus,
+/*
+ * `:focus-within` is the half the first selector never covered, and daisyUI writes its field ring
+ * on exactly that — so the account form of the welcome drew an outline the studio had decided
+ * against, in the one window built on daisyUI's own components. Its cost is the one
+ * `no-focus-ring.test.ts` states, unchanged: this widens the owner's rule, it does not soften it.
+ */
+:focus-within {
   outline: none !important;
 }
 

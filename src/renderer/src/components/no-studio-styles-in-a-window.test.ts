@@ -36,6 +36,7 @@ const FAMILIES: readonly string[] = [
   './features/shell/components/JournalWindow.tsx',
   './features/shell/components/LicencesWindow.tsx',
   './features/usage/',
+  './features/welcome/',
 ]
 
 /**
