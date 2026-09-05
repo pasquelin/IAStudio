@@ -40,9 +40,28 @@ export function useCharacterFit(
       : undefined
   const advanced = candidate?.model.backendId
   const needsDownload = advanced !== undefined && !candidate?.installed
+  const rigBackends =
+    row?.candidates.flatMap(one =>
+      one.installed && one.model.backendId
+        ? [{ backendId: one.model.backendId, modelId: one.model.id, name: one.model.name }]
+        : [],
+    ) ?? []
+  const selectedBackend =
+    advanced && rigBackends.some(one => one.backendId === advanced) ? advanced : 'simple'
   const [failure, setFailure] = useState<AutoRigProductError | null>(null)
   const [running, setRunning] = useState(false)
-  const fit = async (requestedBackend = advanced ?? 'simple'): Promise<void> => {
+  const chooseBackend = async (backendId: string): Promise<void> => {
+    if (!row) return
+    const picked = rigBackends.find(one => one.backendId === backendId)
+    await useAiModels
+      .getState()
+      .chooseAiProvider(
+        AUTO_RIG_ROLE,
+        picked ? { kind: 'local', modelId: picked.modelId } : null,
+        writeScopeFor(row, overview?.projectPath ?? null),
+      )
+  }
+  const fit = async (requestedBackend = selectedBackend): Promise<void> => {
     setFailure(null)
     if (requestedBackend !== 'simple' && needsDownload) {
       setFailure('MODEL_NOT_INSTALLED')
@@ -126,6 +145,9 @@ export function useCharacterFit(
     bytes,
     refusal,
     advanced,
+    rigBackends,
+    selectedBackend,
+    chooseBackend,
     needsDownload,
     failure,
     running,

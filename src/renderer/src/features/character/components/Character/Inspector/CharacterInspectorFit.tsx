@@ -17,7 +17,19 @@ export type CharacterInspectorFitProps = {
 }
 
 function fitSelectors(state: CharacterFit) {
-  const { t, kind, setKind, services, plan, bytes, maxSize } = state
+  const {
+    t,
+    kind,
+    setKind,
+    services,
+    plan,
+    bytes,
+    maxSize,
+    rigBackends,
+    selectedBackend,
+    chooseBackend,
+  } = state
+  const localModelIds = new Set(rigBackends.map(backend => backend.modelId))
   return (
     <>
       <SelectField
@@ -33,16 +45,19 @@ function fitSelectors(state: CharacterFit) {
       />
       <SelectField
         label={t('inspector.rigService')}
-        value=""
+        value={selectedBackend}
         options={[
-          { value: '', label: t('inspector.rigServiceLocal') },
-          ...services.map(service => ({
-            value: service.modelId,
-            label: `${service.name} — ${rigServiceNote(service, plan, { bytes, maxSize }, t)}`,
-            disabled: true,
-          })),
+          { value: 'simple', label: t('inspector.rigServiceLocal') },
+          ...rigBackends.map(backend => ({ value: backend.backendId, label: backend.name })),
+          ...services
+            .filter(service => !localModelIds.has(service.modelId))
+            .map(service => ({
+              value: `service:${service.modelId}`,
+              label: `${service.name} — ${rigServiceNote(service, plan, { bytes, maxSize }, t)}`,
+              disabled: true,
+            })),
         ]}
-        onChange={() => undefined}
+        onChange={backendId => void chooseBackend(backendId)}
         scId="character.service"
         actions={false}
       />
