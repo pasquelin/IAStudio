@@ -4,11 +4,13 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   inputBindingFits,
   inputBindingOf,
+  type GamepadControl,
   type InputActionKind,
   type InputBinding,
   type InputMap,
 } from '@shared/domain/inputMap'
 import { createInputControls } from './inputControls'
+import { resolveInputMaps, type RawInput } from './inputMaps'
 
 const defaults: readonly InputMap[] = [
   {
@@ -133,5 +135,89 @@ describe('the studio reader and the runtime reader of one input map', () => {
     )
 
     expect(disagreements).toEqual([])
+  })
+})
+
+/**
+ * 🛑 `GamepadControl` is stated SIX times over — the two readers above, the two index tables of
+ * `inputMaps`, the rebind menu and the editor — and a member added to the union compiles against
+ * every one of them. This record is the compiler's hold: a control missing from it does not build.
+ */
+const EVERY_CONTROL: Record<GamepadControl, InputActionKind> = {
+  leftStick: 'axis2',
+  rightStick: 'axis2',
+  leftStickX: 'axis1',
+  leftStickY: 'axis1',
+  rightStickX: 'axis1',
+  rightStickY: 'axis1',
+  leftTrigger: 'axis1',
+  rightTrigger: 'axis1',
+  south: 'button',
+  east: 'button',
+  west: 'button',
+  north: 'button',
+  leftShoulder: 'button',
+  rightShoulder: 'button',
+  select: 'button',
+  start: 'button',
+  leftStickButton: 'button',
+  rightStickButton: 'button',
+  dpadUp: 'button',
+  dpadDown: 'button',
+  dpadLeft: 'button',
+  dpadRight: 'button',
+  home: 'button',
+}
+
+/** A standard pad with everything pushed: what a control that resolves to no index reads 0 on. */
+const PUSHED: RawInput = {
+  held: [],
+  gamepads: [
+    {
+      id: 'pad',
+      index: 0,
+      mapping: 'standard',
+      axes: [1, 1, 1, 1],
+      buttons: Array.from({ length: 17 }, () => 1),
+    },
+  ],
+}
+
+function reads(binding: InputBinding, kind: InputActionKind): boolean {
+  const resolved = resolveInputMaps(
+    [
+      {
+        version: 1,
+        id: 'context',
+        priority: 0,
+        defaultActive: true,
+        actions: [{ id: 'action', kind, bindings: [binding] }],
+      },
+    ],
+    ['context'],
+    PUSHED,
+  )
+  const value = resolved.values.action
+  if (kind === 'button') return value === true
+  if (kind === 'axis1') return typeof value === 'number' && value !== 0
+  return typeof value === 'object' && value !== null && (value.x !== 0 || value.y !== 0)
+}
+
+describe('every gamepad control the union names', () => {
+  it('is read by both readers and answers a pad that is pushed', () => {
+    const mute = Object.entries(EVERY_CONTROL)
+      .map(([control, kind]) => {
+        const value = { device: 'gamepad', control }
+        const studio = readByStudio(kind, value)
+        return {
+          control,
+          studio: shown(studio),
+          runtime: shown(readByRuntime(kind, value)),
+          reads: studio !== null && reads(studio, kind),
+        }
+      })
+      .filter(seen => seen.studio === 'refused' || seen.runtime === 'refused' || !seen.reads)
+
+    expect(mute).toEqual([])
   })
 })
