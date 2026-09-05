@@ -15,9 +15,9 @@ export function useRoleOfFolder(): (path: string) => FolderRole | null {
   const byFolder = useMemo(
     () =>
       new Map<string, FolderRole>(
-        FOLDER_ROLES.flatMap(role => {
+        FOLDER_ROLES.flatMap<[string, FolderRole]>(role => {
           const folder = roles[role]
-          return folder ? [[folder, role] as const] : []
+          return folder ? [[folder, role]] : []
         }),
       ),
     [roles],

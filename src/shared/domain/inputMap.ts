@@ -123,12 +123,16 @@ function keyboardBindingOf(value: Record<string, unknown>): KeyboardBinding {
 
 function gamepadBindingOf(value: Record<string, unknown>): GamepadBinding {
   if (!isGamepadControl(value.control)) throw new Error('invalid input binding')
+  // Refused rather than dropped, like `deadZone` and `scale` beside it: the exported game holds
+  // its OWN copy of this reader and refuses it, so dropping here writes a file the game discards.
+  if (value.invert !== undefined && typeof value.invert !== 'boolean')
+    throw new Error('invalid gamepad invert')
   const options = numericOptions(value)
   return {
     device: 'gamepad',
     control: value.control,
     ...(options.deadZone === undefined ? {} : { deadZone: options.deadZone }),
-    ...(typeof value.invert !== 'boolean' ? {} : { invert: value.invert }),
+    ...(value.invert === undefined ? {} : { invert: value.invert }),
     ...(options.scale === undefined ? {} : { scale: options.scale }),
   }
 }
