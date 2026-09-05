@@ -85,6 +85,10 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   résolue et une intention compatible gagnent un point explicable, sans renforcer une sélection
   seulement active. Mesure finale : R@12 76,57 %, MRR 0,4524, trois entrées nettes dans le top-12
   et aucune sortie.
+- Secours retrieval : le briefing borné autorisait `actions.find` et expliquait son appel, mais ne
+  l'imprimait pas dans le Catalogue dont sa propre règle impose l'usage exclusif. L'action de
+  contrôle est désormais visible séparément des douze candidats, sans charger son manuel ni
+  modifier le top-K. Les tests du briefing tiennent les trois propriétés ensemble.
 
 ## Ce que tu ne tranches pas seul
 

@@ -9,8 +9,10 @@ describe('mission briefing', () => {
     )
 
     expect(briefing.text).toContain('project.create')
+    expect(briefing.text).toContain('actions.find')
     expect(briefing.text).not.toContain('git.checkout')
     expect([...briefing.allowed]).toEqual(['project.create', 'actions.find'])
+    expect(briefing.loaded).toEqual(['project.create'])
   })
 
   it('allows an action opened by the bounded discovery fallback', async () => {

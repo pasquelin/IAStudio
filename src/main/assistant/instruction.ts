@@ -349,12 +349,7 @@ function narrowBriefing(declared: BriefingParts): Briefing {
   })
 }
 
-/**
- * The briefing one turn is answered against, composed ONCE and outside any retry: a complaint
- * quotes an answer, and a second reading would ship a briefing the complaint was not about.
- *
- * The three brains differ here in one number — their room — and in nothing else.
- */
+/** Built once outside retries, so a complaint quotes the briefing it actually answers. */
 export async function briefingFor(
   request: AssistantThought,
   room: number,
@@ -379,7 +374,9 @@ export async function briefingFor(
       ? [...new Set([...request.candidates, ...(request.loaded ?? [])])]
       : withChainLast(request.loaded ?? []),
     opened: request.loaded ?? [],
-    catalogue: request.candidates,
+    catalogue: request.candidates
+      ? [...new Set([...request.candidates, DISCOVERY_ACTION])]
+      : undefined,
     room,
     fallbackRoom,
   })
