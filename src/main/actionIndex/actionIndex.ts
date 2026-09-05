@@ -110,7 +110,9 @@ function actionScopeScores(
       ))
   const targetScore = targetsSelection
     ? 4
-    : target !== undefined && action.capabilities.targets?.length
+    : target !== undefined &&
+        action.capabilities.documentAffinity === 'required' &&
+        action.capabilities.targets?.length
       ? -6
       : 0
   return {

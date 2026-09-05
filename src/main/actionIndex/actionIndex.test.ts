@@ -226,6 +226,24 @@ describe('ActionIndex', () => {
     expect(script).toMatchObject({ applicabilityScore: 0, documentAffinity: 'transversal' })
   })
 
+  it('does not turn a resolved document selection into a global-action incompatibility', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const memory = index
+      .inspect({
+        query: 'remember this rule about the selected camera',
+        limit: 12,
+        scope: { target: 'node', document: 'scene', documentAuthority: 'active' },
+      })
+      .find(hit => hit.action.name === 'memory.write')
+
+    expect(memory).toMatchObject({ applicabilityScore: 0, documentAffinity: 'transversal' })
+    expect(memory).not.toHaveProperty('compatibilityScore')
+  })
+
   it('ranks an action targeting the selection above a similarly worded document action', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())
