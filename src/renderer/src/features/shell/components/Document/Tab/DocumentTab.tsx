@@ -11,6 +11,7 @@ import { workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDocumentModified } from '@/hooks/useDocumentModified'
 import { useDocuments } from '@/stores/documents'
 import { closeTab } from './closeTab'
+import { panelIsFileView } from '../../dockviewApi'
 import { openDocumentTabMenu } from './documentTabMenu'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
 
@@ -32,7 +33,7 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
   const title = useDocuments(state => state.documents[props.api.id]?.title) ?? props.api.title
   const modified = useDocumentModified(props.api.id)
   const [renaming, setRenaming] = useState(false)
-  const isFileView = props.api.id.startsWith('file:')
+  const isFileView = panelIsFileView(props.api.id)
 
   const close = (event: MouseEvent): void => {
     // Dockview reads a click on the tab as "activate me"; this one is not that.

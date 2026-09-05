@@ -30,7 +30,7 @@ import { forgetAssetRevisions } from './assetRevisions'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './sceneClipboard'
 import { useSelection } from './selection'
-import { settleFileViewsForProjectChange } from '@/features/shell/components/dockviewApi'
+import { settleFileViews } from '@/features/shell/components/dockviewApi'
 
 /** How leaving a project ended. `nothing` is a window that had none open — a second one asking. */
 export type ProjectLeft = 'left' | 'kept' | 'failed' | 'nothing'
@@ -179,7 +179,7 @@ async function settleLeaving(bridge: StudioBridge): Promise<boolean> {
   return (
     (await bridge.project.askLeave()) &&
     (await settleUnsavedWorkForProjectChange()) &&
-    (await settleFileViewsForProjectChange())
+    (await settleFileViews())
   )
 }
 

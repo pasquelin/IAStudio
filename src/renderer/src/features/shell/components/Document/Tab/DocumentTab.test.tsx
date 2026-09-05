@@ -13,7 +13,7 @@ import { DocumentTab } from './DocumentTab'
 const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
 const deleteDocument = vi.fn((_id: string) => Promise.resolve(true))
 const openPanelIds = vi.fn(() => ['doc-1', 'doc-2'])
-const closeFileView = vi.fn((_id: string) => {})
+const closeFileViewAsking = vi.fn((_id: string) => Promise.resolve(true))
 const markedModified = vi.hoisted(() => ({ ids: new Set<string>() }))
 
 vi.mock('../../../documentIo', () => ({
@@ -23,7 +23,7 @@ vi.mock('../../../documentIo', () => ({
 
 vi.mock('../../dockviewApi', () => ({
   openPanelIds: () => openPanelIds(),
-  closeFileView: (id: string) => closeFileView(id),
+  closeFileViewAsking: (id: string) => closeFileViewAsking(id),
   panelIsFileView: (id: string) => id.startsWith('file:'),
 }))
 
@@ -178,6 +178,22 @@ describe('a document tab', () => {
 
     await vi.waitFor(() => expect(closeDocument).toHaveBeenCalledWith('doc-2'))
     expect(closeDocument).toHaveBeenCalledTimes(1)
+  })
+
+  // The fourth closing gesture, and the one that reaches a file view without ever showing its
+  // tab: `closeDocument` on one asks nothing, drops the edits, and answers `true` to the run.
+  it('sends a file view among the others to its own closer', async () => {
+    openPanelIds.mockReturnValue(['doc-1', 'file:Entrées/Clavier.input.json'])
+    closeDocument.mockResolvedValue(true)
+    menu.picks('Fermer les autres onglets')
+    render(<DocumentTab {...props('doc-1')} />)
+
+    await rightClick()
+
+    await vi.waitFor(() =>
+      expect(closeFileViewAsking).toHaveBeenCalledWith('file:Entrées/Clavier.input.json'),
+    )
+    expect(closeDocument).not.toHaveBeenCalled()
   })
 
   it('never closes the tab the menu was opened on', async () => {

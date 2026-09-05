@@ -1,5 +1,5 @@
 import { closeDocument } from '../../../documentIo'
-import { closeFileView, panelIsFileView } from '../../dockviewApi'
+import { closeFileViewAsking, panelIsFileView } from '../../dockviewApi'
 import { reportFailure } from '@/services/diagnostics'
 
 /**
@@ -10,12 +10,13 @@ import { reportFailure } from '@/services/diagnostics'
  * Nothing is awaited. The dialog is the answer the user gets; a caller waiting on the promise
  * would only be waiting to do nothing with it.
  */
+// A file view is not a document: `closeDocument` finds no io for it, so it asks nothing, drops
+// the edits, and answers `true`. The four closing gestures come here so none can forget it.
+export async function closeTabAsking(tabId: string): Promise<boolean> {
+  return panelIsFileView(tabId) ? await closeFileViewAsking(tabId) : await closeDocument(tabId)
+}
+
+/** The same for a gesture with nothing to do with the verdict — a cross, a row of a menu. */
 export function closeTab(tabId: string): void {
-  // A file view is not a document: `closeDocument` finds no io for it, so it asks nothing and
-  // drops the edits. Every closing gesture comes here so none of them can forget the branch.
-  if (panelIsFileView(tabId)) {
-    closeFileView(tabId)
-    return
-  }
-  void closeDocument(tabId).catch(error => reportFailure('document.close', tabId, error))
+  void closeTabAsking(tabId).catch(error => reportFailure('document.close', tabId, error))
 }

@@ -3,7 +3,7 @@ import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { closableTabId, openFileView } from '@/features/shell/components/dockviewApi'
+import { openFileView } from '@/features/shell/components/dockviewApi'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { useDictation } from '@/stores/dictation'
 import { installDocument } from '@/stores/document-fixtures'
@@ -127,14 +127,6 @@ describe('a command the application performs itself', () => {
     useDocuments.setState({ activeId: `file:${path}`, documents: {} })
 
     expect(routeCommand('document.close')).toBe('ran')
-    expect(closeDocument).not.toHaveBeenCalled()
-    expect(closableTabId()).toBeNull()
-  })
-
-  it('refuses over a panel that is neither a document nor a file view', () => {
-    useDocuments.setState({ activeId: 'file:Entrées/Jamais ouvert.input.json', documents: {} })
-
-    expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()
   })
 

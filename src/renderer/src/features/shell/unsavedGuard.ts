@@ -1,5 +1,6 @@
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
+import { fileViewsHoldEdits, settleFileViews } from './components/dockviewApi'
 import { settleUnsavedWork, unsavedDocumentIds } from './documentIo'
 
 /**
@@ -12,8 +13,9 @@ import { settleUnsavedWork, unsavedDocumentIds } from './documentIo'
  * next attempt goes straight through.
  *
  * It covers the ways the work goes with the window rather than with a tab — quitting, and the
- * developer reload. It does not cover `refreshDocuments`, which drops documents on a project
- * change without unloading anything, and which no `beforeunload` can see.
+ * developer reload — for a document AND for a file view, whose edits live outside the documents
+ * store. It does not cover `refreshDocuments`, which drops documents on a project change without
+ * unloading anything, and which no `beforeunload` can see.
  *
  * A script goes with the rest: it is a document since Code became a space, so `SCRIPT_IO` is what
  * writes it — one channel per file, where a second one left `heads` stale and asked to overwrite.
@@ -27,7 +29,7 @@ export function guardUnsavedWork(target: Window): () => void {
     try {
       // A write that throws — a project on a volume that went away — would otherwise close the
       // dialog and say nothing, leaving every attempt to leave to replay the same silent scene.
-      proceed = await settleUnsavedWork()
+      proceed = (await settleUnsavedWork()) && (await settleFileViews())
     } catch (error) {
       reportFailure('document.close', '', error)
     }
@@ -41,7 +43,9 @@ export function guardUnsavedWork(target: Window): () => void {
   }
 
   const refuse = (event: BeforeUnloadEvent): void => {
-    if (unsavedDocumentIds().length === 0) return
+    // A file view holds its edits outside the documents store, so its tab has to be asked about
+    // here too — nothing else stands between it and a window that is on its way out.
+    if (unsavedDocumentIds().length === 0 && !fileViewsHoldEdits()) return
     event.preventDefault()
     if (asking) return
 

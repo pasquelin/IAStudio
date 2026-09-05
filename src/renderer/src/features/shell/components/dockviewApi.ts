@@ -20,8 +20,11 @@ let pendingFocus: string | null = null
 const fileViews = new Map<string, FileView>()
 const fileViewSaves = new Map<string, () => Promise<boolean>>()
 
+/** The one spelling of a file view's panel id, so `panelIsFileView` and its makers agree. */
+export const FILE_VIEW_PREFIX = 'file:'
+
 function fileViewPanelId(path: string): string {
-  return `file:${path}`
+  return `${FILE_VIEW_PREFIX}${path}`
 }
 
 /**
@@ -58,18 +61,19 @@ export function openFileView(view: FileView): void {
   useLayouts.getState().setActiveWorkspace('code')
 }
 
-/** Which of the two a tab is — the registry answers, where a `file:` prefix only guesses. */
+// Which of the two a tab is. The ID answers, not the registry: `fromJSON` restores a `file:`
+// panel at launch while `fileViews` — module state, never persisted — is still empty, and a tab
+// closed as a document there would go through the door that asks nothing.
 export function panelIsFileView(id: string): boolean {
-  return fileViews.has(id)
+  return id.startsWith(FILE_VIEW_PREFIX)
 }
 
 // The tab ⌘W acts on, read by the router that runs the gesture and by the menu that greys its
-// row. Either kind, since `closeTab` knows both — but nothing behind the home, which covers tabs
-// rather than replacing them, and nothing for a panel that is neither.
+// row. Nothing behind the home, which covers tabs rather than replacing them.
 export function closableTabId(): string | null {
   const { activeId, documents } = useDocuments.getState()
   if (homeIsVisible() || activeId === null) return null
-  return documents[activeId] || fileViews.has(activeId) ? activeId : null
+  return documents[activeId] || panelIsFileView(activeId) ? activeId : null
 }
 
 export function closeFileView(id: string): void {
@@ -78,6 +82,13 @@ export function closeFileView(id: string): void {
     return
   }
   finishFileViewClose(id)
+}
+
+/** The same, awaited and answered — what a run of closings needs to stop on a cancel. */
+export async function closeFileViewAsking(id: string): Promise<boolean> {
+  if (documentIsMarkedModified(id) && !(await settleFileView(id))) return false
+  finishFileViewClose(id)
+  return true
 }
 
 async function closeModifiedFileView(id: string): Promise<void> {
@@ -102,6 +113,11 @@ function finishFileViewClose(id: string): void {
   noteModified(id, false)
 }
 
+/** Whether any file view holds edits — what a leaving window asks before it lets go. */
+export function fileViewsHoldEdits(): boolean {
+  return [...fileViews.keys()].some(id => documentIsMarkedModified(id))
+}
+
 export function registerFileViewSave(id: string, save: () => Promise<boolean>): () => void {
   fileViewSaves.set(id, save)
   return () => {
@@ -109,7 +125,7 @@ export function registerFileViewSave(id: string, save: () => Promise<boolean>): 
   }
 }
 
-export async function settleFileViewsForProjectChange(): Promise<boolean> {
+export async function settleFileViews(): Promise<boolean> {
   for (const id of fileViews.keys()) {
     if (documentIsMarkedModified(id) && !(await settleFileView(id))) return false
   }
