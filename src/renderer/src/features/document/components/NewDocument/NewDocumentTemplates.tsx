@@ -37,20 +37,11 @@ const ICONS: Record<SceneTemplateId, string> = {
   plane: mdiAirplane,
 }
 
-/**
- * How each group is laid out: how many of the section's ELEVEN columns it takes, and how many
- * tiles it fits across — always as many as the group holds, so every group is one row, and the
- * three spans add up to the section's own width so every tile is one column wide whichever group
- * it is in. A group gaining a template moves both numbers, here and on the row below.
- *
- * Written rather than composed from that count, because Tailwind generates its classes by
- * reading the source: `grid-cols-${templates.length}` produces a class that does not exist.
- * `NewDocumentTemplates.test.tsx` holds the two halves together.
- */
-const LAYOUT: Record<SceneTemplateGroup, { span: string; columns: string }> = {
-  general: { span: 'col-span-6', columns: 'grid-cols-6' },
-  character: { span: 'col-span-3', columns: 'grid-cols-3' },
-  machine: { span: 'col-span-2', columns: 'grid-cols-2' },
+/** Static because Tailwind does not generate class names composed from template counts. */
+const LAYOUT: Record<SceneTemplateGroup, { section: string; columns: string }> = {
+  general: { section: 'col-span-6', columns: 'grid-cols-6' },
+  character: { section: 'col-span-3 col-start-1', columns: 'grid-cols-3' },
+  machine: { section: 'col-span-2', columns: 'grid-cols-2' },
 }
 
 export type NewDocumentTemplatesProps = {
@@ -72,7 +63,7 @@ export function NewDocumentTemplates({ value, onChange }: NewDocumentTemplatesPr
   return (
     <div className="grid grid-cols-11 gap-3">
       {SCENE_TEMPLATE_GROUPS.map(group => (
-        <section key={group} className={cn('flex min-w-0 flex-col gap-1.5', LAYOUT[group].span)}>
+        <section key={group} className={cn('flex min-w-0 flex-col gap-1.5', LAYOUT[group].section)}>
           <span className="text-muted text-xs">{t(`documents.templateGroups.${group}`)}</span>
           <ul className={cn('grid gap-2', LAYOUT[group].columns)}>
             {TEMPLATES_BY_GROUP[group].map(id => (

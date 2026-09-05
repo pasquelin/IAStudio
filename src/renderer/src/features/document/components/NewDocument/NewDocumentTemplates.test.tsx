@@ -45,4 +45,10 @@ describe('NewDocumentTemplates', () => {
       expect(lists[at]?.className).toContain(`grid-cols-${TEMPLATES_BY_GROUP[group].length}`)
     })
   })
+
+  it('starts the character templates on a second row', () => {
+    render(<NewDocumentTemplates value="basic" onChange={() => {}} />)
+
+    expect(screen.getByText('Personnage').closest('section')).toHaveClass('col-start-1')
+  })
 })
