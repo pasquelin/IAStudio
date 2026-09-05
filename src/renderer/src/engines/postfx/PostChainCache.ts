@@ -15,8 +15,11 @@ export type PostChain = {
   usedAt: number
 }
 
-/** Bounds chains, not bytes. Equal-size stateless surfaces share one chain. */
-const CHAINS_HELD = 6
+/**
+ * When to sweep the chains NOBODY is drawing through. Not a cap on the total: a chain a surface
+ * still uses is never taken, so a layout with enough stateful surfaces holds more than this.
+ */
+const SWEEP_ABOVE = 6
 
 export class PostChainCache {
   private readonly chains = new Set<PostChain>()
@@ -79,8 +82,9 @@ export class PostChainCache {
     return undefined
   }
 
+  /** Frees one unused chain — a spare left behind when a binding moved to another size. */
   private evict(): void {
-    if (this.chains.size < CHAINS_HELD) return
+    if (this.chains.size < SWEEP_ABOVE) return
     let oldest: PostChain | undefined
     for (const chain of this.chains) {
       if (chain.users.size > 0) continue
