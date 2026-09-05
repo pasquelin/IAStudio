@@ -60,7 +60,12 @@ export function windowControl(active: boolean): string {
   )
 }
 
-/** The chosen/rest fill, without the control height — a logo row is taller than `--sc-control`. */
+/**
+ * The chosen/rest fill, without the control height — a logo row is taller than `--sc-control`.
+ *
+ * 🛑 The rest state hovers `base-200`, never the accent: `tokensSurfaces.test.ts` measures a
+ * HEXADECIMAL there, and hovering the accent would put a `color-mix()` where it reads one.
+ */
 export function windowChosenFill(chosen: boolean): string {
   return chosen ? 'bg-accent-soft' : 'hover:bg-base-200 bg-transparent'
 }
