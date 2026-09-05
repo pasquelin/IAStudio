@@ -223,8 +223,6 @@ describe('how the catalogue is presented to the model', () => {
     expect(wide.text).toContain('repair your OWN order')
     // The four the bench measured, and the reason they live on this door alone — see WIDE_RULES.
     expect(wide.text).toContain('Rule 3 is for what the person ALONE knows')
-    expect(wide.text).toContain('Never ask the person')
-    expect(wide.text).toContain('that an action can discover')
     expect(wide.text).toContain('are RELATIVE')
     expect(wide.text).toContain('Never say a thing is done')
     expect(wide.text).toContain('Reading is not doing')

@@ -133,6 +133,19 @@ describe('ActionIndex', () => {
     ).toBeGreaterThan(0)
   })
 
+  it('offers a consumer that can follow a relevant producer in the same batch', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const names = index
+      .search({ query: 'génère une image photoréaliste', limit: 12 })
+      .map(hit => hit.action.name)
+
+    expect(names).toContain('generator.submit')
+  })
+
   it('uses structural scope without mixing it into the lexical query', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())

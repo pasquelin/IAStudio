@@ -10,6 +10,8 @@ describe('mission briefing', () => {
 
     expect(briefing.text).toContain('project.create')
     expect(briefing.text).toContain('actions.find')
+    expect(briefing.text).toContain('Never ask the person')
+    expect(briefing.text).toContain('that an action can discover')
     expect(briefing.text).not.toContain('git.checkout')
     expect([...briefing.allowed]).toEqual(['project.create', 'actions.find'])
     expect(briefing.loaded).toEqual(['project.create'])

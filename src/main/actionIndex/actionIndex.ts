@@ -158,6 +158,7 @@ function workflowScoresOf(
     hits
       .map(hit => hit.action)
       .filter(action => action.produces.includes(resource) || action.returns.includes(resource))
+  const seedAt = (rank: number): number => Math.max(3, 6 - Math.floor(rank / 3))
   const visit = (
     action: IndexedAction,
     score: number,
@@ -173,10 +174,9 @@ function workflowScoresOf(
     }
   }
   for (const [rank, hit] of ranked.slice(0, MAX_LIMIT).entries()) {
-    const score = Math.max(3, 6 - Math.floor(rank / 3))
-    visit(hit.action, score, new Set())
+    visit(hit.action, seedAt(rank), new Set())
   }
-  for (const hit of ranked) {
+  for (const [rank, hit] of ranked.entries()) {
     for (const resource of [...hit.action.produces, ...hit.action.returns]) {
       for (const consumer of hits.filter(
         candidate =>
@@ -184,7 +184,10 @@ function workflowScoresOf(
           candidate.action.inputs.includes(resource) ||
           candidate.action.uses.includes(resource),
       )) {
-        scores.set(consumer.action.name, Math.max(scores.get(consumer.action.name) ?? 0, 3))
+        scores.set(
+          consumer.action.name,
+          Math.max(scores.get(consumer.action.name) ?? 0, seedAt(rank)),
+        )
         visit(consumer.action, 6, new Set())
       }
     }

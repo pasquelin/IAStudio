@@ -96,6 +96,16 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   applicatives à découvrir des préférences humaines à demander ; 20.1 repasse à 3/3 sur la mesure
   ciblée. `pnpm validate` est vert. Le mini-banc complet de non-régression reste à lancer : la
   garde de coût externe exige un accord explicite pour ses 27 runs.
+- Continuité intra-batch : un consommateur rendu applicable par un producteur textuellement
+  pertinent hérite désormais du même signal décroissant que les prérequis. Offline : R@12 77,54 %
+  contre 76,57 %, MRR 0,4549, quatre `generator.submit` entrent aux rangs 3–5 et aucune action
+  attendue ne sort du top-12. 20.1 passe 3/3 sans action inutile sur le rejeu ciblé.
+- Mini-banc final du lot : 27/27 fonctionnels, 26/27 selon l'oracle historique, 314 910 tokens,
+  81 rounds, 81 appels provider et 6 actions inutiles. La seule divergence est 57.4 : les trois
+  runs persistent bien la mémoire et terminent, mais l'oracle exige la sous-chaîne française
+  littérale « photoréaliste marine » et refuse son équivalent anglais. Classé `BENCHMARK`, oracle
+  inchangé. Gate complète : 16 760 tests TypeScript, 195 Python et `pnpm validate` verts. Prochaine
+  gate produit : Palier B.
 
 ## Ce que tu ne tranches pas seul
 
