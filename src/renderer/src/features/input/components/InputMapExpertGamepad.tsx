@@ -5,6 +5,7 @@ import type { GamepadBinding, GamepadControl, InputActionKind } from '@shared/do
 import { NumberField } from '@/components/NumberField'
 import { SelectField } from '@/components/SelectField'
 import { ToggleField } from '@/components/ToggleField'
+import { DEFAULT_GAMEPAD_DEAD_ZONE } from '@game/runtime/inputMaps'
 
 type InputMapExpertGamepadProps = {
   kind: InputActionKind
@@ -59,7 +60,7 @@ export function InputMapExpertGamepad({
       />
       <NumberField
         label={t('game.inputMap.deadZone')}
-        value={binding.deadZone ?? 0}
+        value={binding.deadZone ?? DEFAULT_GAMEPAD_DEAD_ZONE}
         min={0}
         max={0.99}
         onChange={deadZone => onChange({ ...binding, deadZone })}

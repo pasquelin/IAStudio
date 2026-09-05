@@ -37,7 +37,10 @@ it('edits the device and advanced gamepad options', async () => {
   const onChange = vi.fn()
   render(<InputMapExpert map={map} onChange={onChange} />)
 
-  expect(screen.getByRole('spinbutton', { name: 'Zone morte' })).toBeInTheDocument()
+  expect(screen.getByRole('spinbutton', { name: 'Zone morte' })).toHaveAttribute(
+    'aria-valuenow',
+    '0.15',
+  )
   expect(screen.getByRole('spinbutton', { name: 'Échelle' })).toBeInTheDocument()
   expect(screen.getByRole('checkbox', { name: 'Inverser' })).toBeInTheDocument()
   await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Périphérique' }), 'keyboard')

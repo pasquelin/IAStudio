@@ -29,7 +29,7 @@ export type ResolvedInput = {
 export type InputActionValue = boolean | number | InputVector
 
 const ZERO: InputVector = { x: 0, y: 0 }
-const DEAD_ZONE = 0.15
+export const DEFAULT_GAMEPAD_DEAD_ZONE = 0.15
 
 export function resolveInputMaps(
   maps: readonly InputMap[],
@@ -91,7 +91,7 @@ function axisOf(binding: InputAction['bindings'][number], input: RawInput): numb
     (strongest, gamepad) => stronger(strongest, rawGamepadAxis(gamepad, binding)),
     0,
   )
-  const deadZone = binding.deadZone ?? DEAD_ZONE
+  const deadZone = binding.deadZone ?? DEFAULT_GAMEPAD_DEAD_ZONE
   if (Math.abs(raw) <= deadZone) return 0
   return (binding.invert ? -raw : raw) * (binding.scale ?? 1)
 }
@@ -107,7 +107,7 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
     (strongest, gamepad) => strongerVector(strongest, rawGamepadVector(gamepad, binding)),
     ZERO,
   )
-  const deadZone = binding.deadZone ?? DEAD_ZONE
+  const deadZone = binding.deadZone ?? DEFAULT_GAMEPAD_DEAD_ZONE
   return {
     x:
       Math.abs(vector.x) <= deadZone
