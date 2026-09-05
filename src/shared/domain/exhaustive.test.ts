@@ -88,6 +88,7 @@ it('names every section the settings window can open', () => {
     'ai.vectorization': true,
     spaces: true,
     'spaces.three': true,
+    input: true,
     shortcuts: true,
     dictation: true,
     media: true,

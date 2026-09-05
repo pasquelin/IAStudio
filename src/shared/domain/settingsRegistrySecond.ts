@@ -5,6 +5,13 @@ import { setting } from './settingDescriptor'
 
 export const SETTING_REGISTRY_SECOND = [
   setting({
+    path: 'input.gamepadNavigation',
+    kind: 'boolean',
+    section: 'input',
+    titleKey: 'settings.gamepadNavigation.title',
+    helpKey: 'settings.gamepadNavigation.help',
+  }),
+  setting({
     path: 'three.snapRotate',
     kind: 'slider',
     section: 'spaces.three',

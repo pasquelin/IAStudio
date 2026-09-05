@@ -138,6 +138,8 @@ const general = z.object({
   autosave: z.boolean().optional(),
 })
 
+const input = z.object({ gamepadNavigation: z.boolean().optional() })
+
 const homeSection = z.object({
   id: z.enum(HOME_SECTION_IDS),
   visible: z.boolean(),
@@ -356,6 +358,7 @@ const partialSettingsShape = z.object({
   workspaces: workspaces.optional(),
   appearance: appearance.optional(),
   generation: generation.optional(),
+  input: input.optional(),
   storage: storage.optional(),
   three: three.optional(),
   shortcuts: shortcuts.optional(),

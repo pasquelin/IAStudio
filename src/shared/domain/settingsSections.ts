@@ -99,6 +99,11 @@ export const SETTING_SECTIONS: readonly SettingSectionEntry[] = [
     parent: 'spaces',
   },
   {
+    id: 'input',
+    labelKey: 'settings.input',
+    descriptionKey: 'settings.inputDescription',
+  },
+  {
     id: 'shortcuts',
     labelKey: 'settings.shortcuts',
     descriptionKey: 'settings.shortcutsDescription',

@@ -75,6 +75,7 @@ export function mergedSettings(base: Settings, partial: PartialSettings): Settin
     ai: { ...base.ai, ...partial.ai },
     home: { ...base.home, ...partial.home },
     workspaces: { ...base.workspaces, ...partial.workspaces },
+    input: { ...base.input, ...partial.input },
     appearance: { ...base.appearance, ...partial.appearance },
     generation: { ...base.generation, ...partial.generation },
     storage: { ...base.storage, ...partial.storage },

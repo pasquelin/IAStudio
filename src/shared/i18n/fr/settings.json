@@ -13,6 +13,7 @@
     "media": "Médias",
     "git": "Versions",
     "dictation": "Dictée",
+    "input": "Contrôles",
     "ai": "Modèles d’IA",
     "accountDescription": "Une clé par service, chiffrée par le trousseau.",
     "appearanceDescription": "Thème et densité des contrôles.",
@@ -20,7 +21,18 @@
     "gitDescription": "Suivi des versions du dossier de projet, par git. Ne concerne que vos fichiers.",
     "mediaDescription": "Préparation des fichiers importés : proxies et waveforms.",
     "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
+    "inputDescription": "Façon de parcourir le studio et contrôles connectés à cet ordinateur.",
     "aiDescription": "Quelle IA sert chaque opération. Le studio ici, Ollama ici, ou un service en ligne dont vous avez la clé.",
+    "gamepadNavigation": {
+      "title": "Parcourir le studio à la manette",
+      "help": "Permet à une manette connectée de parcourir l’interface du studio, valider et revenir. Ce choix reste désactivé tant que vous ne l’allumez pas, afin qu’une partie ne déplace pas l’éditeur derrière elle."
+    },
+    "inputDevices": {
+      "title": "Contrôles détectés",
+      "keyboard": "Clavier",
+      "mouse": "Souris",
+      "noGamepad": "Aucune manette connectée."
+    },
     "theme": {
       "title": "Thème",
       "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",

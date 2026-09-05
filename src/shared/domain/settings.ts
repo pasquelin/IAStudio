@@ -24,9 +24,7 @@ import { DEFAULT_ONBOARDING, type OnboardingSettings } from './welcome'
  * main process assigns the setting straight across, with no table in between to fall behind.
  */
 export type Theme = 'dark' | 'light' | 'system'
-
 export type ResolvedTheme = 'dark' | 'light'
-
 export type Density = 'compact' | 'comfortable'
 export type AssetBackend = 'local' | 'cloud'
 
@@ -98,6 +96,7 @@ export type Settings = {
   workspaces: {
     order: WorkspaceId[]
   }
+  input: { gamepadNavigation: boolean }
   appearance: {
     theme: Theme
     density: Density
@@ -380,6 +379,7 @@ export const DEFAULT_SETTINGS: Settings = {
   general: { language: 'system', startup: 'lastProject', autosave: true },
   home: { enabled: true, news: true, sections: [...DEFAULT_HOME_SECTIONS] },
   workspaces: { order: [...WORKSPACE_IDS] },
+  input: { gamepadNavigation: false },
   appearance: { theme: 'dark', density: 'comfortable', fontScale: 1, reduceMotion: false },
   generation: { concurrentJobs: 3, maxRetries: 4, captionArrivals: true, landing: 'ask' },
   // Empty on a fresh install, and that is the point: no choice made means the local side is

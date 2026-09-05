@@ -69,6 +69,7 @@ describe('the line of a list in an app window', () => {
       '../features/settings/components/Ai/AiChoiceRow.tsx',
       '../features/settings/components/Ai/AiCloudModel.tsx',
       '../features/settings/components/Ai/AiStudioModel.tsx',
+      '../features/settings/components/InputSettings.tsx',
       '../features/settings/components/Setting/SettingLine.tsx',
       '../features/settings/components/SettingsWindow/SettingsWindowResultRow.tsx',
     ])

@@ -69,6 +69,12 @@ describe('settings validation', () => {
     expect(parsePartialSettings(DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS)
   })
 
+  it('keeps explicit gamepad navigation writes', () => {
+    expect(parsePartialSettings({ input: { gamepadNavigation: true } })).toEqual({
+      input: { gamepadNavigation: true },
+    })
+  })
+
   it('accepts a partial and keeps only the sections it declares', () => {
     expect(parsePartialSettings({ appearance: { density: 'compact' } })).toEqual({
       appearance: { density: 'compact' },

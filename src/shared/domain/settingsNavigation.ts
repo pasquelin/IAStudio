@@ -40,6 +40,7 @@ export type SettingsSectionId =
   | 'ai.vectorization'
   | 'spaces'
   | 'spaces.three'
+  | 'input'
   | 'shortcuts'
   | 'dictation'
   | 'media'
@@ -68,6 +69,7 @@ export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = [
   'ai.vectorization',
   'spaces',
   'spaces.three',
+  'input',
   'shortcuts',
   'dictation',
   'media',
