@@ -412,8 +412,6 @@ describe('what the native menu is told', () => {
       expect(lastPublished().abilities).toEqual(IN_FRONT)
     })
 
-    // The home covers the tabs rather than replacing them, and ⌘W no longer falls back to the
-    // window — so the row would close a document the reader is not even looking at.
     it('withholds closing the tab while the home covers it', () => {
       useLayouts.setState({ home: true })
       renderHook(() => useNativeMenu())

@@ -1,5 +1,5 @@
 import { APP_NAME } from '@shared/constants'
-import { scopeOfWorkspace, type MenuAbility } from '@shared/domain/command'
+import { scopeOfWorkspace } from '@shared/domain/command'
 import type { DocumentKind } from '@shared/domain/document'
 import type { NavigationPreset } from '@shared/domain/navigationPreset'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -149,10 +149,11 @@ describe('every native role', () => {
     expect(labels(rows(false, null))).toEqual(['Réduire', 'Zoom', 'Fermer la fenêtre'])
   })
 
+  const file = (given: Partial<MenuOptions>) =>
+    submenuOf(menuTemplate(options(given)), TRANSLATIONS.fr.menu.file)
+  const last = (given: Partial<MenuOptions>) => file(given).at(-1)
+
   it('closes a tab from the studio File menu, and the window from an auxiliary one', () => {
-    const file = (given: Partial<MenuOptions>) =>
-      submenuOf(menuTemplate(options(given)), TRANSLATIONS.fr.menu.file)
-    const last = (given: Partial<MenuOptions>) => file(given).at(-1)
     const runCommand = vi.fn()
 
     const studioMac = last({ isMac: true, actions: actions({ runCommand }) })
@@ -166,14 +167,10 @@ describe('every native role', () => {
     expect(file({ isMac: false }).at(-2)?.label).toBe('Fermer l’onglet')
   })
 
-  // The row said "close the tab" and closed the WINDOW when there was none. Greyed instead: ⌘W
-  // closes a tab or it closes nothing, and an enabled row promises it will do something.
+  // An enabled row promises it will do something, and this one had nothing left to close.
   it('greys closing the tab when the window announces none in front', () => {
-    const closeRow = (abilities: MenuAbility[]) =>
-      submenuOf(menuTemplate(options({ abilities })), TRANSLATIONS.fr.menu.file).at(-1)
-
-    expect(closeRow(['document.close'])?.enabled).toBe(true)
-    expect(closeRow([])?.enabled).toBe(false)
+    expect(last({ abilities: ['document.close'] })?.enabled).toBe(true)
+    expect(last({ abilities: [] })?.enabled).toBe(false)
   })
 
   // A label read off the wrong bundle is worse than none: it would look deliberate.

@@ -2,7 +2,6 @@ import { addNode } from '@/engines/scene/commands'
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
 import { isSceneDirty, sceneStore, useScenes } from '@/stores/scenes'
 import type { CloseChoice } from '@shared/domain/document'
 import { type DocumentWrite } from '@shared/domain/document'
@@ -99,11 +98,10 @@ describe('closing a document', () => {
     expect(useDocuments.getState().documents[documentId]).toBeUndefined()
   })
 
-  // Never, not even the last one: the emptied centre is a screen of its own — it stages the
-  // assistant thread, and the window going would take it with it.
+  // The emptied centre is a screen of its own — it stages the assistant thread, and a window
+  // that went with the last tab would take that screen with it.
   it('leaves the window open when the tab it closed was the last one', async () => {
     installFakeBridge({})
-    useLayouts.setState({ home: false })
     const created = await useDocuments.getState().create('3d')
     if (!created) throw new Error('expected a document')
     useScenes.getState().ensure(created.id, createDefaultScene)
@@ -111,6 +109,7 @@ describe('closing a document', () => {
 
     await closeDocument(created.id)
 
+    expect(useDocuments.getState().documents).toEqual({})
     expect(closeWindow).not.toHaveBeenCalled()
   })
 })

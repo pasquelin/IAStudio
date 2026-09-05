@@ -24,7 +24,7 @@ import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { getBridge } from '@/services/bridge'
 import { newId } from '@/helpers/ids'
-import { useLayouts } from './layouts'
+import { homeIsVisible, useLayouts } from './layouts'
 
 type DocumentsState = {
   documents: Record<string, DocumentDescriptor>
@@ -377,6 +377,15 @@ function asNameFailure(error: unknown): DocumentNameFailure {
 
 export function useDocumentIsInFront(documentId: string): boolean {
   return useDocuments(state => state.activeId === documentId)
+}
+
+/**
+ * The tab ⌘W acts on: the one in front, unless the home is covering the centre — closing from
+ * there would drop a document nobody is looking at. Read by the router that runs the gesture and
+ * by the menu that greys its row, so the two can never disagree about what is closable.
+ */
+export function closableDocumentId(): string | null {
+  return homeIsVisible() ? null : useDocuments.getState().activeId
 }
 
 /**

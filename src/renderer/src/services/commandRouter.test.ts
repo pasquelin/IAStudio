@@ -107,29 +107,18 @@ describe('a command the application performs itself', () => {
     expect(saveDocument).toHaveBeenCalledWith('doc-1')
   })
 
-  it('closes the tab in front', () => {
-    const close = vi.fn()
-    vi.stubGlobal('window', { close })
+  it('closes the tab in front, and refuses when there is none', () => {
+    expect(routeCommand('document.close')).toBe('noSurface')
+    expect(closeDocument).not.toHaveBeenCalled()
+
     useDocuments.setState({ activeId: 'doc-1' })
 
     expect(routeCommand('document.close')).toBe('ran')
     expect(closeDocument).toHaveBeenCalledWith('doc-1')
-    expect(close).not.toHaveBeenCalled()
-    vi.unstubAllGlobals()
   })
 
-  // ⌘W closes a tab or it closes nothing: the window is never the fallback, so an emptied
-  // centre answers the same as the home covering the tabs behind it.
-  it('does nothing when no tab is in front', () => {
-    const close = vi.fn()
-    vi.stubGlobal('window', { close })
-
-    expect(routeCommand('document.close')).toBe('noSurface')
-    expect(closeDocument).not.toHaveBeenCalled()
-    expect(close).not.toHaveBeenCalled()
-    vi.unstubAllGlobals()
-  })
-
+  // ⌘W closes a tab or it closes nothing — the window is never the fallback, and the document
+  // the home covers is one the reader is not even looking at.
   it('leaves a tab sitting behind the home alone rather than closing it', () => {
     const close = vi.fn()
     vi.stubGlobal('window', { close })

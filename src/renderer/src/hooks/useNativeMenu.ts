@@ -10,12 +10,12 @@ import { openRecent } from '@/features/shell/openRecent'
 import { canMaskFromSelection, canMergeDown } from '@/engines/canvas/canvasState'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews } from '@/stores/canvasViews'
-import { activeIdOfKind, useDocuments } from '@/stores/documents'
+import { activeIdOfKind, closableDocumentId, useDocuments } from '@/stores/documents'
 import { displayOfPane } from '@/stores/sceneViewChrome'
 import { MAIN_SCENE_PANE, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useGit } from '@/stores/git'
-import { homeIsVisible, toolSurface, useLayouts } from '@/stores/layouts'
+import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -117,9 +117,8 @@ function publishMenuContext(): void {
   // Both refused in silence over a screen with no document — `routeCommand` answers `noSurface`
   // and nothing on the menu said so, which is what an enabled row promises it will not do.
   const saving: MenuAbility[] = front.activeId ? ['document.save', 'document.saveAs'] : []
-  // The home covers the tabs rather than replacing them, so a tab behind it is not one ⌘W may
-  // take — the same answer `routeCommand` gives, said on the row before it is pressed.
-  const closing: MenuAbility[] = front.activeId && !homeIsVisible() ? ['document.close'] : []
+  // The router's own answer, said on the row before it is pressed rather than worked out again.
+  const closing: MenuAbility[] = closableDocumentId() ? ['document.close'] : []
   const abilities = [...saving, ...closing, ...scene.abilities, ...canvas]
   // The scope and not the kind, since the menu asks whose history ⌘Z pops: the 3D space opens
   // both scenes and interfaces, and the two do not answer the same.
