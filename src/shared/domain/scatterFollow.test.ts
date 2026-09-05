@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { scatterLayer } from './scatter'
+import { scatterLayer, type ScatterLayer } from './scatter'
 import { scatterPosesOf, type ScatterGround } from './scatterGenerate'
-import { scatterPosesAfterSculpt, scatterRebuildOf } from './scatterFollow'
+import { scatterLayerRebuildOf, scatterPosesAfterSculpt, scatterRebuildOf } from './scatterFollow'
 
 const terrain = {
   origin: { x: 0, z: 0 },
@@ -62,5 +62,55 @@ describe('scatterRebuildOf', () => {
     expect(
       scatterPosesAfterSculpt(layer, previous, { kind: 'all' }, high).every(pose => pose.y === 8),
     ).toBe(true)
+  })
+})
+
+describe('scatterLayerRebuildOf', () => {
+  it('keeps rendered cells for metadata-only changes', () => {
+    const before = scatterLayer({ id: 'trees', name: 'Trees', locked: false, collision: false })
+    if (before.category !== 'props') throw new Error('expected props')
+
+    expect(scatterLayerRebuildOf(before, { ...before, name: 'Forest' })).toEqual({ kind: 'none' })
+    expect(scatterLayerRebuildOf(before, { ...before, locked: true })).toEqual({ kind: 'none' })
+    expect(scatterLayerRebuildOf(before, { ...before, collision: true })).toEqual({ kind: 'none' })
+  })
+
+  it('rebuilds all cells when placement inputs change', () => {
+    const before = scatterLayer({ id: 'trees' })
+
+    expect(scatterLayerRebuildOf(before, { ...before, seed: before.seed + 1 })).toEqual({
+      kind: 'all',
+    })
+    expect(
+      scatterLayerRebuildOf(before, {
+        ...before,
+        rules: { ...before.rules, density: before.rules.density + 1 },
+      }),
+    ).toEqual({ kind: 'all' })
+  })
+
+  it('limits a painted-mask edit to the changed chunk region', () => {
+    const before = scatterLayer({
+      id: 'trees',
+      origin: { x: 10, z: 20 },
+      size: { x: 256, z: 256 },
+      grain: 64,
+      mask: { kind: 'painted', weights: { chunks: [] } },
+    })
+    const after: ScatterLayer = {
+      ...before,
+      mask: {
+        kind: 'painted',
+        weights: { chunks: [{ column: 1, row: 2, payload: 'changed' }] },
+      },
+    }
+
+    const rebuild = scatterLayerRebuildOf(before, after)
+    expect(rebuild.kind).toBe('brush')
+    if (rebuild.kind !== 'brush') return
+    expect(rebuild.region.minX).toBeCloseTo(73.749)
+    expect(rebuild.region.minZ).toBeCloseTo(148)
+    expect(rebuild.region.maxX).toBeCloseTo(139.004)
+    expect(rebuild.region.maxZ).toBeCloseTo(213.255)
   })
 })
