@@ -178,6 +178,45 @@ describe('createScatterSurface', () => {
     surface.dispose()
   })
 
+  it('reuses visibility until the camera or rendered cells change', async () => {
+    const layer = scatterLayer({
+      id: 'trees',
+      assets: [{ assetId: 'pine', weight: 1 }],
+      origin: { x: 0, z: 0 },
+      size: { x: 512, z: 256 },
+      rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.01, spacing: 16 },
+    })
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    await surface.sync({ ...DEFAULT_WORLD, layers: [layer] })
+    const camera = new PerspectiveCamera(50, 1, 0.1, 200)
+    camera.updateMatrixWorld(true)
+    const query = vi.spyOn(surface.partition, 'query')
+
+    surface.updateVisibility(camera)
+    surface.updateVisibility(camera)
+    await surface.sync({ ...DEFAULT_WORLD, layers: [{ ...layer, name: 'Forest' }] })
+    surface.updateVisibility(camera)
+    expect(query).toHaveBeenCalledTimes(1)
+
+    camera.position.x = 1
+    camera.updateMatrixWorld(true)
+    surface.updateVisibility(camera)
+    camera.far = 100
+    surface.updateVisibility(camera)
+    expect(query).toHaveBeenCalledTimes(3)
+
+    await surface.sync({ ...DEFAULT_WORLD, layers: [{ ...layer, seed: layer.seed + 1 }] })
+    surface.updateVisibility(camera)
+    expect(query).toHaveBeenCalledTimes(4)
+    surface.dispose()
+  })
+
   it('keeps every drawn instance when only layer metadata changes', async () => {
     const layer = scatterLayer({
       id: 'trees',
