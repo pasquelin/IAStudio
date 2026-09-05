@@ -89,6 +89,13 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   l'imprimait pas dans le Catalogue dont sa propre règle impose l'usage exclusif. L'action de
   contrôle est désormais visible séparément des douze candidats, sans charger son manuel ni
   modifier le top-K. Les tests du briefing tiennent les trois propriétés ensemble.
+- Mini-banc après exposition du secours : 26/27, 302 173 tokens, 75 rounds, 77 appels provider et
+  9 actions inutiles. Le seul échec, 20.1 run 3, reçoit exactement les mêmes candidats que les deux
+  runs réussis (`generator.prepare` et `models.search` compris), mais demande un nom de modèle à
+  l'utilisateur au premier round. La règle distingue désormais explicitement les références
+  applicatives à découvrir des préférences humaines à demander ; 20.1 repasse à 3/3 sur la mesure
+  ciblée. `pnpm validate` est vert. Le mini-banc complet de non-régression reste à lancer : la
+  garde de coût externe exige un accord explicite pour ses 27 runs.
 
 ## Ce que tu ne tranches pas seul
 
