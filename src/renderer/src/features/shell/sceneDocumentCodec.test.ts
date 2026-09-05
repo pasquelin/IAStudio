@@ -65,23 +65,29 @@ describe('sceneDocumentCodec', () => {
     expect(worker.messages.some(message => JSON.stringify(message).includes('"id":2'))).toBe(false)
   })
 
-  it('rejects an out-of-order answer instead of assembling a corrupt file', async () => {
+  it('writes here rather than assemble an out-of-order answer', async () => {
     const worker = new CodecWorker()
     const codec = createSceneDocumentCodec(() => worker as unknown as Worker, options)
     const encoding = codec.encode({ ...createDefaultScene(), nodes: [meshNode('one')] }, 'scene-1')
     await Promise.resolve()
     worker.answer({ id: 1, done: false, index: 1, content: 'skipped zero' })
-    await expect(encoding).rejects.toThrow('chunk 1 out of order')
+
+    const written = await encoding
+    expect(written).not.toContain('skipped zero')
+    expect(written).toContain('"version":"2.0"')
   })
 
-  it('rejects a worker answer whose declared length is incomplete', async () => {
+  it('writes here rather than keep a worker file that came back short', async () => {
     const worker = new CodecWorker()
     const codec = createSceneDocumentCodec(() => worker as unknown as Worker, options)
     const encoding = codec.encode({ ...createDefaultScene(), nodes: [meshNode('one')] }, 'scene-1')
     await Promise.resolve()
     worker.answer({ id: 1, done: false, index: 0, content: '{"cut"' })
     worker.answer({ id: 1, done: true, ok: true, chunks: 2, characters: 12 })
-    await expect(encoding).rejects.toThrow('incomplete file')
+
+    const written = await encoding
+    expect(written).not.toBe('{"cut"')
+    expect(written).toContain('"version":"2.0"')
   })
 
   it('cancels an active encoding when its document incarnation ends', async () => {
@@ -103,7 +109,7 @@ describe('sceneDocumentCodec', () => {
     )
   })
 
-  it('restarts after a worker crash without blocking the next save', async () => {
+  it('writes here after a worker crash, and restarts for the next save', async () => {
     const workers: CodecWorker[] = []
     const codec = createSceneDocumentCodec(() => {
       const worker = new CodecWorker()
@@ -114,7 +120,7 @@ describe('sceneDocumentCodec', () => {
     const failed = codec.encode(state, 'scene-1')
     await Promise.resolve()
     workers[0]?.fail('driver stopped')
-    await expect(failed).rejects.toThrow('scene document worker failed: driver stopped')
+    expect(await failed).toContain('"version":"2.0"')
     const retried = codec.encode(state, 'scene-1')
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(workers).toHaveLength(2)
@@ -123,7 +129,7 @@ describe('sceneDocumentCodec', () => {
     await expect(retried).resolves.toBe('{"ok":true}')
   })
 
-  it('terminates a timed-out worker before retrying on a fresh one', async () => {
+  it('fails only its own request on a timeout, leaving other saves in flight alone', async () => {
     const workers: CodecWorker[] = []
     const codec = createSceneDocumentCodec(
       () => {
@@ -135,17 +141,22 @@ describe('sceneDocumentCodec', () => {
     )
     const state = { ...createDefaultScene(), nodes: [meshNode('one')] }
 
-    await expect(codec.encode(state, 'scene-1')).rejects.toThrow('timed out')
-    expect(workers[0]?.terminated).toBe(true)
-
-    const retried = codec.encode(state, 'scene-1')
+    const slow = codec.encode(state, 'scene-1')
+    const other = codec.encode(state, 'scene-2')
     await new Promise(resolve => setTimeout(resolve, 0))
-    workers[1]?.answer({ id: 2, done: false, index: 0, content: '{"ok":true}' })
-    workers[1]?.answer({ id: 2, done: true, ok: true, chunks: 1, characters: 11 })
-    await expect(retried).resolves.toBe('{"ok":true}')
+
+    // Answered inside its own deadline, while the first is left to run out.
+    workers[0]?.answer({ id: 2, done: false, index: 0, content: '{"ok":true}' })
+    workers[0]?.answer({ id: 2, done: true, ok: true, chunks: 1, characters: 11 })
+    await expect(other).resolves.toBe('{"ok":true}')
+
+    expect(await slow).toContain('"version":"2.0"')
+    // The document that ran out did not take the worker, nor anybody else's save, with it.
+    expect(workers).toHaveLength(1)
+    expect(workers[0]?.terminated).toBe(false)
   })
 
-  it('terminates a worker that rejects a later input chunk', async () => {
+  it('terminates a worker that rejects a later input chunk, and writes here instead', async () => {
     class RejectingWorker extends CodecWorker {
       override postMessage(message: unknown): void {
         super.postMessage(message)
@@ -158,7 +169,7 @@ describe('sceneDocumentCodec', () => {
     const codec = createSceneDocumentCodec(() => workers.shift() as unknown as Worker, options)
     const state = { ...createDefaultScene(), nodes: [meshNode('one')] }
 
-    await expect(codec.encode(state, 'scene-1')).rejects.toThrow('rejected a chunk')
+    expect(await codec.encode(state, 'scene-1')).toContain('"version":"2.0"')
     expect(failedWorker.terminated).toBe(true)
     const retried = codec.encode(state, 'scene-1')
     await new Promise(resolve => setTimeout(resolve, 0))

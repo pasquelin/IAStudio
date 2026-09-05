@@ -4,6 +4,7 @@ import type {
   SceneDocumentCodecRequest,
   SceneDocumentCodecResponse,
 } from './sceneDocumentCodecMessage'
+import { traceFailure } from '@/services/diagnostics'
 import { scenePayloadOf } from './sceneDocument'
 import { yieldSceneDocument } from './sceneDocumentYield'
 
@@ -88,10 +89,15 @@ export function createSceneDocumentCodec(
     const { nodes, ...rest } = state
     const id = (nextId += 1)
     const answer = new Promise<string>((resolve, reject) => {
+      // Only THIS request: terminating the worker rejected every other document's save in
+      // flight, for a slowness none of them caused.
       const timer = setTimeout(() => {
-        const stuck = worker
-        if (stuck) failWorker(stuck, 'scene document worker timed out')
-        else rejectPending(waiting, id, new Error('scene document worker timed out'))
+        try {
+          worker?.postMessage({ id, cancel: true } satisfies SceneDocumentCodecRequest)
+        } catch {
+          // Nothing to do about a worker that will not take a cancel; the request is rejected.
+        }
+        rejectPending(waiting, id, new Error('scene document worker timed out'))
       }, options.timeoutMs)
       const pending: Pending = { content: [], nextIndex: 0, resolve, reject, signal, timer }
       const abort = (): void => {
@@ -124,6 +130,27 @@ export function createSceneDocumentCodec(
     return await answer
   }
 
+  /**
+   * The window's thread is the fallback, never a refusal. A worker that will not start, dies or
+   * times out used to leave a large scene with no way to be written at all; 20 000 nodes cost
+   * 21 ms here, measured 2026-09-05, and 100 000 cost 98 ms.
+   */
+  const encodeOffThreadOrHere = async (
+    state: SceneState,
+    documentId: string,
+    signal?: AbortSignal,
+  ): Promise<string> => {
+    try {
+      return await encodeLarge(state, documentId, signal)
+    } catch (error) {
+      if (signal?.aborted || gone || isAbortError(error)) throw error
+      // Not a surface: the save went through, and only whoever reads the log needs to know the
+      // worker was skipped — a toast per save would say nothing the person can act on.
+      traceFailure('shell.dropped', `scene document worker for ${documentId}`, error)
+      return JSON.stringify(scenePayloadOf(state, documentId))
+    }
+  }
+
   const queuedEncode = (
     state: SceneState,
     documentId: string,
@@ -134,7 +161,7 @@ export function createSceneDocumentCodec(
         ? Promise.reject(abortError())
         : !shouldEncodeOffThread(state, options)
           ? Promise.resolve(JSON.stringify(scenePayloadOf(state, documentId)))
-          : encodeLarge(state, documentId, signal),
+          : encodeOffThreadOrHere(state, documentId, signal),
     )
     const tail = ignoreFailure(result)
     encoding.set(documentId, tail)
@@ -229,6 +256,10 @@ function rejectPending(waiting: Map<number, Pending>, id: number, error: Error):
   clearTimeout(pending.timer)
   if (pending.abort) pending.signal?.removeEventListener('abort', pending.abort)
   pending.reject(error)
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
 }
 
 function abortError(): DOMException {
