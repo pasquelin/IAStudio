@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs'
-import { open, stat, unlink } from 'node:fs/promises'
+import { open, rm, stat, unlink } from 'node:fs/promises'
 import { Transform, type TransformCallback } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { steppedProgress, type TaskWatch } from '@shared/domain/taskProgress'
@@ -41,4 +41,9 @@ export async function copyExternalFile(
     if (signal?.aborted) return false
     throw error
   }
+}
+
+/** A document that arrived with siblings owns its folder, so a refusal takes the folder with it. */
+export async function removeExternalFolder(path: string): Promise<void> {
+  await orElse(rm(path, { recursive: true, force: true }), undefined)
 }

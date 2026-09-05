@@ -8,8 +8,8 @@ import { importExternalFiles, takeExternalFiles } from './externalFiles'
 
 vi.mock('i18next', () => ({
   default: {
-    t: (_key: string, params?: { extensions: string }) =>
-      params ? `Unsupported ${params.extensions}` : 'Importing files',
+    t: (key: string, params?: { extensions?: string; names?: string }) =>
+      params ? `${key} ${params.extensions ?? params.names ?? ''}` : 'Importing files',
   },
 }))
 
@@ -177,5 +177,30 @@ describe('external file arrivals', () => {
       ),
     )
     expect(report.mock.calls[0]?.[0].message).toContain('.txt')
+  })
+
+  it('does not call a format unsupported when it was the copied file that would not open', async () => {
+    const report = vi.fn(async (_entry: LogEntry) => undefined)
+    installFakeBridge({
+      externalFiles: {
+        take: async () => [{ request: { id: 'request-5', folder: '' }, refused: [] }],
+      },
+      media: {
+        ingestPaths: async () => ({
+          assets: [],
+          documents: [],
+          montages: [],
+          refused: [{ name: 'Niveau.gltf', extension: 'gltf' }],
+          failed: [],
+        }),
+      },
+      diagnostics: { report },
+    })
+
+    await takeExternalFiles()
+
+    await vi.waitFor(() => expect(report).toHaveBeenCalled())
+    expect(report.mock.calls[0]?.[0].message).toContain('activity.notOpenedFiles')
+    expect(report.mock.calls[0]?.[0].message).toContain('Niveau.gltf')
   })
 })

@@ -288,4 +288,175 @@ describe('importFiles', () => {
     await expect(access(join(outside, basename(source)))).rejects.toThrow()
     expect(imported.failed).toEqual([basename(source)])
   })
+
+  it('copies the binary and the pictures a glTF points at into a folder of its own', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
+    const source = join(outside, 'Niveau.gltf')
+    await writeFile(
+      source,
+      JSON.stringify({
+        asset: { version: '2.0' },
+        buffers: [{ uri: 'Niveau.bin' }],
+        images: [{ uri: 'textures/peau.png' }],
+      }),
+    )
+    await writeFile(join(outside, 'Niveau.bin'), 'binaire')
+    await mkdir(join(outside, 'textures'))
+    await writeFile(join(outside, 'textures', 'peau.png'), 'image')
+    const document: DocumentDescriptor = {
+      id: 'document-3',
+      kind: 'scene',
+      workspace: '3d',
+      title: 'Niveau',
+      path: 'Niveau/Niveau.gltf',
+    }
+
+    const imported = await importFiles([source], '', {
+      projectPath: () => root,
+      names: async () => [],
+      adopt: async () => null,
+      documents: async () => [document],
+      importBundle: async () => null,
+    })
+
+    expect(await readFile(join(root, 'Niveau', 'Niveau.bin'), 'utf8')).toBe('binaire')
+    expect(await readFile(join(root, 'Niveau', 'textures', 'peau.png'), 'utf8')).toBe('image')
+    expect(imported.documents).toEqual([document])
+  })
+
+  it('catalogues a picture a document points at, which is what relinks it to its texture', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
+    const source = join(outside, 'Bois.mtlx')
+    await writeFile(
+      source,
+      '<materialx version="1.39"><input name="file" type="filename" value="albedo.png" /></materialx>',
+    )
+    await writeFile(join(outside, 'albedo.png'), 'image')
+    const adopt = vi.fn(async () => null)
+
+    await importFiles([source], 'Matieres', {
+      projectPath: () => root,
+      names: async () => [],
+      adopt,
+      documents: async () => [],
+      importBundle: async () => null,
+    })
+
+    expect(adopt).toHaveBeenCalledWith('Matieres/Bois/albedo.png')
+  })
+
+  it('imports a document whose neighbour is missing and names the file it could not find', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
+    const source = join(outside, 'Ciel.gltf')
+    await writeFile(
+      source,
+      JSON.stringify({
+        asset: { version: '2.0' },
+        nodes: [{ name: 'Horizon', extras: { iastudio: { source: 'Ciel.hdr' } } }],
+      }),
+    )
+    const document: DocumentDescriptor = {
+      id: 'document-4',
+      kind: 'skybox',
+      workspace: 'skyboxes',
+      title: 'Ciel',
+      path: 'Ciel/Ciel.gltf',
+    }
+
+    const imported = await importFiles([source], '', {
+      projectPath: () => root,
+      names: async () => [],
+      adopt: async () => null,
+      documents: async () => [document],
+      importBundle: async () => null,
+    })
+
+    expect(imported.documents).toEqual([document])
+    expect(imported.failed).toEqual(['Ciel.hdr'])
+  })
+
+  it('leaves a self-contained glTF where every other import lands', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
+    const source = join(outside, 'Seul.gltf')
+    await writeFile(
+      source,
+      JSON.stringify({
+        asset: { version: '2.0' },
+        buffers: [{ uri: 'data:application/octet-stream;base64,AAAA' }],
+      }),
+    )
+    const document: DocumentDescriptor = {
+      id: 'document-5',
+      kind: 'scene',
+      workspace: '3d',
+      title: 'Seul',
+      path: 'Seul.gltf',
+    }
+
+    const imported = await importFiles([source], '', {
+      projectPath: () => root,
+      names: async () => [],
+      adopt: async () => null,
+      documents: async () => [document],
+      importBundle: async () => null,
+    })
+
+    expect(imported.documents).toEqual([document])
+    await expect(access(join(root, 'Seul'))).rejects.toThrow()
+  })
+
+  it('takes the whole folder away when a document that owned one is refused', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
+    const source = join(outside, 'Cassee.gltf')
+    await writeFile(
+      source,
+      JSON.stringify({ asset: { version: '2.0' }, buffers: [{ uri: 'Cassee.bin' }] }),
+    )
+    await writeFile(join(outside, 'Cassee.bin'), 'binaire')
+
+    const imported = await importFiles([source], '', {
+      projectPath: () => root,
+      names: async () => [],
+      adopt: async () => null,
+      documents: async () => [],
+      importBundle: async () => null,
+    })
+
+    await expect(access(join(root, 'Cassee'))).rejects.toThrow()
+    expect(imported.refused).toEqual([{ name: 'Cassee.gltf', extension: 'gltf' }])
+  })
+
+  it('leaves no folder behind when the import is cancelled while copying the neighbours', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
+    const source = join(outside, 'Lourd.gltf')
+    await writeFile(
+      source,
+      JSON.stringify({ asset: { version: '2.0' }, buffers: [{ uri: 'Lourd.bin' }] }),
+    )
+    await writeFile(join(outside, 'Lourd.bin'), Buffer.alloc(8 * 1024 * 1024))
+    const controller = new AbortController()
+    const documents = vi.fn(async () => [])
+
+    const imported = await importFiles(
+      [source],
+      '',
+      {
+        projectPath: () => root,
+        names: async () => [],
+        adopt: async () => null,
+        documents,
+        importBundle: async () => null,
+      },
+      { signal: controller.signal, onStep: () => controller.abort() },
+    )
+
+    await expect(access(join(root, 'Lourd'))).rejects.toThrow()
+    expect(imported.documents).toEqual([])
+  })
 })
