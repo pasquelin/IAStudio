@@ -139,7 +139,7 @@ function referenceRefusal(
   if (!descriptor) return null
   for (const field of descriptor.fields) {
     if (!field.reference || typeof step.call.input[field.key] !== 'string') continue
-    const resources = (descriptor.inputs ?? []).filter(
+    const resources = [...(descriptor.inputs ?? []), ...(descriptor.uses ?? [])].filter(
       resource => ACTION_RESOURCES[resource].reference?.kind === field.reference,
     )
     const returned = resources.map(resource => referencesReturned(mission, resource))

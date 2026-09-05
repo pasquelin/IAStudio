@@ -141,7 +141,7 @@ describe('AssistantContextBuilder', () => {
 
     await builder.build({ mission, step, request: 'List project scripts' })
 
-    expect(search).toHaveBeenCalledWith(expect.any(String), 12, [], {
+    expect(search).toHaveBeenCalledWith('Create a project image\nList project scripts', 12, [], {
       document: 'scene',
       documentAuthority: 'active',
     })

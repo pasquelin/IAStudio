@@ -83,7 +83,6 @@ function retrievalQuery(input: AssistantContextRequest): string {
       [
         textWithin(input.mission.goal, 480),
         textWithin(input.request, 480),
-        textWithin(input.step.title, 160),
       ].filter(Boolean),
     ),
   ].join('\n')

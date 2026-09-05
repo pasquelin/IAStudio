@@ -130,8 +130,15 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    uses: ['projectAssetCandidates'],
     fields: [
-      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
+      {
+        key: 'assetId',
+        kind: 'text',
+        labelKey: 'assistant.fields.assetId',
+        required: true,
+        reference: 'asset',
+      },
     ],
   }),
   action({
