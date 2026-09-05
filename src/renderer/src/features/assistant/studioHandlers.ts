@@ -1,7 +1,8 @@
-import { englishText } from '@shared/i18n'
+import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
 import { refused, type ActionField } from '@shared/domain/assistant'
 import { COMPONENTS, COMPONENT_TYPES, descriptorOf } from '@shared/domain/componentRegistry'
 import { isComponentType } from '@shared/domain/componentRegistry'
+import { resolveNamedReference } from '@shared/domain/namedReference'
 import { refFromString } from '@shared/domain/ref'
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
 import { mounted, NO_SCENE } from './sceneHandlers'
@@ -45,20 +46,39 @@ export const STUDIO_HANDLERS: ActionHandlers = {
     if (topic.length === 0) {
       return { ok: true, data: { topics: [...COMPONENT_TYPES, 'script'] } }
     }
-    // 🛑 The SAME text the editor types against, sliced — never a second telling of it, which is
-    // the one that would drift from what the compiler enforces.
-    if (topic === 'script') return { ok: true, data: { topic, docs: STUDIO_TYPES } }
-
-    if (!isComponentType(topic)) {
+    const resolved = resolveNamedReference(
+      topic,
+      [...COMPONENT_TYPES, 'script'],
+      candidate => candidate,
+      candidate =>
+        isComponentType(candidate)
+          ? [
+              textAt(TRANSLATIONS.en, COMPONENTS[candidate].titleKey),
+              textAt(TRANSLATIONS.fr, COMPONENTS[candidate].titleKey),
+            ]
+          : [],
+    )
+    if (resolved.kind === 'ambiguous') {
+      return refused(
+        'badInput',
+        `topic "${topic}" is ambiguous — use one of: ${resolved.values.join(', ')}`,
+      )
+    }
+    if (resolved.kind === 'missing') {
       return refused('notFound', `no topic "${topic}" — ask with no topic for the list`)
     }
+    // The editor's API declaration is served verbatim, never retold in a second contract.
+    if (resolved.value === 'script')
+      return { ok: true, data: { topic: resolved.value, docs: STUDIO_TYPES } }
+    if (!isComponentType(resolved.value))
+      return refused('notFound', `no topic "${topic}" — ask with no topic for the list`)
     // 🛑 Resolved, never the KEYS: an action whose trade is to document serves sentences, and
     // `mcpTools` already puts every description through `englishText` for the same reason.
-    const held = COMPONENTS[topic]
+    const held = COMPONENTS[resolved.value]
     return {
       ok: true,
       data: {
-        topic,
+        topic: resolved.value,
         title: englishText(held.titleKey),
         description: englishText(held.descriptionKey),
         fields: held.fields.map(describeField),
