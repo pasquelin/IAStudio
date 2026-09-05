@@ -7,11 +7,7 @@ export function readRenderPixels(
   width: number,
   height: number,
 ): Uint8Array {
-  const pixels = pixelBuffer(width, height)
+  const pixels = new Uint8Array(width * height * 4)
   renderer.readRenderTargetPixels(target, 0, 0, width, height, pixels)
   return pixels
-}
-
-function pixelBuffer(width: number, height: number): Uint8Array {
-  return new Uint8Array(width * height * 4)
 }
