@@ -1,7 +1,14 @@
-import type { AssistantCall } from '@shared/domain/assistant'
+import {
+  MOST_QUESTIONS,
+  type ActionName,
+  type ActionOutcome,
+  type AssistantCall,
+} from '@shared/domain/assistant'
+import { MEMORY_ANSWERING_STATES } from '@shared/domain/assistantMemory'
 import type { Mission, MissionClock } from '@shared/domain/mission'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
-import type { ActionSearchService } from '@main/actionIndex/actionSearchService'
+import { actionSearchScope } from '@main/actionIndex/actionSearchContext'
+import { foundActionsData, type ActionSearchService } from '@main/actionIndex/actionSearchService'
 import type { AssistantBrain } from '@main/assistant/brainPort'
 import {
   createAssistantContextBuilder,
@@ -9,7 +16,7 @@ import {
 } from '@main/mission/contextBuilder'
 import { createStudioEventBus } from '@main/mission/eventBus'
 import type { MissionJournal } from '@main/mission/journal'
-import { createMissionManager } from '@main/mission/manager'
+import { createMissionManager, type MissionManager } from '@main/mission/manager'
 import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/metrics'
 import { createMissionRuntime } from '@main/mission/runtime'
 import { createMissionRevisionReader } from '@main/mission/resourceState'
@@ -23,6 +30,9 @@ import { createMissionTraceRecorder, type MissionTraceRecorder } from './mission
 export type MissionRun = Run & {
   rounds: number
   metrics: MissionRuntimeMetrics
+  /** Every action any reflection offered the model — what the retrieval is judged on. */
+  candidates: readonly ActionName[]
+  missions: readonly Mission[]
   traceFile?: string
 }
 
@@ -67,14 +77,26 @@ const answersOf = (missions: readonly Mission[]): { said: string; asks: readonly
   }
 }
 
+/**
+ * What `createRoutedBrain` adds in the product before any door — the state in front and the
+ * memory count. Filled here as `play.ts` fills them: a bench that omitted them measured a
+ * briefing the studio never sends.
+ */
 function tracedBrain(
   think: AssistantBrain['think'],
   recorder: MissionTraceRecorder | null,
+  studio: Studio,
 ): AssistantBrain {
   return {
     capabilities: async () => ({ streaming: false, structuredJson: true, multimodalImages: false }),
     window: async () => null,
-    think: async (request, watch) => {
+    think: async (packed, watch) => {
+      const request = {
+        ...packed,
+        state: await studio.state(),
+        memories: studio.memories().filter(memory => MEMORY_ANSWERING_STATES.includes(memory.state))
+          .length,
+      }
       const reflection = recorder?.beginReflection(request)
       try {
         const answer = await think(request, {
@@ -98,6 +120,7 @@ function tracedContext(
   studio: Studio,
   actions: Pick<ActionSearchService, 'search'>,
   recorder: MissionTraceRecorder | null,
+  offered: Set<ActionName>,
 ): AssistantContextBuilder {
   let snapshot: StudioSnapshot | null = null
   let retrieval: {
@@ -116,6 +139,7 @@ function tracedContext(
     actions: {
       search: async (query, limit, available, scope) => {
         const candidates = await actions.search(query, limit, available, scope)
+        for (const hit of candidates) offered.add(hit.action.name)
         retrieval = { query, available: available ?? [], scope: scope ?? {}, candidates }
         return candidates
       },
@@ -134,12 +158,36 @@ function tracedContext(
   }
 }
 
-function tracedActions(studio: Studio, called: Called[], recorder: MissionTraceRecorder | null) {
+/**
+ * `actions.find` goes to the index, as `createRemoteActions` sends it in the product. Left to the
+ * studio it ran the window's `findActions` — English names alone, a second search engine the
+ * bench measured without knowing.
+ */
+async function foundActions(
+  studio: Studio,
+  actions: Pick<ActionSearchService, 'search'>,
+  input: Record<string, unknown>,
+): Promise<ActionOutcome> {
+  const query = input['query']
+  if (typeof query !== 'string') return { ok: false, refusal: 'badInput' }
+  const scope = actionSearchScope(await studio.snapshot(), query)
+  return { ok: true, data: foundActionsData(await actions.search(query, 12, undefined, scope)) }
+}
+
+function tracedActions(
+  studio: Studio,
+  actions: Pick<ActionSearchService, 'search'>,
+  called: Called[],
+  recorder: MissionTraceRecorder | null,
+) {
   return {
     run: async (call: AssistantCall) => {
       let outcome
       try {
-        outcome = await studio.run(call.action, call.input)
+        outcome =
+          call.action === 'actions.find'
+            ? await foundActions(studio, actions, call.input)
+            : await studio.run(call.action, call.input)
       } catch (error) {
         recorder?.actionError(call, error)
         throw error
@@ -182,9 +230,11 @@ function completedRun(
   studio: Studio,
   called: readonly Called[],
   metrics: ReturnType<typeof createMissionMetrics>,
-  response: ReturnType<typeof answersOf>,
+  missions: readonly Mission[],
+  candidates: ReadonlySet<ActionName>,
   traceFile?: string,
 ): MissionRun {
+  const response = answersOf(missions)
   return {
     studio,
     called,
@@ -193,7 +243,30 @@ function completedRun(
     asks: response.asks,
     rounds: metrics.read().llmCalls,
     metrics: metrics.read(),
+    candidates: [...candidates],
+    missions,
     ...(traceFile ? { traceFile } : {}),
+  }
+}
+
+/**
+ * The person answering the model's questions, one scripted reply per question. Bounded as the
+ * answer format is: a mission that asks more than that is asking in circles.
+ */
+async function answerQuestions(
+  runtime: ReturnType<typeof createMissionRuntime>,
+  manager: MissionManager,
+  mission: Mission,
+  replies: readonly string[],
+): Promise<void> {
+  let current = mission
+  const pending = [...replies]
+  for (let asked = 0; asked < MOST_QUESTIONS; asked += 1) {
+    const wait = current.waits.find(one => one.kind === 'user')
+    const reply = pending.shift()
+    if (!wait || reply === undefined) return
+    await runtime.scheduler.resume(current.id, wait.stepId, reply)
+    current = (await manager.read(current.id)) ?? current
   }
 }
 
@@ -204,7 +277,8 @@ export async function playMission(
   traceOptions?: MissionTraceOptions,
 ): Promise<MissionRun> {
   const called: Called[] = [],
-    metrics = createMissionMetrics()
+    metrics = createMissionMetrics(),
+    offered = new Set<ActionName>()
   const studio = await createStudio(PROJECT, undefined, scenario.answers)
   const recorder = traceOptions
     ? createMissionTraceRecorder({ ...traceOptions, userRequest: scenario.said })
@@ -217,9 +291,9 @@ export async function playMission(
   )
   const runtime = createMissionRuntime({
     manager,
-    context: tracedContext(studio, actions, recorder),
-    brain: tracedBrain(think, recorder),
-    actions: tracedActions(studio, called, recorder),
+    context: tracedContext(studio, actions, recorder, offered),
+    brain: tracedBrain(think, recorder, studio),
+    actions: tracedActions(studio, actions, called, recorder),
     jobs: { list: () => [...studio.jobs()] },
     revisions: createMissionRevisionReader(async () => await studio.snapshot()),
     clock: time,
@@ -230,11 +304,13 @@ export async function playMission(
     await scenario.setup?.(studio)
     studio.settle()
     const scope = await projectScope(studio)
-    for (const request of scenario.said) await runtime.create(request, scope)
+    for (const request of scenario.said) {
+      const mission = await runtime.create(request, scope)
+      if (scenario.replies) await answerQuestions(runtime, manager, mission, scenario.replies)
+    }
     const missions = await manager.list(scope)
-    const response = answersOf(missions)
     const traceFile = recorder?.write(missions, await studio.snapshot())
-    return completedRun(studio, called, metrics, response, traceFile)
+    return completedRun(studio, called, metrics, missions, offered, traceFile)
   } catch (error) {
     await writeFailure(recorder, manager, studio)
     studio.close()

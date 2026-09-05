@@ -10,8 +10,10 @@ import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/metrics'
 import type { Run, Scenario } from './run'
 import { SCENARIOS } from './scenarios'
-import { playMission } from './playMission'
+import { playMission, type MissionRun } from './playMission'
+import { missionFailureClassOf, type MissionFailureClass } from './missionFailures'
 import {
+  expectedMissionActions,
   missionFamilyCoverage,
   missionScenarios,
   scenarioFamilies,
@@ -47,7 +49,17 @@ type Result = {
   tokens: Tokens
   metrics: MissionRuntimeMetrics
   families: readonly string[]
+  /** One class per failed run — what to fix first, read off the run rather than the words. */
+  failures: MissionFailureClass[]
 }
+
+const failureClassOf = (scenario: Scenario, played: MissionRun): MissionFailureClass =>
+  missionFailureClassOf({
+    expected: expectedMissionActions(scenario),
+    candidates: new Set(played.candidates),
+    called: played.called,
+    missionStates: played.missions.map(mission => mission.state),
+  })
 
 const emptyMetrics = (): MissionRuntimeMetrics => createMissionMetrics().read()
 
@@ -143,6 +155,7 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
       tokens: { sent: 0, back: 0, cached: 0, calls: 0 },
       metrics: emptyMetrics(),
       families: scenarioFamilies(scenario),
+      failures: [],
     }
     const failures: string[] = []
     const brain = createHttpChatBrain({
@@ -171,10 +184,12 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
         result.unnecessary += unnecessaryActions(scenario, played)
         addMetrics(result.metrics, played.metrics)
         if (resultPassed(scenario, played)) result.passed += 1
-        else
+        else {
+          result.failures.push(failureClassOf(scenario, played))
           failures.push(
-            `${played.called.map(call => call.action).join(', ') || 'no action'} — ${played.said}`,
+            `[${result.failures.at(-1)}] ${played.called.map(call => call.action).join(', ') || 'no action'} — ${played.said}`,
           )
+        }
       } finally {
         played.studio.close()
       }
@@ -193,9 +208,17 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
       console.log(
         `  ${result.passed === RUNS ? '✓' : '✗'} ${result.name}: ${result.passed}/${RUNS}, ` +
           `${result.actions} actions, ${result.unnecessary} unnecessary, ` +
-          `${result.metrics.actionsSentToLlm} candidates sent, ${result.tokens.sent} tokens`,
+          `${result.metrics.actionsSentToLlm} candidates sent, ${result.tokens.sent} tokens` +
+          (result.failures.length > 0 ? ` — ${result.failures.join(', ')}` : ''),
       )
     }
+    const byClass = new Map<MissionFailureClass, number>()
+    for (const one of results.flatMap(result => result.failures))
+      byClass.set(one, (byClass.get(one) ?? 0) + 1)
+    if (byClass.size > 0)
+      console.log(
+        `  failures by class: ${[...byClass].map(([name, count]) => `${name} ${count}`).join(' · ')}`,
+      )
     console.log(
       `  ${Math.round((passed / total) * 100)}% passed · ${sum(result => result.tokens.sent)} tokens · ` +
         `${sum(result => result.metrics.contextChars)} context chars · ` +
@@ -230,6 +253,7 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
           rounds: sum(result => result.metrics.llmCalls),
           providerCalls: sum(result => result.tokens.calls),
           topK: 12,
+          failuresByClass: Object.fromEntries(byClass),
           coverage: missionFamilyCoverage(scenarios),
           results,
         },

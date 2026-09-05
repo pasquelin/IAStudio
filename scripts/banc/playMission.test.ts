@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import type { AssistantBrain } from '@main/assistant/brainPort'
-import type { AssistantAnswer } from '@shared/domain/assistant'
+import type { AssistantAnswer, AssistantThought } from '@shared/domain/assistant'
 import { isRecord } from '@shared/guards'
 import { blockScene } from './setups'
 import { playMission, type MissionRun } from './playMission'
@@ -194,6 +194,99 @@ describe('parcours mission du banc', () => {
     } finally {
       played?.studio.close()
       await rm(folder, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('ce que le harnais mission envoie et répond, comme le produit', () => {
+  it("envoie l'état du studio et le compte des souvenirs avec chaque réflexion", async () => {
+    const requests: AssistantThought[] = []
+    const played = await playMission(
+      { name: 'état', said: ['Que vois-tu ?'], setup: blockScene, passed: () => true },
+      async request => {
+        requests.push(request)
+        return { say: 'Une scène.', calls: [], cost: 0 }
+      },
+      { search: async () => [] },
+    )
+
+    try {
+      expect(requests[0]?.state).toContain('Bloc')
+      expect(requests[0]?.memories).toBe(0)
+    } finally {
+      played.studio.close()
+    }
+  })
+
+  it("route actions.find vers l'index plutôt que vers la fenêtre", async () => {
+    const action = actionCorpus().actions.find(candidate => candidate.name === 'git.init')
+    if (!action) throw new Error('git.init est absente du registre')
+    const search = vi.fn(async (_query: string) => [
+      {
+        action,
+        score: 1,
+        lexicalScore: 1,
+        relevanceScore: 1,
+        applicabilityScore: 0,
+        documentAffinity: 'transversal' as const,
+      },
+    ])
+    let round = 0
+    const played = await playMission(
+      { name: 'cherche', said: ['Mets le projet sous suivi de versions.'], passed: () => true },
+      async () => {
+        round += 1
+        return round === 1
+          ? { say: '', calls: [{ action: 'actions.find', input: { query: 'versions' } }], cost: 0 }
+          : { say: 'Trouvé.', calls: [], cost: 0 }
+      },
+      { search },
+    )
+
+    try {
+      expect(played.called[0]?.action).toBe('actions.find')
+      expect(played.called[0]?.answer).toContain('"name":"git.init"')
+      expect(search.mock.calls.some(call => call[0] === 'versions')).toBe(true)
+      expect(played.candidates).toContain('git.init')
+    } finally {
+      played.studio.close()
+    }
+  })
+
+  it('répond aux questions du modèle avec les réponses du scénario, et laisse attendre sinon', async () => {
+    const ask = (): AssistantAnswer => ({
+      say: '',
+      ask: { questions: [{ question: 'Quel nom ?', choices: [] }] },
+      calls: [],
+      cost: 0,
+    })
+    const think =
+      (log: string[]): AssistantBrain['think'] =>
+      async request => {
+        log.push(request.utterance)
+        return log.length === 1 ? ask() : { say: 'Fait.', calls: [], cost: 0 }
+      }
+    const answered = await playMission(
+      { name: 'répond', said: ['Renomme.'], replies: ['Bateau'], passed: () => true },
+      think([]),
+      { search: async () => [] },
+    )
+    const waiting = await playMission(
+      { name: 'attend', said: ['Renomme.'], passed: () => true },
+      think([]),
+      { search: async () => [] },
+    )
+
+    try {
+      expect(answered.missions[0]?.state).toBe('completed')
+      expect(
+        answered.missions[0]?.plan.steps.find(step => step.kind === 'user_input')?.result,
+      ).toBe('Bateau')
+      expect(waiting.missions[0]?.state).toBe('waiting_user')
+      expect(waiting.asks).toEqual(['Quel nom ?'])
+    } finally {
+      answered.studio.close()
+      waiting.studio.close()
     }
   })
 })

@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { chunk } from '@shared/collections'
 import { messageOf } from '@shared/guards'
+import { englishText } from '@shared/i18n'
 import type { Embedder } from '@main/memory/embedder'
 import { actionCorpus } from './actionCorpus'
 import type { ActionResource } from '@shared/domain/assistant'
@@ -9,6 +10,14 @@ import type { AsyncActionIndex } from './actionIndexClient'
 import { openActionIndexThread } from './actionIndexThread'
 
 const EMBED_BATCH = 32
+
+/** What `actions.find` answers the model: the hits with their fields, labels in English. */
+export const foundActionsData = (hits: readonly ActionHit[]) =>
+  hits.map(hit => ({
+    name: hit.action.name,
+    description: hit.action.description,
+    fields: hit.action.fields.map(field => ({ ...field, label: englishText(field.labelKey) })),
+  }))
 
 export type ActionSearchService = {
   search: (

@@ -50,8 +50,7 @@ import type { LocalRuntimes } from './ai/localRuntimes'
 import type { AiManager } from './ai/manager'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { AssistantBrain } from './assistant/brainPort'
-import type { ActionSearchService } from './actionIndex/actionSearchService'
-import { englishText } from '@shared/i18n'
+import { foundActionsData, type ActionSearchService } from './actionIndex/actionSearchService'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { orElse } from '@shared/promises'
 import { catalogOf } from './provider/modelCatalog'
@@ -96,21 +95,14 @@ export function createAssistantBrains(deps: AssistantDeps) {
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
     findActions: async query => ({
       ok: true,
-      data: (
+      data: foundActionsData(
         await deps.actionIndex.search(
           query,
           12,
           undefined,
           actionSearchScope(await snapshot(), query),
-        )
-      ).map(hit => ({
-        name: hit.action.name,
-        description: hit.action.description,
-        fields: hit.action.fields.map(field => ({
-          ...field,
-          label: englishText(field.labelKey),
-        })),
-      })),
+        ),
+      ),
     }),
   })
   const visualCapture = createVisualCapturePort({
