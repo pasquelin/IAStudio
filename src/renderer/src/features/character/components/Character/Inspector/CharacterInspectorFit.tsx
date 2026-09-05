@@ -19,6 +19,8 @@ export type CharacterInspectorFitProps = {
   hasRig?: boolean
 }
 
+const MIA_HELP = 'alert alert-info alert-soft min-h-0 px-2 py-1 text-tiny leading-tight'
+
 function miaSettings(state: CharacterFit) {
   if (state.selectedBackend !== 'make-it-animatable') return null
   return (
@@ -46,7 +48,7 @@ function miaSettings(state: CharacterFit) {
         scId="character.mia.useSurfaceNormals"
         actions={false}
       />
-      <QuietNote>{state.t('inspector.autoRigUseSurfaceNormalsHint')}</QuietNote>
+      <p className={MIA_HELP}>{state.t('inspector.autoRigUseSurfaceNormalsHint')}</p>
       <ToggleField
         label={state.t('inspector.autoRigWeightPostProcessing')}
         value={state.miaOptions.weightPostProcessing}
@@ -56,7 +58,7 @@ function miaSettings(state: CharacterFit) {
         scId="character.mia.weightPostProcessing"
         actions={false}
       />
-      <QuietNote>{state.t('inspector.autoRigMiaSettingsHint')}</QuietNote>
+      <p className={MIA_HELP}>{state.t('inspector.autoRigMiaSettingsHint')}</p>
     </details>
   )
 }

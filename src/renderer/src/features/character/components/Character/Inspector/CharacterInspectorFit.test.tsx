@@ -29,7 +29,9 @@ beforeEach(() => {
         'inspector.autoRigFingerDetailed': 'Détaillés',
         'inspector.autoRigFingerSimplified': 'Simplifiés',
         'inspector.autoRigUseSurfaceNormals': 'Utiliser les normales de surface',
+        'inspector.autoRigUseSurfaceNormalsHint': 'Améliore la séparation des poids.',
         'inspector.autoRigWeightPostProcessing': 'Nettoyer les influences',
+        'inspector.autoRigMiaSettingsHint': 'Ces réglages seront utilisés au prochain calcul.',
       })[key] ?? key,
     i18n: { language: 'fr' },
     kind: 'human',
@@ -104,5 +106,18 @@ describe('the Auto Rig selector', () => {
       useSurfaceNormals: false,
       weightPostProcessing: false,
     })
+  })
+
+  it('presents MIA setting help as compact informational alerts', () => {
+    render(
+      <CharacterInspectorFit assetId="asset" documentId="document" nodeId="node" sample={sample} />,
+    )
+
+    for (const text of [
+      'Améliore la séparation des poids.',
+      'Ces réglages seront utilisés au prochain calcul.',
+    ]) {
+      expect(screen.getByText(text)).toHaveClass('alert', 'alert-info', 'alert-soft', 'text-tiny')
+    }
   })
 })
