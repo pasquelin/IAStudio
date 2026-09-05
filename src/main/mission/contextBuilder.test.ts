@@ -134,7 +134,9 @@ describe('AssistantContextBuilder', () => {
       state: {},
     }
     scene.selection = { kind: 'node', items: [{ id: 'node_1', name: 'Cube' }] }
-    const search = vi.fn(async () => [])
+    const search = vi.fn(
+      async (_query: string, _limit?: number, _available?: readonly ActionResource[]) => [],
+    )
     const builder = createAssistantContextBuilder(
       dependencies({ snapshot: async () => scene, actions: { search } }),
     )
@@ -161,7 +163,6 @@ describe('AssistantContextBuilder', () => {
       async (_query: string, _limit?: number, _available?: readonly ActionResource[]) => [],
     )
     const builder = createAssistantContextBuilder(dependencies({ actions: { search } }))
-
     await builder.build({
       mission: { ...base.mission, plan: { steps: [discovered, base.step] } },
       step: base.step,
@@ -177,6 +178,27 @@ describe('AssistantContextBuilder', () => {
     })
 
     expect(search.mock.calls.map(call => call[2])).toEqual([[], ['generationModelCandidates']])
+  })
+  it('exposes generated assets after a completed job', async () => {
+    const base = missionOf('/projects/alpha')
+    const completedJob: MissionStep = {
+      ...base.step,
+      id: 'step_job',
+      kind: 'job',
+      jobId: 'job_1',
+      state: 'completed',
+      result: { id: 'job_1', assetIds: ['asset_1'] },
+    }
+    const search = vi.fn(
+      async (_query: string, _limit?: number, _available?: readonly ActionResource[]) => [],
+    )
+    const builder = createAssistantContextBuilder(dependencies({ actions: { search } }))
+    await builder.build({
+      mission: { ...base.mission, plan: { steps: [completedJob, base.step] } },
+      step: base.step,
+      request: 'Add the generated result to the timeline',
+    })
+    expect(search.mock.calls[0]?.[2]).toEqual(['projectAssetCandidates'])
   })
 
   it('builds a useful context without a window or project', async () => {

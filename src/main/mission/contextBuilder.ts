@@ -20,6 +20,7 @@ import type {
 } from './context'
 import { CONTEXT_BUDGETS, emptyBudgetReport, withinBudget } from './contextBudget'
 import { compactContextValue, serializedContextLength } from './contextCompaction'
+import { assetIdsFromJobResult } from './jobResult'
 
 type AssistantContextRequest = {
   mission: Mission
@@ -80,10 +81,7 @@ function markContentTruncated(report: ContextBudgetReport, source: ContextSource
 function retrievalQuery(input: AssistantContextRequest): string {
   return [
     ...new Set(
-      [
-        textWithin(input.mission.goal, 480),
-        textWithin(input.request, 480),
-      ].filter(Boolean),
+      [textWithin(input.mission.goal, 480), textWithin(input.request, 480)].filter(Boolean),
     ),
   ].join('\n')
 }
@@ -91,7 +89,12 @@ function retrievalQuery(input: AssistantContextRequest): string {
 function availableActionResources(input: AssistantContextRequest): readonly ActionResource[] {
   const resources = new Set<ActionResource>()
   for (const step of input.mission.plan.steps) {
-    if (step.kind !== 'action' || step.state !== 'completed') continue
+    if (step.state !== 'completed') continue
+    if (step.kind === 'job') {
+      if (assetIdsFromJobResult(step.result).length > 0) resources.add('projectAssetCandidates')
+      continue
+    }
+    if (step.kind !== 'action') continue
     const descriptor = assistantAction(step.call.action)
     for (const resource of descriptor?.produces ?? []) resources.add(resource)
     const hasReturnedValue = Array.isArray(step.result)

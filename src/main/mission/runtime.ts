@@ -22,6 +22,7 @@ import type { AssistantBrain } from '@main/assistant/brainPort'
 import type { RemoteActions } from '@main/mcp/asking'
 import type { JobManager } from '@main/provider/jobManager'
 import type { AssistantContextBuilder } from './contextBuilder'
+import { assetIdsFromJobResult } from './jobResult'
 import type { MissionMetrics } from './metrics'
 import type { MissionManager, MissionScope } from './manager'
 import {
@@ -100,18 +101,34 @@ function referencesReturned(
       step.state === 'completed' &&
       (assistantAction(step.call.action)?.returns ?? []).includes(resource),
   )
+  const jobReferences =
+    resource === 'projectAssetCandidates'
+      ? mission.plan.steps.flatMap(step =>
+          step.kind === 'job' && step.state === 'completed'
+            ? assetIdsFromJobResult(step.result)
+            : [],
+        )
+      : []
   const reference = ACTION_RESOURCES[resource].reference
   return {
-    authoritative: steps.length > 0,
+    authoritative: steps.length > 0 || jobReferences.length > 0,
     values: reference
-      ? [...new Set(steps.flatMap(step => referenceValues(step.result, reference.key)))]
+      ? [
+          ...new Set([
+            ...steps.flatMap(step => referenceValues(step.result, reference.key)),
+            ...jobReferences,
+          ]),
+        ]
       : [],
   }
 }
 
 function resourceAvailable(mission: Mission, resource: ActionResource): boolean {
   return mission.plan.steps.some(step => {
-    if (step.kind !== 'action' || step.state !== 'completed') return false
+    if (step.state !== 'completed') return false
+    if (step.kind === 'job')
+      return resource === 'projectAssetCandidates' && assetIdsFromJobResult(step.result).length > 0
+    if (step.kind !== 'action') return false
     const descriptor = assistantAction(step.call.action)
     if (descriptor?.produces?.includes(resource)) return true
     if (!descriptor?.returns?.includes(resource)) return false
