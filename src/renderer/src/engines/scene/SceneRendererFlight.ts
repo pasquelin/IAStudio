@@ -11,6 +11,7 @@ import { captureSize, type CaptureQuality } from '@shared/domain/sceneCapture'
 import './bvhPatches'
 import { flightGaze } from './sceneRendererSupport2'
 import { SceneRendererFilm } from './SceneRendererFilm'
+import { readRenderPixels } from './readRenderPixels'
 export abstract class SceneRendererFlight extends SceneRendererFilm {
   protected abstract syncPaneFreeze(): void
   public abstract get flying(): boolean
@@ -54,7 +55,6 @@ export abstract class SceneRendererFlight extends SceneRendererFilm {
           const samples = Math.min(4, gl.capabilities.maxSamples)
           const captureStillStep3 = async () => {
             const target = new WebGLRenderTarget(width, height, { samples })
-            const pixels = new Uint8Array(width * height * 4)
             const restore = this.hideWorkshop()
             const captureStillStep4 = async () => {
               const loan = aspectLoan(width, height)
@@ -75,7 +75,7 @@ export abstract class SceneRendererFlight extends SceneRendererFilm {
                   width,
                   height,
                 })
-                gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
+                const pixels = readRenderPixels(gl, target, width, height)
                 return await encodeFilmFrameOffThread(pixels, width, height, composed)
               } finally {
                 gl.setRenderTarget(null)

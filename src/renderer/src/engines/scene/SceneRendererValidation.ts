@@ -18,6 +18,7 @@ import {
 } from './sceneRuntimeSnapshot'
 import { nodeIdOf, withEveryLayer } from './sceneRendererSupport2'
 import { SceneRendererOptimization } from './SceneRendererOptimization'
+import { readRenderPixels } from './readRenderPixels'
 
 const VALIDATION_PICK_SAMPLES = 32
 
@@ -30,7 +31,6 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
     this.regroupInstances()
     const camera = validationCamera(spec)
     const target = new WebGLRenderTarget(spec.width, spec.height)
-    const pixels = new Uint8Array(spec.width * spec.height * 4)
     const restore = this.hideWorkshop(camera)
     try {
       this.viewport.drawScene({
@@ -44,7 +44,7 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
         width: spec.width,
         height: spec.height,
       })
-      gl.readRenderTargetPixels(target, 0, 0, spec.width, spec.height, pixels)
+      const pixels = readRenderPixels(gl, target, spec.width, spec.height)
       this.observeRuntimeValidationPicks(spec.id, camera)
       return { width: spec.width, height: spec.height, pixels }
     } finally {

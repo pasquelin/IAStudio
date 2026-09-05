@@ -7,6 +7,7 @@ import { evenSize, frameTimes, type FilmRequest } from './film'
 import { encodeFilmFrameOffThread } from './filmEncodePort'
 import './bvhPatches'
 import { SceneRendererPreview } from './SceneRendererPreview'
+import { readRenderPixels } from './readRenderPixels'
 export abstract class SceneRendererFilm extends SceneRendererPreview {
   protected abstract applyVisibility(): void
   /**
@@ -135,7 +136,6 @@ export abstract class SceneRendererFilm extends SceneRendererPreview {
       const renderFilmStep1 = async () => {
         const { width, height } = evenSize(request)
         const target = new WebGLRenderTarget(width, height)
-        const pixels = new Uint8Array(width * height * 4)
         const renderFilmStep2 = async () => {
           const restore = this.hideWorkshop()
           const loan = aspectLoan(width, height)
@@ -163,7 +163,7 @@ export abstract class SceneRendererFilm extends SceneRendererPreview {
                   width,
                   height,
                 })
-                gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
+                const pixels = readRenderPixels(gl, target, width, height)
                 index += 1
                 await onFrame(
                   index,
