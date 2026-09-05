@@ -211,6 +211,7 @@ export async function answeredTurn(
   round: BrainRound,
   onProgress?: (progress: AssistantProgress) => void,
   notes?: TurnNotes,
+  discover?: (query: string) => Promise<readonly ActionName[]>,
 ): Promise<AssistantAnswer> {
   const budget: Budget = { left: TURN_ATTEMPTS }
   // 🛑 Here and in no brain: this is what KNOWS an attempt is starting, and an answer thrown away
@@ -239,7 +240,7 @@ export async function answeredTurn(
     const query = discoveryIn(read.reply)
     if (query !== null && shown.expand !== null) {
       log.info('assistant', `the model asked what else there is: "${query}"`)
-      shown = shown.expand(query)
+      shown = discover ? shown.withLoaded(await discover(query)) : shown.expand(query)
       continue
     }
 

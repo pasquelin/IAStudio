@@ -162,6 +162,7 @@ export function createHttpChatBrain({
         (shown, complaint) => round(request, shown, watch, complaint),
         watch.onProgress,
         notesFor(cloud, model(), watch),
+        watch.discover,
       )
     },
   }

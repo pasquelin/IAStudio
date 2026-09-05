@@ -55,6 +55,7 @@ export type RemoteActionDeps = {
   send: (request: AssistantActionRequest) => boolean
   newCallId?: () => string
   timeoutMs?: number
+  findActions?: (query: string) => Promise<ActionOutcome>
 }
 
 export type RemoteActions = {
@@ -67,12 +68,19 @@ export function createRemoteActions({
   send,
   newCallId = randomUUID,
   timeoutMs = ANSWER_TIMEOUT_MS,
+  findActions,
 }: RemoteActionDeps): RemoteActions {
   const waiting = new Map<string, (outcome: ActionOutcome) => void>()
 
   return {
-    run: (call, signal) =>
-      new Promise<ActionOutcome>(resolve => {
+    run: async (call, signal) => {
+      if (call.action === 'actions.find' && findActions) {
+        const query = call.input['query']
+        return typeof query === 'string'
+          ? await findActions(query)
+          : { ok: false, refusal: 'badInput' }
+      }
+      return await new Promise<ActionOutcome>(resolve => {
         const callId = newCallId()
         if (signal?.aborted) {
           resolve({ ok: false, refusal: 'timedOut' })
@@ -114,7 +122,8 @@ export function createRemoteActions({
           signal?.removeEventListener('abort', abort)
           resolve(outcome)
         })
-      }),
+      })
+    },
 
     settle: ({ callId, outcome }) => {
       const answer = waiting.get(callId)

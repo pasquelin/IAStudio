@@ -48,6 +48,8 @@ import type { LocalRuntimes } from './ai/localRuntimes'
 import type { AiManager } from './ai/manager'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { AssistantBrain } from './assistant/brainPort'
+import type { ActionSearchService } from './actionIndex/actionSearchService'
+import { englishText } from '@shared/i18n'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { orElse } from '@shared/promises'
 import { catalogOf } from './provider/modelCatalog'
@@ -62,6 +64,7 @@ type AssistantDeps = {
   project: ProjectStore
   context: ProjectContextStore
   memoryVectors: MemoryVectors
+  actionIndex: ActionSearchService
   runtimes: LocalRuntimes
   ai: AiManager
   modelOf: (id: string) => LocalModel | null
@@ -88,6 +91,17 @@ export function createAssistantBrains(deps: AssistantDeps) {
   })
   const remoteActions = createRemoteActions({
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
+    findActions: async query => ({
+      ok: true,
+      data: (await deps.actionIndex.search(query, 12)).map(hit => ({
+        name: hit.action.name,
+        description: hit.action.description,
+        fields: hit.action.fields.map(field => ({
+          ...field,
+          label: englishText(field.labelKey),
+        })),
+      })),
+    }),
   })
   const visualCapture = createVisualCapturePort({
     send: request => sendTo(studioWindow(), EVENTS.assistantVisualCapture, request),

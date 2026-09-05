@@ -107,6 +107,7 @@ export function createLocalBrain({
         // Every frame of this door names its window, the restart `answeredTurn` emits included.
         watch.onProgress && inWindow(watch.onProgress, contextTokens),
         notesFor(LOCAL_DOOR, modelId, watch),
+        watch.discover,
       )
     },
   }

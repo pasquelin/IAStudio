@@ -31,6 +31,11 @@ type AssistantContextRequest = {
 
 export type AssistantContextBuilder = {
   build: (request: AssistantContextRequest) => Promise<AssistantContext>
+  searchActions?: (
+    request: AssistantContextRequest,
+    query: string,
+    limit?: number,
+  ) => Promise<readonly ActionHit[]>
 }
 
 export type AssistantContextBuilderDeps = {
@@ -434,18 +439,34 @@ function assembledContext(
 export function createAssistantContextBuilder(
   deps: AssistantContextBuilderDeps,
 ): AssistantContextBuilder {
+  const snapshotFor = async (input: AssistantContextRequest): Promise<StudioSnapshot | null> => {
+    if (input.step.missionId !== input.mission.id) {
+      throw new Error('context step belongs to another mission')
+    }
+    const snapshot = await deps.snapshot()
+    return input.mission.projectId && snapshot?.project?.path !== input.mission.projectId
+      ? null
+      : snapshot
+  }
+
   return {
     build: async input => {
-      if (input.step.missionId !== input.mission.id) {
-        throw new Error('context step belongs to another mission')
-      }
-      const readSnapshot = await deps.snapshot()
-      const snapshot =
-        input.mission.projectId && readSnapshot?.project?.path !== input.mission.projectId
-          ? null
-          : readSnapshot
+      const snapshot = await snapshotFor(input)
       const collected = await collectContext(deps, input, snapshot)
       return assembledContext(input, snapshot, collected)
+    },
+    searchActions: async (input, query, limit = CONTEXT_BUDGETS.actions.maxItems) => {
+      const snapshot = await snapshotFor(input)
+      const context =
+        input.mission.projectId && snapshot?.project?.path === input.mission.projectId
+          ? await deps.projectContext.read()
+          : noContext()
+      return await deps.actions.search(
+        query,
+        limit,
+        availableActionResources(input),
+        actionSearchScope(snapshot, input.request, availableActionTargets(context, input.request)),
+      )
     },
   }
 }

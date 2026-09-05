@@ -176,6 +176,7 @@ export function createProviderBrain({
         (shown, complaint) => ask(request, chosen, bounds, shown, watch, complaint),
         undefined,
         notesFor(SCENARIO_CLOUD, chosen, watch),
+        watch.discover,
       )
     },
   }

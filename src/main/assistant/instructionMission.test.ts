@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { answeredTurn } from './brainTurn'
 import { briefingFor } from './instruction'
+import type { ActionName } from '@shared/domain/assistant'
 
 describe('mission briefing', () => {
   it('bounds the catalogue and allowed calls to retrieved actions and discovery', async () => {
@@ -27,6 +28,31 @@ describe('mission briefing', () => {
 
     expect(expanded?.allowed.has('git.checkout')).toBe(true)
     expect(expanded?.text).toContain('git.checkout')
+  })
+
+  it('uses the caller search service for bounded mission discovery', async () => {
+    const discover = vi.fn(async (): Promise<readonly ActionName[]> => ['git.checkout'])
+    const briefing = await briefingFor(
+      { utterance: 'switch branch', history: [], candidates: ['project.create'] },
+      200_000,
+    )
+    const round = vi
+      .fn()
+      .mockResolvedValueOnce({
+        answer:
+          '{"say":"","ask":null,"calls":[{"action":"actions.find","input":{"query":"switch branch"}}]}',
+        cost: 1,
+      })
+      .mockResolvedValueOnce({
+        answer:
+          '{"say":"Done.","ask":null,"calls":[{"action":"git.checkout","input":{"branch":"main"}}]}',
+        cost: 1,
+      })
+
+    const answer = await answeredTurn(briefing, round, undefined, undefined, discover)
+
+    expect(discover).toHaveBeenCalledWith('switch branch')
+    expect(answer.calls[0]?.action).toBe('git.checkout')
   })
 
   it('opens a registered action requested outside the bounded candidates before executing it', async () => {

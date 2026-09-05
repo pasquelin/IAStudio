@@ -6,6 +6,7 @@ import type {
   AssistantWindow,
 } from '@shared/domain/assistant'
 import type { AssistantNote } from '@shared/domain/assistantNote'
+import type { ActionName } from '@shared/domain/assistant'
 
 /**
  * What the assistant asks of whatever is doing its thinking.
@@ -48,6 +49,8 @@ export type TurnWatch = {
   onProgress?: (progress: AssistantProgress) => void
   /** What went out and what came back, kept rather than shown — see `AssistantNote`. */
   onNote?: (note: AssistantNote) => void
+  /** Resolves a bounded action discovery query through the caller's current search context. */
+  discover?: (query: string) => Promise<readonly ActionName[]>
 }
 
 /**

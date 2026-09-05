@@ -309,6 +309,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     const serialized = contextText(context)
     deps.metrics?.context(context, serialized.length)
     deps.metrics?.llmCall(step.kind === 'reason')
+    const searchActions = deps.context.searchActions
     return await deps.brain.think(
       {
         utterance,
@@ -317,7 +318,18 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         candidates: context.actions.map(hit => hit.action.name),
         images: context.visual?.map(({ mimeType, bytes }) => ({ mimeType, bytes })),
       },
-      { signal },
+      searchActions
+        ? {
+            signal,
+            discover: async query =>
+              (
+                await searchActions(
+                  { mission, step, request: mission.goal, visual: wantsVisual },
+                  query,
+                )
+              ).map(hit => hit.action.name),
+          }
+        : { signal },
     )
   }
 
