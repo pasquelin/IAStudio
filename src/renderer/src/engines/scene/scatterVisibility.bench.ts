@@ -10,20 +10,19 @@ const cells = fixture(50_000)
 updateScatterVisibility(cells, camera)
 
 bench('visibility before: unchanged camera and 50k batches', () => oldVisibility(cells, camera))
-bench('visibility after: unchanged camera and 50k batches', () =>
-  updateScatterVisibility(cells, camera),
-)
+bench('visibility after: unchanged camera and 50k batches', () => {
+  updateScatterVisibility(cells, camera)
+})
 
 function fixture(count: number) {
+  const props: ScatterCategory = 'props'
   const partitions = new Map(
     SCATTER_CATEGORIES.map(category => [category, buildPartition(category === 'props' ? 256 : 32)]),
   )
   const key = cellKey(0, 0)
   partitions.get('props')?.hold(key)
   return {
-    byLayer: new Map([
-      ['trees', { category: 'props' as const, cells: new Map([[key, objects(count)]]) }],
-    ]),
+    byLayer: new Map([['trees', { category: props, cells: new Map([[key, objects(count)]]) }]]),
     partitions,
     queried: new Map(SCATTER_CATEGORIES.map(category => [category, [] as CellKey[]])),
     wanted: new Map(SCATTER_CATEGORIES.map(category => [category, new Set<CellKey>()])),
