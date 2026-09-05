@@ -1,6 +1,6 @@
 import type { ActionSearchService } from '@main/actionIndex/actionSearchService'
 import type { ActionHit } from '@main/actionIndex/actionIndex'
-import { actionSearchScope } from '@main/actionIndex/actionSearchContext'
+import { actionSearchScope, availableActionTargets } from '@main/actionIndex/actionSearchContext'
 import type { MemoryVectors } from '@main/memory/memoryVectors'
 import type { ProjectContextStore } from '@main/project/context'
 import type { JobManager } from '@main/provider/jobManager'
@@ -145,6 +145,21 @@ async function collectDocumentContext(
   return [state, visual]
 }
 
+function recallProjectMemories(
+  deps: AssistantContextBuilderDeps,
+  attached: boolean,
+  query: string,
+  refs: readonly MemoryRef[],
+): Promise<readonly Memory[]> {
+  return attached
+    ? deps.memories.recall('project', {
+        text: query,
+        refs,
+        limit: CONTEXT_BUDGETS.memories.maxItems,
+      })
+    : Promise.resolve([])
+}
+
 async function collectContext(
   deps: AssistantContextBuilderDeps,
   input: AssistantContextRequest,
@@ -154,30 +169,31 @@ async function collectContext(
   const refs = rememberedRefs(snapshot)
   const attached =
     input.mission.projectId !== undefined && snapshot?.project?.path === input.mission.projectId
-  const [actions, projectMemories, globalMemories, jobs, projectContext, document] =
-    await Promise.all([
-      deps.actions.search(
-        query,
-        CONTEXT_BUDGETS.actions.maxItems,
-        availableActionResources(input),
-        actionSearchScope(snapshot, input.request),
+  const readingProjectContext = attached ? deps.projectContext.read() : Promise.resolve(noContext())
+  const readingProjectMemories = recallProjectMemories(deps, attached, query, refs)
+  const readingGlobalMemories = deps.memories.recall('global', {
+    text: query,
+    refs,
+    limit: CONTEXT_BUDGETS.memories.maxItems,
+  })
+  const readingDocument = collectDocumentContext(deps, input, snapshot)
+  const readProjectContext = await readingProjectContext
+  const [actions, projectMemories, globalMemories, jobs, document] = await Promise.all([
+    deps.actions.search(
+      query,
+      CONTEXT_BUDGETS.actions.maxItems,
+      availableActionResources(input),
+      actionSearchScope(
+        snapshot,
+        input.request,
+        availableActionTargets(readProjectContext, input.request),
       ),
-      attached
-        ? deps.memories.recall('project', {
-            text: query,
-            refs,
-            limit: CONTEXT_BUDGETS.memories.maxItems,
-          })
-        : Promise.resolve([]),
-      deps.memories.recall('global', {
-        text: query,
-        refs,
-        limit: CONTEXT_BUDGETS.memories.maxItems,
-      }),
-      Promise.resolve(deps.jobs.list()),
-      attached ? deps.projectContext.read() : Promise.resolve(noContext()),
-      collectDocumentContext(deps, input, snapshot),
-    ])
+    ),
+    readingProjectMemories,
+    readingGlobalMemories,
+    Promise.resolve(deps.jobs.list()),
+    readingDocument,
+  ])
   return {
     actions,
     memories: [
@@ -186,7 +202,7 @@ async function collectContext(
       ).values(),
     ],
     jobs,
-    projectContext: rankedCards(projectContext, query),
+    projectContext: rankedCards(readProjectContext, query),
     ...(document[0] === undefined ? {} : { documentState: document[0] }),
     ...(document[1] ? { visual: document[1] } : {}),
   }

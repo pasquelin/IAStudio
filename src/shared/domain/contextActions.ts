@@ -72,7 +72,11 @@ export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
-    capabilities: { intents: ['delete'] },
+    capabilities: {
+      intents: ['delete'],
+      targets: ['projectContext'],
+      documentAffinity: 'transversal',
+    },
     fields: [
       {
         key: 'cardId',

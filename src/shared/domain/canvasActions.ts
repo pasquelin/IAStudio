@@ -155,6 +155,12 @@ const CANVAS_ACTIONS_FIRST: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    capabilities: {
+      intents: ['mutate'],
+      targets: ['layer'],
+      documentKinds: ['image'],
+      documentAffinity: 'required',
+    },
     fields: [
       LAYER,
       { key: 'x', kind: 'number', labelKey: 'assistant.fields.x', required: false },

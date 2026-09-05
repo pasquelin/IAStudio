@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
-import { actionSearchScope } from './actionSearchContext'
+import { actionSearchScope, availableActionTargets } from './actionSearchContext'
 
 const SNAPSHOT: StudioSnapshot = {
   project: null,
@@ -96,5 +96,15 @@ describe('action search context', () => {
       document: 'image',
       documentAuthority: 'active',
     })
+  })
+
+  it('only exposes project context as a target when an active card matches the request', () => {
+    const context = {
+      cards: [{ id: 'style', title: 'Style', body: 'Photorealistic', active: true, pictures: [] }],
+      trouble: null,
+    }
+
+    expect(availableActionTargets(context, 'Forget the project style')).toEqual(['projectContext'])
+    expect(availableActionTargets(context, 'Delete the selected node')).toEqual([])
   })
 })

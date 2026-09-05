@@ -3,21 +3,59 @@ import { isRecord } from '@shared/guards'
 export const serializedContextLength = (value: unknown): number =>
   JSON.stringify(value)?.length ?? 0
 
+function structuralIdentity(value: unknown): Readonly<Record<string, unknown>> | null {
+  if (!isRecord(value)) return null
+  const identity: Record<string, unknown> = {}
+  for (const key of ['id', 'name', 'title', 'type', 'kind']) {
+    const field = value[key]
+    if (typeof field === 'string' || typeof field === 'number') identity[key] = field
+  }
+  return Object.keys(identity).length > 0 ? identity : null
+}
+
+function structuralSummary(
+  value: readonly unknown[],
+  maximum: number,
+): { byType: Readonly<Record<string, number>>; items: readonly unknown[] } | null {
+  const byType: Record<string, number> = {}
+  for (const item of value) {
+    if (!isRecord(item)) continue
+    const type = typeof item.type === 'string' ? item.type : item.kind
+    if (typeof type === 'string') byType[type] = (byType[type] ?? 0) + 1
+  }
+  const identities: unknown[] = []
+  for (const item of value) {
+    const identity = structuralIdentity(item)
+    if (!identity) continue
+    if (serializedContextLength({ byType, items: [...identities, identity] }) > maximum) break
+    identities.push(identity)
+  }
+  return Object.keys(byType).length > 0 || identities.length > 0
+    ? { byType, items: identities }
+    : null
+}
+
 function compactArray(value: readonly unknown[], maximum: number): unknown {
+  const summary = structuralSummary(value, Math.floor(maximum / 2))
+  const base = {
+    truncated: true,
+    count: value.length,
+    ...(summary ? { summary } : {}),
+  }
   const items: unknown[] = []
   for (const item of value) {
-    const full = { truncated: true, items: [...items, item] }
+    const full = { ...base, items: [...items, item] }
     if (serializedContextLength(full) <= maximum) {
       items.push(item)
       continue
     }
-    const room = maximum - serializedContextLength({ truncated: true, items }) - 1
+    const room = maximum - serializedContextLength({ ...base, items }) - 1
     const compact = compactContextValue(item, room)
-    const candidate = { truncated: true, items: [...items, compact.value] }
+    const candidate = { ...base, items: [...items, compact.value] }
     if (serializedContextLength(candidate) <= maximum) items.push(compact.value)
     break
   }
-  return { truncated: true, items }
+  return { ...base, items }
 }
 
 function compactRecord(value: Readonly<Record<string, unknown>>, maximum: number): unknown {

@@ -1,4 +1,6 @@
 import type { SnapshotDocument, StudioSnapshot } from '@shared/domain/studioSnapshot'
+import type { ActionTarget } from '@shared/domain/actionCapabilities'
+import type { ContextState } from '@shared/domain/projectContext'
 import { foldForSearch, searchWords } from '@shared/text'
 import type { ActionSearchScope } from './actionIndex'
 import { actionQueryIntent } from './actionLexical'
@@ -37,9 +39,10 @@ function namedDocument(
 export function actionSearchScope(
   snapshot: StudioSnapshot | null,
   query: string,
+  availableTargets: readonly ActionTarget[] = [],
 ): ActionSearchScope {
   const request = foldForSearch(query)
-  const refersToSelection = /-(?:la|le|les)\b|\b(?:it|them|lui)\b/.test(request)
+  const refersToSelection = /-(?:la|le|les)\b|\b(?:it|them|lui|sa|son|ses)\b/.test(request)
   const targetsSelection =
     refersToSelection ||
     snapshot?.selection?.items.some(item => {
@@ -49,6 +52,7 @@ export function actionSearchScope(
   const targetDocument = namedDocument(snapshot?.documents ?? [], query)
   const domainTarget = namedDomainTarget(query, snapshot?.activeDocumentState?.kind)
   return {
+    ...(availableTargets.length > 0 ? { availableTargets } : {}),
     ...(snapshot?.selection && targetsSelection
       ? { target: snapshot.selection.kind }
       : domainTarget
@@ -62,4 +66,16 @@ export function actionSearchScope(
         ? { document: snapshot.activeDocumentState.kind, documentAuthority: 'active' }
         : {}),
   }
+}
+
+export function availableActionTargets(
+  context: ContextState,
+  query: string,
+): readonly ActionTarget[] {
+  const words = new Set(searchWords(query))
+  return context.cards.some(
+    card => card.active && searchWords(`${card.title} ${card.body}`).some(word => words.has(word)),
+  )
+    ? ['projectContext']
+    : []
 }

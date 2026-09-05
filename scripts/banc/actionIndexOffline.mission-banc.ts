@@ -9,7 +9,7 @@ import {
 import type { AsyncActionIndex } from '@main/actionIndex/actionIndexClient'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import { createActionSearchService } from '@main/actionIndex/actionSearchService'
-import { actionSearchScope } from '@main/actionIndex/actionSearchContext'
+import { actionSearchScope, availableActionTargets } from '@main/actionIndex/actionSearchContext'
 import type { Embedder } from '@main/memory/embedder'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { ACTION_FAMILIES, type ActionName } from '@shared/domain/assistant'
@@ -168,7 +168,11 @@ describe('ActionIndex offline retrieval', () => {
             request,
             action,
             scenario.name,
-            actionSearchScope(await studio.snapshot(), request),
+            actionSearchScope(
+              await studio.snapshot(),
+              request,
+              availableActionTargets(studio.projectContext(), request),
+            ),
           ),
         )
       } finally {

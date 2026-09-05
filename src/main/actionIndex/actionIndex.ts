@@ -1,6 +1,6 @@
 import type { ActionName } from '@shared/domain/assistant'
 import type { ActionResource } from '@shared/domain/actionResource'
-import type { ActionDocumentAffinity } from '@shared/domain/actionCapabilities'
+import type { ActionDocumentAffinity, ActionTarget } from '@shared/domain/actionCapabilities'
 import { askExpression } from '@main/project/ftsMatch'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { bytes, number, optionalNumber, optionalText } from '@main/project/sqlRow'
@@ -19,6 +19,7 @@ const DEFAULT_LIMIT = 5
 const MAX_LIMIT = 12
 const FTS_CANDIDATES = 40
 const AVAILABLE_RESOURCE_SCORE = 8
+const AVAILABLE_TARGET_SCORE = 8
 const RRF_K = 60
 const FTS_RRF_WEIGHT = 2
 
@@ -30,6 +31,7 @@ export type ActionEmbedding = {
 
 export type ActionSearchScope = {
   target?: string
+  availableTargets?: readonly ActionTarget[]
   document?: string
   documentAuthority?: 'active' | 'explicit'
 }
@@ -116,9 +118,14 @@ function actionScopeScores(
         action.capabilities.targets?.length
       ? -6
       : 0
+  const availableTargetScore =
+    hasTextRelevance &&
+    action.capabilities.targets?.some(target => scope?.availableTargets?.includes(target))
+      ? AVAILABLE_TARGET_SCORE
+      : 0
   return {
     scope: actionDocumentScore(action, scope, target, document, hasTextRelevance),
-    compatibility: targetScore,
+    compatibility: targetScore + availableTargetScore,
   }
 }
 
@@ -374,8 +381,8 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
       const rank = optionalNumber(row, 'rank')
       const lexical = actionLexicalScore(wanted.query, action, rank)
       const semantic = semanticScoreOf(row, question, wanted.embedding)
-      const scope = actionScopeScores(action, wanted.scope, lexical >= 1)
       const intentScore = actionIntentScore(wanted.query, action)
+      const scope = actionScopeScores(action, wanted.scope, lexical >= 1 || intentScore > 0)
       const targetIntentScore = targetIntentScoreOf(wanted.scope, scope.compatibility, intentScore)
       const totalScopeScore = scope.scope + scope.compatibility + targetIntentScore
       const ftsRank = ftsRanks.get(action.name)
