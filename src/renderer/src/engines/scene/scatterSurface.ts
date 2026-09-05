@@ -114,9 +114,11 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
       state.syncing = new Promise(resolve => {
         release = resolve
       })
-      await previous
-      if (state.disposed) return
+      // The release covers the disposed exit too: a sync that returns without it strands every
+      // sync queued behind it on a lock nothing will ever open.
       try {
+        await previous
+        if (state.disposed) return
         await syncScatter(state, world, heightmaps, options)
       } finally {
         release()

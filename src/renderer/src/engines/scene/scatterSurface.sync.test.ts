@@ -100,4 +100,25 @@ describe('createScatterSurface sync', () => {
     expect(surface.objectsInCell('trees', cellKey(0, 0)).length).toBeGreaterThan(0)
     surface.dispose()
   })
+
+  it('lets a sync settle after disposal instead of stranding the ones behind it', async () => {
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+
+    surface.dispose()
+    await surface.sync(DEFAULT_WORLD)
+
+    // The one behind a disposed sync must not wait on a lock that was never released.
+    await expect(
+      Promise.race([
+        surface.sync(DEFAULT_WORLD).then(() => 'settled'),
+        new Promise(resolve => setTimeout(() => resolve('stranded'), 50)),
+      ]),
+    ).resolves.toBe('settled')
+  })
 })
