@@ -233,6 +233,7 @@ type ChannelMethod = {
   [CHANNELS.windowState]: StudioBridge['window']['state']
   [CHANNELS.windowLanguage]: StudioBridge['window']['language']
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']
+  [CHANNELS.windowResumeLeave]: StudioBridge['window']['resumeLeave']
 
   [CHANNELS.mirrorOpen]: StudioBridge['mirror']['open']
   [CHANNELS.gameWindowOpen]: StudioBridge['gameWindow']['open']

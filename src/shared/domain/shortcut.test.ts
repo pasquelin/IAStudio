@@ -154,12 +154,13 @@ describe('away from macOS', () => {
 describe('reservedByPlatform', () => {
   it('names the chords the desktop answers before any window does', () => {
     expect(reservedByPlatform('Meta+KeyQ')).toBe(true)
-    expect(reservedByPlatform('Meta+KeyW')).toBe(true)
+    expect(reservedByPlatform('Meta+KeyM')).toBe(true)
   })
 
   /** The platform reserves ⌘, FOR the settings, which is the very thing it opens here. */
-  it('leaves ⌘, alone, and says nothing about a chord nobody claims', () => {
+  it('leaves ⌘, and ⌘W alone, and says nothing about a chord nobody claims', () => {
     expect(reservedByPlatform('Meta+Comma')).toBe(false)
+    expect(reservedByPlatform('Meta+KeyW')).toBe(false)
     expect(reservedByPlatform(shipped('canvas.undo'))).toBe(false)
     expect(reservedByPlatform(null)).toBe(false)
   })

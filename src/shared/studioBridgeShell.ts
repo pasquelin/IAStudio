@@ -131,6 +131,11 @@ export type StudioBridgeShell = {
     language: () => Promise<Language>
     onLanguage: (callback: (language: Language) => void) => Unsubscribe
     /**
+     * Continues or drops a leave the renderer held while it asked about unsaved work.
+     * `true` replays the original gesture (quit or close); `false` cancels it.
+     */
+    resumeLeave: (proceed: boolean) => Promise<void>
+    /**
      * Tells the main process which surface is up, which panels it can currently open, which menu
      * rows are ticked and which of them can answer at all, so the menu can follow all four. None
      * of them can be worked out on the other side: whether the generator exists depends on a

@@ -1,4 +1,5 @@
 import { getBridge } from '@/services/bridge'
+import { homeIsVisible } from '@/stores/layouts'
 import { reportFailure, reportNotice } from '@/services/diagnostics'
 import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
@@ -17,7 +18,7 @@ import {
 } from '@shared/domain/formatCapability'
 import type { StudioBridge } from '@shared/ipc'
 import i18next from 'i18next'
-import { closePanel, openDocument } from './components/dockviewApi'
+import { closePanel, openDocument, openPanelIds } from './components/dockviewApi'
 import { IO_BY_KIND, ioOf, type CapturedDraft, type DocumentIo } from './documentIoAdapters'
 import { queueDocumentSave } from './documentSaveQueue'
 const unreadable = new Set<string>()
@@ -380,6 +381,8 @@ export async function closeDocument(documentId: string): Promise<boolean> {
       if (choice === 'save' && !(await saveDocument(documentId))) return false
     }
     forgetDocument(documentId)
+    // The home unmounts Dockview, so an empty panel list there is not "the last tab".
+    if (!homeIsVisible() && openPanelIds().length === 0) window.close()
     return true
   })
 }

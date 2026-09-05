@@ -13,9 +13,12 @@ import { beforeEach, vi } from 'vitest'
 // The real one needs a live Dockview; what this file checks is that closing and opening reach it.
 const closePanel = vi.fn()
 const openDocument = vi.fn()
+const openPanelIds = vi.fn((): string[] => [])
+const closeWindow = vi.spyOn(window, 'close').mockImplementation(() => {})
 vi.mock('./components/dockviewApi', () => ({
   closePanel: (id: string) => closePanel(id),
   openDocument: (document: DocumentDescriptor) => openDocument(document),
+  openPanelIds: () => openPanelIds(),
 }))
 
 const box = meshNode('box-1')
@@ -51,6 +54,8 @@ function scene(id: string): DocumentDescriptor {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  closeWindow.mockClear()
+  openPanelIds.mockReturnValue([])
   localStorage.clear()
   clearScenes()
   forgetReportedFailures()
@@ -100,8 +105,10 @@ export {
   box,
   closeDocument,
   closePanel,
+  closeWindow,
   deleteDocument,
   openDocument,
+  openPanelIds,
   oraContent,
   patched,
   picture,

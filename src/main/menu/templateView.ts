@@ -137,12 +137,13 @@ export function viewMenu(context: MenuContext): MenuItemConstructorOptions {
 }
 
 export function windowMenu(context: MenuContext): MenuItemConstructorOptions {
-  const { roleItem, t } = context
+  const { roleItem, t, options } = context
+  const close = !options.isMac && options.workspace === null ? [roleItem('close')] : []
   return {
     role: 'windowMenu',
     label: t.menu.window,
-    submenu: context.options.isMac
+    submenu: options.isMac
       ? [roleItem('minimize'), roleItem('zoom'), { type: 'separator' }, roleItem('front')]
-      : [roleItem('minimize'), roleItem('zoom'), roleItem('close')],
+      : [roleItem('minimize'), roleItem('zoom'), ...close],
   }
 }

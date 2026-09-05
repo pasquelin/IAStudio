@@ -195,9 +195,10 @@ describe('the keys the registry binds', () => {
   })
 
   /**
-   * ⌘Q, ⌘W, ⌘M: the desktop answers these before any window does, on all three systems. A
+   * ⌘Q, ⌘M: the desktop answers these before any window does, on all three systems. A
    * command holding one is unreachable AND takes a gesture nothing else can make — which is
    * exactly what ⌘Q did on a French keyboard, where the window read it as the canvas's ⌘A.
+   * ⌘W is the tab, so it is not on that list.
    */
   it('leaves the chords the desktop answers to the desktop', () => {
     for (const isMac of [true, false]) {

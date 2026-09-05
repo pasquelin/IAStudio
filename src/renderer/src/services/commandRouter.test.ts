@@ -13,9 +13,10 @@ import { routeCommand } from './commandRouter'
 
 const saveDocument = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const saveDocumentAs = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
+const closeDocument = vi.hoisted(() => vi.fn(() => Promise.resolve(true)))
 const importOtioz = vi.hoisted(() => vi.fn())
 
-vi.mock('@/features/shell/documentIo', () => ({ saveDocument, saveDocumentAs }))
+vi.mock('@/features/shell/documentIo', () => ({ saveDocument, saveDocumentAs, closeDocument }))
 vi.mock('@/features/shell/otioImport', () => ({ importOtioz }))
 
 const createPicked = vi.fn()
@@ -104,6 +105,39 @@ describe('a command the application performs itself', () => {
 
     expect(routeCommand('document.save')).toBe('ran')
     expect(saveDocument).toHaveBeenCalledWith('doc-1')
+  })
+
+  it('closes the tab in front', () => {
+    const close = vi.fn()
+    vi.stubGlobal('window', { close })
+    useDocuments.setState({ activeId: 'doc-1' })
+
+    expect(routeCommand('document.close')).toBe('ran')
+    expect(closeDocument).toHaveBeenCalledWith('doc-1')
+    expect(close).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  it('closes the window when no tab is in front', () => {
+    const close = vi.fn()
+    vi.stubGlobal('window', { close })
+
+    expect(routeCommand('document.close')).toBe('ran')
+    expect(closeDocument).not.toHaveBeenCalled()
+    expect(close).toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  it('closes the window from the home rather than a tab sitting behind it', () => {
+    const close = vi.fn()
+    vi.stubGlobal('window', { close })
+    useLayouts.setState({ home: true })
+    useDocuments.setState({ activeId: 'doc-1' })
+
+    expect(routeCommand('document.close')).toBe('ran')
+    expect(closeDocument).not.toHaveBeenCalled()
+    expect(close).toHaveBeenCalled()
+    vi.unstubAllGlobals()
   })
 })
 

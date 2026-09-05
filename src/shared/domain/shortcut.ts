@@ -131,16 +131,15 @@ export function signatureOf(event: KeyChord, isMac: boolean): Signature {
 }
 
 /**
- * Chords the desktop answers before any window does: quitting, closing, hiding, minimising, the
+ * Chords the desktop answers before any window does: quitting, hiding, minimising, the
  * screenshot keys. A command bound to one is unreachable AND takes a gesture the user has no
  * other way to make — `Meta` reads as ⌘ on macOS and Ctrl elsewhere, which is where these sit
  * on all three systems.
  *
- * ⌘, is absent on purpose: the platform reserves it FOR the settings, which is what it opens.
+ * ⌘, is left out so Settings can bind it; ⌘W is left out so `document.close` can.
  */
 const PLATFORM_CHORDS: ReadonlySet<Signature> = new Set([
   'Meta+KeyQ',
-  'Meta+KeyW',
   'Meta+KeyM',
   'Meta+KeyH',
   'Meta+Space',

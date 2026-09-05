@@ -18,12 +18,14 @@ import { log, mirrorLogsTo, recordLogsTo } from '@main/log'
 import { createLogFile, logsFolder } from '@main/logFile'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
+import { armQuit } from '@main/window/controls'
 import type { SettingsStore } from '@main/settings/store'
 import { registerFieldMenu } from '@main/window/contextMenu'
 import { lockNavigation } from '@main/window/navigation'
 import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splashWindow'
+import { quitsOnLastWindow } from '@main/window/lastWindow'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
 
 /**
@@ -112,6 +114,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // window yet and open one before `registerIpc` above — a renderer whose every `invoke` fails.
   // Never fires in development, where no lock is held: this path is exercised by a packaged run.
   app.on('second-instance', showMainWindow)
+  app.on('activate', showMainWindow)
 }
 
 /** Called once `index.ts` has registered the asset scheme, which `ready` would otherwise beat. */
@@ -124,15 +127,14 @@ export function bootstrap(): void {
   void openWhenReady()
 
   /**
-   * Closing the last window quits, on macOS as everywhere else. That is NOT the platform
-   * convention — a Mac app usually outlives its windows and reopens one from the Dock — but the
-   * studio is a document editor with nothing to offer once its windows are gone, and staying
-   * resident left an application running with no way to see it.
-   *
-   * Safe during start-up: the main window is created before the splash is ever dismissed, so
-   * there is no moment where zero windows exist and the launch quits itself.
+   * Windows and Linux quit with the last window. macOS stays in the Dock: `activate` in
+   * `startUp` recreates the studio, which is what a Dock click is for. Safe during start-up:
+   * the main window is created before the splash is dismissed, so launch never sees zero windows.
    */
-  app.on('window-all-closed', () => app.quit())
+  app.on('window-all-closed', () => {
+    if (quitsOnLastWindow(process.platform)) app.quit()
+  })
+  app.on('before-quit', armQuit)
 }
 
 async function openWhenReady(): Promise<void> {

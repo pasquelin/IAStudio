@@ -18,7 +18,11 @@
     },
     "documentSave": {
       "title": "Enregistrer le document",
-      "help": "Écrit le document en avant dans le projet. Une scène 3D vit dans la fenêtre tant qu’elle n’est pas enregistrée : l’onglet porte un point tant que ce qui est à l’écran n’est pas ce qui est sur le disque."
+      "help": "Écrit le document en avant dans le projet. Tant qu’il n’est pas enregistré, il vit dans la fenêtre : l’onglet porte un astérisque tant que ce qui est à l’écran n’est pas ce qui est sur le disque."
+    },
+    "documentClose": {
+      "title": "Fermer l’onglet",
+      "help": "Ferme le document en avant. S’il reste des modifications non enregistrées, le studio demande quoi en faire. S’il n’y a plus d’onglet, la fenêtre se ferme."
     },
     "layoutReset": {
       "title": "Réinitialiser la disposition",

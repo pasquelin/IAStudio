@@ -5,7 +5,7 @@ import type { NavigationPreset } from '@shared/domain/navigationPreset'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import type { MenuItemConstructorOptions } from 'electron'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
 const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
@@ -132,15 +132,37 @@ describe('every native role', () => {
 
   // The rows Electron would have composed, in our words: same roles, same order, same separator.
   it('names the window rows itself, on both platforms', () => {
-    const rows = (isMac: boolean): MenuItemConstructorOptions[] =>
-      submenuOf(menuTemplate(options({ isMac })), TRANSLATIONS.fr.menu.window)
+    const rows = (
+      isMac: boolean,
+      workspace: MenuOptions['workspace'] = '3d',
+    ): MenuItemConstructorOptions[] =>
+      submenuOf(menuTemplate(options({ isMac, workspace })), TRANSLATIONS.fr.menu.window)
     const shapeOf = (items: MenuItemConstructorOptions[]): (string | undefined)[] =>
       items.map(item => item.role ?? item.type)
 
     expect(shapeOf(rows(true))).toEqual(['minimize', 'zoom', 'separator', 'front'])
     expect(labels(rows(true))).toEqual(['Réduire', 'Zoom', '', 'Tout ramener au premier plan'])
-    expect(shapeOf(rows(false))).toEqual(['minimize', 'zoom', 'close'])
-    expect(labels(rows(false))).toEqual(['Réduire', 'Zoom', 'Fermer la fenêtre'])
+    expect(shapeOf(rows(false))).toEqual(['minimize', 'zoom'])
+    expect(labels(rows(false))).toEqual(['Réduire', 'Zoom'])
+    expect(shapeOf(rows(false, null))).toEqual(['minimize', 'zoom', 'close'])
+    expect(labels(rows(false, null))).toEqual(['Réduire', 'Zoom', 'Fermer la fenêtre'])
+  })
+
+  it('closes a tab from the studio File menu, and the window from an auxiliary one', () => {
+    const file = (given: Partial<MenuOptions>) =>
+      submenuOf(menuTemplate(options(given)), TRANSLATIONS.fr.menu.file)
+    const last = (given: Partial<MenuOptions>) => file(given).at(-1)
+    const runCommand = vi.fn()
+
+    const studioMac = last({ isMac: true, actions: actions({ runCommand }) })
+    expect(studioMac?.label).toBe('Fermer l’onglet')
+    expect(studioMac?.accelerator).toBe('CmdOrCtrl+W')
+    activate(studioMac)
+    expect(runCommand).toHaveBeenCalledWith('document.close')
+
+    expect(last({ workspace: null, isMac: true })?.role).toBe('close')
+    expect(last({ isMac: false })?.role).toBe('quit')
+    expect(file({ isMac: false }).at(-2)?.label).toBe('Fermer l’onglet')
   })
 
   // A label read off the wrong bundle is worse than none: it would look deliberate.

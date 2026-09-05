@@ -397,6 +397,7 @@ const fakeWindow = (overrides: BridgeOverrides): StudioBridge['window'] => ({
   onState: noSubscription,
   language: () => Promise.resolve(DEFAULT_LANGUAGE),
   onLanguage: noSubscription,
+  resumeLeave: () => Promise.resolve(),
   setWorkspace: () => Promise.resolve(),
   ...overrides.window,
 })

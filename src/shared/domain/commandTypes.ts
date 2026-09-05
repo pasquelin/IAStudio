@@ -39,6 +39,7 @@ export type CommandId =
   | 'project.open'
   | 'document.save'
   | 'document.saveAs'
+  | 'document.close'
   | 'layout.reset'
   | 'app.settings'
   | 'app.assistant'

@@ -190,7 +190,7 @@ describe('DocumentArea', () => {
     panels['doc-3'] = { setTitle }
 
     setDocumentTitle('doc-3', 'Set dressing', true)
-    expect(setTitle).toHaveBeenCalledWith('Set dressing •')
+    expect(setTitle).toHaveBeenCalledWith('Set dressing')
 
     setDocumentTitle('doc-3', 'Set dressing', false)
     expect(setTitle).toHaveBeenLastCalledWith('Set dressing')

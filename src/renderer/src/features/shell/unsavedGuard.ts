@@ -1,3 +1,4 @@
+import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { settleUnsavedWork, unsavedDocumentIds } from './documentIo'
 
@@ -21,19 +22,31 @@ export function guardUnsavedWork(target: Window): () => void {
   // A second ⌘Q while the first question is still on screen would stack a dialog per press.
   let asking = false
 
+  const resumeAfterSettling = async (): Promise<void> => {
+    let proceed = false
+    try {
+      // A write that throws — a project on a volume that went away — would otherwise close the
+      // dialog and say nothing, leaving every attempt to leave to replay the same silent scene.
+      proceed = await settleUnsavedWork()
+    } catch (error) {
+      reportFailure('document.close', '', error)
+    }
+    try {
+      const bridge = getBridge()
+      if (bridge) await bridge.window.resumeLeave(proceed)
+      else if (proceed) window.close()
+    } finally {
+      asking = false
+    }
+  }
+
   const refuse = (event: BeforeUnloadEvent): void => {
     if (unsavedDocumentIds().length === 0) return
     event.preventDefault()
     if (asking) return
 
     asking = true
-    void settleUnsavedWork()
-      // A write that throws — a project on a volume that went away — would otherwise close the
-      // dialog and say nothing, leaving every attempt to leave to replay the same silent scene.
-      .catch(error => reportFailure('document.close', '', error))
-      .finally(() => {
-        asking = false
-      })
+    void resumeAfterSettling()
   }
 
   target.addEventListener('beforeunload', refuse)

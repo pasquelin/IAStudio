@@ -13,6 +13,7 @@ import { DocumentTab } from './DocumentTab'
 const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
 const deleteDocument = vi.fn((_id: string) => Promise.resolve(true))
 const openPanelIds = vi.fn(() => ['doc-1', 'doc-2'])
+const markedModified = vi.hoisted(() => ({ ids: new Set<string>() }))
 
 vi.mock('../../../documentIo', () => ({
   closeDocument: (id: string) => closeDocument(id),
@@ -21,38 +22,29 @@ vi.mock('../../../documentIo', () => ({
 
 vi.mock('../../dockviewApi', () => ({ openPanelIds: () => openPanelIds() }))
 
-// The real one needs a layout engine; what this file is about is the cross and the menu hung
-// beside it. `hideClose` is asserted on rather than assumed — it is what stops Dockview's own
-// button from removing a panel behind the studio's back.
-let defaultTabProps: Record<string, unknown> = {}
-vi.mock('dockview-react', () => ({
-  DockviewDefaultTab: (props: Record<string, unknown>) => {
-    defaultTabProps = props
-    return (
-      <span
-        data-testid="default-tab"
-        // The mock takes its props untyped, so the handler comes back as `unknown`.
-        onContextMenu={props.onContextMenu as React.MouseEventHandler}
-      >
-        tab
-      </span>
-    )
-  },
+vi.mock('@/hooks/useDocumentModified', () => ({
+  useDocumentModified: (id: string) => markedModified.ids.has(id),
 }))
 
-/** Only what the tab reads: its own id, off the panel api. */
-const props = (id: string): IDockviewPanelHeaderProps =>
-  ({ api: { id } }) as unknown as IDockviewPanelHeaderProps
+/** Only what the tab reads: its id, and the title Dockview restored. */
+const props = (id: string, title?: string): IDockviewPanelHeaderProps =>
+  ({ api: { id, title } }) as unknown as IDockviewPanelHeaderProps
 
 let menu = fakeMenu()
 
+const tabChrome = (): HTMLElement => {
+  const parent = screen.getByRole('button', { name: 'Fermer l’onglet' }).parentElement
+  if (!parent) throw new Error('expected the tab chrome around the close button')
+  return parent
+}
+
 const rightClick = async (): Promise<void> => {
-  await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
+  await userEvent.pointer({ keys: '[MouseRight]', target: tabChrome() })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  defaultTabProps = {}
+  markedModified.ids.clear()
   useDocuments.setState({ documents: {}, activeId: null, recent: {} })
   menu = fakeMenu()
   installFakeBridge({ menu: menu.bridge })
@@ -92,9 +84,9 @@ describe('a document tab', () => {
     expect(container.querySelectorAll('path')).toHaveLength(1)
   })
 
-  it('hides Dockview’s own close button, which cannot ask about unsaved work', () => {
-    render(<DocumentTab {...props('doc-1')} />)
-    expect(defaultTabProps.hideClose).toBe(true)
+  it('keeps the title Dockview restored until the descriptor arrives', () => {
+    render(<DocumentTab {...props('doc-1', 'Niveau')} />)
+    expect(screen.getByText('Niveau')).toBeTruthy()
   })
 
   it('closes through the studio, so unsaved work is asked about', async () => {
@@ -241,5 +233,44 @@ describe('a document tab', () => {
         'shrink-0',
       )
     })
+  })
+
+  it('marks unsaved work with an asterisk and a bold title', () => {
+    useDocuments.setState({
+      documents: {
+        'doc-1': {
+          id: 'doc-1',
+          kind: 'scene',
+          title: 'Niveau',
+          workspace: '3d',
+          path: 'documents/Niveau.gltf',
+        },
+      },
+    })
+    markedModified.ids.add('doc-1')
+
+    render(<DocumentTab {...props('doc-1')} />)
+
+    expect(screen.getByText('Niveau').className).toContain('font-semibold')
+    expect(screen.getByText('*').className).toContain('text-accent-ink')
+  })
+
+  it('leaves a saved document unmarked', () => {
+    useDocuments.setState({
+      documents: {
+        'doc-1': {
+          id: 'doc-1',
+          kind: 'scene',
+          title: 'Niveau',
+          workspace: '3d',
+          path: 'documents/Niveau.gltf',
+        },
+      },
+    })
+
+    render(<DocumentTab {...props('doc-1')} />)
+
+    expect(screen.getByText('Niveau').className).not.toContain('font-semibold')
+    expect(screen.queryByText('*')).toBeNull()
   })
 })

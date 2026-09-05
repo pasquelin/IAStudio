@@ -48,6 +48,17 @@ export const GENERAL_COMMANDS: readonly CommandDescriptor[] = [
     helpKey: 'commands.documentSaveAs.help',
     defaultBinding: 'Shift+Meta+KeyS',
   }),
+  /**
+   * ⌘W closes the TAB, as it does in every document editor. The native `close` role would take
+   * the window instead, so this command owns the chord — see `reservedByPlatform`.
+   */
+  command({
+    id: 'document.close',
+    scope: 'global',
+    titleKey: 'commands.documentClose.title',
+    helpKey: 'commands.documentClose.help',
+    defaultBinding: 'Meta+KeyW',
+  }),
   // `global` rather than `sequence`, unlike the two exports it mirrors: an import has no montage
   // in front to belong to — it is what MAKES one.
   command({

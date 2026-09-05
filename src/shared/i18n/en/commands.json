@@ -18,7 +18,11 @@
     },
     "documentSave": {
       "title": "Save document",
-      "help": "Writes the document in front into the project. A 3D scene lives in the window until it is saved: the tab carries a dot for as long as what is on screen is not what is on disk."
+      "help": "Writes the document in front into the project. Until it is saved, it lives in the window: the tab carries an asterisk for as long as what is on screen is not what is on disk."
+    },
+    "documentClose": {
+      "title": "Close tab",
+      "help": "Closes the document in front. If it holds unsaved work, the studio asks what to do with it. With no tab left, the window closes."
     },
     "layoutReset": {
       "title": "Reset layout",

@@ -99,13 +99,34 @@ export function showWorkspace(workspace: WorkspaceId): void {
   else current.getPanel(id)?.api.setActive()
 }
 
+const markedModified = new Map<string, boolean>()
+const modifiedListeners = new Set<() => void>()
+
+function noteModified(documentId: string, next: boolean): void {
+  if (markedModified.get(documentId) === next) return
+  markedModified.set(documentId, next)
+  for (const listener of modifiedListeners) listener()
+}
+
 /**
- * Follows what a document is called, and whether it has unsaved work. The bullet lives here
- * rather than in each space: the tab is the only place a document can say it is not on disk,
- * and every space that learns to save would otherwise pick its own glyph.
+ * Follows what a document is called, and whether it has unsaved work. The mark lives on the
+ * tab chrome rather than in the title string: a coloured asterisk cannot be a character of
+ * Dockview's label, and every space that learns to save would otherwise pick its own glyph.
  */
 export function setDocumentTitle(documentId: string, title: string, modified: boolean): void {
-  current?.getPanel(documentId)?.setTitle(modified ? `${title} •` : title)
+  current?.getPanel(documentId)?.setTitle(title)
+  noteModified(documentId, modified)
+}
+
+export function documentIsMarkedModified(documentId: string): boolean {
+  return markedModified.get(documentId) === true
+}
+
+export function subscribeDocumentModified(onChange: () => void): () => void {
+  modifiedListeners.add(onChange)
+  return () => {
+    modifiedListeners.delete(onChange)
+  }
 }
 
 /**
@@ -114,6 +135,9 @@ export function setDocumentTitle(documentId: string, title: string, modified: bo
  */
 export function closePanel(documentId: string): void {
   current?.getPanel(documentId)?.api.close()
+  if (markedModified.delete(documentId)) {
+    for (const listener of modifiedListeners) listener()
+  }
 }
 
 /** The tabs of the workspace on screen, in the order they are shown. */

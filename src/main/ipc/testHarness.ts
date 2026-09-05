@@ -1,3 +1,5 @@
+import { vi } from 'vitest'
+
 /**
  * Electron in a bottle, for main-process tests — four of them had grown their own copy of
  * `ipcMain`, so any change to `handle()` meant four edits.
@@ -26,6 +28,7 @@ export type FakeWindow = {
   isFocusable: () => boolean
   isDestroyed: () => boolean
   on: (event: string, listener: () => void) => void
+  close: () => void
   /** What the window was sent, in order — what an assertion on `send` reads. */
   sent: { channel: string; payload: unknown }[]
 }
@@ -41,10 +44,16 @@ const closed = new Set<FakeWindow>()
 /** Every application menu set, newest last. A rebuild that changes nothing still counts. */
 const menus: unknown[] = []
 
+export const quitApp = vi.fn()
+
 export function mockElectron(): {
   ipcMain: { handle: (channel: string, handler: Invoke) => void }
-  app: { on: (event: string, listener: Listener) => void }
-  BrowserWindow: { getAllWindows: () => FakeWindow[]; getFocusedWindow: () => FakeWindow | null }
+  app: { on: (event: string, listener: Listener) => void; quit: () => void }
+  BrowserWindow: {
+    getAllWindows: () => FakeWindow[]
+    getFocusedWindow: () => FakeWindow | null
+    fromWebContents: (contents: unknown) => FakeWindow | null
+  }
   Menu: {
     buildFromTemplate: (template: unknown) => unknown
     setApplicationMenu: (menu: unknown) => void
@@ -60,8 +69,13 @@ export function mockElectron(): {
     app: {
       on: (event, listener) =>
         void appListeners.set(event, [...(appListeners.get(event) ?? []), listener]),
+      quit: () => quitApp(),
     },
-    BrowserWindow: { getAllWindows: () => [...windows], getFocusedWindow: () => focused },
+    BrowserWindow: {
+      getAllWindows: () => [...windows],
+      getFocusedWindow: () => focused,
+      fromWebContents: contents => windows.find(one => one.webContents === contents) ?? null,
+    },
     Menu: {
       // The template travels through untouched, so a test reads what was built rather than an
       // opaque `Menu` the double would have had to invent.
@@ -116,6 +130,7 @@ export function openWindow({ focusable = true } = {}): FakeWindow {
       if (event !== 'closed') return
       closedListeners.set(window, [...(closedListeners.get(window) ?? []), listener])
     },
+    close: vi.fn(),
     sent,
   }
 

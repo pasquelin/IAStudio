@@ -114,6 +114,17 @@ function openAndSaveItems(context: MenuContext): MenuItemConstructorOptions[] {
   ]
 }
 
+function fileCloseItems(context: MenuContext): MenuItemConstructorOptions[] {
+  const { options, t, commandItem, roleItem } = context
+  // Auxiliary windows keep the native close: ⌘W there must take that window, not a tab
+  // sitting in the studio behind it.
+  if (options.workspace === null) {
+    return options.isMac ? [roleItem('close')] : [roleItem('quit')]
+  }
+  const closeTab = commandItem('document.close', t.documents.close)
+  return options.isMac ? [closeTab] : [closeTab, roleItem('quit')]
+}
+
 export function fileMenu(context: MenuContext): MenuItemConstructorOptions {
   return {
     label: context.t.menu.file,
@@ -126,7 +137,7 @@ export function fileMenu(context: MenuContext): MenuItemConstructorOptions {
       ...exportMenu(context),
       { type: 'separator' },
       ...fileSettingsItems(context),
-      context.roleItem(context.options.isMac ? 'close' : 'quit'),
+      ...fileCloseItems(context),
     ],
   }
 }

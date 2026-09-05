@@ -10,6 +10,7 @@ import {
   setDockviewApi,
   setDocumentTitle,
   showWorkspace,
+  documentIsMarkedModified,
 } from './dockviewApi'
 
 const scene: DocumentDescriptor = {
@@ -264,15 +265,17 @@ describe('the panels of the centre', () => {
 })
 
 describe('the tab of a document', () => {
-  it('carries a bullet while the work is not on disk', () => {
+  it('names the document, and says separately whether the work is not on disk', () => {
     const { panels } = mount()
     openDocument(scene)
 
     setDocumentTitle('doc-1', 'Niveau', true)
-    expect(panels[0]?.setTitle).toHaveBeenCalledWith('Niveau •')
+    expect(panels[0]?.setTitle).toHaveBeenCalledWith('Niveau')
+    expect(documentIsMarkedModified('doc-1')).toBe(true)
 
     setDocumentTitle('doc-1', 'Niveau', false)
-    expect(panels[0]?.setTitle).toHaveBeenCalledWith('Niveau')
+    expect(panels[0]?.setTitle).toHaveBeenLastCalledWith('Niveau')
+    expect(documentIsMarkedModified('doc-1')).toBe(false)
   })
 
   it('says nothing about a document no panel holds', () => {
@@ -287,5 +290,15 @@ describe('the tab of a document', () => {
 
     closePanel('doc-1')
     expect(panels[0]?.api.close).toHaveBeenCalled()
+  })
+
+  it('forgets that a closed panel was marked modified', () => {
+    mount()
+    openDocument(scene)
+    setDocumentTitle('doc-1', 'Niveau', true)
+
+    closePanel('doc-1')
+
+    expect(documentIsMarkedModified('doc-1')).toBe(false)
   })
 })

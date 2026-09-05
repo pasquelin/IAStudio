@@ -245,6 +245,11 @@ export type Channels = {
   windowState: 'window:state'
   windowLanguage: 'window:language'
   windowWorkspace: 'window:workspace'
+  /**
+   * Resumes a leave the renderer held for unsaved work. `true` continues the original
+   * gesture — quit or close; `false` drops it.
+   */
+  windowResumeLeave: 'window:resume-leave'
   /** Opens the video return, or reveals the one already open. See `MIRROR_ROUTE`. */
   mirrorOpen: 'mirror:open'
 

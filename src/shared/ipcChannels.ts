@@ -207,6 +207,7 @@ export const CHANNELS: Channels = {
   windowState: 'window:state',
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
+  windowResumeLeave: 'window:resume-leave',
   mirrorOpen: 'mirror:open',
   gameWindowOpen: 'game:open-window',
   playerModuleWindowOpen: 'player:open-module-window',
