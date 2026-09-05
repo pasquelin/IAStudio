@@ -11,6 +11,7 @@ import { pathIn } from '@shared/domain/folder'
 import { documentReferencesOf, SCANNED_BYTES } from '@shared/domain/documentReferences'
 import { freeName } from '@main/project/filePlan'
 import { folderInsideProject } from '@main/project/folderInsideProject'
+import { pathIsInside } from '@main/export/pathIsInside'
 import { copyExternalFile, removeExternalCopy, removeExternalFolder } from './copyExternalFile'
 import {
   IMPORTABLE_BUNDLE_EXTENSIONS,
@@ -121,6 +122,17 @@ function landingFor(
 }
 
 /**
+ * The file a reference names, or `null` for anything that is not the source's own neighbour.
+ *
+ * `followable` refuses the SPELLING — a scheme, an absolute path, a climb — and a symbolic link
+ * spells nothing suspicious while walking straight out, so both ends go through `realpath`.
+ */
+async function neighbourAt(from: string, reference: string): Promise<string | null> {
+  const resolved = await orElse(realpath(resolve(from, reference)), null)
+  return resolved !== null && pathIsInside(from, resolved) ? resolved : null
+}
+
+/**
  * The siblings, beside the document and under their own spelling — so nothing rewrites the file.
  *
  * A picture is ADOPTED as well as copied: a sky and a material relink through the catalogue
@@ -135,15 +147,18 @@ async function copyNeighbours(
   deps: ImportFilesDeps,
   state: ImportState,
 ): Promise<void> {
-  const from = dirname(source)
+  const from = await orElse(realpath(dirname(source)), null)
+  if (from === null) return
   for (const reference of references) {
     if (watch.signal?.aborted) return
+    const neighbour = await neighbourAt(from, reference)
+    if (neighbour === null) {
+      state.failed.push(basename(reference))
+      continue
+    }
     const destination = join(landing.into, reference)
     await mkdir(dirname(destination), { recursive: true })
-    const copied = await orElse(
-      copyExternalFile(resolve(from, reference), destination, watch),
-      false,
-    )
+    const copied = await orElse(copyExternalFile(neighbour, destination, watch), false)
     if (!copied) {
       state.failed.push(basename(reference))
       continue
