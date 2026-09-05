@@ -290,6 +290,15 @@ describe('what a run with no window can still carry out', () => {
     expect(answers).toEqual([expect.stringMatching(/nothing left to do/)])
   })
 
+  it('keeps a selected scene object framed through the headless viewport', async () => {
+    const answers = await answering(
+      SCENARIOS.find(scenario => scenario.name.startsWith('10.9 '))?.setup,
+      [{ action: 'command.runStudioCommand', input: { command: 'scene.frameFollow' } }],
+    )
+
+    expect(answers).toEqual([expect.stringMatching(/^ok/)])
+  })
+
   it('carries the commands of an image, of a montage and of the project folder', async () => {
     const canvas = await answering(boatImage, [
       { action: 'command.runStudioCommand', input: { command: 'canvas.selectAll' } },
