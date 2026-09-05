@@ -26,6 +26,15 @@ describe('the registry, published as tools', () => {
     ).toEqual(ACTION_REGISTRY.map(action => toolName(action.name)).sort())
   })
 
+  it('publishes numeric choices with their actual JSON type', () => {
+    const usage = mcpTools().find(tool => tool.name === 'usage_report')
+
+    expect(usage?.inputSchema.properties['days']).toMatchObject({
+      type: 'number',
+      enum: [7, 31, 120],
+    })
+  })
+
   /**
    * The dot has to go: an action is `command.runStudioCommand`, and the tool-name grammar clients hold us to
    * takes letters, digits, underscore and dash. A name that fails it is refused by the client

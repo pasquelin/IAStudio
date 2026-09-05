@@ -109,14 +109,12 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
     repeatable: true,
     reach: 'mcp',
     fields: [
-      // A closed set rather than a bounded number: the API takes three windows and nothing
-      // between them, and `validatesInput` only holds a closed set on a field that is text.
       {
         key: 'days',
         kind: 'choice',
         labelKey: 'assistant.fields.days',
         required: false,
-        options: USAGE_PERIODS.map(String),
+        options: USAGE_PERIODS,
       },
     ],
   }),

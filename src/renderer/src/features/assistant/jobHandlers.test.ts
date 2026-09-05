@@ -170,7 +170,7 @@ describe('cancelling and counting', () => {
     const usageReport = vi.fn(async () => report())
     installFakeBridge({ provider: { usageReport } })
 
-    await runAction('usage.report', { days: '7' })
+    await runAction('usage.report', { days: 7 })
     expect(usageReport).toHaveBeenCalledWith(7)
 
     await runAction('usage.report', {})

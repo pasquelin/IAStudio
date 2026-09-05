@@ -54,16 +54,15 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
  * writes and the form shows as-is. A static registry cannot hold a sentence — every word bound
  * for the screen lives in a bundle — so this carries `labelKey` instead.
  */
+export type ActionChoice = string | number | boolean
+
 export type ActionField = {
   key: string
   kind: FieldKind
   labelKey: string
   required: boolean
-  /**
-   * The values this field accepts, when it accepts a closed set. Raw identifiers rather than
-   * translated labels: these are read by a model and by an MCP client, never shown as-is.
-   */
-  options?: readonly string[]
+  /** Closed wire values, never translated labels. */
+  options?: readonly ActionChoice[]
   /**
    * What this value NAMES, so a surface can offer to point at one instead of asking for the word.
    * `folder` is a folder of the machine — the model guesses a name where only the person knows
@@ -324,11 +323,15 @@ function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
     case 'text':
     case 'longText':
-    case 'choice':
     case 'image':
     case 'mesh':
     case 'task':
       return fitsText(field, value)
+    case 'choice':
+      return (
+        (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+        (field.options?.some(option => option === value) ?? true)
+      )
     case 'color':
       return typeof value === 'string' && HEX_COLOR.test(value)
     case 'number':
@@ -369,7 +372,7 @@ function fitsRecord(field: ActionField, value: unknown): boolean {
     typeof value === 'object' &&
     value !== null &&
     !Array.isArray(value) &&
-    Object.keys(value).every(key => field.options?.includes(key) ?? true)
+    Object.keys(value).every(key => field.options?.some(option => option === key) ?? true)
   )
 }
 

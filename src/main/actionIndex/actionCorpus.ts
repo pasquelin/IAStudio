@@ -87,7 +87,7 @@ export function actionCorpus(): ActionCorpus {
             field.key,
             englishText(field.labelKey),
             textAt(TRANSLATIONS.fr, field.labelKey),
-            ...(field.options ?? []),
+            ...(field.options ?? []).map(String),
           ]),
         ].join(' '),
       }
