@@ -1,10 +1,13 @@
 import type { DockviewApi } from 'dockview-react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import type { FileView } from '@shared/domain/fileView'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import {
   closePanel,
+  closeFileView,
+  openFileView,
   openDocument,
   openPanelIds,
   setDockviewApi,
@@ -26,6 +29,11 @@ const sequence: DocumentDescriptor = {
   title: 'Bande annonce',
   workspace: 'video',
   path: 'documents/Bande annonce.otio',
+}
+const controls: FileView = {
+  id: 'inputMap',
+  path: 'Controls/character.input.json',
+  title: 'character',
 }
 
 type Panel = {
@@ -78,6 +86,8 @@ beforeEach(() => {
   useDocuments.setState({ documents: {}, stored: [], activeId: null, recent: {} })
   useLayouts.setState({ activeWorkspace: '3d', home: false, layout: null })
 })
+
+afterEach(() => closeFileView('file:Controls/character.input.json'))
 
 describe('opening a document', () => {
   it('adds a panel for it', () => {
@@ -135,6 +145,24 @@ describe('opening a document', () => {
     openDocument(sequence)
 
     expect(useLayouts.getState().activeWorkspace).toBe('video')
+  })
+})
+
+describe('opening a registered file view', () => {
+  it('adds its editor and brings an existing tab forward', () => {
+    const { addPanel, panels } = mount()
+
+    openFileView(controls)
+    openFileView(controls)
+
+    expect(addPanel).toHaveBeenCalledTimes(1)
+    expect(addPanel).toHaveBeenCalledWith({
+      id: 'file:Controls/character.input.json',
+      component: 'inputMap',
+      title: 'character',
+      params: { path: 'Controls/character.input.json' },
+    })
+    expect(panels[0]?.api.setActive).toHaveBeenCalled()
   })
 })
 

@@ -1,7 +1,8 @@
 import type { Asset } from '@shared/domain/asset'
 import { opensInStudio } from '@shared/domain/fileRole'
 import { nameOf } from '@shared/domain/folder'
-import { openDocument } from '@/features/shell/components/dockviewApi'
+import { fileViewOf } from '@shared/domain/fileView'
+import { openDocument, openFileView } from '@/features/shell/components/dockviewApi'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { documentAtPath, useDocuments } from '@/stores/documents'
@@ -13,7 +14,7 @@ import { documentAtPath, useDocuments } from '@/stores/documents'
  * the journal. `file.open` does, because a model told only "done" tells the person the same.
  */
 export type FileOpening =
-  'document' | 'asset' | 'system' | 'folder' | 'missing' | 'unreachable' | 'failed'
+  'document' | 'editor' | 'asset' | 'system' | 'folder' | 'missing' | 'unreachable' | 'failed'
 
 type Bridge = NonNullable<ReturnType<typeof getBridge>>
 
@@ -55,6 +56,12 @@ export async function openProjectFile(path: string): Promise<FileOpening> {
   if (document) {
     openDocument(document)
     return 'document'
+  }
+
+  const fileView = fileViewOf(path)
+  if (fileView) {
+    openFileView(fileView)
+    return 'editor'
   }
 
   const bridge = getBridge()

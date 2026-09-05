@@ -13,6 +13,7 @@ import { useDocuments } from '@/stores/documents'
 import { closeTab } from './closeTab'
 import { openDocumentTabMenu } from './documentTabMenu'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
+import { closeFileView } from '../../dockviewApi'
 
 /**
  * A document's tab.
@@ -32,14 +33,17 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
   const title = useDocuments(state => state.documents[props.api.id]?.title) ?? props.api.title
   const modified = useDocumentModified(props.api.id)
   const [renaming, setRenaming] = useState(false)
+  const isFileView = props.api.id.startsWith('file:')
 
   const close = (event: MouseEvent): void => {
     // Dockview reads a click on the tab as "activate me"; this one is not that.
     event.stopPropagation()
-    closeTab(props.api.id)
+    if (isFileView) closeFileView(props.api.id)
+    else closeTab(props.api.id)
   }
 
   const openMenu = (event: MouseEvent): void => {
+    if (isFileView) return
     event.preventDefault()
     openDocumentTabMenu({ documentId: props.api.id, t, onRename: () => setRenaming(true) })
   }
@@ -82,7 +86,9 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
           headers — the gesture a title one can edit is expected to answer. */}
       <span
         className="flex min-w-0 flex-1 items-center gap-0.5 px-1"
-        onDoubleClick={() => setRenaming(true)}
+        onDoubleClick={() => {
+          if (!isFileView) setRenaming(true)
+        }}
       >
         <span className={cn('min-w-0 truncate', modified && 'font-semibold')}>{title}</span>
         {modified ? <span className="text-accent-ink shrink-0">*</span> : null}

@@ -1,4 +1,5 @@
 import type { DocumentDescriptor } from '@shared/domain/document'
+import type { FileView } from '@shared/domain/fileView'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { DockviewApi } from 'dockview-react'
 import { frontDocumentIn, useDocuments } from '@/stores/documents'
@@ -14,6 +15,11 @@ let current: DockviewApi | null = null
 
 /** A tab to bring forward once the centre reports itself — see `showWorkspace`. */
 let pendingFocus: string | null = null
+const fileViews = new Map<string, FileView>()
+
+function fileViewPanelId(path: string): string {
+  return `file:${path}`
+}
 
 /**
  * Called by `DocumentArea` once Dockview is ready — and again whenever the home gives it back.
@@ -26,10 +32,32 @@ export function setDockviewApi(api: DockviewApi): void {
 
   const { documents, activeId } = useDocuments.getState()
   for (const document of Object.values(documents)) ensurePanel(api, document)
+  for (const view of fileViews.values()) ensureFileViewPanel(api, view)
 
   const focus = pendingFocus ?? activeId
   pendingFocus = null
   if (focus !== null) api.getPanel(focus)?.api.setActive()
+}
+
+function ensureFileViewPanel(api: DockviewApi, view: FileView): void {
+  const id = fileViewPanelId(view.path)
+  if (api.getPanel(id)) return
+  api.addPanel({ id, component: view.id, title: view.title, params: { path: view.path } })
+}
+
+export function openFileView(view: FileView): void {
+  const id = fileViewPanelId(view.path)
+  fileViews.set(id, view)
+  const existing = current?.getPanel(id)
+  if (existing) existing.api.setActive()
+  else if (!homeIsVisible() && current) ensureFileViewPanel(current, view)
+  else pendingFocus = id
+  useLayouts.getState().setActiveWorkspace('code')
+}
+
+export function closeFileView(id: string): void {
+  fileViews.delete(id)
+  current?.getPanel(id)?.api.close()
 }
 
 /** Adds the tab if missing, and says nothing about the front — what rebuilding a centre needs. */

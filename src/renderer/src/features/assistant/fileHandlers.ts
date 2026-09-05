@@ -94,6 +94,7 @@ async function facts(input: Record<string, unknown>): Promise<ActionOutcome> {
  */
 const REFUSAL_OF_OPENING: Record<FileOpening, ActionOutcome | null> = {
   document: null,
+  editor: null,
   asset: null,
   system: null,
   folder: refused(

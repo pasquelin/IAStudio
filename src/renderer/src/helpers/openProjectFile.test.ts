@@ -7,6 +7,13 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { openProjectFile } from './openProjectFile'
 
+const dockview = vi.hoisted(() => ({
+  openDocument: vi.fn(),
+  openFileView: vi.fn(),
+}))
+
+vi.mock('@/features/shell/components/dockviewApi', () => dockview)
+
 const heightmap: Asset = {
   id: 'asset_height',
   name: 'height',
@@ -28,6 +35,7 @@ describe('openProjectFile', () => {
   let giveBackMeasure: () => void
 
   beforeEach(() => {
+    vi.clearAllMocks()
     useDocuments.setState({ documents: {}, stored: [], activeId: null })
     useLayouts.setState({ layout: null, activeWorkspace: '3d', home: false })
     useProject.setState({
@@ -65,5 +73,18 @@ describe('openProjectFile', () => {
 
     expect(await openProjectFile('Images/facade.jpg')).toBe('asset')
     expect(Object.keys(useDocuments.getState().documents)).toHaveLength(1)
+  })
+
+  it('opens a registered project file in its own editor without cataloguing it', async () => {
+    const adopt = vi.fn(() => Promise.resolve(null))
+    installFakeBridge({ media: { adopt } })
+
+    expect(await openProjectFile('Controls/character.input.json')).toBe('editor')
+    expect(dockview.openFileView).toHaveBeenCalledWith({
+      id: 'inputMap',
+      path: 'Controls/character.input.json',
+      title: 'character',
+    })
+    expect(adopt).not.toHaveBeenCalled()
   })
 })

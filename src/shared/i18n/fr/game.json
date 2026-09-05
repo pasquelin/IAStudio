@@ -173,6 +173,47 @@
       "visualChangesPossible": "Changements visuels : POSSIBLES",
       "failed": "Le jeu n’a pas pu être exporté."
     },
+    "inputMap": {
+      "actionId": "Action",
+      "actionKind": "Valeur",
+      "addAction": "Ajouter une action",
+      "applyPresetHint": "Remplace cette carte par le point de départ choisi",
+      "context": "Contexte",
+      "defaultActive": "Actif au démarrage",
+      "device": {
+        "gamepad": "Manette",
+        "keyboard": "Clavier",
+        "mouse": "Souris"
+      },
+      "id": "Identifiant",
+      "invalid": "Le JSON ne décrit pas une carte de contrôles valide.",
+      "jsonLabel": "JSON de la carte",
+      "kind": {
+        "axis1": "Un axe",
+        "axis2": "Deux axes",
+        "button": "Bouton"
+      },
+      "loadFailed": "Cette carte de contrôles n’a pas pu être lue.",
+      "loading": "Chargement de la carte de contrôles…",
+      "mode": {
+        "expert": "Expert",
+        "json": "JSON",
+        "simple": "Simple"
+      },
+      "modeHint": "Change la façon de modifier la même carte de contrôles",
+      "preset": {
+        "character": "Personnage",
+        "flight": "Vol",
+        "menu": "Menu",
+        "studio": "Studio",
+        "vehicle": "Véhicule"
+      },
+      "presets": "Points de départ",
+      "priority": "Priorité",
+      "removeAction": "Supprimer l’action",
+      "save": "Enregistrer",
+      "unnamedAction": "Action sans nom"
+    },
     "play": {
       "faults_many": "{{count, number}} erreurs",
       "faults_one": "{{count, number}} erreur",

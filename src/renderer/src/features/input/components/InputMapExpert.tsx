@@ -1,0 +1,103 @@
+// SPDX-License-Identifier: MIT
+import { useTranslation } from 'react-i18next'
+import type { InputAction, InputActionKind, InputMap } from '@shared/domain/inputMap'
+import { Button } from '@/components/Button'
+import { NumberField } from '@/components/NumberField'
+import { PropertySection } from '@/components/PropertySection'
+import { SelectField } from '@/components/SelectField'
+import { TextField } from '@/components/TextField'
+import { ToggleField } from '@/components/ToggleField'
+import { inputBindingLabel } from './inputMapPresentation'
+
+type InputMapExpertProps = { map: InputMap; onChange: (map: InputMap) => void }
+
+function changedAction(map: InputMap, index: number, action: InputAction): InputMap {
+  return { ...map, actions: map.actions.map((current, at) => (at === index ? action : current)) }
+}
+
+export function InputMapExpert({ map, onChange }: InputMapExpertProps) {
+  const { t } = useTranslation()
+  const kinds: readonly { value: InputActionKind; label: string }[] = [
+    { value: 'button', label: t('game.inputMap.kind.button') },
+    { value: 'axis1', label: t('game.inputMap.kind.axis1') },
+    { value: 'axis2', label: t('game.inputMap.kind.axis2') },
+  ]
+
+  return (
+    <div className="min-h-0 flex-1 overflow-auto">
+      <PropertySection title={t('game.inputMap.context')} scId="input.context">
+        <TextField
+          scId="input.context.id"
+          label={t('game.inputMap.id')}
+          value={map.id}
+          onChange={id => onChange({ ...map, id })}
+        />
+        <NumberField
+          scId="input.context.priority"
+          label={t('game.inputMap.priority')}
+          value={map.priority}
+          step={1}
+          onChange={priority => onChange({ ...map, priority })}
+        />
+        <ToggleField
+          scId="input.context.active"
+          label={t('game.inputMap.defaultActive')}
+          value={map.defaultActive}
+          onChange={defaultActive => onChange({ ...map, defaultActive })}
+        />
+      </PropertySection>
+      {map.actions.map((action, index) => (
+        <PropertySection
+          key={`${action.id}:${index}`}
+          title={action.id || t('game.inputMap.unnamedAction')}
+          scId={`input.action.${action.id}`}
+          actions={
+            <Button
+              onClick={() =>
+                onChange({ ...map, actions: map.actions.filter((_, at) => at !== index) })
+              }
+            >
+              {t('game.inputMap.removeAction')}
+            </Button>
+          }
+        >
+          <TextField
+            scId={`input.action.${action.id}.id`}
+            label={t('game.inputMap.actionId')}
+            value={action.id}
+            onChange={id => onChange(changedAction(map, index, { ...action, id }))}
+          />
+          <SelectField
+            scId={`input.action.${action.id}.kind`}
+            label={t('game.inputMap.actionKind')}
+            value={action.kind}
+            options={kinds}
+            onChange={kind => onChange(changedAction(map, index, { ...action, kind }))}
+          />
+          <div className="text-muted text-tiny flex flex-wrap gap-1.5 px-2 py-1">
+            {action.bindings.map((binding, at) => (
+              <span key={`${binding.device}:${inputBindingLabel(binding)}:${at}`}>
+                {t(`game.inputMap.device.${binding.device}`)} · {inputBindingLabel(binding)}
+              </span>
+            ))}
+          </div>
+        </PropertySection>
+      ))}
+      <div className="p-(--sc-gutter)">
+        <Button
+          onClick={() =>
+            onChange({
+              ...map,
+              actions: [
+                ...map.actions,
+                { id: `action${map.actions.length + 1}`, kind: 'button', bindings: [] },
+              ],
+            })
+          }
+        >
+          {t('game.inputMap.addAction')}
+        </Button>
+      </div>
+    </div>
+  )
+}

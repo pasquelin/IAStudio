@@ -173,6 +173,47 @@
       "visualChangesPossible": "Visual changes: POSSIBLE",
       "failed": "The game could not be exported."
     },
+    "inputMap": {
+      "actionId": "Action",
+      "actionKind": "Value",
+      "addAction": "Add action",
+      "applyPresetHint": "Replaces this map with the chosen starting point",
+      "context": "Context",
+      "defaultActive": "Active on start",
+      "device": {
+        "gamepad": "Gamepad",
+        "keyboard": "Keyboard",
+        "mouse": "Mouse"
+      },
+      "id": "Identifier",
+      "invalid": "The JSON does not describe a valid input map.",
+      "jsonLabel": "Input map JSON",
+      "kind": {
+        "axis1": "One axis",
+        "axis2": "Two axes",
+        "button": "Button"
+      },
+      "loadFailed": "This input map could not be read.",
+      "loading": "Loading input map…",
+      "mode": {
+        "expert": "Expert",
+        "json": "JSON",
+        "simple": "Simple"
+      },
+      "modeHint": "Changes how the same input map is edited",
+      "preset": {
+        "character": "Character",
+        "flight": "Flight",
+        "menu": "Menu",
+        "studio": "Studio",
+        "vehicle": "Vehicle"
+      },
+      "presets": "Starting points",
+      "priority": "Priority",
+      "removeAction": "Remove action",
+      "save": "Save",
+      "unnamedAction": "Unnamed action"
+    },
     "play": {
       "faults_many": "{{count, number}} errors",
       "faults_one": "{{count, number}} error",
