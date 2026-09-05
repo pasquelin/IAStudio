@@ -1,6 +1,9 @@
 import { createDefaultScene } from '@/engines/scene/defaultScene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
+import type { SceneNode } from '@/engines/scene/sceneState'
 import { describe, expect, it } from 'vitest'
+import { scenePayloadOf } from './sceneDocument'
+import { sceneDocumentText } from './sceneDocumentText'
 import { createSceneDocumentCodec } from './sceneDocumentCodec'
 
 class CodecWorker extends EventTarget {
@@ -182,4 +185,27 @@ describe('sceneDocumentCodec', () => {
     await expect(queued).rejects.toMatchObject({ name: 'AbortError' })
     expect(workers).toHaveLength(1)
   })
+
+  /**
+   * Holds the worker's own serializer against the synchronous one, across the split and the two
+   * structured clones the protocol adds. Blind to the worker's message handling around it.
+   */
+  it('writes the same file whether the nodes crossed a worker or not', () => {
+    const state = { ...createDefaultScene(), nodes: meshNodesOf(1_100) }
+
+    const { nodes, ...rest } = state
+    const carried = structuredClone(rest)
+    const gathered: SceneNode[] = []
+    for (let at = 0; at < nodes.length; at += 512) {
+      gathered.push(...structuredClone(nodes.slice(at, at + 512)))
+    }
+
+    expect(sceneDocumentText(carried, gathered, 'scene-1')).toBe(
+      JSON.stringify(scenePayloadOf(state, 'scene-1')),
+    )
+  })
 })
+
+function meshNodesOf(count: number): SceneNode[] {
+  return Array.from({ length: count }, (_unused, index) => meshNode(`mesh-${index}`))
+}
