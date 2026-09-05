@@ -104,7 +104,22 @@ const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
   ],
   delete: ['supprim', 'retire', 'efface', 'oublie', 'delete', 'remove', 'trash', 'forget', 'clear'],
   search: ['cherch', 'trouve', 'find', 'search', 'browse'],
-  execute: ['lance', 'execute', 'ouvre', 'ferme', 'run', 'open', 'close', 'submit', 'play'],
+  execute: [
+    'lance',
+    'execute',
+    'ouvre',
+    'ferme',
+    'revien',
+    'reven',
+    'retour',
+    'run',
+    'open',
+    'close',
+    'return',
+    'back',
+    'submit',
+    'play',
+  ],
 }
 
 const ACTION_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
@@ -170,7 +185,7 @@ function intentOf(
 }
 
 export function actionIntentScore(query: string, action: IndexedAction): number {
-  const queryIntent = intentOf(query, QUERY_INTENTS)
+  const queryIntent = actionQueryIntent(query)
   if (queryIntent === null) return 0
   if (action.capabilities.intents?.includes(queryIntent)) return INTENT_MATCH_SCORE
   if (action.capabilities.intents?.length) return INTENT_MISMATCH_SCORE
@@ -178,6 +193,9 @@ export function actionIntentScore(query: string, action: IndexedAction): number 
   if (actionIntent === null) return 0
   return actionIntent === queryIntent ? INTENT_MATCH_SCORE : INTENT_MISMATCH_SCORE
 }
+
+export const actionQueryIntent = (query: string): ActionIntent | null =>
+  intentOf(query, QUERY_INTENTS)
 
 export const actionBm25Score = (rank?: number): number =>
   rank === undefined ? 0 : 1 / (1 + Math.exp(rank))

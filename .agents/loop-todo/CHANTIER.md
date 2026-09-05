@@ -75,6 +75,16 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   à 75,85 % car l'action déplace au rang 13 `world.setSceneLighting` dans un cas historique qui
   demande d'abord de lire le skybox courant avant de le remplacer ; cette divergence est un biais
   de l'oracle mono-action, pas une incompatibilité produit.
+- Cible document : le Context Router reconnaît désormais un document ouvert nommé sans confondre
+  document actif et cible certaine. Une sélection nommée reste prioritaire. L'intention de
+  navigation et la compatibilité de cible se renforcent seulement pour une cible document résolue.
+  Offline : R@12 76,57 %, trois gains nets sans sortie du top-12 ; `document.activate` passe du
+  rang 109 au rang 12 sur 2.7.
+- Revue de la cible document : les titres et chemins ne deviennent une cible que pour une intention
+  de navigation ; les types et workspaces restent des signaux structurels. Une cible document
+  résolue et une intention compatible gagnent un point explicable, sans renforcer une sélection
+  seulement active. Mesure finale : R@12 76,57 %, MRR 0,4524, trois entrées nettes dans le top-12
+  et aucune sortie.
 
 ## Ce que tu ne tranches pas seul
 

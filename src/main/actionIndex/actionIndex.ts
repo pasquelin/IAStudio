@@ -52,6 +52,7 @@ export type ActionHit = {
   resourceScore?: number
   scopeScore?: number
   compatibilityScore?: number
+  targetIntentScore?: number
   intentScore?: number
   fusionScore?: number
   relevanceScore: number
@@ -214,6 +215,14 @@ function semanticScoreOf(
     : undefined
 }
 
+function targetIntentScoreOf(
+  scope: ActionSearchScope | undefined,
+  compatibilityScore: number,
+  intentScore: number,
+): number {
+  return scope?.target === 'document' && compatibilityScore > 0 && intentScore > 0 ? 1 : 0
+}
+
 export function createActionIndex(driver: SqliteDriver): ActionIndex {
   migrateTo(driver, ACTION_INDEX_MIGRATIONS)
 
@@ -350,8 +359,9 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
       const lexical = actionLexicalScore(wanted.query, action, rank)
       const semantic = semanticScoreOf(row, question, wanted.embedding)
       const scope = actionScopeScores(action, wanted.scope, lexical >= 1)
-      const totalScopeScore = scope.scope + scope.compatibility
       const intentScore = actionIntentScore(wanted.query, action)
+      const targetIntentScore = targetIntentScoreOf(wanted.scope, scope.compatibility, intentScore)
+      const totalScopeScore = scope.scope + scope.compatibility + targetIntentScore
       const ftsRank = ftsRanks.get(action.name)
       const fusionScore =
         ftsRank === undefined || scope.scope < 0 ? 0 : FTS_RRF_WEIGHT * (RRF_K / (RRF_K + ftsRank))
@@ -363,6 +373,7 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         ...(rank === undefined ? {} : { bm25Score: actionBm25Score(rank) }),
         ...(scope.scope === 0 ? {} : { scopeScore: scope.scope }),
         ...(scope.compatibility === 0 ? {} : { compatibilityScore: scope.compatibility }),
+        ...(targetIntentScore === 0 ? {} : { targetIntentScore }),
         ...(semantic === undefined ? {} : { semanticScore: semantic }),
         ...(intentScore === 0 ? {} : { intentScore }),
         ...(fusionScore === 0 ? {} : { fusionScore }),

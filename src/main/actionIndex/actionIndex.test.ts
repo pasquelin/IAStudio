@@ -337,6 +337,23 @@ describe('ActionIndex', () => {
     expect(assistantAction('file.open')?.inputs).toBeUndefined()
   })
 
+  it('combines a resolved document target with the matching navigation intent', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const hit = index
+      .search({
+        query: 'Reviens sur la scène 3D.',
+        limit: 12,
+        scope: { target: 'document', document: 'scene', documentAuthority: 'explicit' },
+      })
+      .find(candidate => candidate.action.name === 'document.activate')
+
+    expect(hit).toMatchObject({ compatibilityScore: 4, targetIntentScore: 1 })
+  })
+
   it('replaces fields, vectors and FTS words when the corpus changes', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())
