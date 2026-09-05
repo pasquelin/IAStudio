@@ -270,4 +270,26 @@ describe('a sculpt drag through the scene renderer', () => {
     expect(strokes.every(stroke => stroke.target === strokes[0]?.target)).toBe(true)
     renderer.dispose()
   })
+
+  it('releases the relief worker when leaving a combined-height tool', () => {
+    const dispose = vi.fn()
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      relief: reliefStub(),
+    })
+    renderer['reliefSculptor'] = {
+      terrainId: 'terrain',
+      editId: 'hills',
+      paint: false,
+      sculptor: { raiseDisk: vi.fn(), note: vi.fn(), dispose },
+    }
+    renderer.setSculptTool('smooth')
+
+    renderer.setSculptTool('raise')
+
+    expect(dispose).toHaveBeenCalledOnce()
+    expect(renderer['reliefSculptor']).toBeNull()
+    renderer.dispose()
+  })
 })
