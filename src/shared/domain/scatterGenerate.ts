@@ -51,8 +51,8 @@ export function scatterPosesOf(
 ): readonly ScatterPose[] {
   if (!layer.enabled || layer.assets.length === 0) return []
   const rules = layer.rules
-  // Never below the slider's own step: at 1e-3 a 256 m cell walked 65 billion cells and hung the
-  // renderer thread, and the slider reaches 0.
+  // Never below the floor: at 1e-3 a 256 m cell walked 65 billion cells and hung the renderer
+  // thread. The slider no longer reaches under it; a document written when it did still can.
   const step = Math.max(rules.spacing, SCATTER_SPACING.step)
   const chance = clamp(rules.density * step * step, 0, 1)
   if (chance === 0) return []

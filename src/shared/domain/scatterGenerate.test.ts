@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { scatterLayer } from './scatter'
+import { scatterLayer, SCATTER_SPACING } from './scatter'
 import { scatterHash, scatterPosesOf, type ScatterGround } from './scatterGenerate'
 import { layerRegion } from './scatterFollow'
 import { FLAT_SCATTER_GROUND } from './scatterGround'
@@ -134,5 +134,11 @@ describe('what the ground says about a pose', () => {
 
     // A step of 1e-3 walked 65 billion cells of a 256 m region and hung the renderer thread.
     expect(scatterPosesOf(zero, region, flat)).toEqual(scatterPosesOf(stepped, region, flat))
+  })
+
+  // The generator raises anything under its floor. The slider used to reach 0, so a whole notch
+  // of it did nothing; this keeps the published bound and the floor from parting again.
+  it('offers no spacing the generator would silently raise', () => {
+    expect(SCATTER_SPACING.min).toBeGreaterThanOrEqual(SCATTER_SPACING.step)
   })
 })
