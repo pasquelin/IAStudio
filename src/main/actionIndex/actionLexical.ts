@@ -4,6 +4,7 @@ import type { IndexedAction } from './actionCorpus'
 const INTENT_MATCH_SCORE = 2
 const SPECIFIC_INTENT_MATCH_SCORE = 6
 const INTENT_MISMATCH_SCORE = -0.5
+const FIELD_OPTION_MATCH_SCORE = 2
 const STOP_WORDS = new Set([
   'a',
   'au',
@@ -171,6 +172,9 @@ export const actionSearchWords = (value: string): readonly string[] =>
 
 const wordsOf = (value: string): readonly string[] => folded(value).match(/[\p{L}\p{N}_]+/gu) ?? []
 
+const identifierWords = (value: string): readonly string[] =>
+  wordsOf(value.replace(/([a-z0-9])([A-Z])/g, '$1 $2'))
+
 function intentOf(
   value: string,
   vocabulary: Readonly<Record<ActionIntent, readonly string[]>>,
@@ -213,6 +217,9 @@ export function actionLexicalScore(query: string, action: IndexedAction, rank?: 
   const searchableTokens = wordsOf(action.searchable)
   const titleTokens = action.localizedTitles.flatMap(wordsOf)
   const fieldTokens = action.localizedFieldLabels.flatMap(wordsOf)
+  const optionTokens = action.fields.flatMap(field =>
+    (field.options ?? []).flatMap(option => identifierWords(String(option))),
+  )
   let score = actionBm25Score(rank)
   if (name === wanted) score += 12
   else if (name.startsWith(wanted)) score += 7
@@ -226,6 +233,7 @@ export function actionLexicalScore(query: string, action: IndexedAction, rank?: 
     if (searchableTokens.some(candidate => candidate.startsWith(prefix))) score += 0.5
     if (titleTokens.some(candidate => candidate.startsWith(prefix))) score += 2
     if (fieldTokens.some(candidate => candidate.startsWith(prefix))) score += 1.5
+    if (optionTokens.some(candidate => candidate === token)) score += FIELD_OPTION_MATCH_SCORE
   }
   return score
 }
