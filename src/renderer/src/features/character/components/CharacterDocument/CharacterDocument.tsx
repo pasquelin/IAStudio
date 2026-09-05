@@ -162,7 +162,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
   // state nobody draws, no weights are ever worked out, and ⌘S writes bones bound to nothing.
   useEffect(() => {
     const engine = engineRef.current
-    if (!engine || !nodeId) return
+    if (!engine || !nodeId || landedAssetId !== assetId) return
     if (!character.rig) {
       engine.clearRig(nodeId)
       return
@@ -179,7 +179,7 @@ export function CharacterDocument({ documentId }: { documentId: string }) {
         },
       })
     else void engine.skinModel(nodeId, character.rig)
-  }, [character.rig, character.autoRigBindings, nodeId, live])
+  }, [character.rig, character.autoRigBindings, nodeId, live, landedAssetId, assetId])
 
   useEffect(() => {
     dressCharacterStage(assetId, character.dress)

@@ -24,7 +24,7 @@ export class PostChainCache {
 
   acquire(key: string, binding: string, width: number, height: number): PostChain | undefined {
     const current = this.bindings.get(binding)
-    if (current && (binding.endsWith('#legacy') || sameSize(current, width, height))) return current
+    if (current && sameSize(current, width, height)) return current
     const matched = this.match(key, width, height)
     if (!matched && current?.users.size === 1) return current
     if (current) {
@@ -83,6 +83,7 @@ export class PostChainCache {
     if (this.chains.size < CHAINS_HELD) return
     let oldest: PostChain | undefined
     for (const chain of this.chains) {
+      if (chain.users.size > 0) continue
       if (!oldest || chain.usedAt < oldest.usedAt) oldest = chain
     }
     if (oldest) this.drop(oldest)

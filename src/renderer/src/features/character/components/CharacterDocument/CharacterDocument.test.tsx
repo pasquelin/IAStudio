@@ -34,10 +34,16 @@ const navigated = vi.hoisted((): boolean[] => [])
 /** Every viewport dressing handed to the engine, in order — the decor AND the navigation. */
 const configured = vi.hoisted((): Record<string, unknown>[] => [])
 
+/** Live engines, so a case can read skin/clear calls that the constructor planted on `this`. */
+const engines = vi.hoisted(
+  (): Array<{ skinModel: ReturnType<typeof vi.fn>; clearRig: ReturnType<typeof vi.fn> }> => [],
+)
+
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
     constructor(options: unknown) {
       built.push(options as SceneRendererOptions)
+      engines.push(this)
     }
 
     mount = vi.fn()
@@ -115,6 +121,7 @@ beforeEach(() => {
   holds.length = 0
   carried.length = 0
   configured.length = 0
+  engines.length = 0
   clearCharacters()
   // The whole view, never the one flag a case happens to read: a padlock left closed by the case
   // before was what made the next one pass, and the leak showed only when the bar moved.
@@ -237,6 +244,20 @@ it('drops the waiting note as soon as the model has landed', async () => {
   })
 
   expect(screen.queryByText('En attente du personnage…')).not.toBeInTheDocument()
+})
+
+it('does not skin until the model has landed', async () => {
+  seedCharacter(ASSET, RIG, {})
+  showTab()
+  await waitFor(() => expect(engines[0]).toBeDefined())
+
+  expect(engines[0]?.skinModel).not.toHaveBeenCalled()
+
+  await act(async () => {
+    built[0]?.onMaterials?.('node-1', 1, ['Material'], [], true, [0])
+  })
+
+  await waitFor(() => expect(engines[0]?.skinModel).toHaveBeenCalled())
 })
 
 /**

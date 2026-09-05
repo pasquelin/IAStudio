@@ -119,8 +119,8 @@ export class PostComposer {
     // 🛑 The SIZE is deliberately NOT in the key. A `ResizeObserver` fires per pixel of a splitter
     // drag, and a size-keyed cache compiled a fresh composer — two full-frame buffers and a GLSL
     // link per pass — on every tick, then evicted it. A resize resizes; it does not recompile.
-    const key = `${plan.shapeKey}#${float ? 'f' : 'b'}`
-    const binding = `${key}#${bufferSurface(plan.effects, job.surface)}`
+    const key = chainKey(plan.shapeKey, float, job.surface, plan.effects)
+    const binding = `${key}#${job.surface}`
 
     const view = this.view
     view.scene = job.scene
@@ -338,9 +338,15 @@ export class PostComposer {
   }
 }
 
-/** Only audited stateless passes share by size; Glitch must keep its original draw cadence. */
-function bufferSurface(effects: readonly PostEffect[], surface: string): string {
-  return effects.every(sharesBuffers) ? surface : 'legacy'
+/** Stateless passes share by size; Glitch and SSAO keep one chain per surface so cadence stays theirs. */
+function chainKey(
+  shapeKey: string,
+  float: boolean,
+  surface: string,
+  effects: readonly PostEffect[],
+): string {
+  const key = `${shapeKey}#${float ? 'f' : 'b'}`
+  return effects.every(sharesBuffers) ? key : `${key}#${surface}`
 }
 
 function sharesBuffers(effect: PostEffect): boolean {

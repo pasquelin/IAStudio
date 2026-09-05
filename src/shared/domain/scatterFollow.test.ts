@@ -87,6 +87,9 @@ describe('scatterLayerRebuildOf', () => {
         rules: { ...before.rules, density: before.rules.density + 1 },
       }),
     ).toEqual({ kind: 'all' })
+    expect(scatterLayerRebuildOf(before, { ...before, followRelief: 'none' })).toEqual({
+      kind: 'all',
+    })
   })
 
   it('limits a painted-mask edit to the changed chunk region', () => {

@@ -8,6 +8,7 @@
 import {
   Bone,
   BufferAttribute,
+  type BufferGeometry,
   Matrix4,
   Mesh,
   Object3D,
@@ -61,7 +62,7 @@ export function removeRig(holder: Object3D): void {
   })
   unrig(holder)
   for (const mesh of skinned) {
-    const geometry = mesh.geometry.clone()
+    const geometry = ownGeometry(mesh.geometry.clone())
     geometry.deleteAttribute('skinIndex')
     geometry.deleteAttribute('skinWeight')
     const plain = new Mesh(geometry, mesh.material)
@@ -81,7 +82,7 @@ export function removeRig(holder: Object3D): void {
     for (const child of children) plain.add(child)
     mesh.removeFromParent()
     moveChildTo(parent, plain, index)
-    mesh.geometry.dispose()
+    disposeOwnedGeometry(mesh.geometry)
   }
 }
 
@@ -155,7 +156,7 @@ export function applyRig(
   const previousRoots = holder.children.filter(child => child instanceof Bone)
   const { bones, roots } = bonesOfRig(rig)
   const prepared = bound.map(({ mesh, binding }) => {
-    const geometry = mesh.geometry.clone()
+    const geometry = ownGeometry(mesh.geometry.clone())
     geometry.setAttribute('skinIndex', new Uint16BufferAttribute(binding.skinIndex, INFLUENCES))
     geometry.setAttribute('skinWeight', new BufferAttribute(binding.skinWeight, INFLUENCES))
     const skinned = new SkinnedMesh(geometry, mesh.material)
@@ -185,11 +186,11 @@ export function applyRig(
     for (const entry of prepared) replaceMesh(entry, skeleton)
     restInverses(holder)
     for (const root of previousRoots) root.removeFromParent()
-    for (const { mesh } of prepared) if (mesh instanceof SkinnedMesh) mesh.geometry.dispose()
+    for (const { mesh } of prepared) disposeOwnedGeometry(mesh.geometry)
   } catch (error) {
     for (const root of roots) root.removeFromParent()
     for (const entry of prepared.toReversed()) restoreMesh(entry)
-    for (const { skinned } of prepared) skinned.geometry.dispose()
+    for (const { skinned } of prepared) disposeOwnedGeometry(skinned.geometry)
     throw error
   }
 }
@@ -215,6 +216,19 @@ function restoreMesh(entry: PreparedMesh): void {
   entry.skinned.removeFromParent()
   if (entry.mesh.parent !== entry.parent) entry.parent.add(entry.mesh)
   moveChildTo(entry.parent, entry.mesh, entry.index)
+}
+
+const ownedGeometry = new WeakSet<BufferGeometry>()
+
+function ownGeometry(geometry: BufferGeometry): BufferGeometry {
+  ownedGeometry.add(geometry)
+  return geometry
+}
+
+function disposeOwnedGeometry(geometry: BufferGeometry): void {
+  if (!ownedGeometry.has(geometry)) return
+  ownedGeometry.delete(geometry)
+  geometry.dispose()
 }
 
 function moveChildTo(parent: Object3D, child: Object3D, index: number): void {

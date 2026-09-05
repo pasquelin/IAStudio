@@ -74,6 +74,8 @@ type ScatterState = {
   cells: ScatterCells
   world: SceneWorld | null
   grounded: Set<string>
+  syncing: Promise<void>
+  disposed: boolean
 }
 
 export function createScatterSurface(scene: Scene, options: ScatterSurfaceOptions): ScatterSurface {
@@ -96,6 +98,8 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
     },
     world: null,
     grounded: new Set(),
+    syncing: Promise.resolve(),
+    disposed: false,
   }
   return {
     object: group,
@@ -104,10 +108,26 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
       if (!partition) throw new Error('Missing props scatter partition')
       return partition
     },
-    sync: async (world, heightmaps) => syncScatter(state, world, heightmaps, options),
+    sync: async (world, heightmaps) => {
+      const previous = state.syncing
+      let release = (): void => {}
+      state.syncing = new Promise(resolve => {
+        release = resolve
+      })
+      await previous
+      if (state.disposed) return
+      try {
+        await syncScatter(state, world, heightmaps, options)
+      } finally {
+        release()
+      }
+    },
     updateVisibility: camera => updateScatterVisibility(state.cells, camera),
     objectsInCell: (layerId, key) => state.cells.byLayer.get(layerId)?.cells.get(key) ?? [],
-    dispose: () => disposeScatter(state, options.models),
+    dispose: () => {
+      state.disposed = true
+      disposeScatter(state, options.models)
+    },
   }
 }
 
@@ -284,6 +304,7 @@ function mergeRebuild(left: ScatterRebuild, right: ScatterRebuild): ScatterRebui
 }
 
 function cellKeysIn(region: ScatterRegion, cellSize: number): CellKey[] {
+  if (region.minX >= region.maxX || region.minZ >= region.maxZ) return []
   const keys: CellKey[] = []
   const minX = Math.floor(region.minX / cellSize)
   const maxX = Math.ceil(region.maxX / cellSize)

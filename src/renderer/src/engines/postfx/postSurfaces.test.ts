@@ -120,13 +120,13 @@ describe('post-processing surface resources', () => {
     const dropped = vi.spyOn(EffectComposer.prototype, 'dispose')
 
     post.draw(job('surface:6', 160, 64))
-    expect(dropped).toHaveBeenCalledTimes(1)
+    expect(dropped).not.toHaveBeenCalled()
     post.draw(job('surface:0', 64, 64))
+    expect(dropped).not.toHaveBeenCalled()
+    post.releaseSurface('surface:1')
     expect(dropped).toHaveBeenCalledTimes(1)
-    post.draw(job('surface:1', 80, 64))
-    expect(dropped).toHaveBeenCalledTimes(2)
     post.dispose()
-    expect(dropped).toHaveBeenCalledTimes(8)
+    expect(dropped).toHaveBeenCalledTimes(7)
   })
 
   it('releases a closed surface without discarding the live pane', () => {
@@ -164,13 +164,13 @@ describe('post-processing surface resources', () => {
     expect(dropped).not.toHaveBeenCalled()
   })
 
-  it('preserves the existing shared instance for an effect with private temporal state', () => {
+  it('keeps a private temporal chain per surface so glitch cadence stays theirs', () => {
     const post = composer()
     const glitchStack = { enabled: true, effects: [postEffect('glitch', 'glitch')] }
     const disposed = vi.spyOn(GlitchPass.prototype, 'dispose')
     post.draw({ ...job('pane:0', 960, 640), stack: glitchStack })
     post.draw({ ...job('inset', 320, 192), stack: glitchStack })
     post.dispose()
-    expect(disposed).toHaveBeenCalledTimes(1)
+    expect(disposed).toHaveBeenCalledTimes(2)
   })
 })

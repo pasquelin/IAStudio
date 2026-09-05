@@ -29,6 +29,7 @@ export function scatterLayerRebuildOf(before: ScatterLayer, after: ScatterLayer)
     before.size.x !== after.size.x ||
     before.size.z !== after.size.z ||
     before.grain !== after.grain ||
+    before.followRelief !== after.followRelief ||
     !sameRules(before, after) ||
     !sameAssets(before, after)
   ) {

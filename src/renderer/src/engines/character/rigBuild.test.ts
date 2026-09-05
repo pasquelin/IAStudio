@@ -1,4 +1,12 @@
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh } from 'three'
+import {
+  BoxGeometry,
+  type BufferGeometry,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  Object3D,
+  SkinnedMesh,
+} from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { Rig } from '@shared/domain/rig'
 import { INFLUENCES } from './skinMessage'
@@ -286,6 +294,26 @@ describe('taking a rig off a model', () => {
     )
     expect(plain?.children).toContain(child)
     expect(holder.children.indexOf(plain as Object3D)).toBe(before)
+  })
+
+  it('does not dispose geometry shared with another instance of the same file', () => {
+    const geometry = new BoxGeometry()
+    const disposed: BufferGeometry[] = []
+    const original = geometry.dispose.bind(geometry)
+    geometry.dispose = () => {
+      disposed.push(geometry)
+      original()
+    }
+    const source = new SkinnedMesh(geometry, new MeshStandardMaterial())
+    // `Mesh.clone` keeps the source geometry, which is the Mixamo/cache case this guards.
+    const instance = source.clone() as SkinnedMesh
+    const holder = modelWith(instance)
+
+    applyRig(holder, RIG, [{ mesh: instance, binding: bindingFor(instance) }])
+    removeRig(holder)
+
+    expect(disposed).toEqual([])
+    expect(source.geometry.getAttribute('position')).toBeDefined()
   })
 })
 
