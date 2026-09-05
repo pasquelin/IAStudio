@@ -45,17 +45,20 @@ export function useCharacterFit(
       : undefined
   const advanced = candidate?.model.backendId
   const needsDownload = advanced !== undefined && !candidate?.installed
-  // What SERVES stays listed whatever the machine now says of it, as the assistant's own list does:
-  // a backend chosen while the memory was free would otherwise vanish the day it tightens.
+  // Two escapes from `canServe`, and they answer different questions. What SERVES stays listed
+  // whatever the machine now says of it — the assistant's list does the same. What is CHOSEN stays
+  // listed while it is missing from the disk, so the download button below names something.
   const serving = row?.provider?.kind === 'local' ? row.provider.modelId : null
   const rigBackends =
     row?.candidates.flatMap(one =>
-      (canServe(one) || one.model.id === serving) && one.model.backendId
+      (canServe(one) || one.model.id === serving || one === candidate) && one.model.backendId
         ? [{ backendId: one.model.backendId, modelId: one.model.id, name: one.model.name }]
         : [],
     ) ?? []
-  const selectedBackend =
-    advanced && rigBackends.some(one => one.backendId === advanced) ? advanced : 'simple'
+  // The CHOSEN one first, even absent from the disk: the field names what Create will attempt, so
+  // the refusal and the download button below agree with it. Otherwise, what serves.
+  const servingBackend = row?.candidates.find(one => one.model.id === serving)?.model.backendId
+  const selectedBackend = (needsDownload ? advanced : undefined) ?? servingBackend ?? 'simple'
   const [failure, setFailure] = useState<AutoRigProductError | null>(null)
   const [running, setRunning] = useState(false)
   const [miaOptions, setMiaOptions] = useState<AutoRigInferenceOptions>(DEFAULT_AUTO_RIG_OPTIONS)
