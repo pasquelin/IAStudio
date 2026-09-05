@@ -60,7 +60,7 @@ Résultat final isolé, avec les sockets locales autorisées :
 - Python : 202 tests verts, 1 test conditionnel ignoré ;
 - Knip : aucune anomalie ;
 - licences : 73 paquets permissifs, mentions présentes ;
-- typecheck, lint, format, tailles et build moteur : PASS.
+- typecheck, lint, format, tailles et compilation du moteur Python : PASS.
 
 ## Gate B — package public
 
