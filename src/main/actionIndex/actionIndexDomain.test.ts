@@ -26,3 +26,9 @@ it('derives localized component semantics from the component registry', () => {
     'component.setProperties',
   )
 })
+
+it('derives localized command semantics from the command registry', () => {
+  expect(
+    search("Suis la sélection pour qu'elle reste visible pendant son mouvement.", 'scene'),
+  ).toContain('command.runStudioCommand')
+})

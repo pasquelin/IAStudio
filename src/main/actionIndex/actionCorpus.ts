@@ -9,6 +9,7 @@ import type {
 } from '@shared/domain/assistant'
 import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
 import { COMPONENTS, COMPONENT_TYPES } from '@shared/domain/componentRegistry'
+import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { digestOf } from '@main/memory/vectors'
 
 export type IndexedAction = {
@@ -44,17 +45,19 @@ export function actionFingerprint(actions: readonly IndexedAction[]): string {
   return digestOf(JSON.stringify(actions))
 }
 
-function componentTerms(fields: readonly ActionField[]): readonly string[] {
-  const hasComponentChoice = fields.some(
+function includesClosedChoice(fields: readonly ActionField[], values: readonly string[]): boolean {
+  return fields.some(
     field =>
-      field.options?.length === COMPONENT_TYPES.length &&
+      field.options?.length === values.length &&
       field.options.every(
         option =>
-          typeof option === 'string' &&
-          COMPONENT_TYPES.some(componentType => componentType === option),
+          typeof option === 'string' && values.some(expectedValue => expectedValue === option),
       ),
   )
-  if (!hasComponentChoice) return []
+}
+
+function componentTerms(fields: readonly ActionField[]): readonly string[] {
+  if (!includesClosedChoice(fields, COMPONENT_TYPES)) return []
   return Object.values(COMPONENTS).flatMap(component => [
     component.type,
     englishText(component.titleKey),
@@ -66,6 +69,24 @@ function componentTerms(fields: readonly ActionField[]): readonly string[] {
       englishText(field.labelKey),
       textAt(TRANSLATIONS.fr, field.labelKey),
     ]),
+  ])
+}
+
+function commandTerms(fields: readonly ActionField[]): readonly string[] {
+  if (
+    !includesClosedChoice(
+      fields,
+      COMMAND_REGISTRY.map(command => command.id),
+    )
+  )
+    return []
+  return COMMAND_REGISTRY.flatMap(command => [
+    command.id,
+    command.scope,
+    englishText(command.titleKey),
+    textAt(TRANSLATIONS.fr, command.titleKey),
+    englishText(command.helpKey),
+    textAt(TRANSLATIONS.fr, command.helpKey),
   ])
 }
 
@@ -110,6 +131,7 @@ export function actionCorpus(): ActionCorpus {
           frenchTitle,
           frenchDescription,
           ...componentTerms(action.fields),
+          ...commandTerms(action.fields),
           ...fields.flatMap(field => [
             field.key,
             englishText(field.labelKey),
