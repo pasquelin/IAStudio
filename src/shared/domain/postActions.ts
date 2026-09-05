@@ -40,6 +40,7 @@ const EFFECT: ActionField = {
 export const POST_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'post.state',
+    reads: true,
     titleKey: 'assistant.actions.postState.title',
     descriptionKey: 'assistant.actions.postState.description',
     commitment: 'none',
@@ -150,6 +151,7 @@ export const POST_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'post.listPresets',
+    reads: true,
     titleKey: 'assistant.actions.postListPresets.title',
     descriptionKey: 'assistant.actions.postListPresets.description',
     commitment: 'none',

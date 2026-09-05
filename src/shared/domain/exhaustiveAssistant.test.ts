@@ -392,7 +392,55 @@ const ALL_ACTIONS: Record<ActionName, true> = {
   'accounts.rename': true,
 }
 
+/**
+ * The verbs a read is named with. `reads` is what the mission runtime plans on — a read is
+ * followed by planning, a mutation by a check — so a read left unflagged is verified as if it had
+ * done something. Blind spot: a read named with a verb missing here is neither flagged nor caught.
+ */
+const READ_VERBS = [
+  'state',
+  'list',
+  'search',
+  'find',
+  'read',
+  'facts',
+  'counts',
+  'report',
+  'docs',
+  'describe',
+  'recall',
+  'status',
+  'log',
+  'diff',
+  'branches',
+  'stashes',
+  'remotes',
+  'errors',
+  'capabilities',
+  'estimate',
+  'analyze',
+  'browse',
+  'explore',
+  'preview',
+  'suggest',
+  'translate',
+  'get',
+  'canUndoRedo',
+  'recent',
+  'wait',
+]
+
 describe('the assistant action registry', () => {
+  it('flags as a read exactly what is named like one', () => {
+    const namedLikeARead = (name: ActionName): boolean =>
+      READ_VERBS.some(verb => (name.split('.')[1] ?? '').startsWith(verb))
+    const flagged = ACTION_REGISTRY.filter(one => one.reads).map(one => one.name)
+    const named = ACTION_REGISTRY.filter(one => namedLikeARead(one.name)).map(one => one.name)
+
+    expect(sorted(flagged)).toEqual(sorted(named))
+    expect(flagged.length).toBeGreaterThan(50)
+  })
+
   it('builds every action the union declares', () => {
     expect(sorted(ACTION_REGISTRY.map(entry => entry.name))).toEqual(
       sorted(Object.keys(ALL_ACTIONS)),

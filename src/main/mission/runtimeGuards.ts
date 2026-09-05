@@ -29,9 +29,7 @@ export function repeatsLastRound(
   const lastRound = before.slice(before.findLastIndex(one => one.kind !== 'action') + 1)
   const previous = new Set(
     lastRound.flatMap(one =>
-      one.kind === 'action' && assistantAction(one.call.action)?.commitment === 'none'
-        ? [callKey(one.call)]
-        : [],
+      one.kind === 'action' && assistantAction(one.call.action)?.reads ? [callKey(one.call)] : [],
     ),
   )
   return previous.size > 0 && answer.calls.every(call => previous.has(callKey(call)))

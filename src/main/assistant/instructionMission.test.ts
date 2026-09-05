@@ -25,6 +25,11 @@ describe('mission briefing', () => {
     expect(briefing.loaded).toEqual(['project.create'])
   })
 
+  it('prints a repeated field as a list, so the model sends one', () => {
+    expect(manualOf('node.combineIntoSolid')).toContain('nodeIds (list of text, required)')
+    expect(manualOf('node.rename')).toContain('nodeId (text, required)')
+  })
+
   it('tells the model how to read the mission JSON, and only on a mission', async () => {
     const mission = await briefingFor(
       { utterance: 'create', history: [], context: '{"mission":{}}', mission: true },
@@ -84,6 +89,22 @@ describe('mission briefing', () => {
 
     expect(discover).toHaveBeenCalledWith('switch branch')
     expect(answer.calls[0]?.action).toBe('git.checkout')
+  })
+
+  it('executes a call with no fields straight away, whether its manual is open or not', async () => {
+    const briefing = await briefingFor(
+      { utterance: 'move the sphere above the cube', history: [], candidates: ['node.transform'] },
+      200_000,
+    )
+    const answer =
+      '{"say":"","ask":null,"calls":[{"action":"scene.state","input":{}},' +
+      '{"action":"node.transform","input":{"nodeId":"a","positionY":1}}]}'
+    const round = vi.fn(async () => ({ answer, cost: 1 }))
+
+    const result = await answeredTurn(briefing, round)
+
+    expect(round).toHaveBeenCalledTimes(1)
+    expect(result.calls.map(call => call.action)).toEqual(['scene.state', 'node.transform'])
   })
 
   it('opens the manual of an action named outside the candidates before executing it', async () => {

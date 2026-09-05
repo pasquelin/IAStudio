@@ -1,5 +1,6 @@
 import {
   ACTION_REGISTRY,
+  assistantAction,
   DISCOVERY_ACTION,
   type ActionName,
   type AssistantAnswer,
@@ -182,7 +183,13 @@ function discoveryIn(reply: Reply | null): string | null {
  * beside it complained about unreadable JSON — which was never what was wrong.
  */
 const unloadedIn = (reply: Reply | null, loaded: readonly ActionName[]): readonly ActionName[] => [
-  ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !loaded.includes(name))),
+  ...new Set(
+    (reply?.calls ?? [])
+      .map(call => call.action)
+      // Nothing to open for a call with no fields — and asked again with `scene.state` opened,
+      // the model dropped the transform it had planned beside it (7.5, 2026-09-06).
+      .filter(name => !loaded.includes(name) && (assistantAction(name)?.fields.length ?? 0) > 0),
+  ),
 ]
 
 // Said plainly rather than thrown: the caller has a person waiting, and "I did not understand"

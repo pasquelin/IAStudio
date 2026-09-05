@@ -134,6 +134,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'runtime.report',
+    reads: true,
     titleKey: 'assistant.actions.runtimeReport.title',
     descriptionKey: 'assistant.actions.runtimeReport.description',
     commitment: 'none',
@@ -144,6 +145,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
   action({
     /** 🛑 ADDRESSABLE: the script's reference and the line, which is what a repair needs. */
     name: 'runtime.errors',
+    reads: true,
     titleKey: 'assistant.actions.runtimeErrors.title',
     descriptionKey: 'assistant.actions.runtimeErrors.description',
     commitment: 'none',
@@ -157,6 +159,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
 export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'script.list',
+    reads: true,
     titleKey: 'assistant.actions.scriptList.title',
     descriptionKey: 'assistant.actions.scriptList.description',
     commitment: 'none',
@@ -166,6 +169,7 @@ export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'script.read',
+    reads: true,
     titleKey: 'assistant.actions.scriptRead.title',
     descriptionKey: 'assistant.actions.scriptRead.description',
     commitment: 'none',
@@ -206,6 +210,7 @@ export const SCRIPT_ACTIONS: readonly AssistantAction[] = [
 export const STUDIO_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'studio.describe',
+    reads: true,
     titleKey: 'assistant.actions.studioDescribe.title',
     descriptionKey: 'assistant.actions.studioDescribe.description',
     commitment: 'none',
@@ -219,6 +224,7 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
   action({
     /** The same source the editor types against — `studio.d.ts`, sliced by topic. */
     name: 'studio.docs',
+    reads: true,
     titleKey: 'assistant.actions.studioDocs.title',
     descriptionKey: 'assistant.actions.studioDocs.description',
     commitment: 'none',

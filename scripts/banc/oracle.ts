@@ -14,7 +14,7 @@ import type { CsgOperation } from '@shared/domain/csg'
 import { wornMaterials } from '@shared/domain/scene'
 import { toRadians } from '@shared/domain/angles'
 import { SECOND } from '@shared/domain/time'
-import { matchesWords, searchWords } from '@shared/text'
+import { foldForSearch, matchesWords, searchWords } from '@shared/text'
 import type { SkyboxContent } from '@shared/domain/skybox'
 import {
   EMPTY_STACK,
@@ -82,7 +82,12 @@ export const generationComments = (run: Run) =>
 export const nodes = (run: Run): readonly SceneNode[] =>
   inSpace(run, '3d').flatMap(one => sceneOf(useScenes.getState(), one.id).nodes)
 
+/**
+ * The node called exactly that, before one whose name merely CONTAINS it: « Sphere » answered
+ * `HemisphereLight` first, and 6.7 could not pass whatever the model did (2026-09-06).
+ */
 export const nodeNamed = (run: Run, name: string): SceneNode | undefined =>
+  nodes(run).find(one => foldForSearch(one.name) === foldForSearch(name)) ??
   nodes(run).find(one => answersTo(one.name, name))
 
 /**

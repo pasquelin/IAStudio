@@ -67,7 +67,7 @@
       },
       "documentActivate": {
         "title": "Bring a document to the front",
-        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface. Name it by its id, by its path, or by the title the studio shows in quotes — a title two documents share names neither."
+        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface. Name it by its id, by its path, or by the title the studio shows in quotes — a title two documents share names neither. “Reopen X”, “go back to X” for a document already open is this, not file.open."
       },
       "documentClose": {
         "title": "Close a document",
@@ -715,7 +715,7 @@
       },
       "cameraAddShot": {
         "title": "Put a camera on air",
-        "description": "Opens a shot for this camera, from the given instant in seconds, and answers its id. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
+        "description": "Opens a shot for this camera, from the given instant in seconds, and answers its id. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top. A camera with a shot is the ACTIVE camera, the one the scene is seen through."
       },
       "cameraBindPathToShot": {
         "title": "Run a camera along a path",
@@ -995,7 +995,7 @@
       },
       "nodeCombineIntoSolid": {
         "title": "Carve, join or intersect objects",
-        "description": "Folds several objects of the scene in front into a single solid. THE ORDER OF THE IDS DOES NOT MATTER: the matter is the biggest shape unless matterId names it, and an object marked through node.markAsCuttingTool is always a tool. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
+        "description": "Folds several objects of the scene in front into a single solid. THE ORDER OF THE IDS DOES NOT MATTER: the matter is the biggest shape unless matterId names it, and an object marked through node.markAsCuttingTool is always a tool. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid. “intersect” keeps only the part where they overlap."
       },
       "nodeSwapSolidMatterAndTool": {
         "title": "Flip a fold",

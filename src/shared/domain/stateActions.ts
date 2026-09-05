@@ -15,6 +15,7 @@ import { MATERIAL_EXPORT_TARGETS } from './materialExport'
 export const STATE_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'studio.state',
+    reads: true,
     titleKey: 'assistant.actions.studioState.title',
     descriptionKey: 'assistant.actions.studioState.description',
     commitment: 'none',
@@ -24,6 +25,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'documents.list',
+    reads: true,
     titleKey: 'assistant.actions.documentsList.title',
     descriptionKey: 'assistant.actions.documentsList.description',
     commitment: 'none',
@@ -172,6 +174,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'activity.recent',
+    reads: true,
     titleKey: 'assistant.actions.activityRecent.title',
     descriptionKey: 'assistant.actions.activityRecent.description',
     commitment: 'none',

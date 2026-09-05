@@ -52,6 +52,30 @@ describe('AssistantContextBuilder budgets', () => {
     expect(context.budget.selection.truncated).toBe(true)
   })
 
+  it('shows the reads of the round that just ran whole, and compacts the older ones', async () => {
+    const base = missionOf('/projects/alpha')
+    const read = (id: string): MissionStep => ({
+      ...base.step,
+      id,
+      kind: 'action',
+      call: { action: 'scene.state', input: {} },
+      state: 'completed',
+      result: { nodes: Array.from({ length: 60 }, (_, at) => ({ id: `node_${at}`, x: at })) },
+    })
+    const earlier = read('step_earlier')
+    const between = { ...base.step, id: 'step_between', state: 'completed' as const }
+    const latest = read('step_latest')
+    const step = { ...base.step, id: 'step_now', dependsOn: [latest.id] }
+    const mission = { ...base.mission, plan: { steps: [earlier, between, latest, step] } }
+    const builder = createAssistantContextBuilder(dependencies())
+
+    const context = await builder.build({ mission, step, request: 'Place the sphere' })
+
+    expect(context.previousResults.map(one => one.stepId)).toEqual(['step_latest', 'step_earlier'])
+    expect(context.previousResults[0]?.result).toEqual(latest.result)
+    expect(context.previousResults[1]?.result).toMatchObject({ truncated: true })
+  })
+
   it('ranks relevant project cards before applying their independent budget', async () => {
     const { mission, step } = missionOf('/projects/alpha')
     const cards = Array.from({ length: 9 }, (_, at) => ({

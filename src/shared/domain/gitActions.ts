@@ -27,6 +27,7 @@ const PATHS: ActionField = {
 export const GIT_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'git.status',
+    reads: true,
     titleKey: 'assistant.actions.gitStatus.title',
     descriptionKey: 'assistant.actions.gitStatus.description',
     commitment: 'none',
@@ -37,6 +38,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.log',
+    reads: true,
     titleKey: 'assistant.actions.gitLog.title',
     descriptionKey: 'assistant.actions.gitLog.description',
     commitment: 'none',
@@ -56,6 +58,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.listCommitFiles',
+    reads: true,
     titleKey: 'assistant.actions.gitListCommitFiles.title',
     descriptionKey: 'assistant.actions.gitListCommitFiles.description',
     commitment: 'none',
@@ -67,6 +70,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.diff',
+    reads: true,
     titleKey: 'assistant.actions.gitDiff.title',
     descriptionKey: 'assistant.actions.gitDiff.description',
     commitment: 'none',
@@ -79,6 +83,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.branches',
+    reads: true,
     titleKey: 'assistant.actions.gitBranches.title',
     descriptionKey: 'assistant.actions.gitBranches.description',
     commitment: 'none',
@@ -88,6 +93,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.stashes',
+    reads: true,
     titleKey: 'assistant.actions.gitStashes.title',
     descriptionKey: 'assistant.actions.gitStashes.description',
     commitment: 'none',
@@ -259,6 +265,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.remotes',
+    reads: true,
     titleKey: 'assistant.actions.gitRemotes.title',
     descriptionKey: 'assistant.actions.gitRemotes.description',
     commitment: 'none',

@@ -17,6 +17,7 @@ const IRREVERSIBLE: readonly SettingActionId[] = ['advanced.installResolveBridge
 export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'settings.read',
+    reads: true,
     titleKey: 'assistant.actions.settingsRead.title',
     descriptionKey: 'assistant.actions.settingsRead.description',
     commitment: 'none',
@@ -53,6 +54,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'accounts.list',
+    reads: true,
     titleKey: 'assistant.actions.accountsList.title',
     descriptionKey: 'assistant.actions.accountsList.description',
     commitment: 'none',

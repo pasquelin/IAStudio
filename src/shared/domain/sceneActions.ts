@@ -19,19 +19,19 @@ function optimizationActions(): AssistantAction[] {
       ['optimization.clearCache', 'optimizationClearCache'],
     ] satisfies readonly (readonly [ActionName, string])[]
   ).map(([name, key]) => optimizationAction(name, key, []))
-  const nodeIds: Omit<ActionField, 'required'> = {
+  const nodeIds: ActionField = {
     key: 'nodeIds',
     kind: 'text',
     labelKey: 'assistant.fields.nodeIds',
+    required: false,
     repeated: true,
   }
   return [
-    optimizationAction('optimization.analyze', 'optimizationAnalyze', [
-      { ...nodeIds, required: false },
-    ]),
-    optimizationAction('optimization.report', 'optimizationReport', [
-      { ...nodeIds, required: false },
-    ]),
+    {
+      ...optimizationAction('optimization.analyze', 'optimizationAnalyze', [nodeIds]),
+      reads: true,
+    },
+    { ...optimizationAction('optimization.report', 'optimizationReport', [nodeIds]), reads: true },
     ...simple,
     optimizationAction('optimization.exclude', 'optimizationExclude', [
       { ...nodeIds, required: true },

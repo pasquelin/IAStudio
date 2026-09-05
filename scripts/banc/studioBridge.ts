@@ -113,7 +113,13 @@ export function installStudioBridge(context: StudioBridgeContext, think?: Think)
      * the decor had just sown. Through the REAL `mergedSettings`, never a second merge of its own.
      */
     settings: {
-      write: partial => Promise.resolve(mergedSettings(useSettings.getState().settings, partial)),
+      // 🛑 STORED, as the main's store does: merged and answered but never kept, every write of
+      // the batterie was a no-op and `settings.read` still showed the grid on (2026-09-06).
+      write: partial => {
+        const settings = mergedSettings(useSettings.getState().settings, partial)
+        useSettings.setState({ settings })
+        return Promise.resolve(settings)
+      },
       read: () => Promise.resolve(useSettings.getState().settings),
     },
     project: ((): NonNullable<BridgeOverrides['project']> => ({

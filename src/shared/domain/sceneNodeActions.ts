@@ -16,6 +16,7 @@ import {
 export const SCENE_NODE_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'scene.state',
+    reads: true,
     titleKey: 'assistant.actions.sceneState.title',
     descriptionKey: 'assistant.actions.sceneState.description',
     commitment: 'none',

@@ -107,6 +107,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'models.search',
+    reads: true,
     titleKey: 'assistant.actions.modelsSearch.title',
     descriptionKey: 'assistant.actions.modelsSearch.description',
     commitment: 'none',
@@ -195,6 +196,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
    */
   action({
     name: 'generator.readArmedGeneration',
+    reads: true,
     titleKey: 'assistant.actions.generatorReadArmedGeneration.title',
     descriptionKey: 'assistant.actions.generatorReadArmedGeneration.description',
     commitment: 'none',
@@ -222,6 +224,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'jobs.list',
+    reads: true,
     titleKey: 'assistant.actions.jobsList.title',
     descriptionKey: 'assistant.actions.jobsList.description',
     commitment: 'none',
@@ -237,6 +240,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
    */
   action({
     name: 'prompt.suggest',
+    reads: true,
     titleKey: 'assistant.actions.promptSuggest.title',
     descriptionKey: 'assistant.actions.promptSuggest.description',
     commitment: 'none',
@@ -248,6 +252,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'prompt.translate',
+    reads: true,
     titleKey: 'assistant.actions.promptTranslate.title',
     descriptionKey: 'assistant.actions.promptTranslate.description',
     commitment: 'none',
@@ -259,6 +264,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
     // No input: what it reads is the pictures already on the form, which is the only place
     // references exist. Asking the model to name them would have it invent asset ids.
     name: 'prompt.describeStyle',
+    reads: true,
     titleKey: 'assistant.actions.promptDescribeStyle.title',
     descriptionKey: 'assistant.actions.promptDescribeStyle.description',
     commitment: 'none',
@@ -291,6 +297,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
    */
   action({
     name: 'actions.find',
+    reads: true,
     titleKey: 'assistant.actions.actionsFind.title',
     descriptionKey: 'assistant.actions.actionsFind.description',
     commitment: 'none',

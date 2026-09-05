@@ -155,8 +155,8 @@ describe('thinking', () => {
   it('does not treat a plan that also acts as a question', async () => {
     const answers = [
       '{"say":"","calls":[{"action":"actions.find","input":{"query":"git"}},' +
-        '{"action":"jobs.list","input":{}}]}',
-      '{"say":"Looking.","calls":[{"action":"jobs.list","input":{}}]}',
+        '{"action":"files.list","input":{}}]}',
+      '{"say":"Looking.","calls":[{"action":"files.list","input":{}}]}',
     ]
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
@@ -168,10 +168,10 @@ describe('thinking', () => {
 
     const outcome = await brain.think({ utterance: 'anything', history: [] })
 
-    expect(outcome.calls).toEqual([{ action: 'jobs.list', input: {} }])
+    expect(outcome.calls).toEqual([{ action: 'files.list', input: {} }])
     // The manuals, never a query: a plan that acts is not a question, whatever it named first.
     const second = String(run.mock.calls[1]?.[0]?.['instruction'])
-    expect(second).toContain('  jobs.list —')
+    expect(second).toContain('  files.list —')
     expect(second).not.toContain('The manual above now holds')
   })
 

@@ -21,6 +21,7 @@ import type {
 import { CONTEXT_BUDGETS, emptyBudgetReport, withinBudget } from './contextBudget'
 import { compactContextValue, serializedContextLength } from './contextCompaction'
 import { assetIdsFromJobResult } from './jobResult'
+import { previousResults } from './contextResults'
 
 type AssistantContextRequest = {
   mission: Mission
@@ -225,39 +226,6 @@ function visualContext(collected: CollectedContext, report: ContextBudgetReport)
     truncated: collected.visual !== undefined && accepted.length === 0,
   }
   return accepted
-}
-
-/**
- * 🛑 What the model did, WITH the call: shown `files.search → []` five times without the query,
- * it searched again with the same words, fifteen rounds in a row (2.5, 2026-09-06). Its own
- * `say` is not a result and is left out; the newest come first, since the cut takes the tail.
- */
-function previousResults(input: AssistantContextRequest, report: ContextBudgetReport) {
-  return input.mission.plan.steps
-    .filter(
-      step =>
-        step.state === 'completed' &&
-        step.id !== input.step.id &&
-        step.kind !== 'reason' &&
-        step.kind !== 'verify' &&
-        (step.kind === 'action' || step.result !== undefined),
-    )
-    .map(step => {
-      const result = compactContextValue(step.result, 600)
-      if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')
-      return {
-        stepId: step.id,
-        title: textWithin(step.title, 160),
-        ...(step.kind === 'action' ? { call: step.call } : {}),
-        result: result.value,
-      }
-    })
-    .reverse()
-    .sort(
-      (left, right) =>
-        Number(input.step.dependsOn.includes(right.stepId)) -
-        Number(input.step.dependsOn.includes(left.stepId)),
-    )
 }
 
 function relevantJobs(

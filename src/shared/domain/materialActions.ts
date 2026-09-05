@@ -31,6 +31,7 @@ const NUMBER = (key: string, labelKey: string, min?: number, max?: number): Acti
 export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'skybox.state',
+    reads: true,
     titleKey: 'assistant.actions.skyboxState.title',
     descriptionKey: 'assistant.actions.skyboxState.description',
     commitment: 'none',
@@ -143,6 +144,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'material.state',
+    reads: true,
     titleKey: 'assistant.actions.materialState.title',
     descriptionKey: 'assistant.actions.materialState.description',
     commitment: 'none',
@@ -264,6 +266,7 @@ export const MATERIAL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'styles.list',
+    reads: true,
     titleKey: 'assistant.actions.stylesList.title',
     descriptionKey: 'assistant.actions.stylesList.description',
     commitment: 'none',

@@ -77,6 +77,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
      * branch » prints five of the twenty-four it finds where it printed six.
      */
     name: 'projects.list',
+    reads: true,
     titleKey: 'assistant.actions.projectsList.title',
     descriptionKey: 'assistant.actions.projectsList.description',
     commitment: 'none',
@@ -179,6 +180,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'files.list',
+    reads: true,
     titleKey: 'assistant.actions.filesList.title',
     descriptionKey: 'assistant.actions.filesList.description',
     commitment: 'none',
@@ -192,6 +194,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'files.search',
+    reads: true,
     titleKey: 'assistant.actions.filesSearch.title',
     descriptionKey: 'assistant.actions.filesSearch.description',
     commitment: 'none',
@@ -254,6 +257,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'file.facts',
+    reads: true,
     titleKey: 'assistant.actions.fileFacts.title',
     descriptionKey: 'assistant.actions.fileFacts.description',
     commitment: 'none',
@@ -297,6 +301,7 @@ export const FILE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'files.canUndoRedo',
+    reads: true,
     titleKey: 'assistant.actions.filesCanUndoRedo.title',
     descriptionKey: 'assistant.actions.filesCanUndoRedo.description',
     commitment: 'none',

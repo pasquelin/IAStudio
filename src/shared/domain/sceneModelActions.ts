@@ -1,7 +1,22 @@
-import { action, NODE_ID as NODE, RELATIVE_FIELD, type AssistantAction } from './assistantAction'
+import {
+  action,
+  NODE_ID as NODE,
+  RELATIVE_FIELD,
+  type ActionField,
+  type AssistantAction,
+} from './assistantAction'
 import { EASINGS } from './animation'
 import { MATERIAL_SLOTS } from './scene'
 import { dial, vector } from './sceneActionFields'
+
+/** The shot in front, which `camera.addShot` answers — a reference the runtime checks. */
+const SHOT_ID: ActionField = {
+  key: 'shotId',
+  kind: 'text',
+  labelKey: 'assistant.fields.shotId',
+  required: true,
+  reference: 'shot',
+}
 
 export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
   action({
@@ -127,6 +142,7 @@ export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    returns: ['cameraShots'],
     fields: [
       NODE,
       {
@@ -156,8 +172,9 @@ export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    inputs: ['cameraShots'],
     fields: [
-      { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
+      SHOT_ID,
       { key: 'pathId', kind: 'text', labelKey: 'assistant.fields.pathId', required: false },
       // Not clamped to one another: `from` past `to` is what runs the rail backwards.
       { key: 'from', kind: 'number', labelKey: 'assistant.fields.railFrom', required: false },
@@ -183,7 +200,8 @@ export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    fields: [{ key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true }],
+    inputs: ['cameraShots'],
+    fields: [SHOT_ID],
   }),
   action({
     /**
@@ -209,8 +227,9 @@ export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    inputs: ['cameraShots'],
     fields: [
-      { key: 'shotId', kind: 'text', labelKey: 'assistant.fields.shotId', required: true },
+      SHOT_ID,
       { key: 'targetId', kind: 'text', labelKey: 'assistant.fields.targetId', required: false },
       { key: 'atX', kind: 'number', labelKey: 'assistant.fields.positionX', required: false },
       { key: 'atY', kind: 'number', labelKey: 'assistant.fields.positionY', required: false },

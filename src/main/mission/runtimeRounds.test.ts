@@ -41,6 +41,36 @@ describe('mission runtime rounds after the first', () => {
     expect(requests[1]?.utterance).toContain('plan the next calls if it is not')
   })
 
+  it('verifies after a mutation that asks no confirmation, rather than planning it again', async () => {
+    const { brain, requests } = brainWith([
+      {
+        say: '',
+        calls: [{ action: 'node.markAsCuttingTool', input: { nodeIds: ['a'] } }],
+        cost: 0,
+      },
+      { say: 'Done.', calls: [], cost: 0 },
+    ])
+
+    const mission = await runtimeWith(brain).runtime.create('Take the tool mark off', {})
+
+    expect(mission.plan.steps.map(step => step.kind)).toEqual(['reason', 'action', 'verify'])
+    expect(requests[1]?.utterance).toContain('Verify from the current state')
+  })
+
+  it('lets a model send the same mutation twice across rounds', async () => {
+    const move: AssistantCall = { action: 'node.transform', input: { nodeId: 'a', positionY: 1 } }
+    const { brain } = brainWith([
+      { say: '', calls: [move], cost: 0 },
+      { say: '', calls: [move], cost: 0 },
+      { say: 'Done.', calls: [], cost: 0 },
+    ])
+
+    const mission = await runtimeWith(brain).runtime.create('Move it up twice', {})
+
+    expect(mission.state).toBe('completed')
+    expect(mission.plan.steps.filter(step => step.kind === 'action')).toHaveLength(2)
+  })
+
   it('stops a model that sends the same reads as the round before', async () => {
     const search: AssistantCall = { action: 'files.search', input: { query: 'boat' } }
     const { brain, requests } = brainWith([

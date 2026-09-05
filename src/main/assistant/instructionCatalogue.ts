@@ -37,7 +37,8 @@ export function targetLine(target: Target): string {
 
 /** One field, as a line the model can read: name, type, whether it must be there, what it takes. */
 function fieldLine(field: ActionField): string {
-  const parts = [`${field.key} (${field.kind}${field.required ? ', required' : ''})`]
+  const kind = field.repeated ? `list of ${field.kind}` : field.kind
+  const parts = [`${field.key} (${kind}${field.required ? ', required' : ''})`]
   if (field.options) parts.push(`one of: ${field.options.join(', ')}`)
   parts.push(englishText(field.labelKey))
   return `    - ${parts.join(' — ')}`
@@ -222,6 +223,16 @@ export const WIDE_RULES = [
   '  - "2 metres right of X", "above X", "right after X" are relative to X and NOT to the thing',
   '    being moved: read X, add to ITS value, write the sum. A "relative" field moves a thing from',
   '    where it already stands, so it is the wrong tool for these — and "after" is X\'s END.',
+  // Asked for a subfolder inside « Tests Assistant », the model opened a project of that name and
+  // the mission lost its scope (4.2, 2026-09-06). Only the listing names projects.
+  '  - Only projects.list names projects. A name the sentence gives is a folder, a file or an',
+  '    object of the OPEN project: find it there, never project.open or project.create on it.',
+  // « Ajoute une lumière directionnelle » answered « one already exists » with no call (8.1);
+  // « change l'arrière-plan » set the kind the state already showed (10.6).
+  '  - "add a light", "add a cube": call node.add even when the scene already holds one of that',
+  '    kind — one MORE is what was asked. "change", "another" ask for a value DIFFERENT from',
+  '    the one the state shows. "away from" and "closer to" X move along the line between',
+  '    the two: read both positions, then write the result.',
   '  - Never say a thing is done unless a call in this conversation did it.',
   '  - Reading is not doing: the request is done once the change it asked for has been WRITTEN.',
   // The same call sent four times after it answered ok, one refusal collected eight times on

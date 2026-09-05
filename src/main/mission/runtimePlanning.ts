@@ -19,7 +19,7 @@ export const reasoningStep = (): PlannedStep => ({
   draft: { kind: 'reason' },
 })
 
-export const verificationStep = (): PlannedStep => ({
+const verificationStep = (): PlannedStep => ({
   title: 'Verify mission result',
   draft: { kind: 'verify' },
 })
@@ -41,15 +41,16 @@ function dependsOnReturned(
  * 🛑 A READ never ends a mission: asked to « verify » right after `files.search`, the model
  * answered « the duplicate was created » about a duplicate nobody made — seven scenarios of the
  * first thirty-five (2026-09-06). What engages nothing is followed by planning, never by a check.
+ * A mutation is verified, even one whose result another action consumes: planned on again with
+ * the bare goal, the model redid it — the tool mark put back on the cube it had just taken it off.
  */
 function nextStepAfter(call: AssistantCall | undefined): PlannedStep {
   const descriptor = call ? assistantAction(call.action) : null
-  if (descriptor?.commitment === 'none') return reasoningStep()
-  const continues = [...(descriptor?.produces ?? []), ...(descriptor?.returns ?? [])].some(
-    resource =>
-      ACTION_REGISTRY.some(
-        action => action.inputs?.includes(resource) || action.requires?.includes(resource),
-      ),
+  if (descriptor?.reads) return reasoningStep()
+  const continues = (descriptor?.produces ?? []).some(resource =>
+    ACTION_REGISTRY.some(
+      action => action.inputs?.includes(resource) || action.requires?.includes(resource),
+    ),
   )
   return continues ? reasoningStep() : verificationStep()
 }
