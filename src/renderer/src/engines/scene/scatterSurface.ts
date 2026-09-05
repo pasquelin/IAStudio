@@ -275,21 +275,23 @@ function reliefGroundChanged(before: SceneWorld, after: SceneWorld): boolean {
     }
     if (left.enabled !== right.enabled) return true
     if (!right.enabled) continue
-    if (
-      left.heightmap.assetId !== right.heightmap.assetId ||
-      left.origin.x !== right.origin.x ||
-      left.origin.z !== right.origin.z ||
-      left.size.x !== right.size.x ||
-      left.size.z !== right.size.z ||
-      left.elevation.min !== right.elevation.min ||
-      left.elevation.max !== right.elevation.max ||
-      left.grain !== right.grain ||
-      blendChanged(left.edits, right.edits)
-    ) {
-      return true
-    }
+    if (reliefLayerChanged(left, right)) return true
   }
   return false
+}
+
+function reliefLayerChanged(left: ReliefLayer, right: ReliefLayer): boolean {
+  return (
+    left.heightmap.assetId !== right.heightmap.assetId ||
+    left.origin.x !== right.origin.x ||
+    left.origin.z !== right.origin.z ||
+    left.size.x !== right.size.x ||
+    left.size.z !== right.size.z ||
+    left.elevation.min !== right.elevation.min ||
+    left.elevation.max !== right.elevation.max ||
+    left.grain !== right.grain ||
+    blendChanged(left.edits, right.edits)
+  )
 }
 
 function mergeRebuild(left: ScatterRebuild, right: ScatterRebuild): ScatterRebuild {
