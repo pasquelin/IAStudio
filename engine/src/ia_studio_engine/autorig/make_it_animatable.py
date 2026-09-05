@@ -17,10 +17,11 @@ from ia_studio_engine.autorig.quality import (
     focus_surface_on_hands as _focus_surface_on_hands,
 )
 from ia_studio_engine.autorig.quality import (
-    post_process_weights as _post_process_weights,
+    focus_surface_on_hands_with_normals,
+    sample_surface_points,
 )
 from ia_studio_engine.autorig.quality import (
-    sample_surface_points,
+    post_process_weights as _post_process_weights,
 )
 from ia_studio_engine.autorig.quality import (
     simplify_fingers as _simplify_fingers,
@@ -163,18 +164,21 @@ class KinematicTree:
 @dataclass
 class Models:
     skin: Any
+    skin_normal: Any
     joints: Any
     coarse: Any
     pose: Any
     tree: KinematicTree
     device: str
+    root: Path
+    pcae: Any
 
 
 def load(folder: str, device: str) -> Models:
     import ia_studio_engine.vendor.make_it_animatable.model as upstream_model
 
     root = Path(folder)
-    required = ("bw.pth", "joints.pth", "joints_coarse.pth", "pose.pth")
+    required = ("bw.pth", "bw_normal.pth", "joints.pth", "joints_coarse.pth", "pose.pth")
     missing = [name for name in required if not (root / name).is_file()]
     if missing:
         raise LoadRefusedError(f"missing model files: {', '.join(missing)}")
@@ -187,7 +191,25 @@ def load(folder: str, device: str) -> Models:
         "output_dim": 52,
     }
     skin, joints, coarse, pose = _load_networks(upstream_model.PCAE, root, device, tree, common)
-    return Models(skin, joints, coarse, pose, tree, device)
+    return Models(skin, None, joints, coarse, pose, tree, device, root, upstream_model.PCAE)
+
+
+def _normal_skin_model(models: Models):
+    if models.skin_normal is None:
+        models.skin_normal = (
+            models.pcae(
+                N=32768,
+                input_normal=True,
+                input_attention=True,
+                deterministic=True,
+                hierarchical_ratio=0.5,
+                output_dim=52,
+            )
+            .load(str(models.root / "bw_normal.pth"))
+            .to(models.device)
+            .eval()
+        )
+    return models.skin_normal
 
 
 def _load_networks(pcae, root: Path, device: str, tree: KinematicTree, common: dict):
@@ -326,8 +348,8 @@ def _infer(models, vertices, triangles, report, stopping, options):
         report(3, 6, "skeleton")
         coarse_in_model = _transform(coarse[..., 3:], orientation)
         hand_centers = coarse_in_model[0, [9, 28]].numpy()
-        detailed_points = torch.from_numpy(
-            _focus_surface_on_hands(transformed[0].numpy(), triangles, 32768, hand_centers)
+        detailed_points, point_normals, vertex_normals = _detailed_surface(
+            transformed, triangles, hand_centers, options, torch
         )
         second_scale = 1 / detailed_points.abs().amax(dim=1, keepdim=True).amax(
             dim=-1, keepdim=True
@@ -340,10 +362,34 @@ def _infer(models, vertices, triangles, report, stopping, options):
         pose = models.pose(device_points, joints=joints.to(models.device).clone()).pose_trans.cpu()
         if stopping():
             raise InterruptedError("CANCELLED")
-        weights = _skin_weights(models, device_points, transformed, stopping, torch)
+        weights = _skin_weights(
+            models,
+            device_points,
+            transformed,
+            stopping,
+            torch,
+            point_normals=point_normals,
+            vertex_normals=vertex_normals,
+            use_normals=options.get("useSurfaceNormals", False),
+        )
     report(5, 6, "skinning")
     return _result_arrays(
         orientation, center, scale, second_scale, joints, weights, pose, options, torch
+    )
+
+
+def _detailed_surface(transformed, triangles, hand_centers, options, torch):
+    vertices = transformed[0].numpy()
+    if not options.get("useSurfaceNormals", False):
+        points = _focus_surface_on_hands(vertices, triangles, 32768, hand_centers)
+        return torch.from_numpy(points), None, None
+    points, point_normals, vertex_normals = focus_surface_on_hands_with_normals(
+        vertices, triangles, 32768, hand_centers
+    )
+    return (
+        torch.from_numpy(points),
+        torch.from_numpy(point_normals),
+        torch.from_numpy(vertex_normals),
     )
 
 
@@ -372,12 +418,41 @@ def _result_arrays(orientation, center, scale, second_scale, joints, weights, po
     }
 
 
-def _skin_weights(models, device_points, transformed, stopping, torch):
+def _skin_weights(
+    models,
+    device_points,
+    transformed,
+    stopping,
+    torch,
+    *,
+    point_normals=None,
+    vertex_normals=None,
+    use_normals=False,
+):
     weight_chunks = []
-    for chunk in torch.split(transformed, 100000, dim=1):
+    vertex_normal_chunks = (
+        torch.split(vertex_normals, 100000, dim=1) if vertex_normals is not None else []
+    )
+    for index, chunk in enumerate(torch.split(transformed, 100000, dim=1)):
         if stopping():
             raise InterruptedError("CANCELLED")
-        weight_chunks.append(models.skin(device_points, chunk.to(models.device)).bw.cpu())
+        base = models.skin(device_points, chunk.to(models.device)).bw
+        if use_normals:
+            normal = _normal_skin_model(models)(
+                torch.cat((device_points, point_normals.to(models.device)), dim=-1),
+                torch.cat(
+                    (chunk.to(models.device), vertex_normal_chunks[index].to(models.device)),
+                    dim=-1,
+                ),
+            ).bw
+            protected = [
+                bone_index
+                for bone_index, name in enumerate(JOINT_NAMES)
+                if any(part in name for part in ("Spine", "Shoulder", "Arm"))
+            ]
+            normal[..., protected] = base[..., protected]
+            base = normal
+        weight_chunks.append(base.cpu())
         if stopping():
             raise InterruptedError("CANCELLED")
     return torch.cat(weight_chunks, dim=1)

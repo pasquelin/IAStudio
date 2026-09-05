@@ -28,6 +28,7 @@ beforeEach(() => {
         'inspector.autoRigFingers': 'Doigts',
         'inspector.autoRigFingerDetailed': 'Détaillés',
         'inspector.autoRigFingerSimplified': 'Simplifiés',
+        'inspector.autoRigUseSurfaceNormals': 'Utiliser les normales de surface',
         'inspector.autoRigWeightPostProcessing': 'Nettoyer les influences',
       })[key] ?? key,
     i18n: { language: 'fr' },
@@ -41,7 +42,7 @@ beforeEach(() => {
     rigBackends: [{ backendId: 'make-it-animatable', name: 'Make-It-Animatable' }],
     selectedBackend: 'make-it-animatable',
     chooseBackend,
-    miaOptions: { fingers: 'detailed', weightPostProcessing: true },
+    miaOptions: { fingers: 'detailed', useSurfaceNormals: false, weightPostProcessing: true },
     setMiaOptions,
     needsDownload: false,
     failure: null,
@@ -84,15 +85,23 @@ describe('the Auto Rig selector', () => {
     )
 
     await userEvent.selectOptions(screen.getByLabelText('Doigts'), 'simplified')
+    await userEvent.click(screen.getByLabelText('Utiliser les normales de surface'))
     await userEvent.click(screen.getByLabelText('Nettoyer les influences'))
 
     expect(screen.getByRole('button', { name: 'Régénérer le squelette' })).toBeInTheDocument()
     expect(setMiaOptions).toHaveBeenCalledWith({
       fingers: 'simplified',
+      useSurfaceNormals: false,
       weightPostProcessing: true,
     })
     expect(setMiaOptions).toHaveBeenCalledWith({
       fingers: 'detailed',
+      useSurfaceNormals: true,
+      weightPostProcessing: true,
+    })
+    expect(setMiaOptions).toHaveBeenCalledWith({
+      fingers: 'detailed',
+      useSurfaceNormals: false,
       weightPostProcessing: false,
     })
   })

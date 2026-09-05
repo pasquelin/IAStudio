@@ -13,6 +13,7 @@ from ia_studio_engine.autorig.make_it_animatable import (
     _skin_weights,
     _write_result,
 )
+from ia_studio_engine.autorig.quality import sample_surface_points_with_normals
 
 
 def test_fps_is_deterministic_and_spreads_samples_without_a_compiled_extension():
@@ -102,6 +103,18 @@ def test_second_pass_reserves_half_of_its_surface_samples_for_the_hands():
     )
     assert sampled.shape == (100, 3)
     assert near_a_hand.sum() >= 50
+
+
+def test_surface_samples_include_unit_normals_for_the_normal_weight_model():
+    vertices = np.array(((0, 0, 0), (1, 0, 0), (0, 1, 0)), dtype=np.float32)
+    triangles = np.array(((0, 1, 2),), dtype=np.uint32)
+
+    points, normals, vertex_normals = sample_surface_points_with_normals(vertices, triangles, 8)
+
+    assert points.shape == normals.shape == (8, 3)
+    assert vertex_normals.shape == (3, 3)
+    assert normals == pytest.approx(np.tile((0, 0, 1), (8, 1)))
+    assert vertex_normals == pytest.approx(np.tile((0, 0, 1), (3, 1)))
 
 
 def test_simplified_fingers_merge_their_weights_into_each_hand():

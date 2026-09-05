@@ -8,12 +8,15 @@ export type AutoRigInferencePrimitive = {
 export type AutoRigInferenceOptions = {
   /** Keep the predicted finger chains, or merge their skinning into the hands. */
   fingers: 'detailed' | 'simplified'
+  /** Use MIA's dedicated normal-aware weight network for close or touching limbs. */
+  useSurfaceNormals: boolean
   /** Remove mutually exclusive influences and retain the four strongest weights. */
   weightPostProcessing: boolean
 }
 
 export const DEFAULT_AUTO_RIG_OPTIONS: AutoRigInferenceOptions = {
   fingers: 'simplified',
+  useSurfaceNormals: false,
   weightPostProcessing: true,
 }
 

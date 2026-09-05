@@ -5238,6 +5238,14 @@
           "revision": "eb12b71253361fd1a7216625a95144af3c58263e"
         },
         {
+          "role": "skinning-normals",
+          "name": "bw_normal.pth",
+          "url": "https://huggingface.co/jasongzy/Make-It-Animatable/resolve/eb12b71253361fd1a7216625a95144af3c58263e/output/best/new/bw_normal.pth",
+          "bytes": 429008352,
+          "sha256": "d69d259863af77a06b6c4ee3d1fc2cb8566194fc8fc08cecbcb065bf9fa94818",
+          "revision": "eb12b71253361fd1a7216625a95144af3c58263e"
+        },
+        {
           "role": "joints",
           "name": "joints.pth",
           "url": "https://huggingface.co/jasongzy/Make-It-Animatable/resolve/eb12b71253361fd1a7216625a95144af3c58263e/output/best/new/joints.pth",
@@ -5262,8 +5270,8 @@
           "revision": "eb12b71253361fd1a7216625a95144af3c58263e"
         }
       ],
-      "diskBytes": 1901082275,
-      "reservationBytes": 3800000000,
+      "diskBytes": 2330090627,
+      "reservationBytes": 4300000000,
       "distribution": "direct-download",
       "runtimeStatus": "supported",
       "readsTorchWeights": true

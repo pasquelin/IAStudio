@@ -38,6 +38,16 @@ function miaSettings(state: CharacterFit) {
         actions={false}
       />
       <ToggleField
+        label={state.t('inspector.autoRigUseSurfaceNormals')}
+        value={state.miaOptions.useSurfaceNormals}
+        onChange={useSurfaceNormals =>
+          state.setMiaOptions({ ...state.miaOptions, useSurfaceNormals })
+        }
+        scId="character.mia.useSurfaceNormals"
+        actions={false}
+      />
+      <QuietNote>{state.t('inspector.autoRigUseSurfaceNormalsHint')}</QuietNote>
+      <ToggleField
         label={state.t('inspector.autoRigWeightPostProcessing')}
         value={state.miaOptions.weightPostProcessing}
         onChange={weightPostProcessing =>

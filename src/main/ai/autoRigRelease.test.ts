@@ -59,7 +59,7 @@ describe('Auto Rig release runtime', () => {
     expect(model?.distribution).toBe('direct-download')
     expect(model?.distributionStatus).toBeUndefined()
     expect(model && modelRefusalOf(model)).toBeNull()
-    expect(model?.files).toHaveLength(4)
+    expect(model?.files).toHaveLength(5)
     expect(model?.files.every(file => /^[a-f0-9]{64}$/.test(file.sha256))).toBe(true)
     expect(loader.match(/weights_only=True/g)).toHaveLength(2)
   })

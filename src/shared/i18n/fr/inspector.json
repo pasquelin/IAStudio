@@ -254,8 +254,10 @@
     "autoRigFingers": "Doigts",
     "autoRigFingerDetailed": "Détaillés (expérimental)",
     "autoRigFingerSimplified": "Simplifiés (recommandé)",
+    "autoRigUseSurfaceNormals": "Utiliser les normales de surface",
+    "autoRigUseSurfaceNormalsHint": "Améliore la séparation des poids lorsque des membres sont proches ou se touchent. Plus lent et plus gourmand en mémoire.",
     "autoRigWeightPostProcessing": "Nettoyer les influences",
-    "autoRigMiaSettingsHint": "Les mains sont analysées avec une précision renforcée. Le mode simplifié est recommandé pour les mains stylisées ou les doigts joints. Le mode détaillé conserve les cinq chaînes quand leur géométrie est bien séparée.",
+    "autoRigMiaSettingsHint": "Ces réglages sont appliqués au prochain calcul. Le mode simplifié convient aux doigts joints. Le mode détaillé conserve les cinq chaînes quand elles sont bien séparées.",
     "autoRigDownload": "Télécharger le modèle",
     "autoRigUseSimple": "Utiliser le squelettage simple",
     "autoRigErrors": {

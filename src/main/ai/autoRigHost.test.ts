@@ -17,7 +17,7 @@ const request: AutoRigInferenceRequest = {
   positions: Float32Array.from([0, 0, 0, 1, 0, 0, 0, 1, 0]),
   triangles: Uint32Array.from([0, 1, 2]),
   primitives: [{ mesh: 0, primitive: 0, vertexOffset: 0, vertexCount: 3 }],
-  options: { fingers: 'detailed', weightPostProcessing: true },
+  options: { fingers: 'detailed', useSurfaceNormals: false, weightPostProcessing: true },
 }
 
 function engineThatWritesResult(

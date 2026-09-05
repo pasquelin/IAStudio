@@ -16,6 +16,7 @@ const primitive = z.object({
 
 const options = z.object({
   fingers: z.enum(['detailed', 'simplified']),
+  useSurfaceNormals: z.boolean(),
   weightPostProcessing: z.boolean(),
 })
 

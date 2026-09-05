@@ -7,7 +7,7 @@ const valid = () => ({
   positions: Float32Array.from([0, 0, 0, 1, 0, 0, 0, 1, 0]),
   triangles: Uint32Array.from([0, 1, 2]),
   primitives: [{ mesh: 0, primitive: 0, vertexOffset: 0, vertexCount: 3 }],
-  options: { fingers: 'detailed', weightPostProcessing: true },
+  options: { fingers: 'detailed', useSurfaceNormals: true, weightPostProcessing: true },
 })
 
 describe('Auto Rig IPC request validation', () => {
@@ -53,6 +53,7 @@ describe('Auto Rig IPC request validation', () => {
   it('accepts only the supported MIA quality settings', () => {
     expect(parseAutoRigRequest(valid()).options).toEqual({
       fingers: 'detailed',
+      useSurfaceNormals: true,
       weightPostProcessing: true,
     })
     expect(() => parseAutoRigRequest({ ...valid(), options: { fingers: 'invented' } })).toThrow()

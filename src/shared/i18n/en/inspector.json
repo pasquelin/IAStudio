@@ -254,8 +254,10 @@
     "autoRigFingers": "Fingers",
     "autoRigFingerDetailed": "Detailed (experimental)",
     "autoRigFingerSimplified": "Simplified (recommended)",
+    "autoRigUseSurfaceNormals": "Use surface normals",
+    "autoRigUseSurfaceNormalsHint": "Improves weight separation when limbs are close or touching. Slower and more memory intensive.",
     "autoRigWeightPostProcessing": "Clean up influences",
-    "autoRigMiaSettingsHint": "Hands are analysed with enhanced precision. Simplified mode is recommended for stylised hands or joined fingers. Detailed mode keeps all five chains when their geometry is clearly separated.",
+    "autoRigMiaSettingsHint": "These settings are applied to the next run. Simplified mode suits joined fingers; detailed mode keeps all five chains when they are clearly separated.",
     "autoRigDownload": "Download the model",
     "autoRigUseSimple": "Use Simple Auto Rig",
     "autoRigErrors": {

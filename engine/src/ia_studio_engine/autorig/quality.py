@@ -32,6 +32,10 @@ WEIGHT_CONFLICT_GROUPS = (
 
 
 def sample_surface_points(vertices: np.ndarray, triangles: np.ndarray, count: int) -> np.ndarray:
+    return _sample_surface(vertices, triangles, count)[0]
+
+
+def _sample_surface(vertices: np.ndarray, triangles: np.ndarray, count: int):
     corner = vertices[triangles]
     areas = np.linalg.norm(
         np.cross(corner[:, 1] - corner[:, 0], corner[:, 2] - corner[:, 0]), axis=1
@@ -46,7 +50,47 @@ def sample_surface_points(vertices: np.ndarray, triangles: np.ndarray, count: in
     points = (
         face[:, 0] + uv[:, :1] * (face[:, 1] - face[:, 0]) + uv[:, 1:] * (face[:, 2] - face[:, 0])
     )
-    return points.astype(np.float32)
+    return points.astype(np.float32), picked, uv
+
+
+def sample_surface_points_with_normals(
+    vertices: np.ndarray, triangles: np.ndarray, count: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Sample the surface and interpolate stable area-weighted vertex normals."""
+    vertex_normals = _vertex_normals(vertices, triangles)
+    points, sampled_normals = _sample_with_normals(vertices, triangles, count, vertex_normals)
+    return points, sampled_normals, vertex_normals
+
+
+def _vertex_normals(vertices: np.ndarray, triangles: np.ndarray) -> np.ndarray:
+    corners = vertices[triangles]
+    face_vectors = np.cross(corners[:, 1] - corners[:, 0], corners[:, 2] - corners[:, 0])
+    vertex_normals = np.zeros_like(vertices, dtype=np.float32)
+    for corner in range(3):
+        np.add.at(vertex_normals, triangles[:, corner], face_vectors)
+    lengths = np.linalg.norm(vertex_normals, axis=1, keepdims=True)
+    vertex_normals = np.divide(
+        vertex_normals,
+        lengths,
+        out=np.zeros_like(vertex_normals),
+        where=lengths > 1e-12,
+    )
+    return vertex_normals
+
+
+def _sample_with_normals(vertices, triangles, count, vertex_normals):
+    points, picked, uv = _sample_surface(vertices, triangles, count)
+    face_normals = vertex_normals[triangles[picked]]
+    weights = np.column_stack((1 - uv.sum(axis=1), uv))
+    sampled_normals = (face_normals * weights[..., None]).sum(axis=1)
+    sampled_lengths = np.linalg.norm(sampled_normals, axis=1, keepdims=True)
+    sampled_normals = np.divide(
+        sampled_normals,
+        sampled_lengths,
+        out=np.zeros_like(sampled_normals),
+        where=sampled_lengths > 1e-12,
+    )
+    return points, sampled_normals.astype(np.float32)
 
 
 def focus_surface_on_hands(
@@ -81,6 +125,50 @@ def focus_surface_on_hands(
             (sampled, sample_surface_points(vertices, triangles, missing)), axis=0
         )
     return sampled[np.newaxis]
+
+
+def focus_surface_on_hands_with_normals(
+    vertices: np.ndarray,
+    triangles: np.ndarray,
+    count: int,
+    centers: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The hand-focused MIA sample plus normals aligned with every sampled point."""
+    focus_count = count // 2
+    vertex_normals = _vertex_normals(vertices, triangles)
+    points, normals = _sample_with_normals(vertices, triangles, count - focus_count, vertex_normals)
+    point_batches = [points]
+    normal_batches = [normals]
+    radius = 0.15 * float(vertices.max() - vertices.min())
+    corners = vertices[triangles]
+    remaining = focus_count
+    for index, center in enumerate(centers):
+        wanted = remaining if index == len(centers) - 1 else focus_count // len(centers)
+        remaining -= wanted
+        lower = center - radius
+        upper = center + radius
+        intersects = np.all(corners.max(axis=1) >= lower, axis=1) & np.all(
+            corners.min(axis=1) <= upper, axis=1
+        )
+        nearby = triangles[intersects]
+        if len(nearby) > 0 and wanted > 0:
+            focused_points, focused_normals = _sample_with_normals(
+                vertices, nearby, wanted, vertex_normals
+            )
+            point_batches.append(focused_points)
+            normal_batches.append(focused_normals)
+    missing = count - sum(len(batch) for batch in point_batches)
+    if missing:
+        extra_points, extra_normals = _sample_with_normals(
+            vertices, triangles, missing, vertex_normals
+        )
+        point_batches.append(extra_points)
+        normal_batches.append(extra_normals)
+    return (
+        np.concatenate(point_batches, axis=0)[np.newaxis],
+        np.concatenate(normal_batches, axis=0)[np.newaxis],
+        vertex_normals[np.newaxis],
+    )
 
 
 def post_process_weights(weights: np.ndarray, names: tuple[str, ...]) -> np.ndarray:
