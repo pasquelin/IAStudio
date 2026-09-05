@@ -113,7 +113,9 @@ describe('post-processing surface resources', () => {
     expect(dropped).toHaveBeenCalledTimes(2)
   })
 
-  it('bounds cached chains and keeps the most recently drawn surface', () => {
+  // Named for what it now measures: since eviction skips bound chains, CHAINS_HELD stops being a
+  // cap and only a surface going away frees one. The old LRU is no longer exercised anywhere.
+  it('never evicts a chain a surface still uses, and frees one only when its surface goes', () => {
     const post = composer()
     for (let index = 0; index < 6; index++) post.draw(job(`surface:${index}`, 64 + index * 16, 64))
     post.draw(job('surface:0', 64, 64))
