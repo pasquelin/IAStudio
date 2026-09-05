@@ -80,6 +80,7 @@ export abstract class SceneRendererFlight extends SceneRendererFilm {
               } finally {
                 gl.setRenderTarget(null)
                 target.dispose()
+                this.post?.releaseSurface('offscreen')
                 loan.restore()
                 restore()
                 this.redraw()

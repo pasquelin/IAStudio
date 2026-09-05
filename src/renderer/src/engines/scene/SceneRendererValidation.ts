@@ -50,6 +50,7 @@ export abstract class SceneRendererValidation extends SceneRendererOptimization 
     } finally {
       gl.setRenderTarget(null)
       target.dispose()
+      this.post?.releaseSurface('offscreen')
       restore()
     }
   }
