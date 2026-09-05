@@ -19,9 +19,37 @@ import type { StudioBridge } from '@shared/ipc'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './components/dockviewApi'
 import { IO_BY_KIND, ioOf, type CapturedDraft, type DocumentIo } from './documentIoAdapters'
+import { queueDocumentSave } from './documentSaveQueue'
 const unreadable = new Set<string>()
 const assetBehind = new Set<string>()
 const flattenAgreed = new Set<string>()
+const documentEpochs = new Map<string, number>()
+const capturing = new Map<string, Set<AbortController>>()
+
+const epochOf = (documentId: string): number => documentEpochs.get(documentId) ?? 0
+
+function beginCapture(documentId: string): AbortController {
+  const controller = new AbortController()
+  const active = capturing.get(documentId) ?? new Set<AbortController>()
+  active.add(controller)
+  capturing.set(documentId, active)
+  return controller
+}
+
+function endCapture(documentId: string, controller: AbortController): void {
+  const active = capturing.get(documentId)
+  active?.delete(controller)
+  if (active?.size === 0) capturing.delete(documentId)
+}
+
+function invalidateDocument(documentId: string): void {
+  documentEpochs.set(documentId, epochOf(documentId) + 1)
+  cancelLoad(documentId)
+  const active = capturing.get(documentId)
+  if (!active) return
+  capturing.delete(documentId)
+  for (const controller of active) controller.abort()
+}
 async function agreedToFlatten(
   document: DocumentDescriptor,
   format: WritableFormat,
@@ -43,6 +71,13 @@ type SavableDocument = {
   document: DocumentDescriptor
   io: DocumentIo
 }
+type WritableSavableDocument = Omit<SavableDocument, 'io'> & {
+  io: Extract<DocumentIo, { assetOnly?: undefined }>
+}
+type CapturedDocument = Awaited<
+  ReturnType<NonNullable<Extract<DocumentIo, { assetOnly?: undefined }>['capture']>>
+>
+type CaptureResult = { ok: true; captured: CapturedDocument } | { ok: false; error: unknown }
 
 function savableDocument(documentId: string, byHand = true): SavableDocument | null {
   const bridge = getBridge()
@@ -60,26 +95,85 @@ function savableDocument(documentId: string, byHand = true): SavableDocument | n
 export async function saveDocument(documentId: string, byHand = true): Promise<boolean> {
   const savable = savableDocument(documentId, byHand)
   if (!savable) return false
-  const { bridge, document, io } = savable
+  const { io } = savable
   if (io.assetOnly) return await io.saveOwn(documentId)
-  const { draft, commit, wasEdited } = await io.capture(documentId)
+  const writable: WritableSavableDocument = { ...savable, io }
+  const epoch = epochOf(documentId)
+  const controller = beginCapture(documentId)
+  const capture = captureForSave(io, documentId, controller)
+  return await queueDocumentSave(documentId, async () =>
+    writeCaptured(writable, epoch, controller, await capture, byHand),
+  )
+}
+
+async function captureForSave(
+  io: Extract<DocumentIo, { assetOnly?: undefined }>,
+  documentId: string,
+  controller: AbortController,
+): Promise<CaptureResult> {
+  try {
+    return { ok: true, captured: await io.capture(documentId, controller.signal) }
+  } catch (error) {
+    return { ok: false, error }
+  } finally {
+    endCapture(documentId, controller)
+  }
+}
+
+async function writeCaptured(
+  savable: WritableSavableDocument,
+  epoch: number,
+  controller: AbortController,
+  result: CaptureResult,
+  byHand: boolean,
+): Promise<boolean> {
+  const captured = capturedOrThrow(result, controller.signal)
+  if (!captured) return false
+  let { document } = savable
+  if (!saveIsCurrent(document, epoch, controller.signal)) return false
+  document = useDocuments.getState().documents[document.id] ?? document
+  const { draft, commit, wasEdited } = captured
   const payload = {
     ...draft,
     title: document.title,
     ...(document.sourceAssetId ? { sourceAssetId: document.sourceAssetId } : {}),
   }
-  const folder = parentOf(document.path) ?? FOLDER_ROOT
-  if (
-    (await bridge.documents.write(document.id, document.kind, payload, false, folder)) === 'stale'
-  ) {
-    if (!byHand || !(await bridge.documents.confirmOverwrite(document.title))) return false
-    await bridge.documents.write(document.id, document.kind, payload, true, folder)
-  }
+  if (!(await writeDraft(savable, document, payload, epoch, controller.signal, byHand)))
+    return false
+  if (!saveIsCurrent(document, epoch, controller.signal)) return false
   commit()
   if (!byHand) return true
-  await rewriteSourceAsset(document, io, wasEdited, draft)
+  await rewriteSourceAsset(document, savable.io, wasEdited, draft)
   void useDocuments.getState().relist('own-write')
   return true
+}
+
+function capturedOrThrow(result: CaptureResult, signal: AbortSignal): CapturedDocument | null {
+  if (result.ok) return result.captured
+  if (signal.aborted || isAbortError(result.error)) return null
+  throw result.error
+}
+
+async function writeDraft(
+  { bridge }: WritableSavableDocument,
+  document: DocumentDescriptor,
+  draft: CapturedDraft & { title: string; sourceAssetId?: string },
+  epoch: number,
+  signal: AbortSignal,
+  byHand: boolean,
+): Promise<boolean> {
+  const folder = parentOf(document.path) ?? FOLDER_ROOT
+  const result = await bridge.documents.write(document.id, document.kind, draft, false, folder)
+  if (result !== 'stale') return true
+  if (!byHand || !(await bridge.documents.confirmOverwrite(document.title))) return false
+  if (!saveIsCurrent(document, epoch, signal)) return false
+  await bridge.documents.write(document.id, document.kind, draft, true, folder)
+  return true
+}
+
+function saveIsCurrent(document: DocumentDescriptor, epoch: number, signal: AbortSignal): boolean {
+  const current = useDocuments.getState().documents[document.id]
+  return !signal.aborted && epochOf(document.id) === epoch && current?.kind === document.kind
 }
 function writePlanFor(
   document: DocumentDescriptor,
@@ -174,10 +268,24 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   const savable = savableDocument(documentId)
   return savable ? await copyDocumentAsset(documentId, savable) : false
 }
-const loading = new Map<string, Promise<void>>()
+type DocumentLoad = {
+  document: DocumentDescriptor
+  epoch: number
+  controller: AbortController
+  promise: Promise<void>
+}
+const loading = new Map<string, DocumentLoad>()
+
+function cancelLoad(documentId: string): void {
+  const current = loading.get(documentId)
+  if (!current) return
+  loading.delete(documentId)
+  current.controller.abort()
+}
+
 export function restoreDocument(documentId: string): Promise<void> {
   const existing = loading.get(documentId)
-  if (existing) return existing
+  if (existing) return existing.promise
   const bridge = getBridge()
   const document = useDocuments.getState().documents[documentId]
   const io = ioOf(documentId)
@@ -188,20 +296,50 @@ export function restoreDocument(documentId: string): Promise<void> {
     return Promise.resolve()
   }
   unreadable.delete(documentId)
-  const reading = bridge.documents
-    .read(document.id, document.kind)
-    .then(file => {
-      if (io.holds(documentId)) return
-      if (file) io.install(documentId, file.content, file.parts)
-      else io.createDefault(documentId)
-    })
-    .catch(error => {
-      unreadable.add(documentId)
-      reportFailure('document.load', document.title, error)
-    })
-    .finally(() => loading.delete(documentId))
-  loading.set(documentId, reading)
-  return reading
+  const controller = new AbortController()
+  const current: DocumentLoad = {
+    document,
+    epoch: epochOf(documentId),
+    controller,
+    promise: Promise.resolve(),
+  }
+  loading.set(documentId, current)
+  current.promise = readDocument(current, io, bridge)
+  return current.promise
+}
+
+async function readDocument(
+  load: DocumentLoad,
+  io: DocumentIo & { assetOnly?: undefined },
+  bridge: StudioBridge,
+): Promise<void> {
+  const { document, controller } = load
+  try {
+    const file = await bridge.documents.read(document.id, document.kind)
+    if (!loadIsCurrent(load, io)) return
+    if (file) io.install(document.id, file.content, file.parts)
+    else io.createDefault(document.id)
+  } catch (error) {
+    if (controller.signal.aborted || isAbortError(error)) return
+    unreadable.add(document.id)
+    reportFailure('document.load', document.title, error)
+  } finally {
+    if (loading.get(document.id) === load) loading.delete(document.id)
+  }
+}
+
+function loadIsCurrent(load: DocumentLoad, io: DocumentIo): boolean {
+  const current = useDocuments.getState().documents[load.document.id]
+  return (
+    !load.controller.signal.aborted &&
+    epochOf(load.document.id) === load.epoch &&
+    current?.kind === load.document.kind &&
+    !io.holds(load.document.id)
+  )
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
 }
 export async function rehydrateDocument(documentId: string): Promise<void> {
   const bridge = getBridge()
@@ -300,17 +438,38 @@ export async function dropDocument(documentId: string): Promise<boolean> {
   void useDocuments.getState().relist('own-write')
   return true
 }
-export async function refreshDocuments(): Promise<boolean> {
+let activeProjectPath: string | null | undefined
+
+export function renamedDocumentProject(from: string, to: string): void {
+  if (activeProjectPath === from) activeProjectPath = to
+}
+
+export async function refreshDocuments(projectPath?: string | null): Promise<boolean> {
+  const projectChanged =
+    projectPath !== undefined &&
+    activeProjectPath !== undefined &&
+    projectPath !== activeProjectPath
+  if (projectPath !== undefined) activeProjectPath = projectPath
   const wereOpen = Object.values(useDocuments.getState().documents)
+  for (const document of wereOpen) invalidateDocument(document.id)
   const answered = await useDocuments.getState().refresh()
   const { documents } = useDocuments.getState()
   for (const document of wereOpen) {
     if (!documents[document.id]) forgetDocument(document.id, document)
+    else if (projectChanged) forgetDocumentState(document.id, document)
   }
+  for (const document of Object.values(documents)) void restoreDocument(document.id)
   return answered
 }
 function forgetDocument(documentId: string, gone?: DocumentDescriptor): void {
+  invalidateDocument(documentId)
   const document = gone ?? useDocuments.getState().documents[documentId]
+  forgetDocumentState(documentId, document)
+  closePanel(documentId)
+  useDocuments.getState().close(documentId)
+}
+
+function forgetDocumentState(documentId: string, document?: DocumentDescriptor): void {
   if (document) IO_BY_KIND[document.kind].forget(document)
   unreadable.delete(documentId)
   assetBehind.delete(documentId)
@@ -319,6 +478,4 @@ function forgetDocument(documentId: string, gone?: DocumentDescriptor): void {
   useSkyboxViews.getState().forget(documentId)
   useMonitorPair.getState().forgetMonitorPair(documentId)
   usePlayback.getState().clearHead(documentId)
-  closePanel(documentId)
-  useDocuments.getState().close(documentId)
 }

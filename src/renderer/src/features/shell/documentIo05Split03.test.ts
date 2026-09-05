@@ -5,7 +5,7 @@ import { scriptRefOf, useCode } from '@/stores/code'
 import { useDocuments } from '@/stores/documents'
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 import { isSceneDirty, sceneOf, useScenes } from '@/stores/scenes'
-import type { CloseChoice } from '@shared/domain/document'
+import type { CloseChoice, DocumentFile } from '@shared/domain/document'
 import { type DocumentWrite } from '@shared/domain/document'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -110,5 +110,57 @@ describe('closing a document', () => {
 
     await saveDocument('doc-1')
     expect(write).toHaveBeenCalled()
+  })
+
+  it('does not install a file whose tab closed while the read was in flight', async () => {
+    let deliver = (): void => {}
+    installFakeBridge({
+      documents: {
+        read: () =>
+          new Promise<DocumentFile>(resolve => {
+            deliver = () => resolve(savedFile())
+          }),
+        confirmClose: () => Promise.resolve<CloseChoice>('discard'),
+      },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+    const reading = restoreDocument('doc-1')
+    await closeDocument('doc-1')
+    deliver()
+    await reading
+
+    expect(useScenes.getState().states['doc-1']).toBeUndefined()
+  })
+
+  it('starts a fresh read when a closed document reopens under the same id', async () => {
+    const deliveries: Array<(file: DocumentFile) => void> = []
+    const read = vi.fn(
+      () =>
+        new Promise<DocumentFile>(resolve => {
+          deliveries.push(resolve)
+        }),
+    )
+    installFakeBridge({
+      documents: {
+        read,
+        confirmClose: () => Promise.resolve<CloseChoice>('discard'),
+      },
+    })
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+    const obsolete = restoreDocument('doc-1')
+    await closeDocument('doc-1')
+    useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+    const current = restoreDocument('doc-1')
+    expect(read).toHaveBeenCalledTimes(2)
+
+    deliveries[1]?.(savedFile())
+    await current
+    deliveries[0]?.(savedFile())
+    await obsolete
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toEqual([box])
+    expect(isSceneDirty(useScenes.getState(), 'doc-1')).toBe(false)
   })
 })

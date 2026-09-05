@@ -1,12 +1,13 @@
 import { newMaterial } from '@/engines/material/materialState'
 import { addNode } from '@/engines/scene/commands'
+import { meshNode } from '@/engines/scene/scene-fixtures'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
 import { useMaterials } from '@/stores/materials'
 import { inspectedChannel, useMaterialViews } from '@/stores/materialViews'
 import { isClipMonitorShown, useMonitorPair } from '@/stores/monitorPair'
-import { useScenes } from '@/stores/scenes'
+import { sceneOf, useScenes } from '@/stores/scenes'
 import type { CloseChoice } from '@shared/domain/document'
 import { type DocumentWrite } from '@shared/domain/document'
 import { describe, expect, it, vi } from 'vitest'
@@ -16,6 +17,10 @@ import {
   box,
   closeDocument,
   refreshDocuments,
+  renamedDocumentProject,
+  restoreDocument,
+  savedFile,
+  scene,
   settleUnsavedWork,
   settleUnsavedWorkForProjectChange,
   unsavedDocumentIds,
@@ -112,5 +117,41 @@ describe('closing a document', () => {
     // engine state was the one thing a project change could not drop.
     expect(useMaterials.getState().states[left.id]).toBeUndefined()
     expect(useMaterials.getState().states[kept.id]).toBeDefined()
+  })
+
+  it('reloads a same-id document when the project path changes', async () => {
+    installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
+    await refreshDocuments('project-old')
+    const document = scene('doc-1')
+    useDocuments.setState({ documents: { 'doc-1': document } })
+    showPanels('3d', 'doc-1')
+    useScenes.getState().runCommand('doc-1', addNode(meshNode('from-old-project')))
+    installFakeBridge({
+      documents: {
+        list: () => Promise.resolve([document]),
+        read: () => Promise.resolve(savedFile()),
+      },
+    })
+
+    await refreshDocuments('project-new')
+    await restoreDocument('doc-1')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toEqual([box])
+  })
+
+  it('keeps a same-id document alive when its open project was only renamed', async () => {
+    installFakeBridge({ documents: { list: () => Promise.resolve([]) } })
+    await refreshDocuments('project-before-rename')
+    const document = scene('doc-1')
+    useDocuments.setState({ documents: { 'doc-1': document } })
+    showPanels('3d', 'doc-1')
+    const local = meshNode('kept-after-rename')
+    useScenes.getState().runCommand('doc-1', addNode(local))
+    installFakeBridge({ documents: { list: () => Promise.resolve([document]) } })
+
+    renamedDocumentProject('project-before-rename', 'project-after-rename')
+    await refreshDocuments('project-after-rename')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toEqual([local])
   })
 })

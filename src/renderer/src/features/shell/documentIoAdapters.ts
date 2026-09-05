@@ -65,6 +65,7 @@ import {
   scenePayloadOf,
   sceneRefusesToSave,
 } from './sceneDocument'
+import { sceneDocumentCodec } from './sceneDocumentCodec'
 import {
   forgetCarriedMetadata,
   montageIsIncomplete,
@@ -89,7 +90,10 @@ type DocumentFile =
   | {
       assetOnly?: undefined
       saveOwn?: undefined
-      capture: (documentId: string) => Promise<{
+      capture: (
+        documentId: string,
+        signal?: AbortSignal,
+      ) => Promise<{
         draft: CapturedDraft
         commit: () => void
         wasEdited: boolean
@@ -134,6 +138,7 @@ type TextDocumentCodec<S> = {
   fromPayload: (payload: unknown, documentId: string) => S
   createDefault: () => S
   serialize?: (payload: unknown) => string
+  encode?: (state: S, documentId: string, signal?: AbortSignal) => Promise<string>
 }
 function textDocumentIo<S>(
   store: DocumentStore<S>,
@@ -142,17 +147,22 @@ function textDocumentIo<S>(
     fromPayload,
     createDefault,
     serialize = payload => JSON.stringify(payload),
+    encode,
   }: TextDocumentCodec<S>,
 ): DocumentIo {
   return {
-    capture: documentId => {
+    capture: async (documentId, signal) => {
       const current = store.use.getState()
       const mark = store.markOf(current, documentId)
-      return Promise.resolve({
-        draft: { content: serialize(toPayload(store.stateOf(current, documentId), documentId)) },
+      const state = store.stateOf(current, documentId)
+      const content = encode
+        ? await encode(state, documentId, signal)
+        : serialize(toPayload(state, documentId))
+      return {
+        draft: { content },
         commit: () => store.use.getState().markSaved(documentId, mark),
         wasEdited: store.hasUnsavedWork(current, documentId),
-      })
+      }
     },
     install: (documentId, content) => {
       store.use.getState().replace(documentId, fromPayload(JSON.parse(content), documentId))
@@ -367,6 +377,7 @@ export const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
       toPayload: scenePayloadOf,
       fromPayload: sceneFromPayloadFile,
       createDefault: createDefaultScene,
+      encode: sceneDocumentCodec.encode,
     }),
     incomplete: sceneRefusesToSave,
     forget: ({ id }) => {

@@ -95,6 +95,29 @@ describe('restoreDocument', () => {
     expect(read).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps a pending read valid when only the descriptor title changes', async () => {
+    let deliver = (): void => {}
+    installFakeBridge({
+      documents: {
+        read: () =>
+          new Promise<DocumentFile>(resolve => {
+            deliver = () => resolve(savedFile())
+          }),
+      },
+    })
+    const document = scene('doc-1')
+    useDocuments.setState({ documents: { 'doc-1': document } })
+
+    const reading = restoreDocument('doc-1')
+    useDocuments.setState({
+      documents: { 'doc-1': { ...document, title: 'Renamed while reading' } },
+    })
+    deliver()
+    await reading
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toEqual([box])
+  })
+
   // The empty editor a failed read leaves is indistinguishable from a new document, and the
   // refusal to save it then reads as a ⌘S that does nothing. This is the only place that knows.
   it('reports a document whose file would not read', async () => {

@@ -12,7 +12,11 @@ import {
 import type { Settings } from '@shared/domain/settings'
 import type { ProjectBinned } from '@shared/ipc'
 import type { StudioBridge } from '@shared/ipc'
-import { refreshDocuments, settleUnsavedWorkForProjectChange } from '@/features/shell/documentIo'
+import {
+  refreshDocuments,
+  renamedDocumentProject,
+  settleUnsavedWorkForProjectChange,
+} from '@/features/shell/documentIo'
 import { readProjectScripts } from './code'
 import { closeOrphanTabs } from '@/features/shell/orphanTabs'
 import { getBridge } from '@/services/bridge'
@@ -138,7 +142,7 @@ async function followProject(project: Project | null): Promise<void> {
   useSelection.getState().selectFiles([])
   const [, folderAnswered] = await Promise.all([
     useAssets.getState().refresh(),
-    refreshDocuments(),
+    refreshDocuments(project?.path ?? null),
     // The scripts belong to the folder, like the context below: nothing else re-reads them now
     // that the editor is a document rather than a panel with an effect on the open project.
     readProjectScripts(),
@@ -430,7 +434,10 @@ const projectState: ProjectState = {
     // this one is already past it, and waiting for a round trip would leave the title bar naming
     // the old name for a frame.
     const wasOpen = useProject.getState().project?.path === path
-    if (wasOpen) useProject.setState({ project: renamed })
+    if (wasOpen) {
+      renamedDocumentProject(path, renamed.path)
+      useProject.setState({ project: renamed })
+    }
 
     /**
      * 🛑 Everything keyed BY FOLDER moves with it, and the account link above all: orphaned at the
