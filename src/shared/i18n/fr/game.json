@@ -220,6 +220,7 @@
       "unnamedAction": "Action sans nom"
     },
     "controlsMenu": {
+      "add": "Ajouter une liaison",
       "capture": "Appuyez sur une touche ou un bouton de manette",
       "change": "Modifier",
       "close": "Fermer",

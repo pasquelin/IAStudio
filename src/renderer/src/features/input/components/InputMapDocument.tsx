@@ -63,6 +63,21 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
     setError(null)
   }
 
+  const changeMode = (nextMode: EditorMode): void => {
+    if (mode === 'json' && nextMode !== 'json') {
+      try {
+        const next = inputMapOf(JSON.parse(source))
+        setMap(next)
+        setSource(formatted(next))
+        setError(null)
+      } catch {
+        setError(t('game.inputMap.invalid'))
+        return
+      }
+    }
+    setMode(nextMode)
+  }
+
   const save = useCallback(async (): Promise<boolean> => {
     const savedRevision = revision.current
     try {
@@ -101,7 +116,7 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
             label={t(`game.inputMap.mode.${id}`)}
             hint={t('game.inputMap.modeHint')}
             selected={mode === id}
-            onClick={() => setMode(id)}
+            onClick={() => changeMode(id)}
           />
         ))}
         <span className="flex-1" />

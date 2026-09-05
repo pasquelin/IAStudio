@@ -2,6 +2,24 @@ import { describe, expect, it } from 'vitest'
 import { inputMapOf } from './inputMap'
 
 describe('input maps', () => {
+  it('refuses a non-finite gamepad dead zone', () => {
+    expect(() =>
+      inputMapOf({
+        version: 1,
+        id: 'character',
+        priority: 0,
+        defaultActive: true,
+        actions: [
+          {
+            id: 'jump',
+            kind: 'button',
+            bindings: [{ device: 'gamepad', control: 'south', deadZone: Number.NaN }],
+          },
+        ],
+      }),
+    ).toThrow()
+  })
+
   it('reads a versioned context with typed actions', () => {
     expect(
       inputMapOf({

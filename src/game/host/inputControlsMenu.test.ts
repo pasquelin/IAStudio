@@ -21,6 +21,7 @@ const LABELS = {
   reset: 'Reset all',
   change: 'Change',
   capture: 'Press a key or controller button',
+  add: 'Add binding',
   keyboard: 'Keyboard',
   gamepad: 'Gamepad',
   mouse: 'Mouse',
@@ -28,12 +29,22 @@ const LABELS = {
 
 describe('exported controls menu', () => {
   it('opens, rebinds a control, resets it and disposes its page API', () => {
+    const before = document.createElement('button')
+    document.body.appendChild(before)
+    before.focus()
     const controls = createInputControls(MAPS)
     const menu = createInputControlsMenu({ owner: document, controls, labels: LABELS })
 
     expect(Reflect.get(window, 'iaStudioControls')).toBe(menu)
 
     menu.open()
+    expect(document.querySelector('[data-input-controls-menu]')?.getAttribute('role')).toBe(
+      'dialog',
+    )
+    expect(document.querySelector('[data-input-controls-menu]')?.getAttribute('aria-modal')).toBe(
+      'true',
+    )
+    expect(document.activeElement).not.toBe(before)
     const binding = document.querySelector<HTMLButtonElement>('[data-input-binding]')
     binding?.click()
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', bubbles: true }))
@@ -43,8 +54,23 @@ describe('exported controls menu', () => {
     expect(controls.bindings().character?.jump).toEqual([{ device: 'keyboard', code: 'Space' }])
 
     menu.dispose()
+    expect(document.activeElement).toBe(before)
     expect(Reflect.has(window, 'iaStudioControls')).toBe(false)
     expect(document.querySelector('[data-input-controls-menu]')).toBeNull()
+  })
+
+  it('can add the first binding to an unbound action', () => {
+    const controls = createInputControls([
+      { ...MAPS[0]!, actions: [{ id: 'jump', kind: 'button', bindings: [] }] },
+    ])
+    const menu = createInputControlsMenu({ owner: document, controls, labels: LABELS })
+    menu.open()
+
+    document.querySelector<HTMLButtonElement>('[data-input-add]')?.click()
+    document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))
+
+    expect(controls.bindings().character?.jump).toEqual([{ device: 'keyboard', code: 'Space' }])
+    menu.dispose()
   })
 
   it('toggles from Escape when no capture is active', () => {

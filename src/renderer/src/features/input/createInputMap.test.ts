@@ -24,7 +24,7 @@ describe('input map creation', () => {
     expect(await createInputMapFromPreset('character')).toBe('character-2.input.json')
     expect(write).toHaveBeenCalledWith(
       'character-2.input.json',
-      expect.objectContaining({ id: 'character' }),
+      expect.objectContaining({ id: 'character-2' }),
     )
     expect(openFileView).toHaveBeenCalledWith({
       id: 'inputMap',

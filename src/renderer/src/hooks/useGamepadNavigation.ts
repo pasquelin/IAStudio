@@ -33,15 +33,31 @@ function freshlyPressed(
 }
 
 function focusBy(offset: number): void {
-  const controls = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-    element => !element.closest('[hidden]'),
-  )
+  const controls = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(isVisible)
   if (controls.length === 0) return
   const current = controls.indexOf(
     document.activeElement instanceof HTMLElement ? document.activeElement : document.body,
   )
   const next = current < 0 ? 0 : (current + offset + controls.length) % controls.length
   controls[next]?.focus()
+}
+
+function isVisible(element: HTMLElement): boolean {
+  if (element instanceof HTMLInputElement && element.type === 'hidden') return false
+  let current: HTMLElement | null = element
+  while (current) {
+    const style = getComputedStyle(current)
+    if (
+      current.hidden ||
+      current.inert ||
+      current.getAttribute('aria-hidden') === 'true' ||
+      style.display === 'none' ||
+      style.visibility === 'hidden'
+    )
+      return false
+    current = current.parentElement
+  }
+  return true
 }
 
 export function applyGamepadNavigation(

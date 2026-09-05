@@ -5,6 +5,7 @@ import type { InputControls } from '../runtime/inputControls'
 
 export type InputControlsMenuLabels = {
   title: string
+  add: string
   close: string
   reset: string
   change: string
@@ -30,7 +31,7 @@ type Capture = {
   action: string
   index: number
   kind: InputActionKind
-  previous: InputBinding
+  previous?: InputBinding
 }
 
 type InputControlsMenuOptions = {
@@ -43,6 +44,10 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
   const { owner, controls, labels } = options
   const root = owner.createElement('div')
   root.dataset.inputControlsMenu = ''
+  root.setAttribute('role', 'dialog')
+  root.setAttribute('aria-modal', 'true')
+  root.setAttribute('aria-label', labels.title)
+  root.tabIndex = -1
   root.hidden = true
   root.style.cssText =
     'position:fixed;inset:0;z-index:2147483647;overflow:auto;background:#111d;color:#fff;font:16px system-ui;padding:clamp(24px,8vw,96px)'
@@ -50,6 +55,7 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
   let capture: Capture | null = null
   let gamepadTimer: number | null = null
   let open = false
+  let previousFocus: HTMLElement | null = null
 
   const stopCapture = (): void => {
     capture = null
@@ -96,6 +102,22 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
           })
           bindings.appendChild(button)
         })
+        const add = owner.createElement('button')
+        add.type = 'button'
+        add.dataset.inputAdd = ''
+        add.textContent = labels.add
+        add.style.cssText = controlCss()
+        add.addEventListener('click', () => {
+          capture = {
+            context: map.id,
+            action: action.id,
+            index: action.bindings.length,
+            kind: action.kind,
+          }
+          add.textContent = labels.capture
+          startGamepadCapture()
+        })
+        bindings.appendChild(add)
         row.appendChild(bindings)
         context.appendChild(row)
       }
@@ -132,12 +154,13 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
 
   const startGamepadCapture = (): void => {
     if (gamepadTimer !== null || !owner.defaultView) return
-    const held = gamepadSignals(owner.defaultView.navigator)
+    let held = gamepadSignals(owner.defaultView.navigator)
     gamepadTimer = owner.defaultView.setInterval(() => {
       const wanted = capture
       if (!wanted) return
       const signals = gamepadSignals(owner.defaultView?.navigator)
       const fresh = signals.find(signal => !held.includes(signal))
+      held = signals
       if (!fresh) return
       const binding = gamepadBinding(fresh, wanted.kind)
       if (binding) finishCapture(binding)
@@ -145,21 +168,30 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
   }
 
   function openMenu(): void {
+    if (open) return
+    previousFocus = owner.activeElement instanceof HTMLElement ? owner.activeElement : null
     open = true
     root.hidden = false
     redraw()
+    root.querySelector<HTMLElement>('button')?.focus()
   }
 
   function closeMenu(): void {
     stopCapture()
     open = false
     root.hidden = true
+    previousFocus?.focus()
+    previousFocus = null
   }
 
   const onKey = (event: KeyboardEvent): void => {
     if (capture) {
       event.preventDefault()
       finishCapture(keyboardBinding(event.code, capture))
+      return
+    }
+    if (open && event.key === 'Tab') {
+      keepFocusInside(root, event)
       return
     }
     if (event.code !== 'Escape') return
@@ -180,6 +212,7 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
     dispose: () => {
       stopCapture()
       owner.removeEventListener('keydown', onKey)
+      if (open) closeMenu()
       root.remove()
       if (owner.defaultView && Reflect.get(owner.defaultView, 'iaStudioControls') === api) {
         Reflect.deleteProperty(owner.defaultView, 'iaStudioControls')
@@ -227,13 +260,26 @@ function controlCss(): string {
 function keyboardBinding(code: string, capture: Capture): InputBinding {
   const axis =
     capture.kind === 'axis2'
-      ? { axis: capture.previous.device === 'keyboard' ? (capture.previous.axis ?? 'x') : 'x' }
+      ? {
+          axis: capture.previous?.device === 'keyboard' ? (capture.previous.axis ?? 'x') : 'x',
+        }
       : {}
   const scale =
-    capture.previous.device === 'keyboard' && capture.previous.scale !== undefined
+    capture.previous?.device === 'keyboard' && capture.previous.scale !== undefined
       ? { scale: capture.previous.scale }
       : {}
   return { device: 'keyboard', code, ...axis, ...scale }
+}
+
+function keepFocusInside(root: HTMLElement, event: KeyboardEvent): void {
+  const controls = [...root.querySelectorAll<HTMLElement>('button:not(:disabled),[tabindex]')]
+  if (controls.length === 0) return
+  const active = root.ownerDocument.activeElement
+  const current = active instanceof HTMLElement ? controls.indexOf(active) : -1
+  const offset = event.shiftKey ? -1 : 1
+  const next = current < 0 ? 0 : (current + offset + controls.length) % controls.length
+  event.preventDefault()
+  controls[next]?.focus()
 }
 
 function bindingName(binding: InputBinding, labels: InputControlsMenuLabels): string {

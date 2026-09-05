@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { useTranslation } from 'react-i18next'
+import { inputBindingFits } from '@shared/domain/inputMap'
 import type {
   GamepadControl,
   InputAction,
@@ -131,7 +132,9 @@ export function InputMapExpert({ map, onChange }: InputMapExpertProps) {
                       device: t('game.inputMap.device.gamepad'),
                     })}
                     value={binding.control}
-                    options={GAMEPAD_CONTROLS.map(control => ({ value: control, label: control }))}
+                    options={GAMEPAD_CONTROLS.filter(control =>
+                      inputBindingFits(action.kind, { device: 'gamepad', control }),
+                    ).map(control => ({ value: control, label: control }))}
                     onChange={control => {
                       const bindings = action.bindings.map((one, bindingIndex) =>
                         bindingIndex === at ? { ...binding, control } : one,

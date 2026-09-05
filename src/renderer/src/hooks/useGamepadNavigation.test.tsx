@@ -38,4 +38,22 @@ describe('gamepad navigation', () => {
 
     expect(document.activeElement).toBe(document.body)
   })
+
+  it('skips controls hidden by CSS or accessibility state', () => {
+    render(
+      <div>
+        <button type="button" style={{ display: 'none' }}>
+          CSS hidden
+        </button>
+        <div aria-hidden="true">
+          <button type="button">ARIA hidden</button>
+        </div>
+        <button type="button">Visible</button>
+      </div>,
+    )
+
+    applyGamepadNavigation({ ...RESTING, next: true }, RESTING)
+
+    expect(document.activeElement?.textContent).toBe('Visible')
+  })
 })

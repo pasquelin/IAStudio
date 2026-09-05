@@ -88,7 +88,7 @@ function inputActionOf(value: unknown): InputAction {
   if (!Array.isArray(bindings)) throw new Error('input bindings must be an array')
 
   const parsed = bindings.map(inputBindingOf)
-  if (parsed.some(binding => !bindingFits(kind, binding)))
+  if (parsed.some(binding => !inputBindingFits(kind, binding)))
     throw new Error('input binding does not match its action kind')
 
   return { id, kind, bindings: parsed }
@@ -136,7 +136,10 @@ function gamepadBindingOf(value: Record<string, unknown>): GamepadBinding {
 function numericOptions(value: Record<string, unknown>): { deadZone?: number; scale?: number } {
   const deadZone = value.deadZone
   const scale = value.scale
-  if (deadZone !== undefined && (typeof deadZone !== 'number' || deadZone < 0 || deadZone >= 1))
+  if (
+    deadZone !== undefined &&
+    (typeof deadZone !== 'number' || !Number.isFinite(deadZone) || deadZone < 0 || deadZone >= 1)
+  )
     throw new Error('invalid gamepad dead zone')
   if (scale !== undefined && (typeof scale !== 'number' || !Number.isFinite(scale)))
     throw new Error('invalid gamepad scale')
@@ -181,7 +184,7 @@ function isAxisBinding(binding: InputBinding): boolean {
   )
 }
 
-function bindingFits(kind: InputActionKind, binding: InputBinding): boolean {
+export function inputBindingFits(kind: InputActionKind, binding: InputBinding): boolean {
   if (kind === 'button') return !isAxisBinding(binding)
   if (binding.device === 'mouse') return false
   if (kind === 'axis1') {

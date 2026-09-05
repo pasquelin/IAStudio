@@ -82,6 +82,25 @@ describe('the input map editor', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
+  it('keeps a valid JSON edit when switching back to the expert view before saving', async () => {
+    const write = vi.fn(async () => true)
+    installFakeBridge({ inputMaps: { read: async () => CHARACTER, write } })
+    render(<InputMapDocument path="Controls/character.input.json" />)
+    await screen.findByText('jump')
+    await userEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'JSON de la carte' }), {
+      target: { value: JSON.stringify({ ...CHARACTER, priority: 42 }) },
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Expert' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))
+
+    expect(write).toHaveBeenCalledWith('Controls/character.input.json', {
+      ...CHARACTER,
+      priority: 42,
+    })
+  })
+
   it('does not replace edits typed while an earlier save is pending', async () => {
     const pending: { finish: ((value: boolean) => void) | null } = { finish: null }
     const write = vi.fn(

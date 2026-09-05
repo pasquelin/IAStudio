@@ -292,14 +292,24 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   // keystroke run — without a word.
   const [, inputMaps] = await Promise.all([useCode.getState().reload(), projectInputMaps()])
   const files = codeFilesOf(useCode.getState())
-  if (files.length === 0) return { ...NO_SCRIPTS, inputMaps: inputMaps.map(input => input.map) }
+  const runtimeMaps = uniqueInputMaps(inputMaps.map(input => input.map))
+  if (files.length === 0) return { ...NO_SCRIPTS, inputMaps: runtimeMaps }
 
   compiler ??= createScriptCompiler()
   const compiled = await compiler.compile(
     files.map(file => ({ script: file.script, source: file.source })),
     inputMaps,
   )
-  return { ...compiled, inputMaps: inputMaps.map(input => input.map) }
+  return { ...compiled, inputMaps: runtimeMaps }
+}
+
+function uniqueInputMaps(maps: readonly InputMap[]): readonly InputMap[] {
+  const ids = new Set<string>()
+  return maps.filter(map => {
+    if (ids.has(map.id)) return false
+    ids.add(map.id)
+    return true
+  })
 }
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */

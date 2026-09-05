@@ -19,7 +19,11 @@ export async function createInputMapFromPreset(preset: InputPresetId): Promise<s
   const bridge = getBridge()
   if (!bridge) return null
   const path = availablePath(preset, await bridge.inputMaps.list())
-  if (!(await bridge.inputMaps.write(path, structuredClone(inputMapPreset(preset))))) return null
+  const map = {
+    ...structuredClone(inputMapPreset(preset)),
+    id: path.slice(0, -INPUT_MAP_EXTENSION.length),
+  }
+  if (!(await bridge.inputMaps.write(path, map))) return null
   const view = fileViewOf(path)
   if (!view) return null
   openFileView(view)

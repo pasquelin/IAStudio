@@ -220,6 +220,7 @@
       "unnamedAction": "Unnamed action"
     },
     "controlsMenu": {
+      "add": "Add binding",
       "capture": "Press a key or controller button",
       "change": "Change",
       "close": "Close",
