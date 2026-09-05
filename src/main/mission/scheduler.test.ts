@@ -98,7 +98,7 @@ describe('mission scheduler', () => {
 
     await scheduler.wake(created.id)
     expect(await missions.read(created.id)).toMatchObject({ state: 'waiting_user' })
-    expect(scheduler.retainedRuns()).toBe(1)
+    expect(scheduler.retainedRuns()).toBe(0)
     answer = { kind: 'completed' }
     await scheduler.resume(created.id, step.id)
 

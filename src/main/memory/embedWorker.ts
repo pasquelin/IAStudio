@@ -99,7 +99,7 @@ async function answer(request: EmbedJob, signal: AbortSignal): Promise<unknown> 
   if (request.op === 'load') return await load(request)
   if (request.op === 'close') {
     await forget()
-    return undefined
+    return
   }
 
   const current = engine

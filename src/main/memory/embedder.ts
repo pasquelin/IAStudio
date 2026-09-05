@@ -61,7 +61,8 @@ export function createEmbedder({
   // it computed was written under `model = 'B'`, where `dropOtherVectors('B')` never reaches it.
   let loading: string | null = null
   let cancelIdle: (() => void) | null = null
-  let releasing: Promise<void> | null = null
+  // The last process let go, still disposing its weights: the next one is not opened over it.
+  let releasing: Promise<void> = Promise.resolve()
 
   const letGo = (): Promise<void> => {
     const going = held
@@ -70,7 +71,7 @@ export function createEmbedder({
     cancelIdle?.()
     cancelIdle = null
     if (going) releasing = going.client.close()
-    return releasing ?? Promise.resolve()
+    return releasing
   }
 
   const restIdle = (): void => {
@@ -78,16 +79,10 @@ export function createEmbedder({
     cancelIdle = idleMs > 0 ? schedule(() => void letGo(), idleMs) : null
   }
 
-  const waitForRelease = async (): Promise<void> => {
-    if (!releasing) return
-    const closing = releasing
-    await closing
-    if (releasing === closing) releasing = null
-  }
-
   const start = async (modelId: string): Promise<Held | null> => {
     const wanted = weightsFor(modelId)
     if (wanted === null) return null
+    await releasing
 
     // The client is compared on the way out, not captured: a process that died AFTER another
     // was opened must not take the live one with it.
@@ -108,7 +103,8 @@ export function createEmbedder({
       // A model that will not load costs the vectors, never the studio: the retrieval falls back
       // on exact search rather than pretending to have searched.
       onTrouble(messageOf(error))
-      await client.close()
+      releasing = client.close()
+      await releasing
       return null
     }
   }
@@ -116,16 +112,15 @@ export function createEmbedder({
   const ready = async (): Promise<Held | null> => {
     const modelId = chosenId()
     if (modelId === null) {
-      if (held) await letGo()
+      if (held) void letGo()
       return null
     }
-    if (held && held.modelId !== modelId) await letGo()
+    if (held && held.modelId !== modelId) void letGo()
     if (opening !== null && loading !== modelId) {
       opening = null
       loading = null
     }
 
-    if (releasing) await waitForRelease()
     if (opening === null) {
       loading = modelId
       opening = start(modelId)

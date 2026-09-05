@@ -1,5 +1,6 @@
 import { writeQueue } from '@main/persistence'
 import { createProcessClient, type ProcessPort } from '@main/processClient'
+import { orElse } from '@shared/promises'
 import type { EmbedAsk, EmbedRequest, EmbedResponse } from './embedProtocol'
 
 export type EmbedPort = ProcessPort<EmbedRequest, EmbedResponse> & { kill: () => void }
@@ -20,20 +21,6 @@ export type EmbedClient = {
   /** One question. The other prefix, and the only difference — see `EmbedLoad`. */
   embedQuery: (text: string) => Promise<Float32Array>
   close: () => Promise<void>
-}
-
-function closeDeadline(): { elapsed: Promise<void>; cancel: () => void } {
-  let timer: ReturnType<typeof setTimeout> | null = null
-  const elapsed = new Promise<void>(resolve => {
-    timer = setTimeout(resolve, CLOSE_GRACE_MS)
-    timer.unref?.()
-  })
-  return {
-    elapsed,
-    cancel: () => {
-      if (timer) clearTimeout(timer)
-    },
-  }
 }
 
 export function createEmbedClient(port: EmbedPort): EmbedClient {
@@ -83,14 +70,16 @@ export function createEmbedClient(port: EmbedPort): EmbedClient {
     },
 
     close: async () => {
-      const deadline = closeDeadline()
+      let timer: ReturnType<typeof setTimeout> | undefined
+      const elapsed = new Promise<void>(resolve => {
+        timer = setTimeout(resolve, CLOSE_GRACE_MS)
+        timer.unref?.()
+      })
       try {
-        await Promise.race([ask({ op: 'close' }), deadline.elapsed])
-      } catch {
         // A dead process has nothing left to dispose; the kill below still settles its callers.
-        return
+        await orElse(Promise.race([ask({ op: 'close' }), elapsed]), undefined)
       } finally {
-        deadline.cancel()
+        clearTimeout(timer)
         port.kill()
       }
     },

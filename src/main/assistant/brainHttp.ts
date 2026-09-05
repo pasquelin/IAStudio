@@ -23,8 +23,8 @@ const ASK_TOKENS = 4096
  * 496 → 269 refusals.
  *
  * `[M]` A context-free turn still carried 108 426 characters on 2026-09-05: this room keeps every
- * manual that fits, not only those a chain opened. The earlier 23 607-character claim was false.
- * This number therefore constrains the briefing, but it is still not the model's known window.
+ * manual that fits, not only those a chain opened. This number therefore constrains the
+ * briefing, but it is still not the model's known window.
  *
  * 🛑 It budgets the BRIEFING and nothing else: `messagesFor` sends the history unbounded, where
  * `brainLocal` trims it through `promptWindow`. Ten blocks and a paste can add 110 020 characters

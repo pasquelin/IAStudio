@@ -86,16 +86,10 @@
 }
 
 /*
- * The bubble LEAVES at once. Its wait belongs on the way in — a pointer crossing a dense panel
- * must raise nothing — and a fade on the way out is the pointer having already left something
- * still on screen.
- *
- * The library's own variable, `0.15s` by default. Only the CLOSING one: the opening fade is what
- * keeps a bubble from snapping in after its second of wait.
- *
- * 🛑 What stays is `clickable`'s own 100 ms, which no prop can reach — `delayHide || 100`, so a
- * zero is falsy and is read as unset. It is the whole of what lets the pointer cross the 8 px
- * `offset` and sweep the bubble (WCAG SC 1.4.13), and it goes only with `clickable`.
+ * The bubble LEAVES at once (library default `0.15s`); the wait belongs on the way in, and the
+ * opening fade stays so a bubble does not snap in after its second of wait. 🛑 `clickable` keeps
+ * its own 100 ms — `delayHide || 100`, a zero is falsy — which is what lets the pointer cross the
+ * 8 px `offset` to sweep the bubble (WCAG SC 1.4.13).
  */
 .react-tooltip {
   --rt-transition-closing-delay: 0s;

@@ -56,13 +56,8 @@ describe('TooltipHost', () => {
     await waitFor(() => expect(anchor).not.toHaveAttribute('aria-describedby'))
   })
 
-  /**
-   * The wait belongs on the way IN. A fade on the way out is the pointer having already left
-   * something still on screen, and jsdom computes no transition — only the sheet says it.
-   *
-   * The library's own variable, and the CLOSING one alone: the opening fade is what keeps a
-   * bubble from snapping in after its second of wait.
-   */
+  // jsdom computes no transition, so the sheet is what says it. The CLOSING delay alone: the
+  // opening fade is what keeps a bubble from snapping in after its second of wait.
   it('fades in and leaves at once', () => {
     expect(stylesheet).toContain('--rt-transition-closing-delay: 0s')
     expect(stylesheet).not.toContain('--rt-transition-show-delay: 0s')
