@@ -1,4 +1,5 @@
 import {
+  ACTION_REGISTRY,
   DISCOVERY_ACTION,
   type ActionName,
   type AssistantAnswer,
@@ -11,6 +12,10 @@ import type { TurnWatch } from './brainPort'
 import type { Briefing } from './instruction'
 import { recentHistory } from './instruction'
 import { parseReply, type Reply } from './reply'
+
+const REGISTERED_ACTIONS: ReadonlySet<ActionName> = new Set(
+  ACTION_REGISTRY.map(action => action.name),
+)
 
 /**
  * 🛑 The person pressed stop. Raised rather than answered empty: an empty answer is UNREADABLE,
@@ -98,7 +103,7 @@ async function readOnce(
   notes?.note({ kind: 'sent', door: notes.door, model: notes.model, text: briefing.text })
   const first = await round(briefing)
   notes?.note({ kind: 'answered', text: first.answer })
-  const reply = parseReply(first.answer, briefing.allowed)
+  const reply = parseReply(first.answer, REGISTERED_ACTIONS)
   if (reply || budget.left <= 0) return { reply, cost: first.cost }
 
   log.warn('assistant', 'unreadable answer, asking once more')
@@ -126,7 +131,7 @@ async function readOnce(
     second = { answer: '', cost: 0 }
   }
 
-  return { reply: parseReply(second.answer, briefing.allowed), cost: first.cost + second.cost }
+  return { reply: parseReply(second.answer, REGISTERED_ACTIONS), cost: first.cost + second.cost }
 }
 
 /**
@@ -180,6 +185,13 @@ const unloadedIn = (reply: Reply | null, loaded: readonly ActionName[]): readonl
   ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !loaded.includes(name))),
 ]
 
+const unshownIn = (
+  reply: Reply | null,
+  allowed: ReadonlySet<ActionName>,
+): readonly ActionName[] => [
+  ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !allowed.has(name))),
+]
+
 // Said plainly rather than thrown: the caller has a person waiting, and "I did not understand"
 // is a better answer than a stack trace — and the cost was still incurred.
 const answerOf = (read: Read, spentBefore: number, shown: Briefing): AssistantAnswer => {
@@ -214,6 +226,14 @@ export async function answeredTurn(
     shown = used
     const before = spent
     spent += read.cost
+
+    const unshown = unshownIn(read.reply, shown.allowed)
+    if (unshown.length > 0) {
+      if (budget.left <= 0) return answerOf({ ...read, reply: null }, before, shown)
+      log.info('assistant', `opening the requested action ${unshown.join(', ')}`)
+      shown = shown.withLoaded(unshown)
+      continue
+    }
     if (budget.left <= 0) return answerOf(read, before, shown)
 
     const query = discoveryIn(read.reply)

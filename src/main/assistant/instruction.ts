@@ -75,9 +75,9 @@ export type BriefingParts = {
 /**
  * What the model is shown, and what an answer is then held to.
  *
- * 🛑 `allowed` is the whole registry now that the catalogue names it whole, and `loaded` is the
- * narrower thing: what the model has the FIELDS of. A call naming an action outside `loaded` is
- * not refused — `answeredTurn` opens its manual and asks again.
+ * `allowed` is what this bounded catalogue names, while `loaded` is narrower still: what the
+ * model has the FIELDS of. `answeredTurn` never executes a registered action outside either set;
+ * it opens its manual and asks for the plan again first.
  */
 export type Briefing = {
   readonly text: string
@@ -294,7 +294,15 @@ function briefingOf(one: Composition): Briefing {
     allowed: one.parts.catalogue ? new Set([...one.parts.catalogue, DISCOVERY_ACTION]) : allNames(),
     loaded: written.held,
     opened,
-    withLoaded: names => briefingOf(askedFor(one, names)),
+    withLoaded: names => {
+      const askedForNames = askedFor(one, names)
+      const expanded = one.parts.catalogue
+        ? withParts(askedForNames, {
+            catalogue: [...new Set([...one.parts.catalogue, ...names])],
+          })
+        : askedForNames
+      return briefingOf(expanded)
+    },
     expand: one.found === undefined ? query => expandedWith(one, query) : null,
     narrow: one.narrow,
   }
@@ -485,12 +493,7 @@ export function instructionFor(briefing: string, utterance: string, ceiling: num
   return preamble + utterance.slice(0, Math.max(0, ceiling - preamble.length))
 }
 
-// 🛑 A function and not a `const`, however single its use: `no-hardcoded-text.test.ts` reads a
-// sentence BOUND to a name as a line bound for a screen, and this one is bound for a model.
+// A function keeps model text outside the screen-text guard's name binding.
 const preambleOf = (briefing: string): string => `${briefing}\n\nThe person says:\n\n`
 
-/**
- * 🛑 What joining the two costs, which the sentence used to pay: a briefing filling its room to
- * the last character left the person 20 short of `UTTERANCE_ROOM`. Read off the preamble.
- */
 export const PREAMBLE_COST = preambleOf('').length
