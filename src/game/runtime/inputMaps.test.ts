@@ -55,6 +55,15 @@ describe('input mapping contexts', () => {
     expect(resolved.axis2('move')).toEqual({ x: 0, y: -0.75 })
   })
 
+  it('does not guess button indices for a non-standard controller mapping', () => {
+    const resolved = resolveInputMaps([vehicle], ['vehicle'], {
+      held: [],
+      gamepads: [{ id: 'Custom', index: 0, mapping: '', axes: [], buttons: [1, 1, 1, 1] }],
+    })
+
+    expect(resolved.button('jump')).toBe(false)
+  })
+
   it('combines keyboard directions into a two-dimensional action', () => {
     const map: InputMap = {
       ...character,

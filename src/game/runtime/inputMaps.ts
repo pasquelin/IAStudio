@@ -121,6 +121,7 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
 }
 
 function rawGamepadAxis(gamepad: RawGamepad, binding: GamepadBinding): number {
+  if (gamepad.mapping !== 'standard') return 0
   const index = buttonIndex(binding.control)
   if (index !== null) return gamepad.buttons[index] ?? 0
   const axis = axisIndex(binding.control)
@@ -128,6 +129,7 @@ function rawGamepadAxis(gamepad: RawGamepad, binding: GamepadBinding): number {
 }
 
 function rawGamepadVector(gamepad: RawGamepad, binding: GamepadBinding): InputVector {
+  if (gamepad.mapping !== 'standard') return ZERO
   if (binding.control !== 'leftStick' && binding.control !== 'rightStick') return ZERO
   const offset = binding.control === 'leftStick' ? 0 : 2
   return { x: gamepad.axes[offset] ?? 0, y: gamepad.axes[offset + 1] ?? 0 }
@@ -142,13 +144,27 @@ function axisIndex(control: string): number | null {
 }
 
 function buttonIndex(control: string): number | null {
-  if (control === 'rightTrigger') return 7
-  if (control === 'leftTrigger') return 6
-  if (control === 'south') return 0
-  if (control === 'east') return 1
-  if (control === 'west') return 2
-  if (control === 'north') return 3
-  return null
+  const controls = [
+    'south',
+    'east',
+    'west',
+    'north',
+    'leftShoulder',
+    'rightShoulder',
+    'leftTrigger',
+    'rightTrigger',
+    'select',
+    'start',
+    'leftStickButton',
+    'rightStickButton',
+    'dpadUp',
+    'dpadDown',
+    'dpadLeft',
+    'dpadRight',
+    'home',
+  ]
+  const index = controls.indexOf(control)
+  return index < 0 ? null : index
 }
 
 function stronger(one: number, other: number): number {

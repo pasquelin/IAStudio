@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -76,5 +76,23 @@ describe('project input maps', () => {
 
     await expect(maps.read('missing.input.json')).resolves.toBeNull()
     await expect(maps.read('../outside.input.json')).resolves.toBeNull()
+  })
+
+  it('refuses to write through a project folder symlink', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'ia-input-maps-outside-'))
+    await symlink(outside, join(root, 'Controls'))
+    const maps = createInputMaps({ rootOf: () => root, walk: async () => walked })
+
+    await expect(
+      maps.write('Controls/New/character.input.json', {
+        version: 1,
+        id: 'character',
+        priority: 0,
+        defaultActive: true,
+        actions: [],
+      }),
+    ).resolves.toBe(false)
+    await expect(readFile(join(outside, 'New/character.input.json'), 'utf8')).rejects.toThrow()
+    await rm(outside, { recursive: true, force: true })
   })
 })

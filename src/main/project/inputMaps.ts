@@ -1,11 +1,12 @@
 import { mkdir, readFile } from 'node:fs/promises'
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { INPUT_MAP_EXTENSION, inputMapOf, type InputMap } from '@shared/domain/inputMap'
 import { isPrivatePath, type FolderEntry } from '@shared/domain/folder'
 import { byCodeUnit } from '@shared/text'
 import { pathIsInside } from '@main/export/pathIsInside'
 import { writeAtomic, writeQueue } from '@main/persistence'
 import { fileInsideProject } from './fileInsideProject'
+import { folderInsideProject } from './folderInsideProject'
 
 export type InputMapStore = {
   list: () => Promise<string[]>
@@ -40,15 +41,31 @@ export function createInputMaps(deps: {
 
     write: async (path, map) => {
       const root = deps.rootOf()
-      const file = root === null ? null : inputMapPath(root, path)
+      if (root === null) return false
+      const file = inputMapPath(root, path)
       if (file === null) return false
+      const folder = await safeInputFolder(root, relative(root, dirname(file)))
+      if (folder === null) return false
 
       inputMapOf(map)
-      await mkdir(dirname(file), { recursive: true })
-      await writes.next(() => writeAtomic(file, `${JSON.stringify(map, null, 2)}\n`))
+      await mkdir(folder, { recursive: true })
+      await writes.next(() =>
+        writeAtomic(resolve(folder, basename(file)), `${JSON.stringify(map, null, 2)}\n`),
+      )
       return true
     },
   }
+}
+
+async function safeInputFolder(root: string, folder: string): Promise<string | null> {
+  let walked = ''
+  for (const segment of folder.split(sep).filter(Boolean)) {
+    walked = walked === '' ? segment : `${walked}${sep}${segment}`
+    const safe = await folderInsideProject(root, walked)
+    if (safe === null) return null
+    await mkdir(safe, { recursive: true })
+  }
+  return await folderInsideProject(root, folder)
 }
 
 function inputMapPath(root: string, path: string): string | null {

@@ -60,6 +60,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
   // Read once, on the first step, and let go of afterwards: it is the JavaScript of every script
   // of the project, and the system would otherwise hold it for the whole session.
   let modules: readonly ScriptModule[] | null = options.modules
+  let bindingsRevision = -1
   const onFault = options.onFault
 
   const took = (world: World, outcome: ScriptOutcome): void => {
@@ -101,7 +102,9 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       gamepads: world.input.gamepads ?? [],
       pointer: world.input.pointer,
     }).values
-    frame.bindings = world.inputControls.bindings()
+    const revision = world.inputControls.revision()
+    frame.bindings = revision === bindingsRevision ? undefined : world.inputControls.bindings()
+    bindingsRevision = revision
     // Only when there IS something kept: the frame is serialized whole for every hook of every
     // step, and an inventory put aside at the menu would be paid for twice a step for ever.
     const kept = world.ports.scenes.kept()

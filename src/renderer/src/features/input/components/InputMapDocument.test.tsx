@@ -81,4 +81,28 @@ describe('the input map editor', () => {
     ).toBeInTheDocument()
     expect(write).not.toHaveBeenCalled()
   })
+
+  it('does not replace edits typed while an earlier save is pending', async () => {
+    const pending: { finish: ((value: boolean) => void) | null } = { finish: null }
+    const write = vi.fn(
+      () =>
+        new Promise<boolean>(resolve => {
+          pending.finish = resolve
+        }),
+    )
+    installFakeBridge({ inputMaps: { read: () => Promise.resolve(CHARACTER), write } })
+    render(<InputMapDocument path="Controls/character.input.json" />)
+    await screen.findByText('jump')
+    await userEvent.click(screen.getByRole('button', { name: 'JSON' }))
+    const source = screen.getByRole('textbox', { name: 'JSON de la carte' })
+    fireEvent.change(source, { target: { value: JSON.stringify({ ...CHARACTER, priority: 20 }) } })
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))
+    fireEvent.change(source, { target: { value: JSON.stringify({ ...CHARACTER, priority: 30 }) } })
+
+    pending.finish?.(true)
+
+    await vi.waitFor(() =>
+      expect(source).toHaveValue(JSON.stringify({ ...CHARACTER, priority: 30 })),
+    )
+  })
 })

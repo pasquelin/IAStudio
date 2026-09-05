@@ -1,0 +1,299 @@
+// SPDX-License-Identifier: MIT
+
+import type { InputActionKind, InputBinding, GamepadControl } from '@shared/domain/inputMap'
+import type { InputControls } from '../runtime/inputControls'
+
+export type InputControlsMenuLabels = {
+  title: string
+  close: string
+  reset: string
+  change: string
+  capture: string
+  keyboard: string
+  gamepad: string
+  mouse: string
+}
+
+export type InputControlsMenu = {
+  open: () => void
+  close: () => void
+  toggle: () => void
+  isOpen: () => boolean
+  bindings: InputControls['bindings']
+  rebind: InputControls['rebind']
+  reset: InputControls['reset']
+  dispose: () => void
+}
+
+type Capture = {
+  context: string
+  action: string
+  index: number
+  kind: InputActionKind
+  previous: InputBinding
+}
+
+type InputControlsMenuOptions = {
+  owner: Document
+  controls: InputControls
+  labels: InputControlsMenuLabels
+}
+
+export function createInputControlsMenu(options: InputControlsMenuOptions): InputControlsMenu {
+  const { owner, controls, labels } = options
+  const root = owner.createElement('div')
+  root.dataset.inputControlsMenu = ''
+  root.hidden = true
+  root.style.cssText =
+    'position:fixed;inset:0;z-index:2147483647;overflow:auto;background:#111d;color:#fff;font:16px system-ui;padding:clamp(24px,8vw,96px)'
+  owner.body.appendChild(root)
+  let capture: Capture | null = null
+  let gamepadTimer: number | null = null
+  let open = false
+
+  const stopCapture = (): void => {
+    capture = null
+    if (gamepadTimer !== null) owner.defaultView?.clearInterval(gamepadTimer)
+    gamepadTimer = null
+  }
+
+  const redraw = (): void => {
+    root.replaceChildren()
+    const panel = owner.createElement('section')
+    panel.style.cssText =
+      'max-width:760px;margin:auto;background:#20242c;border-radius:12px;padding:24px;box-shadow:0 24px 80px #000a'
+    panel.append(heading(owner, labels.title))
+
+    for (const map of controls.maps()) {
+      const context = owner.createElement('section')
+      context.append(heading(owner, map.id, 2))
+      for (const action of map.actions) {
+        const row = owner.createElement('div')
+        row.style.cssText =
+          'display:grid;grid-template-columns:minmax(120px,1fr) minmax(180px,2fr);gap:12px;align-items:center;margin:8px 0'
+        const name = owner.createElement('span')
+        name.textContent = action.id
+        row.appendChild(name)
+        const bindings = owner.createElement('div')
+        bindings.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px'
+        action.bindings.forEach((binding, index) => {
+          const button = owner.createElement('button')
+          button.type = 'button'
+          button.dataset.inputBinding = ''
+          button.textContent = bindingName(binding, labels)
+          button.setAttribute('aria-label', `${labels.change} ${button.textContent}`)
+          button.style.cssText = controlCss()
+          button.addEventListener('click', () => {
+            capture = {
+              context: map.id,
+              action: action.id,
+              index,
+              kind: action.kind,
+              previous: binding,
+            }
+            button.textContent = labels.capture
+            startGamepadCapture()
+          })
+          bindings.appendChild(button)
+        })
+        row.appendChild(bindings)
+        context.appendChild(row)
+      }
+      panel.appendChild(context)
+    }
+
+    const actions = owner.createElement('div')
+    actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:24px'
+    actions.appendChild(actionButton(owner, labels.reset, 'inputReset', resetControls))
+    actions.appendChild(actionButton(owner, labels.close, 'inputClose', closeMenu))
+    panel.appendChild(actions)
+    root.appendChild(panel)
+  }
+
+  const finishCapture = (binding: InputBinding): void => {
+    const wanted = capture
+    if (!wanted) return
+    if (controls.rebind(wanted.context, wanted.action, wanted.index, binding)) {
+      stopCapture()
+      redraw()
+    }
+  }
+
+  const rebind = (...parameters: Parameters<InputControls['rebind']>): boolean => {
+    const changed = controls.rebind(...parameters)
+    if (changed && open) redraw()
+    return changed
+  }
+
+  const resetControls = (...parameters: Parameters<InputControls['reset']>): void => {
+    controls.reset(...parameters)
+    if (open) redraw()
+  }
+
+  const startGamepadCapture = (): void => {
+    if (gamepadTimer !== null || !owner.defaultView) return
+    const held = gamepadSignals(owner.defaultView.navigator)
+    gamepadTimer = owner.defaultView.setInterval(() => {
+      const wanted = capture
+      if (!wanted) return
+      const signals = gamepadSignals(owner.defaultView?.navigator)
+      const fresh = signals.find(signal => !held.includes(signal))
+      if (!fresh) return
+      const binding = gamepadBinding(fresh, wanted.kind)
+      if (binding) finishCapture(binding)
+    }, 50)
+  }
+
+  function openMenu(): void {
+    open = true
+    root.hidden = false
+    redraw()
+  }
+
+  function closeMenu(): void {
+    stopCapture()
+    open = false
+    root.hidden = true
+  }
+
+  const onKey = (event: KeyboardEvent): void => {
+    if (capture) {
+      event.preventDefault()
+      finishCapture(keyboardBinding(event.code, capture))
+      return
+    }
+    if (event.code !== 'Escape') return
+    event.preventDefault()
+    if (open) closeMenu()
+    else openMenu()
+  }
+  owner.addEventListener('keydown', onKey)
+
+  const api: InputControlsMenu = {
+    open: openMenu,
+    close: closeMenu,
+    toggle: () => (open ? closeMenu() : openMenu()),
+    isOpen: () => open,
+    bindings: controls.bindings,
+    rebind,
+    reset: resetControls,
+    dispose: () => {
+      stopCapture()
+      owner.removeEventListener('keydown', onKey)
+      root.remove()
+      if (owner.defaultView && Reflect.get(owner.defaultView, 'iaStudioControls') === api) {
+        Reflect.deleteProperty(owner.defaultView, 'iaStudioControls')
+      }
+    },
+  }
+  if (owner.defaultView) {
+    Object.defineProperty(owner.defaultView, 'iaStudioControls', {
+      configurable: true,
+      value: api,
+    })
+  }
+  return api
+}
+
+function heading(owner: Document, text: string, level = 1): HTMLHeadingElement {
+  const node = owner.createElement(level === 1 ? 'h1' : 'h2')
+  node.textContent = text
+  node.style.cssText =
+    level === 1 ? 'font-size:1.5rem;margin:0 0 20px' : 'font-size:1rem;margin:20px 0 8px'
+  return node
+}
+
+function actionButton(
+  owner: Document,
+  label: string,
+  data: 'inputReset' | 'inputClose',
+  run: () => void,
+): HTMLButtonElement {
+  const button = owner.createElement('button')
+  button.type = 'button'
+  button.textContent = label
+  button.dataset[data] = ''
+  button.style.cssText = controlCss()
+  button.addEventListener('click', () => {
+    run()
+  })
+  return button
+}
+
+function controlCss(): string {
+  return 'appearance:none;border:1px solid #ffffff40;border-radius:6px;background:#ffffff12;color:inherit;padding:8px 12px;cursor:pointer'
+}
+
+function keyboardBinding(code: string, capture: Capture): InputBinding {
+  const axis =
+    capture.kind === 'axis2'
+      ? { axis: capture.previous.device === 'keyboard' ? (capture.previous.axis ?? 'x') : 'x' }
+      : {}
+  const scale =
+    capture.previous.device === 'keyboard' && capture.previous.scale !== undefined
+      ? { scale: capture.previous.scale }
+      : {}
+  return { device: 'keyboard', code, ...axis, ...scale }
+}
+
+function bindingName(binding: InputBinding, labels: InputControlsMenuLabels): string {
+  if (binding.device === 'keyboard') return `${labels.keyboard} ${binding.code}`
+  if (binding.device === 'gamepad') return `${labels.gamepad} ${binding.control}`
+  return `${labels.mouse} ${binding.control}`
+}
+
+function gamepadSignals(navigator: Navigator | undefined): string[] {
+  if (!navigator?.getGamepads) return []
+  const signals: string[] = []
+  for (const gamepad of navigator.getGamepads()) {
+    if (!gamepad || gamepad.mapping !== 'standard') continue
+    gamepad.buttons.forEach((button, index) => {
+      if (button.pressed) signals.push(`button:${index}`)
+    })
+    gamepad.axes.forEach((axis, index) => {
+      if (Math.abs(axis) > 0.75) signals.push(`axis:${index}`)
+    })
+  }
+  return signals
+}
+
+const BUTTON_CONTROLS: readonly GamepadControl[] = [
+  'south',
+  'east',
+  'west',
+  'north',
+  'leftShoulder',
+  'rightShoulder',
+  'leftTrigger',
+  'rightTrigger',
+  'select',
+  'start',
+  'leftStickButton',
+  'rightStickButton',
+  'dpadUp',
+  'dpadDown',
+  'dpadLeft',
+  'dpadRight',
+  'home',
+]
+
+function gamepadBinding(signal: string, kind: InputActionKind): InputBinding | null {
+  const [source, rawIndex] = signal.split(':')
+  const index = Number(rawIndex)
+  if (source === 'button' && kind === 'button') {
+    const control = BUTTON_CONTROLS[index]
+    return control ? { device: 'gamepad', control } : null
+  }
+  if (source !== 'axis' || index < 0 || index > 3) return null
+  if (kind === 'axis2')
+    return { device: 'gamepad', control: index < 2 ? 'leftStick' : 'rightStick' }
+  if (kind !== 'axis1') return null
+  const controls: readonly GamepadControl[] = [
+    'leftStickX',
+    'leftStickY',
+    'rightStickX',
+    'rightStickY',
+  ]
+  const control = controls[index]
+  return control ? { device: 'gamepad', control } : null
+}

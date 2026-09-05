@@ -14,7 +14,10 @@ import {
   setDocumentTitle,
   showWorkspace,
   documentIsMarkedModified,
+  registerFileViewSave,
+  settleFileViewsForProjectChange,
 } from './dockviewApi'
+import { installFakeBridge } from '@/services/fakeBridge'
 
 const scene: DocumentDescriptor = {
   id: 'doc-1',
@@ -289,6 +292,44 @@ describe('the panels of the centre', () => {
     openDocument({ ...scene, id: 'doc-3', title: 'Autre' })
 
     expect(openPanelIds()).toEqual(['doc-1', 'doc-3'])
+  })
+})
+
+describe('a file view tab', () => {
+  it('saves modified work before closing when the native question asks it to', async () => {
+    const save = vi.fn(() => Promise.resolve(true))
+    installFakeBridge({ documents: { confirmClose: () => Promise.resolve('save') } })
+    const { panels } = mount()
+    openFileView(controls)
+    const release = registerFileViewSave('file:Controls/character.input.json', save)
+    setDocumentTitle('file:Controls/character.input.json', 'character', true)
+
+    closeFileView('file:Controls/character.input.json')
+
+    await vi.waitFor(() => expect(save).toHaveBeenCalled())
+    expect(panels[0]?.api.close).toHaveBeenCalled()
+    release()
+  })
+
+  it('keeps a modified file view when a project change is cancelled', async () => {
+    installFakeBridge({ documents: { confirmClose: () => Promise.resolve('cancel') } })
+    const { panels } = mount()
+    openFileView(controls)
+    setDocumentTitle('file:Controls/character.input.json', 'character', true)
+
+    await expect(settleFileViewsForProjectChange()).resolves.toBe(false)
+
+    expect(panels[0]?.api.close).not.toHaveBeenCalled()
+    setDocumentTitle('file:Controls/character.input.json', 'character', false)
+  })
+
+  it('drops unmodified file views before another project opens', async () => {
+    const { panels } = mount()
+    openFileView(controls)
+
+    await expect(settleFileViewsForProjectChange()).resolves.toBe(true)
+
+    expect(panels[0]?.api.close).toHaveBeenCalled()
   })
 })
 

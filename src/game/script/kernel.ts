@@ -36,6 +36,7 @@ export const KERNEL = String.raw`
   }
 
   var kept = {}
+  var bindings = {}
 
   globalThis.defineScript = function (definition) { return definition }
 
@@ -127,6 +128,7 @@ export const KERNEL = String.raw`
 
   function contextOf(frame) {
     kept = frame.kept || {}
+    if (frame.bindings) bindings = frame.bindings
     var actions = frame.actions || {}
     return {
       tick: frame.tick,
@@ -142,7 +144,7 @@ export const KERNEL = String.raw`
           return value && typeof value === 'object' ? value : { x: 0, y: 0 }
         },
         bindings: function (context, action) {
-          var map = frame.bindings && frame.bindings[context]
+          var map = bindings[context]
           return (map && map[action]) || []
         },
         gamepads: frame.input.gamepads || [],

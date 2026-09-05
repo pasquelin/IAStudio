@@ -39,4 +39,15 @@ describe('project input maps for scripts', () => {
 
     expect(await projectInputMaps()).toEqual([{ path: 'character.input.json', map: CHARACTER }])
   })
+
+  it('keeps one deterministic context when two files reuse its id', async () => {
+    installFakeBridge({
+      inputMaps: {
+        list: () => Promise.resolve(['Controls/a.input.json', 'Controls/b.input.json']),
+        read: path => Promise.resolve({ ...CHARACTER, priority: path.includes('/a.') ? 0 : 10 }),
+      },
+    })
+
+    expect(await projectInputMaps()).toEqual([{ path: 'Controls/a.input.json', map: CHARACTER }])
+  })
 })

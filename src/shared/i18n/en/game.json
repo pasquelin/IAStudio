@@ -177,8 +177,12 @@
       "actionId": "Action",
       "actionKind": "Value",
       "addAction": "Add action",
+      "addBinding": "Add binding",
+      "binding": "{{device}} binding",
       "applyPresetHint": "Replaces this map with the chosen starting point",
       "context": "Context",
+      "create": "New control map",
+      "createHint": "Creates an input map from a standard starting point",
       "defaultActive": "Active on start",
       "device": {
         "gamepad": "Gamepad",
@@ -211,8 +215,19 @@
       "presets": "Starting points",
       "priority": "Priority",
       "removeAction": "Remove action",
+      "removeBinding": "Remove binding",
       "save": "Save",
       "unnamedAction": "Unnamed action"
+    },
+    "controlsMenu": {
+      "capture": "Press a key or controller button",
+      "change": "Change",
+      "close": "Close",
+      "gamepad": "Gamepad",
+      "keyboard": "Keyboard",
+      "mouse": "Mouse",
+      "reset": "Reset everything",
+      "title": "Controls"
     },
     "play": {
       "faults_many": "{{count, number}} errors",

@@ -16,7 +16,10 @@ export async function projectInputMaps(): Promise<InputMapModule[]> {
     const paths = await getBridge()?.inputMaps.list()
     if (!paths) return []
     const maps = await Promise.all(paths.map(readInputMap))
-    return maps.filter((map): map is InputMapModule => map !== null)
+    const known = new Set<string>()
+    return maps
+      .filter((map): map is InputMapModule => map !== null)
+      .filter(input => !known.has(input.map.id) && known.add(input.map.id))
   } catch {
     return []
   }

@@ -26,6 +26,9 @@ import { expandCompressedAssets, type ExpandedAssets } from './exportedAssets'
 import { createStartupRollback, failStartup } from './startupRollback'
 import { createInputControls, type InputControls } from '@game/runtime/inputControls'
 import type { InputMap } from '@shared/domain/inputMap'
+import { createInputControlsMenu } from '@game/host/inputControlsMenu'
+import en from '@shared/i18n/en/game.json'
+import fr from '@shared/i18n/fr/game.json'
 /**
  * A game running in a browser page, with no studio anywhere.
  *
@@ -38,6 +41,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   const expandedAssets = await expandCompressedAssets(game.assets, game.compressedAssets ?? [])
   const rollback = createStartupRollback()
   rollback.add(expandedAssets.dispose)
+  installControlsMenu(canvas, inputControls, rollback)
   try {
     const { assets, render, drawn, swap, entry } = openStage(canvas, game, expandedAssets, rollback)
 
@@ -165,6 +169,20 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
   } catch (error) {
     failStartup(rollback, error)
   }
+}
+
+function installControlsMenu(
+  canvas: HTMLCanvasElement,
+  controls: InputControls,
+  rollback: ReturnType<typeof createStartupRollback>,
+): void {
+  const language = globalThis.navigator.language.toLowerCase().startsWith('fr') ? fr : en
+  const menu = createInputControlsMenu({
+    owner: canvas.ownerDocument,
+    controls,
+    labels: language.game.controlsMenu,
+  })
+  rollback.add(menu.dispose)
 }
 
 /** Everything a game draws THROUGH, and the scene it opens on — nothing that runs yet. */

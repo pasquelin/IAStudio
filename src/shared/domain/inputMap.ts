@@ -11,11 +11,35 @@ export type KeyboardBinding = {
 }
 export type MouseBinding = {
   device: 'mouse'
-  control: 'primary' | 'secondary' | 'middle' | 'wheel'
+  control: 'primary'
 }
+export type GamepadControl =
+  | 'leftStick'
+  | 'rightStick'
+  | 'leftStickX'
+  | 'leftStickY'
+  | 'rightStickX'
+  | 'rightStickY'
+  | 'south'
+  | 'east'
+  | 'west'
+  | 'north'
+  | 'leftShoulder'
+  | 'rightShoulder'
+  | 'leftTrigger'
+  | 'rightTrigger'
+  | 'select'
+  | 'start'
+  | 'leftStickButton'
+  | 'rightStickButton'
+  | 'dpadUp'
+  | 'dpadDown'
+  | 'dpadLeft'
+  | 'dpadRight'
+  | 'home'
 export type GamepadBinding = {
   device: 'gamepad'
-  control: string
+  control: GamepadControl
   deadZone?: number
   invert?: boolean
   scale?: number
@@ -64,8 +88,8 @@ function inputActionOf(value: unknown): InputAction {
   if (!Array.isArray(bindings)) throw new Error('input bindings must be an array')
 
   const parsed = bindings.map(inputBindingOf)
-  if (kind === 'button' && parsed.some(binding => isAxisBinding(binding)))
-    throw new Error('button actions cannot use axis bindings')
+  if (parsed.some(binding => !bindingFits(kind, binding)))
+    throw new Error('input binding does not match its action kind')
 
   return { id, kind, bindings: parsed }
 }
@@ -98,8 +122,7 @@ function keyboardBindingOf(value: Record<string, unknown>): KeyboardBinding {
 }
 
 function gamepadBindingOf(value: Record<string, unknown>): GamepadBinding {
-  if (typeof value.control !== 'string' || value.control.length === 0)
-    throw new Error('invalid input binding')
+  if (!isGamepadControl(value.control)) throw new Error('invalid input binding')
   const options = numericOptions(value)
   return {
     device: 'gamepad',
@@ -135,7 +158,16 @@ function isActionKind(value: unknown): value is InputActionKind {
 }
 
 function isMouseControl(value: unknown): value is MouseBinding['control'] {
-  return value === 'primary' || value === 'secondary' || value === 'middle' || value === 'wheel'
+  return value === 'primary'
+}
+
+function isGamepadControl(value: unknown): value is GamepadControl {
+  return (
+    typeof value === 'string' &&
+    /^(?:leftStick|rightStick)(?:X|Y|Button)?$|^(?:south|east|west|north|leftShoulder|rightShoulder|leftTrigger|rightTrigger|select|start|dpadUp|dpadDown|dpadLeft|dpadRight|home)$/.test(
+      value,
+    )
+  )
 }
 
 function isAxisBinding(binding: InputBinding): boolean {
@@ -147,6 +179,21 @@ function isAxisBinding(binding: InputBinding): boolean {
         binding.control.endsWith('StickX') ||
         binding.control.endsWith('StickY')))
   )
+}
+
+function bindingFits(kind: InputActionKind, binding: InputBinding): boolean {
+  if (kind === 'button') return !isAxisBinding(binding)
+  if (binding.device === 'mouse') return false
+  if (kind === 'axis1') {
+    if (binding.device === 'keyboard') return binding.axis === undefined
+    return (
+      binding.control.endsWith('X') ||
+      binding.control.endsWith('Y') ||
+      binding.control.endsWith('Trigger')
+    )
+  }
+  if (binding.device === 'keyboard') return binding.axis !== undefined
+  return binding.control === 'leftStick' || binding.control === 'rightStick'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

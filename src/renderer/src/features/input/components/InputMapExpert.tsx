@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 import { useTranslation } from 'react-i18next'
-import type { InputAction, InputActionKind, InputMap } from '@shared/domain/inputMap'
+import type {
+  GamepadControl,
+  InputAction,
+  InputActionKind,
+  InputBinding,
+  InputMap,
+} from '@shared/domain/inputMap'
 import { Button } from '@/components/Button'
 import { NumberField } from '@/components/NumberField'
 import { PropertySection } from '@/components/PropertySection'
@@ -13,6 +19,42 @@ type InputMapExpertProps = { map: InputMap; onChange: (map: InputMap) => void }
 
 function changedAction(map: InputMap, index: number, action: InputAction): InputMap {
   return { ...map, actions: map.actions.map((current, at) => (at === index ? action : current)) }
+}
+
+function namedBinding(binding: InputBinding, value: string): InputBinding {
+  return binding.device === 'keyboard' ? { ...binding, code: value } : binding
+}
+
+const GAMEPAD_CONTROLS: readonly GamepadControl[] = [
+  'leftStick',
+  'rightStick',
+  'leftStickX',
+  'leftStickY',
+  'rightStickX',
+  'rightStickY',
+  'south',
+  'east',
+  'west',
+  'north',
+  'leftShoulder',
+  'rightShoulder',
+  'leftTrigger',
+  'rightTrigger',
+  'select',
+  'start',
+  'leftStickButton',
+  'rightStickButton',
+  'dpadUp',
+  'dpadDown',
+  'dpadLeft',
+  'dpadRight',
+  'home',
+]
+
+function newBinding(kind: InputActionKind): InputBinding {
+  if (kind === 'button') return { device: 'keyboard', code: 'Space' }
+  if (kind === 'axis1') return { device: 'gamepad', control: 'leftStickX' }
+  return { device: 'gamepad', control: 'leftStick' }
 }
 
 export function InputMapExpert({ map, onChange }: InputMapExpertProps) {
@@ -72,14 +114,68 @@ export function InputMapExpert({ map, onChange }: InputMapExpertProps) {
             label={t('game.inputMap.actionKind')}
             value={action.kind}
             options={kinds}
-            onChange={kind => onChange(changedAction(map, index, { ...action, kind }))}
+            onChange={kind =>
+              onChange(changedAction(map, index, { ...action, kind, bindings: [newBinding(kind)] }))
+            }
           />
-          <div className="text-muted text-tiny flex flex-wrap gap-1.5 px-2 py-1">
+          <div className="grid gap-1.5 px-2 py-1">
             {action.bindings.map((binding, at) => (
-              <span key={`${binding.device}:${inputBindingLabel(binding)}:${at}`}>
-                {t(`game.inputMap.device.${binding.device}`)} · {inputBindingLabel(binding)}
-              </span>
+              <div
+                className="flex items-end gap-1.5"
+                key={`${binding.device}:${inputBindingLabel(binding)}:${at}`}
+              >
+                {binding.device === 'gamepad' ? (
+                  <SelectField
+                    scId={`input.action.${action.id}.binding.${at}`}
+                    label={t('game.inputMap.binding', {
+                      device: t('game.inputMap.device.gamepad'),
+                    })}
+                    value={binding.control}
+                    options={GAMEPAD_CONTROLS.map(control => ({ value: control, label: control }))}
+                    onChange={control => {
+                      const bindings = action.bindings.map((one, bindingIndex) =>
+                        bindingIndex === at ? { ...binding, control } : one,
+                      )
+                      onChange(changedAction(map, index, { ...action, bindings }))
+                    }}
+                  />
+                ) : (
+                  <TextField
+                    scId={`input.action.${action.id}.binding.${at}`}
+                    label={t('game.inputMap.binding', {
+                      device: t(`game.inputMap.device.${binding.device}`),
+                    })}
+                    value={inputBindingLabel(binding)}
+                    onChange={value => {
+                      const bindings = action.bindings.map((one, bindingIndex) =>
+                        bindingIndex === at ? namedBinding(one, value) : one,
+                      )
+                      onChange(changedAction(map, index, { ...action, bindings }))
+                    }}
+                  />
+                )}
+                <Button
+                  onClick={() => {
+                    const bindings = action.bindings.filter((_, index) => index !== at)
+                    onChange(changedAction(map, index, { ...action, bindings }))
+                  }}
+                >
+                  {t('game.inputMap.removeBinding')}
+                </Button>
+              </div>
             ))}
+            <Button
+              onClick={() =>
+                onChange(
+                  changedAction(map, index, {
+                    ...action,
+                    bindings: [...action.bindings, newBinding(action.kind)],
+                  }),
+                )
+              }
+            >
+              {t('game.inputMap.addBinding')}
+            </Button>
           </div>
         </PropertySection>
       ))}

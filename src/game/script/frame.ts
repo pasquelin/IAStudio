@@ -30,7 +30,7 @@ export type ScriptFrame = {
   dt: number
   input: InputState
   actions: Readonly<Record<string, InputActionValue>>
-  bindings: InputBindings
+  bindings?: InputBindings
   entities: readonly ScriptEntity[]
   /** What survived the last scene load. In the FRAME rather than behind a call: see the kernel. */
   kept: Readonly<Record<string, JsonValue>>

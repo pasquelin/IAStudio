@@ -277,7 +277,9 @@ const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [], inputMaps: [] }
  */
 export async function scriptTrouble(script: string, source: string): Promise<ScriptTrouble | null> {
   compiler ??= createScriptCompiler()
-  return (await compiler.compile([{ script, source }])).troubles[0] ?? null
+  return (
+    (await compiler.compile([{ script, source }], await projectInputMaps())).troubles[0] ?? null
+  )
 }
 
 /**

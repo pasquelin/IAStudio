@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { inputMapOf, type InputMap } from '@shared/domain/inputMap'
 import { Button } from '@/components/Button'
 import { Chip } from '@/components/Chip'
 import { getBridge } from '@/services/bridge'
-import { setDocumentTitle } from '@/features/shell/components/dockviewApi'
+import { registerFileViewSave, setDocumentTitle } from '@/features/shell/components/dockviewApi'
 import { InputMapExpert } from './InputMapExpert'
 import { InputMapJson } from './InputMapJson'
 import { InputMapSimple } from './InputMapSimple'
@@ -25,6 +25,7 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
   const [mode, setMode] = useState<EditorMode>('simple')
   const [modified, setModified] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const revision = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -55,25 +56,34 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
   )
 
   const changeMap = (next: InputMap): void => {
+    revision.current += 1
     setMap(next)
     setSource(formatted(next))
     setModified(true)
     setError(null)
   }
 
-  const save = async (): Promise<void> => {
+  const save = useCallback(async (): Promise<boolean> => {
+    const savedRevision = revision.current
     try {
       const next = mode === 'json' ? inputMapOf(JSON.parse(source)) : inputMapOf(map)
       const written = await getBridge()?.inputMaps.write(path, next)
       if (!written) throw new Error('write refused')
-      setMap(next)
-      setSource(formatted(next))
-      setModified(false)
+      const unchanged = revision.current === savedRevision
+      if (unchanged) {
+        setMap(next)
+        setSource(formatted(next))
+        setModified(false)
+      }
       setError(null)
+      return unchanged
     } catch {
       setError(t('game.inputMap.invalid'))
+      return false
     }
-  }
+  }, [map, mode, path, source, t])
+
+  useEffect(() => registerFileViewSave(`file:${path}`, save), [path, save])
 
   if (!map)
     return (
@@ -110,6 +120,7 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
         <InputMapJson
           value={source}
           onChange={value => {
+            revision.current += 1
             setSource(value)
             setModified(true)
             setError(null)

@@ -4,8 +4,11 @@ import { useMedia } from '@/stores/media'
 import { useTreeFolds } from '@/stores/treeFolds'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExplorerActions } from './ExplorerActions'
+
+const createInputMapFromPreset = vi.hoisted(() => vi.fn(async () => 'character.input.json'))
+vi.mock('@/features/input/createInputMap', () => ({ createInputMapFromPreset }))
 
 beforeEach(() => {
   useExplorerView.setState({ collection: LIST_ONLY, hidden: false, mode: 'folder' })
@@ -17,6 +20,15 @@ beforeEach(() => {
 })
 
 describe('the explorer title row', () => {
+  it('creates a control map from a chosen preset', async () => {
+    render(<ExplorerActions />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Nouvelle carte de contrôles' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Personnage' }))
+
+    expect(createInputMapFromPreset).toHaveBeenCalledWith('character')
+  })
+
   it('turns the studio own files on and off', async () => {
     render(<ExplorerActions />)
 

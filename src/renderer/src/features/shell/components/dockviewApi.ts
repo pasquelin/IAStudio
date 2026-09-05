@@ -5,6 +5,8 @@ import type { DockviewApi } from 'dockview-react'
 import { frontDocumentIn, useDocuments } from '@/stores/documents'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { noteOpenedDocument } from '../recentDocuments'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 
 // In its own file rather than beside `DocumentArea`: a space reaching for `setDocumentTitle`
 // would otherwise import the module that imports every space.
@@ -16,6 +18,7 @@ let current: DockviewApi | null = null
 /** A tab to bring forward once the centre reports itself — see `showWorkspace`. */
 let pendingFocus: string | null = null
 const fileViews = new Map<string, FileView>()
+const fileViewSaves = new Map<string, () => Promise<boolean>>()
 
 function fileViewPanelId(path: string): string {
   return `file:${path}`
@@ -56,8 +59,48 @@ export function openFileView(view: FileView): void {
 }
 
 export function closeFileView(id: string): void {
+  if (documentIsMarkedModified(id)) {
+    void closeModifiedFileView(id).catch(error => reportFailure('document.close', id, error))
+    return
+  }
+  finishFileViewClose(id)
+}
+
+async function closeModifiedFileView(id: string): Promise<void> {
+  if (await settleFileView(id)) finishFileViewClose(id)
+}
+
+async function settleFileView(id: string): Promise<boolean> {
+  const view = fileViews.get(id)
+  const bridge = getBridge()
+  if (!view || !bridge) return false
+  const choice = await bridge.documents.confirmClose(view.title)
+  if (choice === 'cancel') return false
+  if (choice === 'save' && !(await fileViewSaves.get(id)?.())) return false
+  noteModified(id, false)
+  return true
+}
+
+function finishFileViewClose(id: string): void {
   fileViews.delete(id)
+  fileViewSaves.delete(id)
   current?.getPanel(id)?.api.close()
+  noteModified(id, false)
+}
+
+export function registerFileViewSave(id: string, save: () => Promise<boolean>): () => void {
+  fileViewSaves.set(id, save)
+  return () => {
+    if (fileViewSaves.get(id) === save) fileViewSaves.delete(id)
+  }
+}
+
+export async function settleFileViewsForProjectChange(): Promise<boolean> {
+  for (const id of fileViews.keys()) {
+    if (documentIsMarkedModified(id) && !(await settleFileView(id))) return false
+  }
+  for (const id of [...fileViews.keys()]) finishFileViewClose(id)
+  return true
 }
 
 /** Adds the tab if missing, and says nothing about the front — what rebuilding a centre needs. */

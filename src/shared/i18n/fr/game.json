@@ -177,8 +177,12 @@
       "actionId": "Action",
       "actionKind": "Valeur",
       "addAction": "Ajouter une action",
+      "addBinding": "Ajouter une liaison",
+      "binding": "Liaison {{device}}",
       "applyPresetHint": "Remplace cette carte par le point de départ choisi",
       "context": "Contexte",
+      "create": "Nouvelle carte de contrôles",
+      "createHint": "Crée une carte de contrôles depuis un point de départ standard",
       "defaultActive": "Actif au démarrage",
       "device": {
         "gamepad": "Manette",
@@ -211,8 +215,19 @@
       "presets": "Points de départ",
       "priority": "Priorité",
       "removeAction": "Supprimer l’action",
+      "removeBinding": "Supprimer la liaison",
       "save": "Enregistrer",
       "unnamedAction": "Action sans nom"
+    },
+    "controlsMenu": {
+      "capture": "Appuyez sur une touche ou un bouton de manette",
+      "change": "Modifier",
+      "close": "Fermer",
+      "gamepad": "Manette",
+      "keyboard": "Clavier",
+      "mouse": "Souris",
+      "reset": "Tout réinitialiser",
+      "title": "Contrôles"
     },
     "play": {
       "faults_many": "{{count, number}} erreurs",

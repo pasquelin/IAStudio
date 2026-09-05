@@ -1,6 +1,6 @@
 import { digest } from '@shared/hash'
 import type { ScriptModule } from '@game/ports/scriptPort'
-import type { InputMapModule } from '@shared/domain/inputMap'
+import { INPUT_MAP_EXTENSION, type InputMapModule } from '@shared/domain/inputMap'
 import { createWorkerSession } from '../core/workerSession'
 import type { CodeRequest, CodeResponse } from './codeMessage'
 
@@ -19,9 +19,8 @@ const spawn = (): Worker =>
   new Worker(new URL('./code.worker.ts', import.meta.url), { type: 'module' })
 
 /**
- * 🛑 Held by the DIGEST of the source, not by the path: an author saves the same file thirty times
- * an hour and plays after every save, and the compiler is nine megabytes of parsing. Kept for the
- * window with no way to close it, deliberately — the next Play would pay that parse again.
+ * 🛑 Held by the DIGEST of the source and, only for relative input imports, its path. Kept for the
+ * window with no way to close it — the next Play would otherwise pay the parse again.
  */
 export function createScriptCompiler(open: () => Worker = spawn): ScriptCompiler {
   const session = createWorkerSession<CodeRequest, CodeResponse>(open)
@@ -30,7 +29,12 @@ export function createScriptCompiler(open: () => Worker = spawn): ScriptCompiler
   return {
     compile: async (sources, inputMaps = []) => {
       const inputsKey = JSON.stringify(inputMaps)
-      const keyed = sources.map(one => ({ ...one, key: digest(one.source + inputsKey) }))
+      const keyed = sources.map(one => ({
+        ...one,
+        key: digest(
+          one.source + inputsKey + (one.source.includes(INPUT_MAP_EXTENSION) ? one.script : ''),
+        ),
+      }))
       const asked = new Set<string>()
       // Sent TOGETHER: the worker answers by `id`, so what is waiting is one round trip rather
       // than one per script — a project of thirty would otherwise queue thirty latencies.

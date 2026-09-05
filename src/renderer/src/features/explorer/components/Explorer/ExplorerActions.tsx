@@ -3,16 +3,22 @@ import {
   mdiEyeOffOutline,
   mdiEyeOutline,
   mdiFileTreeOutline,
+  mdiGamepadVariantOutline,
   mdiShapeOutline,
 } from '@mdi/js'
+import { INPUT_PRESET_IDS, type InputPresetId } from '@shared/domain/inputPresets'
 import { useTranslation } from 'react-i18next'
+import { MenuButton } from '@/components/MenuButton'
+import { MenuRow } from '@/components/MenuRow'
 import { ToolButton } from '@/components/ToolButton'
 import { UiIcon } from '@/components/UiIcon'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_LEFT, TIP_BOTTOM } from '@/helpers/tooltip'
+import { createInputMapFromPreset } from '@/features/input/createInputMap'
 import { useExplorerView } from '@/stores/explorerView'
 import { useMedia } from '@/stores/media'
 import { useTreeFolds } from '@/stores/treeFolds'
 import { TreeFoldButton } from '@/components/TreeFoldButton'
+import { reportFailure } from '@/services/diagnostics'
 
 /**
  * The Explorer's own title row: how the folder is READ, and how much of it is shown.
@@ -33,6 +39,14 @@ export function ExplorerActions() {
   const expanded = useTreeFolds(state => state.explorer.anyExpanded)
   const ask = useTreeFolds(state => state.ask)
 
+  const createInputMap = async (preset: InputPresetId): Promise<void> => {
+    try {
+      await createInputMapFromPreset(preset)
+    } catch (error) {
+      reportFailure('document.save', preset, error)
+    }
+  }
+
   return (
     <>
       {/* An icon rather than the sentence, which is 65 characters and would chase the three
@@ -49,6 +63,28 @@ export function ExplorerActions() {
           <UiIcon path={mdiAlertOutline} size={14} />
         </span>
       )}
+      <MenuButton
+        icon={mdiGamepadVariantOutline}
+        label={t('game.inputMap.create')}
+        description={t('game.inputMap.createHint')}
+        tooltip={TIP_BOTTOM}
+        variant="header"
+        rowCount={INPUT_PRESET_IDS.length}
+        opensOnClick
+        rows={close =>
+          INPUT_PRESET_IDS.map(preset => (
+            <MenuRow
+              key={preset}
+              label={t(`game.inputMap.preset.${preset}`)}
+              tip={HINT_LEFT(t('game.inputMap.createHint'))}
+              onSelect={() => {
+                close()
+                void createInputMap(preset)
+              }}
+            />
+          ))
+        }
+      />
       {/* Two readings of one folder, and the pair is drawn as a pair: which one is on is what
           says the other exists at all. */}
       <ToolButton

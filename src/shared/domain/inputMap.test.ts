@@ -84,4 +84,20 @@ describe('input maps', () => {
       scale: -1,
     })
   })
+
+  it.each([
+    ['axis1', { device: 'gamepad', control: 'leftStick' }],
+    ['axis2', { device: 'gamepad', control: 'leftStickX' }],
+    ['axis1', { device: 'mouse', control: 'primary' }],
+  ])('refuses a %s binding the runtime cannot resolve', (kind, binding) => {
+    expect(() =>
+      inputMapOf({
+        version: 1,
+        id: 'invalid',
+        priority: 0,
+        defaultActive: true,
+        actions: [{ id: 'move', kind, bindings: [binding] }],
+      }),
+    ).toThrow()
+  })
 })

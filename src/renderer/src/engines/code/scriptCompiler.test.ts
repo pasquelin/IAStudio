@@ -67,6 +67,18 @@ describe('an author’s scripts, compiled once', () => {
     expect(asked).toEqual(['same', 'same'])
   })
 
+  it('compiles identical relative imports once per script folder', async () => {
+    const { asked, compiler } = counting(source => ({ code: source }))
+    const source = "import controls from './controls.input.json'\nexport default controls"
+
+    await compiler.compile([
+      { script: 'script:Character/player.ts', source },
+      { script: 'script:Vehicle/player.ts', source },
+    ])
+
+    expect(asked).toEqual([source, source])
+  })
+
   /** Twice in ONE batch, where the cache has nothing to say yet — the batch answers for itself. */
   it('compiles one text once inside a single batch', async () => {
     const { asked, compiler } = counting(source => ({ code: source }))

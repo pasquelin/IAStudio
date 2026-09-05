@@ -4,6 +4,7 @@ import type {
   GamepadBinding,
   InputActionKind,
   InputBinding,
+  GamepadControl,
   InputMap,
   KeyboardBinding,
   MouseBinding,
@@ -21,6 +22,7 @@ export type InputControlsStorage = {
 export type InputControls = {
   maps: () => readonly InputMap[]
   bindings: () => InputBindings
+  revision: () => number
   rebind: (context: string, action: string, index: number, binding: unknown) => boolean
   reset: (context?: string, action?: string) => void
 }
@@ -32,6 +34,7 @@ export function createInputControls(
   const defaults = structuredClone(given)
   let maps = restored(defaults, storage)
   let bindings = bindingsOf(maps)
+  let revision = 0
 
   const persist = (): void => {
     try {
@@ -44,17 +47,20 @@ export function createInputControls(
   return {
     maps: () => maps,
     bindings: () => bindings,
+    revision: () => revision,
     rebind: (context, action, index, binding) => {
       const changed = rebound(maps, context, action, index, binding)
       if (!changed) return false
       maps = changed
       bindings = bindingsOf(maps)
+      revision += 1
       persist()
       return true
     },
     reset: (context, action) => {
       maps = resetMaps(maps, defaults, context, action)
       bindings = bindingsOf(maps)
+      revision += 1
       persist()
     },
   }
@@ -186,18 +192,11 @@ function keyboardOf(value: Record<string, unknown>): KeyboardBinding | null {
 }
 
 function mouseOf(control: unknown): MouseBinding | null {
-  if (
-    control !== 'primary' &&
-    control !== 'secondary' &&
-    control !== 'middle' &&
-    control !== 'wheel'
-  )
-    return null
-  return { device: 'mouse', control }
+  return control === 'primary' ? { device: 'mouse', control } : null
 }
 
 function gamepadOf(value: Record<string, unknown>): GamepadBinding | null {
-  if (typeof value.control !== 'string' || value.control.length === 0) return null
+  if (!isGamepadControl(value.control)) return null
   if (value.deadZone !== undefined && !deadZone(value.deadZone)) return null
   if (value.invert !== undefined && typeof value.invert !== 'boolean') return null
   if (!optionalNumber(value.scale)) return null
@@ -210,11 +209,25 @@ function gamepadOf(value: Record<string, unknown>): GamepadBinding | null {
   }
 }
 
+const SUPPORTED_GAMEPAD =
+  /^(?:leftStick|rightStick)(?:X|Y|Button)?$|^(?:south|east|west|north|leftShoulder|rightShoulder|leftTrigger|rightTrigger|select|start|dpadUp|dpadDown|dpadLeft|dpadRight|home)$/
+
+const isGamepadControl = (value: unknown): value is GamepadControl =>
+  typeof value === 'string' && SUPPORTED_GAMEPAD.test(value)
+
 function accepts(kind: InputActionKind, binding: InputBinding): boolean {
-  if (kind !== 'button') return true
-  if (binding.device === 'keyboard')
-    return binding.axis === undefined && binding.scale === undefined
-  return binding.device !== 'gamepad' || !/Stick(?:X|Y)?$/.test(binding.control)
+  if (kind === 'button') {
+    if (binding.device === 'keyboard')
+      return binding.axis === undefined && binding.scale === undefined
+    return binding.device !== 'gamepad' || !/Stick(?:X|Y)?$/.test(binding.control)
+  }
+  if (binding.device === 'mouse') return false
+  if (kind === 'axis1') {
+    if (binding.device === 'keyboard') return binding.axis === undefined
+    return /(?:X|Y|Trigger)$/.test(binding.control)
+  }
+  if (binding.device === 'keyboard') return binding.axis !== undefined
+  return binding.control === 'leftStick' || binding.control === 'rightStick'
 }
 
 const optionalNumber = (value: unknown): value is number | undefined =>

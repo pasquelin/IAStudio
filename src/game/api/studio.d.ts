@@ -9,6 +9,53 @@
  * typecheck cannot see: the kernel ships as TEXT.
  */
 
+type StudioGamepadControl =
+  | 'leftStick'
+  | 'rightStick'
+  | 'leftStickX'
+  | 'leftStickY'
+  | 'rightStickX'
+  | 'rightStickY'
+  | 'south'
+  | 'east'
+  | 'west'
+  | 'north'
+  | 'leftShoulder'
+  | 'rightShoulder'
+  | 'leftTrigger'
+  | 'rightTrigger'
+  | 'select'
+  | 'start'
+  | 'leftStickButton'
+  | 'rightStickButton'
+  | 'dpadUp'
+  | 'dpadDown'
+  | 'dpadLeft'
+  | 'dpadRight'
+  | 'home'
+type StudioInputBinding =
+  | { device: 'keyboard'; code: string; axis?: 'x' | 'y'; scale?: number }
+  | { device: 'mouse'; control: 'primary' }
+  | {
+      device: 'gamepad'
+      control: StudioGamepadControl
+      deadZone?: number
+      invert?: boolean
+      scale?: number
+    }
+type StudioInputAction = {
+  readonly id: string
+  readonly kind: 'button' | 'axis1' | 'axis2'
+  readonly bindings: readonly StudioInputBinding[]
+}
+type StudioInputMap = {
+  readonly version: number
+  readonly id: string
+  readonly priority: number
+  readonly defaultActive: boolean
+  readonly actions: readonly StudioInputAction[]
+}
+
 declare module '@studio' {
   /**
    * 🛑 What the PROJECT declares, layered in by its own `.d.ts` — see `projectTypes`.
@@ -26,10 +73,9 @@ declare module '@studio' {
   export type ComponentName = Named<'components'>
 
   export type Vector3 = { x: number; y: number; z: number }
-  export type InputBinding =
-    | { device: 'keyboard'; code: string; axis?: 'x' | 'y'; scale?: number }
-    | { device: 'mouse'; control: 'primary' | 'secondary' | 'middle' | 'wheel' }
-    | { device: 'gamepad'; control: string; deadZone?: number; invert?: boolean; scale?: number }
+  export type InputBinding = StudioInputBinding
+  export type InputAction = StudioInputAction
+  export type InputMap = StudioInputMap
   export type GamepadInput = {
     readonly id: string
     readonly index: number
@@ -210,4 +256,9 @@ declare module '@studio' {
     onTriggerEnter?(self: Self<P>, ctx: Context, event: GameEvent): void
     onTriggerExit?(self: Self<P>, ctx: Context, event: GameEvent): void
   }): unknown
+}
+
+declare module '*.input.json' {
+  const inputMap: StudioInputMap
+  export default inputMap
 }
