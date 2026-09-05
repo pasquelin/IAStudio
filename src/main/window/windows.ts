@@ -363,7 +363,7 @@ export function openFileInfoWindow(path: string): BrowserWindow {
 export function openNewDocumentWindow(): BrowserWindow {
   return openAuxiliaryWindow(NEW_DOCUMENT_ROUTE, {
     width: 860,
-    height: 640,
+    height: 680,
     minWidth: 720,
     minHeight: 520,
   })

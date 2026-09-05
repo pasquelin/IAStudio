@@ -6,7 +6,9 @@ import type { NewDocumentAnswer, NewDocumentAsk } from '@shared/domain/newDocume
 import { WindowShell } from '@/components/WindowShell'
 import { getBridge } from '@/services/bridge'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
+import { useConnections } from '@/hooks/useConnections'
 import { useDocuments } from '@/stores/documents'
+import { useFolderRoles } from '@/stores/folderRoles'
 import { NewDocumentForm } from './NewDocumentForm'
 import { NewDocumentKinds } from './NewDocumentKinds'
 import { NewDocumentNoProject } from './NewDocumentNoProject'
@@ -20,6 +22,9 @@ import { NewDocumentNoProject } from './NewDocumentNoProject'
 export function NewDocumentWindow() {
   const { t } = useTranslation()
   useAppliedSettings()
+  // For DRAWING alone: the folder picker inks a folder that serves a section the way the explorer
+  // does, and this window is its own renderer — the studio's subscription does not reach it.
+  useConnections([useFolderRoles(state => state.connect)])
 
   const [ask, setAsk] = useState<NewDocumentAsk | null>(null)
   const [kind, setKind] = useState<DocumentKind | null>(null)

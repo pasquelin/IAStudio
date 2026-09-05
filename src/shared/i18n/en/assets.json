@@ -194,7 +194,8 @@
     "templateGroups": {
       "general": "General",
       "character": "Character",
-      "machine": "Machine"
+      "machine": "Machine",
+      "staging": "Staging"
     },
     "templates": {
       "empty": "Empty",

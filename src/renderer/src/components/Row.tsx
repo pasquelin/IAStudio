@@ -17,6 +17,11 @@ import { UiIcon } from './UiIcon'
 export type RowProps = {
   media?: ReactNode
   icon?: string
+  /**
+   * What that glyph is inked in — a section's hue, where the row stands for something that has
+   * one. Left out, it takes the ink of the words beside it, which is what a plain row wants.
+   */
+  iconInk?: string
   title: string
   suffix?: string
   clip?: 'end' | 'start'
@@ -29,9 +34,14 @@ export type RowProps = {
   tip?: TooltipFactory
 }
 
-function rowMedia({ media, icon, box }: Pick<RowProps, 'media' | 'icon'> & { box: string }) {
+function rowMedia({
+  media,
+  icon,
+  iconInk,
+  box,
+}: Pick<RowProps, 'media' | 'icon' | 'iconInk'> & { box: string }) {
   if (media) return <div className={box}>{media}</div>
-  return icon ? <UiIcon path={icon} size={14} className="shrink-0" /> : null
+  return icon ? <UiIcon path={icon} size={14} className={cn('shrink-0', iconInk)} /> : null
 }
 
 function rowTitle({ title, suffix, clip, muted, quiet, hint, tip = TIP_RIGHT }: RowProps) {
@@ -58,6 +68,7 @@ function rowTitle({ title, suffix, clip, muted, quiet, hint, tip = TIP_RIGHT }: 
 export function Row({
   media,
   icon,
+  iconInk,
   title,
   suffix,
   clip,
@@ -79,7 +90,7 @@ export function Row({
   return (
     <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-2', line)}>
       {leading}
-      {createElement(rowMedia, { media, icon, box })}
+      {createElement(rowMedia, { media, icon, iconInk, box })}
       <div className="min-w-0 flex-1 leading-tight">
         {createElement(rowTitle, { title, suffix, clip, muted, quiet, hint, tip })}
 

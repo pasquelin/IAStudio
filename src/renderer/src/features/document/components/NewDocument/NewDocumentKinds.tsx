@@ -36,9 +36,13 @@ export function NewDocumentKinds({
   const { t } = useTranslation()
 
   return (
-    <>
+    // A gutter of its own inside the shell's: this column holds a button and a list where the
+    // other windows hold a search field, and rows against the edge read as a menu that slid out.
+    <div className="flex min-h-0 flex-1 flex-col gap-2 px-2 pt-2">
       <WindowButton
-        className="justify-start"
+        // A margin of its own over the column's gap: the button MAKES something where every row
+        // under it only chooses, and read at one gap the two ran as one list.
+        className="mb-5 justify-start"
         {...HINT_RIGHT(t('project.createHint'))}
         onClick={onNewProject}
       >
@@ -64,6 +68,6 @@ export function NewDocumentKinds({
           )
         })}
       </WindowNav>
-    </>
+    </div>
   )
 }

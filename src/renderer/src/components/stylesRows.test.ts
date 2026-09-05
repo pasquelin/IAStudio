@@ -29,10 +29,7 @@ const GUARDED = './styles.ts'
  */
 const OWN_HOVER = TITLE_BAR_GHOST.split(' ').filter(one => one.startsWith('hover:bg-'))
 
-const MAY_FILL_UNDER_THE_POINTER = [
-  '../features/home/components/Tools/ToolsGroup.tsx',
-  '../features/document/components/NewDocument/NewDocumentTemplateTile.tsx',
-]
+const MAY_FILL_UNDER_THE_POINTER = ['../features/home/components/Tools/ToolsGroup.tsx']
 
 describe('the shared class strings', () => {
   it('finds the sources and the shade at all, so the rule below cannot pass on empty lists', () => {

@@ -54,10 +54,13 @@ describe('what « Nouveau document ▸ Third Person » opens on', () => {
     }
   })
 
-  /** The general ones are sets, not games — and none of them claims otherwise. */
-  it.each(TEMPLATES_BY_GROUP.general)('leaves %s a set nobody is walked in', id => {
-    expect(sceneFromTemplate(id).nodes.flatMap(node => node.components ?? [])).toEqual([])
-  })
+  /** The ones nobody plays are sets, not games — and none of them claims otherwise. */
+  it.each([...TEMPLATES_BY_GROUP.general, ...TEMPLATES_BY_GROUP.staging])(
+    'leaves %s a set nobody is walked in',
+    id => {
+      expect(sceneFromTemplate(id).nodes.flatMap(node => node.components ?? [])).toEqual([])
+    },
+  )
 })
 
 /**

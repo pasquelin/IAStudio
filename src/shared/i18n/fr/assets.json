@@ -194,7 +194,8 @@
     "templateGroups": {
       "general": "Général",
       "character": "Personnage",
-      "machine": "Machine"
+      "machine": "Machine",
+      "staging": "Mise en scène"
     },
     "templates": {
       "empty": "Vide",
