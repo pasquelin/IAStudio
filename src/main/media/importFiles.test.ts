@@ -459,4 +459,40 @@ describe('importFiles', () => {
     await expect(access(join(root, 'Lourd'))).rejects.toThrow()
     expect(imported.documents).toEqual([])
   })
+
+  it('does not follow a neighbour that a symbolic link takes out of the source folder', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
+    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
+    const elsewhere = await mkdtemp(join(tmpdir(), 'ia-studio-elsewhere-'))
+    await writeFile(join(elsewhere, 'secret.png'), 'private key')
+    await symlink(join(elsewhere, 'secret.png'), join(outside, 'peau.png'))
+    await symlink(elsewhere, join(outside, 'textures'))
+    const source = join(outside, 'Niveau.gltf')
+    await writeFile(
+      source,
+      JSON.stringify({
+        asset: { version: '2.0' },
+        images: [{ uri: 'peau.png' }, { uri: 'textures/secret.png' }],
+      }),
+    )
+    const document: DocumentDescriptor = {
+      id: 'document-7',
+      kind: 'scene',
+      workspace: '3d',
+      title: 'Niveau',
+      path: 'Niveau/Niveau.gltf',
+    }
+
+    const imported = await importFiles([source], '', {
+      projectPath: () => root,
+      names: async () => [],
+      adopt: async () => null,
+      documents: async () => [document],
+      importBundle: async () => null,
+    })
+
+    await expect(access(join(root, 'Niveau', 'peau.png'))).rejects.toThrow()
+    await expect(access(join(root, 'Niveau', 'textures', 'secret.png'))).rejects.toThrow()
+    expect(imported.failed).toEqual(['peau.png', 'secret.png'])
+  })
 })
