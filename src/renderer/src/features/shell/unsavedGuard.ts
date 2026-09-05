@@ -43,8 +43,6 @@ export function guardUnsavedWork(target: Window): () => void {
   }
 
   const refuse = (event: BeforeUnloadEvent): void => {
-    // A file view holds its edits outside the documents store, so its tab has to be asked about
-    // here too — nothing else stands between it and a window that is on its way out.
     if (unsavedDocumentIds().length === 0 && !fileViewsHoldEdits()) return
     event.preventDefault()
     if (asking) return

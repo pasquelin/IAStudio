@@ -5,7 +5,11 @@ import { inputMapOf, type InputMap } from '@shared/domain/inputMap'
 import { Button } from '@/components/Button'
 import { Chip } from '@/components/Chip'
 import { getBridge } from '@/services/bridge'
-import { registerFileViewSave, setDocumentTitle } from '@/features/shell/components/dockviewApi'
+import {
+  fileViewPanelId,
+  registerFileViewSave,
+  setDocumentTitle,
+} from '@/features/shell/components/dockviewApi'
 import { InputMapExpert } from './InputMapExpert'
 import { InputMapJson } from './InputMapJson'
 import { InputMapSimple } from './InputMapSimple'
@@ -51,7 +55,7 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
   }, [path, t])
 
   useEffect(
-    () => setDocumentTitle(`file:${path}`, map?.id ?? '', modified),
+    () => setDocumentTitle(fileViewPanelId(path), map?.id ?? '', modified),
     [map?.id, modified, path],
   )
 
@@ -98,7 +102,7 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
     }
   }, [map, mode, path, source, t])
 
-  useEffect(() => registerFileViewSave(`file:${path}`, save), [path, save])
+  useEffect(() => registerFileViewSave(fileViewPanelId(path), save), [path, save])
 
   if (!map)
     return (

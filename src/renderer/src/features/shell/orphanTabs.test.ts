@@ -6,9 +6,9 @@ import { useLayouts } from '@/stores/layouts'
 import { closeOrphanTabs } from './orphanTabs'
 
 const closePanel = vi.hoisted(() => vi.fn())
-vi.mock('./components/dockviewApi', () => ({
+vi.mock('./components/dockviewApi', async importActual => ({
+  ...(await importActual<Record<string, unknown>>()),
   closePanel,
-  panelIsFileView: (id: string) => id.startsWith('file:'),
 }))
 
 const SAVED: DocumentDescriptor = {

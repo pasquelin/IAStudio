@@ -3,7 +3,6 @@ import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { openFileView } from '@/features/shell/components/dockviewApi'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { useDictation } from '@/stores/dictation'
 import { installDocument } from '@/stores/document-fixtures'
@@ -122,9 +121,7 @@ describe('a command the application performs itself', () => {
   // A file view is a tab in front that is not a document: `closeDocument` finds no io for it, so
   // it would ask nothing and drop the edits. ⌘W takes the same branch the tab's cross takes.
   it('closes a file view through its own closer, not through the document one', () => {
-    const path = 'Entrées/Clavier.input.json'
-    openFileView({ id: 'inputMap', path, title: 'Clavier' })
-    useDocuments.setState({ activeId: `file:${path}`, documents: {} })
+    useDocuments.setState({ activeId: 'file:Entrées/Clavier.input.json', documents: {} })
 
     expect(routeCommand('document.close')).toBe('ran')
     expect(closeDocument).not.toHaveBeenCalled()

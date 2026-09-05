@@ -14,6 +14,7 @@ import {
   setDocumentTitle,
   showWorkspace,
   documentIsMarkedModified,
+  fileViewsHoldEdits,
   registerFileViewSave,
   settleFileViews,
 } from './dockviewApi'
@@ -90,7 +91,7 @@ beforeEach(() => {
   useLayouts.setState({ activeWorkspace: '3d', home: false, layout: null })
 })
 
-afterEach(() => closeFileView('file:Controls/character.input.json'))
+afterEach(() => void closeFileView('file:Controls/character.input.json'))
 
 describe('opening a document', () => {
   it('adds a panel for it', () => {
@@ -304,11 +305,25 @@ describe('a file view tab', () => {
     const release = registerFileViewSave('file:Controls/character.input.json', save)
     setDocumentTitle('file:Controls/character.input.json', 'character', true)
 
-    closeFileView('file:Controls/character.input.json')
+    void closeFileView('file:Controls/character.input.json')
 
     await vi.waitFor(() => expect(save).toHaveBeenCalled())
     expect(panels[0]?.api.close).toHaveBeenCalled()
     release()
+  })
+
+  // The layout restores a `file:` panel at launch and nothing registers it: only the orphan sweep
+  // used to take it away. Kept on screen, it has to be askable and closable like one opened here.
+  it('asks about and closes a modified file view the layout restored', async () => {
+    installFakeBridge({ documents: { confirmClose: () => Promise.resolve('discard') } })
+    const { panels } = mount('file:Controls/character.input.json')
+    setDocumentTitle('file:Controls/character.input.json', 'character', true)
+
+    expect(fileViewsHoldEdits()).toBe(true)
+    await expect(closeFileView('file:Controls/character.input.json')).resolves.toBe(true)
+
+    expect(panels[0]?.api.close).toHaveBeenCalled()
+    expect(fileViewsHoldEdits()).toBe(false)
   })
 
   it('keeps a modified file view when a project change is cancelled', async () => {

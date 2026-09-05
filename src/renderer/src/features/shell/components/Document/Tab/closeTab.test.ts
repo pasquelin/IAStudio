@@ -6,10 +6,10 @@ import { closeTab, closeTabAsking } from './closeTab'
 const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
 vi.mock('../../../documentIo', () => ({ closeDocument: (id: string) => closeDocument(id) }))
 
-const closeFileViewAsking = vi.fn((_id: string) => Promise.resolve(true))
-vi.mock('../../dockviewApi', () => ({
-  closeFileViewAsking: (id: string) => closeFileViewAsking(id),
-  panelIsFileView: (id: string) => id.startsWith('file:'),
+const closeFileView = vi.fn((_id: string) => Promise.resolve(true))
+vi.mock('../../dockviewApi', async importActual => ({
+  ...(await importActual<Record<string, unknown>>()),
+  closeFileView: (id: string) => closeFileView(id),
 }))
 
 beforeEach(() => {
@@ -36,7 +36,7 @@ describe('closing a tab', () => {
 
     closeTab('file:Entrées/Clavier.input.json')
 
-    expect(closeFileViewAsking).toHaveBeenCalledWith('file:Entrées/Clavier.input.json')
+    expect(closeFileView).toHaveBeenCalledWith('file:Entrées/Clavier.input.json')
     expect(closeDocument).not.toHaveBeenCalled()
   })
 
@@ -44,7 +44,7 @@ describe('closing a tab', () => {
   // would close every tab behind the one the user just kept.
   it('answers the refusal of whichever closer it picked', async () => {
     bridgeWatchingLogs()
-    closeFileViewAsking.mockResolvedValueOnce(false)
+    closeFileView.mockResolvedValueOnce(false)
 
     await expect(closeTabAsking('file:Entrées/Clavier.input.json')).resolves.toBe(false)
     await expect(closeTabAsking('doc-1')).resolves.toBe(true)
