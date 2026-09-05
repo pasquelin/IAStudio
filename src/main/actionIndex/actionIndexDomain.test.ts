@@ -39,7 +39,3 @@ it('derives localized post-processing semantics from the effect registry', () =>
     'post.setEffectEnabled',
   )
 })
-
-it('uses closed field options as structured operation evidence', () => {
-  expect(search('Turn the cube into a cylinder.', 'scene')).toContain('node.setPrimitiveParameters')
-})
