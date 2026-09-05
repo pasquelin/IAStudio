@@ -40,9 +40,7 @@ beforeEach(() => {
  */
 describe('what the registry offers a layer', () => {
   const optionsOf = (name: ActionName, key: string): string[] =>
-    [
-      ...(assistantAction(name)?.fields.find(field => field.key === key)?.options ?? []),
-    ]
+    [...(assistantAction(name)?.fields.find(field => field.key === key)?.options ?? [])]
       .flatMap(option => (typeof option === 'string' ? [option] : []))
       .sort()
 

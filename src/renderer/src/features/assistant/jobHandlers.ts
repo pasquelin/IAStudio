@@ -128,8 +128,7 @@ export const JOB_HANDLERS: ActionHandlers = {
       ),
     ),
 
-  'usage.report': input =>
-    withBridge(bridge => bridge.provider.usageReport(usagePeriodOf(input))),
+  'usage.report': input => withBridge(bridge => bridge.provider.usageReport(usagePeriodOf(input))),
 
   // `false` says nothing was running under that id, which is a click that arrived late rather
   // than a failure — so it travels as the answer it is.
