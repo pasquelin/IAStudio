@@ -302,6 +302,8 @@ def run(
     if len(vertices) < 3 or len(triangles) < 1 or triangles.max(initial=0) >= len(vertices):
         raise ValueError("INVALID_MESH: invalid geometry")
     arrays = _infer(models, vertices, triangles, report, stopping)
+    if stopping():
+        raise InterruptedError("CANCELLED")
     _write_result(Path(destination), arrays, len(vertices))
     report(6, 6, "write")
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
@@ -335,11 +337,7 @@ def _infer(models, vertices, triangles, report, stopping):
         pose = models.pose(device_points, joints=joints.to(models.device).clone()).pose_trans.cpu()
         if stopping():
             raise InterruptedError("CANCELLED")
-        weight_chunks = [
-            models.skin(device_points, chunk.to(models.device)).bw.cpu()
-            for chunk in torch.split(transformed, 100000, dim=1)
-        ]
-        weights = torch.cat(weight_chunks, dim=1)
+        weights = _skin_weights(models, device_points, transformed, stopping, torch)
     report(5, 6, "skinning")
     inverse = torch.linalg.inv(orientation)
     heads = _transform(joints[..., :3] / second_scale, inverse) / scale + center
@@ -350,6 +348,17 @@ def _infer(models, vertices, triangles, report, stopping):
         "weights": weights[0].numpy().astype("<f4"),
         "pose": pose[0].numpy().astype("<f4"),
     }
+
+
+def _skin_weights(models, device_points, transformed, stopping, torch):
+    weight_chunks = []
+    for chunk in torch.split(transformed, 100000, dim=1):
+        if stopping():
+            raise InterruptedError("CANCELLED")
+        weight_chunks.append(models.skin(device_points, chunk.to(models.device)).bw.cpu())
+        if stopping():
+            raise InterruptedError("CANCELLED")
+    return torch.cat(weight_chunks, dim=1)
 
 
 def _write_result(output: Path, arrays: dict[str, np.ndarray], vertices: int) -> None:

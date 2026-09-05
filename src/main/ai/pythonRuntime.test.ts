@@ -13,6 +13,15 @@ const MODEL = localModel({
   modality: 'image',
 })
 
+const MIA = localModel({
+  id: 'make-it-animatable',
+  backendId: 'make-it-animatable',
+  loader: 'plugin',
+  format: 'pickle',
+  modality: 'mesh',
+  readsTorchWeights: true,
+})
+
 const settled = (over: Partial<EngineSettledJob> = {}): EngineSettledJob => ({
   v: 1,
   evt: 'job.completed',
@@ -386,6 +395,14 @@ describe('weights that complete another model', () => {
 })
 
 describe('a door whose environment is incomplete', () => {
+  it('checks the embedded Auto Rig profile before loading MIA', async () => {
+    const held = harness()
+
+    await held.runtime.load?.(MIA, { onProgress: () => {} })
+
+    expect(held.requirements).toHaveBeenCalledWith('autorig')
+  })
+
   /**
    * Asked before the door is woken: an absent library fails as an `ImportError` three frames inside
    * a worker, and reaches the person as a door that died with no name to act on.

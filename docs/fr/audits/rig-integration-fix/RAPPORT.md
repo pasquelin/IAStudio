@@ -3,6 +3,19 @@
 Date de recette : 5 septembre 2026. Base : `develop@13a2c1661`. Candidat initial :
 `feat/rig-integration-clean@b9145e8d7`.
 
+## Amendement — activation de MIA
+
+La décision produit prise après cette fermeture remplace uniquement sa politique de distribution :
+Make-It-Animatable est désormais proposé dans la configuration, ses quatre checkpoints restent
+téléchargés à la demande avec contrôle d'empreinte et ne sont pas inclus dans le package. Le profil
+d'exécution Python/Torch épinglé est, lui, préparé avant le packaging afin que ses bibliothèques
+natives soient signées avec l'application.
+
+La recette macOS arm64 amendée mesure un package de 1,3 Go, dont 704 Mo pour le moteur embarqué,
+et zéro checkpoint MIA. L'import réel de Torch et du backend MIA depuis le package passe. Les
+sections ci-dessous consignent l'état historique de la fermeture initiale ; leurs mentions d'un
+runtime MIA exclu du package sont donc remplacées par le présent amendement.
+
 ## Verdict
 
 `READY TO MERGE`

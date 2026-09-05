@@ -65,7 +65,7 @@ function engineThatWritesResult(
 
 function host(installed = true, engine = engineThatWritesResult()) {
   return createAutoRigHost({
-    models: () => [{ ...MODEL, distributionStatus: 'public' }],
+    models: () => [MODEL],
     installedIds: () => new Set(installed ? [MODEL.id] : []),
     ensureLoaded: vi.fn(),
     hold: () => vi.fn(),
@@ -76,7 +76,7 @@ function host(installed = true, engine = engineThatWritesResult()) {
 describe('AutoRigHost', () => {
   it('refuses a distribution-blocked backend even when its files are installed', async () => {
     const blocked = createAutoRigHost({
-      models: () => [MODEL],
+      models: () => [{ ...MODEL, distributionStatus: 'blocked' }],
       installedIds: () => new Set([MODEL.id]),
       ensureLoaded: vi.fn(),
       hold: () => vi.fn(),
@@ -116,7 +116,7 @@ describe('AutoRigHost', () => {
 
   it('maps a failed integrity check to the product error', async () => {
     const corrupt = createAutoRigHost({
-      models: () => [{ ...MODEL, distributionStatus: 'public' }],
+      models: () => [MODEL],
       installedIds: () => new Set([MODEL.id]),
       ensureLoaded: () => Promise.reject(new Error('digest mismatch')),
       hold: () => vi.fn(),

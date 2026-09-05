@@ -16,6 +16,7 @@ export const PROTOCOL_VERSION = 2
 
 /** What the core answers itself, in the same turn — neither wakes a door. */
 export type EngineOp = 'hardware.info' | 'memory.ledger' | 'engine.requirements'
+export type EngineRequirementsProfile = 'diffusion' | 'autorig'
 
 /**
  * What the core hands to a DOOR instead of answering. Each reads gigabytes or runs for seconds, so

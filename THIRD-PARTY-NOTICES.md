@@ -17,9 +17,9 @@ The terms below govern these components. They are not affected by the licence of
 | @tanstack/react-query | 5.101.4 | MIT |
 | @tanstack/react-virtual | 3.14.9 | MIT |
 | accelerate | 1.14.0 | Apache |
-| ACE-Step 1.5 XL | shipped with the application | MIT |
-| ACE-Step 1.5 XL SFT | shipped with the application | MIT |
-| ACE-Step 1.5 XL Turbo | shipped with the application | MIT |
+| ACE-Step 1.5 XL | 8f40447d21ee59ad4dcee6c99ce248027410bfec | MIT |
+| ACE-Step 1.5 XL SFT | 4bf7b60a63b27144f539f980927eeb89f5f912b0 | MIT |
+| ACE-Step 1.5 XL Turbo | 200ba991ae448051e14b0183157e35c2d27c9fb0 | MIT |
 | ag-psd | 31.0.2 | MIT |
 | annotated-doc | 0.0.5 | MIT |
 | anyio | 4.15.0 | MIT |
@@ -27,13 +27,13 @@ The terms below govern these components. They are not affected by the licence of
 | certifi | 2026.7.22 | MPL-2.0 |
 | charset-normalizer | 3.5.1 | MIT |
 | click | 8.5.0 | BSD-3-Clause |
-| CogVideoX 2B | shipped with the application | Apache-2.0 |
-| ControlNet Canny SDXL | shipped with the application | Apache-2.0 |
+| CogVideoX 2B | 1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01 | Apache-2.0 |
+| ControlNet Canny SDXL | 1271357eda52d54b857c650cacb5b51144643ccb | Apache-2.0 |
 | CPython | 3.12.14 | PSF-2.0 |
-| CraftsMan3D | shipped with the application | CreativeML Open RAIL-M |
+| CraftsMan3D | df4ddf7544cc2e75c5d24cb8605d8e91f0fa4abc | CreativeML Open RAIL-M |
 | daisyui | 5.7.16 | MIT |
 | diffusers | 0.40.0 | Apache 2.0 License |
-| Diffusion360 | shipped with the application | Apache-2.0 |
+| Diffusion360 | d20770f5ec0000a2aaa579a1209d11dc92ddb08a | Apache-2.0 |
 | dockview-react | 8.1.0 | MIT |
 | einops | 0.8.2 | MIT |
 | electron | 43.4.0 | MIT |
@@ -44,7 +44,7 @@ The terms below govern these components. They are not affected by the licence of
 | FFmpeg | 7.1.1 / 7.1.5 | GPL-3.0-or-later / LGPL-2.1-or-later |
 | filelock | 3.32.3 | MIT |
 | fsspec | 2026.7.0 | BSD-3-Clause |
-| GenEx World Initializer | shipped with the application | CC-BY-4.0 |
+| GenEx World Initializer | bdf9a02257c4c2728bcd90404d53687a9641e205 | CC-BY-4.0 |
 | h11 | 0.16.0 | MIT |
 | hf-xet | 1.6.0 | Apache-2.0 |
 | httpcore | 1.0.9 | BSD-3-Clause |
@@ -58,32 +58,32 @@ The terms below govern these components. They are not affected by the licence of
 | imageio-ffmpeg | 0.6.0 | BSD-2-Clause |
 | immer | 11.1.16 | MIT |
 | importlib-metadata | 9.0.1 | Apache-2.0 |
-| InstantMesh | shipped with the application | Apache-2.0 |
-| IP-Adapter SDXL | shipped with the application | Apache-2.0 |
+| InstantMesh | 2da07e89919e1a130c9b5add1584c70c7aa065fd | Apache-2.0 |
+| IP-Adapter SDXL | 018e402774aeeddd60609b4ecdb7e298259dc729 | Apache-2.0 |
 | jinja2 | 3.1.6 | BSD-3-Clause |
 | jolt-physics | 1.1.0-simd.3e3b5ff | MIT |
 | Lato | shipped with the application | OFL-1.1 |
-| LGM | shipped with the application | MIT |
-| Make-It-Animatable | shipped with the application | Apache-2.0 |
+| LGM | 73a034178e748421506492e91790cc62d6aefef5 | MIT |
+| Make-It-Animatable | eb12b71253361fd1a7216625a95144af3c58263e | Apache-2.0 |
 | Make-It-Animatable code | d60cc7e01ff8da46448e458dbf450e8967b34e77 | MIT |
 | markdown-it-py | 4.2.0 | MIT License |
 | markupsafe | 3.0.3 | BSD-3-Clause |
 | mdurl | 0.1.2 | MIT License |
 | mediabunny | 1.53.1 | MPL-2.0 |
-| MMAudio Large | shipped with the application | CC-BY-NC-4.0 |
-| MMAudio Medium | shipped with the application | CC-BY-NC-4.0 |
-| MMAudio Small | shipped with the application | CC-BY-NC-4.0 |
-| Mochi 1 | shipped with the application | Apache-2.0 |
+| MMAudio Large | eb13a1a98fdbec91753775c57b074ccdfc60587c | CC-BY-NC-4.0 |
+| MMAudio Medium | eb13a1a98fdbec91753775c57b074ccdfc60587c | CC-BY-NC-4.0 |
+| MMAudio Small | eb13a1a98fdbec91753775c57b074ccdfc60587c | CC-BY-NC-4.0 |
+| Mochi 1 | 14be5fcea23095ed330cb214647916a451e38b6e | Apache-2.0 |
 | monaco-editor | 0.52.2 | MIT |
 | mpmath | 1.3.0 | BSD-3-Clause |
-| MVDiffusion | shipped with the application | other |
+| MVDiffusion | 451f4fe16113bff5a5d2269ed5ad43b0592e9a14 | other |
 | networkx | 3.6.1 | BSD-3-Clause |
 | node-llama-cpp | 3.20.0 | MIT |
 | numpy | 2.5.2 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 |
 | ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
 | packaging | 26.3 | Apache-2.0 OR BSD-2-Clause |
-| PanFusion | shipped with the application | other |
+| PanFusion | 451f4fe16113bff5a5d2269ed5ad43b0592e9a14 | other |
 | Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
 | pillow | 12.3.0 | MIT-CMU |
 | pip | 26.2.1 | MIT |
@@ -92,8 +92,8 @@ The terms below govern these components. They are not affected by the licence of
 | pygments | 2.21.0 | BSD-2-Clause |
 | pyyaml | 6.0.3 | MIT |
 | quickjs-emscripten-core | 0.32.0 | MIT |
-| Qwen-Image | shipped with the application | Apache-2.0 |
-| Qwen-Image-Edit | shipped with the application | Apache-2.0 |
+| Qwen-Image | 75e0b4be04f60ec59a75f475837eced720f823b6 | Apache-2.0 |
+| Qwen-Image-Edit | ac7f9318f633fc4b5778c59367c8128225f1e3de | Apache-2.0 |
 | Qwen2.5 0.5B Instruct | Q4_K_M | Apache-2.0 |
 | Qwen2.5 1.5B Instruct | Q4_K_M | Apache-2.0 |
 | Qwen2.5 14B Instruct | Q4_K_M | Apache-2.0 |
@@ -113,17 +113,17 @@ The terms below govern these components. They are not affected by the licence of
 | requests | 2.34.2 | Apache-2.0 |
 | rich | 15.0.0 | MIT |
 | safetensors | 0.8.0 | Apache Software License |
-| SANA 1.5 1.6B | shipped with the application | Apache-2.0 |
-| Sana 1600M | shipped with the application | Apache-2.0 |
-| Sana 600M | shipped with the application | Apache-2.0 |
+| SANA 1.5 1.6B | b77948f2b4eed5c728e9b828ccff07f7427b43cc | Apache-2.0 |
+| Sana 1600M | ac0da2ff55fbe434795be0dce883042e4d49e2fc | Apache-2.0 |
+| Sana 600M | 28f3af7689de15f3883d5863059a2fca0aa9b829 | Apache-2.0 |
 | setuptools | 84.0.0 | MIT |
-| Shap-E | shipped with the application | MIT |
-| Shap-E Image | shipped with the application | MIT |
+| Shap-E | 7bd337afdea1c17842e1c3cc45c4e268356dba40 | MIT |
+| Shap-E Image | 0e0aba80f08d368aaf6af9cb93583707481cc29b | MIT |
 | shellingham | 1.5.4 | ISC License |
 | sherpa-onnx-node | 1.13.5 | Apache-2.0 |
 | Silero VAD | v5 | MIT |
 | simple-git | 3.36.0 | MIT |
-| SSD-1B | shipped with the application | Apache-2.0 |
+| SSD-1B | 60987f37e94cd59c36b1cba832b9f97b57395a10 | Apache-2.0 |
 | sympy | 1.14.0 | BSD-3-Clause |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
@@ -136,20 +136,20 @@ The terms below govern these components. They are not affected by the licence of
 | torchvision | 0.29.0 | BSD |
 | tqdm | 4.70.0 | MPL-2.0 AND MIT |
 | transformers | 5.16.1 | Apache 2.0 License |
-| TRELLIS Image | shipped with the application | MIT |
-| TRELLIS Text | shipped with the application | MIT |
-| TRELLIS.2 4B | shipped with the application | MIT |
-| TripoSG | shipped with the application | MIT |
-| TripoSR | shipped with the application | MIT |
+| TRELLIS Image | 25e0d31ffbebe4b5a97464dd851910efc3002d96 | MIT |
+| TRELLIS Text | 4aad9f4a110329a410974d7f41ce5333a9a1fc87 | MIT |
+| TRELLIS.2 4B | af44b45f2e35a493886929c6d786e563ec68364d | MIT |
+| TripoSG | 2c1c516d22d58db486a058d98d31bb6177344e06 | MIT |
+| TripoSR | 5b521936b01fbe1890f6f9baed0254ab6351c04a | MIT |
 | typer | 0.27.2 | MIT |
 | typescript | 6.0.3 | Apache-2.0 |
 | typing-extensions | 4.16.0 | PSF-2.0 |
-| UniPano | shipped with the application | other |
+| UniPano | 451f4fe16113bff5a5d2269ed5ad43b0592e9a14 | other |
 | urllib3 | 2.7.0 | MIT |
 | utif | 3.1.0 | MIT |
-| Wan 2.1 I2V 14B | shipped with the application | Apache-2.0 |
-| Wan 2.1 T2V 1.3B | shipped with the application | Apache-2.0 |
-| Wan 2.2 TI2V 5B | shipped with the application | Apache-2.0 |
+| Wan 2.1 I2V 14B | b184e23a8a16b20f108f727c902e769e873ffc73 | Apache-2.0 |
+| Wan 2.1 T2V 1.3B | 0fad780a534b6463e45facd96134c9f345acfa5b | Apache-2.0 |
+| Wan 2.2 TI2V 5B | b8fff7315c768468a5333511427288870b2e9635 | Apache-2.0 |
 | wavesurfer.js | 7.12.11 | BSD-3-Clause |
 | zipp | 4.1.0 | MIT |
 | zod | 4.4.3 | MIT |
@@ -437,7 +437,7 @@ Source: https://github.com/huggingface/accelerate
 ```
 ## ACE-Step 1.5 XL
 
-Version: shipped with the application
+Version: 8f40447d21ee59ad4dcee6c99ce248027410bfec
 Licence: MIT
 
 Corresponding sources:
@@ -457,7 +457,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## ACE-Step 1.5 XL SFT
 
-Version: shipped with the application
+Version: 4bf7b60a63b27144f539f980927eeb89f5f912b0
 Licence: MIT
 
 Corresponding sources:
@@ -477,7 +477,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## ACE-Step 1.5 XL Turbo
 
-Version: shipped with the application
+Version: 200ba991ae448051e14b0183157e35c2d27c9fb0
 Licence: MIT
 
 Corresponding sources:
@@ -643,7 +643,7 @@ Source: https://github.com/pallets/click/
 ```
 ## CogVideoX 2B
 
-Version: shipped with the application
+Version: 1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -663,7 +663,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## ControlNet Canny SDXL
 
-Version: shipped with the application
+Version: 1271357eda52d54b857c650cacb5b51144643ccb
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -700,7 +700,7 @@ Source: https://github.com/astral-sh/python-build-standalone
 ```
 ## CraftsMan3D
 
-Version: shipped with the application
+Version: df4ddf7544cc2e75c5d24cb8605d8e91f0fa4abc
 Licence: CreativeML Open RAIL-M
 
 Corresponding sources:
@@ -778,7 +778,7 @@ Source: https://github.com/huggingface/diffusers
 ```
 ## Diffusion360
 
-Version: shipped with the application
+Version: d20770f5ec0000a2aaa579a1209d11dc92ddb08a
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1007,7 +1007,7 @@ Source: https://github.com/fsspec/filesystem_spec
 ```
 ## GenEx World Initializer
 
-Version: shipped with the application
+Version: bdf9a02257c4c2728bcd90404d53687a9641e205
 Licence: CC-BY-4.0
 
 Corresponding sources:
@@ -1447,7 +1447,7 @@ Source: https://github.com/python/importlib_metadata
 ```
 ## InstantMesh
 
-Version: shipped with the application
+Version: 2da07e89919e1a130c9b5add1584c70c7aa065fd
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1474,7 +1474,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## IP-Adapter SDXL
 
-Version: shipped with the application
+Version: 018e402774aeeddd60609b4ecdb7e298259dc729
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1648,7 +1648,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 ## LGM
 
-Version: shipped with the application
+Version: 73a034178e748421506492e91790cc62d6aefef5
 Licence: MIT
 
 Corresponding sources:
@@ -1675,7 +1675,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## Make-It-Animatable
 
-Version: shipped with the application
+Version: eb12b71253361fd1a7216625a95144af3c58263e
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -1691,7 +1691,7 @@ against a published digest, and removed from the model manager.
 
 The Hugging Face repository declares Apache-2.0 for these files. The provenance and
 redistribution rights of the training data and derived checkpoints remain unconfirmed;
-the model is restricted and must not be enabled in a public release on that declaration alone.
+the catalogue therefore marks the model as restricted and shows that reservation before download.
 
 Licensed under Apache-2.0. Full terms: https://huggingface.co/jasongzy/Make-It-Animatable/blob/eb12b71253361fd1a7216625a95144af3c58263e/README.md
 ```
@@ -2151,7 +2151,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
 ```
 ## MMAudio Large
 
-Version: shipped with the application
+Version: eb13a1a98fdbec91753775c57b074ccdfc60587c
 Licence: CC-BY-NC-4.0
 
 Corresponding sources:
@@ -2173,7 +2173,7 @@ NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
 ```
 ## MMAudio Medium
 
-Version: shipped with the application
+Version: eb13a1a98fdbec91753775c57b074ccdfc60587c
 Licence: CC-BY-NC-4.0
 
 Corresponding sources:
@@ -2195,7 +2195,7 @@ NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
 ```
 ## MMAudio Small
 
-Version: shipped with the application
+Version: eb13a1a98fdbec91753775c57b074ccdfc60587c
 Licence: CC-BY-NC-4.0
 
 Corresponding sources:
@@ -2217,7 +2217,7 @@ NON-COMMERCIAL ONLY. These weights may not be used in a commercial project.
 ```
 ## Mochi 1
 
-Version: shipped with the application
+Version: 14be5fcea23095ed330cb214647916a451e38b6e
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2282,7 +2282,7 @@ Source: https://github.com/fredrik-johansson/mpmath
 ```
 ## MVDiffusion
 
-Version: shipped with the application
+Version: 451f4fe16113bff5a5d2269ed5ad43b0592e9a14
 Licence: other
 
 Corresponding sources:
@@ -2427,7 +2427,7 @@ Source: https://github.com/pypa/packaging
 ```
 ## PanFusion
 
-Version: shipped with the application
+Version: 451f4fe16113bff5a5d2269ed5ad43b0592e9a14
 Licence: other
 
 Corresponding sources:
@@ -2604,7 +2604,7 @@ SOFTWARE.
 ```
 ## Qwen-Image
 
-Version: shipped with the application
+Version: 75e0b4be04f60ec59a75f475837eced720f823b6
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -2624,7 +2624,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Qwen-Image-Edit
 
-Version: shipped with the application
+Version: ac7f9318f633fc4b5778c59367c8128225f1e3de
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3079,7 +3079,7 @@ Source: https://github.com/huggingface/safetensors
 ```
 ## SANA 1.5 1.6B
 
-Version: shipped with the application
+Version: b77948f2b4eed5c728e9b828ccff07f7427b43cc
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3099,7 +3099,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Sana 1600M
 
-Version: shipped with the application
+Version: ac0da2ff55fbe434795be0dce883042e4d49e2fc
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3119,7 +3119,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Sana 600M
 
-Version: shipped with the application
+Version: 28f3af7689de15f3883d5863059a2fca0aa9b829
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3161,7 +3161,7 @@ Source: https://github.com/pypa/setuptools
 ```
 ## Shap-E
 
-Version: shipped with the application
+Version: 7bd337afdea1c17842e1c3cc45c4e268356dba40
 Licence: MIT
 
 Corresponding sources:
@@ -3186,7 +3186,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## Shap-E Image
 
-Version: shipped with the application
+Version: 0e0aba80f08d368aaf6af9cb93583707481cc29b
 Licence: MIT
 
 Corresponding sources:
@@ -3256,7 +3256,7 @@ See readme.md of the package.
 ```
 ## SSD-1B
 
-Version: shipped with the application
+Version: 60987f37e94cd59c36b1cba832b9f97b57395a10
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3539,7 +3539,7 @@ Source: https://github.com/huggingface/transformers
 ```
 ## TRELLIS Image
 
-Version: shipped with the application
+Version: 25e0d31ffbebe4b5a97464dd851910efc3002d96
 Licence: MIT
 
 Corresponding sources:
@@ -3558,7 +3558,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TRELLIS Text
 
-Version: shipped with the application
+Version: 4aad9f4a110329a410974d7f41ce5333a9a1fc87
 Licence: MIT
 
 Corresponding sources:
@@ -3577,7 +3577,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TRELLIS.2 4B
 
-Version: shipped with the application
+Version: af44b45f2e35a493886929c6d786e563ec68364d
 Licence: MIT
 
 Corresponding sources:
@@ -3597,7 +3597,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TripoSG
 
-Version: shipped with the application
+Version: 2c1c516d22d58db486a058d98d31bb6177344e06
 Licence: MIT
 
 Corresponding sources:
@@ -3617,7 +3617,7 @@ Licensed under MIT. Full terms: https://opensource.org/licenses/MIT
 ```
 ## TripoSR
 
-Version: shipped with the application
+Version: 5b521936b01fbe1890f6f9baed0254ab6351c04a
 Licence: MIT
 
 Corresponding sources:
@@ -3733,7 +3733,7 @@ Source: https://github.com/python/typing_extensions
 ```
 ## UniPano
 
-Version: shipped with the application
+Version: 451f4fe16113bff5a5d2269ed5ad43b0592e9a14
 Licence: other
 
 Corresponding sources:
@@ -3799,7 +3799,7 @@ SOFTWARE.
 ```
 ## Wan 2.1 I2V 14B
 
-Version: shipped with the application
+Version: b184e23a8a16b20f108f727c902e769e873ffc73
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3819,7 +3819,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Wan 2.1 T2V 1.3B
 
-Version: shipped with the application
+Version: 0fad780a534b6463e45facd96134c9f345acfa5b
 Licence: Apache-2.0
 
 Corresponding sources:
@@ -3841,7 +3841,7 @@ Licensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2
 ```
 ## Wan 2.2 TI2V 5B
 
-Version: shipped with the application
+Version: b8fff7315c768468a5333511427288870b2e9635
 Licence: Apache-2.0
 
 Corresponding sources:

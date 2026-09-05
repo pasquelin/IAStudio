@@ -17,7 +17,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
 
 from ia_studio_engine import PROTOCOL_VERSION, __version__
-from ia_studio_engine.core.requirements import survey
+from ia_studio_engine.core.requirements import DOOR_EXTRA, survey
 from ia_studio_engine.core.router import DoorRouter, spawn_door
 from ia_studio_engine.hardware.probe import hardware_info
 from ia_studio_engine.protocol.envelope import (
@@ -33,10 +33,18 @@ from ia_studio_engine.protocol.envelope import (
 
 Handler = Callable[[dict[str, Any]], Any]
 
+
+def _requirements(params: dict[str, Any]) -> dict[str, Any]:
+    profile = params.get("profile", DOOR_EXTRA)
+    if profile not in {DOOR_EXTRA, "autorig"}:
+        raise ValueError(f"unknown runtime profile: {profile}")
+    return survey(profile)
+
+
 HANDLERS: Mapping[str, Handler] = {
     "hardware.info": lambda _params: hardware_info(),
     # Read off `.dist-info` folders, so the core stays free of every library it reports on.
-    "engine.requirements": lambda _params: survey(),
+    "engine.requirements": _requirements,
 }
 
 #: What the core hands to a door rather than answering itself. Each reads gigabytes or runs for

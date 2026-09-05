@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { modelRefusalOf } from '@shared/domain/localModel'
 import { describe, expect, it } from 'vitest'
 import runtime from '../../../engine/autorig-runtime.json'
 import { shippedModel } from './catalogue'
@@ -33,7 +34,7 @@ describe('Auto Rig release runtime', () => {
     expect(autorig).not.toMatch(/torch-cluster|timm|torchvision|gradio|bpy/)
   })
 
-  it('keeps the blocked runtime out of the public packaging hook', () => {
+  it('prepares the Auto Rig runtime for every packaged build', () => {
     const prepare = read('scripts/prepare-engine-runtime.mjs')
     const beforePack = read('scripts/before-pack.mjs')
     const fetchEngine = read('scripts/fetch-engine.mjs')
@@ -42,12 +43,12 @@ describe('Auto Rig release runtime', () => {
     expect(prepare).toContain("'--locked'")
     expect(prepare).toContain("'--only-binary'")
     expect(prepare).toContain("'autorig'")
-    expect(beforePack).not.toContain('prepareEngineRuntime')
+    expect(beforePack).toContain('prepareEngineRuntime')
     expect(fetchEngine).not.toContain('readFileSync(stamp')
     expect(builder).not.toContain('Contents/Resources/engine/python/lib/**/*.dylib')
     expect(builder).not.toContain('Contents/Resources/engine/python/lib/**/*.so')
-    expect(builder).toContain("'!src/ia_studio_engine/autorig/make_it_animatable.py'")
-    expect(builder).toContain("'!src/ia_studio_engine/vendor/make_it_animatable/**'")
+    expect(builder).not.toContain("'!src/ia_studio_engine/autorig/make_it_animatable.py'")
+    expect(builder).not.toContain("'!src/ia_studio_engine/vendor/make_it_animatable/**'")
   })
 
   it('keeps all checkpoint deserialisation behind digest verification and safe loading', () => {
@@ -55,7 +56,9 @@ describe('Auto Rig release runtime', () => {
     const loader = read('engine/src/ia_studio_engine/vendor/make_it_animatable/model.py')
 
     expect(model?.licenceStatus).toBe('restricted')
-    expect(model?.distributionStatus).toBe('blocked')
+    expect(model?.distribution).toBe('direct-download')
+    expect(model?.distributionStatus).toBeUndefined()
+    expect(model && modelRefusalOf(model)).toBeNull()
     expect(model?.files).toHaveLength(4)
     expect(model?.files.every(file => /^[a-f0-9]{64}$/.test(file.sha256))).toBe(true)
     expect(loader.match(/weights_only=True/g)).toHaveLength(2)

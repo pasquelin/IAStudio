@@ -114,7 +114,9 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
       // Asked BEFORE the door is woken: a library that is absent fails as an `ImportError` three
       // frames inside a worker, which reaches the person as a door that died. The core answers
       // this off `.dist-info` folders, so it imports nothing and starts no process.
-      const needs = await engine.requirements()
+      const needs = await engine.requirements(
+        model.backendId === 'make-it-animatable' ? 'autorig' : 'diffusion',
+      )
       if (!needs.complete) {
         throw new Error(`the local AI engine is missing: ${whatIsMissing(needs)}`)
       }

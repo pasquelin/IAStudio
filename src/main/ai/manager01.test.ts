@@ -1,6 +1,6 @@
 import type { MemorySnapshot } from '@shared/domain/aiMemory'
 import type { AiOverview } from '@shared/domain/aiOverview'
-import { aiRoleId, ASSISTANT_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
+import { aiRoleId, ASSISTANT_ROLE, AUTO_RIG_ROLE, DICTATION_ROLE } from '@shared/domain/aiRole'
 import { STT_MODEL } from '@shared/domain/dictation'
 import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
 import { GIBI } from '@shared/domain/localModel-fixtures'
@@ -9,6 +9,7 @@ import { DEFAULT_SETTINGS, type PartialSettings, type Settings } from '@shared/d
 import { describe, expect, it, vi } from 'vitest'
 import type { HardwareFacts } from './hardwareProbe'
 import type { LocalRuntime, LocalRuntimes } from './localRuntimes'
+import { shippedModel } from './catalogue'
 import { createAiManager, type ManagerDeps } from './manager'
 
 const FACTS: HardwareFacts = {
@@ -115,6 +116,25 @@ const candidateOf = (overview: AiOverview, modelId: string) =>
   overview.roles.flatMap(row => row.candidates).find(one => one.model.id === modelId)
 
 describe('the AI manager', () => {
+  it('offers MIA for download without selecting it before its checkpoints are installed', async () => {
+    const mia = shippedModel('make-it-animatable')
+    expect(mia).not.toBeNull()
+
+    const overview = await manager({
+      runtimes: {
+        'sherpa-onnx': idleRuntime(),
+        plugin: idleRuntime(),
+        ollama: idleRuntime(),
+      },
+    }).overview()
+    const row = overview.roles.find(candidate => candidate.role === AUTO_RIG_ROLE)
+
+    expect(row?.candidates).toEqual(
+      expect.arrayContaining([expect.objectContaining({ model: mia, installed: false })]),
+    )
+    expect(row?.provider).toBeNull()
+  })
+
   it('refuses installation before a distribution-blocked runtime is contacted', async () => {
     const install = vi.fn(() => Promise.resolve())
     const ai = manager({ runtimes: { 'sherpa-onnx': idleRuntime(install) } })

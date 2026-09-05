@@ -180,12 +180,12 @@ const LISTED_NOT_FETCHED = [
 function catalogueLicences() {
   const path = join(ROOT, 'src', 'shared', 'domain', 'localModels.json')
   const catalogue = JSON.parse(readFileSync(path, 'utf8'))
-
   return Object.values(catalogue)
     .flat()
     .filter(model => model.loader === 'diffusers' || model.loader === 'plugin')
     .map(model => ({
       name: model.name,
+      ...(model.files[0]?.revision ? { version: model.files[0].revision } : {}),
       spdx: model.licence,
       text: [
         model.files.length === 0

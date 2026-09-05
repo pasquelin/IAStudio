@@ -38,8 +38,8 @@ diffusion = [
   # An undeclared import is one a dependency is free to drop from under us.
   "numpy>=1.26",
   "pillow>=10.0",
-  # Make-It-Animatable runs on this same door. Both publish pure-Python wheels, so first use asks
-  # for no compiler on CPU or Apple Silicon.
+  # Other 3D plugins run on this same door. These pure-Python wheels need no compiler on first use
+  # on CPU or Apple Silicon; MIA itself uses the smaller embedded `autorig` profile above.
   "einops>=0.7",
   "timm>=1.0",
 ]

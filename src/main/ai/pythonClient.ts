@@ -20,6 +20,7 @@ import {
   type EngineHello,
   type EngineJobOp,
   type EngineRequest,
+  type EngineRequirementsProfile,
   type EngineSettledJob,
 } from './pythonProtocol'
 
@@ -65,7 +66,7 @@ export type PythonClient = {
    * What the door's environment is missing, if anything. Answered by the core, so it wakes no
    * door and imports no tensor library — a door started to be told it holds nothing is 682 MB.
    */
-  requirements: () => Promise<EngineRequirements>
+  requirements: (profile?: EngineRequirementsProfile) => Promise<EngineRequirements>
   /**
    * Opens a JOB on a door and waits for the event that settles it — reading gigabytes and running
    * an inference are the two things `REQUEST_TIMEOUT_MS` must never bound.
@@ -219,12 +220,12 @@ export function createPythonClient(port: PythonPort, listeners: PythonListeners)
       return readHardware(answer)
     },
 
-    requirements: async () => {
+    requirements: async (profile = 'diffusion') => {
       if (closed) throw new Error(GONE)
 
       return readRequirements(
         await beforeDeadline(
-          client.send(id => engineRequest(id, 'engine.requirements')),
+          client.send(id => engineRequest(id, 'engine.requirements', { profile })),
           'engine.requirements',
         ),
       )

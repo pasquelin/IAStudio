@@ -10,14 +10,13 @@
  *     node scripts/fetch-engine.mjs --sources-only           # recopy engine/src, skip the interpreter
  *     node scripts/fetch-engine.mjs --digests                # after rotating a build
  *
- * 🛑 **The interpreter alone, and no tensor library.** Measured 2026-08-22: the core answers in
- * 33 ms because it imports none, where a diffusion environment is 682 Mo on macOS, 693 on
- * Windows and **4,7 Go on Linux** — the last one being why an environment is fetched on first use
- * rather than shipped.
+ * This function fetches the interpreter alone. The packaging hook then adds the small, pinned
+ * Auto Rig profile to that interpreter; the much larger diffusion profiles remain downloaded on
+ * demand. Keeping the two steps separate leaves development startup on the bare core runtime.
  *
- * 🛑 And what is fetched on first use must be an archive THIS BUILD SIGNED. Measured the same
- * day: an environment resolved on the person's machine will not load under the hardened runtime,
- * because every Mach-O has to carry our signature or `dlopen` refuses it — "different Team IDs".
+ * Native dependencies prepared for a package must be materialized before signing. Measured on
+ * macOS: an environment resolved after installation will not load under the hardened runtime,
+ * because every Mach-O has to carry the application's signature.
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'

@@ -62,18 +62,21 @@
   },
   {
     "name": "ACE-Step 1.5 XL",
+    "version": "8f40447d21ee59ad4dcee6c99ce248027410bfec",
     "spdx": "MIT",
     "text": "ACE-Step 1.5 XL base, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the ACE-Step authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/ACE-Step/acestep-v15-xl-base-diffusers"
   },
   {
     "name": "ACE-Step 1.5 XL SFT",
+    "version": "4bf7b60a63b27144f539f980927eeb89f5f912b0",
     "spdx": "MIT",
     "text": "ACE-Step 1.5 XL, affine, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the ACE-Step authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/ACE-Step/acestep-v15-xl-sft-diffusers"
   },
   {
     "name": "ACE-Step 1.5 XL Turbo",
+    "version": "200ba991ae448051e14b0183157e35c2d27c9fb0",
     "spdx": "MIT",
     "text": "ACE-Step 1.5 XL turbo, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the ACE-Step authors.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/ACE-Step/acestep-v15-xl-turbo-diffusers"
@@ -127,12 +130,14 @@
   },
   {
     "name": "CogVideoX 2B",
+    "version": "1137dacfc2c9c012bed6a0793f4ecf2ca8e7ba01",
     "spdx": "Apache-2.0",
     "text": "CogVideoX 2B, 49 frames at 720x480, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the CogVideoX authors, Zhipu AI.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/zai-org/CogVideoX-2b"
   },
   {
     "name": "ControlNet Canny SDXL",
+    "version": "1271357eda52d54b857c650cacb5b51144643ccb",
     "spdx": "Apache-2.0",
     "text": "ControlNet Canny pour SDXL, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the xinsir authors. A control network run BESIDE a base model, never alone.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/xinsir/controlnet-canny-sdxl-1.0"
@@ -146,6 +151,7 @@
   },
   {
     "name": "CraftsMan3D",
+    "version": "df4ddf7544cc2e75c5d24cb8605d8e91f0fa4abc",
     "spdx": "CreativeML Open RAIL-M",
     "text": "Native 3D diffusion, one image to a smooth mesh. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the CraftsMan3D authors.\n\nTHE TERMS ARE THOSE OF THE BRANCH THE WEIGHTS BELONG TO, read on 2026-08-23. `main` says MIT\nand does not open these weights at all — it registers neither `pixart-diffusion-system` nor\n`cond-embedder`, the two names their config.yaml asks for. The branch that does, CraftsMan-v1.5,\nstates the Stable Diffusion 1.5 terms: CreativeML Open RAIL-M. Neither branch carries a\nLICENSE file; both state their terms in the README alone.\n\nWhat the studio ships is the inference code, which that licence calls Complementary Material\nand grants outright — its use-based restrictions bind the weights, which the person fetches\nfrom the publisher under the licence they accept there.\n\nTwo configs travel with it: openai/clip-vit-large-patch14, whose card states no licence, and\nfacebook/dinov2-base (Apache-2.0). Their tensors are never fetched — the checkpoint holds them.\n\nLicensed under CreativeML Open RAIL-M. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
     "sources": "https://huggingface.co/craftsman3d/craftsman"
@@ -165,6 +171,7 @@
   },
   {
     "name": "Diffusion360",
+    "version": "d20770f5ec0000a2aaa579a1209d11dc92ddb08a",
     "spdx": "Apache-2.0",
     "text": "Text to 360 panorama, 360-finetuned Stable Diffusion 1.5, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the Diffusion360 authors. The files fetched are the published sd-base pipeline\n(Apache-2.0). They include `.bin` tensors, the same reservation as Shap-E: torch has refused\nto unpickle by default since 2.6, and every file above is pinned to a digest.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/archerfmy0831/sd-t2i-360panoimage"
@@ -236,6 +243,7 @@
   },
   {
     "name": "GenEx World Initializer",
+    "version": "bdf9a02257c4c2728bcd90404d53687a9641e205",
     "spdx": "CC-BY-4.0",
     "text": "Image and prompt to 360 panorama, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under CC-BY-4.0. Full terms: https://creativecommons.org/licenses/by/4.0/",
     "sources": "https://huggingface.co/genex-world/World-Initializer-image-to-panorama"
@@ -329,12 +337,14 @@
   },
   {
     "name": "InstantMesh",
+    "version": "2da07e89919e1a130c9b5add1584c70c7aa065fd",
     "spdx": "Apache-2.0",
     "text": "Image to mesh in about 10 s, regular faces. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Tencent ARC Lab and the InstantMesh authors.\n\nTHE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. Apache-2.0 covers the two\nTencentARC files — the reconstruction checkpoint and the white-background unet. The other\nseventeen are sudo-ai/zero123plus-v1.2, whose repository card states no licence of its own.\n\nThe unet lands under `unet/`, where the six-view pipeline reads it: the studio fetches the\nbase unet of zero123plus not at all, rather than 3.4 GB it would overwrite on load.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/TencentARC/InstantMesh"
   },
   {
     "name": "IP-Adapter SDXL",
+    "version": "018e402774aeeddd60609b4ecdb7e298259dc729",
     "spdx": "Apache-2.0",
     "text": "IP-Adapter pour SDXL, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Tencent AI Lab. Adapter weights grafted onto a base model, never alone.\n\nOnly the SDXL set is fetched: the repository ships four adapters and two image encoders,\nfor two model families.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/h94/IP-Adapter"
@@ -360,14 +370,16 @@
   },
   {
     "name": "LGM",
+    "version": "73a034178e748421506492e91790cc62d6aefef5",
     "spdx": "MIT",
     "text": "Four views, then a 3D Gaussian cloud. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the LGM authors, and Ashawkey for the published weights.\n\nTHE DOWNLOAD CARRIES MORE THAN ONE ORIGIN, read on 2026-08-23. MIT covers the splatter\ncheckpoint alone; the four-view stage is ashawkey/imagedream-ipmv-diffusers, published under\nOpenRAIL, and it is fourteen of the fifteen files above.\n\nWhat LGM writes is a 3D Gaussian cloud, not a mesh: the step that turns one into the other\nis a rasterizer whose licence forbids commercial use, and it is not fetched or shipped.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/ashawkey/LGM"
   },
   {
     "name": "Make-It-Animatable",
+    "version": "eb12b71253361fd1a7216625a95144af3c58263e",
     "spdx": "Apache-2.0",
-    "text": "Advanced local humanoid Auto Rig with skeleton and skin weights, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe Hugging Face repository declares Apache-2.0 for these files. The provenance and\nredistribution rights of the training data and derived checkpoints remain unconfirmed;\nthe model is restricted and must not be enabled in a public release on that declaration alone.\n\nLicensed under Apache-2.0. Full terms: https://huggingface.co/jasongzy/Make-It-Animatable/blob/eb12b71253361fd1a7216625a95144af3c58263e/README.md",
+    "text": "Advanced local humanoid Auto Rig with skeleton and skin weights, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe Hugging Face repository declares Apache-2.0 for these files. The provenance and\nredistribution rights of the training data and derived checkpoints remain unconfirmed;\nthe catalogue therefore marks the model as restricted and shows that reservation before download.\n\nLicensed under Apache-2.0. Full terms: https://huggingface.co/jasongzy/Make-It-Animatable/blob/eb12b71253361fd1a7216625a95144af3c58263e/README.md",
     "sources": "https://huggingface.co/jasongzy/Make-It-Animatable"
   },
   {
@@ -408,24 +420,28 @@
   },
   {
     "name": "MMAudio Large",
+    "version": "eb13a1a98fdbec91753775c57b074ccdfc60587c",
     "spdx": "CC-BY-NC-4.0",
     "text": "MMAudio large, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.",
     "sources": "https://huggingface.co/hkchengrex/MMAudio"
   },
   {
     "name": "MMAudio Medium",
+    "version": "eb13a1a98fdbec91753775c57b074ccdfc60587c",
     "spdx": "CC-BY-NC-4.0",
     "text": "MMAudio medium, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.",
     "sources": "https://huggingface.co/hkchengrex/MMAudio"
   },
   {
     "name": "MMAudio Small",
+    "version": "eb13a1a98fdbec91753775c57b074ccdfc60587c",
     "spdx": "CC-BY-NC-4.0",
     "text": "MMAudio small, 44 kHz, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright the MMAudio authors.\n\nLicensed under CC-BY-NC-4.0. Full terms: https://creativecommons.org/licenses/by-nc/4.0/\n\nNON-COMMERCIAL ONLY. These weights may not be used in a commercial project.",
     "sources": "https://huggingface.co/hkchengrex/MMAudio"
   },
   {
     "name": "Mochi 1",
+    "version": "14be5fcea23095ed330cb214647916a451e38b6e",
     "spdx": "Apache-2.0",
     "text": "Mochi 1 preview, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Genmo.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/genmo/mochi-1-preview"
@@ -445,6 +461,7 @@
   },
   {
     "name": "MVDiffusion",
+    "version": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14",
     "spdx": "other",
     "text": "Text to 360 panorama via MultiDiffusion, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). MVDiffusion publishes a\nDropbox Lightning checkpoint this studio cannot open. Generation uses MultiDiffusion.\n\nLicensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
     "sources": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
@@ -491,6 +508,7 @@
   },
   {
     "name": "PanFusion",
+    "version": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14",
     "spdx": "other",
     "text": "Text to 360 panorama via MultiDiffusion, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). PanFusion publishes a\nLightning checkpoint this studio cannot open. Generation uses MultiDiffusion circular padding.\n\nLicensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
     "sources": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
@@ -550,12 +568,14 @@
   },
   {
     "name": "Qwen-Image",
+    "version": "75e0b4be04f60ec59a75f475837eced720f823b6",
     "spdx": "Apache-2.0",
     "text": "Qwen-Image, 20B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Qwen authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Qwen/Qwen-Image"
   },
   {
     "name": "Qwen-Image-Edit",
+    "version": "ac7f9318f633fc4b5778c59367c8128225f1e3de",
     "spdx": "Apache-2.0",
     "text": "Qwen-Image Edit, 20B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Qwen authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Qwen/Qwen-Image-Edit"
@@ -686,18 +706,21 @@
   },
   {
     "name": "SANA 1.5 1.6B",
+    "version": "b77948f2b4eed5c728e9b828ccff07f7427b43cc",
     "spdx": "Apache-2.0",
     "text": "SANA 1.5, 1.6B, 1024px, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Efficient-Large-Model/SANA1.5_1.6B_1024px_diffusers"
   },
   {
     "name": "Sana 1600M",
+    "version": "ac0da2ff55fbe434795be0dce883042e4d49e2fc",
     "spdx": "Apache-2.0",
     "text": "Sana 1600M, 1024px, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px_diffusers"
   },
   {
     "name": "Sana 600M",
+    "version": "28f3af7689de15f3883d5863059a2fca0aa9b829",
     "spdx": "Apache-2.0",
     "text": "Sana 600M 1024px, fp16, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright NVIDIA Corporation and the Sana authors.\n\nTHE DOWNLOAD CARRIES MORE THAN ONE LICENCE, measured on 2026-08-22. Its text encoder is a\nGemma 2 model: text_encoder/config.json names google/gemma-2-2b-it, and the 5.2 GB it\nweighs are governed by the Gemma Terms of Use rather than by Apache-2.0.\nFull terms: https://ai.google.dev/gemma/terms\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Efficient-Large-Model/Sana_600M_1024px_diffusers"
@@ -711,12 +734,14 @@
   },
   {
     "name": "Shap-E",
+    "version": "7bd337afdea1c17842e1c3cc45c4e268356dba40",
     "spdx": "MIT",
     "text": "Text to a coarse blob mesh. Prefer English CLIP prompts. Dated quality, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright OpenAI. Its text encoder is a CLIP model — text_encoder/config.json names\nopenai/clip-vit-large-patch14, whose repository card states no licence of its own.\n\nThis download carries `.bin` tensors, which the studio otherwise refuses: Shap-E publishes\nits renderer in that form alone. What still guards it: torch has refused to unpickle by\ndefault since 2.6, and every file above is pinned to a digest.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/openai/shap-e"
   },
   {
     "name": "Shap-E Image",
+    "version": "0e0aba80f08d368aaf6af9cb93583707481cc29b",
     "spdx": "MIT",
     "text": "Image to a coarse blob mesh. Same dated quality as text Shap-E, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright OpenAI. Same renderer, and the same `.bin` reservation as Shap-E above.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/openai/shap-e-img2img"
@@ -749,6 +774,7 @@
   },
   {
     "name": "SSD-1B",
+    "version": "60987f37e94cd59c36b1cba832b9f97b57395a10",
     "spdx": "Apache-2.0",
     "text": "Segmind Stable Diffusion 1B, fp16, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Segmind.\n\nIts components, read on 2026-08-22: two CLIP text encoders and a VAE, none of whose\nconfiguration names an upstream repository. SSD-1B is published by Segmind as a distillation\nof Stable Diffusion XL 1.0, whose own weights are released under CreativeML Open RAIL++-M.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/segmind/SSD-1B"
@@ -834,30 +860,35 @@
   },
   {
     "name": "TRELLIS Image",
+    "version": "25e0d31ffbebe4b5a97464dd851910efc3002d96",
     "spdx": "MIT",
     "text": "High-quality image to textured mesh. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/microsoft/TRELLIS-image-large"
   },
   {
     "name": "TRELLIS Text",
+    "version": "4aad9f4a110329a410974d7f41ce5333a9a1fc87",
     "spdx": "MIT",
     "text": "High-quality text to textured mesh. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/microsoft/TRELLIS-text-large"
   },
   {
     "name": "TRELLIS.2 4B",
+    "version": "af44b45f2e35a493886929c6d786e563ec68364d",
     "spdx": "MIT",
     "text": "Best open PBR mesh (colour, metal, roughness). NVIDIA CUDA, 24 GB, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Microsoft.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/microsoft/TRELLIS.2-4B"
   },
   {
     "name": "TripoSG",
+    "version": "2c1c516d22d58db486a058d98d31bb6177344e06",
     "spdx": "MIT",
     "text": "High-fidelity geometry from one image, 8 GB VRAM. NVIDIA CUDA, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright VAST AI Research and Tripo.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/VAST-AI/TripoSG"
   },
   {
     "name": "TripoSR",
+    "version": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
     "spdx": "MIT",
     "text": "Fastest open image-to-mesh. Vertex colours, ~6 GB. Best local pick on Apple Silicon, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Stability AI and Tripo AI.\n\nLicensed under MIT. Full terms: https://opensource.org/licenses/MIT",
     "sources": "https://huggingface.co/stabilityai/TripoSR"
@@ -884,6 +915,7 @@
   },
   {
     "name": "UniPano",
+    "version": "451f4fe16113bff5a5d2269ed5ad43b0592e9a14",
     "spdx": "other",
     "text": "Text to 360 panorama via MultiDiffusion, single-branch, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nThe files fetched are Stable Diffusion 1.5 (CreativeML Open RAIL-M). UniPano publishes no\nweights. Generation uses MultiDiffusion circular padding.\n\nLicensed under other. Full terms: https://huggingface.co/spaces/CompVis/stable-diffusion-license",
     "sources": "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5"
@@ -903,18 +935,21 @@
   },
   {
     "name": "Wan 2.1 I2V 14B",
+    "version": "b184e23a8a16b20f108f727c902e769e873ffc73",
     "spdx": "Apache-2.0",
     "text": "Wan 2.1 image vers video, 14B, 480p, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
   },
   {
     "name": "Wan 2.1 T2V 1.3B",
+    "version": "0fad780a534b6463e45facd96134c9f345acfa5b",
     "spdx": "Apache-2.0",
     "text": "Wan 2.1 text-to-video, 1.3B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors.\n\nIts UMT5 text encoder is 22.7 GB of the 28.9 this weighs — read on 2026-08-22.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
   },
   {
     "name": "Wan 2.2 TI2V 5B",
+    "version": "b8fff7315c768468a5333511427288870b2e9635",
     "spdx": "Apache-2.0",
     "text": "Wan 2.2, texte et image vers video, 5B, one of the models the studio generates with on this machine.\nIt is NOT shipped with the application: it is fetched on request into the user data folder,\nagainst a published digest, and removed from the model manager.\n\nCopyright Alibaba Group and the Wan authors.\n\nLicensed under Apache-2.0. Full terms: https://www.apache.org/licenses/LICENSE-2.0",
     "sources": "https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers"
