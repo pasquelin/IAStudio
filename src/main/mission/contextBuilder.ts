@@ -228,20 +228,27 @@ function visualContext(collected: CollectedContext, report: ContextBudgetReport)
 }
 
 function previousResults(input: AssistantContextRequest, report: ContextBudgetReport) {
-  return input.mission.plan.steps
-    .filter(
-      step => step.state === 'completed' && step.result !== undefined && step.id !== input.step.id,
-    )
-    .map(step => {
-      const result = compactContextValue(step.result, 600)
-      if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')
-      return { stepId: step.id, title: textWithin(step.title, 160), result: result.value }
-    })
-    .sort(
-      (left, right) =>
-        Number(input.step.dependsOn.includes(right.stepId)) -
-        Number(input.step.dependsOn.includes(left.stepId)),
-    )
+  return (
+    input.mission.plan.steps
+      // Every action that RAN, answer or not: a rename answers nothing, and left out of this list
+      // the next round was handed the bare goal as if nothing had happened.
+      .filter(
+        step =>
+          step.state === 'completed' &&
+          step.id !== input.step.id &&
+          (step.kind === 'action' || step.result !== undefined),
+      )
+      .map(step => {
+        const result = compactContextValue(step.result, 600)
+        if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')
+        return { stepId: step.id, title: textWithin(step.title, 160), result: result.value }
+      })
+      .sort(
+        (left, right) =>
+          Number(input.step.dependsOn.includes(right.stepId)) -
+          Number(input.step.dependsOn.includes(left.stepId)),
+      )
+  )
 }
 
 function relevantJobs(

@@ -17,7 +17,6 @@ import { createLocalBrain } from './assistant/brainLocal'
 import { createProviderBrain } from './assistant/brainProvider'
 import { machineFolders } from './assistant/machineFolders'
 import { providerLimits } from './assistant/providerLimits'
-import { actionSearchScope } from './actionIndex/actionSearchContext'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
 import { parseSnapshot } from './assistant/validation'
@@ -50,7 +49,7 @@ import type { LocalRuntimes } from './ai/localRuntimes'
 import type { AiManager } from './ai/manager'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { AssistantBrain } from './assistant/brainPort'
-import { foundActionsData, type ActionSearchService } from './actionIndex/actionSearchService'
+import { createActionFinder, type ActionSearchService } from './actionIndex/actionSearchService'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { orElse } from '@shared/promises'
 import { catalogOf } from './provider/modelCatalog'
@@ -93,16 +92,9 @@ export function createAssistantBrains(deps: AssistantDeps) {
   let snapshot = async (): Promise<StudioSnapshot | null> => null
   const remoteActions = createRemoteActions({
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
-    findActions: async query => ({
-      ok: true,
-      data: foundActionsData(
-        await deps.actionIndex.search(
-          query,
-          12,
-          undefined,
-          actionSearchScope(await snapshot(), query),
-        ),
-      ),
+    findActions: createActionFinder({
+      search: (...search) => deps.actionIndex.search(...search),
+      snapshot: () => snapshot(),
     }),
   })
   const visualCapture = createVisualCapturePort({

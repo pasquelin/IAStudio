@@ -317,8 +317,13 @@ export type AssistantThought = {
    * briefing a renderer can inflate. Unknown names are dropped rather than refused.
    */
   loaded?: readonly ActionName[]
-  /** ActionIndex candidates for a disposable mission turn. Absent on the legacy conversation. */
+  /** ActionIndex candidates whose MANUALS a mission turn opens. Absent on the legacy conversation. */
   candidates?: readonly ActionName[]
+  /**
+   * A mission turn: `context` is then the mission JSON, which the briefing labels and explains.
+   * Never read from the window — `parseThought` names no such field, so a renderer cannot set it.
+   */
+  mission?: boolean
 }
 
 /**
@@ -445,6 +450,13 @@ export type AssistantAnswer = {
    */
   ask?: AssistantAsk
   calls: readonly AssistantCall[]
+  /**
+   * 🛑 Nothing the model sent could be READ, after every attempt: neither a word, a question nor
+   * a call. Said here rather than left to be inferred from an empty `say` — a model that had
+   * nothing to add answers the same shape, and a mission that planned it as « done » closed
+   * « completed » with nothing done.
+   */
+  unreadable?: true
   /**
    * Which manuals the briefing held by the end of this turn — see `AssistantThought.loaded`.
    *

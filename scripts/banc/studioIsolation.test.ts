@@ -20,3 +20,18 @@ describe('isolation du studio du banc', () => {
     }
   })
 })
+
+describe('the window a headless run has not', () => {
+  it('survives the studio closing its own window', async () => {
+    const first = await createStudio(PROJECT)
+    window.close()
+    first.close()
+
+    const second = await createStudio(PROJECT)
+    try {
+      expect(second.documents()).toBeDefined()
+    } finally {
+      second.close()
+    }
+  })
+})

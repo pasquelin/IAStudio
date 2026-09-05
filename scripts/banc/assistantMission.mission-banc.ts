@@ -11,7 +11,7 @@ import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/
 import type { Run, Scenario } from './run'
 import { SCENARIOS } from './scenarios'
 import { playMission, type MissionRun } from './playMission'
-import { missionFailureClassOf, type MissionFailureClass } from './missionFailures'
+import { callKey, missionFailureClassOf, type MissionFailureClass } from './missionFailures'
 import {
   expectedMissionActions,
   missionFamilyCoverage,
@@ -56,7 +56,7 @@ type Result = {
 const failureClassOf = (scenario: Scenario, played: MissionRun): MissionFailureClass =>
   missionFailureClassOf({
     expected: expectedMissionActions(scenario),
-    candidates: new Set(played.candidates),
+    candidates: played.candidates,
     called: played.called,
     missionStates: played.missions.map(mission => mission.state),
   })
@@ -131,7 +131,7 @@ function resultPassed(scenario: Scenario, run: Run): boolean {
 function unnecessaryActions(_scenario: Scenario, run: Run): number {
   const seen = new Set<string>()
   return run.called.filter(call => {
-    const key = `${call.action}:${JSON.stringify(call.input)}`
+    const key = callKey(call)
     const unnecessary = call.answer?.startsWith('refused') === true || seen.has(key)
     seen.add(key)
     return unnecessary
@@ -185,9 +185,10 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
         addMetrics(result.metrics, played.metrics)
         if (resultPassed(scenario, played)) result.passed += 1
         else {
-          result.failures.push(failureClassOf(scenario, played))
+          const failure = failureClassOf(scenario, played)
+          result.failures.push(failure)
           failures.push(
-            `[${result.failures.at(-1)}] ${played.called.map(call => call.action).join(', ') || 'no action'} — ${played.said}`,
+            `[${failure}] ${played.called.map(call => call.action).join(', ') || 'no action'} — ${played.said}`,
           )
         }
       } finally {

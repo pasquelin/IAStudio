@@ -1,6 +1,5 @@
 import {
   ACTION_FAMILIES,
-  ACTION_REGISTRY,
   assistantAction,
   DISCOVERY_ACTION,
   type ActionField,
@@ -77,15 +76,6 @@ export const namesPrinted = (): string =>
   (namesHeld ??= ACTION_FAMILIES.map(
     family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
   ).join('\n'))
-
-/**
- * 🛑 Every name of the registry, and that is the point of showing names: a model may call anything
- * it can read. `parseReply` still refuses what the registry does not declare.
- */
-let allowedHeld: ReadonlySet<ActionName> | null = null
-
-export const allNames = (): ReadonlySet<ActionName> =>
-  (allowedHeld ??= new Set(ACTION_REGISTRY.map(action => action.name)))
 
 /**
  * The shape the answer has to take.
@@ -256,15 +246,12 @@ export const MEMORY_CALL = `  - This project has a memory: ${MEMORY_RECALL_ACTIO
  * the last, it never stops: answering with no calls is the ONLY way it says a request is done,
  * and nothing else in the briefing asks it to.
  */
-export const continuingText = (mission: boolean): string =>
-  [
-    'You are still working on the same request. What you have already done is in',
-    mission
-      ? 'previousResults of the Mission block, with what each action answered — build on it, and'
-      : 'the history above, with what each action answered — build on it, and',
-    'never redo a call that has answered. Answer with NO calls when the request is done. When you',
-    'need something only the person can tell you, that is what "ask" is for.',
-  ].join('\n')
+export const CONTINUING = [
+  'You are still working on the same request. What you have already done is above — the history,',
+  'or previousResults — with what each action answered: build on it, and never redo a call that',
+  'has answered. Answer with NO calls when the request is done. When you need something only the',
+  'person can tell you, that is what "ask" is for.',
+].join('\n')
 
 /**
  * 🛑 How to READ the mission JSON, which no schema travels with: `previousResults`, `verify` and
@@ -278,6 +265,10 @@ export const MISSION_RULES = [
   '    on it, never send a call that is already there.',
   '  - actions is a shortlist the studio picked for this step; their fields are in the Manual.',
   '    The Catalogue names every other action — name one and its fields come back next round.',
+  // 🛑 Handed the document's state in the JSON, the model answered « la scène contient 4
+  // éléments » with no call, three scenarios out of three (1.5, 1.6, 1.8 — 2026-09-06).
+  '  - The JSON is a summary. To tell the person what a document HOLDS, call its read',
+  '    (scene.state, sequence.state, files.list…) and answer from what it returned.',
 ]
 
 export const roleWith = (rules: readonly string[]): string =>

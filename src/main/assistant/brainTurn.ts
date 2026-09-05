@@ -190,7 +190,9 @@ const unloadedIn = (reply: Reply | null, loaded: readonly ActionName[]): readonl
 const answerOf = (read: Read, spentBefore: number, shown: Briefing): AssistantAnswer => {
   const cost = read.cost + spentBefore
   const opened = shown.opened.length > 0 ? { loaded: shown.opened } : {}
-  return read.reply ? { ...read.reply, ...opened, cost } : { say: '', calls: [], ...opened, cost }
+  return read.reply
+    ? { ...read.reply, ...opened, cost }
+    : { say: '', calls: [], unreadable: true, ...opened, cost }
 }
 
 /**

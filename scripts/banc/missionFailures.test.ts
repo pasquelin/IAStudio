@@ -27,18 +27,6 @@ describe('classifying a failed mission run', () => {
     ).toBe('expected-not-called')
   })
 
-  it('does not blame the retrieval for what the runtime does itself', () => {
-    expect(
-      missionFailureClassOf(
-        evidence({
-          expected: ['generator.submit', 'job.waitForCloudGeneration'],
-          candidates: new Set(['generator.submit']),
-          called: [{ action: 'generator.submit', input: {}, answer: 'ok {"jobId":"j"}' }],
-        }),
-      ),
-    ).toBe('oracle')
-  })
-
   it('reads the runtime state before the calls', () => {
     expect(missionFailureClassOf(evidence({ missionStates: ['failed'] }))).toBe('runtime-failed')
     expect(missionFailureClassOf(evidence({ missionStates: ['waiting_user'] }))).toBe(

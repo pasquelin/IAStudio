@@ -10,8 +10,7 @@ import type { Target } from '@shared/domain/target'
 import { linesWithin, STATE_MAX } from './studioState'
 import {
   actionBlock,
-  allNames,
-  continuingText,
+  CONTINUING,
   FORMAT,
   manualPrinted,
   manualText,
@@ -27,12 +26,9 @@ import {
 
 export { recentHistory } from './instructionCatalogue'
 export type BriefingParts = {
-  /**
-   * A mission round: `context` is then the mission JSON, and `MISSION_RULES` tells the model how
-   * to read it. The names are shown whole either way — the candidates only pick the MANUALS.
-   */
+  /** A mission round: `context` is the mission JSON, and `MISSION_RULES` says how to read it. */
   mission?: boolean
-  /** A round after the first on one sentence — see `continuingText`, which is what it adds. */
+  /** A round after the first on one sentence — see `CONTINUING`, which is what it adds. */
   continuing?: boolean
   /** The spaces nothing can generate in, so the model says so before promising a picture. */
   notReady?: readonly string[]
@@ -79,13 +75,12 @@ export type BriefingParts = {
 /**
  * What the model is shown, and what an answer is then held to.
  *
- * `allowed` is every name the registry declares — printed whole on every door, 4 225 characters
- * — while `loaded` is narrower: what the model has the FIELDS of. `answeredTurn` never executes
- * an action outside `loaded`; it opens its manual and asks for the plan again first.
+ * Every name the registry declares is printed on every door — 4 225 characters — and `parseReply`
+ * refuses the rest. `loaded` is narrower: what the model has the FIELDS of. `answeredTurn` never
+ * executes an action outside it; it opens its manual and asks for the plan again first.
  */
 export type Briefing = {
   readonly text: string
-  readonly allowed: ReadonlySet<ActionName>
   /** The manuals this briefing CARRIES, oldest first — what has fields, for `unloadedIn`. */
   readonly loaded: readonly ActionName[]
   /** Of those, the ones the CHAIN asked for: what travels back, never the default load. */
@@ -208,7 +203,7 @@ function composed(
     ...labelled(MANUAL_HEAD, manual),
     ...labelled('Targets in the open document:', targets.map(targetLine).join('\n')),
     ...plain(found),
-    ...plain(parts.continuing ? continuingText(parts.mission === true) : ''),
+    ...plain(parts.continuing ? CONTINUING : ''),
     FORMAT,
   ].join('\n')
 }
@@ -295,7 +290,6 @@ function briefingOf(one: Composition): Briefing {
   const opened = (one.parts.opened ?? asked).filter(name => held.has(name))
   return {
     text: written.text,
-    allowed: allNames(),
     loaded: written.held,
     opened,
     withLoaded: names => briefingOf(askedFor(one, names)),
@@ -386,7 +380,7 @@ export async function briefingFor(
       ? [...new Set([...request.candidates, ...(request.loaded ?? [])])]
       : withChainLast(request.loaded ?? []),
     opened: request.loaded ?? [],
-    mission: request.candidates !== undefined,
+    mission: request.mission === true,
     room,
     fallbackRoom,
   })

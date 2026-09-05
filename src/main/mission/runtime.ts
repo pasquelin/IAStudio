@@ -189,8 +189,14 @@ function dependsOnReturned(
   )
 }
 
+/**
+ * 🛑 A READ never ends a mission: asked to « verify » right after `files.search`, the model
+ * answered « the duplicate was created » about a duplicate nobody made — seven scenarios of the
+ * first thirty-five (2026-09-06). What engages nothing is followed by planning, never by a check.
+ */
 function nextStepAfter(call: AssistantCall | undefined): PlannedStep {
   const descriptor = call ? assistantAction(call.action) : null
+  if (descriptor?.commitment === 'none') return reasoningStep()
   const continues = [...(descriptor?.produces ?? []), ...(descriptor?.returns ?? [])].some(
     resource =>
       ACTION_REGISTRY.some(
@@ -229,8 +235,11 @@ function plannedFrom(
   return verificationPlanned && next.draft.kind === 'verify' ? actions : [...actions, next]
 }
 
-const unreadable = (answer: AssistantAnswer): boolean =>
-  answer.say.trim() === '' && answer.calls.length === 0 && answer.ask === undefined
+// Failed rather than planned as zero steps, which closed the mission « completed » with nothing done.
+const unreadableOutcome: MissionStepOutcome = {
+  kind: 'failed',
+  error: 'the model answered nothing readable',
+}
 
 function hasDependentVerification(mission: Mission, stepId: string): boolean {
   return mission.plan.steps.some(
@@ -322,9 +331,11 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         history: [],
         // 🛑 Without it the model is handed the bare goal after each action and does it again:
         // 6.1 wants ONE cube, and a second `node.add` on the "Continue mission" round killed it.
-        continuing: mission.plan.steps.some(step => step.state === 'completed'),
+        // Read off the block the sentence names, so flag and prose agree by construction.
+        continuing: context.previousResults.length > 0,
         context: serialized,
         candidates: context.actions.map(hit => hit.action.name),
+        mission: true,
         images: context.visual?.map(({ mimeType, bytes }) => ({ mimeType, bytes })),
       },
       searchActions
@@ -363,6 +374,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         signal,
         `Re-evaluate this action after the document changed: ${JSON.stringify(step.call)}`,
       )
+      if (answer.unreadable) return unreadableOutcome
       return {
         kind: 'planned',
         result: { say: answer.say, ask: answer.ask },
@@ -434,14 +446,10 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       step,
       signal,
       step.kind === 'verify'
-        ? `Verify whether this mission is complete from the current state: ${mission.goal}`
+        ? `Verify from the current state whether this is done, and plan the next calls if it is not: ${mission.goal}`
         : mission.goal,
     )
-    // 🛑 `parseReply` gave up: neither a word, a question nor a call. Planned as zero steps it
-    // closed the mission « completed » with nothing done — a failure nobody could read.
-    if (unreadable(answer)) {
-      return { kind: 'failed', error: 'the model answered nothing readable' }
-    }
+    if (answer.unreadable) return unreadableOutcome
     const steps = plannedFrom(
       answer,
       step.kind === 'verify',

@@ -19,7 +19,6 @@ describe('mission briefing', () => {
 
     for (const action of ACTION_REGISTRY) {
       expect(briefing.text.includes(action.name), action.name).toBe(true)
-      expect(briefing.allowed.has(action.name), action.name).toBe(true)
     }
     expect(briefing.text).toContain(manualOf('project.create'))
     expect(briefing.text).not.toContain(manualOf('git.checkout'))
@@ -28,7 +27,7 @@ describe('mission briefing', () => {
 
   it('tells the model how to read the mission JSON, and only on a mission', async () => {
     const mission = await briefingFor(
-      { utterance: 'create', history: [], context: '{"mission":{}}', candidates: [] },
+      { utterance: 'create', history: [], context: '{"mission":{}}', mission: true },
       200_000,
     )
     const conversation = await briefingFor(
@@ -42,14 +41,13 @@ describe('mission briefing', () => {
     expect(conversation.text).not.toContain('previousResults')
   })
 
-  it('points a continuing mission round at previousResults rather than the history', async () => {
+  it('tells a continuing round to build on what already ran', async () => {
     const briefing = await briefingFor(
-      { utterance: 'create', history: [], continuing: true, candidates: [] },
+      { utterance: 'create', history: [], continuing: true, mission: true },
       200_000,
     )
 
-    expect(briefing.text).toContain('previousResults of the Mission block')
-    expect(briefing.text).toContain('never redo a call that has answered')
+    expect(briefing.text).toContain('never redo a call that')
   })
 
   it('opens what a discovery query finds', async () => {

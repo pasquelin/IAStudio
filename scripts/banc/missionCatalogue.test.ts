@@ -3,6 +3,7 @@ import { ACTION_FAMILIES } from '@shared/domain/assistant'
 import { SCENARIOS } from './scenarios'
 import {
   BASELINE_MISSION_SCENARIOS,
+  expectedMissionActions,
   missionFamilyCoverage,
   missionScenarios,
   scenarioFamilies,
@@ -45,5 +46,15 @@ describe('mission runtime bench catalogue', () => {
 
     expect(matrix.map(entry => entry.family)).toEqual(ACTION_FAMILIES.map(family => family.name))
     expect(matrix.every(entry => entry.ready === entry.scenarios && entry.missing === 0)).toBe(true)
+  })
+})
+
+describe('what a mission expects of the model', () => {
+  it('leaves out the job wait the runtime performs itself', () => {
+    const generates = SCENARIOS.find(scenario => scenario.name.startsWith('20.1 '))
+    if (!generates) throw new Error('20.1 is missing')
+
+    expect(expectedMissionActions(generates)).toContain('generator.submit')
+    expect(expectedMissionActions(generates)).not.toContain('job.waitForCloudGeneration')
   })
 })

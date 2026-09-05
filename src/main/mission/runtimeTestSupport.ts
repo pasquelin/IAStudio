@@ -1,9 +1,15 @@
+import { vi } from 'vitest'
 import type { AssistantAnswer, AssistantThought } from '@shared/domain/assistant'
 import type { Mission, MissionClock } from '@shared/domain/mission'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import type { AssistantBrain } from '@main/assistant/brainPort'
 import type { AssistantContext } from './context'
 import { emptyBudgetReport } from './contextBudget'
+import { createStudioEventBus } from './eventBus'
+import type { MissionJournal } from './journal'
+import { createMissionManager, type MissionManager } from './manager'
+import { createMissionRuntime, type MissionRuntime } from './runtime'
+import { createMissionStore } from './store'
 
 export function missionTestClock(): MissionClock {
   let id = 0
@@ -42,9 +48,31 @@ export const missionTestContext = (mission: Mission): AssistantContext => {
     ],
     memories: [],
     jobs: [],
-    previousResults: [],
+    previousResults: mission.plan.steps
+      .filter(step => step.kind === 'action' && step.state === 'completed')
+      .map(step => ({ stepId: step.id, title: step.title, result: step.result })),
     budget: emptyBudgetReport(),
   }
+}
+
+export function missionTestRuntime(
+  brain: AssistantBrain,
+  over: Partial<Parameters<typeof createMissionRuntime>[0]> = {},
+): { runtime: MissionRuntime; manager: MissionManager } {
+  const time = missionTestClock()
+  const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+  const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+  const runtime = createMissionRuntime({
+    manager,
+    context: { build: async ({ mission }) => missionTestContext(mission) },
+    brain,
+    actions: { run: async () => ({ ok: true }), settle: vi.fn() },
+    jobs: { list: () => [] },
+    revisions: { read: async () => ({ current: [], unavailable: [] }) },
+    clock: time,
+    ...over,
+  })
+  return { runtime, manager }
 }
 
 export function missionTestBrain(

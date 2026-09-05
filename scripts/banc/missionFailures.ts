@@ -17,7 +17,7 @@ export type MissionFailureClass =
   | 'oracle'
 
 export type MissionFailureEvidence = {
-  /** What `coverage.ts` says the scenario exercises. */
+  /** What `expectedMissionActions` says the scenario exercises of the MODEL. */
   expected: readonly ActionName[]
   /** Every candidate any reflection of the run showed the model. */
   candidates: ReadonlySet<ActionName>
@@ -25,22 +25,15 @@ export type MissionFailureEvidence = {
   missionStates: readonly MissionState[]
 }
 
-const callKey = (call: Called): string => `${call.action}:${JSON.stringify(call.input)}`
-
-/**
- * 🛑 What `coverage.ts` expects of the LEGACY chain and the runtime does by itself: a `jobId`
- * answered by an action becomes a `job` step, so the wait is never a call the model makes.
- */
-const RUNTIME_HANDLED: ReadonlySet<ActionName> = new Set(['job.waitForCloudGeneration'])
+/** One call as the runtime repeats it: the same action on the same arguments. */
+export const callKey = (call: Called): string => `${call.action}:${JSON.stringify(call.input)}`
 
 export function missionFailureClassOf(evidence: MissionFailureEvidence): MissionFailureClass {
   if (evidence.missionStates.includes('failed')) return 'runtime-failed'
   if (evidence.missionStates.includes('waiting_user')) return 'question-asked'
   if (evidence.called.length === 0) return 'no-call'
   const called = new Set(evidence.called.map(call => call.action))
-  const uncalled = evidence.expected.filter(
-    action => !called.has(action) && !RUNTIME_HANDLED.has(action),
-  )
+  const uncalled = evidence.expected.filter(action => !called.has(action))
   if (uncalled.some(action => !evidence.candidates.has(action))) {
     return 'expected-outside-candidates'
   }

@@ -2,22 +2,41 @@ import { join } from 'node:path'
 import { chunk } from '@shared/collections'
 import { messageOf } from '@shared/guards'
 import { englishText } from '@shared/i18n'
+import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
+import { actionSearchScope } from './actionSearchContext'
 import type { Embedder } from '@main/memory/embedder'
 import { actionCorpus } from './actionCorpus'
-import type { ActionResource } from '@shared/domain/assistant'
+import type { ActionOutcome, ActionResource } from '@shared/domain/assistant'
 import type { ActionEmbedding, ActionHit, ActionRanking, ActionSearchScope } from './actionIndex'
 import type { AsyncActionIndex } from './actionIndexClient'
 import { openActionIndexThread } from './actionIndexThread'
 
 const EMBED_BATCH = 32
 
-/** What `actions.find` answers the model: the hits with their fields, labels in English. */
-export const foundActionsData = (hits: readonly ActionHit[]) =>
-  hits.map(hit => ({
-    name: hit.action.name,
-    description: hit.action.description,
-    fields: hit.action.fields.map(field => ({ ...field, label: englishText(field.labelKey) })),
-  }))
+const FOUND_LIMIT = 12
+
+/**
+ * What `actions.find` answers the model — the hits with their fields, labels in English — built
+ * ONCE for the product and the bench: written twice, the two measured different search engines.
+ */
+export function createActionFinder(deps: {
+  search: ActionSearchService['search']
+  snapshot: () => Promise<StudioSnapshot | null>
+}): (query: unknown) => Promise<ActionOutcome> {
+  return async query => {
+    if (typeof query !== 'string') return { ok: false, refusal: 'badInput' }
+    const scope = actionSearchScope(await deps.snapshot(), query)
+    const hits = await deps.search(query, FOUND_LIMIT, undefined, scope)
+    return {
+      ok: true,
+      data: hits.map(hit => ({
+        name: hit.action.name,
+        description: hit.action.description,
+        fields: hit.action.fields.map(field => ({ ...field, label: englishText(field.labelKey) })),
+      })),
+    }
+  }
+}
 
 export type ActionSearchService = {
   search: (

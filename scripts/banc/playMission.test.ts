@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
+import type { ActionHit } from '@main/actionIndex/actionIndex'
 import type { AssistantBrain } from '@main/assistant/brainPort'
 import type { AssistantAnswer, AssistantThought } from '@shared/domain/assistant'
 import { isRecord } from '@shared/guards'
@@ -221,16 +222,15 @@ describe('ce que le harnais mission envoie et répond, comme le produit', () => 
   it("route actions.find vers l'index plutôt que vers la fenêtre", async () => {
     const action = actionCorpus().actions.find(candidate => candidate.name === 'git.init')
     if (!action) throw new Error('git.init est absente du registre')
-    const search = vi.fn(async (_query: string) => [
-      {
-        action,
-        score: 1,
-        lexicalScore: 1,
-        relevanceScore: 1,
-        applicabilityScore: 0,
-        documentAffinity: 'transversal' as const,
-      },
-    ])
+    const hit: ActionHit = {
+      action,
+      score: 1,
+      lexicalScore: 1,
+      relevanceScore: 1,
+      applicabilityScore: 0,
+      documentAffinity: 'transversal',
+    }
+    const search = vi.fn(async (_query: string) => [hit])
     let round = 0
     const played = await playMission(
       { name: 'cherche', said: ['Mets le projet sous suivi de versions.'], passed: () => true },

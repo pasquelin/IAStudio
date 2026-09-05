@@ -210,7 +210,7 @@ describe('thinking', () => {
 
     const outcome = await brain.think({ utterance: 'open a 3D file', history: [] })
 
-    expect(outcome).toEqual({ say: '', calls: [], cost: 1.5 })
+    expect(outcome).toEqual({ say: '', calls: [], unreadable: true, cost: 1.5 })
   })
 
   // A job that failed was still paid for, and the total the modal shows has to say so.
