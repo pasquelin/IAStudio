@@ -21,6 +21,7 @@ export const EVENTS = {
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
   assistantAction: 'evt:assistant-action',
+  assistantVisualCapture: 'evt:assistant-visual-capture',
   assistantStream: 'evt:assistant-stream',
   dictation: 'evt:dictation',
   ai: 'evt:ai',
@@ -52,6 +53,8 @@ export const EVENTS = {
   updateState: 'evt:update-state',
   gameWindowClosed: 'evt:game-window-closed',
   activity: 'evt:activity',
+  missionChanged: 'evt:mission-changed',
+  missionEvent: 'evt:mission-event',
 }
 
 export type Unsubscribe = () => void
@@ -103,6 +106,9 @@ export type SceneCaptureCommand = { quality: CaptureQuality }
 export type AssistantActionRequest = { callId: string; call: AssistantCall }
 
 export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
+
+export type AssistantVisualCaptureRequest = { callId: string; documentId: string }
+export type AssistantVisualCaptureResult = { callId: string; png: Uint8Array | null }
 
 /** What the native menu asks of the texture in front: which engine it is being handed to. */
 export type MaterialExportCommand = { target: MaterialExportTarget }

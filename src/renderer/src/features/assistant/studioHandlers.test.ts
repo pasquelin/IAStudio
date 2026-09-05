@@ -51,12 +51,14 @@ describe('what keeps a model from guessing', () => {
     expect(outcome.ok && outcome.data).toMatchObject({ scene: DOCUMENT })
   })
 
-  it('names the topics it can document, then documents one', async () => {
+  it('names its topics and resolves their canonical and displayed names', async () => {
     const listed = await runAction('studio.docs', {})
-    const held = await runAction('studio.docs', { topic: 'Health' })
 
     expect(listed.ok && (listed.data as { topics: string[] }).topics).toContain('Health')
-    expect(held.ok && held.data).toMatchObject({ topic: 'Health' })
+    for (const topic of ['Health', 'health', 'Santé', 'sante', 'composant Santé']) {
+      const held = await runAction('studio.docs', { topic })
+      expect(held.ok && held.data).toMatchObject({ topic: 'Health' })
+    }
   })
 
   /** The SAME text the editor types against — a second telling is the one that would drift. */
@@ -64,6 +66,13 @@ describe('what keeps a model from guessing', () => {
     const outcome = await runAction('studio.docs', { topic: 'script' })
 
     expect(outcome.ok && String((outcome.data as { docs: string }).docs)).toContain('defineScript')
+  })
+
+  it('refuses a folded topic shared by a component and the script surface', async () => {
+    expect(await runAction('studio.docs', { topic: 'SCRIPT' })).toMatchObject({
+      ok: false,
+      refusal: 'badInput',
+    })
   })
 
   it('refuses a topic nothing documents, and says how to find the list', async () => {

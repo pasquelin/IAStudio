@@ -187,7 +187,7 @@ export const SCENE_ASSET_SCENARIOS: readonly Scenario[] = [
       await studio.run('key.writePoseKeys', { nodeId: named(studio, 'Cube Test'), timeSeconds: 0 })
     },
     passed: run => {
-      const back = read.keys(run).find(one => read.near(one.time, 10))
+      const back = read.keys(run).find(one => read.lasts(one.time, 10))
       return back !== undefined && read.near(back.value.y, 0, 0.01)
     },
   },

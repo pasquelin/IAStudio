@@ -10,6 +10,8 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
 import type { LogEntry, StudioBridge, TraceEntry } from '@shared/ipc'
 import { EMPTY_AI_OVERVIEW } from './fakeAiOverview'
+import { fakeBridgeMissions } from './fakeBridgeMissions'
+import { fakeBridgeUpdates } from './fakeBridgeUpdates'
 const noSubscription = (): (() => void) => () => {}
 const nothingMoved = (): Promise<FileOutcome> =>
   Promise.resolve({ done: [], refused: [], batch: 'batch-fake' })
@@ -307,7 +309,9 @@ const fakeAssistant = (overrides: BridgeOverrides): StudioBridge['assistant'] =>
   stop: () => Promise.resolve(),
   onAction: noSubscription,
   onStream: noSubscription,
+  onVisualCapture: noSubscription,
   actionResult: () => Promise.resolve(),
+  visualCaptureResult: () => Promise.resolve(),
   note: () => Promise.resolve(),
   said: () => Promise.resolve(null),
   window: () => Promise.resolve(null),
@@ -429,12 +433,6 @@ const fakeNews = (overrides: BridgeOverrides): StudioBridge['news'] => ({
   ...overrides.news,
 })
 
-const fakeUpdates = (overrides: BridgeOverrides): StudioBridge['updates'] => ({
-  state: () => Promise.resolve({ phase: 'idle' }),
-  install: () => Promise.resolve(),
-  onState: noSubscription,
-  ...overrides.updates,
-})
 export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge {
   const bridge: StudioBridge = {
     settings: fakeSettings(overrides),
@@ -463,6 +461,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     animations: fakeAnimations(overrides),
     media: fakeMedia(overrides),
     assistant: fakeAssistant(overrides),
+    missions: fakeBridgeMissions(overrides.missions),
     ai: fakeAi(overrides),
     autoRig: { run: () => Promise.reject(new Error('no Auto Rig backend')), ...overrides.autoRig },
     dictation: fakeDictation(overrides),
@@ -477,7 +476,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     menu: fakeMenu(overrides),
     externalFiles: fakeExternalFiles(overrides),
     news: fakeNews(overrides),
-    updates: fakeUpdates(overrides),
+    updates: fakeBridgeUpdates(overrides.updates),
   }
   vi.stubGlobal('studio', bridge)
   return bridge

@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import type { ActionName } from '@shared/domain/assistant'
 import { describeStudio } from '@main/assistant/studioState'
+import { parseSnapshot } from '@main/assistant/validation'
 import { runAction, runConfirmedAction } from '@/features/assistant/executor'
 import { forgetDocumentHistoriesForTests } from '@/stores/documentStore'
 import { frontDocumentIn, useDocuments } from '@/stores/documents'
@@ -62,6 +63,12 @@ export function studioFacade(
       const read = await runAction('studio.state', {})
       return read.ok ? describeStudio(read.data) : ''
     },
+    snapshot: async () => {
+      const read = await runAction('studio.state', {})
+      const snapshot = read.ok ? parseSnapshot(read.data) : null
+      if (!snapshot) throw new Error('studio.state did not return a snapshot')
+      return snapshot
+    },
     documents: () => Object.values(useDocuments.getState().documents),
     front: () => {
       const { activeId, documents } = useDocuments.getState()
@@ -84,6 +91,7 @@ export function studioFacade(
     changed: () => unsavedDocumentIds().some(one => !runtime.settled.has(one)) || ops.can().undo,
     refusals: () => runtime.refusals,
     memories: memory.held,
+    projectContext: () => shell.context(),
     playing: async () => {
       for (let tries = 0; tries < 200; tries++) {
         if (studio.playState() !== 'edit') return true

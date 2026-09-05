@@ -73,10 +73,18 @@ export const manualText = (manuals: readonly Manual[]): string =>
  */
 let namesHeld: string | null = null
 
-export const namesPrinted = (): string =>
-  (namesHeld ??= ACTION_FAMILIES.map(
-    family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
-  ).join('\n'))
+export const namesPrinted = (only?: readonly ActionName[]): string => {
+  if (!only) {
+    return (namesHeld ??= ACTION_FAMILIES.map(
+      family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
+    ).join('\n'))
+  }
+  const wanted = new Set(only)
+  return ACTION_FAMILIES.flatMap(family => {
+    const names = family.actions.map(action => action.name).filter(name => wanted.has(name))
+    return names.length > 0 ? [`  [${family.name}] ${names.join(', ')}`] : []
+  }).join('\n')
+}
 
 /**
  * 🛑 Every name of the registry, and that is the point of showing names: a model may call anything
@@ -171,7 +179,8 @@ export const WIDE_RULES = [
   // Six runs, none able to answer: asked to rename « la copie », it searched for the NEW name.
   '  - Renaming: the new name is not on disk yet. Find the file by what it is called NOW.',
   '  - Every value is literal. Never write <something> where an id goes: if you do not have it,',
-  '    call for it and use what came back on the next round.',
+  '    discover it with an action and use what came back on the next round. Never ask the person',
+  '    to supply an application id, model name or path that an action can discover.',
   '  - The remote library is not this project. Look there only when asked to.',
   // Five requests died on it: the decor had just generated a picture, and the model answered
   // « je ne vois aucune image générée » — nothing in the studio block says one was made.

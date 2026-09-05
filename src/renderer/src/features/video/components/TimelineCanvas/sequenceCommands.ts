@@ -26,7 +26,7 @@ export function shownSequence(documentId: string, sequence: SequenceState): Sequ
 export function seekTo(documentId: string, time: number): void {
   const store = useSequences.getState()
   const state = sequenceOf(store, documentId)
-  store.replace(documentId, { ...state, playhead: clamp(time, 0, sequenceDuration(state)) })
+  store.replaceView(documentId, { ...state, playhead: clamp(time, 0, sequenceDuration(state)) })
 }
 
 type SequenceCommand = (

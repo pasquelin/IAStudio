@@ -18,10 +18,12 @@ import { machineFolders } from './assistant/machineFolders'
 import { providerLimits } from './assistant/providerLimits'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
+import { parseSnapshot } from './assistant/validation'
 import { bundledFile } from './bundledFile'
 import { createFavorites } from './favorites/store'
 import { sendTo } from './ipc/broadcast'
 import { createRemoteActions } from './mcp/asking'
+import { createVisualCapturePort } from './mission/visualCapture'
 import { renderThumbnail } from './media/renderThumbnail'
 import { createThumbnailCache } from './project/thumbnailCache'
 import { orWhenGone, type ProjectStore } from './project/store'
@@ -46,6 +48,8 @@ import type { LocalRuntimes } from './ai/localRuntimes'
 import type { AiManager } from './ai/manager'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { AssistantBrain } from './assistant/brainPort'
+import type { ActionSearchService } from './actionIndex/actionSearchService'
+import { englishText } from '@shared/i18n'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { orElse } from '@shared/promises'
 import { catalogOf } from './provider/modelCatalog'
@@ -60,6 +64,7 @@ type AssistantDeps = {
   project: ProjectStore
   context: ProjectContextStore
   memoryVectors: MemoryVectors
+  actionIndex: ActionSearchService
   runtimes: LocalRuntimes
   ai: AiManager
   modelOf: (id: string) => LocalModel | null
@@ -86,7 +91,26 @@ export function createAssistantBrains(deps: AssistantDeps) {
   })
   const remoteActions = createRemoteActions({
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
+    findActions: async query => ({
+      ok: true,
+      data: (await deps.actionIndex.search(query, 12)).map(hit => ({
+        name: hit.action.name,
+        description: hit.action.description,
+        fields: hit.action.fields.map(field => ({
+          ...field,
+          label: englishText(field.labelKey),
+        })),
+      })),
+    }),
   })
+  const visualCapture = createVisualCapturePort({
+    send: request => sendTo(studioWindow(), EVENTS.assistantVisualCapture, request),
+    now: () => new Date().toISOString(),
+  })
+  const snapshot = async () => {
+    const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
+    return outcome.ok ? parseSnapshot(outcome.data) : null
+  }
   const brain = createRoutedBrain({
     providerOf: () => deps.ai.providerOf(ASSISTANT_ROLE),
     modelOf: deps.modelOf,
@@ -104,8 +128,8 @@ export function createAssistantBrains(deps: AssistantDeps) {
     cloudBrain: id => deps.clouds[id]?.brain() ?? null,
     contextOf: async () => composedContext((await deps.context.read()).cards),
     stateOf: async () => {
-      const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
-      return outcome.ok ? describeStudio(outcome.data) : ''
+      const current = await snapshot()
+      return current ? describeStudio(current) : ''
     },
     memoriesOf: () => deps.memoryVectors.held('project'),
     foldersOf: () => {
@@ -116,7 +140,7 @@ export function createAssistantBrains(deps: AssistantDeps) {
       )
     },
   })
-  return { providerBrain, remoteActions, brain }
+  return { providerBrain, remoteActions, visualCapture, brain, snapshot }
 }
 
 export function createAssistantPresentation(deps: AssistantDeps) {

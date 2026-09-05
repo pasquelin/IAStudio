@@ -116,6 +116,7 @@ export function createHttpChatBrain({
           chat: asked,
           key: held.key,
           messages,
+          images: request.images,
           json: true,
           maxTokens: ASK_TOKENS,
           ...defined({ signal: watch.signal, onProgress: watch.onProgress }),
@@ -131,6 +132,12 @@ export function createHttpChatBrain({
   }
 
   return {
+    capabilities: async () => ({
+      streaming: true,
+      structuredJson: true,
+      multimodalImages: chat.multimodalImages === true && model() === chat.model,
+      maxOutputTokens: ASK_TOKENS,
+    }),
     // 🛑 None, and INVENTING one is the defect this says no to: neither figure below is a window,
     // both are briefing budgets, and one worn as a window is the `2 067 / 4 096` shown for
     // DeepSeek. No chat cloud here publishes its window over the API, so there is nothing to read.
@@ -155,6 +162,7 @@ export function createHttpChatBrain({
         (shown, complaint) => round(request, shown, watch, complaint),
         watch.onProgress,
         notesFor(cloud, model(), watch),
+        watch.discover,
       )
     },
   }

@@ -23,6 +23,8 @@ describe('the node every family that points at one names', () => {
       kind: 'text',
       labelKey: 'assistant.fields.nodeId',
       required: true,
+      picks: 'node',
+      reference: 'node',
     })
   })
 })
@@ -85,10 +87,16 @@ describe('an input, checked against the fields that declare it', () => {
   })
 
   it('holds a closed field to the values it closes over', () => {
-    const fields = [field({ key: 'axis', kind: 'choice', options: ['x', 'y'] })]
+    const text = [field({ key: 'axis', kind: 'choice', options: ['x', 'y'] })]
+    const number = [field({ key: 'days', kind: 'choice', options: [7, 31, 120] })]
+    const boolean = [field({ key: 'enabled', kind: 'choice', options: [true] })]
 
-    expect(validatesInput(fields, { axis: 'x' })).toBe(true)
-    expect(validatesInput(fields, { axis: 'z' })).toBe(false)
+    expect(validatesInput(text, { axis: 'x' })).toBe(true)
+    expect(validatesInput(text, { axis: 'z' })).toBe(false)
+    expect(validatesInput(number, { days: 31 })).toBe(true)
+    expect(validatesInput(number, { days: '31' })).toBe(false)
+    expect(validatesInput(boolean, { enabled: true })).toBe(true)
+    expect(validatesInput(boolean, { enabled: false })).toBe(false)
   })
 
   it('holds a bounded number to its bounds', () => {

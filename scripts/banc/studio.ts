@@ -21,6 +21,7 @@ import { lendPictureMeasure } from '@/features/image/pictureSize'
 import { resetDocumentStoresForTests } from '@/stores/documentStore'
 import { useAssistant } from '@/stores/assistant'
 import { useJobs } from '@/stores/jobs'
+import { useModels } from '@/stores/models'
 import { noContext } from '@shared/domain/projectContext'
 import { useProjectContext } from '@/stores/projectContext'
 import { useTasks } from '@/stores/tasks'
@@ -188,6 +189,7 @@ async function resetBench(shell: MemoryShell): Promise<void> {
   resetDocumentStoresForTests()
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
   useJobs.setState({ jobs: [], bodies: {} })
+  useModels.setState({ selected: {}, preset: {} })
   useTasks.setState({ running: {} })
   useProjectContext.setState({ context: noContext(), loaded: true })
   useSettings.setState({ settings: DEFAULT_SETTINGS })

@@ -297,6 +297,36 @@ describe('choosing and preparing a model', () => {
       data: [{ id: 'model_z', name: 'Knight', family: '3d' }],
     })
   })
+
+  it('falls back to compatible models when content words match no engine name', async () => {
+    const searchModels = vi.fn(query =>
+      Promise.resolve({
+        items: query.search ? [] : [aModel('model_z', 'Knight')],
+        cursor: null,
+      }),
+    )
+    installFakeBridge({ provider: { searchModels } })
+
+    const outcome = await runAction('models.search', {
+      query: 'wooden chest',
+      family: '3d',
+      operation: 'txt23d',
+    })
+
+    expect(outcome).toEqual({
+      ok: true,
+      data: [{ id: 'model_z', name: 'Knight', family: '3d' }],
+    })
+    expect(searchModels).toHaveBeenNthCalledWith(1, {
+      family: '3d',
+      capabilities: ['txt23d'],
+      search: 'wooden chest',
+    })
+    expect(searchModels).toHaveBeenNthCalledWith(2, {
+      family: '3d',
+      capabilities: ['txt23d'],
+    })
+  })
 })
 
 describe('submitting what was prepared', () => {

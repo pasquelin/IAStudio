@@ -48,6 +48,7 @@ import { registerPlayerModuleWindow } from '@main/window/playerModuleWindow'
 import { registerMirrorWindow } from '@main/window/mirror'
 import { registerNewDocumentWindow } from '@main/window/newDocument'
 import { registerExternalFileHandlers } from '@main/externalFiles'
+import { registerMissionHandlers } from '@main/mission/handlers'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
 
@@ -93,11 +94,13 @@ function registerCreativeIpc(
   services: Services,
   running: ReturnType<typeof createRunningTasks>,
 ): void {
+  registerMissionHandlers(services.missions, services.missionRuntime, services.studioEvents)
   registerStyleHandlers(services.styles)
   registerMediaHandlers({ ...services, running })
   registerAssistantHandlers({
     brain: services.assistant,
     settleAction: services.remoteActions.settle,
+    settleVisualCapture: services.visualCapture.settle,
     running,
     journal: () => services.journal,
     transcribe: services.transcribe,

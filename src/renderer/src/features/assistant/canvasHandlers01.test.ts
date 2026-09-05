@@ -40,7 +40,9 @@ beforeEach(() => {
  */
 describe('what the registry offers a layer', () => {
   const optionsOf = (name: ActionName, key: string): string[] =>
-    [...(assistantAction(name)?.fields.find(field => field.key === key)?.options ?? [])].sort()
+    [...(assistantAction(name)?.fields.find(field => field.key === key)?.options ?? [])]
+      .flatMap(option => (typeof option === 'string' ? [option] : []))
+      .sort()
 
   it('is exactly what the engine declares', () => {
     expect(optionsOf('layer.setOpacityBlendAndVisibility', 'blend')).toEqual(

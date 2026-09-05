@@ -33,6 +33,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { intents: ['search', 'read'] },
     fields: [
       { key: 'query', kind: 'text', labelKey: 'assistant.fields.memoryQuery', required: true },
       {
@@ -52,6 +53,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { intents: ['read'] },
     fields: [
       { key: 'memoryId', kind: 'text', labelKey: 'assistant.fields.memoryId', required: true },
     ],
@@ -68,6 +70,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { intents: ['remember'] },
     fields: [
       {
         key: 'type',
@@ -108,6 +111,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { intents: ['delete'] },
     fields: [
       { key: 'memoryId', kind: 'text', labelKey: 'assistant.fields.memoryId', required: true },
     ],
@@ -119,6 +123,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { intents: ['mutate'] },
     fields: [
       { key: 'memoryId', kind: 'text', labelKey: 'assistant.fields.memoryId', required: true },
       { key: 'toMemoryId', kind: 'text', labelKey: 'assistant.fields.memoryTo', required: true },

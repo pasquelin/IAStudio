@@ -8,6 +8,9 @@ import type { CHANNELS, StudioBridge } from '@shared/ipc'
  * window state — failing only at runtime, inside a component.
  */
 type ChannelMethod = {
+  [CHANNELS.missionsWatch]: StudioBridge['missions']['watch']
+  [CHANNELS.missionsCreate]: StudioBridge['missions']['create']
+  [CHANNELS.missionsResume]: StudioBridge['missions']['resume']
   [CHANNELS.settingsRead]: StudioBridge['settings']['read']
   [CHANNELS.settingsWrite]: StudioBridge['settings']['write']
   [CHANNELS.settingsAuthState]: StudioBridge['settings']['authState']
@@ -199,6 +202,7 @@ type ChannelMethod = {
   [CHANNELS.assistantThink]: StudioBridge['assistant']['think']
   [CHANNELS.assistantStop]: StudioBridge['assistant']['stop']
   [CHANNELS.assistantActionResult]: StudioBridge['assistant']['actionResult']
+  [CHANNELS.assistantVisualCaptureResult]: StudioBridge['assistant']['visualCaptureResult']
   [CHANNELS.assistantNote]: StudioBridge['assistant']['note']
   [CHANNELS.assistantSaid]: StudioBridge['assistant']['said']
   [CHANNELS.assistantWindow]: StudioBridge['assistant']['window']

@@ -18,6 +18,9 @@ import type { Language } from '@shared/i18n/languages'
 import type { UpdateState } from '@shared/domain/update'
 import type { WindowState } from '@shared/domain/window'
 import type { AssistantProgress } from '@shared/domain/assistant'
+import type { Mission } from '@shared/domain/mission'
+import type { StudioEvent } from '@shared/domain/studioEvent'
+import type { AssistantVisualCaptureRequest, AssistantVisualCaptureResult } from '@shared/ipcEvents'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import {
   CHANNELS,
@@ -297,11 +300,22 @@ const bridge: StudioBridge = {
     think: request => ipcRenderer.invoke(CHANNELS.assistantThink, request),
     stop: () => ipcRenderer.invoke(CHANNELS.assistantStop),
     onAction: callback => subscribe<AssistantActionRequest>(EVENTS.assistantAction, callback),
+    onVisualCapture: callback =>
+      subscribe<AssistantVisualCaptureRequest>(EVENTS.assistantVisualCapture, callback),
     onStream: callback => subscribe<AssistantProgress>(EVENTS.assistantStream, callback),
     actionResult: result => ipcRenderer.invoke(CHANNELS.assistantActionResult, result),
+    visualCaptureResult: (result: AssistantVisualCaptureResult) =>
+      ipcRenderer.invoke(CHANNELS.assistantVisualCaptureResult, result),
     note: note => ipcRenderer.invoke(CHANNELS.assistantNote, note),
     said: key => ipcRenderer.invoke(CHANNELS.assistantSaid, key),
     window: () => ipcRenderer.invoke(CHANNELS.assistantWindow),
+  },
+  missions: {
+    watch: scope => ipcRenderer.invoke(CHANNELS.missionsWatch, scope),
+    create: goal => ipcRenderer.invoke(CHANNELS.missionsCreate, goal),
+    resume: (stepId, answer) => ipcRenderer.invoke(CHANNELS.missionsResume, stepId, answer),
+    onChanged: callback => subscribe<Mission>(EVENTS.missionChanged, callback),
+    onEvent: callback => subscribe<StudioEvent>(EVENTS.missionEvent, callback),
   },
   ai: {
     overview: () => ipcRenderer.invoke(CHANNELS.aiOverview),

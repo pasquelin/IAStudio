@@ -51,8 +51,17 @@ import type { Updates } from './updater'
 import type { AiManager } from './ai/manager'
 import type { AskUser } from './project/documentDialogs'
 import type { AutoRigHost } from './ai/autoRigHost'
+import type { MissionManager } from './mission/manager'
+import type { StudioEventBus } from './mission/eventBus'
+import type { ActionSearchService } from './actionIndex/actionSearchService'
+import type { AssistantContextBuilder } from './mission/contextBuilder'
+import type { VisualCapturePort } from './mission/visualCapture'
+import type { MissionRuntime } from './mission/runtime'
 
 export type Services = {
+  missions: MissionManager
+  missionRuntime: MissionRuntime
+  studioEvents: StudioEventBus
   settings: SettingsStore
   client: ClientProvider
   models: ModelRegistry
@@ -89,6 +98,12 @@ export type Services = {
   memory: MemoryHost
   /** The embeddings of both memories, and the one process that computes them. */
   memoryVectors: MemoryVectors
+  /** Reconstructible action retrieval, backed by SQLite outside the UI thread. */
+  actionIndex: ActionSearchService
+  /** Settles retrieval consumers before closing their shared embedding process. */
+  closeRetrieval: () => Promise<void>
+  /** Rebuilds a typed, bounded context for one mission step. */
+  assistantContext: AssistantContextBuilder
   /** Recipes worth keeping, held outside every project — see `favorites/store.ts`. */
   favorites: FavoritesStore
   /** Saved ways of reading a material, held outside every project — see `styles/store.ts`. */
@@ -101,6 +116,7 @@ export type Services = {
   said: Said
   /** Settles the note of what is still running. Awaited at quit, beside the journal. */
   flushJobs: () => Promise<void>
+  flushMissions: () => Promise<void>
   documents: DocumentFiles
   assets: LocalBackend
   /**
@@ -120,6 +136,7 @@ export type Services = {
    * which asks, and the IPC handler, which hears the reply.
    */
   remoteActions: RemoteActions
+  visualCapture: VisualCapturePort
   /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
   mcp: McpControl
   /** How a client spawns this application as its way in. No address, so it never goes stale. */

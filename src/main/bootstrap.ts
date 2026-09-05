@@ -65,6 +65,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
       services.disposeAiEngine(),
       services.journal.flush(),
       services.flushJobs(),
+      services.flushMissions(),
       services.project.settled(),
       services.mcp.stop(),
       // Awaited among them: what is still queued is an append to a file the next launch reads
@@ -72,7 +73,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
       services.memory.close(),
       // Before the memories themselves have to be, and for a plainer reason: it holds a forked
       // process, and a `utilityProcess` nobody kills outlives the studio that forked it.
-      services.memoryVectors.close(),
+      services.closeRetrieval(),
     ])
   }
 

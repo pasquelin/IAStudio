@@ -59,7 +59,8 @@ function pointAt(event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasEl
 
 function writePlayhead(documentId: string, base: SequenceState, playhead: Us): void {
   const store = useSequences.getState()
-  if (sequenceStore.hasState(store, documentId)) store.replace(documentId, { ...base, playhead })
+  if (sequenceStore.hasState(store, documentId))
+    store.replaceView(documentId, { ...base, playhead })
 }
 
 export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
@@ -231,7 +232,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     }
 
     const command = commandForGesture(current.gesture, current.base, viewport, point, mediaExtents)
-    if (command) useSequences.getState().replace(documentId, command.apply(current.base))
+    if (command) useSequences.getState().replaceView(documentId, command.apply(current.base))
   }
 
   const onPointerUp = (event: PointerEvent<HTMLCanvasElement>): void => {
@@ -258,7 +259,7 @@ export function TimelineCanvas({ documentId, tool, history = true }: TimelineCan
     const store = useSequences.getState()
     // Rewind the preview first: the command has to apply to the state the gesture started from,
     // or undo would step back to a half-dragged clip.
-    store.replace(documentId, current.base)
+    store.replaceView(documentId, current.base)
     store.runCommand(documentId, command)
   }
 

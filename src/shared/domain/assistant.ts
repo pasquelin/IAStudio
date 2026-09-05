@@ -2,12 +2,9 @@ import { defined } from '../guards'
 import { englishText } from '../i18n'
 import type { Target } from './target'
 import { searchWords } from '../text'
-import {
-  type ActionCommitment,
-  type ActionName,
-  type AssistantAction,
-  type ActionReach,
-} from './assistantAction'
+import { type ActionCommitment, type ActionName, type AssistantAction } from './assistantAction'
+import type { ActionCapabilities } from './actionCapabilities'
+import type { ActionReach } from './actionReach'
 import { ASSET_ACTIONS } from './assetActions'
 import { CANVAS_ACTIONS } from './canvasActions'
 import { CLOUD_ACTIONS } from './cloudActions'
@@ -46,9 +43,22 @@ import { STATE_ACTIONS } from './stateActions'
  */
 
 export * from './assistantAction'
+export * from './actionCapabilities'
+export * from './actionReach'
 export * from './assistantModel'
+export * from './actionResource'
 
 export { commitmentOfCommand } from './coreActions'
+
+function actionsWithCapabilities(
+  actions: readonly AssistantAction[],
+  capabilities: ActionCapabilities,
+): readonly AssistantAction[] {
+  return actions.map(entry => ({
+    ...entry,
+    capabilities: { ...capabilities, ...entry.capabilities },
+  }))
+}
 
 /**
  * Every action the studio publishes, one family after another.
@@ -68,22 +78,79 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'job', actions: JOB_ACTIONS },
   { name: 'asset', actions: ASSET_ACTIONS },
   { name: 'cloud', actions: CLOUD_ACTIONS },
-  { name: 'canvas', actions: CANVAS_ACTIONS },
-  { name: 'montage', actions: SEQUENCE_ACTIONS },
-  { name: 'material', actions: MATERIAL_ACTIONS },
-  { name: 'scene', actions: SCENE_ACTIONS },
-  { name: 'post', actions: POST_ACTIONS },
-  { name: 'rig', actions: RIG_ACTIONS },
+  {
+    name: 'canvas',
+    actions: actionsWithCapabilities(CANVAS_ACTIONS, {
+      documentKinds: ['image'],
+      documentAffinity: 'required',
+    }),
+  },
+  {
+    name: 'montage',
+    actions: actionsWithCapabilities(SEQUENCE_ACTIONS, {
+      documentKinds: ['sequence'],
+      documentAffinity: 'required',
+    }),
+  },
+  {
+    name: 'material',
+    actions: actionsWithCapabilities(MATERIAL_ACTIONS, {
+      documentKinds: ['material'],
+      documentAffinity: 'required',
+      targets: ['document'],
+    }),
+  },
+  {
+    name: 'scene',
+    actions: actionsWithCapabilities(SCENE_ACTIONS, {
+      documentKinds: ['scene'],
+      documentAffinity: 'required',
+    }),
+  },
+  {
+    name: 'post',
+    actions: actionsWithCapabilities(POST_ACTIONS, {
+      documentKinds: ['scene'],
+      documentAffinity: 'required',
+    }),
+  },
+  {
+    name: 'rig',
+    actions: actionsWithCapabilities(RIG_ACTIONS, {
+      documentKinds: ['scene', 'character'],
+      documentAffinity: 'required',
+    }),
+  },
   { name: 'git', actions: GIT_ACTIONS },
-  { name: 'game', actions: GAME_ACTIONS },
+  {
+    name: 'game',
+    actions: actionsWithCapabilities(GAME_ACTIONS, {
+      documentKinds: ['scene'],
+      documentAffinity: 'required',
+      targets: ['node'],
+    }),
+  },
   { name: 'play', actions: PLAY_ACTIONS },
-  { name: 'script', actions: SCRIPT_ACTIONS },
+  {
+    name: 'script',
+    actions: actionsWithCapabilities(SCRIPT_ACTIONS, { documentAffinity: 'transversal' }),
+  },
   { name: 'studio', actions: STUDIO_ACTIONS },
-  { name: 'timeline', actions: TIMELINE_ACTIONS },
+  {
+    name: 'timeline',
+    actions: actionsWithCapabilities(TIMELINE_ACTIONS, {
+      documentKinds: ['scene'],
+      documentAffinity: 'required',
+      targets: ['timeline'],
+    }),
+  },
   { name: 'assembly', actions: ASSEMBLY_ACTIONS },
   { name: 'export', actions: EXPORT_ACTIONS },
-  { name: 'context', actions: CONTEXT_ACTIONS },
-  { name: 'memory', actions: MEMORY_ACTIONS },
+  {
+    name: 'context',
+    actions: actionsWithCapabilities(CONTEXT_ACTIONS, { targets: ['projectContext'] }),
+  },
+  { name: 'memory', actions: actionsWithCapabilities(MEMORY_ACTIONS, { targets: ['memory'] }) },
   { name: 'settings', actions: SETTINGS_ACTIONS },
   { name: 'shell', actions: SHELL_ACTIONS },
 ]
@@ -175,6 +242,11 @@ export function loadedWith(
 /** One thing the assistant decided to do. Checked against the registry before it is run. */
 export type AssistantCall = { action: ActionName; input: Record<string, unknown> }
 
+export type AssistantImage = {
+  mimeType: 'image/png' | 'image/jpeg'
+  bytes: Uint8Array
+}
+
 /** What is asked of whatever does the thinking. */
 export type AssistantThought = {
   utterance: string
@@ -192,6 +264,7 @@ export type AssistantThought = {
    * ships can only carry ten blocks of text.
    */
   history: readonly string[]
+  images?: readonly AssistantImage[]
   /**
    * What the open project is about, already composed — see `composedContext`.
    *
@@ -244,6 +317,8 @@ export type AssistantThought = {
    * briefing a renderer can inflate. Unknown names are dropped rather than refused.
    */
   loaded?: readonly ActionName[]
+  /** ActionIndex candidates for a disposable mission turn. Absent on the legacy conversation. */
+  candidates?: readonly ActionName[]
 }
 
 /**

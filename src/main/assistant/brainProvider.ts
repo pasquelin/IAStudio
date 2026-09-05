@@ -151,6 +151,12 @@ export function createProviderBrain({
   }
 
   return {
+    capabilities: async () => ({
+      streaming: false,
+      structuredJson: true,
+      multimodalImages: false,
+      maxOutputTokens: 1,
+    }),
     // In CHARACTERS, because that is the unit the model's own `instruction` field is bounded in.
     window: async () => {
       const bounds = await limits()
@@ -170,6 +176,7 @@ export function createProviderBrain({
         (shown, complaint) => ask(request, chosen, bounds, shown, watch, complaint),
         undefined,
         notesFor(SCENARIO_CLOUD, chosen, watch),
+        watch.discover,
       )
     },
   }

@@ -12,6 +12,11 @@ import { log } from './log'
 import { EVENTS } from '@shared/ipc'
 import { isDevelopment } from '@main/environment'
 import { createNewsService } from '@main/news/newsStore'
+import { createMissionRuntime } from '@main/mission/runtime'
+import { createMissionRevisionReader } from '@main/mission/resourceState'
+import { createMissionServices } from '@main/mission/services'
+import { createActionSearchService } from '@main/actionIndex/actionSearchService'
+import { createAssistantContextBuilder } from '@main/mission/contextBuilder'
 import { createUpdates } from '@main/updater'
 import { bundledGameRuntime, resourcesRoot } from './resources'
 import { createMcpControl } from './mcp/control'
@@ -114,6 +119,8 @@ const serviceSlice = <T extends Partial<Services>>(services: T): T => services
  * refuses before then. The settings are built before it and handed in — see `createSettings`.
  */
 export function createServices(settings: SettingsStore): Services {
+  const { missions, studioEvents, missionClock, connectMissionRuntime, onJobProgress } =
+    createMissionServices(timestamp)
   const provider = new ProviderServices(settings, delay, () =>
     log.info('provider', 'rate limit reached, requests are queueing'),
   )
@@ -163,7 +170,17 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
   // prettier-ignore
-  const { clouds, runtimes, ai, engine: localEngine, llama, modelOf, isLocalTarget, notReady, memoryVectors, addOwnAiModel, dictation, autoRig } = buildLocalAi()
+  const { clouds, runtimes, ai, engine: localEngine, llama, modelOf, isLocalTarget, notReady, memoryVectors, embedder, addOwnAiModel, dictation, autoRig } = buildLocalAi()
+  const actionIndex = createActionSearchService({
+    userData: app.getPath('userData'),
+    embedder,
+    onTrouble: why => log.warn('assistant', `action index: ${why}`),
+  })
+  const closeRetrieval = async (): Promise<void> => {
+    await actionIndex.close()
+    await memoryVectors.close()
+    await embedder.close()
+  }
   function buildJobServices(): JobServices {
     return createJobServices({
       settings,
@@ -185,6 +202,7 @@ export function createServices(settings: SettingsStore): Services {
       newAssetId,
       delay,
       now: timestamp,
+      onProgress: onJobProgress,
     })
   }
   // prettier-ignore
@@ -200,6 +218,7 @@ export function createServices(settings: SettingsStore): Services {
       project,
       context,
       memoryVectors,
+      actionIndex,
       runtimes,
       ai,
       modelOf,
@@ -210,7 +229,39 @@ export function createServices(settings: SettingsStore): Services {
     }
   }
   const assistantDeps = assistantDependencies()
-  const { providerBrain, remoteActions, brain } = createAssistantBrains(assistantDeps)
+  const { providerBrain, remoteActions, visualCapture, brain, snapshot } =
+    createAssistantBrains(assistantDeps)
+  const assistantContext = createAssistantContextBuilder({
+    snapshot,
+    actions: actionIndex,
+    memories: memoryVectors,
+    jobs,
+    projectContext: context,
+    visual: async document => {
+      const before = await snapshot()
+      const revision = before?.documentRevisions?.find(one => one.documentId === document.id)
+      const captured = await visualCapture.capture(document.id, revision?.revision)
+      const after = await snapshot()
+      const current = after?.documentRevisions?.find(one => one.documentId === document.id)
+      const active = after?.documents.find(one => one.active)
+      return revision &&
+        current &&
+        revision.revision === current.revision &&
+        active?.id === document.id
+        ? captured
+        : null
+    },
+  })
+  const missionRuntime = createMissionRuntime({
+    manager: missions,
+    context: assistantContext,
+    brain,
+    actions: remoteActions,
+    jobs,
+    revisions: createMissionRevisionReader(snapshot),
+    clock: missionClock,
+  })
+  connectMissionRuntime(missionRuntime)
 
   function buildMcp() {
     const checkout = checkoutOf(app.getAppPath())
@@ -244,6 +295,8 @@ export function createServices(settings: SettingsStore): Services {
 
   function coreServices() {
     return {
+      missions,
+      studioEvents,
       settings,
       favorites,
       styles,
@@ -270,6 +323,11 @@ export function createServices(settings: SettingsStore): Services {
       project,
       memory,
       memoryVectors,
+      actionIndex,
+      closeRetrieval,
+      assistantContext,
+      missionRuntime,
+      visualCapture,
       // `current()` rather than `path()`, which throws: "no project open" is an ordinary answer
       // here, and an export named against nothing is a refusal rather than a failure.
       projectPath: () => project.current()?.path ?? null,
@@ -277,6 +335,7 @@ export function createServices(settings: SettingsStore): Services {
       transcribe,
       said,
       flushJobs: () => jobStore.flush(),
+      flushMissions: () => missions.flush(),
       documents,
       assets,
       extractTextures,

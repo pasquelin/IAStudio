@@ -117,7 +117,8 @@ function optionsOf(
   named: readonly string[],
   held: JsonValue | undefined,
 ): string[] {
-  if (field.kind === 'choice') return [...(field.options ?? [])]
+  if (field.kind === 'choice')
+    return (field.options ?? []).flatMap(option => (typeof option === 'string' ? [option] : []))
 
   // Deduplicated, and never the empty name: two nodes may share one, and `''` is the row a
   // `SelectField` keeps for a value nothing names.

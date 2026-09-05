@@ -569,27 +569,12 @@ getBridge()          →  window.studio         →  ipcMain.handle(CHANNELS.x)
   .searchModels(q)          contextBridge           returns typed data
 ```
 
-**83 channels in `CHANNELS`, plus 18 events in `EVENTS`** — counted on the evening of 9 August
-2026, and the figure moves with every batch: **it moved twice on the day this sentence was
-written.** Counting it (`CHANNELS`, two spaces of indentation) costs less than believing it.
-Twenty-one prefixes, the busiest being:
+The `CHANNELS` and `EVENTS` registries are authoritative; no count copied into documentation stays
+current. `missions:watch` and `missions:create` go up to main. `evt:mission-changed` comes back only
+to the subscribed window, with a projection filtered to its project.
 
-| Family | Count | What it carries |
-|---|---|---|
-| `provider:*` | 13 | model search, model description, generation, job control |
-| `assets:*` / `cloud:*` | 9 + 6 | project catalogue, ingestion, and the account's library |
-| `dictation:*` | 8 | microphone permissions, model, recognition session |
-| `settings:*` / `accounts:*` | 6 + 5 | read, write, credentials, authentication state |
-| `document:*` | 6 | opening, writing and listing the project's documents |
-| `styles:*` | 4 | material settings, saved and replayed |
-| `favorites:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
-| `dialog:*`, `fonts:*`, `update:*` | 2 each | — |
-| `activity:*`, `diagnostics:*`, `scene:*`, `material:*`, `skybox:*` | 1 each | — |
-
-**`EVENTS` is the other direction** — main pushing to the renderer, eighteen entries: job and
-media progress, log lines, project and settings changes, window state, dictation previews, and the
-native menu asking the UI to open a tool or a settings section, run a command, or drop a node into
-the scene.
+**`EVENTS` is the other direction** — main pushes progress, project and settings changes, missions,
+window state, dictation updates and native-menu commands, among other events.
 
 The split is not cosmetic: **every `on…` on the bridge subscribes to exactly one entry of
 `EVENTS`**, and every call method maps to exactly one of `CHANNELS`.
@@ -642,6 +627,7 @@ src/main/
 │   └── protocol.ts          the ia-studio:// protocol
 ├── dictation/               speech recognition: permissions, model, segmenting, handlers
 ├── assistant/               the assistant's thinking, behind a port, and how its reply is read
+├── mission/                 mission authority, store, versioned journal, events and handlers
 ├── mcp/                     the same catalogue of actions, offered to a client outside
 ├── settings/                the encrypted store, its adapter, its handlers
 ├── favorites/               the pinned recipes, kept outside every project
@@ -665,6 +651,15 @@ src/main/
 > user's folder, neither of which belongs to anyone else. **The temporary file's name is a
 > parameter, not a constant**: the three stores serialise their writes, but several windows write
 > into the same project folder.
+
+### Missions survive the process
+
+Main is the sole mission authority. The Store serialises revisions and projects them to windows;
+the Manager publishes domain events. The append-only version 1 journal lives at
+`<userData>/missions.ndjson` and restores the latest valid revision for each identifier. Invalid
+lines are ignored and future versions are refused. An action found `running` is paused with
+`action_outcome_unknown` and is never replayed automatically. Shutdown flushes the Store, then the
+journal.
 
 ### The JobManager is the only thing that polls
 

@@ -82,8 +82,15 @@ export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    uses: ['projectAssetCandidates'],
     fields: [
-      { key: 'assetId', kind: 'text', labelKey: 'assistant.fields.assetId', required: true },
+      {
+        key: 'assetId',
+        kind: 'text',
+        labelKey: 'assistant.fields.assetId',
+        required: true,
+        reference: 'asset',
+      },
       { ...TRACK, required: false },
       {
         key: 'start',

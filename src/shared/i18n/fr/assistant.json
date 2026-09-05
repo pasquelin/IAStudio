@@ -11,7 +11,7 @@
       },
       "modelsSearch": {
         "title": "Chercher un modèle",
-        "description": "Cherche un modèle de génération par mots-clés, en se limitant à une famille si elle est précisée. Ne change rien à l’écran."
+        "description": "Cherche un moteur de génération par nom ou identifiant, famille et opération. La requête est facultative et nomme le moteur, pas le contenu à générer ; si aucun moteur n’y correspond, la famille compatible reste proposée. Ne change rien à l’écran."
       },
       "modelsSelect": {
         "title": "Choisir un modèle",
@@ -207,7 +207,7 @@
       },
       "assetsCounts": {
         "title": "Compter le catalogue du projet",
-        "description": "Rend le nombre d’assets de chaque nature que ce projet porte sur cette machine, compté dans le catalogue plutôt qu’en les listant."
+        "description": "Rend le nombre d’images, de vidéos, d’assets audio, de modèles 3D, de skyboxes et d’animations que ce projet porte sur cette machine, compté dans le catalogue plutôt qu’en les listant. Chaque nature est rendue, même lorsque son compte vaut zéro."
       },
       "assetGet": {
         "title": "Lire des assets",
@@ -298,7 +298,7 @@
         "description": "Change l’opacité d’un calque, son opacité de fond, son mode de fusion, sa visibilité ou son écrêtage. Chaque champ est facultatif, et ce qui n’est pas donné reste exactement tel quel. C’EST ELLE qui cache un calque et le remontre — « masque ce calque » met la visibilité à faux, et n’a rien à voir avec un masque."
       },
       "layerTransform": {
-        "title": "Placer un calque",
+        "title": "Déplacer, redimensionner ou tourner un calque",
         "description": "Déplace, redimensionne ou fait tourner un calque dans le cadre. La rotation se donne en degrés, et tout champ omis garde la valeur que le calque avait déjà."
       },
       "layerEditTextLayer": {
@@ -882,7 +882,7 @@
         "description": "Choisit comment la plage dynamique est ramenée sur l’écran, et de combien de diaphragmes elle est exposée. Les deux appartiennent au document, pas à la fenêtre qui le regarde."
       },
       "gitStatus": {
-        "title": "Lire le dépôt",
+        "title": "Lire l’état des versions du dépôt",
         "description": "Rend la branche, ce qu’elle suit, son avance ou son retard, et chaque fichier modifié avec la moitié de git où il se trouve. Dit aussi quand le projet n’a aucun dépôt. Ce qui a changé DANS un fichier est git.diff ; ceci ne fait que nommer les fichiers."
       },
       "gitLog": {
@@ -1134,7 +1134,7 @@
         "description": "Rend la scène, un objet, ses composants avec leur schéma, ses relations et ce qu’on peut encore lui ajouter."
       },
       "studioDocs": {
-        "title": "Lire la documentation",
+        "title": "Lire les réglages documentés d’un composant ou d’un script",
         "description": "Rend la tranche de documentation qui répond à une question — un composant, ou la surface qu’un script voit."
       },
       "studioBatch": {
@@ -1142,7 +1142,7 @@
         "description": "Exécute une suite d’appels comme un seul, avec une seule question. S’arrête au premier refus."
       },
       "timelineAddSceneCue": {
-        "title": "Poser un repère sur la timeline",
+        "title": "Poser un événement, un média ou un fondu sur la timeline",
         "description": "Ajoute un événement, un son, une vidéo ou une transition à la timeline de la SCÈNE 3D. Un événement est un NOM diffusé sur le bus au moment dit, qu’un script entend par onMessage — c’est ainsi qu’on fait arriver quelque chose à un instant de cinématique, plutôt qu’en posant des clés d’animation. Un fondu de cinématique se pose ici, avec list=transitions et what=fade. Ce que le troisième champ désigne dépend de la liste — un nom d’événement, un identifiant d’asset, ou un genre de transition. Pour un fondu sur un bloc de montage, c’est clip.fade."
       },
       "timelineRemoveSceneCue": {
@@ -1665,6 +1665,24 @@
     "completing": "{{sentence}} — {{accept}} ou {{arrow}} pour compléter",
     "suggested_one": "{{count, number}} demande proposée",
     "suggested_many": "{{count, number}} demandes proposées",
-    "suggested_other": "{{count, number}} demandes proposées"
+    "suggested_other": "{{count, number}} demandes proposées",
+    "missionEvent": {
+      "mission": {
+        "created": "Mission créée",
+        "planning": "Planification de la mission",
+        "ready": "Mission prête",
+        "running": "Mission en cours",
+        "waiting": "Mission en attente",
+        "completed": "Mission terminée",
+        "failed": "Mission en erreur",
+        "cancelled": "Mission annulée"
+      },
+      "step": "Tâche",
+      "action": "Action du studio",
+      "job": "Génération",
+      "user": "En attente de votre réponse",
+      "child": "Sous-mission",
+      "verify": "Vérification"
+    }
   }
 }

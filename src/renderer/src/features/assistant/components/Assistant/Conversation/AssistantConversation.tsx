@@ -9,6 +9,7 @@ import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useAssistant, type AssistantChoiceQuestion } from '@/stores/assistant'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
+import { useMissions } from '@/stores/missions'
 import { registerDictationTarget } from '@/features/dictation/destination'
 import { registerChatPanel } from '../../../chatPanel'
 import { AssistantConversationView } from './AssistantConversationView'
@@ -30,6 +31,7 @@ export function AssistantConversation() {
   // assumed it would be a broken `aria-activedescendant` the day one does.
   const listId = useId()
   const turns = useAssistant(state => state.turns)
+  const missionEvents = useMissions(state => state.events)
   const busy = useAssistant(state => state.busy)
   const round = useAssistant(state => state.round)
   const stop = useAssistant(state => state.stop)
@@ -132,7 +134,7 @@ export function AssistantConversation() {
   useEffect(() => {
     const list = thread.current
     if (list && following.current) list.scrollTop = list.scrollHeight
-  }, [turns, busy, round, asked, choosing])
+  }, [turns, missionEvents, busy, round, asked, choosing])
 
   // 🛑 Never the whole conversation. `registerConfirmer` answers for MCP actions too, which need
   // no assistant model — swallowing the thread here left a question on screen that could not be
@@ -153,6 +155,7 @@ export function AssistantConversation() {
   return (
     <AssistantConversationView
       turns={turns}
+      hasMissionEvents={missionEvents.length > 0}
       asked={asked}
       choosing={choosing}
       setThreadElement={element => {

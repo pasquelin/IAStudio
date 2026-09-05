@@ -41,7 +41,7 @@ export function writeAnimationTrack(
   change: (track: AnimationTrack) => AnimationTrack,
 ): void {
   const current = store.use.getState()
-  current.replace(
+  current.replaceView(
     documentId,
     updateAnimationTrack(store.stateOf(current, documentId), trackId, change),
   )
@@ -64,7 +64,7 @@ export function selectIn(
   // Guarded on the ids rather than on the state, which `setSelection` copies either way: clicking
   // a row that is already selected — the gesture that OPENS a drag — otherwise wrote the document
   // back, and the viewport rebuilt its whole scene graph on the strength of it.
-  if (next.selectedIds !== current.selectedIds) state.replace(documentId, next)
+  if (next.selectedIds !== current.selectedIds) state.replaceView(documentId, next)
 }
 
 /**

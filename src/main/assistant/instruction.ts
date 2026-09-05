@@ -1,5 +1,6 @@
 import {
   ACTION_REGISTRY,
+  DISCOVERY_ACTION,
   findActions,
   MOST_LOADED,
   type AssistantThought,
@@ -8,7 +9,6 @@ import {
 import { CONTEXT_COMPOSED_MAX } from '@shared/domain/projectContext'
 import type { Target } from '@shared/domain/target'
 import { linesWithin, STATE_MAX } from './studioState'
-
 import {
   actionBlock,
   allNames,
@@ -26,8 +26,8 @@ import {
 } from './instructionCatalogue'
 
 export { recentHistory } from './instructionCatalogue'
-
 export type BriefingParts = {
+  catalogue?: readonly ActionName[]
   /** A round after the first on one sentence — see `CONTINUING`, which is what it adds. */
   continuing?: boolean
   /** The spaces nothing can generate in, so the model says so before promising a picture. */
@@ -75,9 +75,9 @@ export type BriefingParts = {
 /**
  * What the model is shown, and what an answer is then held to.
  *
- * 🛑 `allowed` is the whole registry now that the catalogue names it whole, and `loaded` is the
- * narrower thing: what the model has the FIELDS of. A call naming an action outside `loaded` is
- * not refused — `answeredTurn` opens its manual and asks again.
+ * `allowed` is what this bounded catalogue names, while `loaded` is narrower still: what the
+ * model has the FIELDS of. `answeredTurn` never executes a registered action outside either set;
+ * it opens its manual and asks for the plan again first.
  */
 export type Briefing = {
   readonly text: string
@@ -97,7 +97,6 @@ export type Briefing = {
   readonly narrow: (() => Briefing) | null
 }
 
-/** A composed briefing and the manuals it KEPT — what the cut decided, not a scan of its text. */
 type Written = { readonly text: string; readonly held: readonly ActionName[] }
 
 function manualsWithin(manuals: readonly Manual[], over: number): readonly Manual[] {
@@ -182,7 +181,6 @@ function targetsWithin(targets: readonly Target[], over: number): readonly Targe
   return targets.slice(0, targets.length - dropped)
 }
 
-/** The heading the manuals sit under — named, so a model does not read them as the catalogue. */
 const MANUAL_HEAD = 'Manual — the fields of the actions opened so far:'
 
 function composed(
@@ -201,7 +199,7 @@ function composed(
     ...plain(state),
     ...notReadyLines(parts.notReady),
     'Catalogue:',
-    namesPrinted(),
+    namesPrinted(parts.catalogue),
     '',
     ...labelled(MANUAL_HEAD, manual),
     ...labelled('Targets in the open document:', targets.map(targetLine).join('\n')),
@@ -291,13 +289,20 @@ function briefingOf(one: Composition): Briefing {
    * cross it every turn. Without `opened`, the caller IS the chain.
    */
   const opened = (one.parts.opened ?? asked).filter(name => held.has(name))
-
   return {
     text: written.text,
-    allowed: allNames(),
+    allowed: one.parts.catalogue ? new Set([...one.parts.catalogue, DISCOVERY_ACTION]) : allNames(),
     loaded: written.held,
     opened,
-    withLoaded: names => briefingOf(askedFor(one, names)),
+    withLoaded: names => {
+      const askedForNames = askedFor(one, names)
+      const expanded = one.parts.catalogue
+        ? withParts(askedForNames, {
+            catalogue: [...new Set([...one.parts.catalogue, ...names])],
+          })
+        : askedForNames
+      return briefingOf(expanded)
+    },
     expand: one.found === undefined ? query => expandedWith(one, query) : null,
     narrow: one.narrow,
   }
@@ -352,12 +357,7 @@ function narrowBriefing(declared: BriefingParts): Briefing {
   })
 }
 
-/**
- * The briefing one turn is answered against, composed ONCE and outside any retry: a complaint
- * quotes an answer, and a second reading would ship a briefing the complaint was not about.
- *
- * The three brains differ here in one number — their room — and in nothing else.
- */
+/** Built once outside retries, so a complaint quotes the briefing it actually answers. */
 export async function briefingFor(
   request: AssistantThought,
   room: number,
@@ -378,8 +378,13 @@ export async function briefingFor(
      * 2026-08-31 over the 437 scenarios of `pnpm banc`: opened on demand instead, the same
      * scenarios passed 56% against 65%, and reached 214 actions against 243.
      */
-    loaded: withChainLast(request.loaded ?? []),
+    loaded: request.candidates
+      ? [...new Set([...request.candidates, ...(request.loaded ?? [])])]
+      : withChainLast(request.loaded ?? []),
     opened: request.loaded ?? [],
+    catalogue: request.candidates
+      ? [...new Set([...request.candidates, DISCOVERY_ACTION])]
+      : undefined,
     room,
     fallbackRoom,
   })
@@ -459,9 +464,13 @@ function expandedWith(one: Composition, query: string): Briefing {
    * Worst to best, because the cut keeps the TAIL: the other way round, what room was left
    * described the poorest answers.
    */
-  const asked = askedFor(one, [...matched].reverse())
+  const opened = [...matched].reverse()
+  const asked = askedFor(one, opened)
+  const expanded = one.parts.catalogue
+    ? withParts(asked, { catalogue: [...new Set([...one.parts.catalogue, ...opened])] })
+    : asked
   const widest = widestFound(query, matched)
-  const probe = briefingOf({ ...asked, found: widest })
+  const probe = briefingOf({ ...expanded, found: widest })
   const kept = matched.filter(name => probe.loaded.includes(name)).length
   const found = foundBlock(query, matched, kept)
   if (found === widest) return probe
@@ -471,7 +480,7 @@ function expandedWith(one: Composition, query: string): Briefing {
   // printed above it — eight rooms measured 2026-08-31.
   const spare = widest.length - found.length
 
-  return briefingOf({ ...withParts(asked, { room: asked.parts.room - spare }), found })
+  return briefingOf({ ...withParts(expanded, { room: expanded.parts.room - spare }), found })
 }
 
 /**
@@ -484,12 +493,7 @@ export function instructionFor(briefing: string, utterance: string, ceiling: num
   return preamble + utterance.slice(0, Math.max(0, ceiling - preamble.length))
 }
 
-// 🛑 A function and not a `const`, however single its use: `no-hardcoded-text.test.ts` reads a
-// sentence BOUND to a name as a line bound for a screen, and this one is bound for a model.
+// A function keeps model text outside the screen-text guard's name binding.
 const preambleOf = (briefing: string): string => `${briefing}\n\nThe person says:\n\n`
 
-/**
- * 🛑 What joining the two costs, which the sentence used to pay: a briefing filling its room to
- * the last character left the person 20 short of `UTTERANCE_ROOM`. Read off the preamble.
- */
 export const PREAMBLE_COST = preambleOf('').length

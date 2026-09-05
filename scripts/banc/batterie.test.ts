@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { play } from './play'
 import { createStudio, type Studio, type Think } from './studio'
 import { rankOf } from './coverage'
-import { assetOf, boatImage, montage, opened } from './setups'
+import { assetOf, boatImage, montage, named, opened } from './setups'
 import { PROJECT } from './project'
 import type { Scenario } from './run'
 import { SCENARIOS } from './scenarios'
@@ -121,6 +121,21 @@ describe('the batterie and the bench', () => {
     )
 
     expect(mute.map(one => one.name)).toEqual([])
+  })
+
+  it('judges scene key times in the microseconds stored by the timeline', async () => {
+    const scenario = SCENARIOS.find(one => one.name.startsWith('13.3 '))
+    if (!scenario) throw new Error('scenario 13.3 is missing')
+    const studio = await createStudio(PROJECT)
+    await scenario.setup?.(studio)
+    await studio.run('key.writePoseKeys', {
+      nodeId: named(studio, 'Cube Test'),
+      timeSeconds: 10,
+      property: 'position',
+    })
+
+    expect(scenario.passed({ studio, called: [], refused: 0, said: '', asks: [] })).toBe(true)
+    studio.close()
   })
 })
 
@@ -273,6 +288,15 @@ describe('what a run with no window can still carry out', () => {
     // « nothing left to do » and not « nothing in front can carry that »: the scope IS armed, and
     // an empty history is what an undo finds on a document nobody has edited.
     expect(answers).toEqual([expect.stringMatching(/nothing left to do/)])
+  })
+
+  it('keeps a selected scene object framed through the headless viewport', async () => {
+    const answers = await answering(
+      SCENARIOS.find(scenario => scenario.name.startsWith('10.9 '))?.setup,
+      [{ action: 'command.runStudioCommand', input: { command: 'scene.frameFollow' } }],
+    )
+
+    expect(answers).toEqual([expect.stringMatching(/^ok/)])
   })
 
   it('carries the commands of an image, of a montage and of the project folder', async () => {

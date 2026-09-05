@@ -1,7 +1,7 @@
 import { HEX_COLOR } from './color'
 import type { FieldKind } from './model'
 import { ENVIRONMENT_KINDS } from './scene'
-
+import type { ActionReferenceKind, ActionResource } from './actionResource'
 /**
  * Every action the studio publishes, in one list.
  *
@@ -11,9 +11,9 @@ import { ENVIRONMENT_KINDS } from './scene'
  * built leaves the registry and the handler table in perfect agreement about nothing.
  */
 import type { ActionName } from './assistantActionNames'
-
+import type { ActionCapabilities } from './actionCapabilities'
+import type { ActionReach } from './actionReach'
 export type { ActionName } from './assistantActionNames'
-
 /**
  * What running an action leaves behind, and therefore whether it may run without being asked.
  *
@@ -39,7 +39,6 @@ export type { ActionName } from './assistantActionNames'
  * about those would teach its user to click Allow without reading.
  */
 export type ActionCommitment = 'none' | 'files' | 'asset' | 'remote' | 'studio' | 'credits'
-
 export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
   'none',
   'files',
@@ -48,19 +47,6 @@ export const ACTION_COMMITMENTS: readonly ActionCommitment[] = [
   'studio',
   'credits',
 ]
-
-/**
- * 🛑 VESTIGIAL, and said so rather than left to be discovered: the briefing shows every NAME on
- * every door since `studioBriefing` stopped composing manuals it was not asked for, so nothing
- * reads this but `actionsReaching('mcp')` — which both values answer. The wire carries all of it.
- *
- * `both` still reads as "the vocabulary of a spoken request" and `mcp` as "what a program drives",
- * but neither decides anything today. A new action may be marked either way without a consequence.
- */
-export type ActionReach = 'both' | 'mcp'
-
-export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
-
 /**
  * One input of an action.
  *
@@ -68,16 +54,15 @@ export const ACTION_REACHES: readonly ActionReach[] = ['both', 'mcp']
  * writes and the form shows as-is. A static registry cannot hold a sentence — every word bound
  * for the screen lives in a bundle — so this carries `labelKey` instead.
  */
+export type ActionChoice = string | number | boolean
+
 export type ActionField = {
   key: string
   kind: FieldKind
   labelKey: string
   required: boolean
-  /**
-   * The values this field accepts, when it accepts a closed set. Raw identifiers rather than
-   * translated labels: these are read by a model and by an MCP client, never shown as-is.
-   */
-  options?: readonly string[]
+  /** Closed wire values, never translated labels. */
+  options?: readonly ActionChoice[]
   /**
    * What this value NAMES, so a surface can offer to point at one instead of asking for the word.
    * `folder` is a folder of the machine — the model guesses a name where only the person knows
@@ -87,6 +72,7 @@ export type ActionField = {
    * that asked for a FILE under it. A second kind comes with a second label.
    */
   picks?: 'folder' | 'node'
+  reference?: ActionReferenceKind
   min?: number
   max?: number
   /** A list of `kind` rather than one of it. `raw` stays a single value — it is already open. */
@@ -132,18 +118,26 @@ export type AssistantAction = {
   runsOthers?: true
   reach: ActionReach
   fields: readonly ActionField[]
+  requires?: readonly ActionResource[]
+  produces?: readonly ActionResource[]
+  inputs?: readonly ActionResource[]
+  /** A resource that improves this action but whose absence does not prevent a direct call. */
+  uses?: readonly ActionResource[]
+  returns?: readonly ActionResource[]
+  capabilities?: ActionCapabilities
 }
 
 export function action(descriptor: AssistantAction): AssistantAction {
   return descriptor
 }
-
 /** The node in front, named the same way in every family that points at one. */
 export const NODE_ID: ActionField = {
   key: 'nodeId',
   kind: 'text',
   labelKey: 'assistant.fields.nodeId',
   required: true,
+  picks: 'node',
+  reference: 'node',
 }
 
 /** How one works on a channel or a row — the same three flags, two families. */
@@ -329,11 +323,15 @@ function fits(field: ActionField, value: unknown): boolean {
   switch (field.kind) {
     case 'text':
     case 'longText':
-    case 'choice':
     case 'image':
     case 'mesh':
     case 'task':
       return fitsText(field, value)
+    case 'choice':
+      return (
+        (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+        (field.options?.some(option => option === value) ?? true)
+      )
     case 'color':
       return typeof value === 'string' && HEX_COLOR.test(value)
     case 'number':
@@ -374,7 +372,7 @@ function fitsRecord(field: ActionField, value: unknown): boolean {
     typeof value === 'object' &&
     value !== null &&
     !Array.isArray(value) &&
-    Object.keys(value).every(key => field.options?.includes(key) ?? true)
+    Object.keys(value).every(key => field.options?.some(option => option === key) ?? true)
   )
 }
 

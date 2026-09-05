@@ -55,6 +55,12 @@ export function drawing(over: Partial<SceneRenderer> = {}): SceneRenderer {
     analyzeOptimization: () => EMPTY_OPTIMIZATION_PLAN,
     analyzeWorldOptimization: () => Promise.resolve(EMPTY_OPTIMIZATION_PLAN),
     clearOptimizationCache: () => {},
+    frameSelection: () => {
+      placed = AT_REST
+    },
+    frameFollow: () => {
+      placed = AT_REST
+    },
     /**
      * 🛑 It MOVES the view rather than answering nothing: `viewPlacement` reads it back, so a
      * caller can tell the turn from a call that did nothing at all. Without any `viewFrom` the
