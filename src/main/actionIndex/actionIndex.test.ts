@@ -301,6 +301,25 @@ describe('ActionIndex', () => {
     expect(names).toContain('settings.write')
   })
 
+  it('offers a missing prerequisite for a relevant consumer beyond the first three hits', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const ranking = index.inspect({
+      query: 'Active les ombres et la grille de la scène.',
+      limit: 12,
+      scope: { document: 'scene' },
+    })
+
+    const write = ranking.find(hit => hit.action.name === 'settings.write')
+    const read = ranking.find(hit => hit.action.name === 'settings.read')
+    expect(write?.rank).toBeGreaterThan(3)
+    expect(read?.workflowScore).toBeGreaterThan(0)
+    expect(read?.included).toBe(true)
+  })
+
   it('replaces fields, vectors and FTS words when the corpus changes', () => {
     const database = openMemoryDatabase()
     onTestFinished(() => database.close())

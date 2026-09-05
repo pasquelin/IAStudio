@@ -24,11 +24,11 @@ protocole ; la spec prime sur le périmètre fonctionnel.
 | 10.4 | Extension progressive du banc | terminé, Palier B 43/91 |
 | 10.5A–E | Instrumentation et retrieval algorithmique | terminé, R@12 76,09 % |
 | 10.5F | Réduction ciblée par les métadonnées existantes | terminé, plafond démontré |
-| 10.5G | Contrats métier `reads` / `writes` / `effects` | audit terminé, arbitrage Context Router requis |
+| 10.5G | Convergence produit et continuité des prérequis | en cours |
 
 ## État mesuré actuel
 
-- HEAD valide : `18c6bdd63`.
+- HEAD valide : `d1cd4825f`.
 - Référence Mission Runtime : 27/27 sur le mini-banc Phase 10.3.
 - Retrieval offline : 414 cas, R@12 76,09 %, MRR 0,4538, 99 actions attendues hors top-12.
 - Palier B historique : 43/91 ; ne pas le relancer avant un gain offline significatif.
@@ -55,8 +55,14 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   6 actions inutiles. Palier B : 54/91, 1 535 423 tokens, 353 rounds, 388 appels provider et 188
   actions inutiles. Causes relues : 20 Retrieval, 2 Context, 3 Planning, 3 Model, 6 Benchmark,
   1 Execution et 2 Harness.
-- Lot sécurité en cours : refuser avant insertion les batches dépassant 48 steps et limiter la
-  confiance aux références top-level réellement retournées par une ressource.
+- Lot sécurité terminé : les batches dépassant 48 steps sont refusés avant insertion et seules les
+  références top-level réellement retournées par une ressource deviennent fiables.
+- Continuité des prérequis : les consommateurs textuellement pertinents jusqu'au top-12 peuvent
+  désormais faire remonter leur producteur avec un score décroissant. Le retrieval offline reste
+  stable (R@12 76,09 %, MRR 0,4536) et les scénarios settings ciblés passent 2/2. Gate complète :
+  16 753 tests TypeScript et 195 tests Python verts.
+- Prochain lot : distinguer génériquement découverte optionnelle et précondition obligatoire pour
+  les fichiers ; `file.open` doit rester directement utilisable avec un chemin déjà résolu.
 
 ## Ce que tu ne tranches pas seul
 

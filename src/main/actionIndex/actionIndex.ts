@@ -171,7 +171,10 @@ function workflowScoresOf(
       }
     }
   }
-  for (const hit of ranked.slice(0, 3)) visit(hit.action, 6, new Set())
+  for (const [rank, hit] of ranked.slice(0, MAX_LIMIT).entries()) {
+    const score = Math.max(3, 6 - Math.floor(rank / 3))
+    visit(hit.action, score, new Set())
+  }
   for (const hit of ranked) {
     for (const resource of [...hit.action.produces, ...hit.action.returns]) {
       for (const consumer of hits.filter(
