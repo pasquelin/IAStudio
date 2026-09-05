@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -21,6 +22,20 @@ vi.mock('@/features/shell/otioImport', () => ({ importOtioz }))
 
 const createPicked = vi.fn()
 const openPicked = vi.fn()
+
+/** `activeId` also holds the `file:` id of a file view, so a tab in front has to be a real one. */
+const inFront = (
+  id: string,
+): { activeId: string; documents: Record<string, DocumentDescriptor> } => {
+  const document: DocumentDescriptor = {
+    id,
+    kind: 'scene',
+    title: id,
+    workspace: '3d',
+    path: `Scenes/${id}.gltf`,
+  }
+  return { activeId: id, documents: { [id]: document } }
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -107,36 +122,36 @@ describe('a command the application performs itself', () => {
     expect(saveDocument).toHaveBeenCalledWith('doc-1')
   })
 
-  it('closes the tab in front', () => {
-    const close = vi.fn()
-    vi.stubGlobal('window', { close })
-    useDocuments.setState({ activeId: 'doc-1' })
+  it('closes the tab in front, and refuses when there is none', () => {
+    expect(routeCommand('document.close')).toBe('noSurface')
+    expect(closeDocument).not.toHaveBeenCalled()
+
+    useDocuments.setState(inFront('doc-1'))
 
     expect(routeCommand('document.close')).toBe('ran')
     expect(closeDocument).toHaveBeenCalledWith('doc-1')
-    expect(close).not.toHaveBeenCalled()
-    vi.unstubAllGlobals()
   })
 
-  it('closes the window when no tab is in front', () => {
-    const close = vi.fn()
-    vi.stubGlobal('window', { close })
+  // `closeDocument` finds no io for a `file:` id, so it asks nothing and drops the edits. The
+  // tab's own cross knows better and routes to `closeFileView`; ⌘W has no such branch.
+  it('refuses over a file view, which is a panel in front but not a document', () => {
+    useDocuments.setState({ activeId: 'file:src/main.ts', documents: {} })
 
-    expect(routeCommand('document.close')).toBe('ran')
+    expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()
-    expect(close).toHaveBeenCalled()
-    vi.unstubAllGlobals()
   })
 
-  it('closes the window from the home rather than a tab sitting behind it', () => {
+  // ⌘W closes a tab or it closes nothing — the window is never the fallback, and the document
+  // the home covers is one the reader is not even looking at.
+  it('leaves a tab sitting behind the home alone rather than closing it', () => {
     const close = vi.fn()
     vi.stubGlobal('window', { close })
     useLayouts.setState({ home: true })
-    useDocuments.setState({ activeId: 'doc-1' })
+    useDocuments.setState(inFront('doc-1'))
 
-    expect(routeCommand('document.close')).toBe('ran')
+    expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()
-    expect(close).toHaveBeenCalled()
+    expect(close).not.toHaveBeenCalled()
     vi.unstubAllGlobals()
   })
 })

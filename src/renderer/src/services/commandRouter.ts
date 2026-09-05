@@ -9,8 +9,8 @@ import { getBridge } from '@/services/bridge'
 import { commandScopeIsArmed, publishCommand } from '@/services/commandBus'
 import { reportFailure } from '@/services/diagnostics'
 import { useDictation } from '@/stores/dictation'
-import { useDocuments } from '@/stores/documents'
-import { homeIsVisible, toolSurface, useLayouts } from '@/stores/layouts'
+import { closableDocumentId, useDocuments } from '@/stores/documents'
+import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { panelsStore } from '@/stores/panels'
 
@@ -70,13 +70,8 @@ function runProjectCommand(command: CommandId): CommandRouting | null {
 
 function runDocumentCommand(command: CommandId): CommandRouting | null {
   if (command === 'document.close') {
-    const documentId = useDocuments.getState().activeId
-    // The home covers the tabs rather than replacing them: closing one from there would
-    // drop a document the user is not looking at. No tab in front is the same gesture.
-    if (homeIsVisible() || documentId === null) {
-      window.close()
-      return 'ran'
-    }
+    const documentId = closableDocumentId()
+    if (documentId === null) return 'noSurface'
     void closeDocument(documentId).catch(error =>
       reportFailure('document.close', documentId, error),
     )

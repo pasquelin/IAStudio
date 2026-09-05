@@ -149,10 +149,11 @@ describe('every native role', () => {
     expect(labels(rows(false, null))).toEqual(['Réduire', 'Zoom', 'Fermer la fenêtre'])
   })
 
+  const file = (given: Partial<MenuOptions>) =>
+    submenuOf(menuTemplate(options(given)), TRANSLATIONS.fr.menu.file)
+  const last = (given: Partial<MenuOptions>) => file(given).at(-1)
+
   it('closes a tab from the studio File menu, and the window from an auxiliary one', () => {
-    const file = (given: Partial<MenuOptions>) =>
-      submenuOf(menuTemplate(options(given)), TRANSLATIONS.fr.menu.file)
-    const last = (given: Partial<MenuOptions>) => file(given).at(-1)
     const runCommand = vi.fn()
 
     const studioMac = last({ isMac: true, actions: actions({ runCommand }) })
@@ -164,6 +165,12 @@ describe('every native role', () => {
     expect(last({ workspace: null, isMac: true })?.role).toBe('close')
     expect(last({ isMac: false })?.role).toBe('quit')
     expect(file({ isMac: false }).at(-2)?.label).toBe('Fermer l’onglet')
+  })
+
+  // An enabled row promises it will do something, and this one had nothing left to close.
+  it('greys closing the tab when the window announces none in front', () => {
+    expect(last({ abilities: ['document.close'] })?.enabled).toBe(true)
+    expect(last({ abilities: [] })?.enabled).toBe(false)
   })
 
   // A label read off the wrong bundle is worse than none: it would look deliberate.
