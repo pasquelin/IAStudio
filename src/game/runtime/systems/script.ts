@@ -14,6 +14,7 @@ import { settingsOf, textOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
 import { sayCustom } from '../sayCustom'
 import type { System, World } from '../world'
+import { resolveInputMaps } from '../inputMaps'
 
 export type ScriptSystemOptions = {
   /** Already transpiled by the studio: the sandbox runs JavaScript, an author writes TypeScript. */
@@ -50,6 +51,8 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     tick: 0,
     dt: 0,
     input: { held: [], pressed: [], released: [], pointer: { x: 0, y: 0, down: false } },
+    actions: {},
+    bindings: {},
     entities,
     kept: {},
   }
@@ -93,6 +96,12 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     frame.tick = world.time.tick
     frame.dt = dt
     frame.input = world.input
+    frame.actions = resolveInputMaps(world.inputMaps, world.inputContexts.active(), {
+      held: world.input.held,
+      gamepads: world.input.gamepads ?? [],
+      pointer: world.input.pointer,
+    }).values
+    frame.bindings = world.inputControls.bindings()
     // Only when there IS something kept: the frame is serialized whole for every hook of every
     // step, and an inventory put aside at the menu would be paid for twice a step for ever.
     const kept = world.ports.scenes.kept()
@@ -237,7 +246,12 @@ function apply(world: World, intents: readonly ScriptIntent[]): void {
   }
 }
 
-type WorldIntent = Extract<ScriptIntent, { act: 'log' | 'spawn' | 'emit' | 'scene' | 'keep' }>
+type WorldIntent = Extract<
+  ScriptIntent,
+  {
+    act: 'log' | 'spawn' | 'emit' | 'scene' | 'keep' | 'inputContext' | 'inputRebind' | 'inputReset'
+  }
+>
 type EntityIntent = Exclude<ScriptIntent, WorldIntent>
 
 function applyWorldIntent(world: World, intent: ScriptIntent): intent is WorldIntent {
@@ -247,6 +261,10 @@ function applyWorldIntent(world: World, intent: ScriptIntent): intent is WorldIn
     sayCustom(world, intent.name, intent.entity ?? undefined, intent.payload)
   else if (intent.act === 'scene') world.ports.scenes.load(intent.scene, intent.fade)
   else if (intent.act === 'keep') world.ports.scenes.keep(intent.key, intent.value)
+  else if (intent.act === 'inputContext') world.inputContexts[intent.action](intent.id)
+  else if (intent.act === 'inputRebind')
+    world.inputControls.rebind(intent.context, intent.action, intent.index, intent.binding)
+  else if (intent.act === 'inputReset') world.inputControls.reset(intent.context, intent.action)
   else return false
   return true
 }

@@ -26,6 +26,17 @@ declare module '@studio' {
   export type ComponentName = Named<'components'>
 
   export type Vector3 = { x: number; y: number; z: number }
+  export type InputBinding =
+    | { device: 'keyboard'; code: string; axis?: 'x' | 'y'; scale?: number }
+    | { device: 'mouse'; control: 'primary' | 'secondary' | 'middle' | 'wheel' }
+    | { device: 'gamepad'; control: string; deadZone?: number; invert?: boolean; scale?: number }
+  export type GamepadInput = {
+    readonly id: string
+    readonly index: number
+    readonly mapping: string
+    readonly axes: readonly number[]
+    readonly buttons: readonly number[]
+  }
 
   /** One of the components an entity carries, as plain JSON. `type` names which. */
   export type Component = { type: string; [field: string]: unknown }
@@ -81,6 +92,16 @@ declare module '@studio' {
       pressed(code: string): boolean
       /** Whether it came up during this step. */
       released(code: string): boolean
+      /** Whether a named button action in the active input contexts is held. */
+      button(id: string): boolean
+      /** The value of a named one-dimensional action, or zero. */
+      axis(id: string): number
+      /** The value of a named two-dimensional action, or zero on both axes. */
+      axis2(id: string): Readonly<{ x: number; y: number }>
+      /** Current bindings, including persisted rebindings, for a custom controls interface. */
+      bindings(context: string, action: string): readonly InputBinding[]
+      /** Connected standard controllers, for a custom rebinding capture interface. */
+      readonly gamepads: readonly GamepadInput[]
       readonly pointer: { readonly x: number; readonly y: number; readonly down: boolean }
     }
   }
@@ -108,6 +129,16 @@ declare module '@studio' {
     events: {
       /** Puts a named event on the bus, belonging to no entity. */
       emit(name: string, payload?: Record<string, unknown>): void
+    }
+    input: {
+      /** Activates a project input context after this script step. */
+      pushContext(id: string): void
+      /** Deactivates a project input context after this script step. */
+      popContext(id: string): void
+      /** Replaces or appends one binding and persists it in an exported game. */
+      rebind(context: string, action: string, index: number, binding: InputBinding): void
+      /** Restores all defaults, one context, or one action. */
+      reset(context?: string, action?: string): void
     }
     /** Asks for an entity of that name, at that place. Born at the end of the step. */
     spawn(name: string, at?: Vector3): void

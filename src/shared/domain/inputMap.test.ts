@@ -61,4 +61,27 @@ describe('input maps', () => {
       }),
     ).toThrow()
   })
+
+  it('reads a scaled keyboard direction for an axis action', () => {
+    const map = inputMapOf({
+      version: 1,
+      id: 'character',
+      priority: 0,
+      defaultActive: true,
+      actions: [
+        {
+          id: 'move',
+          kind: 'axis2',
+          bindings: [{ device: 'keyboard', code: 'KeyA', axis: 'x', scale: -1 }],
+        },
+      ],
+    })
+
+    expect(map.actions[0]?.bindings[0]).toEqual({
+      device: 'keyboard',
+      code: 'KeyA',
+      axis: 'x',
+      scale: -1,
+    })
+  })
 })

@@ -227,13 +227,17 @@
       "empty": "Vide",
       "hud": "HUD",
       "mainMenu": "Menu principal",
-      "pause": "Menu de pause"
+      "pause": "Menu de pause",
+      "mainMenuControls": "Menu + contrôles",
+      "pauseControls": "Pause + contrôles"
     },
     "uiTemplateHints": {
       "empty": "Un écran nu, à remplir",
       "hud": "Un score en haut, une jauge de vie en bas",
       "mainMenu": "Un titre et des boutons, au centre",
-      "pause": "Un voile sur la partie, et de quoi reprendre"
+      "pause": "Un voile sur la partie, et de quoi reprendre",
+      "mainMenuControls": "Un menu principal qui ouvre aussi la configuration des contrôles",
+      "pauseControls": "Un menu de pause qui ouvre aussi la configuration des contrôles"
     },
     "folderField": "Emplacement",
     "folderHint": "Choisit le dossier du projet où le document sera enregistré",

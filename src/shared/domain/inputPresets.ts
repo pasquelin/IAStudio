@@ -32,7 +32,17 @@ const PRESETS: Record<InputPresetId, InputMap> = {
     priority: 0,
     defaultActive: true,
     actions: [
-      { id: 'move', kind: 'axis2', bindings: [{ device: 'gamepad', control: 'leftStick' }] },
+      {
+        id: 'move',
+        kind: 'axis2',
+        bindings: [
+          { device: 'keyboard', code: 'KeyA', axis: 'x', scale: -1 },
+          { device: 'keyboard', code: 'KeyD', axis: 'x', scale: 1 },
+          { device: 'keyboard', code: 'KeyW', axis: 'y', scale: -1 },
+          { device: 'keyboard', code: 'KeyS', axis: 'y', scale: 1 },
+          { device: 'gamepad', control: 'leftStick' },
+        ],
+      },
       { id: 'look', kind: 'axis2', bindings: [{ device: 'gamepad', control: 'rightStick' }] },
       {
         id: 'jump',
@@ -58,13 +68,31 @@ const PRESETS: Record<InputPresetId, InputMap> = {
     priority: 10,
     defaultActive: false,
     actions: [
-      { id: 'steer', kind: 'axis1', bindings: [{ device: 'gamepad', control: 'leftStickX' }] },
+      {
+        id: 'steer',
+        kind: 'axis1',
+        bindings: [
+          { device: 'keyboard', code: 'KeyA', scale: -1 },
+          { device: 'keyboard', code: 'KeyD', scale: 1 },
+          { device: 'gamepad', control: 'leftStickX' },
+        ],
+      },
       {
         id: 'accelerate',
         kind: 'axis1',
-        bindings: [{ device: 'gamepad', control: 'rightTrigger' }],
+        bindings: [
+          { device: 'keyboard', code: 'KeyW', scale: 1 },
+          { device: 'gamepad', control: 'rightTrigger' },
+        ],
       },
-      { id: 'brake', kind: 'axis1', bindings: [{ device: 'gamepad', control: 'leftTrigger' }] },
+      {
+        id: 'brake',
+        kind: 'axis1',
+        bindings: [
+          { device: 'keyboard', code: 'KeyS', scale: 1 },
+          { device: 'gamepad', control: 'leftTrigger' },
+        ],
+      },
       {
         id: 'exit',
         kind: 'button',

@@ -10,6 +10,7 @@ import { restingTransform } from '../entity'
 import { STEP_SECONDS } from '../gameLoop'
 import { testPorts, testWorld } from '../world-fixtures'
 import type { World } from '../world'
+import type { InputMap } from '@shared/domain/inputMap'
 import { createScriptSystem } from './script'
 
 const STEP = 1 / 60
@@ -43,9 +44,14 @@ describe('what a game does with its own code', () => {
     port.dispose()
   })
 
-  function running(body: string, components: Component[] = []): World {
+  function running(
+    body: string,
+    components: Component[] = [],
+    inputMaps: readonly InputMap[] = [],
+  ): World {
     const world = testWorld({
       ports: testPorts({ script: port }),
+      inputMaps,
       systems: [
         createScriptSystem({
           modules: [{ script: WALK, code: scripted(body) }],
@@ -70,6 +76,21 @@ describe('what a game does with its own code', () => {
     frame(world)
 
     expect(world.entities.get('e1')?.transform.position.z).toBeCloseTo(-8 / 60, 6)
+  })
+
+  it('applies context changes requested by a script', () => {
+    const vehicle: InputMap = {
+      version: 1,
+      id: 'vehicle',
+      priority: 10,
+      defaultActive: false,
+      actions: [],
+    }
+    const world = running('onStart() { game.input.pushContext("vehicle") }', [], [vehicle])
+
+    frame(world)
+
+    expect(world.inputContexts.active()).toEqual(['vehicle'])
   })
 
   it('writes a field of a component the entity already carries', () => {

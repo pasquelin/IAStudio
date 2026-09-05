@@ -27,6 +27,7 @@ import { veilLift } from './veilLift'
 import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
 import type { InputMap } from '@shared/domain/inputMap'
+import { createInputControls } from '@game/runtime/inputControls'
 /** How often the game says what it is doing. Six times a second, and that is a decision — see
  * `publish`. */
 const REPORT_MS = 160
@@ -135,6 +136,7 @@ export type SceneLookup =
  * being edited. STOP therefore restores nothing — it redraws what was never touched.
  */
 export function startPlay(deps: PlaySessionDeps): PlaySession {
+  const inputControls = createInputControls(deps.inputMaps ?? [])
   let veiled = 0
   let loaded: SceneState | null = null
   let steered = false
@@ -208,6 +210,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
             1,
             heightmaps,
             deps.inputMaps,
+            inputControls,
           )
         const startPlayStep4 = () => {
           let world = build(deps.editState())

@@ -9,6 +9,7 @@ import { createEventBus, type EventBus } from '../events/eventBus'
 import type { InputState } from '../ports/inputPort'
 import type { InputMap } from '@shared/domain/inputMap'
 import { createInputContexts, type InputContexts } from './inputContexts'
+import { createInputControls, type InputControls } from './inputControls'
 import { clonedTransform, copyTransformInto, restingTransform, type Entity } from './entity'
 import { createEntityStore, type EntityStore } from './entityStore'
 import { createRandom, type Random } from './random'
@@ -45,6 +46,7 @@ export type World = {
   input: InputState
   readonly inputMaps: readonly InputMap[]
   readonly inputContexts: InputContexts
+  readonly inputControls: InputControls
   /**
    * The four gestures a SYSTEM uses, all of them landing at the END of the step.
    *
@@ -79,6 +81,7 @@ export type WorldOptions = {
   step: number
   play: ScenePlay
   inputMaps?: readonly InputMap[]
+  inputControls?: InputControls
 }
 
 export function createWorld(options: WorldOptions): World {
@@ -90,6 +93,7 @@ export function createWorld(options: WorldOptions): World {
   const attaching: { entity: Entity; component: Component }[] = []
   const detaching: { entity: Entity; type: ComponentType }[] = []
   let minted = 0
+  const inputControls = options.inputControls ?? createInputControls(options.inputMaps ?? [])
 
   // Not `messageOf` of `@shared/guards`: this tree is MIT and ships without the rest, so a VALUE
   // taken from `@shared/` would carry PolyForm code into an exported game.
@@ -131,8 +135,11 @@ export function createWorld(options: WorldOptions): World {
     play: options.play,
     time: { tick: 0, elapsed: 0, step: options.step },
     input: options.ports.input.state(),
-    inputMaps: options.inputMaps ?? [],
-    inputContexts: createInputContexts(options.inputMaps ?? []),
+    get inputMaps() {
+      return inputControls.maps()
+    },
+    inputContexts: createInputContexts(inputControls.maps()),
+    inputControls,
 
     spawn: request => {
       // Counted rather than drawn from `crypto.randomUUID`: two runs of one seed must mint the

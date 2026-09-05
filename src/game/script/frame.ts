@@ -3,6 +3,9 @@
 import type { Component, ComponentType, JsonValue } from '@shared/domain/component'
 import type { Vector3 } from '@shared/domain/transform'
 import type { InputState } from '../ports/inputPort'
+import type { InputActionValue } from '../runtime/inputMaps'
+import type { InputBinding } from '@shared/domain/inputMap'
+import type { InputBindings } from '../runtime/inputControls'
 
 /**
  * One scripted entity as the sandbox sees it — a COPY, never a handle onto the world.
@@ -26,6 +29,8 @@ export type ScriptFrame = {
   tick: number
   dt: number
   input: InputState
+  actions: Readonly<Record<string, InputActionValue>>
+  bindings: InputBindings
   entities: readonly ScriptEntity[]
   /** What survived the last scene load. In the FRAME rather than behind a call: see the kernel. */
   kept: Readonly<Record<string, JsonValue>>
@@ -49,6 +54,15 @@ export type ScriptIntent =
   | { act: 'log'; level: 'info' | 'warn' | 'error'; message: string }
   | { act: 'scene'; scene: string; fade: number }
   | { act: 'keep'; key: string; value: JsonValue }
+  | { act: 'inputContext'; action: 'push' | 'pop'; id: string }
+  | {
+      act: 'inputRebind'
+      context: string
+      action: string
+      index: number
+      binding: InputBinding
+    }
+  | { act: 'inputReset'; context?: string; action?: string }
 
 /** What a script did wrong, where an editor could open it. */
 export type ScriptFault = {

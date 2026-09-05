@@ -24,6 +24,8 @@ import { secondsToUs } from '@shared/domain/time'
 import { answering, exportedJson, exportedText } from './exportedResponse'
 import { expandCompressedAssets, type ExpandedAssets } from './exportedAssets'
 import { createStartupRollback, failStartup } from './startupRollback'
+import { createInputControls, type InputControls } from '@game/runtime/inputControls'
+import type { InputMap } from '@shared/domain/inputMap'
 /**
  * A game running in a browser page, with no studio anywhere.
  *
@@ -32,6 +34,7 @@ import { createStartupRollback, failStartup } from './startupRollback'
  */
 export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() => void> {
   const game = await exportedJson<ExportedGame>(EXPORTED_GAME_FILE)
+  const inputControls = createInputControls(game.inputMaps ?? [], browserInputStorage())
   const expandedAssets = await expandCompressedAssets(game.assets, game.compressedAssets ?? [])
   const rollback = createStartupRollback()
   rollback.add(expandedAssets.dispose)
@@ -45,7 +48,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       createPorts(canvas, game, assets, drawn.port, swap.port, rollback),
       exportedJson<unknown>(entry.file, entry.compression),
     ])
-    const runtime = { modules, inputMaps: game.inputMaps ?? [] }
+    const runtime = { modules, inputMaps: game.inputMaps ?? [], inputControls }
 
     const openingScene = await createOpeningScene(entry, openingSource, assets, ports, runtime)
     const { opening, heightmaps } = openingScene
@@ -91,7 +94,16 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         const nextMaps = await heightmapsOf(found.world.layers, id =>
           heightmapFromBundle(assets, id),
         )
-        world = worldFromScene(wanted.id, found, ports, runtime, 1, nextMaps, runtime.inputMaps)
+        world = worldFromScene(
+          wanted.id,
+          found,
+          ports,
+          runtime,
+          1,
+          nextMaps,
+          runtime.inputMaps,
+          inputControls,
+        )
         loop = createGameLoop(world)
         // The first step of the arrived scene derives every collider — not a gap to catch up on.
         warmed = false
@@ -225,11 +237,24 @@ async function createOpeningScene(
   source: unknown,
   assets: ReturnType<typeof createBundledAssets>,
   ports: ReturnType<typeof createExportHost>,
-  runtime: { modules: readonly ScriptModule[]; inputMaps: ExportedGame['inputMaps'] },
+  runtime: {
+    modules: readonly ScriptModule[]
+    inputMaps: ExportedGame['inputMaps']
+    inputControls: InputControls
+  },
 ) {
   const opening = sceneFromGltf(source)
   const heightmaps = await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id))
-  const world = worldFromScene(entry.id, opening, ports, runtime, 1, heightmaps, runtime.inputMaps)
+  const world = worldFromScene(
+    entry.id,
+    opening,
+    ports,
+    runtime,
+    1,
+    heightmaps,
+    runtime.inputMaps,
+    runtime.inputControls,
+  )
   return { opening, world, heightmaps }
 }
 
@@ -246,4 +271,17 @@ async function heightmapFromBundle(assets: AssetPort, assetId: string) {
   const url = assets.urlOf({ kind: 'asset', id: assetId })
   if (!url) throw new Error(`no file for ${assetId}`)
   return heightmapFromExr(await (await answering(url)).arrayBuffer())
+}
+
+function browserInputStorage() {
+  const key = `input-controls:${globalThis.location.pathname}`
+  return {
+    read: (): unknown => {
+      const value = globalThis.localStorage.getItem(key)
+      return value === null ? null : JSON.parse(value)
+    },
+    write: (maps: readonly InputMap[]): void => {
+      globalThis.localStorage.setItem(key, JSON.stringify(maps))
+    },
+  }
 }

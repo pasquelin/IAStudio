@@ -3,7 +3,12 @@ export const INPUT_MAP_EXTENSION = '.input.json'
 
 export type InputActionKind = 'button' | 'axis1' | 'axis2'
 
-export type KeyboardBinding = { device: 'keyboard'; code: string }
+export type KeyboardBinding = {
+  device: 'keyboard'
+  code: string
+  axis?: 'x' | 'y'
+  scale?: number
+}
 export type MouseBinding = {
   device: 'mouse'
   control: 'primary' | 'secondary' | 'middle' | 'wheel'
@@ -65,27 +70,44 @@ function inputActionOf(value: unknown): InputAction {
   return { id, kind, bindings: parsed }
 }
 
-function inputBindingOf(value: unknown): InputBinding {
+export function inputBindingOf(value: unknown): InputBinding {
   if (!isRecord(value) || typeof value.device !== 'string') throw new Error('invalid input binding')
 
-  if (value.device === 'keyboard' && typeof value.code === 'string' && value.code.length > 0)
-    return { device: 'keyboard', code: value.code }
+  if (value.device === 'keyboard') return keyboardBindingOf(value)
 
   if (value.device === 'mouse' && isMouseControl(value.control))
     return { device: 'mouse', control: value.control }
 
-  if (value.device === 'gamepad' && typeof value.control === 'string' && value.control.length > 0) {
-    const options = numericOptions(value)
-    return {
-      device: 'gamepad',
-      control: value.control,
-      ...(options.deadZone === undefined ? {} : { deadZone: options.deadZone }),
-      ...(typeof value.invert !== 'boolean' ? {} : { invert: value.invert }),
-      ...(options.scale === undefined ? {} : { scale: options.scale }),
-    }
-  }
+  if (value.device === 'gamepad') return gamepadBindingOf(value)
 
   throw new Error('invalid input binding')
+}
+
+function keyboardBindingOf(value: Record<string, unknown>): KeyboardBinding {
+  if (typeof value.code !== 'string' || value.code.length === 0)
+    throw new Error('invalid input binding')
+  if (value.axis !== undefined && value.axis !== 'x' && value.axis !== 'y')
+    throw new Error('invalid keyboard axis')
+  const scale = numericScale(value.scale)
+  return {
+    device: 'keyboard',
+    code: value.code,
+    ...(value.axis === undefined ? {} : { axis: value.axis }),
+    ...(scale === undefined ? {} : { scale }),
+  }
+}
+
+function gamepadBindingOf(value: Record<string, unknown>): GamepadBinding {
+  if (typeof value.control !== 'string' || value.control.length === 0)
+    throw new Error('invalid input binding')
+  const options = numericOptions(value)
+  return {
+    device: 'gamepad',
+    control: value.control,
+    ...(options.deadZone === undefined ? {} : { deadZone: options.deadZone }),
+    ...(typeof value.invert !== 'boolean' ? {} : { invert: value.invert }),
+    ...(options.scale === undefined ? {} : { scale: options.scale }),
+  }
 }
 
 function numericOptions(value: Record<string, unknown>): { deadZone?: number; scale?: number } {
@@ -101,6 +123,13 @@ function numericOptions(value: Record<string, unknown>): { deadZone?: number; sc
   }
 }
 
+function numericScale(value: unknown): number | undefined {
+  if (value === undefined) return undefined
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    throw new Error('invalid keyboard scale')
+  return value
+}
+
 function isActionKind(value: unknown): value is InputActionKind {
   return value === 'button' || value === 'axis1' || value === 'axis2'
 }
@@ -109,12 +138,14 @@ function isMouseControl(value: unknown): value is MouseBinding['control'] {
   return value === 'primary' || value === 'secondary' || value === 'middle' || value === 'wheel'
 }
 
-function isAxisBinding(binding: InputBinding): binding is GamepadBinding {
+function isAxisBinding(binding: InputBinding): boolean {
   return (
-    binding.device === 'gamepad' &&
-    (binding.control.endsWith('Stick') ||
-      binding.control.endsWith('StickX') ||
-      binding.control.endsWith('StickY'))
+    (binding.device === 'keyboard' &&
+      (binding.axis !== undefined || binding.scale !== undefined)) ||
+    (binding.device === 'gamepad' &&
+      (binding.control.endsWith('Stick') ||
+        binding.control.endsWith('StickX') ||
+        binding.control.endsWith('StickY')))
   )
 }
 

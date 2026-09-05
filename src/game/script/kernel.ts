@@ -50,6 +50,19 @@ export const KERNEL = String.raw`
         push({ act: 'emit', name: String(name), entity: null, payload: payload || {} })
       },
     },
+    input: {
+      pushContext: function (id) { push({ act: 'inputContext', action: 'push', id: String(id) }) },
+      popContext: function (id) { push({ act: 'inputContext', action: 'pop', id: String(id) }) },
+      rebind: function (context, action, index, binding) {
+        push({ act: 'inputRebind', context: String(context), action: String(action), index: Number(index), binding: binding })
+      },
+      reset: function (context, action) {
+        var intent = { act: 'inputReset' }
+        if (context !== undefined) intent.context = String(context)
+        if (action !== undefined) intent.action = String(action)
+        push(intent)
+      },
+    },
     spawn: function (name, at) {
       push({ act: 'spawn', name: String(name), at: at ? vector(at.x, at.y, at.z) : null })
     },
@@ -114,6 +127,7 @@ export const KERNEL = String.raw`
 
   function contextOf(frame) {
     kept = frame.kept || {}
+    var actions = frame.actions || {}
     return {
       tick: frame.tick,
       dt: frame.dt,
@@ -121,6 +135,17 @@ export const KERNEL = String.raw`
         down: function (code) { return has(frame.input.held, code) },
         pressed: function (code) { return has(frame.input.pressed, code) },
         released: function (code) { return has(frame.input.released, code) },
+        button: function (id) { return actions[id] === true },
+        axis: function (id) { return typeof actions[id] === 'number' ? actions[id] : 0 },
+        axis2: function (id) {
+          var value = actions[id]
+          return value && typeof value === 'object' ? value : { x: 0, y: 0 }
+        },
+        bindings: function (context, action) {
+          var map = frame.bindings && frame.bindings[context]
+          return (map && map[action]) || []
+        },
+        gamepads: frame.input.gamepads || [],
         pointer: frame.input.pointer,
       },
     }
@@ -157,6 +182,11 @@ export const KERNEL = String.raw`
       down: function () { return false },
       pressed: function () { return false },
       released: function () { return false },
+      button: function () { return false },
+      axis: function () { return 0 },
+      axis2: function () { return { x: 0, y: 0 } },
+      bindings: function () { return [] },
+      gamepads: [],
       pointer: { x: 0, y: 0, down: false },
     },
   }

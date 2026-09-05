@@ -11,6 +11,8 @@ const ICONS: Record<UiTemplateId, string> = {
   hud: mdiGaugeFull,
   mainMenu: mdiMenu,
   pause: mdiPauseCircleOutline,
+  mainMenuControls: mdiMenu,
+  pauseControls: mdiPauseCircleOutline,
 }
 
 export type NewDocumentUiTemplatesProps = {

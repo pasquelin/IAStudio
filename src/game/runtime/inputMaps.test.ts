@@ -54,4 +54,45 @@ describe('input mapping contexts', () => {
 
     expect(resolved.axis2('move')).toEqual({ x: 0, y: -0.75 })
   })
+
+  it('combines keyboard directions into a two-dimensional action', () => {
+    const map: InputMap = {
+      ...character,
+      actions: [
+        {
+          id: 'move',
+          kind: 'axis2',
+          bindings: [
+            { device: 'keyboard', code: 'KeyA', axis: 'x', scale: -1 },
+            { device: 'keyboard', code: 'KeyD', axis: 'x', scale: 1 },
+            { device: 'keyboard', code: 'KeyW', axis: 'y', scale: -1 },
+          ],
+        },
+      ],
+    }
+
+    const resolved = resolveInputMaps([map], ['character'], {
+      held: ['KeyD', 'KeyW'],
+      gamepads: [],
+    })
+
+    expect(resolved.axis2('move')).toEqual({ x: 1, y: -1 })
+  })
+
+  it('reads the primary pointer as a button action', () => {
+    const map: InputMap = {
+      ...character,
+      actions: [
+        { id: 'fire', kind: 'button', bindings: [{ device: 'mouse', control: 'primary' }] },
+      ],
+    }
+
+    const resolved = resolveInputMaps([map], ['character'], {
+      held: [],
+      gamepads: [],
+      pointer: { x: 2, y: 3, down: true },
+    })
+
+    expect(resolved.button('fire')).toBe(true)
+  })
 })

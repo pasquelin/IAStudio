@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { UI_VERSION } from './ui'
 import { uiFromPayload } from './uiDocument'
-import { DEFAULT_UI_TEMPLATE, UI_TEMPLATE_IDS, isUiTemplateId, uiFromTemplate } from './uiTemplates'
+import {
+  DEFAULT_UI_TEMPLATE,
+  UI_TEMPLATE_IDS,
+  isUiTemplateId,
+  uiFromTemplate,
+  type UiTemplateId,
+} from './uiTemplates'
 
 let counter = 0
 const newId = (): string => `made-${(counter += 1)}`
@@ -44,6 +50,15 @@ describe('what a new interface opens on', () => {
   it('turns away an id read back from somewhere else', () => {
     expect(isUiTemplateId('hud')).toBe(true)
     expect(isUiTemplateId('inventory')).toBe(false)
+  })
+
+  const controlsTemplates: readonly UiTemplateId[] = ['mainMenuControls', 'pauseControls']
+  it.each(controlsTemplates)('%s includes a controls action', id => {
+    const actions = flattenElements(uiFromTemplate(id, newId).root).map(
+      one => one.interaction.action,
+    )
+
+    expect(actions).toContain('controls')
   })
 })
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { GamepadBinding, InputAction, InputMap } from '@shared/domain/inputMap'
+import type { Pointer } from '../ports/inputPort'
 
 export type InputVector = { x: number; y: number }
 
@@ -15,15 +16,17 @@ export type RawGamepad = {
 export type RawInput = {
   held: readonly string[]
   gamepads: readonly RawGamepad[]
+  pointer?: Pointer
 }
 
 export type ResolvedInput = {
   button: (id: string) => boolean
   axis: (id: string) => number
   axis2: (id: string) => InputVector
+  values: Readonly<Record<string, InputActionValue>>
 }
 
-type Value = boolean | number | InputVector
+export type InputActionValue = boolean | number | InputVector
 
 const ZERO: InputVector = { x: 0, y: 0 }
 const DEAD_ZONE = 0.15
@@ -34,30 +37,31 @@ export function resolveInputMaps(
   input: RawInput,
 ): ResolvedInput {
   const activeIds = new Set(active)
-  const values = new Map<string, Value>()
+  const values: Record<string, InputActionValue> = {}
   const ordered = maps
     .filter(map => activeIds.has(map.id))
     .slice()
     .sort((one, other) => one.priority - other.priority)
 
   for (const map of ordered) {
-    for (const action of map.actions) values.set(action.id, valueOf(action, input))
+    for (const action of map.actions) values[action.id] = valueOf(action, input)
   }
 
   return {
-    button: id => values.get(id) === true,
+    button: id => values[id] === true,
     axis: id => {
-      const value = values.get(id)
+      const value = values[id]
       return typeof value === 'number' ? value : 0
     },
     axis2: id => {
-      const value = values.get(id)
+      const value = values[id]
       return isVector(value) ? value : ZERO
     },
+    values,
   }
 }
 
-function valueOf(action: InputAction, input: RawInput): Value {
+function valueOf(action: InputAction, input: RawInput): InputActionValue {
   if (action.kind === 'button') return action.bindings.some(binding => buttonOf(binding, input))
   if (action.kind === 'axis1')
     return action.bindings.reduce(
@@ -74,11 +78,14 @@ function valueOf(action: InputAction, input: RawInput): Value {
 
 function buttonOf(binding: InputAction['bindings'][number], input: RawInput): boolean {
   if (binding.device === 'keyboard') return input.held.includes(binding.code)
-  if (binding.device === 'mouse') return false
+  if (binding.device === 'mouse')
+    return binding.control === 'primary' && input.pointer?.down === true
   return axisOf(binding, input) > 0.5
 }
 
 function axisOf(binding: InputAction['bindings'][number], input: RawInput): number {
+  if (binding.device === 'keyboard')
+    return input.held.includes(binding.code) ? (binding.scale ?? 1) : 0
   if (binding.device !== 'gamepad') return 0
   const raw = input.gamepads.reduce(
     (strongest, gamepad) => stronger(strongest, rawGamepadAxis(gamepad, binding)),
@@ -90,6 +97,11 @@ function axisOf(binding: InputAction['bindings'][number], input: RawInput): numb
 }
 
 function vectorOf(binding: InputAction['bindings'][number], input: RawInput): InputVector {
+  if (binding.device === 'keyboard') {
+    if (!input.held.includes(binding.code)) return ZERO
+    const value = binding.scale ?? 1
+    return binding.axis === 'x' ? { x: value, y: 0 } : { x: 0, y: value }
+  }
   if (binding.device !== 'gamepad') return ZERO
   const vector = input.gamepads.reduce<InputVector>(
     (strongest, gamepad) => strongerVector(strongest, rawGamepadVector(gamepad, binding)),
@@ -144,9 +156,9 @@ function stronger(one: number, other: number): number {
 }
 
 function strongerVector(one: InputVector, other: InputVector): InputVector {
-  return one.x * one.x + one.y * one.y < other.x * other.x + other.y * other.y ? other : one
+  return { x: stronger(one.x, other.x), y: stronger(one.y, other.y) }
 }
 
-function isVector(value: Value | undefined): value is InputVector {
+function isVector(value: InputActionValue | undefined): value is InputVector {
   return typeof value === 'object' && value !== null
 }

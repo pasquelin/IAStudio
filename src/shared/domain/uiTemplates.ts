@@ -17,9 +17,17 @@ import { newUiDocument, newUiElement } from './uiDocument'
  * Shared rather than kept in the window, because two sides answer with one: the naming window
  * picks an id, and the assistant will name one on a `ui.create` without a window anywhere.
  */
-export type UiTemplateId = 'empty' | 'hud' | 'mainMenu' | 'pause'
+export type UiTemplateId =
+  'empty' | 'hud' | 'mainMenu' | 'pause' | 'mainMenuControls' | 'pauseControls'
 
-export const UI_TEMPLATE_IDS: readonly UiTemplateId[] = ['empty', 'hud', 'mainMenu', 'pause']
+export const UI_TEMPLATE_IDS: readonly UiTemplateId[] = [
+  'empty',
+  'hud',
+  'mainMenu',
+  'pause',
+  'mainMenuControls',
+  'pauseControls',
+]
 
 /**
  * What a new interface takes when nobody picks. `empty` and not the HUD: an interface is one of
@@ -38,6 +46,8 @@ const BUILDERS: Record<UiTemplateId, (newId: () => string) => readonly UiElement
   hud: hudElements,
   mainMenu: menuElements,
   pause: pauseElements,
+  mainMenuControls: menuControlsElements,
+  pauseControls: pauseControlsElements,
 }
 
 /** Through `newUiDocument` and `newUiElement`: what an element IS is described once, by the
@@ -83,6 +93,15 @@ function menuElements(newId: () => string): readonly UiElement[] {
   return [centredStack(newId, 'Menu', [title(newId, 'Game'), ...buttons(newId, ['Play', 'Quit'])])]
 }
 
+function menuControlsElements(newId: () => string): readonly UiElement[] {
+  return [
+    centredStack(newId, 'Menu', [
+      title(newId, 'Game'),
+      ...buttons(newId, ['Play', 'Controls', 'Quit']),
+    ]),
+  ]
+}
+
 /**
  * A veil over whatever is behind it, and the choices on top. The veil is a `panel` stretched
  * across the screen rather than a property of the interface: what a pause LOOKS like is the
@@ -90,15 +109,27 @@ function menuElements(newId: () => string): readonly UiElement[] {
  */
 function pauseElements(newId: () => string): readonly UiElement[] {
   return [
-    {
-      ...named('panel', newId, 'Veil'),
-      place: SCREEN_PLACEMENT,
-      style: { ...DEFAULT_STYLE, background: { kind: 'color', color: '#000000' }, opacity: 0.6 },
-      children: [],
-    },
+    veil(newId),
     centredStack(newId, 'Pause', [title(newId, 'Paused'), ...buttons(newId, ['Resume', 'Quit'])]),
   ]
 }
+
+function pauseControlsElements(newId: () => string): readonly UiElement[] {
+  return [
+    veil(newId),
+    centredStack(newId, 'Pause', [
+      title(newId, 'Paused'),
+      ...buttons(newId, ['Resume', 'Controls', 'Quit']),
+    ]),
+  ]
+}
+
+const veil = (newId: () => string): UiElement => ({
+  ...named('panel', newId, 'Veil'),
+  place: SCREEN_PLACEMENT,
+  style: { ...DEFAULT_STYLE, background: { kind: 'color', color: '#000000' }, opacity: 0.6 },
+  children: [],
+})
 
 function centredStack(
   newId: () => string,
