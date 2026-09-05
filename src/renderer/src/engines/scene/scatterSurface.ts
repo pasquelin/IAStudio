@@ -15,8 +15,13 @@ import {
   type ScatterRegion,
 } from '@shared/domain/scatterGenerate'
 import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
-import { layerRegion, scatterRebuildOf, type ScatterRebuild } from '@shared/domain/scatterFollow'
-import { dirtiedChunks } from './reliefSurfaceEdits'
+import {
+  layerRegion,
+  scatterLayerRebuildOf,
+  scatterRebuildOf,
+  type ScatterRebuild,
+} from '@shared/domain/scatterFollow'
+import { blendChanged, dirtiedChunks } from './reliefSurfaceEdits'
 import { scatterBatchesOf, scatterCellSize, scatterDrawnOf } from './scatterRender'
 import {
   buildPartition,
@@ -142,11 +147,14 @@ async function syncScatter(
   dropRemovedLayers(state.cells, new Set(enabledScatters(world.layers).map(layer => layer.id)))
   const jobs = enabledScatters(world.layers).map(layer => {
     const before = previous ? scatterLayerOf(previous, layer.id) : undefined
-    if (before && before.category !== layer.category) dropLayer(state.cells, layer.id)
-    const rebuild: ScatterRebuild =
-      before === layer && previous
-        ? reliefRebuildOf(layer, previous, world, heightmaps, state.grounded)
-        : { kind: 'all' }
+    if (before && scatterCellsMoved(before, layer)) dropLayer(state.cells, layer.id)
+    const layerRebuild: ScatterRebuild = before
+      ? scatterLayerRebuildOf(before, layer)
+      : { kind: 'all' }
+    const reliefRebuild: ScatterRebuild = previous
+      ? reliefRebuildOf(layer, previous, world, heightmaps, state.grounded)
+      : { kind: 'none' }
+    const rebuild = mergeRebuild(layerRebuild, reliefRebuild)
     return { layer, rebuild }
   })
   for (const { layer, rebuild } of jobs) {
@@ -219,6 +227,7 @@ function reliefRebuildOf(
   heightmaps: ReadonlyMap<string, HeightmapSamples> | undefined,
   grounded: ReadonlySet<string>,
 ): ScatterRebuild {
+  if (layer.followRelief !== 'none' && reliefGroundChanged(before, after)) return { kind: 'all' }
   let rebuild: ScatterRebuild = { kind: 'none' }
   for (const terrain of enabledTerrains(after.layers)) {
     const previous = reliefLayerOf(before, terrain.id)
@@ -236,8 +245,57 @@ function reliefRebuildOf(
   return rebuild
 }
 
+function scatterCellsMoved(before: ScatterLayer, after: ScatterLayer): boolean {
+  return (
+    before.category !== after.category ||
+    before.origin.x !== after.origin.x ||
+    before.origin.z !== after.origin.z ||
+    before.size.x !== after.size.x ||
+    before.size.z !== after.size.z
+  )
+}
+
+function reliefGroundChanged(before: SceneWorld, after: SceneWorld): boolean {
+  const previous = new Map(
+    before.layers
+      .filter((layer): layer is ReliefLayer => layer.kind === 'relief')
+      .map(layer => [layer.id, layer]),
+  )
+  const next = new Map(
+    after.layers
+      .filter((layer): layer is ReliefLayer => layer.kind === 'relief')
+      .map(layer => [layer.id, layer]),
+  )
+  for (const id of new Set([...previous.keys(), ...next.keys()])) {
+    const left = previous.get(id)
+    const right = next.get(id)
+    if (!left || !right) {
+      if (left?.enabled || right?.enabled) return true
+      continue
+    }
+    if (left.enabled !== right.enabled) return true
+    if (!right.enabled) continue
+    if (
+      left.heightmap.assetId !== right.heightmap.assetId ||
+      left.origin.x !== right.origin.x ||
+      left.origin.z !== right.origin.z ||
+      left.size.x !== right.size.x ||
+      left.size.z !== right.size.z ||
+      left.elevation.min !== right.elevation.min ||
+      left.elevation.max !== right.elevation.max ||
+      left.grain !== right.grain ||
+      blendChanged(left.edits, right.edits)
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
 function mergeRebuild(left: ScatterRebuild, right: ScatterRebuild): ScatterRebuild {
-  if (left.kind !== 'brush' || right.kind !== 'brush') return right
+  if (left.kind === 'all' || right.kind === 'all') return { kind: 'all' }
+  if (left.kind === 'none') return right
+  if (right.kind === 'none') return left
   return {
     kind: 'brush',
     region: {

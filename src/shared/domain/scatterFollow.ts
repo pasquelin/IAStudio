@@ -1,5 +1,12 @@
-import { chunkLayout, texelStep, type ReliefChunkKey, type ReliefExtent } from './relief'
-import type { ScatterFollowRelief, ScatterLayer } from './scatter'
+import {
+  changedChunks,
+  chunkLayout,
+  texelStep,
+  type ReliefChunkKey,
+  type ReliefExtent,
+  type ReliefMask,
+} from './relief'
+import { SCATTER_MASK_TEXELS, type ScatterFollowRelief, type ScatterLayer } from './scatter'
 import {
   scatterPosesOf,
   type ScatterGround,
@@ -9,6 +16,80 @@ import {
 
 export type ScatterRebuild =
   { kind: 'none' } | { kind: 'all' } | { kind: 'brush'; region: ScatterRegion }
+
+/** What a layer edit changes in the already drawn scatter cells. */
+export function scatterLayerRebuildOf(before: ScatterLayer, after: ScatterLayer): ScatterRebuild {
+  if (before === after) return { kind: 'none' }
+  if (
+    before.enabled !== after.enabled ||
+    before.category !== after.category ||
+    before.seed !== after.seed ||
+    before.origin.x !== after.origin.x ||
+    before.origin.z !== after.origin.z ||
+    before.size.x !== after.size.x ||
+    before.size.z !== after.size.z ||
+    before.grain !== after.grain ||
+    !sameRules(before, after) ||
+    !sameAssets(before, after)
+  ) {
+    return { kind: 'all' }
+  }
+  if (before.mask === after.mask || sameProceduralMask(before.mask, after.mask)) {
+    return { kind: 'none' }
+  }
+  if (before.mask?.kind !== 'painted' || after.mask?.kind !== 'painted') return { kind: 'all' }
+  const dirtied = changedChunks(before.mask.weights, after.mask.weights)
+  return dirtied.length === 0
+    ? { kind: 'none' }
+    : {
+        kind: 'brush',
+        region: paintedRegionOf(dirtied, after),
+      }
+}
+
+function sameRules(before: ScatterLayer, after: ScatterLayer): boolean {
+  const left = before.rules as Record<string, unknown>
+  const right = after.rules as Record<string, unknown>
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)])
+  return [...keys].every(key => left[key] === right[key])
+}
+
+function sameAssets(before: ScatterLayer, after: ScatterLayer): boolean {
+  return (
+    before.assets.length === after.assets.length &&
+    before.assets.every(
+      (asset, index) =>
+        asset.assetId === after.assets[index]?.assetId &&
+        asset.weight === after.assets[index]?.weight,
+    )
+  )
+}
+
+function sameProceduralMask(
+  before: ReliefMask | undefined,
+  after: ReliefMask | undefined,
+): boolean {
+  if (!before || !after || before.kind !== after.kind) return false
+  return (
+    before.kind !== 'painted' &&
+    after.kind !== 'painted' &&
+    before.min === after.min &&
+    before.max === after.max
+  )
+}
+
+function paintedRegionOf(dirtied: readonly ReliefChunkKey[], layer: ScatterLayer): ScatterRegion {
+  const samples = { width: SCATTER_MASK_TEXELS, height: SCATTER_MASK_TEXELS }
+  const region = regionOf(dirtied, { ...layer, elevation: { min: 0, max: 1 }, samples })
+  const step = texelStep(layer.size, samples)
+  const extent = layerRegion(layer)
+  return {
+    minX: Math.max(extent.minX, region.minX - step.x / 2),
+    minZ: Math.max(extent.minZ, region.minZ - step.z / 2),
+    maxX: Math.min(extent.maxX, region.maxX + step.x / 2),
+    maxZ: Math.min(extent.maxZ, region.maxZ + step.z / 2),
+  }
+}
 
 /**
  * What a scatter layer must rebuild after a relief sculpt. Subscribes to `dirtiedChunks` —

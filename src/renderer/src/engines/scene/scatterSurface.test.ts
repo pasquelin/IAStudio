@@ -9,7 +9,13 @@ import {
   Scene,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
-import { DEFAULT_WORLD, reliefLayer, scatterLayer, terrainEditLayer } from '@shared/domain/scene'
+import {
+  DEFAULT_WORLD,
+  reliefLayer,
+  scatterLayer,
+  terrainEditLayer,
+  type ScatterLayer,
+} from '@shared/domain/scene'
 import { withChunkDelta } from '@shared/domain/relief'
 import { createScatterSurface } from './scatterSurface'
 import { createModelCache } from './modelCache'
@@ -169,6 +175,97 @@ describe('createScatterSurface', () => {
 
     expect(surface.objectsInCell('trees', cellKey(0, 0))[0]?.visible).toBe(true)
     expect(surface.objectsInCell('trees', cellKey(1, 0))[0]?.visible).toBe(false)
+    surface.dispose()
+  })
+
+  it('keeps every drawn instance when only layer metadata changes', async () => {
+    const layer = scatterLayer({
+      id: 'trees',
+      assets: [{ assetId: 'pine', weight: 1 }],
+      origin: { x: 0, z: 0 },
+      size: { x: 512, z: 256 },
+      rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.01, spacing: 16 },
+    })
+    if (layer.category !== 'props') throw new Error('expected props')
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    await surface.sync({ ...DEFAULT_WORLD, layers: [layer] })
+    const west = surface.objectsInCell('trees', cellKey(0, 0))
+    const east = surface.objectsInCell('trees', cellKey(1, 0))
+
+    const metadata: ScatterLayer = { ...layer, name: 'Forest', locked: true, collision: true }
+    await surface.sync({ ...DEFAULT_WORLD, layers: [metadata] })
+
+    expect(surface.objectsInCell('trees', cellKey(0, 0))).toBe(west)
+    expect(surface.objectsInCell('trees', cellKey(1, 0))).toBe(east)
+    surface.dispose()
+  })
+
+  it('removes cells from the old extent when a layer moves', async () => {
+    const layer = scatterLayer({
+      id: 'trees',
+      assets: [{ assetId: 'pine', weight: 1 }],
+      origin: { x: 0, z: 0 },
+      size: { x: 256, z: 256 },
+      rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.01, spacing: 16 },
+    })
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    await surface.sync({ ...DEFAULT_WORLD, layers: [layer] })
+    expect(surface.objectsInCell('trees', cellKey(0, 0))).not.toEqual([])
+
+    await surface.sync({
+      ...DEFAULT_WORLD,
+      layers: [{ ...layer, origin: { x: 512, z: 0 } }],
+    })
+
+    expect(surface.objectsInCell('trees', cellKey(0, 0))).toEqual([])
+    expect(surface.objectsInCell('trees', cellKey(2, 0))).not.toEqual([])
+    surface.dispose()
+  })
+
+  it('rebuilds grounded scatter when its terrain is disabled', async () => {
+    const samples = { width: 5, height: 5, values: new Float32Array(25).fill(8) }
+    const scatter = scatterLayer({
+      id: 'trees',
+      assets: [{ assetId: 'pine', weight: 1 }],
+      origin: { x: 0, z: 0 },
+      size: { x: 32, z: 32 },
+      rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.05, spacing: 8 },
+    })
+    const terrain = reliefLayer({ assetId: 'height' }, { id: 'ground' })
+    const surface = createScatterSurface(new Scene(), {
+      models: createModelCache(
+        async () => staticTree(),
+        () => undefined,
+      ),
+      onUnsupported: () => undefined,
+    })
+    await surface.sync(
+      { ...DEFAULT_WORLD, layers: [terrain, scatter] },
+      new Map([['height', samples]]),
+    )
+    const grounded = surface.objectsInCell('trees', cellKey(0, 0))[0]
+    expect(grounded).toBeDefined()
+
+    await surface.sync(
+      { ...DEFAULT_WORLD, layers: [{ ...terrain, enabled: false }, scatter] },
+      new Map([['height', samples]]),
+    )
+
+    const flat = surface.objectsInCell('trees', cellKey(0, 0))[0]
+    expect(flat).not.toBe(grounded)
+    expect(flat).toBeDefined()
     surface.dispose()
   })
 
