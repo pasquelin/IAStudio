@@ -63,7 +63,9 @@ export type WorkspaceContext = Pick<
   | 'tasks'
   | 'authenticated'
   | 'authKnown'
->
+> & {
+  documents: readonly Pick<SnapshotDocument, 'id' | 'title' | 'kind' | 'active'>[]
+}
 
 export type VisualContext = {
   kind: 'viewport' | 'document' | 'camera' | 'preview'

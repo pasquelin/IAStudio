@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  addMissionStep,
   createMission,
   createMissionStep,
   type Mission,
@@ -221,6 +222,9 @@ describe('AssistantContextBuilder', () => {
     )
     const context = await builder.build({ mission, step, request: 'Make the boat blue' })
     expect(context.document?.id).toBe('document_1')
+    expect(context.workspace?.documents).toEqual([
+      { id: 'document_1', title: 'Boat', kind: 'image', active: true },
+    ])
     expect(context.selection?.items).toEqual([{ id: 'layer_1', name: 'Hull' }])
     expect(context.documentState).toEqual({ id: 'document_1', layers: 3 })
     expect(context.memories).toEqual([memory])
@@ -233,6 +237,45 @@ describe('AssistantContextBuilder', () => {
         limit: 6,
       }),
     )
+  })
+
+  it('includes active studio jobs even when the mission is not waiting for them', async () => {
+    const { mission, step } = missionOf('/projects/alpha')
+    const completed: Job = { ...job, id: 'job_done', status: 'succeeded' }
+    const builder = createAssistantContextBuilder(
+      dependencies({ jobs: { list: () => [completed, job] } }),
+    )
+
+    const context = await builder.build({ mission, step, request: 'Cancel the running generation' })
+
+    expect(context.jobs).toEqual([job])
+  })
+
+  it('prioritises mission jobs when active studio jobs fill the source budget', async () => {
+    const base = missionOf('/projects/alpha')
+    const waiting = addMissionStep(
+      base.mission,
+      createMissionStep(
+        base.mission.id,
+        'Wait',
+        { kind: 'job', jobId: 'job_linked' },
+        { ...clock, newId: () => 'linked' },
+      ),
+      clock.now(),
+    )
+    const active = Array.from({ length: 6 }, (_, at): Job => ({
+      ...job,
+      id: `job_active_${at}`,
+    }))
+    const linked: Job = { ...job, id: 'job_linked' }
+    const builder = createAssistantContextBuilder(
+      dependencies({ jobs: { list: () => [...active, linked] } }),
+    )
+
+    const context = await builder.build({ mission: waiting, step: base.step, request: 'Continue' })
+
+    expect(context.jobs[0]?.id).toBe('job_linked')
+    expect(context.jobs).toHaveLength(6)
   })
 
   it('does not contaminate a mission with another project window', async () => {
@@ -248,11 +291,32 @@ describe('AssistantContextBuilder', () => {
     )
     const context = await builder.build({ mission, step, request: 'Continue' })
     expect(context.workspace).toBeNull()
+    expect(context.jobs).toEqual([])
     expect(context.document).toBeUndefined()
     expect(context.project).toBeNull()
     expect(recall).toHaveBeenCalledTimes(1)
     expect(recall).toHaveBeenCalledWith('global', expect.anything())
     expect(readContext).not.toHaveBeenCalled()
+  })
+
+  it('keeps workspace state when open documents exhaust the remaining budget', async () => {
+    const { mission, step } = missionOf('/projects/alpha')
+    const snapshot = snapshotOf('/projects/alpha')
+    const document = snapshot.documents[0]
+    if (!document) throw new Error('snapshot fixture needs one document')
+    snapshot.documents = Array.from({ length: 8 }, (_, at) => ({
+      ...document,
+      id: `document_${at}`,
+      title: `Document ${at} ${'x'.repeat(80)}`,
+      active: at === 0,
+    }))
+    const builder = createAssistantContextBuilder(dependencies({ snapshot: async () => snapshot }))
+
+    const context = await builder.build({ mission, step, request: 'Inspect the workspace' })
+
+    expect(context.workspace).toMatchObject({ workspace: 'image', surface: 'image' })
+    expect(context.workspace?.documents.length).toBeLessThan(8)
+    expect(context.budget.workspace).toMatchObject({ truncated: true, contentTruncated: true })
   })
 
   it('scores upstream then enforces every source budget independently', async () => {

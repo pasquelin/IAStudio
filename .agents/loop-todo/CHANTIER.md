@@ -36,8 +36,15 @@ protocole ; la spec prime sur le périmètre fonctionnel.
 - Verts : 16 745 tests TypeScript, 195 tests Python, `pnpm validate`.
 - Expériences rejetées : descriptions françaises globales, poids des options, hausse globale ou
   canonique du poids d'intention. Elles dégradent des familles sans gain net.
-- Audit 10.5G : les contrats métier sont justifiés, mais ne peuvent reranker la recherche initiale
-  sans signal structuré de ressource/effet produit par le Context Router.
+- Audit 10.5G : les contrats métier sont justifiés, mais ne peuvent reranker structurellement la
+  recherche initiale sans signal correspondant produit par le Context Router.
+- Reclassification cas par cas : 15 Metadata, 17 Paraphrase, 38 Domain collision, 2 Scope/target,
+  16 Workflow et 11 Benchmark. `COVERAGE` est une intention de mesure, pas un oracle d'appel ; le
+  R@12 offline actuel mesure donc aussi une compatibilité historique et non la seule applicabilité.
+- Gate produit : mini-banc 27/27 avec 340 545 tokens, 10 actions inutiles et 89 rounds. Palier B
+  53/91, contre 43/91 en 10.4, avec 1 311 894 tokens, 118 actions inutiles et 317 rounds.
+- Causes Palier B relues : 22 Retrieval, 6 Context, 3 Planning, 3 Model et 4 Benchmark. Lot en cours :
+  fidéliser documents ouverts, jobs actifs et état structurel tronqué avant tout nouveau scoring.
 
 ## Ce que tu ne tranches pas seul
 

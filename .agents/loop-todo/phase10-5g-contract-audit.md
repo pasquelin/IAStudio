@@ -127,3 +127,71 @@ Trois voies respectent différemment les contraintes actuelles :
 Recommandation : choisir explicitement si le Context Router doit produire un besoin structuré
 `resource/effect`. Sans cette décision, annoter progressivement `reads/writes/effects` créerait une
 sémantique canonique peu exploitée et ne répondrait pas à la cause dominante mesurée.
+
+## Reclassification reproductible des échecs
+
+La relecture cas par cas des 99 rangs hors top-12 invalide la classification agrégée antérieure.
+Les totaux ci-dessous sont issus des catégories attribuées à chaque ligne ; les rangs et composantes
+de score viennent de l'artefact, tandis que la catégorie reste une interprétation auditée.
+
+| Cause | Ancien total | Total relu |
+|---|---:|---:|
+| Metadata | 35 | 15 |
+| Paraphrase | 16 | 17 |
+| Domain collision | 43 | 38 |
+| Scope/target | 0 | 2 |
+| Workflow | 4 | 16 |
+| Benchmark | 1 | 11 |
+
+La cause de cet écart est vérifiable dans le harnais : `expectedMissionActions` dérive son attendu
+de `COVERAGE`, alors que le commentaire canonique de `COVERAGE` précise explicitement qu'il s'agit
+d'une intention de couverture et non d'une prescription d'appels
+(`scripts/banc/coverage.ts`, lignes 3–18). Le benchmark retient pourtant les scénarios associés à
+une seule action, concatène toute la demande, fournit zéro ressource précédente et juge cette action
+comme l'attendu du premier retrieval (`scripts/banc/actionIndexOffline.mission-banc.ts`, lignes
+154–173).
+
+Cela pénalise notamment :
+
+- les actions finales exigeant une ressource, telles que `generator.submit`, quand
+  `generator.prepare` est correctement proposé avant elles ;
+- les étapes finales de demandes multi-actions, sans résultats précédents ni références résolues ;
+- les actions de relecture devenues inutiles lorsque le Context Builder possède déjà l'état frais ;
+- des attentes historiques dont le contrat actuel ne réalise pas l'effet demandé.
+
+Le chiffre R@12 reste une mesure de compatibilité avec la couverture historique. Il ne prouve pas à
+lui seul la qualité du retrieval au round réellement applicable. Il ne faut donc plus optimiser les
+99 cas comme s'ils étaient tous des faux négatifs ActionIndex.
+
+La prochaine gate justifiée est le mini-banc Mission Runtime, qui mesure l'état final réel et les
+workflows. Le benchmark offline doit rester inchangé comme métrique historique jusqu'à la création
+d'un oracle complémentaire, step-aware, dérivé de ressources réellement présentes plutôt que d'une
+nouvelle table manuelle.
+
+## Gates produit mesurées
+
+Le mini-banc de référence reste à 27/27. Par rapport à la Phase 10.3, il baisse de 361 942 à
+340 545 tokens, de 19 à 10 actions inutiles et de 95 à 89 rounds.
+
+Le Palier B passe de 43/91 en Phase 10.4 à 53/91, avec 1 311 894 tokens, 317 rounds, 341 appels
+provider, 216 actions et 118 actions inutiles. La classification causale des 38 échecs est :
+
+| Cause | Échecs |
+|---|---:|
+| Retrieval | 22 |
+| Context | 6 |
+| Planning | 3 |
+| Model | 3 |
+| Benchmark | 4 |
+
+Le contexte explique deux défauts génériques démontrés : les jobs actifs non reliés à la mission
+étaient absents, et la représentation textuelle préfixée d'un état volumineux pouvait retirer une
+petite structure nécessaire située après une grande collection. La correction conserve désormais
+les petits sous-arbres structurés dans le budget, expose les documents ouverts et inclut les jobs
+actifs seulement lorsque le snapshot appartient au projet de la mission. Les jobs explicitement
+liés restent prioritaires dans le quota.
+
+Sur les cas ciblés, l'exposition du job actif fait réussir 44.3. La compaction structurée fait
+réussir 62.3 dès sa première action, avec l'identifiant réel de transition. Les 19 réflexions qui
+suivent cette mutation réussie démontrent un défaut séparé de clôture du step de vérification ; elles
+ne sont pas attribuables au Context Builder et doivent être traitées dans un lot runtime distinct.

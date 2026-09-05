@@ -19,6 +19,7 @@ import type {
   WorkspaceContext,
 } from './context'
 import { CONTEXT_BUDGETS, emptyBudgetReport, withinBudget } from './contextBudget'
+import { compactContextValue, serializedContextLength } from './contextCompaction'
 
 type AssistantContextRequest = {
   mission: Mission
@@ -70,13 +71,6 @@ function selected<T>(
 
 function textWithin(text: string, maximum: number): string {
   return text.length <= maximum ? text : `${text.slice(0, maximum - 1)}…`
-}
-
-function compactValue(value: unknown, maximum: number): { value: unknown; truncated: boolean } {
-  const serialized = JSON.stringify(value)
-  return serialized === undefined || serialized.length <= maximum
-    ? { value, truncated: false }
-    : { value: { truncated: true, preview: textWithin(serialized, maximum) }, truncated: true }
 }
 
 function markContentTruncated(report: ContextBudgetReport, source: ContextSource): void {
@@ -216,7 +210,7 @@ function previousResults(input: AssistantContextRequest, report: ContextBudgetRe
       step => step.state === 'completed' && step.result !== undefined && step.id !== input.step.id,
     )
     .map(step => {
-      const result = compactValue(step.result, 600)
+      const result = compactContextValue(step.result, 600)
       if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')
       return { stepId: step.id, title: textWithin(step.title, 160), result: result.value }
     })
@@ -227,12 +221,23 @@ function previousResults(input: AssistantContextRequest, report: ContextBudgetRe
     )
 }
 
-function relevantJobs(input: AssistantContextRequest, jobs: readonly Job[]): readonly Job[] {
+function relevantJobs(
+  input: AssistantContextRequest,
+  jobs: readonly Job[],
+  includeActive: boolean,
+): readonly Job[] {
   const ids = new Set([
     ...input.mission.waits.flatMap(wait => (wait.kind === 'job' ? [wait.jobId] : [])),
     ...input.mission.plan.steps.flatMap(step => (step.kind === 'job' ? [step.jobId] : [])),
   ])
-  return jobs.filter(job => ids.has(job.id))
+  const linked = jobs.filter(job => ids.has(job.id))
+  if (!includeActive) return linked
+  return [
+    ...linked,
+    ...jobs.filter(
+      job => !ids.has(job.id) && (job.status === 'queued' || job.status === 'running'),
+    ),
+  ]
 }
 
 function missionContext(
@@ -285,27 +290,59 @@ function workspaceContext(
     ...task,
     label: textWithin(task.label, 80),
   }))
-  const context =
-    selected(report, 'workspace', [
-      {
-        workspace: snapshot.workspace,
-        surface: snapshot.surface,
-        commandScope: snapshot.commandScope,
-        armedModels,
-        play: snapshot.play,
-        tasks,
-        authenticated: snapshot.authenticated,
-        authKnown: snapshot.authKnown,
-      },
-    ])[0] ?? null
-  if (
-    snapshot.tasks.length > tasks.length ||
-    snapshot.tasks.some(task => task.label.length > 80) ||
-    Object.values(snapshot.armedModels).some(model => (model?.length ?? 0) > 120)
-  ) {
+  const base = {
+    workspace: snapshot.workspace,
+    surface: snapshot.surface,
+    commandScope: snapshot.commandScope,
+    armedModels,
+    play: snapshot.play,
+    tasks,
+    authenticated: snapshot.authenticated,
+    authKnown: snapshot.authKnown,
+  }
+  const documents = workspaceDocuments(snapshot, base)
+  const context = selected(report, 'workspace', [{ ...base, documents }])[0] ?? null
+  if (workspaceContentWasTruncated(snapshot, tasks.length, documents.length)) {
     markContentTruncated(report, 'workspace')
   }
   return context
+}
+
+function workspaceDocuments(
+  snapshot: StudioSnapshot,
+  base: Omit<WorkspaceContext, 'documents'>,
+): WorkspaceContext['documents'][number][] {
+  const documents: WorkspaceContext['documents'][number][] = []
+  for (const document of snapshot.documents.slice(0, 8)) {
+    const next = {
+      id: document.id,
+      title: textWithin(document.title, 80),
+      kind: document.kind,
+      active: document.active,
+    }
+    if (
+      serializedContextLength({ ...base, documents: [...documents, next] }) >
+      CONTEXT_BUDGETS.workspace.maxCharacters
+    ) {
+      break
+    }
+    documents.push(next)
+  }
+  return documents
+}
+
+function workspaceContentWasTruncated(
+  snapshot: StudioSnapshot,
+  taskCount: number,
+  documentCount: number,
+): boolean {
+  return (
+    snapshot.tasks.length > taskCount ||
+    snapshot.tasks.some(task => task.label.length > 80) ||
+    snapshot.documents.length > documentCount ||
+    snapshot.documents.some(document => document.title.length > 80) ||
+    Object.values(snapshot.armedModels).some(model => (model?.length ?? 0) > 120)
+  )
 }
 
 function snapshotContext(snapshot: StudioSnapshot | null, report: ContextBudgetReport) {
@@ -344,7 +381,7 @@ function assembledContext(
 ): AssistantContext {
   const report = emptyBudgetReport()
   const current = snapshotContext(snapshot, report)
-  const compactState = compactValue(
+  const compactState = compactContextValue(
     collected.documentState,
     CONTEXT_BUDGETS.documentState.maxCharacters,
   )
@@ -368,7 +405,7 @@ function assembledContext(
       score: hit.score,
     })),
     memories: selected(report, 'memories', collected.memories),
-    jobs: selected(report, 'jobs', relevantJobs(input, collected.jobs)),
+    jobs: selected(report, 'jobs', relevantJobs(input, collected.jobs, snapshot !== null)),
     previousResults: selected(report, 'results', previousResults(input, report)),
     ...(context ? { projectContext: context } : {}),
     ...(visual.length > 0 ? { visual } : {}),
