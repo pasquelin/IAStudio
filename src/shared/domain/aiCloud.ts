@@ -189,3 +189,24 @@ export function chatModelOf(chosen: string | undefined, declared: string): strin
 export function cloudAuth(id: CloudProviderId): CloudAuth {
   return CLOUD_PROVIDERS.find(one => one.id === id)?.auth ?? 'key-secret'
 }
+
+/**
+ * What a cloud is FOR, which is a reading of what it already declares rather than a second list.
+ *
+ * A cloud publishing any family but `code` has a catalogue the studio browses; one declaring
+ * `code` alone is a chat endpoint and nothing more — `chatCloud` gives every one of them exactly
+ * that. Derived, so a cloud added to `CLOUD_PROVIDERS` lands in its group with nothing else to
+ * keep in step.
+ */
+export type CloudGroup = 'generation' | 'assistant'
+
+/** Generation first: it is what a key is most often typed for, and Scenario opens the registry. */
+export const CLOUD_GROUPS: readonly CloudGroup[] = ['generation', 'assistant']
+
+export function cloudGroupOf(provider: CloudProvider): CloudGroup {
+  return provider.families.some(family => family !== CODE_FAMILY) ? 'generation' : 'assistant'
+}
+
+export function cloudsOfGroup(group: CloudGroup): readonly CloudProvider[] {
+  return CLOUD_PROVIDERS.filter(provider => cloudGroupOf(provider) === group)
+}

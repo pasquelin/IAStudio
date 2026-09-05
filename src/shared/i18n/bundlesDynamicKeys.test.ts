@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_MESSAGES, ACTIVITY_TOPICS } from '../domain/activity'
-import { CLOUD_IDS } from '../domain/aiCloud'
+import { CLOUD_GROUPS, CLOUD_IDS } from '../domain/aiCloud'
 import { COMPATIBILITIES } from '../domain/aiMemory'
 import { STANDALONE_ROLES } from '../domain/aiRole'
 import { TRACK_PROPERTIES } from '../domain/animation'
@@ -259,6 +259,8 @@ const DYNAMIC_KEYS: readonly string[] = [
   // A cloud is named by its REGISTRY entry, so the second one to arrive needs no code change —
   // and no line here either. Without its two keys it would offer itself as `aiClouds.x`.
   ...CLOUD_IDS.flatMap(id => [`aiClouds.${id}`, `aiClouds.${id}Hint`]),
+  // Composed by the add form, which groups the picker rather than listing nine services flat.
+  ...CLOUD_GROUPS.map(group => `aiCloudGroups.${group}`),
   /**
    * Every label of a form the studio DERIVES rather than fetches — the knobs of a local model,
    * and those of the cloud whose catalogue is data. Both are read through `translate(<variable>)`

@@ -6,7 +6,13 @@ import { useTranslation } from 'react-i18next'
 import { WindowFailure } from '@/components/WindowFailure'
 import { FormField } from '@/components/FormField'
 import { checkAccountName } from '@shared/domain/account'
-import { CLOUD_IDS, cloudAuth, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import {
+  CLOUD_GROUPS,
+  CLOUD_IDS,
+  cloudAuth,
+  cloudsOfGroup,
+  SCENARIO_CLOUD,
+} from '@shared/domain/aiCloud'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
 import { FAILURE_KEYS } from './failureKeys'
@@ -86,10 +92,16 @@ export function AccountSettingsAddForm() {
           className="w-full"
           {...register('providerId')}
         >
-          {CLOUD_IDS.map(id => (
-            <option key={id} value={id}>
-              {t(`aiClouds.${id}`)}
-            </option>
+          {/* Grouped rather than flat: nine services in one run made a reader read every line to
+              find whether the one they hold generates pictures or answers questions. */}
+          {CLOUD_GROUPS.map(group => (
+            <optgroup key={group} label={t(`aiCloudGroups.${group}`)}>
+              {cloudsOfGroup(group).map(provider => (
+                <option key={provider.id} value={provider.id}>
+                  {t(`aiClouds.${provider.id}`)}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </WindowSelect>
       </FormField>

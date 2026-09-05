@@ -28,7 +28,12 @@
     "account": {
       "title": "A cloud, if you have one",
       "body": "The studio works without an account, on your own files. A key unlocks generation and the shared library.",
-      "connected": "An account is saved. You can continue."
+      "stored": "These services are already saved on this machine. Add another one, or carry on.",
+      "addService": "Add a service",
+      "addServiceHint": "Opens the form to store one more key",
+      "adding": "Paste the key of the service to store.",
+      "backToList": "Back to the list",
+      "backToListHint": "Drops what is typed here and shows the stored services again"
     },
     "project": {
       "title": "Your first project",

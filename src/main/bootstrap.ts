@@ -31,6 +31,50 @@ import { bindWelcomeSettings, openWelcomeWindow } from '@main/window/welcomeWind
 import { needsWelcome } from '@shared/domain/welcome'
 
 /**
+ * The two windows a launch can open, and which of them the splash hands over to.
+ *
+ * Its own function because `startUp` crossed the size guard once the welcome joined it — and the
+ * seam is a real one: everything above it is services, everything here is windows.
+ */
+function openStudioWindows(splash: Splash, settings: SettingsStore): void {
+  // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
+  // the other. Only a second launch overrides that — see `revealWindow`.
+  const main = createMainWindow({ deferShow: true })
+
+  // A first launch opens on the welcome instead, and the studio waits behind it: closing the
+  // welcome is what reveals it. `bindWelcomeSettings` first — the window stamps the onboarding
+  // as seen on its way out, and it needs the store to do it.
+  bindWelcomeSettings(settings)
+  const welcome = needsWelcome(settings.read().onboarding)
+    ? openWelcomeWindow({ deferShow: true })
+    : null
+
+  const showOnceSplashIsGone = async (): Promise<void> => {
+    await splash.finish()
+    if (welcome && !welcome.isDestroyed()) {
+      welcome.show()
+      return
+    }
+    if (!main.isDestroyed()) main.show()
+  }
+
+  const reveal = (): void => void showOnceSplashIsGone()
+
+  // Whichever of the two is meant to be seen first — the other stays hidden behind it.
+  const gate = welcome ?? main
+  gate.once('ready-to-show', reveal)
+
+  // Without this the window would stay hidden forever: `window-all-closed` never fires, so
+  // the process lives on with no UI and macOS `activate` refuses to reopen anything. A welcome
+  // that failed is destroyed rather than shown: it would reveal nothing and hide the studio.
+  gate.webContents.once('did-fail-load', (_event, code, description) => {
+    log.error('renderer', `startup window failed to load (${code}): ${description}`)
+    if (welcome && !welcome.isDestroyed()) welcome.destroy()
+    reveal()
+  })
+}
+
+/**
  * Everything below blocks the main loop from end to end — `createServices()` opens SQLite
  * synchronously. Deferred by one turn so the splash gets its frame first; without it the
  * splash surfaces once the work it covers is already finished.
@@ -81,41 +125,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
   app.on('will-quit', createShutdown({ settle: settleBeforeQuit, quit: () => app.quit() }))
 
-  // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
-  // the other. Only a second launch overrides that — see `revealWindow`.
-  const main = createMainWindow({ deferShow: true })
-
-  // A first launch opens on the welcome instead, and the studio waits behind it: closing the
-  // welcome is what reveals it. `bindWelcomeSettings` first — the window stamps the onboarding
-  // as seen on its way out, and it needs the store to do it.
-  bindWelcomeSettings(settings)
-  const welcome = needsWelcome(settings.read().onboarding)
-    ? openWelcomeWindow({ deferShow: true })
-    : null
-
-  const showOnceSplashIsGone = async (): Promise<void> => {
-    await splash.finish()
-    if (welcome && !welcome.isDestroyed()) {
-      welcome.show()
-      return
-    }
-    if (!main.isDestroyed()) main.show()
-  }
-
-  const reveal = (): void => void showOnceSplashIsGone()
-
-  // Whichever of the two is meant to be seen first — the other stays hidden behind it.
-  const gate = welcome ?? main
-  gate.once('ready-to-show', reveal)
-
-  // Without this the window would stay hidden forever: `window-all-closed` never fires, so
-  // the process lives on with no UI and macOS `activate` refuses to reopen anything. A welcome
-  // that failed is destroyed rather than shown: it would reveal nothing and hide the studio.
-  gate.webContents.once('did-fail-load', (_event, code, description) => {
-    log.error('renderer', `startup window failed to load (${code}): ${description}`)
-    if (welcome && !welcome.isDestroyed()) welcome.destroy()
-    reveal()
-  })
+  openStudioWindows(splash, settings)
 
   // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
   // application menu nor the About panel is reachable before a window exists.

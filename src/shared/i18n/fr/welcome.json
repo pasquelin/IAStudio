@@ -28,7 +28,12 @@
     "account": {
       "title": "Un service, si vous en avez un",
       "body": "Le studio fonctionne sans compte, sur vos fichiers. Une clé débloque la génération et la bibliothèque partagée.",
-      "connected": "Compte enregistré. Vous pouvez continuer."
+      "stored": "Ces services sont déjà enregistrés sur cette machine. Vous pouvez en ajouter un autre, ou continuer.",
+      "addService": "Ajouter un service",
+      "addServiceHint": "Ouvre le formulaire pour enregistrer une clé de plus",
+      "adding": "Collez la clé du service à enregistrer.",
+      "backToList": "Revenir à la liste",
+      "backToListHint": "Abandonne cette saisie et réaffiche les services enregistrés"
     },
     "project": {
       "title": "Votre premier projet",

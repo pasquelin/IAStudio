@@ -57,7 +57,7 @@ export function WelcomeFooter({
         </WindowButton>
         <div className="flex items-center gap-2">
           <WindowButton
-            variant="quiet"
+            variant="secondary"
             onClick={onBack}
             disabled={first}
             {...HINT_TOP(t('welcome.backHint'))}

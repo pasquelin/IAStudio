@@ -140,6 +140,17 @@
 }
 
 /*
+ * The THIRD selector, and the one that survived the two above: `.select:focus, .select:focus-within,
+ * .select:open` is daisyUI's rule, and a select whose menu is DEPLOYED matches only the last of
+ * them — the ring came back for exactly as long as the list was down. Its own rule rather than a
+ * fourth name on the list above: `:open` shipped in Chromium 133, and a selector an older parser
+ * rejects takes the whole list with it.
+ */
+:open {
+  outline: none !important;
+}
+
+/*
  * What a picture sits on once it fills the screen — the video return put on a second display and
  * filled from the window menu, and anything else a viewer takes full screen later.
  *

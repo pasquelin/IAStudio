@@ -28,6 +28,15 @@ describe('keyboard focus', () => {
     expect(stylesheet).toContain(':focus-within {')
   })
 
+  /**
+   * daisyUI rings a field on `:focus`, `:focus-within` AND `:open`, and a select with its menu
+   * deployed matches the last of those alone — the ring came back for as long as the list was
+   * down, in the one window built on those components.
+   */
+  it('covers a control whose menu is deployed, which neither focus selector matches', () => {
+    expect(stylesheet).toMatch(/:open\s*\{\s*outline: none !important;/)
+  })
+
   it('is not overridden one component at a time', () => {
     const overrides = /\b(?:focus|focus-visible|focus-within)[^\s'"`]*:outline-none/
     const offenders = WRITTEN_SOURCES.filter(([, source]) => overrides.test(source)).map(
