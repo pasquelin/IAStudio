@@ -222,7 +222,7 @@ describe('mission runtime', () => {
     }
     const invented: AssistantCall = {
       action: 'models.select',
-      input: { family: '3d', modelId: 'invented' },
+      input: { family: '3d', modelId: 'nested-provider' },
     }
     const grounded: AssistantCall = {
       action: 'models.select',
@@ -236,7 +236,10 @@ describe('mission runtime', () => {
     ])
     const run = vi.fn(async (call: AssistantCall): Promise<ActionOutcome> => ({
       ok: true,
-      data: call.action === 'models.search' ? [{ id: 'model-3d' }] : undefined,
+      data:
+        call.action === 'models.search'
+          ? [{ id: 'model-3d', provider: { id: 'nested-provider' } }]
+          : undefined,
     }))
     const runtime = createMissionRuntime({
       manager,
@@ -247,9 +250,7 @@ describe('mission runtime', () => {
       revisions: { read: async () => ({ current: [], unavailable: [] }) },
       clock: time,
     })
-
     const mission = await runtime.create('Generate a model', {})
-
     expect(run.mock.calls.map(call => call[0])).toEqual([search, grounded])
     expect(
       mission.plan.steps.some(

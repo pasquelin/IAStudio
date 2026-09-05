@@ -51,6 +51,12 @@ protocole ; la spec prime sur le périmètre fonctionnel.
 - Revue adverse : appliquer aussi la déduplication après conflit de révision. Dettes suivantes
   mesurables : borner un batch avant de dépasser 48 steps et restreindre la provenance des IDs aux
   références réellement retournées par le contrat, sans parcourir tout objet imbriqué.
+- Gate final du lot convergence : mini-banc 27/27, 318 721 tokens, 81 rounds, 83 appels provider,
+  6 actions inutiles. Palier B : 54/91, 1 535 423 tokens, 353 rounds, 388 appels provider et 188
+  actions inutiles. Causes relues : 20 Retrieval, 2 Context, 3 Planning, 3 Model, 6 Benchmark,
+  1 Execution et 2 Harness.
+- Lot sécurité en cours : refuser avant insertion les batches dépassant 48 steps et limiter la
+  confiance aux références top-level réellement retournées par une ressource.
 
 ## Ce que tu ne tranches pas seul
 

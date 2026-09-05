@@ -86,10 +86,8 @@ type ReferenceRefusal = {
 function referenceValues(value: unknown, key: string): readonly string[] {
   if (Array.isArray(value)) return value.flatMap(item => referenceValues(item, key))
   if (typeof value !== 'object' || value === null) return []
-  const record = Object.entries(value)
-  return record.flatMap(([entryKey, entryValue]) =>
-    entryKey === key && typeof entryValue === 'string' ? [entryValue] : [],
-  )
+  const reference = Object.entries(value).find(([entryKey]) => entryKey === key)?.[1]
+  return typeof reference === 'string' ? [reference] : []
 }
 
 function referencesReturned(
@@ -406,6 +404,9 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       step.kind === 'verify',
       hasDependentVerification(mission, step.id),
     )
+    if (mission.plan.steps.length + steps.length > MAX_MISSION_STEPS) {
+      return { kind: 'failed', error: 'mission step limit reached' }
+    }
     deps.metrics?.plannedSteps(steps.length)
     return {
       kind: 'planned',

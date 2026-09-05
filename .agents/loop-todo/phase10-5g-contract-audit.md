@@ -209,3 +209,29 @@ a également relevé deux dettes antérieures, distinctes du correctif : une ré
 d'actions peut dépasser la limite de 48 steps avant le prochain contrôle, et l'extraction récursive
 des références peut accepter des identifiants imbriqués qui ne représentent pas la ressource
 annoncée. Ces deux points deviennent des lots séparés avant une nouvelle campagne large.
+
+## Palier B après convergence
+
+Le mini-banc reste à 27/27 et descend encore à 318 721 tokens, 81 rounds, 83 appels provider et 6
+actions inutiles. Le Palier B atteint 54/91, contre 43/91 en Phase 10.4 et 53/91 avant le lot de
+convergence. En revanche, une passe stochastique porte encore 188 actions inutiles, 353 rounds, 388
+appels provider et 1 535 423 tokens. Les boucles extrêmes restent donc le principal coût.
+
+La classification primaire, corrigée lorsque l'état final est bon mais que l'oracle impose une
+ancienne lecture, est :
+
+| Cause | Échecs |
+|---|---:|
+| Retrieval | 20 |
+| Context | 2 |
+| Planning | 3 |
+| Execution | 1 |
+| Model | 3 |
+| Benchmark | 6 |
+| Harness | 2 |
+
+Les répétitions les plus coûteuses sont distinctes du retrieval : `usage.report` répète 23 fois un
+choix numérique alors que le contrat attend une chaîne ; plusieurs lectures ou mutations réussies
+ne modifient pas l'état du harnais ; et certains workflows continuent après des refus identiques.
+Le prochain gain doit donc combiner retrieval ciblé et bornes runtime, et non reprendre un réglage
+global des poids déjà démontré plafonné.
