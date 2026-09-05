@@ -22,9 +22,9 @@ const ASK_TOKENS = 4096
  * the 437 scenarios of `pnpm banc` against deepseek-chat: 55% → 61% passed, 2 069 → 1 548 rounds,
  * 496 → 269 refusals.
  *
- * 🛑 That catalogue is GONE — the briefing now carries names and the manuals a chain opens, and
- * the widest one reachable runs 23 607 characters. Nothing is cut above 8 192 tokens, so this
- * number no longer constrains anything: it is what the door ASKS for, not what it needs.
+ * `[M]` A context-free turn still carried 108 426 characters on 2026-09-05: this room keeps every
+ * manual that fits, not only those a chain opened. The earlier 23 607-character claim was false.
+ * This number therefore constrains the briefing, but it is still not the model's known window.
  *
  * 🛑 It budgets the BRIEFING and nothing else: `messagesFor` sends the history unbounded, where
  * `brainLocal` trims it through `promptWindow`. Ten blocks and a paste can add 110 020 characters

@@ -178,6 +178,26 @@ describe('when the process is gone', () => {
     expect(fake.killed()).toBe(1)
   })
 
+  it('kills the process when graceful disposal never answers', async () => {
+    vi.useFakeTimers()
+    try {
+      const fake = fakePort()
+      const client = createEmbedClient(fake.port)
+
+      const closing = client.close()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fake.asked[0]).toMatchObject({ op: 'close' })
+
+      await vi.advanceTimersByTimeAsync(14_999)
+      expect(fake.killed()).toBe(0)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(fake.killed()).toBe(1)
+      await closing
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   /** A batch given up on is dropped at the worker, so what it half-computed is cleaned up there. */
   it('tells the worker to drop a run whose signal was raised', async () => {
     const fake = fakePort()

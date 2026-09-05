@@ -5,6 +5,7 @@ import type { EmbedAsk, EmbedRequest, EmbedResponse } from './embedProtocol'
 export type EmbedPort = ProcessPort<EmbedRequest, EmbedResponse> & { kill: () => void }
 
 export const EMBEDDER_GONE = 'the embedding process is gone'
+const CLOSE_GRACE_MS = 15_000
 
 export type EmbedClient = {
   /** Loads the weights and answers how many dimensions they produce. Rejects where it cannot. */
@@ -19,6 +20,20 @@ export type EmbedClient = {
   /** One question. The other prefix, and the only difference — see `EmbedLoad`. */
   embedQuery: (text: string) => Promise<Float32Array>
   close: () => Promise<void>
+}
+
+function closeDeadline(): { elapsed: Promise<void>; cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const elapsed = new Promise<void>(resolve => {
+    timer = setTimeout(resolve, CLOSE_GRACE_MS)
+    timer.unref?.()
+  })
+  return {
+    elapsed,
+    cancel: () => {
+      if (timer) clearTimeout(timer)
+    },
+  }
 }
 
 export function createEmbedClient(port: EmbedPort): EmbedClient {
@@ -68,12 +83,14 @@ export function createEmbedClient(port: EmbedPort): EmbedClient {
     },
 
     close: async () => {
+      const deadline = closeDeadline()
       try {
-        await ask({ op: 'close' })
+        await Promise.race([ask({ op: 'close' }), deadline.elapsed])
       } catch {
         // A dead process has nothing left to dispose; the kill below still settles its callers.
         return
       } finally {
+        deadline.cancel()
         port.kill()
       }
     },
