@@ -1,9 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { i18n as I18n, TFunction } from 'i18next'
+import type { CharacterFit } from '@/hooks/useCharacterFit'
 import { CharacterInspectorFit } from './CharacterInspectorFit'
 
-const useCharacterFit = vi.hoisted(() => vi.fn())
+// Typed against what the hook really returns: the mock had drifted from it without a word.
+const useCharacterFit = vi.hoisted(() => vi.fn<() => CharacterFit>())
 
 vi.mock('@/hooks/useCharacterFit', () => ({ useCharacterFit }))
 
@@ -18,7 +21,8 @@ beforeEach(() => {
   chooseBackend.mockReset()
   setMiaOptions.mockReset()
   useCharacterFit.mockReturnValue({
-    t: (key: string) =>
+    // Branded types this stub cannot forge; everything else in the mock is checked.
+    t: ((key: string) =>
       ({
         'inspector.characterKind': 'Type de personnage',
         'inspector.rigService': 'Service',
@@ -32,8 +36,8 @@ beforeEach(() => {
         'inspector.autoRigUseSurfaceNormalsHint': 'Améliore la séparation des poids.',
         'inspector.autoRigWeightPostProcessing': 'Nettoyer les influences',
         'inspector.autoRigMiaSettingsHint': 'Ces réglages seront utilisés au prochain calcul.',
-      })[key] ?? key,
-    i18n: { language: 'fr' },
+      })[key] ?? key) as unknown as TFunction,
+    i18n: { language: 'fr' } as unknown as I18n,
     kind: 'human',
     setKind: vi.fn(),
     plan: null,
@@ -41,7 +45,13 @@ beforeEach(() => {
     maxSize: undefined,
     bytes: 0,
     refusal: null,
-    rigBackends: [{ backendId: 'make-it-animatable', name: 'Make-It-Animatable' }],
+    rigBackends: [
+      {
+        backendId: 'make-it-animatable',
+        modelId: 'make-it-animatable',
+        name: 'Make-It-Animatable',
+      },
+    ],
     selectedBackend: 'make-it-animatable',
     chooseBackend,
     miaOptions: { fingers: 'detailed', useSurfaceNormals: false, weightPostProcessing: true },

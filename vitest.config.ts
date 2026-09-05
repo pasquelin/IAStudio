@@ -231,6 +231,7 @@ const DOM_BOUND = [
   'src/renderer/src/helpers/typing.test.ts',
   'src/renderer/src/hooks/useAssistantDoor.test.ts',
   'src/renderer/src/hooks/useAutomaticPulls.test.ts',
+  'src/renderer/src/hooks/useCharacterFit.test.ts',
   'src/renderer/src/hooks/useColumnKeys.test.ts',
   'src/renderer/src/hooks/useContextMenu.test.ts',
   'src/renderer/src/hooks/useCostEstimate.test.ts',

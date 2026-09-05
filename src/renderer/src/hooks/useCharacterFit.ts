@@ -11,7 +11,7 @@ import { assetsById, useAssets } from '@/stores/assets'
 import { characterOf, useCharacters } from '@/stores/character'
 import { useAiModels } from '@/stores/aiModels'
 import { AUTO_RIG_ROLE } from '@shared/domain/aiRole'
-import { writeScopeFor } from '@shared/domain/aiOverview'
+import { canServe, writeScopeFor } from '@shared/domain/aiOverview'
 import { sceneEngineOf } from '@/stores/sceneEngines'
 import { getBridge } from '@/services/bridge'
 import { autoRigServiceFor } from '@/engines/character/autoRigBackends'
@@ -45,9 +45,12 @@ export function useCharacterFit(
       : undefined
   const advanced = candidate?.model.backendId
   const needsDownload = advanced !== undefined && !candidate?.installed
+  // What SERVES stays listed whatever the machine now says of it, as the assistant's own list does:
+  // a backend chosen while the memory was free would otherwise vanish the day it tightens.
+  const serving = row?.provider?.kind === 'local' ? row.provider.modelId : null
   const rigBackends =
     row?.candidates.flatMap(one =>
-      one.installed && one.model.backendId
+      (canServe(one) || one.model.id === serving) && one.model.backendId
         ? [{ backendId: one.model.backendId, modelId: one.model.id, name: one.model.name }]
         : [],
     ) ?? []
@@ -130,10 +133,7 @@ export function useCharacterFit(
     if (candidate) await useAiModels.getState().installAiModel(candidate.model.id)
   }
   const useSimple = async (): Promise<void> => {
-    if (row)
-      await useAiModels
-        .getState()
-        .chooseAiProvider(AUTO_RIG_ROLE, null, writeScopeFor(row, overview?.projectPath ?? null))
+    await chooseBackend('simple')
     await fit('simple')
   }
   return {
@@ -146,7 +146,6 @@ export function useCharacterFit(
     maxSize,
     bytes,
     refusal,
-    advanced,
     rigBackends,
     selectedBackend,
     chooseBackend,

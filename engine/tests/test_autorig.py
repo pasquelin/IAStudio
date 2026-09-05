@@ -13,7 +13,10 @@ from ia_studio_engine.autorig.make_it_animatable import (
     _skin_weights,
     _write_result,
 )
-from ia_studio_engine.autorig.quality import sample_surface_points_with_normals
+from ia_studio_engine.autorig.quality import (
+    focus_surface_on_hands_with_normals,
+    sample_surface_points_with_normals,
+)
 
 
 def test_fps_is_deterministic_and_spreads_samples_without_a_compiled_extension():
@@ -115,6 +118,54 @@ def test_surface_samples_include_unit_normals_for_the_normal_weight_model():
     assert vertex_normals.shape == (3, 3)
     assert normals == pytest.approx(np.tile((0, 0, 1), (8, 1)))
     assert vertex_normals == pytest.approx(np.tile((0, 0, 1), (3, 1)))
+
+
+def test_the_hand_top_up_samples_new_points_rather_than_repeating_the_base_batch():
+    """Every batch seeds its own generator; sharing one returned the base batch a second time."""
+    vertices = np.array(
+        ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 1.0, 0.0)),
+        dtype=np.float32,
+    )
+    triangles = np.array(((0, 1, 2), (1, 3, 2)), dtype=np.uint32)
+    # Both hand boxes far from the surface, so the whole focused half comes from the top-up.
+    centers = np.array(((-9.0, 0.0, 0.0), (9.0, 0.0, 0.0)), dtype=np.float32)
+
+    sampled = _focus_surface_on_hands(vertices, triangles, 64, centers)[0]
+
+    assert sampled.shape == (64, 3)
+    assert len(np.unique(sampled, axis=0)) == 64
+
+
+def test_a_welded_triangle_under_a_hand_does_not_abort_the_whole_rig():
+    vertices = np.array(
+        ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (5.0, 0.0, 0.0), (5.0, 0.0, 0.0)),
+        dtype=np.float32,
+    )
+    # The second triangle is flat, and it is the only one the hand box touches.
+    triangles = np.array(((0, 1, 2), (3, 4, 3)), dtype=np.uint32)
+
+    sampled = _focus_surface_on_hands(
+        vertices, triangles, 32, np.array(((5.0, 0.0, 0.0),), dtype=np.float32)
+    )[0]
+
+    assert sampled.shape == (32, 3)
+
+
+def test_the_normals_sampler_walks_the_very_same_cloud_as_the_plain_one():
+    """Both read one batch plan: a fix to either has to reach the other, or the rig disagrees."""
+    vertices = np.array(
+        ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (1.0, 1.0, 0.0)),
+        dtype=np.float32,
+    )
+    triangles = np.array(((0, 1, 2), (1, 3, 2)), dtype=np.uint32)
+    # Both hand boxes far from the surface, so the whole focused half comes from the top-up.
+    centers = np.array(((-9.0, 0.0, 0.0), (9.0, 0.0, 0.0)), dtype=np.float32)
+
+    plain = _focus_surface_on_hands(vertices, triangles, 64, centers)[0]
+    points, normals, _ = focus_surface_on_hands_with_normals(vertices, triangles, 64, centers)
+
+    assert np.array_equal(points[0], plain)
+    assert normals[0].shape == plain.shape
 
 
 def test_simplified_fingers_merge_their_weights_into_each_hand():

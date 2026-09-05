@@ -31,19 +31,27 @@ WEIGHT_CONFLICT_GROUPS = (
 )
 
 
-def sample_surface_points(vertices: np.ndarray, triangles: np.ndarray, count: int) -> np.ndarray:
-    return _sample_surface(vertices, triangles, count)[0]
-
-
-def _sample_surface(vertices: np.ndarray, triangles: np.ndarray, count: int):
+def triangle_areas(vertices: np.ndarray, triangles: np.ndarray) -> np.ndarray:
     corner = vertices[triangles]
-    areas = np.linalg.norm(
+    return np.linalg.norm(
         np.cross(corner[:, 1] - corner[:, 0], corner[:, 2] - corner[:, 0]), axis=1
     )
+
+
+def sample_surface_points(
+    vertices: np.ndarray, triangles: np.ndarray, count: int, seed: int = 0
+) -> np.ndarray:
+    return _sample_surface(vertices, triangles, count, seed)[0]
+
+
+def _sample_surface(vertices: np.ndarray, triangles: np.ndarray, count: int, seed: int = 0):
+    """`seed` tells one batch from another: two calls sharing it return the SAME points."""
+    corner = vertices[triangles]
+    areas = triangle_areas(vertices, triangles)
     if not np.isfinite(areas).all() or areas.sum() <= 0:
         raise ValueError("INVALID_MESH: mesh has no finite triangle surface")
-    picked = np.random.default_rng(0).choice(len(triangles), count, p=areas / areas.sum())
-    uv = np.random.default_rng(1).random((count, 2), dtype=np.float32)
+    picked = np.random.default_rng(seed).choice(len(triangles), count, p=areas / areas.sum())
+    uv = np.random.default_rng(seed + 1).random((count, 2), dtype=np.float32)
     reflected = uv.sum(axis=1) > 1
     uv[reflected] = 1 - uv[reflected]
     face = corner[picked]
@@ -54,11 +62,11 @@ def _sample_surface(vertices: np.ndarray, triangles: np.ndarray, count: int):
 
 
 def sample_surface_points_with_normals(
-    vertices: np.ndarray, triangles: np.ndarray, count: int
+    vertices: np.ndarray, triangles: np.ndarray, count: int, seed: int = 0
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Sample the surface and interpolate stable area-weighted vertex normals."""
     vertex_normals = _vertex_normals(vertices, triangles)
-    points, sampled_normals = _sample_with_normals(vertices, triangles, count, vertex_normals)
+    points, sampled_normals = _sample_with_normals(vertices, triangles, count, vertex_normals, seed)
     return points, sampled_normals, vertex_normals
 
 
@@ -78,8 +86,8 @@ def _vertex_normals(vertices: np.ndarray, triangles: np.ndarray) -> np.ndarray:
     return vertex_normals
 
 
-def _sample_with_normals(vertices, triangles, count, vertex_normals):
-    points, picked, uv = _sample_surface(vertices, triangles, count)
+def _sample_with_normals(vertices, triangles, count, vertex_normals, seed=0):
+    points, picked, uv = _sample_surface(vertices, triangles, count, seed)
     face_normals = vertex_normals[triangles[picked]]
     weights = np.column_stack((1 - uv.sum(axis=1), uv))
     sampled_normals = (face_normals * weights[..., None]).sum(axis=1)
@@ -93,18 +101,15 @@ def _sample_with_normals(vertices, triangles, count, vertex_normals):
     return points, sampled_normals.astype(np.float32)
 
 
-def focus_surface_on_hands(
-    vertices: np.ndarray,
-    triangles: np.ndarray,
-    count: int,
-    centers: np.ndarray,
-) -> np.ndarray:
-    """Mirror MIA's inference default: half the detailed cloud is sampled around the hands."""
+def _hand_batches(
+    vertices: np.ndarray, triangles: np.ndarray, count: int, centers: np.ndarray
+) -> list[tuple[np.ndarray, int, int]]:
+    """Which triangles each batch samples, how many points it owes, and the seed that tells it
+    apart. Shared so the two hand-focused samplers cannot drift from one another."""
     focus_count = count // 2
-    batches = [sample_surface_points(vertices, triangles, count - focus_count)]
+    plans = [(triangles, count - focus_count, 0)]
     radius = 0.15 * float(vertices.max() - vertices.min())
     corners = vertices[triangles]
-    focused = []
     remaining = focus_count
     for index, center in enumerate(centers):
         wanted = remaining if index == len(centers) - 1 else focus_count // len(centers)
@@ -115,16 +120,29 @@ def focus_surface_on_hands(
             corners.min(axis=1) <= upper, axis=1
         )
         nearby = triangles[intersects]
-        if len(nearby) > 0 and wanted > 0:
-            focused.append(sample_surface_points(vertices, nearby, wanted))
-    batches.extend(focused)
-    sampled = np.concatenate(batches, axis=0)
-    missing = count - len(sampled)
+        # A box centred on a PREDICTED joint can hold only welded triangles: sampling them would
+        # abort the whole rig on « INVALID_MESH », over a mesh whose full surface is sound.
+        areas = triangle_areas(vertices, nearby) if len(nearby) > 0 else np.zeros(0)
+        if wanted > 0 and areas.sum() > 0 and np.isfinite(areas).all():
+            plans.append((nearby, wanted, 2 + 2 * index))
+    missing = count - sum(wanted for _, wanted, _ in plans)
     if missing:
-        sampled = np.concatenate(
-            (sampled, sample_surface_points(vertices, triangles, missing)), axis=0
-        )
-    return sampled[np.newaxis]
+        plans.append((triangles, missing, 2 + 2 * len(centers)))
+    return plans
+
+
+def focus_surface_on_hands(
+    vertices: np.ndarray,
+    triangles: np.ndarray,
+    count: int,
+    centers: np.ndarray,
+) -> np.ndarray:
+    """Mirror MIA's inference default: half the detailed cloud is sampled around the hands."""
+    batches = [
+        sample_surface_points(vertices, subset, wanted, seed)
+        for subset, wanted, seed in _hand_batches(vertices, triangles, count, centers)
+    ]
+    return np.concatenate(batches, axis=0)[np.newaxis]
 
 
 def focus_surface_on_hands_with_normals(
@@ -134,39 +152,14 @@ def focus_surface_on_hands_with_normals(
     centers: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """The hand-focused MIA sample plus normals aligned with every sampled point."""
-    focus_count = count // 2
     vertex_normals = _vertex_normals(vertices, triangles)
-    points, normals = _sample_with_normals(vertices, triangles, count - focus_count, vertex_normals)
-    point_batches = [points]
-    normal_batches = [normals]
-    radius = 0.15 * float(vertices.max() - vertices.min())
-    corners = vertices[triangles]
-    remaining = focus_count
-    for index, center in enumerate(centers):
-        wanted = remaining if index == len(centers) - 1 else focus_count // len(centers)
-        remaining -= wanted
-        lower = center - radius
-        upper = center + radius
-        intersects = np.all(corners.max(axis=1) >= lower, axis=1) & np.all(
-            corners.min(axis=1) <= upper, axis=1
-        )
-        nearby = triangles[intersects]
-        if len(nearby) > 0 and wanted > 0:
-            focused_points, focused_normals = _sample_with_normals(
-                vertices, nearby, wanted, vertex_normals
-            )
-            point_batches.append(focused_points)
-            normal_batches.append(focused_normals)
-    missing = count - sum(len(batch) for batch in point_batches)
-    if missing:
-        extra_points, extra_normals = _sample_with_normals(
-            vertices, triangles, missing, vertex_normals
-        )
-        point_batches.append(extra_points)
-        normal_batches.append(extra_normals)
+    sampled = [
+        _sample_with_normals(vertices, subset, wanted, vertex_normals, seed)
+        for subset, wanted, seed in _hand_batches(vertices, triangles, count, centers)
+    ]
     return (
-        np.concatenate(point_batches, axis=0)[np.newaxis],
-        np.concatenate(normal_batches, axis=0)[np.newaxis],
+        np.concatenate([points for points, _ in sampled], axis=0)[np.newaxis],
+        np.concatenate([normals for _, normals in sampled], axis=0)[np.newaxis],
         vertex_normals[np.newaxis],
     )
 
