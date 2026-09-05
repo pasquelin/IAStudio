@@ -284,8 +284,11 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     const context = await deps.context.build({ mission, step, request: mission.goal, visual })
     if (context.document) {
       const resource: Ref = { kind: 'document', id: context.document.id }
-      if (!mission.resourceRefs.some(ref => refToString(ref) === refToString(resource))) {
-        await deps.manager.update(mission.id, mission.revision, current => ({
+      // 🛑 Read back rather than trust the caller's `mission`: `runAction` builds a context, then
+      // `think` builds a SECOND one from the same object, whose revision the first append moved.
+      const held = (await deps.manager.read(mission.id)) ?? mission
+      if (!held.resourceRefs.some(ref => refToString(ref) === refToString(resource))) {
+        await deps.manager.update(held.id, held.revision, current => ({
           ...current,
           resourceRefs: [...current.resourceRefs, resource],
         }))
