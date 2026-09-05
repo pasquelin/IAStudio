@@ -102,6 +102,38 @@ async function rigged(): Promise<{ engine: SceneRenderer; model: Object3D }> {
 }
 
 describe('a rig laid on a model that already wears one', () => {
+  it('keeps runtime placement while a model loads and is rigged, then restores its authored pose', async () => {
+    const model = source()
+    let settle = (object: Object3D): void => void object
+    const loading = new Promise<Object3D>(resolve => (settle = resolve))
+    const engine = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      loadModel: () => loading,
+      skin,
+      bvh: trees(),
+    })
+    const state = holding('a')
+    const moved = { ...IDENTITY_TRANSFORM, position: { x: 0, y: 3, z: 0 } }
+    try {
+      engine.apply(state)
+      expect(engine.applyRuntimeTransforms([{ id: 'a', transform: moved }])).toBe(true)
+      settle(model)
+      await vi.waitFor(() => expect(model.parent).not.toBeNull())
+      await engine.skinModel('a', HIPS)
+      expect(boneNamesOf(model)).toEqual(['Hips'])
+      stageOf(model).updateMatrixWorld(true)
+      expect(model.matrixWorld.elements[13]).toBe(3)
+      expect(state.nodes[0]?.transform.position.y).toBe(0)
+      engine.apply(state)
+      stageOf(model).updateMatrixWorld(true)
+      expect(model.matrixWorld.elements[13]).toBe(0)
+      expect(boneNamesOf(model)).toEqual(['Hips'])
+    } finally {
+      engine.dispose()
+    }
+  })
+
   /**
    * 🛑 « Add hands » took the store from 22 bones to 52 and the model kept its 22: the meshes were
    * already skinned, and the mesh gathering refused them — so this returned in silence.

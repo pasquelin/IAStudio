@@ -14,6 +14,7 @@ export type SceneDraw = Pick<
   SceneRenderer,
   'apply' | 'placeView' | 'releaseView' | 'viewPlacement'
 > & {
+  applyRuntimeTransforms?: SceneRenderer['applyRuntimeTransforms']
   runtimePerformance?: () => Omit<RuntimePerformance, 'cpuFrameMs' | 'compilationMs'>
 }
 
@@ -22,21 +23,23 @@ function updateShadow(
   byId: ReadonlyMap<string, SceneNode>,
   bakedById: ReadonlyMap<string, string>,
   shadow: Map<string, SceneNode>,
-): boolean {
-  let changed = false
+): SceneNode[] | null {
+  let changed: SceneNode[] | null = null
   for (const placement of placements) {
     const bakedId = bakedById.get(placement.entity)
     const node = byId.get(bakedId ?? placement.entity)
     if (!node) continue
     const bakedChanged = bakedId ? updateBakedShadow(placement, bakedId, node, shadow) : null
     if (bakedChanged !== null) {
-      changed ||= bakedChanged
+      const shown = shadow.get(bakedId ?? placement.entity)
+      if (bakedChanged && shown) (changed ??= []).push(shown)
       continue
     }
     const shown = shadow.get(placement.entity) ?? node
     if (sameTransform(shown.transform, placement.transform)) continue
-    shadow.set(placement.entity, { ...node, transform: copyTransform(placement.transform) })
-    changed = true
+    const moved = { ...node, transform: copyTransform(placement.transform) }
+    shadow.set(placement.entity, moved)
+    ;(changed ??= []).push(moved)
   }
   return changed
 }
@@ -67,14 +70,9 @@ function updateBakedShadow(
  * What draws a running game inside the studio: the scene the editor already has, redrawn from a
  * SHADOW state the document knows nothing about.
  *
- * The nodes a step did not move are handed over BY IDENTITY, and `SceneRenderer.apply` skips a
- * node it has already applied.
- *
- * 🛑 That is not the whole cost, and saying so would be a comfortable lie: `apply` is the engine's
- * FULL pass — every node walked twice, poses laid, shadows re-cut, instances regrouped — so one
- * moving platform in a large scene pays all of it. Since the poses are INTERPOLATED it is paid at
- * the rate of the SCREEN, not of the step: 120 a second on a fast display, not 60. A
- * `SceneRenderer` of its own for Play is what fixes that, and it is not this lot.
+ * Supported mesh/model poses take the incremental renderer path. A changed document or an
+ * unsupported batch keeps full apply. The renderer still finalizes animation, aids and shadows;
+ * this does not make all frame work proportional to the number of moved nodes.
  *
  * 🛑 It never writes to the store. That is the whole of why STOP restores nothing: one `apply` of
  * the untouched edit state puts the viewport back where it was.
@@ -96,6 +94,7 @@ export function createStudioRender(
     place: (placements: readonly EntityPlacement[]) => {
       const state = editState()
       let changed = false
+      const rebased = state !== source
 
       if (state !== source) {
         // 🛑 The document changed under a running game — a click on a node is one, the selection
@@ -120,11 +119,12 @@ export function createStudioRender(
         changed = shadow.size > 0
       }
 
-      changed = updateShadow(placements, byId, bakedById, shadow) || changed
+      const updates = updateShadow(placements, byId, bakedById, shadow)
 
       // Nothing rebuilt while nothing moves: a paused game, or one whose systems are all idle,
       // costs the comparison above and not one allocation.
-      if (changed) {
+      if (changed || updates) {
+        if (!rebased && updates && renderer.applyRuntimeTransforms?.(updates)) return
         renderer.apply({ ...state, nodes: state.nodes.map(node => shadow.get(node.id) ?? node) })
       }
     },

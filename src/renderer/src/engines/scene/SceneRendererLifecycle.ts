@@ -14,7 +14,9 @@ import { shadowOfLightMoved, shadowOfNodeMoved } from './shadowChanges'
 import type { RuntimeRenderArtifact } from './grouping'
 import { runtimeOptimizationOf } from './runtimeWorldArtifacts'
 import { SceneRendererResources } from './SceneRendererResources'
+import { RuntimeTransformState, type RuntimePlacement } from './RuntimeTransformState'
 export abstract class SceneRendererLifecycle extends SceneRendererResources {
+  private readonly runtimeTransforms = new RuntimeTransformState()
   /** Read here because `apply` is the only step handed the state the compiler wrote it into. */
   protected runtimeArtifacts: readonly RuntimeRenderArtifact[] | undefined
   protected abstract canPlayheadMoveShadows(nodes: readonly SceneNode[]): boolean
@@ -189,6 +191,19 @@ export abstract class SceneRendererLifecycle extends SceneRendererResources {
   }
 
   apply(state: SceneState): void {
+    this.runtimeTransforms.reset(state)
+    this.applyState(state, null)
+  }
+
+  /** Applies only supported runtime poses; false leaves the renderer untouched for full apply. */
+  applyRuntimeTransforms(placements: readonly RuntimePlacement[]): boolean {
+    const delta = this.runtimeTransforms.prepare(placements, this.applied)
+    if (!delta) return false
+    if (delta.changed.length > 0) this.applyState(delta.state, delta.changed)
+    return true
+  }
+
+  private applyState(state: SceneState, changed: readonly SceneNode[] | null): void {
     this.runtimeArtifacts = runtimeOptimizationOf(state)?.artifacts
     let allShadowsChanged =
       state.animation !== this.timeline ||
@@ -201,13 +216,13 @@ export abstract class SceneRendererLifecycle extends SceneRendererResources {
     // with it rather than the previous one.
     this.timeline = state.animation
     this.animations.setTimeline(state.animation)
-    this.sweepCompositions(state)
+    if (changed === null) this.sweepCompositions(state)
     const applyStep1 = () => {
       const applyStep1 = () => {
         this.documentOrder = state.nodes
         // The identity test sits HERE rather than only inside `syncNode`: on a pass where nothing
         // changed it is the whole of the work, and a call per node cost 4,6 ms on 50 000.
-        allShadowsChanged = this.syncChangedNodes(state.nodes, allShadowsChanged)
+        allShadowsChanged = this.syncChangedNodes(changed ?? state.nodes, allShadowsChanged)
         // The set of live ids is built only when one can be missing. `applied` holds every node the
         // last pass knew, so it outgrows the state exactly when a node left it — and building that
         // set of 50 000 strings on every pass was most of what `apply` spent outside its sub-passes.
