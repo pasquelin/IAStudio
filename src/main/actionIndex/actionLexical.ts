@@ -1,0 +1,205 @@
+import type { IndexedAction } from './actionCorpus'
+
+const INTENT_MATCH_SCORE = 2
+const INTENT_MISMATCH_SCORE = -0.5
+const STOP_WORDS = new Set([
+  'a',
+  'au',
+  'aux',
+  'avec',
+  'ce',
+  'ces',
+  'cette',
+  'continue',
+  'dans',
+  'de',
+  'des',
+  'du',
+  'en',
+  'est',
+  'et',
+  'il',
+  'je',
+  'l',
+  'la',
+  'le',
+  'les',
+  'ma',
+  'mes',
+  'mission',
+  'moi',
+  'mon',
+  'ne',
+  'pas',
+  'plan',
+  'pour',
+  'que',
+  'qui',
+  'result',
+  'sa',
+  'son',
+  'sur',
+  'the',
+  'to',
+  'un',
+  'une',
+  'verify',
+  'with',
+])
+
+type SearchIntent = 'read' | 'create' | 'mutate' | 'delete' | 'search' | 'execute'
+const SEARCH_INTENTS: readonly SearchIntent[] = [
+  'read',
+  'create',
+  'mutate',
+  'delete',
+  'search',
+  'execute',
+]
+
+const QUERY_INTENTS: Readonly<Record<SearchIntent, readonly string[]>> = {
+  read: [
+    'quel',
+    'combien',
+    'liste',
+    'donne',
+    'decri',
+    'what',
+    'which',
+    'how',
+    'list',
+    'show',
+    'describe',
+  ],
+  create: [
+    'crea',
+    'cree',
+    'ajout',
+    'gener',
+    'nouveau',
+    'nouvelle',
+    'make',
+    'create',
+    'add',
+    'generate',
+    'new',
+  ],
+  mutate: [
+    'modifi',
+    'change',
+    'renomm',
+    'deplac',
+    'tourne',
+    'mets',
+    'regle',
+    'set',
+    'rename',
+    'move',
+    'update',
+    'adjust',
+    'activ',
+  ],
+  delete: ['supprim', 'retire', 'efface', 'oublie', 'delete', 'remove', 'trash', 'forget', 'clear'],
+  search: ['cherch', 'trouve', 'find', 'search', 'browse'],
+  execute: ['lance', 'execute', 'ouvre', 'ferme', 'run', 'open', 'close', 'submit', 'play'],
+}
+
+const ACTION_INTENTS: Readonly<Record<SearchIntent, readonly string[]>> = {
+  read: [
+    'state',
+    'list',
+    'get',
+    'read',
+    'report',
+    'describe',
+    'docs',
+    'facts',
+    'counts',
+    'status',
+    'log',
+  ],
+  create: ['create', 'add', 'prepare', 'duplicate', 'copy', 'group'],
+  mutate: [
+    'set',
+    'rename',
+    'move',
+    'transform',
+    'resize',
+    'update',
+    'adjust',
+    'apply',
+    'attach',
+    'bind',
+    'reorder',
+    'trim',
+    'split',
+    'write',
+  ],
+  delete: ['remove', 'delete', 'trash', 'forget', 'clear', 'detach', 'ungroup'],
+  search: ['search', 'find', 'browse', 'explore'],
+  execute: ['run', 'submit', 'open', 'close', 'play', 'step', 'cancel', 'wait'],
+}
+
+const folded = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('en')
+
+export const actionSearchWords = (value: string): readonly string[] =>
+  (folded(value).match(/[\p{L}\p{N}_]+/gu) ?? []).filter(token => !STOP_WORDS.has(token))
+
+const wordsOf = (value: string): readonly string[] => folded(value).match(/[\p{L}\p{N}_]+/gu) ?? []
+
+function intentOf(
+  value: string,
+  vocabulary: Readonly<Record<SearchIntent, readonly string[]>>,
+): SearchIntent | null {
+  const tokens = wordsOf(value)
+  let found: { intent: SearchIntent; position: number } | null = null
+  for (const intent of SEARCH_INTENTS) {
+    const position = tokens.findIndex(token =>
+      vocabulary[intent].some(prefix => token.startsWith(prefix)),
+    )
+    if (position >= 0 && (found === null || position < found.position)) found = { intent, position }
+  }
+  return found?.intent ?? null
+}
+
+export function actionIntentScore(query: string, action: IndexedAction): number {
+  const queryIntent = intentOf(query, QUERY_INTENTS)
+  if (queryIntent === null) return 0
+  const actionIntent = intentOf(action.name.split('.')[1] ?? '', ACTION_INTENTS)
+  if (actionIntent === null) return 0
+  return actionIntent === queryIntent ? INTENT_MATCH_SCORE : INTENT_MISMATCH_SCORE
+}
+
+export const actionBm25Score = (rank?: number): number =>
+  rank === undefined ? 0 : 1 / (1 + Math.exp(rank))
+
+export function actionLexicalScore(query: string, action: IndexedAction, rank?: number): number {
+  const wanted = folded(query).trim()
+  const name = action.name.toLocaleLowerCase('en')
+  const nameTokens = action.name
+    .replace(/([a-z0-9])([A-Z])/g, '$1.$2')
+    .toLocaleLowerCase('en')
+    .split(/[.:]/)
+  const searchableTokens = wordsOf(action.searchable)
+  const titleTokens = action.localizedTitles.flatMap(wordsOf)
+  const fieldTokens = action.localizedFieldLabels.flatMap(wordsOf)
+  let score = actionBm25Score(rank)
+  if (name === wanted) score += 12
+  else if (name.startsWith(wanted)) score += 7
+  if (nameTokens.some(token => token === wanted)) score += 4
+  if (action.family === wanted) score += 2
+  for (const token of actionSearchWords(wanted)) {
+    score += nameTokens.some(nameToken => nameToken.startsWith(token)) ? 1.5 : 0
+    if (action.title.toLocaleLowerCase('en').includes(token)) score += 0.75
+    if (token.length < 4) continue
+    const prefix = token.slice(0, 4)
+    if (searchableTokens.some(candidate => candidate.startsWith(prefix))) score += 0.5
+    if (titleTokens.some(candidate => candidate.startsWith(prefix))) score += 2
+    if (fieldTokens.some(candidate => candidate.startsWith(prefix))) score += 1.5
+  }
+  return score
+}

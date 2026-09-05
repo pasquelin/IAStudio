@@ -259,6 +259,19 @@ describe('ActionIndex', () => {
     )
   })
 
+  it('keeps grammatical filler out of FTS and explains intent ranking', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    const ranking = index.inspect({ query: 'Supprime le document de mon projet', limit: 12 })
+    const deletion = ranking.find(hit => hit.action.name === 'document.deleteFromDisk')
+
+    expect(deletion).toMatchObject({ included: true, intentScore: 2 })
+    expect(deletion?.fusionScore).toBeGreaterThan(0)
+    expect(ranking.find(hit => hit.action.name === 'documents.list')?.intentScore).toBe(-0.5)
+  })
+
   it('adds semantic ranking when compatible embeddings exist', () => {
     const corpus = actionCorpus()
     const database = openMemoryDatabase()

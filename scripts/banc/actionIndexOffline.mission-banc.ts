@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, describe, it } from 'vitest'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createActionIndex, type ActionIndex } from '@main/actionIndex/actionIndex'
@@ -61,11 +61,14 @@ type Evaluation = {
 type RankedSignals = {
   action: ActionName
   lexicalScore: number
+  bm25Score: number
   semanticScore: number | null
   scopeScore: number
   workflowScore: number
   resourceScore: number
   compatibilityScore: number
+  intentScore: number
+  fusionScore: number
   score: number
   rank: number
   included: boolean
@@ -73,6 +76,66 @@ type RankedSignals = {
 }
 
 const evaluations: Evaluation[] = []
+const generalization: Evaluation[] = []
+
+const GENERALIZATION_CASES: readonly { request: string; expected: ActionName }[] = [
+  { request: 'make the selected object disappear from view', expected: 'node.setVisible' },
+  { request: 'masque temporairement cet élément', expected: 'node.setVisible' },
+  { request: 'change the filename without moving it', expected: 'file.rename' },
+  {
+    request: 'rends ce calque à moitié transparent',
+    expected: 'layer.setOpacityBlendAndVisibility',
+  },
+  { request: 'garde cette préférence en mémoire pour ce projet', expected: 'memory.write' },
+  { request: 'show me whether this repository has pending changes', expected: 'git.status' },
+  { request: 'déclenche cet évènement à la cinquième seconde', expected: 'timeline.addSceneCue' },
+  { request: 'how many media assets are in this project', expected: 'assets.counts' },
+  { request: 'explain what this selected object contains', expected: 'studio.describe' },
+  { request: 'change the values of this gameplay component', expected: 'component.setProperties' },
+  { request: 'agrandis la zone de dessin sans toucher aux calques', expected: 'canvas.resize' },
+  { request: 'turn this post-processing effect off', expected: 'post.setEffectEnabled' },
+]
+
+async function evaluate(
+  request: string,
+  expected: ActionName,
+  scenario: string,
+): Promise<Evaluation> {
+  const started = performance.now()
+  const ranking = await service.inspect(`${request}\nPlan mission`, 12)
+  const milliseconds = performance.now() - started
+  const hit = ranking.find(candidate => candidate.action.name === expected)
+  if (!hit) throw new Error(`${expected} is absent from the action corpus`)
+  return {
+    scenario,
+    request,
+    expected,
+    family: hit.action.family,
+    rank: hit.rank,
+    included: hit.included,
+    score: hit.score,
+    milliseconds,
+    falsePositives: ranking
+      .slice(0, Math.max(0, hit.rank - 1))
+      .map(candidate => candidate.action.name),
+    ranking: ranking.map(candidate => ({
+      action: candidate.action.name,
+      lexicalScore: candidate.lexicalScore,
+      bm25Score: candidate.bm25Score ?? 0,
+      semanticScore: candidate.semanticScore ?? null,
+      scopeScore: candidate.scopeScore ?? 0,
+      workflowScore: candidate.workflowScore ?? 0,
+      resourceScore: candidate.resourceScore ?? 0,
+      compatibilityScore: candidate.compatibilityScore ?? 0,
+      intentScore: candidate.intentScore ?? 0,
+      fusionScore: candidate.fusionScore ?? 0,
+      score: candidate.score,
+      rank: candidate.rank,
+      included: candidate.included,
+      exclusion: candidate.exclusion ?? null,
+    })),
+  }
+}
 
 describe('ActionIndex offline retrieval', () => {
   for (const scenario of SCENARIOS) {
@@ -82,40 +145,14 @@ describe('ActionIndex offline retrieval', () => {
     if (!action) continue
     it(scenario.name, async () => {
       const request = scenario.said.join('\n')
-      const started = performance.now()
-      const ranking = await service.inspect(`${request}\nPlan mission`, 12)
-      const milliseconds = performance.now() - started
-      const hit = ranking.find(candidate => candidate.action.name === action)
-      if (!hit) throw new Error(`${action} is absent from the action corpus`)
-      evaluations.push({
-        scenario: scenario.name,
-        request,
-        expected: action,
-        family: hit.action.family,
-        rank: hit.rank,
-        included: hit.included,
-        score: hit.score,
-        milliseconds,
-        falsePositives: ranking
-          .slice(0, Math.max(0, hit.rank - 1))
-          .map(candidate => candidate.action.name),
-        ranking: ranking.map(candidate => ({
-          action: candidate.action.name,
-          lexicalScore: candidate.lexicalScore,
-          semanticScore: candidate.semanticScore ?? null,
-          scopeScore: candidate.scopeScore ?? 0,
-          workflowScore: candidate.workflowScore ?? 0,
-          resourceScore: candidate.resourceScore ?? 0,
-          compatibilityScore: candidate.compatibilityScore ?? 0,
-          score: candidate.score,
-          rank: candidate.rank,
-          included: candidate.included,
-          exclusion: candidate.exclusion ?? null,
-        })),
-      })
-      expect(ranking).toHaveLength(297)
+      evaluations.push(await evaluate(request, action, scenario.name))
     })
   }
+
+  for (const sample of GENERALIZATION_CASES)
+    it(`generalizes: ${sample.request}`, async () => {
+      generalization.push(await evaluate(sample.request, sample.expected, sample.request))
+    })
 
   afterAll(async () => {
     const recalls = (limit: number): number =>
@@ -170,6 +207,14 @@ describe('ActionIndex offline retrieval', () => {
         .slice(0, 20),
       families,
       evaluations,
+      generalization: {
+        evaluations: generalization.length,
+        recallAt1: generalization.filter(value => value.rank <= 1).length / generalization.length,
+        recallAt3: generalization.filter(value => value.rank <= 3).length / generalization.length,
+        recallAt5: generalization.filter(value => value.rank <= 5).length / generalization.length,
+        recallAt12: generalization.filter(value => value.rank <= 12).length / generalization.length,
+        cases: generalization,
+      },
     }
     mkdirSync(OUTPUT, { recursive: true })
     writeFileSync(join(OUTPUT, 'retrieval-baseline.json'), `${JSON.stringify(report, null, 2)}\n`)

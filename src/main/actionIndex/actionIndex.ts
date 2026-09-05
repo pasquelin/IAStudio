@@ -8,11 +8,19 @@ import type { SqlRow, SqliteDriver } from '@main/project/sqlite'
 import { dotOfBytes, normalised, packed } from '@main/memory/vectors'
 import type { ActionCorpus, IndexedAction } from './actionCorpus'
 import { ACTION_INDEX_MIGRATIONS } from './actionIndexSchema'
+import {
+  actionBm25Score,
+  actionIntentScore,
+  actionLexicalScore,
+  actionSearchWords,
+} from './actionLexical'
 
 const DEFAULT_LIMIT = 5
 const MAX_LIMIT = 12
 const FTS_CANDIDATES = 40
 const AVAILABLE_RESOURCE_SCORE = 8
+const RRF_K = 60
+const FTS_RRF_WEIGHT = 2
 
 export type ActionEmbedding = {
   name: ActionName
@@ -32,11 +40,14 @@ export type ActionHit = {
   action: IndexedAction
   score: number
   lexicalScore: number
+  bm25Score?: number
   semanticScore?: number
   workflowScore?: number
   resourceScore?: number
   scopeScore?: number
   compatibilityScore?: number
+  intentScore?: number
+  fusionScore?: number
 }
 
 export type ActionRanking = ActionHit & {
@@ -75,50 +86,6 @@ function actionOf(row: SqlRow): IndexedAction | null {
   }
 }
 
-const folded = (value: string): string =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('en')
-
-const wordsOf = (value: string): readonly string[] => folded(value).match(/[\p{L}\p{N}_]+/gu) ?? []
-
-function lexicalScore(query: string, action: IndexedAction, rank?: number): number {
-  const wanted = folded(query).trim()
-  const name = action.name.toLocaleLowerCase('en')
-  const tokens = wordsOf(wanted)
-  const nameTokens = name.split(/[.:]/)
-  const searchableTokens = wordsOf(action.searchable)
-  const titleTokens = action.localizedTitles.flatMap(wordsOf)
-  const fieldTokens = action.localizedFieldLabels.flatMap(wordsOf)
-  let score = rank === undefined ? 0 : 1 / (1 + Math.exp(rank))
-  if (name === wanted) score += 12
-  else if (name.startsWith(wanted)) score += 7
-  if (nameTokens.some(token => token === wanted)) score += 4
-  if (action.family === wanted) score += 2
-  for (const token of tokens)
-    score += tokenScore(token, action.title, nameTokens, searchableTokens, titleTokens, fieldTokens)
-  return score
-}
-
-function tokenScore(
-  token: string,
-  title: string,
-  nameTokens: readonly string[],
-  searchableTokens: readonly string[],
-  titleTokens: readonly string[],
-  fieldTokens: readonly string[],
-): number {
-  let score = nameTokens.some(nameToken => nameToken.startsWith(token)) ? 1.5 : 0
-  if (title.toLocaleLowerCase('en').includes(token)) score += 0.75
-  if (token.length < 4) return score
-  const prefix = token.slice(0, 4)
-  if (searchableTokens.some(candidate => candidate.startsWith(prefix))) score += 0.5
-  if (titleTokens.some(candidate => candidate.startsWith(prefix))) score += 2
-  if (fieldTokens.some(candidate => candidate.startsWith(prefix))) score += 1.5
-  return score
-}
-
 function actionScopeScores(
   action: IndexedAction,
   scope: ActionSearch['scope'],
@@ -147,7 +114,7 @@ function workflowScoresOf(
   const scores = new Map<ActionName, number>()
   const resources = new Map<ActionName, number>()
   const ranked = hits
-    .filter(hit => hit.score >= 1)
+    .filter(hit => hit.lexicalScore >= 1 && (hit.intentScore ?? 0) > 0)
     .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
   const producers = (resource: ActionResource): readonly IndexedAction[] =>
     hits
@@ -277,7 +244,7 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
   }
 
   const inspect = (wanted: ActionSearch): readonly ActionRanking[] => {
-    const expression = askExpression(wanted.query)
+    const expression = askExpression(actionSearchWords(wanted.query).join(' '))
     const lexicalRows =
       expression === null
         ? []
@@ -313,11 +280,20 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         row,
       ]),
     ).values()
-    const question = wanted.embedding ? normalised(wanted.embedding.values) : null
-    const hits = [...rows].flatMap(row => {
+    const indexedRows = [...rows].flatMap(row => {
       const action = actionOf(row)
-      if (!action) return []
-      const lexical = lexicalScore(wanted.query, action, optionalNumber(row, 'rank'))
+      return action ? [{ action, row }] : []
+    })
+    const ftsRanks = new Map(
+      lexicalRows.flatMap((row, index) => {
+        const action = actionOf(row)
+        return action ? [[action.name, index + 1]] : []
+      }),
+    )
+    const question = wanted.embedding ? normalised(wanted.embedding.values) : null
+    const hits = indexedRows.map(({ action, row }) => {
+      const rank = optionalNumber(row, 'rank')
+      const lexical = actionLexicalScore(wanted.query, action, rank)
       const model = optionalText(row, 'embedding_model')
       const semantic =
         question && model === wanted.embedding?.model
@@ -325,16 +301,22 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
           : undefined
       const scope = actionScopeScores(action, wanted.scope)
       const totalScopeScore = scope.scope + scope.compatibility
-      return [
-        {
-          action,
-          lexicalScore: lexical,
-          ...(scope.scope === 0 ? {} : { scopeScore: scope.scope }),
-          ...(scope.compatibility === 0 ? {} : { compatibilityScore: scope.compatibility }),
-          ...(semantic === undefined ? {} : { semanticScore: semantic }),
-          score: lexical + Math.max(0, semantic ?? 0) * 3 + totalScopeScore,
-        },
-      ]
+      const intentScore = actionIntentScore(wanted.query, action)
+      const ftsRank = ftsRanks.get(action.name)
+      const fusionScore =
+        ftsRank === undefined || scope.scope < 0 ? 0 : FTS_RRF_WEIGHT * (RRF_K / (RRF_K + ftsRank))
+      return {
+        action,
+        lexicalScore: lexical,
+        ...(rank === undefined ? {} : { bm25Score: actionBm25Score(rank) }),
+        ...(scope.scope === 0 ? {} : { scopeScore: scope.scope }),
+        ...(scope.compatibility === 0 ? {} : { compatibilityScore: scope.compatibility }),
+        ...(semantic === undefined ? {} : { semanticScore: semantic }),
+        ...(intentScore === 0 ? {} : { intentScore }),
+        ...(fusionScore === 0 ? {} : { fusionScore }),
+        score:
+          lexical + Math.max(0, semantic ?? 0) * 3 + totalScopeScore + intentScore + fusionScore,
+      }
     })
     const signals = workflowScoresOf(hits, wanted.available ?? [])
     const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(wanted.limit ?? DEFAULT_LIMIT)))
