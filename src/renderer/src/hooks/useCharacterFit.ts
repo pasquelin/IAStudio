@@ -16,7 +16,7 @@ import { sceneEngineOf } from '@/stores/sceneEngines'
 import { getBridge } from '@/services/bridge'
 import { autoRigServiceFor } from '@/engines/character/autoRigBackends'
 import { runTask } from '@/stores/tasks'
-import type { AutoRigProductError } from '@shared/domain/autoRigInference'
+import { AUTO_RIG_PRODUCT_ERRORS, type AutoRigProductError } from '@shared/domain/autoRigInference'
 
 export function useCharacterFit(
   assetId: string,
@@ -137,18 +137,7 @@ export function useCharacterFit(
 
 function productErrorOf(error: unknown): AutoRigProductError {
   const message = String(error)
-  const errors: readonly AutoRigProductError[] = [
-    'MODEL_NOT_INSTALLED',
-    'MODEL_INVALID',
-    'ENGINE_UNAVAILABLE',
-    'UNSUPPORTED_PLATFORM',
-    'INVALID_MESH',
-    'NOT_HUMANOID',
-    'INFERENCE_FAILED',
-    'OUT_OF_MEMORY',
-    'CANCELLED',
-  ]
-  return errors.find(code => message.includes(code)) ?? 'INFERENCE_FAILED'
+  return AUTO_RIG_PRODUCT_ERRORS.find(code => message.includes(code)) ?? 'INFERENCE_FAILED'
 }
 
 export type CharacterFit = ReturnType<typeof useCharacterFit>

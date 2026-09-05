@@ -46,7 +46,11 @@ export const useTasks = create<TasksState>()(set => ({
     getBridge()?.tasks.onProgress(({ id, ratio, phase }) =>
       set(state => {
         const row = state.running[id]
-        return row ? { running: { ...state.running, [id]: { ...row, ratio, phase } } } : state
+        // Nothing that has not moved: a bundle steps far more often than a percentage can change,
+        // and each write here is a fresh state every subscriber of this store re-renders on.
+        return row && (row.ratio !== ratio || row.phase !== phase)
+          ? { running: { ...state.running, [id]: { ...row, ratio, phase } } }
+          : state
       }),
     ) ?? (() => {}),
 
