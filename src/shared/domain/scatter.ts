@@ -92,7 +92,8 @@ export const DEFAULT_SCATTER_RULES: ScatterRules = Object.freeze({
 })
 
 export const SCATTER_DENSITY = Object.freeze({ min: 0, max: 2, step: 0.01 })
-export const SCATTER_SPACING = Object.freeze({ min: 0, max: 50, step: 0.1 })
+/** `min` is the generator's own floor: below it a 256 m cell walks billions of cells. */
+export const SCATTER_SPACING = Object.freeze({ min: 0.1, max: 50, step: 0.1 })
 export const SCATTER_SCALE = Object.freeze({ min: 0.01, max: 20, step: 0.01 })
 export const SCATTER_TILT = Object.freeze({ min: 0, max: 45, step: 1 })
 export const SCATTER_SLOPE_ALIGN = Object.freeze({ min: 0, max: 100, step: 1 })

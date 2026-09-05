@@ -29,6 +29,11 @@ const stack = {
 }
 const resources = new Set<PostComposer>()
 
+/** A distinct shape key per index, so a new chain cannot reuse the spare through `spare(key)`. */
+function glitchAt(index: number) {
+  return { enabled: true, effects: [postEffect(`glitch-${index}`, 'glitch')] }
+}
+
 function composer(): PostComposer {
   const result = new PostComposer(new WebGLRenderer())
   resources.add(result)
@@ -113,8 +118,8 @@ describe('post-processing surface resources', () => {
     expect(dropped).toHaveBeenCalledTimes(2)
   })
 
-  // Named for what it now measures: since eviction skips bound chains, CHAINS_HELD stops being a
-  // cap and only a surface going away frees one. The old LRU is no longer exercised anywhere.
+  // Named for what it measures: eviction skips bound chains, so `SWEEP_ABOVE` is a sweep
+  // threshold for spares and not a cap — only a surface going away frees a chain in use.
   it('never evicts a chain a surface still uses, and frees one only when its surface goes', () => {
     const post = composer()
     for (let index = 0; index < 6; index++) post.draw(job(`surface:${index}`, 64 + index * 16, 64))
@@ -129,6 +134,22 @@ describe('post-processing surface resources', () => {
     expect(dropped).toHaveBeenCalledTimes(1)
     post.dispose()
     expect(dropped).toHaveBeenCalledTimes(7)
+  })
+
+  it('sweeps a spare no binding came back to, once the threshold is crossed', () => {
+    const post = composer()
+    // Two surfaces of the SAME key at different sizes, then one joins the other: the chain it
+    // left keeps zero users and is the spare only `evict` can free.
+    post.draw(job('pane:0', 960, 640))
+    post.draw(job('inset', 320, 192))
+    post.draw(job('inset', 960, 640))
+    const dropped = vi.spyOn(EffectComposer.prototype, 'dispose')
+
+    for (let index = 0; index < 6; index++) {
+      post.draw({ ...job(`other:${index}`, 64 + index * 16, 64), stack: glitchAt(index) })
+    }
+
+    expect(dropped).toHaveBeenCalled()
   })
 
   it('releases a closed surface without discarding the live pane', () => {
