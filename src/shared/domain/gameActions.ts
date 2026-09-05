@@ -224,7 +224,7 @@ export const STUDIO_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    capabilities: { intents: ['read'] },
+    capabilities: { intents: ['read'], targets: ['component'] },
     fields: [
       { key: 'topic', kind: 'text', labelKey: 'assistant.fields.docsTopic', required: false },
     ],
@@ -282,7 +282,7 @@ export const TIMELINE_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    capabilities: { intents: ['create'] },
+    capabilities: { intents: ['create', 'execute'] },
     fields: [
       timelineListField,
       { key: 'at', kind: 'number', labelKey: 'assistant.fields.timelineAt', required: true },

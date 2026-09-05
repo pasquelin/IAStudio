@@ -73,6 +73,14 @@ function componentTerms(fields: readonly ActionField[]): readonly string[] {
   ])
 }
 
+function componentNameTerms(): readonly string[] {
+  return Object.values(COMPONENTS).flatMap(component => [
+    component.type,
+    englishText(component.titleKey),
+    textAt(TRANSLATIONS.fr, component.titleKey),
+  ])
+}
+
 function commandTerms(fields: readonly ActionField[]): readonly string[] {
   if (
     !includesClosedChoice(
@@ -153,6 +161,7 @@ export function actionCorpus(): ActionCorpus {
           frenchTitle,
           frenchDescription,
           ...componentTerms(action.fields),
+          ...(action.capabilities?.targets?.includes('component') ? componentNameTerms() : []),
           ...commandTerms(action.fields),
           ...postEffectTerms(action.fields),
           ...fields.flatMap(field => [

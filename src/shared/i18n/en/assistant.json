@@ -298,7 +298,7 @@
         "description": "Changes a layer’s opacity, fill opacity, blend mode, visibility or clipping. Every field is optional, and what is not given is left exactly as it was. THIS is what hides a layer and shows it again — « masque ce calque » sets visible to false, and has nothing to do with a mask."
       },
       "layerTransform": {
-        "title": "Place a layer",
+        "title": "Move, scale or rotate a layer",
         "description": "Moves, scales or turns one layer inside the frame. The rotation is given in degrees, and every field left out keeps the value the layer already had."
       },
       "layerEditTextLayer": {
@@ -882,7 +882,7 @@
         "description": "Chooses how high dynamic range is brought down to the screen, and by how many stops it is exposed. Both belong to the document rather than to the window that happens to be looking at it."
       },
       "gitStatus": {
-        "title": "Read the repository",
+        "title": "Read the repository version status",
         "description": "Returns the branch, what it tracks, how far ahead or behind it is, and every changed file with the half of git it sits in. Also says when the project has no repository at all. What changed INSIDE a file is git.diff; this only names the files."
       },
       "gitLog": {
@@ -1134,7 +1134,7 @@
         "description": "Answers the scene, an object, its components with their schema, its relations and what may still be added to it."
       },
       "studioDocs": {
-        "title": "Read the documentation",
+        "title": "Read documented component or scripting settings",
         "description": "Answers the slice of documentation that answers one question — a component, or the surface a script sees."
       },
       "studioBatch": {
@@ -1142,7 +1142,7 @@
         "description": "Runs a batch of calls as one, with a single question. Stops at the first refusal."
       },
       "timelineAddSceneCue": {
-        "title": "Cue something on the timeline",
+        "title": "Cue an event, media item or fade on the timeline",
         "description": "Adds an event, a sound, a video or a transition to the timeline of the 3D SCENE. An event is a NAME put on the bus at the moment given, which a script hears through onMessage — that is how something is made to happen at a point of a cinematic, rather than by laying animation keys. A cinematic fade goes here, with list=transitions and what=fade. What the third field names depends on the list — an event name, an asset id, or a kind of transition. For a fade on a clip of an edit, that is clip.fade."
       },
       "timelineRemoveSceneCue": {

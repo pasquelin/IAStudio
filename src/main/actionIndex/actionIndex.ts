@@ -147,12 +147,25 @@ function actionDocumentScore(
 function workflowScoresOf(
   hits: readonly ActionHit[],
   availableResources: readonly ActionResource[],
+  query: string,
 ): { workflow: ReadonlyMap<ActionName, number>; resources: ReadonlyMap<ActionName, number> } {
   const available = new Set(availableResources)
   const scores = new Map<ActionName, number>()
   const resources = new Map<ActionName, number>()
+  const resolvesOrdinal = actionSearchWords(query).some(word =>
+    ['first', 'premier', 'premiere'].includes(word),
+  )
   const ranked = hits
-    .filter(hit => hit.lexicalScore >= 1 && (hit.intentScore ?? 0) > 0)
+    .filter(
+      hit =>
+        hit.lexicalScore >= 1 &&
+        ((hit.intentScore ?? 0) > 0 ||
+          (resolvesOrdinal &&
+            hit.score >= 8 &&
+            [...hit.action.requires, ...hit.action.inputs, ...hit.action.uses].some(
+              resource => !available.has(resource),
+            ))),
+    )
     .sort((left, right) => right.score - left.score || left.action.ordinal - right.action.ordinal)
   const producers = (resource: ActionResource): readonly IndexedAction[] =>
     hits
@@ -386,7 +399,7 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         score: relevanceScore + applicabilityScore,
       }
     })
-    const signals = workflowScoresOf(hits, wanted.available ?? [])
+    const signals = workflowScoresOf(hits, wanted.available ?? [], wanted.query)
     const limit = Math.max(1, Math.min(MAX_LIMIT, Math.floor(wanted.limit ?? DEFAULT_LIMIT)))
     const ranked = hits
       .map(hit => {

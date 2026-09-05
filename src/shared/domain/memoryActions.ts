@@ -70,7 +70,7 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
     commitment: 'files',
     repeatable: true,
     reach: 'mcp',
-    capabilities: { intents: ['mutate'] },
+    capabilities: { intents: ['remember'] },
     fields: [
       {
         key: 'type',

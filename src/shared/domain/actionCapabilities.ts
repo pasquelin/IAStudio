@@ -1,11 +1,13 @@
 import type { DocumentKind } from './document'
 import type { TargetKind } from './target'
 
-export type ActionIntent = 'read' | 'create' | 'mutate' | 'delete' | 'search' | 'execute'
+export type ActionIntent =
+  'read' | 'create' | 'mutate' | 'delete' | 'search' | 'execute' | 'remember'
 export type ActionDocumentAffinity = 'required' | 'relevant' | 'transversal'
 export type ActionTarget =
   | TargetKind
   | 'asset'
+  | 'component'
   | 'document'
   | 'file'
   | 'generation'

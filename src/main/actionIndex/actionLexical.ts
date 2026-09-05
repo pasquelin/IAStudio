@@ -2,6 +2,7 @@ import type { ActionIntent } from '@shared/domain/assistant'
 import type { IndexedAction } from './actionCorpus'
 
 const INTENT_MATCH_SCORE = 2
+const SPECIFIC_INTENT_MATCH_SCORE = 6
 const INTENT_MISMATCH_SCORE = -0.5
 const STOP_WORDS = new Set([
   'a',
@@ -55,6 +56,7 @@ const SEARCH_INTENTS: readonly ActionIntent[] = [
   'delete',
   'search',
   'execute',
+  'remember',
 ]
 
 const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
@@ -98,9 +100,6 @@ const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
     'update',
     'adjust',
     'activ',
-    'retien',
-    'remember',
-    'retain',
   ],
   delete: ['supprim', 'retire', 'efface', 'oublie', 'delete', 'remove', 'trash', 'forget', 'clear'],
   search: ['cherch', 'trouve', 'find', 'search', 'browse'],
@@ -108,6 +107,7 @@ const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
     'lance',
     'execute',
     'ouvre',
+    'ouvrir',
     'ferme',
     'revien',
     'reven',
@@ -120,6 +120,7 @@ const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
     'submit',
     'play',
   ],
+  remember: ['retien', 'remember', 'retain'],
 }
 
 const ACTION_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
@@ -156,6 +157,7 @@ const ACTION_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
   delete: ['remove', 'delete', 'trash', 'forget', 'clear', 'detach', 'ungroup'],
   search: ['search', 'find', 'browse', 'explore'],
   execute: ['run', 'submit', 'open', 'close', 'play', 'step', 'cancel', 'wait'],
+  remember: ['remember', 'retain'],
 }
 
 const folded = (value: string): string =>
@@ -187,7 +189,8 @@ function intentOf(
 export function actionIntentScore(query: string, action: IndexedAction): number {
   const queryIntent = actionQueryIntent(query)
   if (queryIntent === null) return 0
-  if (action.capabilities.intents?.includes(queryIntent)) return INTENT_MATCH_SCORE
+  if (action.capabilities.intents?.includes(queryIntent))
+    return queryIntent === 'remember' ? SPECIFIC_INTENT_MATCH_SCORE : INTENT_MATCH_SCORE
   if (action.capabilities.intents?.length) return INTENT_MISMATCH_SCORE
   const actionIntent = intentOf(action.name.split('.')[1] ?? '', ACTION_INTENTS)
   if (actionIntent === null) return 0
@@ -195,7 +198,7 @@ export function actionIntentScore(query: string, action: IndexedAction): number 
 }
 
 export const actionQueryIntent = (query: string): ActionIntent | null =>
-  intentOf(query, QUERY_INTENTS)
+  /^(?:qu est ce|ou )/.test(folded(query)) ? 'read' : intentOf(query, QUERY_INTENTS)
 
 export const actionBm25Score = (rank?: number): number =>
   rank === undefined ? 0 : 1 / (1 + Math.exp(rank))

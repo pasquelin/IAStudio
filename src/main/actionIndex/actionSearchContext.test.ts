@@ -71,4 +71,30 @@ describe('action search context', () => {
       documentAuthority: 'explicit',
     })
   })
+
+  it('resolves an object pronoun to the current selection', () => {
+    const snapshot: StudioSnapshot = {
+      ...SNAPSHOT,
+      selection: { kind: 'layer', items: [{ id: 'layer', name: 'Boat' }] },
+    }
+
+    expect(actionSearchScope(snapshot, 'Déplace-la de 100 pixels.')).toEqual({
+      target: 'layer',
+      document: 'image',
+      documentAuthority: 'active',
+    })
+  })
+
+  it('keeps an explicitly named domain ahead of an unrelated selection', () => {
+    const snapshot: StudioSnapshot = {
+      ...SNAPSHOT,
+      selection: { kind: 'layer', items: [{ id: 'layer', name: 'Boat' }] },
+    }
+
+    expect(actionSearchScope(snapshot, 'Quels réglages porte un composant Santé ?')).toEqual({
+      target: 'component',
+      document: 'image',
+      documentAuthority: 'active',
+    })
+  })
 })
