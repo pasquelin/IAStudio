@@ -287,6 +287,8 @@ function filteredSceneItems(
   language: string,
 ): SceneItem[] {
   const term = collection.search.trim().toLocaleLowerCase(language)
+  if (term === '' && collection.sort === SCENE_ORDER) return [...items]
+
   const kept = new Set<string>([SCENE_ROOT])
   const byId = new Map(items.map(item => [item.id, item]))
   for (const item of items) {
