@@ -162,7 +162,7 @@ function workflowScoresOf(
     score: number,
     visited: ReadonlySet<ActionResource>,
   ): void => {
-    for (const resource of [...action.requires, ...action.inputs]) {
+    for (const resource of [...action.requires, ...action.inputs, ...action.uses]) {
       if (available.has(resource) || visited.has(resource)) continue
       const nextVisited = new Set(visited).add(resource)
       for (const producer of producers(resource)) {
@@ -180,7 +180,8 @@ function workflowScoresOf(
       for (const consumer of hits.filter(
         candidate =>
           candidate.action.requires.includes(resource) ||
-          candidate.action.inputs.includes(resource),
+          candidate.action.inputs.includes(resource) ||
+          candidate.action.uses.includes(resource),
       )) {
         scores.set(consumer.action.name, Math.max(scores.get(consumer.action.name) ?? 0, 3))
         visit(consumer.action, 6, new Set())
@@ -190,7 +191,9 @@ function workflowScoresOf(
   for (const resource of available) {
     for (const hit of hits.filter(
       candidate =>
-        candidate.action.requires.includes(resource) || candidate.action.inputs.includes(resource),
+        candidate.action.requires.includes(resource) ||
+        candidate.action.inputs.includes(resource) ||
+        candidate.action.uses.includes(resource),
     ))
       resources.set(
         hit.action.name,

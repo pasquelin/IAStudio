@@ -28,7 +28,7 @@ protocole ; la spec prime sur le périmètre fonctionnel.
 
 ## État mesuré actuel
 
-- HEAD valide : `d1cd4825f`.
+- HEAD valide : dernier commit de la branche `feat/assistant-mission-runtime`.
 - Référence Mission Runtime : 27/27 sur le mini-banc Phase 10.3.
 - Retrieval offline : 414 cas, R@12 76,09 %, MRR 0,4538, 99 actions attendues hors top-12.
 - Palier B historique : 43/91 ; ne pas le relancer avant un gain offline significatif.
@@ -63,6 +63,13 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   16 753 tests TypeScript et 195 tests Python verts.
 - Prochain lot : distinguer génériquement découverte optionnelle et précondition obligatoire pour
   les fichiers ; `file.open` doit rester directement utilisable avec un chemin déjà résolu.
+- Découverte de fichiers : `uses` décrit désormais une ressource utile mais non obligatoire.
+  `files.list` et `files.search` retournent des chemins de projet et remontent avec `file.open`,
+  sans bloquer un chemin déjà connu ni forcer un round après un simple listing. Offline : famille
+  file 90,63 %, rang moyen 6,47 ; global R@12 75,85 %, la perte unique est un workflow réellement
+  multi-action (`files.search` puis `node.setMeshMaterial`) jugé mono-action par l'oracle offline.
+  Le run DeepSeek ciblé a été refusé par la garde d'exécution externe ; prochaine mesure produit :
+  intégrer ces cas au prochain mini-lot autorisé.
 
 ## Ce que tu ne tranches pas seul
 

@@ -29,6 +29,7 @@ export type IndexedAction = {
   requires: readonly ActionResource[]
   produces: readonly ActionResource[]
   inputs: readonly ActionResource[]
+  uses: readonly ActionResource[]
   returns: readonly ActionResource[]
   capabilities: ActionCapabilities
 }
@@ -68,6 +69,7 @@ export function actionCorpus(): ActionCorpus {
         requires: action.requires ?? [],
         produces: action.produces ?? [],
         inputs: action.inputs ?? [],
+        uses: action.uses ?? [],
         returns: action.returns ?? [],
         capabilities: action.capabilities ?? {},
         localizedFieldLabels: fields.flatMap(field => [

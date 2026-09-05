@@ -1,4 +1,5 @@
-export type ActionResource = 'generationModelCandidates' | 'preparedGeneration' | 'settingsState'
+export type ActionResource =
+  'generationModelCandidates' | 'preparedGeneration' | 'projectFilePaths' | 'settingsState'
 
 export type ActionReferenceKind = 'model' | 'asset' | 'node' | 'document' | 'job'
 
@@ -9,5 +10,6 @@ export type ActionResourceDescriptor = {
 export const ACTION_RESOURCES: Record<ActionResource, ActionResourceDescriptor> = {
   generationModelCandidates: { reference: { kind: 'model', key: 'id' } },
   preparedGeneration: {},
+  projectFilePaths: {},
   settingsState: {},
 }

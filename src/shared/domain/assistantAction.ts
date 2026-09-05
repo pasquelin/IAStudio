@@ -122,6 +122,8 @@ export type AssistantAction = {
   requires?: readonly ActionResource[]
   produces?: readonly ActionResource[]
   inputs?: readonly ActionResource[]
+  /** A resource that improves this action but whose absence does not prevent a direct call. */
+  uses?: readonly ActionResource[]
   returns?: readonly ActionResource[]
   capabilities?: ActionCapabilities
 }

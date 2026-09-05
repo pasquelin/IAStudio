@@ -1,5 +1,5 @@
 import { describe, expect, it, onTestFinished } from 'vitest'
-import { ACTION_REGISTRY } from '@shared/domain/assistant'
+import { ACTION_REGISTRY, assistantAction } from '@shared/domain/assistant'
 import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { actionCorpus, actionFingerprint } from './actionCorpus'
 import { createActionIndex } from './actionIndex'
@@ -318,6 +318,19 @@ describe('ActionIndex', () => {
     expect(write?.rank).toBeGreaterThan(3)
     expect(read?.workflowScore).toBeGreaterThan(0)
     expect(read?.included).toBe(true)
+  })
+
+  it('offers optional discovery without making a resolved file path a prerequisite', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const discovery = index.search({ query: 'Ouvre mon image du bateau.', limit: 12 })
+    expect(discovery.map(hit => hit.action.name)).toEqual(
+      expect.arrayContaining(['file.open', 'files.search']),
+    )
+    expect(assistantAction('file.open')?.inputs).toBeUndefined()
   })
 
   it('replaces fields, vectors and FTS words when the corpus changes', () => {
