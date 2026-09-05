@@ -36,7 +36,7 @@ const RERUN_EVERYTHING = [
   'tsconfig.json',
   'tsconfig.node.json',
   'tsconfig.web.json',
-  'eslint.config.mjs',
+  'oxlint.json',
   '.prettierrc',
 ]
 
@@ -143,17 +143,7 @@ function sourceGates(sources) {
   const lintable = formattable.filter(path => !path.endsWith('.css'))
   const lint =
     lintable.length > 0
-      ? [
-          run('lint', 'npx', [
-            'eslint',
-            '--max-warnings',
-            '0',
-            '--cache',
-            '--cache-location',
-            'node_modules/.cache/eslint/',
-            ...lintable,
-          ]),
-        ]
+      ? [run('lint', 'npx', ['oxlint', '-c', 'oxlint.json', '--deny-warnings', ...lintable])]
       : []
   const format =
     formattable.length > 0

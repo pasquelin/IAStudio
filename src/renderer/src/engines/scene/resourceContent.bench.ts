@@ -1,5 +1,6 @@
+import { bench } from '@shared/vitestBench'
 import { SphereGeometry } from 'three'
-import { bench, describe } from 'vitest'
+import { describe } from 'vitest'
 import { GEOMETRY_CONTENT } from './resourceContent'
 
 const geometry = new SphereGeometry(1, 256, 128)

@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+import { describe } from 'vitest'
 import { applyReliefSculpt, changedChunks, type ReliefSculptOperation } from '@shared/domain/relief'
 import {
   DEFAULT_RELIEF_ELEVATION,

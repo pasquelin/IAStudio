@@ -1,8 +1,9 @@
+import { bench } from '@shared/vitestBench'
 import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { deserialize, serialize } from 'node:v8'
-import { afterAll, bench, describe } from 'vitest'
+import { afterAll, describe } from 'vitest'
 import {
   DOCUMENT_VERSION,
   EXTENSIONS_BY_KIND,

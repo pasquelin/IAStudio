@@ -1,3 +1,4 @@
+import { bench } from '@shared/vitestBench'
 import {
   BoxGeometry,
   Mesh,
@@ -7,7 +8,7 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three'
-import { bench, describe } from 'vitest'
+import { describe } from 'vitest'
 import { createBatchedGroups } from './batching'
 import { createInstancedGroups } from './instancing'
 import { meshNode } from './scene-fixtures'

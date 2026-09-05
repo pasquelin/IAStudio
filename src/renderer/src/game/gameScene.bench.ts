@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+import { describe } from 'vitest'
 import type { GeometryDescriptor } from '@shared/domain/scene'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'

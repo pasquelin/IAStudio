@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+
+import { describe } from 'vitest'
 import { IDENTITY_TRANSFORM } from '@shared/domain/transform'
 import type { BodyDescriptor } from '../ports/physicsPort'
 import { loadJoltPhysics } from './joltPhysics'

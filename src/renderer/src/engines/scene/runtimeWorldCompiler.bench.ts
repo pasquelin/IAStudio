@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+import { describe } from 'vitest'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { DEFAULT_WORLD } from '@shared/domain/scene'
 import { meshNode } from './scene-fixtures'

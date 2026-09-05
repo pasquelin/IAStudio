@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+import { describe } from 'vitest'
 import type { Command, History } from '@/engines/core/history'
 import { createDocumentStore } from './documentStore'
 

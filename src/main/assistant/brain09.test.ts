@@ -69,9 +69,10 @@ describe('thinking', () => {
     await brain.think({ utterance: 'and now?', history })
 
     const body = run.mock.calls[0]?.[0]
-    expect(body?.textInputs).toHaveLength(10)
-    expect((body?.textInputs as string[]).at(-1)).toBe('turn 24')
-    expect(body?.model).toBe('claude-haiku-4-5')
+    if (!body) throw new Error('the request was not sent')
+    expect(body.textInputs).toHaveLength(10)
+    expect((body.textInputs as string[]).at(-1)).toBe('turn 24')
+    expect(body.model).toBe('claude-haiku-4-5')
   })
 
   /**
@@ -93,7 +94,8 @@ describe('thinking', () => {
 
     expect(outcome).toEqual({ say: 'Opening.', calls: [], cost: 1.5 })
     const retry = run.mock.calls[1]?.[0]
-    expect((retry?.textInputs as string[]).at(-1)).toContain('I think you want a 3D file!')
+    if (!retry) throw new Error('the retry request was not sent')
+    expect((retry.textInputs as string[]).at(-1)).toContain('I think you want a 3D file!')
   })
 
   /**

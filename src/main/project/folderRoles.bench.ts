@@ -1,9 +1,10 @@
+import { bench } from '@shared/vitestBench'
 import { execFile } from 'node:child_process'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
-import { afterAll, bench, describe } from 'vitest'
+import { afterAll, describe } from 'vitest'
 import { DEFAULT_ROLE_PATHS, FOLDER_ROLES, ROLE_MARKER } from '@shared/domain/folderRole'
 import {
   CATALOG_FILE,

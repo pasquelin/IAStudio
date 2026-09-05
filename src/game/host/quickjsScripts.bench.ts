@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+
+import { describe } from 'vitest'
 import type { InputState } from '../ports/inputPort'
 import type { ScriptEntity, ScriptFrame } from '../script/frame'
 import type { ScriptPort } from '../ports/scriptPort'

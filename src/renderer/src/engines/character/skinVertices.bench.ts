@@ -1,4 +1,5 @@
-import { bench, describe } from 'vitest'
+import { bench } from '@shared/vitestBench'
+import { describe } from 'vitest'
 import { SKIN_REGIONS, type SkinRequest } from './skinMessage'
 import { skinVertices } from './skinVertices'
 import { loadSkinVerticesWasm } from './skinVerticesWasm'
