@@ -242,12 +242,25 @@ describe('NewDocumentWindow', () => {
     open(ASK)
     render(<NewDocumentWindow />)
 
-    ;(await screen.findByRole('button', { name: 'Annuler' })).focus()
+    // Taken back until it HOLDS: the name field grabs focus when the folder lands, and under load
+    // that effect settled after a plain `.focus()`, sending Enter to the form — which answered
+    // `made` instead of `null`, once in three full gate runs. Measured in isolation the field
+    // already holds focus by this point, so waiting on it alone changed nothing.
+    const focusOn = async (name: string): Promise<HTMLElement> => {
+      const button = await screen.findByRole('button', { name })
+      await waitFor(() => {
+        button.focus()
+        expect(document.activeElement).toBe(button)
+      })
+      return button
+    }
+
+    await focusOn('Annuler')
     await userEvent.keyboard('{Enter}')
     expect(answer).toHaveBeenCalledWith(null)
 
     answer.mockClear()
-    screen.getByRole('button', { name: 'Nouveau dossier' }).focus()
+    await focusOn('Nouveau dossier')
     await userEvent.keyboard('{Enter}')
     // The field opened instead: nothing was answered, and a document was certainly not made.
     expect(answer).not.toHaveBeenCalled()
