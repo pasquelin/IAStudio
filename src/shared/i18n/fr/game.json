@@ -180,10 +180,14 @@
       "addBinding": "Ajouter une liaison",
       "binding": "Liaison {{device}}",
       "applyPresetHint": "Remplace cette carte par le point de départ choisi",
+      "axis": "Axe",
       "context": "Contexte",
       "create": "Nouvelle carte de contrôles",
       "createHint": "Crée une carte de contrôles depuis un point de départ standard",
       "defaultActive": "Actif au démarrage",
+      "deadZone": "Zone morte",
+      "deviceLabel": "Périphérique",
+      "duplicateId": "Plusieurs cartes de contrôles utilisent l’identifiant « {{id}} ». Donnez un identifiant unique à chaque contexte.",
       "device": {
         "gamepad": "Manette",
         "keyboard": "Clavier",
@@ -191,6 +195,7 @@
       },
       "id": "Identifiant",
       "invalid": "Le JSON ne décrit pas une carte de contrôles valide.",
+      "invert": "Inverser",
       "jsonLabel": "JSON de la carte",
       "kind": {
         "axis1": "Un axe",
@@ -217,6 +222,7 @@
       "removeAction": "Supprimer l’action",
       "removeBinding": "Supprimer la liaison",
       "save": "Enregistrer",
+      "scale": "Échelle",
       "unnamedAction": "Action sans nom"
     },
     "controlsMenu": {

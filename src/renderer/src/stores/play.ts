@@ -20,6 +20,8 @@ import { sceneEngineOf } from './sceneEngines'
 import { loadSceneSource, montageSceneOf } from './sceneSources'
 import { sceneOf, useScenes } from './scenes'
 import { projectInputMaps } from '@/engines/code/projectInputMaps'
+import { inputMapIdConflict } from '@/engines/code/projectInputMaps'
+import i18next from 'i18next'
 
 /** How long a command may wait on the game window. A `step` runs up to 120 fixed steps there. */
 const COMMAND_MS = 2_000
@@ -291,8 +293,21 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   // has to be what the screen shows, or an author watches the script from before their last
   // keystroke run — without a word.
   const [, inputMaps] = await Promise.all([useCode.getState().reload(), projectInputMaps()])
+  const conflict = inputMapIdConflict(inputMaps)
+  if (conflict) {
+    return {
+      ...NO_SCRIPTS,
+      troubles: [
+        {
+          script: conflict.path,
+          message: i18next.t('game.inputMap.duplicateId', { id: conflict.map.id }),
+          line: 1,
+        },
+      ],
+    }
+  }
   const files = codeFilesOf(useCode.getState())
-  const runtimeMaps = uniqueInputMaps(inputMaps.map(input => input.map))
+  const runtimeMaps = inputMaps.map(input => input.map)
   if (files.length === 0) return { ...NO_SCRIPTS, inputMaps: runtimeMaps }
 
   compiler ??= createScriptCompiler()
@@ -301,15 +316,6 @@ export async function compiledScripts(): Promise<CompiledScripts> {
     inputMaps,
   )
   return { ...compiled, inputMaps: runtimeMaps }
-}
-
-function uniqueInputMaps(maps: readonly InputMap[]): readonly InputMap[] {
-  const ids = new Set<string>()
-  return maps.filter(map => {
-    if (ids.has(map.id)) return false
-    ids.add(map.id)
-    return true
-  })
 }
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */

@@ -180,10 +180,14 @@
       "addBinding": "Add binding",
       "binding": "{{device}} binding",
       "applyPresetHint": "Replaces this map with the chosen starting point",
+      "axis": "Axis",
       "context": "Context",
       "create": "New control map",
       "createHint": "Creates an input map from a standard starting point",
       "defaultActive": "Active on start",
+      "deadZone": "Dead zone",
+      "deviceLabel": "Device",
+      "duplicateId": "Several input maps use the identifier “{{id}}”. Give each context a unique identifier.",
       "device": {
         "gamepad": "Gamepad",
         "keyboard": "Keyboard",
@@ -191,6 +195,7 @@
       },
       "id": "Identifier",
       "invalid": "The JSON does not describe a valid input map.",
+      "invert": "Invert",
       "jsonLabel": "Input map JSON",
       "kind": {
         "axis1": "One axis",
@@ -217,6 +222,7 @@
       "removeAction": "Remove action",
       "removeBinding": "Remove binding",
       "save": "Save",
+      "scale": "Scale",
       "unnamedAction": "Unnamed action"
     },
     "controlsMenu": {

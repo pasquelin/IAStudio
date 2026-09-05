@@ -64,6 +64,7 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
   }
 
   const redraw = (): void => {
+    const restoreFocus = root.contains(owner.activeElement)
     root.replaceChildren()
     const panel = owner.createElement('section')
     panel.style.cssText =
@@ -130,6 +131,7 @@ export function createInputControlsMenu(options: InputControlsMenuOptions): Inpu
     actions.appendChild(actionButton(owner, labels.close, 'inputClose', closeMenu))
     panel.appendChild(actions)
     root.appendChild(panel)
+    if (restoreFocus) root.querySelector<HTMLElement>('button')?.focus()
   }
 
   const finishCapture = (binding: InputBinding): void => {

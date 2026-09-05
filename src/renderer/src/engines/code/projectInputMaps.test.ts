@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InputMap } from '@shared/domain/inputMap'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { projectInputMaps } from './projectInputMaps'
+import { inputMapIdConflict, projectInputMaps } from './projectInputMaps'
 
 const CHARACTER: InputMap = {
   version: 1,
@@ -52,5 +52,6 @@ describe('project input maps for scripts', () => {
       { path: 'Controls/a.input.json', map: CHARACTER },
       { path: 'Controls/b.input.json', map: { ...CHARACTER, priority: 10 } },
     ])
+    expect(inputMapIdConflict(await projectInputMaps())?.path).toBe('Controls/b.input.json')
   })
 })

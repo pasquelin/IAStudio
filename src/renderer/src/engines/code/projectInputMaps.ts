@@ -21,3 +21,12 @@ export async function projectInputMaps(): Promise<InputMapModule[]> {
     return []
   }
 }
+
+export function inputMapIdConflict(maps: readonly InputMapModule[]): InputMapModule | null {
+  const ids = new Set<string>()
+  for (const map of maps) {
+    if (ids.has(map.map.id)) return map
+    ids.add(map.map.id)
+  }
+  return null
+}

@@ -49,9 +49,15 @@ describe('exported controls menu', () => {
     binding?.click()
     document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Enter', bubbles: true }))
     expect(controls.bindings().character?.jump).toEqual([{ device: 'keyboard', code: 'Enter' }])
+    expect(
+      document.querySelector('[data-input-controls-menu]')?.contains(document.activeElement),
+    ).toBe(true)
 
     document.querySelector<HTMLButtonElement>('[data-input-reset]')?.click()
     expect(controls.bindings().character?.jump).toEqual([{ device: 'keyboard', code: 'Space' }])
+    expect(
+      document.querySelector('[data-input-controls-menu]')?.contains(document.activeElement),
+    ).toBe(true)
 
     menu.dispose()
     expect(document.activeElement).toBe(before)
