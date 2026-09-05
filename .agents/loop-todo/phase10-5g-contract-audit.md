@@ -195,3 +195,17 @@ Sur les cas ciblés, l'exposition du job actif fait réussir 44.3. La compaction
 réussir 62.3 dès sa première action, avec l'identifiant réel de transition. Les 19 réflexions qui
 suivent cette mutation réussie démontrent un défaut séparé de clôture du step de vérification ; elles
 ne sont pas attribuables au Context Builder et doivent être traitées dans un lot runtime distinct.
+
+Ce lot runtime a confirmé le mécanisme : chaque refus réparable insérait un nouveau raisonnement
+avant le verify existant, puis ce raisonnement ajoutait encore un verify. Le Scheduler rebranchait
+l'ancien verify en aval du nouveau sans le supprimer, ce qui empilait les vérifications. Le runtime
+réutilise désormais un verify aval déjà planifié lorsque l'action ne demande pas une continuation de
+workflow. Sur un nouveau run 62.3 réussi, les rounds passent de 20 à 4, les appels provider de 25 à
+4, les actions de 10 à 2 et les actions inutiles de 9 à 1.
+
+La revue adverse a trouvé le même chemin d'empilement lors de la reprise d'une action après conflit
+de révision ; il réutilise désormais lui aussi le verify aval et possède un test déterministe. Elle
+a également relevé deux dettes antérieures, distinctes du correctif : une réponse contenant beaucoup
+d'actions peut dépasser la limite de 48 steps avant le prochain contrôle, et l'extraction récursive
+des références peut accepter des identifiants imbriqués qui ne représentent pas la ressource
+annoncée. Ces deux points deviennent des lots séparés avant une nouvelle campagne large.

@@ -302,7 +302,7 @@ describe('mission runtime', () => {
     const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
     const first: AssistantCall = { action: 'project.create', input: { wrong: true } }
     const corrected: AssistantCall = { action: 'project.create', input: { name: 'Boat' } }
-    const { brain } = brainWith([
+    const { brain, requests } = brainWith([
       { say: '', calls: [first], cost: 0 },
       { say: '', calls: [corrected], cost: 0 },
       { say: 'Done.', calls: [], cost: 0 },
@@ -328,6 +328,8 @@ describe('mission runtime', () => {
 
     expect(mission.state).toBe('completed')
     expect(run.mock.calls.map(call => call[0])).toEqual([first, corrected])
+    expect(requests).toHaveLength(3)
+    expect(mission.plan.steps.filter(step => step.kind === 'verify')).toHaveLength(1)
   })
 
   it('continues planning when an action result enables another action', async () => {

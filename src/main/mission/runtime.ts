@@ -185,7 +185,11 @@ function nextStepAfter(call: AssistantCall | undefined): PlannedStep {
   return continues ? reasoningStep() : verificationStep()
 }
 
-function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly PlannedStep[] {
+function plannedFrom(
+  answer: AssistantAnswer,
+  verification: boolean,
+  verificationPlanned = false,
+): readonly PlannedStep[] {
   if (answer.ask) {
     return [
       {
@@ -205,11 +209,15 @@ function plannedFrom(answer: AssistantAnswer, verification: boolean): readonly P
     actions.push(actionStep(call))
     for (const resource of descriptor?.returns ?? []) returned.add(resource)
   }
-  return actions.length > 0
-    ? [...actions, nextStepAfter(answer.calls.at(-1))]
-    : verification
-      ? []
-      : actions
+  if (actions.length === 0) return verification ? [] : actions
+  const next = nextStepAfter(answer.calls.at(-1))
+  return verificationPlanned && next.draft.kind === 'verify' ? actions : [...actions, next]
+}
+
+function hasDependentVerification(mission: Mission, stepId: string): boolean {
+  return mission.plan.steps.some(
+    step => step.kind === 'verify' && step.state === 'pending' && step.dependsOn.includes(stepId),
+  )
 }
 
 const jobIdOf = (value: unknown): string | null => {
@@ -322,7 +330,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       return {
         kind: 'planned',
         result: { say: answer.say, ask: answer.ask },
-        steps: plannedFrom(answer, true),
+        steps: plannedFrom(answer, true, hasDependentVerification(mission, step.id)),
       }
     }
     const missing = missingResources(mission, step)
@@ -393,7 +401,11 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         ? `Verify whether this mission is complete from the current state: ${mission.goal}`
         : mission.goal,
     )
-    const steps = plannedFrom(answer, step.kind === 'verify')
+    const steps = plannedFrom(
+      answer,
+      step.kind === 'verify',
+      hasDependentVerification(mission, step.id),
+    )
     deps.metrics?.plannedSteps(steps.length)
     return {
       kind: 'planned',

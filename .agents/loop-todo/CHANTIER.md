@@ -45,6 +45,12 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   53/91, contre 43/91 en 10.4, avec 1 311 894 tokens, 118 actions inutiles et 317 rounds.
 - Causes Palier B relues : 22 Retrieval, 6 Context, 3 Planning, 3 Model et 4 Benchmark. Lot en cours :
   fidéliser documents ouverts, jobs actifs et état structurel tronqué avant tout nouveau scoring.
+- Convergence ciblée 62.3 : la réutilisation du verify déjà planifié réduit le run réussi de 20 à
+  4 rounds, de 25 à 4 appels provider et de 9 à 1 action inutile. Prochaine gate : revue et validation
+  du lot runtime, puis mini-banc de non-régression.
+- Revue adverse : appliquer aussi la déduplication après conflit de révision. Dettes suivantes
+  mesurables : borner un batch avant de dépasser 48 steps et restreindre la provenance des IDs aux
+  références réellement retournées par le contrat, sans parcourir tout objet imbriqué.
 
 ## Ce que tu ne tranches pas seul
 
