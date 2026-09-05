@@ -117,4 +117,20 @@ describe('the camera preview', () => {
     await userEvent.click(screen.getByRole('button', { name: /Remettre/ }))
     expect(setCameraPreview).toHaveBeenLastCalledWith(expect.objectContaining({ full: false }))
   })
+
+  it('stays open across a rectangle that changed, rather than closing and reopening', async () => {
+    install({ nodes: [cameraNodeFixture('cam-a')], selectedIds: ['cam-a'] })
+    const view = render(<CameraPreview documentId={DOCUMENT} />)
+    setCameraPreview.mockClear()
+
+    await userEvent.click(screen.getByRole('button', { name: /Agrandir/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Remettre/ }))
+
+    // Closing frees the chain and the programs compiled for it, and the rectangle follows the
+    // pointer: a `null` between two settings is a rebuild on every move.
+    expect(setCameraPreview.mock.calls.map(call => call[0])).not.toContain(null)
+
+    view.unmount()
+    expect(setCameraPreview).toHaveBeenLastCalledWith(null)
+  })
 })
