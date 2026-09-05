@@ -14,6 +14,7 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   openLicences: () => {},
   openManual: () => {},
   openUsage: () => {},
+  openWelcome: () => {},
   toggleFullScreen: () => {},
   openTool: () => {},
   runCommand: () => {},
@@ -132,6 +133,19 @@ describe('menuTemplate', () => {
 
   // Every shipped licence asks for its notice to travel with the binary; Help is where an
   // application keeps it, on all three platforms.
+  it('offers the welcome under Help, so a developer can reopen it', () => {
+    const openWelcome = vi.fn()
+    for (const isMac of [true, false]) {
+      const entries = submenuOf(
+        menuTemplate(options({ isMac, actions: actions({ openWelcome }) })),
+        'Aide',
+      )
+      expect(labels(entries)).toContain('Bienvenue')
+      activate(entries.find(entry => entry.label === 'Bienvenue'))
+    }
+    expect(openWelcome).toHaveBeenCalledTimes(2)
+  })
+
   it('offers the licences under Help, macOS included', () => {
     for (const isMac of [true, false]) {
       expect(labels(submenuOf(menuTemplate(options({ isMac })), 'Aide'))).toContain('Licences')

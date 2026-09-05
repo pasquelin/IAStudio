@@ -10,9 +10,16 @@ const VARIANT: Record<WindowButtonVariant, string> = {
   danger: 'btn-error btn-outline',
 }
 
+const SIZE: Record<'window' | 'dialog' | 'row', string> = {
+  window: 'btn-sm',
+  dialog: '',
+  row: 'btn-xs',
+}
+
 export type WindowButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: WindowButtonVariant
-  size?: 'window' | 'dialog'
+  /** `row` for a button repeated down a list. NOT the `compact` DENSITY, which it does not follow. */
+  size?: 'window' | 'dialog' | 'row'
   ref?: Ref<HTMLButtonElement>
 }
 
@@ -29,7 +36,7 @@ export function WindowButton({
     <button
       ref={ref}
       type={type}
-      className={cn('btn', size === 'window' && 'btn-sm', VARIANT[variant], className)}
+      className={cn('btn', SIZE[size], VARIANT[variant], className)}
       {...rest}
     />
   )

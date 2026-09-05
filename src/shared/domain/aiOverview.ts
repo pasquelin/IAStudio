@@ -66,6 +66,14 @@ export type RoleRow = {
 }
 
 /**
+ * Whether an install already holds the disk. One at a time, wherever it was begun — three screens
+ * derived it side by side, and the day a fourth source of downloads lands they would disagree.
+ */
+export function aiDiskBusy(overview: Pick<AiOverview, 'installing' | 'ollama'> | null): boolean {
+  return overview !== null && (overview.installing !== null || overview.ollama.progress !== null)
+}
+
+/**
  * Whether an employment has something answering for it today — a choice, never a fill-in.
  *
  * Beside the type rather than in either reader: the home counts it and the empty centre asks it,

@@ -5,7 +5,7 @@
  * 241 ms to the way in's first answer before, 131 ms after, which is a bare Electron's own time.
  * The entry it leaves behind is 17 Ko, against 1,6 Mo.
  */
-import { app, session } from 'electron'
+import { type BrowserWindow, app, session } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/aboutPanel'
@@ -27,6 +27,65 @@ import { type Splash } from '@main/window/splash'
 import { openSplashWindow } from '@main/window/splashWindow'
 import { quitsOnLastWindow } from '@main/window/lastWindow'
 import { createMainWindow, showMainWindow } from '@main/window/windows'
+import {
+  bindWelcomeSettings,
+  discardWelcomeWindow,
+  openWelcomeWindow,
+} from '@main/window/welcomeWindow'
+import { needsWelcome } from '@shared/domain/welcome'
+
+/**
+ * The two windows a launch can open, and which of them the splash hands over to.
+ *
+ * Its own function because `startUp` crossed the size guard once the welcome joined it — and the
+ * seam is a real one: everything above it is services, everything here is windows.
+ */
+function openStudioWindows(splash: Splash, settings: SettingsStore): void {
+  // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
+  // the other. Only a second launch overrides that — see `revealWindow`.
+  const main = createMainWindow({ deferShow: true })
+
+  // A first launch opens on the welcome instead, and the studio waits behind it: closing the
+  // welcome is what reveals it. `bindWelcomeSettings` first — the window stamps the onboarding
+  // as seen on its way out, and it needs the store to do it.
+  bindWelcomeSettings(settings)
+  const welcome = needsWelcome(settings.read().onboarding)
+    ? openWelcomeWindow({ deferShow: true })
+    : null
+
+  const showOnceSplashIsGone = async (): Promise<void> => {
+    await splash.finish()
+    if (welcome && !welcome.isDestroyed()) {
+      welcome.show()
+      return
+    }
+    if (!main.isDestroyed()) main.show()
+  }
+
+  const reveal = (): void => void showOnceSplashIsGone()
+
+  // Whichever of the two is meant to be seen first — the other stays hidden behind it.
+  ;(welcome ?? main).once('ready-to-show', reveal)
+
+  // Without this a window stays hidden forever: `window-all-closed` never fires, so the process
+  // lives on with no UI and macOS `activate` refuses to reopen anything. Both are watched — the
+  // studio is revealed by the welcome's close, and a failure there would leave a painted-over box.
+  const failed = (window: BrowserWindow, andThen: () => void): void => {
+    window.webContents.once('did-fail-load', (_event, code: number, description: string) => {
+      log.error('renderer', `startup window failed to load (${code}): ${description}`)
+      andThen()
+    })
+  }
+
+  // Discarded rather than destroyed: `destroy()` emits `closed`, which stamps the onboarding as
+  // seen — a transient load failure would bury the welcome for good.
+  if (welcome)
+    failed(welcome, () => {
+      discardWelcomeWindow()
+      reveal()
+    })
+  failed(main, reveal)
+}
 
 /**
  * Everything below blocks the main loop from end to end — `createServices()` opens SQLite
@@ -79,25 +138,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
   app.on('will-quit', createShutdown({ settle: settleBeforeQuit, quit: () => app.quit() }))
 
-  // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
-  // the other. Only a second launch overrides that — see `revealWindow`.
-  const main = createMainWindow({ deferShow: true })
-
-  const showOnceSplashIsGone = async (): Promise<void> => {
-    await splash.finish()
-    if (!main.isDestroyed()) main.show()
-  }
-
-  const reveal = (): void => void showOnceSplashIsGone()
-
-  main.once('ready-to-show', reveal)
-
-  // Without this the window would stay hidden forever: `window-all-closed` never fires, so
-  // the process lives on with no UI and macOS `activate` refuses to reopen anything.
-  main.webContents.once('did-fail-load', (_event, code, description) => {
-    log.error('renderer', `main window failed to load (${code}): ${description}`)
-    reveal()
-  })
+  openStudioWindows(splash, settings)
 
   // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
   // application menu nor the About panel is reachable before a window exists.

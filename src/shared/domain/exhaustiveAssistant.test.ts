@@ -61,6 +61,7 @@ describe('the assistant lists that stand for a union', () => {
       licences: true,
       usage: true,
       journal: true,
+      welcome: true,
     }
 
     expect(sorted(WINDOW_PAGES)).toEqual(sorted(Object.keys(all)))

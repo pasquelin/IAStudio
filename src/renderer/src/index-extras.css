@@ -128,7 +128,25 @@
   font-size: var(--text-mini) !important;
 }
 
-:focus {
+:focus,
+/*
+ * `:focus-within` is the half the first selector never covered, and daisyUI writes its field ring
+ * on exactly that — so the account form of the welcome drew an outline the studio had decided
+ * against, in the one window built on daisyUI's own components. Its cost is the one
+ * `no-focus-ring.test.ts` states, unchanged: this widens the owner's rule, it does not soften it.
+ */
+:focus-within {
+  outline: none !important;
+}
+
+/*
+ * The THIRD selector, and the one that survived the two above: `.select:focus, .select:focus-within,
+ * .select:open` is daisyUI's rule, and a select whose menu is DEPLOYED matches only the last of
+ * them — the ring came back for exactly as long as the list was down. Its own rule rather than a
+ * fourth name on the list above: `:open` shipped in Chromium 133, and a selector an older parser
+ * rejects takes the whole list with it.
+ */
+:open {
   outline: none !important;
 }
 

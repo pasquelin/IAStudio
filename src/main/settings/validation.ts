@@ -273,6 +273,11 @@ const assistant = z.object({
   steps: z.number().int().catch(ASSISTANT_STEPS_DEFAULT).transform(assistantStepsWithin).optional(),
 })
 
+const onboarding = z.object({
+  version: z.number().int().min(0).optional(),
+  completedAt: z.string().min(1).optional(),
+})
+
 const mcp = z.object({
   enabled: z.boolean().optional(),
   delegateFiles: z.boolean().optional(),
@@ -359,6 +364,7 @@ const partialSettingsShape = z.object({
   advanced: advanced.optional(),
   assistant: assistant.optional(),
   mcp: mcp.optional(),
+  onboarding: onboarding.optional(),
   dictation: dictation.optional(),
 })
 

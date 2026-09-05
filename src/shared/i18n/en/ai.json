@@ -232,5 +232,9 @@
     "cloudModel": "Model",
     "cloudModelHelp": "The exact model name at that service. Left empty, the studio uses the one it offers.",
     "studioModelHelp": "The same choice as in the assistant’s own window. The four differ by price."
+  },
+  "aiCloudGroups": {
+    "generation": "Generation",
+    "assistant": "Assistant and code"
   }
 }

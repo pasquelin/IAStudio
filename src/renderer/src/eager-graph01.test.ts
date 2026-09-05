@@ -198,6 +198,11 @@ describe('the opening chunk', () => {
     expect(files).not.toContain('../../shared/domain/settingsSearch.ts')
   })
 
+  it('never reaches the welcome window', () => {
+    expect(deferredUnder('./features/welcome/')).toEqual([])
+    expect(GRAPH.files).not.toContain('./engines/welcome/WelcomeBackdrop.ts')
+  })
+
   /**
    * The handler table reaches all fourteen families — the canvas, the scene, the rig, git, the
    * timeline — for a door that is off by default and never called at launch. `remoteActions.ts`

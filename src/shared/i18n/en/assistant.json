@@ -571,7 +571,7 @@
       },
       "helpOpenStudioWindow": {
         "title": "Open a studio window",
-        "description": "Opens the user manual, the licences window, the usage window or the journal — or brings it to the front if it is already there. These are windows of the main process, and no command of the registry reaches them."
+        "description": "Opens the user manual, the licences window, the usage window, the journal or the welcome — or brings it to the front if it is already there. These are windows of the main process, and no command of the registry reaches them."
       },
       "updatesInstall": {
         "title": "Install the downloaded update",

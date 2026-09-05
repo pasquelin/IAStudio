@@ -23,6 +23,7 @@ import type * as frCode from '../fr/code.json'
 import type * as frShell from '../fr/shell.json'
 import type * as frUi from '../fr/ui.json'
 import type * as frUsage from '../fr/usage.json'
+import type * as frWelcome from '../fr/welcome.json'
 import activity from './activity.json'
 import ai from './ai.json'
 import assets from './assets.json'
@@ -47,6 +48,7 @@ import settings from './settings.json'
 import shell from './shell.json'
 import ui from './ui.json'
 import usage from './usage.json'
+import welcome from './welcome.json'
 
 /** The roots a section is responsible for, read off its French twin rather than listed here. */
 type Section<Roots extends keyof Translations> = Pick<Translations, Roots>
@@ -86,4 +88,5 @@ export const en = {
   ...(material satisfies Section<keyof typeof frMaterial>),
   ...(ui satisfies Section<keyof typeof frUi>),
   ...(usage satisfies Section<keyof typeof frUsage>),
+  ...(welcome satisfies Section<keyof typeof frWelcome>),
 }

@@ -143,6 +143,10 @@ export function fileMenu(context: MenuContext): MenuItemConstructorOptions {
 }
 
 export function helpMenu(context: MenuContext): MenuItemConstructorOptions {
+  const welcome = {
+    label: context.t.menu.welcome,
+    click: () => context.options.actions.openWelcome(),
+  }
   const manual = { label: context.t.menu.manual, click: () => context.options.actions.openManual() }
   const usage = { label: context.t.menu.usage, click: () => context.options.actions.openUsage() }
   const licences = {
@@ -150,6 +154,8 @@ export function helpMenu(context: MenuContext): MenuItemConstructorOptions {
     click: () => context.options.actions.openLicences(),
   }
   const common: MenuItemConstructorOptions[] = [
+    welcome,
+    { type: 'separator' },
     manual,
     { type: 'separator' },
     usage,

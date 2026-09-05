@@ -571,7 +571,7 @@
       },
       "helpOpenStudioWindow": {
         "title": "Ouvrir une fenêtre du studio",
-        "description": "Ouvre le manuel utilisateur, la fenêtre des licences, celle de la consommation ou le journal — ou la ramène devant si elle est déjà là. Ce sont des fenêtres du processus principal, et aucune commande du registre ne les atteint."
+        "description": "Ouvre le manuel utilisateur, la fenêtre des licences, celle de la consommation, le journal ou l’accueil — ou la ramène devant si elle est déjà là. Ce sont des fenêtres du processus principal, et aucune commande du registre ne les atteint."
       },
       "updatesInstall": {
         "title": "Installer la mise à jour téléchargée",
