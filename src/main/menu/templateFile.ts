@@ -121,7 +121,10 @@ function fileCloseItems(context: MenuContext): MenuItemConstructorOptions[] {
   if (options.workspace === null) {
     return options.isMac ? [roleItem('close')] : [roleItem('quit')]
   }
-  const closeTab = commandItem('document.close', t.documents.close)
+  const closeTab = {
+    ...commandItem('document.close', t.documents.close),
+    enabled: options.abilities.includes('document.close'),
+  }
   return options.isMac ? [closeTab] : [closeTab, roleItem('quit')]
 }
 

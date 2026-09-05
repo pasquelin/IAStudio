@@ -1,5 +1,5 @@
 import { APP_NAME } from '@shared/constants'
-import { scopeOfWorkspace } from '@shared/domain/command'
+import { scopeOfWorkspace, type MenuAbility } from '@shared/domain/command'
 import type { DocumentKind } from '@shared/domain/document'
 import type { NavigationPreset } from '@shared/domain/navigationPreset'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
@@ -164,6 +164,16 @@ describe('every native role', () => {
     expect(last({ workspace: null, isMac: true })?.role).toBe('close')
     expect(last({ isMac: false })?.role).toBe('quit')
     expect(file({ isMac: false }).at(-2)?.label).toBe('Fermer l’onglet')
+  })
+
+  // The row said "close the tab" and closed the WINDOW when there was none. Greyed instead: ⌘W
+  // closes a tab or it closes nothing, and an enabled row promises it will do something.
+  it('greys closing the tab when the window announces none in front', () => {
+    const closeRow = (abilities: MenuAbility[]) =>
+      submenuOf(menuTemplate(options({ abilities })), TRANSLATIONS.fr.menu.file).at(-1)
+
+    expect(closeRow(['document.close'])?.enabled).toBe(true)
+    expect(closeRow([])?.enabled).toBe(false)
   })
 
   // A label read off the wrong bundle is worse than none: it would look deliberate.

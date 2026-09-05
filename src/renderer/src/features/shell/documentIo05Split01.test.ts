@@ -9,14 +9,7 @@ import { type DocumentWrite } from '@shared/domain/document'
 import { describe, expect, it, vi } from 'vitest'
 
 // The real one needs a live Dockview; what this file checks is that closing and opening reach it.
-import {
-  box,
-  closeDocument,
-  closeWindow,
-  openPanelIds,
-  restoreDocument,
-  scene,
-} from './documentIoTest-fixtures'
+import { box, closeDocument, closeWindow, restoreDocument, scene } from './documentIoTest-fixtures'
 
 describe('closing a document', () => {
   const openDirtyScene = async (): Promise<string> => {
@@ -106,42 +99,15 @@ describe('closing a document', () => {
     expect(useDocuments.getState().documents[documentId]).toBeUndefined()
   })
 
-  it('closes the window when the tab it closed was the last one', async () => {
+  // Never, not even the last one: the emptied centre is a screen of its own — it stages the
+  // assistant thread, and the window going would take it with it.
+  it('leaves the window open when the tab it closed was the last one', async () => {
     installFakeBridge({})
     useLayouts.setState({ home: false })
     const created = await useDocuments.getState().create('3d')
     if (!created) throw new Error('expected a document')
     useScenes.getState().ensure(created.id, createDefaultScene)
     useScenes.getState().markSaved(created.id, sceneStore.markOf(useScenes.getState(), created.id))
-    openPanelIds.mockReturnValue([])
-
-    await closeDocument(created.id)
-
-    expect(closeWindow).toHaveBeenCalled()
-  })
-
-  it('leaves the window open when other tabs remain', async () => {
-    installFakeBridge({})
-    useLayouts.setState({ home: false })
-    const created = await useDocuments.getState().create('3d')
-    if (!created) throw new Error('expected a document')
-    useScenes.getState().ensure(created.id, createDefaultScene)
-    useScenes.getState().markSaved(created.id, sceneStore.markOf(useScenes.getState(), created.id))
-    openPanelIds.mockReturnValue(['doc-still-open'])
-
-    await closeDocument(created.id)
-
-    expect(closeWindow).not.toHaveBeenCalled()
-  })
-
-  it('does not close the window when a document is closed behind the home', async () => {
-    installFakeBridge({})
-    useLayouts.setState({ home: true })
-    const created = await useDocuments.getState().create('3d')
-    if (!created) throw new Error('expected a document')
-    useScenes.getState().ensure(created.id, createDefaultScene)
-    useScenes.getState().markSaved(created.id, sceneStore.markOf(useScenes.getState(), created.id))
-    openPanelIds.mockReturnValue([])
 
     await closeDocument(created.id)
 

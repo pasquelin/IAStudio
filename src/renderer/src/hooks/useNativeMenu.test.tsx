@@ -390,26 +390,34 @@ describe('what the native menu is told', () => {
       useScenes.getState().replace('doc-1', { ...scene, selectedIds: ids })
     }
 
-    /** The two Save rows travel with any document in front, this decor holding one. */
-    const SAVING: MenuAbility[] = ['document.save', 'document.saveAs']
+    /** The three document rows travel with any tab in front, this decor holding one. */
+    const IN_FRONT: MenuAbility[] = ['document.save', 'document.saveAs', 'document.close']
 
     it('offers nothing to export where nothing is picked', () => {
       renderHook(() => useNativeMenu())
-      expect(lastPublished().abilities).toEqual(SAVING)
+      expect(lastPublished().abilities).toEqual(IN_FRONT)
     })
 
     /** The scene is the source, so a pick nothing pointed the studio at counts all the same. */
     it('offers the selection export on a pick the studio was never pointed at', () => {
       renderHook(() => useNativeMenu())
       pick(['node-1'])
-      expect(lastPublished().abilities).toEqual([...SAVING, 'scene.exportSelection'])
+      expect(lastPublished().abilities).toEqual([...IN_FRONT, 'scene.exportSelection'])
     })
 
     it('takes it back when the selection empties', () => {
       renderHook(() => useNativeMenu())
       pick(['node-1'])
       pick([])
-      expect(lastPublished().abilities).toEqual(SAVING)
+      expect(lastPublished().abilities).toEqual(IN_FRONT)
+    })
+
+    // The home covers the tabs rather than replacing them, and ⌘W no longer falls back to the
+    // window — so the row would close a document the reader is not even looking at.
+    it('withholds closing the tab while the home covers it', () => {
+      useLayouts.setState({ home: true })
+      renderHook(() => useNativeMenu())
+      expect(lastPublished().abilities).toEqual(['document.save', 'document.saveAs'])
     })
 
     /** A timeline drag writes the scene on every pointer move, and moves nothing that is picked. */

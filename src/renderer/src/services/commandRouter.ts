@@ -71,12 +71,10 @@ function runProjectCommand(command: CommandId): CommandRouting | null {
 function runDocumentCommand(command: CommandId): CommandRouting | null {
   if (command === 'document.close') {
     const documentId = useDocuments.getState().activeId
-    // The home covers the tabs rather than replacing them: closing one from there would
-    // drop a document the user is not looking at. No tab in front is the same gesture.
-    if (homeIsVisible() || documentId === null) {
-      window.close()
-      return 'ran'
-    }
+    // The home covers the tabs rather than replacing them: closing one from there would drop a
+    // document the user is not looking at. No tab in front is the same gesture, and neither
+    // falls back to the window — ⌘W closes a tab or it closes nothing.
+    if (homeIsVisible() || documentId === null) return 'noSurface'
     void closeDocument(documentId).catch(error =>
       reportFailure('document.close', documentId, error),
     )

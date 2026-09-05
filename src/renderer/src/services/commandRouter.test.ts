@@ -118,25 +118,27 @@ describe('a command the application performs itself', () => {
     vi.unstubAllGlobals()
   })
 
-  it('closes the window when no tab is in front', () => {
+  // ⌘W closes a tab or it closes nothing: the window is never the fallback, so an emptied
+  // centre answers the same as the home covering the tabs behind it.
+  it('does nothing when no tab is in front', () => {
     const close = vi.fn()
     vi.stubGlobal('window', { close })
 
-    expect(routeCommand('document.close')).toBe('ran')
+    expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()
-    expect(close).toHaveBeenCalled()
+    expect(close).not.toHaveBeenCalled()
     vi.unstubAllGlobals()
   })
 
-  it('closes the window from the home rather than a tab sitting behind it', () => {
+  it('leaves a tab sitting behind the home alone rather than closing it', () => {
     const close = vi.fn()
     vi.stubGlobal('window', { close })
     useLayouts.setState({ home: true })
     useDocuments.setState({ activeId: 'doc-1' })
 
-    expect(routeCommand('document.close')).toBe('ran')
+    expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()
-    expect(close).toHaveBeenCalled()
+    expect(close).not.toHaveBeenCalled()
     vi.unstubAllGlobals()
   })
 })

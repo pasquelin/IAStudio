@@ -15,7 +15,7 @@ import { displayOfPane } from '@/stores/sceneViewChrome'
 import { MAIN_SCENE_PANE, sceneViewOf, useSceneViews } from '@/stores/sceneViews'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useGit } from '@/stores/git'
-import { toolSurface, useLayouts } from '@/stores/layouts'
+import { homeIsVisible, toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -117,7 +117,10 @@ function publishMenuContext(): void {
   // Both refused in silence over a screen with no document — `routeCommand` answers `noSurface`
   // and nothing on the menu said so, which is what an enabled row promises it will not do.
   const saving: MenuAbility[] = front.activeId ? ['document.save', 'document.saveAs'] : []
-  const abilities = [...saving, ...scene.abilities, ...canvas]
+  // The home covers the tabs rather than replacing them, so a tab behind it is not one ⌘W may
+  // take — the same answer `routeCommand` gives, said on the row before it is pressed.
+  const closing: MenuAbility[] = front.activeId && !homeIsVisible() ? ['document.close'] : []
+  const abilities = [...saving, ...closing, ...scene.abilities, ...canvas]
   // The scope and not the kind, since the menu asks whose history ⌘Z pops: the 3D space opens
   // both scenes and interfaces, and the two do not answer the same.
   const scope = scopeOfWorkspace(

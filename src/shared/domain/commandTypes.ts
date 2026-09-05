@@ -216,6 +216,11 @@ export type MenuAbility =
    */
   | 'document.save'
   | 'document.saveAs'
+  /**
+   * ⌘W. Greyed rather than falling back to the window: closing a tab and closing the studio are
+   * two gestures, and the row promised the first while doing the second.
+   */
+  | 'document.close'
   | 'scene.exportSelection'
   // Both refuse in silence from the menu, and both are correctly greyed in the Layers panel —
   // the native row was the one path that said nothing: a mask needs a selection to cut from,
