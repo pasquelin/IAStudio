@@ -3,6 +3,7 @@ import type { Asset } from '@shared/domain/asset'
 import type {
   ExternalFileImport,
   ExternalFileOffer,
+  ExternalFileRefusal,
   ExternalFileRequest,
 } from '@shared/domain/externalFile'
 import type { AssetType } from '@shared/domain/asset'
@@ -97,7 +98,7 @@ async function handImported(
   imported: ExternalFileImport,
   onImported?: ExternalAssetReceiver,
 ): Promise<void> {
-  reportRefusedExternalFiles({ request: null, refused: imported.refused })
+  reportUnopenedExternalFiles(imported.refused)
   for (const name of imported.failed) {
     reportNotice('assets.copy', i18next.t('activity.importFailed', { name }))
   }
@@ -273,6 +274,21 @@ function reportRefusedExternalFiles(offer: ExternalFileOffer): void {
       count: offer.refused.length,
       names: offer.refused.map(file => file.name).join(', '),
       extensions,
+    }),
+  )
+}
+
+/**
+ * What a refusal earned AFTER the copy says, which is never what the offer's says: the extension
+ * passed `isImportableFile`, so the format IS supported and only this file did not open.
+ */
+function reportUnopenedExternalFiles(refused: readonly ExternalFileRefusal[]): void {
+  if (refused.length === 0) return
+  reportNotice(
+    'assets.copy',
+    i18next.t('activity.notOpenedFiles', {
+      count: refused.length,
+      names: refused.map(file => file.name).join(', '),
     }),
   )
 }
