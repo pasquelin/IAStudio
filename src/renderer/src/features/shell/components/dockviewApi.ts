@@ -58,6 +58,20 @@ export function openFileView(view: FileView): void {
   useLayouts.getState().setActiveWorkspace('code')
 }
 
+/** Which of the two a tab is — the registry answers, where a `file:` prefix only guesses. */
+export function panelIsFileView(id: string): boolean {
+  return fileViews.has(id)
+}
+
+// The tab ⌘W acts on, read by the router that runs the gesture and by the menu that greys its
+// row. Either kind, since `closeTab` knows both — but nothing behind the home, which covers tabs
+// rather than replacing them, and nothing for a panel that is neither.
+export function closableTabId(): string | null {
+  const { activeId, documents } = useDocuments.getState()
+  if (homeIsVisible() || activeId === null) return null
+  return documents[activeId] || fileViews.has(activeId) ? activeId : null
+}
+
 export function closeFileView(id: string): void {
   if (documentIsMarkedModified(id)) {
     void closeModifiedFileView(id).catch(error => reportFailure('document.close', id, error))

@@ -13,6 +13,7 @@ import { DocumentTab } from './DocumentTab'
 const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
 const deleteDocument = vi.fn((_id: string) => Promise.resolve(true))
 const openPanelIds = vi.fn(() => ['doc-1', 'doc-2'])
+const closeFileView = vi.fn((_id: string) => {})
 const markedModified = vi.hoisted(() => ({ ids: new Set<string>() }))
 
 vi.mock('../../../documentIo', () => ({
@@ -20,7 +21,11 @@ vi.mock('../../../documentIo', () => ({
   deleteDocument: (id: string) => deleteDocument(id),
 }))
 
-vi.mock('../../dockviewApi', () => ({ openPanelIds: () => openPanelIds() }))
+vi.mock('../../dockviewApi', () => ({
+  openPanelIds: () => openPanelIds(),
+  closeFileView: (id: string) => closeFileView(id),
+  panelIsFileView: (id: string) => id.startsWith('file:'),
+}))
 
 vi.mock('@/hooks/useDocumentModified', () => ({
   useDocumentModified: (id: string) => markedModified.ids.has(id),

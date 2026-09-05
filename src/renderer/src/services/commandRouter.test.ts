@@ -3,6 +3,7 @@ import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
+import { closableTabId, openFileView } from '@/features/shell/components/dockviewApi'
 import { armCommandScope, subscribeToCommands } from '@/services/commandBus'
 import { useDictation } from '@/stores/dictation'
 import { installDocument } from '@/stores/document-fixtures'
@@ -118,10 +119,20 @@ describe('a command the application performs itself', () => {
     expect(closeDocument).toHaveBeenCalledWith('doc-1')
   })
 
-  // `closeDocument` finds no io for a `file:` id, so it asks nothing and drops the edits. The
-  // tab's own cross knows better and routes to `closeFileView`; ⌘W has no such branch.
-  it('refuses over a file view, which is a panel in front but not a document', () => {
-    useDocuments.setState({ activeId: 'file:src/main.ts', documents: {} })
+  // A file view is a tab in front that is not a document: `closeDocument` finds no io for it, so
+  // it would ask nothing and drop the edits. ⌘W takes the same branch the tab's cross takes.
+  it('closes a file view through its own closer, not through the document one', () => {
+    const path = 'Entrées/Clavier.input.json'
+    openFileView({ id: 'inputMap', path, title: 'Clavier' })
+    useDocuments.setState({ activeId: `file:${path}`, documents: {} })
+
+    expect(routeCommand('document.close')).toBe('ran')
+    expect(closeDocument).not.toHaveBeenCalled()
+    expect(closableTabId()).toBeNull()
+  })
+
+  it('refuses over a panel that is neither a document nor a file view', () => {
+    useDocuments.setState({ activeId: 'file:Entrées/Jamais ouvert.input.json', documents: {} })
 
     expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()

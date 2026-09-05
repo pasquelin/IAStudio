@@ -1,4 +1,5 @@
 import { closeDocument } from '../../../documentIo'
+import { closeFileView, panelIsFileView } from '../../dockviewApi'
 import { reportFailure } from '@/services/diagnostics'
 
 /**
@@ -9,6 +10,12 @@ import { reportFailure } from '@/services/diagnostics'
  * Nothing is awaited. The dialog is the answer the user gets; a caller waiting on the promise
  * would only be waiting to do nothing with it.
  */
-export function closeTab(documentId: string): void {
-  void closeDocument(documentId).catch(error => reportFailure('document.close', documentId, error))
+export function closeTab(tabId: string): void {
+  // A file view is not a document: `closeDocument` finds no io for it, so it asks nothing and
+  // drops the edits. Every closing gesture comes here so none of them can forget the branch.
+  if (panelIsFileView(tabId)) {
+    closeFileView(tabId)
+    return
+  }
+  void closeDocument(tabId).catch(error => reportFailure('document.close', tabId, error))
 }

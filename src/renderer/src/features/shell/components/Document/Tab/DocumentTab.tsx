@@ -13,7 +13,6 @@ import { useDocuments } from '@/stores/documents'
 import { closeTab } from './closeTab'
 import { openDocumentTabMenu } from './documentTabMenu'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
-import { closeFileView } from '../../dockviewApi'
 
 /**
  * A document's tab.
@@ -38,8 +37,7 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
   const close = (event: MouseEvent): void => {
     // Dockview reads a click on the tab as "activate me"; this one is not that.
     event.stopPropagation()
-    if (isFileView) closeFileView(props.api.id)
-    else closeTab(props.api.id)
+    closeTab(props.api.id)
   }
 
   const openMenu = (event: MouseEvent): void => {

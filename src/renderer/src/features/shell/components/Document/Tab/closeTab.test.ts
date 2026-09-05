@@ -6,8 +6,16 @@ import { closeTab } from './closeTab'
 const closeDocument = vi.fn((_id: string) => Promise.resolve(true))
 vi.mock('../../../documentIo', () => ({ closeDocument: (id: string) => closeDocument(id) }))
 
+const closeFileView = vi.fn((_id: string) => {})
+const fileViews = new Set<string>()
+vi.mock('../../dockviewApi', () => ({
+  closeFileView: (id: string) => closeFileView(id),
+  panelIsFileView: (id: string) => fileViews.has(id),
+}))
+
 beforeEach(() => {
   vi.clearAllMocks()
+  fileViews.clear()
   forgetReportedFailures()
 })
 
@@ -21,6 +29,18 @@ describe('closing a tab', () => {
 
     closeTab('doc-1')
     expect(closeDocument).toHaveBeenCalledWith('doc-1')
+  })
+
+  // `closeDocument` finds no io for a file view, so it would ask nothing and drop the edits.
+  // Every closing gesture comes through here, which is what keeps one of them from forgetting.
+  it('hands a file view to the closer that knows how to ask about its edits', () => {
+    bridgeWatchingLogs()
+    fileViews.add('file:Entrées/Clavier.input.json')
+
+    closeTab('file:Entrées/Clavier.input.json')
+
+    expect(closeFileView).toHaveBeenCalledWith('file:Entrées/Clavier.input.json')
+    expect(closeDocument).not.toHaveBeenCalled()
   })
 
   it('sends a refusal from the disk to the journal', async () => {
