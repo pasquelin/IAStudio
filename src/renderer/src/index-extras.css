@@ -86,6 +86,22 @@
 }
 
 /*
+ * The bubble LEAVES at once. Its wait belongs on the way in — a pointer crossing a dense panel
+ * must raise nothing — and a fade on the way out is the pointer having already left something
+ * still on screen.
+ *
+ * The library's own variable, `0.15s` by default. Only the CLOSING one: the opening fade is what
+ * keeps a bubble from snapping in after its second of wait.
+ *
+ * 🛑 What stays is `clickable`'s own 100 ms, which no prop can reach — `delayHide || 100`, so a
+ * zero is falsy and is read as unset. It is the whole of what lets the pointer cross the 8 px
+ * `offset` and sweep the bubble (WCAG SC 1.4.13), and it goes only with `clickable`.
+ */
+.react-tooltip {
+  --rt-transition-closing-delay: 0s;
+}
+
+/*
  * The two edges of a selection in the take editor, which the regions plugin writes inline as
  * `rgba(0, 0, 0, 0.5)` — a black that reads 1.15:1 on the dark chassis, so the marks that
  * actually bound the selection are the ones nobody can see.
