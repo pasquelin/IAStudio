@@ -29,14 +29,19 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
   useEffect(() => {
     let active = true
     const load = async (): Promise<void> => {
-      const loaded = await getBridge()?.inputMaps.read(path)
-      if (!active) return
-      if (!loaded) {
+      try {
+        const loaded = await getBridge()?.inputMaps.read(path)
+        if (!active) return
+        if (!loaded) {
+          setError(t('game.inputMap.loadFailed'))
+          return
+        }
+        setMap(loaded)
+        setSource(formatted(loaded))
+      } catch {
+        if (!active) return
         setError(t('game.inputMap.loadFailed'))
-        return
       }
-      setMap(loaded)
-      setSource(formatted(loaded))
     }
     void load()
     return () => {

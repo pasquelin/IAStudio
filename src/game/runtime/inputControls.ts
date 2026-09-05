@@ -31,6 +31,7 @@ export function createInputControls(
 ): InputControls {
   const defaults = structuredClone(given)
   let maps = restored(defaults, storage)
+  let bindings = bindingsOf(maps)
 
   const persist = (): void => {
     try {
@@ -42,16 +43,18 @@ export function createInputControls(
 
   return {
     maps: () => maps,
-    bindings: () => bindingsOf(maps),
+    bindings: () => bindings,
     rebind: (context, action, index, binding) => {
       const changed = rebound(maps, context, action, index, binding)
       if (!changed) return false
       maps = changed
+      bindings = bindingsOf(maps)
       persist()
       return true
     },
     reset: (context, action) => {
       maps = resetMaps(maps, defaults, context, action)
+      bindings = bindingsOf(maps)
       persist()
     },
   }

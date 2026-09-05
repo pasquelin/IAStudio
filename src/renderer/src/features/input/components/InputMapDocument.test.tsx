@@ -30,6 +30,16 @@ describe('the input map editor', () => {
     expect(screen.getByText(/Space/)).toBeInTheDocument()
   })
 
+  it('reports a read failure instead of leaving a rejected task behind', async () => {
+    installFakeBridge({ inputMaps: { read: () => Promise.reject(new Error('disk failed')) } })
+
+    render(<InputMapDocument path="Controls/character.input.json" />)
+
+    expect(
+      await screen.findByText('Cette carte de contrôles n’a pas pu être lue.'),
+    ).toBeInTheDocument()
+  })
+
   it('validates and saves an edited JSON view', async () => {
     const write = vi.fn(() => Promise.resolve(true))
     installFakeBridge({
