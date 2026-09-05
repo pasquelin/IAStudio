@@ -159,10 +159,9 @@ function tracedActions(studio: Studio, called: Called[], recorder: MissionTraceR
   }
 }
 
-async function projectScope(studio: Studio): Promise<{ projectId: string }> {
+async function projectScope(studio: Studio): Promise<{ projectId?: string }> {
   const projectId = (await studio.snapshot()).project?.path
-  if (!projectId) throw new Error('mission bench requires an open project')
-  return { projectId }
+  return projectId ? { projectId } : {}
 }
 
 async function writeFailure(

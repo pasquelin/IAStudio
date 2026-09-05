@@ -62,6 +62,27 @@ function expectCausalReflection(reflection: Record<string, unknown>, context: st
 }
 
 describe('parcours mission du banc', () => {
+  it('crée une mission après que le setup a fermé le projet', async () => {
+    const played = await playMission(
+      {
+        name: 'mission sans projet',
+        said: ['Crée un projet.'],
+        setup: async studio => {
+          await studio.run('project.close', {})
+        },
+        passed: () => true,
+      },
+      async () => ({ say: 'Prêt.', calls: [], cost: 0 }),
+      { search: async () => [] },
+    )
+
+    try {
+      expect(played.rounds).toBe(1)
+    } finally {
+      played.studio.close()
+    }
+  })
+
   it('garde le même studio et le même oracle tout en bornant les actions envoyées', async () => {
     const action = actionCorpus().actions.find(candidate => candidate.name === 'documents.list')
     if (!action) throw new Error('documents.list est absente du registre')
