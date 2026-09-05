@@ -115,6 +115,17 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   exécuté rend faux. Artefacts : `logs/mission-runtime/phase-10-5g-expanded-intra-batch-baseline`.
   Recommandation : NOT READY FOR FULL BENCHMARK ; corriger d'abord les 19 défauts de retrieval,
   la validation numérique de `usage.report` et les familles montage/post/rig.
+- Dernière passe déterministe : validation générique des choix numériques, correction de fidélité
+  du harnais 13.3, continuité des assets recherchés et produits par les jobs, indexation des
+  composants, commandes et effets depuis leurs registres canoniques, puis récupération bornée
+  d'une action valide absente des candidats. Offline : R@12 78,74 %, MRR 0,4592, sans top-K
+  supérieur à 12. Mini-banc : 27/27 fonctionnels et 26/27 selon l'oracle, 314 075 tokens,
+  321 748 caractères, 79 rounds, 80 appels provider, 58 actions dont 10 inutiles. Le seul rouge,
+  57.4 run 1, persiste correctement la mémoire mais répète `memory.write`, donc reste une limite
+  de planification/modèle et non un défaut retrieval ou exécution. Artefacts :
+  `logs/mission-runtime/last-pass-mini-27`. Porte finale : 16 770 tests TypeScript, 195 Python et
+  `pnpm validate` verts. Recommandation : ne pas payer le Full Benchmark avant une nouvelle mesure
+  du Palier B, car cinq cas ciblés restent dépendants du choix du modèle malgré les outils présents.
 
 ## Ce que tu ne tranches pas seul
 
