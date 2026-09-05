@@ -268,6 +268,10 @@ describe('ActionIndex', () => {
     const requests = [
       ['Compte les assets de chaque type.', 'assets.counts'],
       ['Active la grille de la scène.', 'settings.write'],
+      [
+        "Combien ai-je d'images, de vidéos, de fichiers audio, de modèles 3D et de skyboxes ?",
+        'assets.counts',
+      ],
       ['Quel est le statut Git du projet ?', 'git.status'],
       ['Lance le jeu.', 'play.start'],
       ['Liste les scripts du projet.', 'script.list'],

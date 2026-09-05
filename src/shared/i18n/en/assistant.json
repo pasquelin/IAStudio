@@ -207,7 +207,7 @@
       },
       "assetsCounts": {
         "title": "Count the project’s catalogue",
-        "description": "Returns how many assets of each kind this project holds on this machine, counted in the catalogue rather than by listing them."
+        "description": "Returns how many images, videos, audio assets, 3D models, skyboxes and animations this project holds on this machine, counted in the catalogue rather than by listing them. Every kind is returned, including those whose count is zero."
       },
       "assetGet": {
         "title": "Read assets",

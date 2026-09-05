@@ -70,6 +70,11 @@ protocole ; la spec prime sur le périmètre fonctionnel.
   multi-action (`files.search` puis `node.setMeshMaterial`) jugé mono-action par l'oracle offline.
   Le run DeepSeek ciblé a été refusé par la garde d'exécution externe ; prochaine mesure produit :
   intégrer ces cas au prochain mini-lot autorisé.
+- Métadonnée asset mesurée : la description canonique de `assets.counts` nomme désormais les six
+  catégories réellement retournées. Le scénario 1.3 passe du rang 117 au rang 12. Le global reste
+  à 75,85 % car l'action déplace au rang 13 `world.setSceneLighting` dans un cas historique qui
+  demande d'abord de lire le skybox courant avant de le remplacer ; cette divergence est un biais
+  de l'oracle mono-action, pas une incompatibilité produit.
 
 ## Ce que tu ne tranches pas seul
 

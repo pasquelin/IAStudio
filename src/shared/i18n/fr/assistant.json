@@ -207,7 +207,7 @@
       },
       "assetsCounts": {
         "title": "Compter le catalogue du projet",
-        "description": "Rend le nombre d’assets de chaque nature que ce projet porte sur cette machine, compté dans le catalogue plutôt qu’en les listant."
+        "description": "Rend le nombre d’images, de vidéos, d’assets audio, de modèles 3D, de skyboxes et d’animations que ce projet porte sur cette machine, compté dans le catalogue plutôt qu’en les listant. Chaque nature est rendue, même lorsque son compte vaut zéro."
       },
       "assetGet": {
         "title": "Lire des assets",
