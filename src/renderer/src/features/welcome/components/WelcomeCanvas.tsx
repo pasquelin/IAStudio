@@ -6,6 +6,7 @@ export function WelcomeCanvas({ slide }: { slide: number }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const engine = useRef<WelcomeBackdrop | null>(null)
   const reduceMotion = useSettings(state => state.settings.appearance.reduceMotion)
+  const start = useRef({ reduceMotion, slide })
 
   useEffect(() => {
     const node = canvas.current
@@ -13,7 +14,7 @@ export function WelcomeCanvas({ slide }: { slide: number }) {
 
     let backdrop: WelcomeBackdrop
     try {
-      backdrop = new WelcomeBackdrop(node, { reduceMotion: false, slide: 0 })
+      backdrop = new WelcomeBackdrop(node, start.current)
     } catch {
       // No WebGL: the rest of the window still works, just without the animated ground.
       return

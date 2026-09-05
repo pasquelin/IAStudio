@@ -60,6 +60,11 @@ export function windowControl(active: boolean): string {
   )
 }
 
+/** The chosen/rest fill, without the control height — a logo row is taller than `--sc-control`. */
+export function windowChosenFill(chosen: boolean): string {
+  return chosen ? 'bg-accent-soft' : 'hover:bg-base-200 bg-transparent'
+}
+
 /**
  * The same control when it is CHOSEN rather than pressed — an entry of a window's column.
  *
@@ -69,5 +74,5 @@ export function windowControl(active: boolean): string {
  * vocabulary.
  */
 export function windowChoice(chosen: boolean): string {
-  return cn(WINDOW_CONTROL_BASE, chosen ? 'bg-accent-soft' : 'hover:bg-base-200 bg-transparent')
+  return cn(WINDOW_CONTROL_BASE, windowChosenFill(chosen))
 }

@@ -99,37 +99,38 @@ function tracedContext(
   actions: Pick<ActionSearchService, 'search'>,
   recorder: MissionTraceRecorder | null,
 ): AssistantContextBuilder {
+  let snapshot: StudioSnapshot | null = null
+  let retrieval: {
+    query: string
+    available: NonNullable<Parameters<typeof actions.search>[2]>
+    scope: NonNullable<Parameters<typeof actions.search>[3]>
+    candidates: Awaited<ReturnType<typeof actions.search>>
+  } = {
+    query: '',
+    available: [],
+    scope: {} as NonNullable<Parameters<typeof actions.search>[3]>,
+    candidates: [] as Awaited<ReturnType<typeof actions.search>>,
+  }
+  const builder = createAssistantContextBuilder({
+    snapshot: async () => (snapshot = await studio.snapshot()),
+    actions: {
+      search: async (query, limit, available, scope) => {
+        const candidates = await actions.search(query, limit, available, scope)
+        retrieval = { query, available: available ?? [], scope: scope ?? {}, candidates }
+        return candidates
+      },
+    },
+    memories: { recall: async () => studio.memories() },
+    jobs: { list: () => [...studio.jobs()] },
+    projectContext: { read: async () => studio.projectContext() },
+  })
   return {
     build: async request => {
-      let snapshot: StudioSnapshot | null = null
-      let retrieval: {
-        query: string
-        available: NonNullable<Parameters<typeof actions.search>[2]>
-        scope: NonNullable<Parameters<typeof actions.search>[3]>
-        candidates: Awaited<ReturnType<typeof actions.search>>
-      } = {
-        query: '',
-        available: [],
-        scope: {} as NonNullable<Parameters<typeof actions.search>[3]>,
-        candidates: [] as Awaited<ReturnType<typeof actions.search>>,
-      }
-      const builder = createAssistantContextBuilder({
-        snapshot: async () => (snapshot = await studio.snapshot()),
-        actions: {
-          search: async (query, limit, available, scope) => {
-            const candidates = await actions.search(query, limit, available, scope)
-            retrieval = { query, available: available ?? [], scope: scope ?? {}, candidates }
-            return candidates
-          },
-        },
-        memories: { recall: async () => studio.memories() },
-        jobs: { list: () => [...studio.jobs()] },
-        projectContext: { read: async () => studio.projectContext() },
-      })
       const context = await builder.build(request)
       recorder?.context(request.mission.id, request.step.id, { ...retrieval, snapshot })
       return context
     },
+    searchActions: builder.searchActions,
   }
 }
 

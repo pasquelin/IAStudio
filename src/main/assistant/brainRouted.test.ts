@@ -90,8 +90,8 @@ describe('the routed brain', () => {
   })
 
   /**
-   * Both readings reach the brain, and this is the ONE point they are made: a window that named
-   * its own state or its own project could name a document it is not showing.
+   * State is ASKED of the window, never taken from the thought: `parseThought` strips a forged
+   * one, and a packed mission context must still see the studio as it is.
    */
   it('hands the brain what the project is about and what the studio is', async () => {
     const think = vi.fn(() => Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 }))
@@ -110,12 +110,46 @@ describe('the routed brain', () => {
       stateOf: () => Promise.resolve('Studio now:\n  Space: image.'),
     })
 
-    await brain.think({ utterance: 'hello', history: [], context: 'forged', state: 'forged' })
+    await brain.think({ utterance: 'hello', history: [] })
 
     expect(think).toHaveBeenCalledWith(
       expect.objectContaining({
         context: 'World: a forest',
         state: 'Studio now:\n  Space: image.',
+      }),
+      undefined,
+    )
+  })
+
+  it('keeps a context the main process already packed', async () => {
+    const think = vi.fn(() => Promise.resolve<AssistantAnswer>({ say: '', calls: [], cost: 0 }))
+    const brain = routed({
+      providerOf: () => Promise.resolve({ kind: 'local', modelId: llama.id }),
+      localBrain: () => ({
+        think,
+        window: () => Promise.resolve(null),
+        capabilities: async () => ({
+          streaming: false,
+          structuredJson: true,
+          multimodalImages: false,
+        }),
+      }),
+      contextOf: () => Promise.resolve('World: a forest'),
+      stateOf: () => Promise.resolve('Studio now:\n  Space: image.'),
+    })
+
+    await brain.think({
+      utterance: 'next step',
+      history: [],
+      context: 'packed mission',
+      candidates: ['layer.add'],
+    })
+
+    expect(think).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: 'packed mission',
+        state: 'Studio now:\n  Space: image.',
+        candidates: ['layer.add'],
       }),
       undefined,
     )

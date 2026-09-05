@@ -98,7 +98,15 @@ export function createRoutedBrain(deps: RoutedBrainDeps): AssistantBrain {
       const accepted = capabilities.multimodalImages ? request : { ...request, images: undefined }
 
       return await brain.think(
-        { ...accepted, context, state, memories, folders: deps.foldersOf() },
+        {
+          ...accepted,
+          // A mission already packed this in the main process; overwriting it drops scores, jobs
+          // and previous results. The window cannot forge one: `parseThought` strips the field.
+          context: accepted.context ?? context,
+          state,
+          memories,
+          folders: deps.foldersOf(),
+        },
         watch,
       )
     },

@@ -12,6 +12,7 @@ import { documentReferencesOf, SCANNED_BYTES } from '@shared/domain/documentRefe
 import { freeName } from '@main/project/filePlan'
 import { folderInsideProject } from '@main/project/folderInsideProject'
 import { pathIsInside } from '@main/export/pathIsInside'
+import { pathSegment } from '@main/validation'
 import { copyExternalFile, removeExternalCopy, removeExternalFolder } from './copyExternalFile'
 import {
   IMPORTABLE_BUNDLE_EXTENSIONS,
@@ -95,7 +96,18 @@ async function referencesOf(source: string, extension: string): Promise<readonly
 }
 
 /** Where a copy lands, and whether it brought a folder of its own with it. */
-type Landing = { nest: string; into: string; relative: string; destination: string }
+type Landing = {
+  nest: string
+  into: string
+  relative: string
+  destination: string
+  bound: string
+}
+
+/** A nest is a created folder name: `extname('...gltf')` yields stem `..`, which would climb. */
+function nestName(stem: string, taken: Set<string>): string {
+  return freeName(taken, pathSegment.safeParse(stem).success ? stem : 'document')
+}
 
 /**
  * A document that points at siblings takes a folder of its own: its references keep the spelling
@@ -109,15 +121,20 @@ function landingFor(
   folder: string,
   state: ImportState,
 ): Landing {
-  const nest = nested ? freeName(state.taken, stem) : ''
+  let nest = nested ? nestName(stem, state.taken) : ''
+  let into = nest === '' ? target : join(target, nest)
+  if (nest !== '' && !pathIsInside(target, into)) {
+    nest = nestName('document', state.taken)
+    into = join(target, nest)
+  }
   const name = nest === '' ? freeName(state.taken, canonicalName) : canonicalName
   state.taken.add(foldForFileName(nest === '' ? name : nest))
-  const into = nest === '' ? target : join(target, nest)
   return {
     nest,
     into,
     relative: pathIn(folder, nest === '' ? name : `${nest}/${name}`),
     destination: join(into, name),
+    bound: target,
   }
 }
 
@@ -156,9 +173,16 @@ async function copyNeighbours(
       state.failed.push(basename(reference))
       continue
     }
-    const destination = join(landing.into, reference)
+    const destination = resolve(landing.into, reference)
+    if (!pathIsInside(landing.into, destination)) {
+      state.failed.push(basename(reference))
+      continue
+    }
     await mkdir(dirname(destination), { recursive: true })
-    const copied = await orElse(copyExternalFile(neighbour, destination, watch), false)
+    const copied = await orElse(
+      copyExternalFile(neighbour, destination, watch, { follow: false }),
+      false,
+    )
     if (!copied) {
       state.failed.push(basename(reference))
       continue
@@ -193,7 +217,7 @@ async function landed(
     // folder goes with them rather than being listed as a document missing most of its parts.
     if (watch.signal?.aborted) {
       state.documentFolders.delete(landing.relative)
-      return await removeExternalFolder(landing.into)
+      return await removeExternalFolder(landing.into, landing.bound)
     }
   }
   // The name the user DROPPED, not the free one its copy took: both notices this feeds —
@@ -225,7 +249,7 @@ async function importAssetOrDocument(
 
   if (landing.nest !== '') await mkdir(landing.into, { recursive: true })
   if (!(await copyExternalFile(source, landing.destination, watch))) {
-    if (landing.nest !== '') await removeExternalFolder(landing.into)
+    if (landing.nest !== '') await removeExternalFolder(landing.into, landing.bound)
     return
   }
 
@@ -233,7 +257,7 @@ async function importAssetOrDocument(
     await landed(source, references, landing, folder, isDocument, watch, deps, state)
   } catch (error) {
     if (landing.nest === '') await removeExternalCopy(landing.destination)
-    else await removeExternalFolder(landing.into)
+    else await removeExternalFolder(landing.into, landing.bound)
     throw error
   }
 }
@@ -244,7 +268,7 @@ const removeImported = async (
   state: ImportState,
 ): Promise<void> => {
   const held = state.documentFolders.get(relative)
-  if (held !== undefined) return await removeExternalFolder(join(root, held))
+  if (held !== undefined) return await removeExternalFolder(join(root, held), root)
   await removeExternalCopy(join(root, relative))
 }
 

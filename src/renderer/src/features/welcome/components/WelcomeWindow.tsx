@@ -4,6 +4,7 @@ import { completedOnboarding, WELCOME_SLIDES, type WelcomeSlideId } from '@share
 import { TooltipHost } from '@/components/TooltipHost'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { useConnections } from '@/hooks/useConnections'
+import { useLatest } from '@/hooks/useLatest'
 import { useAccounts } from '@/stores/accounts'
 import { useAiModels } from '@/stores/aiModels'
 import { useProject } from '@/stores/project'
@@ -38,6 +39,42 @@ const SLIDES: Record<WelcomeSlideId, ComponentType> = {
   project: WelcomeSlideProject,
 }
 
+type WelcomeKeys = {
+  index: number
+  advance: () => void
+  finish: () => Promise<void>
+  goTo: (next: number) => void
+}
+
+const closest = (target: EventTarget | null, selector: string): boolean =>
+  target instanceof HTMLElement && target.closest(selector) !== null
+
+function handleWelcomeKey(event: globalThis.KeyboardEvent, held: WelcomeKeys): void {
+  if (closest(event.target, 'input, textarea, select')) return
+  if (event.key === 'Enter' && closest(event.target, 'button, [role="button"]')) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    void held.finish()
+    return
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    held.advance()
+    return
+  }
+  // An arrow slides and never ends (Alban): on the last screen the right one used to close the
+  // window, so reaching the end by keyboard and reaching it by mistake were the same gesture.
+  if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    held.goTo(held.index + 1)
+    return
+  }
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    held.goTo(held.index - 1)
+  }
+}
+
 export function WelcomeWindow() {
   const { t } = useTranslation()
   const [index, setIndex] = useState(0)
@@ -68,36 +105,14 @@ export function WelcomeWindow() {
     else goTo(index + 1)
   }, [finish, goTo, index, last])
 
+  const latest = useLatest({ index, advance, finish, goTo })
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent): void => {
-      if (event.target instanceof HTMLElement && event.target.closest('input, textarea, select')) {
-        return
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        void finish()
-        return
-      }
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        advance()
-        return
-      }
-      // An arrow slides and never ends (Alban): on the last screen the right one used to close the
-      // window, so reaching the end by keyboard and reaching it by mistake were the same gesture.
-      if (event.key === 'ArrowRight') {
-        event.preventDefault()
-        goTo(index + 1)
-        return
-      }
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault()
-        goTo(index - 1)
-      }
+      handleWelcomeKey(event, latest.current)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [advance, finish, goTo, index])
+  }, [latest])
 
   const titles: Record<WelcomeSlideId, string> = {
     language: t('welcome.language.title'),

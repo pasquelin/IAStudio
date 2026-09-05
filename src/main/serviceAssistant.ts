@@ -3,6 +3,7 @@ import { ASSISTANT_ROLE } from '@shared/domain/aiRole'
 import { projectPickerFolder } from '@shared/domain/project'
 import { composedContext } from '@shared/domain/projectContext'
 import { THUMBNAIL_SIZE } from '@shared/domain/project'
+import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { EVENTS } from '@shared/ipc'
 import { app } from 'electron'
 import { readFile } from 'node:fs/promises'
@@ -16,6 +17,7 @@ import { createLocalBrain } from './assistant/brainLocal'
 import { createProviderBrain } from './assistant/brainProvider'
 import { machineFolders } from './assistant/machineFolders'
 import { providerLimits } from './assistant/providerLimits'
+import { actionSearchScope } from './actionIndex/actionSearchContext'
 import { createRoutedBrain } from './assistant/brainRouted'
 import { describeStudio } from './assistant/studioState'
 import { parseSnapshot } from './assistant/validation'
@@ -89,11 +91,19 @@ export function createAssistantBrains(deps: AssistantDeps) {
     model: () => deps.settings.read().assistant.model,
     notReady: deps.notReady,
   })
+  let snapshot = async (): Promise<StudioSnapshot | null> => null
   const remoteActions = createRemoteActions({
     send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
     findActions: async query => ({
       ok: true,
-      data: (await deps.actionIndex.search(query, 12)).map(hit => ({
+      data: (
+        await deps.actionIndex.search(
+          query,
+          12,
+          undefined,
+          actionSearchScope(await snapshot(), query),
+        )
+      ).map(hit => ({
         name: hit.action.name,
         description: hit.action.description,
         fields: hit.action.fields.map(field => ({
@@ -107,7 +117,7 @@ export function createAssistantBrains(deps: AssistantDeps) {
     send: request => sendTo(studioWindow(), EVENTS.assistantVisualCapture, request),
     now: () => new Date().toISOString(),
   })
-  const snapshot = async () => {
+  snapshot = async () => {
     const outcome = await remoteActions.run({ action: 'studio.state', input: {} })
     return outcome.ok ? parseSnapshot(outcome.data) : null
   }

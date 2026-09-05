@@ -58,6 +58,13 @@ describe('WelcomeWindow', () => {
     ).toBeInTheDocument()
   })
 
+  it('still slides with the arrows while a button is focused', async () => {
+    render(<WelcomeWindow />)
+    screen.getByRole('button', { name: 'Continuer' }).focus()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByRole('heading', { name: 'L’apparence' })).toBeInTheDocument()
+  })
+
   it('slides with the arrows, and stops rather than closing on the last screen', async () => {
     const close = vi.spyOn(window, 'close').mockImplementation(() => {})
     render(<WelcomeWindow />)
@@ -68,6 +75,26 @@ describe('WelcomeWindow', () => {
 
     expect(screen.getByRole('heading', { name: 'Votre premier projet' })).toBeInTheDocument()
     expect(close).not.toHaveBeenCalled()
+    close.mockRestore()
+  })
+
+  it('runs the focused button on Enter rather than advancing', async () => {
+    const write = vi.fn().mockResolvedValue(DEFAULT_SETTINGS)
+    installFakeBridge({ settings: { write } })
+    const close = vi.spyOn(window, 'close').mockImplementation(() => {})
+    render(<WelcomeWindow />)
+
+    screen.getByRole('button', { name: 'Passer' }).focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(write).toHaveBeenCalledWith({
+      onboarding: {
+        version: WELCOME_VERSION,
+        completedAt: expect.any(String),
+      },
+    })
+    expect(close).toHaveBeenCalledOnce()
+    expect(screen.getByRole('heading', { name: 'Choisissez votre langue' })).toBeInTheDocument()
     close.mockRestore()
   })
 

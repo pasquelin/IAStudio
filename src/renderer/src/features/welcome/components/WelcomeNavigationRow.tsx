@@ -2,6 +2,7 @@ import { mdiBlenderSoftware, mdiCubeOutline, mdiUnity, mdiUnreal } from '@mdi/js
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { UiIcon } from '@/components/UiIcon'
+import { windowChosenFill } from '@/components/windowStyles'
 import type { DeclaredPreset } from '@shared/domain/navigationPreset'
 import { WelcomeMark } from './WelcomeMark'
 
@@ -38,10 +39,7 @@ export function WelcomeNavigationRow({
       {...HINT_RIGHT(hint)}
       className={cn(
         'flex w-full items-center gap-3 rounded-(--radius-sc-sm) px-3 py-2 text-left',
-        // Not the row constant of these windows: its hover fill paints straight over a chosen row,
-        // and hovering the accent instead is a `color-mix` where `tokensSurfaces.test.ts` measures
-        // a hexadecimal.
-        chosen ? 'bg-accent-soft' : 'hover:bg-base-200',
+        windowChosenFill(chosen),
       )}
     >
       {preset === 'studio' ? (
