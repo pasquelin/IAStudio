@@ -3,9 +3,9 @@
 import type { GamepadBinding, InputAction, InputMap } from '@shared/domain/inputMap'
 import type { Pointer } from '../ports/inputPort'
 
-export type InputVector = { x: number; y: number }
+type InputVector = { x: number; y: number }
 
-export type RawGamepad = {
+type RawGamepad = {
   id: string
   index: number
   mapping: string

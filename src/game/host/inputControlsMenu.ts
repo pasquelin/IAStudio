@@ -3,7 +3,7 @@
 import type { InputActionKind, InputBinding, GamepadControl } from '@shared/domain/inputMap'
 import type { InputControls } from '../runtime/inputControls'
 
-export type InputControlsMenuLabels = {
+type InputControlsMenuLabels = {
   title: string
   add: string
   close: string
