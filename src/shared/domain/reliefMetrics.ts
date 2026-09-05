@@ -42,6 +42,8 @@ export type ChunkMemory = {
   normal: number
   uv: number
   index: number
+  /** Vertex tint of a painted mask. Allocated only on a terrain someone painted. */
+  color: number
   total: number
 }
 
@@ -51,7 +53,10 @@ export function chunkMemoryBytes(grain: number): ChunkMemory {
   const normal = vertices * 12
   const uv = vertices * 8
   const index = grain * grain * 6 * 2
-  return { position, normal, uv, index, total: position + normal + uv + index }
+  // The painted-mask tint counted with the rest: left out, the budget of a painted terrain was
+  // short by 50 700 bytes a chunk at grain 64 — 27,5 % of what it claimed.
+  const color = vertices * 12
+  return { position, normal, uv, index, color, total: position + normal + uv + index + color }
 }
 
 export type RegionUpload = { position: number; normal: number; total: number }

@@ -37,7 +37,16 @@ function heightAt(
 describe('relief chunk grain', () => {
   it('is 64 texels, the candidate whose full-chunk fallback is four times lighter', () => {
     expect(RELIEF_CHUNK_TEXELS).toBe(64)
-    expect(chunkMemoryBytes(64).total).toBe(184_352)
+    // 65² vertices: 50 700 each for position, normal and the painted-mask tint, 33 800 of uv,
+    // 49 152 of index. The tint was missing from the total until 2026-09-05, 27,5 % short.
+    expect(chunkMemoryBytes(64)).toMatchObject({
+      position: 50_700,
+      normal: 50_700,
+      color: 50_700,
+      uv: 33_800,
+      index: 49_152,
+      total: 235_052,
+    })
     expect(chunkMemoryBytes(128).total / chunkMemoryBytes(64).total).toBeCloseTo(4, 0)
   })
 
