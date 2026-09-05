@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import type { InputPort, InputState, Pointer } from '../ports/inputPort'
+import type { GamepadState, InputPort, InputState, Pointer } from '../ports/inputPort'
 
 /**
  * What the port attaches to — a viewport in the studio, the page in an exported game. Pointer
@@ -9,11 +9,13 @@ import type { InputPort, InputState, Pointer } from '../ports/inputPort'
 export type DomInputTarget = Pick<EventTarget, 'addEventListener' | 'removeEventListener'> &
   Partial<Pick<Element, 'setPointerCapture'>>
 
+export type GamepadReader = () => readonly GamepadState[]
+
 /**
  * Both hosts share it — what differs is WHICH element they hand over. Key codes rather than named
  * actions: what binds a key to an action is the author's, and has nowhere to be declared yet.
  */
-export function createDomInput(target: DomInputTarget): InputPort {
+export function createDomInput(target: DomInputTarget, gamepads: GamepadReader = gamepadsOf): InputPort {
   const held = new Set<string>()
   const pressed = new Set<string>()
   const released = new Set<string>()
@@ -87,6 +89,7 @@ export function createDomInput(target: DomInputTarget): InputPort {
       pressed: [...pressed],
       released: [...released],
       pointer: { ...pointer },
+      gamepads: gamepads(),
     }),
     pointer: () => pointer,
     endStep: () => {
@@ -97,6 +100,23 @@ export function createDomInput(target: DomInputTarget): InputPort {
       for (const [name, listener] of listeners) target.removeEventListener(name, listener)
     },
   }
+}
+
+function gamepadsOf(): readonly GamepadState[] {
+  if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') return []
+  return Array.from(navigator.getGamepads()).flatMap(gamepad =>
+    gamepad
+      ? [
+          {
+            id: gamepad.id,
+            index: gamepad.index,
+            mapping: gamepad.mapping,
+            axes: Array.from(gamepad.axes),
+            buttons: gamepad.buttons.map(button => button.value),
+          },
+        ]
+      : [],
+  )
 }
 
 /** Read off the event rather than narrowed by `instanceof`, which answers false across realms. */

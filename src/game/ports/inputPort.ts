@@ -3,6 +3,15 @@
 /** Where the pointer is, in the client pixels the event reported, and whether it is held down. */
 export type Pointer = { x: number; y: number; down: boolean }
 
+/** A controller snapshot, normalised so the runtime does not depend on the DOM Gamepad object. */
+export type GamepadState = {
+  id: string
+  index: number
+  mapping: string
+  axes: readonly number[]
+  buttons: readonly number[]
+}
+
 /**
  * Everything one step needs to know, in ONE value.
  *
@@ -17,6 +26,8 @@ export type InputState = {
   pressed: readonly string[]
   released: readonly string[]
   pointer: Pointer
+  /** Connected controllers at this step. Absent keeps old hosts and replay fixtures compatible. */
+  gamepads?: readonly GamepadState[]
 }
 
 export type InputPort = {
