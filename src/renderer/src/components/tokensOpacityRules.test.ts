@@ -143,7 +143,7 @@ const DIMMING_ALLOWED: Record<string, string> = {
  * an explorer tile is drawn as — which IS the message, the name under it saying nothing about
  * whether the tile is a folder or a file.
  */
-const INFORMATIVE_GLYPHS = ['/MediaTile.tsx', '/EntryCard.tsx']
+const INFORMATIVE_GLYPHS = ['/MediaTile.tsx', '/EntryFace.tsx']
 
 /**
  * Two placeholders, exempt and measured: a crossed-out image on an empty thumbnail (1.65:1 at

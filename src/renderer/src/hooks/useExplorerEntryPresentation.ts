@@ -6,7 +6,7 @@ import { documentExtensionOf, documentsByPath, kindForExtension } from '@shared/
 import { isPrivatePath } from '@shared/domain/folder'
 import { natureOf } from '@shared/domain/fileRole'
 import { WORKSPACE_BY_ROLE, type FolderRole } from '@shared/domain/folderRole'
-import type { EntryKind } from '@/features/explorer/components/Entry/EntryCard'
+import type { EntryKind } from '@/features/explorer/components/Entry/entryKind'
 import {
   domainInk,
   roleIcon,

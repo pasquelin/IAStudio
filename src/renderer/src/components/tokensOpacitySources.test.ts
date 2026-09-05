@@ -130,7 +130,7 @@ const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
  * an explorer tile is drawn as — which IS the message, the name under it saying nothing about
  * whether the tile is a folder or a file.
  */
-const INFORMATIVE_GLYPHS = ['/MediaTile.tsx', '/EntryCard.tsx']
+const INFORMATIVE_GLYPHS = ['/MediaTile.tsx', '/EntryFace.tsx']
 
 /**
  * Every token written at an opacity, composed on the surfaces of its vocabulary and measured
