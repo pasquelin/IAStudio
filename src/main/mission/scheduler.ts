@@ -62,6 +62,14 @@ export type MissionScheduler = {
   resume: (missionId: MissionId, stepId: MissionStepId, result?: unknown) => Promise<void>
   resumeJob: (missionId: MissionId, jobId: string) => Promise<void>
   cancel: (missionId: MissionId) => Promise<void>
+  /** Number of mission queues retained by the scheduler, for runtime resource diagnostics. */
+  retainedRuns: () => number
+}
+
+type MissionRun = {
+  queue: ReturnType<typeof writeQueue>
+  callers: number
+  finished: boolean
 }
 
 async function readRevisions(
@@ -168,7 +176,7 @@ export function createMissionScheduler(
     throw new Error('invalid mission concurrency')
   const controllers = new Map<string, AbortController>()
   const mutations = writeQueue()
-  const missionRuns = new Map<MissionId, ReturnType<typeof writeQueue>>()
+  const missionRuns = new Map<MissionId, MissionRun>()
   const cancelling = new Set<MissionId>()
   let active = 0
   const permits: Array<() => void> = []
@@ -301,11 +309,12 @@ export function createMissionScheduler(
     }
   }
 
-  const runUntilBlocked = async (missionId: MissionId): Promise<void> => {
+  const runUntilBlocked = async (missionId: MissionId): Promise<boolean> => {
     let hasWork = true
     while (hasWork) {
       let mission = await manager.read(missionId)
-      if (!mission || isMissionFinished(mission.state) || cancelling.has(missionId)) return
+      if (!mission || isMissionFinished(mission.state)) return true
+      if (cancelling.has(missionId)) return false
       if (mission.state === 'created') {
         mission = await update(mission.id, current => activatedMission(current, clock.now()))
       }
@@ -319,19 +328,31 @@ export function createMissionScheduler(
       hasWork = executable.length > 0
       await Promise.all(executable.map(async step => await execute(missionId, step.id)))
     }
+    return false
   }
 
   const wake = async (missionId: MissionId): Promise<void> => {
-    let queue = missionRuns.get(missionId)
-    if (!queue) {
-      queue = writeQueue()
-      missionRuns.set(missionId, queue)
+    let run = missionRuns.get(missionId)
+    if (!run) {
+      run = { queue: writeQueue(), callers: 0, finished: false }
+      missionRuns.set(missionId, run)
     }
-    await queue.next(async () => await runUntilBlocked(missionId))
+    run.callers += 1
+    let finished = false
+    try {
+      finished = await run.queue.next(async () => await runUntilBlocked(missionId))
+    } finally {
+      run.finished ||= finished
+      run.callers -= 1
+      if (run.finished && run.callers === 0 && missionRuns.get(missionId) === run) {
+        missionRuns.delete(missionId)
+      }
+    }
   }
 
   return {
     wake,
+    retainedRuns: () => missionRuns.size,
     resume: async (missionId, stepId, result) => {
       const mission = await manager.read(missionId)
       if (!mission) throw new Error(`mission ${missionId} does not exist`)
@@ -375,11 +396,16 @@ export function createMissionScheduler(
         const mission = await manager.read(missionId)
         if (!mission || isMissionFinished(mission.state)) return
         abortMissionSteps(mission)
-        await update(mission.id, current =>
+        const cancelled = await update(mission.id, current =>
           isMissionFinished(current.state)
             ? null
             : transitionMission(current, 'cancelled', clock.now()),
         )
+        const run = missionRuns.get(missionId)
+        if (run && isMissionFinished(cancelled.state)) {
+          run.finished = true
+          if (run.callers === 0 && missionRuns.get(missionId) === run) missionRuns.delete(missionId)
+        }
       } finally {
         cancelling.delete(missionId)
       }

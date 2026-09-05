@@ -36,6 +36,8 @@ export type LlamaRuntimeDeps = {
   port: LlamaPort
   /** Looked up by the id a request names, because a chat request carries no manifest. */
   modelOf: (modelId: string) => LocalModel | null
+  /** Loads through the manager, so a turn cannot create weights outside its idle lifecycle. */
+  ensureLoaded: (modelId: string) => Promise<void>
   /** Called when a load or turn starts; the returned function runs when it ends. */
   onUsed?: (modelId: string) => (() => void) | void
 }
@@ -79,6 +81,7 @@ export function llamaLocalRuntime(deps: LlamaRuntimeDeps): LocalRuntime {
       // Raised rather than answered empty: an empty answer reads as a model that had nothing to add.
       if (model === null) throw new Error(`${request.model} is not in the catalogue`)
 
+      await deps.ensureLoaded(model.id)
       const done = deps.onUsed?.(model.id)
       try {
         return await deps.port.chat(request, deps.weightsOf(model))

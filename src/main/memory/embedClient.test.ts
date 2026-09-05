@@ -149,16 +149,33 @@ describe('when the process is gone', () => {
     await expect(client.embed(['two'])).rejects.toThrow(EMBEDDER_GONE)
   })
 
-  /** Killing it is what rejects the callers: the exit is the one path that empties the runs. */
-  it('kills the process, and every later call says the embedder is gone', async () => {
+  it('disposes the model before killing the process', async () => {
     const fake = fakePort()
     const client = createEmbedClient(fake.port)
 
-    client.close()
+    const closing = client.close()
+    await fake.posted(1)
+    expect(fake.asked[0]).toMatchObject({ op: 'close' })
+    expect(fake.killed()).toBe(0)
+
+    fake.answer({ id: 1, ok: true, value: undefined })
+    await closing
     fake.die(new Error(EMBEDDER_GONE))
 
     expect(fake.killed()).toBe(1)
     await expect(client.embed(['one'])).rejects.toThrow(EMBEDDER_GONE)
+  })
+
+  it('kills the process when graceful disposal fails', async () => {
+    const fake = fakePort()
+    const client = createEmbedClient(fake.port)
+
+    const closing = client.close()
+    await fake.posted(1)
+    fake.answer({ id: 1, ok: false, error: 'dispose failed' })
+
+    await expect(closing).resolves.toBeUndefined()
+    expect(fake.killed()).toBe(1)
   })
 
   /** A batch given up on is dropped at the worker, so what it half-computed is cleaned up there. */

@@ -101,6 +101,7 @@ export function createLocalAiServices(deps: LocalAiDeps) {
   let hold =
     (_modelId: string): (() => void) =>
     () => {}
+  let ensureLoaded = (_modelId: string): Promise<void> => Promise.resolve()
   const weightsOf = (model: LocalModel): string =>
     model.weightsPath ?? join(modelFolder(), model.files[0]?.name ?? '')
   let lookup = (modelId: string): LocalModel | null =>
@@ -118,6 +119,7 @@ export function createLocalAiServices(deps: LocalAiDeps) {
     weightsOf,
     modelOf,
     hold: id => hold(id),
+    ensureLoaded: id => ensureLoaded(id),
     ollama,
     stale: () => {
       forgetDiscovered()
@@ -133,6 +135,7 @@ export function createLocalAiServices(deps: LocalAiDeps) {
     void dictation?.probeModel()
   })
   hold = ai.hold
+  ensureLoaded = ai.ensureLoaded
   lookup = modelId => ai.lookup(modelId)
   forgetDiscovered = () => ai.forgetDiscovered()
   refreshOverview = () => ai.refresh()
@@ -313,6 +316,7 @@ function createRuntimes(input: {
   weightsOf: (model: LocalModel) => string
   modelOf: (id: string) => LocalModel | null
   hold: (id: string) => () => void
+  ensureLoaded: (id: string) => Promise<void>
   ollama: ReturnType<typeof createOllama>
   stale: () => void
 }): LocalRuntimes {
@@ -325,6 +329,7 @@ function createRuntimes(input: {
       weightsOf: input.weightsOf,
       port: input.llama,
       modelOf: input.modelOf,
+      ensureLoaded: input.ensureLoaded,
       onUsed: input.hold,
     }),
     ollama: ollamaLocalRuntime(input.ollama.port, {

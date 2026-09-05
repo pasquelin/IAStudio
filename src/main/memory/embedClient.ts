@@ -18,7 +18,7 @@ export type EmbedClient = {
   embed: (texts: readonly string[], signal?: AbortSignal) => Promise<readonly Float32Array[]>
   /** One question. The other prefix, and the only difference — see `EmbedLoad`. */
   embedQuery: (text: string) => Promise<Float32Array>
-  close: () => void
+  close: () => Promise<void>
 }
 
 export function createEmbedClient(port: EmbedPort): EmbedClient {
@@ -67,9 +67,16 @@ export function createEmbedClient(port: EmbedPort): EmbedClient {
       return vector ?? new Float32Array()
     },
 
-    // Killing it is what rejects the callers: the exit reaches `onFailure`, which is the one
-    // path that empties the pending runs — see `processClient`.
-    close: () => port.kill(),
+    close: async () => {
+      try {
+        await ask({ op: 'close' })
+      } catch {
+        // A dead process has nothing left to dispose; the kill below still settles its callers.
+        return
+      } finally {
+        port.kill()
+      }
+    },
   }
 }
 

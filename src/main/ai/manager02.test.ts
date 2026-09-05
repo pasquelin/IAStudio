@@ -2,12 +2,13 @@ import type { MemorySnapshot } from '@shared/domain/aiMemory'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import { STT_MODEL } from '@shared/domain/dictation'
 import type { LocalModel } from '@shared/domain/localModel'
-import { GIBI } from '@shared/domain/localModel-fixtures'
+import { GIBI, localModel } from '@shared/domain/localModel-fixtures'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { describe, expect, it, vi } from 'vitest'
 import type { HardwareFacts } from './hardwareProbe'
 import type { LocalRuntime } from './localRuntimes'
-import { createAiManager, type ManagerDeps } from './manager'
+import { llamaLocalRuntime, type LlamaPort } from './llamaRuntime'
+import { createAiManager, type AiManager, type ManagerDeps } from './manager'
 
 const FACTS: HardwareFacts = {
   platform: 'linux',
@@ -181,6 +182,86 @@ describe('holding a model in memory', () => {
     armed.run?.()
     await vi.waitFor(() => expect(unload).toHaveBeenCalledOnce())
     expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(false)
+  })
+
+  it('unloads and reloads weights first loaded by an assistant chat', async () => {
+    const chatModel = localModel({ id: 'qwen', format: 'gguf', loader: 'llamacpp' })
+    const weights = `/models/${chatModel.id}.gguf`
+    let resident: string | null = null
+    const timers = new Set<() => void>()
+    const load = vi.fn(async (path: string) => {
+      resident = path
+      return 1_200
+    })
+    const unload = vi.fn(async () => {
+      resident = null
+    })
+    const port: LlamaPort = {
+      ready: () => true,
+      loaded: () => resident,
+      load,
+      unload,
+      chat: async (_request, path) => {
+        if (resident === null) await load(path)
+        return 'answered'
+      },
+      vram: async () => null,
+    }
+    let ai: AiManager | null = null
+    const runtime = llamaLocalRuntime({
+      files: {
+        read: async () => ({
+          ready: true,
+          installed: new Set([chatModel.id]),
+          loaded: new Set<string>(),
+        }),
+        install: async () => {},
+        remove: async () => {},
+      },
+      port,
+      weightsOf: model => `/models/${model.id}.gguf`,
+      modelOf: id => (id === chatModel.id ? chatModel : null),
+      ensureLoaded: async id => await ai?.ensureLoaded(id),
+      onUsed: id => ai?.hold(id) ?? (() => {}),
+    })
+    ai = manager({
+      settings: () => ({
+        ...DEFAULT_SETTINGS,
+        ai: { ...DEFAULT_SETTINGS.ai, ownModels: [chatModel] },
+      }),
+      idleUnloadMinutes: () => 10,
+      schedule: run => {
+        timers.add(run)
+        return () => timers.delete(run)
+      },
+      runtimes: { llamacpp: runtime },
+    })
+    const request = {
+      model: chatModel.id,
+      contextTokens: 4_096,
+      messages: [],
+      json: false,
+    }
+
+    await runtime.chat?.(request)
+    expect(load).toHaveBeenCalledOnce()
+    expect((await runtime.read([chatModel])).loaded).toEqual(new Set([chatModel.id]))
+    expect(candidateOf(await ai.overview(), chatModel.id)?.loaded).toBe(true)
+    expect(timers.size).toBe(1)
+    const firstIdle = timers.values().next().value
+
+    await runtime.chat?.(request)
+    expect(load).toHaveBeenCalledOnce()
+    expect(timers.has(firstIdle!)).toBe(false)
+    expect(timers.size).toBe(1)
+
+    timers.values().next().value?.()
+    await vi.waitFor(() => expect(unload).toHaveBeenCalledOnce())
+    expect(resident).toBeNull()
+
+    await runtime.chat?.(request)
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(resident).toBe(weights)
   })
 
   it('does not unload a model while a job holds it', async () => {

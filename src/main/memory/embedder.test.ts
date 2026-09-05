@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { EmbedClient } from './embedClient'
 import { createEmbedder, type Embedder } from './embedder'
 import type { EmbedWeights } from './embedChoice'
@@ -11,7 +11,7 @@ type Opened = {
 
 function stand(
   modelId: string | null,
-  { dims = 768, failing = false, slow = false } = {},
+  { dims = 768, failing = false, slow = false, slowClose = false } = {},
 ): {
   embedder: Embedder
   opened: Opened[]
@@ -22,6 +22,8 @@ function stand(
   chose: (next: string | null) => void
   /** Lets a load that was held open settle — what makes a race testable. */
   settle: () => void
+  /** Lets a graceful close finish before another process is opened. */
+  settleClose: () => void
 } {
   const opened: Opened[] = []
   const troubles: string[] = []
@@ -31,6 +33,7 @@ function stand(
 
   let killProcess: () => void = () => {}
   const parked: (() => void)[] = []
+  const parkedCloses: (() => void)[] = []
   const open = (onGone: () => void): EmbedClient => {
     killProcess = onGone
     const client: EmbedClient = {
@@ -42,8 +45,9 @@ function stand(
       },
       embed: async texts => texts.map(() => new Float32Array([1])),
       embedQuery: async () => new Float32Array([1]),
-      close: () => {
+      close: async () => {
         closes++
+        if (slowClose) await new Promise<void>(resolve => parkedCloses.push(resolve))
       },
     }
     return client
@@ -55,6 +59,9 @@ function stand(
     die: () => killProcess(),
     settle: () => {
       for (const let_go of parked.splice(0)) let_go()
+    },
+    settleClose: () => {
+      for (const letGo of parkedCloses.splice(0)) letGo()
     },
     closed: () => closes,
     idle: () => fire(),
@@ -178,6 +185,20 @@ describe('idleness', () => {
 
     expect(stood.opened).toHaveLength(2)
   })
+
+  it('waits for graceful disposal before opening the next process', async () => {
+    const stood = stand(GEMMA, { slowClose: true })
+    await stood.embedder.embed(['one'])
+    stood.idle()
+
+    const next = stood.embedder.embed(['two'])
+    await Promise.resolve()
+    expect(stood.opened).toHaveLength(1)
+
+    stood.settleClose()
+    await next
+    expect(stood.opened).toHaveLength(2)
+  })
 })
 
 describe('when the process dies on its own', () => {
@@ -227,9 +248,9 @@ describe('a choice that moves while the weights are loading', () => {
     stood.chose('another-model')
     const second = stood.embedder.embed(['the palette'])
     stood.settle()
-    await Promise.all([first, second])
+    await vi.waitFor(() => expect(stood.opened).toHaveLength(2))
     stood.settle()
-    await second
+    await Promise.all([first, second])
 
     // Both weights were loaded, and the SECOND caller waited for its own rather than taking the
     // first one's: the last load is the one that was chosen.

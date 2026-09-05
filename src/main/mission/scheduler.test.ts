@@ -72,6 +72,19 @@ describe('mission scheduler', () => {
     expect(await missions.read(mission.id)).toMatchObject({ state: 'completed' })
   })
 
+  it('retains no run queues after many missions have finished', async () => {
+    const time = clock()
+    const batch = Array.from({ length: 128 }, (_, index) =>
+      withAction(createMission(`Mission ${index}`, time), time, 'Act'),
+    )
+    const missions = manager(time, batch)
+    const scheduler = createMissionScheduler(missions, async () => ({ kind: 'completed' }), time)
+
+    await Promise.all(batch.map(async mission => await scheduler.wake(mission.id)))
+
+    expect(scheduler.retainedRuns()).toBe(0)
+  })
+
   it('waits for user input and resumes the same step', async () => {
     const time = clock()
     const missions = manager(time)
@@ -85,10 +98,12 @@ describe('mission scheduler', () => {
 
     await scheduler.wake(created.id)
     expect(await missions.read(created.id)).toMatchObject({ state: 'waiting_user' })
+    expect(scheduler.retainedRuns()).toBe(1)
     answer = { kind: 'completed' }
     await scheduler.resume(created.id, step.id)
 
     expect(await missions.read(created.id)).toMatchObject({ state: 'completed', waits: [] })
+    expect(scheduler.retainedRuns()).toBe(0)
   })
 
   it('reports a document changed while a step waited and refreshes its precondition', async () => {
@@ -291,6 +306,7 @@ describe('mission scheduler', () => {
     ])
 
     expect(await missions.read(mission.id)).toMatchObject({ state: 'completed' })
+    expect(scheduler.retainedRuns()).toBe(0)
     const revision = (await missions.read(mission.id))?.revision
     await scheduler.resumeJob(mission.id, 'job_1')
     expect((await missions.read(mission.id))?.revision).toBe(revision)
@@ -431,10 +447,12 @@ describe('mission scheduler', () => {
       expect((await missions.read(created.id))?.plan.steps[0]?.state).toBe('running'),
     )
     await scheduler.cancel(created.id)
+    expect(scheduler.retainedRuns()).toBe(1)
     release()
     await running
 
     expect(observedAborted).toBe(true)
     expect(await missions.read(created.id)).toMatchObject({ state: 'cancelled' })
+    expect(scheduler.retainedRuns()).toBe(0)
   })
 })

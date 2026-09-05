@@ -61,19 +61,28 @@ export function createEmbedder({
   // it computed was written under `model = 'B'`, where `dropOtherVectors('B')` never reaches it.
   let loading: string | null = null
   let cancelIdle: (() => void) | null = null
+  let releasing: Promise<void> | null = null
 
-  const letGo = (): void => {
+  const letGo = (): Promise<void> => {
     const going = held
     held = null
     opening = null
     cancelIdle?.()
     cancelIdle = null
-    going?.client.close()
+    if (going) releasing = going.client.close()
+    return releasing ?? Promise.resolve()
   }
 
   const restIdle = (): void => {
     cancelIdle?.()
-    cancelIdle = idleMs > 0 ? schedule(letGo, idleMs) : null
+    cancelIdle = idleMs > 0 ? schedule(() => void letGo(), idleMs) : null
+  }
+
+  const waitForRelease = async (): Promise<void> => {
+    if (!releasing) return
+    const closing = releasing
+    await closing
+    if (releasing === closing) releasing = null
   }
 
   const start = async (modelId: string): Promise<Held | null> => {
@@ -83,7 +92,7 @@ export function createEmbedder({
     // The client is compared on the way out, not captured: a process that died AFTER another
     // was opened must not take the live one with it.
     const client = open(() => {
-      if (held?.client === client) letGo()
+      if (held?.client === client) void letGo()
     })
 
     try {
@@ -99,7 +108,7 @@ export function createEmbedder({
       // A model that will not load costs the vectors, never the studio: the retrieval falls back
       // on exact search rather than pretending to have searched.
       onTrouble(messageOf(error))
-      client.close()
+      await client.close()
       return null
     }
   }
@@ -107,16 +116,16 @@ export function createEmbedder({
   const ready = async (): Promise<Held | null> => {
     const modelId = chosenId()
     if (modelId === null) {
-      if (held) letGo()
+      if (held) await letGo()
       return null
     }
-
-    if (held && held.modelId !== modelId) letGo()
+    if (held && held.modelId !== modelId) await letGo()
     if (opening !== null && loading !== modelId) {
       opening = null
       loading = null
     }
 
+    if (releasing) await waitForRelease()
     if (opening === null) {
       loading = modelId
       opening = start(modelId)
@@ -169,7 +178,7 @@ export function createEmbedder({
       } catch {
         // A load that failed was already reported by `start`, and has nothing left to close.
       }
-      letGo()
+      await letGo()
     },
   }
 }
