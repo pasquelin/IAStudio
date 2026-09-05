@@ -46,7 +46,7 @@ function expectCausalReflection(reflection: Record<string, unknown>, context: st
   expect(reflection['contextSerialized']).toBe(context)
   expect(reflection['actionIndex']).toMatchObject({
     available: [],
-    scope: { target: 'node', document: 'scene' },
+    scope: { target: 'node', document: 'scene', documentAuthority: 'active' },
     candidates: [{ action: { name: 'scene.state' }, lexicalScore: 3 }],
   })
   expect(reflection['providerAttempts']).toMatchObject([
@@ -81,7 +81,14 @@ describe('parcours mission du banc', () => {
       },
       {
         search: async () => [
-          { action, score: 1, lexicalScore: 1, relevanceScore: 1, applicabilityScore: 0 },
+          {
+            action,
+            score: 1,
+            lexicalScore: 1,
+            relevanceScore: 1,
+            applicabilityScore: 0,
+            documentAffinity: 'transversal',
+          },
         ],
       },
     )
@@ -118,6 +125,7 @@ describe('parcours mission du banc', () => {
             semanticScore: 1,
             relevanceScore: 4,
             applicabilityScore: 0,
+            documentAffinity: 'transversal',
           },
         ],
       },

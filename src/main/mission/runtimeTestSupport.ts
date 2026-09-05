@@ -30,7 +30,16 @@ export const missionTestContext = (mission: Mission): AssistantContext => {
     },
     workspace: null,
     project: null,
-    actions: [{ action, score: 1, lexicalScore: 1, relevanceScore: 1, applicabilityScore: 0 }],
+    actions: [
+      {
+        action,
+        score: 1,
+        lexicalScore: 1,
+        relevanceScore: 1,
+        applicabilityScore: 0,
+        documentAffinity: 'transversal',
+      },
+    ],
     memories: [],
     jobs: [],
     previousResults: [],

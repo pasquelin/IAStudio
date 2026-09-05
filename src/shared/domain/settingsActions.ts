@@ -1,6 +1,7 @@
 import { action, type AssistantAction } from './assistantAction'
 import { DEFAULT_SETTINGS } from './settings'
 import { SETTING_ACTION_IDS, type SettingActionId } from './settingAction'
+import { DOCUMENT_KINDS } from './document'
 
 /** The two buttons nothing takes back: one writes outside the studio, the other empties it. */
 const IRREVERSIBLE: readonly SettingActionId[] = ['advanced.installResolveBridge', 'advanced.reset']
@@ -21,6 +22,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { documentKinds: DOCUMENT_KINDS, documentAffinity: 'relevant' },
     fields: [],
     returns: ['settingsState'],
   }),
@@ -37,6 +39,7 @@ export const SETTINGS_ACTIONS: readonly AssistantAction[] = [
     commitment: 'studio',
     repeatable: true,
     reach: 'mcp',
+    capabilities: { documentKinds: DOCUMENT_KINDS, documentAffinity: 'relevant' },
     inputs: ['settingsState'],
     fields: [
       {

@@ -1,10 +1,11 @@
 import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { foldForSearch } from '@shared/text'
+import type { ActionSearchScope } from './actionIndex'
 
 export function actionSearchScope(
   snapshot: StudioSnapshot | null,
   query: string,
-): { target?: string; document?: string } {
+): ActionSearchScope {
   const request = foldForSearch(query)
   const targetsSelection = snapshot?.selection?.items.some(item => {
     const name = foldForSearch(item.name)
@@ -12,6 +13,8 @@ export function actionSearchScope(
   })
   return {
     ...(snapshot?.selection && targetsSelection ? { target: snapshot.selection.kind } : {}),
-    ...(snapshot?.activeDocumentState ? { document: snapshot.activeDocumentState.kind } : {}),
+    ...(snapshot?.activeDocumentState
+      ? { document: snapshot.activeDocumentState.kind, documentAuthority: 'active' }
+      : {}),
   }
 }

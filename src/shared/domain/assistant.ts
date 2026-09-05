@@ -80,37 +80,67 @@ export const ACTION_FAMILIES: readonly ActionFamily[] = [
   { name: 'cloud', actions: CLOUD_ACTIONS },
   {
     name: 'canvas',
-    actions: actionsWithCapabilities(CANVAS_ACTIONS, { documentKinds: ['image'] }),
+    actions: actionsWithCapabilities(CANVAS_ACTIONS, {
+      documentKinds: ['image'],
+      documentAffinity: 'required',
+    }),
   },
   {
     name: 'montage',
-    actions: actionsWithCapabilities(SEQUENCE_ACTIONS, { documentKinds: ['sequence'] }),
+    actions: actionsWithCapabilities(SEQUENCE_ACTIONS, {
+      documentKinds: ['sequence'],
+      documentAffinity: 'required',
+    }),
   },
   {
     name: 'material',
-    actions: actionsWithCapabilities(MATERIAL_ACTIONS, { documentKinds: ['material'] }),
+    actions: actionsWithCapabilities(MATERIAL_ACTIONS, {
+      documentKinds: ['material'],
+      documentAffinity: 'required',
+      targets: ['document'],
+    }),
   },
-  { name: 'scene', actions: actionsWithCapabilities(SCENE_ACTIONS, { documentKinds: ['scene'] }) },
-  { name: 'post', actions: actionsWithCapabilities(POST_ACTIONS, { documentKinds: ['scene'] }) },
+  {
+    name: 'scene',
+    actions: actionsWithCapabilities(SCENE_ACTIONS, {
+      documentKinds: ['scene'],
+      documentAffinity: 'required',
+    }),
+  },
+  {
+    name: 'post',
+    actions: actionsWithCapabilities(POST_ACTIONS, {
+      documentKinds: ['scene'],
+      documentAffinity: 'required',
+    }),
+  },
   {
     name: 'rig',
-    actions: actionsWithCapabilities(RIG_ACTIONS, { documentKinds: ['scene', 'character'] }),
+    actions: actionsWithCapabilities(RIG_ACTIONS, {
+      documentKinds: ['scene', 'character'],
+      documentAffinity: 'required',
+    }),
   },
   { name: 'git', actions: GIT_ACTIONS },
   {
     name: 'game',
-    actions: actionsWithCapabilities(GAME_ACTIONS, { documentKinds: ['scene'], targets: ['node'] }),
+    actions: actionsWithCapabilities(GAME_ACTIONS, {
+      documentKinds: ['scene'],
+      documentAffinity: 'required',
+      targets: ['node'],
+    }),
   },
   { name: 'play', actions: PLAY_ACTIONS },
   {
     name: 'script',
-    actions: actionsWithCapabilities(SCRIPT_ACTIONS, { documentKinds: ['script'] }),
+    actions: actionsWithCapabilities(SCRIPT_ACTIONS, { documentAffinity: 'transversal' }),
   },
-  { name: 'studio', actions: actionsWithCapabilities(STUDIO_ACTIONS, { targets: ['studio'] }) },
+  { name: 'studio', actions: STUDIO_ACTIONS },
   {
     name: 'timeline',
     actions: actionsWithCapabilities(TIMELINE_ACTIONS, {
       documentKinds: ['scene'],
+      documentAffinity: 'required',
       targets: ['timeline'],
     }),
   },

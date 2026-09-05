@@ -4,7 +4,7 @@ import { messageOf } from '@shared/guards'
 import type { Embedder } from '@main/memory/embedder'
 import { actionCorpus } from './actionCorpus'
 import type { ActionResource } from '@shared/domain/assistant'
-import type { ActionEmbedding, ActionHit, ActionRanking } from './actionIndex'
+import type { ActionEmbedding, ActionHit, ActionRanking, ActionSearchScope } from './actionIndex'
 import type { AsyncActionIndex } from './actionIndexClient'
 import { openActionIndexThread } from './actionIndexThread'
 
@@ -15,13 +15,13 @@ export type ActionSearchService = {
     query: string,
     limit?: number,
     available?: readonly ActionResource[],
-    scope?: { target?: string; document?: string },
+    scope?: ActionSearchScope,
   ) => Promise<readonly ActionHit[]>
   inspect: (
     query: string,
     limit?: number,
     available?: readonly ActionResource[],
-    scope?: { target?: string; document?: string },
+    scope?: ActionSearchScope,
   ) => Promise<readonly ActionRanking[]>
   close: () => Promise<void>
 }
@@ -77,7 +77,7 @@ export function createActionSearchService({
     query: string,
     limit: number | undefined,
     available: readonly ActionResource[] | undefined,
-    scope: { target?: string; document?: string } | undefined,
+    scope: ActionSearchScope | undefined,
     failed: Result,
     operation: (
       index: AsyncActionIndex,

@@ -117,7 +117,7 @@ describe('AssistantContextBuilder', () => {
       expect.stringContaining('Rename the selected cube'),
       12,
       [],
-      { target: 'node', document: 'scene' },
+      { target: 'node', document: 'scene', documentAuthority: 'active' },
     )
     expect(search.mock.calls[0]?.[0]).not.toContain('light_')
   })
@@ -140,7 +140,10 @@ describe('AssistantContextBuilder', () => {
 
     await builder.build({ mission, step, request: 'List project scripts' })
 
-    expect(search).toHaveBeenCalledWith(expect.any(String), 12, [], { document: 'scene' })
+    expect(search).toHaveBeenCalledWith(expect.any(String), 12, [], {
+      document: 'scene',
+      documentAuthority: 'active',
+    })
   })
 
   it('only exposes resources returned with a non-empty result', async () => {
@@ -273,6 +276,7 @@ describe('AssistantContextBuilder', () => {
         lexicalScore: 8 - at,
         relevanceScore: 8 - at,
         applicabilityScore: 0,
+        documentAffinity: 'transversal',
       }))
     const builder = createAssistantContextBuilder(
       dependencies({

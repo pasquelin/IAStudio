@@ -1,6 +1,6 @@
 import type { ActionName } from '@shared/domain/assistant'
 import type { ActionResource } from '@shared/domain/actionResource'
-import { isDocumentKind } from '@shared/domain/document'
+import type { ActionDocumentAffinity } from '@shared/domain/actionCapabilities'
 import { askExpression } from '@main/project/ftsMatch'
 import { migrateTo, transaction } from '@main/project/sqlMigrate'
 import { bytes, number, optionalNumber, optionalText } from '@main/project/sqlRow'
@@ -28,12 +28,18 @@ export type ActionEmbedding = {
   values: Float32Array
 }
 
+export type ActionSearchScope = {
+  target?: string
+  document?: string
+  documentAuthority?: 'active' | 'explicit'
+}
+
 export type ActionSearch = {
   query: string
   limit?: number
   embedding?: { model: string; values: Float32Array }
   available?: readonly ActionResource[]
-  scope?: { target?: string; document?: string }
+  scope?: ActionSearchScope
 }
 
 export type ActionHit = {
@@ -50,6 +56,7 @@ export type ActionHit = {
   fusionScore?: number
   relevanceScore: number
   applicabilityScore: number
+  documentAffinity: ActionDocumentAffinity
 }
 
 export type ActionRanking = ActionHit & {
@@ -91,6 +98,7 @@ function actionOf(row: SqlRow): IndexedAction | null {
 function actionScopeScores(
   action: IndexedAction,
   scope: ActionSearch['scope'],
+  hasTextRelevance: boolean,
 ): { scope: number; compatibility: number } {
   const target = scope?.target?.toLocaleLowerCase('en')
   const document = scope?.document?.toLocaleLowerCase('en')
@@ -100,16 +108,37 @@ function actionScopeScores(
       action.fields.some(
         field => field.picks === target || field.key.toLocaleLowerCase('en') === `${target}id`,
       ))
-  const compatibleDocuments = action.capabilities.documentKinds
-  const documentScore =
-    document !== undefined && (compatibleDocuments?.length || isDocumentKind(action.family))
-      ? action.family === document
-        ? 2
-        : compatibleDocuments?.some(kind => kind === document)
-          ? 0
-          : -4
+  const targetScore = targetsSelection
+    ? 4
+    : target !== undefined && action.capabilities.targets?.length
+      ? -6
       : 0
-  return { scope: documentScore, compatibility: Number(targetsSelection) * 4 }
+  return {
+    scope: actionDocumentScore(action, scope, target, document, hasTextRelevance),
+    compatibility: targetScore,
+  }
+}
+
+function actionDocumentScore(
+  action: IndexedAction,
+  scope: ActionSearch['scope'],
+  target: string | undefined,
+  document: string | undefined,
+  hasTextRelevance: boolean,
+): number {
+  const affinity = action.capabilities.documentAffinity ?? 'transversal'
+  if (document === undefined || affinity === 'transversal') return 0
+  const matches = action.capabilities.documentKinds?.some(kind => kind === document) === true
+  if (scope?.documentAuthority === 'explicit') {
+    if (matches) return 2
+    return affinity === 'required' ? -4 : 0
+  }
+  return target === undefined &&
+    matches &&
+    (affinity === 'relevant' || action.family === document) &&
+    hasTextRelevance
+    ? 2
+    : 0
 }
 
 function workflowScoresOf(
@@ -312,7 +341,7 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
       const rank = optionalNumber(row, 'rank')
       const lexical = actionLexicalScore(wanted.query, action, rank)
       const semantic = semanticScoreOf(row, question, wanted.embedding)
-      const scope = actionScopeScores(action, wanted.scope)
+      const scope = actionScopeScores(action, wanted.scope, lexical >= 1)
       const totalScopeScore = scope.scope + scope.compatibility
       const intentScore = actionIntentScore(wanted.query, action)
       const ftsRank = ftsRanks.get(action.name)
@@ -331,6 +360,7 @@ export function createActionIndex(driver: SqliteDriver): ActionIndex {
         ...(fusionScore === 0 ? {} : { fusionScore }),
         relevanceScore,
         applicabilityScore,
+        documentAffinity: action.capabilities.documentAffinity ?? 'transversal',
         score: relevanceScore + applicabilityScore,
       }
     })

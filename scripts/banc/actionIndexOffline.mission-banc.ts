@@ -1,7 +1,11 @@
 import { afterAll, describe, it } from 'vitest'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { createActionIndex, type ActionIndex } from '@main/actionIndex/actionIndex'
+import {
+  createActionIndex,
+  type ActionIndex,
+  type ActionSearchScope,
+} from '@main/actionIndex/actionIndex'
 import type { AsyncActionIndex } from '@main/actionIndex/actionIndexClient'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import { createActionSearchService } from '@main/actionIndex/actionSearchService'
@@ -74,6 +78,7 @@ type RankedSignals = {
   fusionScore: number
   relevanceScore: number
   applicabilityScore: number
+  documentAffinity: string
   score: number
   rank: number
   included: boolean
@@ -105,7 +110,7 @@ async function evaluate(
   request: string,
   expected: ActionName,
   scenario: string,
-  scope?: { target?: string; document?: string },
+  scope?: ActionSearchScope,
 ): Promise<Evaluation> {
   const started = performance.now()
   const ranking = await service.inspect(`${request}\nPlan mission`, 12, [], scope)
@@ -137,6 +142,7 @@ async function evaluate(
       fusionScore: candidate.fusionScore ?? 0,
       relevanceScore: candidate.relevanceScore,
       applicabilityScore: candidate.applicabilityScore,
+      documentAffinity: candidate.documentAffinity,
       score: candidate.score,
       rank: candidate.rank,
       included: candidate.included,

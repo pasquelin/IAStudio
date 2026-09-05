@@ -149,6 +149,7 @@ describe('ActionIndex', () => {
     expect(hits.find(hit => hit.action.name === 'node.rename')).toMatchObject({
       compatibilityScore: 4,
       applicabilityScore: 4,
+      documentAffinity: 'required',
     })
     expect(hits.find(hit => hit.action.name === 'node.rename')?.relevanceScore).toBeGreaterThan(0)
   })
@@ -163,12 +164,66 @@ describe('ActionIndex', () => {
       .inspect({ query: 'ajoute un média', limit: 12, scope: { document: 'sequence' } })
       .find(hit => hit.action.name === 'clip.add')
 
-    expect(clip).toMatchObject({ applicabilityScore: 0 })
+    expect(clip).toMatchObject({ applicabilityScore: 0, documentAffinity: 'required' })
     expect(
       index
-        .inspect({ query: 'ajoute un média', limit: 12, scope: { document: 'scene' } })
+        .inspect({
+          query: 'ajoute un média',
+          limit: 12,
+          scope: { document: 'scene', documentAuthority: 'explicit' },
+        })
         .find(hit => hit.action.name === 'clip.add'),
     ).toMatchObject({ scopeScore: -4, applicabilityScore: -4 })
+  })
+
+  it('keeps transversal actions retrievable across unrelated active documents', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+    const requests = [
+      ['ouvre les réglages globaux', 'settings.open'],
+      ['liste les scripts du projet', 'script.list'],
+      ['crée un nouveau projet', 'project.create'],
+    ]
+
+    for (const [query, expected] of requests) {
+      const ranking = index.inspect({
+        query: query ?? '',
+        limit: 12,
+        scope: { document: 'image', documentAuthority: 'active' },
+      })
+      expect(ranking.find(hit => hit.action.name === expected)).toMatchObject({
+        included: true,
+        applicabilityScore: 0,
+        documentAffinity: 'transversal',
+      })
+    }
+  })
+
+  it('uses an active document as a bonus without making it a precondition', () => {
+    const database = openMemoryDatabase()
+    onTestFinished(() => database.close())
+    const index = createActionIndex(database)
+    index.rebuild(actionCorpus())
+
+    const settings = index
+      .inspect({
+        query: 'configure the current editor grid',
+        limit: 12,
+        scope: { document: 'scene', documentAuthority: 'active' },
+      })
+      .find(hit => hit.action.name === 'settings.write')
+    const script = index
+      .inspect({
+        query: 'list the project scripts',
+        limit: 12,
+        scope: { document: 'image', documentAuthority: 'active' },
+      })
+      .find(hit => hit.action.name === 'script.list')
+
+    expect(settings).toMatchObject({ scopeScore: 2, documentAffinity: 'relevant' })
+    expect(script).toMatchObject({ applicabilityScore: 0, documentAffinity: 'transversal' })
   })
 
   it('ranks an action targeting the selection above a similarly worded document action', () => {

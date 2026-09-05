@@ -2,6 +2,7 @@ import type { DocumentKind } from './document'
 import type { TargetKind } from './target'
 
 export type ActionIntent = 'read' | 'create' | 'mutate' | 'delete' | 'search' | 'execute'
+export type ActionDocumentAffinity = 'required' | 'relevant' | 'transversal'
 export type ActionTarget =
   | TargetKind
   | 'asset'
@@ -19,4 +20,5 @@ export type ActionCapabilities = {
   intents?: readonly ActionIntent[]
   targets?: readonly ActionTarget[]
   documentKinds?: readonly DocumentKind[]
+  documentAffinity?: ActionDocumentAffinity
 }
