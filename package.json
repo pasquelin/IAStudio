@@ -114,7 +114,7 @@
     "jsdom": "^30.0.1",
     "knip": "^6.34.0",
     "monaco-editor": "0.56.0",
-    "oxlint": "1.80.0",
+    "oxlint": "1.81.0",
     "oxlint-tsgolint": "7.0.2001",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
