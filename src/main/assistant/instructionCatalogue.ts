@@ -261,8 +261,9 @@ export const MISSION_RULES = [
   '  - The "Mission" block is JSON. mission.goal is the request. mission.step.kind says what this',
   '    round is for: "reason" = plan the next calls; "verify" = check from the state whether the',
   '    goal is reached, and answer with NO calls if it is. Never claim it is without reading.',
-  '  - previousResults lists what already RAN in this mission and what each call answered. Build',
-  '    on it, never send a call that is already there.',
+  '  - previousResults lists what already RAN in this mission, the call and what it answered.',
+  '    Build on it, never send a call that is already there: a search that answered [] is an',
+  '    answer — list a folder or search other words, never the same query again.',
   '  - actions is a shortlist the studio picked for this step; their fields are in the Manual.',
   '    The Catalogue names every other action — name one and its fields come back next round.',
   // 🛑 Handed the document's state in the JSON, the model answered « la scène contient 4

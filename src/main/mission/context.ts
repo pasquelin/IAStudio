@@ -1,4 +1,5 @@
 import type { ActionHit } from '@main/actionIndex/actionIndex'
+import type { AssistantCall } from '@shared/domain/assistant'
 import type { Memory } from '@shared/domain/assistantMemory'
 import type { Job } from '@shared/domain/job'
 import type { Mission, MissionStepKind, MissionStepState } from '@shared/domain/mission'
@@ -93,7 +94,13 @@ export type AssistantContext = {
   actions: readonly ActionHit[]
   memories: readonly Memory[]
   jobs: readonly Job[]
-  previousResults: readonly { stepId: string; title: string; result: unknown }[]
+  /** What already ran — the call as it was sent, and what it answered — newest first. */
+  previousResults: readonly {
+    stepId: string
+    title: string
+    call?: AssistantCall
+    result: unknown
+  }[]
   projectContext?: ProjectContextSlice
   visual?: readonly VisualContext[]
   budget: ContextBudgetReport

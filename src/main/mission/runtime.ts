@@ -5,7 +5,6 @@ import {
   type ActionOutcome,
   type ActionResource,
   type AssistantAnswer,
-  type AssistantCall,
 } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
 import {
@@ -15,13 +14,14 @@ import {
   recoverInterruptedMission,
   type Mission,
   type MissionClock,
-  type MissionStepDraft,
 } from '@shared/domain/mission'
 import { refToString, type Ref } from '@shared/domain/ref'
 import type { AssistantBrain } from '@main/assistant/brainPort'
 import type { RemoteActions } from '@main/mcp/asking'
 import type { JobManager } from '@main/provider/jobManager'
 import type { AssistantContextBuilder } from './contextBuilder'
+import { repeatingOutcome, repeatsLastRound, unreadableOutcome } from './runtimeGuards'
+import { hasDependentVerification, plannedFrom, reasoningStep } from './runtimePlanning'
 import { assetIdsFromJobResult } from './jobResult'
 import type { MissionMetrics } from './metrics'
 import type { MissionManager, MissionScope } from './manager'
@@ -50,8 +50,6 @@ type RuntimeDeps = {
   metrics?: MissionMetrics
 }
 
-type PlannedStep = { title: string; draft: MissionStepDraft }
-
 const contextText = (context: Awaited<ReturnType<AssistantContextBuilder['build']>>): string => {
   const compact = {
     ...context,
@@ -61,18 +59,6 @@ const contextText = (context: Awaited<ReturnType<AssistantContextBuilder['build'
     value instanceof Uint8Array ? `[${value.byteLength} image bytes]` : value,
   )
 }
-
-const actionStep = (call: AssistantCall): PlannedStep => ({
-  title: call.action,
-  draft: { kind: 'action', call },
-})
-
-const reasoningStep = (): PlannedStep => ({ title: 'Continue mission', draft: { kind: 'reason' } })
-
-const verificationStep = (): PlannedStep => ({
-  title: 'Verify mission result',
-  draft: { kind: 'verify' },
-})
 
 const MAX_MISSION_STEPS = 48
 
@@ -174,77 +160,6 @@ function referenceRefusal(
     }
   }
   return null
-}
-
-function dependsOnReturned(
-  resource: ActionResource,
-  produced: ReadonlySet<ActionResource>,
-  visited: ReadonlySet<ActionResource> = new Set(),
-): boolean {
-  if (produced.has(resource)) return true
-  if (visited.has(resource)) return false
-  const nextVisited = new Set(visited).add(resource)
-  return ACTION_REGISTRY.filter(action => action.returns?.includes(resource)).some(action =>
-    (action.inputs ?? []).some(required => dependsOnReturned(required, produced, nextVisited)),
-  )
-}
-
-/**
- * 🛑 A READ never ends a mission: asked to « verify » right after `files.search`, the model
- * answered « the duplicate was created » about a duplicate nobody made — seven scenarios of the
- * first thirty-five (2026-09-06). What engages nothing is followed by planning, never by a check.
- */
-function nextStepAfter(call: AssistantCall | undefined): PlannedStep {
-  const descriptor = call ? assistantAction(call.action) : null
-  if (descriptor?.commitment === 'none') return reasoningStep()
-  const continues = [...(descriptor?.produces ?? []), ...(descriptor?.returns ?? [])].some(
-    resource =>
-      ACTION_REGISTRY.some(
-        action => action.inputs?.includes(resource) || action.requires?.includes(resource),
-      ),
-  )
-  return continues ? reasoningStep() : verificationStep()
-}
-
-function plannedFrom(
-  answer: AssistantAnswer,
-  verification: boolean,
-  verificationPlanned = false,
-): readonly PlannedStep[] {
-  if (answer.ask) {
-    return [
-      {
-        title: answer.ask.questions.map(question => question.question).join('\n'),
-        draft: { kind: 'user_input' },
-      },
-      reasoningStep(),
-    ]
-  }
-  const returned = new Set<ActionResource>()
-  const actions: PlannedStep[] = []
-  for (const call of answer.calls) {
-    const descriptor = assistantAction(call.action)
-    if ((descriptor?.inputs ?? []).some(resource => dependsOnReturned(resource, returned))) {
-      return [...actions, reasoningStep()]
-    }
-    actions.push(actionStep(call))
-    for (const resource of descriptor?.returns ?? []) returned.add(resource)
-  }
-  if (actions.length === 0) return verification ? [] : actions
-  const next = nextStepAfter(answer.calls.at(-1))
-  return verificationPlanned && next.draft.kind === 'verify' ? actions : [...actions, next]
-}
-
-// Failed rather than planned as zero steps, which closed the mission « completed » with nothing done.
-const unreadableOutcome: MissionStepOutcome = {
-  kind: 'failed',
-  error: 'the model answered nothing readable',
-}
-
-function hasDependentVerification(mission: Mission, stepId: string): boolean {
-  return mission.plan.steps.some(
-    step => step.kind === 'verify' && step.state === 'pending' && step.dependsOn.includes(stepId),
-  )
 }
 
 const jobIdOf = (value: unknown): string | null => {
@@ -378,7 +293,7 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       return {
         kind: 'planned',
         result: { say: answer.say, ask: answer.ask },
-        steps: plannedFrom(answer, true, hasDependentVerification(mission, step.id)),
+        steps: plannedFrom(answer, hasDependentVerification(mission, step.id)),
       }
     }
     const missing = missingResources(mission, step)
@@ -438,6 +353,14 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
     const passive = passiveOutcome(step, revision)
     if (passive) return passive
     if (step.kind === 'action') return await runAction(mission, step, signal, revision)
+    return await plan(mission, step, signal)
+  }
+
+  const plan = async (
+    mission: Mission,
+    step: Mission['plan']['steps'][number],
+    signal: AbortSignal,
+  ): Promise<MissionStepOutcome> => {
     if (mission.plan.steps.length >= MAX_MISSION_STEPS) {
       return { kind: 'failed', error: 'mission step limit reached' }
     }
@@ -450,11 +373,8 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
         : mission.goal,
     )
     if (answer.unreadable) return unreadableOutcome
-    const steps = plannedFrom(
-      answer,
-      step.kind === 'verify',
-      hasDependentVerification(mission, step.id),
-    )
+    if (repeatsLastRound(mission, step, answer)) return repeatingOutcome
+    const steps = plannedFrom(answer, hasDependentVerification(mission, step.id))
     if (mission.plan.steps.length + steps.length > MAX_MISSION_STEPS) {
       return { kind: 'failed', error: 'mission step limit reached' }
     }

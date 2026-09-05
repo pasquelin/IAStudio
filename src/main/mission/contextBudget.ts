@@ -15,7 +15,7 @@ export const CONTEXT_BUDGETS: Record<ContextSource, ContextSourceBudget> = {
   actions: { maxItems: 12, maxCharacters: 6_000 },
   memories: { maxItems: 6, maxCharacters: 4_000 },
   jobs: { maxItems: 6, maxCharacters: 2_000 },
-  results: { maxItems: 6, maxCharacters: 4_000 },
+  results: { maxItems: 12, maxCharacters: 4_000 },
   projectContext: { maxItems: 8, maxCharacters: 1_200 },
   visual: { maxItems: 2, maxCharacters: 0, maxBytes: 8_000_000 },
 }

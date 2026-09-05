@@ -227,28 +227,37 @@ function visualContext(collected: CollectedContext, report: ContextBudgetReport)
   return accepted
 }
 
+/**
+ * 🛑 What the model did, WITH the call: shown `files.search → []` five times without the query,
+ * it searched again with the same words, fifteen rounds in a row (2.5, 2026-09-06). Its own
+ * `say` is not a result and is left out; the newest come first, since the cut takes the tail.
+ */
 function previousResults(input: AssistantContextRequest, report: ContextBudgetReport) {
-  return (
-    input.mission.plan.steps
-      // Every action that RAN, answer or not: a rename answers nothing, and left out of this list
-      // the next round was handed the bare goal as if nothing had happened.
-      .filter(
-        step =>
-          step.state === 'completed' &&
-          step.id !== input.step.id &&
-          (step.kind === 'action' || step.result !== undefined),
-      )
-      .map(step => {
-        const result = compactContextValue(step.result, 600)
-        if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')
-        return { stepId: step.id, title: textWithin(step.title, 160), result: result.value }
-      })
-      .sort(
-        (left, right) =>
-          Number(input.step.dependsOn.includes(right.stepId)) -
-          Number(input.step.dependsOn.includes(left.stepId)),
-      )
-  )
+  return input.mission.plan.steps
+    .filter(
+      step =>
+        step.state === 'completed' &&
+        step.id !== input.step.id &&
+        step.kind !== 'reason' &&
+        step.kind !== 'verify' &&
+        (step.kind === 'action' || step.result !== undefined),
+    )
+    .map(step => {
+      const result = compactContextValue(step.result, 600)
+      if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')
+      return {
+        stepId: step.id,
+        title: textWithin(step.title, 160),
+        ...(step.kind === 'action' ? { call: step.call } : {}),
+        result: result.value,
+      }
+    })
+    .reverse()
+    .sort(
+      (left, right) =>
+        Number(input.step.dependsOn.includes(right.stepId)) -
+        Number(input.step.dependsOn.includes(left.stepId)),
+    )
 }
 
 function relevantJobs(

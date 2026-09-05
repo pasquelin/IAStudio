@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { AssistantCall } from '@shared/domain/assistant'
 import {
   missionTestBrain as brainWith,
   missionTestRuntime as runtimeWith,
@@ -38,6 +39,23 @@ describe('mission runtime rounds after the first', () => {
 
     expect(mission.plan.steps.map(step => step.kind)).toEqual(['reason', 'action', 'verify'])
     expect(requests[1]?.utterance).toContain('plan the next calls if it is not')
+  })
+
+  it('stops a model that sends the same reads as the round before', async () => {
+    const search: AssistantCall = { action: 'files.search', input: { query: 'boat' } }
+    const { brain, requests } = brainWith([
+      { say: '', calls: [search], cost: 0 },
+      { say: '', calls: [search], cost: 0 },
+      { say: 'never asked', calls: [], cost: 0 },
+    ])
+
+    const mission = await runtimeWith(brain).runtime.create('Find the boat', {})
+
+    expect(mission.state).toBe('failed')
+    expect(requests).toHaveLength(2)
+    expect(mission.plan.steps.at(-1)?.error).toBe(
+      'the model repeats the reads of its previous round',
+    )
   })
 
   it('fails the mission on an answer nothing could be read from', async () => {
