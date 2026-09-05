@@ -21,9 +21,8 @@ describe('WelcomeWindow', () => {
   })
 
   /**
-   * One mark, and OUTSIDE the rail. It used to open every slide: six copies of the same picture
-   * lived in the document at once — `getByRole` refused to answer at all — and the reader watched
-   * it slide off and come back on every step.
+   * One mark, and OUTSIDE the rail: opening every slide put six copies in the document at once,
+   * and `getByRole` refused to answer at all.
    */
   it('carries the mark once, above the carousel rather than on each slide', () => {
     render(<WelcomeWindow />)
@@ -43,9 +42,8 @@ describe('WelcomeWindow', () => {
   })
 
   /**
-   * The dots and the screens both come off `WELCOME_SLIDES` now. They were two positional arrays,
-   * so a screen inserted mid-list moved every title after it onto the wrong dot — and no case saw
-   * it, the count still matching.
+   * Dots and screens both come off `WELCOME_SLIDES`: as two positional arrays, a screen inserted
+   * mid-list moved every title after it onto the wrong dot, and the count still matched.
    */
   it('names each step with the screen that step opens', async () => {
     render(<WelcomeWindow />)

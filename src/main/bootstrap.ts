@@ -34,12 +34,7 @@ import {
 } from '@main/window/welcomeWindow'
 import { needsWelcome } from '@shared/domain/welcome'
 
-/**
- * The two windows a launch can open, and which of them the splash hands over to.
- *
- * Its own function because `startUp` crossed the size guard once the welcome joined it — and the
- * seam is a real one: everything above it is services, everything here is windows.
- */
+/** The two windows a launch can open, and which of them the splash hands over to. */
 function openStudioWindows(splash: Splash, settings: SettingsStore): void {
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
   // the other. Only a second launch overrides that — see `revealWindow`.

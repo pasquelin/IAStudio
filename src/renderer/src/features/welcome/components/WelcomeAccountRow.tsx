@@ -1,9 +1,7 @@
 import { WINDOW_CAPTION } from '@/components/windowStyles'
 
 /**
- * One stored key: the service's initial on a tile, the account name, the service under it.
- *
- * A MONOGRAM and not a logo — `@mdi/js` carries none of these five marks, and drawing them by hand
+ * A MONOGRAM and not a logo: `@mdi/js` carries none of these five marks, and drawing them by hand
  * would put SVG paths in a component, the one thing `UiIcon` exists to prevent.
  */
 export function WelcomeAccountRow({ name, service }: { name: string; service: string }) {

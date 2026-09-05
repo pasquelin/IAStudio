@@ -12,10 +12,7 @@ import { WelcomeCopy } from './WelcomeCopy'
 
 /**
  * The stored keys OR the form, never both (Alban): stacked they ran 536px into a 486px sheet.
- * Adding REPLACES the list, so no state of this screen scrolls.
- *
- * Rows are read-only — renaming and deleting belong to the preferences, where the credit balance
- * that goes with them is refreshed.
+ * Rows are read-only — renaming and deleting belong to the preferences.
  */
 export function WelcomeSlideAccount() {
   const { t } = useTranslation()

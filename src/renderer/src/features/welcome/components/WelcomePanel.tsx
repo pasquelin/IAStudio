@@ -2,11 +2,8 @@ import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 
 /**
- * A frosted sheet posed over the viewport. Without it the light theme left the account form as four
- * white boxes on a light floor, with nothing holding them.
- *
- * The ground is a surface token at an alpha — a scrim owes no ratio; what is written on it is
- * measured against `base-100`.
+ * A frosted sheet over the viewport. Its ground is a surface token at an alpha — a scrim owes no
+ * ratio; what is written on it is measured against `base-100`.
  */
 export function WelcomePanel({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (

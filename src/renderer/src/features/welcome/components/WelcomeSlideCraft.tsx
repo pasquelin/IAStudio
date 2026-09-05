@@ -9,8 +9,7 @@ const DECLARED = NAVIGATION_PRESETS.filter((value): value is DeclaredPreset => v
 
 /**
  * The one question a first launch cannot answer for anyone: which 3D software's gestures the
- * viewport imitates. The seven workspace chips that opened it are gone (Alban) — the bar shows
- * every space anyway.
+ * viewport imitates. The seven workspace chips that opened it are gone (Alban).
  */
 export function WelcomeSlideCraft() {
   const { t } = useTranslation()

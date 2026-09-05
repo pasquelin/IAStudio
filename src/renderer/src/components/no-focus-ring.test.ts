@@ -20,18 +20,16 @@ describe('keyboard focus', () => {
   })
 
   /**
-   * `:focus-within` is not a second way of saying the same thing: daisyUI writes its field ring on
-   * that selector alone, so the rule read as held while the windows built on its components — the
-   * welcome's account form, first of them — drew the outline anyway.
+   * `:focus-within` is not a second spelling: daisyUI writes its field ring on that selector alone,
+   * so the rule read as held while the welcome's account form drew the outline anyway.
    */
   it('covers the selector a component library reaches for, not only the bare one', () => {
     expect(stylesheet).toContain(':focus-within {')
   })
 
   /**
-   * daisyUI rings a field on `:focus`, `:focus-within` AND `:open`, and a select with its menu
-   * deployed matches the last of those alone — the ring came back for as long as the list was
-   * down, in the one window built on those components.
+   * daisyUI rings a field on `:focus`, `:focus-within` AND `:open` — a select with its menu down
+   * matches the last alone, so the ring came back for as long as the list was open.
    */
   it('covers a control whose menu is deployed, which neither focus selector matches', () => {
     expect(stylesheet).toMatch(/:open\s*\{\s*outline: none !important;/)
