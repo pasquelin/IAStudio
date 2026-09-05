@@ -69,7 +69,11 @@ function scalarSchema(field: ActionField): ScalarSchema {
   // other side of the colon.
   const closed = field.options
     ? field.kind === 'record'
-      ? { propertyNames: { enum: [...field.options] } }
+      ? {
+          propertyNames: {
+            enum: field.options.filter((option): option is string => typeof option === 'string'),
+          },
+        }
       : { enum: [...field.options] }
     : {}
 

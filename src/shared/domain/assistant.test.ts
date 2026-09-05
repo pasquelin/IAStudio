@@ -73,7 +73,7 @@ describe('the action registry', () => {
     const offered = assistantAction('command.runStudioCommand')?.fields[0]?.options ?? []
 
     expect(offered).toHaveLength(ids.length)
-    for (const id of offered) expect(ids, id).toContain(id)
+    for (const id of offered) expect(ids).toContain(id)
   })
 })
 
