@@ -33,7 +33,17 @@ vi.mock('dockview-react', () => ({
   Orientation: { HORIZONTAL: 'HORIZONTAL', VERTICAL: 'VERTICAL' },
   DockviewReact: (props: { onReady: (event: { api: unknown }) => void }) => {
     props.onReady({
-      api: { addPanel, getPanel, toJSON, fromJSON, onDidLayoutChange, onDidActivePanelChange },
+      api: {
+        addPanel,
+        getPanel,
+        get panels() {
+          return Object.keys(panels).map(id => ({ id }))
+        },
+        toJSON,
+        fromJSON,
+        onDidLayoutChange,
+        onDidActivePanelChange,
+      },
     })
     return <div data-testid="dockview" />
   },
