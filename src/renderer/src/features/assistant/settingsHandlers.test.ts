@@ -10,6 +10,11 @@ const ACCOUNTS: AccountSummary[] = [
   { id: 'acc-2', name: 'Perso', active: false },
 ]
 
+const ENABLED_MCP_SETTINGS = {
+  ...DEFAULT_SETTINGS,
+  mcp: { ...DEFAULT_SETTINGS.mcp, enabled: true },
+}
+
 beforeEach(() => {
   installFakeBridge()
 })
@@ -20,7 +25,7 @@ describe('the settings', () => {
   })
 
   it('writes one section without restating the others', async () => {
-    const write = vi.fn(async () => DEFAULT_SETTINGS)
+    const write = vi.fn(async () => ENABLED_MCP_SETTINGS)
     installFakeBridge({ settings: { write } })
 
     await runAction('settings.write', { settings: { mcp: { enabled: true } } })
@@ -43,6 +48,17 @@ describe('the settings', () => {
       await runAction('settings.write', { settings: { colours: { accent: 'red' } } }),
     ).toMatchObject({ ok: false, refusal: 'badInput' })
     expect(write).not.toHaveBeenCalled()
+  })
+
+  it('refuses a nested setting field the studio did not apply', async () => {
+    const write = vi.fn(async () => DEFAULT_SETTINGS)
+    installFakeBridge({ settings: { write } })
+
+    expect(
+      await runAction('settings.write', {
+        settings: { workspaces: { scene: { grid: { visible: true } } } },
+      }),
+    ).toMatchObject({ ok: false, refusal: 'badInput' })
   })
 
   /**
@@ -89,7 +105,7 @@ describe('the settings', () => {
 
   // Its neighbour in the same section is ordinary, which is what makes the refusal above narrow.
   it('still lets the entry point itself be switched', async () => {
-    const write = vi.fn(async () => DEFAULT_SETTINGS)
+    const write = vi.fn(async () => ENABLED_MCP_SETTINGS)
     installFakeBridge({ settings: { write } })
 
     expect(
