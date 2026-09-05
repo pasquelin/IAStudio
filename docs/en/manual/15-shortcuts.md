@@ -42,7 +42,7 @@ key marked `Z`, wherever that is on your keyboard: middle-left on AZERTY, bottom
 You press what you read.
 
 That is the rule every other application follows, and it holds for what the system keeps to
-itself too: `⌘Q` quits the studio, `⌘W` closes the window, `⌘M` minimises it. No command here can
+itself too: `⌘Q` quits the studio, `⌘M` minimises the window. No command here can
 take those keys.
 
 > **A key printing nothing the studio can read keeps its position.** That is the case for the

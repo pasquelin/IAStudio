@@ -42,7 +42,7 @@ touche marquée `Z`, où qu’elle soit sur votre clavier : au milieu à gauche 
 gauche sur un QWERTY. Vous appuyez sur ce que vous lisez.
 
 C’est la règle de toutes les autres applications, et elle vaut aussi pour ce que le système
-garde pour lui : `⌘Q` quitte le studio, `⌘W` ferme la fenêtre, `⌘M` la réduit. Aucune commande
+garde pour lui : `⌘Q` quitte le studio, `⌘M` réduit la fenêtre. Aucune commande
 d’ici ne peut prendre ces touches-là.
 
 > **Une touche qui n’écrit rien que le studio sache lire garde sa place.** C’est le cas des

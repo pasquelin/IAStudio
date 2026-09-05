@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { COMMAND_REGISTRY, type CommandId } from '@shared/domain/command'
+import type { DocumentDescriptor } from '@shared/domain/document'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { registerChatPanel } from '@/features/assistant/chatPanel'
 import { installFakeBridge } from '@/services/fakeBridge'
@@ -21,6 +22,20 @@ vi.mock('@/features/shell/otioImport', () => ({ importOtioz }))
 
 const createPicked = vi.fn()
 const openPicked = vi.fn()
+
+/** `activeId` also holds the `file:` id of a file view, so a tab in front has to be a real one. */
+const inFront = (
+  id: string,
+): { activeId: string; documents: Record<string, DocumentDescriptor> } => {
+  const document: DocumentDescriptor = {
+    id,
+    kind: 'scene',
+    title: id,
+    workspace: '3d',
+    path: `Scenes/${id}.gltf`,
+  }
+  return { activeId: id, documents: { [id]: document } }
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -111,10 +126,19 @@ describe('a command the application performs itself', () => {
     expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()
 
-    useDocuments.setState({ activeId: 'doc-1' })
+    useDocuments.setState(inFront('doc-1'))
 
     expect(routeCommand('document.close')).toBe('ran')
     expect(closeDocument).toHaveBeenCalledWith('doc-1')
+  })
+
+  // `closeDocument` finds no io for a `file:` id, so it asks nothing and drops the edits. The
+  // tab's own cross knows better and routes to `closeFileView`; ⌘W has no such branch.
+  it('refuses over a file view, which is a panel in front but not a document', () => {
+    useDocuments.setState({ activeId: 'file:src/main.ts', documents: {} })
+
+    expect(routeCommand('document.close')).toBe('noSurface')
+    expect(closeDocument).not.toHaveBeenCalled()
   })
 
   // ⌘W closes a tab or it closes nothing — the window is never the fallback, and the document
@@ -123,7 +147,7 @@ describe('a command the application performs itself', () => {
     const close = vi.fn()
     vi.stubGlobal('window', { close })
     useLayouts.setState({ home: true })
-    useDocuments.setState({ activeId: 'doc-1' })
+    useDocuments.setState(inFront('doc-1'))
 
     expect(routeCommand('document.close')).toBe('noSurface')
     expect(closeDocument).not.toHaveBeenCalled()

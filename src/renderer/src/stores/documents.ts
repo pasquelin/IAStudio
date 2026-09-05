@@ -379,13 +379,13 @@ export function useDocumentIsInFront(documentId: string): boolean {
   return useDocuments(state => state.activeId === documentId)
 }
 
-/**
- * The tab ⌘W acts on: the one in front, unless the home is covering the centre — closing from
- * there would drop a document nobody is looking at. Read by the router that runs the gesture and
- * by the menu that greys its row, so the two can never disagree about what is closable.
- */
+// The tab ⌘W acts on, read by the router AND by the menu that greys its row. A DOCUMENT, not
+// whatever panel is in front: `closeDocument` on a file view's `file:` id finds no io, so it
+// asks nothing and drops the edits. Nor one the home covers, which nobody is looking at.
 export function closableDocumentId(): string | null {
-  return homeIsVisible() ? null : useDocuments.getState().activeId
+  const { activeId, documents } = useDocuments.getState()
+  if (homeIsVisible() || activeId === null) return null
+  return documents[activeId] ? activeId : null
 }
 
 /**
