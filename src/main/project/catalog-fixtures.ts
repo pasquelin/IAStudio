@@ -15,6 +15,8 @@ export function memoryCatalog(file = ':memory:', disk: RescanDisk | null = null)
   return {
     add: async asset => catalog.add(asset),
     find: async assetId => catalog.find(assetId),
+    setAnimationPoster: async (id, sourcePath, posterPath) =>
+      catalog.setAnimationPoster(id, sourcePath, posterPath),
     findByHash: async hash => catalog.findByHash(hash),
     findByRemoteId: async remoteAssetId => catalog.findByRemoteId(remoteAssetId),
     search: async query => catalog.search(query),

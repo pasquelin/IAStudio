@@ -18,7 +18,7 @@ export async function saveAnimationThumbnail(
   value: unknown,
   root: string,
   find: (id: string) => Promise<Asset | null>,
-  save: (asset: Asset) => Promise<unknown>,
+  publish: (assetId: string, sourcePath: string, posterPath: string) => Promise<boolean>,
 ): Promise<void> {
   const request = requestSchema.parse(value)
   if (request.projectPath !== root) throw new Error('The thumbnail belongs to another project')
@@ -32,5 +32,5 @@ export async function saveAnimationThumbnail(
   if (!file) throw new Error('The thumbnail is outside the project')
   await mkdir(dirname(file), { recursive: true })
   await writeAtomic(file, request.png)
-  await save({ ...asset, posterPath, localChangedAt: new Date().toISOString() })
+  await publish(asset.id, asset.path, posterPath)
 }

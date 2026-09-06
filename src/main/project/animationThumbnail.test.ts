@@ -29,7 +29,7 @@ afterEach(async () => {
 })
 
 it('persists the PNG beside the clip and keeps it after the disposable cache is removed', async () => {
-  const save = vi.fn(async (_asset: Asset) => undefined)
+  const save = vi.fn(async () => true)
   await saveAnimationThumbnail(
     { projectPath: root, assetId: asset.id, sourcePath: asset.path, png },
     root,
@@ -39,12 +39,10 @@ it('persists the PNG beside the clip and keeps it after the disposable cache is 
   await mkdir(join(root, '.index'), { recursive: true })
   await rm(join(root, '.index'), { recursive: true })
   expect(new Uint8Array(await readFile(join(root, 'Animations/Jump.glb.thumb.png')))).toEqual(png)
-  expect(save).toHaveBeenCalledWith(
-    expect.objectContaining({ id: asset.id, posterPath: 'Animations/Jump.glb.thumb.png' }),
-  )
+  expect(save).toHaveBeenCalledWith(asset.id, asset.path, 'Animations/Jump.glb.thumb.png')
 })
 it('refuses a result that belongs to an old project or a moved animation', async () => {
-  const save = vi.fn(async (_asset: Asset) => undefined)
+  const save = vi.fn(async () => true)
   const request = { projectPath: root, assetId: asset.id, sourcePath: asset.path, png }
   await expect(
     saveAnimationThumbnail(

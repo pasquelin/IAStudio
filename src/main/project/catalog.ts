@@ -53,6 +53,10 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
   return {
     add: asset => addAsset(asset, assets),
+    setAnimationPoster: (assetId, sourcePath, posterPath) => {
+      assets.setAnimationPoster.run(posterPath, new Date().toISOString(), assetId, sourcePath)
+      return (optionalNumber(paths.rowsChanged.get() ?? {}, 'touched') ?? 0) > 0
+    },
 
     find: assetId => {
       const row = assets.selectAsset.get(assetId)

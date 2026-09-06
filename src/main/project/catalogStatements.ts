@@ -18,6 +18,11 @@ export function assetStatements(driver: SqliteDriver) {
   `)
   return {
     insertAsset,
+    setAnimationPoster: driver.prepare(`
+      UPDATE assets SET poster_path = ?, local_changed_at = ?
+      WHERE id = ? AND path = ? AND type = 'animation'
+        AND missing_at IS NULL AND poster_path IS NULL
+    `),
     deleteTags: driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?'),
     insertTag: driver.prepare('INSERT OR IGNORE INTO asset_tags (asset_id, tag) VALUES (?, ?)'),
     selectTags: driver.prepare('SELECT tag FROM asset_tags WHERE asset_id = ?'),

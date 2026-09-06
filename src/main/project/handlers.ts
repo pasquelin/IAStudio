@@ -375,7 +375,7 @@ export function registerProjectHandlers({
       request,
       root,
       id => catalog.find(id),
-      asset => catalog.add(asset),
+      (id, sourcePath, posterPath) => catalog.setAnimationPoster(id, sourcePath, posterPath),
     )
   })
   handle(CHANNELS.assetsSaveAnimation, async (_event, value) => {

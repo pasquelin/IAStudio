@@ -33,6 +33,7 @@ export type CatalogPort = {
  * frozen for that long (CLAUDE.md, invariant 6).
  */
 export type AsyncCatalog = {
+  setAnimationPoster: (assetId: string, sourcePath: string, posterPath: string) => Promise<boolean>
   add: (asset: Asset) => Promise<Asset>
   find: (assetId: string) => Promise<Asset | null>
   findByHash: (hash: string) => Promise<Asset | null>
@@ -202,6 +203,14 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     })
 
   return {
+    setAnimationPoster: (assetId, sourcePath, posterPath) =>
+      send<'setAnimationPoster'>(id => ({
+        id,
+        op: 'setAnimationPoster',
+        assetId,
+        sourcePath,
+        posterPath,
+      })),
     add: asset => send<'add'>(id => ({ id, op: 'add', asset })),
 
     find: assetId => send<'find'>(id => ({ id, op: 'find', assetId })),
