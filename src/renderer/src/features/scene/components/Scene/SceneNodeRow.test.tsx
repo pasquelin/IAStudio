@@ -18,6 +18,13 @@ describe('a scene node as a line', () => {
     expect(screen.getByText('player.ts')).toBeInTheDocument()
   })
 
+  /** 🛑 A reference, not a path: slicing on the last `/` showed `script:Walk.ts` whole. */
+  it('names a script filed at the ROOT of the project by its file name too', () => {
+    shown([{ ...newComponent('Script'), script: 'script:Walk.ts' }])
+
+    expect(screen.getByText('Walk.ts')).toBeInTheDocument()
+  })
+
   it('says nothing beside a node that runs none, nor beside one naming no file', () => {
     shown()
     shown([newComponent('Script')])

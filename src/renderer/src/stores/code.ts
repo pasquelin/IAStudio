@@ -191,6 +191,15 @@ export const useCode = create<CodeStoreState>()((set, get) => ({
 /** The `script:` reference a path spells, for a caller holding the descriptor rather than an id. */
 export const scriptRefAt = (path: string): string => refToString({ kind: 'script', path })
 
+/**
+ * The path back out of a `script:` reference — the value itself when it is not one, so a
+ * component written before references existed still names a file rather than nothing.
+ */
+export function scriptPathOf(script: string): string {
+  const ref = refFromString(script)
+  return ref?.kind === 'script' ? ref.path : script
+}
+
 /** The `script:` reference of an OPEN document — `null` once the descriptor has left the store.
  * The centre keys tabs by document id where everything else names a script by PATH. */
 export function scriptRefOf(documentId: string): string | null {
@@ -224,9 +233,7 @@ export function codeFileOf(documentId: string): CodeFile | undefined {
 
 /**
  * The scripts of the project, in one order — what a Play compiles and what `script.list` says.
- *
- * 🛑 Takes the FILES rather than the store, so a memo can hold it: it BUILDS an array, and a
- * component subscribing through it re-rendered for ever.
+ * Takes the FILES, so a memo can hold it: it builds an array, and a selector that does loops.
  */
 export function codeFilesOf(state: Pick<CodeStoreState, 'files'>): readonly CodeFile[] {
   return Object.values(state.files).sort((one, other) => byCodeUnit(one.script, other.script))

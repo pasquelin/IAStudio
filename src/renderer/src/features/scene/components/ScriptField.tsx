@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { refFromString } from '@shared/domain/ref'
+import { nameOf } from '@shared/domain/folder'
 import { LinkField } from '@/components/LinkField/LinkField'
 import type { LinkOption } from '@/components/LinkField/linkOption'
 import { openDocumentById } from '@/helpers/openAsset'
-import { codeFilesOf, useCode } from '@/stores/code'
+import { codeFilesOf, scriptPathOf, useCode } from '@/stores/code'
 import { documentAtPath, useDocuments } from '@/stores/documents'
 
 export type ScriptFieldProps = {
@@ -18,29 +18,34 @@ export type ScriptFieldProps = {
  * The script a component runs, chosen from the project's own — the row a texture and a typeface
  * are chosen by, so the panel says « a file » the same way everywhere.
  *
- * A script the component names and the project no longer holds is offered all the same, marked
- * as missing: dropping it from the list would rewrite the component on the first edit, which is
- * the one thing a missing link must not do — see `FontField`, which holds the same line.
+ * 🛑 A script the project no longer holds stays OFFERED, marked missing: dropping it would
+ * rewrite the component on the first edit, which is what a missing link must never do.
  */
 export function ScriptField({ label, value, onChange, scId }: ScriptFieldProps) {
   const { t } = useTranslation()
-  // 🛑 The RAW record, sorted under a memo: `codeFilesOf` builds a new array per call, and a
-  // selector that does re-renders for ever — React tells you the snapshot is not cached.
   const files = useCode(state => state.files)
-  const documents = useDocuments(state => state)
+
+  // 🛑 Read from the DISK on opening, as `FontField` asks the machine for its faces: `files` is
+  // what is open or last compiled, not what the project holds — closing a tab drops its entry
+  // (`forget`), and the row then called a perfectly good script missing.
+  useEffect(() => {
+    void useCode.getState().reload()
+  }, [])
+  // Selected APART and joined in a memo, the convention `useDocumentOptions` states: the store
+  // object changes identity on every tab gesture, so subscribing to it re-renders on each one.
+  const documents = useDocuments(state => state.documents)
+  const stored = useDocuments(state => state.stored)
 
   const options = useMemo<LinkOption[]>(() => {
-    const held = codeFilesOf({ files }).map(file => ({
-      id: file.script,
-      name: nameOf(file.script),
-    }))
+    const held = named(codeFilesOf({ files }).map(file => file.script))
     const known = value === '' || held.some(one => one.id === value)
     return known
       ? held
-      : [...held, { id: value, name: t('inspector.scriptMissing', { name: nameOf(value) }) }]
+      : [...held, { id: value, name: t('inspector.scriptMissing', { name: fileOf(value) }) }]
   }, [files, value, t])
 
-  const open = pathOf(value) === null ? null : documentAtPath(documents, pathOf(value) ?? '')
+  const path = value === '' ? null : scriptPathOf(value)
+  const open = path === null ? null : documentAtPath({ documents, stored }, path)
 
   return (
     <LinkField
@@ -49,6 +54,8 @@ export function ScriptField({ label, value, onChange, scId }: ScriptFieldProps) 
       options={options}
       onChange={id => onChange(id ?? '')}
       emptyLabel={t('inspector.scriptNone')}
+      // Never reached, the memo appending the held value as its own option — the prop is
+      // required all the same, as `FontField` notes for the same reason.
       missingLabel={t('inspector.noScriptOffered')}
       clearLabel={t('inspector.clearScript')}
       clearHint={t('inspector.clearScriptHint')}
@@ -66,14 +73,20 @@ export function ScriptField({ label, value, onChange, scId }: ScriptFieldProps) 
   )
 }
 
-/** What a `script:` reference names on disk, or nothing when the value is not one. */
-function pathOf(value: string): string | null {
-  const ref = refFromString(value)
-  return ref?.kind === 'script' ? ref.path : null
+/**
+ * By file name, the row being narrow — and by PATH for those that would otherwise read alike:
+ * `Scripts/player.ts` and `Enemies/player.ts` were two identical rows nobody could tell apart.
+ */
+function named(scripts: readonly string[]): LinkOption[] {
+  const seen = new Map<string, number>()
+  for (const script of scripts) seen.set(fileOf(script), (seen.get(fileOf(script)) ?? 0) + 1)
+  return scripts.map(script => ({
+    id: script,
+    name: (seen.get(fileOf(script)) ?? 0) > 1 ? scriptPathOf(script) : fileOf(script),
+  }))
 }
 
-/** The file's own name, folders left out: the row is narrow and the path is what the menu holds. */
-function nameOf(value: string): string {
-  const path = pathOf(value) ?? value
-  return path.slice(path.lastIndexOf('/') + 1)
+/** The file's own name, folders left out. */
+function fileOf(value: string): string {
+  return nameOf(scriptPathOf(value))
 }

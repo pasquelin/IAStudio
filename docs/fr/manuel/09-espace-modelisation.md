@@ -1465,9 +1465,14 @@ le navigateur qui l’exige, pas le studio.
 |---|---|---|
 | Marcher | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> ou les flèches | stick gauche |
 | Courir | <kbd>Maj</kbd> | clic du stick gauche |
-| Regarder | souris, **bouton maintenu** | stick droit, **sans rien tenir** |
+| Regarder | souris, **bouton maintenu**, non rebindable | stick droit, **sans rien tenir** |
 | Sauter | <kbd>Espace</kbd> | ✕ / A |
 | Interagir | <kbd>E</kbd> | ▢ / X |
+
+> **Interagir et Sortir n’agissent pas d’eux-mêmes.** Le studio lit ces deux commandes et les
+> passe à votre script : ce que « interagir » veut dire devant un objet, et ce que sortir d’une
+> voiture veut dire, n’appartiennent qu’à votre jeu. Le script posé par le modèle montre où les
+> brancher.
 
 **Au volant**
 
@@ -1512,7 +1517,7 @@ Les commandes ci-dessus sont un **point de départ**, pas une limite. Une **cart
 du projet les remplace, contexte par contexte.
 
 **Les cinq modèles de scène jouables en posent une, et vous n’avez rien à faire pour cela.**
-Créez une scène « Première personne », « Troisième personne » ou « Vue de dessus » et le projet
+Créez une scène « 1re personne », « 3e personne » ou « Vue de dessus » et le projet
 reçoit `Controls/character.input.json` plus un script `Scripts/player.ts` accroché au personnage ;
 « Voiture » et « Avion » posent les leurs. Ouvrez-les, changez-les — c’est ce qu’ils sont là pour
 montrer. Une seconde scène du même modèle **rejoint** ces fichiers au lieu de les réécrire : une
@@ -1520,7 +1525,8 @@ carte appartient au projet, pas à la scène.
 
 Le bouton **Nouvelle carte de contrôles** de l’Explorateur en crée une à la main, depuis l’un des
 cinq points de départ standards — *studio*, *personnage*, *véhicule*, *vol*, *menu*. Elles se
-rangent dans le dossier **Contrôles du jeu**, au sommet du projet, comme les interfaces.
+rangent dans le dossier **Contrôles du jeu** — `Controls/` sur le disque — au sommet du projet,
+comme les interfaces.
 
 Une carte nomme des **actions** — `move`, `look`, `jump`, `run`, `interact` pour un personnage —
 et dit quelles touches, quels sticks et quels boutons les atteignent. **Ce que la carte du projet
@@ -1529,8 +1535,12 @@ aucune carte marche donc exactement comme le tableau ci-dessus.
 
 Un contexte porte aussi une **priorité** et un drapeau **Actif au démarrage**. Les contextes
 *personnage*, *véhicule* et *vol* sont actifs d’emblée — aucun nom d’action ne leur est commun,
-donc ils ne se marchent pas dessus. Le contexte *menu*, lui, **prime** sur les autres : c’est à un
-script de le pousser quand un menu s’ouvre, et de le retirer quand il se ferme.
+donc ils ne se marchent pas dessus.
+
+Deux préréglages demandent qu’on crée leur carte pour exister. Le contexte *menu* **prime** sur les
+autres, et c’est à un script de le pousser quand un menu s’ouvre : sans la carte, la demande ne
+fait rien. Le préréglage *studio*, lui, décrit la navigation de l’interface du studio, que le
+réglage des préférences pilote directement — le rebinder ne change encore rien.
 
 Un script lit ces mêmes actions par leur nom, jamais une touche :
 

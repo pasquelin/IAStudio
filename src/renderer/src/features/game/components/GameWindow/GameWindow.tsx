@@ -1,6 +1,7 @@
 import { mdiGamepadVariantOutline } from '@mdi/js'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { WindowDragBand } from '@/components/WindowDragBand'
 import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import { EmptyState } from '@/components/EmptyState'
 import { SceneRenderer } from '@/engines/scene/SceneRenderer'
@@ -86,6 +87,9 @@ export function GameWindow() {
   return (
     <div className="bg-monitor relative h-full w-full">
       <div ref={hostRef} className="absolute inset-0" />
+      {/* 🛑 The window wears NO title bar — see `openGameWindow` — so without this band nothing
+          moves it, on any platform. */}
+      <WindowDragBand />
       {report === null && (
         <div className="pointer-events-none absolute inset-0">
           <EmptyState icon={mdiGamepadVariantOutline} message={t('game.window.waiting')} />

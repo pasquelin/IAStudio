@@ -6,6 +6,7 @@ import { documentPathFor } from '@shared/domain/documentName'
 import type { SceneTemplateId } from '@shared/domain/sceneTemplate'
 import { TEMPLATE_SCRIPT_SOURCES, type TemplateScriptId } from '@shared/domain/templateScript'
 import { getBridge } from '@/services/bridge'
+import { scriptRefAt, useCode } from '@/stores/code'
 import { useDocuments } from '@/stores/documents'
 
 /** What each template plays with — the script its pilot carries, and the context that drives it. */
@@ -53,6 +54,14 @@ async function writeScript(script: TemplateScriptId, folder: string): Promise<vo
   const bridge = getBridge()
   if (!bridge) return
   const path = documentPathFor(script, 'script', folder)
-  // Refused rather than overwritten by the main process, so a second scene keeps the first's work.
-  await bridge.game.writeScript(path, TEMPLATE_SCRIPT_SOURCES[script])
+  // 🛑 Asked BEFORE writing, as `writeMap` asks for its own: `game.writeScript` OVERWRITES, so a
+  // second scene from one template threw away whatever the first one's author had written in it.
+  const held = await orElse(bridge.game.scripts(), [])
+  if (held.some(one => one.path.toLowerCase() === path.toLowerCase())) return
+
+  const source = TEMPLATE_SCRIPT_SOURCES[script]
+  await bridge.game.writeScript(path, source)
+  // 🛑 Told to the editor's own store, which is what the inspector reads: without it the script
+  // this very function just wrote reads as missing in the field that points at it.
+  useCode.getState().installed(scriptRefAt(path), source)
 }

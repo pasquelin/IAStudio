@@ -21,6 +21,8 @@ const DRAGS_A_BAR = /style=\{DRAGGABLE\}/
 const DECLARE_BARS: readonly string[] = [
   './components/WindowTitleBar.tsx',
   './features/shell/components/TitleBar/TitleBar.tsx',
+  // Names nothing and insets nothing: the band a window with no title bar at all is moved by.
+  './components/WindowDragBand.tsx',
 ]
 
 describe('the bar over a window', () => {

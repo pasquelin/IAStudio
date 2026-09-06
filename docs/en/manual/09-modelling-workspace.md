@@ -1420,9 +1420,13 @@ the browser's requirement, not the studio's.
 |---|---|---|
 | Walk | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrows | left stick |
 | Run | <kbd>Shift</kbd> | left stick click |
-| Look | mouse, **button held** | right stick, **nothing held** |
+| Look | mouse, **button held**, not rebindable | right stick, **nothing held** |
 | Jump | <kbd>Space</kbd> | ✕ / A |
 | Interact | <kbd>E</kbd> | ▢ / X |
+
+> **Interact and Get out do nothing on their own.** The studio reads those two and hands them to
+> your script: what interacting with the thing in front of you means, and what getting out of a
+> car means, belong to your game alone. The script the template lays down shows you where.
 
 **Driving**
 
@@ -1466,13 +1470,13 @@ context by context.
 
 **The five playable scene templates lay one down, with nothing for you to do.** Create a First
 person, Third person or Top down scene and the project gets `Controls/character.input.json` plus a
-`Scripts/player.ts` hung on the character; Car and Aeroplane lay down their own. Open them, change
+`Scripts/player.ts` hung on the character; Car and Aircraft lay down their own. Open them, change
 them — showing you that is what they are for. A second scene from the same template **joins** those
 files rather than rewriting them: a control map belongs to the project, not to the scene.
 
 The **New control map** button in the Explorer creates one by hand, from any of the five standard
 starting points — *studio*, *character*, *vehicle*, *flight*, *menu*. They are filed under **Game
-controls**, at the top of the project, as interfaces are.
+controls** — `Controls/` on disk — at the top of the project, as interfaces are.
 
 A map names **actions** — `move`, `look`, `jump`, `run`, `interact` for a character — and says
 which keys, sticks and buttons reach them. **What the project's map declares wins; what it leaves
@@ -1481,8 +1485,12 @@ tables above.
 
 A context also carries a **priority** and an **Active at startup** flag. The *character*, *vehicle*
 and *flight* contexts are active from the start — no action name is shared between them, so they
-do not tread on one another. The *menu* context **primes** over the rest: it is for a script to
-push when a menu opens, and to drop when it closes.
+do not tread on one another.
+
+Two starting points need their map to exist at all. The *menu* context **primes** over the rest,
+and it is for a script to push when a menu opens: with no map, the ask does nothing. The *studio*
+one describes walking the studio's own interface, which the setting drives directly — rebinding
+it changes nothing yet.
 
 A script reads those same actions by name, never a key:
 
