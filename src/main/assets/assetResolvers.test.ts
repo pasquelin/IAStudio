@@ -12,6 +12,7 @@ const { TEMPLATE_HOST } = await import('@shared/domain/sceneTemplate')
 const { ANIMATION_HOST } = await import('@shared/domain/animationLibrary')
 const { MODEL_HOST } = await import('@shared/domain/localModel')
 const { TEXTURE_HOST } = await import('@shared/domain/checkerTexture')
+const { CHARACTER_HOST } = await import('@shared/domain/bundledCharacter')
 const { CATALOGUE_CLOSED } = await import('@main/project/catalogClient')
 const { NoProjectError } = await import('@main/project/store')
 
@@ -39,6 +40,7 @@ const hostsWith = (overrides: Partial<Deps> = {}) =>
     bundledTemplate: file => Promise.resolve(`/resources/templates/${file}`),
     bundledModel: file => Promise.resolve(`/resources/models/${file}`),
     bundledTexture: file => Promise.resolve(`/resources/textures/${file}`),
+    bundledCharacter: file => Promise.resolve(`/resources/characters/${file}`),
     ...overrides,
   })
 
@@ -111,6 +113,7 @@ describe('what the asset scheme resolves', () => {
     [MODEL_HOST, 'text.png', '/resources/models/text.png'],
     [ANIMATION_HOST, 'walk', '/resources/animations/walk'],
     [TEXTURE_HOST, 'GridLarge.png', '/resources/textures/GridLarge.png'],
+    [CHARACTER_HOST, 'HeroMedium.glb', '/resources/characters/HeroMedium.glb'],
   ])('serves %s with no project open', async (host, key, file) => {
     const hosts = hostsWith({ projectPath: () => null })
 

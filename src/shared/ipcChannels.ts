@@ -134,6 +134,7 @@ export const CHANNELS: Channels = {
   assetsReadLayered: 'assets:read-layered',
   assetsSaveTexture: 'assets:save-texture',
   texturesInstallBundled: 'textures:install-bundled',
+  charactersInstallBundled: 'characters:install-bundled',
   assetsExtractTextures: 'assets:extract-textures',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',

@@ -228,6 +228,7 @@ const bridge: StudioBridge = {
     readLayered: assetId => ipcRenderer.invoke(CHANNELS.assetsReadLayered, assetId),
     saveTexture: request => ipcRenderer.invoke(CHANNELS.assetsSaveTexture, request),
     installBundledTextures: () => ipcRenderer.invoke(CHANNELS.texturesInstallBundled),
+    installBundledCharacter: level => ipcRenderer.invoke(CHANNELS.charactersInstallBundled, level),
     extractTextures: assetId => ipcRenderer.invoke(CHANNELS.assetsExtractTextures, assetId),
     update: (assetId, changes) => ipcRenderer.invoke(CHANNELS.assetsUpdate, assetId, changes),
     remove: (assetIds, alsoRemote) =>

@@ -4,7 +4,8 @@ import { join } from 'node:path'
 import { app } from 'electron'
 import { registerAssetHandlers } from '@main/assets/handlers'
 import { registerBundledTextureHandlers } from '@main/assets/bundledTextures'
-import { bundledTextures, resourcesRoot } from '@main/resources'
+import { registerBundledCharacterHandlers } from '@main/assets/bundledCharacters'
+import { bundledCharacters, bundledTextures, resourcesRoot } from '@main/resources'
 import { registerDiagnosticsHandlers } from '@main/diagnostics/handlers'
 import { createInstalledFonts } from '@main/fonts/disk'
 import { registerAnimationHandlers } from '@main/animations'
@@ -165,6 +166,14 @@ export function registerIpc(services: Services): void {
     folder: () => bundledTextures(resourcesRoot()),
     projectPath: () => services.project.path(),
     roles: () => services.project.roles(),
+    exists: services.exists,
+  })
+  registerBundledCharacterHandlers({
+    catalog: () => services.project.catalog(),
+    assets: services.assets,
+    newAssetId: services.newAssetId,
+    folder: () => bundledCharacters(resourcesRoot()),
+    projectPath: () => services.project.path(),
     exists: services.exists,
   })
   registerGitIpc(services)
