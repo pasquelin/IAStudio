@@ -82,6 +82,9 @@ export abstract class SceneRendererFilm extends SceneRendererPreview {
               // The arrows a person drags an object by. They stand where the object stands, so a camera
               // aimed at a selected node fills its preview — and its film — with the tool instead.
               hide(this.gizmo?.getHelper())
+              // Furniture too, but held by a material flag rather than a `visible`, so it is
+              // remembered here rather than pushed onto `hidden`.
+              const tinted = this.relief.showMaskTint?.(false) === true
               const hideWorkshopStep5 = () => {
                 // A rail is a working aid like the grid, not something a shot puts on screen: drawn, its
                 // line and its knobs would run across every previewed and every rendered frame.
@@ -90,6 +93,7 @@ export abstract class SceneRendererFilm extends SceneRendererPreview {
                 }
                 return () => {
                   for (const object of hidden) object.visible = true
+                  if (tinted) this.relief.showMaskTint?.(true)
                   if (masked) this.applyVisibility()
                   // 🛑 The zone back where it was found. Left on the preview's own, the next pane widens it
                   // again and answers « moved », which redraws every shadow map — every frame a preview is

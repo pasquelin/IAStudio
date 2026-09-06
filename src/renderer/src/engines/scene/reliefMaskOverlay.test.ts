@@ -57,7 +57,7 @@ function heightAt(surface: ReturnType<typeof createReliefSurface>, localX: numbe
 describe('a painted mask overlay on a drawn terrain', () => {
   it('tints vertices the mask covers even when the sculpt is empty', () => {
     const samples = samplesOf()
-    const surface = createReliefSurface(new Scene())
+    const surface = createReliefSurface(new Scene(), { maskTint: true })
     surface.sync(worldOf({ kind: 'painted', weights: { chunks: [] } }), samples)
     const uncovered = colorAt(surface, 4, 0)
     expect(uncovered).toEqual([1, 1, 1])
@@ -80,7 +80,7 @@ describe('a painted mask overlay on a drawn terrain', () => {
   })
 
   it('leaves a terrain with no painted mask untouched', () => {
-    const surface = createReliefSurface(new Scene())
+    const surface = createReliefSurface(new Scene(), { maskTint: true })
 
     surface.sync(worldOf(), samplesOf())
 

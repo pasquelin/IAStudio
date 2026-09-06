@@ -176,4 +176,19 @@ describe('where the relief geometry is built', () => {
     expect(handed.at(-1)?.builder).toBeDefined()
     renderer.dispose()
   })
+
+  it('asks for the mask tint for the studio, and not for a window that plays the scene', () => {
+    handed.length = 0
+
+    const studio = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+    const asked = handed.at(-1)?.maskTint
+    const played = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn(), chrome: false })
+
+    // 🛑 The played scene builds its relief through `gameSceneWorld`, which asks for no tint at
+    // all: born tinted, the stencil somebody painted would be in the game itself.
+    expect(asked).toBe(true)
+    expect(handed.at(-1)?.maskTint).toBe(false)
+    studio.dispose()
+    played.dispose()
+  })
 })
