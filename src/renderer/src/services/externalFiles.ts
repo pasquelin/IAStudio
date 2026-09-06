@@ -106,14 +106,16 @@ async function handImported(
   onImported?: ExternalAssetReceiver,
 ): Promise<void> {
   reportImportNotices(imported)
-  const { generateAnimationThumbnails } = await import('./animationThumbnails')
-  await generateAnimationThumbnails(imported.assets)
   if (imported.montages.length > 0) {
     const { openImportedOtioz } = await import('@/features/shell/otioImport')
     for (const montage of imported.montages) await openImportedOtioz(montage)
   }
 
   if (imported.assets.length > 0) await useAssets.getState().refresh()
+  // AFTER the refresh and after the montages: a render costs seconds each, and awaiting the
+  // batch first held a dropped `.otioz` behind fifty clips. The pass refreshes again itself.
+  const { generateAnimationThumbnails } = await import('./animationThumbnails')
+  await generateAnimationThumbnails(imported.assets)
   if (imported.documents.length > 0) {
     await useDocuments.getState().relist()
     const { openDocument } = await import('@/features/shell/components/dockviewApi')

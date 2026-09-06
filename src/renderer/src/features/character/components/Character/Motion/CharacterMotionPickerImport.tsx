@@ -35,9 +35,11 @@ export function CharacterMotionPickerImport({ onChoose }: CharacterMotionPickerI
     }
 
     reportImportNotices(imported)
-    const { generateAnimationThumbnails } = await import('@/services/animationThumbnails')
-    await generateAnimationThumbnails(imported.assets)
     if (imported.assets.length > 0) await useAssets.getState().refresh()
+    // Not awaited, and after the refresh: the shelf shows what came in at once, and each still
+    // lands as it is drawn — the pass refreshes again itself and reports its own failures.
+    const { generateAnimationThumbnails } = await import('@/services/animationThumbnails')
+    void generateAnimationThumbnails(imported.assets)
 
     const motions = imported.assets.filter(asset => asset.type === 'animation')
     if (motions.length === 0) {
