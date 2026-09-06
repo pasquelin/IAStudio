@@ -5,11 +5,9 @@ import {
   WELCOME_HEIGHT,
   WELCOME_RADIUS,
   WELCOME_SWING,
+  WELCOME_SWING_RATE,
   WELCOME_TARGET,
-  WELCOME_TURN_PER_SLIDE,
-  WELCOME_TURN_RATE,
   welcomeAzimuth,
-  welcomeHeroTurn,
   welcomePose,
 } from './welcomeMotion'
 
@@ -55,28 +53,24 @@ describe('the welcome camera', () => {
   })
 })
 
-describe('the welcome hero', () => {
-  it('turns by a whole step per slide, so advancing is something the reader sees move', () => {
-    expect(welcomeHeroTurn(3) - welcomeHeroTurn(2)).toBeCloseTo(WELCOME_TURN_PER_SLIDE)
-  })
-
-  it('takes the same time to catch a heading whatever the frame rate', () => {
-    const slow = approach(0, 1, 0.5, WELCOME_TURN_RATE)
+describe('the settling of the swing', () => {
+  it('takes the same time to catch an azimuth whatever the frame rate', () => {
+    const slow = approach(0, 1, 0.5, WELCOME_SWING_RATE)
     const fast = Array.from({ length: 30 }).reduce<number>(
-      turn => approach(turn, 1, 0.5 / 30, WELCOME_TURN_RATE),
+      swing => approach(swing, 1, 0.5 / 30, WELCOME_SWING_RATE),
       0,
     )
 
     expect(fast).toBeCloseTo(slow, 6)
   })
 
-  it('closes on its heading without ever passing it, a rotation that overshoots reading as a jolt', () => {
-    let turn = 0
+  it('closes on its azimuth without ever passing it, a camera that overshoots reading as a jolt', () => {
+    let swing = 0
     for (let step = 0; step < 200; step += 1) {
-      turn = approach(turn, WELCOME_TURN_PER_SLIDE, 1 / 60, WELCOME_TURN_RATE)
-      expect(turn).toBeLessThanOrEqual(WELCOME_TURN_PER_SLIDE)
+      swing = approach(swing, WELCOME_SWING, 1 / 60, WELCOME_SWING_RATE)
+      expect(swing).toBeLessThanOrEqual(WELCOME_SWING)
     }
 
-    expect(turn).toBeCloseTo(WELCOME_TURN_PER_SLIDE, 3)
+    expect(swing).toBeCloseTo(WELCOME_SWING, 3)
   })
 })

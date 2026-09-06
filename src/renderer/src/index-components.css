@@ -103,6 +103,8 @@
   --color-viewport: #babdc4;
   --color-viewport-line: #9aa0a8;
   --color-mesh: #6b7078;
+  /* Deepened as every pigment is here: the dark theme's mint washes out on a pale ground. */
+  --color-foliage: #3f8a71;
   /*
    * Black in both themes, on purpose. A picture is judged against the black it will be shown
    * on, whatever the studio's own chrome is doing — the same trade the opaque window makes.

@@ -4,14 +4,16 @@ export type WelcomePoint = { x: number; y: number; z: number }
 export type WelcomePose = { eye: WelcomePoint; target: WelcomePoint }
 
 /**
- * The camera ORBITS this point, which stands below the eye: a level camera renders a band of
- * nothing where the floor has to read as a viewport.
+ * What the camera ORBITS and aims at: BELOW the eye, since a level camera renders a band of nothing
+ * where the floor has to read as a viewport, and in FRONT of the yard, since the middle of the
+ * frame belongs to the sheet of copy — aimed at the walker, the walker stands behind it.
  */
-export const WELCOME_TARGET: WelcomePoint = { x: 0, y: 1.15, z: 0 }
+export const WELCOME_TARGET: WelcomePoint = { x: 0, y: 1, z: 2.2 }
 
-export const WELCOME_HEIGHT = 2.6
+export const WELCOME_HEIGHT = 3.9
 
-export const WELCOME_RADIUS = 8.6
+/** Far enough that a walker reaching the near edge of the yard is a figure, not a close-up. */
+export const WELCOME_RADIUS = 11.5
 
 /**
  * How far the viewpoint swings for ONE carousel step, in radians — about seven degrees. Sliding
@@ -30,18 +32,6 @@ export const WELCOME_DRIFT_ANGLE = 0.045
 
 export function welcomeAzimuth(slide: number): number {
   return slide * WELCOME_SWING
-}
-
-/**
- * How far the hero turns for one step. Big on purpose: the idle spin is a mood a reader never
- * notices, and a slide change has to be SEEN as one.
- */
-export const WELCOME_TURN_PER_SLIDE = 1.15
-
-export const WELCOME_TURN_RATE = 3.2
-
-export function welcomeHeroTurn(slide: number): number {
-  return slide * WELCOME_TURN_PER_SLIDE
 }
 
 /**

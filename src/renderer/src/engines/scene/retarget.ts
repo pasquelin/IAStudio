@@ -337,21 +337,53 @@ function near(a: readonly number[], b: readonly number[]): boolean {
 export function wireBonesOf(root: Object3D): WireBone[] {
   const bones: WireBone[] = []
   const indexOf = new Map<string, number>()
+  // Needed by the fold below, and read once: `matrixWorld` is stale on a tree nothing has drawn.
+  root.updateWorldMatrix(false, true)
+  const above = new Matrix4().copy(root.matrixWorld).invert()
 
   root.traverse(object => {
     if (!isBoneObject(object) || !object.name || indexOf.has(object.name)) return
 
+    const parent = parentIndexOf(object, indexOf)
     indexOf.set(object.name, bones.length)
-    bones.push({
-      name: object.name,
-      parent: parentIndexOf(object, indexOf),
-      position: object.position.toArray(),
-      quaternion: object.quaternion.toArray(),
-      scale: object.scale.toArray(),
-    })
+    bones.push(parent < 0 ? rootBoneOf(object, above) : localBoneOf(object, parent))
   })
 
   return bones
+}
+
+const localBoneOf = (bone: Object3D, parent: number): WireBone => ({
+  name: bone.name,
+  parent,
+  position: bone.position.toArray(),
+  quaternion: bone.quaternion.toArray(),
+  scale: bone.scale.toArray(),
+})
+
+/**
+ * A bone with no bone above it carries whatever DOES stand above it, up to `root`.
+ *
+ * 🛑 The armature a glTF hangs its rig under is an `Object3D`, not a `Bone`, so this walk drops it
+ * — and with it the quarter turn and the centimetres a Blender export puts there. The source then
+ * reached three lying on its back and a hundred times too large: measured 2026-09-06 on the
+ * shipped clips, a half turn played as a tumble with the head 1,08 m under the feet.
+ *
+ * Relative to `root` and never to the world, for `restOffsetsOf`'s own reason: the caller hands a
+ * node standing IN a scene, whose placement is nobody's business here.
+ */
+function rootBoneOf(bone: Object3D, above: Matrix4): WireBone {
+  const position = new Vector3()
+  const quaternion = new Quaternion()
+  const scale = new Vector3()
+  new Matrix4().multiplyMatrices(above, bone.matrixWorld).decompose(position, quaternion, scale)
+
+  return {
+    name: bone.name,
+    parent: -1,
+    position: position.toArray(),
+    quaternion: quaternion.toArray(),
+    scale: scale.toArray(),
+  }
 }
 
 function parentIndexOf(bone: Object3D, indexOf: ReadonlyMap<string, number>): number {

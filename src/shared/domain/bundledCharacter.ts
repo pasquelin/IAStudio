@@ -1,3 +1,4 @@
+import { hostedUrl } from './asset'
 import { CHARACTER_LEVELS, type CharacterLevel } from './characterLevel'
 
 /**
@@ -21,6 +22,18 @@ export const BUNDLED_CHARACTER_LEVELS: readonly CharacterLevel[] = CHARACTER_LEV
 
 export function bundledCharacterFile(level: CharacterLevel): string {
   return `${BUNDLED_CHARACTER_NAMES[level]}.glb`
+}
+
+/**
+ * The host that serves one from beside the app, no project taking part — as `texture` and
+ * `animation` already do. Beside the install rather than instead of it: the welcome window opens
+ * before any project does, so `installBundledCharacter` has nowhere to put a mesh for it.
+ */
+export const CHARACTER_HOST = 'character'
+
+/** Where a window reads a shipped character from. */
+export function bundledCharacterUrl(level: CharacterLevel): string {
+  return hostedUrl(CHARACTER_HOST, bundledCharacterFile(level))
 }
 
 /** What one of them lands in the project as: the level it stands for, and the row it now has. */

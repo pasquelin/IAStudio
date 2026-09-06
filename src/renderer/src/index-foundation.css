@@ -224,6 +224,12 @@
    */
   --color-mesh: #868a91;
   /*
+   * The crowns of the welcome's little trees. Its own token beside `--color-mesh`, which is the
+   * grey of untextured geometry: a green there would repaint every mesh in the studio. Nothing
+   * writes a word on it, so it answers to no ratio — it is a pigment, not an ink.
+   */
+  --color-foliage: #6fb79b;
+  /*
    * The three axes, on the edge of the field that holds each one — the reading every 3D
    * application gives them, and the reason a Position row can be scanned without reading X, Y, Z.
    *

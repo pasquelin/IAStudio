@@ -5,6 +5,7 @@ import {
   grandfatherOnboarding,
   isWelcomeRoute,
   needsWelcome,
+  WELCOME_CLIP_NAMES,
   WELCOME_SLIDES,
   WELCOME_VERSION,
 } from './welcome'
@@ -69,5 +70,11 @@ describe('the slides', () => {
   it('opens on language and ends on the project', () => {
     expect(WELCOME_SLIDES[0]).toBe('language')
     expect(WELCOME_SLIDES.at(-1)).toBe('project')
+  })
+})
+
+describe('the walk clips', () => {
+  it('names each shipped folder once, which is what the loader asks the scheme for', () => {
+    expect(new Set(WELCOME_CLIP_NAMES).size).toBe(WELCOME_CLIP_NAMES.length)
   })
 })

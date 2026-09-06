@@ -8,9 +8,9 @@ import {
   Fog,
   GridHelper,
   HemisphereLight,
-  IcosahedronGeometry,
   Mesh,
   MeshStandardMaterial,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   PlaneGeometry,
   PointLight,
@@ -19,35 +19,44 @@ import {
   Scene,
   WebGLRenderer,
 } from 'three'
+import { clamp } from '@shared/numeric'
+import { reportFailure } from '@/services/diagnostics'
 import { onPaletteChange, tokenAsHex } from '../core/palette'
-import {
-  approach,
-  WELCOME_SWING_RATE,
-  WELCOME_TURN_RATE,
-  welcomeAzimuth,
-  welcomeHeroTurn,
-  welcomePose,
-} from './welcomeMotion'
+import { createGltfSource } from '../scene/gltfSource'
+import { createRetarget } from '../scene/retarget'
+import RetargetWorker from '../scene/retarget.worker?worker'
+import { WelcomeHero } from './WelcomeHero'
+import { WELCOME_GROVE } from './welcomeGrove'
+import { createWelcomeTrees, type WelcomeTrees } from './welcomeTrees'
+import { approach, WELCOME_SWING_RATE, welcomeAzimuth, welcomePose } from './welcomeMotion'
 
 const FALLBACK_CHASSIS = 0x2b2d30
 const FALLBACK_VIEWPORT = 0x33363b
 const FALLBACK_VIEWPORT_LINE = 0x494d54
 const FALLBACK_MESH = 0x868a91
 const FALLBACK_ACCENT = 0x346ef2
+const FALLBACK_FOLIAGE = 0x6fb79b
 
 /** Wide enough that its edge is far behind the fog: a floor whose end can be seen has no horizon. */
 const FLOOR = 200
 
 const GRID = 64
 
-/** Lines fade a stride ahead of the camera, so the band the copy sits on is flat ground. */
-const FOG_NEAR = 6
-const FOG_FAR = 20
+/** Lines fade a stride past the grove, so the band the copy sits on is flat ground. */
+const FOG_NEAR = 11
+const FOG_FAR = 34
 
 /** Motes in the air. Enough to say the room is alive, few enough that none lands on a word. */
 const MOTES = 520
 
-type Volume = Mesh<IcosahedronGeometry, MeshStandardMaterial>
+/** Half the shadow camera's box, in world units: the yard and the grove around it, and no more. */
+const SHADOW_REACH = 13
+
+/**
+ * The longest step the stroll is ever handed. A window that comes back from an hour hidden reports
+ * that hour, and a walker paid for it in one frame would land on the other side of the yard.
+ */
+const LONGEST_STEP = 0.1
 
 function hexColor(element: Element, name: string, fallback: number): Color {
   return new Color(tokenAsHex(element, name, fallback))
@@ -56,11 +65,12 @@ function hexColor(element: Element, name: string, fallback: number): Color {
 function makeFloor(): Mesh<PlaneGeometry, MeshStandardMaterial> {
   const floor = new Mesh(
     new PlaneGeometry(FLOOR, FLOOR),
-    new MeshStandardMaterial({ roughness: 0.92, metalness: 0, toneMapped: false }),
+    new MeshStandardMaterial({ roughness: 0.92, metalness: 0 }),
   )
   floor.rotation.x = -Math.PI / 2
   // Under the grid rather than level with it: coplanar, the two fight for every far pixel.
   floor.position.y = -0.004
+  floor.receiveShadow = true
   return floor
 }
 
@@ -72,23 +82,16 @@ function makeGrid(): GridHelper {
   return grid
 }
 
-function makeVolume(radius: number): Volume {
-  return new Mesh(
-    new IcosahedronGeometry(radius, 0),
-    new MeshStandardMaterial({ roughness: 0.45, metalness: 0.12, flatShading: true }),
-  )
-}
-
 function makeMotes(): Points<BufferGeometry, PointsMaterial> {
   const positions = new Float32Array(MOTES * 3)
   for (let index = 0; index < MOTES; index += 1) {
     const at = index * 3
-    positions[at] = (Math.random() - 0.5) * 34
+    positions[at] = (Math.random() - 0.5) * 38
     // Never on the floor and never above the horizon: motes belong to the air the fog fills.
     positions[at + 1] = 0.3 + Math.random() * 5.2
-    // Reaching PAST the camera, which stands at z 8.6: a cloud that stops short of it has no mote
-    // near enough to read as one, `sizeAttenuation` giving the far ones a pixel each.
-    positions[at + 2] = -12 + Math.random() * 26
+    // 🛑 Stopping WELL short of the camera, which stands at z 11.5. Reaching past it, the nearest
+    // mote landed a hand's width from the lens and `sizeAttenuation` drew it as a grey slab.
+    positions[at + 2] = -24 + Math.random() * 28
   }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(positions, 3))
@@ -104,13 +107,13 @@ export type WelcomeBackdropOptions = {
 }
 
 /**
- * 🛑 Floor and grid are `toneMapped: false`: they ARE `--color-viewport` and
- * `--color-viewport-line`, so they must leave the pipeline at the value the stylesheet declares.
+ * 🛑 The grid is `toneMapped: false`: it IS `--color-viewport-line`, so it must leave the pipeline
+ * at the value the stylesheet declares. The floor is lit and shadowed, so it cannot be.
  */
 export class WelcomeBackdrop {
   private readonly renderer: WebGLRenderer
   private readonly scene = new Scene()
-  private readonly camera = new PerspectiveCamera(34, 1, 0.1, 400)
+  private readonly camera = new PerspectiveCamera(38, 1, 0.1, 400)
   private readonly clock = new Clock()
   private readonly ground = new Color(FALLBACK_VIEWPORT)
   /**
@@ -120,25 +123,29 @@ export class WelcomeBackdrop {
   private readonly wall = new Color(FALLBACK_CHASSIS)
   private readonly floor = makeFloor()
   private readonly grid = makeGrid()
-  private readonly hero = makeVolume(1.2)
-  private readonly satellite = makeVolume(0.5)
   private readonly motes = makeMotes()
-  private readonly sky = new HemisphereLight(0xffffff, 0xffffff, 1.15)
+  private readonly trees: WelcomeTrees = createWelcomeTrees(WELCOME_GROVE)
+  private readonly hero: WelcomeHero
+  private readonly sky = new HemisphereLight(0xffffff, 0xffffff, 1.5)
   /** WHITE in both themes: a light is not an ink, and only the SURFACES read tokens here. */
-  private readonly key = new DirectionalLight(0xffffff, 2)
+  private readonly key = new DirectionalLight(0xffffff, 1.8)
   /**
-   * From UNDER the volumes: placed with the key it reached nothing new, and every facet the heroes
+   * From UNDER the grove: placed with the key it reached nothing new, and every facet the crowns
    * turn downward stayed a black wedge.
    */
-  private readonly fill = new DirectionalLight(0xffffff, 0.85)
+  private readonly fill = new DirectionalLight(0xffffff, 0.55)
   private readonly lamp = new PointLight(FALLBACK_ACCENT, 42, 16, 2)
   /** Dropped on dispose. The studio publishes the theme, THEN calls the listeners: reading the
    * tokens off a `theme` effect of our own handed back the palette being left. */
   private readonly dropPalette = onPaletteChange(() => this.syncPalette())
+  private readonly gltf = createGltfSource(
+    () => this.renderer,
+    (subject, error) => reportFailure('scene.model', subject, error),
+  )
+  private readonly retarget = createRetarget(() => new RetargetWorker())
+  private readonly onVisibility = (): void => this.start()
   private azimuth = 0
   private wantedAzimuth = 0
-  private heroTurn = 0
-  private wantedTurn = 0
   private frame: number | null = null
   private lastDrawn = 0
   private disposed = false
@@ -156,26 +163,33 @@ export class WelcomeBackdrop {
       powerPreference: 'high-performance',
     })
     this.renderer.toneMapping = ACESFilmicToneMapping
+    // The floor IS `--color-viewport`, and ACES darkens what it is handed: at 1 the plate read a
+    // stop under the token it is painted with.
+    this.renderer.toneMappingExposure = 1.3
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = PCFSoftShadowMap
 
-    // Resting ON the floor — an icosahedron's lowest vertex sits a radius below its centre — and
-    // off to the right, where the reader is not reading.
-    this.hero.position.set(3.3, 1.2, 0.2)
-    this.hero.rotation.x = 0.35
-    this.satellite.position.set(-3.6, 0.5, -1.8)
-    this.satellite.rotation.x = 0.9
-    this.key.position.set(-5, 7, 5)
-    this.fill.position.set(2, -3, 5)
+    this.hero = new WelcomeHero({
+      gltf: this.gltf,
+      retarget: this.retarget,
+      onReady: () => this.arrive(),
+      onFailure: error => reportFailure('scene.model', 'welcome.character', error),
+    })
+
+    this.key.position.set(-7, 10, 6)
+    this.castFrom(this.key)
+    this.fill.position.set(4, -3, 5)
     // A lamp and not a second sun: the accent is a light in this room, and a directional one would
     // paint the whole floor blue — the wash the ground token exists to refuse.
-    this.lamp.position.set(4.8, 2.1, -1.4)
+    this.lamp.position.set(5.4, 2.4, -5)
 
-    this.scene.add(this.floor, this.grid, this.hero, this.satellite, this.motes)
-    this.scene.add(this.sky, this.key, this.fill, this.lamp)
+    this.scene.add(this.floor, this.grid, this.motes, this.trees.group, this.hero.group)
+    this.scene.add(this.sky, this.key, this.key.target, this.fill, this.lamp)
     this.scene.fog = new Fog(this.wall, FOG_NEAR, FOG_FAR)
     this.syncPalette()
     this.setSlide(options.slide)
-    this.heroTurn = this.wantedTurn
     this.azimuth = this.wantedAzimuth
+    document.addEventListener('visibilitychange', this.onVisibility)
     this.resize()
     this.start()
   }
@@ -183,13 +197,15 @@ export class WelcomeBackdrop {
   setReduceMotion(value: boolean): void {
     if (this.reduceMotion === value) return
     this.reduceMotion = value
-    if (value) this.frozenTime = this.clock.getElapsedTime()
+    if (value) {
+      this.frozenTime = this.clock.getElapsedTime()
+      this.hero.settle()
+    }
     this.start()
   }
 
   setSlide(index: number): void {
     this.wantedAzimuth = welcomeAzimuth(index)
-    this.wantedTurn = welcomeHeroTurn(index)
     this.start()
   }
 
@@ -204,13 +220,12 @@ export class WelcomeBackdrop {
     this.renderer.setClearColor(this.wall, 1)
     this.floor.material.color.copy(this.ground)
     this.grid.material.color.copy(line)
-    this.hero.material.color.copy(mesh)
-    this.satellite.material.color.copy(mesh)
     this.motes.material.color.copy(mesh)
+    this.trees.paint(mesh, hexColor(this.canvas, '--color-foliage', FALLBACK_FOLIAGE), this.wall)
     this.sky.color.copy(line)
     // The LINE and not the ground: a hemisphere's lower half is the bounce off the floor, and the
-    // floor here is LIT. Handed the raw ground token it returned nothing, and every facet of the
-    // hero that pointed down came back as a black wedge.
+    // floor here is LIT. Handed the raw ground token it returned nothing, and every facet that
+    // pointed down came back as a black wedge.
     this.sky.groundColor.copy(line)
     this.lamp.color.copy(hexColor(this.canvas, '--color-accent', FALLBACK_ACCENT))
     this.start()
@@ -229,30 +244,58 @@ export class WelcomeBackdrop {
   dispose(): void {
     this.disposed = true
     this.dropPalette()
+    document.removeEventListener('visibilitychange', this.onVisibility)
     if (this.frame !== null) cancelAnimationFrame(this.frame)
     this.frame = null
-    for (const object of [this.floor, this.grid, this.hero, this.satellite, this.motes]) {
+    this.hero.dispose()
+    this.trees.dispose()
+    this.retarget.dispose()
+    this.gltf.dispose()
+    for (const object of [this.floor, this.grid, this.motes]) {
       object.geometry.dispose()
       object.material.dispose()
     }
     this.renderer.dispose()
   }
 
+  /** The character has landed: a still frame owes them a pose, a moving one owes them a loop. */
+  private arrive(): void {
+    if (this.reduceMotion) this.hero.settle()
+    this.start()
+  }
+
+  private castFrom(light: DirectionalLight): void {
+    light.castShadow = true
+    light.shadow.mapSize.set(2048, 2048)
+    // Soft rather than stamped: a hard black wedge under a crown reads as a hole in the plate.
+    light.shadow.radius = 4
+    light.shadow.intensity = 0.55
+    light.shadow.camera.left = -SHADOW_REACH
+    light.shadow.camera.right = SHADOW_REACH
+    light.shadow.camera.top = SHADOW_REACH
+    light.shadow.camera.bottom = -SHADOW_REACH
+    light.shadow.camera.far = 34
+    // Along the surface rather than into it: at this grazing angle a plain bias detaches a crown
+    // from the shadow it casts, and a normal one leaves the contact where the foot is.
+    light.shadow.normalBias = 0.03
+  }
+
   /**
-   * Asks for the next frame, or draws the single one a still needs. Reduced motion used to keep
-   * the loop turning on a frozen clock, which is a GPU paid for a picture that never changes.
+   * Asks for the next frame, or draws the single one a still needs. Nothing is asked for while the
+   * window is hidden — a GPU turning behind another window is paid for a picture nobody sees.
    */
   private start(): void {
     if (this.disposed) return
-    if (!this.reduceMotion) {
+    if (!this.reduceMotion && !document.hidden) {
       if (this.frame === null) this.frame = requestAnimationFrame(this.tick)
       return
     }
     if (this.frame !== null) cancelAnimationFrame(this.frame)
     this.frame = null
-    this.heroTurn = this.wantedTurn
     this.azimuth = this.wantedAzimuth
-    this.draw()
+    // The clock keeps running while hidden, so the first frame back would be handed the absence.
+    this.lastDrawn = 0
+    if (!document.hidden) this.draw()
   }
 
   private draw(): void {
@@ -260,10 +303,7 @@ export class WelcomeBackdrop {
     const { eye, target } = welcomePose(elapsed, this.azimuth)
     this.camera.position.set(eye.x, eye.y, eye.z)
     this.camera.lookAt(target.x, target.y, target.z)
-    const idle = this.reduceMotion ? 0 : elapsed
-    this.hero.rotation.y = this.heroTurn + idle * 0.05
-    this.satellite.rotation.y = -this.heroTurn * 1.4 - idle * 0.08
-    this.motes.rotation.y = idle * 0.02
+    this.motes.rotation.y = this.reduceMotion ? 0 : elapsed * 0.02
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -271,10 +311,10 @@ export class WelcomeBackdrop {
     if (this.disposed) return
     this.frame = null
     const now = this.clock.getElapsedTime()
-    const seconds = this.lastDrawn === 0 ? 0 : now - this.lastDrawn
+    const seconds = this.lastDrawn === 0 ? 0 : clamp(now - this.lastDrawn, 0, LONGEST_STEP)
     this.lastDrawn = now
-    this.heroTurn = approach(this.heroTurn, this.wantedTurn, seconds, WELCOME_TURN_RATE)
     this.azimuth = approach(this.azimuth, this.wantedAzimuth, seconds, WELCOME_SWING_RATE)
+    if (seconds > 0) this.hero.advance(seconds)
     this.draw()
     this.start()
   }

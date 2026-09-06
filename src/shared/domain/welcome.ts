@@ -53,3 +53,31 @@ export function grandfatherOnboarding(stored: object, now: string): OnboardingSe
   if (isRecord(stored) && 'onboarding' in stored) return undefined
   return completedOnboarding(now)
 }
+
+/**
+ * The shipped clips the welcome walk plays. Named here so a main test can check the folders.
+ *
+ * The two jumps are shipped and deliberately LEFT OUT (Alban): the welcome is a stroll, and a
+ * character who leaps behind a sheet of text reads as a glitch rather than as a flourish.
+ */
+export type WelcomeClipName =
+  | 'Walk'
+  | 'WalkStart'
+  | 'WalkStop'
+  | 'TurnLeft'
+  | 'TurnRight'
+  | 'TurnAround'
+  | 'StrafeLeft'
+  | 'StrafeRight'
+
+/** The eight the welcome plays, in the order it loads them. */
+export const WELCOME_CLIP_NAMES: readonly WelcomeClipName[] = [
+  'Walk',
+  'WalkStart',
+  'WalkStop',
+  'TurnLeft',
+  'TurnRight',
+  'TurnAround',
+  'StrafeLeft',
+  'StrafeRight',
+]
