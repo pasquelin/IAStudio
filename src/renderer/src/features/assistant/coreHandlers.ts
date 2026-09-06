@@ -7,6 +7,7 @@ import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES } from '@shared/domain/model'
 import { SCENE_TEMPLATE_IDS } from '@shared/domain/sceneTemplate'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { englishText } from '@shared/i18n'
+import { failureMessageKey } from '@/services/failureMessage'
 import { showWorkspace } from '@/features/shell/components/dockviewApi'
 import { createDocumentIn } from '@/features/shell/newDocument'
 import { openGeneratorOn } from '@/helpers/openGenerator'
@@ -251,16 +252,14 @@ function findInCatalogue(input: Record<string, unknown>): ActionOutcome {
   }
 }
 
-/**
- * A cloud catalogue that answered nothing, said as what to do next: `missing` is the one code a
- * client can repair, and the one Codex met as a bare `failed: missing` — measured 2026-09-06.
- */
+// A cloud catalogue that answered nothing, said as what to do next — `missing` is the one code a
+// client can repair, and it met a bare `failed: missing` (2026-09-06).
 function catalogueRefusal(code: ApiFailure): ActionOutcome {
   return refused(
     'notFound',
     code === 'missing'
       ? 'the cloud catalogue needs a Scenario account and none is active — accounts.list says which accounts exist, and Settings ▸ Accounts adds one; models that need no account are listed when there are any'
-      : `the cloud catalogue refused the search: ${code} — what needs no account is listed when there is any`,
+      : `the cloud catalogue refused the search: ${englishText(failureMessageKey(code))} — what needs no account is listed when there is any`,
   )
 }
 

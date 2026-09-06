@@ -32,7 +32,7 @@ import { hardwareProbe, memorySnapshotOf } from './ai/hardwareProbe'
 import { readyCloudsOf } from './ai/cloudReadiness'
 import { createPythonClient } from './ai/pythonClient'
 import { openPythonProcess } from './ai/pythonProcess'
-import { pythonRuntime } from './ai/pythonRuntime'
+import { notAnswering, pythonRuntime } from './ai/pythonRuntime'
 import { createPythonSupervisor, EngineMissingError } from './ai/pythonSupervisor'
 import { createAutoRigHost } from './ai/autoRigHost'
 import { fileRuntime, type LocalRuntimes } from './ai/localRuntimes'
@@ -74,7 +74,9 @@ const BUDGET = {
 }
 const OLLAMA_LOOK_MS = 10_000
 
-type FromManager = {
+const enginePython = (): string => bundledEngine(resourcesRoot(), process.platform).python
+
+export type FromManager = {
   installedIds: () => ReadonlySet<string>
   discovered: () => readonly LocalModel[]
   engineFailure: () => EngineFailure | null
@@ -146,9 +148,7 @@ export function createLocalAiServices(deps: LocalAiDeps) {
     discovered: () => ai.discovered(),
     // Read off the disk rather than off a start: a catalogue must never fork the interpreter.
     engineFailure: () =>
-      existsSync(bundledEngine(resourcesRoot(), process.platform).python)
-        ? engine.supervisor.whyNot()
-        : 'engine-missing',
+      existsSync(enginePython()) ? engine.supervisor.whyNot() : 'engine-missing',
   } satisfies FromManager)
   const { memoryVectors, embedder } = createVectors(deps, ai, modelOf, weightsOf)
   const autoRig = createAutoRigHost({
@@ -406,10 +406,9 @@ function createManager(
     },
     installEngine: async (onProgress, signal) => {
       const client = await engine.supervisor.engine()
-      if (!client)
-        throw new Error(engine.supervisor.whyNot() ?? 'the local AI engine is not answering')
+      if (!client) throw notAnswering(engine.supervisor.whyNot())
       await installEngineLibraries({
-        python: bundledEngine(resourcesRoot(), process.platform).python,
+        python: enginePython(),
         declaration: (await client.requirements()).declaration,
         spawn: spawnLines,
         onProgress,

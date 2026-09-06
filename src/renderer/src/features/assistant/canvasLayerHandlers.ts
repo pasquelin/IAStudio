@@ -83,13 +83,8 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
 /** The other axis of a box a client half-named, giving a point caption one for the first time. */
 const DEFAULT_PARAGRAPH: Size = { width: 480, height: 120 }
 
-const LAYER_KINDS = ['pixel', 'text', 'adjustment', 'shape']
-
-/**
- * Only what is MISSING: told the whole rule with name, kind and shape already given, a client
- * re-read the rule and not its own call — measured 2026-09-06, Codex by MCP, on a box without
- * width and height.
- */
+// Only what is MISSING: told the whole rule with name, kind and shape already given, a client
+// re-read the rule and not its own call (a box without width and height, 2026-09-06).
 function missingFor(kind: string, input: Record<string, unknown>): string {
   if (kind === 'adjustment') return `"adjustment" wants one of: ${ADJUSTMENT_KINDS.join(', ')}`
   const wants = [
@@ -138,10 +133,9 @@ function born(
 }
 
 function newLayer(input: Record<string, unknown>): ActionOutcome {
-  const name = textOf(input, 'name')
-  if (name === null) return refused('badInput', '"name" is required — what the layer is called')
-  const kind = oneOf(input, 'kind', LAYER_KINDS)
-  if (!kind) return refused('badInput', `"kind" must be one of: ${LAYER_KINDS.join(', ')}`)
+  // Both held to the registry by the executor before any handler runs — see `inputProblem`.
+  const name = textOf(input, 'name') ?? ''
+  const kind = textOf(input, 'kind') ?? ''
   const id = newId()
   const layer = born(input, id, name, kind)
   if (!layer) return refused('badInput', missingFor(kind, input))

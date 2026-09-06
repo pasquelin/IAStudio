@@ -167,10 +167,8 @@ export function reducedBy(scope: string) {
   return reducing(error => noteFailure(scope, error))
 }
 
-/**
- * What every reduced failure leaves behind — the log line and the journal entry — for a caller
- * that answers a page instead of throwing, and would otherwise leave nothing at all.
- */
+// What every reduced failure leaves behind — log line and journal entry — for a caller that
+// answers a page instead of throwing, and would otherwise leave nothing at all.
 export function noteFailure(scope: string, error: unknown): void {
   // No credentials is a state, not a refused call: there was never a request to describe.
   if (error instanceof NotAuthenticatedError) return

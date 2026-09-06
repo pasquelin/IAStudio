@@ -1,5 +1,6 @@
 import type { InstallRefusal, LoadRefusal } from '@shared/domain/aiOverview'
-import type { EngineFailure } from '@shared/domain/failure'
+import { ENGINE_FAILURES } from '@shared/domain/failure'
+import { codeIn } from '@shared/guards'
 import type { AiRoleId, RoleChoices, RoleProvider } from '@shared/domain/aiRole'
 import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
 import { MODEL_LOADERS, type DownloadProgress, type ModelLoader } from '@shared/domain/localModel'
@@ -14,8 +15,6 @@ export type RunningInstall = {
   watchers: ((progress: DownloadProgress) => void)[]
   done: Promise<void>
 }
-
-const ENGINE_FAILURES: readonly EngineFailure[] = ['engine-missing', 'engine-failed']
 
 export const DEFAULT_FACTS_TTL_MS = 3000
 export const DEFAULT_IDLE_UNLOAD_MINUTES = 10
@@ -71,7 +70,7 @@ export function loadRefusalOf(error: unknown, modelId: string): LoadRefusal {
   if (error instanceof NetworkInterrupted || isNetworkError(error))
     return { reason: 'network', modelId }
   const text = String(error)
-  const engine = ENGINE_FAILURES.find(code => text.endsWith(code))
+  const engine = codeIn(text, ENGINE_FAILURES)
   if (engine) return { reason: engine, modelId }
   return text.includes('no file named') || text.includes('incomplete-model')
     ? { reason: 'incomplete', modelId }
@@ -85,7 +84,7 @@ export function loadThrowOf(failure: LoadRefusal): Error {
     )
   if (failure.reason === 'incomplete') return new Error('incomplete-model')
   if (failure.reason === 'network') return new Error('network')
-  if (failure.reason === 'engine-missing' || failure.reason === 'engine-failed')
-    return new Error(failure.reason)
+  const engine = codeIn(failure.reason, ENGINE_FAILURES)
+  if (engine) return new Error(engine)
   return new Error(`loading ${failure.modelId} failed`)
 }

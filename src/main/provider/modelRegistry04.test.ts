@@ -30,10 +30,12 @@ export const registryOf = (
     watch: () => () => {},
   })
 
-export const refusing = () => {
-  const no = () => Promise.reject(new NotAuthenticatedError())
+const rejecting = (error: Error) => {
+  const no = () => Promise.reject(error)
   return { list: no, search: no, retrieve: no, assetUrls: () => Promise.resolve([]) }
 }
+
+export const refusing = () => rejecting(new NotAuthenticatedError())
 
 describe('a catalogue that refuses', () => {
   // 🛑 Measured on screen, with no account: the first remote page threw and took the local
@@ -120,10 +122,7 @@ describe('a catalogue that refuses', () => {
   // account is a state rather than a failure — the one case the journal never heard.
   it('tells the journal of a failure it carries in the page, never of a missing account', async () => {
     const noted: unknown[] = []
-    const failing = () => {
-      const no = () => Promise.reject(new TypeError('fetch failed'))
-      return { list: no, search: no, retrieve: no, assetUrls: () => Promise.resolve([]) }
-    }
+    const failing = () => rejecting(new TypeError('fetch failed'))
 
     await registryOf({ catalog: failing, note: failure => noted.push(failure) }).search({
       family: 'image',

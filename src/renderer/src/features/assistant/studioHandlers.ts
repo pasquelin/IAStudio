@@ -1,16 +1,20 @@
 import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
-import { refused, type ActionField, type ActionOutcome } from '@shared/domain/assistant'
+import {
+  refused,
+  type ActionField,
+  type ActionName,
+  type ActionOutcome,
+} from '@shared/domain/assistant'
 import { COMPONENTS, COMPONENT_TYPES, descriptorOf } from '@shared/domain/componentRegistry'
 import { isComponentType } from '@shared/domain/componentRegistry'
 import { resolveNamedReference } from '@shared/domain/namedReference'
-import { isRecord } from '@shared/guards'
 import { refFromString } from '@shared/domain/ref'
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { usToSeconds } from '@shared/domain/time'
 import type { AnimationTrack } from '@shared/domain/animation'
 import { mounted } from './sceneHandlers'
-import { studioState } from './stateHandlers'
+import { studioSnapshot } from './stateHandlers'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
@@ -137,10 +141,7 @@ const describeField = (field: ActionField): Record<string, unknown> => ({
 })
 
 function describedStudio(): ActionOutcome {
-  const state = studioState()
-  return state.ok
-    ? { ok: true, data: { ...(isRecord(state.data) ? state.data : {}), workspaces: WORKSPACE_IDS } }
-    : state
+  return { ok: true, data: { ...studioSnapshot(), workspaces: WORKSPACE_IDS } }
 }
 
 /** A channel and what takes it: keys are read here, and written by the key actions below. */
@@ -161,6 +162,6 @@ function describedTrack(track: AnimationTrack) {
       'track.rename',
       'track.remove',
       'track.setMuteSoloLockHeight',
-    ],
+    ] satisfies readonly ActionName[],
   }
 }

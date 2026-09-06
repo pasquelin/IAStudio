@@ -1,3 +1,4 @@
+import type { ApiFailure } from '@shared/domain/failure'
 /**
  * One page of a listing walked by cursor. `cursor` is `null` once there is no page after it.
  *
@@ -9,5 +10,5 @@ export type Page<T> = {
   items: readonly T[]
   cursor: string | null
   /** Why part of the listing is missing, when the source answered a page rather than throwing. */
-  refused?: string
+  refused?: ApiFailure
 }

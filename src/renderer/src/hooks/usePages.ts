@@ -125,10 +125,8 @@ export function usePages<T extends { id: string }>(
   }
 }
 
-/**
- * A page that says why and offers nothing is a refusal on screen — the same one it was when the
- * source threw — while one that still lists something is a listing, and reads as one.
- */
+// A page that says why and offers nothing is a refusal on screen, as it was when the source threw;
+// one that still lists something is a listing, and reads as one.
 function refusalOf(
   thrown: Error | null,
   pages: readonly Page<unknown>[] | undefined,

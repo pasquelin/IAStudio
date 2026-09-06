@@ -5,10 +5,8 @@ import type { ChatTool, CloudAnswer } from '@main/ai/cloudChat'
 import { actionOfTool, schemaOfFields, toolName } from '@main/mcp/tools'
 import { jsonIn } from './reply'
 
-/**
- * The manuals a briefing printed, as the tools a chat door calls natively. Not `mcpTools()`: that
- * door appends a consent field and says so — true of a client outside, false of the chain.
- */
+// The manuals a briefing printed, as the tools a chat door calls natively. Not `mcpTools()`: that
+// door appends a consent field and says so — true of a client outside, false of the chain.
 export function chatToolsFor(names: readonly ActionName[]): readonly ChatTool[] {
   return names.flatMap(name => {
     const action = assistantAction(name)
@@ -24,10 +22,8 @@ export function chatToolsFor(names: readonly ActionName[]): readonly ChatTool[] 
   })
 }
 
-/**
- * The text as sent when nothing was called, else the calls folded into the `{say, ask, calls}` the
- * FORMAT asks for. Arguments that do not parse stay as sent: `readReply` refuses the shape.
- */
+// The text as sent when nothing was called, else the calls folded into the `{say, ask, calls}` the
+// FORMAT asks for. Arguments that do not parse read as `null`, which `readReply` refuses as a shape.
 export function foldedReply(answer: CloudAnswer): string {
   if (answer.calls.length === 0) return answer.text
 
@@ -39,15 +35,7 @@ export function foldedReply(answer: CloudAnswer): string {
   const ask = isRecord(said) ? (said.ask ?? null) : null
   const calls = answer.calls.map(call => ({
     action: actionOfTool(call.name)?.name ?? call.name,
-    input: argumentsOf(call.arguments),
+    input: jsonIn(call.arguments),
   }))
   return JSON.stringify({ say, ask, calls })
-}
-
-function argumentsOf(text: string): unknown {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return text
-  }
 }

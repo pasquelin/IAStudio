@@ -1,4 +1,4 @@
-import type { EngineFailure } from '@shared/domain/failure'
+import type { FromManager } from './serviceLocalAi'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
@@ -40,11 +40,7 @@ export class ProviderServices {
     watch: this.credentials.watch,
     transport: this.transport,
   })
-  readonly fromManager: {
-    installedIds: () => ReadonlySet<string>
-    discovered: () => readonly LocalModel[]
-    engineFailure: () => EngineFailure | null
-  } = {
+  readonly fromManager: FromManager = {
     installedIds: () => new Set<string>(),
     discovered: () => NOTHING_DISCOVERED,
     engineFailure: () => null,

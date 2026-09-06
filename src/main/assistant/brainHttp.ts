@@ -1,6 +1,6 @@
 import type { CloudProviderId, HttpChat } from '@shared/domain/aiCloud'
 import type { AssistantThought } from '@shared/domain/assistant'
-import { askCloudChat, type CloudPoster } from '@main/ai/cloudChat'
+import { askCloudChat, takesTools, type CloudPoster } from '@main/ai/cloudChat'
 import { chatToolsFor, foldedReply } from './chatTools'
 import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
@@ -91,16 +91,11 @@ export function createHttpChatBrain({
    */
   let narrowed = false
 
-  // Native tools: the OpenAI wire alone speaks them, a mission alone has candidates, and never on
-  // a stream, whose reader takes text frames only — a clause nothing reaches today, the runtime
-  // passing no `onProgress` and the conversation no candidates.
-  const native = (request: AssistantThought, watch: TurnWatch): boolean =>
-    chat.kind === 'openai' && request.candidates !== undefined && watch.onProgress === undefined
-
   const round = async (
     request: AssistantThought,
     briefing: Briefing,
     watch: TurnWatch,
+    native: boolean,
     complaint?: string,
   ) => {
     const held = credentials()
@@ -119,7 +114,7 @@ export function createHttpChatBrain({
       // setting, and the three request shapes below only ever read the one they were handed.
       const asked = { ...chat, model: model() }
       // The tools follow the briefing SHOWN, expansions included: what has fields is callable.
-      const tools = native(request, watch) ? chatToolsFor(briefing.loaded) : undefined
+      const tools = native ? chatToolsFor(briefing.loaded) : undefined
       const answer = await askCloudChat(
         {
           chat: asked,
@@ -152,12 +147,14 @@ export function createHttpChatBrain({
     // DeepSeek. No chat cloud here publishes its window over the API, so there is nothing to read.
     window: () => Promise.resolve(null),
     think: async (request, watch = {}) => {
+      // A mission alone has candidates to hand over as tools; the door says whether it takes them.
+      const native = request.candidates !== undefined && takesTools({ chat, ...watch })
       const composed = await briefingFor(
         request,
         roomFor(CLOUD_CONTEXT_TOKENS),
         notReady,
         roomFor(CLOUD_FALLBACK_TOKENS),
-        native(request, watch),
+        native,
       )
       // 🛑 Narrowed by the DOOR, not by the room: the names fit everywhere, so a door that has
       // already refused once would be composed the wide rules again and refuse them again — one
@@ -169,7 +166,7 @@ export function createHttpChatBrain({
       // whose window is far larger, off a number that only ever budgeted the briefing.
       return await answeredTurn(
         briefing,
-        (shown, complaint) => round(request, shown, watch, complaint),
+        (shown, complaint) => round(request, shown, watch, native, complaint),
         watch.onProgress,
         notesFor(cloud, model(), watch),
         watch.discover,

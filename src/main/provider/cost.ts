@@ -2,7 +2,7 @@ import { APIError } from '@scenario-labs/sdk'
 import type { CostEstimate, JobTarget } from '@shared/domain/job'
 import { isRecord } from '@shared/guards'
 
-/** What a run would cost, without running it. `null` where the API declines to price it; a model of this machine is priced at nothing. */
+/** What a run would cost, unrun: `null` where the API declines to price it, 0 for this machine. */
 export type CostEstimator = (
   target: JobTarget,
   body: Record<string, unknown>,

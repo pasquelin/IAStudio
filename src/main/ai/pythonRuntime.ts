@@ -61,9 +61,9 @@ function whatIsMissing(needs: EngineRequirements): string {
   return [...absent, ...stale].join(', ')
 }
 
-/** The code when the supervisor knows why, so a failed job says "not installed" rather than "rejected". */
-function notAnswering(deps: Pick<PythonRuntimeDeps, 'whyNot'>): Error {
-  return new Error(deps.whyNot() ?? 'the local AI engine is not answering')
+/** The code when the supervisor knows why, so a failed job says "not installed", not "rejected". */
+export function notAnswering(whyNot: EngineFailure | null): Error {
+  return new Error(whyNot ?? 'the local AI engine is not answering')
 }
 
 export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
@@ -117,7 +117,7 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
 
     load: async (model: LocalModel, options: LoadOptions): Promise<number> => {
       const engine = await deps.engine()
-      if (!engine) throw notAnswering(deps)
+      if (!engine) throw notAnswering(deps.whyNot())
 
       // Asked BEFORE the door is woken: a library that is absent fails as an `ImportError` three
       // frames inside a worker, which reaches the person as a door that died. The core answers
@@ -178,7 +178,7 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
 
     generate: async (request: GenerateRequest): Promise<GenerateResult> => {
       const engine = await deps.engine()
-      if (!engine) throw notAnswering(deps)
+      if (!engine) throw notAnswering(deps.whyNot())
 
       const done = deps.onUsed?.(request.model)
       try {

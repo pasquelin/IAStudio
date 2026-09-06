@@ -52,7 +52,6 @@ export type PythonSupervisor = {
 
 export function createPythonSupervisor(host: PythonSupervisorHost): PythonSupervisor {
   let client: PythonClient | null = null
-  let gaveUp = false
   /** Shared by every caller that arrives while one start is still running. */
   let starting: Promise<PythonClient | null> | null = null
   /**
@@ -94,7 +93,6 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
       } catch (error) {
         // Not a death to count down from: the file is not there, and a backoff changes nothing.
         if (error instanceof EngineMissingError) {
-          gaveUp = true
           whyNot = 'engine-missing'
           log.warn('engine', `the local AI engine is not installed: ${error.path} is missing`)
           return null
@@ -106,7 +104,6 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
 
     // Said rather than looped on: an engine that dies on its handshake would otherwise be forked
     // again by every caller, for as long as anyone asks for a model.
-    gaveUp = true
     whyNot = 'engine-failed'
     log.error('engine', `the local AI engine failed ${MAX_FAILURES} times over; it is not ready`)
     return null
@@ -118,7 +115,7 @@ export function createPythonSupervisor(host: PythonSupervisorHost): PythonSuperv
       // shutdown would spawn an interpreter the quit has no way left to kill.
       if (disposed) return Promise.resolve(null)
       if (client) return Promise.resolve(client)
-      if (gaveUp) return Promise.resolve(null)
+      if (whyNot) return Promise.resolve(null)
       if (starting) return starting
 
       starting = start().finally(() => {

@@ -1,4 +1,5 @@
-import type { JobFailure } from '@shared/domain/failure'
+import { ENGINE_FAILURES, type JobFailure } from '@shared/domain/failure'
+import { codeIn, messageOf } from '@shared/guards'
 import type { AssetType } from '@shared/domain/asset'
 import {
   assetTypeOfModality,
@@ -113,17 +114,12 @@ export function textIn(body: Record<string, unknown>, key: string): string | nul
 }
 
 /** The codes a load or a runtime throws by name, read whole or after the `: ` a wrapper adds. */
-const CODED_FAILURES: readonly JobFailure[] = [
-  'incomplete-model',
-  'network',
-  'engine-missing',
-  'engine-failed',
-]
+const CODED_FAILURES: readonly JobFailure[] = ['incomplete-model', 'network', ...ENGINE_FAILURES]
 
 function jobFailureOf(error: unknown): JobFailure {
   if (error instanceof NetworkInterrupted || isNetworkError(error)) return 'network'
-  const text = error instanceof Error ? error.message : String(error)
-  const coded = CODED_FAILURES.find(code => text === code || text.endsWith(`: ${code}`))
+  const text = messageOf(error)
+  const coded = codeIn(text, CODED_FAILURES)
   if (coded) return coded
   if (text.includes('no file named')) return 'incomplete-model'
   return 'rejected'

@@ -145,7 +145,7 @@ function playAhead(documents: DocumentsSlice): PlayState {
  * and is read key by key in the main process. Untyped, a field renamed here left `describeStudio`
  * composing an empty sentence, and the model acting on a studio that is not there.
  */
-export function studioState(): ActionOutcome {
+export function studioSnapshot(): StudioSnapshot {
   const documents = useDocuments.getState()
   const surface = toolSurface()
   const project = useProject.getState()
@@ -153,7 +153,7 @@ export function studioState(): ActionOutcome {
   const auth = useSettings.getState()
   const activeDocument = documents.activeId ? documents.documents[documents.activeId] : undefined
 
-  const snapshot: StudioSnapshot = {
+  return {
     project: project.project,
     // 🛑 Beside the project itself: its initial `null` means "not asked yet", and a reader that
     // took it for an answer would tell a model there is no project over an open one.
@@ -185,9 +185,9 @@ export function studioState(): ActionOutcome {
     // Same reason as `projectKnown`, and the store keeps the flag for it.
     authKnown: auth.authKnown,
   }
-
-  return { ok: true, data: snapshot }
 }
+
+export const studioState = (): ActionOutcome => ({ ok: true, data: studioSnapshot() })
 
 function listDocuments(): ActionOutcome {
   const { stored, documents, activeId } = useDocuments.getState()

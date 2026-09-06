@@ -27,5 +27,8 @@ export type ApiFailure =
  */
 export type EngineFailure = 'engine-missing' | 'engine-failed'
 
+/** The same, as the list a thrown message is read against — see `codeIn`. */
+export const ENGINE_FAILURES: readonly EngineFailure[] = ['engine-missing', 'engine-failed']
+
 /** What a generation can fail on, beyond the API itself. */
 export type JobFailure = ApiFailure | EngineFailure | 'rejected' | 'storage' | 'incomplete-model'

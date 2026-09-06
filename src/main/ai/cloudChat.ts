@@ -34,10 +34,14 @@ export type ChatTool = {
 }
 
 /** One call the cloud made. `arguments` stays the JSON text it sent: reading it is the caller's. */
-export type ToolCall = { readonly name: string; readonly arguments: string }
+type ToolCall = { readonly name: string; readonly arguments: string }
 
 /** What a cloud answered: its text, and the tools it called — none on a door that takes none. */
 export type CloudAnswer = { readonly text: string; readonly calls: readonly ToolCall[] }
+
+// The OpenAI wire alone speaks tools, and never on a stream: `readStream` takes text frames alone.
+export const takesTools = (ask: Pick<CloudChatAsk, 'chat' | 'onProgress'>): boolean =>
+  ask.chat.kind === 'openai' && ask.onProgress === undefined
 
 export type CloudChatAsk = {
   readonly chat: HttpChat
