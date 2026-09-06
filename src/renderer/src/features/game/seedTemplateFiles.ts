@@ -27,13 +27,15 @@ const PLAYED: Partial<Record<SceneTemplateId, { script: TemplateScriptId; map: I
  * Never overwritten: a second scene from the same template joins the files the first laid down,
  * which is what makes a control map a project's rather than a scene's.
  */
-export async function seedTemplateFiles(template: SceneTemplateId): Promise<void> {
+export async function seedTemplateFiles(template: SceneTemplateId): Promise<string> {
   const played = PLAYED[template]
   const bridge = getBridge()
-  if (!played || !bridge) return
+  const folder = await orElse(bridge?.project.folderFor('code'), DEFAULT_ROLE_PATHS.code)
+  if (!played || !bridge) return folder
 
-  await Promise.all([writeMap(played.map), writeScript(played.script)])
+  await Promise.all([writeMap(played.map), writeScript(played.script, folder)])
   await useDocuments.getState().relist()
+  return folder
 }
 
 async function writeMap(preset: InputPresetId): Promise<void> {
@@ -47,10 +49,9 @@ async function writeMap(preset: InputPresetId): Promise<void> {
   await bridge.inputMaps.write(path, { ...structuredClone(inputMapPreset(preset)), id: preset })
 }
 
-async function writeScript(script: TemplateScriptId): Promise<void> {
+async function writeScript(script: TemplateScriptId, folder: string): Promise<void> {
   const bridge = getBridge()
   if (!bridge) return
-  const folder = await orElse(bridge.project.folderFor('code'), DEFAULT_ROLE_PATHS.code)
   const path = documentPathFor(script, 'script', folder)
   // Refused rather than overwritten by the main process, so a second scene keeps the first's work.
   await bridge.game.writeScript(path, TEMPLATE_SCRIPT_SOURCES[script])
