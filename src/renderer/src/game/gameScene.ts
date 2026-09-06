@@ -6,6 +6,7 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   Scene,
+  type Camera,
   type Texture,
   type BufferGeometry,
   type InstancedMesh,
@@ -61,8 +62,12 @@ export type GameScene = {
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
   place: (entityId: string, transform: Transform) => void
-  /** Settles what a whole frame of `place` left stale — the instanced bounds, once, not per call. */
-  flush: () => void
+  /**
+   * Settles what a frame left stale before it is drawn — the instanced bounds `place` dirtied,
+   * and which scatter cells the camera reaches. The camera is asked for rather than optional:
+   * a game draws its own way, and the one that forgot to prune drew every cell at every distance.
+   */
+  flush: (camera: Camera) => void
   seek: (time: Us) => void
   dispose: () => void
 }
@@ -199,7 +204,8 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     place: (entityId, transform) => placements.get(entityId)?.(transform),
     // 🛑 Once a frame, never per instance: `computeBoundingSphere` walks every slot of the mesh,
     // so recomputing it inside the placement made a 1 000-instance node quadratic per frame.
-    flush: () => {
+    flush: camera => {
+      drape.updateVisibility(camera)
       for (const mesh of staleInstances) {
         mesh.instanceMatrix.needsUpdate = true
         mesh.computeBoundingSphere()
