@@ -20,7 +20,7 @@ export function dispatchCatalogRequest(catalog: Catalog, request: CatalogRequest
 function valueOf(catalog: Catalog, request: CatalogRequest): CatalogResults[CatalogOp] {
   switch (request.op) {
     case 'setAnimationPoster':
-      return catalog.setAnimationPoster(request.assetId, request.sourcePath, request.posterPath)
+      return catalog.setAnimationPoster(request)
     case 'add':
       return catalog.add(request.asset)
     case 'find':

@@ -39,7 +39,11 @@ it('persists the PNG inside the clip’s own folder, under the one name such a f
   await mkdir(join(root, '.index'), { recursive: true })
   await rm(join(root, '.index'), { recursive: true })
   expect(new Uint8Array(await readFile(join(root, 'Animations/Jump/thumb.png')))).toEqual(png)
-  expect(save).toHaveBeenCalledWith(asset.id, asset.path, 'Animations/Jump/thumb.png')
+  expect(save).toHaveBeenCalledWith({
+    assetId: asset.id,
+    sourcePath: asset.path,
+    posterPath: 'Animations/Jump/thumb.png',
+  })
 })
 it('refuses a result that belongs to an old project or a moved animation', async () => {
   const save = vi.fn(async () => true)

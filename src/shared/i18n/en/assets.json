@@ -55,6 +55,8 @@
     "push_many": "Send {{count, number}} assets",
     "push_one": "Send {{count, number}} asset",
     "push_other": "Send {{count, number}} assets",
+    "redrawPoster": "Redraw thumbnail",
+    "redrawPosterHint": "Draws this animation a new thumbnail, in place of the one it wears",
     "renameHint": "Changes the name in this project; the one on the remote account stays as it is",
     "renameLabel": "Asset name",
     "search": "Search…",

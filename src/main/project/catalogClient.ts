@@ -1,5 +1,6 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
+import type { AnimationPosterWrite } from './catalogTypes'
 import {
   ABANDONED,
   isRescanProgress,
@@ -33,7 +34,7 @@ export type CatalogPort = {
  * frozen for that long (CLAUDE.md, invariant 6).
  */
 export type AsyncCatalog = {
-  setAnimationPoster: (assetId: string, sourcePath: string, posterPath: string) => Promise<boolean>
+  setAnimationPoster: (write: AnimationPosterWrite) => Promise<boolean>
   add: (asset: Asset) => Promise<Asset>
   find: (assetId: string) => Promise<Asset | null>
   findByHash: (hash: string) => Promise<Asset | null>
@@ -203,14 +204,8 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     })
 
   return {
-    setAnimationPoster: (assetId, sourcePath, posterPath) =>
-      send<'setAnimationPoster'>(id => ({
-        id,
-        op: 'setAnimationPoster',
-        assetId,
-        sourcePath,
-        posterPath,
-      })),
+    setAnimationPoster: write =>
+      send<'setAnimationPoster'>(id => ({ id, op: 'setAnimationPoster', ...write })),
     add: asset => send<'add'>(id => ({ id, op: 'add', asset })),
 
     find: assetId => send<'find'>(id => ({ id, op: 'find', assetId })),

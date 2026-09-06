@@ -53,8 +53,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
   return {
     add: asset => addAsset(asset, assets),
-    setAnimationPoster: (assetId, sourcePath, posterPath) => {
-      assets.setAnimationPoster.run(posterPath, new Date().toISOString(), assetId, sourcePath)
+    setAnimationPoster: ({ assetId, sourcePath, posterPath, replace = false }) => {
+      // `local_changed_at` moves even when the path does not: a redrawn still keeps its name,
+      // and the shelf reads it through a versioned URL that would otherwise serve the old one.
+      const now = new Date().toISOString()
+      assets.setAnimationPoster.run(posterPath, now, assetId, sourcePath, replace ? 1 : 0)
       return (optionalNumber(paths.rowsChanged.get() ?? {}, 'touched') ?? 0) > 0
     },
 

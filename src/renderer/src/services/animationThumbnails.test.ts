@@ -115,3 +115,17 @@ it('does not save a render that finishes after cancellation', async () => {
   expect(state.report).not.toHaveBeenCalled()
   expect(state.dispose).toHaveBeenCalled()
 })
+
+/**
+ * The automatic pass skips a clip that already has a still — which is what makes a poor frame
+ * permanent without this. Asked for, it is exactly that clip the pass is about.
+ */
+it('redraws a still the automatic pass would have skipped, and says so to the main process', async () => {
+  const drawn = { ...motion('Jump'), posterPath: 'Animations/Jump/thumb.png' }
+
+  await generateAnimationThumbnails([drawn])
+  expect(state.save).not.toHaveBeenCalled()
+
+  await generateAnimationThumbnails([drawn], true)
+  expect(state.save).toHaveBeenCalledWith(expect.objectContaining({ replace: true }))
+})

@@ -1,6 +1,7 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
 import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
 import type { RescanReport } from './catalogRescan'
+import type { AnimationPosterWrite } from './catalogTypes'
 
 /**
  * What the main process and the catalogue worker say to each other.
@@ -11,13 +12,7 @@ import type { RescanReport } from './catalogRescan'
  */
 
 export type CatalogRequest =
-  | {
-      id: number
-      op: 'setAnimationPoster'
-      assetId: string
-      sourcePath: string
-      posterPath: string
-    }
+  | ({ id: number; op: 'setAnimationPoster' } & AnimationPosterWrite)
   | { id: number; op: 'add'; asset: Asset }
   | { id: number; op: 'find'; assetId: string }
   | { id: number; op: 'findByHash'; hash: string }

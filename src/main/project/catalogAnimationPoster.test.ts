@@ -39,7 +39,12 @@ it('publishes through the worker protocol without replacing edits made during re
 })
 
 it('rejects publication after a move, deletion, missing file or another poster', () => {
-  const publish = () => catalog.setAnimationPoster(animation.id, 'Animations/Jump.glb', 'new.png')
+  const publish = () =>
+    catalog.setAnimationPoster({
+      assetId: animation.id,
+      sourcePath: 'Animations/Jump.glb',
+      posterPath: 'new.png',
+    })
   catalog.repath('Animations/Jump.glb', 'Moved.glb')
   expect(publish()).toBe(false)
   expect(catalog.find(animation.id)?.path).toBe('Moved.glb')
@@ -52,4 +57,30 @@ it('rejects publication after a move, deletion, missing file or another poster',
   catalog.add(animation)
   catalog.markMissing(animation.id, '2026-09-06')
   expect(publish()).toBe(false)
+})
+
+/**
+ * The automatic pass may never overwrite a still; a person asking for one must.
+ *
+ * What the accepted write is FOR is the stamp: a redrawn still keeps its name — it lives at
+ * `<folder>/thumb.png` and nowhere else — and the shelf reads it through a versioned URL, so
+ * without a new `local_changed_at` the window goes on serving the picture just replaced. Both
+ * columns are written by the one statement, so an accepted write is the stamp moving.
+ *
+ * 🛑 Not measured on the stamp ITSELF: `new Date()` resolves to the millisecond and the catalogue
+ * takes no clock, so two writes of one tick carry the same one. A real redraw costs seconds.
+ */
+it('redraws over a still on demand, and only on demand', () => {
+  const publish = (replace?: boolean) =>
+    catalog.setAnimationPoster({
+      assetId: animation.id,
+      sourcePath: 'Animations/Jump.glb',
+      posterPath: 'Animations/Jump/thumb.png',
+      replace,
+    })
+
+  expect(publish()).toBe(true)
+  expect(publish()).toBe(false)
+  expect(publish(true)).toBe(true)
+  expect(catalog.find(animation.id)?.posterPath).toBe('Animations/Jump/thumb.png')
 })

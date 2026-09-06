@@ -22,7 +22,10 @@ let preceding = Promise.resolve()
  * the person the clip they just chose — starts it with `void`, and a rejection there would be an
  * `unhandledRejection`. Everything it can go wrong about is reported from the inside.
  */
-export async function generateAnimationThumbnails(assets: readonly Asset[]): Promise<void> {
+export async function generateAnimationThumbnails(
+  assets: readonly Asset[],
+  redraw = false,
+): Promise<void> {
   const projectPath = useProject.getState().project?.path
   const prior = preceding
   let release: () => void = () => undefined
@@ -31,7 +34,7 @@ export async function generateAnimationThumbnails(assets: readonly Asset[]): Pro
   })
   await prior
   try {
-    if (useProject.getState().project?.path === projectPath) await renderBatch(assets)
+    if (useProject.getState().project?.path === projectPath) await renderBatch(assets, redraw)
   } catch (error) {
     reportFailure('assets.save', 'animation-thumbnails', error)
   } finally {
@@ -39,9 +42,10 @@ export async function generateAnimationThumbnails(assets: readonly Asset[]): Pro
   }
 }
 
-async function renderBatch(assets: readonly Asset[]): Promise<void> {
+async function renderBatch(assets: readonly Asset[], redraw: boolean): Promise<void> {
+  // A redraw was ASKED for, so a clip that already has a still is exactly what it is about.
   const motions = assets.filter(
-    asset => asset.type === 'animation' && asset.path && !asset.posterPath,
+    asset => asset.type === 'animation' && asset.path && (redraw || !asset.posterPath),
   )
   const foundBridge = getBridge()
   const foundProject = useProject.getState().project?.path
@@ -61,7 +65,11 @@ async function renderBatch(assets: readonly Asset[]): Promise<void> {
     try {
       const drawing: Drawing = {
         worker,
-        save: request => bridge.assets.saveAnimationThumbnail(request),
+        save: request =>
+          bridge.assets.saveAnimationThumbnail({
+            ...request,
+            ...(redraw ? { replace: true } : {}),
+          }),
         model: await bridge.assets.animationThumbnailModel(),
         // Read at every step rather than captured: a pass outlives the project it began in, and
         // a still filed into a project that has closed lands beside another one's clip.
