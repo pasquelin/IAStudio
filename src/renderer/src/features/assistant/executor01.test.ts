@@ -331,6 +331,25 @@ describe('choosing and preparing a model', () => {
     expect(outcome).toEqual({ ok: true, data: [{ id: 'ssd-1b', name: 'SSD-1B', family: '3d' }] })
   })
 
+  it('says of a local model that its engine cannot serve, rather than listing it as any other', async () => {
+    installFakeBridge({
+      provider: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [{ ...aModel('ssd-1b', 'SSD-1B'), unavailable: 'engine-missing' }],
+            cursor: null,
+          }),
+      },
+    })
+
+    const outcome = await runAction('models.search', { family: '3d' })
+
+    expect(outcome).toEqual({
+      ok: true,
+      data: [{ id: 'ssd-1b', name: 'SSD-1B', family: '3d', unavailable: 'engine-missing' }],
+    })
+  })
+
   it('falls back to compatible models when content words match no engine name', async () => {
     const searchModels = vi.fn(query =>
       Promise.resolve({

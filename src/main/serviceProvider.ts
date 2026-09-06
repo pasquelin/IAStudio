@@ -1,3 +1,4 @@
+import type { EngineFailure } from '@shared/domain/failure'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
@@ -42,9 +43,11 @@ export class ProviderServices {
   readonly fromManager: {
     installedIds: () => ReadonlySet<string>
     discovered: () => readonly LocalModel[]
+    engineFailure: () => EngineFailure | null
   } = {
     installedIds: () => new Set<string>(),
     discovered: () => NOTHING_DISCOVERED,
+    engineFailure: () => null,
   }
   readonly holdsTripo = (): boolean => this.settings.readCredentialsFor(TRIPO_CLOUD) !== null
   readonly generationFolder = async (): Promise<string> => {
@@ -67,6 +70,7 @@ export class ProviderServices {
     publishedModelOf: modelId => this.describedTripo().find(model => model.id === modelId) ?? null,
     localModels: () => this.mergedCatalogue(),
     isInstalled: modelId => this.fromManager.installedIds().has(modelId),
+    engineFailure: () => this.fromManager.engineFailure(),
     translate: key => textAt(TRANSLATIONS[this.language()], key),
     note: failure => noteFailure('provider:search-models', failure),
   })

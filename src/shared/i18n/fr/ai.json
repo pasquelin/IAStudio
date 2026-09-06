@@ -180,6 +180,8 @@
     "load": "Charger",
     "loadBeyondMachine": "Chargement impossible : {{needed}} demandés, {{available}} disponibles.",
     "loadFailed": "Le chargement s’est arrêté. Réessayez, ou réinstallez le modèle.",
+    "loadEngineMissing": "Le moteur d’IA local n’est pas installé sur cette machine.",
+    "loadEngineFailed": "Le moteur d’IA local n’a pas démarré. Consultez le journal d’activité, puis réessayez.",
     "loadHint": "Met les poids en mémoire pour que les réponses soient immédiates",
     "loadIncomplete": "Les fichiers du modèle manquent ou sont illisibles. Réinstallez-le, puis réessayez.",
     "loadNetwork": "Le chargement s’est interrompu. Vérifiez le réseau et réessayez.",

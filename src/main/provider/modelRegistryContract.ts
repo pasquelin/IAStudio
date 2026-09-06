@@ -1,3 +1,4 @@
+import type { EngineFailure } from '@shared/domain/failure'
 import {
   CATALOGUE_FAMILIES,
   FEATURED_TAG,
@@ -132,6 +133,8 @@ export type RegistryOptions = {
   localModels: () => readonly LocalModel[]
   /** Whether a local model's weights are on this disk. Read per call: an install lands mid-panel. */
   isInstalled: (modelId: string) => boolean
+  /** Why no local model can run right now, when none can — carried on each one as `unavailable`. */
+  engineFailure?: () => EngineFailure | null
   /**
    * A cloud's whole catalogue as DATA rather than through a listing, each entry carrying its own
    * `runsOn` — so nothing here is told which cloud answered. Empty while no key is held: a
@@ -242,6 +245,7 @@ export function localSummaryOf(
   model: LocalModel,
   installed: boolean,
   asFamily?: ModelFamily,
+  unavailable: EngineFailure | null = null,
 ): ModelSummary | null {
   const family = asFamily ?? model.family
   if (family === undefined) return null
@@ -261,6 +265,7 @@ export function localSummaryOf(
     origin: 'community',
     installed,
     ...(model.files.length === 0 ? { downloadable: false } : {}),
+    ...(unavailable === null ? {} : { unavailable }),
     diskBytes: model.diskBytes,
     featured: model.featured ?? false,
     capabilities,

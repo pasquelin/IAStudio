@@ -171,10 +171,14 @@ export function createModelRegistry(options: RegistryOptions): ModelRegistry {
     }
   }
 
-  const localSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] =>
-    options
+  const localSummaries = (asFamily?: ModelFamily): readonly ModelSummary[] => {
+    const unavailable = options.engineFailure?.() ?? null
+    return options
       .localModels()
-      .flatMap(model => localSummaryOf(model, options.isInstalled(model.id), asFamily) ?? [])
+      .flatMap(
+        model => localSummaryOf(model, options.isInstalled(model.id), asFamily, unavailable) ?? [],
+      )
+  }
 
   const published = (): readonly ModelDescriptor[] => options.publishedModels?.() ?? []
 

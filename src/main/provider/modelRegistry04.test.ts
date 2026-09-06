@@ -11,7 +11,12 @@ import { createModelRegistry, type ModelRegistry, type RegistryOptions } from '.
  */
 export const registryOf = (
   options: Omit<RegistryOptions, 'watch' | 'localModels' | 'translate' | 'isInstalled'> &
-    Partial<Pick<RegistryOptions, 'localModels' | 'translate' | 'isInstalled' | 'publishedModels'>>,
+    Partial<
+      Pick<
+        RegistryOptions,
+        'localModels' | 'translate' | 'isInstalled' | 'publishedModels' | 'engineFailure'
+      >
+    >,
 ): ModelRegistry =>
   createModelRegistry({
     localModels: () => [],
@@ -82,6 +87,20 @@ describe('a catalogue that refuses', () => {
     await registry.search({ family: 'image' })
 
     expect(refusals).toBeGreaterThan(before)
+  })
+
+  // Codex chose SSD-1B because it was listed, and the job died on a missing engine — measured
+  // 2026-09-06. A local model is listed with why it cannot run, so a client can choose elsewhere.
+  it('marks every local model unavailable when the engine cannot serve, and says why', async () => {
+    const registry = registryOf({
+      catalog: refusing,
+      localModels: () => [localModel({ id: 'ssd-1b', family: 'image', capabilities: ['txt2img'] })],
+      engineFailure: () => 'engine-missing',
+    })
+
+    const page = await registry.search({ family: 'image' })
+
+    expect(page.items.map(one => [one.id, one.unavailable])).toEqual([['ssd-1b', 'engine-missing']])
   })
 
   // 🛑 With nothing local to show, the refusal was THROWN: Electron printed the handler in the

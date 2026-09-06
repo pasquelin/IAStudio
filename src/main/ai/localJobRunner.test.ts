@@ -229,6 +229,17 @@ describe('a model that produces something other than a sentence', () => {
     expect(runner.producedBy(jobId)).toBeNull()
   })
 
+  it('names a missing engine so the jobs row can say to install it', async () => {
+    const runner = imageRunner({
+      generate: () => Promise.reject(new Error('loading local_image failed: engine-missing')),
+    })
+
+    const { jobId } = await runner.submit({ id: IMAGE_MODEL.id }, { prompt: 'x' })
+    await settled()
+
+    expect((await runner.poll(jobId, TARGET)).error).toBe('engine-missing')
+  })
+
   it('names an incomplete model so the jobs row can say to reinstall', async () => {
     const runner = imageRunner({
       generate: () => Promise.reject(new Error('incomplete-model')),

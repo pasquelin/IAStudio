@@ -290,7 +290,12 @@ export const CORE_HANDLERS: ActionHandlers = {
     if (page.items.length === 0 && page.refused) return catalogueRefusal(page.refused)
     return {
       ok: true,
-      data: page.items.map(model => ({ id: model.id, name: model.name, family: model.family })),
+      data: page.items.map(model => ({
+        id: model.id,
+        name: model.name,
+        family: model.family,
+        ...(model.unavailable ? { unavailable: model.unavailable } : {}),
+      })),
     }
   },
 
