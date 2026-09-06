@@ -1506,9 +1506,9 @@ studio's controller carries it out — with gravity, slopes and walls.
 
 | Ask | What it does |
 |---|---|
-| `self.walk(x, z)` | walks, in metres a second, in world axes |
+| `self.walk(x, z)` | walks in that **direction** — the pace comes from the component |
 | `self.jump()` | jumps, with the same ground tolerance a button gets |
-| `self.look(yaw, pitch)` | turns the look, in radians a second |
+| `self.look(yaw, pitch)` | turns the look, in the shape a stick speaks |
 | `self.drive(throttle, steer, handBrake)` | drives **this** vehicle |
 | `self.fly(pitch, roll, yaw, throttle)` | flies **this** aircraft |
 
@@ -1516,7 +1516,18 @@ studio's controller carries it out — with gravity, slopes and walls.
 > so through the wall the physics has not seen yet. `walk` asks, and what is impossible does not
 > happen.
 
-**An ask REPLACES the controls, for that body and that step alone.** A script silent on a step
+> **`walk` takes a direction, not a speed.** The pace is the `CharacterController`'s, or the
+> scene's own when it declares none: `walk(0, -1)` and `walk(0, -3)` walk at the same pace,
+> `walk(0, -0.5)` at half of it — exactly as a stick held halfway does. And it is **relative to
+> the look**, not to the world: `walk(0, -1)` means « ahead of me ».
+
+**An ask REPLACES the controls, for that body and that step alone**, with two exceptions: a jump
+**adds** to the button — an impulse cannot be un-pressed, so a script cannot stop a player from
+jumping — and there is **one look** for the scene, the one belonging to the body the camera
+follows.
+
+Ask from `onUpdate`, which is the step itself: what is asked in `onLateUpdate` arrives after the
+controllers have read, and is lost. A script silent on a step
 hands the player back the sticks on it; a script that speaks every step holds the body. That is
 what lets you say « stand still »: `self.walk(0, 0)` stops it dead, where an ask that only added
 could never ask for nothing at all.

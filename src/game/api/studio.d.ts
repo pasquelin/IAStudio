@@ -112,18 +112,37 @@ declare module '@studio' {
     get(type: ComponentName): Component | null
     has(type: ComponentName): boolean
     /**
-     * Asks the CHARACTER CONTROLLER to walk this body, in metres a second, in world axes — the
-     * `AddMovementInput` of this runtime. Gravity, slopes and walls still apply; `moveBy` places
-     * the node instead, and puts a walker through a wall.
+     * Asks the CHARACTER CONTROLLER to walk this body — the `AddMovementInput` of this runtime.
+     * Gravity, slopes and walls still apply; `moveBy` places the node instead, and puts a walker
+     * through a wall.
+     *
+     * 🛑 A DIRECTION, not a speed: the pace comes from `CharacterController.moveSpeed`, or from
+     * the scene's own when that is zero. Anything longer than one unit is normalised back — half
+     * a unit walks at half the pace, as half a stick does.
+     *
+     * 🛑 Relative to where the LOOK points, not to the world: `walk(0, -1)` is « away from the
+     * camera », which is what the same call means for a stick.
      *
      * 🛑 It REPLACES the input map for this body and this step. A script silent on a step hands
      * the sticks back on it, so calling it every step owns the body and calling it never leaves
      * the player in charge — and `walk(0, 0)` is how one says « stand still ».
      */
     walk(x: number, z: number): void
-    /** Asks for a jump, answered by the same coyote time and buffer a button gets. */
+    /**
+     * Asks for a jump, answered by the same coyote time and buffer a button gets.
+     *
+     * 🛑 It ADDS to the button rather than replacing it — an impulse cannot be un-pressed, so a
+     * script cannot stop a player from jumping.
+     */
     jump(): void
-    /** Turns the look, in radians a second — the shape the right stick speaks in. */
+    /**
+     * Turns the look. The shape the right STICK speaks in — from −1 to 1, clamped, and a full
+     * stick is a turn of about 2,6 radians a second. `look(1, 0)` turns the same way the stick
+     * pushed right does, which is towards decreasing yaw.
+     *
+     * 🛑 There is ONE look for the world, and it belongs to the body the camera watches: asked
+     * for by any other, it is dropped.
+     */
     look(yaw: number, pitch: number): void
     /** Drives THIS vehicle: throttle and steering from −1 to 1, and the hand brake. */
     drive(throttle: number, steer: number, handBrake?: boolean): void
@@ -263,7 +282,13 @@ declare module '@studio' {
     onStart?(self: Self<P>, ctx: Context, dt: number): void
     /** Every fixed step. `dt` is `ctx.dt`, handed over for what a movement is written against. */
     onUpdate?(self: Self<P>, ctx: Context, dt: number): void
-    /** Once per RENDERED frame, after every step of it. */
+    /**
+     * Once per RENDERED frame, after every step of it.
+     *
+     * 🛑 `walk`, `jump`, `drive` and `fly` asked for HERE are dropped: the controllers have
+     * already read the step, and the next one opens by clearing what nobody asked for again.
+     * Ask from `onUpdate`, which is the step itself.
+     */
     onLateUpdate?(self: Self<P>, ctx: Context, dt: number): void
     /** Once, on its way out. The entity has already left the world. */
     onDestroy?(self: Self<P>, ctx: Context): void

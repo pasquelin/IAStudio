@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 
+import type { Stick } from '../physics/aerodynamics'
+
 type Steering = { throttle: number; steer: number; handBrake: boolean }
-type Stick = { pitch: number; roll: number; yaw: number; throttle: number }
 
 /**
  * What a SCRIPT asks of a body this step, which the built-in controller then carries out — the
@@ -11,6 +12,14 @@ type Stick = { pitch: number; roll: number; yaw: number; throttle: number }
  * 🛑 It REPLACES what the input map said, for that step and that body alone. A script silent on
  * one step hands the sticks back on it; a script that writes every step owns the body. That is
  * what lets one say « stand still » — an intent that only added could never ask for nothing.
+ *
+ * 🛑 Two exceptions, both in `characters.ts`: a jump ADDS to the button, an impulse having no way
+ * to be un-pressed; and there is one look for the world, read for the body the camera watches
+ * alone. `walk` and `drive` and `fly` replace, per body.
+ *
+ * 🛑 Blind spot, written rather than hidden: an ask landing on a body no controller reads — a
+ * script on a child mesh, a `drive` from a walker's module — is stored and dropped in SILENCE.
+ * Nothing faults, nothing logs, and the author sees a call that does nothing.
  */
 export type Intents = {
   walk: (bodyId: string, x: number, z: number) => void
@@ -19,7 +28,8 @@ export type Intents = {
   drive: (bodyId: string, throttle: number, steer: number, handBrake: boolean) => void
   fly: (bodyId: string, pitch: number, roll: number, yaw: number, throttle: number) => void
 
-  walkOf: (bodyId: string) => { x: number; z: number } | null
+  /** In the shape a STICK speaks: ahead is negative on y, as a stick pushed forward reads. */
+  walkOf: (bodyId: string) => { x: number; y: number } | null
   jumped: (bodyId: string) => boolean
   lookOf: (bodyId: string) => { x: number; y: number } | null
   driveOf: (bodyId: string) => Steering | null
@@ -30,14 +40,16 @@ export type Intents = {
 }
 
 export function createIntents(): Intents {
-  const walking = new Map<string, { x: number; z: number }>()
+  const walking = new Map<string, { x: number; y: number }>()
   const jumping = new Set<string>()
   const looking = new Map<string, { x: number; y: number }>()
   const driving = new Map<string, Steering>()
   const flying = new Map<string, Stick>()
 
   return {
-    walk: (bodyId, x, z) => void walking.set(bodyId, { x, z }),
+    // A script says its z, a stick says its y, and both go the same way — normalised HERE so
+    // nothing downstream has to ask which of the two it is reading.
+    walk: (bodyId, x, z) => void walking.set(bodyId, { x, y: z }),
     jump: bodyId => void jumping.add(bodyId),
     look: (bodyId, yaw, pitch) => void looking.set(bodyId, { x: yaw, y: pitch }),
     drive: (bodyId, throttle, steer, handBrake) =>

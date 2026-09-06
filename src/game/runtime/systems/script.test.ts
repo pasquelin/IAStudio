@@ -4,8 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Component, JsonValue } from '@shared/domain/component'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import { createIntents } from '../intents'
-
-let intents = createIntents()
 import { loadQuickjsScripts } from '../../host/quickjsScripts'
 import type { ScriptFault } from '../../script/frame'
 import type { ScriptPort } from '../../ports/scriptPort'
@@ -18,6 +16,9 @@ import { createScriptSystem } from './script'
 
 const STEP = 1 / 60
 const WALK = 'script:Walk.ts'
+
+/** Fresh per case: a store shared between them would carry one test's ask into the next. */
+let intents = createIntents()
 
 const scripted = (body: string): string => `exports.default = defineScript({ ${body} })`
 
@@ -41,6 +42,7 @@ describe('what a game does with its own code', () => {
   beforeEach(async () => {
     port = await loadQuickjsScripts()
     faults = []
+    intents = createIntents()
   })
 
   afterEach(() => {
@@ -85,19 +87,17 @@ describe('what a game does with its own code', () => {
   })
 
   it('lands a walk in the intents rather than on the transform, so physics still rules', () => {
-    intents = createIntents()
     const world = running('onStart(self) { self.walk(1, -2) }')
 
     frame(world)
 
-    expect(intents.walkOf('e1')).toEqual({ x: 1, z: -2 })
+    expect(intents.walkOf('e1')).toEqual({ x: 1, y: -2 })
     // 🛑 The node has NOT moved: a walk placed here would go through whatever wall is in the way.
     expect(world.entities.get('e1')?.transform.position).toEqual({ x: 0, y: 0, z: 0 })
   })
 
   /** The script sits on the MODULE in one template and on the capsule itself in two others. */
   it('reaches the module BODY when the script sits on the module', () => {
-    intents = createIntents()
     const world = running('onStart(self) { self.jump() }', [], [], id =>
       id === 'e1' ? 'body' : null,
     )

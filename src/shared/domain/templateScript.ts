@@ -24,8 +24,9 @@ export default defineScript({
     const walking = ctx.input.axis2('move')
 
     // To DRIVE it yourself, ask the controller rather than placing the node: gravity, slopes and
-    // walls still apply. What you ask replaces the sticks for this step only.
-    //   self.walk(walking.x * 4, walking.y * 4)
+    // walls still apply. It takes a DIRECTION — the pace is the CharacterController's — and what
+    // you ask replaces the sticks for this step only.
+    //   self.walk(walking.x, walking.y)
     //   if (ctx.input.button('jump')) self.jump()
 
     if (ctx.input.button('interact')) {

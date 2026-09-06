@@ -340,6 +340,7 @@ describe('a body hanging from a parent the game moves', () => {
     const physics = notedPhysics()
     const world = worldFromScene('doc-1', state, ports(physics))
 
+    // Several steps: a walker leans into its pace rather than reaching it whole on the first.
     for (let step = 0; step < 30; step++) world.step(1 / 60)
 
     const lifted = world.entities.get(lift.id)?.transform.position.y ?? 0

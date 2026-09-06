@@ -271,7 +271,6 @@ function applyBodyIntent(
   intent: ScriptIntent,
   { intents, bodyIdOf }: ScriptSystemOptions,
 ): intent is BodyIntent {
-  if (!BODY_ACTS.some(act => act === intent.act)) return false
   // The script's own entity when it walks itself, its module's body when it sits on the module.
   const body = bodyIdOf(entity.id) ?? entity.id
 
@@ -282,15 +281,15 @@ function applyBodyIntent(
     intents.drive(body, intent.throttle, intent.steer, intent.handBrake)
   else if (intent.act === 'fly')
     intents.fly(body, intent.pitch, intent.roll, intent.yaw, intent.throttle)
+  else return false
   return true
 }
 
-/** What a script asks of a BODY rather than of a node — see `applyBodyIntent`. */
-type BodyAct = 'walk' | 'jump' | 'look' | 'drive' | 'fly'
-
-const BODY_ACTS: readonly BodyAct[] = ['walk', 'jump', 'look', 'drive', 'fly']
-
-type BodyIntent = Extract<ScriptIntent, { act: BodyAct }>
+/**
+ * 🛑 The chain above discriminates ALONE, as `applyWorldIntent` does. A second list beside it
+ * could drift, and what an act missing from one of the two falls through to is `destroy`.
+ */
+type BodyIntent = Extract<ScriptIntent, { act: 'walk' | 'jump' | 'look' | 'drive' | 'fly' }>
 
 type WorldIntent = Extract<
   ScriptIntent,
@@ -298,7 +297,7 @@ type WorldIntent = Extract<
     act: 'log' | 'spawn' | 'emit' | 'scene' | 'keep' | 'inputContext' | 'inputRebind' | 'inputReset'
   }
 >
-type EntityIntent = Exclude<ScriptIntent, WorldIntent | { act: BodyAct }>
+type EntityIntent = Exclude<ScriptIntent, WorldIntent | BodyIntent>
 
 function applyWorldIntent(world: World, intent: ScriptIntent): intent is WorldIntent {
   if (intent.act === 'log') world.ports.log.write(intent.level, intent.message)

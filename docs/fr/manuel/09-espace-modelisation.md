@@ -1554,9 +1554,9 @@ et c'est le contrôleur du studio qui exécute — avec la gravité, les pentes 
 
 | Demande | Ce qu'elle fait |
 |---|---|
-| `self.walk(x, z)` | marche, en mètres par seconde, dans les axes du monde |
+| `self.walk(x, z)` | marche dans cette **direction** — l'allure vient du composant |
 | `self.jump()` | saute, avec la même tolérance au sol qu'un bouton |
-| `self.look(lacet, tangage)` | tourne le regard, en radians par seconde |
+| `self.look(lacet, tangage)` | tourne le regard, dans la forme d'un stick |
 | `self.drive(gaz, braquage, frein)` | conduit **ce** véhicule |
 | `self.fly(tangage, roulis, lacet, gaz)` | pilote **cet** appareil |
 
@@ -1564,7 +1564,18 @@ et c'est le contrôleur du studio qui exécute — avec la gravité, les pentes 
 > demander à personne — donc à travers le mur que la physique n'a pas encore vu. `walk` demande,
 > et ce qui est impossible n'arrive pas.
 
-**Une demande REMPLACE les commandes, pour ce corps et ce pas seulement.** Un script qui se tait
+> **`walk` prend une direction, pas une vitesse.** L'allure est celle du `CharacterController`, ou
+> celle de la scène quand il n'en déclare aucune : `walk(0, -1)` et `walk(0, -3)` marchent à la
+> même allure, `walk(0, -0.5)` à la moitié — exactement comme un stick à mi-course. Et elle est
+> **relative au regard**, pas au monde : `walk(0, -1)` veut dire « devant moi ».
+
+**Une demande REMPLACE les commandes, pour ce corps et ce pas seulement**, à deux exceptions près :
+un saut **s'ajoute** au bouton — une impulsion ne se dé-presse pas, donc un script ne peut pas
+empêcher un joueur de sauter — et il n'y a **qu'un seul regard** pour la scène, celui du corps que
+la caméra suit.
+
+Ces demandes se font depuis `onUpdate`, qui est le pas lui-même : celles écrites dans
+`onLateUpdate` arrivent après que les contrôleurs ont lu, et sont perdues. Un script qui se tait
 sur un pas rend la main au joueur sur ce pas ; un script qui parle à chaque pas tient le corps.
 C'est ce qui permet de dire « ne bouge pas » : `self.walk(0, 0)` immobilise, là qu'une demande qui
 ne ferait que s'ajouter ne pourrait jamais rien demander du tout.

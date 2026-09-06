@@ -42,10 +42,11 @@ export function createAircraftSystem(
   const flying: Entity[] = []
   const settings: Component[] = []
   const axes = restingAxes()
+  // The scratch `pushForce` reads, and what the input map said this step — two, so a plane a
+  // script flies cannot leave its values behind for the next one of the sweep.
   const stick: Stick = { throttle: 0, pitch: 0, roll: 0, yaw: 0 }
-  // What the sticks said, kept so a plane a script flew does not leave its own values behind for
-  // the next one of the sweep.
   const sticks: Stick = { throttle: 0, pitch: 0, roll: 0, yaw: 0 }
+  const own = (body: string): Stick | null => intents.flyOf(body)
   const frame: Airframe = { maxThrust: 0, wingArea: 0, stallAngle: 0, agility: 0, drag: 0 }
   const aero: Aero = { force: { x: 0, y: 0, z: 0 }, torque: { x: 0, y: 0, z: 0 } }
 
@@ -94,7 +95,7 @@ export function createAircraftSystem(
    * 🛑 The stick is read per PLANE, like a car's pedals: it flies every aeroplane of the scene
    * alike, and a script flies the one it sits on.
    */
-  const pushEach = (world: World, lever: number, dt: number): void => {
+  const pushEach = (world: World, dt: number): void => {
     forces.length = 0
     const motions = world.ports.physics.motion(names)
     let read = 0
@@ -106,10 +107,13 @@ export function createAircraftSystem(
       const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
       if (!motion) continue
 
-      const own = intents.flyOf(entity.id)
-      if (own) copyStick(stick, own)
-      pushForce(entity, held, motion, own ? own.throttle : lever, dt)
-      if (own) copyStick(stick, sticks)
+      // Read from the one that speaks for THIS plane, written into the shared scratch `pushForce`
+      // reads: no save-and-restore, so no plane can leave its stick behind for the next.
+      const from = own(entity.id) ?? sticks
+      stick.pitch = from.pitch
+      stick.roll = from.roll
+      stick.yaw = from.yaw
+      pushForce(entity, held, motion, from.throttle, dt)
     }
   }
 
@@ -124,13 +128,12 @@ export function createAircraftSystem(
 
       // Read ONCE: there is one stick, and every plane in the scene answers it.
       const actions = world.actions
-      stick.pitch = actions.axis('pitch')
-      stick.roll = actions.axis('roll')
-      stick.yaw = actions.axis('yaw')
-      const lever = actions.axis('throttle')
-      copyStick(sticks, stick)
+      sticks.pitch = actions.axis('pitch')
+      sticks.roll = actions.axis('roll')
+      sticks.yaw = actions.axis('yaw')
+      sticks.throttle = actions.axis('throttle')
 
-      pushEach(world, lever, dt)
+      pushEach(world, dt)
       if (forces.length > 0) world.ports.physics.push(forces)
     },
 
@@ -145,13 +148,6 @@ export function createAircraftSystem(
       }
     },
   }
-}
-
-function copyStick(into: Stick, from: Stick): void {
-  into.pitch = from.pitch
-  into.roll = from.roll
-  into.yaw = from.yaw
-  into.throttle = from.throttle
 }
 
 function copyForce(into: BodyForce, body: string, aero: Aero): void {

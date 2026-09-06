@@ -5,7 +5,7 @@ import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domai
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
-import { createIntents } from '@game/runtime/intents'
+import { createIntents, type Intents } from '@game/runtime/intents'
 import { createPossessions } from '@game/runtime/possessions'
 import { createPossessionSystem } from '@game/runtime/systems/possession'
 import type { Entity } from '@game/runtime/entity'
@@ -78,7 +78,7 @@ export function worldFromScene(
   documentId: string,
   given: SceneState,
   ports: GameApi,
-  scripts: Partial<ScriptSystemOptions> = {},
+  scripts: SceneScripts = {},
   seed = 1,
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
   inputMaps: readonly InputMap[] = [],
@@ -91,7 +91,10 @@ export function worldFromScene(
     ...given,
     nodes: bakedRuntimeNodes(withBoundPlayerArm(given.nodes)),
   }
-  const told = scriptOptionsFor(state, ports, scripts)
+  // 🛑 Made HERE and handed to both sides: the three controllers read what the scripts write, and
+  // a second store would leave the feature dead with every suite green.
+  const intents = createIntents()
+  const told = scriptOptionsFor(state, ports, scripts, intents)
   // Filled the line after the world stands, and read only once a step runs: what lets the
   // hierarchy compose a parent where the game has MOVED it — see `createHierarchy`.
   let living: World | null = null
@@ -102,6 +105,7 @@ export function worldFromScene(
       state,
       ports,
       told,
+      intents,
       id => living?.entities.get(id)?.transform ?? null,
       heightmaps,
     ),
@@ -129,6 +133,9 @@ function installEntities(world: World, state: SceneState): void {
     })
   }
 }
+/** What a caller may SET: the two the world resolves for itself are not among them. */
+type SceneScripts = Partial<Pick<ScriptSystemOptions, 'modules' | 'onFault'>>
+
 /**
  * 🛑 One MODULE resolution for the whole world: `possession` freezes the body a rider carries and
  * a script's `walk` has to reach that same body — two answers would drift.
@@ -136,12 +143,13 @@ function installEntities(world: World, state: SceneState): void {
 function scriptOptionsFor(
   state: SceneState,
   ports: GameApi,
-  scripts: Partial<ScriptSystemOptions>,
+  scripts: SceneScripts,
+  intents: Intents,
 ): ScriptSystemOptions {
   const played = playerPartsOf(state.nodes)
   return {
     modules: scripts.modules ?? [],
-    intents: createIntents(),
+    intents,
     bodyIdOf: moduleId => (moduleId === played?.module.id ? (played.body?.id ?? null) : null),
     // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
     // nowhere is a script that silently never ran — and a caller passing an empty one is how
@@ -157,10 +165,11 @@ function systemsFor(
   state: SceneState,
   ports: GameApi,
   scripts: ScriptSystemOptions,
+  intents: Intents,
   liveOf: (nodeId: string) => Transform | null,
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
 ): readonly System[] {
-  const { intents, bodyIdOf } = scripts
+  const { bodyIdOf } = scripts
   const byId = new Map(state.nodes.map(node => [node.id, node]))
   const hierarchy = createHierarchy(byId, liveOf)
   const placedAt = (entity: Entity, own: Transform): Transform => hierarchy.worldOf(entity.id, own)

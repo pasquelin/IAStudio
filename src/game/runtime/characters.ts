@@ -35,8 +35,12 @@ const LOOK_PER_SECOND = 2.6
 
 /** 🛑 At the STEP, not the frame: a drag is idempotent between two aiming systems, a stick is not. */
 function turnBy(look: Look, stick: { x: number; y: number }, dt: number): void {
-  look.yaw = (look.yaw - stick.x * LOOK_PER_SECOND * dt) % FULL_TURN
-  look.pitch = clamp(look.pitch - stick.y * LOOK_PER_SECOND * dt, -PITCH_LIMIT, PITCH_LIMIT)
+  // 🛑 CLAMPED before it is scaled: a script may pass any finite number, and 1e308 × 2,6 is
+  // Infinity — whose remainder is NaN, which this object then keeps for the whole session.
+  const turn = clamp(stick.x, -1, 1) * LOOK_PER_SECOND * dt
+  const tilt = clamp(stick.y, -1, 1) * LOOK_PER_SECOND * dt
+  look.yaw = (look.yaw - turn) % FULL_TURN
+  look.pitch = clamp(look.pitch - tilt, -PITCH_LIMIT, PITCH_LIMIT)
 }
 
 /** A hair under straight up, where yaw and pitch would turn about the same axis. */
@@ -175,10 +179,13 @@ export function createCharacters(
         const walker = walkerFor(entity)
         fallInto(walker, settings, asked || intents.jumped(entity.id), world.play.gravity, dt)
 
+        // 🛑 The run is the PLAYER's, so it goes with the sticks: a scripted walk that kept it
+        // doubled its pace because somebody was leaning on Shift.
+        const own = intents.walkOf(entity.id)
         paceInto(
           pace,
-          intents.walkOf(entity.id) ?? world.actions.axis2('move'),
-          paceOf(settings, world.play, world.actions),
+          own ?? world.actions.axis2('move'),
+          paceOf(settings, world.play, own ? null : world.actions),
           look.yaw,
         )
         const steered = pace.x !== 0 || pace.z !== 0
@@ -249,13 +256,12 @@ function turnedBy(world: World, intents: Intents, walker: Entity | null): { x: n
  */
 function paceInto(
   into: { x: number; z: number },
-  wanted: { x: number; y?: number; z?: number },
+  wanted: { x: number; y: number },
   speed: number,
   yaw: number,
 ): void {
   // Ahead is negative on y, the axis a stick pushed forward reads on — see the `character` preset.
-  // A script says it in metres of its own, on z: one shape, read the way its writer meant it.
-  const ahead = wanted.z === undefined ? -(wanted.y ?? 0) : -wanted.z
+  const ahead = -wanted.y
   const side = wanted.x
   const length = Math.hypot(ahead, side)
   const walk = speed / Math.max(1, length)
@@ -265,9 +271,9 @@ function paceInto(
 }
 
 /** Metres a second. 🛑 Zero is « what the SCENE says » for the walk and « no running » for the run. */
-function paceOf(settings: Component | null, play: ScenePlay, actions: InputActions): number {
+function paceOf(settings: Component | null, play: ScenePlay, actions: InputActions | null): number {
   const run = numberOf(settings, 'runSpeed', WALKER.runSpeed)
-  if (run > 0 && actions.button('run')) return run
+  if (run > 0 && actions?.button('run')) return run
   return numberOf(settings, 'moveSpeed', WALKER.moveSpeed) || play.moveSpeed
 }
 
