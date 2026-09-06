@@ -26,7 +26,10 @@ import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { CompiledModelMesh, CompiledSceneOptimization } from '@shared/domain/gameExport'
 import { buildGameScene, type GameScene } from './gameScene'
 import { createGltfSource } from '@/engines/scene/gltfSource'
-import type { Us } from '@shared/domain/time'
+import { SECOND, type Us } from '@shared/domain/time'
+import { stackDraws } from '@shared/domain/postProcessing'
+import { loadLutFrom } from '@/engines/postfx/lutSource'
+import type { PostComposer } from '@/engines/postfx/PostComposer'
 
 export type WebRender = RenderPort & {
   /** Puts another scene on. What a `game.scene.load` lands as, outside the studio. */
@@ -72,6 +75,13 @@ export function createWebRender(
   let held: GameScene | null = null
   /** Whether the scene the shadow maps hold is no longer the one about to be drawn. */
   let shadowsStale = true
+  /**
+   * 🛑 Loaded only by a game that HAS effects, and imported dynamically for that: the chain and
+   * its three.js passes are weight every other exported game would carry for nothing.
+   */
+  let composer: PostComposer | null = null
+  /** Seconds, off the game's own clock: grain and tape jitter advance on it, never on a wall. */
+  let played = 0
   // 🛑 Which build the picture belongs to: a scene arriving while another is still being cut would
   // otherwise have the slower one land on top of it, and the faster one disposed under the draw.
   let building = 0
@@ -97,6 +107,7 @@ export function createWebRender(
       shadowsStale = true
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
       if (policy.shadows) tuneSceneShadows(built.scene, policy)
+      if (stackDraws(built.world.post) && !composer) composer = await composerFor(renderer, assets)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
       if (!aimed) frameAll(camera, built.scene)
@@ -122,9 +133,10 @@ export function createWebRender(
     },
 
     seek: time => {
-      // A clip moves what it drives without anyone placing it: its shadow moves with it.
-      shadowsStale = true
-      held?.seek(time)
+      played = time / SECOND
+      // 🛑 Only when it POSED something: an exported frame seeks on every tick of the clock, so a
+      // scene that drives no clip would have owed a depth pass sixty times a second for nothing.
+      if (held?.seek(time) === true) shadowsStale = true
     },
 
     // 🛑 Only when it CHANGED: `setSize` reassigns `canvas.width`, which reallocates and clears
@@ -153,7 +165,22 @@ export function createWebRender(
       // three.js clears `needsUpdate` inside the pass it triggers, so this is written per frame.
       renderer.shadowMap.needsUpdate = shadowsStale || settled
       shadowsStale = false
-      renderer.render(held.scene, camera)
+      // The composition the editor draws through, or the plain pass while its chain is still
+      // being fetched — a few frames without grade, never a scene nobody sees.
+      if (composer && stackDraws(held.world.post)) {
+        composer.draw({
+          surface: 'game',
+          scene: held.scene,
+          camera,
+          stack: held.world.post,
+          target: null,
+          width: sized.width,
+          height: sized.height,
+          quality: policy.quality,
+          toneMapped: held.world.toneMapping !== 'none',
+          time: played,
+        })
+      } else renderer.render(held.scene, camera)
       // A second pass rather than a DOM layer: the port owns a canvas and nothing above it.
       if (veil.material.opacity > 0) {
         renderer.autoClear = false
@@ -168,10 +195,26 @@ export function createWebRender(
       held?.dispose()
       held = null
       veil.dispose()
+      composer?.dispose()
+      composer = null
       gltf.dispose()
       renderer.dispose()
     },
   }
+}
+
+/**
+ * The editor's own composer, on a game's assets: an effect a scene asks for cannot differ between
+ * the two, and `PostComposer` is the one place either draws a composition.
+ */
+async function composerFor(renderer: WebGLRenderer, assets: AssetPort): Promise<PostComposer> {
+  const { PostComposer: Composer } = await import('@/engines/postfx/PostComposer')
+  return new Composer(renderer, {
+    loadLut: async assetId => {
+      const url = assets.urlOf({ kind: 'asset', id: assetId })
+      return url === null ? null : await loadLutFrom(url)
+    },
+  })
 }
 
 /**

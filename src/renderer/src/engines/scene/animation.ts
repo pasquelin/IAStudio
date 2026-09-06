@@ -246,10 +246,13 @@ export class SceneAnimations {
    * Puts every block where the scene's HEAD says, rather than where real time left it. A render
    * never advances real time at all: without this it writes the same pose a thousand times, and
    * a film of a walking character came out frozen for exactly that reason.
+   *
+   * Answers whether any model was actually POSED: a head that drives nothing moves nothing, and
+   * an exported frame reads that to decide whether it owes a shadow pass.
    */
-  seek(playhead: Us): void {
+  seek(playhead: Us): boolean {
     this.playhead = playhead
-    this.placeAll()
+    return this.placeAll()
   }
 
   /**
@@ -286,10 +289,14 @@ export class SceneAnimations {
     return length
   }
 
-  private placeAll(): void {
+  private placeAll(): boolean {
+    let posed = false
     for (const player of this.players.values()) {
-      if (player.bound.size > 0) this.place(player)
+      if (player.bound.size === 0) continue
+      this.place(player)
+      posed = true
     }
+    return posed
   }
 
   private place(player: Player): void {

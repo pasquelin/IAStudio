@@ -33,6 +33,21 @@ describe('what an exported game pays for an image', () => {
     expect(code).toContain('renderer.shadowMap.needsUpdate = shadowsStale || settled')
   })
 
+  /**
+   * `SceneWorld.post` is a scene's own chain — grade, grain, bloom. The editor draws every
+   * surface through `PostComposer`; a game that called `render` alone showed the scene ungraded,
+   * and nothing compared the two pictures.
+   */
+  it('draws a scene that asks for effects through the composer the editor uses', () => {
+    expect(code).toContain('stackDraws(held.world.post)')
+    expect(code).toContain('composer.draw({')
+    expect(code).toContain("await import('@/engines/postfx/PostComposer')")
+  })
+
+  it('falls back to the plain pass, so a chain still loading never blanks the picture', () => {
+    expect(code).toContain('} else renderer.render(held.scene, camera)')
+  })
+
   it('settles the scene BEFORE reading the flag, or a short-circuit skips the pruning', () => {
     const draw = code.slice(code.indexOf('draw: () => {'))
     expect(draw.indexOf('held.flush(camera)')).toBeLessThan(draw.indexOf('shadowMap.needsUpdate'))

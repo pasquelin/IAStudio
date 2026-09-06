@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SECOND } from '@shared/domain/time'
 import { DirectionalLight, Mesh, Object3D, PerspectiveCamera } from 'three'
 import type { GeometryDescriptor, LightDescriptor } from '@shared/domain/scene'
 import type { AssetPort } from '@game/ports/assetPort'
@@ -54,6 +55,18 @@ describe('what an exported game throws a shadow with', () => {
     expect(meshes.every(one => one.castShadow && one.receiveShadow)).toBe(true)
   })
 
+  /**
+   * three.js aims a directional shadow at `light.target`, whose world matrix it follows only once
+   * the target stands in the scene. The editor adds it in `buildLight`; a game that did not would
+   * throw every shadow at the world origin, with nothing to say so.
+   */
+  it('stands the target its sun aims at in the scene, as the editor does', async () => {
+    const built = await buildGameScene(scene([lightNode(SUN, { x: 0, y: 4, z: 0 })]), NOTHING)
+
+    const light = [...built.byEntity.values()].find(one => one instanceof DirectionalLight)
+    expect(light && built.scene.children.includes(light.target)).toBe(true)
+  })
+
   it('leaves alone what the document says throws nothing', async () => {
     const node = { ...meshNode(BOX, { name: 'Crate' }), castShadow: false, receiveShadow: false }
     const built = await buildGameScene(scene([node]), NOTHING)
@@ -84,6 +97,13 @@ describe('what an exported game throws a shadow with', () => {
 
 /** What decides a depth pass in an exported frame — see `createWebRender`, which reads it. */
 describe('what a settled frame answers', () => {
+  it('owes nothing for a head that drives no clip, however far the clock has run', async () => {
+    const built = await buildGameScene(scene([meshNode(BOX, { name: 'Crate' })]), NOTHING)
+
+    expect(built.seek(4 * SECOND)).toBe(false)
+    built.dispose()
+  })
+
   it('owes nothing once the scene it settled has stopped changing', async () => {
     const built = await buildGameScene(
       scene([meshNode(BOX, { name: 'Crate' }), lightNode(SUN, { x: 0, y: 4, z: 0 })]),

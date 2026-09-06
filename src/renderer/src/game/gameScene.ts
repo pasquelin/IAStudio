@@ -1,11 +1,13 @@
 import {
   Color,
+  DirectionalLight,
   Mesh,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
   SRGBColorSpace,
   Scene,
+  SpotLight,
   type Camera,
   type Texture,
   type BufferGeometry,
@@ -72,7 +74,8 @@ export type GameScene = {
    * decides a depth pass: a set nothing moved in owes no shadow map.
    */
   flush: (camera: Camera) => boolean
-  seek: (time: Us) => void
+  /** Poses what the head drives, and answers whether anything moved — see `flush`. */
+  seek: (time: Us) => boolean
   dispose: () => void
 }
 
@@ -315,6 +318,9 @@ async function populateScene(
     if (!object) continue
     const parent = node.parentId === null ? null : byEntity.get(node.parentId)
     ;(parent ?? scene).add(object)
+    // three.js follows the target's world matrix only once it stands in the scene — the same
+    // line `buildLight` holds in the editor. Without it a shadow is thrown at the origin.
+    if (object instanceof DirectionalLight || object instanceof SpotLight) scene.add(object.target)
   }
   dressShadows(nodes, byEntity)
 }
