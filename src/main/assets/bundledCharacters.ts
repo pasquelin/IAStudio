@@ -22,12 +22,8 @@ function resourceOf(level: CharacterLevel): BundledResource {
   return {
     file: bundledCharacterFile(level),
     name: BUNDLED_CHARACTER_NAMES[level],
-    extension: '.glb',
     type: 'mesh',
     role: 'models',
-    // Nothing shipped a character before `.resources/` existed: there is no former path to look
-    // under, and inventing one would make a project adopt a mesh of its own that happens to match.
-    formerPaths: [],
   }
 }
 

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 
 import type { Asset } from '@shared/domain/asset'
 
+import { isPrivatePath } from '@shared/domain/folder'
+
 import { createCatalog, type Catalog } from './catalog'
 
 import { openMemoryDatabase } from './sqliteMemory'
@@ -59,13 +61,21 @@ describe('the studio’s own resources, in the catalogue', () => {
     expect(catalog.search({}).map(one => one.id)).toContain('asset_cloud')
   })
 
-  // Named, not browsed: `installBundled` asks by path, an export asks by id, and a scene resolves
-  // its texture through `find`. All three must be answered, or a mesh wears a map that is gone.
-  it('answers when a caller names one by path, by id, or through find', () => {
-    expect(catalog.search({ path: '.resources/Materials/GridLarge.png' })[0]?.id).toBe(
-      'asset_shipped',
-    )
-    expect(catalog.search({ ids: ['asset_shipped'] })[0]?.id).toBe('asset_shipped')
+  /**
+   * 🛑 ASKED for, never deduced from the shape of the query. Reading `path`/`ids` as "this caller
+   * means to reach them" had a counter-example each way: the explorer's own walk names its rows by
+   * `paths` and would have revealed them, `derivedFrom` names one by relation and was refused.
+   */
+  it('answers a caller that asks for them, and refuses one that merely names them', () => {
+    const named = { path: '.resources/Materials/GridLarge.png' }
+
+    expect(catalog.search(named)).toEqual([])
+    expect(catalog.search({ ...named, hidden: true })[0]?.id).toBe('asset_shipped')
+    expect(catalog.search({ ids: ['asset_shipped'], hidden: true })[0]?.id).toBe('asset_shipped')
+  })
+
+  // `find` takes an id and answers one row: there is nothing to browse, so nothing to hide from.
+  it('resolves one through find, which a scene reading its texture back depends on', () => {
     expect(catalog.find('asset_shipped')?.name).toBe('GridLarge')
   })
 
@@ -73,5 +83,39 @@ describe('the studio’s own resources, in the catalogue', () => {
     catalog.add(asset({ id: 'asset_deep', path: 'Modelling/.private/Hidden.png' }))
 
     expect(catalog.search({}).map(one => one.id)).toEqual(['asset_own'])
+  })
+})
+
+/**
+ * The rule that hides them is spelt TWICE — `isPrivatePath` in TypeScript, `NOT_PRIVATE` in SQL —
+ * and SQLite cannot call the first. Nothing else makes the two agree: measured on the same table
+ * of paths, so the day one gains a case the other goes red rather than drifting in silence.
+ */
+describe('the two spellings of a private path', () => {
+  let driver: SqliteDriver
+  let catalog: Catalog
+
+  const PATHS = [
+    'Images/Boulder.png',
+    '.resources/Materials/GridLarge.png',
+    'Modelling/.private/Hidden.png',
+    '.ia-studio/memory.ndjson',
+    'Images/.hidden/One.png',
+    'Images/not.a.folder/Two.png',
+    'a.b/c.d/Three.png',
+  ]
+
+  beforeEach(() => {
+    driver = openMemoryDatabase()
+    catalog = createCatalog(driver)
+    onTestFinished(driver.close)
+
+    PATHS.forEach((path, index) => catalog.add(asset({ id: `asset_${index}`, path })))
+  })
+
+  it('agrees on every path, in both languages', () => {
+    const listed = new Set(catalog.search({ limit: PATHS.length }).flatMap(one => one.path ?? []))
+
+    expect(PATHS.filter(path => !listed.has(path))).toEqual(PATHS.filter(path => isPrivatePath(path)))
   })
 })

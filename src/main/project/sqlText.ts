@@ -1,5 +1,5 @@
 /**
- * The two pieces of SQL that get written by hand wherever a query is composed, and were spelt
+ * The three pieces of SQL that get written by hand wherever a query is composed, and were spelt
  * five times between the catalogue and the memory before they were named.
  */
 

@@ -2,10 +2,11 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { orElse } from '@shared/promises'
 import { withoutSourcePath, type Asset, type AssetType } from '@shared/domain/asset'
-import { DEFAULT_ROLE_PATHS, type FolderRole } from '@shared/domain/folderRole'
+import type { FolderRole } from '@shared/domain/folderRole'
 import type { PbrChannel } from '@shared/domain/material'
 import { pathIn } from '@shared/domain/folder'
-import { RESOURCES_FOLDER } from '@shared/domain/project'
+import { extensionOf } from '@shared/domain/fileName'
+import { resourceFolderOf } from '@shared/domain/project'
 import { ownFileOf } from './protocol'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import type { LocalBackend } from './localBackend'
@@ -21,12 +22,11 @@ export type BundledResource = {
   /** The file beside the app, and what it is filed under — the two are the same stem. */
   file: string
   name: string
-  extension: string
   type: AssetType
   role: FolderRole
   /** The PBR channel a texture answers, kept on the row as any other import would carry it. */
   map?: PbrChannel
-  formerPaths: readonly string[]
+  formerPaths?: readonly string[]
 }
 
 export type BundledResourceDeps = {
@@ -39,14 +39,8 @@ export type BundledResourceDeps = {
   exists: (file: string) => boolean
 }
 
-/**
- * Where one lands: under the studio's own folder, which no surface that browses assets lists.
- *
- * The tree inside mirrors the project's own, by `DEFAULT_ROLE_PATHS` names fixed rather than
- * resolved — the studio owns this folder, so no marker travels into it and no rename moves it.
- */
 function resourcePathOf(resource: BundledResource): string {
-  return pathIn(pathIn(RESOURCES_FOLDER, DEFAULT_ROLE_PATHS[resource.role]), resource.file)
+  return pathIn(resourceFolderOf(resource.role), resource.file)
 }
 
 /**
@@ -71,10 +65,12 @@ export async function installBundledResource(
   folder: string,
   resource: BundledResource,
 ): Promise<Asset> {
-  let held = (await catalog().search({ path: resourcePathOf(resource) }))[0]
-  for (const former of resource.formerPaths) {
-    held ??= (await catalog().search({ path: former }))[0]
-  }
+  // ONE round trip for every candidate: asking path by path cost sixteen round trips to the
+  // catalogue worker for four textures, where `paths` answers them all at once. The order of
+  // preference is kept here rather than by the query, which answers in its own.
+  const wanted = [resourcePathOf(resource), ...(resource.formerPaths ?? [])]
+  const rows = await catalog().search({ paths: wanted, hidden: true })
+  const held = wanted.flatMap(path => rows.filter(row => row.path === path))[0]
   // The row alone is not enough: a file deleted in the Finder leaves it behind, and everything
   // that points at it would resolve to nothing.
   const file = held ? ownFileOf(projectPath(), held) : null
@@ -88,7 +84,10 @@ export async function installBundledResource(
   // Falling back to a fresh import rather than letting it throw: `replaceBytes` writes to the path
   // the row carries and makes no folder, so a folder sent to the trash whole would fail here.
   if (held) {
-    const rewritten = await orElse(assets.replaceBytes(held.id, bytes, resource.extension), null)
+    const rewritten = await orElse(
+      assets.replaceBytes(held.id, bytes, extensionOf(resource.file)),
+      null,
+    )
     if (rewritten) return withoutSourcePath(rewritten)
   }
 
@@ -98,7 +97,7 @@ export async function installBundledResource(
         id: newAssetId(),
         name: resource.name,
         type: resource.type,
-        extension: resource.extension,
+        extension: extensionOf(resource.file),
         folderRole: resource.role,
         ...(resource.map ? { map: resource.map } : {}),
         resource: true,

@@ -49,7 +49,6 @@ function resourceOf(id: CheckerTextureId, roles: RoleFolders): BundledResource {
   return {
     file: checkerTextureFile(id),
     name: CHECKER_TEXTURE_NAMES[id],
-    extension: '.png',
     type: 'image',
     role: 'materials',
     map: 'baseColor',

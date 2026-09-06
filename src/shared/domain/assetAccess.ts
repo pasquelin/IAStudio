@@ -102,6 +102,15 @@ export type AssetQuery = {
    * reaches is a branch nothing tests.
    */
   generated?: true
+  /**
+   * Reaches what the STUDIO owns — the rows under `.resources/`, which no listing may show.
+   *
+   * 🛑 Asked for, never deduced. Reading the shape of a query instead had a counter-example each
+   * way: the explorer's own walk names its rows by `paths` and would have revealed them, while
+   * `derivedFrom` names one row by relation and was refused. Two callers pass it: the install of
+   * what the app ships, which looks for the row it filed, and the game export, which gathers by id.
+   */
+  hidden?: true
   /** Bounded by `ASSET_SEARCH_LIMIT_MAX`, past which the query is refused rather than cut. */
   limit?: number
   offset?: number

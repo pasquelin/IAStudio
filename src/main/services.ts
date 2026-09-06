@@ -411,7 +411,9 @@ export function createServices(settings: SettingsStore): Services {
       // The same picker the settings use for a folder: a second dialog with slightly different
       // options is how two flows start behaving differently.
       pickFolder: () => pickPath('folder'),
-      assetsById: ids => project.catalog().search({ ids, limit: ids.length }),
+      // `hidden`: an exported game carries what its scenes point at, the studio's own
+      // character included — the one gathering that must reach under `.resources/`.
+      assetsById: ids => project.catalog().search({ ids, limit: ids.length, hidden: true }),
       runtimeFolder: () => bundledGameRuntime(resourcesRoot()),
       // Forked on the first bundle asked for, then kept — most sessions export none. Forgotten
       // when it exits, so a crash costs the export it was writing and not the session.

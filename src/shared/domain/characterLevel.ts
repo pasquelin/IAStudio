@@ -28,17 +28,14 @@ export function nearestCharacterLevel(
   wanted: CharacterLevel,
   available: readonly CharacterLevel[],
 ): CharacterLevel | null {
-  const target = CHARACTER_LEVELS.indexOf(wanted)
-  let best: CharacterLevel | null = null
-  let bestDistance = Number.POSITIVE_INFINITY
+  const distanceOf = (level: CharacterLevel): number =>
+    Math.abs(CHARACTER_LEVELS.indexOf(level) - CHARACTER_LEVELS.indexOf(wanted))
 
+  let best: CharacterLevel | null = null
   for (const level of CHARACTER_LEVELS) {
-    if (!available.includes(level)) continue
-    const distance = Math.abs(CHARACTER_LEVELS.indexOf(level) - target)
     // Strictly closer, so walking lightest first leaves a tie with the lighter one.
-    if (distance < bestDistance) {
+    if (available.includes(level) && (best === null || distanceOf(level) < distanceOf(best))) {
       best = level
-      bestDistance = distance
     }
   }
 

@@ -3,6 +3,7 @@ import { pathBaseNameOf } from './fileName'
 import { byCodeUnit } from '../text'
 import type { AccountSummary } from './account'
 import { parentOf } from './folder'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from './folderRole'
 
 export const MANIFEST_VERSION = 1
 
@@ -49,6 +50,17 @@ export const STUDIO_FOLDER = '.ia-studio'
  * project's own scenes point at.
  */
 export const RESOURCES_FOLDER = '.resources'
+
+/**
+ * Where a resource of this role lands inside `.resources/` — the ONE spelling of that path.
+ *
+ * Default role names rather than resolved ones: the studio owns this folder, so no marker travels
+ * into it and no rename moves what it holds. Written and looked up through here, never composed
+ * twice — a divergence makes the lookup miss and installs a second copy at every open.
+ */
+export function resourceFolderOf(role: FolderRole): string {
+  return `${RESOURCES_FOLDER}/${DEFAULT_ROLE_PATHS[role]}`
+}
 
 /** What the assistant has learned about this project. One JSON object per line, appended. */
 export const MEMORY_FILE = `${STUDIO_FOLDER}/memory.ndjson`

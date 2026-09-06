@@ -8,9 +8,8 @@ import {
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
-import { DEFAULT_ROLE_PATHS, type FolderRole } from '@shared/domain/folderRole'
-import { pathIn } from '@shared/domain/folder'
-import { POSTERS_FOLDER, RESOURCES_FOLDER } from '@shared/domain/project'
+import type { FolderRole } from '@shared/domain/folderRole'
+import { POSTERS_FOLDER, resourceFolderOf } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/material'
 import type { ModelTextureUse } from '@shared/domain/modelTextureUse'
 import type { AsyncCatalog } from '@main/project/catalogClient'
@@ -312,11 +311,7 @@ export function createLocalBackend({
     if (existing?.path) return withExtension(existing.path, extension)
 
     const role = request.folderRole ?? roleForAsset(request)
-    // The DEFAULT tree under `.resources/`, never the resolved one: the studio owns that folder,
-    // so no marker travels into it and no rename may move what it holds.
-    const folder = request.resource
-      ? pathIn(RESOURCES_FOLDER, DEFAULT_ROLE_PATHS[role])
-      : await folderFor(role)
+    const folder = request.resource ? resourceFolderOf(role) : await folderFor(role)
     return freeAssetPath(projectPath(), folder, name, extension)
   }
 
