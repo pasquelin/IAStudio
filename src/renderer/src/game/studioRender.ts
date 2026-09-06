@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import { copyTransform, sameVector3, type Transform } from '@shared/domain/transform'
+import { copyTransform, sameTransform, sameVector3 } from '@shared/domain/transform'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
@@ -158,14 +158,3 @@ const NOWHERE = { x: Number.NaN, y: Number.NaN, z: Number.NaN }
 
 const sameView = (one: CameraView, other: CameraView): boolean =>
   sameVector3(one.position, other.position) && sameVector3(one.target, other.target)
-
-const sameTransform = (one: Transform, other: Transform): boolean =>
-  one.position.x === other.position.x &&
-  one.position.y === other.position.y &&
-  one.position.z === other.position.z &&
-  one.rotation.x === other.rotation.x &&
-  one.rotation.y === other.rotation.y &&
-  one.rotation.z === other.rotation.z &&
-  one.scale.x === other.scale.x &&
-  one.scale.y === other.scale.y &&
-  one.scale.z === other.scale.z

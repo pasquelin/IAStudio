@@ -1,29 +1,27 @@
 import {
   type Box3,
-  DirectionalLight,
   type Light,
   Mesh,
   MeshStandardMaterial,
   type Object3D,
-  SpotLight,
   Sprite,
   SpriteMaterial,
-  Vector3 as ThreeVector3,
 } from 'three'
 import { type LightDescriptor } from '@shared/domain/scene'
 import { shadowMapSizeFor } from './viewportQuality'
 import { type SceneNode, type SpriteNode } from './sceneState'
+import { isFramed } from './framedNodes'
 import { railOf } from './nodeRail'
 import { dressWithRail, type RailColours, helperFor } from './threeFactory'
 import { aimLightMarker, holdMarkerSize } from './markerPose'
-import { applyMaterial, applyNegative, applySprite, lightFor } from './threeSync'
+import { applyMaterial, applyNegative, applySprite, lightFor, standTarget } from './threeSync'
 import { createMaterialTextures, createSpriteTexture } from './materialTextures'
 import { reportFailure } from '@/services/diagnostics'
-import { fitShadowCamera, limitShadowUpdates, needsShadowFrustum, resizeShadowMap } from './shadows'
+import { limitShadowUpdates, shadowReachOf, tuneShadowMaps } from './shadows'
 import { applyWireOverlay } from './sceneView'
 import './bvhPatches'
 import { isNegative } from '../csg/carve'
-import { isFramed, boundsOf } from './sceneRendererSupport2'
+import { boundsOf } from './sceneRendererSupport2'
 import { throwsOf } from './sceneRendererSupport3'
 import { SceneRendererModels } from './SceneRendererModels'
 
@@ -94,25 +92,18 @@ export abstract class SceneRendererShadows extends SceneRendererModels {
     this.placementChanged = false
   }
 
-  /** Every light at once, against a reach measured once. */
+  /** Every light at once, against a reach measured once — the pass an exported game runs too. */
   protected tuneShadows(): void {
-    const size = shadowMapSizeFor(this.view.quality, this.view.shadowMapSize)
-    const framed: Object3D[] = []
+    const lights: Object3D[] = []
     for (const [id, object] of this.objects) {
-      if (this.applied.get(id)?.type !== 'light') continue
-      resizeShadowMap(object, size)
-      if (needsShadowFrustum(object)) framed.push(object)
+      if (this.applied.get(id)?.type === 'light') lights.push(object)
     }
-    // The scene is walked only if some light would read the answer: a set lit by a hemisphere
-    // and a point light has no box to size, and measuring it would be a pass for nothing.
-    if (framed.length === 0) {
-      this.shadowThrow = null
-      return
-    }
-
-    const reach = this.measureShadowReach()
-    for (const light of framed) fitShadowCamera(light, reach)
-    this.shadowThrow = throwsOf(framed, this.heldShadowBounds(), reach)
+    const tuned = tuneShadowMaps(
+      lights,
+      shadowMapSizeFor(this.view.quality, this.view.shadowMapSize),
+      () => this.measureShadowReach(),
+    )
+    this.shadowThrow = tuned && throwsOf(tuned.framed, this.heldShadowBounds(), tuned.reach)
   }
 
   /**
@@ -121,13 +112,7 @@ export abstract class SceneRendererShadows extends SceneRendererModels {
    * casts something.
    */
   protected measureShadowReach(): number {
-    const bounds = this.heldShadowBounds()
-    if (bounds.isEmpty()) return this.view.gridSize
-
-    const size = bounds.getSize(new ThreeVector3())
-    // The diagonal, not the width: a sun comes in at an angle, and a frustum cut to the exact
-    // width of the set clips the shadow its far corner throws across it.
-    return Math.max(Math.max(size.x, size.z) * Math.SQRT2, this.view.gridSize)
+    return shadowReachOf(this.heldShadowBounds(), this.view.gridSize)
   }
 
   /**
@@ -194,10 +179,7 @@ export abstract class SceneRendererShadows extends SceneRendererModels {
   protected buildLight(node: SceneNode & { type: 'light' }): Light {
     const light = lightFor(node.light)
 
-    // three.js only reads the target's world matrix once the target is in the scene.
-    if (light instanceof DirectionalLight || light instanceof SpotLight) {
-      this.viewport.scene.add(light.target)
-    }
+    standTarget(light, this.viewport.scene)
 
     const helper = helperFor(light)
     if (helper) {

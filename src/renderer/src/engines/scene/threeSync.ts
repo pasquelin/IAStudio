@@ -166,6 +166,14 @@ export function lightFor(descriptor: LightDescriptor): Light {
 }
 
 /**
+ * 🛑 three.js follows a light target's world matrix only once the target stands in the scene:
+ * without this a directional shadow is thrown at the world origin, and nothing says so.
+ */
+export function standTarget(light: Object3D, scene: Object3D): void {
+  if (light instanceof DirectionalLight || light instanceof SpotLight) scene.add(light.target)
+}
+
+/**
  * The light's own parameters. Each branch checks the class it writes to rather than casting: a
  * mismatch leaves the light alone instead of throwing at the user.
  */

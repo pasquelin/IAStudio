@@ -47,6 +47,21 @@ export function movedParts(transform: Transform): Partial<Transform> {
 export const sameVector3 = (one: Vector3, other: Vector3): boolean =>
   one.x === other.x && one.y === other.y && one.z === other.z
 
+/** Whether two poses are the same one. Read per entity per frame — no allocation on the way. */
+export function sameTransform(one: Transform, other: Transform): boolean {
+  return (
+    one.position.x === other.position.x &&
+    one.position.y === other.position.y &&
+    one.position.z === other.position.z &&
+    one.rotation.x === other.rotation.x &&
+    one.rotation.y === other.rotation.y &&
+    one.rotation.z === other.rotation.z &&
+    one.scale.x === other.scale.x &&
+    one.scale.y === other.scale.y &&
+    one.scale.z === other.scale.z
+  )
+}
+
 /** A transform nothing else holds a reference into — what a runtime copies out of a document. */
 export function copyTransform(transform: Transform): Transform {
   return {

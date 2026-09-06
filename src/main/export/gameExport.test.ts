@@ -379,6 +379,34 @@ describe('a game written to run with no studio', () => {
     expect(gunzipSync(stored)).toEqual(compactGlbGeometry(bytes))
   })
 
+  /**
+   * What one image costs travels with the game: the page draws under the author's own policy
+   * rather than under whatever a runtime happens to default to — the two used to differ, the
+   * editor drawing every shadow and the game none.
+   */
+  it('writes the render policy it was handed', async () => {
+    const { ports, written } = writing()
+    const render = {
+      shadows: true,
+      shadowQuality: 'soft',
+      shadowMapSize: 1024,
+      quality: 'performance',
+      fieldOfView: 50,
+    } satisfies NonNullable<GameExportRequest['render']>
+
+    await writeExportedGame(ports, { ...ASKED, render })
+
+    expect(manifestOf(written).render).toEqual(render)
+  })
+
+  it('leaves the policy out when nobody named one, so an older page keeps its default', async () => {
+    const { ports, written } = writing()
+
+    await writeExportedGame(ports, ASKED)
+
+    expect(manifestOf(written).render).toBeUndefined()
+  })
+
   it('writes the explicit LOSSY choices and packages the transformed image', async () => {
     const { ports, written } = writing()
     const lossyOptimization = {

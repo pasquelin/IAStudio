@@ -1,13 +1,17 @@
 import { Vector3, type Camera, type Object3D } from 'three'
 import { SCATTER_CATEGORIES, type ScatterCategory } from '@shared/domain/scene'
+import { SCATTER_DISTANCE } from '@shared/domain/renderPolicy'
 import { MAX_SPATIAL_REACH, type CellKey, type WorldPartition } from './worldPartition'
+
+/** What the pass actually reaches: the semis' own distance, never further than a query stays spatial. */
+const REACH = Math.min(SCATTER_DISTANCE, MAX_SPATIAL_REACH)
 
 type ScatterVisibilityCells = {
   byLayer: Map<string, { category: ScatterCategory; cells: Map<CellKey, Object3D[]> }>
   partitions: Map<ScatterCategory, WorldPartition>
   queried: Map<ScatterCategory, CellKey[]>
   wanted: Map<ScatterCategory, Set<CellKey>>
-  visibility: { x: number; z: number; reach: number; revision: number }
+  visibility: { x: number; z: number; revision: number }
   revision: number
 }
 
@@ -15,21 +19,18 @@ const SCATTER_EYE = new Vector3()
 
 export function updateScatterVisibility(cells: ScatterVisibilityCells, camera: Camera): boolean {
   camera.getWorldPosition(SCATTER_EYE)
-  const reach =
-    'far' in camera && typeof camera.far === 'number'
-      ? Math.min(camera.far, MAX_SPATIAL_REACH)
-      : MAX_SPATIAL_REACH
-  if (visibilityIsCurrent(cells, SCATTER_EYE.x, SCATTER_EYE.z, reach)) return false
-  queryWantedCells(cells, reach)
+  if (visibilityIsCurrent(cells, SCATTER_EYE.x, SCATTER_EYE.z)) return false
+
+  queryWantedCells(cells)
   const changed = applyVisibility(cells)
-  rememberVisibility(cells, SCATTER_EYE.x, SCATTER_EYE.z, reach)
+  rememberVisibility(cells, SCATTER_EYE.x, SCATTER_EYE.z)
   return changed
 }
 
-function queryWantedCells(cells: ScatterVisibilityCells, reach: number): void {
+function queryWantedCells(cells: ScatterVisibilityCells): void {
   for (const category of SCATTER_CATEGORIES) {
     const queried = cells.queried.get(category) ?? []
-    cells.partitions.get(category)?.query(SCATTER_EYE.x, SCATTER_EYE.z, reach, queried)
+    cells.partitions.get(category)?.query(SCATTER_EYE.x, SCATTER_EYE.z, REACH, queried)
     const wanted = cells.wanted.get(category)
     wanted?.clear()
     for (const key of queried) wanted?.add(key)
@@ -52,29 +53,13 @@ function applyVisibility(cells: ScatterVisibilityCells): boolean {
   return changed
 }
 
-function visibilityIsCurrent(
-  cells: ScatterVisibilityCells,
-  x: number,
-  z: number,
-  reach: number,
-): boolean {
+function visibilityIsCurrent(cells: ScatterVisibilityCells, x: number, z: number): boolean {
   const current = cells.visibility
-  return (
-    current.revision === cells.revision &&
-    current.x === x &&
-    current.z === z &&
-    current.reach === reach
-  )
+  return current.revision === cells.revision && current.x === x && current.z === z
 }
 
-function rememberVisibility(
-  cells: ScatterVisibilityCells,
-  x: number,
-  z: number,
-  reach: number,
-): void {
+function rememberVisibility(cells: ScatterVisibilityCells, x: number, z: number): void {
   cells.visibility.x = x
   cells.visibility.z = z
-  cells.visibility.reach = reach
   cells.visibility.revision = cells.revision
 }

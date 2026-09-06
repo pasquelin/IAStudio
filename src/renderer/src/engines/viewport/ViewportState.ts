@@ -1,3 +1,4 @@
+import { VIEW_DISTANCE } from '@shared/domain/renderPolicy'
 import {
   Color,
   OrthographicCamera,
@@ -180,10 +181,10 @@ export abstract class ViewportState {
       options.fieldOfView ?? 60,
       1,
       options.near ?? 0.1,
-      options.far ?? 1000,
+      options.far ?? VIEW_DISTANCE,
     )
     this.orthographic.near = options.near ?? 0.1
-    this.orthographic.far = options.far ?? 1000
+    this.orthographic.far = options.far ?? VIEW_DISTANCE
     this.navigationTarget = new ViewportNavigationTarget({
       pointerNdc: at => this.pointerNdcOf(at),
       pickTargets: () => this.options.pickTargets?.() ?? [],

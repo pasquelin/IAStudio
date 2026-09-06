@@ -224,6 +224,11 @@ export function shadowDefaults(node: ShadowSubject): {
   return { castShadow: canCastShadow(node), receiveShadow: canReceiveShadow(node) }
 }
 
+/** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */
+export function receivesShadow(node: SceneNode): boolean {
+  return canReceiveShadow(node) && node.receiveShadow
+}
+
 /**
  * Whether a node can throw a shadow at all. An ambient or hemisphere light has no shadow camera,
  * and three.js warns once per frame about a light told to cast one — so the box is not offered

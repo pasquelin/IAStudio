@@ -193,7 +193,7 @@ function openStage(
   rollback: ReturnType<typeof createStartupRollback>,
 ) {
   const assets = createBundledAssets(expanded.files)
-  const render = createWebRender(canvas, assets)
+  const render = createWebRender(canvas, assets, game.render)
   rollback.add(render.dispose)
   const entry = exportedSceneNamed(game, game.entryScene)
   if (!entry) throw new Error(`no scene "${game.entryScene}" in this game`)

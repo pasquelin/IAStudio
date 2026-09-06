@@ -248,6 +248,7 @@ function exportedGameOf(
     ...(assets.compressed.length > 0 ? { compressedAssets: assets.compressed } : {}),
     ...(request.modelAssets ? { modelAssets: request.modelAssets } : {}),
     ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
+    ...(request.render ? { render: request.render } : {}),
     ...(request.inputMaps?.length ? { inputMaps: request.inputMaps } : {}),
   }
 }

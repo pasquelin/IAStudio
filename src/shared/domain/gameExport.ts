@@ -1,6 +1,7 @@
 import type { CsgGraph } from './csg'
 import type { GeometryDescriptor } from './geometry'
 import type { InputMap } from './inputMap'
+import type { RenderPolicy } from './renderPolicy'
 
 /**
  * What an exported game ships beside its page, and the one thing its writer and its reader both
@@ -144,6 +145,8 @@ export type ExportedGame = {
   modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>
   /** Absent in older exports and equivalent to every LOSSY option being off. */
   lossyOptimization?: LossyOptimization
+  /** What an image costs, as the author saw it. Absent in older exports — see its default. */
+  render?: RenderPolicy
   inputMaps?: readonly InputMap[]
 }
 
@@ -180,6 +183,8 @@ export type GameExportRequest = {
   inputMaps?: readonly InputMap[]
   /** Must be named by the caller: no export path enables a visual change on its behalf. */
   lossyOptimization?: LossyOptimization
+  /** What an image costs, carried through so a game draws it the way the editor did. */
+  render?: RenderPolicy
   /** Image bytes prepared off the UI and main threads, keyed by their logical asset identity. */
   assetOverrides?: readonly ExportedAssetOverride[]
   modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>

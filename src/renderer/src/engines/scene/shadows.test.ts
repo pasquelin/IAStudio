@@ -9,16 +9,20 @@ import {
   PointLight,
   AmbientLight,
 } from 'three'
+import { Box3, Vector3 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { SHADOW_QUALITIES } from '@shared/domain/scene'
 import {
   applyShadowFlags,
+  applyShadowPolicy,
   applyShadowQuality,
   applyShadows,
   fitShadowCamera,
   limitShadowUpdates,
   ownedByAnotherNode,
   resizeShadowMap,
+  shadowReachOf,
+  tuneShadowMaps,
 } from './shadows'
 
 /** Enough of a renderer for what this reads: jsdom has no WebGL to build a real one. */
@@ -285,5 +289,66 @@ describe('turning shadows off', () => {
     const renderer = { shadowMap: { enabled: false } }
 
     expect(() => applyShadows(renderer, true, new Object3D())).not.toThrow()
+  })
+})
+
+describe('applyShadowPolicy', () => {
+  const renderer = () => ({ shadowMap: { type: PCFShadowMap, enabled: true, autoUpdate: true } })
+
+  it('turns the pass on or off as the policy says, and never leaves it to three.js', () => {
+    const off = renderer()
+    applyShadowPolicy(off, { shadows: false, shadowQuality: 'hard' })
+
+    expect(off.shadowMap.enabled).toBe(false)
+    expect(off.shadowMap.type).toBe(BasicShadowMap)
+    // The frames that owe a depth pass ask for one; nobody redraws every map of every light.
+    expect(off.shadowMap.autoUpdate).toBe(false)
+  })
+
+  it('carries the soft filter through, as a viewport on its own settings would', () => {
+    const on = renderer()
+    applyShadowPolicy(on, { shadows: true, shadowQuality: 'soft' })
+
+    expect(on.shadowMap.enabled).toBe(true)
+    expect(on.shadowMap.type).toBe(PCFShadowMap)
+  })
+})
+
+describe('shadowReachOf', () => {
+  it('spans the DIAGONAL of the ground a set covers, never its width', () => {
+    const bounds = new Box3(new Vector3(0, 0, 0), new Vector3(10, 3, 10))
+
+    expect(shadowReachOf(bounds, 0)).toBeCloseTo(10 * Math.SQRT2)
+  })
+
+  it('never falls under the floor the caller stands on', () => {
+    expect(shadowReachOf(new Box3(new Vector3(0, 0, 0), new Vector3(1, 1, 1)), 20)).toBe(20)
+  })
+
+  it('answers the floor alone for a scene that occupies nothing', () => {
+    expect(shadowReachOf(new Box3(), 20)).toBe(20)
+  })
+})
+
+/** The pass both engines run: the editor on every placement, an exported game as a scene lands. */
+describe('tuneShadowMaps', () => {
+  it('sizes the map of every light and frames the ones that frame a box', () => {
+    const sun = new DirectionalLight()
+    const bulb = new PointLight()
+
+    const tuned = tuneShadowMaps([sun, bulb], 1024, () => 40)
+
+    expect(sun.shadow.mapSize.width).toBe(1024)
+    expect(bulb.shadow.mapSize.width).toBe(1024)
+    expect(tuned?.framed).toEqual([sun])
+    expect(tuned?.reach).toBe(40)
+    expect(sun.shadow.camera.right).toBe(20)
+  })
+
+  it('never measures a scene no light would read — a pass for nothing', () => {
+    const measure = vi.fn(() => 40)
+
+    expect(tuneShadowMaps([new PointLight(), new AmbientLight()], 512, measure)).toBeNull()
+    expect(measure).not.toHaveBeenCalled()
   })
 })

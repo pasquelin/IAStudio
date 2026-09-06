@@ -1,6 +1,6 @@
 import { Object3D } from 'three'
 import { type ClipLane } from '@shared/domain/scene'
-import { type ModelNode } from './sceneState'
+import { receivesShadow, type ModelNode } from './sceneState'
 import { createModelTextures } from './modelTextures'
 import { reportFailure } from '@/services/diagnostics'
 import { clipLengthsOf, clipNamesOf, clipsOf, foreignClipsOf, type ForeignClip } from './animation'
@@ -14,7 +14,6 @@ import { skeletonSignatureOf } from '@shared/domain/skeletonProfile'
 import { characterOf } from './rigRead'
 import { meshSampleOf } from './rigSnap'
 import './bvhPatches'
-import { receivesShadow } from './sceneRendererSupport2'
 import { SceneRendererGeometry } from './SceneRendererGeometry'
 export abstract class SceneRendererModels extends SceneRendererGeometry {
   protected abstract tuneShadowsIfMoved(): void
