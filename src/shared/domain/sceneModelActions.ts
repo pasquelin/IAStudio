@@ -172,7 +172,7 @@ export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    inputs: ['cameraShots'],
+    uses: ['cameraShots'],
     fields: [
       SHOT_ID,
       { key: 'pathId', kind: 'text', labelKey: 'assistant.fields.pathId', required: false },
@@ -200,7 +200,7 @@ export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    inputs: ['cameraShots'],
+    uses: ['cameraShots'],
     fields: [SHOT_ID],
   }),
   action({
@@ -227,7 +227,7 @@ export const SCENE_MODEL_ACTIONS: readonly AssistantAction[] = [
     commitment: 'none',
     repeatable: true,
     reach: 'mcp',
-    inputs: ['cameraShots'],
+    uses: ['cameraShots'],
     fields: [
       SHOT_ID,
       { key: 'targetId', kind: 'text', labelKey: 'assistant.fields.targetId', required: false },

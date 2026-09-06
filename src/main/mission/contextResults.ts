@@ -13,10 +13,12 @@ const RESULT_ROOM = 600
 /** The steps of the round that just ran: what the current step is about to build on. */
 function lastRoundIds(input: ResultsRequest): ReadonlySet<string> {
   const steps = input.mission.plan.steps
-  const before = steps.slice(
-    0,
-    steps.findIndex(step => step.id === input.step.id),
-  )
+  const before = steps
+    .slice(
+      0,
+      steps.findIndex(step => step.id === input.step.id),
+    )
+    .filter(step => step.state === 'completed')
   const opened = before.findLastIndex(step => step.kind === 'reason' || step.kind === 'verify')
   return new Set(before.slice(opened + 1).map(step => step.id))
 }

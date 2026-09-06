@@ -129,3 +129,32 @@ it('holds back a call that aims a shot the same answer creates, until its id is 
   expect(mission.state).toBe('completed')
   expect(run.mock.calls.map(call => call[0])).toEqual([add, aimed])
 })
+
+it('aims a shot the decor made without asking the mission to open one', async () => {
+  const time = missionTestClock()
+  const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
+  const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+  const aimed: AssistantCall = {
+    action: 'camera.aimShotAt',
+    input: { shotId: 'shot-from-the-decor', targetId: 'cube' },
+  }
+  const { brain } = missionTestBrain([
+    { say: '', calls: [aimed], cost: 0 },
+    { say: 'Done.', calls: [], cost: 0 },
+  ])
+  const run = vi.fn(async (_call: AssistantCall): Promise<ActionOutcome> => ({ ok: true }))
+  const runtime = createMissionRuntime({
+    manager,
+    context: { build: async ({ mission }) => missionTestContext(mission) },
+    brain,
+    actions: { run, settle: vi.fn() },
+    jobs: { list: () => [] },
+    revisions: { read: async () => ({ current: [], unavailable: [] }) },
+    clock: time,
+  })
+
+  const mission = await runtime.create('Aim the camera at the cube', {})
+
+  expect(mission.state).toBe('completed')
+  expect(run.mock.calls.map(call => call[0])).toEqual([aimed])
+})

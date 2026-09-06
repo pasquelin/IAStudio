@@ -3,6 +3,7 @@ import {
   ACTION_REGISTRY,
   assistantAction,
   type ActionOutcome,
+  type ActionRefusal,
   type ActionResource,
   type AssistantAnswer,
 } from '@shared/domain/assistant'
@@ -189,17 +190,30 @@ function missingResourceOutcome(missing: readonly ActionResource[]): MissionStep
   }
 }
 
+/**
+ * The refusals nobody plans around: a person said no, or nobody was there to ask. Every other
+ * one goes back to the model with its detail — `failed` on an invented id killed 2.5 outright,
+ * where the legacy chain would have let the model find the real one (2026-09-06).
+ */
+const FINAL_REFUSALS: ReadonlySet<ActionRefusal> = new Set([
+  'declined',
+  'noConfirmer',
+  'timedOut',
+  'noWindow',
+  'noBridge',
+])
+
 function refusedActionOutcome(
   step: Extract<Mission['plan']['steps'][number], { kind: 'action' }>,
   outcome: Extract<ActionOutcome, { ok: false }>,
 ): MissionStepOutcome {
-  return outcome.refusal === 'badInput' || outcome.refusal === 'notFound'
-    ? {
+  return FINAL_REFUSALS.has(outcome.refusal)
+    ? { kind: 'failed', error: `action ${step.call.action}: ${outcome.refusal}` }
+    : {
         kind: 'planned',
         result: { ...outcome, action: step.call.action, input: step.call.input },
         steps: [reasoningStep()],
       }
-    : { kind: 'failed', error: `action ${step.call.action}: ${outcome.refusal}` }
 }
 
 export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
