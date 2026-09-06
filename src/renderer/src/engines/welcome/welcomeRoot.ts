@@ -15,6 +15,8 @@ import {
   type KeyframeTrack,
   type Object3D,
 } from 'three'
+import { shortWay } from '@game/numeric'
+import { clamp } from '@shared/numeric'
 import type { WelcomeStep } from './welcomeWalk'
 
 export type WelcomeRootMotion = {
@@ -34,10 +36,9 @@ const STILL: WelcomeRootMotion = {
 }
 
 /**
- * The root's path through the world, at the character's own size.
- *
- * `scale` is how much shorter the character is than the body the clip was authored on — a stride
- * belongs to a leg, so a walk replayed on a smaller one covers proportionally less ground.
+ * The root's path through the world, at the character's own size. `scale` is how much shorter the
+ * character is than the body the clip was authored on — a stride belongs to a leg, so a walk
+ * replayed on a smaller one covers proportionally less ground.
  */
 export function welcomeRootMotion(
   clip: AnimationClip,
@@ -51,7 +52,10 @@ export function welcomeRootMotion(
   // and its centimetres.
   root.updateWorldMatrix(true, false)
   const frame = new Matrix4().copy(root.parent?.matrixWorld ?? new Matrix4())
-  const clamped = (time: number): number => Math.min(Math.max(time, 0), clip.duration)
+  // The DURATION and never the clip: these three closures live for the session, and one holding
+  // the clip pins all of its tracks — 1 248 of them across the shipped set, for one number.
+  const duration = clip.duration
+  const clamped = (time: number): number => clamp(time, 0, duration)
   const along = moved.InterpolantFactoryMethodLinear()
   const held = new Vector3()
   const at = (time: number): Vector3 => {
@@ -63,13 +67,17 @@ export function welcomeRootMotion(
   }
 
   return {
-    travelAt: time => ({ x: at(time).x, z: at(time).z }),
+    travelAt: time => {
+      const point = at(time)
+
+      return { x: point.x, z: point.z }
+    },
     heightAt: time => at(time).y,
     turnAt: yawOf(
       clip.tracks.find(one => one.name === `${root.name}.quaternion`),
       frame,
       clamped,
-      clip.duration,
+      duration,
     ),
   }
 }
@@ -81,10 +89,9 @@ export function welcomeRootMotion(
 const SWAY = 0.55
 
 /**
- * The yaw the clip turns THROUGH, spread evenly across its length.
- *
- * 🛑 Never the instant yaw. A hip's own swing then steered the travel a dozen degrees each way,
- * frame by frame, and the walker slid sideways down the plate while its feet went straight.
+ * The yaw the clip turns THROUGH, spread evenly across its length. 🛑 Never the INSTANT yaw: a
+ * hip's own swing then steered the travel a dozen degrees each way, frame by frame, and the walker
+ * slid sideways down the plate while its feet went straight.
  */
 function yawOf(
   track: KeyframeTrack | undefined,
@@ -108,7 +115,7 @@ function yawOf(
     return Math.atan2(facing.x, facing.z)
   }
 
-  const net = ((at(duration) - at(0) + Math.PI * 3) % (Math.PI * 2)) - Math.PI
+  const net = shortWay(at(0), at(duration))
   if (Math.abs(net) < SWAY) return () => 0
 
   return time => (net * clamped(time)) / duration

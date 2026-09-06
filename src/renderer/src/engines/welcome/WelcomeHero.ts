@@ -1,15 +1,13 @@
 /**
  * The shipped character, strolling. Loads through the studio's own glTF source, borrows the
  * shipped clips through the studio's own retarget, and plays them on ONE clock — the walk's.
- *
- * Nothing here decides where to go: `welcomeWalk` does, off numbers this reads back from the
- * clips themselves, so the ground the walker covers is the ground their feet cover.
  */
 import {
   AnimationClip,
   AnimationMixer,
   Group,
   LoopRepeat,
+  PropertyBinding,
   SkinnedMesh,
   Vector3,
   type AnimationAction,
@@ -52,6 +50,11 @@ const FADE = 0.22
  */
 const IDLE: WelcomeClipName = 'WalkStop'
 
+/** How many instants of a walk cycle `plant` measures the soles at. */
+const PLANT_STEPS = 24
+
+const STILL: WelcomeStep = { x: 0, z: 0, turned: 0 }
+
 type Played = {
   name: WelcomeClipName
   action: AnimationAction
@@ -80,6 +83,8 @@ export class WelcomeHero {
   private rest = 0
   /** How far the lowest foot misses the floor by, measured once. See `plant`. */
   private floor = 0
+  /** The toe bones, found once: `plant` samples them two dozen times over. */
+  private toes: readonly Object3D[] = []
   private fading: Fading | null = null
   private disposed = false
 
@@ -92,15 +97,12 @@ export class WelcomeHero {
    * from being hidden hands out the whole absence, and a walker would cross the yard in one step.
    */
   advance(seconds: number): void {
-    const played = this.walk.clip ? this.played.get(this.walk.clip) : null
     if (!this.mixer) return
 
-    if (played) {
-      this.walk = welcomeAdvance(this.walk, this.stepped(played, seconds), seconds)
-      if (this.walk.time >= played.duration) this.turnOver(played.duration)
-    } else {
-      this.walk = welcomeAdvance(this.walk, { x: 0, z: 0, turned: 0 }, seconds)
-      if (this.walk.pause <= 0) this.turnOver()
+    const played = this.playing()
+    this.walk = welcomeAdvance(this.walk, played ? this.stepped(played, seconds) : STILL, seconds)
+    if (played ? this.walk.time >= played.duration : this.walk.pause <= 0) {
+      this.turnOver(played?.duration)
     }
 
     if (this.fading) this.fading = fadedBy(this.fading, seconds)
@@ -123,6 +125,7 @@ export class WelcomeHero {
     }
     this.body = null
     this.mixer = null
+    this.toes = []
     this.played.clear()
   }
 
@@ -141,13 +144,15 @@ export class WelcomeHero {
       )
       if (this.disposed) return void disposeTree(body)
 
-      this.rest = fill(this.played, { body, files, adapted, mixer })
+      const bones = skeletonBonesOf(body)
+      this.rest = fill(this.played, { body, bones, files, adapted, mixer })
       for (const file of files) disposeTree(file)
 
       castAndKeep(body)
       this.group.add(body)
       this.body = body
       this.mixer = mixer
+      this.toes = toesOf(body, bones)
       this.plant()
       this.pose()
       this.deps.onReady()
@@ -156,12 +161,14 @@ export class WelcomeHero {
     }
   }
 
+  private playing(): Played | null {
+    return this.walk.clip ? (this.played.get(this.walk.clip) ?? null) : null
+  }
+
   /**
-   * What the playing clip does to the body over `seconds`, in the walker's own frame and blended
-   * with whatever is fading out.
-   *
-   * The clip's ground is turned by the walker's heading LESS the yaw the clip has already spent,
-   * so a path that steers mid-clip still carries the feet where they point.
+   * What the playing clip does to the body over `seconds`, blended with whatever is fading out and
+   * turned into the walker's frame — by their heading LESS the yaw the clip has already spent, so
+   * a path that steers mid-clip still carries the feet where they point.
    */
   private stepped(played: Played, seconds: number): WelcomeStep {
     const own = stepOf(played, this.walk.time, seconds)
@@ -169,20 +176,20 @@ export class WelcomeHero {
       ? mixSteps(own, stepOf(this.fading.played, this.fading.time, seconds), this.weight())
       : own
     const spin = this.walk.heading - played.root.turnAt(this.walk.time)
+    const cos = Math.cos(spin)
+    const sin = Math.sin(spin)
 
     return {
-      x: blend.x * Math.cos(spin) + blend.z * Math.sin(spin),
-      z: blend.z * Math.cos(spin) - blend.x * Math.sin(spin),
+      x: blend.x * cos + blend.z * sin,
+      z: blend.z * cos - blend.x * sin,
       turned: blend.turned,
     }
   }
 
   /**
-   * Sets the character ON the floor, by their feet rather than by their hips.
-   *
-   * A stride belongs to a leg: replayed on shorter ones the hips ride true and the soles stop
-   * short. Measured over a whole walk cycle — 11 cm on the shipped character, 2026-09-06 — and
-   * taken off once, so the contact is right without touching the pose.
+   * Sets the character ON the floor, by their feet rather than by their hips: a stride belongs to
+   * a leg, so replayed on shorter ones the hips ride true and the soles stop short. Measured over
+   * a whole walk cycle — 11 cm on the shipped character, 2026-09-06 — and taken off once.
    */
   private plant(): void {
     const walk = this.played.get('Walk')
@@ -190,13 +197,11 @@ export class WelcomeHero {
     if (!walk || !body) return
 
     let lowest = Infinity
-    for (let step = 0; step <= 24; step += 1) {
-      this.walk = { ...this.walk, clip: 'Walk', time: (step / 24) * walk.duration }
+    for (let step = 0; step <= PLANT_STEPS; step += 1) {
+      this.walk = { ...this.walk, clip: 'Walk', time: (step / PLANT_STEPS) * walk.duration }
       this.pose()
       body.updateWorldMatrix(true, true)
-      body.traverse(bone => {
-        if (bone.name.endsWith('Toes')) lowest = Math.min(lowest, soleOf(bone))
-      })
+      for (const toe of this.toes) lowest = Math.min(lowest, soleOf(toe))
     }
 
     this.floor = Number.isFinite(lowest) ? lowest : 0
@@ -205,7 +210,7 @@ export class WelcomeHero {
 
   /** How high the body rides this frame — the walk's bounce, and the whole arc of a jump. */
   private riding(): number {
-    const played = this.walk.clip ? this.played.get(this.walk.clip) : null
+    const played = this.playing()
     const own = played ? played.root.heightAt(this.walk.time) : this.rest
     const rode = this.fading
       ? blended(own, this.fading.played.root.heightAt(this.fading.time), this.weight())
@@ -220,13 +225,12 @@ export class WelcomeHero {
   }
 
   /**
-   * The clip has run out, or the stand has: choose the next one and hand the old one a fade.
-   *
-   * A clip chosen again is LOOPED rather than restarted — its overrun is carried across. Dropped,
-   * every cycle of a walk lost up to a frame and the stride stuttered once a second.
+   * The clip has run out, or the stand has: choose the next one and hand the old one a fade. A
+   * clip chosen again is LOOPED rather than restarted — dropped, its overrun cost a walk up to a
+   * frame per cycle and the stride stuttered once a second.
    */
   private turnOver(duration = 0): void {
-    const held = this.walk.clip ? this.played.get(this.walk.clip) : null
+    const held = this.playing()
     const over = Math.max(0, this.walk.time - duration)
     const time = this.walk.time
     this.walk = welcomeTurnOver(this.walk, WELCOME_GROVE, Math.random)
@@ -244,26 +248,30 @@ export class WelcomeHero {
 
     const weight = this.weight()
     const showing = this.walk.clip ?? IDLE
-    for (const [name, played] of this.played) {
-      const playing = name === showing
+    for (const played of this.played.values()) {
+      const playing = played.name === showing
       const leaving = played === this.fading?.played
       played.action.enabled = playing || leaving
       played.action.weight = playing ? weight : leaving ? 1 - weight : 0
-      played.action.time = clamp(
-        playing ? (this.walk.clip ? this.walk.time : played.duration) : (this.fading?.time ?? 0),
-        0,
-        played.duration,
-      )
+      played.action.time = clamp(this.instantOf(playing, played), 0, played.duration)
     }
 
     this.group.position.set(this.walk.x, this.riding(), this.walk.z)
     this.group.rotation.y = this.walk.heading
     this.mixer.update(0)
   }
+
+  /** A standing walker is held on the LAST frame of their clip, which is what `IDLE` is for. */
+  private instantOf(playing: boolean, played: Played): number {
+    if (!playing) return this.fading?.time ?? 0
+
+    return this.walk.clip ? this.walk.time : played.duration
+  }
 }
 
 type Loaded = {
   body: Object3D
+  bones: readonly SkeletonBone[]
   files: readonly (Object3D | undefined)[]
   adapted: readonly (AnimationClip | undefined)[]
   mixer: AnimationMixer
@@ -275,7 +283,6 @@ type Loaded = {
  * on the ground and the turn back about Y, and the retargeted clip carries neither.
  */
 function fill(played: Map<WelcomeClipName, Played>, loaded: Loaded): number {
-  const bones = skeletonBonesOf(loaded.body)
   let rest = 0
   for (const [index, name] of WELCOME_CLIP_NAMES.entries()) {
     const clip = loaded.adapted[index]
@@ -283,15 +290,21 @@ function fill(played: Map<WelcomeClipName, Played>, loaded: Loaded): number {
     const raw = file && clipsOf(file)[0]
     if (!clip || !raw) continue
 
-    const source = rootBoneOf(file, raw)
-    const target = rootBoneOf(loaded.body, clip)
-    if (!source || !target) continue
+    const source = rootOf(file, raw, skeletonBonesOf(file))
+    const target = rootOf(loaded.body, clip, loaded.bones)
+    if (!source.bone || !target.bone || !target.track) continue
 
-    const fit = welcomeRootFit(target, source)
+    const fit = welcomeRootFit(target.bone, source.bone)
     rest = fit.rest
     played.set(
       name,
-      playedOf(name, loaded.mixer, clip, bones, welcomeRootMotion(raw, source, fit.scale)),
+      playedOf(
+        name,
+        loaded.mixer,
+        clip,
+        target.track,
+        welcomeRootMotion(raw, source.bone, fit.scale),
+      ),
     )
   }
 
@@ -308,25 +321,38 @@ function castAndKeep(body: Object3D): void {
   })
 }
 
-/** The bone a clip drives a body BY, as an object of that very tree. */
-function rootBoneOf(tree: Object3D, clip: AnimationClip): Object3D | null {
-  const track = rootTrackOf(clip, skeletonBonesOf(tree))
-  const name = track?.slice(0, track.indexOf('.'))
+/** The bones a sole is measured at, by ROLE — a rig may spell its toes half a dozen ways. */
+function toesOf(body: Object3D, bones: readonly SkeletonBone[]): readonly Object3D[] {
+  return bones.flatMap(bone => {
+    if (bone.role !== 'LeftToes' && bone.role !== 'RightToes') return []
+    const found = body.getObjectByName(bone.name)
 
-  return name ? (tree.getObjectByName(name) ?? null) : null
+    return found ? [found] : []
+  })
+}
+
+/** The bone a clip drives a body BY, with the track that names it. */
+function rootOf(
+  tree: Object3D,
+  clip: AnimationClip,
+  bones: readonly SkeletonBone[],
+): { bone: Object3D | null; track: string | null } {
+  const track = rootTrackOf(clip, bones)
+  const name = track === null ? null : PropertyBinding.parseTrackName(track).nodeName
+
+  return { bone: name ? (tree.getObjectByName(name) ?? null) : null, track }
 }
 
 function playedOf(
   name: WelcomeClipName,
   mixer: AnimationMixer,
   clip: AnimationClip,
-  bones: readonly SkeletonBone[],
+  track: string,
   root: WelcomeRootMotion,
 ): Played {
-  const track = rootTrackOf(clip, bones)
   // 🛑 BOTH root channels dropped, not pinned. The group carries the travel, the height and the
   // yaw; left in the pose as well, every one of them would be paid twice.
-  const spun = track === null ? '' : `${track.slice(0, track.indexOf('.'))}.quaternion`
+  const spun = `${PropertyBinding.parseTrackName(track).nodeName}.quaternion`
   const held = new AnimationClip(
     clip.name,
     clip.duration,

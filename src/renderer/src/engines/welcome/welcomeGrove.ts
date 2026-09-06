@@ -46,6 +46,13 @@ export const WELCOME_GROVE: readonly WelcomeTree[] = [
   { x: 3.8, z: -8.6, height: 1.02, crown: 0.74, planter: 0.5, turn: 2.4 },
 ]
 
+/**
+ * How far out of the yard's middle a spot stands, with one at its rim answering exactly 1 — the
+ * ellipse read as a circle, which is the only way a single number says « outside ».
+ */
+export const welcomeYardOffset = (x: number, z: number): number =>
+  Math.hypot((x - WELCOME_YARD_AT.x) / WELCOME_YARD.x, (z - WELCOME_YARD_AT.z) / WELCOME_YARD.z)
+
 /** How far a walker must stay from a tree's centre: its planter, plus their own width. */
 export function welcomeClearanceOf(tree: WelcomeTree): number {
   // The planter is square, so its CORNER is what a circle has to clear, not its side.
@@ -63,13 +70,8 @@ export function welcomeGroveAllows(
   z: number,
   slack = 0,
 ): boolean {
-  // Normalised, so one number says « outside » for an ellipse: the slack is a distance in metres,
-  // read against the SHORTER half — the edge it can cross soonest.
-  const out = Math.hypot(
-    (x - WELCOME_YARD_AT.x) / WELCOME_YARD.x,
-    (z - WELCOME_YARD_AT.z) / WELCOME_YARD.z,
-  )
-  if (out > 1 - slack / Math.min(WELCOME_YARD.x, WELCOME_YARD.z)) return false
+  // The slack is a distance in metres, read against the SHORTER half — the edge crossed soonest.
+  if (welcomeYardOffset(x, z) > 1 - slack / Math.min(WELCOME_YARD.x, WELCOME_YARD.z)) return false
 
   return trees.every(tree => Math.hypot(x - tree.x, z - tree.z) >= welcomeClearanceOf(tree) + slack)
 }

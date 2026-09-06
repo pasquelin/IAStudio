@@ -89,7 +89,12 @@ function stroll(seconds: number, trees: readonly WelcomeTree[] = WELCOME_GROVE, 
 
 describe('a walker taking one clip', () => {
   it('covers exactly the ground the clip covered, which is what stops the feet sliding', () => {
-    const state = { ...welcomeWalkStart(), clip: 'Walk' as const, heading: 0, goal: goalAhead }
+    const state: WelcomeWalkState = {
+      ...welcomeWalkStart(),
+      clip: 'Walk',
+      heading: 0,
+      goal: goalAhead,
+    }
 
     expect(welcomeAdvance(state, { x: 0, z: 0.4, turned: 0 }, 0.1).z - state.z).toBeCloseTo(0.4, 2)
   })
@@ -105,7 +110,7 @@ describe('a walker taking one clip', () => {
   })
 
   it('carries a strafe sideways without turning, which is what makes it a side step', () => {
-    const state = { ...welcomeWalkStart(), clip: 'StrafeLeft' as const, heading: 0 }
+    const state: WelcomeWalkState = { ...welcomeWalkStart(), clip: 'StrafeLeft', heading: 0 }
     const moved = welcomeAdvance(state, stepOf(state, MEASURED.StrafeLeft, 0.1), 0.1)
 
     expect(moved.heading).toBe(0)
@@ -114,7 +119,12 @@ describe('a walker taking one clip', () => {
   })
 
   it('steers a straight gait toward its goal, which is what curves a path without a turn clip', () => {
-    const state = { ...welcomeWalkStart(), clip: 'Walk' as const, heading: 0, goal: { x: 4, z: 4 } }
+    const state: WelcomeWalkState = {
+      ...welcomeWalkStart(),
+      clip: 'Walk',
+      heading: 0,
+      goal: { x: 4, z: 4 },
+    }
 
     expect(welcomeAdvance(state, { x: 0, z: 0.4, turned: 0 }, 0.1).heading).toBeGreaterThan(0)
   })
@@ -126,15 +136,15 @@ describe('what a walker plays next', () => {
   })
 
   it('stands once it has stopped, so a pause is a pause and not a stutter', () => {
-    const stopped = { ...welcomeWalkStart(), clip: 'WalkStop' as const }
+    const stopped: WelcomeWalkState = { ...welcomeWalkStart(), clip: 'WalkStop' }
 
     expect(welcomeNextClip(stopped, WELCOME_GROVE, () => 0.5)).toBeNull()
   })
 
   it('swings round something in the way rather than walking into it', () => {
-    const walking = {
+    const walking: WelcomeWalkState = {
       ...welcomeWalkStart(),
-      clip: 'Walk' as const,
+      clip: 'Walk',
       heading: 0,
       goal: goalAhead,
     }
@@ -148,9 +158,9 @@ describe('what a walker plays next', () => {
 
   it('turns on the spot rather than into a corner it cannot swing out of', () => {
     const boxed: readonly WelcomeTree[] = [treeAt(0, 1.9), treeAt(2, 0.4), treeAt(-2, 0.4)]
-    const walking = {
+    const walking: WelcomeWalkState = {
       ...welcomeWalkStart(),
-      clip: 'Walk' as const,
+      clip: 'Walk',
       heading: 0,
       goal: goalAhead,
     }

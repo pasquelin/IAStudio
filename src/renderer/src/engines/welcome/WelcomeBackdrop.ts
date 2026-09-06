@@ -23,6 +23,7 @@ import { clamp } from '@shared/numeric'
 import { reportFailure } from '@/services/diagnostics'
 import { onPaletteChange, tokenAsHex } from '../core/palette'
 import { createGltfSource } from '../scene/gltfSource'
+import { fitShadowCamera, resizeShadowMap } from '../scene/shadows'
 import { createRetarget } from '../scene/retarget'
 import RetargetWorker from '../scene/retarget.worker?worker'
 import { WelcomeHero } from './WelcomeHero'
@@ -115,7 +116,6 @@ export class WelcomeBackdrop {
   private readonly scene = new Scene()
   private readonly camera = new PerspectiveCamera(38, 1, 0.1, 400)
   private readonly clock = new Clock()
-  private readonly ground = new Color(FALLBACK_VIEWPORT)
   /**
    * Deliberately NOT the floor's colour: painted alike, a light theme loses its horizon entirely.
    * The chassis falls the right side of the floor in both themes.
@@ -210,7 +210,7 @@ export class WelcomeBackdrop {
   }
 
   syncPalette(): void {
-    this.ground.copy(hexColor(this.canvas, '--color-viewport', FALLBACK_VIEWPORT))
+    const ground = hexColor(this.canvas, '--color-viewport', FALLBACK_VIEWPORT)
     this.wall.copy(hexColor(this.canvas, '--color-chassis', FALLBACK_CHASSIS))
     const line = hexColor(this.canvas, '--color-viewport-line', FALLBACK_VIEWPORT_LINE)
     const mesh = hexColor(this.canvas, '--color-mesh', FALLBACK_MESH)
@@ -218,7 +218,7 @@ export class WelcomeBackdrop {
     this.scene.background = this.wall
     if (this.scene.fog instanceof Fog) this.scene.fog.color.copy(this.wall)
     this.renderer.setClearColor(this.wall, 1)
-    this.floor.material.color.copy(this.ground)
+    this.floor.material.color.copy(ground)
     this.grid.material.color.copy(line)
     this.motes.material.color.copy(mesh)
     this.trees.paint(mesh, hexColor(this.canvas, '--color-foliage', FALLBACK_FOLIAGE), this.wall)
@@ -266,14 +266,11 @@ export class WelcomeBackdrop {
 
   private castFrom(light: DirectionalLight): void {
     light.castShadow = true
-    light.shadow.mapSize.set(2048, 2048)
+    resizeShadowMap(light, 2048)
     // Soft rather than stamped: a hard black wedge under a crown reads as a hole in the plate.
     light.shadow.radius = 4
     light.shadow.intensity = 0.55
-    light.shadow.camera.left = -SHADOW_REACH
-    light.shadow.camera.right = SHADOW_REACH
-    light.shadow.camera.top = SHADOW_REACH
-    light.shadow.camera.bottom = -SHADOW_REACH
+    fitShadowCamera(light, 2 * SHADOW_REACH)
     light.shadow.camera.far = 34
     // Along the surface rather than into it: at this grazing angle a plain bias detaches a crown
     // from the shadow it casts, and a normal one leaves the contact where the foot is.

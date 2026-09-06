@@ -10,6 +10,7 @@ import { clamp } from '@shared/numeric'
 import {
   welcomeGroveAllows,
   welcomeGroveOpens,
+  welcomeYardOffset,
   WELCOME_SLACK,
   WELCOME_YARD,
   WELCOME_YARD_AT,
@@ -41,27 +42,24 @@ const STEER = 0.9
 
 /**
  * How far off its goal a walk may be aimed — the steering cap, and the widest a fresh goal is
- * drawn. 🛑 The TURN clips are never played to face a goal, only to get round something: a quarter
- * turn overshoots a small error into one the other way, and the walker rocks between two of them.
+ * drawn. 🛑 A TURN is never played to FACE a goal: a quarter turn overshoots a small error into
+ * one the other way, and the walker rocks between two of them.
  */
 const SPREAD = 0.9
 
 /** What `WalkStart` carries the walker while they gather speed. */
 const START_REACH = 2.2
 
-/**
- * And what a stop needs: its own stride PLUS a start's. A walker who halts with no room left to
- * set off again stands facing a planter with nothing to play but a half turn on the spot.
- */
+/** What a stop needs: its own stride PLUS a start's, or it halts with no room to set off again. */
 const STOP_REACH = 3.4
 
 /** What a quarter turn covers along its arc, which is the ground it has to find free. */
 const TURN_REACH = 2.9
 
 /**
- * And what walking on needs — a stride, no more. 🛑 Asked for a TURN's ground before walking on, a
- * walker in a yard 3.2 m deep almost never had it: measured over ten strolls of a quarter of an
- * hour, they spent 87 % to 99.6 % of themselves turning, which is a weathervane, not a stroll.
+ * And what walking on needs — a stride, no more. 🛑 Asked for a TURN's ground instead, a walker in
+ * a yard 3.2 m deep almost never had it: ten strolls of a quarter of an hour, 2026-09-06, spent
+ * 87 % to 99.6 % of themselves turning.
  */
 const WALK_REACH = 2.2
 
@@ -74,11 +72,9 @@ const RARE: readonly WelcomeClipName[] = ['StrafeLeft', 'StrafeRight', 'TurnArou
 const PAUSE_SECONDS = { least: 1.1, most: 2.9 }
 
 /**
- * Metres a second no clip may exceed — faster than the running jump, the quickest shipped.
- *
- * 🛑 A ceiling, not a speed: what it stops is a root channel READ WRONG, which is a walker thrown
- * clean out of the window rather than a walker in a hurry. Measured 2026-09-06, one misread
- * channel answered 149 m for a side step.
+ * Metres a second no clip may exceed — faster than the running jump, the quickest shipped. 🛑 A
+ * ceiling, not a speed: it stops a root channel READ WRONG, which throws the walker clean out of
+ * the window. Measured 2026-09-06, one misread channel answered 149 m for a side step.
  */
 const FASTEST = 6
 
@@ -141,11 +137,9 @@ export function welcomeAdvance(
 }
 
 /**
- * Only a gait that walks where it faces steers, and only within the error a turn is not for.
- *
- * 🛑 Read as « anything turning slower than `STEER` », the shipped turns tour at 0.71 rad/s and
- * slipped under it, and a side step is not steerable at all — both came out on an arc flatter than
- * the one the look-ahead had cleared, over the yard's short edge and into a planter.
+ * Only a gait that walks where it faces steers, and only within the error a turn is not for. 🛑
+ * Read as « anything turning slower than `STEER` », the shipped turns tour at 0.71 rad/s and
+ * slipped under it, and so did every side step — onto an arc the look-ahead had never cleared.
  */
 function steerOf(state: WelcomeWalkState, seconds: number): number {
   if (!state.clip || !STEERED.includes(state.clip)) return 0
@@ -242,8 +236,8 @@ export function welcomeNextClip(
 
 /**
  * Standing where no plan can start: over the yard's rim, or within the look-ahead's own slack of a
- * planter. Read at bare contact instead, a walker a hand's width inside that ring counted as fine
- * while every clip read shut — measured 2026-09-06, one stroll of ten span there for five minutes.
+ * planter. 🛑 Read at bare contact instead, a walker inside that ring counted as fine while every
+ * clip read shut — measured 2026-09-06, one stroll of ten span there for five minutes.
  */
 const strandedIn = (state: WelcomeWalkState, trees: readonly WelcomeTree[]): boolean =>
   !welcomeGroveAllows(trees, state.x, state.z, WELCOME_SLACK)
@@ -315,11 +309,7 @@ function aimedAt(
     if (!reaches(state, goal, trees)) continue
     // One that lands well inside wins outright: taking the first that merely fits sent the walker
     // to the rim over and over, where the only clip with room left is a half turn on the spot.
-    const from = Math.hypot(
-      (goal.x - WELCOME_YARD_AT.x) / WELCOME_YARD.x,
-      (goal.z - WELCOME_YARD_AT.z) / WELCOME_YARD.z,
-    )
-    if (from < INSIDE) return goal
+    if (welcomeYardOffset(goal.x, goal.z) < INSIDE) return goal
     outward ??= goal
   }
 

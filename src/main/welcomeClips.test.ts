@@ -26,7 +26,7 @@ describe('what the welcome backdrop reads from beside the app', () => {
     expect(missing).toEqual([])
   })
 
-  it('finds the shipped character at every density, the welcome taking the lightest', () => {
+  it('finds the shipped character at every density, the welcome taking the heaviest', () => {
     const missing = CHARACTER_LEVELS.filter(
       level => !existsSync(join(RESOURCES, 'characters', bundledCharacterFile(level))),
     )

@@ -361,15 +361,10 @@ const localBoneOf = (bone: Object3D, parent: number): WireBone => ({
 })
 
 /**
- * A bone with no bone above it carries whatever DOES stand above it, up to `root`.
- *
- * 🛑 The armature a glTF hangs its rig under is an `Object3D`, not a `Bone`, so this walk drops it
- * — and with it the quarter turn and the centimetres a Blender export puts there. The source then
- * reached three lying on its back and a hundred times too large: measured 2026-09-06 on the
- * shipped clips, a half turn played as a tumble with the head 1,08 m under the feet.
- *
- * Relative to `root` and never to the world, for `restOffsetsOf`'s own reason: the caller hands a
- * node standing IN a scene, whose placement is nobody's business here.
+ * A bone with no bone above it carries whatever DOES stand above it, up to `root` — the armature a
+ * glTF hangs its rig under being an `Object3D` and not a `Bone`. 🛑 Dropped, its quarter turn and
+ * its centimetres went with it: measured 2026-09-06, a half turn played the head 1,08 m under the
+ * feet. Relative to `root` and never to the world, which is what `restOffsetsOf` reads.
  */
 function rootBoneOf(bone: Object3D, above: Matrix4): WireBone {
   const position = new Vector3()
