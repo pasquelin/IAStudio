@@ -154,6 +154,28 @@ describe('mission runtime rounds after the first', () => {
     expect(requests).toHaveLength(3)
   })
 
+  it('holds back a question asked before any read, and lets the next one through', async () => {
+    const which = { questions: [{ question: 'Which account?', choices: [] }] }
+    const { brain, requests } = brainWith([
+      { say: '', ask: which, calls: [], cost: 0 },
+      { say: '', calls: [{ action: 'accounts.list', input: {} }], cost: 0 },
+      { say: '', ask: which, calls: [], cost: 0 },
+    ])
+
+    const mission = await runtimeWith(brain).runtime.create('Rename that account', {})
+
+    expect(mission.state).toBe('waiting_user')
+    expect(mission.plan.steps.map(step => step.kind)).toEqual([
+      'reason',
+      'reason',
+      'action',
+      'reason',
+      'user_input',
+      'reason',
+    ])
+    expect(requests[1]?.utterance).toContain('Question NOT sent')
+  })
+
   it('fails the mission on an answer nothing could be read from', async () => {
     const { brain } = brainWith([{ say: '', calls: [], unreadable: true, cost: 0 }])
 

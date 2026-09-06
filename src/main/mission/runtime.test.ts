@@ -371,13 +371,11 @@ describe('mission runtime', () => {
     const time = clock()
     const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
     const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
+    // Twice: a question asked before any read is held back once, and asked again as it was.
+    const asked = { say: '', ask: { questions: [{ question: 'Project name?', choices: [] }] } }
     const { brain } = brainWith([
-      {
-        say: '',
-        ask: { questions: [{ question: 'Project name?', choices: [] }] },
-        calls: [],
-        cost: 0,
-      },
+      { ...asked, calls: [], cost: 0 },
+      { ...asked, calls: [], cost: 0 },
       { say: '', calls: [{ action: 'project.create', input: { name: 'Boat' } }], cost: 0 },
       { say: 'Done.', calls: [], cost: 0 },
     ])

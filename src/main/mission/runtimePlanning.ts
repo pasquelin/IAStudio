@@ -16,10 +16,28 @@ const actionStep = (call: AssistantCall): PlannedStep => ({
   draft: { kind: 'action', call },
 })
 
-export const reasoningStep = (): PlannedStep => ({
-  title: 'Continue mission',
+export const reasoningStep = (title = 'Continue mission'): PlannedStep => ({
+  title,
   draft: { kind: 'reason' },
 })
+
+/**
+ * 🛑 A question asked before ANY read: « quel compte ? », « que doit avancer ? » — fourteen of the
+ * passe-5 failures asked what a read would have answered (2026-09-06). Held back ONCE per mission,
+ * so what only the person knows costs one round more. Within the 160 characters the JSON shows.
+ */
+export const READ_BEFORE_ASKING =
+  'Question NOT sent: nothing was read yet. If a read can answer it, read and act on the answer; if only the person can, ask it again as it was.'
+
+/** Whether an ask is held back: no action ran yet, and the mission was not held back before. */
+export function asksBeforeReading(mission: Mission, answer: AssistantAnswer): boolean {
+  if (!answer.ask) return false
+  const steps = mission.plan.steps
+  return (
+    !steps.some(step => step.kind === 'action' && step.state === 'completed') &&
+    !steps.some(step => step.kind === 'reason' && step.title === READ_BEFORE_ASKING)
+  )
+}
 
 const verificationStep = (): PlannedStep => ({
   title: 'Verify mission result',

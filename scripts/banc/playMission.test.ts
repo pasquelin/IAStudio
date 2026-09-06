@@ -264,7 +264,8 @@ describe('ce que le harnais mission envoie et répond, comme le produit', () => 
       (log: string[]): AssistantBrain['think'] =>
       async request => {
         log.push(request.utterance)
-        return log.length === 1 ? ask() : { say: 'Fait.', calls: [], cost: 0 }
+        // Twice: the runtime holds a question back once before any read, and it is asked again.
+        return log.length <= 2 ? ask() : { say: 'Fait.', calls: [], cost: 0 }
       }
     const answered = await playMission(
       { name: 'répond', said: ['Renomme.'], replies: ['Bateau'], passed: () => true },
