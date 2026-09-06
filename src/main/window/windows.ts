@@ -71,6 +71,7 @@ function shown(window: BrowserWindow): BrowserWindow {
  * on them; `theme.test.ts` holds the two numbers together.
  */
 const TRAFFIC_LIGHTS = { x: 16, y: 14 }
+type WindowOptions = NonNullable<ConstructorParameters<typeof BrowserWindow>[0]>
 
 /**
  * The shape shared by every window that is not a document: a size typed here rather than taken
@@ -373,7 +374,11 @@ export function openNewDocumentWindow(): BrowserWindow {
  * The shape the two windows that show a PICTURE share: full screen allowed, no title bar inset,
  * and the monitor's own black behind the image so that nothing beside it tints the judgement.
  */
-function monitorWindow(size: WindowSize, title: string): BrowserWindow {
+function monitorWindow(
+  size: WindowSize,
+  title: string,
+  over: Partial<WindowOptions> = {},
+): BrowserWindow {
   return shown(
     new BrowserWindow({
       ...size,
@@ -382,6 +387,7 @@ function monitorWindow(size: WindowSize, title: string): BrowserWindow {
       title,
       icon: WINDOW_ICON,
       webPreferences: WEB_PREFERENCES,
+      ...over,
     }),
   )
 }
@@ -438,6 +444,9 @@ export function openGameWindow(): BrowserWindow {
   const window = monitorWindow(
     { width: 1280, height: 720, minWidth: 480, minHeight: 320 },
     TRANSLATIONS[windowLanguage()].game.window.title,
+    // 🛑 NO title bar, where the studio only insets its own: a strip of chrome over a game is a
+    // strip of somebody else's window. The lights stay — nothing else closes it with a mouse.
+    { titleBarStyle: 'hidden', trafficLightPosition: TRAFFIC_LIGHTS },
   )
 
   window.on('closed', () => {
