@@ -222,8 +222,13 @@ export function codeFileOf(documentId: string): CodeFile | undefined {
   return script === null ? undefined : useCode.getState().files[script]
 }
 
-/** The scripts of the project, in one order — what a Play compiles and what `script.list` says. */
-export function codeFilesOf(state: CodeStoreState): readonly CodeFile[] {
+/**
+ * The scripts of the project, in one order — what a Play compiles and what `script.list` says.
+ *
+ * 🛑 Takes the FILES rather than the store, so a memo can hold it: it BUILDS an array, and a
+ * component subscribing through it re-rendered for ever.
+ */
+export function codeFilesOf(state: Pick<CodeStoreState, 'files'>): readonly CodeFile[] {
   return Object.values(state.files).sort((one, other) => byCodeUnit(one.script, other.script))
 }
 

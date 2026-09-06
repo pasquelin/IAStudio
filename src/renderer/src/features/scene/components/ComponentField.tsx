@@ -7,6 +7,7 @@ import { SelectField } from '@/components/SelectField'
 import { TextField } from '@/components/TextField'
 import { ToggleField } from '@/components/ToggleField'
 import type { GestureProps } from '@/components/styles'
+import { ScriptField } from './ScriptField'
 
 export type ComponentFieldProps = {
   /** What the row SHOWS. Handed over rather than read off a component: a script's settings live
@@ -103,6 +104,16 @@ export function ComponentField({
     />
   )
   if (field.kind === 'boolean') return booleanField()
+  // The row a texture and a typeface are picked by, so a file is chosen the same way everywhere.
+  if (field.picks === 'script')
+    return (
+      <ScriptField
+        label={label}
+        value={typeof held === 'string' ? held : ''}
+        onChange={value => onChange(value)}
+        scId={scId}
+      />
+    )
   if (field.kind === 'choice' || field.picks === 'node') return selectField()
   if (field.kind === 'number' || field.kind === 'integer') return numberField()
   return textField()

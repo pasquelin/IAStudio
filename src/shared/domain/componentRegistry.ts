@@ -404,7 +404,7 @@ const SCRIPT: ComponentDescriptor = {
   // 🛑 ONE declared field. What a script exposes differs per script, so those rows are read off
   // the file's own `props` and written beside this one — see `scriptProps`. Absent by default:
   // a component nobody has set carries nothing, and `settingsOf` answers the author's own words.
-  fields: [{ key: 'script', kind: 'text', labelKey: 'game.fields.script', required: true }],
+  fields: [textField('script', 'script')],
   defaults: { script: '' },
 }
 

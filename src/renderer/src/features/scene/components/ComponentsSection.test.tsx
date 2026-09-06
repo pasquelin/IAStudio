@@ -137,3 +137,36 @@ describe('what the selected object does while the game runs', () => {
     expect(screen.getByLabelText('speed')).toHaveValue('4')
   })
 })
+
+describe('the script a component runs', () => {
+  const scripted = (named: string) => sceneWith([{ ...newComponent('Script'), script: named }])
+
+  const holdingFiles = (...names: string[]) => {
+    useCode.setState({
+      files: Object.fromEntries(names.map(name => [name, { script: name, saved: '', source: '' }])),
+    })
+  }
+
+  /** 🛑 The row a texture and a typeface are picked by — never a name to type by hand. */
+  it('offers the project scripts as a list, by file name', () => {
+    holdingFiles('script:Scripts/player.ts', 'script:Scripts/door.ts')
+
+    show(scripted('script:Scripts/player.ts'))
+
+    // By FILE name: the row is narrow, and the folders are what the menu holds.
+    expect(screen.getByRole('option', { name: 'door.ts' })).toBeInTheDocument()
+    expect(screen.getByRole<HTMLOptionElement>('option', { name: 'player.ts' }).selected).toBe(true)
+  })
+
+  /**
+   * Dropping it would rewrite the component on the first edit, which is the one thing a missing
+   * link must not do — the line `FontField` holds for a typeface this machine has not got.
+   */
+  it('keeps a script the project no longer holds, marked as missing', () => {
+    holdingFiles('script:Scripts/door.ts')
+
+    show(scripted('script:Scripts/gone.ts'))
+
+    expect(screen.getByRole('option', { name: /gone\.ts/ })).toBeInTheDocument()
+  })
+})

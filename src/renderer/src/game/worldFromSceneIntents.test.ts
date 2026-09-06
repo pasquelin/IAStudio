@@ -47,7 +47,13 @@ describe('what a script asks, reaching the body it sits on', () => {
         },
       ],
     })
-    for (let step = 0; step < 30; step++) world.step(1 / 60)
+    // 🛑 Whole FRAMES, never a run of bare steps: the script budget is four milliseconds of wall
+    // clock and `script.ts` refills it in `lateUpdate`. Thirty steps in a row spend it once and
+    // the sandbox stops running — green alone, red under a loaded suite.
+    for (let frame = 0; frame < 30; frame++) {
+      world.step(1 / 60)
+      world.lateUpdate(0, 1 / 60)
+    }
 
     expect(physics.asked.at(-1)?.wanted.x).toBeGreaterThan(0)
     world.dispose()

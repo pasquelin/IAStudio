@@ -71,6 +71,9 @@ export const SceneNodeRow = memo(function SceneNodeRow({
       <Row
         icon={iconOf(node)}
         title={node.name}
+        // What DRIVES it, said on the line: the panel's own suffix, so the outliner answers
+        // « which script » rather than only « one of them ».
+        suffix={scriptOn(node)}
         muted={!node.visible}
         leading={
           visibleLabel && (
@@ -85,3 +88,10 @@ export const SceneNodeRow = memo(function SceneNodeRow({
     </div>
   )
 })
+
+/** The file a `Script` component names, folders left out — nothing when the node carries none. */
+function scriptOn(node: SceneNode): string | undefined {
+  const held = node.components?.find(one => one.type === 'Script')
+  const named = typeof held?.script === 'string' ? held.script : ''
+  return named === '' ? undefined : named.slice(named.lastIndexOf('/') + 1)
+}

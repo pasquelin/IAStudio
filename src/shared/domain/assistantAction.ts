@@ -66,12 +66,13 @@ export type ActionField = {
   /**
    * What this value NAMES, so a surface can offer to point at one instead of asking for the word.
    * `folder` is a folder of the machine — the model guesses a name where only the person knows
-   * where their work lives; `node` is a node of the scene, which the inspector offers as a list.
+   * where their work lives; `node` is a node of the scene and `script` a file of the project,
+   * both of which the inspector offers as a list rather than as a name to type.
    *
    * 🛑 Not `PathKind`: the button's label says « dossier », and nothing would rougir on a field
    * that asked for a FILE under it. A second kind comes with a second label.
    */
-  picks?: 'folder' | 'node'
+  picks?: 'folder' | 'node' | 'script'
   reference?: ActionReferenceKind
   min?: number
   max?: number
