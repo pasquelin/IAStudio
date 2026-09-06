@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { BoxGeometry, Mesh, MeshBasicMaterial, Object3D, PerspectiveCamera } from 'three'
 import type { AssetPort } from '@game/ports/assetPort'
 import { reliefLayer, scatterLayer } from '@shared/domain/scene'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
@@ -42,6 +43,71 @@ describe('a game scene draped with world layers', () => {
       NOTHING,
     )
     expect(namesOf(built.scene)).toContain('scene-scatter')
+    built.dispose()
+  })
+})
+
+/**
+ * 🛑 The studio prunes its scatter every frame (`SceneRendererFrame.advance`); an exported game
+ * draws its own way and asked for nothing, so every cell of a forest was drawn at every distance.
+ */
+describe('what an exported game asks of its scatter', () => {
+  const treeAt = (): Object3D => {
+    const tree = new Object3D()
+    tree.add(new Mesh(new BoxGeometry(1, 2, 1), new MeshBasicMaterial()))
+    return tree
+  }
+  /** Effective visibility: a cell is hidden at its own root, and `traverse` walks under it anyway. */
+  const drawnUnder = (root: Object3D): Set<string> => {
+    const drawn = new Set<string>()
+    root.traverse(object => {
+      for (let walk: Object3D | null = object; walk; walk = walk.parent) {
+        if (!walk.visible) return
+      }
+      if (object instanceof Mesh) drawn.add(object.uuid)
+    })
+    return drawn
+  }
+
+  it('draws the cells around its camera and drops the ones out of reach, as the camera moves', async () => {
+    const built = await buildGameScene(
+      {
+        ...EMPTY_SCENE,
+        world: {
+          ...EMPTY_SCENE.world,
+          layers: [
+            scatterLayer({
+              id: 'trees',
+              assets: [{ assetId: 'pine', weight: 1 }],
+              origin: { x: 0, z: 0 },
+              size: { x: 512, z: 256 },
+              rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.01, spacing: 16 },
+            }),
+          ],
+        },
+      },
+      { urlOf: () => 'asset://pine' },
+      undefined,
+      undefined,
+      async () => treeAt(),
+    )
+    const scatter = built.scene.getObjectByName('scene-scatter')
+    if (!scatter) throw new Error('the game scene grew no scatter to prune')
+    // Two cells of 256 across a 512-wide layer, and a reach that spans neither: what the eye is
+    // read as decides which one survives. No `updateMatrixWorld` here on purpose — a stale matrix
+    // would answer the origin, which is the OTHER cell, so this tells the two apart.
+    const camera = new PerspectiveCamera(50, 1, 0.1, 60)
+    camera.position.set(400, 10, 0)
+
+    built.flush(camera)
+    const far = drawnUnder(scatter)
+    camera.position.set(0, 10, 0)
+    built.flush(camera)
+    const near = drawnUnder(scatter)
+
+    expect(far.size).toBeGreaterThan(0)
+    expect(near.size).toBeGreaterThan(0)
+    expect([...far].some(uuid => near.has(uuid))).toBe(false)
     built.dispose()
   })
 })

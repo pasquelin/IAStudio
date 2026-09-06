@@ -1,4 +1,4 @@
-import type { Scene } from 'three'
+import type { Camera, Scene } from 'three'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { enabledScatters, enabledTerrains, type SceneWorld } from '@shared/domain/scene'
 import type { AssetPort } from '@game/ports/assetPort'
@@ -9,6 +9,8 @@ import { disposeTree, type ModelSource } from '@/engines/scene/modelCache'
 
 export type WorldDrape = {
   hideGround: boolean
+  /** Prunes the scatter to what the camera reaches — a game draws its own way and must ask. */
+  updateVisibility: (camera: Camera) => void
   dispose: () => void
 }
 
@@ -30,6 +32,10 @@ export async function drapeWorld(
   if (scatter) await scatter.sync(world, maps)
   return {
     hideGround: terrains.length > 0 && (maps?.size ?? 0) > 0,
+    // The `changed` it answers keeps the STUDIO's loop alive; an exported game draws every frame.
+    updateVisibility: camera => {
+      scatter?.updateVisibility(camera)
+    },
     dispose: () => {
       scatter?.dispose()
       relief?.dispose()

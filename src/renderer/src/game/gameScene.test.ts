@@ -10,6 +10,7 @@ import {
   MeshStandardMaterial,
   NumberKeyframeTrack,
   Object3D,
+  PerspectiveCamera,
 } from 'three'
 import { embeddedClip, type GeometryDescriptor } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
@@ -201,7 +202,7 @@ describe('a scene as a game draws it', () => {
     built.place('second', { ...IDENTITY_TRANSFORM, position: { x: 100, y: 0, z: 0 } })
     expect(rendered.boundingSphere?.radius ?? 0).toBe(before)
 
-    built.flush()
+    built.flush(new PerspectiveCamera())
     expect(rendered.boundingSphere?.radius ?? 0).toBeGreaterThan(before)
     expect(rendered.instanceMatrix.version).toBeGreaterThan(uploaded)
   })

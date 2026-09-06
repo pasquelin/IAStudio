@@ -116,7 +116,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
     draw: () => {
       if (!held) return
 
-      held.flush()
+      held.flush(camera)
       renderer.render(held.scene, camera)
       // A second pass rather than a DOM layer: the port owns a canvas and nothing above it.
       if (veil.material.opacity > 0) {
