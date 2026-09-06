@@ -16,6 +16,9 @@ export function previousResults(input: ResultsRequest, report: ContextBudgetRepo
   const latest = new Set(
     completedRoundsBefore(input.mission, input.step.id)[0]?.map(step => step.id),
   )
+  // Shared between the entries of that round: one at 5 400 pushed the second past the budget,
+  // where `withinBudget` drops an entry whole rather than cutting it.
+  let latestLeft = latest.size
   let remaining = CONTEXT_BUDGETS.results.maxCharacters
   return input.mission.plan.steps
     .filter(
@@ -29,7 +32,7 @@ export function previousResults(input: ResultsRequest, report: ContextBudgetRepo
     .reverse()
     .map(step => {
       const room = latest.has(step.id)
-        ? Math.max(RESULT_ROOM, remaining - RESULT_ROOM)
+        ? Math.max(RESULT_ROOM, Math.floor(remaining / latestLeft--) - 2 * RESULT_ROOM)
         : RESULT_ROOM
       const result = compactContextValue(step.result, room)
       if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')

@@ -143,9 +143,9 @@ function callIn(value: unknown, shown: ReadonlySet<ActionName>): AssistantCall |
    * names alone — a hallucinated action is still refused. Whether the model had that action's
    * FIELDS is a different question, and one `answeredTurn` answers by opening them.
    */
-  const name = typeof value.action === 'string' ? value.action : ''
-  const action = assistantAction(name)
-  if (!action || !shown.has(action.name)) return { kind: 'unknownAction', name }
+  if (typeof value.action !== 'string') return SHAPE
+  const action = assistantAction(value.action)
+  if (!action || !shown.has(action.name)) return { kind: 'unknownAction', name: value.action }
 
   // An action with no fields may legitimately arrive without an input at all.
   const input = value.input

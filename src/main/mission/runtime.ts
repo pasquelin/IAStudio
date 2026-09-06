@@ -135,6 +135,14 @@ function missingResources(
   )
 }
 
+const seenInResults = (mission: Mission, given: string): boolean =>
+  mission.plan.steps.some(
+    step =>
+      step.kind === 'action' &&
+      step.state === 'completed' &&
+      JSON.stringify(step.result ?? null).includes(JSON.stringify(given)),
+  )
+
 function referenceRefusal(
   mission: Mission,
   step: Extract<Mission['plan']['steps'][number], { kind: 'action' }>,
@@ -150,7 +158,13 @@ function referenceRefusal(
     if (!returned.some(result => result.authoritative)) continue
     const validReferences = [...new Set(returned.flatMap(result => result.values))]
     const given = step.call.input[field.key]
-    if (typeof given === 'string' && !validReferences.includes(given)) {
+    // A shot the decor made and scene.state showed is not invented: once the mission adds one,
+    // its own answers would otherwise be the only ids allowed (review, 2026-09-06).
+    if (
+      typeof given === 'string' &&
+      !validReferences.includes(given) &&
+      !seenInResults(mission, given)
+    ) {
       return {
         ok: false,
         refusal: 'untrustedReference',
@@ -191,8 +205,9 @@ function missingResourceOutcome(missing: readonly ActionResource[]): MissionStep
 }
 
 /**
- * Final when a person said no or nobody was there to ask; every other refusal goes back to the
- * model with its detail — `failed` on an invented id killed 2.5 outright (2026-09-06).
+ * Final when a person said no, nobody was there to ask, or a dialog only a person can close;
+ * every other refusal goes back to the model with its detail — `failed` on an invented id killed
+ * 2.5 outright (2026-09-06).
  */
 const REFUSAL_FATE: Record<ActionRefusal, 'final' | 'repairable'> = {
   declined: 'final',
@@ -212,9 +227,9 @@ const REFUSAL_FATE: Record<ActionRefusal, 'final' | 'repairable'> = {
   formChanged: 'repairable',
   notFound: 'repairable',
   notAllowed: 'repairable',
-  nativeDialog: 'repairable',
+  nativeDialog: 'final',
   notRenderable: 'repairable',
-  needsConsent: 'repairable',
+  needsConsent: 'final',
   failed: 'repairable',
 }
 

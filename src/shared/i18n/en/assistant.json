@@ -951,7 +951,7 @@
       },
       "settingsRead": {
         "title": "Read the settings",
-        "description": "Returns every setting the studio holds, section by section, exactly as the settings window shows them. What the viewport DRAWS lives here — the grid, the shadows, the helpers — and so do the units, the theme and the language. No scene action turns any of them on."
+        "description": "Answers { settings, choices }: every setting the studio holds under settings, section by section, and under choices what each setting with a fixed list accepts, with its title and help. What the viewport DRAWS lives here — the grid, the shadows, the helpers — and so do the units, the theme and the language. No scene action turns any of them on."
       },
       "settingsWrite": {
         "title": "Change the settings",

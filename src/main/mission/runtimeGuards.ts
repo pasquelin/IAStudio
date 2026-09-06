@@ -29,14 +29,14 @@ const readsBy = (name: string): boolean => {
   return action !== null && actionReads(action)
 }
 
+const idle = (step: MissionStep): boolean =>
+  step.kind !== 'action' || readsBy(step.call.action) || isRefusedResult(step.result)
+
+/** Empty for a round that mutated: a read after it checks, and is never a repeat. */
 const idleKeys = (round: readonly MissionStep[]): ReadonlySet<string> =>
-  new Set(
-    round.flatMap(one =>
-      one.kind === 'action' && (readsBy(one.call.action) || isRefusedResult(one.result))
-        ? [callKey(one.call)]
-        : [],
-    ),
-  )
+  round.every(idle)
+    ? new Set(round.flatMap(one => (one.kind === 'action' ? [callKey(one.call)] : [])))
+    : new Set()
 
 /**
  * 🛑 The same reads, or the same refused calls, as the TWO rounds before and nothing else: 2.5

@@ -97,6 +97,34 @@ it('holds back a call that aims a shot the same answer creates, until its id is 
   expect(run.mock.calls.map(call => call[0])).toEqual([add, aimed])
 })
 
+it('lets a shot a read showed be aimed after the mission added another', async () => {
+  const read: AssistantCall = { action: 'scene.state', input: {} }
+  const add: AssistantCall = { action: 'camera.addShot', input: { nodeId: 'camera' } }
+  const aimed: AssistantCall = {
+    action: 'camera.aimShotAt',
+    input: { shotId: 'shot-from-the-decor', targetId: 'cube' },
+  }
+  const { brain } = missionTestBrain([
+    { say: '', calls: [read], cost: 0 },
+    { say: '', calls: [add], cost: 0 },
+    { say: '', calls: [aimed], cost: 0 },
+    { say: 'Done.', calls: [], cost: 0 },
+  ])
+  const run = vi.fn(async (call: AssistantCall): Promise<ActionOutcome> =>
+    call.action === 'scene.state'
+      ? { ok: true, data: { shots: [{ id: 'shot-from-the-decor' }] } }
+      : call.action === 'camera.addShot'
+        ? { ok: true, data: { shotId: 'shot-1' } }
+        : { ok: true },
+  )
+  const { runtime } = missionTestRuntime(brain, { actions: { run, settle: vi.fn() } })
+
+  const mission = await runtime.create('Aim the first shot at the cube', {})
+
+  expect(mission.state).toBe('completed')
+  expect(run.mock.calls.map(call => call[0])).toEqual([read, add, aimed])
+})
+
 it('aims a shot the decor made without asking the mission to open one', async () => {
   const aimed: AssistantCall = {
     action: 'camera.aimShotAt',

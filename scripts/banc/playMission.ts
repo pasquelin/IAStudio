@@ -119,7 +119,10 @@ function tracedContext(
   actions: Pick<ActionSearchService, 'search'>,
   recorder: MissionTraceRecorder | null,
   offered: Set<ActionName>,
-): AssistantContextBuilder & { latest: () => StudioSnapshot | null } {
+): AssistantContextBuilder & {
+  latest: () => StudioSnapshot | null
+  search: ActionSearchService['search']
+} {
   let snapshot: StudioSnapshot | null = null
   let retrieval: {
     query: string
@@ -132,16 +135,15 @@ function tracedContext(
     scope: {} as NonNullable<Parameters<typeof actions.search>[3]>,
     candidates: [] as Awaited<ReturnType<typeof actions.search>>,
   }
+  const search: ActionSearchService['search'] = async (query, limit, available, scope) => {
+    const candidates = await actions.search(query, limit, available, scope)
+    for (const hit of candidates) offered.add(hit.action.name)
+    retrieval = { query, available: available ?? [], scope: scope ?? {}, candidates }
+    return candidates
+  }
   const builder = createAssistantContextBuilder({
     snapshot: async () => (snapshot = await studio.snapshot()),
-    actions: {
-      search: async (query, limit, available, scope) => {
-        const candidates = await actions.search(query, limit, available, scope)
-        for (const hit of candidates) offered.add(hit.action.name)
-        retrieval = { query, available: available ?? [], scope: scope ?? {}, candidates }
-        return candidates
-      },
-    },
+    actions: { search },
     memories: { recall: async () => studio.memories() },
     jobs: { list: () => [...studio.jobs()] },
     projectContext: { read: async () => studio.projectContext() },
@@ -154,6 +156,7 @@ function tracedContext(
     },
     searchActions: builder.searchActions,
     latest: () => snapshot,
+    search,
   }
 }
 
@@ -274,7 +277,7 @@ export async function playMission(
   )
   const context = tracedContext(studio, actions, recorder, offered)
   const find = createActionFinder({
-    search: actions.search,
+    search: context.search,
     snapshot: async () => context.latest() ?? (await studio.snapshot()),
   })
   const runtime = createMissionRuntime({

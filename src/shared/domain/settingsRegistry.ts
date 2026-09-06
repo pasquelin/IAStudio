@@ -84,8 +84,10 @@ export type SettingChoice = { title: string; help: string; values: readonly Sett
  * asked for « the highest » read the settings three times and never learnt that `soft` is the top
  * (10.5, 2026-09-06).
  */
+let choicesHeld: Record<string, SettingChoice> | null = null
+
 export function settingChoices(): Record<string, SettingChoice> {
-  return Object.fromEntries(
+  return (choicesHeld ??= Object.fromEntries(
     SETTING_REGISTRY.filter(descriptor => descriptor.kind === 'choice').map(descriptor => [
       descriptor.path,
       {
@@ -94,7 +96,7 @@ export function settingChoices(): Record<string, SettingChoice> {
         values: optionsOf(descriptor).map(option => option.value),
       },
     ]),
-  )
+  ))
 }
 
 export type Bounds = {

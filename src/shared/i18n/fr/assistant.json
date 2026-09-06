@@ -951,7 +951,7 @@
       },
       "settingsRead": {
         "title": "Lire les réglages",
-        "description": "Répond tous les réglages du studio, section par section, tels que la fenêtre des réglages les montre. Ce que la vue DESSINE vit ici — la grille, les ombres, les repères — comme les unités, le thème et la langue. Aucune action de scène ne les active."
+        "description": "Répond { settings, choices } : sous settings, tous les réglages du studio, section par section ; sous choices, ce que chaque réglage à liste fermée accepte, avec son titre et son aide. Ce que la vue DESSINE vit ici — la grille, les ombres, les repères — comme les unités, le thème et la langue. Aucune action de scène ne les active."
       },
       "settingsWrite": {
         "title": "Changer les réglages",

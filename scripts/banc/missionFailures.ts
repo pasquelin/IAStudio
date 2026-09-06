@@ -26,8 +26,6 @@ export type MissionFailureEvidence = {
   missionStates: readonly MissionState[]
 }
 
-/** One call as the runtime repeats it: the same action on the same arguments. */
-
 export function missionFailureClassOf(evidence: MissionFailureEvidence): MissionFailureClass {
   if (evidence.missionStates.includes('failed')) return 'runtime-failed'
   if (evidence.missionStates.includes('waiting_user')) return 'question-asked'
