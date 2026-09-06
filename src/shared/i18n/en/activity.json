@@ -44,6 +44,7 @@
     "generatedInto_one": "{{count, number}} asset generated in {{workspaces}}",
     "generatedInto_other": "{{count, number}} assets generated in {{workspaces}}",
     "generated_many": "{{count, number}} assets generated",
+    "drawingMotionPosters": "Drawing motion thumbnails",
     "generated_one": "{{count, number}} asset generated",
     "generated_other": "{{count, number}} assets generated",
     "importFailed": "Could not import “{{name}}”",
