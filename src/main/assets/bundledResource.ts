@@ -45,7 +45,7 @@ export type BundledResourceDeps = {
  * The tree inside mirrors the project's own, by `DEFAULT_ROLE_PATHS` names fixed rather than
  * resolved — the studio owns this folder, so no marker travels into it and no rename moves it.
  */
-export function resourcePathOf(resource: BundledResource): string {
+function resourcePathOf(resource: BundledResource): string {
   return pathIn(pathIn(RESOURCES_FOLDER, DEFAULT_ROLE_PATHS[resource.role]), resource.file)
 }
 
