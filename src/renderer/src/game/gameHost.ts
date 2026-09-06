@@ -1,3 +1,5 @@
+import type { SceneAnimate } from './studioAnimation'
+import type { AnimationGraphModule } from '@shared/domain/animationGraph'
 import { orElse } from '@shared/promises'
 import type { DomInputTarget } from '@game/host/domInput'
 import { loadJoltPhysics } from '@game/host/joltPhysics'
@@ -15,6 +17,11 @@ import type { InputMap } from '@shared/domain/inputMap'
 export type GameHostDeps = {
   documentId: string
   renderer: SceneDraw
+  /**
+   * The mixers a state machine writes through. Absent, every body stands in its rest pose and the
+   * game plays on — a host with no viewport of its own has none.
+   */
+  animate?: SceneAnimate
   /** Read on every frame rather than captured: the document may be edited while a game runs. */
   editState: () => SceneState
   input: DomInputTarget
@@ -26,6 +33,7 @@ export type GameHostDeps = {
   onReport: (report: RuntimeReport) => void
   compilationMs?: () => number
   inputMaps: readonly InputMap[]
+  animationGraphs: readonly AnimationGraphModule[]
 }
 
 /**
@@ -44,6 +52,7 @@ export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
   return startPlay({
     documentId: deps.documentId,
     renderer: deps.renderer,
+    animate: deps.animate,
     editState: deps.editState,
     input: deps.input,
     frames: animationFrames(),
@@ -56,5 +65,6 @@ export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
     heightmaps,
     compilationMs: deps.compilationMs,
     inputMaps: deps.inputMaps,
+    animationGraphs: deps.animationGraphs,
   })
 }

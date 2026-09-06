@@ -5,6 +5,10 @@
         "title": "Aircraft",
         "description": "Makes the object fly: lift, drag and thrust computed on its own motion, and control surfaces that only answer with air over them."
       },
+      "Animator": {
+        "title": "Animator",
+        "description": "Plays the clip that matches what the body is doing — walking, jumping, standing — from an animation graph of the project."
+      },
       "CharacterController": {
         "description": "Makes the object the one being driven: it walks, it jumps, it climbs steps.",
         "title": "Character"
@@ -75,6 +79,7 @@
       "agility": "Agility",
       "airControl": "Air control",
       "axis": "Axis",
+      "body": "Driving body",
       "bodyTurnSpeed": "Body turn speed (0: none)",
       "camera": "Camera",
       "collision": "Avoid walls",
@@ -89,6 +94,7 @@
       "fidelity": "Fidelity",
       "friction": "Friction",
       "from": "Source file",
+      "graph": "Animation graph",
       "gravityScale": "Gravity",
       "height": "Height",
       "hysteresis": "Hysteresis",

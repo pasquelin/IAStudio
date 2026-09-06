@@ -27,6 +27,7 @@ import type { DocumentFiles } from './project/documents'
 import type { FileOps } from './project/fileOps'
 import type { ProjectGameStore } from './project/game'
 import type { GameScriptStore } from './project/gameScripts'
+import type { AnimationGraphStore } from './project/animationGraphs'
 import type { InputMapStore } from './project/inputMaps'
 import type { Reconciler } from './project/reconcile'
 import type { ProjectStore } from './project/store'
@@ -210,6 +211,7 @@ export type Services = {
   game: ProjectGameStore
   scripts: GameScriptStore
   inputMaps: InputMapStore
+  animationGraphs: AnimationGraphStore
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `documentDialogs`. */

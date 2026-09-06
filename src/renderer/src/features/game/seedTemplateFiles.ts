@@ -1,5 +1,7 @@
 import { orElse } from '@shared/promises'
-import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from '@shared/domain/folderRole'
+import { ANIMATION_GRAPH_EXTENSION } from '@shared/domain/animationGraph'
+import { animationGraphPreset, type AnimationPresetId } from '@shared/domain/animationPresets'
 import { INPUT_MAP_EXTENSION } from '@shared/domain/inputMap'
 import { inputMapPreset, type InputPresetId } from '@shared/domain/inputPresets'
 import { documentPathFor } from '@shared/domain/documentName'
@@ -10,10 +12,15 @@ import { scriptRefAt, useCode } from '@/stores/code'
 import { useDocuments } from '@/stores/documents'
 
 /** What each template plays with — the script its pilot carries, and the context that drives it. */
-const PLAYED: Partial<Record<SceneTemplateId, { script: TemplateScriptId; map: InputPresetId }>> = {
-  firstPerson: { script: 'player', map: 'character' },
-  thirdPerson: { script: 'player', map: 'character' },
-  topDown: { script: 'player', map: 'character' },
+const PLAYED: Partial<
+  Record<
+    SceneTemplateId,
+    { script: TemplateScriptId; map: InputPresetId; graph?: AnimationPresetId }
+  >
+> = {
+  firstPerson: { script: 'player', map: 'character', graph: 'character' },
+  thirdPerson: { script: 'player', map: 'character', graph: 'character' },
+  topDown: { script: 'player', map: 'character', graph: 'character' },
   car: { script: 'car', map: 'vehicle' },
   plane: { script: 'plane', map: 'flight' },
 }
@@ -34,20 +41,46 @@ export async function seedTemplateFiles(template: SceneTemplateId): Promise<stri
   const folder = await orElse(bridge?.project.folderFor('code'), DEFAULT_ROLE_PATHS.code)
   if (!played || !bridge) return folder
 
-  await Promise.all([writeMap(played.map), writeScript(played.script, folder)])
+  await Promise.all([
+    seedPreset('input', INPUT_MAP_EXTENSION, played.map, bridge.inputMaps, {
+      ...structuredClone(inputMapPreset(played.map)),
+      id: played.map,
+    }),
+    writeScript(played.script, folder),
+    played.graph
+      ? seedPreset(
+          'animations',
+          ANIMATION_GRAPH_EXTENSION,
+          played.graph,
+          bridge.animationGraphs,
+          structuredClone(animationGraphPreset(played.graph)),
+        )
+      : Promise.resolve(),
+  ])
   await useDocuments.getState().relist()
   return folder
 }
 
-async function writeMap(preset: InputPresetId): Promise<void> {
-  const bridge = getBridge()
-  if (!bridge) return
-  const folder = await orElse(bridge.project.folderFor('input'), DEFAULT_ROLE_PATHS.input)
-  const path = `${folder}/${preset}${INPUT_MAP_EXTENSION}`
-  const taken = await orElse(bridge.inputMaps.list(), [])
+/**
+ * One preset written where its role says, and never overwritten.
+ *
+ * 🛑 Asked BEFORE writing: both stores overwrite, so a second scene from one template would throw
+ * away whatever the first one's author had changed. What makes a control map or a graph belong to
+ * the PROJECT rather than to the scene that laid it down.
+ */
+async function seedPreset<T>(
+  role: FolderRole,
+  extension: string,
+  name: string,
+  files: { list: () => Promise<string[]>; write: (path: string, value: T) => Promise<boolean> },
+  value: T,
+): Promise<void> {
+  const folder = await orElse(getBridge()?.project.folderFor(role), DEFAULT_ROLE_PATHS[role])
+  const path = `${folder}/${name}${extension}`
+  const taken = await orElse(files.list(), [])
   if (taken.some(one => one.toLowerCase() === path.toLowerCase())) return
 
-  await bridge.inputMaps.write(path, { ...structuredClone(inputMapPreset(preset)), id: preset })
+  await files.write(path, value)
 }
 
 async function writeScript(script: TemplateScriptId, folder: string): Promise<void> {

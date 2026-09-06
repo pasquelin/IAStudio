@@ -408,6 +408,18 @@ const SCRIPT: ComponentDescriptor = {
   defaults: { script: '' },
 }
 
+/** `body` names the node carrying the `CharacterController` this reads; empty is this one. */
+const ANIMATOR: ComponentDescriptor = {
+  type: 'Animator',
+  titleKey: 'game.components.Animator.title',
+  descriptionKey: 'game.components.Animator.description',
+  category: 'gameplay',
+  // 🛑 `graph` is TYPED and not picked: a `picks` kind comes with a label of its own.
+  fields: [textField('graph'), textField('body', 'node')],
+  defaults: { graph: '', body: '' },
+  events: ['AnimationFinished', 'AnimationEvent'],
+}
+
 /**
  * 🛑 A `Record<ComponentType, …>`, so the COMPILER refuses a type declared without a descriptor.
  * A component nothing describes has no form, no schema and no documentation — it is a name in a
@@ -431,6 +443,7 @@ export const COMPONENTS: Record<ComponentType, ComponentDescriptor> = {
   Vehicle: VEHICLE,
   Aircraft: AIRCRAFT,
   Script: SCRIPT,
+  Animator: ANIMATOR,
 }
 
 export const COMPONENT_TYPES: readonly ComponentType[] =

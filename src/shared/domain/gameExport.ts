@@ -1,3 +1,4 @@
+import type { AnimationGraphModule } from './animationGraph'
 import type { CsgGraph } from './csg'
 import type { GeometryDescriptor } from './geometry'
 import type { InputMap } from './inputMap'
@@ -148,6 +149,8 @@ export type ExportedGame = {
   /** What an image costs, as the author saw it. Absent in older exports — see its default. */
   render?: RenderPolicy
   inputMaps?: readonly InputMap[]
+  /** The state machines bodies are animated by, as the project holds them. */
+  animationGraphs?: readonly AnimationGraphModule[]
 }
 
 /** Which scene a name stands for — its title first, as a person says it, then its id. */
@@ -181,6 +184,8 @@ export type GameExportRequest = {
   scenes: readonly SceneToExport[]
   scripts: readonly ScriptToExport[]
   inputMaps?: readonly InputMap[]
+  /** The state machines bodies are animated by, as the project holds them. */
+  animationGraphs?: readonly AnimationGraphModule[]
   /** Must be named by the caller: no export path enables a visual change on its behalf. */
   lossyOptimization?: LossyOptimization
   /** What an image costs, carried through so a game draws it the way the editor did. */

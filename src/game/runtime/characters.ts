@@ -102,6 +102,37 @@ export type Characters = {
   /** Who the camera watches: the first entity that declared a controller. */
   leader: () => Entity | null
   look: () => Look
+  /**
+   * What that body is DOING, for whoever has to show it rather than move it — the animator.
+   *
+   * 🛑 A reading and never a handle: the walker is written every step, and an animator holding
+   * one would read a pose half a step old on the frames between two steps.
+   */
+  reading: (entity: Entity) => WalkerReading | null
+}
+
+/**
+ * The walker as something other than the controller sees it. Metres a second, and radians.
+ *
+ * 🛑 In the BODY's own frame, composed here: the pace is written in the world — see `paceInto` —
+ * and turning it back is the same convention read backwards. Written twice, a sign flipped on one
+ * side would make a walk read as a step aside, and nothing would say so.
+ *
+ * 🛑 `airborne` is NOT here: the controller writes `Infinity` into it to mark a jump as spent, so
+ * it is a flag half the time rather than a duration. Whoever needs how long a body has been off
+ * the ground counts it from `grounded`.
+ */
+export type WalkerReading = {
+  /** Over the ground, whichever way the body faces. */
+  speed: number
+  /** Along the body's own heading, negative walking backwards. */
+  forward: number
+  /** Across it, positive to the body's right. */
+  strafe: number
+  grounded: boolean
+  velocityY: number
+  /** Where the body points, in radians. */
+  facing: number
 }
 
 /**
@@ -239,6 +270,23 @@ export function createCharacters(
 
     leader: () => first,
     look: () => look,
+
+    reading: entity => {
+      const walker = walkers.get(entity)
+      if (!walker) return null
+
+      const cos = Math.cos(walker.facing)
+      const sin = Math.sin(walker.facing)
+
+      return {
+        speed: Math.hypot(walker.paceX, walker.paceZ),
+        forward: -(walker.paceZ * cos + walker.paceX * sin),
+        strafe: walker.paceX * cos - walker.paceZ * sin,
+        grounded: walker.grounded,
+        velocityY: walker.velocityY,
+        facing: walker.facing,
+      }
+    },
   }
 }
 

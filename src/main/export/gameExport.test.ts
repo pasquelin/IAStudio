@@ -19,6 +19,7 @@ const ASKED: GameExportRequest = {
 function writing(over: Partial<GameExportPorts> = {}) {
   const written = new Map<string, string | Uint8Array>()
   const ports: GameExportPorts = {
+    bundledClip: () => Promise.resolve(null),
     assetFiles: ids =>
       Promise.resolve(
         new Map(

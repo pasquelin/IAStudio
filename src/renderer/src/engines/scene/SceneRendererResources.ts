@@ -1,3 +1,4 @@
+import type { ForeignClip } from './animation'
 import {
   type Box3,
   Frustum,
@@ -215,6 +216,8 @@ export abstract class SceneRendererResources extends SceneRendererState {
    * block plays nothing until its clip lands, and every `apply` would otherwise load again.
    */
   protected bundled = new Map<string, Map<string, string>>()
+  /** What a running game's state machine needs on each model, beside what its band names. */
+  protected graphClips = new Map<string, readonly ForeignClip[]>()
 
   /**
    * One read per animation FILE, however many characters play it — two dancers are one parse.

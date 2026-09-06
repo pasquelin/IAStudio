@@ -24,6 +24,7 @@ import { createCredentialVault } from '@main/git/credentials'
 import { registerGitHandlers } from '@main/git/handlers'
 import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
+import { registerAnimationGraphHandlers } from '@main/project/animationGraphHandlers'
 import { registerInputMapHandlers } from '@main/project/inputMapHandlers'
 import { registerProviderHandlers } from '@main/provider/handlers'
 import { TRANSLATIONS } from '@shared/i18n'
@@ -37,6 +38,8 @@ import { registerSceneHandlers } from '@main/scene/export'
 import { registerPostPresetHandlers } from '@main/scene/postPreset'
 import { registerExportHandlers } from '@main/export/folder'
 import { registerGameExportHandler } from '@main/export/game'
+import { bundledAnimationFile } from '@main/animations'
+import { bundledAnimations } from '@main/resources'
 import { registerMontageHandlers } from '@main/export/montage'
 import { createRunningTasks, registerTaskCancelHandler } from '@main/task/runningTasks'
 import { registerMontageImportHandlers } from '@main/import/montageImport'
@@ -95,6 +98,7 @@ function registerSettingsIpc(services: Services): void {
 function registerProjectIpc(services: Services): void {
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
   registerInputMapHandlers(services.inputMaps)
+  registerAnimationGraphHandlers(services.animationGraphs)
 }
 
 function registerGitIpc(services: Services): void {
@@ -141,7 +145,11 @@ function registerCreativeIpc(
   registerSceneHandlers(services)
   registerPostPresetHandlers(services)
   registerExportHandlers(services)
-  registerGameExportHandler(services)
+  registerGameExportHandler({
+    ...services,
+    // The same folder the asset scheme serves `animation://` from — see `serviceAssistant`.
+    bundledAnimation: name => bundledAnimationFile(bundledAnimations(resourcesRoot()), name),
+  })
   registerMontageHandlers({ ...services, running })
   registerMontageImportHandlers({ ...services, running })
   registerTaskCancelHandler(running)

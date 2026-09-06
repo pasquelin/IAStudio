@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Component, JsonValue } from '@shared/domain/component'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
+import { createAnimators } from '../animators'
 import { createIntents } from '../intents'
 import { loadQuickjsScripts } from '../../host/quickjsScripts'
 import type { ScriptFault } from '../../script/frame'
@@ -54,12 +55,15 @@ describe('what a game does with its own code', () => {
     components: Component[] = [],
     inputMaps: readonly InputMap[] = [],
     bodyIdOf: (moduleId: string) => string | null = () => null,
+    animatorIdOf: (moduleId: string) => string | null = () => null,
   ): World {
     const world = testWorld({
       ports: testPorts({ script: port }),
       inputMaps,
       systems: [
         createScriptSystem({
+          animators: createAnimators(),
+          animatorIdOf,
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: fault => faults.push(fault),
           intents,
@@ -75,6 +79,27 @@ describe('what a game does with its own code', () => {
     })
     return world
   }
+
+  /**
+   * 🛑 A module's script sits on the module and its animator on the mesh, so an event named for
+   * its own entity reached nobody — the hook was unreachable from the very script a template
+   * lays down.
+   */
+  it("hands an animation event of its module's animated part to the script", () => {
+    const world = running(
+      'onAnimationEvent(self, ctx, event) { game.log.info(event.payload.state) }',
+      [],
+      [],
+      () => null,
+      moduleId => (moduleId === 'e1' ? 'mesh' : null),
+    )
+    world.events.emit({ name: 'AnimationFinished', entity: 'mesh', payload: { state: 'jump' } })
+
+    frame(world)
+    frame(world)
+
+    expect(world.ports.log.recent().map(entry => entry.message)).toContain('jump')
+  })
 
   /** 🛑 The measure the lot is for: twenty lines of an author's code move something. */
   it('moves what a script tells it to move', () => {
@@ -252,6 +277,8 @@ describe('what a game does with its own code', () => {
       ports: testPorts({ script: port }),
       systems: [
         createScriptSystem({
+          animators: createAnimators(),
+          animatorIdOf: () => null,
           modules: [
             {
               script: WALK,
@@ -332,6 +359,8 @@ describe('what a script asks about its scenes', () => {
       }),
       systems: [
         createScriptSystem({
+          animators: createAnimators(),
+          animatorIdOf: () => null,
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: () => {},
           intents,

@@ -30,9 +30,10 @@ import { resolveSpecifier } from './sourceFiles.ts'
  * `indexCss-fixtures` and `sceneRendererSource.testHelper` gave back the fourteen design guards
  * the `index.css` split had dropped and the eleven of `SceneRenderer` that had never been in the
  * net; 112 against 126 the same day, when the name list became a resolved hop into the module;
- * 122 against 132 on 2026-09-06, when `manualInputActions.test.ts` read the manual chapters.
+ * 122 against 132 on 2026-09-06, when `manualInputActions.test.ts` read the manual chapters; 123
+ * against 133 the same day, the animation graph having brought its own beside them.
  */
-export const LEAST_GUARDS = 122
+export const LEAST_GUARDS = 123
 
 /**
  * How far the floor may sit below the real count before it stops meaning anything.

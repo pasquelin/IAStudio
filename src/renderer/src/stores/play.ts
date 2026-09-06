@@ -24,6 +24,8 @@ import {
   projectInputMaps,
   withoutDuplicateInputMapIds,
 } from '@/engines/code/projectInputMaps'
+import { projectAnimationGraphs } from '@/engines/code/projectAnimationGraphs'
+import type { AnimationGraphModule } from '@shared/domain/animationGraph'
 import i18next from 'i18next'
 
 /** How long a command may wait on the game window. A `step` runs up to 120 fixed steps there. */
@@ -69,6 +71,7 @@ type PublishedGame = {
   modules: readonly ScriptModule[]
   troubles: readonly ScriptTrouble[]
   inputMaps: readonly InputMap[]
+  animationGraphs: readonly AnimationGraphModule[]
 }
 
 export const usePlay = create<PlayStoreState>()(() => ({
@@ -146,6 +149,7 @@ async function begin(documentId: string): Promise<void> {
     modules: compiled.modules,
     troubles: compiled.troubles,
     inputMaps: compiled.inputMaps,
+    animationGraphs: compiled.animationGraphs,
   }
   publishGame()
   watchTheScene(documentId)
@@ -170,6 +174,7 @@ function publishGame(): void {
     modules: published.modules,
     troubles: published.troubles,
     inputMaps: published.inputMaps,
+    animationGraphs: published.animationGraphs,
   })
 }
 
@@ -269,9 +274,15 @@ type CompiledScripts = {
   modules: readonly ScriptModule[]
   troubles: readonly ScriptTrouble[]
   inputMaps: readonly InputMap[]
+  animationGraphs: readonly AnimationGraphModule[]
 }
 
-const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [], inputMaps: [] }
+const NO_SCRIPTS: CompiledScripts = {
+  modules: [],
+  troubles: [],
+  inputMaps: [],
+  animationGraphs: [],
+}
 
 /**
  * Whether that text would compile, said the way a fault is — or nothing when it would.
@@ -296,7 +307,11 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   // 🛑 Through the EDITOR's own reading, never a second walk of the disk: what a Play compiles
   // has to be what the screen shows, or an author watches the script from before their last
   // keystroke run — without a word.
-  const [, allMaps] = await Promise.all([useCode.getState().reload(), projectInputMaps()])
+  const [, allMaps, animationGraphs] = await Promise.all([
+    useCode.getState().reload(),
+    projectInputMaps(),
+    projectAnimationGraphs(),
+  ])
   const conflict = inputMapIdConflict(allMaps)
   // 🛑 SAID, never fatal: a duplicate id used to drop every script of the project, so a fifty-file
   // game lost all fifty for one map in double. `line: 0` because the offender is a `.input.json`
@@ -313,7 +328,8 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   const inputMaps = withoutDuplicateInputMapIds(allMaps)
   const files = codeFilesOf(useCode.getState())
   const runtimeMaps = inputMaps.map(input => input.map)
-  if (files.length === 0) return { ...NO_SCRIPTS, troubles, inputMaps: runtimeMaps }
+  if (files.length === 0)
+    return { ...NO_SCRIPTS, troubles, inputMaps: runtimeMaps, animationGraphs }
 
   compiler ??= createScriptCompiler()
   const compiled = await compiler.compile(
@@ -321,7 +337,12 @@ export async function compiledScripts(): Promise<CompiledScripts> {
     inputMaps,
   )
   // The conflict FIRST: it is the cause, and what compiled after it is the consequence.
-  return { ...compiled, troubles: [...troubles, ...compiled.troubles], inputMaps: runtimeMaps }
+  return {
+    ...compiled,
+    troubles: [...troubles, ...compiled.troubles],
+    inputMaps: runtimeMaps,
+    animationGraphs,
+  }
 }
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */

@@ -1,23 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ANIMATION_GRAPH_EXTENSION, type AnimationGraph } from '@shared/domain/animationGraph'
 import { INPUT_MAP_EXTENSION, type InputMap } from '@shared/domain/inputMap'
 import { seedTemplateFiles } from './seedTemplateFiles'
 
-const written: { maps: [string, InputMap][]; scripts: [string, string][] } = {
-  maps: [],
-  scripts: [],
-}
+const written: {
+  maps: [string, InputMap][]
+  scripts: [string, string][]
+  graphs: [string, AnimationGraph][]
+} = { maps: [], scripts: [], graphs: [] }
 let taken: string[] = []
+let takenGraphs: string[] = []
 let heldScripts: { path: string }[] = []
 
 vi.mock('@/services/bridge', () => ({
   getBridge: () => ({
     project: {
-      folderFor: (role: string) => Promise.resolve(role === 'input' ? 'Controls' : 'Scripts'),
+      folderFor: (role: string) =>
+        Promise.resolve(
+          role === 'input' ? 'Controls' : role === 'animations' ? 'Motions' : 'Scripts',
+        ),
     },
     inputMaps: {
       list: () => Promise.resolve(taken),
       write: (path: string, map: InputMap) => {
         written.maps.push([path, map])
+        return Promise.resolve(true)
+      },
+    },
+    animationGraphs: {
+      list: () => Promise.resolve(takenGraphs),
+      write: (path: string, graph: AnimationGraph) => {
+        written.graphs.push([path, graph])
         return Promise.resolve(true)
       },
     },
@@ -49,8 +62,10 @@ describe('the files a scene template lays down', () => {
   beforeEach(() => {
     written.maps = []
     written.scripts = []
+    written.graphs = []
     installed.length = 0
     taken = []
+    takenGraphs = []
     heldScripts = []
   })
 
@@ -58,6 +73,9 @@ describe('the files a scene template lays down', () => {
     await seedTemplateFiles('thirdPerson')
 
     expect(written.maps.map(([path]) => path)).toEqual([`Controls/character${INPUT_MAP_EXTENSION}`])
+    expect(written.graphs.map(([path]) => path)).toEqual([
+      `Motions/character${ANIMATION_GRAPH_EXTENSION}`,
+    ])
     expect(written.scripts.map(([path]) => path)).toEqual(['Scripts/player.ts'])
   })
 

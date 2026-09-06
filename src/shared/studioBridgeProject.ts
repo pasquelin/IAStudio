@@ -7,12 +7,19 @@ import type { ContextCard, ContextState } from './domain/projectContext'
 import type { ProjectBinned, Unsubscribe } from './ipcEvents'
 import type { FolderExportRequest } from './ipcExports'
 import type { InputMap } from './domain/inputMap'
+import type { AnimationGraph } from './domain/animationGraph'
 
 export type StudioBridgeProject = {
   inputMaps: {
     list: () => Promise<string[]>
     read: (path: string) => Promise<InputMap | null>
     write: (path: string, map: InputMap) => Promise<boolean>
+  }
+  /** The state machines a body is animated by. The same three gestures, on `.anim.json` files. */
+  animationGraphs: {
+    list: () => Promise<string[]>
+    read: (path: string) => Promise<AnimationGraph | null>
+    write: (path: string, graph: AnimationGraph) => Promise<boolean>
   }
   project: {
     /**

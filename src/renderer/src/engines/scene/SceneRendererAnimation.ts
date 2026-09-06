@@ -1,3 +1,4 @@
+import type { PosedClip } from '@game/ports/animationPort'
 import { type Object3D, PerspectiveCamera } from 'three'
 import { type HelperVisibility, showsAid } from '@shared/domain/scene'
 import { railOf } from './nodeRail'
@@ -93,6 +94,26 @@ export abstract class SceneRendererAnimation extends SceneRendererLifecycle {
   protected workedRails(): Object3D[] {
     return [...this.workedRailIds()].flatMap(id => this.objects.get(id) ?? [])
   }
+  /**
+   * What a running game's state machine plays on one model, and how it gives it back.
+   *
+   * 🛑 Through the renderer rather than by handing `animations` out: a body an `Animator` drives
+   * leaves the band entirely, and the two clocks must not both be reachable from a caller.
+   */
+  poseNode(nodeId: string, clips: readonly PosedClip[]): void {
+    this.animations.pose(nodeId, clips)
+    this.refreshWithoutShadows()
+  }
+
+  releaseNode(nodeId: string): void {
+    this.animations.release(nodeId)
+  }
+
+  /** How long each clip that model can play runs, by key — what a state machine cannot guess. */
+  clipLengthsOf(nodeId: string): Readonly<Record<string, number>> {
+    return this.animations.lengthsOf(nodeId)
+  }
+
   /**
    * Where the head stands, in seconds. Session state, so it arrives by a call of its own rather
    * than inside the document — playing would otherwise put one undo entry per frame.

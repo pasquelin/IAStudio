@@ -34,6 +34,7 @@ export type ComponentType =
   | 'Vehicle'
   | 'Aircraft'
   | 'Script'
+  | 'Animator'
 
 export type Component = { type: ComponentType } & { readonly [key: string]: JsonValue }
 

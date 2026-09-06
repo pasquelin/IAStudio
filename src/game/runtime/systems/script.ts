@@ -2,6 +2,7 @@
 
 import type { Component, JsonValue } from '@shared/domain/component'
 import type { GameEvent } from '@shared/domain/gameEvent'
+import type { Animators } from '../animators'
 import type { Intents } from '../intents'
 import type { ScriptModule } from '../../ports/scriptPort'
 import type {
@@ -29,6 +30,19 @@ export type ScriptSystemOptions = {
    * `self.walk()` has to reach the body from both.
    */
   bodyIdOf: (moduleId: string) => string | null
+  /**
+   * The ANIMATED part of a module, resolved from the tree the same way its body is.
+   *
+   * 🛑 Never the same node as the body: a character's mesh hangs under the capsule that walks, so
+   * `self.anim` asked from a script on the module would write where no animator ever reads.
+   *
+   * 🛑 Blind spot, written rather than hidden: it answers for the PLAYER's module alone, as
+   * `bodyIdOf` does. A scripted module of any other kind writes on its own id, where nothing
+   * reads — silently, exactly as an ask landing on a body no controller drives is dropped.
+   */
+  animatorIdOf: (moduleId: string) => string | null
+  /** Where a script's animator asks LAND, read by the animator system on the same step. */
+  animators: Animators
 }
 
 /** Shared and empty: a frame with nothing kept must not allocate an object per hook. */
@@ -109,6 +123,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       held.position = entity.transform.position
       held.rotation = entity.transform.rotation
       held.components = entity.components
+      held.anim = options.animators.playingOn(animatorFor(entity, options)) ?? undefined
       entities.push(held)
     }
 
@@ -195,6 +210,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
 
       // Before a hook runs: what nobody asks for again hands the sticks back on that very step.
       options.intents.release()
+      options.animators.release()
 
       sync(world)
 
@@ -202,7 +218,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       // had just made. Emptied whether or not anyone listens, or a scriptless world hoards them.
       if (waiting.length > 0) {
         if (known.size > 0 && EVENT_HOOKS.some(hook => port.declares(hook)))
-          took(world, port.deliver(compose(world, dt), waiting))
+          took(world, port.deliver(compose(world, dt), routed(waiting, known, options)))
         waiting.length = 0
       }
       if (known.size === 0) return
@@ -247,8 +263,39 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
   }
 }
 
+/**
+ * The events of an ANIMATED part, readdressed to the script that can hear them.
+ *
+ * 🛑 A module's script sits on the module and its animator on the mesh, so a hook named for the
+ * event's own entity would reach nobody — `onAnimationEvent` was unreachable from the very script
+ * a template lays down. Only when nothing scripts the part itself: a PNJ carrying both keeps its
+ * own events.
+ */
+function routed(
+  events: readonly GameEvent[],
+  known: ReadonlySet<string>,
+  { animatorIdOf }: ScriptSystemOptions,
+): readonly GameEvent[] {
+  if (!events.some(event => ANIMATION_EVENTS.includes(event.name))) return events
+
+  return events.map(event => {
+    if (!event.entity || known.has(event.entity) || !ANIMATION_EVENTS.includes(event.name))
+      return event
+    const owner = [...known].find(id => animatorIdOf(id) === event.entity)
+    return owner ? { ...event, entity: owner } : event
+  })
+}
+
+const ANIMATION_EVENTS: readonly GameEvent['name'][] = ['AnimationEvent', 'AnimationFinished']
+
 /** What an event drives. A frame with none of them declared never crosses the bridge at all. */
-const EVENT_HOOKS = ['onMessage', 'onCollision', 'onTriggerEnter', 'onTriggerExit']
+const EVENT_HOOKS = [
+  'onMessage',
+  'onAnimationEvent',
+  'onCollision',
+  'onTriggerEnter',
+  'onTriggerExit',
+]
 
 /** What the scripts asked for, done through the world's own gestures and nothing else. */
 function apply(world: World, asks: readonly ScriptIntent[], options: ScriptSystemOptions): void {
@@ -257,6 +304,7 @@ function apply(world: World, asks: readonly ScriptIntent[], options: ScriptSyste
     const entity = world.entities.get(intent.entity)
     if (!entity) continue
     if (applyBodyIntent(entity, intent, options)) continue
+    if (applyAnimatorIntent(entity, intent, options)) continue
     applyEntityIntent(world, entity, intent)
   }
 }
@@ -291,13 +339,38 @@ function applyBodyIntent(
  */
 type BodyIntent = Extract<ScriptIntent, { act: 'walk' | 'jump' | 'look' | 'drive' | 'fly' }>
 
+/**
+ * 🛑 Its own chain, ahead of `applyEntityIntent`: that one ends in an unguarded `destroy`, so an
+ * act it does not name would DELETE the entity that asked for it.
+ */
+function applyAnimatorIntent(
+  entity: Entity,
+  intent: ScriptIntent,
+  options: ScriptSystemOptions,
+): intent is AnimatorIntent {
+  const { animators } = options
+  const animated = animatorFor(entity, options)
+
+  if (intent.act === 'animParam') animators.set(animated, intent.param, intent.value)
+  else if (intent.act === 'animPlay') animators.play(animated, intent.state)
+  else if (intent.act === 'animStop') animators.stop(animated)
+  else return false
+  return true
+}
+
+/** The script's own entity when it carries the animator, its module's animated part otherwise. */
+const animatorFor = (entity: Entity, { animatorIdOf }: ScriptSystemOptions): string =>
+  animatorIdOf(entity.id) ?? entity.id
+
+type AnimatorIntent = Extract<ScriptIntent, { act: 'animParam' | 'animPlay' | 'animStop' }>
+
 type WorldIntent = Extract<
   ScriptIntent,
   {
     act: 'log' | 'spawn' | 'emit' | 'scene' | 'keep' | 'inputContext' | 'inputRebind' | 'inputReset'
   }
 >
-type EntityIntent = Exclude<ScriptIntent, WorldIntent | BodyIntent>
+type EntityIntent = Exclude<ScriptIntent, WorldIntent | BodyIntent | AnimatorIntent>
 
 function applyWorldIntent(world: World, intent: ScriptIntent): intent is WorldIntent {
   if (intent.act === 'log') world.ports.log.write(intent.level, intent.message)
@@ -328,8 +401,13 @@ function applyEntityIntent(world: World, entity: Entity, intent: EntityIntent): 
     entity.transform.rotation.y = intent.to.y
     entity.transform.rotation.z = intent.to.z
   } else if (intent.act === 'field') write(world, entity, intent.type, intent.key, intent.value)
-  else world.destroy(intent.entity)
+  else if (intent.act === 'destroy') world.destroy(intent.entity)
+  // 🛑 Named rather than fallen through to: this chain used to END on `destroy`, so an act added
+  // to `ScriptIntent` and forgotten here DELETED the entity that asked for it — and compiled.
+  else unroutedIntent(intent)
 }
+
+const unroutedIntent = (intent: never): void => void intent
 
 /**
  * 🛑 One field the component ALREADY carries. `newComponent` fills every declared field, so a key

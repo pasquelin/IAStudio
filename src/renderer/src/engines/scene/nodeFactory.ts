@@ -269,7 +269,7 @@ export function playerModuleNodes(): readonly SceneNode[] {
   // 🛑 A figure and not a capsule: what stands in a walking body is a BODY, and a capsule inside
   // a capsule showed nothing a cage does not already draw. Every part of it stays an editable
   // mesh — see `figures.ts` — so replacing the look of a player is replacing these nodes.
-  const figure = figureNodesUnder(capsule.id)
+  const figure = figureNodesUnder(capsule.id, capsule.name)
   const arm: SceneNode = { ...groupNode(IDENTITY_TRANSFORM, 'SpringArm'), parentId: module.id }
   // 🛑 Where the arm will put it on the first frame of play, worked out from the very functions
   // the system uses. Left at its parent's origin, the camera stood at the player's feet, and
@@ -378,12 +378,16 @@ export function figureNodes(
  * 🛑 The fallback is not dead code. A project that cannot be written to installs nothing, and a
  * module without a body is a module nobody can see walking.
  */
-function figureNodesUnder(bodyId: string): readonly SceneNode[] {
+function figureNodesUnder(bodyId: string, bodyName: string): readonly SceneNode[] {
   const character = shippedCharacterAssetId()
   if (character) {
     return [
       {
         ...modelNode(character, 'Character'),
+        // 🛑 On the MESH and pointed at the capsule: what a graph reads is what the controller
+        // walks, and the two are never the same node. The figure of boxes gets none — it carries
+        // no skeleton, and an animator with nothing to pose would say nothing about why.
+        components: [{ ...newComponent('Animator'), body: bodyName }],
         // Down by half the controller's height: the body's node is its CENTRE, and a character's
         // own origin is at its feet — left at the centre it would stand 90 cm in the air.
         transform: transformAt({ x: 0, y: -WALKER_HEIGHT / 2, z: 0 }),

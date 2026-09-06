@@ -9,6 +9,7 @@ import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import { loadJoltPhysics } from '@game/host/joltPhysics'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { EntityPlacement, RenderPort } from '@game/ports/renderPort'
+import type { AnimationPort } from '@game/ports/animationPort'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import { placementsOf } from '@game/runtime/placements'
@@ -20,6 +21,12 @@ import { veilLift } from './veilLift'
 import { createWebRender } from './webRender'
 import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
+import { animatedNodesOf, graphNamed } from './animatedNodes'
+import { graphSourcesOf } from '@/engines/scene/clipSources'
+import type { ClipSource } from '@shared/domain/scene'
+import type { HeightmapSamples } from '@shared/domain/heightmap'
+import type { SceneState } from '@/engines/scene/sceneState'
+import type { World } from '@game/runtime/world'
 import { secondsToUs } from '@shared/domain/time'
 import { answering, exportedJson, exportedText } from './exportedResponse'
 import { expandCompressedAssets, type ExpandedAssets } from './exportedAssets'
@@ -49,10 +56,10 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     // fetches before its first frame. A sibling of a load that rejects goes undisposed — that
     // startup has already failed, and the page shows nothing.
     const [{ ports, modules }, openingSource] = await Promise.all([
-      createPorts(canvas, game, assets, drawn.port, swap.port, rollback),
+      createPorts(canvas, game, assets, drawn.port, render.animation, swap.port, rollback),
       exportedJson<unknown>(entry.file, entry.compression),
     ])
-    const runtime = { modules, inputMaps: game.inputMaps ?? [], inputControls }
+    const runtime = runtimeOf(game, modules, inputControls)
 
     const openingScene = await createOpeningScene(entry, openingSource, assets, ports, runtime)
     const { opening, heightmaps } = openingScene
@@ -65,7 +72,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     let stopped = false
     /** Seconds of veil the scene that has just arrived still owes. */
     let fading = 0
-    await render.show(opening, entry.optimization, game.modelAssets, heightmaps)
+    await shown(render, game, opening, entry.optimization, heightmaps, runtime)
 
     /**
      * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -98,16 +105,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         const nextMaps = await heightmapsOf(found.world.layers, id =>
           heightmapFromBundle(assets, id),
         )
-        world = worldFromScene(
-          wanted.id,
-          found,
-          ports,
-          runtime,
-          1,
-          nextMaps,
-          runtime.inputMaps,
-          inputControls,
-        )
+        world = worldOf(wanted.id, found, ports, runtime, nextMaps)
         loop = createGameLoop(world)
         // The first step of the arrived scene derives every collider — not a gap to catch up on.
         warmed = false
@@ -115,7 +113,13 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         // stepping the arrived world over the picture of the one just left — and the veil would
         // lift onto it.
         fading = request.fade
-        await render.show(found, wanted.optimization, game.modelAssets, nextMaps)
+        await render.show(
+          found,
+          wanted.optimization,
+          game.modelAssets,
+          nextMaps,
+          clipsIn(found, runtime),
+        )
         // A second suspension point, so a second look: the stop above threw this world away.
         if (stopped) return
 
@@ -223,6 +227,7 @@ async function createPorts(
   game: ExportedGame,
   assets: ReturnType<typeof createBundledAssets>,
   render: RenderPort,
+  animation: AnimationPort,
   scenes: ReturnType<typeof createSceneSwap>['port'],
   rollback: ReturnType<typeof createStartupRollback>,
 ) {
@@ -241,6 +246,7 @@ async function createPorts(
     physics,
     script,
     render,
+    animation,
     scenes,
   })
   rollback.add(() => {
@@ -255,25 +261,11 @@ async function createOpeningScene(
   source: unknown,
   assets: ReturnType<typeof createBundledAssets>,
   ports: ReturnType<typeof createExportHost>,
-  runtime: {
-    modules: readonly ScriptModule[]
-    inputMaps: ExportedGame['inputMaps']
-    inputControls: InputControls
-  },
+  runtime: ReturnType<typeof runtimeOf>,
 ) {
   const opening = sceneFromGltf(source)
   const heightmaps = await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id))
-  const world = worldFromScene(
-    entry.id,
-    opening,
-    ports,
-    runtime,
-    1,
-    heightmaps,
-    runtime.inputMaps,
-    runtime.inputControls,
-  )
-  return { opening, world, heightmaps }
+  return { opening, world: worldOf(entry.id, opening, ports, runtime, heightmaps), heightmaps }
 }
 
 /** Every script of the game, already JavaScript: the studio transpiled them at export time. */
@@ -302,4 +294,71 @@ function browserInputStorage() {
       globalThis.localStorage.setItem(key, JSON.stringify(maps))
     },
   }
+}
+
+/** One world of this game, built the same way on the opening scene and on every swap. */
+function worldOf(
+  documentId: string,
+  state: SceneState,
+  ports: ReturnType<typeof createExportHost>,
+  runtime: ReturnType<typeof runtimeOf>,
+  heightmaps: ReadonlyMap<string, HeightmapSamples>,
+): World {
+  return worldFromScene(
+    documentId,
+    state,
+    ports,
+    runtime,
+    1,
+    heightmaps,
+    runtime.inputMaps,
+    runtime.inputControls,
+    runtime.animationGraphs,
+  )
+}
+
+/** What every world of this game is built from, named once rather than spelled at each build. */
+function runtimeOf(
+  game: ExportedGame,
+  modules: readonly ScriptModule[],
+  inputControls: InputControls,
+) {
+  return {
+    modules,
+    inputMaps: game.inputMaps ?? [],
+    animationGraphs: game.animationGraphs ?? [],
+    inputControls,
+  }
+}
+
+/** One scene put on screen, with the clips its state machines need — the same call, twice. */
+async function shown(
+  render: ReturnType<typeof createWebRender>,
+  game: ExportedGame,
+  state: SceneState,
+  optimization: ExportedGame['scenes'][number]['optimization'],
+  heightmaps: ReadonlyMap<string, HeightmapSamples>,
+  runtime: ReturnType<typeof runtimeOf>,
+): Promise<void> {
+  await render.show(state, optimization, game.modelAssets, heightmaps, clipsIn(state, runtime))
+}
+
+/**
+ * What a state machine plays on each node of this scene, for whoever loads the files.
+ *
+ * 🛑 Every shipped clip a graph named became an asset of the bundle at export time — see
+ * `bundledGraphs`. Nothing here resolves an `animation://`, which no exported page serves.
+ */
+function clipsIn(
+  state: SceneState,
+  runtime: ReturnType<typeof runtimeOf>,
+): (nodeId: string) => readonly ClipSource[] {
+  const sources = new Map(
+    animatedNodesOf(state.nodes, graphNamed(runtime.animationGraphs)).map(one => [
+      one.nodeId,
+      graphSourcesOf(one.graph),
+    ]),
+  )
+
+  return nodeId => sources.get(nodeId) ?? []
 }

@@ -36,11 +36,12 @@ import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { disposeTree, instanceOf, type ModelSource } from '@/engines/scene/modelCache'
 import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
-import type { SceneAnimations } from '@/engines/scene/animation'
+import { loadModelAnimations } from './gameSceneClips'
 import { createSceneResources, type SceneResources } from './gameSceneResources'
 import { drapeWorld, type WorldDrape } from './gameSceneWorld'
 import { dressShadows, shadowBoundsOf } from './gameSceneShadows'
-import { clipKeyOf } from '@shared/domain/scene'
+import type { ClipSource } from '@shared/domain/scene'
+import type { PosedClip } from '@game/ports/animationPort'
 import type { ModelRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import {
@@ -71,6 +72,10 @@ export type GameScene = {
    * for a movement would find the scene changed sixty times a second in a level nobody walks.
    */
   place: (entityId: string, transform: Transform) => boolean
+  /** What a state machine plays on one model, and how it gives it back — see `AnimationPort`. */
+  pose: (nodeId: string, clips: readonly PosedClip[]) => void
+  releasePose: (nodeId: string) => void
+  clipLengthsOf: (nodeId: string) => Readonly<Record<string, number>>
   /**
    * Settles what a frame left stale before it is drawn — the instanced bounds `place` dirtied,
    * and which scatter cells the camera reaches. The camera is asked for rather than optional:
@@ -104,6 +109,8 @@ export async function buildGameScene(
   modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>,
   loadModel?: ModelSource,
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
+  /** What a state machine plays on a node, beside whatever its band names — see `graphSourcesOf`. */
+  clipsForNode?: (nodeId: string) => readonly ClipSource[],
 ): Promise<GameScene> {
   const compiled = new Map(optimization?.nodes.map(node => [node.nodeId, node]) ?? [])
   const needsCarver = state.nodes.some(
@@ -126,7 +133,7 @@ export async function buildGameScene(
     resources.geometries.acquire,
     dress,
     carve,
-    createModelOf(assets, loadModel, resources),
+    createModelOf(assets, loadModel, resources, clipsForNode),
     modelAssets,
     resources.staleInstances,
   )
@@ -228,6 +235,9 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
       return scattered
     },
     seek: time => animations.seek(time),
+    pose: (nodeId, clips) => animations.pose(nodeId, clips),
+    releasePose: nodeId => animations.release(nodeId),
+    clipLengthsOf: nodeId => animations.lengthsOf(nodeId),
     dispose: () => {
       animations.clear()
       instances.dispose()
@@ -253,6 +263,7 @@ function createModelOf(
   assets: AssetPort,
   loadModel: ModelSource | undefined,
   resources: SceneResources,
+  clipsForNode?: (nodeId: string) => readonly ClipSource[],
 ) {
   return async (
     nodeId: string,
@@ -276,7 +287,8 @@ function createModelOf(
         resources.modelMeshes,
       )
       resources.animations.add(nodeId, optimized, source.animations)
-      await loadModelAnimations(nodeId, model, assets, loadModel, resources.animations)
+      const wanted = clipsForNode?.(nodeId)
+      await loadModelAnimations(nodeId, model, assets, loadModel, resources.animations, wanted)
       resources.animations.apply(nodeId, model.lanes ?? [])
       return optimized
     } catch {
@@ -435,30 +447,6 @@ function carvedObject(
     materialOf(node.material, dress),
   )
   return object
-}
-
-async function loadModelAnimations(
-  nodeId: string,
-  model: ModelRef,
-  assets: AssetPort,
-  loadModel: ModelSource,
-  animations: SceneAnimations,
-): Promise<void> {
-  for (const lane of model.lanes ?? []) {
-    for (const clip of lane.clips) {
-      if (clip.source.kind !== 'asset') continue
-      const url = assets.urlOf({ kind: 'asset', id: clip.source.assetId })
-      if (!url) continue
-      try {
-        const source = await loadModel(url)
-        const animation = source.animations[0]
-        if (animation) animations.addClip(nodeId, clipKeyOf(clip.source), animation)
-        disposeTree(source)
-      } catch {
-        continue
-      }
-    }
-  }
 }
 
 /**

@@ -5,6 +5,10 @@
         "title": "Avion",
         "description": "Fait voler l’objet : portance, traînée et poussée calculées sur son propre mouvement, gouvernes qui ne répondent qu’avec du vent."
       },
+      "Animator": {
+        "title": "Animateur",
+        "description": "Fait jouer au corps le clip qui correspond à ce qu’il fait — marche, saut, arrêt — d’après un graphe d’animation du projet."
+      },
       "CharacterController": {
         "description": "Fait de l’objet celui qu’on dirige : il marche, il saute, il monte les marches.",
         "title": "Personnage"
@@ -75,6 +79,7 @@
       "agility": "Maniabilité",
       "airControl": "Contrôle en l’air",
       "axis": "Axe",
+      "body": "Corps suivi",
       "bodyTurnSpeed": "Rotation du corps (0 : aucune)",
       "camera": "Caméra",
       "collision": "Éviter les murs",
@@ -89,6 +94,7 @@
       "fidelity": "Précision",
       "friction": "Frottement",
       "from": "Fichier d’origine",
+      "graph": "Graphe d’animation",
       "gravityScale": "Pesanteur",
       "height": "Hauteur",
       "hysteresis": "Hystérésis",

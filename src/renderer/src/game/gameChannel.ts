@@ -1,3 +1,4 @@
+import { animationGraphOf, type AnimationGraphModule } from '@shared/domain/animationGraph'
 import { isRecord } from '@shared/guards'
 import type { RuntimeReport } from '@shared/domain/gameRuntime'
 import type { ScriptModule } from '@game/ports/scriptPort'
@@ -21,6 +22,8 @@ export type GameMessage =
       modules: readonly ScriptModule[]
       troubles: readonly ScriptTrouble[]
       inputMaps: readonly InputMap[]
+      /** The state machines the project holds. A module naming none walks off the shipped preset. */
+      animationGraphs: readonly AnimationGraphModule[]
     }
   /** The document was edited under a running game — `createStudioRender` follows it per frame. */
   | { kind: 'edit'; documentId: string; patch: RuntimeWorldPatch }
@@ -77,15 +80,30 @@ type Decoder = (data: WireMessage) => GameMessage | null
 function playMessage(data: WireMessage): GameMessage | null {
   const { documentId, scene, modules = [], troubles = [] } = data
   const inputMaps = inputMapsOf(data.inputMaps ?? [])
+  const animationGraphs = animationGraphsOf(data.animationGraphs ?? [])
   if (
     typeof documentId !== 'string' ||
     !isScene(scene) ||
     !Array.isArray(modules) ||
     !Array.isArray(troubles) ||
-    inputMaps === null
+    inputMaps === null ||
+    animationGraphs === null
   )
     return null
-  return { kind: 'play', documentId, scene, modules, troubles, inputMaps }
+  return { kind: 'play', documentId, scene, modules, troubles, inputMaps, animationGraphs }
+}
+
+/** Read back through the parser, as the maps are: what crosses is data, never a trusted object. */
+function animationGraphsOf(value: unknown): AnimationGraphModule[] | null {
+  if (!Array.isArray(value)) return null
+  try {
+    return value.map(one => {
+      if (!isFields(one) || typeof one.path !== 'string') throw new Error('unnamed graph')
+      return { path: one.path, graph: animationGraphOf(one.graph) }
+    })
+  } catch {
+    return null
+  }
 }
 
 function inputMapsOf(value: unknown): InputMap[] | null {

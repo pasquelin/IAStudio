@@ -160,6 +160,35 @@ declare module '@studio' {
     say(name: string, payload?: Record<string, unknown>): void
     /** Asks for this entity to be destroyed at the end of the step. */
     destroy(): void
+    /**
+     * What this body is ANIMATED by — the state machine of its `Animator`, if it carries one.
+     *
+     * 🛑 The two readings are a step behind, as `position` is: scripts run before the animator,
+     * so what is read here is the state the frame being drawn actually shows. Empty for a body
+     * no graph animates.
+     */
+    anim: {
+      /** The state the machine ended the last step in, or `''` for a body with no animator. */
+      readonly state: string
+      /** How far into that state's clip, in seconds. */
+      readonly time: number
+      /**
+       * Writes one parameter of the graph. It STAYS written until it is written again — unlike
+       * `walk`, which lapses the step after.
+       *
+       * 🛑 The eight built-in names — `speed`, `forward`, `strafe`, `grounded`, `airborne`,
+       * `verticalSpeed`, `jumped`, `turning` — are published by the runtime and cannot be taken
+       * by a graph's own parameter; a graph that tries will not open.
+       */
+      set(param: string, value: number | boolean): void
+      /**
+       * Forces a state of the graph, whatever its ways out say. Held until `stop`, or until a
+       * state that does not loop has played out — a one-shot need not be released by hand.
+       */
+      play(state: string): void
+      /** Hands the body back to its own state machine. */
+      stop(): void
+    }
   }
 
   /** The step itself: its clock and what the player is doing. */
@@ -299,6 +328,13 @@ declare module '@studio' {
     onMessage?(self: Self<P>, ctx: Context, event: GameEvent): void
     /** When something hit THIS entity. */
     onCollision?(self: Self<P>, ctx: Context, event: GameEvent): void
+    /**
+     * A marker crossed inside a clip, or a state that does not loop having played out.
+     *
+     * `event.payload.state` names the state; `event.payload.event` the marker, and is absent for
+     * the end of a clip. Both arrive for the entity that carries the `Animator`.
+     */
+    onAnimationEvent?(self: Self<P>, ctx: Context, event: GameEvent): void
     onTriggerEnter?(self: Self<P>, ctx: Context, event: GameEvent): void
     onTriggerExit?(self: Self<P>, ctx: Context, event: GameEvent): void
   }): unknown

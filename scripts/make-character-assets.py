@@ -3,7 +3,10 @@
 Run through Blender, which is the only reader here for FBX:
 
     /Applications/Blender.app/Contents/MacOS/Blender --background --factory-startup \
-        --python scripts/make-character-assets.py -- <source folder> <resources folder>
+        --python scripts/make-character-assets.py -- <source folder> <resources folder> [names...]
+
+Naming what to build restricts the run to those clips or hero levels; with none it builds the
+whole of both tables.
 
 The source folder holds `game/` — `character.glb` and Mixamo FBX clips — beside `optimization/`,
 which holds the decimations of that same mesh. What
@@ -283,6 +286,12 @@ def build_hero(source, target, height):
 
 
 CLIPS = {
+    "Idle.fbx": "Idle",
+    "Idle (1).fbx": "IdleShift",
+    "Breathing Idle.fbx": "IdleBreathing",
+    "Happy Idle.fbx": "IdleHappy",
+    "Sad Idle.fbx": "IdleSad",
+    "Standing W_Briefcase Idle.fbx": "IdleBriefcase",
     "Walking.fbx": "Walk",
     "Start Walking.fbx": "WalkStart",
     "Stop Walking.fbx": "WalkStop",
@@ -311,9 +320,15 @@ HERO_LEVELS = (
 def main():
     argv = sys.argv[sys.argv.index("--") + 1 :]
     source, resources = argv[0], argv[1]
+    # Names to build, or everything. A rebuild of what is already shipped is not free: the
+    # exporter is not byte-stable across Blender versions, so relaunching for one added clip
+    # would rewrite the ten beside it and put them in the diff.
+    wanted = set(argv[2:])
 
     animations = os.path.join(resources, "animations")
     for file, name in CLIPS.items():
+        if wanted and name not in wanted:
+            continue
         folder = os.path.join(animations, name)
         os.makedirs(folder, exist_ok=True)
         target = os.path.join(folder, "animation.glb")
@@ -325,6 +340,8 @@ def main():
     characters = os.path.join(resources, "characters")
     os.makedirs(characters, exist_ok=True)
     for name, folder, file in HERO_LEVELS:
+        if wanted and name not in wanted:
+            continue
         target = os.path.join(characters, f"{name}.glb")
         before, after, measured, factor = build_hero(
             os.path.join(source, folder, file), target, HERO_HEIGHT
