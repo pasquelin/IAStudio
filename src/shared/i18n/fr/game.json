@@ -223,7 +223,22 @@
       "removeBinding": "Supprimer la liaison",
       "save": "Enregistrer",
       "scale": "Échelle",
-      "unnamedAction": "Action sans nom"
+      "unnamedAction": "Action sans nom",
+      "capture": "Appuyez",
+      "capturing": "Appuyez…",
+      "captureHint": "Lie cette commande à la prochaine touche ou au prochain contrôle poussé. Échap annule.",
+      "help": {
+        "id": "Le nom du contexte, celui qu’un script pousse et que le repli intégré complète. Il vient du nom du fichier ; deux fichiers portant le même identifiant ne feraient qu’un seul contexte.",
+        "priority": "Qui gagne quand deux contextes actifs déclarent la même action. Le plus GRAND nombre écrit en dernier et l’emporte. Les contextes intégrés personnage, véhicule et vol sont à 0, 10 et 10.",
+        "defaultActive": "Si cette carte est en service dès le début de la partie. Sinon, c’est à un script de la pousser — un contexte de menu s’ouvre et se referme ainsi.",
+        "actionId": "Le nom que lit un script et que lisent les contrôleurs intégrés : `move`, `jump`, `steer`. C’est ce nom qui compte, jamais la touche.",
+        "actionKind": "Ce que l’action rend : un bouton rend oui ou non, un axe rend un nombre entre −1 et 1, deux axes rendent un couple — ce qu’un stick dit.",
+        "device": "D’où vient la commande. Une même action peut en cumuler plusieurs : c’est ainsi qu’un jeu répond au clavier ET à la manette sans le savoir.",
+        "axis": "Sur laquelle des deux moitiés cette touche pousse. Une action à deux axes se compose de quatre touches, deux par axe.",
+        "scale": "De combien cette liaison pousse, et dans quel sens. −1 pour la moitié qui va vers la gauche ou vers l’arrière, 1 pour l’autre.",
+        "deadZone": "En dessous de cette valeur, le stick est considéré au repos. Un stick usé dérive : sans zone morte, le personnage marche tout seul.",
+        "invert": "Retourne le sens de ce contrôle. Ce que certains pilotes attendent du tangage, et personne du reste."
+      }
     },
     "controlsMenu": {
       "add": "Ajouter une liaison",

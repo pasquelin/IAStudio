@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-import type { GamepadBinding, InputAction, InputBinding, InputMap } from '@shared/domain/inputMap'
+import type {
+  GamepadBinding,
+  GamepadControl,
+  InputAction,
+  InputBinding,
+  InputMap,
+} from '@shared/domain/inputMap'
 import type { GamepadState, InputState } from '../ports/inputPort'
 import { clamp } from '../numeric'
 
@@ -182,7 +188,7 @@ function axisIndex(control: string): number | null {
 }
 
 /** The standard mapping's button order — exported so a suite names a control, never an index. */
-export const GAMEPAD_BUTTONS: readonly string[] = [
+export const GAMEPAD_BUTTONS: readonly GamepadControl[] = [
   'south',
   'east',
   'west',
@@ -203,7 +209,7 @@ export const GAMEPAD_BUTTONS: readonly string[] = [
 ]
 
 function buttonIndex(control: string): number | null {
-  const index = GAMEPAD_BUTTONS.indexOf(control)
+  const index = GAMEPAD_BUTTONS.findIndex(one => one === control)
   return index < 0 ? null : index
 }
 

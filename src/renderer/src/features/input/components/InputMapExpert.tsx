@@ -7,6 +7,7 @@ import { PropertySection } from '@/components/PropertySection'
 import { SelectField } from '@/components/SelectField'
 import { TextField } from '@/components/TextField'
 import { ToggleField } from '@/components/ToggleField'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { InputMapExpertBinding } from './InputMapExpertBinding'
 
 type InputMapExpertProps = { map: InputMap; onChange: (map: InputMap) => void }
@@ -32,15 +33,19 @@ export function InputMapExpert({ map, onChange }: InputMapExpertProps) {
   return (
     <div className="min-h-0 flex-1 overflow-auto">
       <PropertySection title={t('game.inputMap.context')} scId="input.context">
+        {/* 🛑 Every one of these carries its own line of help: the six notions of this editor
+            were nowhere explained on screen, while each Preferences setting has a paragraph. */}
         <TextField
           scId="input.context.id"
           label={t('game.inputMap.id')}
+          hint={TIP_LEFT(t('game.inputMap.id'), false, t('game.inputMap.help.id'))}
           value={map.id}
           onChange={id => onChange({ ...map, id })}
         />
         <NumberField
           scId="input.context.priority"
           label={t('game.inputMap.priority')}
+          hint={TIP_LEFT(t('game.inputMap.priority'), false, t('game.inputMap.help.priority'))}
           value={map.priority}
           step={1}
           onChange={priority => onChange({ ...map, priority })}
@@ -48,6 +53,11 @@ export function InputMapExpert({ map, onChange }: InputMapExpertProps) {
         <ToggleField
           scId="input.context.active"
           label={t('game.inputMap.defaultActive')}
+          hint={TIP_LEFT(
+            t('game.inputMap.defaultActive'),
+            false,
+            t('game.inputMap.help.defaultActive'),
+          )}
           value={map.defaultActive}
           onChange={defaultActive => onChange({ ...map, defaultActive })}
         />
@@ -70,12 +80,18 @@ export function InputMapExpert({ map, onChange }: InputMapExpertProps) {
           <TextField
             scId={`input.action.${action.id}.id`}
             label={t('game.inputMap.actionId')}
+            hint={TIP_LEFT(t('game.inputMap.actionId'), false, t('game.inputMap.help.actionId'))}
             value={action.id}
             onChange={id => onChange(changedAction(map, index, { ...action, id }))}
           />
           <SelectField
             scId={`input.action.${action.id}.kind`}
             label={t('game.inputMap.actionKind')}
+            hint={TIP_LEFT(
+              t('game.inputMap.actionKind'),
+              false,
+              t('game.inputMap.help.actionKind'),
+            )}
             value={action.kind}
             options={kinds}
             onChange={kind =>
