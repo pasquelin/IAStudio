@@ -135,12 +135,23 @@ function missingResources(
   )
 }
 
-const seenInResults = (mission: Mission, given: string): boolean =>
+/** The `id` of every entry of a list named for the kind — `shots: [{ id }]` as scene.state answers. */
+function listedIds(value: unknown, collection: string): readonly string[] {
+  if (Array.isArray(value)) return value.flatMap(item => listedIds(item, collection))
+  if (typeof value !== 'object' || value === null) return []
+  return Object.entries(value).flatMap(([key, entry]) =>
+    key === collection && Array.isArray(entry)
+      ? entry.flatMap(item => referenceValues(item, 'id'))
+      : listedIds(entry, collection),
+  )
+}
+
+const seenInResults = (mission: Mission, kind: string, given: string): boolean =>
   mission.plan.steps.some(
     step =>
       step.kind === 'action' &&
       step.state === 'completed' &&
-      JSON.stringify(step.result ?? null).includes(JSON.stringify(given)),
+      listedIds(step.result, `${kind}s`).includes(given),
   )
 
 function referenceRefusal(
@@ -163,7 +174,7 @@ function referenceRefusal(
     if (
       typeof given === 'string' &&
       !validReferences.includes(given) &&
-      !seenInResults(mission, given)
+      !seenInResults(mission, field.reference, given)
     ) {
       return {
         ok: false,
