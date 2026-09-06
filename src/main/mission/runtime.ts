@@ -22,13 +22,7 @@ import type { RemoteActions } from '@main/mcp/asking'
 import type { JobManager } from '@main/provider/jobManager'
 import type { AssistantContextBuilder } from './contextBuilder'
 import { repeatingOutcome, repeatsLastRound, unreadableOutcome } from './runtimeGuards'
-import {
-  asksBeforeReading,
-  hasDependentVerification,
-  plannedFrom,
-  READ_BEFORE_ASKING,
-  reasoningStep,
-} from './runtimePlanning'
+import { hasDependentVerification, plannedFrom, reasoningStep } from './runtimePlanning'
 import { assetIdsFromJobResult } from './jobResult'
 import type { MissionMetrics } from './metrics'
 import type { MissionManager, MissionScope } from './manager'
@@ -405,20 +399,10 @@ export function createMissionRuntime(deps: RuntimeDeps): MissionRuntime {
       signal,
       step.kind === 'verify'
         ? `Verify from the current state whether this is done, and plan the next calls if it is not: ${mission.goal}`
-        : step.title === READ_BEFORE_ASKING
-          ? `${READ_BEFORE_ASKING} Goal: ${mission.goal}`
-          : mission.goal,
+        : mission.goal,
     )
     if (answer.unreadable) return unreadableOutcome
     if (repeatsLastRound(mission, step, answer)) return repeatingOutcome
-    if (asksBeforeReading(mission, answer)) {
-      deps.metrics?.plannedSteps(1)
-      return {
-        kind: 'planned',
-        result: { say: answer.say, ask: null, heldBack: answer.ask },
-        steps: [reasoningStep(READ_BEFORE_ASKING)],
-      }
-    }
     const steps = plannedFrom(answer, hasDependentVerification(mission, step.id))
     if (mission.plan.steps.length + steps.length > MAX_MISSION_STEPS) {
       return { kind: 'failed', error: 'mission step limit reached' }
