@@ -139,6 +139,7 @@ const DOM_BOUND = [
   'src/renderer/src/features/shell/components/toolComponents.test.ts',
   'src/renderer/src/features/shell/unsavedGuard.test.ts',
   // `renderHook` mounts into a document, and this one has no component to make it a `.tsx`.
+  'src/renderer/src/hooks/useInputCapture.test.ts',
   'src/renderer/src/hooks/useTaskChoices.test.ts',
   'src/renderer/src/hooks/usePixelPreview.test.ts',
   'src/renderer/src/hooks/usePixelArtGrid.test.ts',

@@ -10,7 +10,7 @@ import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneState } from '@/engines/scene/sceneState'
 import { installFakeBridge } from '@/services/fakeBridge'
 import { installScene } from './scene-fixtures'
-import { playReportOf, usePlay } from './play'
+import { compiledScripts, playReportOf, usePlay } from './play'
 import { sceneOf, useScenes } from './scenes'
 import { forgetSceneEngine, registerSceneEngine } from './sceneEngines'
 
@@ -238,5 +238,48 @@ describe('a game played in a window of its own', () => {
 
   it('says nothing, and throws nothing, when a document nobody played is stopped', () => {
     expect(() => usePlay.getState().stop('never-played')).not.toThrow()
+  })
+})
+
+describe('a project where two files carry one context', () => {
+  const named = (id: string) => ({
+    version: 1,
+    id,
+    priority: 0,
+    defaultActive: true,
+    actions: [],
+  })
+
+  it('still hands the game a map, and names the file that was dropped', async () => {
+    installFakeBridge({
+      game: { scripts: () => Promise.resolve([]) },
+      inputMaps: {
+        list: () =>
+          Promise.resolve(['Controls/character.input.json', 'Controls/studio.input.json']),
+        read: () => Promise.resolve(named('character')),
+      },
+    })
+
+    const compiled = await compiledScripts()
+
+    // 🛑 ONE map rather than none: a duplicate id used to return `NO_SCRIPTS`, so a game lost its
+    // controls AND every script of the project for one file in double.
+    expect(compiled.inputMaps).toEqual([named('character')])
+    expect(compiled.troubles).toHaveLength(1)
+    expect(compiled.troubles[0]?.message).toContain('character')
+    // `line: 0` — the offender is a control map, and only a script can be opened at a line.
+    expect(compiled.troubles[0]?.line).toBe(0)
+  })
+
+  it('says nothing when each context is carried by one file', async () => {
+    installFakeBridge({
+      game: { scripts: () => Promise.resolve([]) },
+      inputMaps: {
+        list: () => Promise.resolve(['Controls/character.input.json']),
+        read: () => Promise.resolve(named('character')),
+      },
+    })
+
+    expect((await compiledScripts()).troubles).toEqual([])
   })
 })

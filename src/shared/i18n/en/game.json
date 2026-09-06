@@ -223,7 +223,22 @@
       "removeBinding": "Remove binding",
       "save": "Save",
       "scale": "Scale",
-      "unnamedAction": "Unnamed action"
+      "unnamedAction": "Unnamed action",
+      "capture": "Press",
+      "capturing": "Press…",
+      "captureHint": "Binds this control to the next key or the next gamepad control pushed. Escape gives up.",
+      "help": {
+        "id": "The context’s name — what a script pushes, and what the built-in fallback completes. It comes from the file name; two files carrying one identifier would make a single context.",
+        "priority": "Who wins when two active contexts declare the same action. The HIGHER number writes last and takes it. The built-in character, vehicle and flight contexts sit at 0, 10 and 10.",
+        "defaultActive": "Whether this map is in service from the start of a game. Otherwise a script has to push it — a menu context opens and closes that way.",
+        "actionId": "The name a script reads, and the built-in controllers with it: `move`, `jump`, `steer`. That name is what counts, never the key.",
+        "actionKind": "What the action answers: a button answers yes or no, one axis answers a number between −1 and 1, two axes answer a pair — what a stick says.",
+        "device": "Where the control comes from. One action may carry several: that is how a game answers a keyboard AND a gamepad without knowing which spoke.",
+        "axis": "Which of the two halves this key pushes on. A two-axis action is made of four keys, two per axis.",
+        "scale": "How far this binding pushes, and which way. −1 for the half that goes left or backwards, 1 for the other.",
+        "deadZone": "Below this value the stick counts as at rest. A worn stick drifts: with no dead zone, the character walks off on its own.",
+        "invert": "Turns this control round. What some pilots expect of pitch, and nobody of anything else."
+      }
     },
     "controlsMenu": {
       "add": "Add binding",

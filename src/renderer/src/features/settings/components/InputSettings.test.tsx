@@ -22,6 +22,27 @@ describe('input devices in settings', () => {
     expect(screen.getByText('Wireless Controller')).toBeInTheDocument()
   })
 
+  /**
+   * 🛑 An empty list is what a plugged-in gamepad looks like until a button is pressed — the
+   * browser hides it. Without this line the normal state reads as a breakage.
+   */
+  it('says a gamepad is only seen after a first press when none is listed', () => {
+    Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [] })
+
+    render(<InputSettings />)
+
+    expect(screen.getByText(/premier appui/)).toBeInTheDocument()
+  })
+
+  it('says where the game’s own keys are set, which is never this page', () => {
+    Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [] })
+
+    render(<InputSettings />)
+
+    expect(screen.getByText('Les commandes du jeu')).toBeInTheDocument()
+    expect(screen.getByText(/Explorateur/)).toBeInTheDocument()
+  })
+
   it('refreshes the list when a gamepad connects', () => {
     const getGamepads = vi
       .fn<() => (Gamepad | null)[]>()

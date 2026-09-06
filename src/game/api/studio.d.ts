@@ -171,9 +171,12 @@ declare module '@studio' {
     readonly input: {
       /** Whether the key is held down right now. `code` is a `KeyboardEvent.code`. */
       down(code: string): boolean
-      /** Whether it went down during THIS step. */
+      /**
+       * Whether it went down during THIS step. 🛑 A key TAPPED between two steps answers true
+       * here AND on `released` at the same step — that is what makes a 20 ms tap register at all.
+       */
       pressed(code: string): boolean
-      /** Whether it came up during this step. */
+      /** Whether it came up during this step. See `pressed`: a tap says both. */
       released(code: string): boolean
       /** Whether a named button action in the active input contexts is held. */
       button(id: string): boolean

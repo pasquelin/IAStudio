@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import type { InputMap } from '@shared/domain/inputMap'
 import { resolveInputMaps } from './inputMaps'
+import { standardGamepad } from './input-fixtures'
 
 const character: InputMap = {
   version: 1,
@@ -141,5 +142,56 @@ describe('an axis read off keys and a stick together', () => {
     expect(read([], 0.6)).toBeCloseTo(0.6)
     expect(read(['KeyA'], 0.6)).toBe(-1)
     expect(read(['KeyA', 'KeyD'], 0.6)).toBeCloseTo(0.6)
+  })
+})
+
+describe('two controllers pushing one axis', () => {
+  const moving: readonly InputMap[] = [
+    {
+      version: 1,
+      id: 'character',
+      priority: 0,
+      defaultActive: true,
+      actions: [
+        {
+          id: 'steer',
+          kind: 'axis1',
+          bindings: [
+            { device: 'keyboard', code: 'KeyA', scale: -1 },
+            { device: 'gamepad', control: 'leftStickX' },
+          ],
+        },
+      ],
+    },
+  ]
+
+  const steering = (input: Parameters<typeof resolveInputMaps>[2]): number =>
+    resolveInputMaps(moving, ['character'], input).axis('steer')
+
+  /** 🛑 `stronger` kept the FIRST of two equal pushes: the pad listed first always won. */
+  it('cancels out when they push the opposite way with the same force', () => {
+    expect(
+      steering({
+        held: [],
+        gamepads: [standardGamepad({ leftX: 0.9 }), standardGamepad({ leftX: -0.9 })],
+      }),
+    ).toBe(0)
+  })
+
+  it('still keeps the stronger of the two', () => {
+    expect(
+      steering({
+        held: [],
+        gamepads: [standardGamepad({ leftX: 0.4 }), standardGamepad({ leftX: -0.9 })],
+      }),
+    ).toBeCloseTo(-0.9, 5)
+  })
+
+  /**
+   * 🛑 Scoped to CONTROLLERS: between a key and a stick the strongest still wins outright, or a
+   * key held with a stick pushed full the other way would answer nothing at all.
+   */
+  it('does not cancel a held key against a stick pushed the other way', () => {
+    expect(steering({ held: ['KeyA'], gamepads: [standardGamepad({ leftX: 1 })] })).toBe(-1)
   })
 })

@@ -4,6 +4,7 @@ import { inputBindingFits } from '@shared/domain/inputMap'
 import type { InputAction, InputBinding } from '@shared/domain/inputMap'
 import { Button } from '@/components/Button'
 import { SelectField } from '@/components/SelectField'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { inputBindingLabel } from './inputMapPresentation'
 import { InputMapExpertGamepad } from './InputMapExpertGamepad'
 import { InputMapExpertKeyboard } from './InputMapExpertKeyboard'
@@ -42,10 +43,13 @@ export function InputMapExpertBinding({
   ]
 
   return (
-    <div className="flex items-end gap-1.5">
+    // 🛑 One field per LINE. Side by side, five fields shared one label column and three of
+    // them read « Périphér… », « Liaison M… », « Inv… » in a 2 056 px window.
+    <div className="border-border grid gap-1.5 rounded-(--radius-sc-sm) border p-2">
       <SelectField
         scId={`input.action.${action.id}.binding.${index}.device`}
         label={t('game.inputMap.deviceLabel')}
+        hint={TIP_LEFT(t('game.inputMap.deviceLabel'), false, t('game.inputMap.help.device'))}
         value={binding.device}
         options={devices.filter(device =>
           inputBindingFits(action.kind, bindingForDevice(action.kind, device.value)),
@@ -77,7 +81,9 @@ export function InputMapExpertBinding({
           onChange={control => onChange({ ...binding, control })}
         />
       )}
-      <Button onClick={() => onChange(null)}>{t('game.inputMap.removeBinding')}</Button>
+      <div className="flex justify-end">
+        <Button onClick={() => onChange(null)}>{t('game.inputMap.removeBinding')}</Button>
+      </div>
     </div>
   )
 }

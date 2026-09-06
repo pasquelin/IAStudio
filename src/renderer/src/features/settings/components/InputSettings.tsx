@@ -40,8 +40,18 @@ export function InputSettings() {
         ))}
       </ul>
       {gamepads.length === 0 && (
-        <p className={cn(WINDOW_CAPTION, 'mt-2')}>{t('settings.inputDevices.noGamepad')}</p>
+        <>
+          <p className={cn(WINDOW_CAPTION, 'mt-2')}>{t('settings.inputDevices.noGamepad')}</p>
+          {/* 🛑 An empty list is the NORMAL state of a plugged-in gamepad nobody has pressed yet:
+              the browser hides it until then, and without this line it reads as a breakage. */}
+          <p className={cn(WINDOW_CAPTION, 'mt-1')}>{t('settings.inputDevices.gamepadSleeps')}</p>
+        </>
       )}
+
+      {/* This page and a game's keys wear the same word in everyday speech. Saying where the
+          other one lives is what stops a search for a setting that was never here. */}
+      <h3 className={cn(WINDOW_GROUP_LABEL, 'mt-5')}>{t('settings.gameControls.title')}</h3>
+      <p className={WINDOW_CAPTION}>{t('settings.gameControls.help')}</p>
     </section>
   )
 }

@@ -125,3 +125,38 @@ describe('the input map editor', () => {
     )
   })
 })
+
+describe('a context two files carry', () => {
+  it('is named on saving, rather than waiting for a Play to drop every script', async () => {
+    installFakeBridge({
+      inputMaps: {
+        list: () =>
+          Promise.resolve(['Controls/character.input.json', 'Controls/studio.input.json']),
+        read: () => Promise.resolve(CHARACTER),
+        write: () => Promise.resolve(true),
+      },
+    })
+
+    render(<InputMapDocument path="Controls/studio.input.json" />)
+    await screen.findByText('jump')
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('character')
+  })
+
+  it('says nothing when the project holds one file per context', async () => {
+    installFakeBridge({
+      inputMaps: {
+        list: () => Promise.resolve(['Controls/character.input.json']),
+        read: () => Promise.resolve(CHARACTER),
+        write: () => Promise.resolve(true),
+      },
+    })
+
+    render(<InputMapDocument path="Controls/character.input.json" />)
+    await screen.findByText('jump')
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})

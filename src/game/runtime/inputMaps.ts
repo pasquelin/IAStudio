@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-import type { GamepadBinding, InputAction, InputBinding, InputMap } from '@shared/domain/inputMap'
+import type {
+  GamepadBinding,
+  GamepadControl,
+  InputAction,
+  InputBinding,
+  InputMap,
+} from '@shared/domain/inputMap'
 import type { GamepadState, InputState } from '../ports/inputPort'
 import { clamp } from '../numeric'
 
@@ -22,17 +28,35 @@ export type InputActionValue = boolean | number | InputVector
 const ZERO: InputVector = { x: 0, y: 0 }
 export const DEFAULT_GAMEPAD_DEAD_ZONE = 0.15
 
+/**
+ * The active maps, lowest priority first — the order they are folded in, so the highest priority
+ * writes last and wins. SEPARATE from the resolution because it only changes at a rebind or a
+ * push, while the resolution runs once a step: `inputActions` holds this answer between steps.
+ */
+export function orderedInputMaps(
+  maps: readonly InputMap[],
+  active: readonly string[],
+): readonly InputMap[] {
+  const activeIds = new Set(active)
+  // No `slice` before the sort: `filter` already answers a new array.
+  return maps
+    .filter(map => activeIds.has(map.id))
+    .sort((one, other) => one.priority - other.priority)
+}
+
 export function resolveInputMaps(
   maps: readonly InputMap[],
   active: readonly string[],
   input: RawInput,
 ): ResolvedInput {
-  const activeIds = new Set(active)
+  return resolveOrderedInputMaps(orderedInputMaps(maps, active), input)
+}
+
+export function resolveOrderedInputMaps(
+  ordered: readonly InputMap[],
+  input: RawInput,
+): ResolvedInput {
   const values: Record<string, InputActionValue> = {}
-  // No `slice` before the sort: `filter` already answers a new array, and this runs once a step.
-  const ordered = maps
-    .filter(map => activeIds.has(map.id))
-    .sort((one, other) => one.priority - other.priority)
 
   for (const map of ordered) {
     for (const action of map.actions) values[action.id] = valueOf(action, input)
@@ -93,7 +117,7 @@ function vectorValueOf(action: InputAction, input: RawInput): InputVector {
  */
 function isHalfAxis(binding: InputBinding): boolean {
   if (binding.device !== 'gamepad') return true
-  return buttonIndex(binding.control) !== null
+  return BUTTON_INDEX.has(binding.control)
 }
 
 function buttonOf(binding: InputAction['bindings'][number], input: RawInput): boolean {
@@ -108,7 +132,7 @@ function axisOf(binding: InputAction['bindings'][number], input: RawInput): numb
     return input.held.includes(binding.code) ? (binding.scale ?? 1) : 0
   if (binding.device !== 'gamepad') return 0
   const raw = (input.gamepads ?? []).reduce(
-    (strongest, gamepad) => stronger(strongest, rawGamepadAxis(gamepad, binding)),
+    (strongest, gamepad) => strongestAcross(strongest, rawGamepadAxis(gamepad, binding)),
     0,
   )
   const deadZone = binding.deadZone ?? DEFAULT_GAMEPAD_DEAD_ZONE
@@ -123,10 +147,10 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
     return binding.axis === 'x' ? { x: value, y: 0 } : { x: 0, y: value }
   }
   if (binding.device !== 'gamepad') return ZERO
-  const vector = (input.gamepads ?? []).reduce<InputVector>(
-    (strongest, gamepad) => strongerVector(strongest, rawGamepadVector(gamepad, binding)),
-    ZERO,
-  )
+  const vector = (input.gamepads ?? []).reduce<InputVector>((strongest, gamepad) => {
+    const raw = rawGamepadVector(gamepad, binding)
+    return { x: strongestAcross(strongest.x, raw.x), y: strongestAcross(strongest.y, raw.y) }
+  }, ZERO)
   const deadZone = binding.deadZone ?? DEFAULT_GAMEPAD_DEAD_ZONE
   return {
     x:
@@ -142,10 +166,10 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
 
 function rawGamepadAxis(gamepad: GamepadState, binding: GamepadBinding): number {
   if (gamepad.mapping !== 'standard') return 0
-  const index = buttonIndex(binding.control)
-  if (index !== null) return gamepad.buttons[index] ?? 0
-  const axis = axisIndex(binding.control)
-  return axis === null ? 0 : (gamepad.axes[axis] ?? 0)
+  const index = BUTTON_INDEX.get(binding.control)
+  if (index !== undefined) return gamepad.buttons[index] ?? 0
+  const axis = AXIS_INDEX.get(binding.control)
+  return axis === undefined ? 0 : (gamepad.axes[axis] ?? 0)
 }
 
 function rawGamepadVector(gamepad: GamepadState, binding: GamepadBinding): InputVector {
@@ -155,16 +179,16 @@ function rawGamepadVector(gamepad: GamepadState, binding: GamepadBinding): Input
   return { x: gamepad.axes[offset] ?? 0, y: gamepad.axes[offset + 1] ?? 0 }
 }
 
-function axisIndex(control: string): number | null {
-  if (control === 'leftStickX') return 0
-  if (control === 'leftStickY') return 1
-  if (control === 'rightStickX') return 2
-  if (control === 'rightStickY') return 3
-  return null
-}
+/** The standard mapping's stick order — exported so a caller names a control, never an index. */
+export const GAMEPAD_AXES: readonly GamepadControl[] = [
+  'leftStickX',
+  'leftStickY',
+  'rightStickX',
+  'rightStickY',
+]
 
 /** The standard mapping's button order — exported so a suite names a control, never an index. */
-export const GAMEPAD_BUTTONS: readonly string[] = [
+export const GAMEPAD_BUTTONS: readonly GamepadControl[] = [
   'south',
   'east',
   'west',
@@ -184,12 +208,23 @@ export const GAMEPAD_BUTTONS: readonly string[] = [
   'home',
 ]
 
-function buttonIndex(control: string): number | null {
-  const index = GAMEPAD_BUTTONS.indexOf(control)
-  return index < 0 ? null : index
-}
+// Built once: these two are read per gamepad binding per step, and a scan of seventeen entries
+// through a closure was paid sixty times a second for an answer that never changes.
+const BUTTON_INDEX = new Map(GAMEPAD_BUTTONS.map((control, index) => [control, index]))
+const AXIS_INDEX = new Map(GAMEPAD_AXES.map((control, index) => [control, index]))
 
 function stronger(one: number, other: number): number {
+  return Math.abs(other) > Math.abs(one) ? other : one
+}
+
+/**
+ * 🛑 Across CONTROLLERS only, where `stronger` kept the first of two equal pushes: two people
+ * pushing a stick the opposite way each cancel out rather than letting the one listed first win.
+ * Not used between a key and a stick — there a held key and a full stick backwards must not
+ * silently answer nothing.
+ */
+function strongestAcross(one: number, other: number): number {
+  if (Math.abs(other) === Math.abs(one)) return one === -other ? 0 : one
   return Math.abs(other) > Math.abs(one) ? other : one
 }
 

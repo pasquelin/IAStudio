@@ -74,3 +74,71 @@ describe('the actions of a step', () => {
     expect(actions.pressed('jump')).toBe(false)
   })
 })
+
+describe('an action two active contexts declare', () => {
+  const declaring = (id: string, priority: number, action: string): InputMap => ({
+    version: 1,
+    id,
+    priority,
+    defaultActive: true,
+    actions: [{ id: action, kind: 'button', bindings: [{ device: 'keyboard', code: 'KeyJ' }] }],
+  })
+
+  it('is named once, however many steps run', () => {
+    const said: string[] = []
+    const actions = createInputActions(message => said.push(message))
+    const maps = [declaring('character', 0, 'jump'), declaring('vehicle', 10, 'jump')]
+
+    for (let step = 0; step < 5; step += 1)
+      actions.sample(maps, ['character', 'vehicle'], { held: [] })
+
+    expect(said).toHaveLength(1)
+    expect(said[0]).toContain('jump')
+    expect(said[0]).toContain('vehicle')
+  })
+
+  it('says nothing when the active contexts share no action name', () => {
+    const said: string[] = []
+    const actions = createInputActions(message => said.push(message))
+
+    actions.sample(
+      [declaring('character', 0, 'jump'), declaring('vehicle', 10, 'handBrake')],
+      ['character', 'vehicle'],
+      { held: [] },
+    )
+
+    expect(said).toEqual([])
+  })
+})
+
+/** 🛑 The selection is HELD between steps — these two say it cannot go stale. */
+describe('the held selection', () => {
+  const jumping = (id: string, code: string): InputMap => ({
+    version: 1,
+    id,
+    priority: 0,
+    defaultActive: true,
+    actions: [{ id: 'jump', kind: 'button', bindings: [{ device: 'keyboard', code }] }],
+  })
+
+  it('follows a context pushed between two steps', () => {
+    const actions = createInputActions()
+    const maps = [jumping('character', 'Space'), jumping('menu', 'Enter')]
+
+    actions.sample(maps, ['character'], { held: ['Enter'] })
+    expect(actions.button('jump')).toBe(false)
+
+    actions.sample(maps, ['character', 'menu'], { held: ['Enter'] })
+    expect(actions.button('jump')).toBe(true)
+  })
+
+  it('follows a rebinding, which hands over a new array of maps', () => {
+    const actions = createInputActions()
+
+    actions.sample([jumping('character', 'Space')], ['character'], { held: ['KeyJ'] })
+    expect(actions.button('jump')).toBe(false)
+
+    actions.sample([jumping('character', 'KeyJ')], ['character'], { held: ['KeyJ'] })
+    expect(actions.button('jump')).toBe(true)
+  })
+})

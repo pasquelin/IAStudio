@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { InputMap } from '@shared/domain/inputMap'
 import { INPUT_PRESET_IDS, inputMapPreset } from '@shared/domain/inputPresets'
 import { Chip } from '@/components/Chip'
+import { sameValues } from '@/helpers/objects'
 import { inputBindingLabel } from './inputMapPresentation'
 
 type InputMapSimpleProps = {
@@ -21,8 +22,13 @@ export function InputMapSimple({ map, onChange }: InputMapSimpleProps) {
             key={id}
             label={t(`game.inputMap.preset.${id}`)}
             hint={t('game.inputMap.applyPresetHint')}
-            selected={map.id === id}
-            onClick={() => onChange(inputMapPreset(id))}
+            // 🛑 By the ACTIONS, never the id: the click keeps the map's own id, so testing the
+            // id lit a chip for a file merely NAMED `character` and none for one holding that
+            // preset under any other name.
+            selected={sameValues(map.actions, inputMapPreset(id).actions)}
+            // 🛑 The map keeps its OWN id — same reason as `createInputMap`: the FILE names the
+            // context, so taking the preset's id gave two files one context, in silence.
+            onClick={() => onChange({ ...structuredClone(inputMapPreset(id)), id: map.id })}
           />
         ))}
       </section>

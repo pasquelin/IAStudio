@@ -5,6 +5,7 @@ import { inputMapOf, type InputMap } from '@shared/domain/inputMap'
 import { Button } from '@/components/Button'
 import { Chip } from '@/components/Chip'
 import { getBridge } from '@/services/bridge'
+import { isDuplicateInputMapId, projectInputMaps } from '@/engines/code/projectInputMaps'
 import {
   fileViewPanelId,
   registerFileViewSave,
@@ -82,6 +83,17 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
     setMode(nextMode)
   }
 
+  const duplicateOf = useCallback(
+    async (id: string): Promise<string | null> => {
+      // 🛑 Asked of THIS id: `inputMapIdConflict` answers the first repeat of the project, so a
+      // second pair elsewhere hid the one the author had just written.
+      return isDuplicateInputMapId(await projectInputMaps(), id)
+        ? t('game.inputMap.duplicateId', { id })
+        : null
+    },
+    [t],
+  )
+
   const save = useCallback(async (): Promise<boolean> => {
     const savedRevision = revision.current
     try {
@@ -94,13 +106,16 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
         setSource(formatted(next))
         setModified(false)
       }
-      setError(null)
+      // 🛑 Asked AFTER the write, from the disk: a second file carrying this context is what the
+      // author has to read here and now — a Play is the only place that used to say it, and only
+      // once it had already dropped every script of the project.
+      setError(await duplicateOf(next.id))
       return unchanged
     } catch {
       setError(t('game.inputMap.invalid'))
       return false
     }
-  }, [map, mode, path, source, t])
+  }, [duplicateOf, map, mode, path, source, t])
 
   useEffect(() => registerFileViewSave(fileViewPanelId(path), save), [path, save])
 
