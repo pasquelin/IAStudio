@@ -60,7 +60,15 @@ export type SaveMeshRequest = {
  */
 export type SaveAnimationRequest = SaveRequestBase & { glb: Uint8Array }
 
-export type AnimationThumbnailRequest = {
+/**
+ * A poster a window drew for a motion, on its way beside the clip — see
+ * `StudioBridge['assets']['saveAnimationThumbnail']`.
+ *
+ * `projectPath` and `sourcePath` travel with the bytes rather than being trusted from the state:
+ * a render costs seconds, and the project it was asked for may have closed or the clip moved by
+ * the time it lands. The main process refuses both cases instead of filing the poster elsewhere.
+ */
+export type SaveAnimationThumbnailRequest = {
   projectPath: string
   assetId: string
   sourcePath: string

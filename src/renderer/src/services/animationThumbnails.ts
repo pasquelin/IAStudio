@@ -36,7 +36,7 @@ async function renderBatch(assets: readonly Asset[]): Promise<void> {
   if (!foundBridge || !foundProject || motions.length === 0) return
   const bridge = foundBridge
   const projectPath = foundProject
-  await runTask(i18next.t('activity.importingFiles'), async (_id, watch) => {
+  await runTask(i18next.t('activity.drawingMotionPosters'), async (_id, watch) => {
     const worker = createWorkerSession<AnimationThumbnailRequest, AnimationThumbnailResponse>(
       () =>
         new Worker(new URL('../engines/scene/animationThumbnail.worker.ts', import.meta.url), {

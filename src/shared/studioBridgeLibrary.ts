@@ -31,7 +31,7 @@ import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
 import type { Unsubscribe } from './ipcEvents'
 import type {
   SaveAnimationRequest,
-  AnimationThumbnailRequest,
+  SaveAnimationThumbnailRequest,
   SaveAudioRequest,
   SaveLayeredRequest,
   SaveMeshRequest,
@@ -312,7 +312,7 @@ export type StudioBridgeLibrary = {
      */
     saveAnimation: (request: SaveAnimationRequest) => Promise<Asset>
     animationThumbnailModel: () => Promise<Uint8Array>
-    saveAnimationThumbnail: (request: AnimationThumbnailRequest) => Promise<void>
+    saveAnimationThumbnail: (request: SaveAnimationThumbnailRequest) => Promise<void>
     /**
      * Reads a layered picture back, or `null` for an asset that is not one.
      *

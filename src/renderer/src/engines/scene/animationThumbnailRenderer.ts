@@ -114,9 +114,9 @@ export async function createAnimationThumbnailRenderer(model: ArrayBuffer, decod
       })
       const names = retargetPlanOf(wireBonesOf(character), wireBonesOf(source), []).names
       const clip = source.animations[0]
-      if (!clip) throw Error('No clip in ' + name)
+      if (!clip) throw new Error(`No clip in ${name}`)
       const sourceHip = refs.get(names.Hips ?? 'Hips')
-      if (!sourceHip) throw Error('Hips missing in ' + name)
+      if (!sourceHip) throw new Error(`Hips missing in ${name}`)
       const sh = sourceHip
 
       const scale = skeletonScaleOf(character, source)
@@ -156,9 +156,14 @@ export async function createAnimationThumbnailRenderer(model: ArrayBuffer, decod
               ? ['Head', 'Chest', 'Hips', 'LeftUpperLeg', 'RightUpperLeg']
               : ['LeftUpperLeg', 'RightUpperLeg']
           for (const n of scoredNames) {
-            const r = refs.get(names[n] ?? n)
+            // `refs` and `start` are keyed by SOURCE names, `scoredNames` by the character's:
+            // read one of them untranslated and a Mixamo clip scores against its bind pose.
+            const from = names[n] ?? n
+            const r = refs.get(from)
             if (r)
-              score += r.o.getWorldQuaternion(new T.Quaternion()).angleTo(start.get(n) ?? r.world)
+              score += r.o
+                .getWorldQuaternion(new T.Quaternion())
+                .angleTo(start.get(from) ?? r.world)
           }
         }
         return score
@@ -178,7 +183,7 @@ export async function createAnimationThumbnailRenderer(model: ArrayBuffer, decod
           }
         }
         if (chosen === undefined || !Number.isFinite(chosen) || chosen < 0 || chosen > 1)
-          throw Error('The pose fraction must be between 0 and 1')
+          throw new Error('The pose fraction must be between 0 and 1')
         return chosen
       }
       const chosen = choosePose()
