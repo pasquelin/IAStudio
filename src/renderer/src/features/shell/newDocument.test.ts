@@ -95,9 +95,12 @@ describe('createDocumentIn', () => {
   it('calls the document what the window answers, and opens it', async () => {
     answering([madeAs('Niveau', 'Modelling/Scenes')])
 
-    createDocumentIn('3d')
+    // 🛑 AWAITED, where the cases below need not be: the opening happens AFTER the seeding, and
+    // the seeding awaits what the app ships. Waiting on the document alone read before the
+    // opening and went red under a loaded suite — green alone, the worst way to be wrong.
+    await createDocumentIn('3d')
 
-    await vi.waitFor(() => expect(created()).toHaveLength(1))
+    expect(created()).toHaveLength(1)
     expect(created()[0]?.title).toBe('Niveau')
     // The name is the file name: there is only ever one name to change afterwards.
     expect(created()[0]?.path).toBe('Modelling/Scenes/Niveau.gltf')
