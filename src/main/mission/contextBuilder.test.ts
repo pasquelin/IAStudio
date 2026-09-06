@@ -155,7 +155,6 @@ describe('AssistantContextBuilder', () => {
             trouble: null,
           }),
         },
-        documentState: async document => ({ id: document.id, layers: 3 }),
       }),
     )
     const context = await builder.build({ mission, step, request: 'Make the boat blue' })
@@ -164,7 +163,6 @@ describe('AssistantContextBuilder', () => {
       { id: 'document_1', title: 'Boat', kind: 'image', active: true },
     ])
     expect(context.selection?.items).toEqual([{ id: 'layer_1', name: 'Hull' }])
-    expect(context.documentState).toEqual({ id: 'document_1', layers: 3 })
     expect(context.memories).toEqual([memory])
     expect(context.jobs).toEqual([job])
     expect(context.projectContext?.cards).toHaveLength(1)

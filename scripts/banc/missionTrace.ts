@@ -32,7 +32,6 @@ type MissionReflectionTrace = {
   missionGoal: string
   step: unknown
   workspaceState: unknown
-  documentState: unknown
   revision: { mission?: number; document?: number }
   contextSerialized: string
   context: unknown
@@ -125,7 +124,6 @@ function reflectionOf(
     missionGoal: typeof mission['goal'] === 'string' ? mission['goal'] : '',
     step,
     workspaceState: root['workspace'],
-    documentState: root['documentState'],
     revision: {
       ...(typeof mission['revision'] === 'number' ? { mission: mission['revision'] } : {}),
       ...(snapshot?.activeDocumentState ? { document: snapshot.activeDocumentState.revision } : {}),

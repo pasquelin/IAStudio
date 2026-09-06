@@ -279,10 +279,10 @@ export const MISSION_RULES = [
   '    answer — list a folder or search other words, never the same query again.',
   '  - actions is a shortlist the studio picked for this step; their fields are in the Manual.',
   '    The Catalogue names every other action — name one and its fields come back next round.',
-  // 🛑 Handed the document's state in the JSON, the model answered « la scène contient 4
-  // éléments » with no call, three scenarios out of three (1.5, 1.6, 1.8 — 2026-09-06).
-  '  - The JSON is a summary. To tell the person what a document HOLDS, call its read',
-  '    (scene.state, sequence.state, files.list…) and answer from what it returned.',
+  // The JSON carried a summary of the document once, and the model answered from it with no
+  // call — 26 scenarios of passe 6 (2026-09-06). Gone since; the rule stays for the selection.
+  '  - The JSON says what is in front and selected, never what a document HOLDS: to tell the',
+  '    person that, call its read (scene.state, sequence.state, files.list…) and answer from it.',
 ]
 
 export const roleWith = (rules: readonly string[]): string =>

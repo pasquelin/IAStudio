@@ -16,7 +16,6 @@ export type ContextSource =
   | 'project'
   | 'document'
   | 'selection'
-  | 'documentState'
   | 'actions'
   | 'memories'
   | 'jobs'
@@ -90,7 +89,6 @@ export type AssistantContext = {
   project: StudioSnapshot['project']
   document?: SnapshotDocument
   selection?: SnapshotSelection
-  documentState?: unknown
   actions: readonly ActionHit[]
   memories: readonly Memory[]
   jobs: readonly Job[]
