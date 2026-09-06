@@ -6,6 +6,7 @@ import {
   RepeatWrapping,
   SRGBColorSpace,
   Scene,
+  type Box3,
   type Camera,
   type Texture,
   type BufferGeometry,
@@ -38,7 +39,7 @@ import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
 import type { SceneAnimations } from '@/engines/scene/animation'
 import { createSceneResources, type SceneResources } from './gameSceneResources'
 import { drapeWorld, type WorldDrape } from './gameSceneWorld'
-import { dressShadows } from './gameSceneShadows'
+import { dressShadows, shadowBoundsOf } from './gameSceneShadows'
 import { clipKeyOf } from '@shared/domain/scene'
 import type { ModelRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
@@ -62,6 +63,8 @@ export type GameScene = {
   world: SceneWorld
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
+  /** What a shadow frustum is cut to — see `shadowBoundsOf`, which leaves the world out. */
+  shadowBounds: Box3
   /**
    * Poses one entity, and answers whether that MOVED it. A game hands over every entity of the
    * world on every frame, moving or not — see `placementsOf` — so a caller that took the call
@@ -211,6 +214,7 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     scene,
     world: state.world,
     byEntity,
+    shadowBounds: shadowBoundsOf(state.nodes, byEntity),
     place: (entityId, transform) => placements.get(entityId)?.(transform) ?? false,
     // 🛑 Once a frame, never per instance: `computeBoundingSphere` walks every slot of the mesh,
     // so recomputing it inside the placement made a 1 000-instance node quadratic per frame.

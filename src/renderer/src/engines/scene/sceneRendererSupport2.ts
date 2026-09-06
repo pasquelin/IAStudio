@@ -17,7 +17,7 @@ import { cachedOn } from '../core/cachedOn'
 import { COMPONENT_DEFAULTS } from '@game/runtime/componentDefaults'
 import { numberOf } from '@game/runtime/componentFields'
 import type { PaneRect } from '../viewport/panes'
-import { type ModelNode, type SceneNode, type SceneNodeType } from './sceneState'
+import { type ModelNode, type SceneNode } from './sceneState'
 import { isRailAid } from './threeFactory'
 import { MARKER_NAME } from './markerPaint'
 import { type Projected } from './bonePicking'
@@ -173,22 +173,6 @@ export const DEFAULT_VIEW_DISTANCE = 8
  * enough that no depth buffer confuses the two.
  */
 export const GRID_SINKAGE = 0.02
-
-/**
- * The node types an automatic framing counts — see `frameContents`. Lights and cameras are
- * placed away from what they light or watch, and a group is only ever as big as its children,
- * which are counted on their own.
- */
-export const UNFRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>([
-  'light',
-  'camera',
-  'group',
-  'path',
-])
-
-/** Spelled as what is LEFT OUT: a node kind added to the union is framed by default, where a
- * whitelist would have quietly stopped framing it. */
-export const isFramed = (type: SceneNodeType): boolean => !UNFRAMED_NODES.has(type)
 
 /** An empty box for an empty set, which is how a caller tells "nothing yet" from "nothing there". */
 export function boundsOf(objects: Iterable<Object3D>): Box3 {

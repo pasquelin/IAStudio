@@ -19,8 +19,13 @@ describe('what an exported game pays for an image', () => {
   })
 
   it('tunes the shadow maps of a scene it puts on, or every light keeps three.js defaults', () => {
-    expect(code).toContain('tuneSceneShadows(built.scene, bounds, policy)')
+    expect(code).toContain('tuneSceneShadows(built, policy)')
     expect(code).toContain('shadowMapSizeFor(policy.quality, policy.shadowMapSize)')
+  })
+
+  /** A frustum cut to the scatter spreads one map over kilometres — see `shadowBoundsOf`. */
+  it('cuts that frustum to what DRAWS, never to everything the scene holds', () => {
+    expect(code).toContain('shadowReachOf(built.shadowBounds, 0)')
   })
 
   /**

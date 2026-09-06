@@ -70,9 +70,7 @@ export function createWebRender(
   /** Whether the scene the shadow maps hold is no longer the one about to be drawn. */
   let shadowsStale = true
   /** 🛑 Dynamic: its three.js passes are weight every game without effects would carry for nothing. */
-  let composer: PostComposer | null = null
-  /** Held as the PROMISE: two loads overlapping read `composer` before either had awaited one. */
-  let composing: Promise<PostComposer> | null = null
+  const chain = composerHold(renderer, assets)
   /** Seconds, off the game's own clock: grain and tape jitter advance on it, never on a wall. */
   let played = 0
   let sought: Us | null = null
@@ -100,16 +98,22 @@ export function createWebRender(
       held = built
       shadowsStale = true
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
-      // Measured once for the two that read it — a box off a whole scene is a traversal each.
-      const bounds = new Box3().setFromObject(built.scene)
-      if (policy.shadows) tuneSceneShadows(built.scene, bounds, policy)
+      // 🛑 Two boxes, not one: a frustum is cut to what DRAWS, a framing to everything there is.
+      // Sharing them spread a single shadow map over a whole scatter layer.
+      if (policy.shadows) tuneSceneShadows(built, policy)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
-      if (!aimed) frameAll(camera, bounds)
-      // Last, so fetching a chain never holds up the first picture — `draw` falls back until it
-      // lands.
-      if (stackDraws(built.world.post))
-        composer = await (composing ??= composerFor(renderer, assets))
+      if (!aimed) frameAll(camera, built.scene)
+      // Last, and never fatal: a chain that fails to arrive leaves a scene drawn ungraded, where
+      // a throw here would leave a page showing nothing at all.
+      if (stackDraws(built.world.post)) await chain.load()
+      // The build may have been thrown away while that chain was in flight.
+      if (mine !== building) return
+
+      // 🛑 What the scene that just left was drawn through: kept, a chain holds two full-screen
+      // targets, and a game moving between N shapes of stack would hold N of them until the page
+      // closed — the editor sweeps for the same reason on every view it drops.
+      chain.current()?.sweep([built.world.post])
     },
 
     place: (placements: readonly EntityPlacement[]) => {
@@ -170,6 +174,7 @@ export function createWebRender(
       shadowsStale = false
       // The composition the editor draws through, or the plain pass while its chain is still
       // being fetched — a few frames without grade, never a scene nobody sees.
+      const composer = chain.current()
       if (composer && stackDraws(held.world.post)) {
         composer.draw({
           surface: 'game',
@@ -200,11 +205,37 @@ export function createWebRender(
       held?.dispose()
       held = null
       veil.dispose()
-      composer?.dispose()
-      composer = null
-      composing = null
+      chain.dispose()
       gltf.dispose()
       renderer.dispose()
+    },
+  }
+}
+
+/**
+ * The one composer a page ever builds, held as its PROMISE: two scenes landing together read a
+ * null `current` before either had awaited one, and built two.
+ *
+ * 🛑 A failure is nothing, never a throw: `show` is awaited by the page's startup, so a chunk that
+ * never arrives showed no game at all. The rejected promise is dropped, so a later scene retries.
+ */
+function composerHold(renderer: WebGLRenderer, assets: AssetPort) {
+  let held: PostComposer | null = null
+  let loading: Promise<PostComposer> | null = null
+
+  return {
+    current: () => held,
+    load: async (): Promise<void> => {
+      try {
+        held = await (loading ??= composerFor(renderer, assets))
+      } catch {
+        loading = null
+      }
+    },
+    dispose: () => {
+      held?.dispose()
+      held = null
+      loading = null
     },
   }
 }
@@ -224,14 +255,14 @@ async function composerFor(renderer: WebGLRenderer, assets: AssetPort): Promise<
  * Run ONCE as a scene lands, where the editor runs it on every move. 🛑 Its blind spot: an entity
  * walking past what the scene occupied at load walks out of the frustum and stops throwing.
  */
-function tuneSceneShadows(scene: Scene, bounds: Box3, policy: RenderPolicy): void {
+function tuneSceneShadows(built: GameScene, policy: RenderPolicy): void {
   const lights: Light[] = []
-  scene.traverse(object => {
+  built.scene.traverse(object => {
     if (object instanceof Light) lights.push(object)
   })
   // No grid to fall back on, unlike the editor: a game with nothing in it shades nothing.
   tuneShadowMaps(lights, shadowMapSizeFor(policy.quality, policy.shadowMapSize), () =>
-    shadowReachOf(bounds, 0),
+    shadowReachOf(built.shadowBounds, 0),
   )
 }
 
@@ -253,7 +284,8 @@ function veilPass() {
 }
 
 /** Everything in frame, for a scene nobody walks: what the studio's own « frame all » does. */
-function frameAll(camera: PerspectiveCamera, bounds: Box3): void {
+function frameAll(camera: PerspectiveCamera, scene: Scene): void {
+  const bounds = new Box3().setFromObject(scene)
   if (bounds.isEmpty()) return
 
   const middle = bounds.getCenter(new Vector3())

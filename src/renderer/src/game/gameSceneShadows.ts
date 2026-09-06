@@ -1,6 +1,7 @@
-import type { Object3D } from 'three'
+import { Box3, type Object3D } from 'three'
 import { applyShadowFlags } from '@/engines/scene/shadows'
 import { receivesShadow, type SceneNode } from '@/engines/scene/sceneState'
+import { isFramed } from '@/engines/scene/framedNodes'
 
 /**
  * 🛑 The flags a node carries, read through the same two answers the editor reads — lights and
@@ -19,4 +20,21 @@ export function dressShadows(
     if (!object) continue
     applyShadowFlags(object, node.castShadow, receivesShadow(node), belongsElsewhere)
   }
+}
+
+/**
+ * 🛑 What a shadow frustum is measured against: the nodes that DRAW something, never the ground,
+ * the scatter or the relief. A semis spans the world — a frustum cut to it spreads one shadow map
+ * over kilometres, which is `measureShadowReach` reading `framedObjects` and not the scene.
+ */
+export function shadowBoundsOf(
+  nodes: readonly SceneNode[],
+  byEntity: ReadonlyMap<string, Object3D>,
+): Box3 {
+  const bounds = new Box3()
+  for (const node of nodes) {
+    const object = isFramed(node.type) ? byEntity.get(node.id) : undefined
+    if (object) bounds.expandByObject(object)
+  }
+  return bounds
 }
