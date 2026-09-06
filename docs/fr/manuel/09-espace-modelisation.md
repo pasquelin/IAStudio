@@ -1509,9 +1509,18 @@ figure pas n’a pas encore envoyé un premier appui.
 ### Changer les commandes
 
 Les commandes ci-dessus sont un **point de départ**, pas une limite. Une **carte de contrôles**
-du projet les remplace, contexte par contexte : le bouton **Nouvelle carte de contrôles** de
-l’Explorateur en crée une depuis l’un des cinq points de départ standards — *studio*, *personnage*,
-*véhicule*, *vol*, *menu*.
+du projet les remplace, contexte par contexte.
+
+**Les cinq modèles de scène jouables en posent une, et vous n’avez rien à faire pour cela.**
+Créez une scène « Première personne », « Troisième personne » ou « Vue de dessus » et le projet
+reçoit `Controls/character.input.json` plus un script `Scripts/player.ts` accroché au personnage ;
+« Voiture » et « Avion » posent les leurs. Ouvrez-les, changez-les — c’est ce qu’ils sont là pour
+montrer. Une seconde scène du même modèle **rejoint** ces fichiers au lieu de les réécrire : une
+carte appartient au projet, pas à la scène.
+
+Le bouton **Nouvelle carte de contrôles** de l’Explorateur en crée une à la main, depuis l’un des
+cinq points de départ standards — *studio*, *personnage*, *véhicule*, *vol*, *menu*. Elles se
+rangent dans le dossier **Contrôles du jeu**, au sommet du projet, comme les interfaces.
 
 Une carte nomme des **actions** — `move`, `look`, `jump`, `run`, `interact` pour un personnage —
 et dit quelles touches, quels sticks et quels boutons les atteignent. **Ce que la carte du projet

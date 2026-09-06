@@ -1462,8 +1462,17 @@ it has not sent a first press yet.
 ### Changing the controls
 
 The controls above are a **starting point**, not a limit. A project **control map** replaces them,
-context by context: the **New control map** button in the Explorer creates one from any of the
-five standard starting points — *studio*, *character*, *vehicle*, *flight*, *menu*.
+context by context.
+
+**The five playable scene templates lay one down, with nothing for you to do.** Create a First
+person, Third person or Top down scene and the project gets `Controls/character.input.json` plus a
+`Scripts/player.ts` hung on the character; Car and Aeroplane lay down their own. Open them, change
+them — showing you that is what they are for. A second scene from the same template **joins** those
+files rather than rewriting them: a control map belongs to the project, not to the scene.
+
+The **New control map** button in the Explorer creates one by hand, from any of the five standard
+starting points — *studio*, *character*, *vehicle*, *flight*, *menu*. They are filed under **Game
+controls**, at the top of the project, as interfaces are.
 
 A map names **actions** — `move`, `look`, `jump`, `run`, `interact` for a character — and says
 which keys, sticks and buttons reach them. **What the project's map declares wins; what it leaves
