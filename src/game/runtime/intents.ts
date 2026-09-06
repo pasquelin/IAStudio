@@ -57,13 +57,11 @@ export function createIntents(report?: (message: string) => void): Intents {
     report(message)
   }
 
-  const wrote = (kind: string, bodyId: string, already: boolean): void => {
-    if (already)
-      say(
-        `two scripts ask ${kind} of body ${bodyId} on one step: the last one wins`,
-        `2:${kind}:${bodyId}`,
-      )
-  }
+  const twice = (kind: string, bodyId: string): void =>
+    say(
+      `two scripts ask ${kind} of body ${bodyId} on one step: the last one wins`,
+      `2:${kind}:${bodyId}`,
+    )
 
   const dropped = (kind: string, bodyId: string): void => {
     if (read.has(`${kind}:${bodyId}`)) return
@@ -73,8 +71,10 @@ export function createIntents(report?: (message: string) => void): Intents {
     )
   }
 
+  // 🛑 Behind `report`, all of it: a key built per read is an ALLOCATION a step, sixty times a
+  // second, for bookkeeping nobody asked for. Silent, this costs exactly what it did before.
   const taken = <T>(kind: string, bodyId: string, held: T | undefined): T | null => {
-    read.add(`${kind}:${bodyId}`)
+    if (report) read.add(`${kind}:${bodyId}`)
     return held ?? null
   }
 
@@ -82,26 +82,26 @@ export function createIntents(report?: (message: string) => void): Intents {
     // A script says its z, a stick says its y, and both go the same way — normalised HERE so
     // nothing downstream has to ask which of the two it is reading.
     walk: (bodyId, x, z) => {
-      wrote('walk', bodyId, walking.has(bodyId))
+      if (report && walking.has(bodyId)) twice('walk', bodyId)
       walking.set(bodyId, { x, y: z })
     },
     jump: bodyId => void jumping.add(bodyId),
     look: (bodyId, yaw, pitch) => {
-      wrote('look', bodyId, looking.has(bodyId))
+      if (report && looking.has(bodyId)) twice('look', bodyId)
       looking.set(bodyId, { x: yaw, y: pitch })
     },
     drive: (bodyId, throttle, steer, handBrake) => {
-      wrote('drive', bodyId, driving.has(bodyId))
+      if (report && driving.has(bodyId)) twice('drive', bodyId)
       driving.set(bodyId, { throttle, steer, handBrake })
     },
     fly: (bodyId, pitch, roll, yaw, throttle) => {
-      wrote('fly', bodyId, flying.has(bodyId))
+      if (report && flying.has(bodyId)) twice('fly', bodyId)
       flying.set(bodyId, { pitch, roll, yaw, throttle })
     },
 
     walkOf: bodyId => taken('walk', bodyId, walking.get(bodyId)),
     jumped: bodyId => {
-      read.add(`jump:${bodyId}`)
+      if (report) read.add(`jump:${bodyId}`)
       return jumping.has(bodyId)
     },
     lookOf: bodyId => taken('look', bodyId, looking.get(bodyId)),

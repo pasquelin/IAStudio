@@ -146,7 +146,7 @@ describe('SettingsWindow navigation', () => {
       'Vectorisation',
       'Espaces de travail',
       'Modélisation',
-      'Contrôles',
+      'Périphériques',
       'Raccourcis',
       'Dictée',
       'Médias',
