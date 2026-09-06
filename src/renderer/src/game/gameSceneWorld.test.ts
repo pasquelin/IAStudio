@@ -92,8 +92,8 @@ describe('what an exported game asks of its scatter', () => {
     )
     const scatter = built.scene.getObjectByName('scene-scatter')
     if (!scatter) throw new Error('the game scene grew no scatter to prune')
-    // A layer three times what a semis is drawn to, walked from one end to the other: the two
-    // ends share no cell. The LENS is deliberately short of both — the reach is the semis' own,
+    // A layer three times what a scatter is drawn to, walked from one end to the other: the two
+    // ends share no cell. The LENS is deliberately short of both — the reach is the scatter's own,
     // and reading it off `camera.far` is what made this pass unable to hide anything at all. No
     // `updateMatrixWorld` here on purpose: a stale matrix would answer the origin every time.
     const camera = new PerspectiveCamera(50, 1, 0.1, 60)

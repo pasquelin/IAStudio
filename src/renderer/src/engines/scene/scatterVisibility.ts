@@ -3,7 +3,7 @@ import { SCATTER_CATEGORIES, type ScatterCategory } from '@shared/domain/scene'
 import { SCATTER_DISTANCE } from '@shared/domain/renderPolicy'
 import { MAX_SPATIAL_REACH, type CellKey, type WorldPartition } from './worldPartition'
 
-/** What the pass actually reaches: the semis' own distance, never further than a query stays spatial. */
+/** What the pass actually reaches: the scatter's own distance, never further than a query stays spatial. */
 const REACH = Math.min(SCATTER_DISTANCE, MAX_SPATIAL_REACH)
 
 type ScatterVisibilityCells = {

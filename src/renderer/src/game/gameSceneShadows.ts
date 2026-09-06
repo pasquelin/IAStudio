@@ -24,7 +24,7 @@ export function dressShadows(
 
 /**
  * 🛑 What a shadow frustum is measured against: the nodes that DRAW something, never the ground,
- * the scatter or the relief. A semis spans the world — a frustum cut to it spreads one shadow map
+ * the scatter or the relief. A scatter spans the world — a frustum cut to it spreads one shadow map
  * over kilometres, which is `measureShadowReach` reading `framedObjects` and not the scene.
  */
 export function shadowBoundsOf(
