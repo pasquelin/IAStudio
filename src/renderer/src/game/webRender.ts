@@ -1,5 +1,6 @@
 import {
   Box3,
+  Light,
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
@@ -13,6 +14,9 @@ import { clamp } from '@shared/numeric'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
+import { applyShadowQuality, shadowReachOf, tuneShadowMaps } from '@/engines/scene/shadows'
+import { pixelRatioFor, shadowMapSizeFor } from '@/engines/scene/viewportQuality'
+import { DEFAULT_RENDER_POLICY, type RenderPolicy } from '@shared/domain/renderPolicy'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { CompiledModelMesh, CompiledSceneOptimization } from '@shared/domain/gameExport'
@@ -43,10 +47,16 @@ const FAR = 2000
  * 🛑 One `apply`-free port: outside the studio nothing edits, so the scene is built once per
  * load and only the entity poses move. That is what makes an exported frame cheap.
  */
-export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): WebRender {
+export function createWebRender(
+  canvas: HTMLCanvasElement,
+  assets: AssetPort,
+  /** What the author saw. Absent in an export written before it was carried — see its default. */
+  policy: RenderPolicy = DEFAULT_RENDER_POLICY,
+): WebRender {
   const renderer = new WebGLRenderer({ canvas, antialias: true })
   const gltf = createGltfSource(() => renderer)
-  renderer.shadowMap.enabled = true
+  renderer.shadowMap.enabled = policy.shadows
+  applyShadowQuality(renderer, policy.shadowQuality)
   const camera = new PerspectiveCamera(60, 1, NEAR, FAR)
   const veil = veilPass()
   const sized = { width: 0, height: 0 }
@@ -75,6 +85,7 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
       held?.dispose()
       held = built
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
+      if (policy.shadows) tuneSceneShadows(built.scene, policy)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
       if (!aimed) frameAll(camera, built.scene)
@@ -107,7 +118,11 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
 
       sized.width = width
       sized.height = height
-      renderer.setPixelRatio(globalThis.devicePixelRatio ?? 1)
+      // What the quality level pays for, held to the screen's own — the editor's very rule. The
+      // whole device ratio was four times the pixels of a `performance` viewport, unasked.
+      renderer.setPixelRatio(
+        Math.min(pixelRatioFor(policy.quality), globalThis.devicePixelRatio ?? 1),
+      )
       renderer.setSize(width, height, false)
       camera.aspect = height === 0 ? 1 : width / height
       camera.updateProjectionMatrix()
@@ -136,6 +151,25 @@ export function createWebRender(canvas: HTMLCanvasElement, assets: AssetPort): W
       renderer.dispose()
     },
   }
+}
+
+/**
+ * The shadow pass the editor runs whenever something moved, run ONCE as a scene lands: a game has
+ * no instant where the set stops moving, and re-measuring the whole of it per frame is a pass no
+ * frame budget holds.
+ *
+ * 🛑 Its blind spot, written rather than hidden: an entity that walks past what the scene occupied
+ * when it loaded walks out of the shadow frustum, and stops throwing.
+ */
+function tuneSceneShadows(scene: Scene, policy: RenderPolicy): void {
+  const lights: Light[] = []
+  scene.traverse(object => {
+    if (object instanceof Light) lights.push(object)
+  })
+  tuneShadowMaps(lights, shadowMapSizeFor(policy.quality, policy.shadowMapSize), () =>
+    // No grid to fall back on, unlike the editor: a game with nothing in it shades nothing.
+    shadowReachOf(new Box3().setFromObject(scene), 0),
+  )
 }
 
 /** A black sheet across the frame, drawn over the scene at the veil's own opacity. */

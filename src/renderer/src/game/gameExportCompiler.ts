@@ -14,6 +14,8 @@ import { useProject } from '@/stores/project'
 import { compiledScripts } from '@/stores/play'
 import { loadSceneSource, montageSceneOf } from '@/stores/sceneSources'
 import { compileLossyWorldGeometry } from '@/engines/scene/lossyWorldCompiler'
+import { renderPolicyOf } from '@shared/domain/renderPolicy'
+import { useSettings } from '@/stores/settings'
 import {
   compileLossyModelTextures,
   compileLossyTextures,
@@ -201,6 +203,9 @@ function exportRequestOf(
     ...(hasVisualChanges(options.lossyOptimization)
       ? { lossyOptimization: options.lossyOptimization }
       : {}),
+    // 🛑 Carried rather than defaulted: a game drawn under another policy than the editor is the
+    // same scene lit two ways, and nothing compared the two.
+    render: renderPolicyOf(useSettings.getState().settings.three),
     ...(assetOverrides?.length ? { assetOverrides } : {}),
     ...(options.folder ? { folder: options.folder } : {}),
   }

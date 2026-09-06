@@ -17,7 +17,7 @@ import { cachedOn } from '../core/cachedOn'
 import { COMPONENT_DEFAULTS } from '@game/runtime/componentDefaults'
 import { numberOf } from '@game/runtime/componentFields'
 import type { PaneRect } from '../viewport/panes'
-import { canReceiveShadow, type ModelNode, type SceneNode, type SceneNodeType } from './sceneState'
+import { type ModelNode, type SceneNode, type SceneNodeType } from './sceneState'
 import { isRailAid } from './threeFactory'
 import { MARKER_NAME } from './markerPaint'
 import { type Projected } from './bonePicking'
@@ -229,11 +229,6 @@ export function nodeIdOf(object: Object3D, isNode: (name: string) => boolean): s
     current = current.parent
   }
   return null
-}
-
-/** A light catches nothing: the flag exists on every node, but only two kinds answer to it. */
-export function receivesShadow(node: SceneNode): boolean {
-  return canReceiveShadow(node) && node.receiveShadow
 }
 
 /** Whether anything the drawn aids are built from moved — see `refreshAids`, which is not cheap. */

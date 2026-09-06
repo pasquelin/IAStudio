@@ -28,7 +28,8 @@ import { applyFog } from '@/engines/scene/worldBinding'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
 import { applyTransform } from '@/engines/scene/pivot'
-import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
+import { applyShadowFlags } from '@/engines/scene/shadows'
+import { receivesShadow, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
 import { runtimeArtifactsOf, runtimeOptimizationOf } from '@/engines/scene/runtimeWorldCompiler'
 import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
@@ -310,6 +311,22 @@ async function populateScene(
     const parent = node.parentId === null ? null : byEntity.get(node.parentId)
     ;(parent ?? scene).add(object)
   }
+  dressShadows(nodes, byEntity)
+}
+
+/**
+ * 🛑 The flags every node carries, put on after the parenting and read through the same two
+ * answers the editor reads. The pass this replaces walked MESHES alone: a light never threw and
+ * an imported model never caught, so an exported game drew no shadow at all. It stops at a child
+ * standing for a node of its own, which carries its own.
+ */
+function dressShadows(nodes: readonly SceneNode[], byEntity: ReadonlyMap<string, Object3D>): void {
+  const ownObjects = new Set(byEntity.values())
+  for (const node of nodes) {
+    const object = byEntity.get(node.id)
+    if (!object) continue
+    applyShadowFlags(object, node.castShadow, receivesShadow(node), child => ownObjects.has(child))
+  }
 }
 
 function registerBakedPlacements(
@@ -388,7 +405,6 @@ function meshObject(
     materialOf(node.material, dress),
     node.instances,
   )
-  applyShadows(object, node.castShadow, node.receiveShadow)
   return object
 }
 
@@ -406,16 +422,7 @@ function carvedObject(
     geometries ?? graphs.map(graph => carve(graph)),
     materialOf(node.material, dress),
   )
-  applyShadows(object, node.castShadow, node.receiveShadow)
   return object
-}
-
-function applyShadows(object: Object3D, cast: boolean, receive: boolean): void {
-  object.traverse(child => {
-    if (!(child instanceof Mesh)) return
-    child.castShadow = cast
-    child.receiveShadow = receive
-  })
 }
 
 async function loadModelAnimations(

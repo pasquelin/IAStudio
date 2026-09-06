@@ -1,4 +1,4 @@
-import { BasicShadowMap, PCFShadowMap, type Object3D } from 'three'
+import { BasicShadowMap, PCFShadowMap, Vector3, type Box3, type Object3D } from 'three'
 import type { LightShadow, ShadowMapType } from 'three'
 import type { ShadowQuality } from '@shared/domain/scene'
 import { isRecord } from '@shared/guards'
@@ -100,6 +100,47 @@ export function resizeShadowMap(object: Object3D, size: number): void {
   object.shadow.mapSize.set(size, size)
   object.shadow.map?.dispose()
   object.shadow.map = null
+}
+
+/**
+ * How wide a shadow frustum has to be to hold a box, under a floor the caller decides — the
+ * editor's grid, so an empty scene still gets one; nothing in a game, which has no grid.
+ *
+ * The DIAGONAL, not the width: a sun comes in at an angle, and a frustum cut to the exact width
+ * of the set clips the shadow its far corner throws across it.
+ */
+export function shadowReachOf(bounds: Box3, floor: number): number {
+  if (bounds.isEmpty()) return floor
+
+  const size = bounds.getSize(new Vector3())
+  return Math.max(Math.max(size.x, size.z) * Math.SQRT2, floor)
+}
+
+/** What a tuning pass settled: the lights it framed, and the reach it framed them to. */
+export type TunedShadows = { framed: readonly Object3D[]; reach: number }
+
+/**
+ * Sizes every light's shadow map and fits the ones that frame a box to what the scene occupies.
+ *
+ * Shared by the editor and an exported game rather than written twice: a map sized on one side
+ * alone is the same scene lit two ways. `extentOf` is read only when a light would use it — a set
+ * lit by point lights alone has no box to size, and measuring one would be a pass for nothing.
+ */
+export function tuneShadowMaps(
+  lights: Iterable<Object3D>,
+  size: number,
+  extentOf: () => number,
+): TunedShadows {
+  const framed: Object3D[] = []
+  for (const light of lights) {
+    resizeShadowMap(light, size)
+    if (needsShadowFrustum(light)) framed.push(light)
+  }
+  if (framed.length === 0) return { framed, reach: 0 }
+
+  const reach = extentOf()
+  for (const light of framed) fitShadowCamera(light, reach)
+  return { framed, reach }
 }
 
 /** Leaves unchanged lights out of one viewport shadow pass, then restores export behaviour. */
