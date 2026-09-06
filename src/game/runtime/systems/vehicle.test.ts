@@ -5,6 +5,7 @@ import type { JsonValue } from '@shared/domain/component'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { restingTransform } from '../entity'
+import { standardGamepad } from '../input-fixtures'
 import { STEP_SECONDS } from '../gameLoop'
 import { createPilots, PILOT_RANK, type Pilots } from '../pilots'
 import { testPorts, testWorld } from '../world-fixtures'
@@ -13,12 +14,10 @@ import { createVehicleSystem } from './vehicle'
 
 type Bench = { world: World; physics: NotedPhysics; pilots: Pilots }
 
-type Pad = { axes?: readonly number[]; buttons?: readonly number[] }
-
 function bench(
   held: readonly string[] = [],
   over: Record<string, JsonValue> = {},
-  pad?: Pad,
+  pad?: Parameters<typeof standardGamepad>,
 ): Bench {
   const physics = notedPhysics()
   const pilots = createPilots()
@@ -37,17 +36,7 @@ function bench(
     pressed: [],
     released: [],
     pointer: { x: 0, y: 0, down: false },
-    gamepads: pad
-      ? [
-          {
-            id: 'pad',
-            index: 0,
-            mapping: 'standard',
-            axes: [0, 0, 0, 0].map((rest, at) => pad.axes?.[at] ?? rest),
-            buttons: Array.from({ length: 17 }, (_, at) => pad.buttons?.[at] ?? 0),
-          },
-        ]
-      : [],
+    gamepads: pad ? [standardGamepad(...pad)] : [],
   })
   return { world, physics, pilots }
 }
@@ -104,18 +93,14 @@ describe('what a car is driven by', () => {
   })
 
   it('drives on the triggers and steers on the left stick, with no input map of its own', () => {
-    const rightTrigger = Array.from({ length: 17 }, (_, at) => (at === 7 ? 1 : 0))
-
-    const drive = asked(bench([], {}, { axes: [0.5], buttons: rightTrigger }))
+    const drive = asked(bench([], {}, [{ leftX: 0.5 }, ['rightTrigger']]))
 
     expect(drive?.forward).toBeCloseTo(1)
     expect(drive?.steer).toBeCloseTo(0.5)
   })
 
   it('brakes on the left trigger, which is the pedal the keyboard puts on the down key', () => {
-    const leftTrigger = Array.from({ length: 17 }, (_, at) => (at === 6 ? 1 : 0))
-
-    expect(asked(bench([], {}, { buttons: leftTrigger }))?.forward).toBeCloseTo(-1)
+    expect(asked(bench([], {}, [{}, ['leftTrigger']]))?.forward).toBeCloseTo(-1)
   })
 
   it('holds the car on the hand brake, whatever the pedal says', () => {

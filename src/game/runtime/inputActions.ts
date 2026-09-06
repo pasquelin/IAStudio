@@ -22,7 +22,7 @@ export type InputActionsReader = InputActions & {
   sample: (maps: readonly InputMap[], active: readonly string[], input: RawInput) => void
 }
 
-const NOTHING: RawInput = { held: [], gamepads: [] }
+const NOTHING: RawInput = { held: [] }
 
 export function createInputActions(): InputActionsReader {
   let current = resolveInputMaps([], [], NOTHING)

@@ -5,6 +5,7 @@ import type { JsonValue } from '@shared/domain/component'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { restingTransform } from '../entity'
+import { standardGamepad } from '../input-fixtures'
 import { STEP_SECONDS } from '../gameLoop'
 import { createPilots, type Pilots } from '../pilots'
 import { testPorts, testWorld } from '../world-fixtures'
@@ -13,12 +14,10 @@ import { createAircraftSystem } from './aircraft'
 
 type Bench = { world: World; physics: NotedPhysics; pilots: Pilots }
 
-type Pad = { axes?: readonly number[]; buttons?: readonly number[] }
-
 function bench(
   held: readonly string[] = [],
   over: Record<string, JsonValue> = {},
-  pad?: Pad,
+  pad?: Parameters<typeof standardGamepad>,
 ): Bench {
   const physics = notedPhysics()
   const pilots = createPilots()
@@ -41,17 +40,7 @@ function bench(
     pressed: [],
     released: [],
     pointer: { x: 0, y: 0, down: false },
-    gamepads: pad
-      ? [
-          {
-            id: 'pad',
-            index: 0,
-            mapping: 'standard',
-            axes: [0, 0, 0, 0].map((rest, at) => pad.axes?.[at] ?? rest),
-            buttons: Array.from({ length: 17 }, (_, at) => pad.buttons?.[at] ?? 0),
-          },
-        ]
-      : [],
+    gamepads: pad ? [standardGamepad(...pad)] : [],
   })
   return { world, physics, pilots }
 }
@@ -65,7 +54,7 @@ const pushed = (bench: Bench, steps = 1) => {
 
 describe('what flies', () => {
   it('pulls the nose up on a stick pulled back, as the down arrow already did', () => {
-    const stick = pushed(bench([], {}, { axes: [0, 1] }), 30)
+    const stick = pushed(bench([], {}, [{ leftY: 1 }]), 30)
     const arrow = pushed(bench(['ArrowDown']), 30)
 
     expect(stick?.torque.x).toBeCloseTo(arrow?.torque.x ?? 0)
@@ -73,9 +62,7 @@ describe('what flies', () => {
   })
 
   it('opens the throttle on the right trigger, which is the lever Shift holds', () => {
-    const rightTrigger = Array.from({ length: 17 }, (_, at) => (at === 7 ? 1 : 0))
-
-    const trigger = pushed(bench([], {}, { buttons: rightTrigger }), 120)?.force.z ?? 0
+    const trigger = pushed(bench([], {}, [{}, ['rightTrigger']]), 120)?.force.z ?? 0
 
     expect(trigger).toBeCloseTo(pushed(bench(['ShiftLeft']), 120)?.force.z ?? 0, 0)
   })

@@ -51,7 +51,6 @@ export type World = {
    * built-in controllers answer, so a stick and a key reach them by one path.
    */
   readonly actions: InputActions
-  readonly inputMaps: readonly InputMap[]
   readonly inputContexts: InputContexts
   readonly inputControls: InputControls
   /**
@@ -151,9 +150,6 @@ export function createWorld(options: WorldOptions): World {
     },
     get actions() {
       return input.actions
-    },
-    get inputMaps() {
-      return inputControls.maps()
     },
     inputContexts: contexts,
     inputControls,

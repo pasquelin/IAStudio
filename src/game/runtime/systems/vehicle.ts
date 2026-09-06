@@ -13,12 +13,6 @@ import type { System, World } from '../world'
 
 const VEHICLE = COMPONENT_DEFAULTS.Vehicle
 
-/** The named actions of the `vehicle` context — see the preset for what reaches them. */
-const ACCELERATE = 'accelerate'
-const BRAKE = 'brake'
-const STEER = 'steer'
-const HAND_BRAKE = 'handBrake'
-
 /** Metres a second under which a change of direction is taken as a stop rather than a reversal. */
 const STOPPED = 0.1
 
@@ -79,9 +73,9 @@ export function createVehicleSystem(
       collect(world)
       if (driving.length === 0) return
       const actions = world.actions
-      const asked = clamp(actions.axis(ACCELERATE) - actions.axis(BRAKE), -1, 1)
-      const steer = clamp(actions.axis(STEER), -1, 1)
-      const handBrake = actions.button(HAND_BRAKE) ? 1 : 0
+      const asked = clamp(actions.axis('accelerate') - actions.axis('brake'), -1, 1)
+      const steer = clamp(actions.axis('steer'), -1, 1)
+      const handBrake = actions.button('handBrake') ? 1 : 0
       drive(world, asked, steer, handBrake)
     },
 

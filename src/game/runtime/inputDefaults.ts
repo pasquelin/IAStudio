@@ -2,14 +2,6 @@
 
 import type { InputMap, KeyboardBinding } from '@shared/domain/inputMap'
 
-/**
- * The contexts a scene plays with when the project declares none of its own — what makes a
- * gamepad and a keyboard reach the built-in controllers with no file and no script.
- *
- * 🛑 COPIED from `@shared/domain/inputPresets`, because this tree is MIT and ships without the
- * rest: a VALUE taken from `@shared/` would carry PolyForm code into an exported game. Held to
- * the originals by `inputDefaults.test.ts`, which ships nowhere and may read both.
- */
 /** The four keys and the four arrows a walker and a machine both answer, as one half-axis each. */
 function keyAxis(negative: readonly string[], positive: readonly string[]): KeyboardBinding[] {
   return [
@@ -31,6 +23,11 @@ const RIGHT = ['KeyD', 'ArrowRight']
 const AHEAD = ['KeyW', 'ArrowUp']
 const BACK = ['KeyS', 'ArrowDown']
 
+/**
+ * 🛑 COPIED from `@shared/domain/inputPresets`: this tree is MIT and ships without the rest, so a
+ * VALUE taken from `@shared/` would carry PolyForm code into an exported game. `inputDefaults.
+ * test.ts` ships nowhere, reads both, and refuses a drift.
+ */
 const DEFAULTS: readonly InputMap[] = [
   {
     version: 1,
@@ -166,11 +163,14 @@ const DEFAULTS: readonly InputMap[] = [
   },
 ]
 
-/** The maps given, completed by the defaults they leave undefined. What is given always wins. */
+/**
+ * The maps given, completed by the contexts they leave undefined — a gamepad and a keyboard reach
+ * the built-in controllers with no file and no script. What is given always wins.
+ *
+ * 🛑 Handed out as they ARE: `createInputControls` clones what it keeps, and cloning twice hid
+ * which of the two owned the copy.
+ */
 export function withDefaultInputMaps(maps: readonly InputMap[]): readonly InputMap[] {
   const declared = new Set(maps.map(map => map.id))
-  return [
-    ...maps,
-    ...DEFAULTS.filter(map => !declared.has(map.id)).map(map => structuredClone(map)),
-  ]
+  return [...maps, ...DEFAULTS.filter(map => !declared.has(map.id))]
 }

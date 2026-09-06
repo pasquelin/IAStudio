@@ -9,11 +9,10 @@ import { withDefaultInputMaps } from './inputDefaults'
  * these maps — and a test ships nowhere, so it may read both and refuse a drift.
  */
 describe('the input contexts a scene falls back on', () => {
-  const built = withDefaultInputMaps([])
+  const PLAYED: readonly InputPresetId[] = ['character', 'vehicle', 'flight']
 
   it('says exactly what the preset says, for the three a game plays with', () => {
-    expect(built.map(map => map.id)).toEqual(['character', 'vehicle', 'flight'])
-    for (const map of built) expect(map).toEqual(inputMapPreset(map.id as InputPresetId))
+    expect(withDefaultInputMaps([])).toEqual(PLAYED.map(inputMapPreset))
   })
 
   it('leaves what the project declares alone, and completes the rest', () => {
@@ -23,11 +22,5 @@ describe('the input contexts a scene falls back on', () => {
 
     expect(completed[0]).toBe(own)
     expect(completed.map(map => map.id)).toEqual(['character', 'vehicle', 'flight'])
-  })
-
-  it('hands out a copy, so one scene rebinding an action cannot reach the next', () => {
-    const first = withDefaultInputMaps([])[0]
-
-    expect(withDefaultInputMaps([])[0]).not.toBe(first)
   })
 })

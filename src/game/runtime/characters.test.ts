@@ -5,6 +5,7 @@ import { newComponent, withComponentField } from '@shared/domain/componentRegist
 import type { JsonValue } from '@shared/domain/component'
 import { DEFAULT_PLAY } from '@shared/domain/scene'
 import type { InputState } from '../ports/inputPort'
+import { reading, standardGamepad } from './input-fixtures'
 import type { CharacterMove } from '../ports/physicsPort'
 import { createCharacters, type Characters } from './characters'
 import { restingTransform } from './entity'
@@ -14,27 +15,12 @@ import type { World } from './world'
 
 const STEP = 1 / 60
 
-const pressing = (over: Partial<InputState> = {}): InputState => ({
-  held: [],
-  pressed: [],
-  released: [],
-  pointer: { x: 0, y: 0, down: false },
-  ...over,
-})
+const pressing = reading
 
-/** One standard controller, its two sticks where the test puts them. */
-const holding = (axes: readonly number[], buttons: readonly number[] = []): InputState =>
-  pressing({
-    gamepads: [
-      {
-        id: 'pad',
-        index: 0,
-        mapping: 'standard',
-        axes: [0, 0, 0, 0].map((rest, at) => axes[at] ?? rest),
-        buttons: Array.from({ length: 17 }, (_, at) => buttons[at] ?? 0),
-      },
-    ],
-  })
+const holding = (
+  axes: Parameters<typeof standardGamepad>[0],
+  pressed: Parameters<typeof standardGamepad>[1] = [],
+): InputState => reading({ gamepads: [standardGamepad(axes, pressed)] })
 
 function walking(gravity = 0, moveSpeed = 4, over: Record<string, JsonValue> = {}): World {
   const world = testWorld({ play: { ...DEFAULT_PLAY, gravity, moveSpeed } })
@@ -77,7 +63,7 @@ function cruising(world: World, characters: Characters, steps = 120): CharacterM
 describe('what a character asks to move', () => {
   it('walks on the left stick, with no input map and no script of its own', () => {
     const world = walking()
-    world.input = holding([0, -1])
+    world.input = holding({ leftY: -1 })
 
     const move = cruising(
       world,
@@ -89,7 +75,7 @@ describe('what a character asks to move', () => {
 
   it('walks a stick held HALF way at half the pace, which no key can ask for', () => {
     const world = walking()
-    world.input = holding([0, -0.5])
+    world.input = holding({ leftY: -0.5 })
 
     const move = cruising(
       world,
@@ -101,8 +87,7 @@ describe('what a character asks to move', () => {
 
   it('runs on the left stick pressed in, as Shift does', () => {
     const world = walking(0, 4, { runSpeed: 8 })
-    const pressedIn = Array.from({ length: 11 }, (_, at) => (at === 10 ? 1 : 0))
-    world.input = holding([0, -1], pressedIn)
+    world.input = holding({ leftY: -1 }, ['leftStickButton'])
 
     const move = cruising(
       world,
@@ -115,9 +100,9 @@ describe('what a character asks to move', () => {
   it('turns the head on the right stick with NO button held, unlike a drag', () => {
     const world = walking()
     const characters = createCharacters(createPossessions(), entity => entity.transform)
-    world.input = holding([0, 0, 1, 0])
+    world.input = holding({ rightX: 1 })
 
-    characters.turn(world.actions.axis2('look'), STEP)
+    characters.intents(world, STEP)
 
     expect(characters.look().yaw).toBeLessThan(0)
   })
@@ -125,11 +110,23 @@ describe('what a character asks to move', () => {
   it('leaves the look alone when the stick rests, so a drag is not fought over', () => {
     const world = walking()
     const characters = createCharacters(createPossessions(), entity => entity.transform)
-    world.input = holding([0, 0, 0, 0])
+    world.input = holding({})
 
-    characters.turn(world.actions.axis2('look'), STEP)
+    characters.intents(world, STEP)
 
     expect(characters.look()).toEqual({ yaw: 0, pitch: 0 })
+  })
+
+  it('turns the head ONCE a step, whatever a frame asks of the arm after it', () => {
+    const world = walking()
+    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    world.input = holding({ rightX: 1 })
+
+    characters.intents(world, STEP)
+    const once = characters.look().yaw
+    characters.aim(world.input.pointer)
+
+    expect(characters.look().yaw).toBe(once)
   })
 
   it('walks on two opposite keys held as it walks on none', () => {

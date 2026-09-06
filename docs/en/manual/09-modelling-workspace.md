@@ -1453,7 +1453,7 @@ the browser's requirement, not the studio's.
 
 The setting **Settings ▸ Controls ▸ Navigate the studio with a gamepad** concerns **the studio's
 interface only**: it lets a connected gamepad move the focus, confirm and go back through panels
-and dialogs. It stays off by default, so that a game does not move the editor behind it — **and it
+and dialogues. It stays off by default, so that a game does not move the editor behind it — **and it
 has no bearing on the game**, which listens to the gamepad either way.
 
 The **Detected controls** list on the same page says what the machine sees. A gamepad missing from

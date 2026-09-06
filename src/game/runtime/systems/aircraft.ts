@@ -15,12 +15,6 @@ import type { System, World } from '../world'
 
 const AIRCRAFT = COMPONENT_DEFAULTS.Aircraft
 
-/** The named actions of the `flight` context — see the preset for what reaches them. */
-const PITCH = 'pitch'
-const ROLL = 'roll'
-const YAW = 'yaw'
-const THROTTLE = 'throttle'
-
 /** How much of the throttle a second of holding the lever moves — four seconds lever to lever. */
 const THROTTLE_RATE = 0.25
 
@@ -102,10 +96,10 @@ export function createAircraftSystem(
 
       // Read ONCE: there is one stick, and every plane in the scene answers it.
       const actions = world.actions
-      stick.pitch = actions.axis(PITCH)
-      stick.roll = actions.axis(ROLL)
-      stick.yaw = actions.axis(YAW)
-      const lever = actions.axis(THROTTLE)
+      stick.pitch = actions.axis('pitch')
+      stick.roll = actions.axis('roll')
+      stick.yaw = actions.axis('yaw')
+      const lever = actions.axis('throttle')
 
       forces.length = 0
       const motions = world.ports.physics.motion(names)
