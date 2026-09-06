@@ -9,6 +9,7 @@ import type {
   KeyboardBinding,
   MouseBinding,
 } from '@shared/domain/inputMap'
+import { withDefaultInputMaps } from './inputDefaults'
 
 export type InputBindings = Readonly<
   Record<string, Readonly<Record<string, readonly InputBinding[]>>>
@@ -27,11 +28,15 @@ export type InputControls = {
   reset: (context?: string, action?: string) => void
 }
 
+/**
+ * 🛑 What is given is COMPLETED by the built-in contexts, never replaced: a project that declares
+ * no `.input.json` still walks, drives and flies — see `inputDefaults`.
+ */
 export function createInputControls(
   given: readonly InputMap[],
   storage?: InputControlsStorage,
 ): InputControls {
-  const defaults = structuredClone(given)
+  const defaults = structuredClone(withDefaultInputMaps(given))
   let maps = restored(defaults, storage)
   let bindings = bindingsOf(maps)
   let revision = 0

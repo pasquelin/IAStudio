@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-import type { InputState, Pointer } from '../ports/inputPort'
+import type { Pointer } from '../ports/inputPort'
 import type { CharacterMove, CharacterMoved, CharacterSettings } from '../ports/physicsPort'
 import type { Component } from '@shared/domain/component'
 import type { ScenePlay } from '@shared/domain/scene'
 import { clamp, DEGREES, FULL_TURN, shortWay } from '../numeric'
 import { numberOf } from './componentFields'
-import { keysHeld } from './keysHeld'
+import type { InputActions } from './inputActions'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
 import type { Transform } from '@shared/domain/transform'
@@ -16,19 +16,22 @@ import type { World } from './world'
 
 const WALKER = COMPONENT_DEFAULTS.CharacterController
 
-/** `KeyboardEvent.code`, so a key is the one under the finger whatever the layout says it types. */
-const FORWARD = ['KeyW', 'ArrowUp']
-const BACK = ['KeyS', 'ArrowDown']
-const LEFT = ['KeyA', 'ArrowLeft']
-const RIGHT = ['KeyD', 'ArrowRight']
-const JUMP = 'Space'
-const RUN = ['ShiftLeft', 'ShiftRight']
+/**
+ * The named actions of the `character` context. What binds a key or a stick to one of them is the
+ * author's, and the runtime falls back to the preset when the project declares none.
+ */
+const MOVE = 'move'
+const JUMP = 'jump'
+const RUN = 'run'
 
 /** Metres a second a fall stops getting faster at: past it a step tunnels through a thin floor. */
 const TERMINAL_FALL = 50
 
 /** Radians of turn per pixel dragged. */
 const LOOK_PER_PIXEL = 0.005
+
+/** Radians a second at full stick. A stick holds a POSITION, so its turn is paid per second. */
+const LOOK_PER_SECOND = 2.6
 
 /** A hair under straight up, where yaw and pitch would turn about the same axis. */
 export const PITCH_LIMIT = Math.PI / 2 - 0.01
@@ -75,6 +78,13 @@ export type Characters = {
    * none of ignored the mouse and the next took two moves at once.
    */
   aim: (pointer: Pointer) => void
+  /**
+   * The same look, turned by a STICK — a rate, so it is paid per second.
+   *
+   * 🛑 Apart from `aim` because two systems aim each frame and a drag is idempotent between them
+   * (the delta is consumed) while a held stick is not: called twice, it would turn twice.
+   */
+  turn: (stick: { x: number; y: number }, dt: number) => void
   /** What each one asks to move this step, read off the input and the scene's own pace. */
   intents: (world: World, dt: number) => readonly CharacterMove[]
   /** What actually happened, back from the controller. */
@@ -112,6 +122,13 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
   let dragging = false
 
   return {
+    turn: (stick, dt) => {
+      // No button to hold: a stick says how FAST to turn, and says it on every frame.
+      if (stick.x === 0 && stick.y === 0) return
+      look.yaw = (look.yaw - stick.x * LOOK_PER_SECOND * dt) % FULL_TURN
+      look.pitch = clamp(look.pitch - stick.y * LOOK_PER_SECOND * dt, -PITCH_LIMIT, PITCH_LIMIT)
+    },
+
     aim: pointer => {
       if (!pointer.down) {
         dragging = false
@@ -133,8 +150,8 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
       moves.length = 0
       byBody.clear()
       first = null
-      // One key, one answer: read per walker, this asked the same question of the same array again.
-      const jumped = world.input.pressed.includes(JUMP)
+      // One reading, one answer: asked per walker, this repeated the same question a step.
+      const jumped = world.actions.pressed(JUMP)
 
       for (const entity of world.entities.withComponent('CharacterController')) {
         const settings = componentOf(entity, 'CharacterController')
@@ -156,7 +173,7 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
 
         fallInto(walker, settings, jumped, world.play.gravity, dt)
 
-        paceInto(pace, world.input, paceOf(settings, world.play, world.input), look.yaw)
+        paceInto(pace, world.actions, paceOf(settings, world.play, world.actions), look.yaw)
         const steered = pace.x !== 0 || pace.z !== 0
         leanInto(walker, pace, rateOf(settings, walker, steered) * dt)
 
@@ -212,26 +229,32 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
   }
 }
 
-/** Level, and never faster on the diagonal: two keys held would otherwise walk at 1,41 times. */
+/**
+ * Level, and never faster on the diagonal: two keys held would otherwise walk at 1,41 times.
+ * 🛑 A stick is NOT normalised back up — a third of the way is a third of the pace, which is the
+ * whole of what an analogue stick buys over a key.
+ */
 function paceInto(
   into: { x: number; z: number },
-  input: InputState,
+  actions: InputActions,
   speed: number,
   yaw: number,
 ): void {
-  const ahead = keysHeld(input, FORWARD) - keysHeld(input, BACK)
-  const side = keysHeld(input, RIGHT) - keysHeld(input, LEFT)
+  const wanted = actions.axis2(MOVE)
+  // Ahead is negative on y, the axis a stick pushed forward reads on — see the `character` preset.
+  const ahead = -wanted.y
+  const side = wanted.x
   const length = Math.hypot(ahead, side)
-  const walk = length === 0 ? 0 : speed / length
+  const walk = length === 0 ? 0 : (speed * Math.min(1, length)) / length
 
   into.x = (-Math.sin(yaw) * ahead + Math.cos(yaw) * side) * walk
   into.z = (-Math.cos(yaw) * ahead - Math.sin(yaw) * side) * walk
 }
 
 /** Metres a second. 🛑 Zero is « what the SCENE says » for the walk and « no running » for the run. */
-function paceOf(settings: Component | null, play: ScenePlay, input: InputState): number {
+function paceOf(settings: Component | null, play: ScenePlay, actions: InputActions): number {
   const run = numberOf(settings, 'runSpeed', WALKER.runSpeed)
-  if (run > 0 && keysHeld(input, RUN) === 1) return run
+  if (run > 0 && actions.button(RUN)) return run
   return numberOf(settings, 'moveSpeed', WALKER.moveSpeed) || play.moveSpeed
 }
 

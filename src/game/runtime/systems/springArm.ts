@@ -17,6 +17,9 @@ import type { System, World } from '../world'
 
 const ARM = COMPONENT_DEFAULTS.SpringArm
 
+/** The `character` context's turn, which drives the same look the pointer does. */
+const LOOK = 'look'
+
 export type SpringArmOptions = {
   /** The one look the pointer drives, which an arm set to `pointer` hangs behind. */
   characters: Characters
@@ -105,7 +108,9 @@ export function createSpringArmSystem(options: SpringArmOptions): System {
 
     lateUpdate: (world: World, alpha: number, dt: number) => {
       // `aim` walks from where it last saw the pointer, so `camera` taking it again after this
-      // one moves it by zero — kept honest by `characters.test.ts`.
+      // one moves it by zero — kept honest by `characters.test.ts`. `turn` is NOT idempotent, so
+      // it is called here alone: before `camera`, which then films the look of this frame.
+      characters.turn(world.actions.axis2(LOOK), dt)
       characters.aim(world.ports.input.pointer())
 
       for (const entity of world.entities.withComponent('SpringArm')) {

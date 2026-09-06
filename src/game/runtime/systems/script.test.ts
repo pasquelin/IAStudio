@@ -87,10 +87,11 @@ describe('what a game does with its own code', () => {
       actions: [],
     }
     const world = running('onStart() { game.input.pushContext("vehicle") }', [], [vehicle])
+    expect(world.inputContexts.active()).not.toContain('vehicle')
 
     frame(world)
 
-    expect(world.inputContexts.active()).toEqual(['vehicle'])
+    expect(world.inputContexts.active()).toContain('vehicle')
   })
 
   it('writes a field of a component the entity already carries', () => {

@@ -22,6 +22,20 @@ const pressing = (over: Partial<InputState> = {}): InputState => ({
   ...over,
 })
 
+/** One standard controller, its two sticks where the test puts them. */
+const holding = (axes: readonly number[], buttons: readonly number[] = []): InputState =>
+  pressing({
+    gamepads: [
+      {
+        id: 'pad',
+        index: 0,
+        mapping: 'standard',
+        axes: [0, 0, 0, 0].map((rest, at) => axes[at] ?? rest),
+        buttons: Array.from({ length: 17 }, (_, at) => buttons[at] ?? 0),
+      },
+    ],
+  })
+
 function walking(gravity = 0, moveSpeed = 4, over: Record<string, JsonValue> = {}): World {
   const world = testWorld({ play: { ...DEFAULT_PLAY, gravity, moveSpeed } })
   let walker = newComponent('CharacterController')
@@ -61,6 +75,75 @@ function cruising(world: World, characters: Characters, steps = 120): CharacterM
 }
 
 describe('what a character asks to move', () => {
+  it('walks on the left stick, with no input map and no script of its own', () => {
+    const world = walking()
+    world.input = holding([0, -1])
+
+    const move = cruising(
+      world,
+      createCharacters(createPossessions(), entity => entity.transform),
+    )
+
+    expect(move?.wanted.z).toBeCloseTo(-4 * STEP)
+  })
+
+  it('walks a stick held HALF way at half the pace, which no key can ask for', () => {
+    const world = walking()
+    world.input = holding([0, -0.5])
+
+    const move = cruising(
+      world,
+      createCharacters(createPossessions(), entity => entity.transform),
+    )
+
+    expect(move?.wanted.z).toBeCloseTo(-2 * STEP)
+  })
+
+  it('runs on the left stick pressed in, as Shift does', () => {
+    const world = walking(0, 4, { runSpeed: 8 })
+    const pressedIn = Array.from({ length: 11 }, (_, at) => (at === 10 ? 1 : 0))
+    world.input = holding([0, -1], pressedIn)
+
+    const move = cruising(
+      world,
+      createCharacters(createPossessions(), entity => entity.transform),
+    )
+
+    expect(move?.wanted.z).toBeCloseTo(-8 * STEP)
+  })
+
+  it('turns the head on the right stick with NO button held, unlike a drag', () => {
+    const world = walking()
+    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    world.input = holding([0, 0, 1, 0])
+
+    characters.turn(world.actions.axis2('look'), STEP)
+
+    expect(characters.look().yaw).toBeLessThan(0)
+  })
+
+  it('leaves the look alone when the stick rests, so a drag is not fought over', () => {
+    const world = walking()
+    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    world.input = holding([0, 0, 0, 0])
+
+    characters.turn(world.actions.axis2('look'), STEP)
+
+    expect(characters.look()).toEqual({ yaw: 0, pitch: 0 })
+  })
+
+  it('walks on two opposite keys held as it walks on none', () => {
+    const world = walking()
+    world.input = pressing({ held: ['KeyA', 'KeyD'] })
+
+    const move = cruising(
+      world,
+      createCharacters(createPossessions(), entity => entity.transform),
+    )
+
+    expect(move?.wanted.x).toBeCloseTo(0)
+  })
+
   it('walks forward on the key under the finger, whatever it types', () => {
     const world = walking()
     world.input = pressing({ held: ['KeyW'] })
@@ -102,7 +185,7 @@ describe('what a character asks to move', () => {
   it('jumps only from the ground', () => {
     const world = walking(10)
     const characters = createCharacters(createPossessions(), entity => entity.transform)
-    world.input = pressing({ pressed: ['Space'] })
+    world.input = pressing({ held: ['Space'] })
 
     const inAir = characters.intents(world, STEP)[0]?.wanted.y ?? 0
     landed(characters, true)
@@ -237,7 +320,7 @@ describe('what a character asks to move', () => {
     characters.intents(world, STEP)
     landed(characters, false)
 
-    world.input = pressing({ pressed: ['Space'] })
+    world.input = pressing({ held: ['Space'] })
     const [move] = characters.intents(world, STEP)
 
     expect(move?.wanted.y).toBeGreaterThan(0)
@@ -253,7 +336,7 @@ describe('what a character asks to move', () => {
       landed(characters, false)
     }
 
-    world.input = pressing({ pressed: ['Space'] })
+    world.input = pressing({ held: ['Space'] })
     const [move] = characters.intents(world, STEP)
 
     expect(move?.wanted.y).toBeLessThan(0)
@@ -262,7 +345,7 @@ describe('what a character asks to move', () => {
   it('holds a jump asked for just before landing, and spends it on the ground', () => {
     const world = walking(10, 4, { jumpBuffer: 0.2, coyoteTime: 0 })
     const characters = createCharacters(createPossessions(), entity => entity.transform)
-    world.input = pressing({ pressed: ['Space'] })
+    world.input = pressing({ held: ['Space'] })
     characters.intents(world, STEP)
     landed(characters, false)
 

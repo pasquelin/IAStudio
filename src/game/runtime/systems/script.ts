@@ -14,7 +14,6 @@ import { settingsOf, textOf } from '../componentFields'
 import { componentOf, type Entity } from '../entity'
 import { sayCustom } from '../sayCustom'
 import type { System, World } from '../world'
-import { resolveInputMaps } from '../inputMaps'
 
 export type ScriptSystemOptions = {
   /** Already transpiled by the studio: the sandbox runs JavaScript, an author writes TypeScript. */
@@ -97,11 +96,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     frame.tick = world.time.tick
     frame.dt = dt
     frame.input = world.input
-    frame.actions = resolveInputMaps(world.inputMaps, world.inputContexts.active(), {
-      held: world.input.held,
-      gamepads: world.input.gamepads ?? [],
-      pointer: world.input.pointer,
-    }).values
+    frame.actions = world.actions.values
     const revision = world.inputControls.revision()
     frame.bindings = revision === bindingsRevision ? undefined : world.inputControls.bindings()
     bindingsRevision = revision

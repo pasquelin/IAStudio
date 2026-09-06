@@ -105,3 +105,41 @@ describe('input mapping contexts', () => {
     expect(resolved.button('fire')).toBe(true)
   })
 })
+
+describe('an axis read off keys and a stick together', () => {
+  const walking: InputMap = {
+    version: 1,
+    id: 'character',
+    priority: 0,
+    defaultActive: true,
+    actions: [
+      {
+        id: 'steer',
+        kind: 'axis1',
+        bindings: [
+          { device: 'keyboard', code: 'KeyA', scale: -1 },
+          { device: 'keyboard', code: 'KeyD', scale: 1 },
+          { device: 'gamepad', control: 'leftStickX' },
+        ],
+      },
+    ],
+  }
+
+  const read = (held: readonly string[], x = 0): number =>
+    resolveInputMaps([walking], ['character'], {
+      held,
+      gamepads: [{ id: 'pad', index: 0, mapping: 'standard', axes: [x, 0, 0, 0], buttons: [] }],
+    }).axis('steer')
+
+  it('cancels two opposite keys held, where the strongest alone kept the first for ever', () => {
+    expect(read(['KeyA', 'KeyD'])).toBe(0)
+    expect(read(['KeyA'])).toBe(-1)
+    expect(read(['KeyD'])).toBe(1)
+  })
+
+  it('lets the stick win when it is pushed further than the keys ask', () => {
+    expect(read([], 0.6)).toBeCloseTo(0.6)
+    expect(read(['KeyA'], 0.6)).toBe(-1)
+    expect(read(['KeyA', 'KeyD'], 0.6)).toBeCloseTo(0.6)
+  })
+})

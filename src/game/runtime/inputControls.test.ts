@@ -23,6 +23,15 @@ const defaults: readonly InputMap[] = [
 ]
 
 describe('runtime input controls', () => {
+  it('completes what it is given with the built-in contexts, and never overrides one', () => {
+    const ids = createInputControls(defaults)
+      .maps()
+      .map(map => map.id)
+
+    expect(ids).toEqual(['character', 'vehicle', 'flight'])
+    expect(createInputControls(defaults).maps()[0]).toEqual(defaults[0])
+  })
+
   it('rebinds one action without changing the project defaults', () => {
     const controls = createInputControls(defaults)
 
@@ -44,7 +53,7 @@ describe('runtime input controls', () => {
     controls.rebind('character', 'jump', 0, { device: 'keyboard', code: 'Enter' })
     controls.reset()
 
-    expect(controls.maps()).toEqual(defaults)
+    expect(controls.maps().find(map => map.id === 'character')).toEqual(defaults[0])
     expect(write).toHaveBeenCalledTimes(2)
   })
 

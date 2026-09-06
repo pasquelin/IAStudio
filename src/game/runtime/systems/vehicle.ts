@@ -8,17 +8,16 @@ import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
 import type { Transform } from '@shared/domain/transform'
 import { componentOf, type Entity } from '../entity'
-import { keyHeld, keysHeld } from '../keysHeld'
 import { PILOT_RANK, type Pilots } from '../pilots'
 import type { System, World } from '../world'
 
 const VEHICLE = COMPONENT_DEFAULTS.Vehicle
 
-const THROTTLE = ['KeyW', 'ArrowUp']
-const REVERSE = ['KeyS', 'ArrowDown']
-const LEFT = ['KeyA', 'ArrowLeft']
-const RIGHT = ['KeyD', 'ArrowRight']
-const HAND_BRAKE = 'Space'
+/** The named actions of the `vehicle` context — see the preset for what reaches them. */
+const ACCELERATE = 'accelerate'
+const BRAKE = 'brake'
+const STEER = 'steer'
+const HAND_BRAKE = 'handBrake'
 
 /** Metres a second under which a change of direction is taken as a stop rather than a reversal. */
 const STOPPED = 0.1
@@ -79,10 +78,10 @@ export function createVehicleSystem(
     fixedUpdate: (world: World) => {
       collect(world)
       if (driving.length === 0) return
-      const input = world.input
-      const asked = keysHeld(input, THROTTLE) - keysHeld(input, REVERSE)
-      const steer = clamp(keysHeld(input, RIGHT) - keysHeld(input, LEFT), -1, 1)
-      const handBrake = keyHeld(input, HAND_BRAKE)
+      const actions = world.actions
+      const asked = clamp(actions.axis(ACCELERATE) - actions.axis(BRAKE), -1, 1)
+      const steer = clamp(actions.axis(STEER), -1, 1)
+      const handBrake = actions.button(HAND_BRAKE) ? 1 : 0
       drive(world, asked, steer, handBrake)
     },
 

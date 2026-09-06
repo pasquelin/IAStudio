@@ -8,6 +8,8 @@ import type { GameApi } from '../api/gameApi'
 import { createEventBus, type EventBus } from '../events/eventBus'
 import type { InputState } from '../ports/inputPort'
 import type { InputMap } from '@shared/domain/inputMap'
+import type { InputActions } from './inputActions'
+import { createWorldInput } from './worldInput'
 import { createInputContexts, type InputContexts } from './inputContexts'
 import { createInputControls, type InputControls } from './inputControls'
 import { clonedTransform, copyTransformInto, restingTransform, type Entity } from './entity'
@@ -44,6 +46,11 @@ export type World = {
   readonly time: { tick: number; elapsed: number; readonly step: number }
   /** The input as of the step being run — DATA of the tick, never a live read. */
   input: InputState
+  /**
+   * The same input read as NAMED actions of the active contexts, sampled once a step. What the
+   * built-in controllers answer, so a stick and a key reach them by one path.
+   */
+  readonly actions: InputActions
   readonly inputMaps: readonly InputMap[]
   readonly inputContexts: InputContexts
   readonly inputControls: InputControls
@@ -94,6 +101,8 @@ export function createWorld(options: WorldOptions): World {
   const detaching: { entity: Entity; type: ComponentType }[] = []
   let minted = 0
   const inputControls = options.inputControls ?? createInputControls(options.inputMaps ?? [])
+  const contexts = createInputContexts(inputControls.maps())
+  const input = createWorldInput(inputControls, contexts, options.ports.input.state())
 
   // Not `messageOf` of `@shared/guards`: this tree is MIT and ships without the rest, so a VALUE
   // taken from `@shared/` would carry PolyForm code into an exported game.
@@ -134,11 +143,19 @@ export function createWorld(options: WorldOptions): World {
     ports: options.ports,
     play: options.play,
     time: { tick: 0, elapsed: 0, step: options.step },
-    input: options.ports.input.state(),
+    get input() {
+      return input.state()
+    },
+    set input(state: InputState) {
+      input.take(state)
+    },
+    get actions() {
+      return input.actions
+    },
     get inputMaps() {
       return inputControls.maps()
     },
-    inputContexts: createInputContexts(inputControls.maps()),
+    inputContexts: contexts,
     inputControls,
 
     spawn: request => {

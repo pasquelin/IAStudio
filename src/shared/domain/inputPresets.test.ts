@@ -13,7 +13,27 @@ describe('input presets', () => {
       'move',
       'look',
       'jump',
+      'run',
       'interact',
     ])
+  })
+
+  it('binds every controller the built-in systems read, keyboard and gamepad both', () => {
+    const bindings = (preset: 'character' | 'vehicle' | 'flight', action: string) =>
+      inputMapPreset(preset)
+        .actions.find(one => one.id === action)
+        ?.bindings.map(binding => binding.device)
+
+    expect(bindings('character', 'move')).toContain('gamepad')
+    expect(bindings('character', 'move')).toContain('keyboard')
+    expect(bindings('vehicle', 'accelerate')).toContain('gamepad')
+    expect(bindings('flight', 'yaw')).toContain('gamepad')
+  })
+
+  it('leaves the driving and flying contexts ACTIVE, no action name being shared', () => {
+    expect(inputMapPreset('vehicle').defaultActive).toBe(true)
+    expect(inputMapPreset('flight').defaultActive).toBe(true)
+    // A menu PRIMES over the rest, so only a script knows when to push it.
+    expect(inputMapPreset('menu').defaultActive).toBe(false)
   })
 })

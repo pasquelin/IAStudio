@@ -13,7 +13,13 @@ import { createVehicleSystem } from './vehicle'
 
 type Bench = { world: World; physics: NotedPhysics; pilots: Pilots }
 
-function bench(held: readonly string[] = [], over: Record<string, JsonValue> = {}): Bench {
+type Pad = { axes?: readonly number[]; buttons?: readonly number[] }
+
+function bench(
+  held: readonly string[] = [],
+  over: Record<string, JsonValue> = {},
+  pad?: Pad,
+): Bench {
   const physics = notedPhysics()
   const pilots = createPilots()
   const world = testWorld({
@@ -31,6 +37,17 @@ function bench(held: readonly string[] = [], over: Record<string, JsonValue> = {
     pressed: [],
     released: [],
     pointer: { x: 0, y: 0, down: false },
+    gamepads: pad
+      ? [
+          {
+            id: 'pad',
+            index: 0,
+            mapping: 'standard',
+            axes: [0, 0, 0, 0].map((rest, at) => pad.axes?.[at] ?? rest),
+            buttons: Array.from({ length: 17 }, (_, at) => pad.buttons?.[at] ?? 0),
+          },
+        ]
+      : [],
   })
   return { world, physics, pilots }
 }
@@ -84,6 +101,21 @@ describe('what a car is driven by', () => {
     rolling(car, 0)
 
     expect(asked(car)).toMatchObject({ forward: -1, brake: 0 })
+  })
+
+  it('drives on the triggers and steers on the left stick, with no input map of its own', () => {
+    const rightTrigger = Array.from({ length: 17 }, (_, at) => (at === 7 ? 1 : 0))
+
+    const drive = asked(bench([], {}, { axes: [0.5], buttons: rightTrigger }))
+
+    expect(drive?.forward).toBeCloseTo(1)
+    expect(drive?.steer).toBeCloseTo(0.5)
+  })
+
+  it('brakes on the left trigger, which is the pedal the keyboard puts on the down key', () => {
+    const leftTrigger = Array.from({ length: 17 }, (_, at) => (at === 6 ? 1 : 0))
+
+    expect(asked(bench([], {}, { buttons: leftTrigger }))?.forward).toBeCloseTo(-1)
   })
 
   it('holds the car on the hand brake, whatever the pedal says', () => {

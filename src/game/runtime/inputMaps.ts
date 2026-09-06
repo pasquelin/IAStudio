@@ -63,17 +63,40 @@ export function resolveInputMaps(
 
 function valueOf(action: InputAction, input: RawInput): InputActionValue {
   if (action.kind === 'button') return action.bindings.some(binding => buttonOf(binding, input))
-  if (action.kind === 'axis1')
-    return action.bindings.reduce(
-      (strongest, binding) => stronger(strongest, axisOf(binding, input)),
-      0,
-    )
+  if (action.kind === 'axis1') return axisValueOf(action, input)
+  return vectorValueOf(action, input)
+}
 
-  const vector = action.bindings.reduce<InputVector>(
-    (strongest, binding) => strongerVector(strongest, vectorOf(binding, input)),
-    ZERO,
-  )
-  return vector
+/**
+ * 🛑 Keys SUM and a stick wins by magnitude, which is not one rule applied twice: two opposite
+ * keys held must cancel, and `stronger` alone kept the first of them for ever.
+ */
+function axisValueOf(action: InputAction, input: RawInput): number {
+  let keys = 0
+  let device = 0
+  for (const binding of action.bindings) {
+    const value = axisOf(binding, input)
+    if (binding.device === 'keyboard') keys += value
+    else device = stronger(device, value)
+  }
+  return stronger(clampAxis(keys), device)
+}
+
+function vectorValueOf(action: InputAction, input: RawInput): InputVector {
+  const keys: InputVector = { x: 0, y: 0 }
+  let device: InputVector = ZERO
+  for (const binding of action.bindings) {
+    const value = vectorOf(binding, input)
+    if (binding.device === 'keyboard') {
+      keys.x += value.x
+      keys.y += value.y
+    } else device = strongerVector(device, value)
+  }
+  return strongerVector({ x: clampAxis(keys.x), y: clampAxis(keys.y) }, device)
+}
+
+function clampAxis(value: number): number {
+  return Math.max(-1, Math.min(1, value))
 }
 
 function buttonOf(binding: InputAction['bindings'][number], input: RawInput): boolean {

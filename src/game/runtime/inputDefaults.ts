@@ -1,15 +1,15 @@
-import type { InputMap, KeyboardBinding } from './inputMap'
+// SPDX-License-Identifier: MIT
 
-export type InputPresetId = 'studio' | 'character' | 'vehicle' | 'flight' | 'menu'
+import type { InputMap, KeyboardBinding } from '@shared/domain/inputMap'
 
-export const INPUT_PRESET_IDS: readonly InputPresetId[] = [
-  'studio',
-  'character',
-  'vehicle',
-  'flight',
-  'menu',
-]
-
+/**
+ * The contexts a scene plays with when the project declares none of its own — what makes a
+ * gamepad and a keyboard reach the built-in controllers with no file and no script.
+ *
+ * 🛑 COPIED from `@shared/domain/inputPresets`, because this tree is MIT and ships without the
+ * rest: a VALUE taken from `@shared/` would carry PolyForm code into an exported game. Held to
+ * the originals by `inputDefaults.test.ts`, which ships nowhere and may read both.
+ */
 /** The four keys and the four arrows a walker and a machine both answer, as one half-axis each. */
 function keyAxis(negative: readonly string[], positive: readonly string[]): KeyboardBinding[] {
   return [
@@ -31,23 +31,8 @@ const RIGHT = ['KeyD', 'ArrowRight']
 const AHEAD = ['KeyW', 'ArrowUp']
 const BACK = ['KeyS', 'ArrowDown']
 
-const PRESETS: Record<InputPresetId, InputMap> = {
-  studio: {
-    version: 1,
-    id: 'studio',
-    priority: 100,
-    defaultActive: true,
-    actions: [
-      { id: 'navigate', kind: 'axis2', bindings: [{ device: 'gamepad', control: 'leftStick' }] },
-      {
-        id: 'confirm',
-        kind: 'button',
-        bindings: [{ device: 'gamepad', control: 'south' }],
-      },
-      { id: 'back', kind: 'button', bindings: [{ device: 'gamepad', control: 'east' }] },
-    ],
-  },
-  character: {
+const DEFAULTS: readonly InputMap[] = [
+  {
     version: 1,
     id: 'character',
     priority: 0,
@@ -92,7 +77,7 @@ const PRESETS: Record<InputPresetId, InputMap> = {
       },
     ],
   },
-  vehicle: {
+  {
     version: 1,
     id: 'vehicle',
     priority: 10,
@@ -139,7 +124,7 @@ const PRESETS: Record<InputPresetId, InputMap> = {
       },
     ],
   },
-  flight: {
+  {
     version: 1,
     id: 'flight',
     priority: 10,
@@ -179,32 +164,13 @@ const PRESETS: Record<InputPresetId, InputMap> = {
       },
     ],
   },
-  menu: {
-    version: 1,
-    id: 'menu',
-    priority: 100,
-    defaultActive: false,
-    actions: [
-      {
-        id: 'confirm',
-        kind: 'button',
-        bindings: [
-          { device: 'keyboard', code: 'Enter' },
-          { device: 'gamepad', control: 'south' },
-        ],
-      },
-      {
-        id: 'back',
-        kind: 'button',
-        bindings: [
-          { device: 'keyboard', code: 'Escape' },
-          { device: 'gamepad', control: 'east' },
-        ],
-      },
-    ],
-  },
-}
+]
 
-export function inputMapPreset(id: InputPresetId): InputMap {
-  return PRESETS[id]
+/** The maps given, completed by the defaults they leave undefined. What is given always wins. */
+export function withDefaultInputMaps(maps: readonly InputMap[]): readonly InputMap[] {
+  const declared = new Set(maps.map(map => map.id))
+  return [
+    ...maps,
+    ...DEFAULTS.filter(map => !declared.has(map.id)).map(map => structuredClone(map)),
+  ]
 }
