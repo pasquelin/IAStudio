@@ -93,7 +93,10 @@ async function submitPrepared(input: Record<string, unknown>): Promise<ActionOut
   // reads: a refusal naming nothing was sent again word for word 384 times on 2026-08-25.
   const into = oneOf(input, 'landing', LANDING_TARGETS) ?? armed.landing.target
   if (into === null) {
-    return refused('ambiguousLanding', `name landing: one of ${LANDING_TARGETS.join(', ')}`)
+    return refused(
+      'ambiguousLanding',
+      `by MCP nobody is at the screen to be asked — name landing: one of ${LANDING_TARGETS.join(', ')}`,
+    )
   }
 
   const job = await generator.submit(into)

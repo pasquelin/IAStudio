@@ -145,7 +145,7 @@ function playAhead(documents: DocumentsSlice): PlayState {
  * and is read key by key in the main process. Untyped, a field renamed here left `describeStudio`
  * composing an empty sentence, and the model acting on a studio that is not there.
  */
-function studioState(): ActionOutcome {
+export function studioState(): ActionOutcome {
   const documents = useDocuments.getState()
   const surface = toolSurface()
   const project = useProject.getState()

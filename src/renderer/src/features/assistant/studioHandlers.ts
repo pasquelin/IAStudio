@@ -1,11 +1,16 @@
 import { englishText, textAt, TRANSLATIONS } from '@shared/i18n'
-import { refused, type ActionField } from '@shared/domain/assistant'
+import { refused, type ActionField, type ActionOutcome } from '@shared/domain/assistant'
 import { COMPONENTS, COMPONENT_TYPES, descriptorOf } from '@shared/domain/componentRegistry'
 import { isComponentType } from '@shared/domain/componentRegistry'
 import { resolveNamedReference } from '@shared/domain/namedReference'
+import { isRecord } from '@shared/guards'
 import { refFromString } from '@shared/domain/ref'
 import STUDIO_TYPES from '@game/api/studio.d.ts?raw'
-import { mounted, NO_SCENE } from './sceneHandlers'
+import { WORKSPACE_IDS } from '@shared/domain/workspace'
+import { usToSeconds } from '@shared/domain/time'
+import type { AnimationTrack } from '@shared/domain/animation'
+import { mounted } from './sceneHandlers'
+import { studioState } from './stateHandlers'
 import type { ActionHandlers } from './actionHandler'
 import { textOf } from './actionInputs'
 import { nodeAimed } from './nodeAimed'
@@ -15,7 +20,9 @@ import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 export const STUDIO_HANDLERS: ActionHandlers = {
   'studio.describe': input => {
     const open = mounted()
-    if (!open) return refused('wrongSurface', NO_SCENE)
+    // The studio itself when no scene is in front — refused as « no surface » at start-up, a
+    // client asking what it was talking to learnt nothing (Codex by MCP, 2026-09-06).
+    if (!open) return describedStudio()
 
     const named = textOf(input, 'ref') ?? ''
     const scene = open.state
@@ -36,8 +43,14 @@ export const STUDIO_HANDLERS: ActionHandlers = {
     if (ref?.kind === 'entity' && ref.document !== open.documentId) {
       return refused('notFound', `"${named}" belongs to another document`)
     }
+    const track = scene.animation.tracks.find(one => one.id === named)
+    if (track) return { ok: true, data: describedTrack(track) }
     const node = nodeAimed(scene, ref?.kind === 'entity' ? ref.id : named)
-    if (!node) return refused('notFound', `no node "${named}" in the scene in front, by id or name`)
+    if (!node)
+      return refused(
+        'notFound',
+        `no node "${named}" in the scene in front, by id or name — a node id, a node name or a channel id (track_…) is what this takes`,
+      )
     return { ok: true, data: describedNode(node, scene) }
   },
 
@@ -122,3 +135,32 @@ const describeField = (field: ActionField): Record<string, unknown> => ({
   ...(field.min === undefined ? {} : { min: field.min }),
   ...(field.max === undefined ? {} : { max: field.max }),
 })
+
+function describedStudio(): ActionOutcome {
+  const state = studioState()
+  return state.ok
+    ? { ok: true, data: { ...(isRecord(state.data) ? state.data : {}), workspaces: WORKSPACE_IDS } }
+    : state
+}
+
+/** A channel and what takes it: keys are read here, and written by the key actions below. */
+function describedTrack(track: AnimationTrack) {
+  return {
+    channel: {
+      id: track.id,
+      name: track.name,
+      target: track.target,
+      muted: track.muted,
+      solo: track.solo,
+      locked: track.locked,
+      keys: track.keys.map(key => ({ timeSeconds: usToSeconds(key.time), value: key.value })),
+    },
+    accepts: [
+      'key.writeKeysOnOpenChannels',
+      'key.move',
+      'track.rename',
+      'track.remove',
+      'track.setMuteSoloLockHeight',
+    ],
+  }
+}
