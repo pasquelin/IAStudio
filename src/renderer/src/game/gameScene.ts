@@ -28,8 +28,7 @@ import { applyFog } from '@/engines/scene/worldBinding'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { applyMaterial, lightFor, standTarget } from '@/engines/scene/threeSync'
 import { applyTransform, standsAt } from '@/engines/scene/pivot'
-import { applyShadowFlags } from '@/engines/scene/shadows'
-import { receivesShadow, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
+import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
 import { runtimeArtifactsOf, runtimeOptimizationOf } from '@/engines/scene/runtimeWorldCompiler'
 import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
@@ -39,6 +38,7 @@ import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
 import type { SceneAnimations } from '@/engines/scene/animation'
 import { createSceneResources, type SceneResources } from './gameSceneResources'
 import { drapeWorld, type WorldDrape } from './gameSceneWorld'
+import { dressShadows } from './gameSceneShadows'
 import { clipKeyOf } from '@shared/domain/scene'
 import type { ModelRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
@@ -328,22 +328,6 @@ async function populateScene(
     standTarget(object, scene)
   }
   dressShadows(nodes, byEntity)
-}
-
-/**
- * 🛑 The flags a node carries, read through the same two answers the editor reads — lights and
- * models included. It stops at a child standing for a node of its own, which carries its own.
- */
-function dressShadows(nodes: readonly SceneNode[], byEntity: ReadonlyMap<string, Object3D>): void {
-  const ownObjects = new Set(byEntity.values())
-  // Identity, not the name `ownedByAnotherNode` reads: a game names its objects after the NODE,
-  // where the editor names them after its id.
-  const belongsElsewhere = (child: Object3D): boolean => ownObjects.has(child)
-  for (const node of nodes) {
-    const object = byEntity.get(node.id)
-    if (!object) continue
-    applyShadowFlags(object, node.castShadow, receivesShadow(node), belongsElsewhere)
-  }
 }
 
 function registerBakedPlacements(
