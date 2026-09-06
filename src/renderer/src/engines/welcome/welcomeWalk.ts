@@ -63,7 +63,7 @@ const TURN_REACH = 2.9
  */
 const WALK_REACH = 2.2
 
-/** A side step's own reach, PLUS the slack the look-ahead keeps: under it, a strafe grazed a bac. */
+/** A side step's own reach, PLUS the slack the look-ahead keeps: under it, a strafe grazed a planter. */
 const STRAFE_REACH = 2.1
 
 /** The clips that are a garnish rather than a gait: never two in a row. */
@@ -164,6 +164,21 @@ function steerTo(state: WelcomeWalkState): number {
 /** How far the walker is turned away from a point, the short way round. */
 const headingErrorOf = (state: WelcomeWalkState, at: { x: number; z: number }): number =>
   shortWay(state.heading, Math.atan2(at.x - state.x, at.z - state.z))
+
+/**
+ * How one clip gives way to the next. A pause is a HOLD of the stand, never a fade in from
+ * weight zero — Three mixes the bind pose (T-pose) for any frame whose weights sum under one.
+ */
+export function welcomeFadeOf(
+  held: WelcomeClipName | null,
+  next: WelcomeClipName | null,
+): 'loop' | 'cross' | 'rise' | 'hold' {
+  if (held && next === held) return 'loop'
+  if (next && held) return 'cross'
+  if (next) return 'rise'
+
+  return 'hold'
+}
 
 /**
  * The state as the next clip begins — the one call the engine makes when a clip runs out.

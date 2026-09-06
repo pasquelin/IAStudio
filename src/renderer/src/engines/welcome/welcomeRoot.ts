@@ -8,10 +8,12 @@
  * 149 m of travel for a side step and 297° of turn for a straight walk.
  */
 import {
+  AnimationClip,
   Matrix4,
+  PropertyBinding,
   Quaternion,
+  QuaternionKeyframeTrack,
   Vector3,
-  type AnimationClip,
   type KeyframeTrack,
   type Object3D,
 } from 'three'
@@ -178,4 +180,57 @@ function between(root: WelcomeRootMotion, from: number, to: number): WelcomeStep
     z: end.z - start.z,
     turned: root.turnAt(to) - root.turnAt(from),
   }
+}
+
+/**
+ * Pose tracks with the root's travel dropped and its PATH yaw taken off the quaternion. The group
+ * owns heading; the bone keeps roll, pitch, and the stride's own hip sway.
+ */
+export function welcomeRootHeld(
+  clip: AnimationClip,
+  root: Object3D,
+  positionTrack: string,
+  turnAt: (time: number) => number,
+): AnimationClip {
+  const spun = `${PropertyBinding.parseTrackName(positionTrack).nodeName}.quaternion`
+  root.updateWorldMatrix(true, false)
+  const turn = new Quaternion()
+  const frame = new Matrix4().copy(root.parent?.matrixWorld ?? new Matrix4())
+  frame.decompose(new Vector3(), turn, new Vector3())
+
+  return new AnimationClip(
+    clip.name,
+    clip.duration,
+    clip.tracks.flatMap(track => {
+      if (track.name === positionTrack) return []
+      if (track.name !== spun) return [track]
+
+      return [heldSpin(track, turn, turnAt)]
+    }),
+  )
+}
+
+const Y_AXIS = new Vector3(0, 1, 0)
+
+function heldSpin(
+  track: KeyframeTrack,
+  frame: Quaternion,
+  turnAt: (time: number) => number,
+): QuaternionKeyframeTrack {
+  const inverse = frame.clone().invert()
+  const values = new Float32Array(track.values.length)
+  const local = new Quaternion()
+  const world = new Quaternion()
+  const yaw = new Quaternion()
+
+  for (let index = 0; index < track.times.length; index += 1) {
+    local.fromArray(track.values, index * 4)
+    world.copy(frame).multiply(local)
+    yaw.setFromAxisAngle(Y_AXIS, -turnAt(track.times[index] ?? 0))
+    world.premultiply(yaw)
+    local.copy(inverse).multiply(world)
+    local.toArray(values, index * 4)
+  }
+
+  return new QuaternionKeyframeTrack(track.name, Array.from(track.times), values)
 }

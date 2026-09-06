@@ -3,7 +3,6 @@
  * shipped clips through the studio's own retarget, and plays them on ONE clock — the walk's.
  */
 import {
-  AnimationClip,
   AnimationMixer,
   Group,
   LoopRepeat,
@@ -11,6 +10,7 @@ import {
   SkinnedMesh,
   Vector3,
   type AnimationAction,
+  type AnimationClip,
   type Object3D,
 } from 'three'
 import { bundledAnimationUrl } from '@shared/domain/animationLibrary'
@@ -23,17 +23,20 @@ import { skeletonBonesOf, type SkeletonBone } from '../scene/rigState'
 import { rootTrackOf } from '../scene/rootMotion'
 import type { GltfSource } from '../scene/gltfSource'
 import type { Retarget } from '../scene/retarget'
-import { WELCOME_GROVE } from './welcomeGrove'
+import { WELCOME_GROVE, welcomeGroveAllows, WELCOME_SLACK } from './welcomeGrove'
 import {
   welcomeRootFit,
+  welcomeRootHeld,
   welcomeRootMotion,
   welcomeStepOver,
   type WelcomeRootMotion,
 } from './welcomeRoot'
 import {
   welcomeAdvance,
+  welcomeFadeOf,
   welcomeTurnOver,
   welcomeWalkStart,
+  type WelcomeRoll,
   type WelcomeStep,
   type WelcomeWalkState,
 } from './welcomeWalk'
@@ -68,9 +71,11 @@ type Fading = { played: Played; time: number; left: number }
 export type WelcomeHeroDeps = {
   gltf: GltfSource
   retarget: Retarget
-  /** Called when the character lands, and on every frame it owes a draw. */
+  /** Called once the character has landed and taken its first pose. */
   onReady: () => void
   onFailure: (error: unknown) => void
+  /** Handed to the planner so a test can decide the stroll. Defaults to `Math.random`. */
+  roll?: WelcomeRoll
 }
 
 export class WelcomeHero {
@@ -100,9 +105,13 @@ export class WelcomeHero {
     if (!this.mixer) return
 
     const played = this.playing()
-    this.walk = welcomeAdvance(this.walk, played ? this.stepped(played, seconds) : STILL, seconds)
-    if (played ? this.walk.time >= played.duration : this.walk.pause <= 0) {
-      this.turnOver(played?.duration)
+    if (this.walk.clip && !played) {
+      this.turnOver()
+    } else {
+      this.walk = welcomeAdvance(this.walk, played ? this.stepped(played, seconds) : STILL, seconds)
+      if (played ? this.walk.time >= played.duration : this.walk.pause <= 0) {
+        this.turnOver(played?.duration)
+      }
     }
 
     if (this.fading) this.fading = fadedBy(this.fading, seconds)
@@ -118,11 +127,8 @@ export class WelcomeHero {
 
   dispose(): void {
     this.disposed = true
-    this.mixer?.stopAllAction()
-    if (this.body) {
-      this.mixer?.uncacheRoot(this.body)
-      disposeTree(this.body)
-    }
+    if (this.body) this.group.remove(this.body)
+    dropLoaded(this.body, [], this.mixer)
     this.body = null
     this.mixer = null
     this.toes = []
@@ -130,35 +136,55 @@ export class WelcomeHero {
   }
 
   private async load(): Promise<void> {
+    let body: Object3D | undefined
+    let files: Object3D[] = []
+    let mixer: AnimationMixer | undefined
     try {
-      const loading = WELCOME_CLIP_NAMES.map(name =>
-        this.deps.gltf.loadAnimation(bundledAnimationUrl(name)),
-      )
-      const body = await this.deps.gltf.load(bundledCharacterUrl(WELCOME_LEVEL))
-      const files = await Promise.all(loading)
-      if (this.disposed) return void disposeTree(body)
-
-      const mixer = new AnimationMixer(body)
-      const adapted = await Promise.all(
-        files.map(async file => (await this.deps.retarget.adapt(body, file, clipsOf(file)))?.[0]),
-      )
-      if (this.disposed) return void disposeTree(body)
-
-      const bones = skeletonBonesOf(body)
-      this.rest = fill(this.played, { body, bones, files, adapted, mixer })
-      for (const file of files) disposeTree(file)
-
-      castAndKeep(body)
-      this.group.add(body)
-      this.body = body
-      this.mixer = mixer
-      this.toes = toesOf(body, bones)
-      this.plant()
-      this.pose()
-      this.deps.onReady()
+      const brought = await this.bring()
+      body = brought.body
+      files = brought.files
+      mixer = brought.mixer
+      if (this.disposed) return
+      this.mount(brought)
+      body = undefined
+      mixer = undefined
+      files = []
     } catch (error) {
-      this.deps.onFailure(error)
+      if (!this.disposed) this.deps.onFailure(error)
+    } finally {
+      if (this.disposed || !this.mixer) dropLoaded(body, files, mixer)
     }
+  }
+
+  private async bring(): Promise<Brought> {
+    const loading = WELCOME_CLIP_NAMES.map(name =>
+      this.deps.gltf.loadAnimation(bundledAnimationUrl(name)),
+    )
+    const body = await this.deps.gltf.load(bundledCharacterUrl(WELCOME_LEVEL))
+    const files = await Promise.all(loading)
+    const mixer = new AnimationMixer(body)
+    const adapted = await Promise.all(
+      files.map(async file => (await this.deps.retarget.adapt(body, file, clipsOf(file)))?.[0]),
+    )
+    return { body, files, mixer, adapted }
+  }
+
+  private mount(brought: Brought): void {
+    const { body, files, mixer, adapted } = brought
+    const bones = skeletonBonesOf(body)
+    this.rest = fill(this.played, { body, bones, files, adapted, mixer })
+    if (!this.played.has('Walk') || !this.played.has('WalkStop')) {
+      throw new Error('Welcome character is missing Walk or WalkStop')
+    }
+    for (const file of files) disposeTree(file)
+    castAndKeep(body)
+    this.group.add(body)
+    this.body = body
+    this.mixer = mixer
+    this.toes = toesOf(body, bones)
+    this.plant()
+    this.pose()
+    if (!this.disposed) this.deps.onReady()
   }
 
   private playing(): Played | null {
@@ -175,15 +201,26 @@ export class WelcomeHero {
     const blend = this.fading
       ? mixSteps(own, stepOf(this.fading.played, this.fading.time, seconds), this.weight())
       : own
-    const spin = this.walk.heading - played.root.turnAt(this.walk.time)
-    const cos = Math.cos(spin)
-    const sin = Math.sin(spin)
 
-    return {
-      x: blend.x * cos + blend.z * sin,
-      z: blend.z * cos - blend.x * sin,
-      turned: blend.turned,
+    return facing(blend, this.walk.heading, played.root.turnAt(this.walk.time))
+  }
+
+  /** Whether the clip's OWN root stays in the yard — the look-ahead is a constant-speed arc. */
+  private fits(name: WelcomeClipName, from: WelcomeWalkState): boolean {
+    const played = this.played.get(name)
+    if (!played) return false
+
+    if (played.duration <= 0) return true
+
+    let probe: WelcomeWalkState = { ...from, clip: name, time: 0, pause: 0 }
+    const steps = 8
+    const dt = played.duration / steps
+    for (let step = 0; step < steps; step += 1) {
+      probe = welcomeAdvance(probe, stepInFrame(played, probe, dt), dt)
+      if (!welcomeGroveAllows(WELCOME_GROVE, probe.x, probe.z, WELCOME_SLACK)) return false
     }
+
+    return true
   }
 
   /**
@@ -231,12 +268,30 @@ export class WelcomeHero {
    */
   private turnOver(duration = 0): void {
     const held = this.playing()
+    const standing = held ? null : this.played.get(IDLE)
     const over = Math.max(0, this.walk.time - duration)
     const time = this.walk.time
-    this.walk = welcomeTurnOver(this.walk, WELCOME_GROVE, Math.random)
+    this.walk = this.pick(this.walk)
 
-    if (held && this.walk.clip === held.name) this.walk = { ...this.walk, time: over }
-    else if (held) this.fading = { played: held, time, left: FADE }
+    const fade = welcomeFadeOf(held?.name ?? null, this.walk.clip)
+    if (fade === 'loop' && held) this.walk = { ...this.walk, time: over }
+    else if (fade === 'cross' && held) this.fading = { played: held, time, left: FADE }
+    else if (fade === 'rise' && standing) {
+      this.fading = { played: standing, time: standing.duration, left: FADE }
+    }
+  }
+
+  private pick(from: WelcomeWalkState): WelcomeWalkState {
+    const roll = this.deps.roll ?? Math.random
+    let next = welcomeTurnOver(from, WELCOME_GROVE, roll)
+    for (let tries = 0; tries < 8 && next.clip && !this.fits(next.clip, next); tries += 1) {
+      next = welcomeTurnOver(next, WELCOME_GROVE, roll)
+    }
+    if (next.clip && !this.fits(next.clip, next)) {
+      return welcomeTurnOver({ ...from, clip: 'WalkStop' }, WELCOME_GROVE, roll)
+    }
+
+    return next
   }
 
   /**
@@ -269,6 +324,13 @@ export class WelcomeHero {
   }
 }
 
+type Brought = {
+  body: Object3D
+  files: Object3D[]
+  mixer: AnimationMixer
+  adapted: readonly (AnimationClip | undefined)[]
+}
+
 type Loaded = {
   body: Object3D
   bones: readonly SkeletonBone[]
@@ -280,7 +342,7 @@ type Loaded = {
 /**
  * Fills `played` with every clip that came back whole, and answers the height the character's own
  * root rides at. Read BEFORE the sources are let go: their own frames are what put the travel back
- * on the ground and the turn back about Y, and the retargeted clip carries neither.
+ * on the ground and the turn back about Y.
  */
 function fill(played: Map<WelcomeClipName, Played>, loaded: Loaded): number {
   let rest = 0
@@ -288,7 +350,7 @@ function fill(played: Map<WelcomeClipName, Played>, loaded: Loaded): number {
     const clip = loaded.adapted[index]
     const file = loaded.files[index]
     const raw = file && clipsOf(file)[0]
-    if (!clip || !raw) continue
+    if (!clip || !raw || !file) continue
 
     const source = rootOf(file, raw, skeletonBonesOf(file))
     const target = rootOf(loaded.body, clip, loaded.bones)
@@ -296,14 +358,14 @@ function fill(played: Map<WelcomeClipName, Played>, loaded: Loaded): number {
 
     const fit = welcomeRootFit(target.bone, source.bone)
     rest = fit.rest
+    const root = welcomeRootMotion(raw, source.bone, fit.scale)
     played.set(
       name,
       playedOf(
         name,
         loaded.mixer,
-        clip,
-        target.track,
-        welcomeRootMotion(raw, source.bone, fit.scale),
+        welcomeRootHeld(clip, target.bone, target.track, root.turnAt),
+        root,
       ),
     )
   }
@@ -347,18 +409,9 @@ function playedOf(
   name: WelcomeClipName,
   mixer: AnimationMixer,
   clip: AnimationClip,
-  track: string,
   root: WelcomeRootMotion,
 ): Played {
-  // 🛑 BOTH root channels dropped, not pinned. The group carries the travel, the height and the
-  // yaw; left in the pose as well, every one of them would be paid twice.
-  const spun = `${PropertyBinding.parseTrackName(track).nodeName}.quaternion`
-  const held = new AnimationClip(
-    clip.name,
-    clip.duration,
-    clip.tracks.filter(one => one.name !== track && one.name !== spun),
-  )
-  const action = mixer.clipAction(held)
+  const action = mixer.clipAction(clip)
   action.loop = LoopRepeat
   // Paused, and never unpaused: `pose` writes the instant, so a mixer left running would move
   // the character a second time, at its own rate.
@@ -370,6 +423,37 @@ function playedOf(
 
 const stepOf = (played: Played, from: number, seconds: number): WelcomeStep =>
   welcomeStepOver(played.root, played.duration, from, seconds)
+
+function stepInFrame(played: Played, walk: WelcomeWalkState, seconds: number): WelcomeStep {
+  return facing(stepOf(played, walk.time, seconds), walk.heading, played.root.turnAt(walk.time))
+}
+
+function facing(step: WelcomeStep, heading: number, spent: number): WelcomeStep {
+  const spin = heading - spent
+  const cos = Math.cos(spin)
+  const sin = Math.sin(spin)
+
+  return {
+    x: step.x * cos + step.z * sin,
+    z: step.z * cos - step.x * sin,
+    turned: step.turned,
+  }
+}
+
+function dropLoaded(
+  body: Object3D | null | undefined,
+  files: readonly Object3D[],
+  mixer: AnimationMixer | null | undefined,
+): void {
+  mixer?.stopAllAction()
+  if (body) {
+    mixer?.uncacheRoot(body)
+    disposeTree(body)
+  }
+  for (const file of files) {
+    if (file !== body) disposeTree(file)
+  }
+}
 
 /** One number crossfading into another. */
 const blended = (own: number, leaving: number, weight: number): number =>

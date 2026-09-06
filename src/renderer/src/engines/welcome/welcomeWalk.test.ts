@@ -8,6 +8,7 @@ import {
 } from './welcomeGrove'
 import {
   welcomeAdvance,
+  welcomeFadeOf,
   welcomeNextClip,
   welcomeTurnOver,
   welcomeWalkStart,
@@ -139,6 +140,13 @@ describe('what a walker plays next', () => {
     const stopped: WelcomeWalkState = { ...welcomeWalkStart(), clip: 'WalkStop' }
 
     expect(welcomeNextClip(stopped, WELCOME_GROVE, () => 0.5)).toBeNull()
+  })
+
+  it('holds a finished WalkStop rather than fading the stand in from an empty mixer', () => {
+    expect(welcomeFadeOf('WalkStop', null)).toBe('hold')
+    expect(welcomeFadeOf(null, 'WalkStart')).toBe('rise')
+    expect(welcomeFadeOf('Walk', 'WalkStop')).toBe('cross')
+    expect(welcomeFadeOf('Walk', 'Walk')).toBe('loop')
   })
 
   it('swings round something in the way rather than walking into it', () => {

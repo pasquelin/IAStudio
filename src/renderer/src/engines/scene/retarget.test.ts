@@ -381,6 +381,28 @@ describe('crossing the wire', () => {
     expect(bones.every((bone, index) => bone.parent < index)).toBe(true)
   })
 
+  it('folds an armature Object3D above the first bone into that bone, relative to root', () => {
+    const root = new Object3D()
+    const armature = new Object3D()
+    armature.name = 'Armature'
+    armature.rotation.y = Math.PI / 2
+    armature.position.set(0.1, 0.2, 0.3)
+    const hips = new Bone()
+    hips.name = 'Hips'
+    hips.position.set(0, 1, 0)
+    root.add(armature)
+    armature.add(hips)
+
+    const [bone] = wireBonesOf(root)
+
+    expect(bone?.parent).toBe(-1)
+    expect(bone?.position[0]).toBeCloseTo(0.1, 5)
+    expect(bone?.position[1]).toBeCloseTo(1.2, 5)
+    expect(bone?.position[2]).toBeCloseTo(0.3, 5)
+    expect(bone?.quaternion[1]).toBeCloseTo(Math.sin(Math.PI / 4), 5)
+    expect(bone?.quaternion[3]).toBeCloseTo(Math.cos(Math.PI / 4), 5)
+  })
+
   it('carries a clip out and back unchanged', () => {
     const clip = new AnimationClip('walk', 2, [
       new QuaternionKeyframeTrack('Hips.quaternion', [0, 1], [0, 0, 0, 1, 0, 0, 0, 1]),
