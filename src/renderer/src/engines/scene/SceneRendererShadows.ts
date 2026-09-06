@@ -17,12 +17,11 @@ import { aimLightMarker, holdMarkerSize } from './markerPose'
 import { applyMaterial, applyNegative, applySprite, lightFor, standTarget } from './threeSync'
 import { createMaterialTextures, createSpriteTexture } from './materialTextures'
 import { reportFailure } from '@/services/diagnostics'
-import { limitShadowUpdates, shadowReachOf, tuneShadowMaps } from './shadows'
+import { limitShadowUpdates, shadowReachOf, throwsOf, tuneShadowMaps } from './shadows'
 import { applyWireOverlay } from './sceneView'
 import './bvhPatches'
 import { isNegative } from '../csg/carve'
 import { boundsOf } from './sceneRendererSupport2'
-import { throwsOf } from './sceneRendererSupport3'
 import { SceneRendererModels } from './SceneRendererModels'
 
 export abstract class SceneRendererShadows extends SceneRendererModels {

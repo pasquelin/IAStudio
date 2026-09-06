@@ -3,17 +3,15 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
-  RepeatWrapping,
-  SRGBColorSpace,
   Scene,
   type Box3,
   type Camera,
-  type Texture,
   type BufferGeometry,
   type InstancedMesh,
+  type Texture,
 } from 'three'
 import type { CsgGraph } from '@shared/domain/csg'
-import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
+import type { ClipSource, ModelRef, SceneWorld } from '@shared/domain/scene'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import { copyTransform, sameTransform, type Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
@@ -26,13 +24,12 @@ import { uncutGeometry } from '@/engines/csg/uncutGeometry'
 import type { createGeometryCache } from '@/engines/scene/geometryCache'
 import { createGroundPlane } from '@/engines/scene/groundPlane'
 import { applyFog } from '@/engines/scene/worldBinding'
-import { loadTexture } from '@/engines/scene/textureCache'
-import { applyMaterial, lightFor, standTarget } from '@/engines/scene/threeSync'
+import { lightFor, standTarget } from '@/engines/scene/threeSync'
+import { behavioralGroupingExclusions, type ShadowThrow } from '@/engines/scene/grouping'
 import { applyTransform, standsAt } from '@/engines/scene/pivot'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
 import { runtimeArtifactsOf, runtimeOptimizationOf } from '@/engines/scene/runtimeWorldCompiler'
-import { behavioralGroupingExclusions } from '@/engines/scene/grouping'
 import { drivenNodes } from '@/engines/scene/animationEval'
 import { disposeTree, instanceOf, type ModelSource } from '@/engines/scene/modelCache'
 import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
@@ -40,9 +37,15 @@ import { loadModelAnimations } from './gameSceneClips'
 import { createSceneResources, type SceneResources } from './gameSceneResources'
 import { drapeWorld, type WorldDrape } from './gameSceneWorld'
 import { dressShadows, shadowBoundsOf } from './gameSceneShadows'
-import type { ClipSource } from '@shared/domain/scene'
+import { settleGameFrame, type GameFlush } from './gameSceneFrame'
+import {
+  createDress,
+  materialOf,
+  MESH_COLOUR,
+  wearOcclusionUvs,
+  type Dress,
+} from './gameSceneMaterials'
 import type { PosedClip } from '@game/ports/animationPort'
-import type { ModelRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import {
   applyCompiledModel,
@@ -77,24 +80,15 @@ export type GameScene = {
   releasePose: (nodeId: string) => void
   clipLengthsOf: (nodeId: string) => Readonly<Record<string, number>>
   /**
-   * Settles what a frame left stale before it is drawn — the instanced bounds `place` dirtied,
-   * and which scatter cells the camera reaches. The camera is asked for rather than optional:
-   * a game draws its own way, and the one that forgot to prune drew every cell at every distance.
-   *
-   * Answers whether the scene it hands over is not the one the last frame drew, which is what
-   * decides a depth pass: a set nothing moved in owes no shadow map.
+   * Settles what a frame left stale before it is drawn — instanced bounds, scatter, and the
+   * spatial cells the editor follows from `dressPane`. `cast` is the last `throwsOf`, so a
+   * caster just out of frame still throws onto the ground.
    */
-  flush: (camera: Camera) => boolean
+  flush: (camera: Camera, cast?: ShadowThrow | null) => GameFlush
   /** Poses what the head drives, and answers whether anything moved — see `flush`. */
   seek: (time: Us) => boolean
   dispose: () => void
 }
-
-/**
- * A game reads no CSS token, so the studio's own mesh colour cannot be resolved: this is the
- * value `--sc-mesh` settles on in the shipped theme.
- */
-const MESH_COLOUR = '#b0b4bd'
 
 /** What stands behind a scene whose backdrop is an environment a game does not ship. */
 const NO_ENVIRONMENT = '#9fb2c8'
@@ -150,39 +144,12 @@ export async function buildGameScene(
   })
 }
 
-function createDress(assets: AssetPort, textures: Map<string, Promise<Texture>>) {
-  return (material: MeshStandardMaterial, assetId: string): void => {
-    const url = assets.urlOf({ kind: 'asset', id: assetId })
-    if (url !== null) void wearTexture(material, assetId, url, textures)
-  }
-}
-
-async function wearTexture(
-  material: MeshStandardMaterial,
-  assetId: string,
-  url: string,
-  textures: Map<string, Promise<Texture>>,
-): Promise<void> {
-  try {
-    const held = textures.get(assetId) ?? loadTexture(url)
-    textures.set(assetId, held)
-    const texture = await held
-    texture.colorSpace = SRGBColorSpace
-    texture.wrapS = RepeatWrapping
-    texture.wrapT = RepeatWrapping
-    material.map = texture
-    material.needsUpdate = true
-  } catch {
-    return
-  }
-}
-
 type FinalizeContext = {
   state: SceneState
   optimization: CompiledSceneOptimization | undefined
   scene: Scene
   byEntity: Map<string, Object3D>
-  placements: Map<string, (transform: Transform) => void>
+  placements: Map<string, (transform: Transform) => boolean>
   resources: SceneResources
   drape: WorldDrape
 }
@@ -190,6 +157,7 @@ type FinalizeContext = {
 function finalizeGameScene(context: FinalizeContext): GameScene {
   const { state, optimization, scene, byEntity, placements, resources, drape } = context
   const { staleInstances, animations } = resources
+  const movedObjects = new Set<Object3D>()
   scene.updateMatrixWorld()
   const instances = createOptimizedGroups(scene)
   const excluded = new Set(behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)))
@@ -217,23 +185,26 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     scene.add(ground.object)
   }
 
+  const shadowBounds = shadowBoundsOf(state.nodes, byEntity)
   return {
     scene,
     world: state.world,
     byEntity,
-    shadowBounds: shadowBoundsOf(state.nodes, byEntity),
-    place: (entityId, transform) => placements.get(entityId)?.(transform) ?? false,
-    // 🛑 Once a frame, never per instance: `computeBoundingSphere` walks every slot of the mesh,
-    // so recomputing it inside the placement made a 1 000-instance node quadratic per frame.
-    flush: camera => {
-      const scattered = drape.updateVisibility(camera)
-      for (const mesh of staleInstances) {
-        mesh.instanceMatrix.needsUpdate = true
-        mesh.computeBoundingSphere()
+    shadowBounds,
+    place: (entityId, transform) => {
+      const moved = placements.get(entityId)?.(transform) ?? false
+      if (moved) {
+        const object = byEntity.get(entityId)
+        if (object) movedObjects.add(object)
       }
-      staleInstances.clear()
-      return scattered
+      return moved
     },
+    flush: (camera, cast = null) =>
+      settleGameFrame(
+        { drape, instances, staleInstances, movedObjects, shadowBounds },
+        camera,
+        cast,
+      ),
     seek: time => animations.seek(time),
     pose: (nodeId, clips) => animations.pose(nodeId, clips),
     releasePose: nodeId => animations.release(nodeId),
@@ -304,7 +275,7 @@ async function populateScene(
   placements: Map<string, (transform: Transform) => boolean>,
   compiled: ReadonlyMap<string, CompiledNodeGeometry>,
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
-  dress: (material: MeshStandardMaterial, assetId: string) => void,
+  dress: Dress,
   carve: Carve,
   modelOf: (
     nodeId: string,
@@ -397,7 +368,7 @@ async function objectOf(
   node: SceneNode,
   compiled: CompiledNodeGeometry | undefined,
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
-  dress: (material: MeshStandardMaterial, assetId: string) => void,
+  dress: Dress,
   carve: Carve,
   modelOf: (
     nodeId: string,
@@ -421,7 +392,7 @@ function meshObject(
   node: Extract<SceneNode, { type: 'mesh' }>,
   compiled: CompiledNodeGeometry | undefined,
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
-  dress: (material: MeshStandardMaterial, assetId: string) => void,
+  dress: Dress,
 ): Object3D {
   const descriptors = compiled?.lodGeometries ?? [compiled?.geometry ?? node.geometry]
   const object = renderedGeometry(
@@ -429,6 +400,7 @@ function meshObject(
     materialOf(node.material, dress),
     node.instances,
   )
+  if (node.material.aoMap) wearOcclusionUvs(object)
   return object
 }
 
@@ -436,7 +408,7 @@ function carvedObject(
   node: Extract<SceneNode, { type: 'carved' }>,
   compiled: CompiledNodeGeometry | undefined,
   carve: Carve,
-  dress: (material: MeshStandardMaterial, assetId: string) => void,
+  dress: Dress,
 ): Object3D {
   const geometries =
     compiled?.lodMeshes?.map(geometryOfCompiledMesh) ??
@@ -446,6 +418,7 @@ function carvedObject(
     geometries ?? graphs.map(graph => carve(graph)),
     materialOf(node.material, dress),
   )
+  if (node.material.aoMap) wearOcclusionUvs(object)
   return object
 }
 
@@ -473,14 +446,4 @@ async function carver(): Promise<Carve> {
     // The chunk an export failed to ship. Same hole, one scale up: every solid comes out uncut.
     return uncutGeometry
   }
-}
-
-const materialOf = (
-  descriptor: MaterialDescriptor,
-  dress: (material: MeshStandardMaterial, assetId: string) => void,
-): MeshStandardMaterial => {
-  const material = new MeshStandardMaterial()
-  applyMaterial(material, descriptor, MESH_COLOUR)
-  if (descriptor.map) dress(material, descriptor.map.assetId)
-  return material
 }

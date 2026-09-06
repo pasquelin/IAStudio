@@ -1,8 +1,9 @@
-import { BasicShadowMap, PCFShadowMap, Vector3, type Box3, type Object3D } from 'three'
+import { BasicShadowMap, Object3D, PCFShadowMap, Vector3, type Box3 } from 'three'
 import type { LightShadow, ShadowMapType } from 'three'
 import type { ShadowQuality } from '@shared/domain/scene'
 import type { RenderPolicy } from '@shared/domain/renderPolicy'
 import { isRecord } from '@shared/guards'
+import type { ShadowThrow } from './grouping'
 
 /** The one place the studio's words meet three.js's map types. */
 const MAP_TYPES: Record<ShadowQuality, ShadowMapType> = {
@@ -119,7 +120,7 @@ export function resizeShadowMap(object: Object3D, size: number): void {
 
 /**
  * How wide a shadow frustum has to be to hold a box, under a floor the caller decides — the
- * editor's grid, so an empty scene still gets one; nothing in a game, which has no grid.
+ * editor's grid, and the same number on an exported game so an empty set still gets a frustum.
  *
  * The DIAGONAL, not the width: a sun comes in at an angle, and a frustum cut to the exact width
  * of the set clips the shadow its far corner throws across it.
@@ -127,8 +128,59 @@ export function resizeShadowMap(object: Object3D, size: number): void {
 export function shadowReachOf(bounds: Box3, floor: number): number {
   if (bounds.isEmpty()) return floor
 
-  const size = bounds.getSize(new Vector3())
+  const size = bounds.getSize(REACH)
   return Math.max(Math.max(size.x, size.z) * Math.SQRT2, floor)
+}
+
+/**
+ * Grows a shadow box by what just moved. Answers whether it actually got BIGGER — a fit is owed
+ * only then. A box that stayed put keeps the maps it already holds.
+ */
+export function growShadowBounds(bounds: Box3, objects: Iterable<Object3D>): boolean {
+  const empty = bounds.isEmpty()
+  const minX = bounds.min.x
+  const minY = bounds.min.y
+  const minZ = bounds.min.z
+  const maxX = bounds.max.x
+  const maxY = bounds.max.y
+  const maxZ = bounds.max.z
+  for (const object of objects) bounds.expandByObject(object)
+  if (bounds.isEmpty()) return false
+  if (empty) return true
+  return (
+    bounds.min.x < minX ||
+    bounds.min.y < minY ||
+    bounds.min.z < minZ ||
+    bounds.max.x > maxX ||
+    bounds.max.y > maxY ||
+    bounds.max.z > maxZ
+  )
+}
+
+const AT = new Vector3()
+const FROM = new Vector3()
+const REACH = new Vector3()
+
+/**
+ * Which ways the shadows fall — one direction per casting light, read off its target.
+ * Shared by both engines so a cell just out of frame still throws onto the ground the camera sees.
+ */
+export function throwsOf(
+  lights: readonly Object3D[],
+  bounds: Box3,
+  reach: number,
+): ShadowThrow | null {
+  const along: { x: number; y: number; z: number }[] = []
+  for (const light of lights) {
+    const target: unknown = Reflect.get(light, 'target')
+    if (target instanceof Object3D) target.getWorldPosition(AT)
+    else AT.set(0, 0, 0)
+    const direction = AT.sub(light.getWorldPosition(FROM)).normalize()
+    if (direction.lengthSq() === 0) continue
+    along.push({ x: direction.x, y: direction.y, z: direction.z })
+  }
+  if (along.length === 0) return null
+  return { along, floor: bounds.isEmpty() ? 0 : bounds.min.y, reach }
 }
 
 /** What a tuning pass settled: the lights it framed, and the reach it framed them to. */

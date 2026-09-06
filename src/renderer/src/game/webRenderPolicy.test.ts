@@ -33,7 +33,10 @@ describe('what an exported game pays for an image', () => {
    * level nobody walks in was paying sixty times a second for a picture that does not move.
    */
   it('draws a depth pass on the frames that owe one, never on all of them', () => {
-    expect(code).toContain('renderer.shadowMap.needsUpdate = shadowsStale || changed')
+    expect(code).toContain('frameOwesDraw(settled, shadowsStale, pictureStale)')
+    expect(code).toContain(
+      'renderer.shadowMap.needsUpdate = shadowsStale || settled.zoned || settled.reframed',
+    )
   })
 
   /**
@@ -57,6 +60,13 @@ describe('what an exported game pays for an image', () => {
 
   it('settles the scene BEFORE reading the flag, or a short-circuit skips the pruning', () => {
     const draw = code.slice(code.indexOf('draw: () => {'))
-    expect(draw.indexOf('held.flush(camera)')).toBeLessThan(draw.indexOf('shadowMap.needsUpdate'))
+    expect(draw.indexOf('held.flush(camera, cast)')).toBeLessThan(
+      draw.indexOf('shadowMap.needsUpdate'),
+    )
+  })
+
+  it('keeps the canvas when nothing moved, the editor viewport at rest', () => {
+    const draw = code.slice(code.indexOf('draw: () => {'))
+    expect(draw).toContain('if (!frameOwesDraw(settled, shadowsStale, pictureStale)) return')
   })
 })

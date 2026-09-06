@@ -109,7 +109,7 @@ describe('what a settled frame answers', () => {
 
     built.flush(camera)
 
-    expect(built.flush(camera)).toBe(false)
+    expect(built.flush(camera)).toEqual({ zoned: false, reframed: false })
     built.dispose()
   })
 })

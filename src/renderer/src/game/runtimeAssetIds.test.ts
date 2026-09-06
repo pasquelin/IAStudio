@@ -19,7 +19,7 @@ describe('assets reachable from an exported runtime', () => {
     const material = {
       ...textured.material,
       map: { assetId: 'shared' },
-      normalMap: { assetId: 'unused-normal' },
+      normalMap: { assetId: 'normal' },
     }
     const model = modelNode('model', 'Model')
     const plainSprite = spriteNode()
@@ -41,7 +41,14 @@ describe('assets reachable from an exported runtime', () => {
       },
     }
 
-    expect(runtimeAssetIds(state)).toEqual(['shared', 'model', 'height', 'sound', 'movie'])
+    expect(runtimeAssetIds(state)).toEqual([
+      'shared',
+      'normal',
+      'model',
+      'height',
+      'sound',
+      'movie',
+    ])
   })
 
   it('packages scatter prop assets the same way it packages a heightmap', () => {

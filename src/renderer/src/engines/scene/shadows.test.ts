@@ -21,7 +21,9 @@ import {
   limitShadowUpdates,
   ownedByAnotherNode,
   resizeShadowMap,
+  growShadowBounds,
   shadowReachOf,
+  throwsOf,
   tuneShadowMaps,
 } from './shadows'
 
@@ -327,6 +329,42 @@ describe('shadowReachOf', () => {
 
   it('answers the floor alone for a scene that occupies nothing', () => {
     expect(shadowReachOf(new Box3(), 20)).toBe(20)
+  })
+})
+
+describe('growShadowBounds', () => {
+  it('answers false when the box already holds what moved', () => {
+    const bounds = new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1))
+    const mesh = new Mesh(new BoxGeometry(1, 1, 1))
+
+    expect(growShadowBounds(bounds, [mesh])).toBe(false)
+  })
+
+  it('grows when a caster walks outside the box the maps were cut to', () => {
+    const bounds = new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1))
+    const mesh = new Mesh(new BoxGeometry(1, 1, 1))
+    mesh.position.set(50, 0, 0)
+    mesh.updateMatrixWorld()
+
+    expect(growShadowBounds(bounds, [mesh])).toBe(true)
+    expect(bounds.max.x).toBeGreaterThan(1)
+  })
+})
+
+describe('throwsOf', () => {
+  it('reads the direction a sun throws, off the target both engines stand in the scene', () => {
+    const sun = new DirectionalLight()
+    sun.position.set(0, 4, 0)
+    sun.target.position.set(0, 0, 0)
+    sun.updateMatrixWorld()
+    sun.target.updateMatrixWorld()
+    const bounds = new Box3(new Vector3(-1, 0, -1), new Vector3(1, 2, 1))
+
+    const thrown = throwsOf([sun], bounds, 40)
+
+    expect(thrown?.along).toHaveLength(1)
+    expect(thrown?.along[0]?.y).toBeLessThan(0)
+    expect(thrown?.reach).toBe(40)
   })
 })
 
