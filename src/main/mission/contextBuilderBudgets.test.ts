@@ -63,7 +63,7 @@ describe('AssistantContextBuilder budgets', () => {
       result: { nodes: Array.from({ length: 60 }, (_, at) => ({ id: `node_${at}`, x: at })) },
     })
     const earlier = read('step_earlier')
-    const between = { ...base.step, id: 'step_between', state: 'completed' as const }
+    const between: MissionStep = { ...base.step, id: 'step_between', state: 'completed' }
     const latest = read('step_latest')
     const step = { ...base.step, id: 'step_now', dependsOn: [latest.id] }
     const mission = { ...base.mission, plan: { steps: [earlier, between, latest, step] } }

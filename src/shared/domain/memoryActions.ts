@@ -28,7 +28,6 @@ export const MEMORY_RECALL_ACTION: ActionName = 'memory.recall'
 export const MEMORY_ACTIONS: readonly AssistantAction[] = [
   action({
     name: MEMORY_RECALL_ACTION,
-    reads: true,
     titleKey: 'assistant.actions.memoryRecall.title',
     descriptionKey: 'assistant.actions.memoryRecall.description',
     commitment: 'none',
@@ -49,7 +48,6 @@ export const MEMORY_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'memory.read',
-    reads: true,
     titleKey: 'assistant.actions.memoryRead.title',
     descriptionKey: 'assistant.actions.memoryRead.description',
     commitment: 'none',

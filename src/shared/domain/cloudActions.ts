@@ -26,7 +26,6 @@ const ASSET_IDS: AssistantAction['fields'][number] = {
 export const CLOUD_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'cloud.browseAccountLibrary',
-    reads: true,
     titleKey: 'assistant.actions.cloudBrowseAccountLibrary.title',
     descriptionKey: 'assistant.actions.cloudBrowseAccountLibrary.description',
     commitment: 'none',
@@ -74,7 +73,6 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
      * pulls nothing: a tile of the feed belongs to somebody else until it is fetched.
      */
     name: 'cloud.explorePublicFeed',
-    reads: true,
     titleKey: 'assistant.actions.cloudExplorePublicFeed.title',
     descriptionKey: 'assistant.actions.cloudExplorePublicFeed.description',
     commitment: 'none',
@@ -100,7 +98,6 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'cloud.findSimilarPublished',
-    reads: true,
     titleKey: 'assistant.actions.cloudFindSimilarPublished.title',
     descriptionKey: 'assistant.actions.cloudFindSimilarPublished.description',
     commitment: 'none',
@@ -116,7 +113,7 @@ export const CLOUD_ACTIONS: readonly AssistantAction[] = [
      * choose between pushing and pulling can ask what each would do before either costs a request.
      */
     name: 'cloud.previewSync',
-    reads: true,
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.cloudPreviewSync.title',
     descriptionKey: 'assistant.actions.cloudPreviewSync.description',
     commitment: 'none',

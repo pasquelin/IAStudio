@@ -86,8 +86,6 @@ export type AssistantAction = {
   descriptionKey: string
   /** The floor. What one CALL engages may be higher — see `raises`. */
   commitment: ActionCommitment
-  // Answers and changes nothing. Not `commitment: 'none'`, which `node.remove` declares too.
-  reads?: true
   /**
    * Whether a SECOND identical call, in one turn, can bring anything the first did not. False is
    * for what sets a surface or a session to a NAMED state; everything else is true, reading

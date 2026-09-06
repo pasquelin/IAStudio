@@ -4,6 +4,7 @@ import {
   ACTION_REACHES,
   ACTION_REGISTRY,
   ASSISTANT_MODELS,
+  actionReads,
   type ActionCommitment,
   type ActionName,
   type ActionReach,
@@ -393,52 +394,17 @@ const ALL_ACTIONS: Record<ActionName, true> = {
 }
 
 /**
- * The verbs a read is named with. `reads` is what the mission runtime plans on — a read is
- * followed by planning, a mutation by a check — so a read left unflagged is verified as if it had
- * done something. Blind spot: a read named with a verb missing here is neither flagged nor caught.
+ * A read is what the mission runtime plans after; anything else it verifies. Blind spot: a read
+ * whose verb is outside `ACTION_NAME_INTENTS` and that declares no intent is verified as a
+ * mutation — 82 names say nothing on their own (2026-09-06), and nothing here lists them.
  */
-const READ_VERBS = [
-  'state',
-  'list',
-  'search',
-  'find',
-  'read',
-  'facts',
-  'counts',
-  'report',
-  'docs',
-  'describe',
-  'recall',
-  'status',
-  'log',
-  'diff',
-  'branches',
-  'stashes',
-  'remotes',
-  'errors',
-  'capabilities',
-  'estimate',
-  'analyze',
-  'browse',
-  'explore',
-  'preview',
-  'suggest',
-  'translate',
-  'get',
-  'canUndoRedo',
-  'recent',
-  'wait',
-]
-
 describe('the assistant action registry', () => {
-  it('flags as a read exactly what is named like one', () => {
-    const namedLikeARead = (name: ActionName): boolean =>
-      READ_VERBS.some(verb => (name.split('.')[1] ?? '').startsWith(verb))
-    const flagged = ACTION_REGISTRY.filter(one => one.reads).map(one => one.name)
-    const named = ACTION_REGISTRY.filter(one => namedLikeARead(one.name)).map(one => one.name)
+  it('never flags as a read an action that engages anything', () => {
+    const engaging = ACTION_REGISTRY.filter(actionReads).filter(
+      one => one.commitment !== 'none' || one.raises !== undefined,
+    )
 
-    expect(sorted(flagged)).toEqual(sorted(named))
-    expect(flagged.length).toBeGreaterThan(50)
+    expect(engaging.map(one => one.name)).toEqual([])
   })
 
   it('builds every action the union declares', () => {

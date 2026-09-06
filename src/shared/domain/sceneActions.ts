@@ -29,9 +29,9 @@ function optimizationActions(): AssistantAction[] {
   return [
     {
       ...optimizationAction('optimization.analyze', 'optimizationAnalyze', [nodeIds]),
-      reads: true,
+      capabilities: { intents: ['read'] },
     },
-    { ...optimizationAction('optimization.report', 'optimizationReport', [nodeIds]), reads: true },
+    optimizationAction('optimization.report', 'optimizationReport', [nodeIds]),
     ...simple,
     optimizationAction('optimization.exclude', 'optimizationExclude', [
       { ...nodeIds, required: true },

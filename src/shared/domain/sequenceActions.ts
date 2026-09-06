@@ -53,7 +53,6 @@ const SPEED_MAX = 4
 export const SEQUENCE_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'sequence.state',
-    reads: true,
     titleKey: 'assistant.actions.sequenceState.title',
     descriptionKey: 'assistant.actions.sequenceState.description',
     commitment: 'none',

@@ -18,7 +18,6 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
      * form on screen already holds.
      */
     name: 'models.readGenerationModelFields',
-    reads: true,
     titleKey: 'assistant.actions.modelsReadGenerationModelFields.title',
     descriptionKey: 'assistant.actions.modelsReadGenerationModelFields.description',
     commitment: 'none',
@@ -38,7 +37,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'cost.estimate',
-    reads: true,
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.costEstimate.title',
     descriptionKey: 'assistant.actions.costEstimate.description',
     commitment: 'none',
@@ -51,7 +50,6 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'job.readCloudGeneration',
-    reads: true,
     titleKey: 'assistant.actions.jobReadCloudGeneration.title',
     descriptionKey: 'assistant.actions.jobReadCloudGeneration.description',
     commitment: 'none',
@@ -65,7 +63,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
      * would hand the client a timeout instead of the job it was watching.
      */
     name: 'job.waitForCloudGeneration',
-    reads: true,
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.jobWaitForCloudGeneration.title',
     descriptionKey: 'assistant.actions.jobWaitForCloudGeneration.description',
     commitment: 'none',
@@ -107,7 +105,6 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'usage.report',
-    reads: true,
     titleKey: 'assistant.actions.usageReport.title',
     descriptionKey: 'assistant.actions.usageReport.description',
     commitment: 'none',

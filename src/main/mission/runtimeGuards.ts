@@ -1,4 +1,9 @@
-import { assistantAction, type AssistantAnswer, type AssistantCall } from '@shared/domain/assistant'
+import {
+  actionReads,
+  assistantAction,
+  type AssistantAnswer,
+  type AssistantCall,
+} from '@shared/domain/assistant'
 import type { Mission, MissionStep } from '@shared/domain/mission'
 import type { MissionStepOutcome } from './scheduler'
 
@@ -39,10 +44,15 @@ function completedRounds(mission: Mission, step: MissionStep): readonly (readonl
   return rounds.reverse()
 }
 
+const readsBy = (name: string): boolean => {
+  const action = assistantAction(name)
+  return action !== null && actionReads(action)
+}
+
 const idleKeys = (round: readonly MissionStep[]): ReadonlySet<string> =>
   new Set(
     round.flatMap(one =>
-      one.kind === 'action' && (assistantAction(one.call.action)?.reads || refused(one.result))
+      one.kind === 'action' && (readsBy(one.call.action) || refused(one.result))
         ? [callKey(one.call)]
         : [],
     ),

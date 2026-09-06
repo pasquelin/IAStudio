@@ -1,5 +1,6 @@
 import {
   ACTION_REGISTRY,
+  actionReads,
   assistantAction,
   type ActionResource,
   type AssistantAnswer,
@@ -47,7 +48,8 @@ function dependsOnReturned(
  */
 function nextStepAfter(calls: readonly AssistantCall[]): PlannedStep {
   const descriptors = calls.map(call => assistantAction(call.action))
-  if (descriptors.every(descriptor => descriptor?.reads)) return reasoningStep()
+  if (descriptors.every(descriptor => descriptor !== null && actionReads(descriptor)))
+    return reasoningStep()
   const descriptor = descriptors.at(-1)
   const continues = (descriptor?.produces ?? []).some(resource =>
     ACTION_REGISTRY.some(

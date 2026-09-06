@@ -46,7 +46,6 @@ const SUBJECT: readonly ActionField[] = [
 export const RIG_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'rig.state',
-    reads: true,
     titleKey: 'assistant.actions.rigState.title',
     descriptionKey: 'assistant.actions.rigState.description',
     commitment: 'none',
@@ -184,7 +183,6 @@ export const RIG_ACTIONS: readonly AssistantAction[] = [
      * client that could only lay an asset would be blind to what the model's own file carries.
      */
     name: 'animations.list',
-    reads: true,
     titleKey: 'assistant.actions.animationsList.title',
     descriptionKey: 'assistant.actions.animationsList.description',
     commitment: 'none',

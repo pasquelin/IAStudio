@@ -35,7 +35,6 @@ const KIND: ActionField = {
 export const ASSET_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'assets.searchProjectCatalogue',
-    reads: true,
     titleKey: 'assistant.actions.assetsSearchProjectCatalogue.title',
     descriptionKey: 'assistant.actions.assetsSearchProjectCatalogue.description',
     commitment: 'none',
@@ -73,7 +72,6 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'assets.counts',
-    reads: true,
     titleKey: 'assistant.actions.assetsCounts.title',
     descriptionKey: 'assistant.actions.assetsCounts.description',
     commitment: 'none',
@@ -83,7 +81,6 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'asset.get',
-    reads: true,
     titleKey: 'assistant.actions.assetGet.title',
     descriptionKey: 'assistant.actions.assetGet.description',
     commitment: 'none',
@@ -176,7 +173,6 @@ export const ASSET_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'assets.listMissing',
-    reads: true,
     titleKey: 'assistant.actions.assetsListMissing.title',
     descriptionKey: 'assistant.actions.assetsListMissing.description',
     commitment: 'none',

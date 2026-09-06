@@ -25,7 +25,6 @@ import { LAYER, SIDES } from './canvasActionFields'
 const CANVAS_ACTIONS_FIRST: readonly AssistantAction[] = [
   action({
     name: 'canvas.state',
-    reads: true,
     titleKey: 'assistant.actions.canvasState.title',
     descriptionKey: 'assistant.actions.canvasState.description',
     commitment: 'none',

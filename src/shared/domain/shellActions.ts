@@ -27,7 +27,6 @@ const PANEL: ActionField = {
 export const SHELL_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'auth.state',
-    reads: true,
     titleKey: 'assistant.actions.authState.title',
     descriptionKey: 'assistant.actions.authState.description',
     commitment: 'none',
@@ -37,7 +36,6 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'window.state',
-    reads: true,
     titleKey: 'assistant.actions.windowState.title',
     descriptionKey: 'assistant.actions.windowState.description',
     commitment: 'none',
@@ -73,7 +71,6 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'updates.state',
-    reads: true,
     titleKey: 'assistant.actions.updatesState.title',
     descriptionKey: 'assistant.actions.updatesState.description',
     commitment: 'none',
@@ -83,7 +80,7 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'media.capabilities',
-    reads: true,
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.mediaCapabilities.title',
     descriptionKey: 'assistant.actions.mediaCapabilities.description',
     commitment: 'none',
@@ -106,7 +103,6 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'fonts.list',
-    reads: true,
     titleKey: 'assistant.actions.fontsList.title',
     descriptionKey: 'assistant.actions.fontsList.description',
     commitment: 'none',
@@ -116,7 +112,6 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'favorites.listPinnedRecipes',
-    reads: true,
     titleKey: 'assistant.actions.favoritesListPinnedRecipes.title',
     descriptionKey: 'assistant.actions.favoritesListPinnedRecipes.description',
     commitment: 'none',
@@ -198,7 +193,6 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'dictation.state',
-    reads: true,
     titleKey: 'assistant.actions.dictationState.title',
     descriptionKey: 'assistant.actions.dictationState.description',
     commitment: 'none',
@@ -234,7 +228,6 @@ export const SHELL_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'panels.list',
-    reads: true,
     titleKey: 'assistant.actions.panelsList.title',
     descriptionKey: 'assistant.actions.panelsList.description',
     commitment: 'none',

@@ -14,7 +14,6 @@ import { CONTEXT_BODY_MAX, CONTEXT_TITLE_MAX } from './projectContext'
 export const CONTEXT_ACTIONS: readonly AssistantAction[] = [
   action({
     name: 'context.readProjectCards',
-    reads: true,
     titleKey: 'assistant.actions.contextReadProjectCards.title',
     descriptionKey: 'assistant.actions.contextReadProjectCards.description',
     commitment: 'none',
