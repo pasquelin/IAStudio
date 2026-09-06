@@ -4,8 +4,8 @@ import { type ViewportCamera, type ViewportOutput } from '../viewport/ViewportEn
 import { type Us } from '@shared/domain/time'
 import { framingPlacement, plainVector, type CameraPlacement } from './sceneView'
 import './bvhPatches'
-import { lookedAtBy, boundsOf } from './sceneRendererSupport2'
-import { isFramed } from './framedNodes'
+import { lookedAtBy } from './sceneRendererSupport2'
+import { boundsOf, isFramed } from './framedNodes'
 import type { CameraPreviewRequest } from './sceneRendererSupport2'
 import { SceneRendererSkinning } from './SceneRendererSkinning'
 

@@ -393,6 +393,7 @@ describe('a game written to run with no studio', () => {
       shadowMapSize: 1024,
       quality: 'performance',
       fieldOfView: 50,
+      gridSize: 30,
     } satisfies NonNullable<GameExportRequest['render']>
 
     await writeExportedGame(ports, { ...ASKED, render })

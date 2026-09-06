@@ -17,6 +17,11 @@ export type RenderPolicy = {
   quality: ViewportQuality
   /** Vertical field of view, in degrees. The editor reads it off the same setting. */
   fieldOfView: number
+  /**
+   * Extent of the editor's ground grid, in metres — and the floor under every shadow frustum, so
+   * a game frames a small set exactly as the editor does. A game draws no grid.
+   */
+  gridSize: number
 }
 
 /**
@@ -48,10 +53,11 @@ export const DEFAULT_RENDER_POLICY: RenderPolicy = Object.freeze({
   shadowMapSize: 2048,
   quality: 'balanced',
   fieldOfView: 60,
+  gridSize: 20,
 })
 
 /**
- * The four values, taken off the larger object a viewport reads: an export carries these and not
+ * The values, taken off the larger object a viewport reads: an export carries these and not
  * the twenty settings that only mean something in front of an editor.
  */
 export function renderPolicyOf(view: RenderPolicy): RenderPolicy {
@@ -61,5 +67,6 @@ export function renderPolicyOf(view: RenderPolicy): RenderPolicy {
     shadowMapSize: view.shadowMapSize,
     quality: view.quality,
     fieldOfView: view.fieldOfView,
+    gridSize: view.gridSize,
   }
 }

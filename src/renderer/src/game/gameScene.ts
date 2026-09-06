@@ -8,6 +8,7 @@ import {
   type Camera,
   type BufferGeometry,
   type InstancedMesh,
+  type Light,
   type Texture,
 } from 'three'
 import type { CsgGraph } from '@shared/domain/csg'
@@ -36,8 +37,8 @@ import { geometryOfCompiledMesh } from '@/engines/scene/compiledGeometry'
 import { loadModelAnimations } from './gameSceneClips'
 import { createSceneResources, type SceneResources } from './gameSceneResources'
 import { drapeWorld, type WorldDrape } from './gameSceneWorld'
-import { dressShadows, shadowBoundsOf } from './gameSceneShadows'
-import { settleGameFrame, type GameFlush } from './gameSceneFrame'
+import { dressShadows, lightsOf, shadowBoundsOf } from './gameSceneShadows'
+import { createFrameSettler, type GameFlush } from './gameSceneFrame'
 import {
   createDress,
   materialOf,
@@ -67,6 +68,8 @@ export type GameScene = {
   world: SceneWorld
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
+  /** The scene's own lights — the nodes', as the editor reads them, never one an import brought. */
+  lights: readonly Light[]
   /** What a shadow frustum is cut to — see `shadowBoundsOf`, which leaves the world out. */
   shadowBounds: Box3
   /**
@@ -80,9 +83,9 @@ export type GameScene = {
   releasePose: (nodeId: string) => void
   clipLengthsOf: (nodeId: string) => Readonly<Record<string, number>>
   /**
-   * Settles what a frame left stale before it is drawn — instanced bounds, scatter, and the
-   * spatial cells the editor follows from `dressPane`. `cast` is the last `throwsOf`, so a
-   * caster just out of frame still throws onto the ground.
+   * Settles what a frame left stale — instanced bounds, scatter, the spatial cells the editor
+   * follows from `dressPane`, the maps the moves owe — and answers what the frame owes. `cast` is
+   * the last `throwsOf`, so a caster just out of frame still throws onto the ground.
    */
   flush: (camera: Camera, cast?: ShadowThrow | null) => GameFlush
   /** Poses what the head drives, and answers whether anything moved — see `flush`. */
@@ -116,7 +119,7 @@ export async function buildGameScene(
   const byEntity = new Map<string, Object3D>()
   const placements = new Map<string, (transform: Transform) => boolean>()
   const resources = createSceneResources(state.animation)
-  const dress = createDress(assets, resources.textures)
+  const dress = createDress(assets, resources)
 
   await populateScene(
     state.nodes,
@@ -129,7 +132,7 @@ export async function buildGameScene(
     carve,
     createModelOf(assets, loadModel, resources, clipsForNode),
     modelAssets,
-    resources.staleInstances,
+    resources,
   )
 
   const drape = await drapeWorld(scene, state.world, assets, loadModel, heightmaps)
@@ -156,8 +159,7 @@ type FinalizeContext = {
 
 function finalizeGameScene(context: FinalizeContext): GameScene {
   const { state, optimization, scene, byEntity, placements, resources, drape } = context
-  const { staleInstances, animations } = resources
-  const movedObjects = new Set<Object3D>()
+  const { animations } = resources
   scene.updateMatrixWorld()
   const instances = createOptimizedGroups(scene)
   const excluded = new Set(behavioralGroupingExclusions(state.nodes, drivenNodes(state.animation)))
@@ -185,29 +187,20 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     scene.add(ground.object)
   }
 
+  const lights = lightsOf(state.nodes, byEntity)
   const shadowBounds = shadowBoundsOf(state.nodes, byEntity)
+  const frame = createFrameSettler({ drape, instances, resources, lights, shadowBounds })
   return {
     scene,
     world: state.world,
     byEntity,
+    lights,
     shadowBounds,
-    place: (entityId, transform) => {
-      const moved = placements.get(entityId)?.(transform) ?? false
-      if (moved) {
-        const object = byEntity.get(entityId)
-        if (object) movedObjects.add(object)
-      }
-      return moved
-    },
-    flush: (camera, cast = null) =>
-      settleGameFrame(
-        { drape, instances, staleInstances, movedObjects, shadowBounds },
-        camera,
-        cast,
-      ),
-    seek: time => animations.seek(time),
-    pose: (nodeId, clips) => animations.pose(nodeId, clips),
-    releasePose: nodeId => animations.release(nodeId),
+    place: (entityId, transform) => placements.get(entityId)?.(transform) ?? false,
+    flush: (camera, cast = null) => frame.flush(camera, cast),
+    seek: frame.seek,
+    pose: frame.pose,
+    releasePose: frame.releasePose,
     clipLengthsOf: nodeId => animations.lengthsOf(nodeId),
     dispose: () => {
       animations.clear()
@@ -283,7 +276,7 @@ async function populateScene(
     modelPlan: readonly CompiledModelMesh[] | undefined,
   ) => Promise<Object3D | null>,
   modelAssets: Readonly<Record<string, readonly CompiledModelMesh[]>> | undefined,
-  staleInstances: Set<InstancedMesh>,
+  resources: SceneResources,
 ): Promise<void> {
   const objects = await Promise.all(
     nodes.map(async node =>
@@ -303,9 +296,10 @@ async function populateScene(
       if (standsAt(object, transform)) return false
 
       applyGameTransform(object, transform)
+      resources.movedObjects.add(object)
       return true
     })
-    registerBakedPlacements(node, object, byEntity, placements, staleInstances)
+    registerBakedPlacements(node, object, byEntity, placements, resources.staleInstances)
   }
   for (const node of nodes) {
     const object = byEntity.get(node.id)

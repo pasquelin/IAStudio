@@ -1,3 +1,4 @@
+import { Box3, type Object3D } from 'three'
 import type { SceneNodeType } from './sceneState'
 
 /**
@@ -17,3 +18,10 @@ export const UNFRAMED_NODES: ReadonlySet<SceneNodeType> = new Set<SceneNodeType>
  * whitelist would have quietly stopped framing it.
  */
 export const isFramed = (type: SceneNodeType): boolean => !UNFRAMED_NODES.has(type)
+
+/** An empty box for an empty set, which is how a caller tells "nothing yet" from "nothing there". */
+export function boundsOf(objects: Iterable<Object3D>): Box3 {
+  const bounds = new Box3()
+  for (const object of objects) bounds.expandByObject(object)
+  return bounds
+}

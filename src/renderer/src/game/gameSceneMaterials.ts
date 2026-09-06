@@ -1,9 +1,10 @@
-import { Mesh, MeshStandardMaterial, RepeatWrapping, type Object3D, type Texture } from 'three'
+import { Mesh, MeshStandardMaterial, RepeatWrapping, type Object3D } from 'three'
 import { TEXTURE_SLOTS, type MaterialDescriptor, type TextureSlot } from '@shared/domain/scene'
 import type { AssetPort } from '@game/ports/assetPort'
 import { loadTexture } from '@/engines/scene/textureCache'
 import { spaceOf } from '@/engines/scene/textureBinding'
 import { applyMaterial, giveSecondUvSet } from '@/engines/scene/threeSync'
+import type { SceneResources } from './gameSceneResources'
 
 /**
  * A game reads no CSS token, so the studio's own mesh colour cannot be resolved: this is the
@@ -13,29 +14,31 @@ export const MESH_COLOUR = '#868a91'
 
 export type Dress = (material: MeshStandardMaterial, slot: TextureSlot, assetId: string) => void
 
-export function createDress(assets: AssetPort, textures: Map<string, Promise<Texture>>): Dress {
+export function createDress(assets: AssetPort, resources: SceneResources): Dress {
   return (material, slot, assetId) => {
     const url = assets.urlOf({ kind: 'asset', id: assetId })
-    if (url !== null) void wearTexture(material, slot, assetId, url, textures)
+    if (url !== null) void wearTexture(material, slot, assetId, url, resources)
   }
 }
 
+// The picture lands long after the build, on no signal a step gives: the frame is told here.
 async function wearTexture(
   material: MeshStandardMaterial,
   slot: TextureSlot,
   assetId: string,
   url: string,
-  textures: Map<string, Promise<Texture>>,
+  resources: SceneResources,
 ): Promise<void> {
   try {
-    const held = textures.get(assetId) ?? loadTexture(url)
-    textures.set(assetId, held)
+    const held = resources.textures.get(assetId) ?? loadTexture(url)
+    resources.textures.set(assetId, held)
     const texture = await held
     texture.colorSpace = spaceOf(slot)
     texture.wrapS = RepeatWrapping
     texture.wrapT = RepeatWrapping
     material[slot] = texture
     material.needsUpdate = true
+    resources.textureArrived = true
   } catch {
     return
   }

@@ -10,18 +10,17 @@ import {
 import { type LightDescriptor } from '@shared/domain/scene'
 import { shadowMapSizeFor } from './viewportQuality'
 import { type SceneNode, type SpriteNode } from './sceneState'
-import { isFramed } from './framedNodes'
+import { boundsOf, isFramed } from './framedNodes'
 import { railOf } from './nodeRail'
 import { dressWithRail, type RailColours, helperFor } from './threeFactory'
 import { aimLightMarker, holdMarkerSize } from './markerPose'
 import { applyMaterial, applyNegative, applySprite, lightFor, standTarget } from './threeSync'
 import { createMaterialTextures, createSpriteTexture } from './materialTextures'
 import { reportFailure } from '@/services/diagnostics'
-import { limitShadowUpdates, shadowReachOf, throwsOf, tuneShadowMaps } from './shadows'
+import { limitShadowUpdates, throwsOf, tuneShadowMaps } from './shadows'
 import { applyWireOverlay } from './sceneView'
 import './bvhPatches'
 import { isNegative } from '../csg/carve'
-import { boundsOf } from './sceneRendererSupport2'
 import { SceneRendererModels } from './SceneRendererModels'
 
 export abstract class SceneRendererShadows extends SceneRendererModels {
@@ -97,21 +96,15 @@ export abstract class SceneRendererShadows extends SceneRendererModels {
     for (const [id, object] of this.objects) {
       if (this.applied.get(id)?.type === 'light') lights.push(object)
     }
+    // Measured once for its two readers, and only if a light would read it at all.
+    let bounds: Box3 | null = null
+    const boundsOnce = (): Box3 => (bounds ??= this.heldShadowBounds())
     const tuned = tuneShadowMaps(
       lights,
       shadowMapSizeFor(this.view.quality, this.view.shadowMapSize),
-      () => this.measureShadowReach(),
+      () => ({ bounds: boundsOnce(), floor: this.view.gridSize }),
     )
-    this.shadowThrow = tuned && throwsOf(tuned.framed, this.heldShadowBounds(), tuned.reach)
-  }
-
-  /**
-   * How far the shadows have to reach: what the scene OCCUPIES, never the grid. The grid is a
-   * FLOOR under the answer, so an empty scene still gets a frustum and the first mesh laid down
-   * casts something.
-   */
-  protected measureShadowReach(): number {
-    return shadowReachOf(this.heldShadowBounds(), this.view.gridSize)
+    this.shadowThrow = tuned && throwsOf(tuned.framed, boundsOnce(), tuned.reach)
   }
 
   /**

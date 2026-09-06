@@ -2,7 +2,6 @@ import type { ClipSource } from '@shared/domain/scene'
 import type { AnimationPort } from '@game/ports/animationPort'
 import {
   Box3,
-  Light,
   Mesh,
   MeshBasicMaterial,
   OrthographicCamera,
@@ -15,12 +14,11 @@ import {
 import { clamp } from '@shared/numeric'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
-import { sameCameraView } from '@shared/domain/transform'
+import { sameVector3 } from '@shared/domain/transform'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
 import { applyShadowPolicy, throwsOf, tuneShadowMaps } from '@/engines/scene/shadows'
 import type { ShadowThrow } from '@/engines/scene/grouping'
-import { gameShadowReach } from './gameSceneShadows'
-import { frameOwesDraw } from './gameSceneFrame'
+import { frameOwesDraw, frameOwesShadows } from './gameSceneFrame'
 import { pixelRatioFor, shadowMapSizeFor } from '@/engines/scene/viewportQuality'
 import {
   DEFAULT_RENDER_POLICY,
@@ -65,9 +63,10 @@ const NEAR = 0.1
 export function createWebRender(
   canvas: HTMLCanvasElement,
   assets: AssetPort,
-  /** What the author saw. Absent in an export written before it was carried — see its default. */
-  policy: RenderPolicy = DEFAULT_RENDER_POLICY,
+  /** What the author saw. An older export carries less, or nothing: the defaults fill the rest. */
+  carried: Partial<RenderPolicy> = {},
 ): WebRender {
+  const policy: RenderPolicy = { ...DEFAULT_RENDER_POLICY, ...carried }
   const renderer = new WebGLRenderer({ canvas, antialias: true })
   const gltf = createGltfSource(() => renderer)
   applyShadowPolicy(renderer, policy)
@@ -76,15 +75,10 @@ export function createWebRender(
   const sized = { width: 0, height: 0 }
   let aimed = false
   let held: GameScene | null = null
-  /** Whether the scene the shadow maps hold is no longer the one about to be drawn. */
-  let shadowsStale = true
-  /** A still picture keeps the canvas — the editor's rest. True until the first draw. */
+  /** The canvas differs from the next frame for a reason the scene cannot see: size, lens, veil. */
   let pictureStale = true
   let cast: ShadowThrow | null = null
-  const watched: CameraView = {
-    position: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
-    target: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
-  }
+  const aim = new Vector3()
   /** 🛑 Dynamic: its three.js passes are weight every game without effects would carry for nothing. */
   const chain = composerHold(renderer, assets)
   /** Seconds, off the game's own clock: grain and tape jitter advance on it, never on a wall. */
@@ -114,12 +108,10 @@ export function createWebRender(
 
       held?.dispose()
       held = built
-      shadowsStale = true
       pictureStale = true
+      // A head the scene that left had already seen: the one that arrived has not.
+      sought = null
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
-      // 🛑 Two boxes, not one: a frustum is cut to what DRAWS, a framing to everything there is.
-      // Sharing them spread a single shadow map over a whole scatter layer.
-      if (policy.shadows) cast = tuneSceneShadows(built, policy)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
       if (!aimed) frameAll(camera, built.scene)
@@ -137,20 +129,22 @@ export function createWebRender(
       chain.current()?.sweep([built.world.post])
     },
 
+    // What each pose moved is settled by `flush`, on the frame: a game hands over every entity
+    // of the world on every frame, moving or not, and the scene alone knows which ones stood still.
     place: (placements: readonly EntityPlacement[]) => {
-      // 🛑 On what MOVED, never on the call: a game hands over every entity of the world on every
-      // frame, so arming on `length` redrew every shadow map of a level nobody was walking in.
-      for (const placement of placements) {
-        if (held?.place(placement.entity, placement.transform) === true) shadowsStale = true
-      }
+      if (!held) return
+      for (const placement of placements) held.place(placement.entity, placement.transform)
     },
 
     view: (view: CameraView | null) => {
-      if (!view || sameCameraView(watched, view)) return
+      // Dropped when it has not MOVED, as the studio drops it; `aim` is what it last looked at.
+      if (!view) return
+      if (aimed && sameVector3(camera.position, view.position) && sameVector3(aim, view.target)) {
+        return
+      }
 
       aimed = true
-      watched.position = { ...view.position }
-      watched.target = { ...view.target }
+      aim.set(view.target.x, view.target.y, view.target.z)
       camera.position.set(view.position.x, view.position.y, view.position.z)
       camera.lookAt(view.target.x, view.target.y, view.target.z)
       pictureStale = true
@@ -167,8 +161,6 @@ export function createWebRender(
       pose: (entity, clips) => {
         posed.add(entity)
         held?.pose(entity, clips)
-        shadowsStale = true
-        pictureStale = true
       },
       release: entity => {
         posed.delete(entity)
@@ -190,7 +182,7 @@ export function createWebRender(
 
       sought = time
       played = time / SECOND
-      if (held?.seek(time) === true) shadowsStale = true
+      held?.seek(time)
     },
 
     // 🛑 Only when it CHANGED: `setSize` reassigns `canvas.width`, which reallocates and clears
@@ -215,15 +207,20 @@ export function createWebRender(
       if (!held) return
 
       let settled = held.flush(camera, cast)
+      // On the frame the scene lands, and again whenever a caster or a light left its frustum.
       if (settled.reframed && policy.shadows) {
         cast = tuneSceneShadows(held, policy)
         if (held.flush(camera, cast).zoned) settled = { ...settled, zoned: true }
       }
-      if (!frameOwesDraw(settled, shadowsStale, pictureStale)) return
-      renderer.shadowMap.needsUpdate = shadowsStale || settled.zoned || settled.reframed
+      // 🛑 Nothing changed, nothing drawn — the canvas keeps the frame it shows, as the viewport at
+      // rest. A composed frame is drawn regardless: its grain and jitter run on the clock.
+      const composer = chain.current()
+      const composed = composer !== null && stackDraws(held.world.post)
+      if (!composed && !frameOwesDraw(settled, pictureStale)) return
+      // Which maps the pass draws was settled per light by `flush`; this is whether it runs.
+      renderer.shadowMap.needsUpdate = frameOwesShadows(settled)
       pictureStale = false
-      shadowsStale = false
-      paintHeld(renderer, held, camera, chain.current(), policy, sized, played, veil)
+      paintHeld(renderer, held, camera, composer, policy, sized, played, veil)
     },
 
     dispose: () => {
@@ -245,6 +242,7 @@ export function createWebRender(
  *
  * 🛑 A failure is nothing, never a throw: `show` is awaited by the page's startup, so a chunk that
  * never arrives showed no game at all. The rejected promise is dropped, so a later scene retries.
+ * A composer that lands after `dispose` is dropped too, rather than kept on a renderer that went.
  */
 function composerHold(renderer: WebGLRenderer, assets: AssetPort) {
   let held: PostComposer | null = null
@@ -253,8 +251,12 @@ function composerHold(renderer: WebGLRenderer, assets: AssetPort) {
   return {
     current: () => held,
     load: async (): Promise<void> => {
+      const mine = (loading ??= composerFor(renderer, assets))
       try {
-        held = await (loading ??= composerFor(renderer, assets))
+        const built = await mine
+        // Still the load in flight, or `dispose` ran meanwhile and the renderer it was built on went.
+        if (loading === mine) held = built
+        else built.dispose()
       } catch {
         loading = null
       }
@@ -309,14 +311,15 @@ function paintHeld(
   }
 }
 
-/** Sizes maps and fits frustums, and answers how they throw — what `follow` needs to keep casters. */
+/**
+ * Sizes the maps and fits the frustums of the scene's own lights — as the editor's `tuneShadows`,
+ * floored on the author's grid — and answers how they throw, what `follow` needs to keep casters.
+ */
 function tuneSceneShadows(built: GameScene, policy: RenderPolicy): ShadowThrow | null {
-  const lights: Light[] = []
-  built.scene.traverse(object => {
-    if (object instanceof Light) lights.push(object)
-  })
-  const tuned = tuneShadowMaps(lights, shadowMapSizeFor(policy.quality, policy.shadowMapSize), () =>
-    gameShadowReach(built.shadowBounds),
+  const tuned = tuneShadowMaps(
+    built.lights,
+    shadowMapSizeFor(policy.quality, policy.shadowMapSize),
+    () => ({ bounds: built.shadowBounds, floor: policy.gridSize }),
   )
   return tuned ? throwsOf(tuned.framed, built.shadowBounds, tuned.reach) : null
 }

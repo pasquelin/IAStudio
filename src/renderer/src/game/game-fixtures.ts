@@ -1,4 +1,5 @@
-import type { GeometryDescriptor, ViewDirection } from '@shared/domain/scene'
+import type { GeometryDescriptor, LightDescriptor, ViewDirection } from '@shared/domain/scene'
+import { IDENTITY_TRANSFORM, type Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
@@ -143,4 +144,18 @@ export const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth
 export const sceneOf = (nodes: readonly SceneNode[]): SceneState => ({
   ...EMPTY_SCENE,
   nodes: [...nodes],
+})
+
+/** A white sun aimed at the origin, the key of every lit scene these suites build. */
+export const SUN: LightDescriptor = {
+  kind: 'directional',
+  color: '#ffffff',
+  intensity: 1,
+  target: { x: 0, y: 0, z: 0 },
+}
+
+/** The identity pose, stood at a point. */
+export const at = (x: number, y: number, z: number): Transform => ({
+  ...IDENTITY_TRANSFORM,
+  position: { x, y, z },
 })
