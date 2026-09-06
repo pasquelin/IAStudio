@@ -105,10 +105,10 @@ export type AssetQuery = {
   /**
    * Reaches what the STUDIO owns — the rows under `.resources/`, which no listing may show.
    *
-   * 🛑 Asked for, never deduced. Reading the shape of a query instead had a counter-example each
-   * way: the explorer's own walk names its rows by `paths` and would have revealed them, while
-   * `derivedFrom` names one row by relation and was refused. Two callers pass it: the install of
-   * what the app ships, which looks for the row it filed, and the game export, which gathers by id.
+   * 🛑 For a query that asks by PATH, which is what the install of a shipped resource does. Asking
+   * by `ids` reaches them without this: an id is a capability, unguessable, held only by a document
+   * that already names it. A path is composed by walking the disk — that is how the explorer would
+   * have revealed them, and why it stays filtered.
    */
   hidden?: true
   /** Bounded by `ASSET_SEARCH_LIMIT_MAX`, past which the query is refused rather than cut. */

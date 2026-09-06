@@ -27,7 +27,11 @@ export function searchAssets(
 
 function searchParts(query: AssetQuery): SearchParts {
   const parts: SearchParts = { conditions: ['missing_at IS NULL'], params: [] }
-  if (!query.hidden) parts.conditions.push(NOT_PRIVATE)
+  // An id is a CAPABILITY: it cannot be guessed, and a caller holding one got it from a document
+  // that already names it — a scene resolving the character it was born with, an export gathering
+  // what its scenes cite. A path is composed by walking the disk, which is how the explorer
+  // reaches what it must not show, so `path` and `paths` stay filtered.
+  if (!query.hidden && !query.ids) parts.conditions.push(NOT_PRIVATE)
   scalarFilters(parts, query)
   setFilters(parts, query)
   if (query.generated) parts.conditions.push('model_id IS NOT NULL')

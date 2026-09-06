@@ -62,16 +62,23 @@ describe('the studio’s own resources, in the catalogue', () => {
   })
 
   /**
-   * 🛑 ASKED for, never deduced from the shape of the query. Reading `path`/`ids` as "this caller
-   * means to reach them" had a counter-example each way: the explorer's own walk names its rows by
-   * `paths` and would have revealed them, `derivedFrom` names one by relation and was refused.
+   * 🛑 An id is a CAPABILITY, a path is not. The window holds the character's id because the scene
+   * it opened names it — refusing that answer opened the character's tab titled with a raw uuid,
+   * and had the assistant reply « no asset in this library » about a node the studio itself placed.
    */
-  it('answers a caller that asks for them, and refuses one that merely names them', () => {
+  it('resolves one asked for by id, which is how a scene reads back what it wears', () => {
+    expect(catalog.search({ ids: ['asset_shipped'] })[0]?.id).toBe('asset_shipped')
+  })
+
+  /**
+   * A path is composed by WALKING the disk, which is exactly how the explorer reaches a dot folder
+   * once its eye is open. Only the install of a shipped resource may look one up, and it says so.
+   */
+  it('refuses one merely named by path, unless the caller asks for the hidden', () => {
     const named = { path: '.resources/Materials/GridLarge.png' }
 
     expect(catalog.search(named)).toEqual([])
     expect(catalog.search({ ...named, hidden: true })[0]?.id).toBe('asset_shipped')
-    expect(catalog.search({ ids: ['asset_shipped'], hidden: true })[0]?.id).toBe('asset_shipped')
   })
 
   // `find` takes an id and answers one row: there is nothing to browse, so nothing to hide from.
@@ -116,6 +123,8 @@ describe('the two spellings of a private path', () => {
   it('agrees on every path, in both languages', () => {
     const listed = new Set(catalog.search({ limit: PATHS.length }).flatMap(one => one.path ?? []))
 
-    expect(PATHS.filter(path => !listed.has(path))).toEqual(PATHS.filter(path => isPrivatePath(path)))
+    expect(PATHS.filter(path => !listed.has(path))).toEqual(
+      PATHS.filter(path => isPrivatePath(path)),
+    )
   })
 })
