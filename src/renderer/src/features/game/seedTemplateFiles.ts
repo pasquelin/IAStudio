@@ -1,0 +1,57 @@
+import { orElse } from '@shared/promises'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
+import { INPUT_MAP_EXTENSION } from '@shared/domain/inputMap'
+import { inputMapPreset, type InputPresetId } from '@shared/domain/inputPresets'
+import { documentPathFor } from '@shared/domain/documentName'
+import type { SceneTemplateId } from '@shared/domain/sceneTemplate'
+import { TEMPLATE_SCRIPT_SOURCES, type TemplateScriptId } from '@shared/domain/templateScript'
+import { getBridge } from '@/services/bridge'
+import { useDocuments } from '@/stores/documents'
+
+/** What each template plays with — the script its pilot carries, and the context that drives it. */
+const PLAYED: Partial<Record<SceneTemplateId, { script: TemplateScriptId; map: InputPresetId }>> = {
+  firstPerson: { script: 'player', map: 'character' },
+  thirdPerson: { script: 'player', map: 'character' },
+  topDown: { script: 'player', map: 'character' },
+  car: { script: 'car', map: 'vehicle' },
+  plane: { script: 'plane', map: 'flight' },
+}
+
+/**
+ * The files a scene template lays down beside itself: the control map its actions are bound by,
+ * and the script its pilot carries.
+ *
+ * 🛑 A template SHOWS. The runtime walks and drives off its own contexts with no file at all, so
+ * none of this is needed to PLAY — it is needed to be read, opened and changed.
+ *
+ * Never overwritten: a second scene from the same template joins the files the first laid down,
+ * which is what makes a control map a project's rather than a scene's.
+ */
+export async function seedTemplateFiles(template: SceneTemplateId): Promise<void> {
+  const played = PLAYED[template]
+  const bridge = getBridge()
+  if (!played || !bridge) return
+
+  await Promise.all([writeMap(played.map), writeScript(played.script)])
+  await useDocuments.getState().relist()
+}
+
+async function writeMap(preset: InputPresetId): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+  const folder = await orElse(bridge.project.folderFor('input'), DEFAULT_ROLE_PATHS.input)
+  const path = `${folder}/${preset}${INPUT_MAP_EXTENSION}`
+  const taken = await orElse(bridge.inputMaps.list(), [])
+  if (taken.some(one => one.toLowerCase() === path.toLowerCase())) return
+
+  await bridge.inputMaps.write(path, { ...structuredClone(inputMapPreset(preset)), id: preset })
+}
+
+async function writeScript(script: TemplateScriptId): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+  const folder = await orElse(bridge.project.folderFor('code'), DEFAULT_ROLE_PATHS.code)
+  const path = documentPathFor(script, 'script', folder)
+  // Refused rather than overwritten by the main process, so a second scene keeps the first's work.
+  await bridge.game.writeScript(path, TEMPLATE_SCRIPT_SOURCES[script])
+}

@@ -46,9 +46,35 @@ import {
 } from './nodeFactory'
 import { playgroundNodes } from './playgroundLevel'
 import { postProcessingTemplate } from './postProcessingTemplate'
+import type { TemplateScriptId } from '@shared/domain/templateScript'
 import type { SceneNode, SceneState } from './sceneState'
 
 const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
+
+/**
+ * The same node, carrying the script that will drive it.
+ *
+ * 🛑 A template SHOWS: a player who walks off the built-in contexts alone leaves nothing in the
+ * project to read, and nothing to change. `seedSceneScripts` writes the file this names.
+ */
+function scripted(node: SceneNode, script: TemplateScriptId): SceneNode {
+  return {
+    ...node,
+    components: [
+      ...(node.components ?? []),
+      withComponentField(newComponent('Script'), 'script', script),
+    ],
+  }
+}
+
+/** Its FIRST node carries it — a machine's own body, a module's root. */
+function scriptedFirst(
+  nodes: readonly SceneNode[],
+  script: TemplateScriptId,
+): readonly SceneNode[] {
+  const [first, ...rest] = nodes
+  return first ? [scripted(first, script), ...rest] : nodes
+}
 
 /**
  * The pitch that aims a camera standing at `height`, `distance` away on the +Z axis, at a point
@@ -310,19 +336,27 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // On the start pad, at eye height and facing down the set — where the walk begins the day a
   // controller reads `play`, rather than somewhere on the floor with the court behind it.
   firstPerson: () =>
-    characterView([standIn(), cameraNode(transformAt({ x: 0, y: EYE_HEIGHT, z: STAND_IN_Z }))], {
-      camera: 'firstPerson',
-    }),
+    characterView(
+      [
+        scripted(standIn(), 'player'),
+        cameraNode(transformAt({ x: 0, y: EYE_HEIGHT, z: STAND_IN_Z })),
+      ],
+      { camera: 'firstPerson' },
+    ),
 
   // The camera stands back BEHIND the stand-in, which stands at z = 10 — over the shoulder means
   // both on the same axis, and the aim is at chest height.
   // 🛑 The module and nothing else: it carries the body, the arm and the camera, bound by the
   // TREE. The trio it replaces bound them by name, and a second `Camera` captured the arm.
   thirdPerson: () =>
-    characterView([...playerModuleAt(STAND_IN_Z)], { camera: 'thirdPerson' }, 'Capsule'),
+    characterView(
+      [...scriptedFirst(playerModuleAt(STAND_IN_Z), 'player')],
+      { camera: 'thirdPerson' },
+      'Capsule',
+    ),
 
   topDown: () =>
-    characterView([standIn(), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
+    characterView([scripted(standIn(), 'player'), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
       camera: 'topDown',
       moveSpeed: 6,
     }),
@@ -336,7 +370,7 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
       ...circuitNodes(),
       sun(2.4, { x: 60, y: 70, z: 40 }),
       skyLight(1.3),
-      ...cameraRig(carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW), {
+      ...cameraRig(scriptedCar(), {
         orientation: 'subject',
         length: 8,
         height: 2.4,
@@ -359,7 +393,7 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
       ...mountainNodes(),
       sun(2.6, { x: 40, y: 50, z: 20 }),
       skyLight(1.4),
-      ...planeNodes({ x: 0, y: CRUISE_ALTITUDE, z: 60 }),
+      ...scriptedFirst(planeNodes({ x: 0, y: CRUISE_ALTITUDE, z: 60 }), 'plane'),
       aimedCamera(CRUISE_ALTITUDE + 6, 30, CRUISE_ALTITUDE, 60),
     ],
     world: {
@@ -385,6 +419,12 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
 
 /** Who the set's beacon and drone watch here, the stand-in being nowhere on this template. */
 const CAR_NAME = 'Car'
+
+/** `cameraRig` needs the pair typed as a non-empty tuple, which `scriptedFirst` cannot promise. */
+function scriptedCar(): [SceneNode, ...SceneNode[]] {
+  const [body, ...rest] = carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW)
+  return [scripted(body, 'car'), ...rest]
+}
 
 /** Metres. High enough that a plane finding its speed has room to dip while it does. */
 const CRUISE_ALTITUDE = 120

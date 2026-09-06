@@ -29,7 +29,8 @@ describe('runtime input controls', () => {
       .map(map => map.id)
 
     expect(ids).toEqual(['character', 'vehicle', 'flight'])
-    expect(createInputControls(defaults).maps()[0]).toEqual(defaults[0])
+    // The author's own `jump` kept whole, the actions it predates filled in behind it.
+    expect(createInputControls(defaults).maps()[0]?.actions[0]).toEqual(defaults[0]?.actions[0])
   })
 
   it('rebinds one action without changing the project defaults', () => {
@@ -53,7 +54,9 @@ describe('runtime input controls', () => {
     controls.rebind('character', 'jump', 0, { device: 'keyboard', code: 'Enter' })
     controls.reset()
 
-    expect(controls.maps().find(map => map.id === 'character')).toEqual(defaults[0])
+    expect(controls.maps().find(map => map.id === 'character')?.actions[0]).toEqual(
+      defaults[0]?.actions[0],
+    )
     expect(write).toHaveBeenCalledTimes(2)
   })
 

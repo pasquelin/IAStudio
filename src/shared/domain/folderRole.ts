@@ -23,6 +23,7 @@ export type FolderRole =
   | 'models'
   | 'animations'
   | 'gui'
+  | 'input'
 
 /**
  * The values beside the type: a marker read off disk has to be checked against them.
@@ -42,6 +43,7 @@ export const FOLDER_ROLES: readonly FolderRole[] = [
   'models',
   'animations',
   'gui',
+  'input',
 ]
 
 export function isFolderRole(value: unknown): value is FolderRole {
@@ -74,6 +76,9 @@ export const DEFAULT_ROLE_PATHS: Record<FolderRole, string> = {
   // At the TOP of the project, never under Modelling: an interface belongs to the game rather
   // than to what is modelled, and several scenes share one.
   gui: 'GUI',
+  // Same reason, and one more: a control map is what a PLAYER rebinds, so it outlives the scene
+  // it was written for and every scene of the project reads the same one.
+  input: 'Controls',
 }
 
 /**
@@ -112,6 +117,7 @@ export const WORKSPACE_BY_ROLE: Record<FolderRole, WorkspaceId> = {
   models: '3d',
   animations: '3d',
   gui: '3d',
+  input: '3d',
 }
 
 /**

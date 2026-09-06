@@ -43,7 +43,10 @@ export default defineScript({
   props: { speed: 4 },
 
   onUpdate(self, ctx, dt) {
-    if (ctx.input.down('KeyW')) self.moveBy(0, 0, -self.props.speed * dt)
+    // A named ACTION, never a key code: the same line answers a keyboard and a gamepad, and
+    // rebinding it is a line of a control map rather than of this file.
+    const wanted = ctx.input.axis2('move')
+    self.moveBy(wanted.x * self.props.speed * dt, 0, wanted.y * self.props.speed * dt)
   },
 })
 `

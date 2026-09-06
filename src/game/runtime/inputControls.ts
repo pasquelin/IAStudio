@@ -229,7 +229,8 @@ function accepts(kind: InputActionKind, binding: InputBinding): boolean {
   if (binding.device === 'mouse') return false
   if (kind === 'axis1') {
     if (binding.device === 'keyboard') return binding.axis === undefined
-    return /(?:X|Y|Trigger)$/.test(binding.control)
+    // Anything but a two-way stick — see `inputBindingFits`, which this is held to.
+    return binding.control !== 'leftStick' && binding.control !== 'rightStick'
   }
   if (binding.device === 'keyboard') return binding.axis !== undefined
   return binding.control === 'leftStick' || binding.control === 'rightStick'

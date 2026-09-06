@@ -22,7 +22,8 @@
     "scenes": "Scènes de la section {{label}}",
     "models": "Modèles de la section {{label}}",
     "animations": "Animations de la section {{label}}",
-    "gui": "Interfaces du jeu"
+    "gui": "Interfaces du jeu",
+    "input": "Contrôles du jeu"
   },
   "panels": {
     "assistant": "Assistant",

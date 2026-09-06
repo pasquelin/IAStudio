@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { inputMapOf } from './inputMap'
 import { inputMapPreset, INPUT_PRESET_IDS } from './inputPresets'
 
 describe('input presets', () => {
@@ -28,6 +29,10 @@ describe('input presets', () => {
     expect(bindings('character', 'move')).toContain('keyboard')
     expect(bindings('vehicle', 'accelerate')).toContain('gamepad')
     expect(bindings('flight', 'yaw')).toContain('gamepad')
+  })
+
+  it('writes maps a project can actually SAVE — the rudder is on the shoulders', () => {
+    for (const id of INPUT_PRESET_IDS) expect(() => inputMapOf(inputMapPreset(id))).not.toThrow()
   })
 
   it('leaves the driving and flying contexts ACTIVE, no action name being shared', () => {

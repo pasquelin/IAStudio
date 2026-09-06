@@ -7,7 +7,8 @@ import { clamp } from '../numeric'
 type InputVector = { x: number; y: number }
 
 /** What a map is resolved against: the reading itself, minus what names no binding. */
-export type RawInput = Pick<InputState, 'held' | 'gamepads'> & Partial<Pick<InputState, 'pointer'>>
+export type RawInput = Pick<InputState, 'held' | 'gamepads'> &
+  Partial<Pick<InputState, 'pointer' | 'pressed'>>
 
 export type ResolvedInput = {
   button: (id: string) => boolean

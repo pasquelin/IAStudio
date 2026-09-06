@@ -9,12 +9,19 @@ import { numberOf } from './componentFields'
 import type { InputActions } from './inputActions'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
+import { pooled } from '../pooled'
 import type { Transform } from '@shared/domain/transform'
 import type { Look } from './playView'
 import type { Possessions } from './possessions'
 import type { World } from './world'
 
 const WALKER = COMPONENT_DEFAULTS.CharacterController
+
+const freshMove = (): CharacterMove => ({
+  body: '',
+  wanted: { x: 0, y: 0, z: 0 },
+  facing: null,
+})
 
 /** Metres a second a fall stops getting faster at: past it a step tunnels through a thin floor. */
 const TERMINAL_FALL = 50
@@ -136,7 +143,6 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
       first = null
       // One reading, one answer: asked per walker, this repeated the same question a step.
       const jumped = world.actions.pressed('jump')
-      turnBy(look, world.actions.axis2('look'), dt)
 
       for (const entity of world.entities.withComponent('CharacterController')) {
         const settings = componentOf(entity, 'CharacterController')
@@ -162,11 +168,7 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
         const steered = pace.x !== 0 || pace.z !== 0
         leanInto(walker, pace, rateOf(settings, walker, steered) * dt)
 
-        let move = pool[moves.length]
-        if (!move) {
-          move = { body: '', wanted: { x: 0, y: 0, z: 0 }, facing: null }
-          pool.push(move)
-        }
+        const move = pooled(pool, moves.length, freshMove)
         move.body = entity.id
         move.wanted.x = walker.paceX * dt
         move.wanted.y = walker.wantedY
@@ -175,6 +177,10 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
         moves.push(move)
         byBody.set(entity.id, walker)
       }
+
+      // 🛑 After the walkers, and only if one of them ASKED: a stick turning the shared look
+      // while its owner drives would snap the camera on getting out of the car.
+      if (moves.length > 0) turnBy(look, world.actions.axis2('look'), dt)
 
       return moves
     },

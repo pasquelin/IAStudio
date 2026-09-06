@@ -172,5 +172,18 @@ const DEFAULTS: readonly InputMap[] = [
  */
 export function withDefaultInputMaps(maps: readonly InputMap[]): readonly InputMap[] {
   const declared = new Set(maps.map(map => map.id))
-  return [...maps, ...DEFAULTS.filter(map => !declared.has(map.id))]
+  return [...maps.map(completed), ...DEFAULTS.filter(map => !declared.has(map.id))]
+}
+
+/**
+ * 🛑 Completed action by ACTION: a map written before an action existed — `run`, `handBrake`,
+ * `yaw` — would otherwise leave the built-in controller reading nothing, and a car that drove
+ * yesterday would be dead with no word.
+ */
+function completed(map: InputMap): InputMap {
+  const built = DEFAULTS.find(one => one.id === map.id)
+  if (!built) return map
+  const declared = new Set(map.actions.map(action => action.id))
+  const missing = built.actions.filter(action => !declared.has(action.id))
+  return missing.length === 0 ? map : { ...map, actions: [...map.actions, ...missing] }
 }

@@ -60,7 +60,8 @@ describe('RailNewButton', () => {
 
     const documents = Object.values(useDocuments.getState().documents)
     expect(documents[0]?.workspace).toBe('3d')
-    expect(openDocument).toHaveBeenCalledWith(documents[0])
+    // A scene lays its template's files down before its tab arrives — see `seedTemplateFiles`.
+    await waitFor(() => expect(openDocument).toHaveBeenCalledWith(documents[0]))
   })
 
   /**
