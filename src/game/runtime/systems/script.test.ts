@@ -3,6 +3,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Component, JsonValue } from '@shared/domain/component'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
+import { createIntents } from '../intents'
+
+let intents = createIntents()
 import { loadQuickjsScripts } from '../../host/quickjsScripts'
 import type { ScriptFault } from '../../script/frame'
 import type { ScriptPort } from '../../ports/scriptPort'
@@ -48,6 +51,7 @@ describe('what a game does with its own code', () => {
     body: string,
     components: Component[] = [],
     inputMaps: readonly InputMap[] = [],
+    bodyIdOf: (moduleId: string) => string | null = () => null,
   ): World {
     const world = testWorld({
       ports: testPorts({ script: port }),
@@ -56,6 +60,8 @@ describe('what a game does with its own code', () => {
         createScriptSystem({
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: fault => faults.push(fault),
+          intents,
+          bodyIdOf,
         }),
       ],
     })
@@ -76,6 +82,30 @@ describe('what a game does with its own code', () => {
     frame(world)
 
     expect(world.entities.get('e1')?.transform.position.z).toBeCloseTo(-8 / 60, 6)
+  })
+
+  it('lands a walk in the intents rather than on the transform, so physics still rules', () => {
+    intents = createIntents()
+    const world = running('onStart(self) { self.walk(1, -2) }')
+
+    frame(world)
+
+    expect(intents.walkOf('e1')).toEqual({ x: 1, z: -2 })
+    // 🛑 The node has NOT moved: a walk placed here would go through whatever wall is in the way.
+    expect(world.entities.get('e1')?.transform.position).toEqual({ x: 0, y: 0, z: 0 })
+  })
+
+  /** The script sits on the MODULE in one template and on the capsule itself in two others. */
+  it('reaches the module BODY when the script sits on the module', () => {
+    intents = createIntents()
+    const world = running('onStart(self) { self.jump() }', [], [], id =>
+      id === 'e1' ? 'body' : null,
+    )
+
+    frame(world)
+
+    expect(intents.jumped('body')).toBe(true)
+    expect(intents.jumped('e1')).toBe(false)
   })
 
   it('applies context changes requested by a script', () => {
@@ -231,6 +261,8 @@ describe('what a game does with its own code', () => {
             },
           ],
           onFault: fault => faults.push(fault),
+          intents,
+          bodyIdOf: () => null,
         }),
       ],
     })
@@ -302,6 +334,8 @@ describe('what a script asks about its scenes', () => {
         createScriptSystem({
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: () => {},
+          intents,
+          bodyIdOf: () => null,
         }),
       ],
     })

@@ -47,6 +47,11 @@ export type ScriptIntent =
   | { act: 'move'; entity: string; by: Vector3 }
   | { act: 'place'; entity: string; at: Vector3 }
   | { act: 'turn'; entity: string; to: Vector3 }
+  | { act: 'walk'; entity: string; x: number; z: number }
+  | { act: 'jump'; entity: string }
+  | { act: 'look'; entity: string; yaw: number; pitch: number }
+  | { act: 'drive'; entity: string; throttle: number; steer: number; handBrake: boolean }
+  | { act: 'fly'; entity: string; pitch: number; roll: number; yaw: number; throttle: number }
   | { act: 'field'; entity: string; type: ComponentType; key: string; value: JsonValue }
   | { act: 'spawn'; name: string; at: Vector3 | null }
   | { act: 'destroy'; entity: string }

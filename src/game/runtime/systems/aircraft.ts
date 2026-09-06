@@ -10,6 +10,7 @@ import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
 import type { Transform } from '@shared/domain/transform'
 import { componentOf, type Entity } from '../entity'
+import type { Intents } from '../intents'
 import { PILOT_RANK, type Pilots } from '../pilots'
 import type { System, World } from '../world'
 
@@ -31,6 +32,7 @@ const CHASE_BACK = 30
  */
 export function createAircraftSystem(
   pilots: Pilots,
+  intents: Intents,
   worldOf?: (entity: Entity) => Transform,
 ): System {
   const throttles = new WeakMap<Entity, number>()
@@ -41,6 +43,9 @@ export function createAircraftSystem(
   const settings: Component[] = []
   const axes = restingAxes()
   const stick: Stick = { throttle: 0, pitch: 0, roll: 0, yaw: 0 }
+  // What the sticks said, kept so a plane a script flew does not leave its own values behind for
+  // the next one of the sweep.
+  const sticks: Stick = { throttle: 0, pitch: 0, roll: 0, yaw: 0 }
   const frame: Airframe = { maxThrust: 0, wingArea: 0, stallAngle: 0, agility: 0, drag: 0 }
   const aero: Aero = { force: { x: 0, y: 0, z: 0 }, torque: { x: 0, y: 0, z: 0 } }
 
@@ -85,6 +90,29 @@ export function createAircraftSystem(
     forces.push(push)
   }
 
+  /**
+   * 🛑 The stick is read per PLANE, like a car's pedals: it flies every aeroplane of the scene
+   * alike, and a script flies the one it sits on.
+   */
+  const pushEach = (world: World, lever: number, dt: number): void => {
+    forces.length = 0
+    const motions = world.ports.physics.motion(names)
+    let read = 0
+    for (let index = 0; index < flying.length; index++) {
+      const entity = flying[index]
+      const held = settings[index]
+      if (!entity || !held) continue
+      // `motion` answers in the order it was asked, leaving out what the port does not hold.
+      const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
+      if (!motion) continue
+
+      const own = intents.flyOf(entity.id)
+      if (own) copyStick(stick, own)
+      pushForce(entity, held, motion, own ? own.throttle : lever, dt)
+      if (own) copyStick(stick, sticks)
+    }
+  }
+
   return {
     name: 'aircraft',
     reads: ['Aircraft'],
@@ -100,21 +128,9 @@ export function createAircraftSystem(
       stick.roll = actions.axis('roll')
       stick.yaw = actions.axis('yaw')
       const lever = actions.axis('throttle')
+      copyStick(sticks, stick)
 
-      forces.length = 0
-      const motions = world.ports.physics.motion(names)
-      let read = 0
-      for (let index = 0; index < flying.length; index++) {
-        const entity = flying[index]
-        const held = settings[index]
-        if (!entity || !held) continue
-        // `motion` answers in the order it was asked, leaving out what the port does not hold.
-        const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
-        if (!motion) continue
-
-        pushForce(entity, held, motion, lever, dt)
-      }
-
+      pushEach(world, lever, dt)
       if (forces.length > 0) world.ports.physics.push(forces)
     },
 
@@ -129,6 +145,13 @@ export function createAircraftSystem(
       }
     },
   }
+}
+
+function copyStick(into: Stick, from: Stick): void {
+  into.pitch = from.pitch
+  into.roll = from.roll
+  into.yaw = from.yaw
+  into.throttle = from.throttle
 }
 
 function copyForce(into: BodyForce, body: string, aero: Aero): void {

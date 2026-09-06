@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Transform } from '@shared/domain/transform'
+import { createIntents } from '../intents'
 import { clonedTransform, restingTransform, type Entity } from '../entity'
 import { STEP_SECONDS } from '../gameLoop'
 import { createPossessions } from '../possessions'
@@ -129,7 +130,7 @@ describe('what a held body asks the physics for', () => {
       components: [{ type: 'CharacterController', height: 1.8, radius: 0.3 }],
     })
 
-    const characters = createCharacters(possessions, entity => entity.transform)
+    const characters = createCharacters(possessions, entity => entity.transform, createIntents())
     expect(characters.intents(world, STEP_SECONDS)).toHaveLength(1)
 
     possessions.hold('body')
@@ -153,7 +154,7 @@ describe('a held body against the physics', () => {
       systems: [
         createPhysicsSystem({
           shapeOf: () => null,
-          characters: createCharacters(possessions, entity => entity.transform),
+          characters: createCharacters(possessions, entity => entity.transform, createIntents()),
           possessions,
         }),
       ],

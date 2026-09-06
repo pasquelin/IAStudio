@@ -7,6 +7,7 @@ import type { ScenePlay } from '@shared/domain/scene'
 import { clamp, DEGREES, FULL_TURN, shortWay } from '../numeric'
 import { numberOf } from './componentFields'
 import type { InputActions } from './inputActions'
+import type { Intents } from './intents'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
 import { pooled } from '../pooled'
@@ -106,7 +107,11 @@ export type Characters = {
  * 🛑 One look for the whole world: there is one pointer, so a second controller walks the same
  * heading.
  */
-export function createCharacters(possessions: Possessions, worldOf: Placed): Characters {
+export function createCharacters(
+  possessions: Possessions,
+  worldOf: Placed,
+  intents: Intents,
+): Characters {
   const walkers = new WeakMap<Entity, Walker>()
   const byBody = new Map<string, Walker>()
   // `pool` HOLDS the moves and never shrinks; `moves` is the list handed to the port.
@@ -118,6 +123,19 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
   // Rewritten rather than replaced: this runs on every frame of a drag.
   const dragged = { x: 0, y: 0 }
   let dragging = false
+
+  /**
+   * 🛑 Seeded from the WORLD yaw the author put the body at: a heading is sent to the port in
+   * world, and a walker starting at zero snapped a turned body straight on frame one.
+   */
+  const walkerFor = (entity: Entity): Walker => {
+    const kept = walkers.get(entity)
+    if (kept) return kept
+
+    const made: Walker = { ...FRESH_WALKER, facing: worldOf(entity).rotation.y }
+    walkers.set(entity, made)
+    return made
+  }
 
   return {
     aim: pointer => {
@@ -142,7 +160,7 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
       byBody.clear()
       first = null
       // One reading, one answer: asked per walker, this repeated the same question a step.
-      const jumped = world.actions.pressed('jump')
+      const asked = world.actions.pressed('jump')
 
       for (const entity of world.entities.withComponent('CharacterController')) {
         const settings = componentOf(entity, 'CharacterController')
@@ -154,17 +172,15 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
         // falling sinks through whatever carries it.
         if (possessions.holds(entity.id)) continue
 
-        let walker = walkers.get(entity)
-        if (!walker) {
-          // 🛑 Seeded from the WORLD yaw the author put the body at: a heading is sent to the port
-          // in world, and a walker starting at zero snapped a turned body straight on frame one.
-          walker = { ...FRESH_WALKER, facing: worldOf(entity).rotation.y }
-          walkers.set(entity, walker)
-        }
+        const walker = walkerFor(entity)
+        fallInto(walker, settings, asked || intents.jumped(entity.id), world.play.gravity, dt)
 
-        fallInto(walker, settings, jumped, world.play.gravity, dt)
-
-        paceInto(pace, world.actions, paceOf(settings, world.play, world.actions), look.yaw)
+        paceInto(
+          pace,
+          intents.walkOf(entity.id) ?? world.actions.axis2('move'),
+          paceOf(settings, world.play, world.actions),
+          look.yaw,
+        )
         const steered = pace.x !== 0 || pace.z !== 0
         leanInto(walker, pace, rateOf(settings, walker, steered) * dt)
 
@@ -180,7 +196,7 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
 
       // 🛑 After the walkers, and only if one of them ASKED: a stick turning the shared look
       // while its owner drives would snap the camera on getting out of the car.
-      if (moves.length > 0) turnBy(look, world.actions.axis2('look'), dt)
+      if (moves.length > 0) turnBy(look, turnedBy(world, intents, first), dt)
 
       return moves
     },
@@ -220,6 +236,12 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
   }
 }
 
+/** The look a script asked for, or the stick — the same shape, so one reading serves both. */
+function turnedBy(world: World, intents: Intents, walker: Entity | null): { x: number; y: number } {
+  const asked = walker && intents.lookOf(walker.id)
+  return asked ?? world.actions.axis2('look')
+}
+
 /**
  * Level, and never faster on the diagonal: two keys held would otherwise walk at 1,41 times.
  * 🛑 A stick is NOT normalised back up — a third of the way is a third of the pace, which is the
@@ -227,13 +249,13 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
  */
 function paceInto(
   into: { x: number; z: number },
-  actions: InputActions,
+  wanted: { x: number; y?: number; z?: number },
   speed: number,
   yaw: number,
 ): void {
-  const wanted = actions.axis2('move')
   // Ahead is negative on y, the axis a stick pushed forward reads on — see the `character` preset.
-  const ahead = -wanted.y
+  // A script says it in metres of its own, on z: one shape, read the way its writer meant it.
+  const ahead = wanted.z === undefined ? -(wanted.y ?? 0) : -wanted.z
   const side = wanted.x
   const length = Math.hypot(ahead, side)
   const walk = speed / Math.max(1, length)

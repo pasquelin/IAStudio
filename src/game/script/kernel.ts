@@ -18,8 +18,10 @@ export const KERNEL = String.raw`
   function push(intent) { intents.push(intent) }
 
   function vector(x, y, z) {
-    return { x: Number(x) || 0, y: Number(y) || 0, z: Number(z) || 0 }
+    return { x: number(x), y: number(y), z: number(z) }
   }
+
+  function number(value) { return Number(value) || 0 }
 
   // Mulberry32, the same draw the world uses, run INSIDE the machine: a random that crossed the
   // bridge would cost more than the number it carries, and would not replay.
@@ -109,6 +111,17 @@ export const KERNEL = String.raw`
       },
       has: function (type) { return this.get(type) !== null },
       moveBy: function (x, y, z) { push({ act: 'move', entity: entity.entity, by: vector(x, y, z) }) },
+      walk: function (x, z) { push({ act: 'walk', entity: entity.entity, x: number(x), z: number(z) }) },
+      jump: function () { push({ act: 'jump', entity: entity.entity }) },
+      look: function (yaw, pitch) {
+        push({ act: 'look', entity: entity.entity, yaw: number(yaw), pitch: number(pitch) })
+      },
+      drive: function (throttle, steer, handBrake) {
+        push({ act: 'drive', entity: entity.entity, throttle: number(throttle), steer: number(steer), handBrake: handBrake === true })
+      },
+      fly: function (pitch, roll, yaw, throttle) {
+        push({ act: 'fly', entity: entity.entity, pitch: number(pitch), roll: number(roll), yaw: number(yaw), throttle: number(throttle) })
+      },
       placeAt: function (x, y, z) { push({ act: 'place', entity: entity.entity, at: vector(x, y, z) }) },
       turnTo: function (x, y, z) { push({ act: 'turn', entity: entity.entity, to: vector(x, y, z) }) },
       set: function (type, key, value) {

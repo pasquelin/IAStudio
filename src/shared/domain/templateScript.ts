@@ -19,9 +19,15 @@ export const TEMPLATE_SCRIPT_SOURCES: Record<TemplateScriptId, string> = {
 
 export default defineScript({
   onUpdate(self, ctx, dt) {
-    // The runtime already walks, runs and jumps this body off the \`character\` context.
-    // What goes here is what the game does ON TOP of that.
+    // The runtime already walks, runs and jumps this body off the \`character\` context — you have
+    // to write nothing at all for a keyboard and a gamepad to move it.
     const walking = ctx.input.axis2('move')
+
+    // To DRIVE it yourself, ask the controller rather than placing the node: gravity, slopes and
+    // walls still apply. What you ask replaces the sticks for this step only.
+    //   self.walk(walking.x * 4, walking.y * 4)
+    //   if (ctx.input.button('jump')) self.jump()
+
     if (ctx.input.button('interact')) {
       // Whatever standing in front of something means in your game.
     }
@@ -35,6 +41,10 @@ export default defineScript({
   onUpdate(self, ctx, dt) {
     // The runtime drives, brakes and steers this body off the \`vehicle\` context.
     const throttle = ctx.input.axis('accelerate') - ctx.input.axis('brake')
+
+    // To drive it yourself — this car alone, whatever the other cars of the scene are doing:
+    //   self.drive(throttle, ctx.input.axis('steer'), ctx.input.button('handBrake'))
+
     if (ctx.input.button('exit')) {
       // Getting out is yours to write: the runtime holds the pedals, not the doors.
     }
@@ -48,6 +58,9 @@ export default defineScript({
   onUpdate(self, ctx, dt) {
     // The runtime flies this body off the \`flight\` context — stick, rudder and throttle.
     const throttle = ctx.input.axis('throttle')
+
+    // To fly it yourself, this aeroplane alone:
+    //   self.fly(ctx.input.axis('pitch'), ctx.input.axis('roll'), ctx.input.axis('yaw'), throttle)
   },
 })
 `,

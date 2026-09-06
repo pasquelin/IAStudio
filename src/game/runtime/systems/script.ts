@@ -2,6 +2,7 @@
 
 import type { Component, JsonValue } from '@shared/domain/component'
 import type { GameEvent } from '@shared/domain/gameEvent'
+import type { Intents } from '../intents'
 import type { ScriptModule } from '../../ports/scriptPort'
 import type {
   ScriptEntity,
@@ -20,6 +21,14 @@ export type ScriptSystemOptions = {
   modules: readonly ScriptModule[]
   /** Told what went wrong, with the script and the entity it belongs to. */
   onFault: (fault: ScriptFault) => void
+  /** Where a script's asks LAND — read by the three built-in controllers on the same step. */
+  intents: Intents
+  /**
+   * The walking body of a module, resolved from the TREE — which the runtime does not hold. A
+   * script sits on the module in one template and on the capsule itself in two others, and
+   * `self.walk()` has to reach the body from both.
+   */
+  bodyIdOf: (moduleId: string) => string | null
 }
 
 /** Shared and empty: a frame with nothing kept must not allocate an object per hook. */
@@ -62,8 +71,18 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
   let bindingsRevision = -1
   const onFault = options.onFault
 
+  /** Once, on the first step the system runs: the machine is fed and the bus is listened to. */
+  const loadOnFirstStep = (world: World, port: World['ports']['script']): void => {
+    if (!modules) return
+    port.seed(world.random.state())
+    for (const fault of port.load(modules)) onFault(fault)
+    modules = null
+    // Never dropped by hand: STOP clears the bus whole, which takes this with it.
+    world.events.onAny(event => waiting.push(event))
+  }
+
   const took = (world: World, outcome: ScriptOutcome): void => {
-    apply(world, outcome.intents)
+    apply(world, outcome.intents, options)
     for (const fault of outcome.faults) onFault(fault)
   }
 
@@ -172,13 +191,10 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
 
     fixedUpdate: (world: World, dt: number) => {
       const port = world.ports.script
-      if (modules) {
-        port.seed(world.random.state())
-        for (const fault of port.load(modules)) onFault(fault)
-        modules = null
-        // Never dropped by hand: STOP clears the bus whole, which takes this with it.
-        world.events.onAny(event => waiting.push(event))
-      }
+      loadOnFirstStep(world, port)
+
+      // Before a hook runs: what nobody asks for again hands the sticks back on that very step.
+      options.intents.release()
 
       sync(world)
 
@@ -235,14 +251,46 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
 const EVENT_HOOKS = ['onMessage', 'onCollision', 'onTriggerEnter', 'onTriggerExit']
 
 /** What the scripts asked for, done through the world's own gestures and nothing else. */
-function apply(world: World, intents: readonly ScriptIntent[]): void {
-  for (const intent of intents) {
+function apply(world: World, asks: readonly ScriptIntent[], options: ScriptSystemOptions): void {
+  for (const intent of asks) {
     if (applyWorldIntent(world, intent)) continue
     const entity = world.entities.get(intent.entity)
     if (!entity) continue
+    if (applyBodyIntent(entity, intent, options)) continue
     applyEntityIntent(world, entity, intent)
   }
 }
+
+/**
+ * 🛑 Written into a MAGAZINE, never into a transform: a walk is what the character controller
+ * then has to reconcile with gravity, a slope and whatever wall is in the way. Placing the body
+ * here would put it through that wall, before `physics` ever heard about it.
+ */
+function applyBodyIntent(
+  entity: Entity,
+  intent: ScriptIntent,
+  { intents, bodyIdOf }: ScriptSystemOptions,
+): intent is BodyIntent {
+  if (!BODY_ACTS.some(act => act === intent.act)) return false
+  // The script's own entity when it walks itself, its module's body when it sits on the module.
+  const body = bodyIdOf(entity.id) ?? entity.id
+
+  if (intent.act === 'walk') intents.walk(body, intent.x, intent.z)
+  else if (intent.act === 'jump') intents.jump(body)
+  else if (intent.act === 'look') intents.look(body, intent.yaw, intent.pitch)
+  else if (intent.act === 'drive')
+    intents.drive(body, intent.throttle, intent.steer, intent.handBrake)
+  else if (intent.act === 'fly')
+    intents.fly(body, intent.pitch, intent.roll, intent.yaw, intent.throttle)
+  return true
+}
+
+/** What a script asks of a BODY rather than of a node — see `applyBodyIntent`. */
+type BodyAct = 'walk' | 'jump' | 'look' | 'drive' | 'fly'
+
+const BODY_ACTS: readonly BodyAct[] = ['walk', 'jump', 'look', 'drive', 'fly']
+
+type BodyIntent = Extract<ScriptIntent, { act: BodyAct }>
 
 type WorldIntent = Extract<
   ScriptIntent,
@@ -250,7 +298,7 @@ type WorldIntent = Extract<
     act: 'log' | 'spawn' | 'emit' | 'scene' | 'keep' | 'inputContext' | 'inputRebind' | 'inputReset'
   }
 >
-type EntityIntent = Exclude<ScriptIntent, WorldIntent>
+type EntityIntent = Exclude<ScriptIntent, WorldIntent | { act: BodyAct }>
 
 function applyWorldIntent(world: World, intent: ScriptIntent): intent is WorldIntent {
   if (intent.act === 'log') world.ports.log.write(intent.level, intent.message)

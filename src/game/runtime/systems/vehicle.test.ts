@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import type { JsonValue } from '@shared/domain/component'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { createIntents, type Intents } from '../intents'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { restingTransform } from '../entity'
 import { standardGamepad } from '../input-fixtures'
@@ -12,7 +13,7 @@ import { testPorts, testWorld } from '../world-fixtures'
 import type { World } from '../world'
 import { createVehicleSystem } from './vehicle'
 
-type Bench = { world: World; physics: NotedPhysics; pilots: Pilots }
+type Bench = { world: World; physics: NotedPhysics; pilots: Pilots; intents: Intents }
 
 function bench(
   held: readonly string[] = [],
@@ -21,9 +22,10 @@ function bench(
 ): Bench {
   const physics = notedPhysics()
   const pilots = createPilots()
+  const intents = createIntents()
   const world = testWorld({
     ports: testPorts({ physics }),
-    systems: [createVehicleSystem(pilots)],
+    systems: [createVehicleSystem(pilots, intents)],
   })
   world.entities.add({
     id: 'car',
@@ -38,7 +40,7 @@ function bench(
     pointer: { x: 0, y: 0, down: false },
     gamepads: pad ? [standardGamepad(...pad)] : [],
   })
-  return { world, physics, pilots }
+  return { world, physics, pilots, intents }
 }
 
 /** What the driver was last asked for, after `steps` steps at the scene's own pace. */
@@ -103,6 +105,34 @@ describe('what a car is driven by', () => {
     expect(asked(bench([], {}, [{}, ['leftTrigger']]))?.forward).toBeCloseTo(-1)
   })
 
+  it('drives on what a SCRIPT asks, the pedals saying nothing that step', () => {
+    const one = bench()
+    one.intents.drive('car', 1, 0.5, false)
+
+    const drive = asked(one)
+
+    expect(drive?.forward).toBeCloseTo(1)
+    expect(drive?.steer).toBeCloseTo(0.5)
+  })
+
+  /** 🛑 A script drives the car it SITS ON — the sticks drive every car of the scene alike. */
+  it('leaves a second car on the pedals while a script drives the first', () => {
+    const two = bench(['KeyW'])
+    two.world.entities.add({
+      id: 'other',
+      name: 'other',
+      transform: restingTransform(),
+      components: [newComponent('RigidBody'), newComponent('Vehicle')],
+    })
+    two.intents.drive('car', 0, 0, false)
+
+    two.world.step(STEP_SECONDS)
+    const driven = two.physics.driven
+
+    expect(driven.findLast(one => one.body === 'car')?.forward).toBeCloseTo(0)
+    expect(driven.findLast(one => one.body === 'other')?.forward).toBeCloseTo(1)
+  })
+
   it('holds the car on the hand brake, whatever the pedal says', () => {
     expect(asked(bench(['Space', 'KeyW']))).toMatchObject({ forward: 0, handBrake: 1 })
   })
@@ -151,7 +181,7 @@ describe('what a car is driven by', () => {
     const physics = notedPhysics()
     const world = testWorld({
       ports: testPorts({ physics }),
-      systems: [createVehicleSystem(createPilots())],
+      systems: [createVehicleSystem(createPilots(), createIntents())],
     })
     world.step(STEP_SECONDS)
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import { describe, expect, it } from 'vitest'
+import { createIntents } from '../intents'
 import { STEP_SECONDS } from '../gameLoop'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { DEFAULT_PLAY, type PlayCamera } from '@shared/domain/scene'
@@ -30,7 +31,11 @@ function watching(
     detach: () => {},
   }
   const views: (CameraView | null)[] = []
-  const characters = createCharacters(createPossessions(), entity => entity.transform)
+  const characters = createCharacters(
+    createPossessions(),
+    entity => entity.transform,
+    createIntents(),
+  )
   const world = testWorld({
     play: { ...DEFAULT_PLAY, camera },
     ports: testPorts({

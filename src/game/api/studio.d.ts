@@ -111,6 +111,24 @@ declare module '@studio' {
     /** The component of that type, or `null` when the entity does not carry one. */
     get(type: ComponentName): Component | null
     has(type: ComponentName): boolean
+    /**
+     * Asks the CHARACTER CONTROLLER to walk this body, in metres a second, in world axes — the
+     * `AddMovementInput` of this runtime. Gravity, slopes and walls still apply; `moveBy` places
+     * the node instead, and puts a walker through a wall.
+     *
+     * 🛑 It REPLACES the input map for this body and this step. A script silent on a step hands
+     * the sticks back on it, so calling it every step owns the body and calling it never leaves
+     * the player in charge — and `walk(0, 0)` is how one says « stand still ».
+     */
+    walk(x: number, z: number): void
+    /** Asks for a jump, answered by the same coyote time and buffer a button gets. */
+    jump(): void
+    /** Turns the look, in radians a second — the shape the right stick speaks in. */
+    look(yaw: number, pitch: number): void
+    /** Drives THIS vehicle: throttle and steering from −1 to 1, and the hand brake. */
+    drive(throttle: number, steer: number, handBrake?: boolean): void
+    /** Flies THIS aircraft: stick and rudder from −1 to 1, throttle as a rate. */
+    fly(pitch: number, roll: number, yaw: number, throttle: number): void
     /** Moves BY that much, in metres. Applied at the end of the step. */
     moveBy(x: number, y: number, z: number): void
     /** Moves TO that place, in metres. */

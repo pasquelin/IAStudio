@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import type { JsonValue } from '@shared/domain/component'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { createIntents, type Intents } from '../intents'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { restingTransform } from '../entity'
 import { standardGamepad } from '../input-fixtures'
@@ -12,7 +13,7 @@ import { testPorts, testWorld } from '../world-fixtures'
 import type { World } from '../world'
 import { createAircraftSystem } from './aircraft'
 
-type Bench = { world: World; physics: NotedPhysics; pilots: Pilots }
+type Bench = { world: World; physics: NotedPhysics; pilots: Pilots; intents: Intents }
 
 function bench(
   held: readonly string[] = [],
@@ -21,9 +22,10 @@ function bench(
 ): Bench {
   const physics = notedPhysics()
   const pilots = createPilots()
+  const intents = createIntents()
   const world = testWorld({
     ports: testPorts({ physics }),
-    systems: [createAircraftSystem(pilots)],
+    systems: [createAircraftSystem(pilots, intents)],
   })
   world.entities.add({
     id: 'plane',
@@ -42,7 +44,7 @@ function bench(
     pointer: { x: 0, y: 0, down: false },
     gamepads: pad ? [standardGamepad(...pad)] : [],
   })
-  return { world, physics, pilots }
+  return { world, physics, pilots, intents }
 }
 
 const pushed = (bench: Bench, steps = 1) => {
@@ -59,6 +61,14 @@ describe('what flies', () => {
 
     expect(stick?.torque.x).toBeCloseTo(arrow?.torque.x ?? 0)
     expect(stick?.torque.x).not.toBe(0)
+  })
+
+  it('flies on what a SCRIPT asks, the stick saying nothing that step', () => {
+    const asked = bench()
+    asked.intents.fly('plane', 1, 0, 0, 0)
+    const stick = pushed(bench([], {}, [{ leftY: 1 }]), 1)
+
+    expect(pushed(asked, 1)?.torque.x).toBeCloseTo(stick?.torque.x ?? 0)
   })
 
   it('opens the throttle on the right trigger, which is the lever Shift holds', () => {
@@ -127,7 +137,7 @@ describe('what flies', () => {
     const physics = notedPhysics()
     const world = testWorld({
       ports: testPorts({ physics }),
-      systems: [createAircraftSystem(createPilots())],
+      systems: [createAircraftSystem(createPilots(), createIntents())],
     })
     world.step(STEP_SECONDS)
 

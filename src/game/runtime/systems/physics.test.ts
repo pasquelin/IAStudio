@@ -5,6 +5,7 @@ import { newComponent } from '@shared/domain/componentRegistry'
 import { DEFAULT_PLAY } from '@shared/domain/scene'
 import type { Component } from '@shared/domain/component'
 import type { GameEvent, GameEventName } from '@shared/domain/gameEvent'
+import { createIntents } from '../intents'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { createCharacters } from '../characters'
 import { createPossessions } from '../possessions'
@@ -26,7 +27,7 @@ function bench(over: Partial<WorldOptions> = {}): Bench {
 
   // One `possessions` for both: `characters` reads it, and `settle` reads the same answer.
   const possessions = createPossessions()
-  const characters = createCharacters(possessions, entity => entity.transform)
+  const characters = createCharacters(possessions, entity => entity.transform, createIntents())
   const world = testWorld({
     ports: testPorts({ physics }),
     systems: [createPhysicsSystem({ shapeOf: () => CUBE, characters, possessions })],
@@ -234,7 +235,11 @@ describe('what falls, what blocks and what walks', () => {
    */
   it('asks for a shape once, not once a frame', () => {
     const physics = notedPhysics()
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(
+      createPossessions(),
+      entity => entity.transform,
+      createIntents(),
+    )
     let asked = 0
     const world = testWorld({
       ports: testPorts({ physics }),

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import type { JsonValue } from '@shared/domain/component'
 import { DEFAULT_PLAY } from '@shared/domain/scene'
@@ -9,11 +9,14 @@ import { reading, standardGamepad } from './input-fixtures'
 import type { CharacterMove } from '../ports/physicsPort'
 import { createCharacters, type Characters } from './characters'
 import { restingTransform } from './entity'
+import { createIntents } from './intents'
 import { createPossessions } from './possessions'
 import { testWorld } from './world-fixtures'
 import type { World } from './world'
 
 const STEP = 1 / 60
+
+let intents = createIntents()
 
 const pressing = reading
 
@@ -61,13 +64,78 @@ function cruising(world: World, characters: Characters, steps = 120): CharacterM
 }
 
 describe('what a character asks to move', () => {
+  beforeEach(() => {
+    intents = createIntents()
+  })
+
+  it('walks where a SCRIPT asks, and the stick says nothing that step', () => {
+    const world = walking()
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
+    world.input = holding({ leftY: -1 })
+    intents.walk('walker', 1, 0)
+
+    const move = cruising(world, characters)
+
+    expect(move?.wanted.x).toBeCloseTo(4 * STEP)
+    expect(move?.wanted.z).toBeCloseTo(0)
+  })
+
+  /** 🛑 What a script cannot say by staying quiet, and the whole reason an intent REPLACES. */
+  it('stands still on `walk(0, 0)` though the stick is pushed', () => {
+    const world = walking()
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
+    world.input = holding({ leftY: -1 })
+    intents.walk('walker', 0, 0)
+
+    const move = cruising(world, characters)
+
+    expect(move?.wanted.z).toBeCloseTo(0)
+  })
+
+  it('hands the stick back on the step a script stops asking', () => {
+    const world = walking()
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
+    world.input = holding({ leftY: -1 })
+    intents.walk('walker', 1, 0)
+    cruising(world, characters)
+
+    intents.release()
+    const move = characters.intents(world, STEP)[0]
+
+    expect(move?.wanted.z).toBeLessThan(0)
+  })
+
+  it('jumps on a script asking, with the same ground rule a button answers', () => {
+    const world = walking(10)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
+    intents.jump('walker')
+
+    const inAir = characters.intents(world, STEP)[0]?.wanted.y ?? 0
+    landed(characters, true)
+    const grounded = characters.intents(world, STEP)[0]?.wanted.y ?? 0
+
+    expect(inAir).toBeLessThan(0)
+    expect(grounded).toBeGreaterThan(0)
+  })
+
+  it('turns the look where a script asks, ahead of the stick', () => {
+    const world = walking()
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
+    world.input = holding({ rightX: 1 })
+    intents.look('walker', -1, 0)
+
+    characters.intents(world, STEP)
+
+    expect(characters.look().yaw).toBeGreaterThan(0)
+  })
+
   it('walks on the left stick, with no input map and no script of its own', () => {
     const world = walking()
     world.input = holding({ leftY: -1 })
 
     const move = cruising(
       world,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(move?.wanted.z).toBeCloseTo(-4 * STEP)
@@ -79,7 +147,7 @@ describe('what a character asks to move', () => {
 
     const move = cruising(
       world,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(move?.wanted.z).toBeCloseTo(-2 * STEP)
@@ -91,7 +159,7 @@ describe('what a character asks to move', () => {
 
     const move = cruising(
       world,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(move?.wanted.z).toBeCloseTo(-8 * STEP)
@@ -99,7 +167,7 @@ describe('what a character asks to move', () => {
 
   it('turns the head on the right stick with NO button held, unlike a drag', () => {
     const world = walking()
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     world.input = holding({ rightX: 1 })
 
     characters.intents(world, STEP)
@@ -109,7 +177,7 @@ describe('what a character asks to move', () => {
 
   it('leaves the look alone when the stick rests, so a drag is not fought over', () => {
     const world = walking()
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     world.input = holding({})
 
     characters.intents(world, STEP)
@@ -119,7 +187,7 @@ describe('what a character asks to move', () => {
 
   it('turns the head ONCE a step, whatever a frame asks of the arm after it', () => {
     const world = walking()
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     world.input = holding({ rightX: 1 })
 
     characters.intents(world, STEP)
@@ -135,7 +203,7 @@ describe('what a character asks to move', () => {
 
     const move = cruising(
       world,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(move?.wanted.x).toBeCloseTo(0)
@@ -147,7 +215,7 @@ describe('what a character asks to move', () => {
 
     const move = cruising(
       world,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(move?.wanted.z).toBeCloseTo(-4 * STEP, 6)
@@ -161,7 +229,7 @@ describe('what a character asks to move', () => {
 
     const move = cruising(
       world,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(Math.hypot(move?.wanted.x ?? 0, move?.wanted.z ?? 0)).toBeCloseTo(4 * STEP, 6)
@@ -170,10 +238,11 @@ describe('what a character asks to move', () => {
   it('falls by the pull the SCENE declares, not by one of its own', () => {
     const world = walking(10)
 
-    const [move] = createCharacters(createPossessions(), entity => entity.transform).intents(
-      world,
-      STEP,
-    )
+    const [move] = createCharacters(
+      createPossessions(),
+      entity => entity.transform,
+      intents,
+    ).intents(world, STEP)
 
     expect(move?.wanted.y).toBeCloseTo(-10 * STEP * STEP, 8)
   })
@@ -181,7 +250,7 @@ describe('what a character asks to move', () => {
   /** A jump from nothing is how a character climbs a wall it should not. */
   it('jumps only from the ground', () => {
     const world = walking(10)
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     world.input = pressing({ held: ['Space'] })
 
     const inAir = characters.intents(world, STEP)[0]?.wanted.y ?? 0
@@ -195,7 +264,7 @@ describe('what a character asks to move', () => {
   /** A fall nobody stopped keeps getting faster, and a character standing still would sink. */
   it('stops gaining speed once it is standing on something', () => {
     const world = walking(10)
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
 
     for (let step = 0; step < 60; step++) {
       characters.intents(world, STEP)
@@ -206,7 +275,7 @@ describe('what a character asks to move', () => {
   })
 
   it('turns the heading with a drag, and never past straight up', () => {
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
 
     characters.aim({ x: 100, y: 100, down: true })
     characters.aim({ x: 0, y: -100000, down: true })
@@ -217,7 +286,7 @@ describe('what a character asks to move', () => {
 
   /** 🛑 A frame the accumulator ran no step of must still turn the head — see `Characters.aim`. */
   it('turns the head without a step being run at all', () => {
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
 
     characters.aim({ x: 0, y: 0, down: true })
     characters.aim({ x: 200, y: 0, down: true })
@@ -230,7 +299,7 @@ describe('what a character asks to move', () => {
    * camera does, and the head must not turn twice as far because a scene holds an arm.
    */
   it('turns nothing on a second reading of one frame pointer', () => {
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     characters.aim({ x: 0, y: 0, down: true })
     characters.aim({ x: 200, y: 40, down: true })
     const once = { ...characters.look() }
@@ -248,11 +317,11 @@ describe('what a character asks to move', () => {
 
     const fast = cruising(
       mine,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
     const plain = cruising(
       scene,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(fast?.wanted.z).toBeCloseTo(-9 * STEP, 6)
@@ -263,7 +332,7 @@ describe('what a character asks to move', () => {
   it('leans into its pace instead of reaching it whole on the first frame', () => {
     const world = walking(0, 4, { acceleration: 20 })
     world.input = pressing({ held: ['KeyW'] })
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     standing(world, characters)
 
     const [first] = characters.intents(world, STEP)
@@ -274,7 +343,7 @@ describe('what a character asks to move', () => {
   it('slides to a stop instead of dropping to nothing on the release', () => {
     const world = walking(0, 4, { deceleration: 20 })
     world.input = pressing({ held: ['KeyW'] })
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     cruising(world, characters)
 
     world.input = pressing()
@@ -289,7 +358,7 @@ describe('what a character asks to move', () => {
 
     const move = cruising(
       world,
-      createCharacters(createPossessions(), entity => entity.transform),
+      createCharacters(createPossessions(), entity => entity.transform, intents),
     )
 
     expect(move?.wanted.z).toBeCloseTo(-8 * STEP, 6)
@@ -298,7 +367,7 @@ describe('what a character asks to move', () => {
   it('answers the keys far less readily once its feet have left the ground', () => {
     const world = walking(0, 4, { acceleration: 20, airControl: 0.25 })
     world.input = pressing({ held: ['KeyW'] })
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     standing(world, characters)
     characters.intents(world, STEP)
     landed(characters, false)
@@ -311,7 +380,7 @@ describe('what a character asks to move', () => {
 
   it('still jumps for a moment after walking off an edge', () => {
     const world = walking(10, 4, { coyoteTime: 0.2 })
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     characters.intents(world, STEP)
     landed(characters, true)
     characters.intents(world, STEP)
@@ -325,7 +394,7 @@ describe('what a character asks to move', () => {
 
   it('forgets a jump asked for long after the ground was left', () => {
     const world = walking(10, 4, { coyoteTime: 0.05 })
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     characters.intents(world, STEP)
     landed(characters, false)
     for (let step = 0; step < 10; step++) {
@@ -341,7 +410,7 @@ describe('what a character asks to move', () => {
 
   it('holds a jump asked for just before landing, and spends it on the ground', () => {
     const world = walking(10, 4, { jumpBuffer: 0.2, coyoteTime: 0 })
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
     world.input = pressing({ held: ['Space'] })
     characters.intents(world, STEP)
     landed(characters, false)
@@ -357,7 +426,7 @@ describe('what a character asks to move', () => {
   it('turns the body towards where it walks, at the speed asked for', () => {
     const world = walking(0, 4, { bodyTurnSpeed: 180 })
     world.input = pressing({ held: ['KeyD'] })
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
 
     const [move] = characters.intents(world, STEP)
 
@@ -371,10 +440,11 @@ describe('what a character asks to move', () => {
     const world = walking(0, 4, { bodyTurnSpeed: 180 })
     world.entities.get('walker')!.transform.rotation.y = Math.PI / 2
 
-    const [move] = createCharacters(createPossessions(), entity => entity.transform).intents(
-      world,
-      STEP,
-    )
+    const [move] = createCharacters(
+      createPossessions(),
+      entity => entity.transform,
+      intents,
+    ).intents(world, STEP)
 
     expect(move?.facing).toBeCloseTo(Math.PI / 2, 6)
   })
@@ -383,17 +453,18 @@ describe('what a character asks to move', () => {
     const world = walking(0, 4)
     world.input = pressing({ held: ['KeyD'] })
 
-    const [move] = createCharacters(createPossessions(), entity => entity.transform).intents(
-      world,
-      STEP,
-    )
+    const [move] = createCharacters(
+      createPossessions(),
+      entity => entity.transform,
+      intents,
+    ).intents(world, STEP)
 
     expect(move?.facing).toBeNull()
   })
 
   it('names the first controller as the one the camera watches', () => {
     const world = walking()
-    const characters = createCharacters(createPossessions(), entity => entity.transform)
+    const characters = createCharacters(createPossessions(), entity => entity.transform, intents)
 
     characters.intents(world, STEP)
     const leader = characters.leader()

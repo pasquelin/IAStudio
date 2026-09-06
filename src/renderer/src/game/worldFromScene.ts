@@ -5,6 +5,7 @@ import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domai
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
+import { createIntents } from '@game/runtime/intents'
 import { createPossessions } from '@game/runtime/possessions'
 import { createPossessionSystem } from '@game/runtime/systems/possession'
 import type { Entity } from '@game/runtime/entity'
@@ -90,15 +91,7 @@ export function worldFromScene(
     ...given,
     nodes: bakedRuntimeNodes(withBoundPlayerArm(given.nodes)),
   }
-  const told: ScriptSystemOptions = {
-    modules: scripts.modules ?? [],
-    // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
-    // nowhere is a script that silently never ran — and a caller passing an empty one is how
-    // that happened in the exported game.
-    onFault:
-      scripts.onFault ??
-      (fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`)),
-  }
+  const told = scriptOptionsFor(state, ports, scripts)
   // Filled the line after the world stands, and read only once a step runs: what lets the
   // hierarchy compose a parent where the game has MOVED it — see `createHierarchy`.
   let living: World | null = null
@@ -136,6 +129,29 @@ function installEntities(world: World, state: SceneState): void {
     })
   }
 }
+/**
+ * 🛑 One MODULE resolution for the whole world: `possession` freezes the body a rider carries and
+ * a script's `walk` has to reach that same body — two answers would drift.
+ */
+function scriptOptionsFor(
+  state: SceneState,
+  ports: GameApi,
+  scripts: Partial<ScriptSystemOptions>,
+): ScriptSystemOptions {
+  const played = playerPartsOf(state.nodes)
+  return {
+    modules: scripts.modules ?? [],
+    intents: createIntents(),
+    bodyIdOf: moduleId => (moduleId === played?.module.id ? (played.body?.id ?? null) : null),
+    // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
+    // nowhere is a script that silently never ran — and a caller passing an empty one is how
+    // that happened in the exported game.
+    onFault:
+      scripts.onFault ??
+      (fault => ports.log.write('error', `${fault.script}:${fault.line} — ${fault.message}`)),
+  }
+}
+
 /** Every system the studio runs today. A component gains its behaviour by joining this list. */
 function systemsFor(
   state: SceneState,
@@ -144,13 +160,14 @@ function systemsFor(
   liveOf: (nodeId: string) => Transform | null,
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
 ): readonly System[] {
+  const { intents, bodyIdOf } = scripts
   const byId = new Map(state.nodes.map(node => [node.id, node]))
   const hierarchy = createHierarchy(byId, liveOf)
   const placedAt = (entity: Entity, own: Transform): Transform => hierarchy.worldOf(entity.id, own)
   const systemsForStep1 = () => {
     const placed = (entity: Entity): Transform => placedAt(entity, entity.transform)
     const possessions = createPossessions()
-    const characters = createCharacters(possessions, placed)
+    const characters = createCharacters(possessions, placed, intents)
     const systemsForStep2 = () => {
       const pilots = createPilots()
       const player = playerPartsOf(state.nodes)
@@ -193,12 +210,11 @@ function systemsFor(
           createOrbitSystem(),
           createSpinSystem(),
           createLookAtSystem(),
-          createVehicleSystem(pilots, placed),
-          createAircraftSystem(pilots, placed),
+          createVehicleSystem(pilots, intents, placed),
+          createAircraftSystem(pilots, intents, placed),
           createPossessionSystem({
             possessions,
-            bodyIdOf: moduleId =>
-              moduleId === player?.module.id ? (player.body?.id ?? null) : null,
+            bodyIdOf,
             worldOf: placedAt,
             localOf: (entity, position, rotation) =>
               hierarchy.localOf(entity.id, position, rotation),

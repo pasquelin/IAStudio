@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
 import type { Component, JsonValue } from '@shared/domain/component'
 import { DEFAULT_PLAY } from '@shared/domain/scene'
+import { createIntents } from '../intents'
 import type { PhysicsPort } from '../../ports/physicsPort'
 import { loadJoltPhysics } from '../../host/joltPhysics'
 import {
@@ -49,7 +50,11 @@ function rigged(
     ports: testPorts({ physics: ported ?? physics }),
     systems: [
       createSpringArmSystem({
-        characters: createCharacters(createPossessions(), entity => entity.transform),
+        characters: createCharacters(
+          createPossessions(),
+          entity => entity.transform,
+          createIntents(),
+        ),
         rigs,
         // Flat: every node of these cases hangs from nothing, so its own frame IS the world's.
         worldOf: (_, own) => own,

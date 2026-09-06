@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import { clamp } from '../../numeric'
+import type { Intents } from '../intents'
 import { pooled } from '../../pooled'
 import { axesOfEuler, dot, restingAxes } from '../../physics/quaternion'
 import type { VehicleDrive } from '../../ports/physicsPort'
@@ -19,6 +20,9 @@ const STOPPED = 0.1
 /** Where a chase camera sits behind a car: past its own boot, and low enough to read the road. */
 const CHASE_BACK = 9
 
+/** What the sticks ask of every car alike, before a script speaks for one of them. */
+type Pedals = { asked: number; steer: number; handBrake: number }
+
 /**
  * 🛑 The reverse pedal BRAKES while the car still rolls forward, and only reverses once it has
  * stopped. Handed straight through, a car asked to reverse at speed spins its wheels backwards
@@ -26,6 +30,7 @@ const CHASE_BACK = 9
  */
 export function createVehicleSystem(
   pilots: Pilots,
+  intents: Intents,
   worldOf?: (entity: Entity) => Transform,
 ): System {
   const wanted: VehicleDrive[] = []
@@ -44,12 +49,20 @@ export function createVehicleSystem(
     }
   }
 
-  const drive = (world: World, asked: number, steer: number, handBrake: number): void => {
+  /**
+   * 🛑 The pedals are read PER CAR, not once for the lot: the sticks drive every vehicle of the
+   * scene alike, but a script drives the one it sits on — and driving A must not drive B.
+   */
+  const drive = (world: World, sticks: Pedals): void => {
     wanted.length = 0
     const motions = world.ports.physics.motion(names)
     let read = 0
     for (const entity of driving) {
       const motion = motions[read]?.body === entity.id ? motions[read++] : undefined
+      const own = intents.driveOf(entity.id)
+      const asked = own ? clamp(own.throttle, -1, 1) : sticks.asked
+      const steer = own ? clamp(own.steer, -1, 1) : sticks.steer
+      const handBrake = own ? (own.handBrake ? 1 : 0) : sticks.handBrake
       const turned = (worldOf ? worldOf(entity) : entity.transform).rotation
       const speed = motion ? dot(motion.linear, axesOfEuler(turned, heading).forward) : 0
       const braking = asked * speed < 0 && Math.abs(speed) > STOPPED
@@ -73,10 +86,11 @@ export function createVehicleSystem(
       collect(world)
       if (driving.length === 0) return
       const actions = world.actions
-      const asked = clamp(actions.axis('accelerate') - actions.axis('brake'), -1, 1)
-      const steer = clamp(actions.axis('steer'), -1, 1)
-      const handBrake = actions.button('handBrake') ? 1 : 0
-      drive(world, asked, steer, handBrake)
+      drive(world, {
+        asked: clamp(actions.axis('accelerate') - actions.axis('brake'), -1, 1),
+        steer: clamp(actions.axis('steer'), -1, 1),
+        handBrake: actions.button('handBrake') ? 1 : 0,
+      })
     },
 
     /**
