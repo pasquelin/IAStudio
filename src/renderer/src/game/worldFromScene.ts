@@ -93,7 +93,7 @@ export function worldFromScene(
   }
   // 🛑 Made HERE and handed to both sides: the three controllers read what the scripts write, and
   // a second store would leave the feature dead with every suite green.
-  const intents = createIntents()
+  const intents = createIntents(message => ports.log.write('warn', message))
   const told = scriptOptionsFor(state, ports, scripts, intents)
   // Filled the line after the world stands, and read only once a step runs: what lets the
   // hierarchy compose a parent where the game has MOVED it — see `createHierarchy`.

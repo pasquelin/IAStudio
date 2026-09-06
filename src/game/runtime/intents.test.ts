@@ -55,3 +55,51 @@ describe('what a script asks of a body', () => {
     expect(intents.flyOf('a')).toBeNull()
   })
 })
+
+describe('an ask nobody reads, and an ask written twice', () => {
+  it('names the body a controller never looked at, once', () => {
+    const said: string[] = []
+    const intents = createIntents(message => said.push(message))
+
+    intents.drive('a-walker', 1, 0, false)
+    intents.release()
+    intents.drive('a-walker', 1, 0, false)
+    intents.release()
+
+    expect(said).toHaveLength(1)
+    expect(said[0]).toContain('a-walker')
+    expect(said[0]).toContain('drive')
+  })
+
+  it('says nothing about an ask a controller did read', () => {
+    const said: string[] = []
+    const intents = createIntents(message => said.push(message))
+
+    intents.walk('a-walker', 1, 0)
+    intents.walkOf('a-walker')
+    intents.release()
+
+    expect(said).toEqual([])
+  })
+
+  it('names a body two scripts write on one step, where the last one wins', () => {
+    const said: string[] = []
+    const intents = createIntents(message => said.push(message))
+
+    intents.walk('a-walker', 1, 0)
+    intents.walk('a-walker', -1, 0)
+    intents.walkOf('a-walker')
+
+    expect(intents.walkOf('a-walker')).toEqual({ x: -1, y: 0 })
+    expect(said).toHaveLength(1)
+    expect(said[0]).toContain('two scripts')
+  })
+
+  it('holds its tongue entirely when nobody is watching', () => {
+    const intents = createIntents()
+
+    intents.drive('nobody', 1, 0, false)
+
+    expect(() => intents.release()).not.toThrow()
+  })
+})

@@ -100,8 +100,9 @@ export function createWorld(options: WorldOptions): World {
   const detaching: { entity: Entity; type: ComponentType }[] = []
   let minted = 0
   const inputControls = options.inputControls ?? createInputControls(options.inputMaps ?? [])
-  const contexts = createInputContexts(inputControls.maps())
-  const input = createWorldInput(inputControls, contexts, options.ports.input.state())
+  const saidOfInput = (message: string): void => options.ports.log.write('warn', message)
+  const contexts = createInputContexts(inputControls.maps(), saidOfInput)
+  const input = createWorldInput(inputControls, contexts, options.ports.input.state(), saidOfInput)
 
   // Not `messageOf` of `@shared/guards`: this tree is MIT and ships without the rest, so a VALUE
   // taken from `@shared/` would carry PolyForm code into an exported game.

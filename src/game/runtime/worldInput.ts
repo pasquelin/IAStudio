@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 import type { InputState } from '../ports/inputPort'
-import { createInputActions, type InputActions } from './inputActions'
+import { createInputActions, type InputActions, type InputActionsReport } from './inputActions'
 import type { InputContexts } from './inputContexts'
 import type { InputControls } from './inputControls'
 
@@ -20,8 +20,9 @@ export function createWorldInput(
   controls: InputControls,
   contexts: InputContexts,
   initial: InputState,
+  report?: InputActionsReport,
 ): WorldInput {
-  const actions = createInputActions()
+  const actions = createInputActions(report)
   let held = initial
 
   const take = (state: InputState): void => {

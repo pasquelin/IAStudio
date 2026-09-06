@@ -22,17 +22,35 @@ export type InputActionValue = boolean | number | InputVector
 const ZERO: InputVector = { x: 0, y: 0 }
 export const DEFAULT_GAMEPAD_DEAD_ZONE = 0.15
 
+/**
+ * The active maps, lowest priority first — the order they are folded in, so the highest priority
+ * writes last and wins. SEPARATE from the resolution because it only changes at a rebind or a
+ * push, while the resolution runs once a step: `inputActions` holds this answer between steps.
+ */
+export function orderedInputMaps(
+  maps: readonly InputMap[],
+  active: readonly string[],
+): readonly InputMap[] {
+  const activeIds = new Set(active)
+  // No `slice` before the sort: `filter` already answers a new array.
+  return maps
+    .filter(map => activeIds.has(map.id))
+    .sort((one, other) => one.priority - other.priority)
+}
+
 export function resolveInputMaps(
   maps: readonly InputMap[],
   active: readonly string[],
   input: RawInput,
 ): ResolvedInput {
-  const activeIds = new Set(active)
+  return resolveOrderedInputMaps(orderedInputMaps(maps, active), input)
+}
+
+export function resolveOrderedInputMaps(
+  ordered: readonly InputMap[],
+  input: RawInput,
+): ResolvedInput {
   const values: Record<string, InputActionValue> = {}
-  // No `slice` before the sort: `filter` already answers a new array, and this runs once a step.
-  const ordered = maps
-    .filter(map => activeIds.has(map.id))
-    .sort((one, other) => one.priority - other.priority)
 
   for (const map of ordered) {
     for (const action of map.actions) values[action.id] = valueOf(action, input)
@@ -108,7 +126,7 @@ function axisOf(binding: InputAction['bindings'][number], input: RawInput): numb
     return input.held.includes(binding.code) ? (binding.scale ?? 1) : 0
   if (binding.device !== 'gamepad') return 0
   const raw = (input.gamepads ?? []).reduce(
-    (strongest, gamepad) => stronger(strongest, rawGamepadAxis(gamepad, binding)),
+    (strongest, gamepad) => strongestAcross(strongest, rawGamepadAxis(gamepad, binding)),
     0,
   )
   const deadZone = binding.deadZone ?? DEFAULT_GAMEPAD_DEAD_ZONE
@@ -123,10 +141,10 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
     return binding.axis === 'x' ? { x: value, y: 0 } : { x: 0, y: value }
   }
   if (binding.device !== 'gamepad') return ZERO
-  const vector = (input.gamepads ?? []).reduce<InputVector>(
-    (strongest, gamepad) => strongerVector(strongest, rawGamepadVector(gamepad, binding)),
-    ZERO,
-  )
+  const vector = (input.gamepads ?? []).reduce<InputVector>((strongest, gamepad) => {
+    const raw = rawGamepadVector(gamepad, binding)
+    return { x: strongestAcross(strongest.x, raw.x), y: strongestAcross(strongest.y, raw.y) }
+  }, ZERO)
   const deadZone = binding.deadZone ?? DEFAULT_GAMEPAD_DEAD_ZONE
   return {
     x:
@@ -190,6 +208,17 @@ function buttonIndex(control: string): number | null {
 }
 
 function stronger(one: number, other: number): number {
+  return Math.abs(other) > Math.abs(one) ? other : one
+}
+
+/**
+ * 🛑 Across CONTROLLERS only, where `stronger` kept the first of two equal pushes: two people
+ * pushing a stick the opposite way each cancel out rather than letting the one listed first win.
+ * Not used between a key and a stick — there a held key and a full stick backwards must not
+ * silently answer nothing.
+ */
+function strongestAcross(one: number, other: number): number {
+  if (Math.abs(other) === Math.abs(one)) return one === -other ? 0 : one
   return Math.abs(other) > Math.abs(one) ? other : one
 }
 

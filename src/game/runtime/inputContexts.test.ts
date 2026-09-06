@@ -32,3 +32,30 @@ describe('input contexts', () => {
     expect(contexts.active()).toEqual(['character'])
   })
 })
+
+describe('a context no control map declares', () => {
+  it('is named once, rather than a push doing nothing and saying nothing', () => {
+    const said: string[] = []
+    const contexts = createInputContexts([map('character', 0, true)], message => said.push(message))
+
+    contexts.push('menu')
+    contexts.push('menu')
+
+    expect(contexts.active()).toEqual(['character'])
+    expect(said).toHaveLength(1)
+    expect(said[0]).toContain('menu')
+  })
+
+  it('says nothing at all when the context is declared', () => {
+    const said: string[] = []
+    const contexts = createInputContexts(
+      [map('character', 0, true), map('menu', 100, false)],
+      message => said.push(message),
+    )
+
+    contexts.push('menu')
+
+    expect(contexts.active()).toEqual(['character', 'menu'])
+    expect(said).toEqual([])
+  })
+})
