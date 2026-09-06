@@ -1401,6 +1401,97 @@ computing anything** — a render takes minutes.
 
 ---
 
+## Playing the scene
+
+The **Play** button in the toolbar runs the scene as a game, **in a window of its own**. The
+document is not touched: the game builds a world of its own, and **Stop** throws it away and puts
+the scene back as it was. The game window reads its own keyboard — nothing of the viewport is
+handed over, and the editor behind it does not move.
+
+### The controls, with nothing to set up
+
+A fresh scene plays **on the keyboard and on a gamepad alike**, with no file to create and no
+script to write. A connected gamepad is recognised as soon as a first button is pressed — that is
+the browser's requirement, not the studio's.
+
+**On foot**
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Walk | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrows | left stick |
+| Run | <kbd>Shift</kbd> | left stick click |
+| Look | mouse, **button held** | right stick, **nothing held** |
+| Jump | <kbd>Space</kbd> | ✕ / A |
+| Interact | <kbd>E</kbd> | ▢ / X |
+
+**Driving**
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Accelerate | <kbd>W</kbd> or <kbd>↑</kbd> | right trigger |
+| Brake, reverse | <kbd>S</kbd> or <kbd>↓</kbd> | left trigger |
+| Steer | <kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> | left stick |
+| Hand brake | <kbd>Space</kbd> | ✕ / A |
+| Get out | <kbd>F</kbd> | ▢ / X |
+
+**Flying**
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Pitch | <kbd>↓</kbd> noses up, <kbd>↑</kbd> noses down | left stick, **pulled back to climb** |
+| Roll | <kbd>A</kbd> <kbd>D</kbd> | left stick |
+| Yaw | <kbd>Q</kbd> <kbd>E</kbd> | shoulder buttons |
+| Throttle | <kbd>Shift</kbd> opens, <kbd>Ctrl</kbd> closes | triggers |
+
+> **A stick is analogue, a key is not.** A stick held halfway walks at half the pace; a key knows
+> nothing but zero and everything. It is the one thing a gamepad can say that a keyboard cannot.
+
+> **An aircraft throttle is a lever, not a pedal.** It is pushed, pulled, and stays where it was
+> left — an engine that drops to idle the moment a finger lifts is not something anyone can fly.
+
+### Two settings not to confuse
+
+The setting **Settings ▸ Controls ▸ Navigate the studio with a gamepad** concerns **the studio's
+interface only**: it lets a connected gamepad move the focus, confirm and go back through panels
+and dialogs. It stays off by default, so that a game does not move the editor behind it — **and it
+has no bearing on the game**, which listens to the gamepad either way.
+
+The **Detected controls** list on the same page says what the machine sees. A gamepad missing from
+it has not sent a first press yet.
+
+### Changing the controls
+
+The controls above are a **starting point**, not a limit. A project **control map** replaces them,
+context by context: the **New control map** button in the Explorer creates one from any of the
+five standard starting points — *studio*, *character*, *vehicle*, *flight*, *menu*.
+
+A map names **actions** — `move`, `look`, `jump`, `run`, `interact` for a character — and says
+which keys, sticks and buttons reach them. **What the project's map declares wins; what it leaves
+out keeps the default behaviour.** A project with no map at all therefore plays exactly as the
+tables above.
+
+A context also carries a **priority** and an **Active at startup** flag. The *character*, *vehicle*
+and *flight* contexts are active from the start — no action name is shared between them, so they
+do not tread on one another. The *menu* context **primes** over the rest: it is for a script to
+push when a menu opens, and to drop when it closes.
+
+A script reads those same actions by name, never a key:
+
+```ts
+import { defineScript } from '@studio'
+
+export default defineScript({
+  onUpdate(self, ctx, dt) {
+    const walk = ctx.input.axis2('move')
+    const running = ctx.input.button('run')
+  },
+})
+```
+
+The same script then answers the keyboard **and** the gamepad, without knowing which one spoke.
+
+---
+
 ## Optimising and exporting a game
 
 The scene you edit remains the authoring world: every tree, prop and scripted object keeps its
