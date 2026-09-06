@@ -14,7 +14,8 @@ import { clamp } from '@shared/numeric'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
-import { applyShadowPolicy, shadowReachOf, tuneShadowMaps } from '@/engines/scene/shadows'
+import { applyShadowPolicy, tuneShadowMaps } from '@/engines/scene/shadows'
+import { gameShadowReach } from './gameSceneShadows'
 import { pixelRatioFor, shadowMapSizeFor } from '@/engines/scene/viewportQuality'
 import {
   DEFAULT_RENDER_POLICY,
@@ -260,9 +261,8 @@ function tuneSceneShadows(built: GameScene, policy: RenderPolicy): void {
   built.scene.traverse(object => {
     if (object instanceof Light) lights.push(object)
   })
-  // No grid to fall back on, unlike the editor: a game with nothing in it shades nothing.
   tuneShadowMaps(lights, shadowMapSizeFor(policy.quality, policy.shadowMapSize), () =>
-    shadowReachOf(built.shadowBounds, 0),
+    gameShadowReach(built.shadowBounds),
   )
 }
 
