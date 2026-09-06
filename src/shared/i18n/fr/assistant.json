@@ -819,7 +819,7 @@
       },
       "keyWritePoseKeys": {
         "title": "Poser une clé sur un sujet",
-        "description": "Écrit une clé sur chaque canal d’un objet ou d’un os, à l’instant donné ou à la tête de lecture, en tenant la pose où il se trouve. Les canaux qui manquent sont ouverts au passage, puisque exiger une piste d’abord serait réclamer ce qui se tient déjà dans la vue."
+        "description": "Écrit une clé sur chaque canal d’un objet ou d’un os, à l’instant donné ou à la tête de lecture, en tenant la pose affichée à la tête de lecture — celle que node.transform a posée. Sur un objet animé, node.transform pose une clé à la tête de lecture elle-même ; pour poser un autre instant, y écrire la clé d’abord, puis placer l’objet avec la tête dessus. Les canaux qui manquent sont ouverts au passage, puisque exiger une piste d’abord serait réclamer ce qui se tient déjà dans la vue."
       },
       "keyRemoveSubjectKeys": {
         "title": "Retirer les clés d’un sujet",

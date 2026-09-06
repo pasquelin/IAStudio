@@ -819,7 +819,7 @@
       },
       "keyWritePoseKeys": {
         "title": "Key a subject",
-        "description": "Writes a key on every channel of an object or a bone, at the instant given or at the playhead, holding the pose it stands in. The channels it lacks are opened on the way, since demanding a track first would be asking for the thing already standing in the viewport."
+        "description": "Writes a key on every channel of an object or a bone, at the instant given or at the playhead, holding the pose shown at the playhead — the one node.transform placed. On an animated object node.transform keys the playhead itself, so to pose another instant: write the key there first, then place the object with the playhead on it. The channels it lacks are opened on the way, since demanding a track first would be asking for the thing already standing in the viewport."
       },
       "keyRemoveSubjectKeys": {
         "title": "Take a subject’s keys off",
