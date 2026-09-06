@@ -18,7 +18,7 @@ export type Embedder = {
   embed: (texts: readonly string[], signal?: AbortSignal) => Promise<readonly Float32Array[]>
   /** One question. An empty vector where no model can answer — see `similarity`. */
   embedQuery: (text: string) => Promise<Float32Array>
-  /** Lets go of the process — within `graceMs` if it will not dispose. The next call opens another one. */
+  /** Lets go of the process, killing it after `graceMs` if it will not dispose. */
   close: (graceMs?: number) => Promise<void>
 }
 

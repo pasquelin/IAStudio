@@ -30,7 +30,6 @@ function stand(
   const opened: Opened[] = []
   const troubles: string[] = []
   const closedWith: (number | undefined)[] = []
-  let closes = 0
   let current = modelId
   let fire: () => void = () => {}
 
@@ -49,7 +48,6 @@ function stand(
       embed: async texts => texts.map(() => new Float32Array([1])),
       embedQuery: async () => new Float32Array([1]),
       close: async graceMs => {
-        closes++
         closedWith.push(graceMs)
         if (slowClose) await new Promise<void>(resolve => parkedCloses.push(resolve))
       },
@@ -67,7 +65,7 @@ function stand(
     settleClose: () => {
       for (const letGo of parkedCloses.splice(0)) letGo()
     },
-    closed: () => closes,
+    closed: () => closedWith.length,
     closedWith: () => closedWith,
     idle: () => fire(),
     chose: next => {

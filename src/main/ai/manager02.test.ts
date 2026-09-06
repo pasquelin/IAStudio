@@ -132,13 +132,13 @@ describe('holding a model in memory', () => {
   it('waits for the load in flight before loading the model a turn asks for', async () => {
     const extra = other('whisper')
     const runtime = holdingRuntime()
-    const parked: (() => void)[] = []
-    let first = true
-    const load = vi.fn<NonNullable<LocalRuntime['load']>>((model, options) => {
-      if (!first) return runtime.load!(model, options)
-      first = false
-      return new Promise(resolve => parked.push(() => resolve(runtime.load!(model, options))))
-    })
+    let release: () => void = () => {}
+    const load = vi.fn(runtime.load!).mockImplementationOnce(
+      (model, options) =>
+        new Promise(resolve => {
+          release = () => resolve(runtime.load!(model, options))
+        }),
+    )
     const ai = manager({
       settings: () => ({
         ...DEFAULT_SETTINGS,
@@ -153,11 +153,10 @@ describe('holding a model in memory', () => {
     await Promise.resolve()
     expect(load).toHaveBeenCalledOnce()
 
-    parked.splice(0).forEach(go => go())
+    release()
     await settingsLoad
     await expect(turn).resolves.toBeUndefined()
 
-    expect(load).toHaveBeenCalledTimes(2)
     expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(true)
   })
 

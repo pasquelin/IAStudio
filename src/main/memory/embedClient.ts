@@ -22,7 +22,7 @@ export type EmbedClient = {
   embed: (texts: readonly string[], signal?: AbortSignal) => Promise<readonly Float32Array[]>
   /** One question. The other prefix, and the only difference — see `EmbedLoad`. */
   embedQuery: (text: string) => Promise<Float32Array>
-  /** Asks the worker to dispose its weights, then kills it — after `graceMs` if it never answers. */
+  /** Disposes the worker's weights, then kills it — after `graceMs` if it never answers. */
   close: (graceMs?: number) => Promise<void>
 }
 

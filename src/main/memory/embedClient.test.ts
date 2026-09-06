@@ -178,35 +178,22 @@ describe('when the process is gone', () => {
     expect(fake.killed()).toBe(1)
   })
 
-  it('kills the process when graceful disposal never answers', async () => {
+  // The default grace, and the shorter one the quit asks for — a wedged worker is not worth
+  // keeping the window on screen 15 s.
+  it.each([
+    ['its default grace', undefined, CLOSE_GRACE_MS],
+    ['the shorter grace it was given', 2_000, 2_000],
+  ])('kills the process after %s when disposal never answers', async (_, given, graceMs) => {
     vi.useFakeTimers()
     try {
       const fake = fakePort()
       const client = createEmbedClient(fake.port)
 
-      const closing = client.close()
+      const closing = client.close(given)
       await vi.advanceTimersByTimeAsync(0)
       expect(fake.asked[0]).toMatchObject({ op: 'close' })
 
-      await vi.advanceTimersByTimeAsync(CLOSE_GRACE_MS - 1)
-      expect(fake.killed()).toBe(0)
-      await vi.advanceTimersByTimeAsync(1)
-      expect(fake.killed()).toBe(1)
-      await closing
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  // What the quit asks for: a wedged worker is not worth keeping the window on screen 15 s.
-  it('kills at the shorter grace it was given', async () => {
-    vi.useFakeTimers()
-    try {
-      const fake = fakePort()
-      const client = createEmbedClient(fake.port)
-
-      const closing = client.close(2_000)
-      await vi.advanceTimersByTimeAsync(1_999)
+      await vi.advanceTimersByTimeAsync(graceMs - 1)
       expect(fake.killed()).toBe(0)
       await vi.advanceTimersByTimeAsync(1)
       expect(fake.killed()).toBe(1)
