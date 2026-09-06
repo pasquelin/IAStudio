@@ -55,6 +55,7 @@ export function createAnimatorSystem(options: AnimatorSystemOptions): System {
   // looked up sixty times a second, for ever, on a body that will never play anything.
   const missed = new WeakMap<Entity, string>()
   const targets = createTargets()
+  let listening = false
 
   return {
     name: 'animator',
@@ -62,6 +63,15 @@ export function createAnimatorSystem(options: AnimatorSystemOptions): System {
     writes: [],
 
     fixedUpdate: (world: World, dt: number) => {
+      // 🛑 Once, on the first step: what a dead body wrote would otherwise be kept for the life of
+      // the world, and an id given out again would inherit it. Dropped with the bus on a STOP.
+      if (!listening) {
+        listening = true
+        world.events.on('EntityDestroyed', event => {
+          if (event.entity) options.animators.forget(event.entity)
+        })
+      }
+
       for (const entity of world.entities.withComponent('Animator')) {
         const current = heldFor(held, missed, entity, options)
         if (!current) continue
@@ -180,10 +190,11 @@ function walkerOf(
 }
 
 /**
- * What every condition of the graph reads: what the body is doing, under what a script wrote.
+ * What every condition of the graph reads: what a script wrote, under what the body is DOING.
  *
- * 🛑 The built-ins are laid FIRST and a written one wins: a script may drive a parameter of its
- * own, and shadowing `speed` is refused by the parser rather than by an order here.
+ * 🛑 The built-ins are laid LAST and win. A parser refuses a GRAPH that declares one of their
+ * names; nothing looks at what a script writes, and a `set('grounded', false)` — which never
+ * lapses — would lock a character out of every way back onto the ground, silently.
  */
 function readingOf(
   current: Held,
@@ -205,6 +216,7 @@ function readingOf(
   current.facing = walker.facing
 
   return {
+    ...options.animators.writtenOn(entity),
     speed: walker.speed,
     forward: walker.forward,
     strafe: walker.strafe,
@@ -213,6 +225,5 @@ function readingOf(
     verticalSpeed: walker.velocityY,
     jumped,
     turning,
-    ...options.animators.writtenOn(entity),
   }
 }

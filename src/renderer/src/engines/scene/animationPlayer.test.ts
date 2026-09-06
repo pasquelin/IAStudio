@@ -91,6 +91,21 @@ describe('a model a state machine drives', () => {
     expect(driving(animations, 'node-1')).toEqual([])
   })
 
+  /**
+   * 🛑 Two states of one graph on the same file are ONE pose at their two weights. Keeping the
+   * last would drop the total under one for the whole fade, and the body would sag towards its
+   * rest pose in the middle of a move.
+   */
+  it('adds up two clips that share a file rather than keeping the last', () => {
+    const animations = new SceneAnimations()
+    const source = model('walk')
+    animations.add('node-1', source, source.animations)
+
+    animations.pose('node-1', [posed('walk', 0.4), posed('walk', 0.6)])
+
+    expect(driving(animations, 'node-1')).toEqual([{ name: 'walk', weight: 1 }])
+  })
+
   it('says nothing and does nothing for a node it holds no player for', () => {
     const animations = new SceneAnimations()
 

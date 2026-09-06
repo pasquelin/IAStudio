@@ -1,4 +1,5 @@
 import type { ClipSource } from '@shared/domain/scene'
+import type { AnimationPort } from '@game/ports/animationPort'
 import {
   Box3,
   Light,
@@ -45,6 +46,8 @@ export type WebRender = RenderPort & {
   resize: (width: number, height: number) => void
   draw: () => void
   seek: (time: Us) => void
+  /** The mixers a state machine writes through — the scene on screen holds them. */
+  animation: AnimationPort
   dispose: () => void
 }
 
@@ -80,6 +83,7 @@ export function createWebRender(
   // 🛑 Which build the picture belongs to: a scene arriving while another is still being cut would
   // otherwise have the slower one land on top of it, and the faster one disposed under the draw.
   let building = 0
+  const posed = new Set<string>()
 
   return {
     show: async (state, optimization, modelAssets, heightmaps, clipsForNode) => {
@@ -138,6 +142,24 @@ export function createWebRender(
 
     veil: amount => {
       veil.material.opacity = clamp(amount, 0, 1)
+    },
+
+    animation: {
+      pose: (entity, clips) => {
+        posed.add(entity)
+        held?.pose(entity, clips)
+      },
+      release: entity => {
+        posed.delete(entity)
+        held?.releasePose(entity)
+      },
+      // 🛑 Cleared with the scene it belonged to: a swap builds another one, and a body posed on
+      // the scene just thrown away is nobody's to give back.
+      releaseAll: () => {
+        for (const entity of posed) held?.releasePose(entity)
+        posed.clear()
+      },
+      lengths: entity => held?.clipLengthsOf(entity) ?? {},
     },
 
     seek: time => {

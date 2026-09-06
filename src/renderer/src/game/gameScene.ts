@@ -41,6 +41,7 @@ import { createSceneResources, type SceneResources } from './gameSceneResources'
 import { drapeWorld, type WorldDrape } from './gameSceneWorld'
 import { dressShadows, shadowBoundsOf } from './gameSceneShadows'
 import type { ClipSource } from '@shared/domain/scene'
+import type { PosedClip } from '@game/ports/animationPort'
 import type { ModelRef } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import {
@@ -71,6 +72,10 @@ export type GameScene = {
    * for a movement would find the scene changed sixty times a second in a level nobody walks.
    */
   place: (entityId: string, transform: Transform) => boolean
+  /** What a state machine plays on one model, and how it gives it back — see `AnimationPort`. */
+  pose: (nodeId: string, clips: readonly PosedClip[]) => void
+  releasePose: (nodeId: string) => void
+  clipLengthsOf: (nodeId: string) => Readonly<Record<string, number>>
   /**
    * Settles what a frame left stale before it is drawn — the instanced bounds `place` dirtied,
    * and which scatter cells the camera reaches. The camera is asked for rather than optional:
@@ -230,6 +235,9 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
       return scattered
     },
     seek: time => animations.seek(time),
+    pose: (nodeId, clips) => animations.pose(nodeId, clips),
+    releasePose: nodeId => animations.release(nodeId),
+    clipLengthsOf: nodeId => animations.lengthsOf(nodeId),
     dispose: () => {
       animations.clear()
       instances.dispose()

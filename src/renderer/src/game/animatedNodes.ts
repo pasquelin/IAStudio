@@ -36,5 +36,7 @@ export function graphNamed(
 ): (ref: string) => AnimationGraph | null {
   const byPath = new Map(modules.map(module => [module.path, module.graph]))
 
-  return ref => (ref === '' ? animationGraphPreset('character') : (byPath.get(ref) ?? null))
+  // 🛑 The table FIRST, even for the empty name: an exported game files the shipped preset under
+  // it, with its clips rewritten to assets of the bundle — see `bundledGraphs`.
+  return ref => byPath.get(ref) ?? (ref === '' ? animationGraphPreset('character') : null)
 }

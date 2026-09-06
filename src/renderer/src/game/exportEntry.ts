@@ -9,6 +9,7 @@ import { loadQuickjsScripts } from '@game/host/quickjsScripts'
 import { loadJoltPhysics } from '@game/host/joltPhysics'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { EntityPlacement, RenderPort } from '@game/ports/renderPort'
+import type { AnimationPort } from '@game/ports/animationPort'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import { createGameLoop } from '@game/runtime/gameLoop'
 import { placementsOf } from '@game/runtime/placements'
@@ -55,7 +56,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     // fetches before its first frame. A sibling of a load that rejects goes undisposed — that
     // startup has already failed, and the page shows nothing.
     const [{ ports, modules }, openingSource] = await Promise.all([
-      createPorts(canvas, game, assets, drawn.port, swap.port, rollback),
+      createPorts(canvas, game, assets, drawn.port, render.animation, swap.port, rollback),
       exportedJson<unknown>(entry.file, entry.compression),
     ])
     const runtime = runtimeOf(game, modules, inputControls)
@@ -226,6 +227,7 @@ async function createPorts(
   game: ExportedGame,
   assets: ReturnType<typeof createBundledAssets>,
   render: RenderPort,
+  animation: AnimationPort,
   scenes: ReturnType<typeof createSceneSwap>['port'],
   rollback: ReturnType<typeof createStartupRollback>,
 ) {
@@ -244,6 +246,7 @@ async function createPorts(
     physics,
     script,
     render,
+    animation,
     scenes,
   })
   rollback.add(() => {

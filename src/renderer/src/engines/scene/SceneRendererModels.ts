@@ -168,6 +168,11 @@ export abstract class SceneRendererModels extends SceneRendererGeometry {
   /**
    * The clips a running game's state machine needs on this model, beside whatever its band names.
    * An empty list gives them back, which is what stopping a game does.
+   *
+   * 🛑 Blind spot: `adopt` leaves early for a model that has not landed, and the key is already
+   * marked — so a clip asked for before its model arrives never lands, and the state holds and
+   * poses nothing. The window is narrow (a game waits on Jolt and the sandbox first) and closed
+   * by nothing.
    */
   useGraphClips(nodeId: string, clips: readonly ForeignClip[]): void {
     if (clips.length === 0) this.graphClips.delete(nodeId)

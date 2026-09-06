@@ -35,6 +35,10 @@ export type ScriptSystemOptions = {
    *
    * 🛑 Never the same node as the body: a character's mesh hangs under the capsule that walks, so
    * `self.anim` asked from a script on the module would write where no animator ever reads.
+   *
+   * 🛑 Blind spot, written rather than hidden: it answers for the PLAYER's module alone, as
+   * `bodyIdOf` does. A scripted module of any other kind writes on its own id, where nothing
+   * reads — silently, exactly as an ask landing on a body no controller drives is dropped.
    */
   animatorIdOf: (moduleId: string) => string | null
   /** Where a script's animator asks LAND, read by the animator system on the same step. */
@@ -214,7 +218,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       // had just made. Emptied whether or not anyone listens, or a scriptless world hoards them.
       if (waiting.length > 0) {
         if (known.size > 0 && EVENT_HOOKS.some(hook => port.declares(hook)))
-          took(world, port.deliver(compose(world, dt), waiting))
+          took(world, port.deliver(compose(world, dt), routed(waiting, known, options)))
         waiting.length = 0
       }
       if (known.size === 0) return
@@ -258,6 +262,31 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
     },
   }
 }
+
+/**
+ * The events of an ANIMATED part, readdressed to the script that can hear them.
+ *
+ * 🛑 A module's script sits on the module and its animator on the mesh, so a hook named for the
+ * event's own entity would reach nobody — `onAnimationEvent` was unreachable from the very script
+ * a template lays down. Only when nothing scripts the part itself: a PNJ carrying both keeps its
+ * own events.
+ */
+function routed(
+  events: readonly GameEvent[],
+  known: ReadonlySet<string>,
+  { animatorIdOf }: ScriptSystemOptions,
+): readonly GameEvent[] {
+  if (!events.some(event => ANIMATION_EVENTS.includes(event.name))) return events
+
+  return events.map(event => {
+    if (!event.entity || known.has(event.entity) || !ANIMATION_EVENTS.includes(event.name))
+      return event
+    const owner = [...known].find(id => animatorIdOf(id) === event.entity)
+    return owner ? { ...event, entity: owner } : event
+  })
+}
+
+const ANIMATION_EVENTS: readonly GameEvent['name'][] = ['AnimationEvent', 'AnimationFinished']
 
 /** What an event drives. A frame with none of them declared never crosses the bridge at all. */
 const EVENT_HOOKS = [

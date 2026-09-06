@@ -89,6 +89,7 @@ export abstract class SceneRendererHierarchy extends SceneRendererShadows {
           // Its share of every animation file it played: the last node to let go frees the parse.
           for (const url of this.bundled.get(id)?.values() ?? []) this.clipSources.release(url)
           this.bundled.delete(id)
+          this.graphClips.delete(id)
           this.unbindSkeleton(id)
           const releaseStep3 = () => {
             this.iks.delete(id)

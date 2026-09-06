@@ -75,12 +75,15 @@ export function posePlayer(player: Player, clips: readonly PosedClip[]): void {
     player.graphDriven = true
   }
 
-  // The id composed ONCE per clip: it was built four times over — once to bind, twice inside the
-  // binding, once to write — for a string that only depends on the clip asked for.
+  // The id composed ONCE per clip, and two clips sharing it ADD UP rather than one replacing the
+  // other: two states of a graph playing the same file are one pose at their two weights, and
+  // keeping the last would have made the body sag towards its rest pose for the whole fade.
   const kept = new Map<string, PosedClip>()
   for (const clip of clips) {
     const id = posedIdOf(clip)
-    if (bindPosed(player, id, clip)) kept.set(id, clip)
+    if (!bindPosed(player, id, clip)) continue
+    const already = kept.get(id)
+    kept.set(id, already ? { ...clip, weight: already.weight + clip.weight } : clip)
   }
   for (const [id, held] of player.posed) {
     if (kept.has(id)) continue
