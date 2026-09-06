@@ -27,8 +27,12 @@ export const isSceneDirty = store.isDirty
  * `ensure`, so this never writes over a scene already there — and the state being present is
  * exactly what stops `restoreDocument` from putting the studio default in its place.
  */
-export function seedSceneTemplate(documentId: string, template: SceneTemplateId): void {
-  store.use.getState().ensure(documentId, () => sceneFromTemplate(template))
+export function seedSceneTemplate(
+  documentId: string,
+  template: SceneTemplateId,
+  scriptFolder?: string,
+): void {
+  store.use.getState().ensure(documentId, () => sceneFromTemplate(template, scriptFolder))
 }
 
 /**

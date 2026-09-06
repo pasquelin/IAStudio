@@ -46,6 +46,9 @@ import {
 } from './nodeFactory'
 import { playgroundNodes } from './playgroundLevel'
 import { postProcessingTemplate } from './postProcessingTemplate'
+import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
+import { documentPathFor } from '@shared/domain/documentName'
+import { refToString } from '@shared/domain/ref'
 import type { TemplateScriptId } from '@shared/domain/templateScript'
 import type { SceneNode, SceneState } from './sceneState'
 
@@ -57,12 +60,18 @@ const ORIGIN: Vector3 = { x: 0, y: 0, z: 0 }
  * 🛑 A template SHOWS: a player who walks off the built-in contexts alone leaves nothing in the
  * project to read, and nothing to change. `seedSceneScripts` writes the file this names.
  */
-function scripted(node: SceneNode, script: TemplateScriptId): SceneNode {
+function scripted(node: SceneNode, script: TemplateScriptId, folder: string): SceneNode {
   return {
     ...node,
     components: [
       ...(node.components ?? []),
-      withComponentField(newComponent('Script'), 'script', script),
+      // 🛑 A `script:<path>` REFERENCE, never the bare id: the kernel keys its modules by that
+      // string, and anything else answers « script never loaded » without opening in the inspector.
+      withComponentField(
+        newComponent('Script'),
+        'script',
+        refToString({ kind: 'script', path: documentPathFor(script, 'script', folder) }),
+      ),
     ],
   }
 }
@@ -71,9 +80,10 @@ function scripted(node: SceneNode, script: TemplateScriptId): SceneNode {
 function scriptedFirst(
   nodes: readonly SceneNode[],
   script: TemplateScriptId,
+  folder: string,
 ): readonly SceneNode[] {
   const [first, ...rest] = nodes
-  return first ? [scripted(first, script), ...rest] : nodes
+  return first ? [scripted(first, script, folder), ...rest] : nodes
 }
 
 /**
@@ -254,7 +264,7 @@ type Template = {
   animation?: Partial<AnimationTimeline>
 }
 
-const BUILDERS: Record<SceneTemplateId, () => Template> = {
+const BUILDERS: Record<SceneTemplateId, (scriptFolder: string) => Template> = {
   // The studio's own default, unchanged: three lights and nothing else. Lit rather than truly
   // bare — an unlit scene reads as a broken viewport, not as a document waiting to be filled.
   empty: () => ({ nodes: createDefaultScene().nodes }),
@@ -335,10 +345,10 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // picking is a set one can climb, fall off and bump into.
   // On the start pad, at eye height and facing down the set — where the walk begins the day a
   // controller reads `play`, rather than somewhere on the floor with the court behind it.
-  firstPerson: () =>
+  firstPerson: folder =>
     characterView(
       [
-        scripted(standIn(), 'player'),
+        scripted(standIn(), 'player', folder),
         cameraNode(transformAt({ x: 0, y: EYE_HEIGHT, z: STAND_IN_Z })),
       ],
       { camera: 'firstPerson' },
@@ -348,15 +358,15 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // both on the same axis, and the aim is at chest height.
   // 🛑 The module and nothing else: it carries the body, the arm and the camera, bound by the
   // TREE. The trio it replaces bound them by name, and a second `Camera` captured the arm.
-  thirdPerson: () =>
+  thirdPerson: folder =>
     characterView(
-      [...scriptedFirst(playerModuleAt(STAND_IN_Z), 'player')],
+      [...scriptedFirst(playerModuleAt(STAND_IN_Z), 'player', folder)],
       { camera: 'thirdPerson' },
       'Capsule',
     ),
 
-  topDown: () =>
-    characterView([scripted(standIn(), 'player'), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
+  topDown: folder =>
+    characterView([scripted(standIn(), 'player', folder), aimedCamera(16, 11, 0.9, STAND_IN_Z)], {
       camera: 'topDown',
       moveSpeed: 6,
     }),
@@ -365,12 +375,12 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
   // so a silhouette left on the pad would frame the car from a pair of feet.
   // 🛑 The arm aims down the CAR's own nose, not where the pointer looks: a car turning under a
   // camera the mouse alone aims reads as a car sliding sideways.
-  car: () => ({
+  car: folder => ({
     nodes: [
       ...circuitNodes(),
       sun(2.4, { x: 60, y: 70, z: 40 }),
       skyLight(1.3),
-      ...cameraRig(scriptedCar(), {
+      ...cameraRig(scriptedCar(folder), {
         orientation: 'subject',
         length: 8,
         height: 2.4,
@@ -387,13 +397,13 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
     play: { ...WALKING, camera: 'thirdPerson', played: CAR_NAME },
   }),
 
-  plane: () => ({
+  plane: folder => ({
     nodes: [
       ...airfieldNodes(),
       ...mountainNodes(),
       sun(2.6, { x: 40, y: 50, z: 20 }),
       skyLight(1.4),
-      ...scriptedFirst(planeNodes({ x: 0, y: CRUISE_ALTITUDE, z: 60 }), 'plane'),
+      ...scriptedFirst(planeNodes({ x: 0, y: CRUISE_ALTITUDE, z: 60 }), 'plane', folder),
       aimedCamera(CRUISE_ALTITUDE + 6, 30, CRUISE_ALTITUDE, 60),
     ],
     world: {
@@ -421,9 +431,9 @@ const BUILDERS: Record<SceneTemplateId, () => Template> = {
 const CAR_NAME = 'Car'
 
 /** `cameraRig` needs the pair typed as a non-empty tuple, which `scriptedFirst` cannot promise. */
-function scriptedCar(): [SceneNode, ...SceneNode[]] {
+function scriptedCar(folder: string): [SceneNode, ...SceneNode[]] {
   const [body, ...rest] = carNodes(CIRCUIT_START, CAR_NAME, CIRCUIT_START_YAW)
-  return [scripted(body, 'car'), ...rest]
+  return [scripted(body, 'car', folder), ...rest]
 }
 
 /** Metres. High enough that a plane finding its speed has room to dip while it does. */
@@ -433,10 +443,13 @@ const CRUISE_ALTITUDE = 120
  * The scene a template opens on. A fresh state on every call, ids included — two documents made
  * from one template share nothing.
  */
-export function sceneFromTemplate(id: SceneTemplateId = DEFAULT_SCENE_TEMPLATE): SceneState {
+export function sceneFromTemplate(
+  id: SceneTemplateId = DEFAULT_SCENE_TEMPLATE,
+  scriptFolder: string = DEFAULT_ROLE_PATHS.code,
+): SceneState {
   // Checked although the type says it cannot be wrong: the id crosses the boundary from the
   // naming window, and one this build has never heard of would throw on `BUILDERS[id]()`.
-  const template = BUILDERS[isSceneTemplateId(id) ? id : DEFAULT_SCENE_TEMPLATE]()
+  const template = BUILDERS[isSceneTemplateId(id) ? id : DEFAULT_SCENE_TEMPLATE](scriptFolder)
 
   return {
     nodes: [...template.nodes],

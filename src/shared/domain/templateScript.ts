@@ -7,10 +7,6 @@ export type TemplateScriptId = 'player' | 'car' | 'plane'
 
 export const TEMPLATE_SCRIPT_IDS: readonly TemplateScriptId[] = ['player', 'car', 'plane']
 
-export function isTemplateScriptId(value: unknown): value is TemplateScriptId {
-  return TEMPLATE_SCRIPT_IDS.some(candidate => candidate === value)
-}
-
 /**
  * What each one opens on. Named ACTIONS, never a key code: the same body then answers a keyboard
  * and a gamepad alike, and rebinding one is a line of the control map rather than of this file.
