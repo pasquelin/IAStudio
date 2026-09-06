@@ -32,7 +32,6 @@ import {
   bundledAnimations,
   bundledModels,
   bundledTemplates,
-  bundledCharacters,
   bundledTextures,
   resourcesRoot,
 } from './resources'
@@ -174,7 +173,6 @@ export function createAssistantPresentation(deps: AssistantDeps) {
       bundledTemplate: file => bundledFile(bundledTemplates(resourcesRoot()), file),
       bundledModel: file => bundledFile(bundledModels(resourcesRoot()), file),
       bundledTexture: file => bundledFile(bundledTextures(resourcesRoot()), file),
-      bundledCharacter: file => bundledFile(bundledCharacters(resourcesRoot()), file),
     }),
   )
   return { captioner, favorites, styles }

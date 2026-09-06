@@ -13,6 +13,8 @@ import {
 import { parentOf } from '@shared/domain/folder'
 import { exists } from '@main/persistence'
 import { assetFilePath } from './protocol'
+import type { AssetType } from '@shared/domain/asset'
+import { extname } from 'node:path'
 
 /**
  * Where an asset's bytes live, now that a row's name is also its file's.
@@ -154,4 +156,35 @@ export async function moveAssetFileToFree(
   // and the row must say what the disk says rather than what was asked for. NOT `stemOf(moved)`
   // — a name may legitimately hold a dot, and `Ruelle v1.2.png` would come back as `Ruelle v1`.
   return moved ? { name: safeFileName(free, FALLBACK_ASSET_NAME), path: moved } : undefined
+}
+
+/** The kind's own extension, for anything that is not a plain one. */
+const FALLBACK_EXTENSION: Record<AssetType, string> = {
+  image: '.png',
+  video: '.mp4',
+  audio: '.mp3',
+  mesh: '.glb',
+  skybox: '.png',
+  animation: '.glb',
+}
+
+/**
+ * Anything that is not a plain extension is refused, and the kind's own is used instead. The
+ * refusal is the point: the string comes from an API response or from the renderer, and
+ * `../../.ssh/id_rsa` appended to an asset id would write outside the project entirely.
+ */
+export function safeExtension(extension: string, type: AssetType): string {
+  return /^\.[a-z0-9]{1,8}$/i.test(extension) ? extension.toLowerCase() : FALLBACK_EXTENSION[type]
+}
+
+/**
+ * The same file, re-suffixed — a take re-encoded on the way out keeps the name it is known by,
+ * and it cannot collide, being the file that is already there. `freeAssetPath` is for one that
+ * does not exist yet.
+ */
+export function withExtension(relativePath: string, extension: string): string {
+  // `extname` and not `stemOf`, which is for a NAME: this takes a path, and only `node:path`
+  // knows that the last dot of `assets/v1.2/take` belongs to a folder rather than to the file.
+  const suffix = extname(relativePath)
+  return `${suffix ? relativePath.slice(0, -suffix.length) : relativePath}${extension}`
 }

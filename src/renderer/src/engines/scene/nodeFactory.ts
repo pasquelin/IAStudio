@@ -16,6 +16,7 @@ import { defaultMeshMaterial } from './checkerTextures'
 import { figureByKind, figureScaleWithin, type FigureDescriptor } from './figures'
 import { lightByKind } from './lightTypes'
 import { primitiveByKind } from './meshPrimitives'
+import { shippedCharacterAssetId } from './shippedCharacter'
 import { isPlayerModule, PLAYER_KIND } from './playerModule'
 import {
   CAMERA_ICON,
@@ -370,8 +371,27 @@ export function figureNodes(
   ]
 }
 
-/** The default figure, sized to fit INSIDE the body it stands in — the module's own stand-in. */
+/**
+ * What a module is born wearing: the shipped character when the project holds it, and the figure
+ * of boxes when it does not.
+ *
+ * 🛑 The fallback is not dead code. A project that cannot be written to installs nothing, and a
+ * module without a body is a module nobody can see walking.
+ */
 function figureNodesUnder(bodyId: string): readonly SceneNode[] {
+  const character = shippedCharacterAssetId()
+  if (character) {
+    return [
+      {
+        ...modelNode(character, 'Character'),
+        // Down by half the controller's height: the body's node is its CENTRE, and a character's
+        // own origin is at its feet — left at the centre it would stand 90 cm in the air.
+        transform: transformAt({ x: 0, y: -WALKER_HEIGHT / 2, z: 0 }),
+        parentId: bodyId,
+      },
+    ]
+  }
+
   const figure = figureByKind(DEFAULT_FIGURE)?.create()
   if (!figure) return []
 

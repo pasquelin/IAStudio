@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { figureByKind } from './figures'
 import { createNodeOf, createNodesOf, figureNodes, groupNode, iconOf } from './nodeFactory'
 import { PLAYER_KIND } from './playerModule'
+import { forgetShippedCharacter, rememberShippedCharacter } from './shippedCharacter'
 import { lightNodeFixture, meshNode, modelNodeFixture, spriteNodeFixture } from './scene-fixtures'
 
 describe('createNodeOf', () => {
@@ -122,6 +123,24 @@ describe('the player module', () => {
     expect(bornWith('Capsule')?.components?.map(one => one.type)).toEqual(['CharacterController'])
     expect(bornWith('Figure')?.type).toBe('group')
     expect(bornWith('Figure')?.components).toBeUndefined()
+  })
+
+  /**
+   * What the shipped character is FOR. The figure of boxes above is the fallback — a project that
+   * cannot be written to installs nothing, and a module without a body cannot be seen walking.
+   */
+  it('wears the shipped character once the project holds it, feet on the ground', () => {
+    rememberShippedCharacter('asset_hero')
+    onTestFinished(forgetShippedCharacter)
+
+    const worn = bornWith('Character')
+
+    expect(worn?.type).toBe('model')
+    expect(worn?.type === 'model' && worn.model.assetId).toBe('asset_hero')
+    // Down by half the controller's height: the body's node is its centre, a character's origin
+    // is at its feet, and left at the centre it would stand 90 cm in the air.
+    expect(worn?.transform.position).toEqual({ x: 0, y: -0.9, z: 0 })
+    expect(bornWith('Figure')).toBeUndefined()
   })
 
   it('hangs the camera on an arm rather than on the body, so a wall can push it in', () => {

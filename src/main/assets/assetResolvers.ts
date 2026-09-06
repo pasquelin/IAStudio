@@ -1,7 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_HOST, MASTER_HOST, POSTER_HOST, THUMB_HOST } from '@shared/domain/asset'
 import { ANIMATION_HOST } from '@shared/domain/animationLibrary'
-import { CHARACTER_HOST } from '@shared/domain/bundledCharacter'
 import { TEMPLATE_HOST } from '@shared/domain/sceneTemplate'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import { MODEL_HOST } from '@shared/domain/localModel'
@@ -25,7 +24,6 @@ export type AssetResolverDeps = {
   bundledModel: (file: string) => Promise<string | null>
   /** And for a working texture, which a probe wears without any project having a row for it. */
   bundledTexture: (file: string) => Promise<string | null>
-  bundledCharacter: (file: string) => Promise<string | null>
 }
 
 /**
@@ -63,6 +61,5 @@ export function createAssetResolvers(deps: AssetResolverDeps): AssetResolvers {
     [TEMPLATE_HOST]: file => deps.bundledTemplate(file),
     [MODEL_HOST]: file => deps.bundledModel(file),
     [TEXTURE_HOST]: file => deps.bundledTexture(file),
-    [CHARACTER_HOST]: file => deps.bundledCharacter(file),
   }
 }

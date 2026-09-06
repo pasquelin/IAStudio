@@ -21,7 +21,7 @@ import os
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Quaternion, Vector
 
 COPYRIGHT = "© IA Studio"
 
@@ -162,12 +162,58 @@ def build_clip(source, target, name):
     return renamed
 
 
+def node_matrix(node):
+    if "matrix" in node:
+        return Matrix([node["matrix"][i::4] for i in range(4)])
+
+    out = Matrix.Identity(4)
+    if "translation" in node:
+        out = Matrix.Translation(node["translation"])
+    if "rotation" in node:
+        x, y, z, w = node["rotation"]
+        out = out @ Quaternion((w, x, y, z)).to_matrix().to_4x4()
+    if "scale" in node:
+        out = out @ Matrix.Diagonal((*node["scale"], 1.0))
+    return out
+
+
+def glb_height(path):
+    """The height of a WRITTEN file, walking its node graph — the only measurement that counts.
+
+    🛑 Not Blender's bounding boxes: they cover objects the exporter leaves out, and measuring
+    that way made every character come out 13 % short without a word.
+    """
+    with open(path, "rb") as handle:
+        data = handle.read()
+    length = int.from_bytes(data[12:16], "little")
+    document = json.loads(data[20 : 20 + length])
+
+    found = []
+
+    def walk(index, parent):
+        node = document["nodes"][index]
+        world = parent @ node_matrix(node)
+        if "mesh" in node:
+            for primitive in document["meshes"][node["mesh"]]["primitives"]:
+                box = document["accessors"][primitive["attributes"]["POSITION"]]
+                for low in (box["min"][1], box["max"][1]):
+                    for x in (box["min"][0], box["max"][0]):
+                        for z in (box["min"][2], box["max"][2]):
+                            found.append((world @ Vector((x, low, z))).y)
+        for child in node.get("children", []):
+            walk(child, world)
+
+    for root in document["scenes"][0]["nodes"]:
+        walk(root, Matrix.Identity(4))
+    return max(found) - min(found)
+
+
 def measured_height():
-    """The tallest point of every mesh, in metres, which is what the scale is set from."""
+    """The tallest point of every VISIBLE mesh — what the exporter will write, and nothing else."""
     top = -math.inf
     bottom = math.inf
     for obj in bpy.data.objects:
-        if obj.type != "MESH":
+        if obj.type != "MESH" or not obj.visible_get():
             continue
         for corner in obj.bound_box:
             world = obj.matrix_world @ Vector(corner)
@@ -219,7 +265,21 @@ def build_hero(source, target, height):
 
     after = merge_by_material()
     export_glb(target)
-    return before, after, measured, factor
+
+    # The written file is measured and the scale corrected once, rather than trusted: scaling is
+    # linear, so one pass closes any gap between what Blender bounds and what the exporter writes.
+    written = glb_height(target)
+    if abs(written - height) > height * 0.005:
+        for obj in bpy.data.objects:
+            if obj.parent is None:
+                obj.scale = (height / written,) * 3
+        bpy.ops.object.select_all(action="SELECT")
+        bpy.context.view_layer.objects.active = next(iter(bpy.data.objects))
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        export_glb(target)
+        written = glb_height(target)
+
+    return before, after, written, factor
 
 
 CLIPS = {
@@ -231,6 +291,8 @@ CLIPS = {
     "Walking Turn 180.fbx": "TurnAround",
     "Left Turn W_Briefcase.fbx": "TurnLeft",
     "Right Turn W_ Briefcase.fbx": "TurnRight",
+    "Jump.fbx": "Jump",
+    "Running Jump.fbx": "RunningJump",
 }
 
 HERO_HEIGHT = 1.8
@@ -268,7 +330,7 @@ def main():
             os.path.join(source, folder, file), target, HERO_HEIGHT
         )
         print(
-            f"[hero] {name}: {measured:.2f} → {HERO_HEIGHT} m (×{factor:.4f}), "
+            f"[hero] {name}: {measured:.3f} m written (asked {HERO_HEIGHT}), "
             f"{before} → {after} meshes, {os.path.getsize(target) // 1024} KB"
         )
 

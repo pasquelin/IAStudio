@@ -18,6 +18,7 @@ import type {
 } from '@shared/domain/newDocument'
 import { DEFAULT_UI_TEMPLATE, isUiTemplateId } from '@shared/domain/uiTemplates'
 import { ensureCheckerTextures } from '@/engines/scene/checkerTextures'
+import { ensureShippedCharacter } from '@/engines/scene/shippedCharacter'
 import { seedGuiTemplate } from '@/stores/gui'
 import { seedSceneTemplate } from '@/stores/scenes'
 import { documentAtPath, useDocuments } from '@/stores/documents'
@@ -169,10 +170,11 @@ async function made(
 async function seedCreated(
   created: DocumentDescriptor,
   template: DocumentTemplateId | undefined,
-  textures: Promise<void>,
+  /** Everything the app ships that a template's shapes and modules read — awaited before seeding. */
+  shipped: Promise<unknown>,
 ): Promise<void> {
   if (created.kind === 'scene') {
-    await textures
+    await shipped
     const scene = isSceneTemplateId(template) ? template : DEFAULT_SCENE_TEMPLATE
     // Imported HERE, never at the top: this module opens the plus button, and what lays a
     // template's files down reaches the bridge and the document store — see `createDocumentIn`.
@@ -201,13 +203,16 @@ async function create(kind: DocumentKind, of: NamedCreation): Promise<DocumentDe
 
   // A round trip to the main process, started before the creation and awaited under the seeding
   // below — the shapes of a template are laid down before any editor mounts.
-  const textures = kind === 'scene' ? ensureCheckerTextures(project.path) : Promise.resolve()
+  const shipped =
+    kind === 'scene'
+      ? Promise.all([ensureCheckerTextures(project.path), ensureShippedCharacter(project.path)])
+      : Promise.resolve()
 
   // The KIND travels: a space opens several, and its head is not always the one asked for.
   const created = await useDocuments.getState().create(workspace, { ...of, kind })
   if (!created) return null
 
-  await seedCreated(created, of.template, textures)
+  await seedCreated(created, of.template, shipped)
 
   openDocument(created)
   return created

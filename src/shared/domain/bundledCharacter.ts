@@ -1,4 +1,3 @@
-import { hostedUrl } from './asset'
 import { CHARACTER_LEVELS, type CharacterLevel } from './characterLevel'
 
 /**
@@ -22,18 +21,6 @@ export const BUNDLED_CHARACTER_LEVELS: readonly CharacterLevel[] = CHARACTER_LEV
 
 export function bundledCharacterFile(level: CharacterLevel): string {
   return `${BUNDLED_CHARACTER_NAMES[level]}.glb`
-}
-
-/**
- * The host that serves one from beside the app, no project taking part — as `texture` and
- * `animation` already do. Beside the install rather than instead of it: a scene wears the ASSET,
- * so the `.gltf` it is written as points at a mesh another application can open.
- */
-export const CHARACTER_HOST = 'character'
-
-/** Where the window reads a shipped character from. */
-export function bundledCharacterUrl(level: CharacterLevel): string {
-  return hostedUrl(CHARACTER_HOST, bundledCharacterFile(level))
 }
 
 /** What one of them lands in the project as: the level it stands for, and the row it now has. */

@@ -40,14 +40,18 @@ function resourceOf(level: CharacterLevel): BundledResource {
  * a single density gives.
  */
 export function registerBundledCharacterHandlers({ folder, ...deps }: BundledCharacterDeps): void {
-  handle(
-    CHANNELS.charactersInstallBundled,
-    async (_event, wanted: CharacterLevel): Promise<InstalledCharacter | null> => {
-      const level = nearestCharacterLevel(wanted, BUNDLED_CHARACTER_LEVELS)
-      if (!level) return null
+  // Named rather than written inline: `ipc-handlers.test.ts` reads `handle(CHANNELS.…` by regex
+  // on ONE line, and an argument list Prettier wraps leaves the channel looking unhandled.
+  const install = async (
+    _event: unknown,
+    wanted: CharacterLevel,
+  ): Promise<InstalledCharacter | null> => {
+    const level = nearestCharacterLevel(wanted, BUNDLED_CHARACTER_LEVELS)
+    if (!level) return null
 
-      const asset = await installBundledResource(deps, folder(), resourceOf(level))
-      return { level, assetId: asset.id }
-    },
-  )
+    const asset = await installBundledResource(deps, folder(), resourceOf(level))
+    return { level, assetId: asset.id }
+  }
+
+  handle(CHANNELS.charactersInstallBundled, install)
 }

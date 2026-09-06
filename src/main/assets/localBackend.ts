@@ -15,16 +15,7 @@ import type { PbrChannel } from '@shared/domain/material'
 import type { ModelTextureUse } from '@shared/domain/modelTextureUse'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import { log } from '@main/log'
-import { freeAssetPath } from './assetFile'
-
-const FALLBACK_EXTENSION: Record<AssetType, string> = {
-  image: '.png',
-  video: '.mp4',
-  audio: '.mp3',
-  mesh: '.glb',
-  skybox: '.png',
-  animation: '.glb',
-}
+import { freeAssetPath, safeExtension, withExtension } from './assetFile'
 
 export type Download = (url: string) => Promise<Uint8Array>
 
@@ -108,11 +99,9 @@ export type WriteRequest = Omit<ImportRequest, 'url'> & {
   /** Overrides filing without changing what kind of asset the catalogue records. */
   folderRole?: FolderRole
   /**
-   * Files this under the studio's own `.resources/`, in the same role tree the project uses — for
-   * what the APP ships rather than what the user brought. No surface that browses assets lists it.
-   *
-   * 🛑 A FLAG, never a path: an arbitrary folder reaching this from a request would write outside
-   * the project on its first `../`.
+   * Files this under `.resources/` — what the APP ships, which no surface that browses assets
+   * lists. 🛑 A FLAG, never a path: a folder reaching this from a request would write outside the
+   * project on its first `../`.
    */
   resource?: true
   /** What the bytes say about themselves, when the caller could read it. */
@@ -143,30 +132,6 @@ export type LocalBackend = {
 }
 
 /**
- * Anything that is not a plain extension is refused, and the kind's own is used instead.
- *
- * The refusal is the point, and it lives here rather than at each caller: the string comes
- * from an API response or from the renderer, and `../../.ssh/id_rsa` appended to an asset id
- * would write outside the project entirely.
- */
-function safeExtension(extension: string, type: AssetType): string {
-  return /^\.[a-z0-9]{1,8}$/i.test(extension) ? extension.toLowerCase() : FALLBACK_EXTENSION[type]
-}
-
-/**
- * The same file, re-suffixed — a take re-encoded on the way out keeps the name it is known by.
- *
- * Which is also what makes it the only path an asset's own file ever needs: it cannot collide,
- * being the file that is already there. `freeAssetPath` is for a file that does not exist yet.
- */
-function withExtension(relativePath: string, extension: string): string {
-  // `extname` and not `stemOf`, which is for a NAME: this takes a path, and only `node:path`
-  // knows that the last dot of `assets/v1.2/take` belongs to a folder rather than to the file.
-  const suffix = extname(relativePath)
-  return `${suffix ? relativePath.slice(0, -suffix.length) : relativePath}${extension}`
-}
-
-/**
  * A URL carries a name, and a name carries whatever the API put in it. Only the extension is
  * kept, and only if it looks like one — the file name itself comes from the asset's own name.
  */
@@ -174,7 +139,7 @@ export function extensionFromUrl(url: string, type: AssetType): string {
   try {
     return safeExtension(extname(new URL(url).pathname), type)
   } catch {
-    return FALLBACK_EXTENSION[type]
+    return safeExtension('', type)
   }
 }
 
