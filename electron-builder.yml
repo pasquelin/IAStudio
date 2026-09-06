@@ -131,6 +131,12 @@ extraResources:
   - from: resources/animations
     to: animations
     filter: ['**/*']
+  # The character the app ships with, one GLB per density — the body a player module is born
+  # wearing. Four levels rather than one: a project copies in the level it is asked for, and the
+  # rest stay here rather than in every project folder.
+  - from: resources/characters
+    to: characters
+    filter: ['**/*.glb']
   # The grid and the checker a primitive is born wearing, and the stills drawn of each scene
   # template. Redrawn rather than fetched — `pnpm textures:make` writes them, and they are the
   # only thing a new scene has to show for itself before anything is modelled.

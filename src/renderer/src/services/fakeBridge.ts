@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
 import type { LogEntry, StudioBridge, TraceEntry } from '@shared/ipc'
 import { EMPTY_AI_OVERVIEW } from './fakeAiOverview'
+import { fakeBridgeGit } from './fakeBridgeGit'
 import { fakeBridgeMissions } from './fakeBridgeMissions'
 import { fakeBridgeUpdates } from './fakeBridgeUpdates'
 const noSubscription = (): (() => void) => () => {}
@@ -132,38 +133,6 @@ const fakeInputMaps = (overrides: BridgeOverrides): StudioBridge['inputMaps'] =>
   ...overrides.inputMaps,
 })
 
-const fakeGit = (overrides: BridgeOverrides): StudioBridge['git'] => ({
-  read: () => Promise.resolve({ kind: 'no-project' }),
-  init: () => Promise.resolve({ kind: 'no-project' }),
-  stage: () => Promise.resolve({ kind: 'no-project' }),
-  unstage: () => Promise.resolve({ kind: 'no-project' }),
-  restore: () => Promise.resolve({ kind: 'no-project' }),
-  commit: () => Promise.resolve({ kind: 'no-project' }),
-  branches: () => Promise.resolve([]),
-  createBranch: () => Promise.resolve({ kind: 'no-project' }),
-  checkout: () => Promise.resolve({ kind: 'no-project' }),
-  log: () => Promise.resolve([]),
-  commitFiles: () => Promise.resolve([]),
-  diff: () => Promise.resolve({ kind: 'empty' }),
-  bytes: () => Promise.resolve(null),
-  remotes: () => Promise.resolve([]),
-  addRemote: () => Promise.resolve({ kind: 'no-project' }),
-  fetch: () => Promise.resolve({ kind: 'no-project' }),
-  pull: () => Promise.resolve({ kind: 'no-project' }),
-  push: () => Promise.resolve({ kind: 'no-project' }),
-  resolve: () => Promise.resolve({ kind: 'no-project' }),
-  abortMerge: () => Promise.resolve({ kind: 'no-project' }),
-  stash: () => Promise.resolve({ kind: 'no-project' }),
-  stashes: () => Promise.resolve([]),
-  stashPop: () => Promise.resolve({ kind: 'no-project' }),
-  stashDrop: () => Promise.resolve({ kind: 'no-project' }),
-  tag: () => Promise.resolve({ kind: 'no-project' }),
-  hasCredentials: () => Promise.resolve(false),
-  setCredentials: () => Promise.resolve(),
-  clearCredentials: () => Promise.resolve(),
-  ...overrides.git,
-})
-
 const fakeDialog = (overrides: BridgeOverrides): StudioBridge['dialog'] => ({
   exportPicture: () => Promise.resolve(null),
   pickPath: () => Promise.resolve(null),
@@ -209,6 +178,7 @@ const fakeAssets = (overrides: BridgeOverrides): StudioBridge['assets'] => ({
   readLayered: () => Promise.resolve(null),
   saveTexture: () => Promise.reject(new Error('no project')),
   installBundledTextures: () => Promise.resolve([]),
+  installBundledCharacter: () => Promise.resolve(null),
   extractTextures: () => Promise.reject(new Error('no project')),
   update: () => Promise.reject(new Error('no project')),
   remove: () => Promise.resolve(),
@@ -451,7 +421,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     provider: fakeProvider(overrides),
     project: fakeProject(overrides),
     inputMaps: fakeInputMaps(overrides),
-    git: fakeGit(overrides),
+    git: fakeBridgeGit(overrides.git),
     dialog: fakeDialog(overrides),
     game: fakeGame(overrides),
     documents: fakeDocuments(overrides),

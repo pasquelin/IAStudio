@@ -37,6 +37,19 @@ export const CATALOG_FILE = `${INDEX_FOLDER}/catalog.db`
  */
 export const STUDIO_FOLDER = '.ia-studio'
 
+/**
+ * Where what the APP ships lands inside a project — the working textures, the character, the
+ * clips. Copied there rather than served from beside the app because a `.gltf` has to point at a
+ * picture another application can open, and a texture living only inside the studio would leave
+ * every exported scene bare.
+ *
+ * Under a dot for the same reason `.index/` is: it is not the user's to arrange. No surface that
+ * BROWSES assets lists it — see `isStudioPrivate` and `NOT_PRIVATE` — and no gesture may move or
+ * throw away what it holds. It travels with the project like `.ia-studio/`, being what the
+ * project's own scenes point at.
+ */
+export const RESOURCES_FOLDER = '.resources'
+
 /** What the assistant has learned about this project. One JSON object per line, appended. */
 export const MEMORY_FILE = `${STUDIO_FOLDER}/memory.ndjson`
 

@@ -1,6 +1,8 @@
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
+import type { InstalledCharacter } from './domain/bundledCharacter'
+import type { CharacterLevel } from './domain/characterLevel'
 import type { GameManifest, GameScriptFile, GameState } from './domain/game'
 import type { OraDocument } from './domain/openRaster'
 import type { MaterialStyle } from './domain/style'
@@ -331,6 +333,11 @@ export type StudioBridgeLibrary = {
      * as glTF: what a document points at has to be a file another application can open.
      */
     installBundledTextures: () => Promise<InstalledCheckerTexture[]>
+    /**
+     * The shipped character at the density asked for — or the nearest one it HAS, which for a
+     * character imported by hand is its only one. `null` only when there is none at all.
+     */
+    installBundledCharacter: (level: CharacterLevel) => Promise<InstalledCharacter | null>
     /**
      * Takes the pictures a `.glb` carries inside itself out into the project, one texture asset
      * each — which is what makes a downloaded model's own maps something the studio can open,

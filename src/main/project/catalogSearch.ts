@@ -1,6 +1,6 @@
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import { matchExpression } from './ftsMatch'
-import { escapeLike, holes } from './sqlText'
+import { escapeLike, holes, NOT_PRIVATE } from './sqlText'
 import type { SqliteDriver, SqlValue } from './sqlite'
 import { text } from './sqlRow'
 import { assetOf } from './catalogRows'
@@ -25,8 +25,20 @@ export function searchAssets(
   return rows.map(row => assetOf(row, tags.get(text(row, 'id')) ?? []))
 }
 
+/**
+ * Whether this query NAMES the rows it wants — by path or by id — rather than browsing for them.
+ *
+ * The whole of what lets the studio's own resources be hidden and still resolve: a scene reading
+ * its texture back, an export gathering what its scenes point at, and `installBundled` looking
+ * for the row it filed all ask by name, and all must be answered.
+ */
+function namesRows(query: AssetQuery): boolean {
+  return Boolean(query.path ?? query.paths ?? query.ids)
+}
+
 function searchParts(query: AssetQuery): SearchParts {
   const parts: SearchParts = { conditions: ['missing_at IS NULL'], params: [] }
+  if (!namesRows(query)) parts.conditions.push(NOT_PRIVATE)
   scalarFilters(parts, query)
   setFilters(parts, query)
   if (query.generated) parts.conditions.push('model_id IS NOT NULL')
