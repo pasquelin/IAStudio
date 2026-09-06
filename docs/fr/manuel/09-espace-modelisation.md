@@ -1503,7 +1503,7 @@ le navigateur qui l’exige, pas le studio.
 
 ### Deux réglages qu’il ne faut pas confondre
 
-Le réglage **Réglages ▸ Contrôles ▸ Parcourir le studio à la manette** ne concerne **que
+Le réglage **Réglages ▸ Périphériques ▸ Parcourir le studio à la manette** ne concerne **que
 l’interface du studio** : il laisse une manette déplacer le focus, valider et revenir dans les
 panneaux et les dialogues. Il reste éteint par défaut, pour qu’une partie ne déplace pas l’éditeur
 derrière elle — **et il n’a aucun effet sur la partie**, qui écoute la manette de toute façon.

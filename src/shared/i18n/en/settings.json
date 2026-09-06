@@ -13,7 +13,7 @@
     "media": "Media",
     "git": "Versions",
     "dictation": "Dictation",
-    "input": "Controls",
+    "input": "Devices",
     "ai": "AI models",
     "accountDescription": "One key per service, encrypted by the keychain.",
     "appearanceDescription": "Theme and control density.",
@@ -21,7 +21,7 @@
     "gitDescription": "Version tracking of the project folder, by git. Your files only.",
     "mediaDescription": "Preparation of imported files: proxies and waveforms.",
     "dictationDescription": "Speaking a text instead of typing it. Everything happens on this computer: nothing you say is sent anywhere.",
-    "inputDescription": "How the studio is navigated, and the controls connected to this computer.",
+    "inputDescription": "How the studio is navigated with a gamepad, and the devices connected to this computer.",
     "aiDescription": "Which AI serves each operation. The studio here, Ollama here, or an online service you have a key for.",
     "gamepadNavigation": {
       "title": "Navigate the studio with a gamepad",
@@ -31,7 +31,8 @@
       "title": "Detected controls",
       "keyboard": "Keyboard",
       "mouse": "Mouse",
-      "noGamepad": "No gamepad is connected."
+      "noGamepad": "No gamepad is connected.",
+      "gamepadSleeps": "A gamepad only appears once one of its buttons has been pressed: the browser does not show it before that. Plugged in but silent, it looks exactly like no gamepad at all."
     },
     "theme": {
       "title": "Theme",
@@ -488,6 +489,10 @@
     "memoryCompactHelp": "Rewrites the file with one line per standing memory. This is where what was forgotten finally leaves the disk.",
     "memoryRelations": "What this memory touches",
     "memoryPromote": "Keep everywhere",
-    "memoryPromoteHint": "Copies this memory into the machine’s own, so it serves in every project of yours. What the project learned stays there too."
+    "memoryPromoteHint": "Copies this memory into the machine’s own, so it serves in every project of yours. What the project learned stays there too.",
+    "gameControls": {
+      "title": "The game’s controls",
+      "help": "They are not set here. A game reads a control map of the project, filed under “Game controls” in the Explorer, and the “New control map” button creates one. This page covers the studio interface alone, and what is plugged into this computer."
+    }
   }
 }
