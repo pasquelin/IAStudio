@@ -9,8 +9,9 @@ import {
   type InstalledCheckerTexture,
 } from '@shared/domain/checkerTexture'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
-import { folderForRole, type RoleFolders } from '@shared/domain/folderRole'
+import { DEFAULT_ROLE_PATHS, folderForRole, type RoleFolders } from '@shared/domain/folderRole'
 import { pathIn } from '@shared/domain/folder'
+import { RESOURCES_FOLDER } from '@shared/domain/project'
 import { CHANNELS } from '@shared/ipc'
 import { ownFileOf } from './protocol'
 import { handle } from '@main/ipc/handle'
@@ -35,9 +36,13 @@ type BundledTextureDeps = {
   exists: (file: string) => boolean
 }
 
-/** Where one lands in the project, and where it is looked for before being copied again. */
-function pathOf(id: CheckerTextureId, roles: RoleFolders): string {
-  return pathIn(folderForRole('materials', roles), checkerTextureFile(id))
+/**
+ * Where one lands in the project: under the studio's own folder, which no surface that browses
+ * assets lists. The tree inside it mirrors the project's own — `DEFAULT_ROLE_PATHS` names, fixed
+ * rather than resolved, since the studio owns this folder and no marker travels into it.
+ */
+function pathOf(id: CheckerTextureId): string {
+  return pathIn(pathIn(RESOURCES_FOLDER, DEFAULT_ROLE_PATHS.materials), checkerTextureFile(id))
 }
 
 /**
@@ -53,8 +58,20 @@ function pathOf(id: CheckerTextureId, roles: RoleFolders): string {
  */
 const FORMER_FOLDERS: readonly string[] = ['Images', 'Textures']
 
-function formerPathsOf(id: CheckerTextureId): readonly string[] {
-  return FORMER_FOLDERS.map(folder => pathIn(folder, checkerTextureFile(id)))
+/**
+ * The paths a project made before `.resources/` may hold one at — the two above, and the MATERIALS
+ * folder this used to land in, which is a lookup rather than a literal because a project may have
+ * moved its own.
+ *
+ * A project that already carries its four keeps them where they are: they go on resolving, and
+ * nothing here migrates. What it does not gain is the hiding — decision of Alban's, written
+ * rather than silently half-done.
+ */
+function formerPathsOf(id: CheckerTextureId, roles: RoleFolders): readonly string[] {
+  return [
+    pathIn(folderForRole('materials', roles), checkerTextureFile(id)),
+    ...FORMER_FOLDERS.map(folder => pathIn(folder, checkerTextureFile(id))),
+  ]
 }
 
 /**
@@ -84,8 +101,8 @@ export function registerBundledTextureHandlers({
   exists,
 }: BundledTextureDeps): void {
   const install = async (id: CheckerTextureId): Promise<Asset> => {
-    let held = (await catalog().search({ path: pathOf(id, roles()) }))[0]
-    for (const former of formerPathsOf(id)) {
+    let held = (await catalog().search({ path: pathOf(id) }))[0]
+    for (const former of formerPathsOf(id, roles())) {
       held ??= (await catalog().search({ path: former }))[0]
     }
     // The row alone is not enough: a texture deleted in the Finder leaves it behind, and every
@@ -114,6 +131,7 @@ export function registerBundledTextureHandlers({
           type: 'image',
           extension: '.png',
           map: 'baseColor',
+          resource: true,
         },
         bytes,
       ),

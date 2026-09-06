@@ -186,6 +186,26 @@ describe('local backend', () => {
     expect(asset.packedSlot).toBe('metallicRoughnessTexture')
   })
 
+  /**
+   * What the app SHIPS lands under the studio's own folder rather than in the user's tree — the
+   * default role path inside it, never the resolved one, the studio owning that folder.
+   */
+  it('files what the app ships under the resources folder, in the role’s own tree', async () => {
+    const asset = await backend.importFromBytes(
+      {
+        id: 'asset_grid',
+        name: 'GridLarge',
+        type: 'image',
+        extension: '.png',
+        map: 'baseColor',
+        resource: true,
+      },
+      BYTES,
+    )
+
+    expect(asset.path).toBe('.resources/Materials/GridLarge.png')
+  })
+
   it('files an extracted model map with images while keeping its channel metadata', async () => {
     const asset = await backend.importFromBytes(
       {

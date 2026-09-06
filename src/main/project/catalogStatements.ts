@@ -1,3 +1,4 @@
+import { NOT_PRIVATE } from './sqlText'
 import type { SqliteDriver } from './sqlite'
 
 const UNDER_PATH = 'path = ? OR (path >= ? AND path < ?)'
@@ -28,7 +29,8 @@ export function assetStatements(driver: SqliteDriver) {
       'SELECT * FROM assets WHERE hash = ? AND missing_at IS NULL ORDER BY created_at, id LIMIT 1',
     ),
     countTypes: driver.prepare(
-      'SELECT type, COUNT(*) AS total FROM assets WHERE missing_at IS NULL GROUP BY type',
+      `SELECT type, COUNT(*) AS total FROM assets
+       WHERE missing_at IS NULL AND ${NOT_PRIVATE} GROUP BY type`,
     ),
     deleteAsset: driver.prepare('DELETE FROM assets WHERE id = ?'),
     orphanChildren: driver.prepare('UPDATE assets SET derived_from = NULL WHERE derived_from = ?'),

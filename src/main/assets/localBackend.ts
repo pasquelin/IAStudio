@@ -8,8 +8,9 @@ import {
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
-import type { FolderRole } from '@shared/domain/folderRole'
-import { POSTERS_FOLDER } from '@shared/domain/project'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from '@shared/domain/folderRole'
+import { pathIn } from '@shared/domain/folder'
+import { POSTERS_FOLDER, RESOURCES_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/material'
 import type { ModelTextureUse } from '@shared/domain/modelTextureUse'
 import type { AsyncCatalog } from '@main/project/catalogClient'
@@ -106,6 +107,14 @@ export type WriteRequest = Omit<ImportRequest, 'url'> & {
   extension: string
   /** Overrides filing without changing what kind of asset the catalogue records. */
   folderRole?: FolderRole
+  /**
+   * Files this under the studio's own `.resources/`, in the same role tree the project uses — for
+   * what the APP ships rather than what the user brought. No surface that browses assets lists it.
+   *
+   * 🛑 A FLAG, never a path: an arbitrary folder reaching this from a request would write outside
+   * the project on its first `../`.
+   */
+  resource?: true
   /** What the bytes say about themselves, when the caller could read it. */
   probe?: MediaProbe
 }
@@ -335,14 +344,15 @@ export function createLocalBackend({
     name: string,
   ): Promise<string> => {
     const extension = safeExtension(request.extension, request.type)
-    return existing?.path
-      ? withExtension(existing.path, extension)
-      : freeAssetPath(
-          projectPath(),
-          await folderFor(request.folderRole ?? roleForAsset(request)),
-          name,
-          extension,
-        )
+    if (existing?.path) return withExtension(existing.path, extension)
+
+    const role = request.folderRole ?? roleForAsset(request)
+    // The DEFAULT tree under `.resources/`, never the resolved one: the studio owns that folder,
+    // so no marker travels into it and no rename may move what it holds.
+    const folder = request.resource
+      ? pathIn(RESOURCES_FOLDER, DEFAULT_ROLE_PATHS[role])
+      : await folderFor(role)
+    return freeAssetPath(projectPath(), folder, name, extension)
   }
 
   const removeReplacedPoster = async (
