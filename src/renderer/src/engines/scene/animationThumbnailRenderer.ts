@@ -156,9 +156,14 @@ export async function createAnimationThumbnailRenderer(model: ArrayBuffer, decod
               ? ['Head', 'Chest', 'Hips', 'LeftUpperLeg', 'RightUpperLeg']
               : ['LeftUpperLeg', 'RightUpperLeg']
           for (const n of scoredNames) {
-            const r = refs.get(names[n] ?? n)
+            // `refs` and `start` are keyed by SOURCE names, `scoredNames` by the character's:
+            // read one of them untranslated and a Mixamo clip scores against its bind pose.
+            const from = names[n] ?? n
+            const r = refs.get(from)
             if (r)
-              score += r.o.getWorldQuaternion(new T.Quaternion()).angleTo(start.get(n) ?? r.world)
+              score += r.o
+                .getWorldQuaternion(new T.Quaternion())
+                .angleTo(start.get(from) ?? r.world)
           }
         }
         return score
