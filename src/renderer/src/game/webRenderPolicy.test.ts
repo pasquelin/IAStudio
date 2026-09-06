@@ -23,4 +23,18 @@ describe('what an exported game pays for an image', () => {
     expect(code).toContain('tuneSceneShadows(built.scene, policy)')
     expect(code).toContain('shadowMapSizeFor(policy.quality, policy.shadowMapSize)')
   })
+
+  /**
+   * Left to itself three.js redraws every map of every casting light on every frame — what a
+   * level nobody walks in was paying sixty times a second for a picture that does not move.
+   */
+  it('draws a depth pass on the frames that owe one, never on all of them', () => {
+    expect(code).toContain('renderer.shadowMap.autoUpdate = false')
+    expect(code).toContain('renderer.shadowMap.needsUpdate = shadowsStale || settled')
+  })
+
+  it('settles the scene BEFORE reading the flag, or a short-circuit skips the pruning', () => {
+    const draw = code.slice(code.indexOf('draw: () => {'))
+    expect(draw.indexOf('held.flush(camera)')).toBeLessThan(draw.indexOf('shadowMap.needsUpdate'))
+  })
 })

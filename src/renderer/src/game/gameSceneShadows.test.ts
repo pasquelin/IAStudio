@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DirectionalLight, Mesh, Object3D } from 'three'
+import { DirectionalLight, Mesh, Object3D, PerspectiveCamera } from 'three'
 import type { GeometryDescriptor, LightDescriptor } from '@shared/domain/scene'
 import type { AssetPort } from '@game/ports/assetPort'
 import { groupNode, lightNode, meshNode, modelNode } from '@/engines/scene/nodeFactory'
@@ -79,5 +79,21 @@ describe('what an exported game throws a shadow with', () => {
     const built = await buildGameScene(scene([child, parent]), NOTHING)
 
     expect(built.byEntity.get(child.id)?.castShadow).toBe(false)
+  })
+})
+
+/** What decides a depth pass in an exported frame — see `createWebRender`, which reads it. */
+describe('what a settled frame answers', () => {
+  it('owes nothing once the scene it settled has stopped changing', async () => {
+    const built = await buildGameScene(
+      scene([meshNode(BOX, { name: 'Crate' }), lightNode(SUN, { x: 0, y: 4, z: 0 })]),
+      NOTHING,
+    )
+    const camera = new PerspectiveCamera()
+
+    built.flush(camera)
+
+    expect(built.flush(camera)).toBe(false)
+    built.dispose()
   })
 })

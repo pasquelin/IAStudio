@@ -67,8 +67,11 @@ export type GameScene = {
    * Settles what a frame left stale before it is drawn — the instanced bounds `place` dirtied,
    * and which scatter cells the camera reaches. The camera is asked for rather than optional:
    * a game draws its own way, and the one that forgot to prune drew every cell at every distance.
+   *
+   * Answers whether the scene it hands over is not the one the last frame drew, which is what
+   * decides a depth pass: a set nothing moved in owes no shadow map.
    */
-  flush: (camera: Camera) => void
+  flush: (camera: Camera) => boolean
   seek: (time: Us) => void
   dispose: () => void
 }
@@ -206,12 +209,14 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     // 🛑 Once a frame, never per instance: `computeBoundingSphere` walks every slot of the mesh,
     // so recomputing it inside the placement made a 1 000-instance node quadratic per frame.
     flush: camera => {
-      drape.updateVisibility(camera)
+      const scattered = drape.updateVisibility(camera)
+      const moved = staleInstances.size > 0
       for (const mesh of staleInstances) {
         mesh.instanceMatrix.needsUpdate = true
         mesh.computeBoundingSphere()
       }
       staleInstances.clear()
+      return scattered || moved
     },
     seek: time => animations.seek(time),
     dispose: () => {

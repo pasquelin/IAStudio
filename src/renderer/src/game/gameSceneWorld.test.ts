@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SCATTER_DISTANCE } from '@shared/domain/renderPolicy'
 import { BoxGeometry, Mesh, MeshBasicMaterial, Object3D, PerspectiveCamera } from 'three'
 import type { AssetPort } from '@game/ports/assetPort'
 import { reliefLayer, scatterLayer } from '@shared/domain/scene'
@@ -80,7 +81,7 @@ describe('what an exported game asks of its scatter', () => {
               id: 'trees',
               assets: [{ assetId: 'pine', weight: 1 }],
               origin: { x: 0, z: 0 },
-              size: { x: 512, z: 256 },
+              size: { x: SCATTER_DISTANCE * 3, z: 256 },
               rules: { ...scatterLayer({ id: 'rules' }).rules, density: 0.01, spacing: 16 },
             }),
           ],
@@ -93,11 +94,12 @@ describe('what an exported game asks of its scatter', () => {
     )
     const scatter = built.scene.getObjectByName('scene-scatter')
     if (!scatter) throw new Error('the game scene grew no scatter to prune')
-    // Two cells of 256 across a 512-wide layer, and a reach that spans neither: what the eye is
-    // read as decides which one survives. No `updateMatrixWorld` here on purpose — a stale matrix
-    // would answer the origin, which is the OTHER cell, so this tells the two apart.
+    // A layer three times what a semis is drawn to, walked from one end to the other: the two
+    // ends share no cell. The LENS is deliberately short of both — the reach is the semis' own,
+    // and reading it off `camera.far` is what made this pass unable to hide anything at all. No
+    // `updateMatrixWorld` here on purpose: a stale matrix would answer the origin every time.
     const camera = new PerspectiveCamera(50, 1, 0.1, 60)
-    camera.position.set(400, 10, 0)
+    camera.position.set(SCATTER_DISTANCE * 3 - 128, 10, 0)
 
     built.flush(camera)
     const far = drawnUnder(scatter)

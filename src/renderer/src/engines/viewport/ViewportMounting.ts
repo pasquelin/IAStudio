@@ -1,3 +1,4 @@
+import { VIEW_DISTANCE } from '@shared/domain/renderPolicy'
 import { OrthographicCamera, PerspectiveCamera } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { paneRects, type PaneRect } from './panes'
@@ -29,7 +30,7 @@ export abstract class ViewportMounting extends ViewportPaneLayout {
 
   protected createExtra(): ExtraPane {
     const near = this.options.near ?? 0.1
-    const far = this.options.far ?? 1000
+    const far = this.options.far ?? VIEW_DISTANCE
 
     const orthographic = new OrthographicCamera()
     orthographic.near = near

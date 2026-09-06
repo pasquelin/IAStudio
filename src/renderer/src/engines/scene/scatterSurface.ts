@@ -65,7 +65,7 @@ type ScatterCells = {
   group: Group
   queried: Map<ScatterCategory, CellKey[]>
   wanted: Map<ScatterCategory, Set<CellKey>>
-  visibility: { x: number; z: number; reach: number; revision: number }
+  visibility: { x: number; z: number; revision: number }
   revision: number
 }
 
@@ -93,7 +93,7 @@ export function createScatterSurface(scene: Scene, options: ScatterSurfaceOption
       group,
       queried: new Map(SCATTER_CATEGORIES.map(category => [category, []])),
       wanted: new Map(SCATTER_CATEGORIES.map(category => [category, new Set()])),
-      visibility: { x: 0, z: 0, reach: 0, revision: -1 },
+      visibility: { x: 0, z: 0, revision: -1 },
       revision: 0,
     },
     world: null,

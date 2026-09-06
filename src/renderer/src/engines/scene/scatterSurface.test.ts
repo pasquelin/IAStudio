@@ -1,3 +1,4 @@
+import { SCATTER_DISTANCE } from '@shared/domain/renderPolicy'
 import {
   BoxGeometry,
   InstancedMesh,
@@ -147,7 +148,7 @@ describe('createScatterSurface', () => {
     surface.dispose()
   })
 
-  it('uses the world partition to hide cells beyond the camera reach', async () => {
+  it('uses the world partition to hide cells beyond what a semis is drawn to', async () => {
     const surface = createScatterSurface(new Scene(), {
       models: createModelCache(
         async () => staticTree(),
@@ -167,6 +168,8 @@ describe('createScatterSurface', () => {
         }),
       ],
     })
+    // 🛑 Past SCATTER_DISTANCE, and not past the far plane: the reach is the semis' own, so an
+    // eye whose lens sees no further than 200 still holds both cells of a layer at its feet.
     const camera = new PerspectiveCamera(50, 1, 0.1, 200)
     camera.position.set(0, 10, 0)
     camera.updateMatrixWorld(true)
@@ -174,7 +177,13 @@ describe('createScatterSurface', () => {
     surface.updateVisibility(camera)
 
     expect(surface.objectsInCell('trees', cellKey(0, 0))[0]?.visible).toBe(true)
-    expect(surface.objectsInCell('trees', cellKey(1, 0))[0]?.visible).toBe(false)
+    expect(surface.objectsInCell('trees', cellKey(1, 0))[0]?.visible).toBe(true)
+
+    camera.position.set(SCATTER_DISTANCE + 512, 10, 0)
+    camera.updateMatrixWorld(true)
+    surface.updateVisibility(camera)
+
+    expect(surface.objectsInCell('trees', cellKey(0, 0))[0]?.visible).toBe(false)
     surface.dispose()
   })
 
@@ -207,13 +216,14 @@ describe('createScatterSurface', () => {
     camera.position.x = 1
     camera.updateMatrixWorld(true)
     surface.updateVisibility(camera)
+    // A lens that changes asks for nothing: what a semis is drawn to is not what a camera sees to.
     camera.far = 100
     surface.updateVisibility(camera)
-    expect(query).toHaveBeenCalledTimes(3)
+    expect(query).toHaveBeenCalledTimes(2)
 
     await surface.sync({ ...DEFAULT_WORLD, layers: [{ ...layer, seed: layer.seed + 1 }] })
     surface.updateVisibility(camera)
-    expect(query).toHaveBeenCalledTimes(4)
+    expect(query).toHaveBeenCalledTimes(3)
     surface.dispose()
   })
 

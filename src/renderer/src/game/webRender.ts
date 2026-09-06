@@ -16,7 +16,11 @@ import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/render
 import { applyToneMapping } from '@/engines/scene/worldBinding'
 import { applyShadowQuality, shadowReachOf, tuneShadowMaps } from '@/engines/scene/shadows'
 import { pixelRatioFor, shadowMapSizeFor } from '@/engines/scene/viewportQuality'
-import { DEFAULT_RENDER_POLICY, type RenderPolicy } from '@shared/domain/renderPolicy'
+import {
+  DEFAULT_RENDER_POLICY,
+  VIEW_DISTANCE,
+  type RenderPolicy,
+} from '@shared/domain/renderPolicy'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { CompiledModelMesh, CompiledSceneOptimization } from '@shared/domain/gameExport'
@@ -39,7 +43,6 @@ export type WebRender = RenderPort & {
 }
 
 const NEAR = 0.1
-const FAR = 2000
 
 /**
  * What draws a game in a browser page — the whole of the studio's viewport that a game needs.
@@ -57,11 +60,18 @@ export function createWebRender(
   const gltf = createGltfSource(() => renderer)
   renderer.shadowMap.enabled = policy.shadows
   applyShadowQuality(renderer, policy.shadowQuality)
-  const camera = new PerspectiveCamera(60, 1, NEAR, FAR)
+  // 🛑 Never on its own: three.js redraws EVERY map of EVERY casting light on every frame it is
+  // left to, which a level nobody walks in pays sixty times a second for a picture that does not
+  // move. The frames that owe one say so — see `draw`, and `ViewportSurface`, where the editor
+  // has held the same rule since it had shadows at all.
+  renderer.shadowMap.autoUpdate = false
+  const camera = new PerspectiveCamera(policy.fieldOfView, 1, NEAR, VIEW_DISTANCE)
   const veil = veilPass()
   const sized = { width: 0, height: 0 }
   let aimed = false
   let held: GameScene | null = null
+  /** Whether the scene the shadow maps hold is no longer the one about to be drawn. */
+  let shadowsStale = true
   // 🛑 Which build the picture belongs to: a scene arriving while another is still being cut would
   // otherwise have the slower one land on top of it, and the faster one disposed under the draw.
   let building = 0
@@ -84,6 +94,7 @@ export function createWebRender(
 
       held?.dispose()
       held = built
+      shadowsStale = true
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
       if (policy.shadows) tuneSceneShadows(built.scene, policy)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
@@ -92,6 +103,7 @@ export function createWebRender(
     },
 
     place: (placements: readonly EntityPlacement[]) => {
+      if (placements.length > 0) shadowsStale = true
       for (const placement of placements) {
         held?.place(placement.entity, placement.transform)
       }
@@ -109,7 +121,11 @@ export function createWebRender(
       veil.material.opacity = clamp(amount, 0, 1)
     },
 
-    seek: time => held?.seek(time),
+    seek: time => {
+      // A clip moves what it drives without anyone placing it: its shadow moves with it.
+      shadowsStale = true
+      held?.seek(time)
+    },
 
     // 🛑 Only when it CHANGED: `setSize` reassigns `canvas.width`, which reallocates and clears
     // the framebuffer — sixty times a second at a size nobody touched.
@@ -131,7 +147,12 @@ export function createWebRender(
     draw: () => {
       if (!held) return
 
-      held.flush(camera)
+      // 🛑 Settled BEFORE the flag is read, never inside it: `||` short-circuits, and a frame
+      // that already owed a depth pass would have skipped the pruning entirely.
+      const settled = held.flush(camera)
+      // three.js clears `needsUpdate` inside the pass it triggers, so this is written per frame.
+      renderer.shadowMap.needsUpdate = shadowsStale || settled
+      shadowsStale = false
       renderer.render(held.scene, camera)
       // A second pass rather than a DOM layer: the port owns a canvas and nothing above it.
       if (veil.material.opacity > 0) {
