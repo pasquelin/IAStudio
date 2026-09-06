@@ -5,7 +5,7 @@ import { inputMapOf, type InputMap } from '@shared/domain/inputMap'
 import { Button } from '@/components/Button'
 import { Chip } from '@/components/Chip'
 import { getBridge } from '@/services/bridge'
-import { inputMapIdConflict, projectInputMaps } from '@/engines/code/projectInputMaps'
+import { isDuplicateInputMapId, projectInputMaps } from '@/engines/code/projectInputMaps'
 import {
   fileViewPanelId,
   registerFileViewSave,
@@ -85,8 +85,11 @@ export function InputMapDocument({ path }: InputMapDocumentProps) {
 
   const duplicateOf = useCallback(
     async (id: string): Promise<string | null> => {
-      const conflict = inputMapIdConflict(await projectInputMaps())
-      return conflict?.map.id === id ? t('game.inputMap.duplicateId', { id }) : null
+      // 🛑 Asked of THIS id: `inputMapIdConflict` answers the first repeat of the project, so a
+      // second pair elsewhere hid the one the author had just written.
+      return isDuplicateInputMapId(await projectInputMaps(), id)
+        ? t('game.inputMap.duplicateId', { id })
+        : null
     },
     [t],
   )

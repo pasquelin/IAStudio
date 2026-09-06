@@ -282,9 +282,10 @@ const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [], inputMaps: [] }
  */
 export async function scriptTrouble(script: string, source: string): Promise<ScriptTrouble | null> {
   compiler ??= createScriptCompiler()
-  return (
-    (await compiler.compile([{ script, source }], await projectInputMaps())).troubles[0] ?? null
-  )
+  // The same maps a Play is handed, duplicates dropped — or the squiggle in the editor answers
+  // for a set of contexts the game will never see.
+  const maps = withoutDuplicateInputMapIds(await projectInputMaps())
+  return (await compiler.compile([{ script, source }], maps)).troubles[0] ?? null
 }
 
 /**

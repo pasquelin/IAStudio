@@ -11,11 +11,19 @@ export type InputCapture = {
   capturing: boolean
   /** Waits for the next key. Answers a `KeyboardEvent.code`; Escape gives up. */
   captureKey: (taken: (code: string) => void) => void
-  /** Waits for the next gamepad control pushed past its rest, on any standard controller. */
-  captureGamepadControl: (taken: (control: GamepadControl) => void) => void
+  /**
+   * Waits for the next gamepad control pushed past its rest, on any standard controller. A push
+   * `accepts` refuses keeps the capture WAITING rather than binding nothing in silence.
+   */
+  captureGamepadControl: (
+    taken: (control: GamepadControl) => void,
+    accepts?: (control: GamepadControl) => boolean,
+  ) => void
   /** Gives up without binding anything. */
   cancel: () => void
 }
+
+const ANY = (): boolean => true
 
 /**
  * 🛑 « Press the key you want » rather than typing `ShiftLeft` into a text field, which is what
@@ -23,7 +31,7 @@ export type InputCapture = {
  * has done this since it shipped; this is the same gesture, in the studio.
  */
 export function useInputCapture(): InputCapture {
-  const [capturing, setCapturing] = useState(false)
+  const [mode, setMode] = useState<'key' | 'gamepad' | null>(null)
   // Held in refs, not in state: the listener is attached once and must see the latest taker.
   const keyTaker = useRef<((code: string) => void) | null>(null)
   const padTaker = useRef<((control: GamepadControl) => void) | null>(null)
@@ -34,12 +42,15 @@ export function useInputCapture(): InputCapture {
     padTaker.current = null
     if (polling.current !== 0) cancelAnimationFrame(polling.current)
     polling.current = 0
-    setCapturing(false)
+    setMode(null)
   }, [])
 
   useEffect(() => {
-    if (!capturing) return
+    if (mode === null) return
     const onKeyDown = (event: KeyboardEvent): void => {
+      // 🛑 Waiting on a STICK, only Escape is ours: eating every key would swallow ⌘S, and taking
+      // one would cancel the capture without binding anything and without a word.
+      if (mode === 'gamepad' && event.code !== 'Escape') return
       // The capture eats the key: Space on the armed button would otherwise press it again.
       event.preventDefault()
       const take = keyTaker.current
@@ -48,19 +59,22 @@ export function useInputCapture(): InputCapture {
     }
     window.addEventListener('keydown', onKeyDown, { capture: true })
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true })
-  }, [capturing, stop])
+  }, [mode, stop])
 
   const captureKey = useCallback((taken: (code: string) => void): void => {
     keyTaker.current = taken
-    setCapturing(true)
+    setMode('key')
   }, [])
 
   const captureGamepadControl = useCallback(
-    (taken: (control: GamepadControl) => void): void => {
+    (
+      taken: (control: GamepadControl) => void,
+      accepts: (control: GamepadControl) => boolean = ANY,
+    ): void => {
       padTaker.current = taken
-      setCapturing(true)
+      setMode('gamepad')
       const look = (): void => {
-        const pushed = pushedControl()
+        const pushed = pushedControl(accepts)
         if (pushed === null) {
           polling.current = requestAnimationFrame(look)
           return
@@ -77,18 +91,32 @@ export function useInputCapture(): InputCapture {
   // Escape hatch for a panel closed mid-capture: the frame loop must not outlive the editor.
   useEffect(() => stop, [stop])
 
-  return { capturing, captureKey, captureGamepadControl, cancel: stop }
+  return { capturing: mode !== null, captureKey, captureGamepadControl, cancel: stop }
 }
 
-/** The first control of any connected standard controller pushed past rest, or nothing. */
-function pushedControl(): GamepadControl | null {
+/** The first control of any connected standard controller `accepts` reads in a push, or nothing. */
+function pushedControl(accepts: (control: GamepadControl) => boolean): GamepadControl | null {
   if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') return null
   for (const gamepad of navigator.getGamepads()) {
     if (!gamepad || gamepad.mapping !== 'standard') continue
-    const button = gamepad.buttons.findIndex(one => one.value > PRESSED)
-    if (button >= 0 && GAMEPAD_BUTTONS[button] !== undefined) return GAMEPAD_BUTTONS[button]
-    const axis = gamepad.axes.findIndex(value => Math.abs(value) > PRESSED)
-    if (axis >= 0 && GAMEPAD_AXES[axis] !== undefined) return GAMEPAD_AXES[axis]
+    const taken = readingsOf(gamepad).find(accepts)
+    if (taken !== undefined) return taken
   }
   return null
+}
+
+/**
+ * 🛑 What ONE push can be read as, WIDEST first: a stick before either of its axes. An `axis2`
+ * action takes `leftStick` and nothing else, so answering `leftStickX` alone bound nothing at
+ * all on `move` and `look` — the two the feature exists for.
+ */
+function readingsOf(gamepad: Gamepad): readonly GamepadControl[] {
+  const button = gamepad.buttons.findIndex(one => one.value > PRESSED)
+  if (button >= 0) {
+    const named = GAMEPAD_BUTTONS[button]
+    return named === undefined ? [] : [named]
+  }
+  const axis = gamepad.axes.findIndex(value => Math.abs(value) > PRESSED)
+  const named = GAMEPAD_AXES[axis]
+  return named === undefined ? [] : [axis < 2 ? 'leftStick' : 'rightStick', named]
 }

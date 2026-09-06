@@ -7,7 +7,8 @@ import { NumberField } from '@/components/NumberField'
 import { SelectField } from '@/components/SelectField'
 import { ToggleField } from '@/components/ToggleField'
 import { useInputCapture } from '@/hooks/useInputCapture'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
+import { useLatest } from '@/hooks/useLatest'
 import { DEFAULT_GAMEPAD_DEAD_ZONE } from '@game/runtime/inputMaps'
 
 type InputMapExpertGamepadProps = {
@@ -51,6 +52,9 @@ export function InputMapExpertGamepad({
 }: InputMapExpertGamepadProps) {
   const { t } = useTranslation()
   const capture = useInputCapture()
+  // The row keeps being edited while a push is waited on: without this, binding the stick would
+  // put back the dead zone and the scale the author changed in the meantime.
+  const latest = useLatest(binding)
   // A control the ACTION cannot take is not one a capture may bind: a stick pushed while a
   // button action is being captured would otherwise write a binding the map refuses.
   const fits = (control: GamepadControl): boolean =>
@@ -69,15 +73,12 @@ export function InputMapExpertGamepad({
             onClick={() =>
               capture.capturing
                 ? capture.cancel()
-                : capture.captureGamepadControl(control => {
-                    if (fits(control)) onChange({ ...binding, control })
-                  })
+                : capture.captureGamepadControl(
+                    control => onChange({ ...latest.current, control }),
+                    fits,
+                  )
             }
-            {...TIP_LEFT(
-              capture.capturing ? t('game.inputMap.capturing') : t('game.inputMap.capture'),
-              false,
-              t('game.inputMap.captureHint'),
-            )}
+            {...HINT_LEFT(t('game.inputMap.captureHint'))}
           >
             {capture.capturing ? t('game.inputMap.capturing') : t('game.inputMap.capture')}
           </Button>

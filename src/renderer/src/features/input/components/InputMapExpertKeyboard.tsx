@@ -6,7 +6,8 @@ import { NumberField } from '@/components/NumberField'
 import { SelectField } from '@/components/SelectField'
 import { TextField } from '@/components/TextField'
 import { useInputCapture } from '@/hooks/useInputCapture'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
+import { useLatest } from '@/hooks/useLatest'
 
 type InputMapExpertKeyboardProps = {
   kind: InputActionKind
@@ -23,6 +24,8 @@ export function InputMapExpertKeyboard({
 }: InputMapExpertKeyboardProps) {
   const { t } = useTranslation()
   const capture = useInputCapture()
+  // Read at the moment the key lands, not at the click: the axis or the scale may have moved.
+  const latest = useLatest(binding)
   const label = t('game.inputMap.binding', { device: t('game.inputMap.device.keyboard') })
 
   return (
@@ -39,13 +42,9 @@ export function InputMapExpertKeyboard({
             onClick={() =>
               capture.capturing
                 ? capture.cancel()
-                : capture.captureKey(code => onChange({ ...binding, code }))
+                : capture.captureKey(code => onChange({ ...latest.current, code }))
             }
-            {...TIP_LEFT(
-              capture.capturing ? t('game.inputMap.capturing') : t('game.inputMap.capture'),
-              false,
-              t('game.inputMap.captureHint'),
-            )}
+            {...HINT_LEFT(t('game.inputMap.captureHint'))}
           >
             {capture.capturing ? t('game.inputMap.capturing') : t('game.inputMap.capture')}
           </Button>

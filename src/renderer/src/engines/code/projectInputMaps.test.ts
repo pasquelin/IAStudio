@@ -5,6 +5,7 @@ import { installFakeBridge } from '@/services/fakeBridge'
 import {
   inputMapIdConflict,
   projectInputMaps,
+  isDuplicateInputMapId,
   withoutDuplicateInputMapIds,
 } from './projectInputMaps'
 
@@ -80,5 +81,21 @@ describe('what a game is handed when two files carry one context', () => {
     const maps = [at('a.input.json', 'character'), at('b.input.json', 'vehicle')]
 
     expect(withoutDuplicateInputMapIds(maps)).toEqual(maps)
+  })
+
+  /**
+   * 🛑 Asked of ONE id: the save of a document reads its own, and a first duplicate pair
+   * elsewhere in the project used to hide the one the author had just written.
+   */
+  it('says an id is doubled even when another pair comes first', () => {
+    const maps = [
+      at('a.input.json', 'character'),
+      at('b.input.json', 'character'),
+      at('c.input.json', 'vehicle'),
+      at('d.input.json', 'vehicle'),
+    ]
+
+    expect(isDuplicateInputMapId(maps, 'vehicle')).toBe(true)
+    expect(isDuplicateInputMapId(maps, 'flight')).toBe(false)
   })
 })

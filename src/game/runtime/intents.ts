@@ -46,9 +46,16 @@ export function createIntents(report?: (message: string) => void): Intents {
   const driving = new Map<string, Steering>()
   const flying = new Map<string, Stick>()
 
-  // What a controller looked at THIS step, and what has already been complained about — the
-  // second never clears, or a body nobody reads would write a line sixty times a second.
-  const read = new Set<string>()
+  // 🛑 One set of body ids PER KIND, and not one set keyed `kind:body`: the studio always hands
+  // a `report`, so that key was a string built per read per step — sixty allocations a second a
+  // body, for bookkeeping. `said` never clears, or a body nobody reads writes a line every step.
+  const read = {
+    walk: new Set<string>(),
+    jump: new Set<string>(),
+    look: new Set<string>(),
+    drive: new Set<string>(),
+    fly: new Set<string>(),
+  }
   const said = new Set<string>()
 
   const say = (message: string, key: string): void => {
@@ -63,18 +70,16 @@ export function createIntents(report?: (message: string) => void): Intents {
       `2:${kind}:${bodyId}`,
     )
 
-  const dropped = (kind: string, bodyId: string): void => {
-    if (read.has(`${kind}:${bodyId}`)) return
+  const dropped = (kind: keyof typeof read, bodyId: string): void => {
+    if (read[kind].has(bodyId)) return
     say(
       `${kind} was asked of body ${bodyId}, which no controller reads: the ask is dropped`,
       `0:${kind}:${bodyId}`,
     )
   }
 
-  // 🛑 Behind `report`, all of it: a key built per read is an ALLOCATION a step, sixty times a
-  // second, for bookkeeping nobody asked for. Silent, this costs exactly what it did before.
-  const taken = <T>(kind: string, bodyId: string, held: T | undefined): T | null => {
-    if (report) read.add(`${kind}:${bodyId}`)
+  const taken = <T>(kind: keyof typeof read, bodyId: string, held: T | undefined): T | null => {
+    read[kind].add(bodyId)
     return held ?? null
   }
 
@@ -101,7 +106,7 @@ export function createIntents(report?: (message: string) => void): Intents {
 
     walkOf: bodyId => taken('walk', bodyId, walking.get(bodyId)),
     jumped: bodyId => {
-      if (report) read.add(`jump:${bodyId}`)
+      read.jump.add(bodyId)
       return jumping.has(bodyId)
     },
     lookOf: bodyId => taken('look', bodyId, looking.get(bodyId)),
@@ -116,7 +121,7 @@ export function createIntents(report?: (message: string) => void): Intents {
         for (const bodyId of driving.keys()) dropped('drive', bodyId)
         for (const bodyId of flying.keys()) dropped('fly', bodyId)
       }
-      read.clear()
+      for (const one of Object.values(read)) one.clear()
       walking.clear()
       jumping.clear()
       looking.clear()

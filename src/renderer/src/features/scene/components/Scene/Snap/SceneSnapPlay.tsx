@@ -6,6 +6,9 @@ import { tipFor } from '@/helpers/tooltip'
 import { openScriptAt } from '@/helpers/openScript'
 import { playReportOf, usePlay } from '@/stores/play'
 
+/** Enough to read the cause and what it caused; the button's label carries the true count. */
+const FAULTS_SHOWN = 6
+
 export type SceneSnapPlayProps = { documentId: string }
 
 /**
@@ -56,9 +59,10 @@ export function SceneSnapPlay({ documentId }: SceneSnapPlayProps) {
           icon={mdiAlertCircleOutline}
           tone="warning"
           label={t('game.play.faults', { count: faults.length })}
-          // 🛑 ALL of them, and in order: showing only the last one read out `script never loaded`
-          // while the duplicate map id that CAUSED it, reported first, was never on screen.
-          description={faults.join('\n')}
+          // 🛑 The FIRST ones, in order: showing only the last read out `script never loaded`
+          // while the duplicate map id that CAUSED it, reported first, was never on screen — and
+          // the log ring keeps two hundred, which a system throwing every step fills.
+          description={faults.slice(0, FAULTS_SHOWN).join('\n')}
           tooltip={tipFor('horizontal')}
           disabled={!addressable}
           onClick={() => {
