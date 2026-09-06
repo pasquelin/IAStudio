@@ -1547,6 +1547,31 @@ export default defineScript({
 
 Le même script répond alors au clavier **et** à la manette, sans savoir lequel des deux a parlé.
 
+### Piloter le corps depuis un script
+
+Lire les commandes ne suffit pas toujours : un script peut aussi **demander** au corps de bouger,
+et c'est le contrôleur du studio qui exécute — avec la gravité, les pentes et les murs.
+
+| Demande | Ce qu'elle fait |
+|---|---|
+| `self.walk(x, z)` | marche, en mètres par seconde, dans les axes du monde |
+| `self.jump()` | saute, avec la même tolérance au sol qu'un bouton |
+| `self.look(lacet, tangage)` | tourne le regard, en radians par seconde |
+| `self.drive(gaz, braquage, frein)` | conduit **ce** véhicule |
+| `self.fly(tangage, roulis, lacet, gaz)` | pilote **cet** appareil |
+
+> **Ne déplacez pas un personnage avec `moveBy`.** Celle-là pose le nœud où vous dites, sans rien
+> demander à personne — donc à travers le mur que la physique n'a pas encore vu. `walk` demande,
+> et ce qui est impossible n'arrive pas.
+
+**Une demande REMPLACE les commandes, pour ce corps et ce pas seulement.** Un script qui se tait
+sur un pas rend la main au joueur sur ce pas ; un script qui parle à chaque pas tient le corps.
+C'est ce qui permet de dire « ne bouge pas » : `self.walk(0, 0)` immobilise, là qu'une demande qui
+ne ferait que s'ajouter ne pourrait jamais rien demander du tout.
+
+Et la demande vise **le corps sur lequel le script est posé** : un script sur une voiture conduit
+cette voiture, pas les autres de la scène.
+
 ---
 
 ## Optimiser et exporter un jeu

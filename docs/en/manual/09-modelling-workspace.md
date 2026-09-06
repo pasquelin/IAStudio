@@ -1499,6 +1499,31 @@ export default defineScript({
 
 The same script then answers the keyboard **and** the gamepad, without knowing which one spoke.
 
+### Driving the body from a script
+
+Reading the controls is not always enough: a script can also **ask** the body to move, and the
+studio's controller carries it out — with gravity, slopes and walls.
+
+| Ask | What it does |
+|---|---|
+| `self.walk(x, z)` | walks, in metres a second, in world axes |
+| `self.jump()` | jumps, with the same ground tolerance a button gets |
+| `self.look(yaw, pitch)` | turns the look, in radians a second |
+| `self.drive(throttle, steer, handBrake)` | drives **this** vehicle |
+| `self.fly(pitch, roll, yaw, throttle)` | flies **this** aircraft |
+
+> **Do not move a character with `moveBy`.** That one puts the node where you say, asking nobody —
+> so through the wall the physics has not seen yet. `walk` asks, and what is impossible does not
+> happen.
+
+**An ask REPLACES the controls, for that body and that step alone.** A script silent on a step
+hands the player back the sticks on it; a script that speaks every step holds the body. That is
+what lets you say « stand still »: `self.walk(0, 0)` stops it dead, where an ask that only added
+could never ask for nothing at all.
+
+And the ask reaches **the body the script sits on**: a script on one car drives that car, not the
+others in the scene.
+
 ---
 
 ## Optimising and exporting a game
