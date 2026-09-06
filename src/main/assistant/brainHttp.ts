@@ -1,6 +1,7 @@
 import type { CloudProviderId, HttpChat } from '@shared/domain/aiCloud'
 import type { AssistantThought } from '@shared/domain/assistant'
 import { askCloudChat, type CloudPoster } from '@main/ai/cloudChat'
+import { chatToolsFor, foldedReply } from './chatTools'
 import type { ChatTurn } from '@main/ai/localRuntimes'
 import { log } from '@main/log'
 import type { Credentials } from '@main/settings/accounts'
@@ -90,6 +91,12 @@ export function createHttpChatBrain({
    */
   let narrowed = false
 
+  // Native tools: the OpenAI wire alone speaks them, a mission alone has candidates, and never on
+  // a stream, whose reader takes text frames only — a clause nothing reaches today, the runtime
+  // passing no `onProgress` and the conversation no candidates.
+  const native = (request: AssistantThought, watch: TurnWatch): boolean =>
+    chat.kind === 'openai' && request.candidates !== undefined && watch.onProgress === undefined
+
   const round = async (
     request: AssistantThought,
     briefing: Briefing,
@@ -111,6 +118,8 @@ export function createHttpChatBrain({
       // The model is settled HERE and nowhere deeper: what a cloud is talked to with is a
       // setting, and the three request shapes below only ever read the one they were handed.
       const asked = { ...chat, model: model() }
+      // The tools follow the briefing SHOWN, expansions included: what has fields is callable.
+      const tools = native(request, watch) ? chatToolsFor(briefing.loaded) : undefined
       const answer = await askCloudChat(
         {
           chat: asked,
@@ -119,12 +128,12 @@ export function createHttpChatBrain({
           images: request.images,
           json: true,
           maxTokens: ASK_TOKENS,
-          ...defined({ signal: watch.signal, onProgress: watch.onProgress }),
+          ...defined({ signal: watch.signal, onProgress: watch.onProgress, tools }),
         },
         send,
       )
       if (briefing.narrow === null) narrowed = true
-      return { answer, cost: 0 }
+      return { answer: foldedReply(answer), cost: 0 }
     } catch (error) {
       log.warn('assistant', `${chat.kind} thinking failed: ${String(error)}`)
       throw error
@@ -148,6 +157,7 @@ export function createHttpChatBrain({
         roomFor(CLOUD_CONTEXT_TOKENS),
         notReady,
         roomFor(CLOUD_FALLBACK_TOKENS),
+        native(request, watch),
       )
       // 🛑 Narrowed by the DOOR, not by the room: the names fit everywhere, so a door that has
       // already refused once would be composed the wide rules again and refuse them again — one

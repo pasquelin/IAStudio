@@ -39,7 +39,8 @@ function missionBenchSet(value: string): MissionBenchSet {
 const BENCH_SET = missionBenchSet(requestedSet)
 const scenarios = missionScenarios(SCENARIOS, BENCH_SET, process.env['MISSION_BENCH_RANKS'] ?? '')
 
-type Tokens = { sent: number; back: number; cached: number; calls: number }
+/** `native` counts the answers that came back as tool calls rather than as JSON text. */
+type Tokens = { sent: number; back: number; cached: number; calls: number; native: number }
 type Result = {
   name: string
   passed: number
@@ -97,8 +98,15 @@ function counting(tokens: Tokens): typeof fetch {
     tokens.sent += number('prompt_tokens') + number('input_tokens')
     tokens.back += number('completion_tokens') + number('output_tokens')
     tokens.cached += number('prompt_cache_hit_tokens') + number('cache_read_input_tokens')
+    if (answeredWithTools(body)) tokens.native += 1
     return new Response([204, 205, 304].includes(response.status) ? null : written, response)
   }
+}
+
+function answeredWithTools(body: unknown): boolean {
+  const first = isRecord(body) && Array.isArray(body['choices']) ? body['choices'][0] : null
+  const message = isRecord(first) ? first['message'] : null
+  return isRecord(message) && Array.isArray(message['tool_calls'])
 }
 
 function parsed(written: string): unknown {
@@ -153,7 +161,7 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
       unnecessary: 0,
       searches: 0,
       milliseconds: 0,
-      tokens: { sent: 0, back: 0, cached: 0, calls: 0 },
+      tokens: { sent: 0, back: 0, cached: 0, calls: 0, native: 0 },
       metrics: emptyMetrics(),
       families: scenarioFamilies(scenario),
       failures: [],
@@ -226,6 +234,7 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
         `${sum(result => result.metrics.contextChars)} context chars · ` +
         `${sum(result => result.metrics.llmCalls)} runtime rounds · ` +
         `${sum(result => result.tokens.calls)} provider calls · ` +
+        `${sum(result => result.tokens.native)} native tool answers · ` +
         `${sum(result => result.metrics.replans)} replans · ` +
         `${sum(result => result.metrics.revisionConflicts)} revision conflicts · ` +
         `${sum(result => result.metrics.userWaits)} user waits · ` +
@@ -254,6 +263,7 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
           unnecessary: sum(result => result.unnecessary),
           rounds: sum(result => result.metrics.llmCalls),
           providerCalls: sum(result => result.tokens.calls),
+          nativeAnswers: sum(result => result.tokens.native),
           topK: 12,
           failuresByClass: Object.fromEntries(byClass),
           coverage: missionFamilyCoverage(scenarios),

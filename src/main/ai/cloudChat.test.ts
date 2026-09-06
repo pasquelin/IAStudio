@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { HttpChat } from '@shared/domain/aiCloud'
-import { askCloudChat } from './cloudChat'
+import { askCloudChat, type ChatTool } from './cloudChat'
 
 const answerFor = (kind: HttpChat['kind']): Response =>
   new Response(
@@ -108,6 +108,71 @@ describe('askCloudChat visual context', () => {
 
     expect(JSON.parse(String(post.mock.calls[0]?.[1]?.body))).toMatchObject({
       messages: [{ role: 'user', content: 'hello' }],
+    })
+  })
+})
+
+describe('askCloudChat native tools', () => {
+  const tool = {
+    name: 'node_add',
+    description: 'Adds a node.',
+    parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
+  } satisfies ChatTool
+  const chat: HttpChat = { kind: 'openai', baseUrl: 'https://example.test/v1', model: 'text' }
+
+  it('sends the tools to the OpenAI door, the JSON format kept beside them', async () => {
+    const post = vi.fn(async (_url: string, _init?: RequestInit) => answerFor('openai'))
+
+    await askCloudChat(
+      {
+        chat,
+        key: 'key',
+        messages: [{ role: 'user', content: 'go' }],
+        json: true,
+        maxTokens: 20,
+        tools: [tool],
+      },
+      post,
+    )
+
+    const body: unknown = JSON.parse(String(post.mock.calls[0]?.[1]?.body))
+    expect(body).toMatchObject({ tools: [{ type: 'function', function: tool }] })
+    expect(body).toHaveProperty('response_format')
+  })
+
+  it('reads the calls a cloud made, with nothing said beside them', async () => {
+    const post = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: '',
+                  tool_calls: [{ function: { name: 'node_add', arguments: '{"kind":"cube"}' } }],
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+    )
+
+    const answer = await askCloudChat(
+      {
+        chat,
+        key: 'key',
+        messages: [{ role: 'user', content: 'go' }],
+        json: true,
+        maxTokens: 20,
+        tools: [tool],
+      },
+      post,
+    )
+
+    expect(answer).toEqual({
+      text: '',
+      calls: [{ name: 'node_add', arguments: '{"kind":"cube"}' }],
     })
   })
 })

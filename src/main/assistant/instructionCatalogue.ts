@@ -85,9 +85,7 @@ export const namesPrinted = (): string =>
  * to obtain is a parseable object, and the cheapest model on the list is the one most likely to
  * wrap it in prose if only told once.
  */
-export const FORMAT = [
-  'Answer with one JSON object and nothing else. No prose around it, no code fence.',
-  'The object has exactly three keys:',
+const ASK_LINES = [
   '  "say": a short sentence for the person, in their language. May be empty.',
   // 🛑 Two lines of the FORMAT and never a rule of the catalogue: named by a rule, this was
   // described to every model and called by none — the question went in "say" and the calls went
@@ -95,6 +93,12 @@ export const FORMAT = [
   '  "ask": {"question":"…","choices":[…]} to ask the person, or null. It RUNS NOTHING:',
   '    the calls wait, their answer comes back next round. Ask rather than act halfway.',
   `    Several: {"questions":[{"question":"…","choices":[…],"note":true},…]}, ${MOST_QUESTIONS} max ("note" = a free line).`,
+]
+
+export const FORMAT = [
+  'Answer with one JSON object and nothing else. No prose around it, no code fence.',
+  'The object has exactly three keys:',
+  ...ASK_LINES,
   '  "calls": a list of actions to run, in order. May be empty.',
   'Each call is {"action": "<name from the catalogue>", "input": {<the fields above>}}.',
   // 🛑 A LITERAL id: the example spelled `"<the armed model>"` and the model copied the shape —
@@ -102,6 +106,18 @@ export const FORMAT = [
   'Example: {"say":"Making an image.","ask":null,"calls":[{"action":"generator.prepare",',
   '"input":{"family":"image","modelId":"flux.1-dev","parameters":{"prompt":"a bicycle"}}},',
   '{"action":"generator.submit","input":{"landing":"document"}}]}',
+].join('\n')
+
+// For a door handed the manuals as native tools: the calls go through them, the text carries the
+// two other keys. « Never in the text » is the point: a name written by hand was a name invented.
+export const TOOL_FORMAT = [
+  'Run actions by CALLING THE TOOLS, in order. Never write an action name in the text.',
+  'Beside the calls, answer with one JSON object and nothing else, with two keys:',
+  ...ASK_LINES,
+  // 🛑 In the tools' own words: the rule above says it of an empty "calls", a key this door has
+  // no more — told nothing, the model wrote « je lance l'envoi » and called nothing (2026-09-06).
+  'Calling no tool means the request is DONE, and "say" then tells the person where things',
+  'stand — never empty. Never write that you will call, or that a thing is done: call it now.',
 ].join('\n')
 
 /**

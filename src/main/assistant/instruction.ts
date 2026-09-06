@@ -20,6 +20,7 @@ import {
   roleWith,
   RULES,
   targetLine,
+  TOOL_FORMAT,
   type Manual,
   WIDE_RULES,
 } from './instructionCatalogue'
@@ -30,6 +31,8 @@ export type BriefingParts = {
   mission?: boolean
   /** A round after the first on one sentence — see `CONTINUING`, which is what it adds. */
   continuing?: boolean
+  /** The manuals travel as native tools too, so the FORMAT says to call them — `TOOL_FORMAT`. */
+  tools?: boolean
   /** The spaces nothing can generate in, so the model says so before promising a picture. */
   notReady?: readonly string[]
   /** What the open project is about, already composed — see `composedContext`. */
@@ -204,7 +207,7 @@ function composed(
     ...labelled('Targets in the open document:', targets.map(targetLine).join('\n')),
     ...plain(found),
     ...plain(parts.continuing ? CONTINUING : ''),
-    FORMAT,
+    parts.tools ? TOOL_FORMAT : FORMAT,
   ].join('\n')
 }
 
@@ -357,9 +360,11 @@ export async function briefingFor(
   room: number,
   notReady?: () => Promise<readonly string[]>,
   fallbackRoom = room,
+  tools = false,
 ): Promise<Briefing> {
   return studioBriefing({
     continuing: request.continuing === true,
+    tools,
     notReady: await notReady?.(),
     context: request.context,
     folders: request.folders,
