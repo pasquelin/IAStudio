@@ -193,11 +193,9 @@ export function inputBindingFits(kind: InputActionKind, binding: InputBinding): 
   if (binding.device === 'mouse') return false
   if (kind === 'axis1') {
     if (binding.device === 'keyboard') return binding.axis === undefined
-    return (
-      binding.control.endsWith('X') ||
-      binding.control.endsWith('Y') ||
-      binding.control.endsWith('Trigger')
-    )
+    // Anything but a TWO-WAY stick: a button pushes one way, which is what a half-axis is — and
+    // a rudder on the shoulders was refused by a rule that only knew the word « Trigger ».
+    return binding.control !== 'leftStick' && binding.control !== 'rightStick'
   }
   if (binding.device === 'keyboard') return binding.axis !== undefined
   return binding.control === 'leftStick' || binding.control === 'rightStick'

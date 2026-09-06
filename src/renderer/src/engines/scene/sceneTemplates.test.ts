@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_CHECKER_TEXTURE } from '@shared/domain/checkerTexture'
 import { SCENE_SUBJECT_ID } from '@shared/domain/animation'
 import { SCENE_TEMPLATE_IDS, type SceneTemplateId } from '@shared/domain/sceneTemplate'
+import { isTemplateScriptId } from '@shared/domain/templateScript'
 import { rememberCheckerTextures, forgetCheckerTextures } from './checkerTextures'
 import { textOf } from '@game/runtime/componentFields'
 import { createHierarchy } from '@/game/hierarchy'
@@ -298,4 +299,40 @@ describe('the arm the playable templates hang their camera on', () => {
       expect(named).toContain(subject)
     })
   }
+})
+
+describe('what a template lays down beside itself', () => {
+  const scripted = (template: SceneTemplateId): readonly string[] =>
+    sceneFromTemplate(template)
+      .nodes.flatMap(node => node.components ?? [])
+      .filter(component => component.type === 'Script')
+      .map(component => textOf(component, 'script', ''))
+
+  it('gives every played template a script to open, and every other none', () => {
+    expect(scripted('firstPerson')).toEqual(['player'])
+    expect(scripted('thirdPerson')).toEqual(['player'])
+    expect(scripted('topDown')).toEqual(['player'])
+    expect(scripted('car')).toEqual(['car'])
+    expect(scripted('plane')).toEqual(['plane'])
+    expect(scripted('empty')).toEqual([])
+    expect(scripted('basic')).toEqual([])
+  })
+
+  it('hangs it on what is PLAYED, never on a prop standing beside it', () => {
+    const third = sceneFromTemplate('thirdPerson').nodes
+    const module = third.find(isPlayerModule)
+
+    expect(module?.components?.some(one => one.type === 'Script')).toBe(true)
+
+    const walker = sceneFromTemplate('firstPerson').nodes.find(node =>
+      node.components?.some(one => one.type === 'CharacterController'),
+    )
+    expect(walker?.components?.some(one => one.type === 'Script')).toBe(true)
+  })
+
+  it('names a script the seeding can write, so the component never points at nothing', () => {
+    for (const template of SCENE_TEMPLATE_IDS) {
+      for (const named of scripted(template)) expect(isTemplateScriptId(named)).toBe(true)
+    }
+  })
 })

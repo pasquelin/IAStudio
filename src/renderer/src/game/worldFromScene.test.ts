@@ -46,8 +46,14 @@ describe('the edit state, translated into something that runs', () => {
 
     const world = worldFromScene('doc-1', scene(), ports(), {}, 1, undefined, inputMaps)
 
-    expect(world.inputMaps).toEqual(inputMaps)
-    expect(world.inputContexts.active()).toEqual(['character'])
+    // Its own two first, then the built-in contexts it left undefined — see `inputDefaults`.
+    expect(world.inputControls.maps().map(map => map.id)).toEqual([
+      'character',
+      'vehicle',
+      'flight',
+    ])
+    expect(world.inputContexts.active()).not.toContain('vehicle')
+    expect(world.inputContexts.active()).toContain('character')
   })
 
   it('carries every object, with its name and what it does', () => {

@@ -1446,6 +1446,109 @@ avant de calculer quoi que ce soit** — un rendu prend des minutes.
 
 ---
 
+## Jouer la scène
+
+Le bouton **Jouer** de la barre d’outils lance la scène comme une partie, **dans une fenêtre à
+part**. Le document n’est pas touché : la partie construit son propre monde, et **Arrêter** le
+jette pour remettre la scène telle qu’elle était. La fenêtre de jeu lit son propre clavier — rien
+du viewport ne lui est passé, et l’éditeur derrière elle ne bouge pas.
+
+### Les commandes, sans rien configurer
+
+Une scène neuve se joue **au clavier comme à la manette**, sans créer un seul fichier ni écrire
+une ligne de script. Une manette branchée est reconnue dès qu’un premier bouton est pressé — c’est
+le navigateur qui l’exige, pas le studio.
+
+**À pied**
+
+| Geste | Clavier | Manette |
+|---|---|---|
+| Marcher | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> ou les flèches | stick gauche |
+| Courir | <kbd>Maj</kbd> | clic du stick gauche |
+| Regarder | souris, **bouton maintenu** | stick droit, **sans rien tenir** |
+| Sauter | <kbd>Espace</kbd> | ✕ / A |
+| Interagir | <kbd>E</kbd> | ▢ / X |
+
+**Au volant**
+
+| Geste | Clavier | Manette |
+|---|---|---|
+| Accélérer | <kbd>W</kbd> ou <kbd>↑</kbd> | gâchette droite |
+| Freiner, reculer | <kbd>S</kbd> ou <kbd>↓</kbd> | gâchette gauche |
+| Braquer | <kbd>A</kbd> <kbd>D</kbd> ou <kbd>←</kbd> <kbd>→</kbd> | stick gauche |
+| Frein à main | <kbd>Espace</kbd> | ✕ / A |
+| Sortir | <kbd>F</kbd> | ▢ / X |
+
+**Aux commandes d’un avion**
+
+| Geste | Clavier | Manette |
+|---|---|---|
+| Cabrer, piquer | <kbd>↓</kbd> cabre, <kbd>↑</kbd> pique | stick gauche, **tiré vers soi pour cabrer** |
+| Incliner | <kbd>A</kbd> <kbd>D</kbd> | stick gauche |
+| Lacet | <kbd>Q</kbd> <kbd>E</kbd> | gâchettes d’épaule |
+| Gaz | <kbd>Maj</kbd> ouvre, <kbd>Ctrl</kbd> réduit | gâchettes |
+
+> **Le stick est analogique, la touche ne l’est pas.** Un stick poussé à mi-course marche à mi-
+> vitesse ; une touche ne connaît que zéro et tout. C’est la seule chose qu’une manette sait dire
+> et qu’un clavier ne sait pas.
+
+> **Les gaz d’un avion sont un levier, pas une pédale.** On les pousse, on les tire, et ils
+> restent où on les a laissés — un moteur qui retombe au ralenti dès qu’un doigt se lève ne se
+> pilote pas.
+
+### Deux réglages qu’il ne faut pas confondre
+
+Le réglage **Réglages ▸ Contrôles ▸ Parcourir le studio à la manette** ne concerne **que
+l’interface du studio** : il laisse une manette déplacer le focus, valider et revenir dans les
+panneaux et les dialogues. Il reste éteint par défaut, pour qu’une partie ne déplace pas l’éditeur
+derrière elle — **et il n’a aucun effet sur la partie**, qui écoute la manette de toute façon.
+
+La liste **Contrôles détectés** de la même page dit ce que la machine voit. Une manette qui n’y
+figure pas n’a pas encore envoyé un premier appui.
+
+### Changer les commandes
+
+Les commandes ci-dessus sont un **point de départ**, pas une limite. Une **carte de contrôles**
+du projet les remplace, contexte par contexte.
+
+**Les cinq modèles de scène jouables en posent une, et vous n’avez rien à faire pour cela.**
+Créez une scène « Première personne », « Troisième personne » ou « Vue de dessus » et le projet
+reçoit `Controls/character.input.json` plus un script `Scripts/player.ts` accroché au personnage ;
+« Voiture » et « Avion » posent les leurs. Ouvrez-les, changez-les — c’est ce qu’ils sont là pour
+montrer. Une seconde scène du même modèle **rejoint** ces fichiers au lieu de les réécrire : une
+carte appartient au projet, pas à la scène.
+
+Le bouton **Nouvelle carte de contrôles** de l’Explorateur en crée une à la main, depuis l’un des
+cinq points de départ standards — *studio*, *personnage*, *véhicule*, *vol*, *menu*. Elles se
+rangent dans le dossier **Contrôles du jeu**, au sommet du projet, comme les interfaces.
+
+Une carte nomme des **actions** — `move`, `look`, `jump`, `run`, `interact` pour un personnage —
+et dit quelles touches, quels sticks et quels boutons les atteignent. **Ce que la carte du projet
+déclare l’emporte ; ce qu’elle laisse de côté garde le comportement par défaut.** Un projet sans
+aucune carte marche donc exactement comme le tableau ci-dessus.
+
+Un contexte porte aussi une **priorité** et un drapeau **Actif au démarrage**. Les contextes
+*personnage*, *véhicule* et *vol* sont actifs d’emblée — aucun nom d’action ne leur est commun,
+donc ils ne se marchent pas dessus. Le contexte *menu*, lui, **prime** sur les autres : c’est à un
+script de le pousser quand un menu s’ouvre, et de le retirer quand il se ferme.
+
+Un script lit ces mêmes actions par leur nom, jamais une touche :
+
+```ts
+import { defineScript } from '@studio'
+
+export default defineScript({
+  onUpdate(self, ctx, dt) {
+    const walk = ctx.input.axis2('move')
+    const running = ctx.input.button('run')
+  },
+})
+```
+
+Le même script répond alors au clavier **et** à la manette, sans savoir lequel des deux a parlé.
+
+---
+
 ## Optimiser et exporter un jeu
 
 La scène modifiée reste le monde auteur : chaque arbre, accessoire et objet piloté par un script

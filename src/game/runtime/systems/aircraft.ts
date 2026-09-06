@@ -10,20 +10,10 @@ import { COMPONENT_DEFAULTS } from '../componentDefaults'
 import { numberOf } from '../componentFields'
 import type { Transform } from '@shared/domain/transform'
 import { componentOf, type Entity } from '../entity'
-import { keyHeld, keysHeld } from '../keysHeld'
 import { PILOT_RANK, type Pilots } from '../pilots'
 import type { System, World } from '../world'
 
 const AIRCRAFT = COMPONENT_DEFAULTS.Aircraft
-
-const NOSE_DOWN = ['KeyW', 'ArrowUp']
-const NOSE_UP = ['KeyS', 'ArrowDown']
-const ROLL_LEFT = ['KeyA', 'ArrowLeft']
-const ROLL_RIGHT = ['KeyD', 'ArrowRight']
-const YAW_LEFT = 'KeyQ'
-const YAW_RIGHT = 'KeyE'
-const THROTTLE_UP = 'ShiftLeft'
-const THROTTLE_DOWN = 'ControlLeft'
 
 /** How much of the throttle a second of holding the lever moves — four seconds lever to lever. */
 const THROTTLE_RATE = 0.25
@@ -105,11 +95,11 @@ export function createAircraftSystem(
       if (flying.length === 0) return
 
       // Read ONCE: there is one stick, and every plane in the scene answers it.
-      const input = world.input
-      stick.pitch = keysHeld(input, NOSE_UP) - keysHeld(input, NOSE_DOWN)
-      stick.roll = keysHeld(input, ROLL_RIGHT) - keysHeld(input, ROLL_LEFT)
-      stick.yaw = keyHeld(input, YAW_RIGHT) - keyHeld(input, YAW_LEFT)
-      const lever = keyHeld(input, THROTTLE_UP) - keyHeld(input, THROTTLE_DOWN)
+      const actions = world.actions
+      stick.pitch = actions.axis('pitch')
+      stick.roll = actions.axis('roll')
+      stick.yaw = actions.axis('yaw')
+      const lever = actions.axis('throttle')
 
       forces.length = 0
       const motions = world.ports.physics.motion(names)

@@ -5,6 +5,7 @@ import type { JsonValue } from '@shared/domain/component'
 import { newComponent } from '@shared/domain/componentRegistry'
 import { notedPhysics, type NotedPhysics } from '../../physics/physics-fixtures'
 import { restingTransform } from '../entity'
+import { standardGamepad } from '../input-fixtures'
 import { STEP_SECONDS } from '../gameLoop'
 import { createPilots, type Pilots } from '../pilots'
 import { testPorts, testWorld } from '../world-fixtures'
@@ -13,7 +14,11 @@ import { createAircraftSystem } from './aircraft'
 
 type Bench = { world: World; physics: NotedPhysics; pilots: Pilots }
 
-function bench(held: readonly string[] = [], over: Record<string, JsonValue> = {}): Bench {
+function bench(
+  held: readonly string[] = [],
+  over: Record<string, JsonValue> = {},
+  pad?: Parameters<typeof standardGamepad>,
+): Bench {
   const physics = notedPhysics()
   const pilots = createPilots()
   const world = testWorld({
@@ -35,6 +40,7 @@ function bench(held: readonly string[] = [], over: Record<string, JsonValue> = {
     pressed: [],
     released: [],
     pointer: { x: 0, y: 0, down: false },
+    gamepads: pad ? [standardGamepad(...pad)] : [],
   })
   return { world, physics, pilots }
 }
@@ -47,6 +53,20 @@ const pushed = (bench: Bench, steps = 1) => {
 }
 
 describe('what flies', () => {
+  it('pulls the nose up on a stick pulled back, as the down arrow already did', () => {
+    const stick = pushed(bench([], {}, [{ leftY: 1 }]), 30)
+    const arrow = pushed(bench(['ArrowDown']), 30)
+
+    expect(stick?.torque.x).toBeCloseTo(arrow?.torque.x ?? 0)
+    expect(stick?.torque.x).not.toBe(0)
+  })
+
+  it('opens the throttle on the right trigger, which is the lever Shift holds', () => {
+    const trigger = pushed(bench([], {}, [{}, ['rightTrigger']]), 120)?.force.z ?? 0
+
+    expect(trigger).toBeCloseTo(pushed(bench(['ShiftLeft']), 120)?.force.z ?? 0, 0)
+  })
+
   it('pushes a lifting, thrusting force into the body every step', () => {
     const force = pushed(bench())?.force
 

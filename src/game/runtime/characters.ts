@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 
-import type { InputState, Pointer } from '../ports/inputPort'
+import type { Pointer } from '../ports/inputPort'
 import type { CharacterMove, CharacterMoved, CharacterSettings } from '../ports/physicsPort'
 import type { Component } from '@shared/domain/component'
 import type { ScenePlay } from '@shared/domain/scene'
 import { clamp, DEGREES, FULL_TURN, shortWay } from '../numeric'
 import { numberOf } from './componentFields'
-import { keysHeld } from './keysHeld'
+import type { InputActions } from './inputActions'
 import { COMPONENT_DEFAULTS } from './componentDefaults'
 import { componentOf, type Entity } from './entity'
+import { pooled } from '../pooled'
 import type { Transform } from '@shared/domain/transform'
 import type { Look } from './playView'
 import type { Possessions } from './possessions'
@@ -16,19 +17,26 @@ import type { World } from './world'
 
 const WALKER = COMPONENT_DEFAULTS.CharacterController
 
-/** `KeyboardEvent.code`, so a key is the one under the finger whatever the layout says it types. */
-const FORWARD = ['KeyW', 'ArrowUp']
-const BACK = ['KeyS', 'ArrowDown']
-const LEFT = ['KeyA', 'ArrowLeft']
-const RIGHT = ['KeyD', 'ArrowRight']
-const JUMP = 'Space'
-const RUN = ['ShiftLeft', 'ShiftRight']
+const freshMove = (): CharacterMove => ({
+  body: '',
+  wanted: { x: 0, y: 0, z: 0 },
+  facing: null,
+})
 
 /** Metres a second a fall stops getting faster at: past it a step tunnels through a thin floor. */
 const TERMINAL_FALL = 50
 
 /** Radians of turn per pixel dragged. */
 const LOOK_PER_PIXEL = 0.005
+
+/** Radians a second at full stick. A stick holds a POSITION, so its turn is paid per second. */
+const LOOK_PER_SECOND = 2.6
+
+/** 🛑 At the STEP, not the frame: a drag is idempotent between two aiming systems, a stick is not. */
+function turnBy(look: Look, stick: { x: number; y: number }, dt: number): void {
+  look.yaw = (look.yaw - stick.x * LOOK_PER_SECOND * dt) % FULL_TURN
+  look.pitch = clamp(look.pitch - stick.y * LOOK_PER_SECOND * dt, -PITCH_LIMIT, PITCH_LIMIT)
+}
 
 /** A hair under straight up, where yaw and pitch would turn about the same axis. */
 export const PITCH_LIMIT = Math.PI / 2 - 0.01
@@ -133,8 +141,8 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
       moves.length = 0
       byBody.clear()
       first = null
-      // One key, one answer: read per walker, this asked the same question of the same array again.
-      const jumped = world.input.pressed.includes(JUMP)
+      // One reading, one answer: asked per walker, this repeated the same question a step.
+      const jumped = world.actions.pressed('jump')
 
       for (const entity of world.entities.withComponent('CharacterController')) {
         const settings = componentOf(entity, 'CharacterController')
@@ -156,15 +164,11 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
 
         fallInto(walker, settings, jumped, world.play.gravity, dt)
 
-        paceInto(pace, world.input, paceOf(settings, world.play, world.input), look.yaw)
+        paceInto(pace, world.actions, paceOf(settings, world.play, world.actions), look.yaw)
         const steered = pace.x !== 0 || pace.z !== 0
         leanInto(walker, pace, rateOf(settings, walker, steered) * dt)
 
-        let move = pool[moves.length]
-        if (!move) {
-          move = { body: '', wanted: { x: 0, y: 0, z: 0 }, facing: null }
-          pool.push(move)
-        }
+        const move = pooled(pool, moves.length, freshMove)
         move.body = entity.id
         move.wanted.x = walker.paceX * dt
         move.wanted.y = walker.wantedY
@@ -173,6 +177,10 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
         moves.push(move)
         byBody.set(entity.id, walker)
       }
+
+      // 🛑 After the walkers, and only if one of them ASKED: a stick turning the shared look
+      // while its owner drives would snap the camera on getting out of the car.
+      if (moves.length > 0) turnBy(look, world.actions.axis2('look'), dt)
 
       return moves
     },
@@ -212,26 +220,32 @@ export function createCharacters(possessions: Possessions, worldOf: Placed): Cha
   }
 }
 
-/** Level, and never faster on the diagonal: two keys held would otherwise walk at 1,41 times. */
+/**
+ * Level, and never faster on the diagonal: two keys held would otherwise walk at 1,41 times.
+ * 🛑 A stick is NOT normalised back up — a third of the way is a third of the pace, which is the
+ * whole of what an analogue stick buys over a key.
+ */
 function paceInto(
   into: { x: number; z: number },
-  input: InputState,
+  actions: InputActions,
   speed: number,
   yaw: number,
 ): void {
-  const ahead = keysHeld(input, FORWARD) - keysHeld(input, BACK)
-  const side = keysHeld(input, RIGHT) - keysHeld(input, LEFT)
+  const wanted = actions.axis2('move')
+  // Ahead is negative on y, the axis a stick pushed forward reads on — see the `character` preset.
+  const ahead = -wanted.y
+  const side = wanted.x
   const length = Math.hypot(ahead, side)
-  const walk = length === 0 ? 0 : speed / length
+  const walk = speed / Math.max(1, length)
 
   into.x = (-Math.sin(yaw) * ahead + Math.cos(yaw) * side) * walk
   into.z = (-Math.cos(yaw) * ahead - Math.sin(yaw) * side) * walk
 }
 
 /** Metres a second. 🛑 Zero is « what the SCENE says » for the walk and « no running » for the run. */
-function paceOf(settings: Component | null, play: ScenePlay, input: InputState): number {
+function paceOf(settings: Component | null, play: ScenePlay, actions: InputActions): number {
   const run = numberOf(settings, 'runSpeed', WALKER.runSpeed)
-  if (run > 0 && keysHeld(input, RUN) === 1) return run
+  if (run > 0 && actions.button('run')) return run
   return numberOf(settings, 'moveSpeed', WALKER.moveSpeed) || play.moveSpeed
 }
 

@@ -173,7 +173,12 @@ async function seedCreated(
 ): Promise<void> {
   if (created.kind === 'scene') {
     await textures
-    seedSceneTemplate(created.id, isSceneTemplateId(template) ? template : DEFAULT_SCENE_TEMPLATE)
+    const scene = isSceneTemplateId(template) ? template : DEFAULT_SCENE_TEMPLATE
+    seedSceneTemplate(created.id, scene)
+    // Imported HERE, never at the top: this module opens the plus button, and what lays a
+    // template's files down reaches the bridge and the document store — see `createDocumentIn`.
+    const { seedTemplateFiles } = await import('@/features/game/seedTemplateFiles')
+    await seedTemplateFiles(scene)
   }
   if (created.kind === 'gui') {
     seedGuiTemplate(created.id, isUiTemplateId(template) ? template : DEFAULT_UI_TEMPLATE)

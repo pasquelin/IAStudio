@@ -1,23 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-import type { GamepadBinding, InputAction, InputMap } from '@shared/domain/inputMap'
-import type { Pointer } from '../ports/inputPort'
+import type { GamepadBinding, InputAction, InputBinding, InputMap } from '@shared/domain/inputMap'
+import type { GamepadState, InputState } from '../ports/inputPort'
+import { clamp } from '../numeric'
 
 type InputVector = { x: number; y: number }
 
-type RawGamepad = {
-  id: string
-  index: number
-  mapping: string
-  axes: readonly number[]
-  buttons: readonly number[]
-}
-
-export type RawInput = {
-  held: readonly string[]
-  gamepads: readonly RawGamepad[]
-  pointer?: Pointer
-}
+/** What a map is resolved against: the reading itself, minus what names no binding. */
+export type RawInput = Pick<InputState, 'held' | 'gamepads'> &
+  Partial<Pick<InputState, 'pointer' | 'pressed'>>
 
 export type ResolvedInput = {
   button: (id: string) => boolean
@@ -38,9 +29,9 @@ export function resolveInputMaps(
 ): ResolvedInput {
   const activeIds = new Set(active)
   const values: Record<string, InputActionValue> = {}
+  // No `slice` before the sort: `filter` already answers a new array, and this runs once a step.
   const ordered = maps
     .filter(map => activeIds.has(map.id))
-    .slice()
     .sort((one, other) => one.priority - other.priority)
 
   for (const map of ordered) {
@@ -63,17 +54,46 @@ export function resolveInputMaps(
 
 function valueOf(action: InputAction, input: RawInput): InputActionValue {
   if (action.kind === 'button') return action.bindings.some(binding => buttonOf(binding, input))
-  if (action.kind === 'axis1')
-    return action.bindings.reduce(
-      (strongest, binding) => stronger(strongest, axisOf(binding, input)),
-      0,
-    )
+  if (action.kind === 'axis1') return axisValueOf(action, input)
+  return vectorValueOf(action, input)
+}
 
-  const vector = action.bindings.reduce<InputVector>(
-    (strongest, binding) => strongerVector(strongest, vectorOf(binding, input)),
-    ZERO,
-  )
-  return vector
+/**
+ * 🛑 Half-axes SUM and a stick wins by magnitude. Two opposite halves held must cancel, which
+ * `stronger` alone never did: it kept the first of them for ever.
+ */
+function axisValueOf(action: InputAction, input: RawInput): number {
+  let halves = 0
+  let axes = 0
+  for (const binding of action.bindings) {
+    const value = axisOf(binding, input)
+    if (isHalfAxis(binding)) halves += value
+    else axes = stronger(axes, value)
+  }
+  return stronger(clamp(halves, -1, 1), axes)
+}
+
+function vectorValueOf(action: InputAction, input: RawInput): InputVector {
+  const halves: InputVector = { x: 0, y: 0 }
+  let axes: InputVector = ZERO
+  for (const binding of action.bindings) {
+    const value = vectorOf(binding, input)
+    if (isHalfAxis(binding)) {
+      halves.x += value.x
+      halves.y += value.y
+    } else axes = strongerVector(axes, value)
+  }
+  return strongerVector({ x: clamp(halves.x, -1, 1), y: clamp(halves.y, -1, 1) }, axes)
+}
+
+/**
+ * Whether a binding can only push ONE way — a key, a button, a trigger. The seam is the control,
+ * never the device: two triggers scaled apart are a pair of halves exactly as two keys are, and
+ * reading `device` alone gave a plane holding both of them full throttle BACKWARDS.
+ */
+function isHalfAxis(binding: InputBinding): boolean {
+  if (binding.device !== 'gamepad') return true
+  return buttonIndex(binding.control) !== null
 }
 
 function buttonOf(binding: InputAction['bindings'][number], input: RawInput): boolean {
@@ -87,7 +107,7 @@ function axisOf(binding: InputAction['bindings'][number], input: RawInput): numb
   if (binding.device === 'keyboard')
     return input.held.includes(binding.code) ? (binding.scale ?? 1) : 0
   if (binding.device !== 'gamepad') return 0
-  const raw = input.gamepads.reduce(
+  const raw = (input.gamepads ?? []).reduce(
     (strongest, gamepad) => stronger(strongest, rawGamepadAxis(gamepad, binding)),
     0,
   )
@@ -103,7 +123,7 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
     return binding.axis === 'x' ? { x: value, y: 0 } : { x: 0, y: value }
   }
   if (binding.device !== 'gamepad') return ZERO
-  const vector = input.gamepads.reduce<InputVector>(
+  const vector = (input.gamepads ?? []).reduce<InputVector>(
     (strongest, gamepad) => strongerVector(strongest, rawGamepadVector(gamepad, binding)),
     ZERO,
   )
@@ -120,7 +140,7 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
   }
 }
 
-function rawGamepadAxis(gamepad: RawGamepad, binding: GamepadBinding): number {
+function rawGamepadAxis(gamepad: GamepadState, binding: GamepadBinding): number {
   if (gamepad.mapping !== 'standard') return 0
   const index = buttonIndex(binding.control)
   if (index !== null) return gamepad.buttons[index] ?? 0
@@ -128,7 +148,7 @@ function rawGamepadAxis(gamepad: RawGamepad, binding: GamepadBinding): number {
   return axis === null ? 0 : (gamepad.axes[axis] ?? 0)
 }
 
-function rawGamepadVector(gamepad: RawGamepad, binding: GamepadBinding): InputVector {
+function rawGamepadVector(gamepad: GamepadState, binding: GamepadBinding): InputVector {
   if (gamepad.mapping !== 'standard') return ZERO
   if (binding.control !== 'leftStick' && binding.control !== 'rightStick') return ZERO
   const offset = binding.control === 'leftStick' ? 0 : 2
@@ -143,27 +163,29 @@ function axisIndex(control: string): number | null {
   return null
 }
 
+/** The standard mapping's button order — exported so a suite names a control, never an index. */
+export const GAMEPAD_BUTTONS: readonly string[] = [
+  'south',
+  'east',
+  'west',
+  'north',
+  'leftShoulder',
+  'rightShoulder',
+  'leftTrigger',
+  'rightTrigger',
+  'select',
+  'start',
+  'leftStickButton',
+  'rightStickButton',
+  'dpadUp',
+  'dpadDown',
+  'dpadLeft',
+  'dpadRight',
+  'home',
+]
+
 function buttonIndex(control: string): number | null {
-  const controls = [
-    'south',
-    'east',
-    'west',
-    'north',
-    'leftShoulder',
-    'rightShoulder',
-    'leftTrigger',
-    'rightTrigger',
-    'select',
-    'start',
-    'leftStickButton',
-    'rightStickButton',
-    'dpadUp',
-    'dpadDown',
-    'dpadLeft',
-    'dpadRight',
-    'home',
-  ]
-  const index = controls.indexOf(control)
+  const index = GAMEPAD_BUTTONS.indexOf(control)
   return index < 0 ? null : index
 }
 

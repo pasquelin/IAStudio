@@ -10,26 +10,37 @@ beforeEach(() => {
   openFileView.mockReset()
 })
 
-describe('input map creation', () => {
-  it('writes the chosen preset under an available standard filename and opens it', async () => {
-    const write = vi.fn(async () => true)
-    installFakeBridge({
-      inputMaps: {
-        list: async () => ['character.input.json'],
-        read: async () => null,
-        write,
-      },
-    })
+const bridgeHolding = (paths: readonly string[], write: () => Promise<boolean>) =>
+  installFakeBridge({
+    inputMaps: { list: async () => [...paths], read: async () => null, write },
+  })
 
-    expect(await createInputMapFromPreset('character')).toBe('character-2.input.json')
+describe('input map creation', () => {
+  it('writes the chosen preset in the role folder and opens it', async () => {
+    const write = vi.fn(async () => true)
+    bridgeHolding([], write)
+
+    expect(await createInputMapFromPreset('character')).toBe('Controls/character.input.json')
     expect(write).toHaveBeenCalledWith(
-      'character-2.input.json',
-      expect.objectContaining({ id: 'character-2' }),
+      'Controls/character.input.json',
+      expect.objectContaining({ id: 'character' }),
     )
     expect(openFileView).toHaveBeenCalledWith({
       id: 'inputMap',
-      path: 'character-2.input.json',
-      title: 'character-2',
+      path: 'Controls/character.input.json',
+      title: 'character',
     })
+  })
+
+  /** The FILE names the context: a map filed elsewhere must not rename what a scene resolves. */
+  it('walks to a free name and names the context after it, folder left out', async () => {
+    const write = vi.fn(async () => true)
+    bridgeHolding(['Controls/character.input.json'], write)
+
+    expect(await createInputMapFromPreset('character')).toBe('Controls/character-2.input.json')
+    expect(write).toHaveBeenCalledWith(
+      'Controls/character-2.input.json',
+      expect.objectContaining({ id: 'character-2' }),
+    )
   })
 })
