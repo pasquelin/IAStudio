@@ -57,7 +57,7 @@ const stopped = (error: unknown): boolean =>
   (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError'))
 
 /** Quoting the answer back is what works; bounded so an essay does not eat the history budget. */
-export function complaintAbout(answer: string, fault: ReplyFault): string {
+function complaintAbout(answer: string, fault: ReplyFault): string {
   return [...faultLines(fault), 'This is what you sent:', answer.slice(0, 500)].join('\n')
 }
 
