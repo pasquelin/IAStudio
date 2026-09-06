@@ -18,8 +18,7 @@ import { texturesOf } from './sceneStats'
  * Put there by `scripts/copy-decoders.mjs` on postinstall; a checkout that skipped it loads
  * plain `.glb` files and reports a failure for compressed ones, like any unreadable file.
  */
-const DRACO_PATH = './decoders/draco/'
-const KTX2_PATH = './decoders/basis/'
+const DECODER_ROOT = './decoders/'
 const GLTF_MATERIAL_INDEX = 'gltfMaterialIndex'
 
 export function gltfMaterialIndexOf(material: Material): number | null {
@@ -58,13 +57,14 @@ export type GltfSource = {
 export function createGltfSource(
   rendererOf: () => WebGLRenderer | null,
   onFailure: (scope: string, error: unknown) => void = () => undefined,
+  decoderRoot = DECODER_ROOT,
 ): GltfSource {
   const loader = new GLTFLoader()
 
-  const draco = new DRACOLoader().setDecoderPath(DRACO_PATH)
+  const draco = new DRACOLoader().setDecoderPath(`${decoderRoot}draco/`)
   loader.setDRACOLoader(draco)
 
-  const ktx2 = new KTX2Loader().setTranscoderPath(KTX2_PATH)
+  const ktx2 = new KTX2Loader().setTranscoderPath(`${decoderRoot}basis/`)
   loader.setKTX2Loader(ktx2)
   // WASM inlined in the module — unlike Draco/KTX2, nothing to fetch at runtime.
   loader.setMeshoptDecoder(MeshoptDecoder)

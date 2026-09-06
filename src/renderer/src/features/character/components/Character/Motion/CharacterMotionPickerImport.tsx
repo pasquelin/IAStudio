@@ -35,6 +35,8 @@ export function CharacterMotionPickerImport({ onChoose }: CharacterMotionPickerI
     }
 
     reportImportNotices(imported)
+    const { generateAnimationThumbnails } = await import('@/services/animationThumbnails')
+    await generateAnimationThumbnails(imported.assets)
     if (imported.assets.length > 0) await useAssets.getState().refresh()
 
     const motions = imported.assets.filter(asset => asset.type === 'animation')

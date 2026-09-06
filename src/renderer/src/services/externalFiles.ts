@@ -106,6 +106,8 @@ async function handImported(
   onImported?: ExternalAssetReceiver,
 ): Promise<void> {
   reportImportNotices(imported)
+  const { generateAnimationThumbnails } = await import('./animationThumbnails')
+  await generateAnimationThumbnails(imported.assets)
   if (imported.montages.length > 0) {
     const { openImportedOtioz } = await import('@/features/shell/otioImport')
     for (const montage of imported.montages) await openImportedOtioz(montage)

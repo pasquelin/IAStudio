@@ -60,6 +60,13 @@ export type SaveMeshRequest = {
  */
 export type SaveAnimationRequest = SaveRequestBase & { glb: Uint8Array }
 
+export type AnimationThumbnailRequest = {
+  projectPath: string
+  assetId: string
+  sourcePath: string
+  png: Uint8Array
+}
+
 /**
  * A layered picture on its way to disk as OpenRaster — see `StudioBridge['assets']['saveLayered']`.
  *

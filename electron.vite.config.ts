@@ -111,6 +111,7 @@ const preload: PreloadViteConfig = {
 const renderer: RendererViteConfig = {
   root: resolve('src/renderer'),
   plugins: [react(), tailwindcss(), strippedDecoderUrls()],
+  worker: { plugins: () => [strippedDecoderUrls()] },
   // `@game` here as well as in `tsconfig.web.json`: a path the compiler resolves and the
   // bundler does not fails at RUNTIME with a green typecheck.
   resolve: {

@@ -11,6 +11,13 @@ import type { RescanReport } from './catalogRescan'
  */
 
 export type CatalogRequest =
+  | {
+      id: number
+      op: 'setAnimationPoster'
+      assetId: string
+      sourcePath: string
+      posterPath: string
+    }
   | { id: number; op: 'add'; asset: Asset }
   | { id: number; op: 'find'; assetId: string }
   | { id: number; op: 'findByHash'; hash: string }
@@ -25,6 +32,7 @@ export type CatalogRequest =
 
 /** What each operation answers, so the client can type its promise without a cast. */
 export type CatalogResults = {
+  setAnimationPoster: boolean
   add: Asset
   find: Asset | null
   findByHash: Asset | null

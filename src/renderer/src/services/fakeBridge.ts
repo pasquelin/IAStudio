@@ -175,6 +175,8 @@ const fakeAssets = (overrides: BridgeOverrides): StudioBridge['assets'] => ({
   saveLayered: () => Promise.reject(new Error('no project')),
   saveMesh: () => Promise.reject(new Error('no project')),
   saveAnimation: () => Promise.reject(new Error('no project')),
+  animationThumbnailModel: () => Promise.reject(new Error('no character')),
+  saveAnimationThumbnail: () => Promise.reject(new Error('no project')),
   readLayered: () => Promise.resolve(null),
   saveTexture: () => Promise.reject(new Error('no project')),
   installBundledTextures: () => Promise.resolve([]),

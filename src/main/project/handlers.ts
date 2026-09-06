@@ -1,4 +1,7 @@
 import { readFile } from 'node:fs/promises'
+import { saveAnimationThumbnail } from './animationThumbnail'
+import { bundledCharacters, resourcesRoot } from '@main/resources'
+import { bundledCharacterFile } from '@shared/domain/bundledCharacter'
 import { join } from 'node:path'
 import { PLAYER_MODULE_FORMAT, PLAYER_MODULE_SEGMENT } from '@shared/domain/playerModuleFile'
 import { projectName } from '@shared/domain/project'
@@ -359,6 +362,21 @@ export function registerProjectHandlers({
     const request = parseSaveMesh(value)
     if (!glbChunksOf(request.glb)) throw new Error('expected a binary glTF payload')
     return replaceGlb(request.replaces, request.glb, 'mesh')
+  })
+  handle(CHANNELS.animationThumbnailModel, async () => {
+    return new Uint8Array(
+      await readFile(join(bundledCharacters(resourcesRoot()), bundledCharacterFile('medium'))),
+    )
+  })
+  handle(CHANNELS.animationThumbnailSave, async (_event, request) => {
+    const root = project.path()
+    const catalog = project.catalog()
+    await saveAnimationThumbnail(
+      request,
+      root,
+      id => catalog.find(id),
+      (id, sourcePath, posterPath) => catalog.setAnimationPoster(id, sourcePath, posterPath),
+    )
   })
   handle(CHANNELS.assetsSaveAnimation, async (_event, value) => {
     const request = parseSaveAnimation(value)

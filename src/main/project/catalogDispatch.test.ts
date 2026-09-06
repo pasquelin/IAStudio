@@ -174,6 +174,7 @@ describe('dispatchCatalogRequest', () => {
         throw new Error('disk is full')
       },
       find: () => null,
+      setAnimationPoster: () => false,
       findByHash: () => null,
       findByRemoteId: () => null,
       search: () => [],
@@ -198,6 +199,7 @@ describe('dispatchCatalogRequest', () => {
     const failing: Catalog = {
       add: () => asset,
       find: () => null,
+      setAnimationPoster: () => false,
       findByHash: () => null,
       findByRemoteId: () => null,
       search: () => {

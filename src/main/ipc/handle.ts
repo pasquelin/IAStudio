@@ -8,6 +8,8 @@ import type { CHANNELS, StudioBridge } from '@shared/ipc'
  * window state — failing only at runtime, inside a component.
  */
 type ChannelMethod = {
+  [CHANNELS.animationThumbnailModel]: StudioBridge['assets']['animationThumbnailModel']
+  [CHANNELS.animationThumbnailSave]: StudioBridge['assets']['saveAnimationThumbnail']
   [CHANNELS.missionsWatch]: StudioBridge['missions']['watch']
   [CHANNELS.missionsCreate]: StudioBridge['missions']['create']
   [CHANNELS.missionsResume]: StudioBridge['missions']['resume']

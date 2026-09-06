@@ -44,6 +44,7 @@ export type BackedUpItem = {
 }
 
 export type Catalog = {
+  setAnimationPoster: (assetId: string, sourcePath: string, posterPath: string) => boolean
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
   /** The local asset an API one became, so a generation's parent can be tied to its channels. */

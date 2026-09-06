@@ -31,6 +31,7 @@ import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
 import type { Unsubscribe } from './ipcEvents'
 import type {
   SaveAnimationRequest,
+  AnimationThumbnailRequest,
   SaveAudioRequest,
   SaveLayeredRequest,
   SaveMeshRequest,
@@ -310,6 +311,8 @@ export type StudioBridgeLibrary = {
      * names: what makes a motion reusable is being a file no character owns.
      */
     saveAnimation: (request: SaveAnimationRequest) => Promise<Asset>
+    animationThumbnailModel: () => Promise<Uint8Array>
+    saveAnimationThumbnail: (request: AnimationThumbnailRequest) => Promise<void>
     /**
      * Reads a layered picture back, or `null` for an asset that is not one.
      *
