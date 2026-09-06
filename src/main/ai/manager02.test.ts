@@ -160,6 +160,37 @@ describe('holding a model in memory', () => {
     expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(true)
   })
 
+  // A quit mid-load disposes the manager; a turn still parked behind that load must not wake up
+  // and put weights into a runtime that is shutting down.
+  it('refuses a parked turn once the manager was disposed', async () => {
+    const extra = other('whisper')
+    const runtime = holdingRuntime()
+    let release: () => void = () => {}
+    const load = vi.fn(runtime.load!).mockImplementationOnce(
+      (model, options) =>
+        new Promise(resolve => {
+          release = () => resolve(runtime.load!(model, options))
+        }),
+    )
+    const ai = manager({
+      settings: () => ({
+        ...DEFAULT_SETTINGS,
+        ai: { ...DEFAULT_SETTINGS.ai, ownModels: [QWEN, extra] },
+      }),
+      runtimes: { 'sherpa-onnx': { ...runtime, load } },
+    })
+
+    const settingsLoad = ai.load(extra.id)
+    await vi.waitFor(() => expect(load).toHaveBeenCalledOnce())
+    const turn = ai.ensureLoaded(QWEN.id)
+    ai.dispose()
+    release()
+    await settingsLoad
+
+    await expect(turn).rejects.toThrow('disposed')
+    expect(load).toHaveBeenCalledOnce()
+  })
+
   it('loads the model the form named when another is on that door', async () => {
     const extra = other('whisper')
     const runtime = holdingRuntime()

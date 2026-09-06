@@ -458,8 +458,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
       const model = modelOf(modelId)
       if (model === null) throw new Error(`${modelId} is not in the catalogue`)
       if (occupancy.get(endpointOf(model.loader, model.modality))?.modelId === modelId) return
-      // Another model's flight is waited out, not refused: a turn asked mid-load answers late.
       while (loadFlight && loading?.modelId !== modelId) await orElse(loadFlight, undefined)
+      if (disposed) throw new Error(`${modelId} was asked for after the manager was disposed`)
       await runLoad(model)
       await announce()
       if (loadFailure !== null) throw managerHelpers.loadThrowOf(loadFailure)

@@ -19,6 +19,8 @@ import { clientFor, createClientProvider } from './provider/client'
 import { createRateLimiters, limitedTransport } from './provider/rateLimiter'
 import type { SettingsStore } from './settings/store'
 
+// Keys queried at once when reading usage: low, so a screen nobody waits on does not spend a
+// window of requests and hold the limiter. Concurrency only: the rate is `rateLimiter.ts`'s.
 const USAGE_CONCURRENCY = 4
 const NOTHING_DISCOVERED: readonly LocalModel[] = []
 

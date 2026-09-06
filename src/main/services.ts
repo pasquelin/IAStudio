@@ -58,12 +58,6 @@ import {
   savePicture,
 } from './serviceDialogs'
 
-/**
- * Keys queried at once when reading usage. Fixed and low, so that asking about every stored
- * account does not spend one window's worth of requests on a screen nobody is waiting on — the
- * limiter would hold the rest of the studio behind it. It bounds concurrency, not rate: the
- * hundred a minute the API allows is `rateLimiter.ts`'s business.
- */
 export type { Services } from './serviceTypes'
 import type { Services } from './serviceTypes'
 /** Two cores left to the interface and to whatever else the machine is doing — CLAUDE.md § 6. */
@@ -177,9 +171,11 @@ export function createServices(settings: SettingsStore): Services {
     onTrouble: why => log.warn('assistant', `action index: ${why}`),
   })
   const closeRetrieval = async (): Promise<void> => {
+    // The worker FIRST: the index close awaits an indexing that runs through it, so a wedged
+    // worker held the quit for ever with the grace still to come. Gone, that wait settles.
+    await embedder.close(QUIT_CLOSE_GRACE_MS)
     await actionIndex.close()
     await memoryVectors.close()
-    await embedder.close(QUIT_CLOSE_GRACE_MS)
   }
   function buildJobServices(): JobServices {
     return createJobServices({
