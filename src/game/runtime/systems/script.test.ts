@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Component, JsonValue } from '@shared/domain/component'
 import { newComponent, withComponentField } from '@shared/domain/componentRegistry'
+import { createAnimators } from '../animators'
 import { createIntents } from '../intents'
 import { loadQuickjsScripts } from '../../host/quickjsScripts'
 import type { ScriptFault } from '../../script/frame'
@@ -60,6 +61,7 @@ describe('what a game does with its own code', () => {
       inputMaps,
       systems: [
         createScriptSystem({
+          animators: createAnimators(),
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: fault => faults.push(fault),
           intents,
@@ -252,6 +254,7 @@ describe('what a game does with its own code', () => {
       ports: testPorts({ script: port }),
       systems: [
         createScriptSystem({
+          animators: createAnimators(),
           modules: [
             {
               script: WALK,
@@ -332,6 +335,7 @@ describe('what a script asks about its scenes', () => {
       }),
       systems: [
         createScriptSystem({
+          animators: createAnimators(),
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: () => {},
           intents,

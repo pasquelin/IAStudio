@@ -32,6 +32,7 @@ import { createFileOps } from './project/fileOps'
 import { createFolderReader, createFolderWriter } from './project/folder'
 import { createProjectGame } from './project/game'
 import { createGameScripts } from './project/gameScripts'
+import { createAnimationGraphs } from './project/animationGraphs'
 import { createInputMaps } from './project/inputMaps'
 import { keepScriptPaths } from './project/scriptPaths'
 import type { ActivityLog } from './project/activityLog'
@@ -129,6 +130,7 @@ export function createMediaServices(deps: MediaDeps) {
   const game = createProjectGame({ rootOf: projectRoot })
   const scripts = createGameScripts({ rootOf: projectRoot, walk: () => folder.walk() })
   const inputMaps = createInputMaps({ rootOf: projectRoot, walk: () => folder.walk() })
+  const animationGraphs = createAnimationGraphs({ rootOf: projectRoot, walk: () => folder.walk() })
   const files = createFileOps({
     rootOf: projectRoot,
     folder,
@@ -186,6 +188,7 @@ export function createMediaServices(deps: MediaDeps) {
       game,
       scripts,
       inputMaps,
+      animationGraphs,
       files,
       ffmpeg,
       media,

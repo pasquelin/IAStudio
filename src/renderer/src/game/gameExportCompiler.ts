@@ -177,6 +177,7 @@ async function compileExportRequest(
     entryScene,
     compiled.modules,
     compiled.inputMaps,
+    compiled.animationGraphs,
     [...textureOverrides, ...modelTextureOverrides],
   )
   return { request, troubles: compiled.troubles.map(trouble => trouble.script) }
@@ -189,6 +190,7 @@ function exportRequestOf(
   entryScene: string,
   modules: Awaited<ReturnType<typeof compiledScripts>>['modules'],
   inputMaps: Awaited<ReturnType<typeof compiledScripts>>['inputMaps'],
+  animationGraphs: Awaited<ReturnType<typeof compiledScripts>>['animationGraphs'],
   assetOverrides: GameExportRequest['assetOverrides'],
 ): GameExportRequest {
   return {
@@ -197,6 +199,7 @@ function exportRequestOf(
     scenes: projectScenes.scenes,
     scripts: modules.map(module => ({ script: module.script, code: module.code })),
     ...(inputMaps.length ? { inputMaps } : {}),
+    ...(animationGraphs.length ? { animationGraphs } : {}),
     ...(Object.keys(projectScenes.modelAssets).length
       ? { modelAssets: projectScenes.modelAssets }
       : {}),

@@ -16,6 +16,14 @@ export type SceneDraw = Pick<
 > & {
   applyRuntimeTransforms?: SceneRenderer['applyRuntimeTransforms']
   runtimePerformance?: () => Omit<RuntimePerformance, 'cpuFrameMs' | 'compilationMs'>
+  /**
+   * The three an `Animator` needs. Optional for the reason the two above are: a host with no
+   * mixers — an executed validation, a suite — poses nothing and the game plays on.
+   */
+  poseNode?: SceneRenderer['poseNode']
+  releaseNode?: SceneRenderer['releaseNode']
+  clipLengthsOf?: SceneRenderer['clipLengthsOf']
+  useGraphClips?: SceneRenderer['useGraphClips']
 }
 
 function updateShadow(

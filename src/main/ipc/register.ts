@@ -24,6 +24,7 @@ import { createCredentialVault } from '@main/git/credentials'
 import { registerGitHandlers } from '@main/git/handlers'
 import { createElectronAdapter } from '@main/settings/adapter'
 import { registerProjectHandlers } from '@main/project/handlers'
+import { registerAnimationGraphHandlers } from '@main/project/animationGraphHandlers'
 import { registerInputMapHandlers } from '@main/project/inputMapHandlers'
 import { registerProviderHandlers } from '@main/provider/handlers'
 import { TRANSLATIONS } from '@shared/i18n'
@@ -95,6 +96,7 @@ function registerSettingsIpc(services: Services): void {
 function registerProjectIpc(services: Services): void {
   registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
   registerInputMapHandlers(services.inputMaps)
+  registerAnimationGraphHandlers(services.animationGraphs)
 }
 
 function registerGitIpc(services: Services): void {

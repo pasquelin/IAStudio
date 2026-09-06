@@ -127,6 +127,9 @@ type ChannelMethod = {
   [CHANNELS.inputMapList]: StudioBridge['inputMaps']['list']
   [CHANNELS.inputMapRead]: StudioBridge['inputMaps']['read']
   [CHANNELS.inputMapWrite]: StudioBridge['inputMaps']['write']
+  [CHANNELS.animationGraphList]: StudioBridge['animationGraphs']['list']
+  [CHANNELS.animationGraphRead]: StudioBridge['animationGraphs']['read']
+  [CHANNELS.animationGraphWrite]: StudioBridge['animationGraphs']['write']
 
   [CHANNELS.documentList]: StudioBridge['documents']['list']
   [CHANNELS.documentRead]: StudioBridge['documents']['read']

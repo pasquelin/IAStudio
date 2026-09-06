@@ -29,9 +29,10 @@ import { resolveSpecifier } from './sourceFiles.ts'
  * 2026-09-03, when `window-ground.test.ts` took it past ten; 92 against 106 on 2026-09-04, when
  * `indexCss-fixtures` and `sceneRendererSource.testHelper` gave back the fourteen design guards
  * the `index.css` split had dropped and the eleven of `SceneRenderer` that had never been in the
- * net; 112 against 126 the same day, when the name list became a resolved hop into the module.
+ * net; 112 against 126 the same day, when the name list became a resolved hop into the module;
+ * 122 against 132 on 2026-09-06, when the animation graph brought its own.
  */
-export const LEAST_GUARDS = 121
+export const LEAST_GUARDS = 122
 
 /**
  * How far the floor may sit below the real count before it stops meaning anything.

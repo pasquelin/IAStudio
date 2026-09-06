@@ -131,6 +131,10 @@ export type Channels = {
   inputMapRead: 'input:read'
   inputMapWrite: 'input:write'
 
+  animationGraphList: 'anim:list'
+  animationGraphRead: 'anim:read'
+  animationGraphWrite: 'anim:write'
+
   documentList: 'document:list'
   documentRead: 'document:read'
   documentWrite: 'document:write'

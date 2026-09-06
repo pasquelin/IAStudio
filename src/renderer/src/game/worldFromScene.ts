@@ -5,6 +5,8 @@ import { copyTransform, IDENTITY_TRANSFORM, type Transform } from '@shared/domai
 import type { GameApi } from '@game/api/gameApi'
 import type { BodyDescriptor } from '@game/ports/physicsPort'
 import { createCharacters } from '@game/runtime/characters'
+import { createAnimators, type Animators } from '@game/runtime/animators'
+import { createAnimatorSystem } from '@game/runtime/systems/animator'
 import { createIntents, type Intents } from '@game/runtime/intents'
 import { createPossessions } from '@game/runtime/possessions'
 import { createPossessionSystem } from '@game/runtime/systems/possession'
@@ -37,6 +39,8 @@ import { bakedRuntimeNodes } from '@/engines/scene/bakedRuntimeNodes'
 import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
 import { scatterCollisionOf } from './scatterCollision'
 import type { InputMap } from '@shared/domain/inputMap'
+import type { AnimationGraph, AnimationGraphModule } from '@shared/domain/animationGraph'
+import { animationGraphPreset } from '@shared/domain/animationPresets'
 import type { InputControls } from '@game/runtime/inputControls'
 
 /**
@@ -83,6 +87,7 @@ export function worldFromScene(
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
   inputMaps: readonly InputMap[] = [],
   inputControls?: InputControls,
+  animationGraphs: readonly AnimationGraphModule[] = [],
 ): World {
   // A module's arm reads the TREE rather than its two written names. It rewrites the STATE where
   // `filmable` and the seat stay closure arguments: `springArm` reads its two fields off the
@@ -94,7 +99,9 @@ export function worldFromScene(
   // 🛑 Made HERE and handed to both sides: the three controllers read what the scripts write, and
   // a second store would leave the feature dead with every suite green.
   const intents = createIntents()
-  const told = scriptOptionsFor(state, ports, scripts, intents)
+  // 🛑 Made HERE and handed to both sides, as `intents` is: a second store leaves the surface dead.
+  const animators = createAnimators()
+  const told = scriptOptionsFor(state, ports, scripts, intents, animators)
   // Filled the line after the world stands, and read only once a step runs: what lets the
   // hierarchy compose a parent where the game has MOVED it — see `createHierarchy`.
   let living: World | null = null
@@ -106,6 +113,8 @@ export function worldFromScene(
       ports,
       told,
       intents,
+      animators,
+      graphNamed(animationGraphs),
       id => living?.entities.get(id)?.transform ?? null,
       heightmaps,
     ),
@@ -145,12 +154,14 @@ function scriptOptionsFor(
   ports: GameApi,
   scripts: SceneScripts,
   intents: Intents,
+  animators: Animators,
 ): ScriptSystemOptions {
   const played = playerPartsOf(state.nodes)
   return {
     modules: scripts.modules ?? [],
     intents,
     bodyIdOf: moduleId => (moduleId === played?.module.id ? (played.body?.id ?? null) : null),
+    animators,
     // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
     // nowhere is a script that silently never ran — and a caller passing an empty one is how
     // that happened in the exported game.
@@ -166,6 +177,8 @@ function systemsFor(
   ports: GameApi,
   scripts: ScriptSystemOptions,
   intents: Intents,
+  animators: Animators,
+  graphOf: (ref: string) => AnimationGraph | null,
   liveOf: (nodeId: string) => Transform | null,
   heightmaps?: ReadonlyMap<string, HeightmapSamples>,
 ): readonly System[] {
@@ -245,6 +258,7 @@ function systemsFor(
               hierarchy.localOf(entity.id, position, rotation),
             filmable: entity => byId.get(entity.id)?.type === 'camera',
           }),
+          createAnimatorSystem({ graphOf, characters, animators }),
           createPlayCameraSystem({
             characters,
             worldOf: placedAt,
@@ -303,4 +317,19 @@ function staticBody(body: string, shape: ColliderShape): BodyDescriptor {
     character: null,
     vehicle: null,
   }
+}
+
+/**
+ * The graph a component names: a file of the project, or the shipped one when it names nothing.
+ *
+ * 🛑 The empty name is what makes a player module walk with no file at all — the same bargain the
+ * input contexts strike. A template writes the preset down beside the scene so it can be READ and
+ * changed; nothing needs it to be there to play.
+ */
+function graphNamed(
+  modules: readonly AnimationGraphModule[],
+): (ref: string) => AnimationGraph | null {
+  const byPath = new Map(modules.map(module => [module.path, module.graph]))
+
+  return ref => (ref === '' ? animationGraphPreset('character') : (byPath.get(ref) ?? null))
 }

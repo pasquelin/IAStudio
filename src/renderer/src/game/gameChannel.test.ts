@@ -19,7 +19,15 @@ describe('what the two windows accept off the wire', () => {
 
   it('takes the messages the studio publishes', () => {
     expect(
-      gameMessageOf({ kind: 'play', documentId: 'd', scene, modules: [], troubles: [], inputMaps }),
+      gameMessageOf({
+        kind: 'play',
+        documentId: 'd',
+        scene,
+        modules: [],
+        troubles: [],
+        inputMaps,
+        animationGraphs: [],
+      }),
     ).toEqual({
       kind: 'play',
       documentId: 'd',
@@ -27,6 +35,7 @@ describe('what the two windows accept off the wire', () => {
       modules: [],
       troubles: [],
       inputMaps,
+      animationGraphs: [],
     })
     expect(gameMessageOf({ kind: 'edit', documentId: 'd', patch })).toEqual({
       kind: 'edit',

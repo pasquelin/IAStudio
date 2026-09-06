@@ -1,3 +1,4 @@
+import type { AnimationGraphModule } from '@shared/domain/animationGraph'
 import { orElse } from '@shared/promises'
 import type { DomInputTarget } from '@game/host/domInput'
 import { loadJoltPhysics } from '@game/host/joltPhysics'
@@ -26,6 +27,7 @@ export type GameHostDeps = {
   onReport: (report: RuntimeReport) => void
   compilationMs?: () => number
   inputMaps: readonly InputMap[]
+  animationGraphs: readonly AnimationGraphModule[]
 }
 
 /**
@@ -56,5 +58,6 @@ export async function startGame(deps: GameHostDeps): Promise<PlaySession> {
     heightmaps,
     compilationMs: deps.compilationMs,
     inputMaps: deps.inputMaps,
+    animationGraphs: deps.animationGraphs,
   })
 }

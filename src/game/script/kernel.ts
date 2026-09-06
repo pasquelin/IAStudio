@@ -131,6 +131,15 @@ export const KERNEL = String.raw`
         push({ act: 'emit', name: String(name), entity: entity.entity, payload: payload || {} })
       },
       destroy: function () { push({ act: 'destroy', entity: entity.entity }) },
+      anim: {
+        state: entity.anim ? entity.anim.state : '',
+        time: entity.anim ? entity.anim.time : 0,
+        set: function (param, value) {
+          push({ act: 'animParam', entity: entity.entity, param: String(param), value: value === true || value === false ? value : number(value) })
+        },
+        play: function (state) { push({ act: 'animPlay', entity: entity.entity, state: String(state) }) },
+        stop: function () { push({ act: 'animStop', entity: entity.entity }) },
+      },
     }
   }
 
@@ -286,6 +295,8 @@ export const KERNEL = String.raw`
   }
 
   var HOOKS = {
+    AnimationEvent: 'onAnimationEvent',
+    AnimationFinished: 'onAnimationEvent',
     Collided: 'onCollision',
     TriggerEntered: 'onTriggerEnter',
     TriggerExited: 'onTriggerExit',

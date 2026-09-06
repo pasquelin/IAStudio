@@ -22,6 +22,10 @@ import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { FrameDriver } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
+import { createStudioAnimation } from './studioAnimation'
+import { graphClipsOf } from '@/engines/scene/clipSources'
+import { animationGraphPreset } from '@shared/domain/animationPresets'
+import type { AnimationGraph, AnimationGraphModule } from '@shared/domain/animationGraph'
 import { createStudioRender, type SceneDraw } from './studioRender'
 import { veilLift } from './veilLift'
 import { heightmapsOf } from './heightmapsOf'
@@ -116,6 +120,8 @@ export type PlaySessionDeps = {
   sceneNamed?: (scene: string) => SceneLookup
   compilationMs?: () => number
   inputMaps?: readonly InputMap[]
+  /** The state machines the project holds, by path. A module names none and walks off the preset. */
+  animationGraphs?: readonly AnimationGraphModule[]
 }
 /**
  * What a project answers about a scene a game asked for.
@@ -157,12 +163,28 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       veiled = amount
     })
     const swap = createSceneSwap()
+    const animation = createStudioAnimation({
+      poseNode: (nodeId, clips) => deps.renderer.poseNode?.(nodeId, clips),
+      releaseNode: nodeId => deps.renderer.releaseNode?.(nodeId),
+      clipLengthsOf: nodeId => deps.renderer.clipLengthsOf?.(nodeId) ?? {},
+    })
+    /** The graph each animated node plays, so its clips can be read before a step needs them. */
+    const graphsByPath = new Map((deps.animationGraphs ?? []).map(one => [one.path, one.graph]))
+    const animatedIn = (state: SceneState): { nodeId: string; graph: AnimationGraph }[] =>
+      state.nodes.flatMap(node => {
+        const held = node.components?.find(one => one.type === 'Animator')
+        if (!held) return []
+        const ref = typeof held.graph === 'string' ? held.graph : ''
+        const graph = ref === '' ? animationGraphPreset('character') : graphsByPath.get(ref)
+        return graph ? [{ nodeId: node.id, graph }] : []
+      })
     const startPlayStep2 = () => {
       const ports = createStudioHost({
         input: deps.input,
         player: { id: 'local', name: 'Player', local: true },
         urlForAsset: assetUrl,
         render,
+        animation: animation.port,
         physics: deps.physics,
         script: deps.script,
         scenes: swap.port,
@@ -201,8 +223,13 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
             pullingMaps = false
           }
         }
-        const build = (state: SceneState): World =>
-          worldFromScene(
+        const build = (state: SceneState): World => {
+          // 🛑 Before the first step: a state machine cannot loop, finish or place a footfall
+          // without a length, and a length lives in the file.
+          for (const one of animatedIn(state))
+            deps.renderer.useGraphClips?.(one.nodeId, graphClipsOf(one.graph))
+
+          return worldFromScene(
             deps.documentId,
             state,
             ports,
@@ -211,7 +238,9 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
             heightmaps,
             deps.inputMaps,
             inputControls,
+            deps.animationGraphs,
           )
+        }
         const startPlayStep4 = () => {
           let world = build(deps.editState())
           let loop = createGameLoop(world)
@@ -411,6 +440,11 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
                             veiled = 0
                             ports.physics.dispose()
                             ports.script.dispose()
+                            // 🛑 Before the repaint: a body still posed would be drawn in the
+                            // pose the last step left him in, and no gate would say a word.
+                            animation.releaseAll()
+                            for (const one of animatedIn(sceneNow()))
+                              deps.renderer.useGraphClips?.(one.nodeId, [])
                             deps.renderer.apply(deps.editState())
                             publish()
                           },

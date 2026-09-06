@@ -102,7 +102,29 @@ export type Characters = {
   /** Who the camera watches: the first entity that declared a controller. */
   leader: () => Entity | null
   look: () => Look
+  /**
+   * What that body is DOING, for whoever has to show it rather than move it — the animator.
+   *
+   * 🛑 A reading and never a handle: the walker is written every step, and an animator holding
+   * one would read a pose half a step old on the frames between two steps.
+   */
+  reading: (entity: Entity) => WalkerReading | null
 }
+
+/** The walker as something other than the controller sees it. Metres a second, and seconds. */
+export type WalkerReading = {
+  /** In the WORLD, which is the frame the pace is composed in — see `paceInto`. */
+  paceX: number
+  paceZ: number
+  grounded: boolean
+  velocityY: number
+  /** Where the body points, in radians. */
+  facing: number
+}
+
+// 🛑 `airborne` is NOT here, and that is not an oversight: the controller writes `Infinity` into
+// it to mark a jump as spent, so it is a flag half the time rather than a duration. Whoever needs
+// how long a body has been off the ground counts it from `grounded`.
 
 /**
  * What turns keys and a drag into a movement the physics is allowed to correct. The pace, the
@@ -239,6 +261,19 @@ export function createCharacters(
 
     leader: () => first,
     look: () => look,
+
+    reading: entity => {
+      const walker = walkers.get(entity)
+      if (!walker) return null
+
+      return {
+        paceX: walker.paceX,
+        paceZ: walker.paceZ,
+        grounded: walker.grounded,
+        velocityY: walker.velocityY,
+        facing: walker.facing,
+      }
+    },
   }
 }
 

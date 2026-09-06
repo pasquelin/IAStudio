@@ -1,5 +1,7 @@
 import { orElse } from '@shared/promises'
 import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
+import { ANIMATION_GRAPH_EXTENSION } from '@shared/domain/animationGraph'
+import { animationGraphPreset, type AnimationPresetId } from '@shared/domain/animationPresets'
 import { INPUT_MAP_EXTENSION } from '@shared/domain/inputMap'
 import { inputMapPreset, type InputPresetId } from '@shared/domain/inputPresets'
 import { documentPathFor } from '@shared/domain/documentName'
@@ -10,10 +12,15 @@ import { scriptRefAt, useCode } from '@/stores/code'
 import { useDocuments } from '@/stores/documents'
 
 /** What each template plays with — the script its pilot carries, and the context that drives it. */
-const PLAYED: Partial<Record<SceneTemplateId, { script: TemplateScriptId; map: InputPresetId }>> = {
-  firstPerson: { script: 'player', map: 'character' },
-  thirdPerson: { script: 'player', map: 'character' },
-  topDown: { script: 'player', map: 'character' },
+const PLAYED: Partial<
+  Record<
+    SceneTemplateId,
+    { script: TemplateScriptId; map: InputPresetId; graph?: AnimationPresetId }
+  >
+> = {
+  firstPerson: { script: 'player', map: 'character', graph: 'character' },
+  thirdPerson: { script: 'player', map: 'character', graph: 'character' },
+  topDown: { script: 'player', map: 'character', graph: 'character' },
   car: { script: 'car', map: 'vehicle' },
   plane: { script: 'plane', map: 'flight' },
 }
@@ -34,7 +41,11 @@ export async function seedTemplateFiles(template: SceneTemplateId): Promise<stri
   const folder = await orElse(bridge?.project.folderFor('code'), DEFAULT_ROLE_PATHS.code)
   if (!played || !bridge) return folder
 
-  await Promise.all([writeMap(played.map), writeScript(played.script, folder)])
+  await Promise.all([
+    writeMap(played.map),
+    writeScript(played.script, folder),
+    played.graph ? writeGraph(played.graph) : Promise.resolve(),
+  ])
   await useDocuments.getState().relist()
   return folder
 }
@@ -48,6 +59,23 @@ async function writeMap(preset: InputPresetId): Promise<void> {
   if (taken.some(one => one.toLowerCase() === path.toLowerCase())) return
 
   await bridge.inputMaps.write(path, { ...structuredClone(inputMapPreset(preset)), id: preset })
+}
+
+/**
+ * The state machine the module is already animated by, written down beside the scene.
+ *
+ * 🛑 Not needed to PLAY — a module with an empty `graph` field walks off the shipped preset. It
+ * is written so the thresholds, the clips and the ways out can be READ and changed.
+ */
+async function writeGraph(preset: AnimationPresetId): Promise<void> {
+  const bridge = getBridge()
+  if (!bridge) return
+  const folder = await orElse(bridge.project.folderFor('animations'), DEFAULT_ROLE_PATHS.animations)
+  const path = `${folder}/${preset}${ANIMATION_GRAPH_EXTENSION}`
+  const taken = await orElse(bridge.animationGraphs.list(), [])
+  if (taken.some(one => one.toLowerCase() === path.toLowerCase())) return
+
+  await bridge.animationGraphs.write(path, structuredClone(animationGraphPreset(preset)))
 }
 
 async function writeScript(script: TemplateScriptId, folder: string): Promise<void> {

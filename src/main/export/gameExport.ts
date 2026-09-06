@@ -250,6 +250,7 @@ function exportedGameOf(
     ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
     ...(request.render ? { render: request.render } : {}),
     ...(request.inputMaps?.length ? { inputMaps: request.inputMaps } : {}),
+    ...(request.animationGraphs?.length ? { animationGraphs: request.animationGraphs } : {}),
   }
 }
 

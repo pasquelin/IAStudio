@@ -22,6 +22,13 @@ export type ScriptEntity = {
   position: Vector3
   rotation: Vector3
   components: readonly Component[]
+  /**
+   * What its animator ended the LAST step on, or nothing for a body no graph animates.
+   *
+   * One step behind, as `position` is: `script` runs before `animator` in the declared order, so
+   * what a script reads is what the frame being drawn actually shows.
+   */
+  anim?: { state: string; time: number }
 }
 
 /** What one hook is given: the clock, the input, and every entity that runs a script. */
@@ -68,6 +75,9 @@ export type ScriptIntent =
       binding: InputBinding
     }
   | { act: 'inputReset'; context?: string; action?: string }
+  | { act: 'animParam'; entity: string; param: string; value: number | boolean }
+  | { act: 'animPlay'; entity: string; state: string }
+  | { act: 'animStop'; entity: string }
 
 /** What a script did wrong, where an editor could open it. */
 export type ScriptFault = {

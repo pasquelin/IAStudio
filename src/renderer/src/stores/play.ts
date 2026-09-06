@@ -19,6 +19,8 @@ import { documentById, sceneDocumentNamed, useDocuments } from './documents'
 import { sceneEngineOf } from './sceneEngines'
 import { loadSceneSource, montageSceneOf } from './sceneSources'
 import { sceneOf, useScenes } from './scenes'
+import { projectAnimationGraphs } from '@/engines/code/projectAnimationGraphs'
+import type { AnimationGraphModule } from '@shared/domain/animationGraph'
 import { projectInputMaps } from '@/engines/code/projectInputMaps'
 import { inputMapIdConflict } from '@/engines/code/projectInputMaps'
 import i18next from 'i18next'
@@ -66,6 +68,7 @@ type PublishedGame = {
   modules: readonly ScriptModule[]
   troubles: readonly ScriptTrouble[]
   inputMaps: readonly InputMap[]
+  animationGraphs: readonly AnimationGraphModule[]
 }
 
 export const usePlay = create<PlayStoreState>()(() => ({
@@ -143,6 +146,7 @@ async function begin(documentId: string): Promise<void> {
     modules: compiled.modules,
     troubles: compiled.troubles,
     inputMaps: compiled.inputMaps,
+    animationGraphs: compiled.animationGraphs,
   }
   publishGame()
   watchTheScene(documentId)
@@ -167,6 +171,7 @@ function publishGame(): void {
     modules: published.modules,
     troubles: published.troubles,
     inputMaps: published.inputMaps,
+    animationGraphs: published.animationGraphs,
   })
 }
 
@@ -266,9 +271,15 @@ type CompiledScripts = {
   modules: readonly ScriptModule[]
   troubles: readonly ScriptTrouble[]
   inputMaps: readonly InputMap[]
+  animationGraphs: readonly AnimationGraphModule[]
 }
 
-const NO_SCRIPTS: CompiledScripts = { modules: [], troubles: [], inputMaps: [] }
+const NO_SCRIPTS: CompiledScripts = {
+  modules: [],
+  troubles: [],
+  inputMaps: [],
+  animationGraphs: [],
+}
 
 /**
  * Whether that text would compile, said the way a fault is — or nothing when it would.
@@ -292,7 +303,11 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   // 🛑 Through the EDITOR's own reading, never a second walk of the disk: what a Play compiles
   // has to be what the screen shows, or an author watches the script from before their last
   // keystroke run — without a word.
-  const [, inputMaps] = await Promise.all([useCode.getState().reload(), projectInputMaps()])
+  const [, inputMaps, animationGraphs] = await Promise.all([
+    useCode.getState().reload(),
+    projectInputMaps(),
+    projectAnimationGraphs(),
+  ])
   const conflict = inputMapIdConflict(inputMaps)
   if (conflict) {
     return {
@@ -308,14 +323,14 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   }
   const files = codeFilesOf(useCode.getState())
   const runtimeMaps = inputMaps.map(input => input.map)
-  if (files.length === 0) return { ...NO_SCRIPTS, inputMaps: runtimeMaps }
+  if (files.length === 0) return { ...NO_SCRIPTS, inputMaps: runtimeMaps, animationGraphs }
 
   compiler ??= createScriptCompiler()
   const compiled = await compiler.compile(
     files.map(file => ({ script: file.script, source: file.source })),
     inputMaps,
   )
-  return { ...compiled, inputMaps: runtimeMaps }
+  return { ...compiled, inputMaps: runtimeMaps, animationGraphs }
 }
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */

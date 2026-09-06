@@ -166,6 +166,16 @@ export abstract class SceneRendererModels extends SceneRendererGeometry {
     this.options.onProfile?.(profile)
   }
   /**
+   * The clips a running game's state machine needs on this model, beside whatever its band names.
+   * An empty list gives them back, which is what stopping a game does.
+   */
+  useGraphClips(nodeId: string, clips: readonly ForeignClip[]): void {
+    if (clips.length === 0) this.graphClips.delete(nodeId)
+    else this.graphClips.set(nodeId, clips)
+    this.ensureBundled(nodeId, this.animations.lanesOf(nodeId))
+  }
+
+  /**
    * Loads whatever clips a model's blocks name that its own file did not bring, once each, and
    * lets go of the ones no block names any more. Called wherever lanes are applied: a block can
    * be dropped long after the file it plays on landed.
@@ -173,7 +183,14 @@ export abstract class SceneRendererModels extends SceneRendererGeometry {
   protected ensureBundled(nodeId: string, lanes: readonly ClipLane[]): void {
     const held = this.bundled.get(nodeId) ?? new Map<string, string>()
     this.bundled.set(nodeId, held)
-    const wanted = new Map(foreignClipsOf(lanes).map(clip => [clip.key, clip]))
+    // 🛑 The band's clips AND the state machine's, in one list: they share this node's holdings,
+    // and either one asked for on its own would release what the other had just taken.
+    const wanted = new Map(
+      [...foreignClipsOf(lanes), ...(this.graphClips.get(nodeId) ?? [])].map(clip => [
+        clip.key,
+        clip,
+      ]),
+    )
     for (const clip of wanted.values()) {
       if (held.has(clip.key)) continue
       // Acquired HERE and not inside the adoption: released while the read is still in flight,

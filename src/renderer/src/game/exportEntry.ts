@@ -20,6 +20,9 @@ import { veilLift } from './veilLift'
 import { createWebRender } from './webRender'
 import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
+import type { HeightmapSamples } from '@shared/domain/heightmap'
+import type { SceneState } from '@/engines/scene/sceneState'
+import type { World } from '@game/runtime/world'
 import { secondsToUs } from '@shared/domain/time'
 import { answering, exportedJson, exportedText } from './exportedResponse'
 import { expandCompressedAssets, type ExpandedAssets } from './exportedAssets'
@@ -52,7 +55,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
       createPorts(canvas, game, assets, drawn.port, swap.port, rollback),
       exportedJson<unknown>(entry.file, entry.compression),
     ])
-    const runtime = { modules, inputMaps: game.inputMaps ?? [], inputControls }
+    const runtime = runtimeOf(game, modules, inputControls)
 
     const openingScene = await createOpeningScene(entry, openingSource, assets, ports, runtime)
     const { opening, heightmaps } = openingScene
@@ -98,16 +101,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         const nextMaps = await heightmapsOf(found.world.layers, id =>
           heightmapFromBundle(assets, id),
         )
-        world = worldFromScene(
-          wanted.id,
-          found,
-          ports,
-          runtime,
-          1,
-          nextMaps,
-          runtime.inputMaps,
-          inputControls,
-        )
+        world = worldOf(wanted.id, found, ports, runtime, nextMaps)
         loop = createGameLoop(world)
         // The first step of the arrived scene derives every collider — not a gap to catch up on.
         warmed = false
@@ -255,25 +249,11 @@ async function createOpeningScene(
   source: unknown,
   assets: ReturnType<typeof createBundledAssets>,
   ports: ReturnType<typeof createExportHost>,
-  runtime: {
-    modules: readonly ScriptModule[]
-    inputMaps: ExportedGame['inputMaps']
-    inputControls: InputControls
-  },
+  runtime: ReturnType<typeof runtimeOf>,
 ) {
   const opening = sceneFromGltf(source)
   const heightmaps = await heightmapsOf(opening.world.layers, id => heightmapFromBundle(assets, id))
-  const world = worldFromScene(
-    entry.id,
-    opening,
-    ports,
-    runtime,
-    1,
-    heightmaps,
-    runtime.inputMaps,
-    runtime.inputControls,
-  )
-  return { opening, world, heightmaps }
+  return { opening, world: worldOf(entry.id, opening, ports, runtime, heightmaps), heightmaps }
 }
 
 /** Every script of the game, already JavaScript: the studio transpiled them at export time. */
@@ -301,5 +281,40 @@ function browserInputStorage() {
     write: (maps: readonly InputMap[]): void => {
       globalThis.localStorage.setItem(key, JSON.stringify(maps))
     },
+  }
+}
+
+/** One world of this game, built the same way on the opening scene and on every swap. */
+function worldOf(
+  documentId: string,
+  state: SceneState,
+  ports: ReturnType<typeof createExportHost>,
+  runtime: ReturnType<typeof runtimeOf>,
+  heightmaps: ReadonlyMap<string, HeightmapSamples>,
+): World {
+  return worldFromScene(
+    documentId,
+    state,
+    ports,
+    runtime,
+    1,
+    heightmaps,
+    runtime.inputMaps,
+    runtime.inputControls,
+    runtime.animationGraphs,
+  )
+}
+
+/** What every world of this game is built from, named once rather than spelled at each build. */
+function runtimeOf(
+  game: ExportedGame,
+  modules: readonly ScriptModule[],
+  inputControls: InputControls,
+) {
+  return {
+    modules,
+    inputMaps: game.inputMaps ?? [],
+    animationGraphs: game.animationGraphs ?? [],
+    inputControls,
   }
 }

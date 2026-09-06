@@ -2,6 +2,7 @@
 
 import type { Component, JsonValue } from '@shared/domain/component'
 import type { GameEvent } from '@shared/domain/gameEvent'
+import type { Animators } from '../animators'
 import type { Intents } from '../intents'
 import type { ScriptModule } from '../../ports/scriptPort'
 import type {
@@ -29,6 +30,8 @@ export type ScriptSystemOptions = {
    * `self.walk()` has to reach the body from both.
    */
   bodyIdOf: (moduleId: string) => string | null
+  /** Where a script's animator asks LAND, read by the animator system on the same step. */
+  animators: Animators
 }
 
 /** Shared and empty: a frame with nothing kept must not allocate an object per hook. */
@@ -109,6 +112,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       held.position = entity.transform.position
       held.rotation = entity.transform.rotation
       held.components = entity.components
+      held.anim = options.animators.playingOn(entity.id) ?? undefined
       entities.push(held)
     }
 
@@ -195,6 +199,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
 
       // Before a hook runs: what nobody asks for again hands the sticks back on that very step.
       options.intents.release()
+      options.animators.release()
 
       sync(world)
 
@@ -248,7 +253,13 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
 }
 
 /** What an event drives. A frame with none of them declared never crosses the bridge at all. */
-const EVENT_HOOKS = ['onMessage', 'onCollision', 'onTriggerEnter', 'onTriggerExit']
+const EVENT_HOOKS = [
+  'onMessage',
+  'onAnimationEvent',
+  'onCollision',
+  'onTriggerEnter',
+  'onTriggerExit',
+]
 
 /** What the scripts asked for, done through the world's own gestures and nothing else. */
 function apply(world: World, asks: readonly ScriptIntent[], options: ScriptSystemOptions): void {
@@ -257,6 +268,7 @@ function apply(world: World, asks: readonly ScriptIntent[], options: ScriptSyste
     const entity = world.entities.get(intent.entity)
     if (!entity) continue
     if (applyBodyIntent(entity, intent, options)) continue
+    if (applyAnimatorIntent(entity, intent, options)) continue
     applyEntityIntent(world, entity, intent)
   }
 }
@@ -291,13 +303,31 @@ function applyBodyIntent(
  */
 type BodyIntent = Extract<ScriptIntent, { act: 'walk' | 'jump' | 'look' | 'drive' | 'fly' }>
 
+/**
+ * 🛑 Its own chain, ahead of `applyEntityIntent`: that one ends in an unguarded `destroy`, so an
+ * act it does not name would DELETE the entity that asked for it.
+ */
+function applyAnimatorIntent(
+  entity: Entity,
+  intent: ScriptIntent,
+  { animators }: ScriptSystemOptions,
+): intent is AnimatorIntent {
+  if (intent.act === 'animParam') animators.set(entity.id, intent.param, intent.value)
+  else if (intent.act === 'animPlay') animators.play(entity.id, intent.state)
+  else if (intent.act === 'animStop') animators.stop(entity.id)
+  else return false
+  return true
+}
+
+type AnimatorIntent = Extract<ScriptIntent, { act: 'animParam' | 'animPlay' | 'animStop' }>
+
 type WorldIntent = Extract<
   ScriptIntent,
   {
     act: 'log' | 'spawn' | 'emit' | 'scene' | 'keep' | 'inputContext' | 'inputRebind' | 'inputReset'
   }
 >
-type EntityIntent = Exclude<ScriptIntent, WorldIntent | BodyIntent>
+type EntityIntent = Exclude<ScriptIntent, WorldIntent | BodyIntent | AnimatorIntent>
 
 function applyWorldIntent(world: World, intent: ScriptIntent): intent is WorldIntent {
   if (intent.act === 'log') world.ports.log.write(intent.level, intent.message)

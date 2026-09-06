@@ -1,3 +1,4 @@
+import type { AnimationGraphModule } from '@shared/domain/animationGraph'
 import type { DomInputTarget } from '@game/host/domInput'
 import type { ScriptModule } from '@game/ports/scriptPort'
 import type { ScriptTrouble } from '@/engines/code/scriptCompiler'
@@ -40,6 +41,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
   let modules: readonly ScriptModule[] = []
   let troubles: readonly ScriptTrouble[] = []
   let inputMaps: readonly InputMap[] = []
+  let animationGraphs: readonly AnimationGraphModule[] = []
   let compilationMs = 0
   /** Scenes the studio has answered for, by the name the game asked with. */
   const known = new Map<string, SceneLookup>()
@@ -89,6 +91,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
       onReport: report,
       compilationMs: () => compilationMs,
       inputMaps,
+      animationGraphs,
     })
 
     // Overtaken by a later Play, or stopped while the engines were landing.
@@ -151,6 +154,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
     modules = message.modules
     troubles = message.troubles
     inputMaps = message.inputMaps
+    animationGraphs = message.animationGraphs
     deps.renderer.apply(scene)
     void begin(generation)
   }

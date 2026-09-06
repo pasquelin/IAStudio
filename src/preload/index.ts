@@ -156,6 +156,11 @@ const bridge: StudioBridge = {
     read: path => ipcRenderer.invoke(CHANNELS.inputMapRead, path),
     write: (path, map) => ipcRenderer.invoke(CHANNELS.inputMapWrite, path, map),
   },
+  animationGraphs: {
+    list: () => ipcRenderer.invoke(CHANNELS.animationGraphList),
+    read: path => ipcRenderer.invoke(CHANNELS.animationGraphRead, path),
+    write: (path, graph) => ipcRenderer.invoke(CHANNELS.animationGraphWrite, path, graph),
+  },
   git: {
     read: () => ipcRenderer.invoke(CHANNELS.gitRead),
     init: () => ipcRenderer.invoke(CHANNELS.gitInit),
