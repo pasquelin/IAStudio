@@ -1,5 +1,4 @@
 import type { ActionName } from '@shared/domain/assistant'
-import { MEMORY_ANSWERING_STATES } from '@shared/domain/assistantMemory'
 import { composedContext } from '@shared/domain/projectContext'
 import { resultLine } from '@/features/assistant/components/Assistant/Conversation/conversation'
 import { useAssistant } from '@/stores/assistant'
@@ -31,8 +30,7 @@ export async function play(scenario: Scenario, ask: Think): Promise<Run & { roun
          * searched the FILES for what it had learned: « qu'est-ce que tu sais des caméras ? »
          * answered `files.search query=camera → found 0`, measured 2026-09-01.
          */
-        memories: studio.memories().filter(one => MEMORY_ANSWERING_STATES.includes(one.state))
-          .length,
+        memories: studio.answeringMemories(),
       })
 
       asked.push(

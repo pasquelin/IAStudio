@@ -98,6 +98,29 @@ describe('thinking', () => {
     expect((retry.textInputs as string[]).at(-1)).toContain('I think you want a 3D file!')
   })
 
+  // Told only « not JSON », the model invented a second name and the mission died (31.1, 2026-09-06).
+  it('names the unknown action in the retry, with the closest catalogue names', async () => {
+    const answers = [
+      '{"say":"","calls":[{"action":"scene.create","input":{"name":"Demo"}}]}',
+      '{"say":"Opening.","calls":[]}',
+    ]
+    const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
+    const brain = createProviderBrain({
+      limits: reading(),
+      run,
+      readText: () => Promise.resolve(answers.shift() ?? ''),
+      model: () => 'claude-haiku-4-5',
+    })
+
+    await brain.think({ utterance: 'create a scene', history: [] })
+
+    const retry = run.mock.calls[1]?.[0]
+    if (!retry) throw new Error('the retry request was not sent')
+    const complaint = (retry.textInputs as string[]).at(-1) ?? ''
+    expect(complaint).toContain('"scene.create", which is not an action of the catalogue')
+    expect(complaint).toMatch(/the closest are [a-z]+\.[A-Za-z]+/)
+  })
+
   /**
    * A word rather than a name: `actions.find` is still what a model reaches for when it cannot
    * name what it needs, and what its query finds is OPENED — fields and all — for the next round.
@@ -155,8 +178,8 @@ describe('thinking', () => {
   it('does not treat a plan that also acts as a question', async () => {
     const answers = [
       '{"say":"","calls":[{"action":"actions.find","input":{"query":"git"}},' +
-        '{"action":"jobs.list","input":{}}]}',
-      '{"say":"Looking.","calls":[{"action":"jobs.list","input":{}}]}',
+        '{"action":"files.list","input":{}}]}',
+      '{"say":"Looking.","calls":[{"action":"files.list","input":{}}]}',
     ]
     const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
     const brain = createProviderBrain({
@@ -168,10 +191,10 @@ describe('thinking', () => {
 
     const outcome = await brain.think({ utterance: 'anything', history: [] })
 
-    expect(outcome.calls).toEqual([{ action: 'jobs.list', input: {} }])
+    expect(outcome.calls).toEqual([{ action: 'files.list', input: {} }])
     // The manuals, never a query: a plan that acts is not a question, whatever it named first.
     const second = String(run.mock.calls[1]?.[0]?.['instruction'])
-    expect(second).toContain('  jobs.list —')
+    expect(second).toContain('  files.list —')
     expect(second).not.toContain('The manual above now holds')
   })
 
@@ -210,7 +233,7 @@ describe('thinking', () => {
 
     const outcome = await brain.think({ utterance: 'open a 3D file', history: [] })
 
-    expect(outcome).toEqual({ say: '', calls: [], cost: 1.5 })
+    expect(outcome).toEqual({ say: '', calls: [], unreadable: true, cost: 1.5 })
   })
 
   // A job that failed was still paid for, and the total the modal shows has to say so.

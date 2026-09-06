@@ -370,6 +370,9 @@ describe('submitting what was prepared', () => {
 
     expect(outcome).toMatchObject({ ok: false, refusal: 'ambiguousLanding' })
     expect(outcome).toMatchObject({ detail: expect.stringContaining('newTab') })
+    // Why the question is not simply asked: a client with no screen read the refusal as a broken
+    // promise of `generation.landing: ask` (Codex by MCP, 2026-09-06).
+    expect(outcome).toMatchObject({ detail: expect.stringContaining('by MCP') })
     expect(submit).not.toHaveBeenCalled()
     stop()
   })

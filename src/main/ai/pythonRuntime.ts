@@ -1,5 +1,6 @@
 import type { DownloadProgress, LocalModel } from '@shared/domain/localModel'
 import type { RuntimeEndpointId } from '@shared/domain/aiRuntime'
+import type { EngineFailure } from '@shared/domain/failure'
 import type { PythonClient } from './pythonClient'
 import type { EngineRequirements } from './pythonProtocol'
 import type {
@@ -27,6 +28,8 @@ export type PythonRuntimeDeps = FileRuntimeDeps & {
   engine: () => Promise<PythonClient | null>
   /** The engine only if it is ALREADY running. Reading the catalogue must never start one. */
   running: () => PythonClient | null
+  /** Why the engine will not come, once that is settled — the code a failed job then carries. */
+  whyNot: () => EngineFailure | null
   log: (level: 'info' | 'warn', message: string) => void
   /** Called when a load or generation starts; the returned function runs when it ends. */
   onUsed?: (modelId: string) => (() => void) | void
@@ -56,6 +59,11 @@ function whatIsMissing(needs: EngineRequirements): string {
   const absent = needs.absent.map(one => one.name)
   const stale = needs.stale.map(one => `${one.name} ${one.installed} (needs ${one.wanted})`)
   return [...absent, ...stale].join(', ')
+}
+
+/** The code when the supervisor knows why, so a failed job says "not installed", not "rejected". */
+export function notAnswering(whyNot: EngineFailure | null): Error {
+  return new Error(whyNot ?? 'the local AI engine is not answering')
 }
 
 export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
@@ -109,7 +117,7 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
 
     load: async (model: LocalModel, options: LoadOptions): Promise<number> => {
       const engine = await deps.engine()
-      if (!engine) throw new Error('the local AI engine is not answering')
+      if (!engine) throw notAnswering(deps.whyNot())
 
       // Asked BEFORE the door is woken: a library that is absent fails as an `ImportError` three
       // frames inside a worker, which reaches the person as a door that died. The core answers
@@ -170,7 +178,7 @@ export function pythonRuntime(deps: PythonRuntimeDeps): LocalRuntime {
 
     generate: async (request: GenerateRequest): Promise<GenerateResult> => {
       const engine = await deps.engine()
-      if (!engine) throw new Error('the local AI engine is not answering')
+      if (!engine) throw notAnswering(deps.whyNot())
 
       const done = deps.onUsed?.(request.model)
       try {

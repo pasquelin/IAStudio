@@ -1,36 +1,72 @@
 import { describe, expect, it, vi } from 'vitest'
+import { ACTION_REGISTRY, assistantAction, type ActionName } from '@shared/domain/assistant'
 import { answeredTurn } from './brainTurn'
 import { briefingFor } from './instruction'
-import type { ActionName } from '@shared/domain/assistant'
+import { actionBlock } from './instructionCatalogue'
+
+const manualOf = (name: ActionName): string => {
+  const action = assistantAction(name)
+  if (!action) throw new Error(`${name} is not registered`)
+  return actionBlock(action)
+}
 
 describe('mission briefing', () => {
-  it('bounds the catalogue and allowed calls to retrieved actions and discovery', async () => {
+  it('names every action and opens the manuals of the candidates alone', async () => {
     const briefing = await briefingFor(
       { utterance: 'create', history: [], candidates: ['project.create'] },
       200_000,
     )
 
-    expect(briefing.text).toContain('project.create')
-    expect(briefing.text).toContain('actions.find')
-    expect(briefing.text).toContain('Never ask the person')
-    expect(briefing.text).toContain('that an action can discover')
-    expect(briefing.text).not.toContain('git.checkout')
-    expect([...briefing.allowed]).toEqual(['project.create', 'actions.find'])
+    for (const action of ACTION_REGISTRY) {
+      expect(briefing.text.includes(action.name), action.name).toBe(true)
+    }
+    expect(briefing.text).toContain(manualOf('project.create'))
+    expect(briefing.text).not.toContain(manualOf('git.checkout'))
     expect(briefing.loaded).toEqual(['project.create'])
   })
 
-  it('allows an action opened by the bounded discovery fallback', async () => {
+  it('prints a repeated field as a list, so the model sends one', () => {
+    expect(manualOf('node.combineIntoSolid')).toContain('nodeIds (list of text, required)')
+    expect(manualOf('node.rename')).toContain('nodeId (text, required)')
+  })
+
+  it('tells the model how to read the mission JSON, and only on a mission', async () => {
+    const mission = await briefingFor(
+      { utterance: 'create', history: [], context: '{"mission":{}}', mission: true },
+      200_000,
+    )
+    const conversation = await briefingFor(
+      { utterance: 'create', history: [], context: 'a project about boats' },
+      200_000,
+    )
+
+    expect(mission.text).toContain('Mission:\n{"mission":{}}')
+    expect(mission.text).toContain('previousResults lists what already RAN')
+    expect(conversation.text).toContain('Project context:\na project about boats')
+    expect(conversation.text).not.toContain('previousResults')
+  })
+
+  it('tells a continuing round to build on what already ran', async () => {
+    const briefing = await briefingFor(
+      { utterance: 'create', history: [], continuing: true, mission: true },
+      200_000,
+    )
+
+    expect(briefing.text).toContain('never redo a call that')
+  })
+
+  it('opens what a discovery query finds', async () => {
     const briefing = await briefingFor(
       { utterance: 'create', history: [], candidates: ['project.create'] },
       200_000,
     )
     const expanded = briefing.expand?.('git checkout')
 
-    expect(expanded?.allowed.has('git.checkout')).toBe(true)
-    expect(expanded?.text).toContain('git.checkout')
+    expect(expanded?.loaded).toContain('git.checkout')
+    expect(expanded?.text).toContain(manualOf('git.checkout'))
   })
 
-  it('uses the caller search service for bounded mission discovery', async () => {
+  it('uses the caller search service for mission discovery', async () => {
     const discover = vi.fn(async (): Promise<readonly ActionName[]> => ['git.checkout'])
     const briefing = await briefingFor(
       { utterance: 'switch branch', history: [], candidates: ['project.create'] },
@@ -55,7 +91,23 @@ describe('mission briefing', () => {
     expect(answer.calls[0]?.action).toBe('git.checkout')
   })
 
-  it('opens a registered action requested outside the bounded candidates before executing it', async () => {
+  it('executes a call with no fields straight away, whether its manual is open or not', async () => {
+    const briefing = await briefingFor(
+      { utterance: 'move the sphere above the cube', history: [], candidates: ['node.transform'] },
+      200_000,
+    )
+    const answer =
+      '{"say":"","ask":null,"calls":[{"action":"scene.state","input":{}},' +
+      '{"action":"node.transform","input":{"nodeId":"a","positionY":1}}]}'
+    const round = vi.fn(async () => ({ answer, cost: 1 }))
+
+    const result = await answeredTurn(briefing, round)
+
+    expect(round).toHaveBeenCalledTimes(1)
+    expect(result.calls.map(call => call.action)).toEqual(['scene.state', 'node.transform'])
+  })
+
+  it('opens the manual of an action named outside the candidates before executing it', async () => {
     const briefing = await briefingFor(
       { utterance: 'use the first project asset', history: [], candidates: ['project.create'] },
       200_000,

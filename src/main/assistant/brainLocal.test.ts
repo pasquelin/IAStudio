@@ -220,6 +220,7 @@ describe('the local brain conversation', () => {
     await expect(brain.think({ utterance: 'hello', history: [] })).resolves.toEqual({
       say: '',
       calls: [],
+      unreadable: true,
       cost: 0,
     })
   })

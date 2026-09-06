@@ -18,9 +18,16 @@ import type {
   VisualContext,
   WorkspaceContext,
 } from './context'
-import { CONTEXT_BUDGETS, emptyBudgetReport, withinBudget } from './contextBudget'
-import { compactContextValue, serializedContextLength } from './contextCompaction'
+import {
+  CONTEXT_BUDGETS,
+  emptyBudgetReport,
+  markContentTruncated,
+  textWithin,
+  withinBudget,
+} from './contextBudget'
+import { serializedContextLength } from './contextCompaction'
 import { assetIdsFromJobResult } from './jobResult'
+import { previousResults } from './contextResults'
 
 type AssistantContextRequest = {
   mission: Mission
@@ -44,7 +51,6 @@ export type AssistantContextBuilderDeps = {
   memories: Pick<MemoryVectors, 'recall'>
   jobs: Pick<JobManager, 'list'>
   projectContext: Pick<ProjectContextStore, 'read'>
-  documentState?: (document: StudioSnapshot['documents'][number]) => Promise<unknown>
   visual?: (document: StudioSnapshot['documents'][number]) => Promise<VisualContext | null>
 }
 
@@ -73,14 +79,6 @@ function selected<T>(
     truncated: bounded.report.truncated || contentTruncated,
   }
   return bounded.values
-}
-
-function textWithin(text: string, maximum: number): string {
-  return text.length <= maximum ? text : `${text.slice(0, maximum - 1)}…`
-}
-
-function markContentTruncated(report: ContextBudgetReport, source: ContextSource): void {
-  report[source] = { ...report[source], truncated: true, contentTruncated: true }
 }
 
 function retrievalQuery(input: AssistantContextRequest): string {
@@ -132,22 +130,16 @@ type CollectedContext = {
   memories: readonly Memory[]
   jobs: readonly Job[]
   projectContext: ContextState
-  documentState?: unknown
   visual?: VisualContext
 }
 
-async function collectDocumentContext(
+async function collectVisualContext(
   deps: AssistantContextBuilderDeps,
   input: AssistantContextRequest,
   snapshot: StudioSnapshot | null,
-): Promise<readonly [unknown, VisualContext | null]> {
+): Promise<VisualContext | null> {
   const active = snapshot?.documents.find(document => document.active)
-  const state =
-    active && deps.documentState
-      ? await deps.documentState(active)
-      : snapshot?.activeDocumentState?.state
-  const visual = input.visual && active && deps.visual ? await deps.visual(active) : null
-  return [state, visual]
+  return input.visual && active && deps.visual ? await deps.visual(active) : null
 }
 
 function recallProjectMemories(
@@ -181,9 +173,9 @@ async function collectContext(
     refs,
     limit: CONTEXT_BUDGETS.memories.maxItems,
   })
-  const readingDocument = collectDocumentContext(deps, input, snapshot)
+  const readingVisual = collectVisualContext(deps, input, snapshot)
   const readProjectContext = await readingProjectContext
-  const [actions, projectMemories, globalMemories, jobs, document] = await Promise.all([
+  const [actions, projectMemories, globalMemories, jobs, visual] = await Promise.all([
     deps.actions.search(
       query,
       CONTEXT_BUDGETS.actions.maxItems,
@@ -197,7 +189,7 @@ async function collectContext(
     readingProjectMemories,
     readingGlobalMemories,
     Promise.resolve(deps.jobs.list()),
-    readingDocument,
+    readingVisual,
   ])
   return {
     actions,
@@ -208,8 +200,7 @@ async function collectContext(
     ],
     jobs,
     projectContext: rankedCards(readProjectContext, query),
-    ...(document[0] === undefined ? {} : { documentState: document[0] }),
-    ...(document[1] ? { visual: document[1] } : {}),
+    ...(visual ? { visual } : {}),
   }
 }
 
@@ -225,23 +216,6 @@ function visualContext(collected: CollectedContext, report: ContextBudgetReport)
     truncated: collected.visual !== undefined && accepted.length === 0,
   }
   return accepted
-}
-
-function previousResults(input: AssistantContextRequest, report: ContextBudgetReport) {
-  return input.mission.plan.steps
-    .filter(
-      step => step.state === 'completed' && step.result !== undefined && step.id !== input.step.id,
-    )
-    .map(step => {
-      const result = compactContextValue(step.result, 600)
-      if (result.truncated || step.title.length > 160) markContentTruncated(report, 'results')
-      return { stepId: step.id, title: textWithin(step.title, 160), result: result.value }
-    })
-    .sort(
-      (left, right) =>
-        Number(input.step.dependsOn.includes(right.stepId)) -
-        Number(input.step.dependsOn.includes(left.stepId)),
-    )
 }
 
 function relevantJobs(
@@ -404,16 +378,6 @@ function assembledContext(
 ): AssistantContext {
   const report = emptyBudgetReport()
   const current = snapshotContext(snapshot, report)
-  const compactState = compactContextValue(
-    collected.documentState,
-    CONTEXT_BUDGETS.documentState.maxCharacters,
-  )
-  if (compactState.truncated) markContentTruncated(report, 'documentState')
-  const state = selected(
-    report,
-    'documentState',
-    collected.documentState === undefined ? [] : [compactState.value],
-  )[0]
   const context = projectContext(collected, report)
   const visual = visualContext(collected, report)
   return {
@@ -422,7 +386,6 @@ function assembledContext(
     project: current.project ?? null,
     ...(current.document ? { document: current.document } : {}),
     ...(current.selection ? { selection: current.selection } : {}),
-    ...(state === undefined ? {} : { documentState: state }),
     actions: selected(report, 'actions', collected.actions, hit => ({
       name: hit.action.name,
       score: hit.score,

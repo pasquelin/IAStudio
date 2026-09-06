@@ -1,6 +1,7 @@
 import { refused, type ActionOutcome } from '@shared/domain/assistant'
 import type { PartialSettings } from '@shared/domain/settings'
 import { SETTING_ACTION_IDS } from '@shared/domain/settingAction'
+import { settingChoices } from '@shared/domain/settingsRegistry'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
 import { withBridge, type ActionHandlers } from './actionHandler'
@@ -60,7 +61,11 @@ async function activate(input: Record<string, unknown>): Promise<ActionOutcome> 
 }
 
 export const SETTINGS_HANDLERS: ActionHandlers = {
-  'settings.read': () => withBridge(bridge => bridge.settings.read()),
+  'settings.read': () =>
+    withBridge(async bridge => ({
+      settings: await bridge.settings.read(),
+      choices: settingChoices(),
+    })),
   'settings.write': write,
   'accounts.list': () => withBridge(bridge => bridge.accounts.list()),
   'accounts.activate': activate,

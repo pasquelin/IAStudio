@@ -86,6 +86,8 @@
     "invalidValue": "Invalid value.",
     "rejected": "The generation failed.",
     "incompleteModel": "The model files are incomplete. Reinstall the model, then run it again.",
+    "engineMissing": "The local AI engine is not installed on this machine, so nothing here can run the model.",
+    "engineFailed": "The local AI engine did not start. Check the activity journal, then try again.",
     "storage": "Could not save the result to disk.",
     "panelCrashed": "This panel ran into an error.",
     "windowCrashed": "The application ran into an error."

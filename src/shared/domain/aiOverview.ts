@@ -1,3 +1,4 @@
+import type { EngineFailure } from './failure'
 import type { AiRoleId, RoleProvider } from './aiRole'
 import type { Compatibility } from './aiMemory'
 import type { DownloadProgress, LocalModel } from './localModel'
@@ -135,6 +136,7 @@ export type LoadRefusal =
     }
   | { readonly reason: 'incomplete'; readonly modelId: string }
   | { readonly reason: 'network'; readonly modelId: string }
+  | { readonly reason: EngineFailure; readonly modelId: string }
   | { readonly reason: 'failed'; readonly modelId: string }
 
 /** Why an install did not land, kept until the next try so the screen can say it. */

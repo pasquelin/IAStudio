@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addMissionStep,
   attachChildMission,
+  completedRoundsBefore,
   createMission,
   createMissionStep,
   missionCanComplete,
@@ -422,5 +423,34 @@ describe('mission domain', () => {
     expect(() => transitionMissionStep(cancelled, step.id, 'ready', time.now())).toThrow(
       'mission steps cannot transition while mission is cancelled',
     )
+  })
+})
+
+describe('completedRoundsBefore', () => {
+  it('groups the finished steps by the reason or verify step that closed them, newest first', () => {
+    const time = clock()
+    let mission = createMission('Add a cube', time)
+    const drafts: readonly [string, MissionStepDraft, MissionStepState][] = [
+      ['plan', { kind: 'reason' }, 'completed'],
+      ['add', { kind: 'action', call: { action: 'node.add', input: {} } }, 'completed'],
+      ['render', { kind: 'job', jobId: 'job-1' }, 'completed'],
+      ['check', { kind: 'verify' }, 'completed'],
+      ['read', { kind: 'action', call: { action: 'scene.state', input: {} } }, 'completed'],
+      ['skipped', { kind: 'action', call: { action: 'node.remove', input: {} } }, 'skipped'],
+      ['now', { kind: 'reason' }, 'pending'],
+    ]
+    for (const [title, draft, state] of drafts) {
+      const step = createMissionStep(mission.id, title, draft, time)
+      mission = addMissionStep(mission, { ...step, state }, time.now())
+    }
+    const now = mission.plan.steps.find(step => step.title === 'now')
+
+    const rounds = completedRoundsBefore(mission, now?.id ?? '')
+
+    expect(rounds.map(round => round.map(step => step.title))).toEqual([
+      ['read'],
+      ['add', 'render'],
+      [],
+    ])
   })
 })

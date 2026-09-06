@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { newComponent } from '@shared/domain/componentRegistry'
+import { SECOND } from '@shared/domain/time'
+import { animationTrack } from '@/engines/scene/animation-fixtures'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
 import { installScene } from '@/stores/scene-fixtures'
@@ -12,6 +14,30 @@ describe('what keeps a model from guessing', () => {
     installScene(DOCUMENT, {
       ...EMPTY_SCENE,
       nodes: [{ ...meshNode('n1'), name: 'Hero', components: [newComponent('Health')] }],
+    })
+  })
+
+  // Asked about a channel id, the answer was « no node » — a client that had just opened the
+  // channel could not read it back (Codex by MCP, 2026-09-06).
+  it('describes a channel by its id, with its keys and what takes it', async () => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [{ ...meshNode('n1'), name: 'Hero' }],
+      animation: {
+        ...EMPTY_SCENE.animation,
+        tracks: [
+          animationTrack('track_1', 'position', [{ time: SECOND, value: { x: 0, y: 2, z: 0 } }], {
+            target: { nodeId: 'n1', property: 'position' },
+          }),
+        ],
+      },
+    })
+
+    const outcome = await runAction('studio.describe', { ref: 'track_1' })
+
+    expect(outcome.ok && outcome.data).toMatchObject({
+      channel: { id: 'track_1', keys: [{ timeSeconds: 1, value: { x: 0, y: 2, z: 0 } }] },
+      accepts: expect.arrayContaining(['key.writeKeysOnOpenChannels']),
     })
   })
 

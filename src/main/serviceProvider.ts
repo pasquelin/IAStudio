@@ -1,3 +1,4 @@
+import type { FromManager } from './serviceLocalAi'
 import type { LocalModel } from '@shared/domain/localModel'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
@@ -8,6 +9,7 @@ import { join } from 'node:path'
 import { catalogueWith } from './ai/catalogue'
 import { ensureFolder } from './ai/modelStore'
 import { windowLanguage } from './window/language'
+import { noteFailure } from './provider/client'
 import { createCredentialsWatch } from './provider/credentialsWatch'
 import { catalogOf } from './provider/modelCatalog'
 import { createModelRegistry } from './provider/modelRegistry'
@@ -38,12 +40,10 @@ export class ProviderServices {
     watch: this.credentials.watch,
     transport: this.transport,
   })
-  readonly fromManager: {
-    installedIds: () => ReadonlySet<string>
-    discovered: () => readonly LocalModel[]
-  } = {
+  readonly fromManager: FromManager = {
     installedIds: () => new Set<string>(),
     discovered: () => NOTHING_DISCOVERED,
+    engineFailure: () => null,
   }
   readonly holdsTripo = (): boolean => this.settings.readCredentialsFor(TRIPO_CLOUD) !== null
   readonly generationFolder = async (): Promise<string> => {
@@ -66,7 +66,9 @@ export class ProviderServices {
     publishedModelOf: modelId => this.describedTripo().find(model => model.id === modelId) ?? null,
     localModels: () => this.mergedCatalogue(),
     isInstalled: modelId => this.fromManager.installedIds().has(modelId),
+    engineFailure: () => this.fromManager.engineFailure(),
     translate: key => textAt(TRANSLATIONS[this.language()], key),
+    note: failure => noteFailure('provider:search-models', failure),
   })
   readonly plan = createPlanReader({
     catalog: () => teamsOf(this.client.require()),

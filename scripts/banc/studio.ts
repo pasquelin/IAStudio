@@ -303,6 +303,19 @@ function followViewport(): () => void {
   )
 }
 
+/**
+ * 🛑 Closing the last document closes the studio WINDOW (`documentIo.ts`), and jsdom's `close()`
+ * tears its document down: every scenario after 5.4 died on `localStorage` (2026-09-06). A run
+ * without a screen has no window to close.
+ */
+function standInForTheWindow(): () => void {
+  const held = window.close
+  window.close = () => {}
+  return () => {
+    window.close = held
+  }
+}
+
 function connectSurfaces(): { painted: PaintedCells; cleanups: (() => void)[] } {
   const painted: PaintedCells = new Map()
   const stage = createGameStage({ renderer: drawing(), input: new EventTarget() })
@@ -315,6 +328,7 @@ function connectSurfaces(): { painted: PaintedCells; cleanups: (() => void)[] } 
       followViewport(),
       () => stage.close(),
       standInForWorkers(),
+      standInForTheWindow(),
     ],
   }
 }

@@ -11,7 +11,7 @@ import {
 import type { Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import { type Command } from '../core/history'
-import { deltaOf, valueAt, withKey, withoutKey } from './animationEval'
+import { deltaOf, poseAt, valueAt, withKey, withoutKey } from './animationEval'
 import { moveNodes, multi } from './commands'
 import { nodeById, type NodeMove, type SceneState } from './sceneState'
 
@@ -221,6 +221,8 @@ export function keyNode(
   mintId: (property: TrackProperty) => string,
   /** One channel rather than the whole pose. The band's diamond names none; a client may. */
   only?: TrackProperty,
+  /** The instant the subject is SEEN at — the playhead — when the key lands elsewhere. */
+  seenAt: Us = time,
 ): Command<SceneState> | null {
   const held = recordingTracksFor(state.animation, subject.nodeId, subject.bone)
   const missing = keyableProperties(state, subject)
@@ -244,7 +246,7 @@ export function keyNode(
     .filter(track => only === undefined || track.target.property === only)
     .map(track => track.id)
 
-  const keys = keySubject(opening, ids, time)
+  const keys = keySubject(opening, ids, time, seenAt)
   if (!keys) return opened.length === 0 ? null : multi('key:node', opened)
 
   return multi('key:node', [...opened, keys])
@@ -263,6 +265,7 @@ export function keySubject(
   state: SceneState,
   trackIds: readonly string[],
   time: Us,
+  seenAt: Us = time,
 ): Command<SceneState> | null {
   const writes: Command<SceneState>[] = []
 
@@ -271,7 +274,7 @@ export function keySubject(
   for (const trackId of trackIds) {
     const track = trackById(state, trackId)
     if (!track || track.locked) continue
-    keyTrack(state, track, time, writes, moved)
+    keyTrack(state, track, time, seenAt, writes, moved)
   }
 
   if (writes.length === 0) return null
@@ -284,12 +287,16 @@ function keyTrack(
   state: SceneState,
   track: AnimationTrack,
   time: Us,
+  seenAt: Us,
   writes: Command<SceneState>[],
   moved: NodeMove[],
 ): void {
   const rest = track.rest
-  const pose = rest ? nodeById(state, track.target.nodeId)?.transform : undefined
-  if (rest && pose) {
+  const node = rest ? nodeById(state, track.target.nodeId) : undefined
+  if (rest && node) {
+    // The pose on SCREEN, not the stored one: an animated node stores its rest, and measuring the
+    // rest against itself wrote a key that held nothing — measured 2026-09-06, keyed at 3 s.
+    const pose = poseAt(node.transform, state.animation, node.id, seenAt)
     writes.push(setAnimationKey(track.id, time, deltaOf(rest, pose, track.target.property)))
     moved.push({ id: track.target.nodeId, transform: rest })
     return

@@ -1,97 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  addMissionStep,
-  createMission,
-  createMissionStep,
-  type Mission,
-  type MissionStep,
-} from '@shared/domain/mission'
+import type { MissionStep } from '@shared/domain/mission'
+import { addMissionStep, createMissionStep } from '@shared/domain/mission'
 import type { Memory, MemoryRecallAsk, MemoryScope } from '@shared/domain/assistantMemory'
 import type { ActionResource } from '@shared/domain/assistant'
 import type { Job } from '@shared/domain/job'
-import type { StudioSnapshot } from '@shared/domain/studioSnapshot'
 import { actionCorpus } from '@main/actionIndex/actionCorpus'
 import type { ActionHit } from '@main/actionIndex/actionIndex'
-import type { VisualContext } from './context'
-import { createAssistantContextBuilder, type AssistantContextBuilderDeps } from './contextBuilder'
-
-const clock = { now: () => '2026-09-04T10:00:00.000Z', newId: () => 'one' }
-
-function missionOf(projectId?: string): {
-  mission: Mission
-  step: Mission['plan']['steps'][number]
-} {
-  const made = createMission('Create a project image', clock)
-  const mission = projectId ? { ...made, projectId } : made
-  const step = createMissionStep(mission.id, 'Choose the correct action', { kind: 'reason' }, clock)
-  return { mission: { ...mission, plan: { steps: [step] } }, step }
-}
-
-function snapshotOf(path = '/projects/alpha'): StudioSnapshot {
-  return {
-    project: {
-      path,
-      manifest: { version: 1, createdAt: clock.now(), updatedAt: clock.now() },
-    },
-    projectKnown: true,
-    workspace: 'image',
-    surface: 'image',
-    commandScope: 'canvas',
-    documents: [
-      {
-        id: 'document_1',
-        title: 'Boat',
-        kind: 'image',
-        workspace: 'image',
-        path: 'documents/Boat.ora',
-        active: true,
-        modified: true,
-      },
-    ],
-    selection: { kind: 'layer', items: [{ id: 'layer_1', name: 'Hull' }] },
-    armedModels: {},
-    play: 'edit',
-    tasks: [],
-    authenticated: true,
-    authKnown: true,
-  }
-}
-
-const memory: Memory = {
-  id: 'memory_1',
-  type: 'decision',
-  summary: 'Use the selected layer',
-  body: '',
-  importance: 4,
-  createdAt: clock.now(),
-  source: { kind: 'assistant' },
-  refs: [],
-  links: [],
-  state: 'live',
-}
-
-const job: Job = {
-  id: 'job_1',
-  targetId: 'model_1',
-  label: 'Boat',
-  status: 'running',
-  progress: 0.5,
-  createdAt: clock.now(),
-  assetIds: [],
-}
-
-function dependencies(
-  overrides: Partial<AssistantContextBuilderDeps> = {},
-): AssistantContextBuilderDeps {
-  return {
-    snapshot: async () => snapshotOf(),
-    actions: { search: async () => [] },
-    memories: { recall: async () => [] },
-    jobs: { list: () => [] },
-    projectContext: { read: async () => ({ cards: [], trouble: null }) },
-    ...overrides,
-  }
-}
+import { createAssistantContextBuilder } from './contextBuilder'
+import { clock, dependencies, job, memory, missionOf, snapshotOf } from './contextBuilder-fixtures'
 
 describe('AssistantContextBuilder', () => {
   it('retrieves actions from the mission intent without structural serialization noise', async () => {
@@ -239,7 +155,6 @@ describe('AssistantContextBuilder', () => {
             trouble: null,
           }),
         },
-        documentState: async document => ({ id: document.id, layers: 3 }),
       }),
     )
     const context = await builder.build({ mission, step, request: 'Make the boat blue' })
@@ -248,7 +163,6 @@ describe('AssistantContextBuilder', () => {
       { id: 'document_1', title: 'Boat', kind: 'image', active: true },
     ])
     expect(context.selection?.items).toEqual([{ id: 'layer_1', name: 'Hull' }])
-    expect(context.documentState).toEqual({ id: 'document_1', layers: 3 })
     expect(context.memories).toEqual([memory])
     expect(context.jobs).toEqual([job])
     expect(context.projectContext?.cards).toHaveLength(1)
@@ -398,102 +312,5 @@ describe('AssistantContextBuilder', () => {
     )
     expect(search.mock.calls[0]?.[0].length).toBeLessThan(1_200)
     expect(recall.mock.calls[0]?.[1].text?.length).toBeLessThan(1_200)
-  })
-
-  it('keeps a scene selection bounded and prioritises results required by the current step', async () => {
-    const base = missionOf('/projects/alpha')
-    const earlier: MissionStep = {
-      ...base.step,
-      id: 'step_earlier',
-      state: 'completed',
-      result: { value: 1 },
-    }
-    const needed: MissionStep = {
-      ...base.step,
-      id: 'step_needed',
-      state: 'completed',
-      result: { value: 'needed'.repeat(2_000) },
-    }
-    const step = { ...base.step, dependsOn: [needed.id] }
-    const mission = { ...base.mission, plan: { steps: [earlier, needed, step] } }
-    const scene = snapshotOf()
-    scene.workspace = '3d'
-    scene.surface = '3d'
-    scene.documents[0] = {
-      ...scene.documents[0]!,
-      kind: 'scene',
-      workspace: '3d',
-      path: 'documents/Boat.gltf',
-    }
-    scene.selection = {
-      kind: 'node',
-      items: Array.from({ length: 12 }, (_, at) => ({ id: `node_${at}`, name: `Node ${at}` })),
-    }
-    const builder = createAssistantContextBuilder(dependencies({ snapshot: async () => scene }))
-    const context = await builder.build({ mission, step, request: 'Move the selected nodes' })
-    expect(context.document?.kind).toBe('scene')
-    expect(context.selection?.items).toHaveLength(8)
-    expect(context.previousResults[0]?.stepId).toBe('step_needed')
-    expect(context.previousResults[0]?.result).toMatchObject({ truncated: true })
-    expect(context.budget.results.contentTruncated).toBe(true)
-    expect(context.budget.selection.truncated).toBe(true)
-  })
-
-  it('ranks relevant project cards before applying their independent budget', async () => {
-    const { mission, step } = missionOf('/projects/alpha')
-    const cards = Array.from({ length: 9 }, (_, at) => ({
-      id: `card_${at}`,
-      title: at === 8 ? 'Boat palette' : `Unrelated ${at}`,
-      body: 'x'.repeat(120),
-      active: true,
-      pictures: [],
-    }))
-    const builder = createAssistantContextBuilder(
-      dependencies({ projectContext: { read: async () => ({ cards, trouble: null }) } }),
-    )
-    const context = await builder.build({ mission, step, request: 'boat colors' })
-    expect(context.projectContext?.cards[0]?.id).toBe('card_8')
-    expect(context.budget.projectContext.truncated).toBe(true)
-  })
-
-  it('captures visual context only when requested and keeps its byte budget independent', async () => {
-    const { mission, step } = missionOf('/projects/alpha')
-    const capture = vi.fn(async (): Promise<VisualContext> => ({
-      kind: 'document',
-      mimeType: 'image/png',
-      width: 1,
-      height: 1,
-      bytes: new Uint8Array([1, 2, 3]),
-      capturedAt: clock.now(),
-    }))
-    const builder = createAssistantContextBuilder(dependencies({ visual: capture }))
-
-    expect((await builder.build({ mission, step, request: 'Continue' })).visual).toBeUndefined()
-    const context = await builder.build({ mission, step, request: 'Inspect it', visual: true })
-
-    expect(capture).toHaveBeenCalledTimes(1)
-    expect(context.visual?.[0]?.bytes).toEqual(new Uint8Array([1, 2, 3]))
-    expect(context.budget.visual).toMatchObject({ considered: 1, selected: 1, truncated: false })
-  })
-
-  it('drops a visual capture larger than its source budget', async () => {
-    const { mission, step } = missionOf('/projects/alpha')
-    const builder = createAssistantContextBuilder(
-      dependencies({
-        visual: async () => ({
-          kind: 'document',
-          mimeType: 'image/png',
-          width: 4_000,
-          height: 4_000,
-          bytes: new Uint8Array(8_000_001),
-          capturedAt: clock.now(),
-        }),
-      }),
-    )
-
-    const context = await builder.build({ mission, step, request: 'Inspect it', visual: true })
-
-    expect(context.visual).toBeUndefined()
-    expect(context.budget.visual).toMatchObject({ considered: 1, selected: 0, truncated: true })
   })
 })

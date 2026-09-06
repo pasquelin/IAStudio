@@ -41,6 +41,10 @@ function loadFailureKey(reason: LoadRefusal['reason']): string {
       return 'aiModels.loadIncomplete'
     case 'network':
       return 'aiModels.loadNetwork'
+    case 'engine-missing':
+      return 'aiModels.loadEngineMissing'
+    case 'engine-failed':
+      return 'aiModels.loadEngineFailed'
     case 'failed':
       return 'aiModels.loadFailed'
   }

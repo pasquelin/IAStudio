@@ -56,6 +56,7 @@ function harness(over: Partial<PythonClient> = {}, deps: Partial<PythonRuntimeDe
     baseOf: () => null,
     engine: () => Promise.resolve(client),
     running: () => client,
+    whyNot: () => null,
     log: () => {},
     ...deps,
   })
@@ -170,6 +171,17 @@ describe('loading', () => {
     const held = harness()
 
     expect(await held.runtime.load?.(MODEL, { onProgress: () => {} })).toBe(MODEL.reservationBytes)
+  })
+
+  // Measured 2026-09-06 (Codex by MCP, worktree without `pnpm engine:fetch`): the job ended on the
+  // bare word `rejected`. The supervisor knows why the engine will not come; the throw says it.
+  it('names the reason the engine will not come, so a job says "not installed" rather than "rejected"', async () => {
+    const { runtime } = harness(
+      {},
+      { engine: () => Promise.resolve(null), whyNot: () => 'engine-missing' },
+    )
+
+    await expect(runtime.load?.(MODEL, { onProgress: () => {} })).rejects.toThrow('engine-missing')
   })
 
   it('refuses readably when the engine is not answering', async () => {

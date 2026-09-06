@@ -4,6 +4,7 @@ import {
   ACTION_REACHES,
   ACTION_REGISTRY,
   ASSISTANT_MODELS,
+  actionReads,
   type ActionCommitment,
   type ActionName,
   type ActionReach,
@@ -392,7 +393,20 @@ const ALL_ACTIONS: Record<ActionName, true> = {
   'accounts.rename': true,
 }
 
+/**
+ * A read is what the mission runtime plans after; anything else it verifies. Blind spot: a read
+ * whose verb is outside `ACTION_NAME_INTENTS` and that declares no intent is verified as a
+ * mutation — 82 names say nothing on their own (2026-09-06), and nothing here lists them.
+ */
 describe('the assistant action registry', () => {
+  it('never flags as a read an action that engages anything', () => {
+    const engaging = ACTION_REGISTRY.filter(actionReads).filter(
+      one => one.commitment !== 'none' || one.raises !== undefined,
+    )
+
+    expect(engaging.map(one => one.name)).toEqual([])
+  })
+
   it('builds every action the union declares', () => {
     expect(sorted(ACTION_REGISTRY.map(entry => entry.name))).toEqual(
       sorted(Object.keys(ALL_ACTIONS)),

@@ -66,8 +66,14 @@ describe('what an object does while the game runs, driven from outside', () => {
     const wrongField = { nodeId: 'Cube Test', type: 'Health', field: 'stamina', value: '3' }
     const wrongValue = { nodeId: 'Cube Test', type: 'Health', field: 'max', value: 'beaucoup' }
 
-    expect(await runAction('component.setProperties', wrongField)).toMatchObject({ ok: false })
-    expect(await runAction('component.setProperties', wrongValue)).toMatchObject({ ok: false })
+    expect(await runAction('component.setProperties', wrongField)).toMatchObject({
+      ok: false,
+      detail: 'Health has no field "stamina" — it has: max (number ≥ 1), current (number ≥ 0)',
+    })
+    expect(await runAction('component.setProperties', wrongValue)).toMatchObject({
+      ok: false,
+      detail: '"beaucoup" does not fit Health.max, which takes max (number ≥ 1)',
+    })
     expect(components()).toEqual([newComponent('Health')])
   })
 
@@ -82,7 +88,10 @@ describe('what an object does while the game runs, driven from outside', () => {
     const offAxis = { nodeId: 'Cube Test', type: 'Movement', field: 'axis', value: 'north' }
     const belowFloor = { nodeId: 'Cube Test', type: 'Movement', field: 'speed', value: '-2' }
 
-    expect(await runAction('component.setProperties', offAxis)).toMatchObject({ ok: false })
+    expect(await runAction('component.setProperties', offAxis)).toMatchObject({
+      ok: false,
+      detail: '"north" does not fit Movement.axis, which takes axis (one of x, y, z)',
+    })
     expect(await runAction('component.setProperties', belowFloor)).toMatchObject({ ok: false })
     expect(components()).toEqual([newComponent('Movement')])
   })

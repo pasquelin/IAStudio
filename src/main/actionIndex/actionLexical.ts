@@ -1,4 +1,4 @@
-import type { ActionIntent } from '@shared/domain/assistant'
+import { actionIntents, intentOfWords, type ActionIntent } from '@shared/domain/assistant'
 import type { IndexedAction } from './actionCorpus'
 
 const INTENT_MATCH_SCORE = 2
@@ -48,16 +48,6 @@ const STOP_WORDS = new Set([
   'verify',
   'with',
 ])
-
-const SEARCH_INTENTS: readonly ActionIntent[] = [
-  'read',
-  'create',
-  'mutate',
-  'delete',
-  'search',
-  'execute',
-  'remember',
-]
 
 const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
   read: [
@@ -123,43 +113,6 @@ const QUERY_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
   remember: ['retien', 'remember', 'retain'],
 }
 
-const ACTION_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
-  read: [
-    'state',
-    'list',
-    'get',
-    'read',
-    'report',
-    'describe',
-    'docs',
-    'facts',
-    'counts',
-    'status',
-    'log',
-  ],
-  create: ['create', 'add', 'prepare', 'duplicate', 'copy', 'group'],
-  mutate: [
-    'set',
-    'rename',
-    'move',
-    'transform',
-    'resize',
-    'update',
-    'adjust',
-    'apply',
-    'attach',
-    'bind',
-    'reorder',
-    'trim',
-    'split',
-    'write',
-  ],
-  delete: ['remove', 'delete', 'trash', 'forget', 'clear', 'detach', 'ungroup'],
-  search: ['search', 'find', 'browse', 'explore'],
-  execute: ['run', 'submit', 'open', 'close', 'play', 'step', 'cancel', 'wait'],
-  remember: ['remember', 'retain'],
-}
-
 const folded = (value: string): string =>
   value
     .normalize('NFD')
@@ -171,34 +124,17 @@ export const actionSearchWords = (value: string): readonly string[] =>
 
 const wordsOf = (value: string): readonly string[] => folded(value).match(/[\p{L}\p{N}_]+/gu) ?? []
 
-function intentOf(
-  value: string,
-  vocabulary: Readonly<Record<ActionIntent, readonly string[]>>,
-): ActionIntent | null {
-  const tokens = wordsOf(value)
-  let found: { intent: ActionIntent; position: number } | null = null
-  for (const intent of SEARCH_INTENTS) {
-    const position = tokens.findIndex(token =>
-      vocabulary[intent].some(prefix => token.startsWith(prefix)),
-    )
-    if (position >= 0 && (found === null || position < found.position)) found = { intent, position }
-  }
-  return found?.intent ?? null
-}
-
 export function actionIntentScore(query: string, action: IndexedAction): number {
   const queryIntent = actionQueryIntent(query)
   if (queryIntent === null) return 0
-  if (action.capabilities.intents?.includes(queryIntent))
+  const intents = actionIntents(action)
+  if (intents.includes(queryIntent))
     return queryIntent === 'remember' ? SPECIFIC_INTENT_MATCH_SCORE : INTENT_MATCH_SCORE
-  if (action.capabilities.intents?.length) return INTENT_MISMATCH_SCORE
-  const actionIntent = intentOf(action.name.split('.')[1] ?? '', ACTION_INTENTS)
-  if (actionIntent === null) return 0
-  return actionIntent === queryIntent ? INTENT_MATCH_SCORE : INTENT_MISMATCH_SCORE
+  return intents.length === 0 ? 0 : INTENT_MISMATCH_SCORE
 }
 
 export const actionQueryIntent = (query: string): ActionIntent | null =>
-  /^(?:qu est ce|ou )/.test(folded(query)) ? 'read' : intentOf(query, QUERY_INTENTS)
+  /^(?:qu est ce|ou )/.test(folded(query)) ? 'read' : intentOfWords(wordsOf(query), QUERY_INTENTS)
 
 export const actionBm25Score = (rank?: number): number =>
   rank === undefined ? 0 : 1 / (1 + Math.exp(rank))

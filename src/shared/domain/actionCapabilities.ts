@@ -88,3 +88,88 @@ export const ACTION_TARGET_DESCRIPTORS: readonly ActionTargetDescriptor[] = [
     ],
   },
 ]
+
+/** Most specific last: a name that says `read` and `find` is a search, and a query likewise. */
+export const ACTION_INTENT_ORDER: readonly ActionIntent[] = [
+  'read',
+  'create',
+  'mutate',
+  'delete',
+  'search',
+  'execute',
+  'remember',
+]
+
+/** The verbs an action name opens with, per intent — the index and the runtime read the same list. */
+export const ACTION_NAME_INTENTS: Readonly<Record<ActionIntent, readonly string[]>> = {
+  read: [
+    'state',
+    'list',
+    'get',
+    'read',
+    'report',
+    'describe',
+    'docs',
+    'facts',
+    'counts',
+    'status',
+    'log',
+  ],
+  create: ['create', 'add', 'prepare', 'duplicate', 'copy', 'group'],
+  mutate: [
+    'set',
+    'rename',
+    'move',
+    'transform',
+    'resize',
+    'update',
+    'adjust',
+    'apply',
+    'attach',
+    'bind',
+    'reorder',
+    'trim',
+    'split',
+    'write',
+  ],
+  delete: ['remove', 'delete', 'trash', 'forget', 'clear', 'detach', 'ungroup'],
+  search: ['search', 'find', 'browse', 'explore'],
+  execute: ['run', 'submit', 'open', 'close', 'play', 'step', 'cancel', 'wait'],
+  remember: ['remember', 'retain'],
+}
+
+/** The intent of the earliest token that opens with a known verb; ties go to the earlier intent. */
+export function intentOfWords(
+  tokens: readonly string[],
+  vocabulary: Readonly<Record<ActionIntent, readonly string[]>>,
+): ActionIntent | null {
+  let found: { intent: ActionIntent; position: number } | null = null
+  for (const intent of ACTION_INTENT_ORDER) {
+    const position = tokens.findIndex(token =>
+      vocabulary[intent].some(prefix => token.startsWith(prefix)),
+    )
+    if (position >= 0 && (found === null || position < found.position)) found = { intent, position }
+  }
+  return found?.intent ?? null
+}
+
+type IntentBearer = { name: string; capabilities?: ActionCapabilities }
+
+/** Declared intents first; otherwise the one the verb of the name says, or none. */
+export function actionIntents(action: IntentBearer): readonly ActionIntent[] {
+  if (action.capabilities?.intents) return action.capabilities.intents
+  const intent = intentOfWords(
+    [(action.name.split('.')[1] ?? '').toLowerCase()],
+    ACTION_NAME_INTENTS,
+  )
+  return intent === null ? [] : [intent]
+}
+
+/**
+ * Answers and changes nothing — the mission runtime plans after one, and verifies after anything
+ * else. Not `commitment: 'none'`, which `node.remove` declares too.
+ */
+export function actionReads(action: IntentBearer): boolean {
+  const intents = actionIntents(action)
+  return intents.length > 0 && intents.every(intent => intent === 'read' || intent === 'search')
+}

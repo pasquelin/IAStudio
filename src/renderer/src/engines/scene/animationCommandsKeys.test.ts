@@ -141,6 +141,33 @@ describe('dragging an object that is already keyed', () => {
   const poseOf = (state: SceneState, time: number) =>
     poseAt(state.nodes[0]!.transform, state.animation, 'cube', time).position.x
 
+  // Measured 2026-09-06 (Codex by MCP): keyed at zero, placed two units along at the playhead,
+  // keyed again at three seconds — and read ZERO at three seconds. The key measured the stored
+  // rest against itself instead of the pose on screen.
+  it('holds the pose shown at the playhead when the key lands elsewhere on the band', () => {
+    const start = { ...EMPTY_SCENE, nodes: [cube(0)] }
+    const first = keyNode(start, { nodeId: 'cube' }, 0, NAMES, p => `t-${p}`)!.apply(start)
+    const placed = movesToCommand(
+      first,
+      [{ id: 'cube', transform: { ...REST, position: vec(2) } }],
+      0,
+      false,
+    )!.apply(first)
+
+    const keyed = keyNode(
+      placed,
+      { nodeId: 'cube' },
+      3 * SECOND,
+      NAMES,
+      p => `t-${p}`,
+      undefined,
+      0,
+    )
+
+    expect(poseOf(keyed!.apply(placed), 3 * SECOND)).toBe(2)
+    expect(poseOf(keyed!.apply(placed), 0)).toBe(2)
+  })
+
   it('records the drag even with the switch OFF, since the object is already animated', () => {
     const state = animated()
     // Dropped at nine, at the instant the second key stands on.

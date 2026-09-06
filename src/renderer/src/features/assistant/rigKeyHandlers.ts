@@ -30,7 +30,7 @@ function frameAt(state: SceneState, seconds: number): Us {
 
 function editKeys(
   input: Record<string, unknown>,
-  build: (open: { state: SceneState; at: Us }) => Command<SceneState> | null,
+  build: (open: { state: SceneState; at: Us; playhead: Us }) => Command<SceneState> | null,
   nothing: string,
 ): ActionOutcome {
   const documentId = activeSceneId(useDocuments.getState())
@@ -38,7 +38,7 @@ function editKeys(
   const keying = sceneKeyingAt(documentId)
   const seconds = numberOf(input, 'timeSeconds')
   const at = seconds === null ? keying.at : frameAt(keying.state, seconds)
-  const command = build({ state: keying.state, at })
+  const command = build({ state: keying.state, at, playhead: keying.at })
   if (!command) return refused('badInput', nothing)
   useScenes.getState().runCommand(documentId, command)
   return { ok: true }
@@ -76,7 +76,7 @@ function keyPose(input: Record<string, unknown>): ActionOutcome {
   const only = oneOf(input, 'property', DIRECT_PROPERTIES) ?? undefined
   return editKeys(
     input,
-    ({ state, at }) => {
+    ({ state, at, playhead }) => {
       const subject = subjectOf(input)
       const node = nodeById(state, subject.nodeId)
       return node
@@ -87,6 +87,7 @@ function keyPose(input: Record<string, unknown>): ActionOutcome {
             channelNames(speaksBundle(), subject.bone ?? node.name),
             () => `track_${newId()}`,
             only,
+            playhead,
           )
         : null
     },

@@ -1,6 +1,8 @@
 import {
   ACTION_REGISTRY,
+  assistantAction,
   DISCOVERY_ACTION,
+  findActions,
   type ActionName,
   type AssistantAnswer,
   type AssistantProgress,
@@ -11,7 +13,7 @@ import { log } from '@main/log'
 import type { TurnWatch } from './brainPort'
 import type { Briefing } from './instruction'
 import { recentHistory } from './instruction'
-import { parseReply, type Reply } from './reply'
+import { parseReply, readReply, type Reply, type ReplyFault } from './reply'
 
 const REGISTERED_ACTIONS: ReadonlySet<ActionName> = new Set(
   ACTION_REGISTRY.map(action => action.name),
@@ -55,12 +57,34 @@ const stopped = (error: unknown): boolean =>
   (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError'))
 
 /** Quoting the answer back is what works; bounded so an essay does not eat the history budget. */
-function complaintAbout(answer: string): string {
-  return [
-    'Your previous answer could not be read. It must be one JSON object with the keys "say",',
-    '"ask" and "calls", and nothing else around it. This is what you sent:',
-    answer.slice(0, 500),
-  ].join('\n')
+function complaintAbout(answer: string, fault: ReplyFault): string {
+  return [...faultLines(fault), 'This is what you sent:', answer.slice(0, 500)].join('\n')
+}
+
+function faultLines(fault: ReplyFault): readonly string[] {
+  switch (fault.kind) {
+    case 'unknownAction': {
+      const closest = findActions(fault.name.replace(/[.:]/g, ' '))
+        .slice(0, 5)
+        .map(action => action.name)
+      return [
+        `Your previous answer named "${fault.name}", which is not an action of the catalogue, so`,
+        'none of its calls ran. Use catalogue names only' +
+          (closest.length > 0 ? `; the closest are ${closest.join(', ')}.` : '.'),
+        'Send the whole answer again.',
+      ]
+    }
+    case 'empty':
+      return [
+        'Your previous answer had neither a sentence nor a call. If the goal is reached, say so',
+        'in "say"; otherwise send the calls.',
+      ]
+    default:
+      return [
+        'Your previous answer could not be read. It must be one JSON object with the keys "say",',
+        '"ask" and "calls", and nothing else around it.',
+      ]
+  }
 }
 
 /**
@@ -103,13 +127,14 @@ async function readOnce(
   notes?.note({ kind: 'sent', door: notes.door, model: notes.model, text: briefing.text })
   const first = await round(briefing)
   notes?.note({ kind: 'answered', text: first.answer })
-  const reply = parseReply(first.answer, REGISTERED_ACTIONS)
-  if (reply || budget.left <= 0) return { reply, cost: first.cost }
+  const read = readReply(first.answer, REGISTERED_ACTIONS)
+  if ('reply' in read) return { reply: read.reply, cost: first.cost }
+  if (budget.left <= 0) return { reply: null, cost: first.cost }
 
-  log.warn('assistant', 'unreadable answer, asking once more')
+  log.warn('assistant', `unreadable answer (${read.fault.kind}), asking once more`)
   budget.left -= 1
   restart()
-  const complaint = complaintAbout(first.answer)
+  const complaint = complaintAbout(first.answer, read.fault)
   // The briefing goes out AGAIN beside it, so the note carries both — a reader chasing an
   // oversized request would otherwise read the retry as the cheap round.
   notes?.note({
@@ -182,14 +207,13 @@ function discoveryIn(reply: Reply | null): string | null {
  * beside it complained about unreadable JSON — which was never what was wrong.
  */
 const unloadedIn = (reply: Reply | null, loaded: readonly ActionName[]): readonly ActionName[] => [
-  ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !loaded.includes(name))),
-]
-
-const unshownIn = (
-  reply: Reply | null,
-  allowed: ReadonlySet<ActionName>,
-): readonly ActionName[] => [
-  ...new Set((reply?.calls ?? []).map(call => call.action).filter(name => !allowed.has(name))),
+  ...new Set(
+    (reply?.calls ?? [])
+      .map(call => call.action)
+      // Nothing to open for a call with no fields — and asked again with `scene.state` opened,
+      // the model dropped the transform it had planned beside it (7.5, 2026-09-06).
+      .filter(name => !loaded.includes(name) && (assistantAction(name)?.fields.length ?? 0) > 0),
+  ),
 ]
 
 // Said plainly rather than thrown: the caller has a person waiting, and "I did not understand"
@@ -197,7 +221,9 @@ const unshownIn = (
 const answerOf = (read: Read, spentBefore: number, shown: Briefing): AssistantAnswer => {
   const cost = read.cost + spentBefore
   const opened = shown.opened.length > 0 ? { loaded: shown.opened } : {}
-  return read.reply ? { ...read.reply, ...opened, cost } : { say: '', calls: [], ...opened, cost }
+  return read.reply
+    ? { ...read.reply, ...opened, cost }
+    : { say: '', calls: [], unreadable: true, ...opened, cost }
 }
 
 /**
@@ -228,14 +254,15 @@ export async function answeredTurn(
     const before = spent
     spent += read.cost
 
-    const unshown = unshownIn(read.reply, shown.allowed)
-    if (unshown.length > 0) {
-      if (budget.left <= 0) return answerOf({ ...read, reply: null }, before, shown)
-      log.info('assistant', `opening the requested action ${unshown.join(', ')}`)
-      shown = shown.withLoaded(unshown)
-      continue
+    const missing = unloadedIn(read.reply, shown.loaded)
+    if (budget.left <= 0) {
+      // Sent on guessed fields rather than dropped: the calls are registered, and a turn that
+      // answers nothing after four round trips reads as a model that had nothing to say.
+      if (missing.length > 0) {
+        log.warn('assistant', `out of attempts, calling ${missing.join(', ')} unopened`)
+      }
+      return answerOf(read, before, shown)
     }
-    if (budget.left <= 0) return answerOf(read, before, shown)
 
     const query = discoveryIn(read.reply)
     if (query !== null && shown.expand !== null) {
@@ -244,7 +271,6 @@ export async function answeredTurn(
       continue
     }
 
-    const missing = unloadedIn(read.reply, shown.loaded)
     if (missing.length === 0) return answerOf(read, before, shown)
 
     log.info('assistant', `opening the manual of ${missing.join(', ')}`)

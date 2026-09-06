@@ -144,6 +144,7 @@ export const PLAY_ACTIONS: readonly AssistantAction[] = [
   action({
     /** 🛑 ADDRESSABLE: the script's reference and the line, which is what a repair needs. */
     name: 'runtime.errors',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.runtimeErrors.title',
     descriptionKey: 'assistant.actions.runtimeErrors.description',
     commitment: 'none',

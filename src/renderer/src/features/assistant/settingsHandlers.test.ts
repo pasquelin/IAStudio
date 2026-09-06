@@ -20,8 +20,20 @@ beforeEach(() => {
 })
 
 describe('the settings', () => {
-  it('answers them whole', async () => {
-    expect(await runAction('settings.read', {})).toEqual({ ok: true, data: DEFAULT_SETTINGS })
+  it('answers them whole, with what each choice setting accepts', async () => {
+    expect(await runAction('settings.read', {})).toEqual({
+      ok: true,
+      data: {
+        settings: DEFAULT_SETTINGS,
+        choices: expect.objectContaining({
+          'three.shadowQuality': {
+            title: 'Shadow softness',
+            help: expect.any(String),
+            values: ['hard', 'soft'],
+          },
+        }),
+      },
+    })
   })
 
   it('writes one section without restating the others', async () => {

@@ -67,7 +67,7 @@
       },
       "documentActivate": {
         "title": "Bring a document to the front",
-        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface. Name it by its id, by its path, or by the title the studio shows in quotes — a title two documents share names neither."
+        "description": "Makes an already open document the active tab, so that commands aimed at its surface reach it. This is the answer to a command refused for being on the wrong surface. Name it by its id, by its path, or by the title the studio shows in quotes — a title two documents share names neither. “Reopen X”, “go back to X” for a document already open is this, not file.open."
       },
       "documentClose": {
         "title": "Close a document",
@@ -715,7 +715,7 @@
       },
       "cameraAddShot": {
         "title": "Put a camera on air",
-        "description": "Opens a shot for this camera, from the given instant in seconds, and answers its id. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top."
+        "description": "Opens a shot for this camera, from the given instant in seconds, and answers its id. Which line it lands on follows the band’s own rule, where a camera not yet on the band arrives on top. A camera with a shot is the ACTIVE camera, the one the scene is seen through."
       },
       "cameraBindPathToShot": {
         "title": "Run a camera along a path",
@@ -819,7 +819,7 @@
       },
       "keyWritePoseKeys": {
         "title": "Key a subject",
-        "description": "Writes a key on every channel of an object or a bone, at the instant given or at the playhead, holding the pose it stands in. The channels it lacks are opened on the way, since demanding a track first would be asking for the thing already standing in the viewport."
+        "description": "Writes a key on every channel of an object or a bone, at the instant given or at the playhead, holding the pose shown at the playhead — the one node.transform placed. On an animated object node.transform keys the playhead itself, so to pose another instant: write the key there first, then place the object with the playhead on it. The channels it lacks are opened on the way, since demanding a track first would be asking for the thing already standing in the viewport."
       },
       "keyRemoveSubjectKeys": {
         "title": "Take a subject’s keys off",
@@ -951,7 +951,7 @@
       },
       "settingsRead": {
         "title": "Read the settings",
-        "description": "Returns every setting the studio holds, section by section, exactly as the settings window shows them. What the viewport DRAWS lives here — the grid, the shadows, the helpers — and so do the units, the theme and the language. No scene action turns any of them on."
+        "description": "Answers { settings, choices }: every setting the studio holds under settings, section by section, and under choices what each setting with a fixed list accepts, with its title and help. What the viewport DRAWS lives here — the grid, the shadows, the helpers — and so do the units, the theme and the language. No scene action turns any of them on."
       },
       "settingsWrite": {
         "title": "Change the settings",
@@ -995,7 +995,7 @@
       },
       "nodeCombineIntoSolid": {
         "title": "Carve, join or intersect objects",
-        "description": "Folds several objects of the scene in front into a single solid. THE ORDER OF THE IDS DOES NOT MATTER: the matter is the biggest shape unless matterId names it, and an object marked through node.markAsCuttingTool is always a tool. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid."
+        "description": "Folds several objects of the scene in front into a single solid. THE ORDER OF THE IDS DOES NOT MATTER: the matter is the biggest shape unless matterId names it, and an object marked through node.markAsCuttingTool is always a tool. The original shapes are kept inside the solid and node.separate gives them back. Answers with the id of the solid. “intersect” keeps only the part where they overlap."
       },
       "nodeSwapSolidMatterAndTool": {
         "title": "Flip a fold",
@@ -1212,7 +1212,7 @@
       "noWindow": "No studio window was in front to run that action.",
       "timedOut": "The request stood on screen unanswered, and was given up on.",
       "noReference": "The form carries no reference image to read a style from.",
-      "ambiguousLanding": "Two destinations are possible and the studio would have asked. Name one: the wrong choice writes over an open file.",
+      "ambiguousLanding": "Two destinations are possible and the studio would have asked, but a call from outside has no screen for the question. Name one: the wrong choice writes over an open file.",
       "formChanged": "The form changed after the cost was quoted. Nothing was sent — ask again for a fresh figure.",
       "notFound": "Nothing of that name is there to act on. The call itself was well formed.",
       "notAllowed": "The studio does not let a call from outside change that. Only its own window does.",
@@ -1594,6 +1594,7 @@
       "credits": "This action will spend {{cost}}.",
       "value": "{{label}}: {{value}}",
       "unknownCost": "This action will spend on your account. The studio could not estimate how much, and does not invent a figure.",
+      "noCost": "This action spends nothing: the model runs on this machine, or is priced at nothing.",
       "files": "This action will change what your project holds — files, or the assets in its library. It spends nothing.",
       "asset": "This action will upload an image, which then stays in your library. It spends nothing.",
       "remote": "This action will publish to a server, off this machine. It spends nothing, and nothing here takes it back.",

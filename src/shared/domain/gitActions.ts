@@ -67,6 +67,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.diff',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.gitDiff.title',
     descriptionKey: 'assistant.actions.gitDiff.description',
     commitment: 'none',
@@ -79,6 +80,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.branches',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.gitBranches.title',
     descriptionKey: 'assistant.actions.gitBranches.description',
     commitment: 'none',
@@ -88,6 +90,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.stashes',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.gitStashes.title',
     descriptionKey: 'assistant.actions.gitStashes.description',
     commitment: 'none',
@@ -259,6 +262,7 @@ export const GIT_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'git.remotes',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.gitRemotes.title',
     descriptionKey: 'assistant.actions.gitRemotes.description',
     commitment: 'none',

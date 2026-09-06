@@ -41,6 +41,11 @@ export type Scenario = {
    */
   answers?: 'yes' | 'no'
   /**
+   * What the person answers the model's QUESTIONS, in order — the mission bench alone reads it.
+   * Absent, a question leaves the mission waiting, which is what a scenario about asking measures.
+   */
+  replies?: readonly string[]
+  /**
    * Whether the request was carried out — read off what the studio HOLDS, never off the words
    * the model wrote. Every failure this bench exists for was announced as a success.
    */

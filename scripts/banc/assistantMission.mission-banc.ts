@@ -10,8 +10,11 @@ import { openMemoryDatabase } from '@main/project/sqliteMemory'
 import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/metrics'
 import type { Run, Scenario } from './run'
 import { SCENARIOS } from './scenarios'
-import { playMission } from './playMission'
+import { playMission, type MissionRun } from './playMission'
+import { callKey } from '@main/mission/runtimeGuards'
+import { missionFailureClassOf, type MissionFailureClass } from './missionFailures'
 import {
+  expectedMissionActions,
   missionFamilyCoverage,
   missionScenarios,
   scenarioFamilies,
@@ -36,7 +39,8 @@ function missionBenchSet(value: string): MissionBenchSet {
 const BENCH_SET = missionBenchSet(requestedSet)
 const scenarios = missionScenarios(SCENARIOS, BENCH_SET, process.env['MISSION_BENCH_RANKS'] ?? '')
 
-type Tokens = { sent: number; back: number; cached: number; calls: number }
+/** `native` counts the answers that came back as tool calls rather than as JSON text. */
+type Tokens = { sent: number; back: number; cached: number; calls: number; native: number }
 type Result = {
   name: string
   passed: number
@@ -47,7 +51,17 @@ type Result = {
   tokens: Tokens
   metrics: MissionRuntimeMetrics
   families: readonly string[]
+  /** One class per failed run — what to fix first, read off the run rather than the words. */
+  failures: MissionFailureClass[]
 }
+
+const failureClassOf = (scenario: Scenario, played: MissionRun): MissionFailureClass =>
+  missionFailureClassOf({
+    expected: expectedMissionActions(scenario),
+    candidates: played.candidates,
+    called: played.called,
+    missionStates: played.missions.map(mission => mission.state),
+  })
 
 const emptyMetrics = (): MissionRuntimeMetrics => createMissionMetrics().read()
 
@@ -84,8 +98,15 @@ function counting(tokens: Tokens): typeof fetch {
     tokens.sent += number('prompt_tokens') + number('input_tokens')
     tokens.back += number('completion_tokens') + number('output_tokens')
     tokens.cached += number('prompt_cache_hit_tokens') + number('cache_read_input_tokens')
+    if (answeredWithTools(body)) tokens.native += 1
     return new Response([204, 205, 304].includes(response.status) ? null : written, response)
   }
+}
+
+function answeredWithTools(body: unknown): boolean {
+  const first = isRecord(body) && Array.isArray(body['choices']) ? body['choices'][0] : null
+  const message = isRecord(first) ? first['message'] : null
+  return isRecord(message) && Array.isArray(message['tool_calls'])
 }
 
 function parsed(written: string): unknown {
@@ -119,7 +140,7 @@ function resultPassed(scenario: Scenario, run: Run): boolean {
 function unnecessaryActions(_scenario: Scenario, run: Run): number {
   const seen = new Set<string>()
   return run.called.filter(call => {
-    const key = `${call.action}:${JSON.stringify(call.input)}`
+    const key = callKey(call)
     const unnecessary = call.answer?.startsWith('refused') === true || seen.has(key)
     seen.add(key)
     return unnecessary
@@ -140,9 +161,10 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
       unnecessary: 0,
       searches: 0,
       milliseconds: 0,
-      tokens: { sent: 0, back: 0, cached: 0, calls: 0 },
+      tokens: { sent: 0, back: 0, cached: 0, calls: 0, native: 0 },
       metrics: emptyMetrics(),
       families: scenarioFamilies(scenario),
+      failures: [],
     }
     const failures: string[] = []
     const brain = createHttpChatBrain({
@@ -171,10 +193,13 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
         result.unnecessary += unnecessaryActions(scenario, played)
         addMetrics(result.metrics, played.metrics)
         if (resultPassed(scenario, played)) result.passed += 1
-        else
+        else {
+          const failure = failureClassOf(scenario, played)
+          result.failures.push(failure)
           failures.push(
-            `${played.called.map(call => call.action).join(', ') || 'no action'} — ${played.said}`,
+            `[${failure}] ${played.called.map(call => call.action).join(', ') || 'no action'} — ${played.said}`,
           )
+        }
       } finally {
         played.studio.close()
       }
@@ -193,14 +218,23 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
       console.log(
         `  ${result.passed === RUNS ? '✓' : '✗'} ${result.name}: ${result.passed}/${RUNS}, ` +
           `${result.actions} actions, ${result.unnecessary} unnecessary, ` +
-          `${result.metrics.actionsSentToLlm} candidates sent, ${result.tokens.sent} tokens`,
+          `${result.metrics.actionsSentToLlm} candidates sent, ${result.tokens.sent} tokens` +
+          (result.failures.length > 0 ? ` — ${result.failures.join(', ')}` : ''),
       )
     }
+    const byClass = new Map<MissionFailureClass, number>()
+    for (const one of results.flatMap(result => result.failures))
+      byClass.set(one, (byClass.get(one) ?? 0) + 1)
+    if (byClass.size > 0)
+      console.log(
+        `  failures by class: ${[...byClass].map(([name, count]) => `${name} ${count}`).join(' · ')}`,
+      )
     console.log(
       `  ${Math.round((passed / total) * 100)}% passed · ${sum(result => result.tokens.sent)} tokens · ` +
         `${sum(result => result.metrics.contextChars)} context chars · ` +
         `${sum(result => result.metrics.llmCalls)} runtime rounds · ` +
         `${sum(result => result.tokens.calls)} provider calls · ` +
+        `${sum(result => result.tokens.native)} native tool answers · ` +
         `${sum(result => result.metrics.replans)} replans · ` +
         `${sum(result => result.metrics.revisionConflicts)} revision conflicts · ` +
         `${sum(result => result.metrics.userWaits)} user waits · ` +
@@ -229,7 +263,9 @@ describe.skipIf(KEY === '' || chat === null)(`mission runtime with ${PROVIDER}`,
           unnecessary: sum(result => result.unnecessary),
           rounds: sum(result => result.metrics.llmCalls),
           providerCalls: sum(result => result.tokens.calls),
+          nativeAnswers: sum(result => result.tokens.native),
           topK: 12,
+          failuresByClass: Object.fromEntries(byClass),
           coverage: missionFamilyCoverage(scenarios),
           results,
         },

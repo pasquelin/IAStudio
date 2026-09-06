@@ -110,7 +110,7 @@ describe('how much of the catalogue the model is shown', () => {
     // treize actions sont citées — la garde ne pouvait plus rougir pour aucune d'elles.
     const at = briefing.text.indexOf('[core]')
     const names = briefing.text.slice(at, briefing.text.indexOf('\n\n', at))
-    const unwritten = [...briefing.allowed].filter(name => !names.includes(name))
+    const unwritten = ACTION_REGISTRY.map(one => one.name).filter(name => !names.includes(name))
     expect(unwritten).toEqual([])
     expect(briefing.text).toContain('The Image space is in front')
     expect(briefing.text).toContain('a project about sailing boats')
@@ -168,7 +168,6 @@ describe('how much of the catalogue the model is shown', () => {
 
       for (const action of ACTION_REGISTRY) {
         expect(briefing.text.includes(action.name), action.name).toBe(true)
-        expect(briefing.allowed.has(action.name), action.name).toBe(true)
       }
     },
   )

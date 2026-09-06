@@ -29,8 +29,16 @@ const actionsByRank = (): ReadonlyMap<string, readonly ActionName[]> => {
   return actions
 }
 
+/**
+ * 🛑 What `coverage.ts` expects of the LEGACY chain and the runtime does by itself: a `jobId`
+ * answered by an action becomes a `job` step, so the wait is never a call the model makes.
+ */
+const RUNTIME_HANDLED: ReadonlySet<ActionName> = new Set(['job.waitForCloudGeneration'])
+
 export function expectedMissionActions(scenario: Scenario): readonly ActionName[] {
-  return actionsByRank().get(rankOf(scenario)) ?? []
+  return (actionsByRank().get(rankOf(scenario)) ?? []).filter(
+    action => !RUNTIME_HANDLED.has(action),
+  )
 }
 
 export function scenarioFamilies(scenario: Scenario): readonly string[] {

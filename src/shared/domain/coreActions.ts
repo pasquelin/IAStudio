@@ -1,3 +1,4 @@
+import { SCENE_TEMPLATE_IDS } from './sceneTemplate'
 import { action, type ActionCommitment, type AssistantAction } from './assistantAction'
 import { COMMAND_REGISTRY, type CommandId } from './command'
 import { LANDING_TARGETS } from './landingTarget'
@@ -97,12 +98,15 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
       { key: 'title', kind: 'text', labelKey: 'assistant.fields.title', required: false },
       { key: 'folder', kind: 'text', labelKey: 'assistant.fields.folderPath', required: false },
       // What a scene opens on. Read only when a title was given: with none the window opens, and
-      // the person in front of it picks the template themselves.
-      //
-      // Its eight values are deliberately NOT enumerated here: measured, they cost 83 characters
-      // of the preamble, which took the room left for the person's own sentence under the 4 000
-      // `brain.test.ts` holds. An unknown value opens the default rather than failing.
-      { key: 'template', kind: 'text', labelKey: 'assistant.fields.template', required: false },
+      // the person in front of it picks the template themselves. Enumerated since 2026-09-06: a
+      // client that was not told `empty` existed emptied a new scene by hand, five objects.
+      {
+        key: 'template',
+        kind: 'choice',
+        labelKey: 'assistant.fields.template',
+        required: false,
+        options: SCENE_TEMPLATE_IDS,
+      },
     ],
   }),
   action({
@@ -237,6 +241,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
    */
   action({
     name: 'prompt.suggest',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.promptSuggest.title',
     descriptionKey: 'assistant.actions.promptSuggest.description',
     commitment: 'none',
@@ -248,6 +253,7 @@ export const CORE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'prompt.translate',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.promptTranslate.title',
     descriptionKey: 'assistant.actions.promptTranslate.description',
     commitment: 'none',

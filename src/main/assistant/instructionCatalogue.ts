@@ -1,6 +1,5 @@
 import {
   ACTION_FAMILIES,
-  ACTION_REGISTRY,
   assistantAction,
   DISCOVERY_ACTION,
   type ActionField,
@@ -38,7 +37,8 @@ export function targetLine(target: Target): string {
 
 /** One field, as a line the model can read: name, type, whether it must be there, what it takes. */
 function fieldLine(field: ActionField): string {
-  const parts = [`${field.key} (${field.kind}${field.required ? ', required' : ''})`]
+  const kind = field.repeated ? `list of ${field.kind}` : field.kind
+  const parts = [`${field.key} (${kind}${field.required ? ', required' : ''})`]
   if (field.options) parts.push(`one of: ${field.options.join(', ')}`)
   parts.push(englishText(field.labelKey))
   return `    - ${parts.join(' — ')}`
@@ -73,27 +73,10 @@ export const manualText = (manuals: readonly Manual[]): string =>
  */
 let namesHeld: string | null = null
 
-export const namesPrinted = (only?: readonly ActionName[]): string => {
-  if (!only) {
-    return (namesHeld ??= ACTION_FAMILIES.map(
-      family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
-    ).join('\n'))
-  }
-  const wanted = new Set(only)
-  return ACTION_FAMILIES.flatMap(family => {
-    const names = family.actions.map(action => action.name).filter(name => wanted.has(name))
-    return names.length > 0 ? [`  [${family.name}] ${names.join(', ')}`] : []
-  }).join('\n')
-}
-
-/**
- * 🛑 Every name of the registry, and that is the point of showing names: a model may call anything
- * it can read. `parseReply` still refuses what the registry does not declare.
- */
-let allowedHeld: ReadonlySet<ActionName> | null = null
-
-export const allNames = (): ReadonlySet<ActionName> =>
-  (allowedHeld ??= new Set(ACTION_REGISTRY.map(action => action.name)))
+export const namesPrinted = (): string =>
+  (namesHeld ??= ACTION_FAMILIES.map(
+    family => `  [${family.name}] ${family.actions.map(one => one.name).join(', ')}`,
+  ).join('\n'))
 
 /**
  * The shape the answer has to take.
@@ -102,9 +85,7 @@ export const allNames = (): ReadonlySet<ActionName> =>
  * to obtain is a parseable object, and the cheapest model on the list is the one most likely to
  * wrap it in prose if only told once.
  */
-export const FORMAT = [
-  'Answer with one JSON object and nothing else. No prose around it, no code fence.',
-  'The object has exactly three keys:',
+const ASK_LINES = [
   '  "say": a short sentence for the person, in their language. May be empty.',
   // 🛑 Two lines of the FORMAT and never a rule of the catalogue: named by a rule, this was
   // described to every model and called by none — the question went in "say" and the calls went
@@ -112,6 +93,12 @@ export const FORMAT = [
   '  "ask": {"question":"…","choices":[…]} to ask the person, or null. It RUNS NOTHING:',
   '    the calls wait, their answer comes back next round. Ask rather than act halfway.',
   `    Several: {"questions":[{"question":"…","choices":[…],"note":true},…]}, ${MOST_QUESTIONS} max ("note" = a free line).`,
+]
+
+export const FORMAT = [
+  'Answer with one JSON object and nothing else. No prose around it, no code fence.',
+  'The object has exactly three keys:',
+  ...ASK_LINES,
   '  "calls": a list of actions to run, in order. May be empty.',
   'Each call is {"action": "<name from the catalogue>", "input": {<the fields above>}}.',
   // 🛑 A LITERAL id: the example spelled `"<the armed model>"` and the model copied the shape —
@@ -119,6 +106,18 @@ export const FORMAT = [
   'Example: {"say":"Making an image.","ask":null,"calls":[{"action":"generator.prepare",',
   '"input":{"family":"image","modelId":"flux.1-dev","parameters":{"prompt":"a bicycle"}}},',
   '{"action":"generator.submit","input":{"landing":"document"}}]}',
+].join('\n')
+
+// For a door handed the manuals as native tools: the calls go through them, the text carries the
+// two other keys. « Never in the text » is the point: a name written by hand was a name invented.
+export const TOOL_FORMAT = [
+  'Run actions by CALLING THE TOOLS, in order. Never write an action name in the text.',
+  'Beside the calls, answer with one JSON object and nothing else, with two keys:',
+  ...ASK_LINES,
+  // 🛑 In the tools' own words: the rule above says it of an empty "calls", a key this door has
+  // no more — told nothing, the model wrote « je lance l'envoi » and called nothing (2026-09-06).
+  'Calling no tool means the request is DONE, and "say" then tells the person where things',
+  'stand — never empty. Never write that you will call, or that a thing is done: call it now.',
 ].join('\n')
 
 /**
@@ -157,7 +156,10 @@ export const RULES = [
  * shown `RULES` and these are what it does without — see `studioBriefing`, which decides on room.
  */
 export const WIDE_RULES = [
-  '  - If nothing in the catalogue fits, return no calls and say so in "say".',
+  // 🛑 The catalogue names 297 actions and the model still wrote « aucune action de miroir
+  // n'existe » about one of them (55.7, 69.4 — measured 2026-09-05). A search first, then the no.
+  `  - Nothing in the catalogue seems to fit? Call ${DISCOVERY_ACTION} with the words of the request`,
+  '    first. Only when it answers nothing, return no calls and say so in "say".',
   /**
    * The three that place a NAMED file, and they are one story: a model shown two hundred actions
    * reached for documents.list, which holds documents alone, then said it had found a picture.
@@ -171,7 +173,9 @@ export const WIDE_RULES = [
    */
   '  - Nothing found by name? List the folders YOURSELF and read the names in them, in this same',
   '    answer. Never ask to be allowed: a name follows the prompt that made it, not what is spoken.',
-  '  - Several files match? Choose none: "ask" which, with their names as the choices.',
+  // « Ouvre mon premier fichier audio » found two and asked which (2.3, 2.4, 17.3, 17.4 — 2026-09-06).
+  '  - Several files match? Choose none: "ask" which, with their names as the choices. NOT when',
+  '    the sentence COUNTS — "the first", "the second": take the Nth of the listing, as it answered.',
   // Four requests of the batterie died on a bare name — `files.move ["bateau-test.png"]` for a
   // file sitting in `Images/` — each answered `refused: missing`.
   '  - A path is the WHOLE path inside the project, folders and all: "Images/x.png", never',
@@ -237,6 +241,16 @@ export const WIDE_RULES = [
   '  - "2 metres right of X", "above X", "right after X" are relative to X and NOT to the thing',
   '    being moved: read X, add to ITS value, write the sum. A "relative" field moves a thing from',
   '    where it already stands, so it is the wrong tool for these — and "after" is X\'s END.',
+  // Asked for a subfolder inside « Tests Assistant », the model opened a project of that name and
+  // the mission lost its scope (4.2, 2026-09-06). Only the listing names projects.
+  '  - Only projects.list names projects. A name the sentence gives is a folder, a file or an',
+  '    object of the OPEN project: find it there, never project.open or project.create on it.',
+  // « Ajoute une lumière directionnelle » answered « one already exists » with no call (8.1);
+  // « change l'arrière-plan » set the kind the state already showed (10.6).
+  '  - "add a light", "add a cube": call node.add even when the scene already holds one of that',
+  '    kind — one MORE is what was asked. "change", "another" ask for a value DIFFERENT from',
+  '    the one the state shows. "away from" and "closer to" X move along the line between',
+  '    the two: read both positions, then write the result.',
   '  - Never say a thing is done unless a call in this conversation did it.',
   '  - Reading is not doing: the request is done once the change it asked for has been WRITTEN.',
   // The same call sent four times after it answered ok, one refusal collected eight times on
@@ -262,11 +276,30 @@ export const MEMORY_CALL = `  - This project has a memory: ${MEMORY_RECALL_ACTIO
  * and nothing else in the briefing asks it to.
  */
 export const CONTINUING = [
-  'You are still working on the same request. What you have already done is in the history',
-  'above, with what each action answered — build on it, and never redo a call that has answered.',
-  'Answer with NO calls when the request is done. When you need something only the person can',
-  'tell you, that is what "ask" is for.',
+  'You are still working on the same request. What you have already done is above — the history,',
+  'or previousResults — with what each action answered: build on it, and never redo a call that',
+  'has answered. Answer with NO calls when the request is done. When you need something only the',
+  'person can tell you, that is what "ask" is for.',
 ].join('\n')
+
+/**
+ * 🛑 How to READ the mission JSON, which no schema travels with: `previousResults`, `verify` and
+ * the scored `actions` list were inferred by the model, and the scores meant nothing to it.
+ */
+export const MISSION_RULES = [
+  '  - The "Mission" block is JSON. mission.goal is the request. mission.step.kind says what this',
+  '    round is for: "reason" = plan the next calls; "verify" = check from the state whether the',
+  '    goal is reached, and answer with NO calls if it is. Never claim it is without reading.',
+  '  - previousResults lists what already RAN in this mission, the call and what it answered.',
+  '    Build on it, never send a call that is already there: a search that answered [] is an',
+  '    answer — list a folder or search other words, never the same query again.',
+  '  - actions is a shortlist the studio picked for this step; their fields are in the Manual.',
+  '    The Catalogue names every other action — name one and its fields come back next round.',
+  // The JSON carried a summary of the document once, and the model answered from it with no
+  // call — 26 scenarios of passe 6 (2026-09-06). Gone since; the rule stays for the selection.
+  '  - The JSON says what is in front and selected, never what a document HOLDS: to tell the',
+  '    person that, call its read (scene.state, sequence.state, files.list…) and answer from it.',
+]
 
 export const roleWith = (rules: readonly string[]): string =>
   [

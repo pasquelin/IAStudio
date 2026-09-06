@@ -35,6 +35,8 @@ export type Studio = {
   changed: () => boolean
   refusals: () => readonly string[]
   memories: () => readonly Memory[]
+  /** The count the briefing carries — what `createRoutedBrain` sends, and nothing else. */
+  answeringMemories: () => number
   projectContext: () => ContextState
   playState: () => PlayState
   playing: () => Promise<boolean>

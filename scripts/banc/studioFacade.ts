@@ -1,3 +1,4 @@
+import { MEMORY_ANSWERING_STATES } from '@shared/domain/assistantMemory'
 import { vi } from 'vitest'
 import type { ActionName } from '@shared/domain/assistant'
 import { describeStudio } from '@main/assistant/studioState'
@@ -91,6 +92,8 @@ export function studioFacade(
     changed: () => unsavedDocumentIds().some(one => !runtime.settled.has(one)) || ops.can().undo,
     refusals: () => runtime.refusals,
     memories: memory.held,
+    answeringMemories: () =>
+      memory.held().filter(one => MEMORY_ANSWERING_STATES.includes(one.state)).length,
     projectContext: () => shell.context(),
     playing: async () => {
       for (let tries = 0; tries < 200; tries++) {

@@ -172,6 +172,7 @@ export const STATE_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'activity.recent',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.activityRecent.title',
     descriptionKey: 'assistant.actions.activityRecent.description',
     commitment: 'none',

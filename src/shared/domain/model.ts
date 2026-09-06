@@ -3,6 +3,8 @@
  * (`GET /models/{id}`). `FieldDescriptor` is their normalized shape, the only one the
  * renderer ever sees — see spec § 6.
  */
+import type { ApiFailure, EngineFailure } from './failure'
+
 export type FieldKind =
   | 'text'
   | 'longText'
@@ -274,6 +276,12 @@ export type ModelSummary = {
   downloadable?: boolean
   /** What the download weighs. Absent for a cloud model, which downloads nothing. */
   diskBytes?: number
+  /**
+   * Why a model of THIS machine cannot run right now, whatever its weights: the engine that
+   * would serve it is not installed, or would not start. A picker that lists it without saying
+   * so sends a client into a job that fails — measured 2026-09-06, Codex by MCP, on `ssd-1b`.
+   */
+  unavailable?: EngineFailure
   featured: boolean
   capabilities: readonly string[]
   tags: readonly string[]
@@ -459,4 +467,10 @@ export type ModelPage = {
   items: ModelSummary[]
   /** `null` once the catalogue is exhausted, which is how the list knows to stop asking. */
   cursor: string | null
+  /**
+   * Why the cloud half of the catalogue is missing from this page, when it is. `items` still
+   * holds what needs no account — local models, a published catalogue — and a page that says why
+   * is what a client can act on, where a thrown code was a handler printed in a terminal.
+   */
+  refused?: ApiFailure
 }

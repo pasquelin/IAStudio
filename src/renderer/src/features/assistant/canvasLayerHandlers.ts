@@ -83,16 +83,38 @@ function drawnShape(input: Record<string, unknown>): { at: Point; drawn: DrawnSh
 /** The other axis of a box a client half-named, giving a point caption one for the first time. */
 const DEFAULT_PARAGRAPH: Size = { width: 480, height: 120 }
 
-function born(input: Record<string, unknown>, id: string, name: string): Layer | null {
-  switch (oneOf(input, 'kind', ['pixel', 'text', 'adjustment', 'shape'])) {
+// Only what is MISSING: told the whole rule with name, kind and shape already given, a client
+// re-read the rule and not its own call (a box without width and height, 2026-09-06).
+function missingFor(kind: string, input: Record<string, unknown>): string {
+  if (kind === 'adjustment') return `"adjustment" wants one of: ${ADJUSTMENT_KINDS.join(', ')}`
+  const wants = [
+    ...(oneOf(input, 'shape', SHAPE_KINDS) ? [] : [`"shape" one of: ${SHAPE_KINDS.join(', ')}`]),
+    ...['width', 'height'].flatMap(side => {
+      const held = numberOf(input, side)
+      return held === null || held <= 0 ? [`"${side}" above zero`] : []
+    }),
+  ]
+  return `a shape wants ${wants.join(' and ')}`
+}
+
+function bornShape(input: Record<string, unknown>, id: string, name: string): Layer | null {
+  const made = drawnShape(input)
+  if (!made) return null
+  const at = { x: numberOf(input, 'x') ?? 0, y: numberOf(input, 'y') ?? 0 }
+  return shapeLayer(id, name, { x: at.x + made.at.x, y: at.y + made.at.y }, made.drawn)
+}
+
+function born(
+  input: Record<string, unknown>,
+  id: string,
+  name: string,
+  kind: string,
+): Layer | null {
+  switch (kind) {
     case 'pixel':
       return pixelLayer(id, name)
-    case 'shape': {
-      const made = drawnShape(input)
-      if (!made) return null
-      const at = { x: numberOf(input, 'x') ?? 0, y: numberOf(input, 'y') ?? 0 }
-      return shapeLayer(id, name, { x: at.x + made.at.x, y: at.y + made.at.y }, made.drawn)
-    }
+    case 'shape':
+      return bornShape(input, id, name)
     case 'text':
       return {
         ...textLayer(id, textOf(input, 'text') ?? name, {
@@ -111,14 +133,12 @@ function born(input: Record<string, unknown>, id: string, name: string): Layer |
 }
 
 function newLayer(input: Record<string, unknown>): ActionOutcome {
-  const name = textOf(input, 'name')
+  // Both held to the registry by the executor before any handler runs — see `inputProblem`.
+  const name = textOf(input, 'name') ?? ''
+  const kind = textOf(input, 'kind') ?? ''
   const id = newId()
-  const layer = name === null ? null : born(input, id, name)
-  if (!layer)
-    return refused(
-      'badInput',
-      '"name" is required, and "kind" must be one of: pixel, text, adjustment, shape — a shape also wants "shape" and a "width" and "height" above zero, an adjustment wants "adjustment"',
-    )
+  const layer = born(input, id, name, kind)
+  if (!layer) return refused('badInput', missingFor(kind, input))
 
   const outcome = editCanvas(() => [addLayer(layer)], 'the new layer built no command to run')
   return outcome.ok ? { ok: true, data: { layerId: id } } : outcome

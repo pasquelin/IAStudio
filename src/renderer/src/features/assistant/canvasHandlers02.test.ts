@@ -42,6 +42,22 @@ describe('building a stack', () => {
     expect(canvas().layers.at(-1)?.name).toBe('Ciel')
   })
 
+  // Told the whole rule with name, kind and shape already given, a client re-read the rule and
+  // not its own call — measured 2026-09-06, Codex by MCP.
+  it('names only what a box lacks, not the whole rule', async () => {
+    const outcome = await runAction('layer.add', {
+      kind: 'shape',
+      name: 'Cadre',
+      shape: 'rectangle',
+    })
+
+    expect(outcome).toEqual({
+      ok: false,
+      refusal: 'badInput',
+      detail: 'a shape wants "width" above zero and "height" above zero',
+    })
+  })
+
   /** A client has a rectangle, not a hand: the box is what it names, and the two points follow. */
   it('draws a shape from the box a client names', async () => {
     await runAction('layer.add', {

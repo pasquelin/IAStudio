@@ -37,6 +37,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
   }),
   action({
     name: 'cost.estimate',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.costEstimate.title',
     descriptionKey: 'assistant.actions.costEstimate.description',
     commitment: 'none',
@@ -62,6 +63,7 @@ export const JOB_ACTIONS: readonly AssistantAction[] = [
      * would hand the client a timeout instead of the job it was watching.
      */
     name: 'job.waitForCloudGeneration',
+    capabilities: { intents: ['read'] },
     titleKey: 'assistant.actions.jobWaitForCloudGeneration.title',
     descriptionKey: 'assistant.actions.jobWaitForCloudGeneration.description',
     commitment: 'none',
