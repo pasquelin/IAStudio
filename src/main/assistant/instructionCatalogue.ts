@@ -157,7 +157,9 @@ export const WIDE_RULES = [
    */
   '  - Nothing found by name? List the folders YOURSELF and read the names in them, in this same',
   '    answer. Never ask to be allowed: a name follows the prompt that made it, not what is spoken.',
-  '  - Several files match? Choose none: "ask" which, with their names as the choices.',
+  // « Ouvre mon premier fichier audio » found two and asked which (2.3, 2.4, 17.3, 17.4 — 2026-09-06).
+  '  - Several files match? Choose none: "ask" which, with their names as the choices. NOT when',
+  '    the sentence COUNTS — "the first", "the second": take the Nth of the listing, as it answered.',
   // Four requests of the batterie died on a bare name — `files.move ["bateau-test.png"]` for a
   // file sitting in `Images/` — each answered `refused: missing`.
   '  - A path is the WHOLE path inside the project, folders and all: "Images/x.png", never',
