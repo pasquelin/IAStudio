@@ -22,10 +22,10 @@ import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { FrameDriver } from './frameDriver'
 import { createSceneSwap } from './sceneSwap'
-import { createStudioAnimation } from './studioAnimation'
+import { createStudioAnimation, type SceneAnimate } from './studioAnimation'
 import { graphClipsOf } from '@/engines/scene/clipSources'
-import { animationGraphPreset } from '@shared/domain/animationPresets'
-import type { AnimationGraph, AnimationGraphModule } from '@shared/domain/animationGraph'
+import { animatedNodesOf, graphNamed, type AnimatedNode } from './animatedNodes'
+import type { AnimationGraphModule } from '@shared/domain/animationGraph'
 import { createStudioRender, type SceneDraw } from './studioRender'
 import { veilLift } from './veilLift'
 import { heightmapsOf } from './heightmapsOf'
@@ -95,6 +95,8 @@ export type PlaySession = {
 export type PlaySessionDeps = {
   documentId: string
   renderer: SceneDraw
+  /** The mixers a state machine writes through. Absent leaves every body in its rest pose. */
+  animate?: SceneAnimate
   /** Read on every frame rather than captured: the document may be edited while a game runs. */
   editState: () => SceneState
   input: DomInputTarget
@@ -163,28 +165,16 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
       veiled = amount
     })
     const swap = createSceneSwap()
-    const animation = createStudioAnimation({
-      poseNode: (nodeId, clips) => deps.renderer.poseNode?.(nodeId, clips),
-      releaseNode: nodeId => deps.renderer.releaseNode?.(nodeId),
-      clipLengthsOf: nodeId => deps.renderer.clipLengthsOf?.(nodeId) ?? {},
-    })
-    /** The graph each animated node plays, so its clips can be read before a step needs them. */
-    const graphsByPath = new Map((deps.animationGraphs ?? []).map(one => [one.path, one.graph]))
-    const animatedIn = (state: SceneState): { nodeId: string; graph: AnimationGraph }[] =>
-      state.nodes.flatMap(node => {
-        const held = node.components?.find(one => one.type === 'Animator')
-        if (!held) return []
-        const ref = typeof held.graph === 'string' ? held.graph : ''
-        const graph = ref === '' ? animationGraphPreset('character') : graphsByPath.get(ref)
-        return graph ? [{ nodeId: node.id, graph }] : []
-      })
+    const animation = createStudioAnimation(deps.animate)
+    const graphOf = graphNamed(deps.animationGraphs ?? [])
+    const animatedIn = (state: SceneState): AnimatedNode[] => animatedNodesOf(state.nodes, graphOf)
     const startPlayStep2 = () => {
       const ports = createStudioHost({
         input: deps.input,
         player: { id: 'local', name: 'Player', local: true },
         urlForAsset: assetUrl,
         render,
-        animation: animation.port,
+        animation,
         physics: deps.physics,
         script: deps.script,
         scenes: swap.port,
@@ -227,7 +217,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
           // 🛑 Before the first step: a state machine cannot loop, finish or place a footfall
           // without a length, and a length lives in the file.
           for (const one of animatedIn(state))
-            deps.renderer.useGraphClips?.(one.nodeId, graphClipsOf(one.graph))
+            deps.animate?.useGraphClips(one.nodeId, graphClipsOf(one.graph))
 
           return worldFromScene(
             deps.documentId,
@@ -444,7 +434,7 @@ export function startPlay(deps: PlaySessionDeps): PlaySession {
                             // pose the last step left him in, and no gate would say a word.
                             animation.releaseAll()
                             for (const one of animatedIn(sceneNow()))
-                              deps.renderer.useGraphClips?.(one.nodeId, [])
+                              deps.animate?.useGraphClips(one.nodeId, [])
                             deps.renderer.apply(deps.editState())
                             publish()
                           },

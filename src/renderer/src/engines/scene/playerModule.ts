@@ -22,6 +22,8 @@ export type PlayerParts = {
   arm?: SceneNode
   /** The camera anywhere under the arm, so tidying one into a group of its own breaks nothing. */
   eye?: SceneNode
+  /** What is ANIMATED — the mesh, never the capsule. A script sits on the module and asks here. */
+  animated?: SceneNode
 }
 
 type FoundParts = PlayerParts & { inside: readonly SceneNode[] }
@@ -72,6 +74,7 @@ function partsIn(nodes: readonly SceneNode[], module: SceneNode): FoundParts {
     module,
     inside,
     body: inside.find(node => carries(node, 'CharacterController')),
+    animated: inside.find(node => carries(node, 'Animator')),
     arm,
     eye: arm && inside.find(node => node.type === 'camera' && hangsFrom(node, arm.id)),
   }

@@ -49,12 +49,9 @@ export type Player = {
    * 🛑 One mixer per skeleton, so the two clocks cannot share it: a body an `Animator` drives
    * leaves the band entirely — Alban's arbitration, 2026-09-06 — and gets it back on `release`.
    */
-  posed: Map<string, Posed>
+  posed: Map<string, AnimationClip>
   graphDriven: boolean
 }
-
-/** One clip a state machine plays, and the object cut for it — `Bound` without a band position. */
-export type Posed = { key: string; part: BodyPart; travel: boolean; clip: AnimationClip }
 
 /** What a posed clip is filed under: the same clip on another half of the body is another one. */
 const posedIdOf = (clip: PosedClip): string => `${clip.key}|${clip.part}|${clip.rootMotion}`
@@ -78,24 +75,29 @@ export function posePlayer(player: Player, clips: readonly PosedClip[]): void {
     player.graphDriven = true
   }
 
-  const kept = new Set<string>()
-  for (const clip of clips) if (bindPosed(player, clip)) kept.add(posedIdOf(clip))
+  // The id composed ONCE per clip: it was built four times over — once to bind, twice inside the
+  // binding, once to write — for a string that only depends on the clip asked for.
+  const kept = new Map<string, PosedClip>()
+  for (const clip of clips) {
+    const id = posedIdOf(clip)
+    if (bindPosed(player, id, clip)) kept.set(id, clip)
+  }
   for (const [id, held] of player.posed) {
     if (kept.has(id)) continue
-    player.mixer.uncacheClip(held.clip)
+    player.mixer.uncacheClip(held)
     player.posed.delete(id)
   }
 
-  for (const clip of clips) written(player, clip)
+  for (const [id, clip] of kept) written(player, id, clip)
   player.mixer.update(0)
 }
 
 /** Always looping and always paused: where inside the clip is the machine's answer, not a clock. */
-function written(player: Player, clip: PosedClip): void {
-  const held = player.posed.get(posedIdOf(clip))
+function written(player: Player, id: string, clip: PosedClip): void {
+  const held = player.posed.get(id)
   if (!held) return
 
-  const action = player.mixer.clipAction(held.clip)
+  const action = player.mixer.clipAction(held)
   action.loop = LoopRepeat
   action.play()
   action.paused = true
@@ -106,29 +108,20 @@ function written(player: Player, clip: PosedClip): void {
 
 /** Everything the machine held, let go. The caller puts the lanes back on. */
 export function releasePlayer(player: Player): void {
-  for (const held of player.posed.values()) player.mixer.uncacheClip(held.clip)
+  for (const held of player.posed.values()) player.mixer.uncacheClip(held)
   player.posed.clear()
   player.mixer.stopAllAction()
   player.graphDriven = false
 }
 
 /** Cuts the clip a state machine names, once per key and half of body. */
-function bindPosed(player: Player, clip: PosedClip): boolean {
+function bindPosed(player: Player, id: string, clip: PosedClip): boolean {
   const source = player.clips.get(clip.key)
   if (!source) return false
-  if (player.posed.has(posedIdOf(clip))) return true
+  if (player.posed.has(id)) return true
 
   const travel = travelsWith(clip.rootMotion, false)
-  player.posed.set(posedIdOf(clip), {
-    key: clip.key,
-    part: clip.part,
-    travel,
-    clip: blockClip(
-      source,
-      player.rootTracks.get(clip.key) ?? null,
-      travel,
-      drivenIn(player, clip.part),
-    ),
-  })
+  const track = player.rootTracks.get(clip.key) ?? null
+  player.posed.set(id, blockClip(source, track, travel, drivenIn(player, clip.part)))
   return true
 }

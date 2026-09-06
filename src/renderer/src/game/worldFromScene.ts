@@ -34,13 +34,13 @@ import type { SceneState } from '@/engines/scene/sceneState'
 import { colliderFromNode } from './colliderFromNode'
 import { colliderFromRelief } from './colliderFromRelief'
 import { createHierarchy } from './hierarchy'
+import { graphNamed } from './animatedNodes'
 import { playerPartsOf, withBoundPlayerArm } from '@/engines/scene/playerModule'
 import { bakedRuntimeNodes } from '@/engines/scene/bakedRuntimeNodes'
 import { scatterGroundOf, scatterTerrainsOf } from '@shared/domain/scatterGround'
 import { scatterCollisionOf } from './scatterCollision'
 import type { InputMap } from '@shared/domain/inputMap'
 import type { AnimationGraph, AnimationGraphModule } from '@shared/domain/animationGraph'
-import { animationGraphPreset } from '@shared/domain/animationPresets'
 import type { InputControls } from '@game/runtime/inputControls'
 
 /**
@@ -161,6 +161,8 @@ function scriptOptionsFor(
     modules: scripts.modules ?? [],
     intents,
     bodyIdOf: moduleId => (moduleId === played?.module.id ? (played.body?.id ?? null) : null),
+    animatorIdOf: moduleId =>
+      moduleId === played?.module.id ? (played.animated?.id ?? null) : null,
     animators,
     // 🛑 The game's own log rather than nothing: without a studio listening, a fault that goes
     // nowhere is a script that silently never ran — and a caller passing an empty one is how
@@ -317,19 +319,4 @@ function staticBody(body: string, shape: ColliderShape): BodyDescriptor {
     character: null,
     vehicle: null,
   }
-}
-
-/**
- * The graph a component names: a file of the project, or the shipped one when it names nothing.
- *
- * 🛑 The empty name is what makes a player module walk with no file at all — the same bargain the
- * input contexts strike. A template writes the preset down beside the scene so it can be READ and
- * changed; nothing needs it to be there to play.
- */
-function graphNamed(
-  modules: readonly AnimationGraphModule[],
-): (ref: string) => AnimationGraph | null {
-  const byPath = new Map(modules.map(module => [module.path, module.graph]))
-
-  return ref => (ref === '' ? animationGraphPreset('character') : (byPath.get(ref) ?? null))
 }

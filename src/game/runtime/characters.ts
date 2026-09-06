@@ -111,20 +111,29 @@ export type Characters = {
   reading: (entity: Entity) => WalkerReading | null
 }
 
-/** The walker as something other than the controller sees it. Metres a second, and seconds. */
+/**
+ * The walker as something other than the controller sees it. Metres a second, and radians.
+ *
+ * 🛑 In the BODY's own frame, composed here: the pace is written in the world — see `paceInto` —
+ * and turning it back is the same convention read backwards. Written twice, a sign flipped on one
+ * side would make a walk read as a step aside, and nothing would say so.
+ *
+ * 🛑 `airborne` is NOT here: the controller writes `Infinity` into it to mark a jump as spent, so
+ * it is a flag half the time rather than a duration. Whoever needs how long a body has been off
+ * the ground counts it from `grounded`.
+ */
 export type WalkerReading = {
-  /** In the WORLD, which is the frame the pace is composed in — see `paceInto`. */
-  paceX: number
-  paceZ: number
+  /** Over the ground, whichever way the body faces. */
+  speed: number
+  /** Along the body's own heading, negative walking backwards. */
+  forward: number
+  /** Across it, positive to the body's right. */
+  strafe: number
   grounded: boolean
   velocityY: number
   /** Where the body points, in radians. */
   facing: number
 }
-
-// 🛑 `airborne` is NOT here, and that is not an oversight: the controller writes `Infinity` into
-// it to mark a jump as spent, so it is a flag half the time rather than a duration. Whoever needs
-// how long a body has been off the ground counts it from `grounded`.
 
 /**
  * What turns keys and a drag into a movement the physics is allowed to correct. The pace, the
@@ -266,9 +275,13 @@ export function createCharacters(
       const walker = walkers.get(entity)
       if (!walker) return null
 
+      const cos = Math.cos(walker.facing)
+      const sin = Math.sin(walker.facing)
+
       return {
-        paceX: walker.paceX,
-        paceZ: walker.paceZ,
+        speed: Math.hypot(walker.paceX, walker.paceZ),
+        forward: -(walker.paceZ * cos + walker.paceX * sin),
+        strafe: walker.paceX * cos - walker.paceZ * sin,
         grounded: walker.grounded,
         velocityY: walker.velocityY,
         facing: walker.facing,

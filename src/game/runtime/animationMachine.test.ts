@@ -6,12 +6,17 @@ import {
   animationGraphOf,
   type AnimationLayer,
 } from '@shared/domain/animationGraph'
-import { clipKeyOf as studioClipKeyOf, type ClipSource } from '@shared/domain/sceneModel'
+import {
+  CLIP_SPEED,
+  clipKeyOf as studioClipKeyOf,
+  type ClipSource,
+} from '@shared/domain/sceneModel'
 import type { AnimationCondition } from '@shared/domain/animationGraph'
 import {
   advanceAnimator,
   clipKeyOf,
   conditionHolds,
+  MAX_RATE,
   freshAnimator,
   posedClipsOf,
   type AnimatorState,
@@ -166,6 +171,12 @@ describe('what a state machine plays', () => {
 
     const released = ran(WALKING, forced, { speed: 2 }, 2, { letGo: true }).held
     expect(released.state).toBe('walk')
+  })
+})
+
+describe('what this tree copies from the studio', () => {
+  it('reads a clip back at the same ceiling a block on the band is bounded by', () => {
+    expect(MAX_RATE).toBe(CLIP_SPEED.max)
   })
 })
 

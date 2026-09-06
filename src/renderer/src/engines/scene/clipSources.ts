@@ -30,18 +30,22 @@ export function foreignClipsOf(lanes: readonly ClipLane[]): ForeignClip[] {
 }
 
 /**
- * Every clip a state machine names that a model's own file did not bring, once per key.
+ * Every clip a state machine names, once per key — as a source, and as something to read.
  *
- * Beside `foreignClipsOf` and not folded into it: a graph and a band name their clips in shapes
- * that have nothing in common, and what they produce is the same list.
+ * The two answer the same question for two callers: the studio preloads by URL, the exported
+ * game by source. One pass, so the « first wins on a key held twice » rule is written once.
  */
-export function graphClipsOf(graph: AnimationGraph): ForeignClip[] {
-  const found = new Map<string, ForeignClip>()
+export function graphSourcesOf(graph: AnimationGraph): ClipSource[] {
+  const found = new Map<string, ClipSource>()
 
-  for (const state of graph.layers.flatMap(one => one.states)) {
-    const url = clipSourceUrl(state.source)
-    const key = clipKeyOf(state.source)
-    if (url && !found.has(key)) found.set(key, { key, url, label: state.source.name })
-  }
+  for (const state of graph.layers.flatMap(one => one.states))
+    if (!found.has(clipKeyOf(state.source))) found.set(clipKeyOf(state.source), state.source)
   return [...found.values()]
+}
+
+export function graphClipsOf(graph: AnimationGraph): ForeignClip[] {
+  return graphSourcesOf(graph).flatMap(source => {
+    const url = clipSourceUrl(source)
+    return url ? [{ key: clipKeyOf(source), url, label: source.name }] : []
+  })
 }

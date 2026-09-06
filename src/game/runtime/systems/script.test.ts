@@ -62,6 +62,7 @@ describe('what a game does with its own code', () => {
       systems: [
         createScriptSystem({
           animators: createAnimators(),
+          animatorIdOf: () => null,
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: fault => faults.push(fault),
           intents,
@@ -255,6 +256,7 @@ describe('what a game does with its own code', () => {
       systems: [
         createScriptSystem({
           animators: createAnimators(),
+          animatorIdOf: () => null,
           modules: [
             {
               script: WALK,
@@ -336,6 +338,7 @@ describe('what a script asks about its scenes', () => {
       systems: [
         createScriptSystem({
           animators: createAnimators(),
+          animatorIdOf: () => null,
           modules: [{ script: WALK, code: scripted(body) }],
           onFault: () => {},
           intents,

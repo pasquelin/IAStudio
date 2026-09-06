@@ -30,6 +30,8 @@ export type PosedClip = {
 export type AnimationPort = {
   pose: (entity: string, clips: readonly PosedClip[]) => void
   release: (entity: string) => void
+  /** Every body this has posed, given back at once. What a stop owes, and what a swap owes. */
+  releaseAll: () => void
   /**
    * How long each clip that body can play runs, in seconds, by key.
    *

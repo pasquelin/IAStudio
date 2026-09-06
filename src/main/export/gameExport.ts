@@ -1,5 +1,7 @@
 import { pathBaseNameOf, safeFileName, stemOf } from '@shared/domain/fileName'
 import { escapeXml } from '@shared/domain/xmlText'
+import type { AnimationGraph, AnimationGraphModule } from '@shared/domain/animationGraph'
+import type { ClipSource } from '@shared/domain/sceneModel'
 import { freeName } from '@shared/domain/otioz'
 import { availableParallelism } from 'node:os'
 import { gzip } from 'node:zlib'
@@ -41,6 +43,14 @@ export type GameExportPorts = {
   runtime: () => Promise<readonly { name: string; body: Uint8Array }[]>
   /** Writes one file of the exported folder, at a path relative to its root. */
   write: (relative: string, body: string | Uint8Array) => Promise<void>
+  /**
+   * The clip a shipped animation folder holds, by that folder's name.
+   *
+   * 🛑 An exported game has no studio to serve `animation://` from, so a graph naming a shipped
+   * clip would play nothing at all — silently. Copied into the bundle instead, and the graph
+   * rewritten to point at it as any project clip is.
+   */
+  bundledClip: (name: string) => Promise<Uint8Array | null>
 }
 
 /** 🛑 What the folder holds, minus its name: only the caller knows where it put it. */
@@ -64,8 +74,9 @@ export async function writeExportedGame(
   const taken = new Set<string>()
   const compression = boundedPool(() => Math.max(1, availableParallelism() - 2))
   const assetResult = await prepareAssets(ports, request, taken, compression)
+  const graphs = await bundledGraphs(ports, request.animationGraphs ?? [], taken, assetResult)
   const content = await prepareContent(scenes, scripts, taken, compression)
-  const game = exportedGameOf(request, assetResult, content)
+  const game = exportedGameOf(request, assetResult, content, graphs)
   const runtime = await ports.runtime()
   await writeGameFiles(ports, request, assetResult.writes, content, runtime, game)
   return {
@@ -223,10 +234,70 @@ async function prepareContent(
   }
 }
 
+/**
+ * Every shipped clip a graph names, written into the bundle, and the graphs pointed at the copies.
+ *
+ * A clip a folder no longer holds leaves its state as it was: the state then plays nothing, which
+ * is the same silence a project clip whose file has gone already answers with.
+ */
+async function bundledGraphs(
+  ports: GameExportPorts,
+  graphs: readonly AnimationGraphModule[],
+  taken: Set<string>,
+  assets: AssetResult,
+): Promise<readonly AnimationGraphModule[]> {
+  const filed = new Map<string, string>()
+
+  for (const name of shippedClipNames(graphs)) {
+    const body = await ports.bundledClip(name)
+    if (!body) continue
+
+    const file = freeName(`${safeFileName(name, 'clip')}.glb`, taken)
+    taken.add(file)
+    const id = `${BUNDLED_CLIP}${name}`
+    filed.set(name, id)
+    assets.assets[id] = `assets/${file}`
+    assets.writes.push(ports.write(assets.assets[id], body))
+  }
+
+  return graphs.map(module => ({ path: module.path, graph: pointedAtCopies(module.graph, filed) }))
+}
+
+/** How a shipped clip is filed in an exported game. A prefix no project asset id can wear. */
+const BUNDLED_CLIP = 'clip:'
+
+function shippedClipNames(graphs: readonly AnimationGraphModule[]): readonly string[] {
+  const names = new Set<string>()
+  for (const { graph } of graphs)
+    for (const layer of graph.layers)
+      for (const state of layer.states)
+        if (state.source.kind === 'bundled') names.add(state.source.name)
+  return [...names]
+}
+
+function pointedAtCopies(
+  graph: AnimationGraph,
+  filed: ReadonlyMap<string, string>,
+): AnimationGraph {
+  return {
+    ...graph,
+    layers: graph.layers.map(layer => ({
+      ...layer,
+      states: layer.states.map(state => {
+        const id = state.source.kind === 'bundled' ? filed.get(state.source.name) : undefined
+        return id ? { ...state, source: copied(state.source.name, id) } : state
+      }),
+    })),
+  }
+}
+
+const copied = (name: string, assetId: string): ClipSource => ({ kind: 'asset', assetId, name })
+
 function exportedGameOf(
   request: GameExportRequest,
   assets: AssetResult,
   content: PreparedContent,
+  graphs: readonly AnimationGraphModule[],
 ): ExportedGame {
   return {
     version: EXPORTED_GAME_VERSION,
@@ -250,7 +321,7 @@ function exportedGameOf(
     ...(request.lossyOptimization ? { lossyOptimization: request.lossyOptimization } : {}),
     ...(request.render ? { render: request.render } : {}),
     ...(request.inputMaps?.length ? { inputMaps: request.inputMaps } : {}),
-    ...(request.animationGraphs?.length ? { animationGraphs: request.animationGraphs } : {}),
+    ...(graphs.length ? { animationGraphs: graphs } : {}),
   }
 }
 

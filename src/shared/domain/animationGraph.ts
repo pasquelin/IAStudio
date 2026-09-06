@@ -116,9 +116,6 @@ export type AnimationGraph = {
 
 export type AnimationGraphModule = { path: string; graph: AnimationGraph }
 
-/** How long a fade may last. The same second a block on the band is bounded by. */
-export const MAX_ANIMATION_FADE = MAX_CLIP_FADE
-
 export function animationGraphOf(value: unknown): AnimationGraph {
   if (!isRecord(value)) throw new Error('animation graph must be an object')
   const { version, id, parameters, layers } = value
@@ -255,7 +252,7 @@ function animationTransitionOf(
   return {
     from: source,
     to,
-    fade: boundedNumber(value.fade ?? 0, 0, MAX_ANIMATION_FADE, 'animation fade'),
+    fade: boundedNumber(value.fade ?? 0, 0, MAX_CLIP_FADE, 'animation fade'),
     when,
     ...(exitTime === undefined ? {} : { exitTime: fraction(exitTime, 'animation exitTime') }),
     priority: boundedNumber(value.priority ?? 0, -1000, 1000, 'animation priority'),

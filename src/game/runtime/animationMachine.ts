@@ -172,23 +172,42 @@ function crossed(
   const length = lengths[clipKeyOf(state.source)]
   if (length === undefined || length <= 0) return held.fired
 
-  const passed = state.loop ? (time % length) / length : Math.min(time, length) / length
   // A loop that came round starts firing again: the pass is over, and its footfalls are next
   // lap's. Measured against the lap, not the clock, so a clip played fast still fires each lap.
   const looped = state.loop && Math.floor(time / length) > Math.floor(held.time / length)
-  const fired = looped ? [] : held.fired
-
-  const marked: string[] = [...fired]
-  for (const marker of state.events ?? []) {
-    if (marked.includes(marker.id) || passed < marker.at) continue
-    marked.push(marker.id)
-    happened.push({ kind: 'marker', state: state.id, name: marker.name })
-  }
+  const fired = looped ? NOTHING_FIRED : held.fired
 
   if (!state.loop && time >= length && held.time < length)
     happened.push({ kind: 'finished', state: state.id })
-  return marked
+
+  const passed = state.loop ? (time % length) / length : Math.min(time, length) / length
+  return marked(state, fired, passed, happened) ?? (looped ? [] : fired)
 }
+
+/**
+ * The markers of this pass, or nothing when none was crossed.
+ *
+ * Copied only once something IS crossed: a state with no marker at all — which every state of the
+ * shipped preset is — would otherwise allocate an array sixty times a second for nothing.
+ */
+function marked(
+  state: AnimationState,
+  fired: readonly string[],
+  passed: number,
+  happened: AnimationHappening[],
+): string[] | null {
+  let held: string[] | null = null
+  for (const marker of state.events ?? []) {
+    if ((held ?? fired).includes(marker.id) || passed < marker.at) continue
+    held ??= [...fired]
+    held.push(marker.id)
+    happened.push({ kind: 'marker', state: state.id, name: marker.name })
+  }
+  return held
+}
+
+/** Shared and frozen: a lap that came round starts again from nothing, and so does every state. */
+const NOTHING_FIRED: readonly string[] = Object.freeze([])
 
 function rateOf(state: AnimationState, reading: ParameterReading): number {
   if (state.speedFrom === undefined) return state.speed
@@ -200,8 +219,11 @@ function rateOf(state: AnimationState, reading: ParameterReading): number {
   return clamp(state.speed * scale, 0, MAX_RATE)
 }
 
-/** Four times, the same ceiling a block on the band is bounded by. */
-const MAX_RATE = 4
+/**
+ * The same ceiling a block on the band is bounded by. 🛑 Copied from `CLIP_SPEED.max` rather than
+ * imported — this tree takes no VALUE from the studio's — and held to it by the suite.
+ */
+export const MAX_RATE = 4
 
 function rateOfState(layer: AnimationLayer, id: string, reading: ParameterReading): number {
   const state = stateOf(layer, id)
@@ -240,7 +262,11 @@ function opens(
   if (transition.exitTime !== undefined && fractionOf(layer, held, lengths) < transition.exitTime)
     return false
 
-  return transition.when.every(condition => conditionHolds(condition, reading[condition.param]))
+  // A loop rather than `every`: a closure capturing the reading, allocated per transition and
+  // per step, for a list that is almost always one condition long.
+  for (const condition of transition.when)
+    if (!conditionHolds(condition, reading[condition.param])) return false
+  return true
 }
 
 /** How far through its clip the playing state stands. Zero while the clip has not landed. */

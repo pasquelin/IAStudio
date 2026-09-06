@@ -1,3 +1,4 @@
+import type { SceneAnimate } from './studioAnimation'
 import type { AnimationGraphModule } from '@shared/domain/animationGraph'
 import type { DomInputTarget } from '@game/host/domInput'
 import type { ScriptModule } from '@game/ports/scriptPort'
@@ -17,6 +18,11 @@ import type { InputMap } from '@shared/domain/inputMap'
 export type GameStageDeps = {
   /** What draws. The game window's own engine — a WebGL context never crosses a window. */
   renderer: SceneDraw
+  /**
+   * The mixers a state machine writes through. Absent, every body stands in its rest pose and the
+   * game plays on — a host with no viewport of its own has none.
+   */
+  animate?: SceneAnimate
   /** What the keyboard and the pointer are read off. The window itself, where there is one. */
   input: DomInputTarget
   /** Told what is playing, so a window can title itself and draw its own debug drawer. */
@@ -82,6 +88,7 @@ export function createGameStage(deps: GameStageDeps): GameStage {
     const started = await startGame({
       documentId: id,
       renderer: deps.renderer,
+      animate: deps.animate,
       // The LATEST published state, never the one captured here: the studio keeps editing.
       editState: () => scene ?? held,
       input: deps.input,

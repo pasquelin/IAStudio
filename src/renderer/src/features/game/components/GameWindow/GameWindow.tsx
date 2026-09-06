@@ -68,6 +68,8 @@ export function GameWindow() {
     // meant for the game — where the studio had to hand over a focusable div beside its panels.
     const stage = createGameStage({
       renderer,
+      // The same engine, under the port a state machine writes through — see `SceneAnimate`.
+      animate: renderer,
       input: window,
       onReport: one => {
         setReport(one)

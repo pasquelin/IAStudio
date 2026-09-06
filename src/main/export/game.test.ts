@@ -28,6 +28,7 @@ describe('the door onto a game written out of the studio', () => {
       pickFolder: () => Promise.resolve<string | null>(chosen),
       projectPath: () => project,
       assetsById: () => Promise.resolve([]),
+      bundledAnimation: () => Promise.resolve(null),
       runtimeFolder: () => runtime,
     })
   })
@@ -72,6 +73,7 @@ describe('the door onto a game written out of the studio', () => {
         pickFolder,
         projectPath: () => project,
         assetsById: () => Promise.resolve([]),
+        bundledAnimation: () => Promise.resolve(null),
         runtimeFolder: () => runtime,
       })
 
@@ -103,6 +105,7 @@ describe('the door onto a game written out of the studio', () => {
       pickFolder: () => Promise.resolve<string | null>(null),
       projectPath: () => null,
       assetsById: () => Promise.resolve([]),
+      bundledAnimation: () => Promise.resolve(null),
       runtimeFolder: () => runtime,
     })
 
@@ -116,6 +119,7 @@ describe('the door onto a game written out of the studio', () => {
       pickFolder: () => Promise.resolve<string | null>(chosen),
       projectPath: () => project,
       assetsById: () => Promise.resolve([]),
+      bundledAnimation: () => Promise.resolve(null),
       runtimeFolder: () => join(project, 'nowhere'),
     })
 
@@ -159,6 +163,7 @@ describe('the door onto a game written out of the studio', () => {
       pickFolder: () => Promise.resolve<string | null>(chosen),
       projectPath: () => project,
       assetsById: () => Promise.resolve([{ id: 'tex-1', path: 'tex.png' } as Asset]),
+      bundledAnimation: () => Promise.resolve(null),
       runtimeFolder: () => runtime,
     })
     const wearing = JSON.stringify({ nodes: [{ material: { map: { assetId: 'tex-1' } } }] })
@@ -180,6 +185,7 @@ describe('the door onto a game written out of the studio', () => {
       pickFolder: () => Promise.resolve<string | null>(chosen),
       projectPath: () => project,
       assetsById: () => Promise.resolve([]),
+      bundledAnimation: () => Promise.resolve(null),
       runtimeFolder: () => join(project, 'missing-runtime'),
     })
 
@@ -200,6 +206,7 @@ describe('the door onto a game written out of the studio', () => {
       },
       projectPath: () => project,
       assetsById: () => Promise.resolve([]),
+      bundledAnimation: () => Promise.resolve(null),
       runtimeFolder: () => runtime,
     })
     const first = exporting({ scenes: [{ id: 'first', title: 'First', content: SCENE }] })
@@ -219,6 +226,7 @@ describe('the door onto a game written out of the studio', () => {
       pickFolder: () => Promise.resolve<string | null>(chosen),
       projectPath: () => project,
       assetsById: () => Promise.resolve([]),
+      bundledAnimation: () => Promise.resolve(null),
       runtimeFolder: () => join(project, 'missing-runtime'),
     })
 

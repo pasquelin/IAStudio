@@ -1,5 +1,5 @@
 import { orElse } from '@shared/promises'
-import { DEFAULT_ROLE_PATHS } from '@shared/domain/folderRole'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from '@shared/domain/folderRole'
 import { ANIMATION_GRAPH_EXTENSION } from '@shared/domain/animationGraph'
 import { animationGraphPreset, type AnimationPresetId } from '@shared/domain/animationPresets'
 import { INPUT_MAP_EXTENSION } from '@shared/domain/inputMap'
@@ -42,40 +42,45 @@ export async function seedTemplateFiles(template: SceneTemplateId): Promise<stri
   if (!played || !bridge) return folder
 
   await Promise.all([
-    writeMap(played.map),
+    seedPreset('input', INPUT_MAP_EXTENSION, played.map, bridge.inputMaps, {
+      ...structuredClone(inputMapPreset(played.map)),
+      id: played.map,
+    }),
     writeScript(played.script, folder),
-    played.graph ? writeGraph(played.graph) : Promise.resolve(),
+    played.graph
+      ? seedPreset(
+          'animations',
+          ANIMATION_GRAPH_EXTENSION,
+          played.graph,
+          bridge.animationGraphs,
+          structuredClone(animationGraphPreset(played.graph)),
+        )
+      : Promise.resolve(),
   ])
   await useDocuments.getState().relist()
   return folder
 }
 
-async function writeMap(preset: InputPresetId): Promise<void> {
-  const bridge = getBridge()
-  if (!bridge) return
-  const folder = await orElse(bridge.project.folderFor('input'), DEFAULT_ROLE_PATHS.input)
-  const path = `${folder}/${preset}${INPUT_MAP_EXTENSION}`
-  const taken = await orElse(bridge.inputMaps.list(), [])
-  if (taken.some(one => one.toLowerCase() === path.toLowerCase())) return
-
-  await bridge.inputMaps.write(path, { ...structuredClone(inputMapPreset(preset)), id: preset })
-}
-
 /**
- * The state machine the module is already animated by, written down beside the scene.
+ * One preset written where its role says, and never overwritten.
  *
- * 🛑 Not needed to PLAY — a module with an empty `graph` field walks off the shipped preset. It
- * is written so the thresholds, the clips and the ways out can be READ and changed.
+ * 🛑 Asked BEFORE writing: both stores overwrite, so a second scene from one template would throw
+ * away whatever the first one's author had changed. What makes a control map or a graph belong to
+ * the PROJECT rather than to the scene that laid it down.
  */
-async function writeGraph(preset: AnimationPresetId): Promise<void> {
-  const bridge = getBridge()
-  if (!bridge) return
-  const folder = await orElse(bridge.project.folderFor('animations'), DEFAULT_ROLE_PATHS.animations)
-  const path = `${folder}/${preset}${ANIMATION_GRAPH_EXTENSION}`
-  const taken = await orElse(bridge.animationGraphs.list(), [])
+async function seedPreset<T>(
+  role: FolderRole,
+  extension: string,
+  name: string,
+  files: { list: () => Promise<string[]>; write: (path: string, value: T) => Promise<boolean> },
+  value: T,
+): Promise<void> {
+  const folder = await orElse(getBridge()?.project.folderFor(role), DEFAULT_ROLE_PATHS[role])
+  const path = `${folder}/${name}${extension}`
+  const taken = await orElse(files.list(), [])
   if (taken.some(one => one.toLowerCase() === path.toLowerCase())) return
 
-  await bridge.animationGraphs.write(path, structuredClone(animationGraphPreset(preset)))
+  await files.write(path, value)
 }
 
 async function writeScript(script: TemplateScriptId, folder: string): Promise<void> {

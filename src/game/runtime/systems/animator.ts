@@ -43,18 +43,18 @@ type Held = {
 }
 
 /**
- * What makes a body LOOK like what it is doing: a state machine per animated entity, run on the
- * fixed step and posed on the frame.
+ * A state machine per animated entity, run on the fixed step and posed on the frame.
  *
- * 🛑 It sits after `gameplay` and before `timeline` for a reason the order file spells: it reads
- * what the controllers settled this step, and writes nothing any of them will read again.
+ * 🛑 After `gameplay` and before `timeline`: it reads what the controllers settled this step.
  */
 export function createAnimatorSystem(options: AnimatorSystemOptions): System {
   // Keyed by the ENTITY, as `movement` is: keyed by id, a game that spawns and destroys animated
   // bodies grows the map for the session, and an id given out again inherits the dead one's pose.
   const held = new WeakMap<Entity, Held>()
+  // 🛑 The MISSES too, as `targets.of` remembers its own: a name no file wears would otherwise be
+  // looked up sixty times a second, for ever, on a body that will never play anything.
+  const missed = new WeakMap<Entity, string>()
   const targets = createTargets()
-  const posed = new Set<string>()
 
   return {
     name: 'animator',
@@ -63,7 +63,7 @@ export function createAnimatorSystem(options: AnimatorSystemOptions): System {
 
     fixedUpdate: (world: World, dt: number) => {
       for (const entity of world.entities.withComponent('Animator')) {
-        const current = heldFor(held, entity, options)
+        const current = heldFor(held, missed, entity, options)
         if (!current) continue
 
         const walker = walkerOf(world, targets, entity, options)
@@ -103,17 +103,12 @@ export function createAnimatorSystem(options: AnimatorSystemOptions): System {
           entity.id,
           posedClipsOf(current.layer, shownAt(current, alpha), lengths),
         )
-        posed.add(entity.id)
       }
     },
 
-    /** 🛑 Given back, every one: a body left posed keeps the pose a stopped game ended on. */
+    /** 🛑 Given back: a body left posed keeps the pose the last step of a dead world ended on. */
     dispose: (world: World) => {
-      for (const id of posed) {
-        world.ports.animation.release(id)
-        options.animators.forget(id)
-      }
-      posed.clear()
+      world.ports.animation.releaseAll()
     },
   }
 }
@@ -143,15 +138,20 @@ const mix = (from: number, to: number, alpha: number): number => from + (to - fr
 /** The state this entity's animator stands in, built or rebuilt for what its component names. */
 function heldFor(
   kept: WeakMap<Entity, Held>,
+  missed: WeakMap<Entity, string>,
   entity: Entity,
   options: AnimatorSystemOptions,
 ): Held | null {
   const ref = textOf(componentOf(entity, 'Animator'), 'graph', '')
   const found = kept.get(entity)
   if (found && found.ref === ref) return found
+  if (missed.get(entity) === ref) return null
 
   const layer = options.graphOf(ref)?.layers[0]
-  if (!layer) return null
+  if (!layer) {
+    missed.set(entity, ref)
+    return null
+  }
 
   const made: Held = {
     ref,
@@ -195,14 +195,6 @@ function readingOf(
   // A graph on a body no controller walks still runs: what a script writes is all it reads.
   if (!walker) return options.animators.writtenOn(entity)
 
-  const speed = Math.hypot(walker.paceX, walker.paceZ)
-  // 🛑 Turned back into the body's OWN frame: the pace is composed in the world, so a character
-  // walking north with its back turned would read as walking forwards.
-  const cos = Math.cos(walker.facing)
-  const sin = Math.sin(walker.facing)
-  const forward = -(walker.paceZ * cos + walker.paceX * sin)
-  const strafe = walker.paceX * cos - walker.paceZ * sin
-
   // The single step the ground is left with a rise still in the body: a walk off a ledge falls.
   const jumped = current.grounded && !walker.grounded && walker.velocityY > 0
   // The short way round, as every angle of this tree is compared: a body crossing north would
@@ -213,9 +205,9 @@ function readingOf(
   current.facing = walker.facing
 
   return {
-    speed,
-    forward,
-    strafe,
+    speed: walker.speed,
+    forward: walker.forward,
+    strafe: walker.strafe,
     grounded: walker.grounded,
     airborne: current.airborne,
     verticalSpeed: walker.velocityY,

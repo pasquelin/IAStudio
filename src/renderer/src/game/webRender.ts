@@ -1,3 +1,4 @@
+import type { ClipSource } from '@shared/domain/scene'
 import {
   Box3,
   Light,
@@ -39,6 +40,7 @@ export type WebRender = RenderPort & {
     optimization?: CompiledSceneOptimization,
     modelAssets?: Readonly<Record<string, readonly CompiledModelMesh[]>>,
     heightmaps?: ReadonlyMap<string, HeightmapSamples>,
+    clipsForNode?: (nodeId: string) => readonly ClipSource[],
   ) => Promise<void>
   resize: (width: number, height: number) => void
   draw: () => void
@@ -80,7 +82,7 @@ export function createWebRender(
   let building = 0
 
   return {
-    show: async (state, optimization, modelAssets, heightmaps) => {
+    show: async (state, optimization, modelAssets, heightmaps, clipsForNode) => {
       const mine = (building += 1)
       const built = await buildGameScene(
         state,
@@ -89,6 +91,7 @@ export function createWebRender(
         modelAssets,
         gltf.load,
         heightmaps,
+        clipsForNode,
       )
       if (mine !== building) {
         built.dispose()

@@ -20,6 +20,8 @@ export type GameExportDeps = {
   assetsById: (ids: readonly string[]) => Promise<readonly Asset[]>
   /** Where the runtime bundle sits: `resources/gameRuntime` beside the app. */
   runtimeFolder: () => string
+  /** The file one shipped animation folder holds, by that folder's name — or nothing. */
+  bundledAnimation: (name: string) => Promise<string | null>
 }
 
 /** Writing a game that runs with no studio. The split is written on the channel, in `ipc.ts`. */
@@ -154,6 +156,18 @@ function portsFor(deps: GameExportDeps, project: string, root: string): GameExpo
         }
       }
       return found
+    },
+
+    /** One folder of `resources/animations`, read by the name a graph spells. */
+    bundledClip: async name => {
+      const file = await deps.bundledAnimation(name)
+      if (!file) return null
+      try {
+        return await readFile(file)
+      } catch {
+        // Gone from beside the app: the state plays nothing, as a lost project clip already does.
+        return null
+      }
     },
 
     runtime: async () => {

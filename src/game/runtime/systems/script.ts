@@ -30,6 +30,13 @@ export type ScriptSystemOptions = {
    * `self.walk()` has to reach the body from both.
    */
   bodyIdOf: (moduleId: string) => string | null
+  /**
+   * The ANIMATED part of a module, resolved from the tree the same way its body is.
+   *
+   * 🛑 Never the same node as the body: a character's mesh hangs under the capsule that walks, so
+   * `self.anim` asked from a script on the module would write where no animator ever reads.
+   */
+  animatorIdOf: (moduleId: string) => string | null
   /** Where a script's animator asks LAND, read by the animator system on the same step. */
   animators: Animators
 }
@@ -112,7 +119,7 @@ export function createScriptSystem(options: ScriptSystemOptions): System {
       held.position = entity.transform.position
       held.rotation = entity.transform.rotation
       held.components = entity.components
-      held.anim = options.animators.playingOn(entity.id) ?? undefined
+      held.anim = options.animators.playingOn(animatorFor(entity, options)) ?? undefined
       entities.push(held)
     }
 
@@ -310,14 +317,21 @@ type BodyIntent = Extract<ScriptIntent, { act: 'walk' | 'jump' | 'look' | 'drive
 function applyAnimatorIntent(
   entity: Entity,
   intent: ScriptIntent,
-  { animators }: ScriptSystemOptions,
+  options: ScriptSystemOptions,
 ): intent is AnimatorIntent {
-  if (intent.act === 'animParam') animators.set(entity.id, intent.param, intent.value)
-  else if (intent.act === 'animPlay') animators.play(entity.id, intent.state)
-  else if (intent.act === 'animStop') animators.stop(entity.id)
+  const { animators } = options
+  const animated = animatorFor(entity, options)
+
+  if (intent.act === 'animParam') animators.set(animated, intent.param, intent.value)
+  else if (intent.act === 'animPlay') animators.play(animated, intent.state)
+  else if (intent.act === 'animStop') animators.stop(animated)
   else return false
   return true
 }
+
+/** The script's own entity when it carries the animator, its module's animated part otherwise. */
+const animatorFor = (entity: Entity, { animatorIdOf }: ScriptSystemOptions): string =>
+  animatorIdOf(entity.id) ?? entity.id
 
 type AnimatorIntent = Extract<ScriptIntent, { act: 'animParam' | 'animPlay' | 'animStop' }>
 
@@ -358,8 +372,13 @@ function applyEntityIntent(world: World, entity: Entity, intent: EntityIntent): 
     entity.transform.rotation.y = intent.to.y
     entity.transform.rotation.z = intent.to.z
   } else if (intent.act === 'field') write(world, entity, intent.type, intent.key, intent.value)
-  else world.destroy(intent.entity)
+  else if (intent.act === 'destroy') world.destroy(intent.entity)
+  // 🛑 Named rather than fallen through to: this chain used to END on `destroy`, so an act added
+  // to `ScriptIntent` and forgotten here DELETED the entity that asked for it — and compiled.
+  else unroutedIntent(intent)
 }
+
+const unroutedIntent = (intent: never): void => void intent
 
 /**
  * 🛑 One field the component ALREADY carries. `newComponent` fills every declared field, so a key

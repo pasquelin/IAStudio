@@ -20,6 +20,9 @@ import { veilLift } from './veilLift'
 import { createWebRender } from './webRender'
 import { heightmapsOf } from './heightmapsOf'
 import { worldFromScene } from './worldFromScene'
+import { animatedNodesOf, graphNamed } from './animatedNodes'
+import { graphSourcesOf } from '@/engines/scene/clipSources'
+import type { ClipSource } from '@shared/domain/scene'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
 import type { SceneState } from '@/engines/scene/sceneState'
 import type { World } from '@game/runtime/world'
@@ -68,7 +71,7 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
     let stopped = false
     /** Seconds of veil the scene that has just arrived still owes. */
     let fading = 0
-    await render.show(opening, entry.optimization, game.modelAssets, heightmaps)
+    await shown(render, game, opening, entry.optimization, heightmaps, runtime)
 
     /**
      * The scene a running game asked for, put on between two steps — as `playSession` does.
@@ -109,7 +112,13 @@ export async function startExportedGame(canvas: HTMLCanvasElement): Promise<() =
         // stepping the arrived world over the picture of the one just left — and the veil would
         // lift onto it.
         fading = request.fade
-        await render.show(found, wanted.optimization, game.modelAssets, nextMaps)
+        await render.show(
+          found,
+          wanted.optimization,
+          game.modelAssets,
+          nextMaps,
+          clipsIn(found, runtime),
+        )
         // A second suspension point, so a second look: the stop above threw this world away.
         if (stopped) return
 
@@ -317,4 +326,36 @@ function runtimeOf(
     animationGraphs: game.animationGraphs ?? [],
     inputControls,
   }
+}
+
+/** One scene put on screen, with the clips its state machines need — the same call, twice. */
+async function shown(
+  render: ReturnType<typeof createWebRender>,
+  game: ExportedGame,
+  state: SceneState,
+  optimization: ExportedGame['scenes'][number]['optimization'],
+  heightmaps: ReadonlyMap<string, HeightmapSamples>,
+  runtime: ReturnType<typeof runtimeOf>,
+): Promise<void> {
+  await render.show(state, optimization, game.modelAssets, heightmaps, clipsIn(state, runtime))
+}
+
+/**
+ * What a state machine plays on each node of this scene, for whoever loads the files.
+ *
+ * 🛑 Every shipped clip a graph named became an asset of the bundle at export time — see
+ * `bundledGraphs`. Nothing here resolves an `animation://`, which no exported page serves.
+ */
+function clipsIn(
+  state: SceneState,
+  runtime: ReturnType<typeof runtimeOf>,
+): (nodeId: string) => readonly ClipSource[] {
+  const sources = new Map(
+    animatedNodesOf(state.nodes, graphNamed(runtime.animationGraphs)).map(one => [
+      one.nodeId,
+      graphSourcesOf(one.graph),
+    ]),
+  )
+
+  return nodeId => sources.get(nodeId) ?? []
 }

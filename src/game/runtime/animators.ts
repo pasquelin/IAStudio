@@ -3,10 +3,7 @@
 /**
  * What a SCRIPT told the animators, and what the animators played back.
  *
- * Shared the way `intents` is — the script system writes, the animator system reads — with one
- * difference that matters: a parameter WRITTEN stays written. A switch a script turned on once is
- * meant to hold until it turns it off, where a walk asked for is meant to lapse the step after.
- * `release` empties the asks alone.
+ * 🛑 Unlike `intents`, a parameter WRITTEN stays written: `release` empties the asks alone.
  */
 export type Animators = {
   set: (entity: string, param: string, value: number | boolean) => void
@@ -21,6 +18,12 @@ export type Animators = {
   playingOn: (entity: string) => { state: string; time: number } | null
   /** Called at the top of each step's scripts: an ask nobody made again is nobody's now. */
   release: () => void
+  /**
+   * Everything held for that body, dropped.
+   *
+   * 🛑 Called when an entity DIES, not only on the way out: keyed by id, these four tables grow
+   * for the life of the world, and an id given out again would inherit the dead one's parameters.
+   */
   forget: (entity: string) => void
 }
 
@@ -40,12 +43,28 @@ export function createAnimators(): Animators {
 
     play: (entity, state) => void forced.set(entity, state),
     stop: entity => void letGo.add(entity),
-    askOf: entity => ({
-      ...(forced.has(entity) ? { forced: forced.get(entity) } : {}),
-      ...(letGo.has(entity) ? { letGo: true } : {}),
-    }),
+    // Shared and frozen while nobody asked for anything, which is every step but the rare one:
+    // three objects were allocated per body per step to say « nothing ».
+    askOf: entity => {
+      const wanted = forced.get(entity)
+      const given = letGo.has(entity)
+      if (wanted === undefined && !given) return NO_ASK
 
-    played: (entity, state, time) => void playing.set(entity, { state, time }),
+      return {
+        ...(wanted === undefined ? {} : { forced: wanted }),
+        ...(given ? { letGo: true } : {}),
+      }
+    },
+
+    played: (entity, state, time) => {
+      // Written in place: this is the mutable half of the pair by design, and a fresh object per
+      // body per step is one the script kernel copies out of anyway.
+      const held = playing.get(entity)
+      if (held) {
+        held.state = state
+        held.time = time
+      } else playing.set(entity, { state, time })
+    },
     playingOn: entity => playing.get(entity) ?? null,
 
     release: () => {
@@ -64,3 +83,5 @@ export function createAnimators(): Animators {
 
 /** Shared and empty: a body no script ever wrote to must not allocate a record per step. */
 const NOTHING: Readonly<Record<string, number | boolean>> = Object.freeze({})
+
+const NO_ASK: { forced?: string; letGo?: boolean } = Object.freeze({})
