@@ -326,10 +326,9 @@ async function populateScene(
 }
 
 /**
- * 🛑 The flags every node carries, put on after the parenting and read through the same two
- * answers the editor reads. The pass this replaces walked MESHES alone: a light never threw and
- * an imported model never caught, so an exported game drew no shadow at all. It stops at a child
- * standing for a node of its own, which carries its own.
+ * 🛑 The flags a node carries, read through the same two answers the editor reads. The pass this
+ * replaces walked MESHES alone, so a light never threw and an exported game had no shadow at all.
+ * It stops at a child standing for a node of its own, which carries its own.
  */
 function dressShadows(nodes: readonly SceneNode[], byEntity: ReadonlyMap<string, Object3D>): void {
   const ownObjects = new Set(byEntity.values())

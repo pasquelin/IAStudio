@@ -44,6 +44,10 @@ describe('what an exported game pays for an image', () => {
     expect(code).toContain("await import('@/engines/postfx/PostComposer')")
   })
 
+  it('composes at the size of the drawing buffer, never at the CSS size of the canvas', () => {
+    expect(code).toContain('Math.round(sized.width * renderer.getPixelRatio())')
+  })
+
   it('falls back to the plain pass, so a chain still loading never blanks the picture', () => {
     expect(code).toContain('} else renderer.render(held.scene, camera)')
   })

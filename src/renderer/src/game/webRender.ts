@@ -63,10 +63,9 @@ export function createWebRender(
   const gltf = createGltfSource(() => renderer)
   renderer.shadowMap.enabled = policy.shadows
   applyShadowQuality(renderer, policy.shadowQuality)
-  // 🛑 Never on its own: three.js redraws EVERY map of EVERY casting light on every frame it is
-  // left to, which a level nobody walks in pays sixty times a second for a picture that does not
-  // move. The frames that owe one say so — see `draw`, and `ViewportSurface`, where the editor
-  // has held the same rule since it had shadows at all.
+  // 🛑 Never on its own: left to itself three.js redraws every map of every casting light on
+  // every frame, which a level nobody walks in pays for. The frames that owe one say so, as
+  // `ViewportSurface` has held since the editor had shadows at all.
   renderer.shadowMap.autoUpdate = false
   const camera = new PerspectiveCamera(policy.fieldOfView, 1, NEAR, VIEW_DISTANCE)
   const veil = veilPass()
@@ -107,10 +106,12 @@ export function createWebRender(
       shadowsStale = true
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
       if (policy.shadows) tuneSceneShadows(built.scene, policy)
-      if (stackDraws(built.world.post) && !composer) composer = await composerFor(renderer, assets)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
       if (!aimed) frameAll(camera, built.scene)
+      // Last, so fetching a chain never holds up the first picture — `draw` falls back until it
+      // lands.
+      if (stackDraws(built.world.post) && !composer) composer = await composerFor(renderer, assets)
     },
 
     place: (placements: readonly EntityPlacement[]) => {
@@ -159,8 +160,8 @@ export function createWebRender(
     draw: () => {
       if (!held) return
 
-      // 🛑 Settled BEFORE the flag is read, never inside it: `||` short-circuits, and a frame
-      // that already owed a depth pass would have skipped the pruning entirely.
+      // 🛑 Settled BEFORE the flag is read: `||` short-circuits, and a frame already owing a
+      // depth pass would have skipped the pruning entirely.
       const settled = held.flush(camera)
       // three.js clears `needsUpdate` inside the pass it triggers, so this is written per frame.
       renderer.shadowMap.needsUpdate = shadowsStale || settled
@@ -174,8 +175,10 @@ export function createWebRender(
           camera,
           stack: held.world.post,
           target: null,
-          width: sized.width,
-          height: sized.height,
+          // 🛑 DEVICE pixels, as `ViewportDrawing` hands them: `sized` is CSS, and a chain built
+          // from it would compose the frame at a fraction of the canvas and blur it.
+          width: Math.round(sized.width * renderer.getPixelRatio()),
+          height: Math.round(sized.height * renderer.getPixelRatio()),
           quality: policy.quality,
           toneMapped: held.world.toneMapping !== 'none',
           time: played,
@@ -218,12 +221,9 @@ async function composerFor(renderer: WebGLRenderer, assets: AssetPort): Promise<
 }
 
 /**
- * The shadow pass the editor runs whenever something moved, run ONCE as a scene lands: a game has
- * no instant where the set stops moving, and re-measuring the whole of it per frame is a pass no
- * frame budget holds.
- *
- * 🛑 Its blind spot, written rather than hidden: an entity that walks past what the scene occupied
- * when it loaded walks out of the shadow frustum, and stops throwing.
+ * The pass the editor runs whenever something moved, run ONCE as a scene lands: a game never
+ * stops moving, and re-measuring the whole of it per frame is a pass no budget holds. 🛑 Its blind
+ * spot: an entity walking past what the scene occupied at load walks out of the frustum.
  */
 function tuneSceneShadows(scene: Scene, policy: RenderPolicy): void {
   const lights: Light[] = []
