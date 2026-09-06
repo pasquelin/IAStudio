@@ -58,6 +58,13 @@ describe('the starting points of the simple view', () => {
     )
   })
 
+  it('names each binding as a label, not a choice', () => {
+    render(<InputMapSimple map={inputMapPreset('character')} onChange={vi.fn()} />)
+
+    expect(screen.getByText('Clavier · Space')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clavier · Space' })).not.toBeInTheDocument()
+  })
+
   it('lights nothing when the map holds no preset', () => {
     render(<InputMapSimple map={STUDIO} onChange={vi.fn()} />)
 

@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { SCENARIO_CLOUD } from '@shared/domain/aiCloud'
 import type { AccountSummary } from '@shared/domain/account'
+import { WindowTag } from '@/components/WindowTag'
 import { WindowButton } from '@/components/WindowButton'
 import { WINDOW_CAPTION } from '@/components/windowStyles'
-import { cn } from '@/helpers/cn'
 import { describeCredit } from '@/helpers/describeCredit'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useAccounts } from '@/stores/accounts'
@@ -24,9 +24,9 @@ export function AccountSettingsRowDisplay({ account, authenticated, onRename }: 
         <span className="flex flex-1 items-center gap-2 truncate text-sm">
           {account.name}
           {account.active && (
-            <span className={cn('badge badge-sm', keyWorks ? 'badge-success' : 'badge-error')}>
+            <WindowTag tone={keyWorks ? 'success' : 'error'}>
               {keyWorks ? t('accounts.active') : t('accounts.notConnected')}
-            </span>
+            </WindowTag>
           )}
         </span>
         {!account.active && (

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { InputMap } from '@shared/domain/inputMap'
 import { INPUT_PRESET_IDS, inputMapPreset } from '@shared/domain/inputPresets'
 import { Chip } from '@/components/Chip'
+import { Tag } from '@/components/Tag'
 import { sameValues } from '@/helpers/objects'
 import { inputBindingLabel } from './inputMapPresentation'
 
@@ -44,12 +45,9 @@ export function InputMapSimple({ map, onChange }: InputMapSimpleProps) {
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {action.bindings.map((binding, index) => (
-                <span
-                  key={`${binding.device}:${inputBindingLabel(binding)}:${index}`}
-                  className="bg-surface text-muted text-tiny rounded-(--radius-sc-sm) px-2 py-1"
-                >
+                <Tag key={`${binding.device}:${inputBindingLabel(binding)}:${index}`}>
                   {t(`game.inputMap.device.${binding.device}`)} · {inputBindingLabel(binding)}
-                </span>
+                </Tag>
               ))}
             </div>
           </article>

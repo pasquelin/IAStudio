@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AUTO_RIG_ROLE } from '@shared/domain/aiRole'
 import type { AiOverview, ChoiceScope, ModelCandidate, RoleRow } from '@shared/domain/aiOverview'
+import { WindowTag } from '@/components/WindowTag'
 import { WINDOW_CAPTION } from '@/components/windowStyles'
 import type { ModelFitSentence } from '@/hooks/useModelFit'
 import { roleLabel } from '@/helpers/roleLabel'
@@ -50,9 +51,7 @@ export const AiRoleRow = memo(function AiRoleRow({
     <details className="border-base-300 border-b last:border-b-0">
       <summary className="flex cursor-pointer items-center gap-2 py-3">
         <span className="flex-1">{label}</span>
-        {row.chosen.project !== null && (
-          <span className="badge badge-sm">{t('aiModels.chosenAtProject')}</span>
-        )}
+        {row.chosen.project !== null && <WindowTag>{t('aiModels.chosenAtProject')}</WindowTag>}
         <span className={WINDOW_CAPTION}>
           {served && served.model.name}
           {provider?.kind === 'cloud' && t(`aiClouds.${provider.providerId}`)}
