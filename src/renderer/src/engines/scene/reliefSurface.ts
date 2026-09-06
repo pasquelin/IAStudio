@@ -26,7 +26,7 @@ import { loadHeightmap } from './heightmap'
 import type { ReliefBuilder } from './reliefBuilder'
 import type { ReliefGeometryData } from './reliefBuildMessage'
 import { reliefGeometryData, writeChunkNormals, writeChunkRegion } from './reliefSurfaceGeometry'
-import { addReliefChunk, writeMaskOverlay } from './reliefMaskOverlay'
+import { addReliefChunk, showMaskTint, writeMaskOverlay } from './reliefMaskOverlay'
 import { blendChanged, dirtiedChunks } from './reliefSurfaceEdits'
 import { reliefSculptSourceOf, type ReliefSculptSource } from './reliefSculptSource'
 import type { GroundPaint } from '@shared/domain/groundPaint'
@@ -44,6 +44,8 @@ export type ReliefSurface = {
   sculptSource: (terrainId: string, editId: string) => ReliefSculptSource | null
   paintGround?: (terrainId: string, paint: GroundPaint) => void
   holdGroundPaint?: (hold: boolean) => void
+  /** Draws the painted-mask tint, or hides it, and hands back whether it was shown before. */
+  showMaskTint?: (shown: boolean) => boolean
   dispose: () => void
 }
 
@@ -66,6 +68,8 @@ export type ReliefSurfaceOptions = {
   onFailure?: (assetId: string, error: unknown) => void
   loadGround?: TextureSource
   assetVersion?: (assetId: string) => string | undefined
+  /** Off unless the studio asks: the tint is a working aid, and a played scene has no workshop. */
+  maskTint?: boolean
 }
 
 const RELIEF_NAME = 'scene-relief'
@@ -111,7 +115,11 @@ export function createReliefSurface(
 ): ReliefSurface {
   const state: SurfaceState = {
     group: new Group(),
-    material: new MeshStandardMaterial({ roughness: 0.9, metalness: 0, vertexColors: true }),
+    material: new MeshStandardMaterial({
+      roughness: 0.9,
+      metalness: 0,
+      vertexColors: options.maskTint === true,
+    }),
     terrains: new Map(),
     options,
     load: options.load ?? (assetId => loadHeightmap(assetId)),
@@ -140,6 +148,8 @@ export function createReliefSurface(
     holdGroundPaint: hold => {
       state.keepLiveWeights = hold
     },
+    showMaskTint: shown =>
+      tinting(state) && showMaskTint(state.material, state.terrains.values(), shown),
     dispose: () => disposeRelief(state),
   }
 }
@@ -223,7 +233,7 @@ function applyLayer(
     buildMeshes(state, terrain, samples, extent, layer.grain, layer.edits)
   } else {
     dropPendingBuild(terrain)
-    patchMeshes(terrain, samples, extent, layer.grain, terrain.held?.edits ?? [], layer.edits)
+    patchMeshes(state, terrain, samples, extent, terrain.held?.edits ?? [], layer)
   }
   terrain.held = {
     assetId: layer.heightmap.assetId,
@@ -322,6 +332,11 @@ async function loadLayer(
   }
 }
 
+/** A played scene never asks for the tint, so its chunks skip an overlay nothing would sample. */
+function tinting(state: SurfaceState): boolean {
+  return state.options.maskTint === true
+}
+
 function disposeRelief(state: SurfaceState): void {
   for (const [id, terrain] of [...state.terrains]) dropTerrain(state, id, terrain)
   state.builder?.dispose()
@@ -347,7 +362,7 @@ function buildMeshes(
         reliefGeometryData(samples, extent, layout, grain, edits),
         samples,
         grain,
-        edits,
+        tinting(state) ? edits : [],
       )
     }
   }
@@ -362,18 +377,20 @@ function buildMeshesFromData(
   grain: number,
   edits: readonly TerrainEditLayer[],
 ): void {
-  for (const chunk of chunks) addReliefChunk(terrain, chunk, samples, grain, edits)
+  const tint = tinting(state) ? edits : []
+  for (const chunk of chunks) addReliefChunk(terrain, chunk, samples, grain, tint)
   if (terrain.group.parent !== state.group) state.group.add(terrain.group)
 }
 
 function patchMeshes(
+  state: SurfaceState,
   terrain: TerrainSurface,
   samples: HeightmapSamples,
   extent: ReliefExtent,
-  grain: number,
   before: readonly TerrainEditLayer[],
-  after: readonly TerrainEditLayer[],
+  layer: ReliefLayer,
 ): void {
+  const { grain, edits: after } = layer
   for (const mesh of terrain.meshes.values()) clearChunkRanges(mesh)
   const edits = dirtiedChunks(before, after)
   const beforeRead = reliefReader(samples, grain, before, extent)
@@ -385,7 +402,7 @@ function patchMeshes(
     if (!mesh) continue
     const layout = chunkLayout(column, row, samples.width, samples.height, grain)
     const rect = changedRect(layout, beforeRead, afterRead)
-    writeMaskOverlay(mesh.geometry, samples, layout, grain, after)
+    writeMaskOverlay(mesh.geometry, samples, layout, grain, tinting(state) ? after : [])
     if (!rect) continue
     dirty.set(keyOf(column, row), { layout, rect })
     writeChunkRegion(mesh.geometry, samples, extent, layout, afterRead, rect)

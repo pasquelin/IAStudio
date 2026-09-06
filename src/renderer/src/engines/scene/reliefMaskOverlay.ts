@@ -20,6 +20,26 @@ type OverlayHost = {
   meshes: Map<string, Mesh>
 }
 
+/**
+ * Draws the tint on a template and on the terrains cloned from it, or hides it, and answers what
+ * the template was showing — so a caller restores what it found rather than deriving the rule.
+ */
+export function showMaskTint(
+  template: Material,
+  clones: Iterable<{ material: Material }>,
+  shown: boolean,
+): boolean {
+  const was = template.vertexColors
+  const apply = (material: Material): void => {
+    if (material.vertexColors === shown) return
+    material.vertexColors = shown
+    material.needsUpdate = true
+  }
+  apply(template)
+  for (const clone of clones) apply(clone.material)
+  return was
+}
+
 export function addReliefChunk(
   host: OverlayHost,
   data: ReliefGeometryData,
