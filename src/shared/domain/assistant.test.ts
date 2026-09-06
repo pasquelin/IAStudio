@@ -123,6 +123,12 @@ describe('what an action engages', () => {
     expect(findActions('   ')).toEqual([])
   })
 
+  it('finds the action whose field ACCEPTS the word, so a studio command is reachable by name', () => {
+    expect(findActions('duplicate scene').map(action => action.name)).toContain(
+      'command.runStudioCommand',
+    )
+  })
+
   /**
    * 🛑 The five the widening put within a spoken sentence's reach, and the reason `studio`
    * exists: the assistant's model is now shown the whole registry, where before it was shown

@@ -185,7 +185,10 @@ const searchable = (): readonly Searchable[] =>
   (searchableHeld ??= ACTION_REGISTRY.filter(entry => entry.name !== DISCOVERY_ACTION).map(
     action => ({
       action,
-      words: searchWords(`${action.name} ${englishText(action.descriptionKey)}`),
+      // Options too: `scene.duplicate` is a choice of command.runStudioCommand, not an action (25.5).
+      words: searchWords(
+        `${action.name} ${englishText(action.descriptionKey)} ${action.fields.flatMap(field => field.options ?? []).join(' ')}`,
+      ),
     }),
   ))
 
