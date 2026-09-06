@@ -5,6 +5,8 @@ import { CHANNELS as BASE_CHANNELS } from './ipcChannels'
 import { EVENTS as BASE_EVENTS, type Unsubscribe } from './ipcEvents'
 
 export type Channels = BaseChannels & {
+  animationThumbnailModel: 'animation:thumbnail-model'
+  animationThumbnailSave: 'animation:thumbnail-save'
   mediaIngestPaths: 'media:ingest-paths'
   mediaImportPicked: 'media:import-picked'
   externalFilesTake: 'external:take'
@@ -14,6 +16,8 @@ export type Channels = BaseChannels & {
 
 export const CHANNELS: Channels = {
   ...BASE_CHANNELS,
+  animationThumbnailModel: 'animation:thumbnail-model',
+  animationThumbnailSave: 'animation:thumbnail-save',
   mediaIngestPaths: 'media:ingest-paths',
   mediaImportPicked: 'media:import-picked',
   externalFilesTake: 'external:take',

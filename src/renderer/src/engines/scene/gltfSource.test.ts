@@ -129,6 +129,12 @@ describe('createGltfSource', () => {
     expect(setTranscoderPath).toHaveBeenCalledWith('./decoders/basis/')
   })
 
+  it('lets a worker resolve decoders against the app page rather than its bundle directory', () => {
+    createGltfSource(() => null, undefined, 'file:///app/renderer/decoders/')
+    expect(setDecoderPath).toHaveBeenCalledWith('file:///app/renderer/decoders/draco/')
+    expect(setTranscoderPath).toHaveBeenCalledWith('file:///app/renderer/decoders/basis/')
+  })
+
   it('hands both decoders to the loader that needs them', () => {
     createGltfSource(() => null)
 
