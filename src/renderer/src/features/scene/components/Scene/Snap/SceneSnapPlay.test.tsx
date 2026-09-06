@@ -143,7 +143,7 @@ describe('a game whose systems are failing', () => {
       },
     })
 
-  it('says how many faults there are, and names the last', () => {
+  it('says how many faults there are, and names the one there is', () => {
     playing(
       [],
       [
@@ -157,6 +157,23 @@ describe('a game whose systems are failing', () => {
     expect(screen.getByRole('button', { name: '1 erreur' })).toHaveAttribute(
       'data-tooltip-content',
       'system script threw: broken',
+    )
+  })
+
+  /**
+   * 🛑 ALL of them: naming the last alone read out `script never loaded` while the duplicate map
+   * id that CAUSED it, reported first, never reached the screen.
+   */
+  it('names every fault, first one first', () => {
+    playing(
+      [{ script: WALK, entity: null, message: 'cause', line: 0, column: 0, at: 1 }],
+      [{ level: 'error', message: 'consequence', at: 2 }],
+    )
+    render(<SceneSnapPlay documentId={DOCUMENT} />)
+
+    expect(screen.getByRole('button', { name: '2 erreurs' })).toHaveAttribute(
+      'data-tooltip-content',
+      `${WALK}:0 — cause\nconsequence`,
     )
   })
 

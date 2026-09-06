@@ -56,7 +56,9 @@ export function SceneSnapPlay({ documentId }: SceneSnapPlayProps) {
           icon={mdiAlertCircleOutline}
           tone="warning"
           label={t('game.play.faults', { count: faults.length })}
-          description={faults.at(-1)}
+          // 🛑 ALL of them, and in order: showing only the last one read out `script never loaded`
+          // while the duplicate map id that CAUSED it, reported first, was never on screen.
+          description={faults.join('\n')}
           tooltip={tipFor('horizontal')}
           disabled={!addressable}
           onClick={() => {

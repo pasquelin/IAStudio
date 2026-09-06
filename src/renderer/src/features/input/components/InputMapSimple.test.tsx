@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MIT
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import type { InputMap } from '@shared/domain/inputMap'
+import { InputMapSimple } from './InputMapSimple'
+
+const STUDIO: InputMap = {
+  version: 1,
+  id: 'studio',
+  priority: 100,
+  defaultActive: true,
+  actions: [{ id: 'navigate', kind: 'axis2', bindings: [] }],
+}
+
+describe('the starting points of the simple view', () => {
+  it('takes the preset’s actions and keeps the map’s own context id', async () => {
+    const onChange = vi.fn()
+    render(<InputMapSimple map={STUDIO} onChange={onChange} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Personnage' }))
+
+    const next = onChange.mock.calls[0]?.[0] as InputMap
+    expect(next.id).toBe('studio')
+    expect(next.actions.map(action => action.id)).toContain('jump')
+  })
+
+  it('hands out a copy, so a later edit never reaches the shared preset', async () => {
+    const onChange = vi.fn()
+    render(<InputMapSimple map={STUDIO} onChange={onChange} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Véhicule' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Véhicule' }))
+
+    const first = onChange.mock.calls[0]?.[0] as InputMap
+    const second = onChange.mock.calls[1]?.[0] as InputMap
+    expect(first).not.toBe(second)
+    expect(first.actions[0]).not.toBe(second.actions[0])
+  })
+})

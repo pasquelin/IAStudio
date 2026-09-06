@@ -19,8 +19,11 @@ import { documentById, sceneDocumentNamed, useDocuments } from './documents'
 import { sceneEngineOf } from './sceneEngines'
 import { loadSceneSource, montageSceneOf } from './sceneSources'
 import { sceneOf, useScenes } from './scenes'
-import { projectInputMaps } from '@/engines/code/projectInputMaps'
-import { inputMapIdConflict } from '@/engines/code/projectInputMaps'
+import {
+  inputMapIdConflict,
+  projectInputMaps,
+  withoutDuplicateInputMapIds,
+} from '@/engines/code/projectInputMaps'
 import i18next from 'i18next'
 
 /** How long a command may wait on the game window. A `step` runs up to 120 fixed steps there. */
@@ -292,30 +295,32 @@ export async function compiledScripts(): Promise<CompiledScripts> {
   // 🛑 Through the EDITOR's own reading, never a second walk of the disk: what a Play compiles
   // has to be what the screen shows, or an author watches the script from before their last
   // keystroke run — without a word.
-  const [, inputMaps] = await Promise.all([useCode.getState().reload(), projectInputMaps()])
-  const conflict = inputMapIdConflict(inputMaps)
-  if (conflict) {
-    return {
-      ...NO_SCRIPTS,
-      troubles: [
+  const [, allMaps] = await Promise.all([useCode.getState().reload(), projectInputMaps()])
+  const conflict = inputMapIdConflict(allMaps)
+  // 🛑 SAID, never fatal: a duplicate id used to drop every script of the project, so a fifty-file
+  // game lost all fifty for one map in double. `line: 0` because the offender is a `.input.json`
+  // and `openScriptAt` opens scripts alone — an addressable fault that opens nothing is worse.
+  const troubles: readonly ScriptTrouble[] = conflict
+    ? [
         {
           script: conflict.path,
           message: i18next.t('game.inputMap.duplicateId', { id: conflict.map.id }),
-          line: 1,
+          line: 0,
         },
-      ],
-    }
-  }
+      ]
+    : []
+  const inputMaps = withoutDuplicateInputMapIds(allMaps)
   const files = codeFilesOf(useCode.getState())
   const runtimeMaps = inputMaps.map(input => input.map)
-  if (files.length === 0) return { ...NO_SCRIPTS, inputMaps: runtimeMaps }
+  if (files.length === 0) return { ...NO_SCRIPTS, troubles, inputMaps: runtimeMaps }
 
   compiler ??= createScriptCompiler()
   const compiled = await compiler.compile(
     files.map(file => ({ script: file.script, source: file.source })),
     inputMaps,
   )
-  return { ...compiled, inputMaps: runtimeMaps }
+  // The conflict FIRST: it is the cause, and what compiled after it is the consequence.
+  return { ...compiled, troubles: [...troubles, ...compiled.troubles], inputMaps: runtimeMaps }
 }
 
 /** What a document's game says about itself, or the still report — never `undefined` on screen. */

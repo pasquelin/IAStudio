@@ -22,6 +22,22 @@ export async function projectInputMaps(): Promise<InputMapModule[]> {
   }
 }
 
+/**
+ * The maps a game is handed, with any id already taken left out — the FIRST file wins. A duplicate
+ * used to reach `createInputContexts`, which pushed the id twice and let the last one silently
+ * decide every action; `inputMapIdConflict` names the file that was dropped.
+ */
+export function withoutDuplicateInputMapIds(
+  maps: readonly InputMapModule[],
+): readonly InputMapModule[] {
+  const ids = new Set<string>()
+  return maps.filter(one => {
+    if (ids.has(one.map.id)) return false
+    ids.add(one.map.id)
+    return true
+  })
+}
+
 export function inputMapIdConflict(maps: readonly InputMapModule[]): InputMapModule | null {
   const ids = new Set<string>()
   for (const map of maps) {

@@ -2,7 +2,11 @@
 import { describe, expect, it } from 'vitest'
 import type { InputMap } from '@shared/domain/inputMap'
 import { installFakeBridge } from '@/services/fakeBridge'
-import { inputMapIdConflict, projectInputMaps } from './projectInputMaps'
+import {
+  inputMapIdConflict,
+  projectInputMaps,
+  withoutDuplicateInputMapIds,
+} from './projectInputMaps'
 
 const CHARACTER: InputMap = {
   version: 1,
@@ -53,5 +57,28 @@ describe('project input maps for scripts', () => {
       { path: 'Controls/b.input.json', map: { ...CHARACTER, priority: 10 } },
     ])
     expect(inputMapIdConflict(await projectInputMaps())?.path).toBe('Controls/b.input.json')
+  })
+})
+
+describe('what a game is handed when two files carry one context', () => {
+  const at = (path: string, id: string) => ({ path, map: { ...CHARACTER, id } })
+
+  it('keeps the FIRST file and drops the one that repeats its id', () => {
+    const kept = withoutDuplicateInputMapIds([
+      at('Controls/character.input.json', 'character'),
+      at('Controls/studio.input.json', 'character'),
+      at('Controls/vehicle.input.json', 'vehicle'),
+    ])
+
+    expect(kept.map(one => one.path)).toEqual([
+      'Controls/character.input.json',
+      'Controls/vehicle.input.json',
+    ])
+  })
+
+  it('leaves a project with one file per context exactly as it was', () => {
+    const maps = [at('a.input.json', 'character'), at('b.input.json', 'vehicle')]
+
+    expect(withoutDuplicateInputMapIds(maps)).toEqual(maps)
   })
 })
