@@ -1,13 +1,11 @@
 import {
   Color,
-  DirectionalLight,
   Mesh,
   MeshStandardMaterial,
   Object3D,
   RepeatWrapping,
   SRGBColorSpace,
   Scene,
-  SpotLight,
   type Camera,
   type Texture,
   type BufferGeometry,
@@ -16,7 +14,7 @@ import {
 import type { CsgGraph } from '@shared/domain/csg'
 import type { MaterialDescriptor, SceneWorld } from '@shared/domain/scene'
 import type { HeightmapSamples } from '@shared/domain/heightmap'
-import type { Transform } from '@shared/domain/transform'
+import { copyTransform, sameTransform, type Transform } from '@shared/domain/transform'
 import type { AssetPort } from '@game/ports/assetPort'
 import type {
   CompiledModelMesh,
@@ -28,8 +26,8 @@ import type { createGeometryCache } from '@/engines/scene/geometryCache'
 import { createGroundPlane } from '@/engines/scene/groundPlane'
 import { applyFog } from '@/engines/scene/worldBinding'
 import { loadTexture } from '@/engines/scene/textureCache'
-import { applyMaterial, lightFor } from '@/engines/scene/threeSync'
-import { applyTransform } from '@/engines/scene/pivot'
+import { applyMaterial, lightFor, standTarget } from '@/engines/scene/threeSync'
+import { applyTransform, standsAt } from '@/engines/scene/pivot'
 import { applyShadowFlags } from '@/engines/scene/shadows'
 import { receivesShadow, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import { createOptimizedGroups } from '@/engines/scene/optimizedGrouping'
@@ -64,7 +62,12 @@ export type GameScene = {
   world: SceneWorld
   /** Where each entity's object is, so a step can place it without walking the tree. */
   byEntity: ReadonlyMap<string, Object3D>
-  place: (entityId: string, transform: Transform) => void
+  /**
+   * Poses one entity, and answers whether that MOVED it. A game hands over every entity of the
+   * world on every frame, moving or not — see `placementsOf` — so a caller that took the call
+   * for a movement would find the scene changed sixty times a second in a level nobody walks.
+   */
+  place: (entityId: string, transform: Transform) => boolean
   /**
    * Settles what a frame left stale before it is drawn — the instanced bounds `place` dirtied,
    * and which scatter cells the camera reaches. The camera is asked for rather than optional:
@@ -107,7 +110,7 @@ export async function buildGameScene(
   const carve = needsCarver ? await carver() : uncutGeometry
   const scene = new Scene()
   const byEntity = new Map<string, Object3D>()
-  const placements = new Map<string, (transform: Transform) => void>()
+  const placements = new Map<string, (transform: Transform) => boolean>()
   const resources = createSceneResources(state.animation)
   const dress = createDress(assets, resources.textures)
 
@@ -208,18 +211,17 @@ function finalizeGameScene(context: FinalizeContext): GameScene {
     scene,
     world: state.world,
     byEntity,
-    place: (entityId, transform) => placements.get(entityId)?.(transform),
+    place: (entityId, transform) => placements.get(entityId)?.(transform) ?? false,
     // 🛑 Once a frame, never per instance: `computeBoundingSphere` walks every slot of the mesh,
     // so recomputing it inside the placement made a 1 000-instance node quadratic per frame.
     flush: camera => {
       const scattered = drape.updateVisibility(camera)
-      const moved = staleInstances.size > 0
       for (const mesh of staleInstances) {
         mesh.instanceMatrix.needsUpdate = true
         mesh.computeBoundingSphere()
       }
       staleInstances.clear()
-      return scattered || moved
+      return scattered
     },
     seek: time => animations.seek(time),
     dispose: () => {
@@ -283,7 +285,7 @@ async function populateScene(
   nodes: readonly SceneNode[],
   scene: Scene,
   byEntity: Map<string, Object3D>,
-  placements: Map<string, (transform: Transform) => void>,
+  placements: Map<string, (transform: Transform) => boolean>,
   compiled: ReadonlyMap<string, CompiledNodeGeometry>,
   acquire: ReturnType<typeof createGeometryCache>['acquire'],
   dress: (material: MeshStandardMaterial, assetId: string) => void,
@@ -310,7 +312,12 @@ async function populateScene(
     rememberOwnLods(object)
     applyGameTransform(object, node.transform)
     byEntity.set(node.id, object)
-    placements.set(node.id, transform => applyGameTransform(object, transform))
+    placements.set(node.id, transform => {
+      if (standsAt(object, transform)) return false
+
+      applyGameTransform(object, transform)
+      return true
+    })
     registerBakedPlacements(node, object, byEntity, placements, staleInstances)
   }
   for (const node of nodes) {
@@ -318,24 +325,24 @@ async function populateScene(
     if (!object) continue
     const parent = node.parentId === null ? null : byEntity.get(node.parentId)
     ;(parent ?? scene).add(object)
-    // three.js follows the target's world matrix only once it stands in the scene — the same
-    // line `buildLight` holds in the editor. Without it a shadow is thrown at the origin.
-    if (object instanceof DirectionalLight || object instanceof SpotLight) scene.add(object.target)
+    standTarget(object, scene)
   }
   dressShadows(nodes, byEntity)
 }
 
 /**
- * 🛑 The flags a node carries, read through the same two answers the editor reads. The pass this
- * replaces walked MESHES alone, so a light never threw and an exported game had no shadow at all.
- * It stops at a child standing for a node of its own, which carries its own.
+ * 🛑 The flags a node carries, read through the same two answers the editor reads — lights and
+ * models included. It stops at a child standing for a node of its own, which carries its own.
  */
 function dressShadows(nodes: readonly SceneNode[], byEntity: ReadonlyMap<string, Object3D>): void {
   const ownObjects = new Set(byEntity.values())
+  // Identity, not the name `ownedByAnotherNode` reads: a game names its objects after the NODE,
+  // where the editor names them after its id.
+  const belongsElsewhere = (child: Object3D): boolean => ownObjects.has(child)
   for (const node of nodes) {
     const object = byEntity.get(node.id)
     if (!object) continue
-    applyShadowFlags(object, node.castShadow, receivesShadow(node), child => ownObjects.has(child))
+    applyShadowFlags(object, node.castShadow, receivesShadow(node), belongsElsewhere)
   }
 }
 
@@ -343,21 +350,28 @@ function registerBakedPlacements(
   node: SceneNode,
   object: Object3D,
   byEntity: Map<string, Object3D>,
-  placements: Map<string, (transform: Transform) => void>,
+  placements: Map<string, (transform: Transform) => boolean>,
   staleInstances: Set<InstancedMesh>,
 ): void {
   if (node.type !== 'mesh' || !node.instances) return
   const renderedInstances = instancedMeshesIn(object)
   const placement = new Object3D()
+  // What each slot was last posed at: an instance has no object of its own to read it back off.
+  const posed = new Map<string, Transform>()
   for (const [slot, instance] of node.instances.entries()) {
     byEntity.set(instance.sourceId, object)
     placements.set(instance.sourceId, transform => {
+      const held = posed.get(instance.sourceId)
+      if (held && sameTransform(held, transform)) return false
+
+      posed.set(instance.sourceId, copyTransform(transform))
       applyTransform(placement, transform)
       placement.updateMatrix()
       for (const mesh of renderedInstances) {
         mesh.setMatrixAt(slot, placement.matrix)
         staleInstances.add(mesh)
       }
+      return true
     })
   }
 }

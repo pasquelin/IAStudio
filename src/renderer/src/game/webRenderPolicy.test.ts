@@ -2,17 +2,16 @@ import { describe, expect, it } from 'vitest'
 import source from './webRender.ts?raw'
 
 /**
- * The seam no jsdom test can reach: `createWebRender` builds a real `WebGLRenderer`. Read as
- * source, like `webRenderScatter.test.ts` does, so the three lines that make an exported game
- * cost what the editor costs cannot be dropped in silence. Comments are stripped first: a
- * commented-out call read as live is exactly how such a guard passes on dead code.
+ * The seam no jsdom test can reach: `createWebRender` builds a real `WebGLRenderer`. What the
+ * writes THEMSELVES do is tested against a double in `shadows.test.ts`; this holds that the game
+ * still calls them. 🛑 Both spellings of a comment are stripped — a commented-out call read as
+ * live is exactly how such a guard passes on dead code.
  */
-const code = source.replace(/\/\/.*$/gm, '')
+const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
 
 describe('what an exported game pays for an image', () => {
-  it('draws shadows only when the policy says so, never on a flag written here', () => {
-    expect(code).toContain('renderer.shadowMap.enabled = policy.shadows')
-    expect(code).toContain('applyShadowQuality(renderer, policy.shadowQuality)')
+  it('tells the renderer what the policy says, through the pass both engines share', () => {
+    expect(code).toContain('applyShadowPolicy(renderer, policy)')
   })
 
   it('holds the pixel ratio to what the quality level pays for', () => {
@@ -20,7 +19,7 @@ describe('what an exported game pays for an image', () => {
   })
 
   it('tunes the shadow maps of a scene it puts on, or every light keeps three.js defaults', () => {
-    expect(code).toContain('tuneSceneShadows(built.scene, policy)')
+    expect(code).toContain('tuneSceneShadows(built.scene, bounds, policy)')
     expect(code).toContain('shadowMapSizeFor(policy.quality, policy.shadowMapSize)')
   })
 
@@ -29,8 +28,7 @@ describe('what an exported game pays for an image', () => {
    * level nobody walks in was paying sixty times a second for a picture that does not move.
    */
   it('draws a depth pass on the frames that owe one, never on all of them', () => {
-    expect(code).toContain('renderer.shadowMap.autoUpdate = false')
-    expect(code).toContain('renderer.shadowMap.needsUpdate = shadowsStale || settled')
+    expect(code).toContain('renderer.shadowMap.needsUpdate = shadowsStale || changed')
   })
 
   /**

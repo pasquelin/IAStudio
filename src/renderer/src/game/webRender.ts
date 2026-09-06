@@ -14,7 +14,7 @@ import { clamp } from '@shared/numeric'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
-import { applyShadowQuality, shadowReachOf, tuneShadowMaps } from '@/engines/scene/shadows'
+import { applyShadowPolicy, shadowReachOf, tuneShadowMaps } from '@/engines/scene/shadows'
 import { pixelRatioFor, shadowMapSizeFor } from '@/engines/scene/viewportQuality'
 import {
   DEFAULT_RENDER_POLICY,
@@ -61,12 +61,7 @@ export function createWebRender(
 ): WebRender {
   const renderer = new WebGLRenderer({ canvas, antialias: true })
   const gltf = createGltfSource(() => renderer)
-  renderer.shadowMap.enabled = policy.shadows
-  applyShadowQuality(renderer, policy.shadowQuality)
-  // 🛑 Never on its own: left to itself three.js redraws every map of every casting light on
-  // every frame, which a level nobody walks in pays for. The frames that owe one say so, as
-  // `ViewportSurface` has held since the editor had shadows at all.
-  renderer.shadowMap.autoUpdate = false
+  applyShadowPolicy(renderer, policy)
   const camera = new PerspectiveCamera(policy.fieldOfView, 1, NEAR, VIEW_DISTANCE)
   const veil = veilPass()
   const sized = { width: 0, height: 0 }
@@ -74,13 +69,13 @@ export function createWebRender(
   let held: GameScene | null = null
   /** Whether the scene the shadow maps hold is no longer the one about to be drawn. */
   let shadowsStale = true
-  /**
-   * 🛑 Loaded only by a game that HAS effects, and imported dynamically for that: the chain and
-   * its three.js passes are weight every other exported game would carry for nothing.
-   */
+  /** 🛑 Dynamic: its three.js passes are weight every game without effects would carry for nothing. */
   let composer: PostComposer | null = null
+  /** Held as the PROMISE: two loads overlapping read `composer` before either had awaited one. */
+  let composing: Promise<PostComposer> | null = null
   /** Seconds, off the game's own clock: grain and tape jitter advance on it, never on a wall. */
   let played = 0
+  let sought: Us | null = null
   // 🛑 Which build the picture belongs to: a scene arriving while another is still being cut would
   // otherwise have the slower one land on top of it, and the faster one disposed under the draw.
   let building = 0
@@ -105,19 +100,23 @@ export function createWebRender(
       held = built
       shadowsStale = true
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
-      if (policy.shadows) tuneSceneShadows(built.scene, policy)
+      // Measured once for the two that read it — a box off a whole scene is a traversal each.
+      const bounds = new Box3().setFromObject(built.scene)
+      if (policy.shadows) tuneSceneShadows(built.scene, bounds, policy)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
-      if (!aimed) frameAll(camera, built.scene)
+      if (!aimed) frameAll(camera, bounds)
       // Last, so fetching a chain never holds up the first picture — `draw` falls back until it
       // lands.
-      if (stackDraws(built.world.post) && !composer) composer = await composerFor(renderer, assets)
+      if (stackDraws(built.world.post))
+        composer = await (composing ??= composerFor(renderer, assets))
     },
 
     place: (placements: readonly EntityPlacement[]) => {
-      if (placements.length > 0) shadowsStale = true
+      // 🛑 On what MOVED, never on the call: a game hands over every entity of the world on every
+      // frame, so arming on `length` redrew every shadow map of a level nobody was walking in.
       for (const placement of placements) {
-        held?.place(placement.entity, placement.transform)
+        if (held?.place(placement.entity, placement.transform) === true) shadowsStale = true
       }
     },
 
@@ -134,9 +133,12 @@ export function createWebRender(
     },
 
     seek: time => {
+      // 🛑 On a head that MOVED, and only then: an exported frame seeks on every tick of its
+      // clock, so a paused game would have posed and owed a depth pass sixty times a second.
+      if (time === sought) return
+
+      sought = time
       played = time / SECOND
-      // 🛑 Only when it POSED something: an exported frame seeks on every tick of the clock, so a
-      // scene that drives no clip would have owed a depth pass sixty times a second for nothing.
       if (held?.seek(time) === true) shadowsStale = true
     },
 
@@ -162,9 +164,9 @@ export function createWebRender(
 
       // 🛑 Settled BEFORE the flag is read: `||` short-circuits, and a frame already owing a
       // depth pass would have skipped the pruning entirely.
-      const settled = held.flush(camera)
+      const changed = held.flush(camera)
       // three.js clears `needsUpdate` inside the pass it triggers, so this is written per frame.
-      renderer.shadowMap.needsUpdate = shadowsStale || settled
+      renderer.shadowMap.needsUpdate = shadowsStale || changed
       shadowsStale = false
       // The composition the editor draws through, or the plain pass while its chain is still
       // being fetched — a few frames without grade, never a scene nobody sees.
@@ -200,16 +202,14 @@ export function createWebRender(
       veil.dispose()
       composer?.dispose()
       composer = null
+      composing = null
       gltf.dispose()
       renderer.dispose()
     },
   }
 }
 
-/**
- * The editor's own composer, on a game's assets: an effect a scene asks for cannot differ between
- * the two, and `PostComposer` is the one place either draws a composition.
- */
+/** The editor's own composer, on a game's assets: an effect cannot differ between the two. */
 async function composerFor(renderer: WebGLRenderer, assets: AssetPort): Promise<PostComposer> {
   const { PostComposer: Composer } = await import('@/engines/postfx/PostComposer')
   return new Composer(renderer, {
@@ -221,18 +221,17 @@ async function composerFor(renderer: WebGLRenderer, assets: AssetPort): Promise<
 }
 
 /**
- * The pass the editor runs whenever something moved, run ONCE as a scene lands: a game never
- * stops moving, and re-measuring the whole of it per frame is a pass no budget holds. 🛑 Its blind
- * spot: an entity walking past what the scene occupied at load walks out of the frustum.
+ * Run ONCE as a scene lands, where the editor runs it on every move. 🛑 Its blind spot: an entity
+ * walking past what the scene occupied at load walks out of the frustum and stops throwing.
  */
-function tuneSceneShadows(scene: Scene, policy: RenderPolicy): void {
+function tuneSceneShadows(scene: Scene, bounds: Box3, policy: RenderPolicy): void {
   const lights: Light[] = []
   scene.traverse(object => {
     if (object instanceof Light) lights.push(object)
   })
+  // No grid to fall back on, unlike the editor: a game with nothing in it shades nothing.
   tuneShadowMaps(lights, shadowMapSizeFor(policy.quality, policy.shadowMapSize), () =>
-    // No grid to fall back on, unlike the editor: a game with nothing in it shades nothing.
-    shadowReachOf(new Box3().setFromObject(scene), 0),
+    shadowReachOf(bounds, 0),
   )
 }
 
@@ -254,8 +253,7 @@ function veilPass() {
 }
 
 /** Everything in frame, for a scene nobody walks: what the studio's own « frame all » does. */
-function frameAll(camera: PerspectiveCamera, scene: Scene): void {
-  const bounds = new Box3().setFromObject(scene)
+function frameAll(camera: PerspectiveCamera, bounds: Box3): void {
   if (bounds.isEmpty()) return
 
   const middle = bounds.getCenter(new Vector3())

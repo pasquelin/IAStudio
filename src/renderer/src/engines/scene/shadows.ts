@@ -1,6 +1,7 @@
 import { BasicShadowMap, PCFShadowMap, Vector3, type Box3, type Object3D } from 'three'
 import type { LightShadow, ShadowMapType } from 'three'
 import type { ShadowQuality } from '@shared/domain/scene'
+import type { RenderPolicy } from '@shared/domain/renderPolicy'
 import { isRecord } from '@shared/guards'
 
 /** The one place the studio's words meet three.js's map types. */
@@ -22,6 +23,20 @@ type ShadowMapHolder = { shadowMap: { type: ShadowMapType } }
  */
 export function applyShadowQuality(renderer: ShadowMapHolder, quality: ShadowQuality): void {
   renderer.shadowMap.type = MAP_TYPES[quality]
+}
+
+/**
+ * What a renderer is told before it draws a shadow at all. 🛑 `autoUpdate` stays OFF: left to
+ * itself three.js redraws every map of every casting light on every frame, and the frames that
+ * owe one say so instead — `ViewportFrame` for the editor, `draw` for a game.
+ */
+export function applyShadowPolicy(
+  renderer: ShadowMapHolder & { shadowMap: { enabled: boolean; autoUpdate: boolean } },
+  policy: Pick<RenderPolicy, 'shadows' | 'shadowQuality'>,
+): void {
+  renderer.shadowMap.enabled = policy.shadows
+  applyShadowQuality(renderer, policy.shadowQuality)
+  renderer.shadowMap.autoUpdate = false
 }
 
 type ShadowSwitch = { shadowMap: { enabled: boolean } }
@@ -130,13 +145,13 @@ export function tuneShadowMaps(
   lights: Iterable<Object3D>,
   size: number,
   extentOf: () => number,
-): TunedShadows {
+): TunedShadows | null {
   const framed: Object3D[] = []
   for (const light of lights) {
     resizeShadowMap(light, size)
     if (needsShadowFrustum(light)) framed.push(light)
   }
-  if (framed.length === 0) return { framed, reach: 0 }
+  if (framed.length === 0) return null
 
   const reach = extentOf()
   for (const light of framed) fitShadowCamera(light, reach)

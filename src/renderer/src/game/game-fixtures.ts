@@ -1,4 +1,6 @@
-import type { ViewDirection } from '@shared/domain/scene'
+import type { GeometryDescriptor, ViewDirection } from '@shared/domain/scene'
+import type { AssetPort } from '@game/ports/assetPort'
+import { EMPTY_SCENE, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { FrameDriver } from './frameDriver'
 import type { SceneDraw } from './studioRender'
@@ -130,3 +132,15 @@ export function handDriven() {
     },
   }
 }
+
+/** A game that reaches no asset at all — what a scene of plain shapes is built through. */
+export const NOTHING: AssetPort = { urlOf: () => null }
+
+/** The unit shape these suites build with, named rather than spelled at every call. */
+export const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
+
+/** An empty scene carrying these nodes and nothing else. */
+export const sceneOf = (nodes: readonly SceneNode[]): SceneState => ({
+  ...EMPTY_SCENE,
+  nodes: [...nodes],
+})

@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { SHADOW_QUALITIES } from '@shared/domain/scene'
 import {
   applyShadowFlags,
+  applyShadowPolicy,
   applyShadowQuality,
   applyShadows,
   fitShadowCamera,
@@ -291,6 +292,28 @@ describe('turning shadows off', () => {
   })
 })
 
+describe('applyShadowPolicy', () => {
+  const renderer = () => ({ shadowMap: { type: PCFShadowMap, enabled: true, autoUpdate: true } })
+
+  it('turns the pass on or off as the policy says, and never leaves it to three.js', () => {
+    const off = renderer()
+    applyShadowPolicy(off, { shadows: false, shadowQuality: 'hard' })
+
+    expect(off.shadowMap.enabled).toBe(false)
+    expect(off.shadowMap.type).toBe(BasicShadowMap)
+    // The frames that owe a depth pass ask for one; nobody redraws every map of every light.
+    expect(off.shadowMap.autoUpdate).toBe(false)
+  })
+
+  it('carries the soft filter through, as a viewport on its own settings would', () => {
+    const on = renderer()
+    applyShadowPolicy(on, { shadows: true, shadowQuality: 'soft' })
+
+    expect(on.shadowMap.enabled).toBe(true)
+    expect(on.shadowMap.type).toBe(PCFShadowMap)
+  })
+})
+
 describe('shadowReachOf', () => {
   it('spans the DIAGONAL of the ground a set covers, never its width', () => {
     const bounds = new Box3(new Vector3(0, 0, 0), new Vector3(10, 3, 10))
@@ -313,22 +336,19 @@ describe('tuneShadowMaps', () => {
     const sun = new DirectionalLight()
     const bulb = new PointLight()
 
-    const { framed, reach } = tuneShadowMaps([sun, bulb], 1024, () => 40)
+    const tuned = tuneShadowMaps([sun, bulb], 1024, () => 40)
 
     expect(sun.shadow.mapSize.width).toBe(1024)
     expect(bulb.shadow.mapSize.width).toBe(1024)
-    expect(framed).toEqual([sun])
-    expect(reach).toBe(40)
+    expect(tuned?.framed).toEqual([sun])
+    expect(tuned?.reach).toBe(40)
     expect(sun.shadow.camera.right).toBe(20)
   })
 
   it('never measures a scene no light would read — a pass for nothing', () => {
     const measure = vi.fn(() => 40)
 
-    const { framed, reach } = tuneShadowMaps([new PointLight(), new AmbientLight()], 512, measure)
-
+    expect(tuneShadowMaps([new PointLight(), new AmbientLight()], 512, measure)).toBeNull()
     expect(measure).not.toHaveBeenCalled()
-    expect(framed).toEqual([])
-    expect(reach).toBe(0)
   })
 })

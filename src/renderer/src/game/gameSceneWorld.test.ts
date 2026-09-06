@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { SCATTER_DISTANCE } from '@shared/domain/renderPolicy'
 import { BoxGeometry, Mesh, MeshBasicMaterial, Object3D, PerspectiveCamera } from 'three'
-import type { AssetPort } from '@game/ports/assetPort'
 import { reliefLayer, scatterLayer } from '@shared/domain/scene'
 import { EMPTY_SCENE } from '@/engines/scene/sceneState'
+import { NOTHING } from './game-fixtures'
 import { buildGameScene } from './gameScene'
-
-const NOTHING: AssetPort = { urlOf: () => null }
 
 function namesOf(scene: { traverse: (fn: (object: { name: string }) => void) => void }): string[] {
   const names: string[] = []

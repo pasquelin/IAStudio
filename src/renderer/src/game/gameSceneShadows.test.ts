@@ -1,16 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { DirectionalLight, Mesh, Object3D, PerspectiveCamera } from 'three'
-import type { GeometryDescriptor, LightDescriptor } from '@shared/domain/scene'
-import type { AssetPort } from '@game/ports/assetPort'
+import type { LightDescriptor } from '@shared/domain/scene'
 import { groupNode, lightNode, meshNode, modelNode } from '@/engines/scene/nodeFactory'
-import { EMPTY_SCENE, type SceneNode, type SceneState } from '@/engines/scene/sceneState'
+import { BOX, NOTHING, sceneOf } from './game-fixtures'
 import { buildGameScene } from './gameScene'
-
-const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
-const NOTHING: AssetPort = { urlOf: () => null }
-
-const scene = (nodes: readonly SceneNode[]): SceneState => ({ ...EMPTY_SCENE, nodes: [...nodes] })
 
 const SUN: LightDescriptor = {
   kind: 'directional',
@@ -27,7 +21,7 @@ const SUN: LightDescriptor = {
 describe('what an exported game throws a shadow with', () => {
   it('lets the light that carries the key of a scene throw one', async () => {
     const built = await buildGameScene(
-      scene([meshNode(BOX, { name: 'Crate' }), lightNode(SUN, { x: 0, y: 4, z: 0 })]),
+      sceneOf([meshNode(BOX, { name: 'Crate' }), lightNode(SUN, { x: 0, y: 4, z: 0 })]),
       NOTHING,
     )
 
@@ -40,7 +34,7 @@ describe('what an exported game throws a shadow with', () => {
     source.add(new Mesh())
     const node = modelNode('model-1', 'Model')
     const built = await buildGameScene(
-      scene([node]),
+      sceneOf([node]),
       { urlOf: () => 'assets/model.glb' },
       undefined,
       undefined,
@@ -61,7 +55,7 @@ describe('what an exported game throws a shadow with', () => {
    * throw every shadow at the world origin, with nothing to say so.
    */
   it('stands the target its sun aims at in the scene, as the editor does', async () => {
-    const built = await buildGameScene(scene([lightNode(SUN, { x: 0, y: 4, z: 0 })]), NOTHING)
+    const built = await buildGameScene(sceneOf([lightNode(SUN, { x: 0, y: 4, z: 0 })]), NOTHING)
 
     const light = [...built.byEntity.values()].find(one => one instanceof DirectionalLight)
     expect(light && built.scene.children.includes(light.target)).toBe(true)
@@ -69,7 +63,7 @@ describe('what an exported game throws a shadow with', () => {
 
   it('leaves alone what the document says throws nothing', async () => {
     const node = { ...meshNode(BOX, { name: 'Crate' }), castShadow: false, receiveShadow: false }
-    const built = await buildGameScene(scene([node]), NOTHING)
+    const built = await buildGameScene(sceneOf([node]), NOTHING)
 
     const drawn = built.byEntity.get(node.id)
     expect(drawn?.castShadow).toBe(false)
@@ -89,7 +83,7 @@ describe('what an exported game throws a shadow with', () => {
       castShadow: false,
       receiveShadow: false,
     }
-    const built = await buildGameScene(scene([child, parent]), NOTHING)
+    const built = await buildGameScene(sceneOf([child, parent]), NOTHING)
 
     expect(built.byEntity.get(child.id)?.castShadow).toBe(false)
   })
@@ -98,7 +92,7 @@ describe('what an exported game throws a shadow with', () => {
 /** What decides a depth pass in an exported frame — see `createWebRender`, which reads it. */
 describe('what a settled frame answers', () => {
   it('owes nothing for a head that drives no clip, however far the clock has run', async () => {
-    const built = await buildGameScene(scene([meshNode(BOX, { name: 'Crate' })]), NOTHING)
+    const built = await buildGameScene(sceneOf([meshNode(BOX, { name: 'Crate' })]), NOTHING)
 
     expect(built.seek(4 * SECOND)).toBe(false)
     built.dispose()
@@ -106,7 +100,7 @@ describe('what a settled frame answers', () => {
 
   it('owes nothing once the scene it settled has stopped changing', async () => {
     const built = await buildGameScene(
-      scene([meshNode(BOX, { name: 'Crate' }), lightNode(SUN, { x: 0, y: 4, z: 0 })]),
+      sceneOf([meshNode(BOX, { name: 'Crate' }), lightNode(SUN, { x: 0, y: 4, z: 0 })]),
       NOTHING,
     )
     const camera = new PerspectiveCamera()

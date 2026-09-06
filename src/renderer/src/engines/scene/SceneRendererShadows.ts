@@ -1,11 +1,9 @@
 import {
   type Box3,
-  DirectionalLight,
   type Light,
   Mesh,
   MeshStandardMaterial,
   type Object3D,
-  SpotLight,
   Sprite,
   SpriteMaterial,
 } from 'three'
@@ -15,7 +13,7 @@ import { type SceneNode, type SpriteNode } from './sceneState'
 import { railOf } from './nodeRail'
 import { dressWithRail, type RailColours, helperFor } from './threeFactory'
 import { aimLightMarker, holdMarkerSize } from './markerPose'
-import { applyMaterial, applyNegative, applySprite, lightFor } from './threeSync'
+import { applyMaterial, applyNegative, applySprite, lightFor, standTarget } from './threeSync'
 import { createMaterialTextures, createSpriteTexture } from './materialTextures'
 import { reportFailure } from '@/services/diagnostics'
 import { limitShadowUpdates, shadowReachOf, tuneShadowMaps } from './shadows'
@@ -99,12 +97,12 @@ export abstract class SceneRendererShadows extends SceneRendererModels {
     for (const [id, object] of this.objects) {
       if (this.applied.get(id)?.type === 'light') lights.push(object)
     }
-    const { framed, reach } = tuneShadowMaps(
+    const tuned = tuneShadowMaps(
       lights,
       shadowMapSizeFor(this.view.quality, this.view.shadowMapSize),
       () => this.measureShadowReach(),
     )
-    this.shadowThrow = framed.length === 0 ? null : throwsOf(framed, this.heldShadowBounds(), reach)
+    this.shadowThrow = tuned && throwsOf(tuned.framed, this.heldShadowBounds(), tuned.reach)
   }
 
   /**
@@ -180,10 +178,7 @@ export abstract class SceneRendererShadows extends SceneRendererModels {
   protected buildLight(node: SceneNode & { type: 'light' }): Light {
     const light = lightFor(node.light)
 
-    // three.js only reads the target's world matrix once the target is in the scene.
-    if (light instanceof DirectionalLight || light instanceof SpotLight) {
-      this.viewport.scene.add(light.target)
-    }
+    standTarget(light, this.viewport.scene)
 
     const helper = helperFor(light)
     if (helper) {

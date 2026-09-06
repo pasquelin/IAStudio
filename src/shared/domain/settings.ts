@@ -1,3 +1,4 @@
+import { DEFAULT_RENDER_POLICY, type RenderPolicy } from './renderPolicy'
 import type {
   CustomDolly,
   CustomOrbit,
@@ -16,7 +17,7 @@ import type { LocalModel } from './localModel'
 import { DEFAULT_HOME_SECTIONS, type HomeSectionSetting } from './home'
 import type { RecentDocument, RecentProject } from './project'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
-import type { DisplayUnit, HelperVisibility, ShadowQuality, ViewportQuality } from './scene'
+import type { DisplayUnit, HelperVisibility } from './scene'
 import { DEFAULT_ONBOARDING, type OnboardingSettings } from './welcome'
 
 /**
@@ -174,7 +175,7 @@ export type Settings = {
    * of `Settings` is one level deep, which is what lets the store merge a write by spreading —
    * a nested branch would be replaced wholesale by a write touching one of its leaves.
    */
-  three: {
+  three: RenderPolicy & {
     showGrid: boolean
     /** Extent of the ground grid, in metres. */
     gridSize: number
@@ -201,8 +202,6 @@ export type Settings = {
     flySpeed: number
     /** What holding the boost key multiplies the fly speed by. */
     boostFactor: number
-    /** Vertical field of view, in degrees. */
-    fieldOfView: number
     /**
      * The steps snapping moves by, when it is on. Whether it is on is a session thing — the
      * toolbar toggles it per document — but how coarse it is belongs to the person, not to the
@@ -222,14 +221,6 @@ export type Settings = {
     snapSurfaceAlign: boolean
     /** Metres a surface snap leaves between what it lays down and what it landed on. */
     snapSurfaceOffset: number
-    /** Whether shadow maps are drawn at all — a depth pass per casting light, and the way out of it. */
-    shadows: boolean
-    /** How soft a shadow edge is. Which objects throw one is a property of the node. */
-    shadowQuality: ShadowQuality
-    /** Side of the square map each casting light allocates. Doubling it costs four times as much. */
-    shadowMapSize: number
-    /** How finely the same frame is drawn. It moves `pixelRatio`, and never the assets. */
-    quality: ViewportQuality
     /** How much of a family of working aids is drawn — see `HelperVisibility`. */
     lightHelpers: HelperVisibility
     cameraHelpers: HelperVisibility
@@ -386,6 +377,9 @@ export const DEFAULT_SETTINGS: Settings = {
   // taken wherever it can serve, so the studio works before anyone has an account.
   ai: { roles: {}, projectRoles: {}, ownModels: [] },
   three: {
+    // 🛑 Spread rather than retyped: what a game carries out of here is the same five values, and
+    // an export written from a copy would open on another picture than the editor it left.
+    ...DEFAULT_RENDER_POLICY,
     showGrid: true,
     gridSize: 20,
     navigationPreset: 'studio',
@@ -397,17 +391,12 @@ export const DEFAULT_SETTINGS: Settings = {
     orbitUnderCursor: false,
     flySpeed: 4,
     boostFactor: 3,
-    fieldOfView: 60,
     snapTranslate: 0.5,
     snapRotate: 15,
     snapScale: 0.1,
     gizmoSize: 0.75,
     snapSurfaceAlign: true,
     snapSurfaceOffset: 0,
-    shadows: true,
-    shadowQuality: 'soft',
-    shadowMapSize: 2048,
-    quality: 'balanced',
     // `selected` and not `all`: a directional light draws a line clear across the scene and a
     // frustum reaches its camera's far plane, so three lamps shown at once is a viewport nobody
     // can read. Anyone who wants them all says so.
