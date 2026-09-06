@@ -148,7 +148,7 @@ describe('createScatterSurface', () => {
     surface.dispose()
   })
 
-  it('uses the world partition to hide cells beyond what a semis is drawn to', async () => {
+  it('uses the world partition to hide cells beyond what a scatter is drawn to', async () => {
     const surface = createScatterSurface(new Scene(), {
       models: createModelCache(
         async () => staticTree(),
@@ -168,7 +168,7 @@ describe('createScatterSurface', () => {
         }),
       ],
     })
-    // 🛑 Past SCATTER_DISTANCE, and not past the far plane: the reach is the semis' own, so an
+    // 🛑 Past SCATTER_DISTANCE, and not past the far plane: the reach is the scatter's own, so an
     // eye whose lens sees no further than 200 still holds both cells of a layer at its feet.
     const camera = new PerspectiveCamera(50, 1, 0.1, 200)
     camera.position.set(0, 10, 0)
@@ -216,7 +216,7 @@ describe('createScatterSurface', () => {
     camera.position.x = 1
     camera.updateMatrixWorld(true)
     surface.updateVisibility(camera)
-    // A lens that changes asks for nothing: what a semis is drawn to is not what a camera sees to.
+    // A lens that changes asks for nothing: what a scatter is drawn to is not what a camera sees to.
     camera.far = 100
     surface.updateVisibility(camera)
     expect(query).toHaveBeenCalledTimes(2)

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
-import { DirectionalLight, Mesh, Object3D, PerspectiveCamera } from 'three'
+import { Box3, DirectionalLight, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import type { LightDescriptor } from '@shared/domain/scene'
 import { groupNode, lightNode, meshNode, modelNode } from '@/engines/scene/nodeFactory'
 import { BOX, NOTHING, sceneOf } from './game-fixtures'
 import { buildGameScene } from './gameScene'
+import { gameShadowReach } from './gameSceneShadows'
+import { fitShadowCamera } from '@/engines/scene/shadows'
 
 const SUN: LightDescriptor = {
   kind: 'directional',
@@ -109,5 +111,28 @@ describe('what a settled frame answers', () => {
 
     expect(built.flush(camera)).toBe(false)
     built.dispose()
+  })
+})
+
+/**
+ * 🛑 A reach of zero writes `left = right = top = bottom = 0`, and three's orthographic projection
+ * then divides by that width: the matrix carries Infinity and the sun rasterises NOTHING. The
+ * editor cannot reach it — it floors on its grid — so the game floors on the same number.
+ */
+describe('how far an exported game frames its sun', () => {
+  it('falls back on the editor floor when the scene frames nothing, keeping the matrix finite', () => {
+    const sun = new DirectionalLight()
+    sun.castShadow = true
+
+    fitShadowCamera(sun, gameShadowReach(new Box3()))
+
+    expect(gameShadowReach(new Box3())).toBeGreaterThan(0)
+    expect(sun.shadow.camera.projectionMatrix.elements.every(Number.isFinite)).toBe(true)
+  })
+
+  it('frames what the scene occupies once it holds something', () => {
+    const wide = new Box3(new Vector3(-50, 0, -50), new Vector3(50, 4, 50))
+
+    expect(gameShadowReach(wide)).toBeGreaterThan(gameShadowReach(new Box3()))
   })
 })
