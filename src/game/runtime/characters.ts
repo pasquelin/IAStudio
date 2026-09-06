@@ -201,9 +201,8 @@ export function createCharacters(
         byBody.set(entity.id, walker)
       }
 
-      // 🛑 After the walkers, and only if one of them ASKED: a stick turning the shared look
-      // while its owner drives would snap the camera on getting out of the car.
-      if (moves.length > 0) turnBy(look, turnedBy(world, intents, first), dt)
+      // After the walkers: who may turn the shared look is `turnedBy`'s own question.
+      if (moves.length > 0) turnBy(look, turnedBy(world, intents, first, possessions), dt)
 
       return moves
     },
@@ -243,11 +242,21 @@ export function createCharacters(
   }
 }
 
-/** The look a script asked for, or the stick — the same shape, so one reading serves both. */
-function turnedBy(world: World, intents: Intents, walker: Entity | null): { x: number; y: number } {
-  const asked = walker && intents.lookOf(walker.id)
-  return asked ?? world.actions.axis2('look')
+/**
+ * The look a script asked for, or the stick — and NOTHING while the leader is held: driving, that
+ * same stick steers the car, and a head turned meanwhile snaps the camera on getting out.
+ */
+function turnedBy(
+  world: World,
+  intents: Intents,
+  walker: Entity | null,
+  possessions: Possessions,
+): { x: number; y: number } {
+  if (!walker || possessions.holds(walker.id)) return AT_REST
+  return intents.lookOf(walker.id) ?? world.actions.axis2('look')
 }
+
+const AT_REST = { x: 0, y: 0 }
 
 /**
  * Level, and never faster on the diagonal: two keys held would otherwise walk at 1,41 times.

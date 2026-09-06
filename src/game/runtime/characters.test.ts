@@ -476,3 +476,23 @@ describe('what a character asks to move', () => {
     expect(capsule?.radius).toBeCloseTo(0.3, 6)
   })
 })
+
+/** 🛑 The look belongs to the LEADER: a bystander walking by must not stand in for it. */
+describe('who may turn the shared look', () => {
+  it('leaves it alone while its owner drives, even with another walker afoot', () => {
+    const world = walking()
+    const held = createPossessions()
+    world.entities.add({
+      id: 'by',
+      name: 'By',
+      transform: restingTransform(),
+      components: [newComponent('CharacterController')],
+    })
+    held.hold('walker')
+    world.input = holding({ rightX: 1 })
+    const characters = createCharacters(held, entity => entity.transform, intents)
+
+    expect(characters.intents(world, STEP).map(one => one.body)).toEqual(['by'])
+    expect(characters.look()).toEqual({ yaw: 0, pitch: 0 })
+  })
+})
