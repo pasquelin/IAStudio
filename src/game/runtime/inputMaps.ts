@@ -117,7 +117,7 @@ function vectorValueOf(action: InputAction, input: RawInput): InputVector {
  */
 function isHalfAxis(binding: InputBinding): boolean {
   if (binding.device !== 'gamepad') return true
-  return buttonIndex(binding.control) !== null
+  return BUTTON_INDEX.has(binding.control)
 }
 
 function buttonOf(binding: InputAction['bindings'][number], input: RawInput): boolean {
@@ -166,10 +166,10 @@ function vectorOf(binding: InputAction['bindings'][number], input: RawInput): In
 
 function rawGamepadAxis(gamepad: GamepadState, binding: GamepadBinding): number {
   if (gamepad.mapping !== 'standard') return 0
-  const index = buttonIndex(binding.control)
-  if (index !== null) return gamepad.buttons[index] ?? 0
-  const axis = axisIndex(binding.control)
-  return axis === null ? 0 : (gamepad.axes[axis] ?? 0)
+  const index = BUTTON_INDEX.get(binding.control)
+  if (index !== undefined) return gamepad.buttons[index] ?? 0
+  const axis = AXIS_INDEX.get(binding.control)
+  return axis === undefined ? 0 : (gamepad.axes[axis] ?? 0)
 }
 
 function rawGamepadVector(gamepad: GamepadState, binding: GamepadBinding): InputVector {
@@ -179,13 +179,13 @@ function rawGamepadVector(gamepad: GamepadState, binding: GamepadBinding): Input
   return { x: gamepad.axes[offset] ?? 0, y: gamepad.axes[offset + 1] ?? 0 }
 }
 
-function axisIndex(control: string): number | null {
-  if (control === 'leftStickX') return 0
-  if (control === 'leftStickY') return 1
-  if (control === 'rightStickX') return 2
-  if (control === 'rightStickY') return 3
-  return null
-}
+/** The standard mapping's stick order — exported so a caller names a control, never an index. */
+export const GAMEPAD_AXES: readonly GamepadControl[] = [
+  'leftStickX',
+  'leftStickY',
+  'rightStickX',
+  'rightStickY',
+]
 
 /** The standard mapping's button order — exported so a suite names a control, never an index. */
 export const GAMEPAD_BUTTONS: readonly GamepadControl[] = [
@@ -208,10 +208,10 @@ export const GAMEPAD_BUTTONS: readonly GamepadControl[] = [
   'home',
 ]
 
-function buttonIndex(control: string): number | null {
-  const index = GAMEPAD_BUTTONS.findIndex(one => one === control)
-  return index < 0 ? null : index
-}
+// Built once: these two are read per gamepad binding per step, and a scan of seventeen entries
+// through a closure was paid sixty times a second for an answer that never changes.
+const BUTTON_INDEX = new Map(GAMEPAD_BUTTONS.map((control, index) => [control, index]))
+const AXIS_INDEX = new Map(GAMEPAD_AXES.map((control, index) => [control, index]))
 
 function stronger(one: number, other: number): number {
   return Math.abs(other) > Math.abs(one) ? other : one

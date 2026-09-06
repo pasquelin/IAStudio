@@ -59,13 +59,10 @@ export function createInputActions(report?: InputActionsReport): InputActionsRea
 }
 
 /**
- * 🛑 The selection held between steps: it changes at a rebind or a push, never within a step, and
- * redoing it cost 0,139 µs of the 1,311 µs a step spent — measured best-of-5 over 300 000 calls.
- * The comparison is a length and a few strings, against a `Set`, a `filter` and a `sort`.
- *
- * 🛑 Rests on `InputControls.maps()` being IMMUTABLE — a rebind or a reset hands over a new array
- * rather than editing the one held. A caller that mutated its array in place would be served the
- * previous order, and nothing would say so.
+ * 🛑 The selection held between steps: redoing it cost 0,139 µs of the 1,311 µs a step spent,
+ * measured best-of-5 over 300 000 calls. Rests on `InputControls.maps()` and `InputContexts
+ * .active()` being IMMUTABLE — both REPLACE their array, so a caller that edited one in place
+ * would be served the previous order and nothing would say so.
  */
 function createInputSelection(report?: InputActionsReport) {
   let lastMaps: readonly InputMap[] | null = null

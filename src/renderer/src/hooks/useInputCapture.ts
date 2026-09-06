@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { GamepadControl } from '@shared/domain/inputMap'
-import { GAMEPAD_BUTTONS } from '@game/runtime/inputMaps'
+import { GAMEPAD_AXES, GAMEPAD_BUTTONS } from '@game/runtime/inputMaps'
 
 /** Below this a resting stick still drifts and a trigger still reads a few hundredths. */
 const PRESSED = 0.6
-
-const AXES: readonly GamepadControl[] = ['leftStickX', 'leftStickY', 'rightStickX', 'rightStickY']
 
 export type InputCapture = {
   /** Whether a control is being waited on right now — the button says so while it is true. */
@@ -90,7 +88,7 @@ function pushedControl(): GamepadControl | null {
     const button = gamepad.buttons.findIndex(one => one.value > PRESSED)
     if (button >= 0 && GAMEPAD_BUTTONS[button] !== undefined) return GAMEPAD_BUTTONS[button]
     const axis = gamepad.axes.findIndex(value => Math.abs(value) > PRESSED)
-    if (axis >= 0 && AXES[axis] !== undefined) return AXES[axis]
+    if (axis >= 0 && GAMEPAD_AXES[axis] !== undefined) return GAMEPAD_AXES[axis]
   }
   return null
 }

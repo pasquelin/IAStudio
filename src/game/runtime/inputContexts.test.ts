@@ -31,6 +31,18 @@ describe('input contexts', () => {
 
     expect(contexts.active()).toEqual(['character'])
   })
+
+  /** What the selection cache of `inputActions` rests on: read once a step, it must not allocate. */
+  it('hands the same list back until a push or a pop replaces it', () => {
+    const contexts = createInputContexts([map('character', 0, true), map('vehicle', 10, false)])
+    const first = contexts.active()
+
+    expect(contexts.active()).toBe(first)
+    contexts.push('vehicle')
+
+    expect(contexts.active()).not.toBe(first)
+    expect(first).toEqual(['character'])
+  })
 })
 
 describe('a context no control map declares', () => {

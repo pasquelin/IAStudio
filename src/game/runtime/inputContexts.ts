@@ -18,11 +18,13 @@ export function createInputContexts(
   report?: (message: string) => void,
 ): InputContexts {
   const known = new Set(maps.map(map => map.id))
-  const active = maps.filter(map => map.defaultActive).map(map => map.id)
   const said = new Set<string>()
+  // Replaced rather than edited, so `active()` hands the same array back until a push or a pop —
+  // it is read once a STEP, and copying it there allocated sixty times a second for nothing.
+  let active: readonly string[] = maps.filter(map => map.defaultActive).map(map => map.id)
 
   return {
-    active: () => [...active],
+    active: () => active,
     push: id => {
       if (!known.has(id)) {
         if (report && !said.has(id)) {
@@ -33,11 +35,10 @@ export function createInputContexts(
         }
         return
       }
-      if (!active.includes(id)) active.push(id)
+      if (!active.includes(id)) active = [...active, id]
     },
     pop: id => {
-      const index = active.indexOf(id)
-      if (index >= 0) active.splice(index, 1)
+      if (active.includes(id)) active = active.filter(one => one !== id)
     },
   }
 }
