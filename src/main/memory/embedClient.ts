@@ -7,6 +7,8 @@ export type EmbedPort = ProcessPort<EmbedRequest, EmbedResponse> & { kill: () =>
 
 export const EMBEDDER_GONE = 'the embedding process is gone'
 export const CLOSE_GRACE_MS = 15_000
+// The quit does not wait 15 s on a wedged worker: the OS reclaims what a kill leaves behind.
+export const QUIT_CLOSE_GRACE_MS = 2_000
 
 export type EmbedClient = {
   /** Loads the weights and answers how many dimensions they produce. Rejects where it cannot. */
@@ -20,7 +22,8 @@ export type EmbedClient = {
   embed: (texts: readonly string[], signal?: AbortSignal) => Promise<readonly Float32Array[]>
   /** One question. The other prefix, and the only difference — see `EmbedLoad`. */
   embedQuery: (text: string) => Promise<Float32Array>
-  close: () => Promise<void>
+  /** Asks the worker to dispose its weights, then kills it — after `graceMs` if it never answers. */
+  close: (graceMs?: number) => Promise<void>
 }
 
 export function createEmbedClient(port: EmbedPort): EmbedClient {
@@ -69,10 +72,10 @@ export function createEmbedClient(port: EmbedPort): EmbedClient {
       return vector ?? new Float32Array()
     },
 
-    close: async () => {
+    close: async (graceMs = CLOSE_GRACE_MS) => {
       let timer: ReturnType<typeof setTimeout> | undefined
       const elapsed = new Promise<void>(resolve => {
-        timer = setTimeout(resolve, CLOSE_GRACE_MS)
+        timer = setTimeout(resolve, graceMs)
         timer.unref?.()
       })
       try {

@@ -29,7 +29,6 @@ import {
   mcpStateOf,
   type McpLaunch,
 } from './mcp/endpoint'
-
 const MCP_CLIENT = clientName(APP_NAME)
 import { openMicrophoneSettings } from './dictation/permissions'
 import { claimExternalFiles } from './externalFiles'
@@ -37,6 +36,7 @@ import { adoptFile } from './media/adoptFile'
 import { importFiles } from './media/importFiles'
 import { importMontageArchive } from './import/montageImport'
 import { linkedAsset } from './media/link'
+import { QUIT_CLOSE_GRACE_MS } from './memory/embedClient'
 import { binaryRuns, forgetBinaries, hashOrNull, runProcess } from './media/runner'
 import { broadcast } from './ipc/broadcast'
 import { writeAtomic } from './persistence'
@@ -179,7 +179,7 @@ export function createServices(settings: SettingsStore): Services {
   const closeRetrieval = async (): Promise<void> => {
     await actionIndex.close()
     await memoryVectors.close()
-    await embedder.close()
+    await embedder.close(QUIT_CLOSE_GRACE_MS)
   }
   function buildJobServices(): JobServices {
     return createJobServices({

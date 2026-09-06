@@ -16,6 +16,8 @@ function stand(
   embedder: Embedder
   opened: Opened[]
   closed: () => number
+  /** The grace each close was given, in order — `undefined` where the client's default stands. */
+  closedWith: () => (number | undefined)[]
   troubles: string[]
   die: () => void
   idle: () => void
@@ -27,6 +29,7 @@ function stand(
 } {
   const opened: Opened[] = []
   const troubles: string[] = []
+  const closedWith: (number | undefined)[] = []
   let closes = 0
   let current = modelId
   let fire: () => void = () => {}
@@ -45,8 +48,9 @@ function stand(
       },
       embed: async texts => texts.map(() => new Float32Array([1])),
       embedQuery: async () => new Float32Array([1]),
-      close: async () => {
+      close: async graceMs => {
         closes++
+        closedWith.push(graceMs)
         if (slowClose) await new Promise<void>(resolve => parkedCloses.push(resolve))
       },
     }
@@ -64,6 +68,7 @@ function stand(
       for (const letGo of parkedCloses.splice(0)) letGo()
     },
     closed: () => closes,
+    closedWith: () => closedWith,
     idle: () => fire(),
     chose: next => {
       current = next
@@ -231,6 +236,15 @@ describe('closing', () => {
     await stood.embedder.close()
 
     expect(stood.closed()).toBe(0)
+  })
+
+  // The quit hands a short grace down; an idle release hands none and the client's default stands.
+  it('passes the grace it was given on to the process', async () => {
+    const stood = stand(GEMMA)
+    await stood.embedder.embed(['one'])
+    await stood.embedder.close(2_000)
+
+    expect(stood.closedWith()).toEqual([2_000])
   })
 })
 

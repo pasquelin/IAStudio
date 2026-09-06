@@ -18,8 +18,8 @@ export type Embedder = {
   embed: (texts: readonly string[], signal?: AbortSignal) => Promise<readonly Float32Array[]>
   /** One question. An empty vector where no model can answer — see `similarity`. */
   embedQuery: (text: string) => Promise<Float32Array>
-  /** Lets go of the process. The next call opens another one. */
-  close: () => Promise<void>
+  /** Lets go of the process — within `graceMs` if it will not dispose. The next call opens another one. */
+  close: (graceMs?: number) => Promise<void>
 }
 
 export type EmbedderDeps = {
@@ -64,13 +64,13 @@ export function createEmbedder({
   // The last process let go, still disposing its weights: the next one is not opened over it.
   let releasing: Promise<void> = Promise.resolve()
 
-  const letGo = (): Promise<void> => {
+  const letGo = (graceMs?: number): Promise<void> => {
     const going = held
     held = null
     opening = null
     cancelIdle?.()
     cancelIdle = null
-    if (going) releasing = going.client.close()
+    if (going) releasing = going.client.close(graceMs)
     return releasing
   }
 
@@ -170,7 +170,7 @@ export function createEmbedder({
       }
     },
 
-    close: async () => {
+    close: async graceMs => {
       // Awaited first: letting go mid-load leaves a process holding weights nothing will kill,
       // and quitting is exactly when that happens.
       try {
@@ -178,7 +178,7 @@ export function createEmbedder({
       } catch {
         // A load that failed was already reported by `start`, and has nothing left to close.
       }
-      await letGo()
+      await letGo(graceMs)
     },
   }
 }

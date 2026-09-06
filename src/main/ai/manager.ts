@@ -25,6 +25,7 @@ import type { AiManager, HeldRuntime, LoadingModel, ManagerDeps } from './manage
 import * as managerHelpers from './managerHelpers'
 import { createRuntimeInstaller, type RuntimeInstaller } from './managerRuntimeInstaller'
 import { DownloadCancelled } from './modelInstall'
+import { orElse } from '@shared/promises'
 export type { AiManager, ManagerDeps } from './managerTypes'
 export function createAiManager(deps: ManagerDeps): AiManager {
   let running: managerHelpers.RunningInstall | null = null
@@ -328,7 +329,8 @@ export function createAiManager(deps: ManagerDeps): AiManager {
   const runLoad = async (model: LocalModel): Promise<void> => {
     if (modelRefusalOf(model) !== null) throw new Error('model is not admitted')
     if (loading?.modelId === model.id && loadFlight) return loadFlight
-    if (loading !== null) throw new Error(`busy loading ${loading.modelId}`)
+    // Another model's flight is waited out, not refused: a turn asked mid-load answers late.
+    while (loading !== null && loadFlight) await orElse(loadFlight, undefined)
     const work = (async () => {
       const load = deps.runtimes[model.loader]?.load
       const endpoint = endpointOf(model.loader, model.modality)

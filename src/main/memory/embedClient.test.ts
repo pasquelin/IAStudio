@@ -198,6 +198,24 @@ describe('when the process is gone', () => {
     }
   })
 
+  // What the quit asks for: a wedged worker is not worth keeping the window on screen 15 s.
+  it('kills at the shorter grace it was given', async () => {
+    vi.useFakeTimers()
+    try {
+      const fake = fakePort()
+      const client = createEmbedClient(fake.port)
+
+      const closing = client.close(2_000)
+      await vi.advanceTimersByTimeAsync(1_999)
+      expect(fake.killed()).toBe(0)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(fake.killed()).toBe(1)
+      await closing
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   /** A batch given up on is dropped at the worker, so what it half-computed is cleaned up there. */
   it('tells the worker to drop a run whose signal was raised', async () => {
     const fake = fakePort()

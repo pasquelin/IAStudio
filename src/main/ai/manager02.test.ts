@@ -127,6 +127,40 @@ describe('holding a model in memory', () => {
     expect(load).toHaveBeenCalledOnce()
   })
 
+  // Alban's call: a turn asked while the Settings load another model answers late, never with
+  // `busy loading`.
+  it('waits for the load in flight before loading the model a turn asks for', async () => {
+    const extra = other('whisper')
+    const runtime = holdingRuntime()
+    const parked: (() => void)[] = []
+    let first = true
+    const load = vi.fn<NonNullable<LocalRuntime['load']>>((model, options) => {
+      if (!first) return runtime.load!(model, options)
+      first = false
+      return new Promise(resolve => parked.push(() => resolve(runtime.load!(model, options))))
+    })
+    const ai = manager({
+      settings: () => ({
+        ...DEFAULT_SETTINGS,
+        ai: { ...DEFAULT_SETTINGS.ai, ownModels: [QWEN, extra] },
+      }),
+      runtimes: { 'sherpa-onnx': { ...runtime, load } },
+    })
+
+    const settingsLoad = ai.load(extra.id)
+    await vi.waitFor(() => expect(load).toHaveBeenCalledOnce())
+    const turn = ai.ensureLoaded(QWEN.id)
+    await Promise.resolve()
+    expect(load).toHaveBeenCalledOnce()
+
+    parked.splice(0).forEach(go => go())
+    await settingsLoad
+    await expect(turn).resolves.toBeUndefined()
+
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(candidateOf(await ai.overview(), QWEN.id)?.loaded).toBe(true)
+  })
+
   it('loads the model the form named when another is on that door', async () => {
     const extra = other('whisper')
     const runtime = holdingRuntime()
