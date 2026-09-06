@@ -70,9 +70,10 @@ export function createMemoryCatalog(
       rows = [...rows.filter(one => one.id !== asset.id), asset]
       return Promise.resolve(asset)
     },
-    setAnimationPoster: async (assetId, sourcePath, posterPath) => {
+    setAnimationPoster: async ({ assetId, sourcePath, posterPath, replace }) => {
       const asset = rows.find(one => one.id === assetId)
-      if (asset?.type !== 'animation' || asset.path !== sourcePath || asset.posterPath) return false
+      if (asset?.type !== 'animation' || asset.path !== sourcePath) return false
+      if (asset.posterPath && !replace) return false
       rows = rows.map(one =>
         one.id === assetId ? { ...one, posterPath, localChangedAt: new Date().toISOString() } : one,
       )

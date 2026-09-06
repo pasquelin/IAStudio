@@ -43,8 +43,21 @@ export type BackedUpItem = {
   seed?: number
 }
 
+/**
+ * Filing the still an animation wears. An OBJECT rather than four arguments: three of them are
+ * paths, and `sourcePath` and `posterPath` next to each other are two strings nothing tells apart.
+ */
+export type AnimationPosterWrite = {
+  assetId: string
+  /** Where the clip is, as the row holds it: the write is refused if it has moved since. */
+  sourcePath: string
+  posterPath: string
+  /** Overwrites a still the clip already has. A person asked; the automatic pass never does. */
+  replace?: boolean
+}
+
 export type Catalog = {
-  setAnimationPoster: (assetId: string, sourcePath: string, posterPath: string) => boolean
+  setAnimationPoster: (write: AnimationPosterWrite) => boolean
   add: (asset: Asset) => Asset
   find: (assetId: string) => Asset | null
   /** The local asset an API one became, so a generation's parent can be tied to its channels. */

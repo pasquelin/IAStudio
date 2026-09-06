@@ -55,6 +55,8 @@
     "push_many": "Envoyer {{count, number}} assets",
     "push_one": "Envoyer {{count, number}} asset",
     "push_other": "Envoyer {{count, number}} assets",
+    "redrawPoster": "Redessiner la vignette",
+    "redrawPosterHint": "Dessine une nouvelle vignette pour cette animation, à la place de celle qu’elle porte",
     "renameHint": "Change le nom dans ce projet ; celui du compte distant ne bouge pas",
     "renameLabel": "Nom de l’asset",
     "search": "Rechercher…",

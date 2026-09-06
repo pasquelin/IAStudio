@@ -73,6 +73,13 @@ export type SaveAnimationThumbnailRequest = {
   assetId: string
   sourcePath: string
   png: Uint8Array
+  /**
+   * Overwrites a still the clip already has, which the automatic pass may never do.
+   *
+   * Only a person asking for it: the pass skips what is already drawn, so without this a poor
+   * frame chosen once would be the one forever.
+   */
+  replace?: true
 }
 
 /**

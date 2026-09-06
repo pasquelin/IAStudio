@@ -301,6 +301,31 @@ describe('renaming and tagging', () => {
     expect(updated).toMatchObject({ name: 'Ruelle', path: 'assets/img/Ruelle.png' })
   })
 
+  /**
+   * An animation wears its FOLDER's name, and its still lives inside that folder — so the still
+   * travelled with the rename without anyone naming it. Recomposed rather than reported: the row
+   * would otherwise keep pointing into a folder that no longer exists, and the tile go blank.
+   */
+  it('carries an animation’s still into the folder the rename moved', async () => {
+    const moved = setup({
+      renameFile: async () => 'assets/img/Saut/animation.glb',
+    })
+    await moved.catalog.add(
+      localAsset({
+        type: 'animation',
+        path: 'assets/img/Jump/animation.glb',
+        posterPath: 'assets/img/Jump/thumb.png',
+      }),
+    )
+
+    const updated = await invoke<Asset>(CHANNELS.assetsUpdate, 'asset_1', { name: 'Saut' })
+
+    expect(updated).toMatchObject({
+      path: 'assets/img/Saut/animation.glb',
+      posterPath: 'assets/img/Saut/thumb.png',
+    })
+  })
+
   /** Tagging is not renaming: a row whose name nobody touched has no file to move. */
   it('leaves the file alone when only the tags changed', async () => {
     await harness.catalog.add(localAsset({ path: 'assets/img/asset_1.png' }))

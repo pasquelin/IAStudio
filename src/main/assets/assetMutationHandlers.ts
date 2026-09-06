@@ -1,4 +1,5 @@
 import { CHANNELS } from '@shared/ipc'
+import { animationPosterPathOf } from '@shared/domain/animationLibrary'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import { checkAssetName } from '@shared/domain/assetName'
 import { handle } from '@main/ipc/handle'
@@ -60,10 +61,22 @@ async function updateAsset(
       ? {}
       : { modelMaterialIds: [...parsed.modelMaterialIds] }),
     ...(path === undefined ? {} : { path }),
+    ...posterAfterRename(asset, path),
   }
   const saved = await deps.catalog().add(updated)
   await updateRemoteTags(deps, asset, updated, parsed.tags)
   return withoutSourcePath(saved)
+}
+
+/**
+ * Where an animation's still sits once its folder has been renamed — it travelled inside that
+ * folder without anyone naming it, and the row would otherwise point at a folder that is gone.
+ *
+ * Recomposed rather than reported, so `animationPosterPathOf` stays the one spelling of it.
+ */
+function posterAfterRename(asset: Asset, path: string | undefined): Partial<Asset> {
+  if (!path || !asset.posterPath || asset.type !== 'animation') return {}
+  return { posterPath: animationPosterPathOf(path) ?? asset.posterPath }
 }
 
 async function removeAssets(

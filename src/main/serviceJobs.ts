@@ -1,3 +1,5 @@
+import { orElse } from '@shared/promises'
+import { parentOf } from '@shared/domain/folder'
 import { CLOUD_PROVIDERS } from '@shared/domain/aiCloud'
 import type { Asset } from '@shared/domain/asset'
 import type { JobProgress } from '@shared/domain/job'
@@ -7,7 +9,7 @@ import { projectName } from '@shared/domain/project'
 import { TRIPO_CLOUD, isTripoModelId } from '@shared/domain/tripo'
 import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { readFile, rm, rmdir, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type Scenario from '@scenario-labs/sdk'
 import { createAssetCollector } from './assets/collector'
@@ -277,6 +279,11 @@ async function removeFiles(deps: JobDeps, asset: Asset): Promise<void> {
     const file = stored ? assetFilePath(current.path, stored) : null
     if (file) await rm(file, { force: true })
   }
+  // An animation owns its folder, so what is left of it goes too. `rmdir` and not `rm -r`: it
+  // refuses a folder holding anything else, which is the guard against taking a user's own.
+  const own = asset.path && asset.type === 'animation' ? parentOf(asset.path) : null
+  const folder = own ? assetFilePath(current.path, own) : null
+  if (folder) await orElse(rmdir(folder), undefined)
 }
 
 function createLocalJobs(deps: JobDeps) {
