@@ -1,5 +1,5 @@
 import { clamp } from '@shared/numeric'
-import { copyTransform, sameTransform, sameVector3 } from '@shared/domain/transform'
+import { copyTransform, sameCameraView, sameTransform } from '@shared/domain/transform'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
@@ -133,7 +133,7 @@ export function createStudioRender(
     // fight whoever is dragging it. A view that has not MOVED is dropped too — `placeView` asks
     // for a frame, so a character standing still would repaint the viewport sixty times a second.
     view: (wanted: CameraView | null) => {
-      if (!wanted || sameView(watched, wanted)) return
+      if (!wanted || sameCameraView(watched, wanted)) return
       watched.position = { ...wanted.position }
       watched.target = { ...wanted.target }
       renderer.placeView(wanted)
@@ -155,6 +155,3 @@ export function createStudioRender(
 
 /** Off the scene, so the first view a game asks for is never mistaken for the one already held. */
 const NOWHERE = { x: Number.NaN, y: Number.NaN, z: Number.NaN }
-
-const sameView = (one: CameraView, other: CameraView): boolean =>
-  sameVector3(one.position, other.position) && sameVector3(one.target, other.target)

@@ -1,4 +1,4 @@
-import type { MaterialDescriptor } from '@shared/domain/scene'
+import { TEXTURE_SLOTS, type MaterialDescriptor } from '@shared/domain/scene'
 import type { SceneNode, SceneState } from '@/engines/scene/sceneState'
 import { lossyCandidatesOf } from '@/engines/scene/worldAnalyzer'
 
@@ -57,5 +57,8 @@ export function runtimeModelAssetIds(nodes: readonly SceneNode[]): readonly stri
 }
 
 function assetOfMaterial(material: MaterialDescriptor, found: Set<string>): void {
-  if (material.map) found.add(material.map.assetId)
+  for (const slot of TEXTURE_SLOTS) {
+    const ref = material[slot]
+    if (ref) found.add(ref.assetId)
+  }
 }

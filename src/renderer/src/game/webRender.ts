@@ -15,9 +15,12 @@ import {
 import { clamp } from '@shared/numeric'
 import type { AssetPort } from '@game/ports/assetPort'
 import type { CameraView, EntityPlacement, RenderPort } from '@game/ports/renderPort'
+import { sameCameraView } from '@shared/domain/transform'
 import { applyToneMapping } from '@/engines/scene/worldBinding'
-import { applyShadowPolicy, tuneShadowMaps } from '@/engines/scene/shadows'
+import { applyShadowPolicy, throwsOf, tuneShadowMaps } from '@/engines/scene/shadows'
+import type { ShadowThrow } from '@/engines/scene/grouping'
 import { gameShadowReach } from './gameSceneShadows'
+import { frameOwesDraw } from './gameSceneFrame'
 import { pixelRatioFor, shadowMapSizeFor } from '@/engines/scene/viewportQuality'
 import {
   DEFAULT_RENDER_POLICY,
@@ -75,6 +78,13 @@ export function createWebRender(
   let held: GameScene | null = null
   /** Whether the scene the shadow maps hold is no longer the one about to be drawn. */
   let shadowsStale = true
+  /** A still picture keeps the canvas — the editor's rest. True until the first draw. */
+  let pictureStale = true
+  let cast: ShadowThrow | null = null
+  const watched: CameraView = {
+    position: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
+    target: { x: Number.NaN, y: Number.NaN, z: Number.NaN },
+  }
   /** 🛑 Dynamic: its three.js passes are weight every game without effects would carry for nothing. */
   const chain = composerHold(renderer, assets)
   /** Seconds, off the game's own clock: grain and tape jitter advance on it, never on a wall. */
@@ -105,17 +115,20 @@ export function createWebRender(
       held?.dispose()
       held = built
       shadowsStale = true
+      pictureStale = true
       applyToneMapping(renderer, built.world.toneMapping, built.world.exposure)
       // 🛑 Two boxes, not one: a frustum is cut to what DRAWS, a framing to everything there is.
       // Sharing them spread a single shadow map over a whole scatter layer.
-      if (policy.shadows) tuneSceneShadows(built, policy)
+      if (policy.shadows) cast = tuneSceneShadows(built, policy)
       // 🛑 A framing to fall back on: `view(null)` means « flown by hand », which in the studio
       // leaves the viewport's own camera and here would leave one at the origin looking at itself.
       if (!aimed) frameAll(camera, built.scene)
       // Last, and never fatal: a chain that fails to arrive leaves a scene drawn ungraded, where
       // a throw here would leave a page showing nothing at all.
-      if (stackDraws(built.world.post)) await chain.load()
-      // The build may have been thrown away while that chain was in flight.
+      if (stackDraws(built.world.post)) {
+        await chain.load()
+        pictureStale = true
+      }
       if (mine !== building) return
 
       // 🛑 What the scene that just left was drawn through: kept, a chain holds two full-screen
@@ -133,21 +146,29 @@ export function createWebRender(
     },
 
     view: (view: CameraView | null) => {
-      if (!view) return
+      if (!view || sameCameraView(watched, view)) return
 
       aimed = true
+      watched.position = { ...view.position }
+      watched.target = { ...view.target }
       camera.position.set(view.position.x, view.position.y, view.position.z)
       camera.lookAt(view.target.x, view.target.y, view.target.z)
+      pictureStale = true
     },
 
     veil: amount => {
-      veil.material.opacity = clamp(amount, 0, 1)
+      const wanted = clamp(amount, 0, 1)
+      if (wanted === veil.material.opacity) return
+      veil.material.opacity = wanted
+      pictureStale = true
     },
 
     animation: {
       pose: (entity, clips) => {
         posed.add(entity)
         held?.pose(entity, clips)
+        shadowsStale = true
+        pictureStale = true
       },
       release: entity => {
         posed.delete(entity)
@@ -187,42 +208,22 @@ export function createWebRender(
       renderer.setSize(width, height, false)
       camera.aspect = height === 0 ? 1 : width / height
       camera.updateProjectionMatrix()
+      pictureStale = true
     },
 
     draw: () => {
       if (!held) return
 
-      // 🛑 Settled BEFORE the flag is read: `||` short-circuits, and a frame already owing a
-      // depth pass would have skipped the pruning entirely.
-      const changed = held.flush(camera)
-      // three.js clears `needsUpdate` inside the pass it triggers, so this is written per frame.
-      renderer.shadowMap.needsUpdate = shadowsStale || changed
-      shadowsStale = false
-      // The composition the editor draws through, or the plain pass while its chain is still
-      // being fetched — a few frames without grade, never a scene nobody sees.
-      const composer = chain.current()
-      if (composer && stackDraws(held.world.post)) {
-        composer.draw({
-          surface: 'game',
-          scene: held.scene,
-          camera,
-          stack: held.world.post,
-          target: null,
-          // 🛑 DEVICE pixels, as `ViewportDrawing` hands them: `sized` is CSS, and a chain built
-          // from it would compose the frame at a fraction of the canvas and blur it.
-          width: Math.round(sized.width * renderer.getPixelRatio()),
-          height: Math.round(sized.height * renderer.getPixelRatio()),
-          quality: policy.quality,
-          toneMapped: held.world.toneMapping !== 'none',
-          time: played,
-        })
-      } else renderer.render(held.scene, camera)
-      // A second pass rather than a DOM layer: the port owns a canvas and nothing above it.
-      if (veil.material.opacity > 0) {
-        renderer.autoClear = false
-        renderer.render(veil.scene, veil.camera)
-        renderer.autoClear = true
+      let settled = held.flush(camera, cast)
+      if (settled.reframed && policy.shadows) {
+        cast = tuneSceneShadows(held, policy)
+        if (held.flush(camera, cast).zoned) settled = { ...settled, zoned: true }
       }
+      if (!frameOwesDraw(settled, shadowsStale, pictureStale)) return
+      renderer.shadowMap.needsUpdate = shadowsStale || settled.zoned || settled.reframed
+      pictureStale = false
+      shadowsStale = false
+      paintHeld(renderer, held, camera, chain.current(), policy, sized, played, veil)
     },
 
     dispose: () => {
@@ -277,18 +278,47 @@ async function composerFor(renderer: WebGLRenderer, assets: AssetPort): Promise<
   })
 }
 
-/**
- * Run ONCE as a scene lands, where the editor runs it on every move. 🛑 Its blind spot: an entity
- * walking past what the scene occupied at load walks out of the frustum and stops throwing.
- */
-function tuneSceneShadows(built: GameScene, policy: RenderPolicy): void {
+function paintHeld(
+  renderer: WebGLRenderer,
+  held: GameScene,
+  camera: PerspectiveCamera,
+  composer: PostComposer | null,
+  policy: RenderPolicy,
+  sized: { width: number; height: number },
+  played: number,
+  veil: ReturnType<typeof veilPass>,
+): void {
+  if (composer && stackDraws(held.world.post)) {
+    composer.draw({
+      surface: 'game',
+      scene: held.scene,
+      camera,
+      stack: held.world.post,
+      target: null,
+      width: Math.round(sized.width * renderer.getPixelRatio()),
+      height: Math.round(sized.height * renderer.getPixelRatio()),
+      quality: policy.quality,
+      toneMapped: held.world.toneMapping !== 'none',
+      time: played,
+    })
+  } else renderer.render(held.scene, camera)
+  if (veil.material.opacity > 0) {
+    renderer.autoClear = false
+    renderer.render(veil.scene, veil.camera)
+    renderer.autoClear = true
+  }
+}
+
+/** Sizes maps and fits frustums, and answers how they throw — what `follow` needs to keep casters. */
+function tuneSceneShadows(built: GameScene, policy: RenderPolicy): ShadowThrow | null {
   const lights: Light[] = []
   built.scene.traverse(object => {
     if (object instanceof Light) lights.push(object)
   })
-  tuneShadowMaps(lights, shadowMapSizeFor(policy.quality, policy.shadowMapSize), () =>
+  const tuned = tuneShadowMaps(lights, shadowMapSizeFor(policy.quality, policy.shadowMapSize), () =>
     gameShadowReach(built.shadowBounds),
   )
+  return tuned ? throwsOf(tuned.framed, built.shadowBounds, tuned.reach) : null
 }
 
 /** A black sheet across the frame, drawn over the scene at the veil's own opacity. */
