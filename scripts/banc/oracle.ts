@@ -86,9 +86,14 @@ export const nodes = (run: Run): readonly SceneNode[] =>
  * The node called exactly that, before one whose name merely CONTAINS it: « Sphere » answered
  * `HemisphereLight` first, and 6.7 could not pass whatever the model did (2026-09-06).
  */
-export const nodeNamed = (run: Run, name: string): SceneNode | undefined =>
-  nodes(run).find(one => foldForSearch(one.name) === foldForSearch(name)) ??
-  nodes(run).find(one => answersTo(one.name, name))
+export function nodeNamed(run: Run, name: string): SceneNode | undefined {
+  const wanted = foldForSearch(name)
+  const all = nodes(run)
+  return (
+    all.find(one => foldForSearch(one.name) === wanted) ??
+    all.find(one => answersTo(one.name, name))
+  )
+}
 
 /**
  * What a node was ADDED as — the word `node.add` takes, which the state spells across two

@@ -18,7 +18,13 @@ import type {
   VisualContext,
   WorkspaceContext,
 } from './context'
-import { CONTEXT_BUDGETS, emptyBudgetReport, withinBudget } from './contextBudget'
+import {
+  CONTEXT_BUDGETS,
+  emptyBudgetReport,
+  markContentTruncated,
+  textWithin,
+  withinBudget,
+} from './contextBudget'
 import { compactContextValue, serializedContextLength } from './contextCompaction'
 import { assetIdsFromJobResult } from './jobResult'
 import { previousResults } from './contextResults'
@@ -74,14 +80,6 @@ function selected<T>(
     truncated: bounded.report.truncated || contentTruncated,
   }
   return bounded.values
-}
-
-function textWithin(text: string, maximum: number): string {
-  return text.length <= maximum ? text : `${text.slice(0, maximum - 1)}…`
-}
-
-function markContentTruncated(report: ContextBudgetReport, source: ContextSource): void {
-  report[source] = { ...report[source], truncated: true, contentTruncated: true }
 }
 
 function retrievalQuery(input: AssistantContextRequest): string {

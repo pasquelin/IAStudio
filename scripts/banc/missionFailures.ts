@@ -1,5 +1,6 @@
 import type { ActionName } from '@shared/domain/assistant'
 import type { MissionState } from '@shared/domain/mission'
+import { callKey } from '@main/mission/runtimeGuards'
 import type { Called } from './run'
 
 /**
@@ -26,7 +27,6 @@ export type MissionFailureEvidence = {
 }
 
 /** One call as the runtime repeats it: the same action on the same arguments. */
-export const callKey = (call: Called): string => `${call.action}:${JSON.stringify(call.input)}`
 
 export function missionFailureClassOf(evidence: MissionFailureEvidence): MissionFailureClass {
   if (evidence.missionStates.includes('failed')) return 'runtime-failed'

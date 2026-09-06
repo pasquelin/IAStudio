@@ -69,6 +69,14 @@ export const blockScene = sceneWith({ kind: 'box', name: 'Bloc' })
 /** A scene holding the cube every section from 6 onwards talks about. */
 export const cubeScene = sceneWith(CUBE)
 
+/** The cube scene with three.js settings written over it — what a scenario lowers before asking. */
+export const cubeSceneWith =
+  (three: Record<string, unknown>) =>
+  async (studio: Studio): Promise<void> => {
+    await cubeScene(studio)
+    await studio.run('settings.write', { settings: { three } })
+  }
+
 export const withSphere = sceneWith(CUBE, { kind: 'sphere', name: 'Sphere Droite' })
 
 /** A wall with a cube standing inside it — what a window is cut out of. */

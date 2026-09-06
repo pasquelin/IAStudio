@@ -11,7 +11,8 @@ import { createMissionMetrics, type MissionRuntimeMetrics } from '@main/mission/
 import type { Run, Scenario } from './run'
 import { SCENARIOS } from './scenarios'
 import { playMission, type MissionRun } from './playMission'
-import { callKey, missionFailureClassOf, type MissionFailureClass } from './missionFailures'
+import { callKey } from '@main/mission/runtimeGuards'
+import { missionFailureClassOf, type MissionFailureClass } from './missionFailures'
 import {
   expectedMissionActions,
   missionFamilyCoverage,

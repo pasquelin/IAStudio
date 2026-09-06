@@ -1,16 +1,8 @@
 import { expect, it, vi } from 'vitest'
 import type { ActionOutcome, AssistantCall } from '@shared/domain/assistant'
-import { createStudioEventBus } from './eventBus'
-import type { MissionJournal } from './journal'
-import { createMissionManager } from './manager'
-import { createMissionRuntime } from './runtime'
-import { createMissionStore } from './store'
-import { missionTestBrain, missionTestClock, missionTestContext } from './runtimeTestSupport'
+import { missionTestBrain, missionTestClock, missionTestRuntime } from './runtimeTestSupport'
 
 it('grounds an optional asset reference after project asset discovery', async () => {
-  const clock = missionTestClock()
-  const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
-  const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), clock)
   const search: AssistantCall = {
     action: 'assets.searchProjectCatalogue',
     input: { type: 'video' },
@@ -27,15 +19,7 @@ it('grounds an optional asset reference after project asset discovery', async ()
     ok: true,
     data: call.action === 'assets.searchProjectCatalogue' ? [{ id: 'video-1' }] : undefined,
   }))
-  const runtime = createMissionRuntime({
-    manager,
-    context: { build: async ({ mission }) => missionTestContext(mission) },
-    brain,
-    actions: { run, settle: vi.fn() },
-    jobs: { list: () => [] },
-    revisions: { read: async () => ({ current: [], unavailable: [] }) },
-    clock,
-  })
+  const { runtime } = missionTestRuntime(brain, { actions: { run, settle: vi.fn() } })
 
   const mission = await runtime.create('Add the first project video', {})
 
@@ -44,9 +28,6 @@ it('grounds an optional asset reference after project asset discovery', async ()
 })
 
 it('grounds an asset reference in the result of a completed generation job', async () => {
-  const clock = missionTestClock()
-  const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
-  const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), clock)
   const prepare: AssistantCall = {
     action: 'generator.prepare',
     input: { family: 'video', modelId: 'model-video', parameters: { prompt: 'boat' } },
@@ -65,10 +46,8 @@ it('grounds an asset reference in the result of a completed generation job', asy
     ok: true,
     data: call.action === 'generator.submit' ? { jobId: 'job-1' } : undefined,
   }))
-  const runtime = createMissionRuntime({
-    manager,
-    context: { build: async ({ mission }) => missionTestContext(mission) },
-    brain,
+  const clock = missionTestClock()
+  const { runtime } = missionTestRuntime(brain, {
     actions: { run, settle: vi.fn() },
     jobs: {
       list: () => [
@@ -84,7 +63,6 @@ it('grounds an asset reference in the result of a completed generation job', asy
         },
       ],
     },
-    revisions: { read: async () => ({ current: [], unavailable: [] }) },
     clock,
   })
 
@@ -94,9 +72,6 @@ it('grounds an asset reference in the result of a completed generation job', asy
 })
 
 it('holds back a call that aims a shot the same answer creates, until its id is known', async () => {
-  const time = missionTestClock()
-  const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
-  const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
   const add: AssistantCall = { action: 'camera.addShot', input: { nodeId: 'camera' } }
   const guessed: AssistantCall = {
     action: 'camera.aimShotAt',
@@ -114,15 +89,7 @@ it('holds back a call that aims a shot the same answer creates, until its id is 
   const run = vi.fn(async (call: AssistantCall): Promise<ActionOutcome> =>
     call.action === 'camera.addShot' ? { ok: true, data: { shotId: 'shot-1' } } : { ok: true },
   )
-  const runtime = createMissionRuntime({
-    manager,
-    context: { build: async ({ mission }) => missionTestContext(mission) },
-    brain,
-    actions: { run, settle: vi.fn() },
-    jobs: { list: () => [] },
-    revisions: { read: async () => ({ current: [], unavailable: [] }) },
-    clock: time,
-  })
+  const { runtime } = missionTestRuntime(brain, { actions: { run, settle: vi.fn() } })
 
   const mission = await runtime.create('Aim the camera at the cube', {})
 
@@ -131,9 +98,6 @@ it('holds back a call that aims a shot the same answer creates, until its id is 
 })
 
 it('aims a shot the decor made without asking the mission to open one', async () => {
-  const time = missionTestClock()
-  const journal: MissionJournal = { read: async () => [], append: vi.fn(), flush: vi.fn() }
-  const manager = createMissionManager(createMissionStore(journal), createStudioEventBus(), time)
   const aimed: AssistantCall = {
     action: 'camera.aimShotAt',
     input: { shotId: 'shot-from-the-decor', targetId: 'cube' },
@@ -143,15 +107,7 @@ it('aims a shot the decor made without asking the mission to open one', async ()
     { say: 'Done.', calls: [], cost: 0 },
   ])
   const run = vi.fn(async (_call: AssistantCall): Promise<ActionOutcome> => ({ ok: true }))
-  const runtime = createMissionRuntime({
-    manager,
-    context: { build: async ({ mission }) => missionTestContext(mission) },
-    brain,
-    actions: { run, settle: vi.fn() },
-    jobs: { list: () => [] },
-    revisions: { read: async () => ({ current: [], unavailable: [] }) },
-    clock: time,
-  })
+  const { runtime } = missionTestRuntime(brain, { actions: { run, settle: vi.fn() } })
 
   const mission = await runtime.create('Aim the camera at the cube', {})
 

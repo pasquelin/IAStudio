@@ -191,23 +191,38 @@ function missingResourceOutcome(missing: readonly ActionResource[]): MissionStep
 }
 
 /**
- * The refusals nobody plans around: a person said no, or nobody was there to ask. Every other
- * one goes back to the model with its detail — `failed` on an invented id killed 2.5 outright,
- * where the legacy chain would have let the model find the real one (2026-09-06).
+ * Final when a person said no or nobody was there to ask; every other refusal goes back to the
+ * model with its detail — `failed` on an invented id killed 2.5 outright (2026-09-06).
  */
-const FINAL_REFUSALS: ReadonlySet<ActionRefusal> = new Set([
-  'declined',
-  'noConfirmer',
-  'timedOut',
-  'noWindow',
-  'noBridge',
-])
+const REFUSAL_FATE: Record<ActionRefusal, 'final' | 'repairable'> = {
+  declined: 'final',
+  noConfirmer: 'final',
+  timedOut: 'final',
+  noWindow: 'final',
+  noBridge: 'final',
+  unknownCommand: 'repairable',
+  wrongSurface: 'repairable',
+  generatorClosed: 'repairable',
+  nothingPrepared: 'repairable',
+  notSubmitted: 'repairable',
+  badInput: 'repairable',
+  noProject: 'repairable',
+  noReference: 'repairable',
+  ambiguousLanding: 'repairable',
+  formChanged: 'repairable',
+  notFound: 'repairable',
+  notAllowed: 'repairable',
+  nativeDialog: 'repairable',
+  notRenderable: 'repairable',
+  needsConsent: 'repairable',
+  failed: 'repairable',
+}
 
 function refusedActionOutcome(
   step: Extract<Mission['plan']['steps'][number], { kind: 'action' }>,
   outcome: Extract<ActionOutcome, { ok: false }>,
 ): MissionStepOutcome {
-  return FINAL_REFUSALS.has(outcome.refusal)
+  return REFUSAL_FATE[outcome.refusal] === 'final'
     ? { kind: 'failed', error: `action ${step.call.action}: ${outcome.refusal}` }
     : {
         kind: 'planned',

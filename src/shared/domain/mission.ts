@@ -434,6 +434,24 @@ export function missionCanComplete(mission: Mission): boolean {
   )
 }
 
+/**
+ * The completed steps before `stepId`, grouped by round — what one answer of the model planned,
+ * closed by the reason or verify step that followed. Newest first; the last round is still open.
+ */
+export function completedRoundsBefore(
+  mission: Mission,
+  stepId: MissionStepId,
+): readonly (readonly MissionStep[])[] {
+  const rounds: MissionStep[][] = [[]]
+  for (const step of mission.plan.steps) {
+    if (step.id === stepId) break
+    if (step.state !== 'completed') continue
+    if (step.kind === 'reason' || step.kind === 'verify') rounds.push([])
+    else rounds.at(-1)?.push(step)
+  }
+  return rounds.reverse()
+}
+
 export function isMissionFinished(state: MissionState): boolean {
   return state === 'completed' || state === 'failed' || state === 'cancelled'
 }

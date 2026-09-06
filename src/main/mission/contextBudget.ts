@@ -4,6 +4,7 @@ import type {
   ContextSourceBudget,
   ContextSourceReport,
 } from './context'
+import { serializedContextLength } from './contextCompaction'
 
 export const CONTEXT_BUDGETS: Record<ContextSource, ContextSourceBudget> = {
   mission: { maxItems: 1, maxCharacters: 1_200 },
@@ -20,7 +21,12 @@ export const CONTEXT_BUDGETS: Record<ContextSource, ContextSourceBudget> = {
   visual: { maxItems: 2, maxCharacters: 0, maxBytes: 8_000_000 },
 }
 
-const charactersOf = (value: unknown): number => JSON.stringify(value)?.length ?? 0
+export const textWithin = (text: string, maximum: number): string =>
+  text.length <= maximum ? text : `${text.slice(0, maximum - 1)}…`
+
+export function markContentTruncated(report: ContextBudgetReport, source: ContextSource): void {
+  report[source] = { ...report[source], truncated: true, contentTruncated: true }
+}
 
 export function withinBudget<T>(
   values: readonly T[],
@@ -31,7 +37,7 @@ export function withinBudget<T>(
   let characters = 0
   for (const value of values) {
     if (selected.length >= budget.maxItems) break
-    const cost = charactersOf(measure(value))
+    const cost = serializedContextLength(measure(value))
     if (characters + cost > budget.maxCharacters) continue
     selected.push(value)
     characters += cost

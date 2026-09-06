@@ -3,6 +3,7 @@ import {
   actionReads,
   assistantAction,
   type ActionResource,
+  type AssistantAction,
   type AssistantAnswer,
   type AssistantCall,
 } from '@shared/domain/assistant'
@@ -39,15 +40,11 @@ function dependsOnReturned(
 }
 
 /**
- * 🛑 A READ never ends a mission: asked to « verify » right after `files.search`, the model
- * answered « the duplicate was created » about a duplicate nobody made — seven scenarios of the
- * first thirty-five (2026-09-06). What engages nothing is followed by planning, never by a check.
- * A round that mutated is verified, even when a read closed it or another action consumes its
- * result: planned on again with the bare goal, the model redid it — the tool mark put back on the
- * cube it had just taken off (6.15), the sphere duplicated twice (6.8).
+ * 🛑 A read is followed by planning, never by a check — asked to verify after `files.search`, the
+ * model invented a duplicate (seven of the first thirty-five, 2026-09-06). A round that mutated is
+ * verified even when a read closed it: planned on again bare, the model redid it (6.15, 6.8).
  */
-function nextStepAfter(calls: readonly AssistantCall[]): PlannedStep {
-  const descriptors = calls.map(call => assistantAction(call.action))
+function nextStepAfter(descriptors: readonly (AssistantAction | null)[]): PlannedStep {
   if (descriptors.every(descriptor => descriptor !== null && actionReads(descriptor)))
     return reasoningStep()
   const descriptor = descriptors.at(-1)
@@ -74,8 +71,10 @@ export function plannedFrom(
   }
   const returned = new Set<ActionResource>()
   const actions: PlannedStep[] = []
+  const descriptors: (AssistantAction | null)[] = []
   for (const call of answer.calls) {
     const descriptor = assistantAction(call.action)
+    descriptors.push(descriptor)
     // `uses` too: a shot the same answer opens is not known yet, one the decor made is.
     const wanted = [...(descriptor?.inputs ?? []), ...(descriptor?.uses ?? [])]
     if (wanted.some(resource => dependsOnReturned(resource, returned))) {
@@ -85,7 +84,7 @@ export function plannedFrom(
     for (const resource of descriptor?.returns ?? []) returned.add(resource)
   }
   if (actions.length === 0) return []
-  const next = nextStepAfter(answer.calls)
+  const next = nextStepAfter(descriptors)
   return verificationPlanned && next.draft.kind === 'verify' ? actions : [...actions, next]
 }
 

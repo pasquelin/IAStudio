@@ -5,6 +5,7 @@ import * as read from './oracle'
 import {
   cameraScene,
   cubeScene,
+  cubeSceneWith,
   litScene,
   named,
   opened,
@@ -383,10 +384,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ['Active la grille de la scène.'],
     // Off first: the studio draws it by default, and a model that read the settings answered
     // « already on » with no call — which was true (2026-09-06).
-    setup: async studio => {
-      await cubeScene(studio)
-      await studio.run('settings.write', { settings: { three: { showGrid: false } } })
-    },
+    setup: cubeSceneWith({ showGrid: false }),
     // No action of its own: the grid is a three setting, so `settings.write` is the road.
     passed: run => read.wrote(run, 'three', 'grid'),
   },
@@ -416,10 +414,7 @@ export const SCENE_SCENARIOS: readonly Scenario[] = [
     said: ['Mets la qualité des ombres au niveau le plus élevé disponible.'],
     // Lowered first: `soft` is both the default and the top of the scale, so the request meant
     // nothing to a model that had read the settings (2026-09-06).
-    setup: async studio => {
-      await cubeScene(studio)
-      await studio.run('settings.write', { settings: { three: { shadowQuality: 'hard' } } })
-    },
+    setup: cubeSceneWith({ shadowQuality: 'hard' }),
     passed: run => read.wrote(run, 'three', 'shadow'),
   },
   {

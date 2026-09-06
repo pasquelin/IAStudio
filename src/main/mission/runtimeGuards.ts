@@ -4,7 +4,8 @@ import {
   type AssistantAnswer,
   type AssistantCall,
 } from '@shared/domain/assistant'
-import type { Mission, MissionStep } from '@shared/domain/mission'
+import { completedRoundsBefore, type Mission, type MissionStep } from '@shared/domain/mission'
+import { isRecord } from '@shared/guards'
 import type { MissionStepOutcome } from './scheduler'
 
 // Failed rather than planned as zero steps, which closed the mission « completed » with nothing done.
@@ -18,31 +19,10 @@ export const repeatingOutcome: MissionStepOutcome = {
   error: 'the model repeats the reads or refused calls of its previous round',
 }
 
-const callKey = (call: AssistantCall): string => `${call.action}:${JSON.stringify(call.input)}`
+export const callKey = (call: AssistantCall): string =>
+  `${call.action}:${JSON.stringify(call.input)}`
 
-const refused = (result: unknown): boolean =>
-  typeof result === 'object' && result !== null && 'ok' in result && result.ok === false
-
-/** The rounds before this step, newest first — a round is what one answer of the model planned. */
-function completedRounds(mission: Mission, step: MissionStep): readonly (readonly MissionStep[])[] {
-  const before = mission.plan.steps
-    .slice(
-      0,
-      mission.plan.steps.findIndex(one => one.id === step.id),
-    )
-    .filter(one => one.state === 'completed')
-  const rounds: MissionStep[][] = []
-  let round: MissionStep[] = []
-  for (const one of before) {
-    if (one.kind === 'action') round.push(one)
-    else {
-      rounds.push(round)
-      round = []
-    }
-  }
-  rounds.push(round)
-  return rounds.reverse()
-}
+const isRefusedResult = (result: unknown): boolean => isRecord(result) && result.ok === false
 
 const readsBy = (name: string): boolean => {
   const action = assistantAction(name)
@@ -52,7 +32,7 @@ const readsBy = (name: string): boolean => {
 const idleKeys = (round: readonly MissionStep[]): ReadonlySet<string> =>
   new Set(
     round.flatMap(one =>
-      one.kind === 'action' && (readsBy(one.call.action) || refused(one.result))
+      one.kind === 'action' && (readsBy(one.call.action) || isRefusedResult(one.result))
         ? [callKey(one.call)]
         : [],
     ),
@@ -70,7 +50,7 @@ export function repeatsLastRound(
   answer: AssistantAnswer,
 ): boolean {
   if (answer.calls.length === 0) return false
-  const [last, before] = completedRounds(mission, step)
+  const [last, before] = completedRoundsBefore(mission, step.id)
   if (!last || !before) return false
   const keys = answer.calls.map(callKey)
   const repeats = (round: readonly MissionStep[]): boolean => {
