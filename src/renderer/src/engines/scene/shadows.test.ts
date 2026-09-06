@@ -9,7 +9,7 @@ import {
   PointLight,
   AmbientLight,
 } from 'three'
-import { Box3, Vector3 } from 'three'
+import { Box3, Frustum, Matrix4, Vector3 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { SHADOW_QUALITIES } from '@shared/domain/scene'
 import {
@@ -18,10 +18,11 @@ import {
   applyShadowQuality,
   applyShadows,
   fitShadowCamera,
+  holdShadowMap,
   limitShadowUpdates,
+  oweShadowPass,
   ownedByAnotherNode,
   resizeShadowMap,
-  growShadowBounds,
   shadowReachOf,
   throwsOf,
   tuneShadowMaps,
@@ -186,13 +187,26 @@ describe('resizeShadowMap', () => {
 })
 
 /**
- * A directional shadow frustum is a ten-unit box by default. On the twenty-metre grid the studio
- * lays a scene out against, half of it would throw nothing at all — with no hint as to why.
+ * A directional shadow frustum is a ten-unit box by default, centred on the light's target. A
+ * set laid down twenty metres off that target threw nothing at all — with no hint as to why.
  */
 describe('fitShadowCamera', () => {
-  it('sizes the box against the grid the scene is built on', () => {
+  const sunOver = (x: number, y: number, z: number): DirectionalLight => {
     const light = new DirectionalLight()
-    fitShadowCamera(light, 20)
+    light.position.set(x, y, z)
+    return light
+  }
+  const frustumOf = (light: DirectionalLight): Frustum => {
+    light.shadow.updateMatrices(light)
+    const camera = light.shadow.camera
+    return new Frustum().setFromProjectionMatrix(
+      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
+    )
+  }
+
+  it('frames an empty scene on the floor, around the target', () => {
+    const light = sunOver(0, 10, 5)
+    fitShadowCamera(light, { bounds: new Box3(), floor: 20 })
 
     expect(light.shadow.camera.right).toBe(10)
     expect(light.shadow.camera.left).toBe(-10)
@@ -200,31 +214,84 @@ describe('fitShadowCamera', () => {
     expect(light.shadow.camera.bottom).toBe(-10)
   })
 
+  it('frames a set where it STANDS, seen from the light, not around the target', () => {
+    const light = sunOver(0, 10, 0)
+    const crate = new Box3(new Vector3(24.5, 0, 24.5), new Vector3(25.5, 1, 25.5))
+
+    fitShadowCamera(light, { bounds: crate, floor: 20 })
+
+    expect(frustumOf(light).intersectsBox(crate)).toBe(true)
+  })
+
+  it('keeps the frustum at least the floor wide around a small set', () => {
+    const light = sunOver(0, 10, 5)
+    fitShadowCamera(light, { bounds: new Box3(new Vector3(), new Vector3(1, 1, 1)), floor: 20 })
+
+    expect(light.shadow.camera.right - light.shadow.camera.left).toBeCloseTo(20)
+  })
+
+  it('runs the depth past the farthest caster, so the ground its shadow lands on is inside', () => {
+    const light = sunOver(0, 100, 0)
+    const set = new Box3(new Vector3(-5, 0, -5), new Vector3(5, 10, 5))
+
+    fitShadowCamera(light, { bounds: set, floor: 20 })
+
+    expect(light.shadow.camera.far).toBeGreaterThan(100)
+    expect(light.shadow.camera.near).toBeLessThan(90)
+  })
+
+  it('never shortens the depth under what three.js builds a sun with', () => {
+    const light = sunOver(0, 10, 0)
+    fitShadowCamera(light, { bounds: new Box3(new Vector3(), new Vector3(1, 1, 1)), floor: 20 })
+
+    expect(light.shadow.camera.far).toBeGreaterThanOrEqual(500)
+  })
+
+  /** A frustum of width zero projects to Infinity: the sun then rasterises NOTHING, silently. */
+  it('never writes a frustum of width zero, whatever the floor', () => {
+    const light = sunOver(0, 10, 0)
+    fitShadowCamera(light, { bounds: new Box3(), floor: 0 })
+
+    expect(light.shadow.camera.projectionMatrix.elements.every(Number.isFinite)).toBe(true)
+  })
+
+  it('stands a sun straight overhead, where the view has no side to lean on', () => {
+    const light = sunOver(0, 10, 0)
+    fitShadowCamera(light, {
+      bounds: new Box3(new Vector3(-5, 0, -5), new Vector3(5, 1, 5)),
+      floor: 0,
+    })
+
+    expect(light.shadow.camera.projectionMatrix.elements.every(Number.isFinite)).toBe(true)
+    expect(light.shadow.camera.right - light.shadow.camera.left).toBeCloseTo(10, 1)
+  })
+
   // three.js never reads a camera's own bounds back: the matrix has to be asked for.
   it('recomputes the projection, or the new size shows on nothing', () => {
-    const light = new DirectionalLight()
+    const light = sunOver(0, 10, 5)
     const update = vi.spyOn(light.shadow.camera, 'updateProjectionMatrix')
 
-    fitShadowCamera(light, 40)
+    fitShadowCamera(light, { bounds: new Box3(), floor: 40 })
 
     expect(update).toHaveBeenCalled()
   })
 
-  it('does nothing when the extent has not moved', () => {
-    const light = new DirectionalLight()
-    fitShadowCamera(light, 20)
+  it('does nothing when the frame has not moved', () => {
+    const light = sunOver(0, 10, 5)
+    const frame = { bounds: new Box3(new Vector3(), new Vector3(4, 1, 4)), floor: 20 }
+    fitShadowCamera(light, frame)
     const update = vi.spyOn(light.shadow.camera, 'updateProjectionMatrix')
 
-    fitShadowCamera(light, 20)
+    fitShadowCamera(light, frame)
 
     expect(update).not.toHaveBeenCalled()
   })
 
   // A spot and a point shadow through a perspective camera, which has no box to size.
   it('leaves alone a shadow that is not cast through a box', () => {
-    const spot = new PointLight()
-    expect(() => fitShadowCamera(spot, 20)).not.toThrow()
-    expect(() => fitShadowCamera(new AmbientLight(), 20)).not.toThrow()
+    const frame = { bounds: new Box3(), floor: 20 }
+    expect(() => fitShadowCamera(new PointLight(), frame)).not.toThrow()
+    expect(() => fitShadowCamera(new AmbientLight(), frame)).not.toThrow()
   })
 })
 
@@ -332,22 +399,39 @@ describe('shadowReachOf', () => {
   })
 })
 
-describe('growShadowBounds', () => {
-  it('answers false when the box already holds what moved', () => {
-    const bounds = new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1))
-    const mesh = new Mesh(new BoxGeometry(1, 1, 1))
+/** The pass both engines run: the editor on every placement, an exported game as a scene lands. */
+describe('tuneShadowMaps', () => {
+  it('sizes the map of every light and frames the ones that frame a box', () => {
+    const sun = new DirectionalLight()
+    sun.position.set(0, 10, 5)
+    const bulb = new PointLight()
+    const bounds = new Box3(new Vector3(-20, 0, -20), new Vector3(20, 3, 20))
 
-    expect(growShadowBounds(bounds, [mesh])).toBe(false)
+    const tuned = tuneShadowMaps([sun, bulb], 1024, () => ({ bounds, floor: 0 }))
+
+    expect(sun.shadow.mapSize.width).toBe(1024)
+    expect(bulb.shadow.mapSize.width).toBe(1024)
+    expect(tuned?.framed).toEqual([sun])
+    expect(tuned?.reach).toBeCloseTo(40 * Math.SQRT2)
+    expect(sun.shadow.camera.right - sun.shadow.camera.left).toBeCloseTo(40, 1)
   })
 
-  it('grows when a caster walks outside the box the maps were cut to', () => {
-    const bounds = new Box3(new Vector3(-1, -1, -1), new Vector3(1, 1, 1))
-    const mesh = new Mesh(new BoxGeometry(1, 1, 1))
-    mesh.position.set(50, 0, 0)
-    mesh.updateMatrixWorld()
+  it('never measures a scene no light would read — a pass for nothing', () => {
+    const measure = vi.fn(() => ({ bounds: new Box3(), floor: 40 }))
 
-    expect(growShadowBounds(bounds, [mesh])).toBe(true)
-    expect(bounds.max.x).toBeGreaterThan(1)
+    expect(tuneShadowMaps([new PointLight(), new AmbientLight()], 512, measure)).toBeNull()
+    expect(measure).not.toHaveBeenCalled()
+  })
+})
+
+describe('holding a map off the per-frame redraw', () => {
+  it('draws it on the pass it is owed, and on no other', () => {
+    const sun = new DirectionalLight()
+    holdShadowMap(sun)
+    expect(sun.shadow.autoUpdate).toBe(false)
+
+    oweShadowPass([sun, new AmbientLight()])
+    expect(sun.shadow.needsUpdate).toBe(true)
   })
 })
 
@@ -369,24 +453,3 @@ describe('throwsOf', () => {
 })
 
 /** The pass both engines run: the editor on every placement, an exported game as a scene lands. */
-describe('tuneShadowMaps', () => {
-  it('sizes the map of every light and frames the ones that frame a box', () => {
-    const sun = new DirectionalLight()
-    const bulb = new PointLight()
-
-    const tuned = tuneShadowMaps([sun, bulb], 1024, () => 40)
-
-    expect(sun.shadow.mapSize.width).toBe(1024)
-    expect(bulb.shadow.mapSize.width).toBe(1024)
-    expect(tuned?.framed).toEqual([sun])
-    expect(tuned?.reach).toBe(40)
-    expect(sun.shadow.camera.right).toBe(20)
-  })
-
-  it('never measures a scene no light would read — a pass for nothing', () => {
-    const measure = vi.fn(() => 40)
-
-    expect(tuneShadowMaps([new PointLight(), new AmbientLight()], 512, measure)).toBeNull()
-    expect(measure).not.toHaveBeenCalled()
-  })
-})

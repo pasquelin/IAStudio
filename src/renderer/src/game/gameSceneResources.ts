@@ -15,6 +15,10 @@ export type SceneResources = {
   animations: SceneAnimations
   /** What a whole frame of `place` left to settle — the instanced bounds, once, not per call. */
   staleInstances: Set<InstancedMesh>
+  /** The objects `place` moved since the last frame settled — what the shadow bounds grow by. */
+  movedObjects: Set<Object3D>
+  /** A picture landed on a material since the last frame: what a frame drawing on change reads. */
+  textureArrived: boolean
 }
 
 export function createSceneResources(timeline: AnimationTimeline): SceneResources {
@@ -28,5 +32,7 @@ export function createSceneResources(timeline: AnimationTimeline): SceneResource
     ownedModelGeometries: new Set(),
     animations,
     staleInstances: new Set(),
+    movedObjects: new Set(),
+    textureArrived: false,
   }
 }

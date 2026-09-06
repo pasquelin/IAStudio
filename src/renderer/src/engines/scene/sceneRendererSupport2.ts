@@ -1,5 +1,4 @@
 import {
-  Box3,
   Euler,
   type Material,
   Matrix3,
@@ -173,13 +172,6 @@ export const DEFAULT_VIEW_DISTANCE = 8
  * enough that no depth buffer confuses the two.
  */
 export const GRID_SINKAGE = 0.02
-
-/** An empty box for an empty set, which is how a caller tells "nothing yet" from "nothing there". */
-export function boundsOf(objects: Iterable<Object3D>): Box3 {
-  const bounds = new Box3()
-  for (const object of objects) bounds.expandByObject(object)
-  return bounds
-}
 
 /**
  * How far a side view stands off its target. Distance changes nothing an orthographic camera

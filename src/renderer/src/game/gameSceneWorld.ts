@@ -11,7 +11,7 @@ export type WorldDrape = {
   hideGround: boolean
   /**
    * Prunes the scatter to what the camera reaches — a game draws its own way and must ask.
-   * Answers whether a cell went out or came back, which is a shadow map to draw again.
+   * Answers whether a cell went out or came back, which is a picture to draw again.
    */
   updateVisibility: (camera: Camera) => boolean
   dispose: () => void
@@ -35,7 +35,8 @@ export async function drapeWorld(
   if (scatter) await scatter.sync(world, maps)
   return {
     hideGround: terrains.length > 0 && (maps?.size ?? 0) > 0,
-    // The `changed` it answers keeps the STUDIO's loop alive; a game spends it on its shadows.
+    // The `changed` it answers keeps the STUDIO's loop alive; a game draws the frame on it. Never a
+    // shadow pass: a cell casts nothing, and one toggles at SCATTER_DISTANCE, past any frustum.
     updateVisibility: camera => scatter?.updateVisibility(camera) ?? false,
     dispose: () => {
       scatter?.dispose()

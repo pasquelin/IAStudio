@@ -177,8 +177,6 @@ export type Settings = {
    */
   three: RenderPolicy & {
     showGrid: boolean
-    /** Extent of the ground grid, in metres. */
-    gridSize: number
     /**
      * Which application's viewport this one drives like. A PARTIAL layer: it moves the gestures
      * and the keys its own application binds differently, and everything else keeps the studio's
@@ -381,7 +379,6 @@ export const DEFAULT_SETTINGS: Settings = {
     // an export written from a copy would open on another picture than the editor it left.
     ...DEFAULT_RENDER_POLICY,
     showGrid: true,
-    gridSize: 20,
     navigationPreset: 'studio',
     navigationCustomOrbit: 'leftAlt',
     navigationCustomPan: 'middle',

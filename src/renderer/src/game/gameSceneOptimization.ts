@@ -167,7 +167,12 @@ export function applyGameTransform(object: Object3D, transform: Transform): void
   const lods = OWN_LODS.get(object)
   if (!lods || lods.length === 0) return
 
-  const scale = Math.max(...Object.values(transform.scale).map(Math.abs))
+  // Spelled out: `Object.values(…).map` allocated two arrays per moved entity per frame.
+  const scale = Math.max(
+    Math.abs(transform.scale.x),
+    Math.abs(transform.scale.y),
+    Math.abs(transform.scale.z),
+  )
   if (LOD_SCALE.get(object) === scale) return
 
   LOD_SCALE.set(object, scale)

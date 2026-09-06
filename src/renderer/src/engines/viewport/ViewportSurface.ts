@@ -1,5 +1,7 @@
 import { ACESFilmicToneMapping, Color, NoToneMapping, WebGLRenderer } from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { DEFAULT_RENDER_POLICY } from '@shared/domain/renderPolicy'
+import { applyShadowPolicy } from '../scene/shadows'
 import { token } from '../core/palette'
 import { createGpuTimer, isGpuTimerContext } from './gpuTimer'
 import { ViewportMounting } from './ViewportMounting'
@@ -51,12 +53,14 @@ export abstract class ViewportSurface extends ViewportMounting {
     // pixels it painted and nothing else. `setClearAlpha` alone is ignored without `alpha`.
     if (this.output.alpha) renderer.setClearAlpha(0)
     renderer.toneMapping = this.options.toneMapping ? ACESFilmicToneMapping : NoToneMapping
-    renderer.shadowMap.enabled = this.options.shadows ?? false
-    // Drawn when this engine says so, never per frame: `requestRender` is what says a shadow
-    // could have moved, and a camera frame goes through `requestCameraRender` instead. Stale
-    // from here, so a context rebuilt under a mounted engine draws its maps on the first frame
-    // rather than showing a scene with no shadows until something else moves.
-    renderer.shadowMap.autoUpdate = false
+    // The pass a game applies too; `configure` refines the filter. Drawn when this engine says so,
+    // never per frame: `requestRender` is what says a shadow could have moved, and a camera frame
+    // goes through `requestCameraRender` instead. Stale from here, so a context rebuilt under a
+    // mounted engine draws its maps on the first frame rather than showing none until something moves.
+    applyShadowPolicy(renderer, {
+      ...DEFAULT_RENDER_POLICY,
+      shadows: this.options.shadows ?? false,
+    })
     this.shadowsStale = true
     this.allShadowsStale = true
     // three.js clears the counters at the top of every `render`, and the overlay pass calls

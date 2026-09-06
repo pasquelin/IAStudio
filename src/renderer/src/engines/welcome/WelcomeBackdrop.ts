@@ -1,4 +1,5 @@
 import {
+  Box3,
   ACESFilmicToneMapping,
   BufferAttribute,
   BufferGeometry,
@@ -270,7 +271,8 @@ export class WelcomeBackdrop {
     // Soft rather than stamped: a hard black wedge under a crown reads as a hole in the plate.
     light.shadow.radius = 4
     light.shadow.intensity = 0.55
-    fitShadowCamera(light, 2 * SHADOW_REACH)
+    // Nothing to frame but the reach around the target: the grove stands where the light aims.
+    fitShadowCamera(light, { bounds: new Box3(), floor: 2 * SHADOW_REACH })
     light.shadow.camera.far = 34
     // Along the surface rather than into it: at this grazing angle a plain bias detaches a crown
     // from the shadow it casts, and a normal one leaves the contact where the foot is.

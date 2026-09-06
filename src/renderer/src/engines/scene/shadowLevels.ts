@@ -15,7 +15,7 @@ export type ShadowLevel = 'off' | 'fast' | 'standard' | 'high'
 export const SHADOW_LEVELS: readonly ShadowLevel[] = ['off', 'fast', 'standard', 'high']
 
 /** The four an export carries too — the lens apart, this IS a render policy. */
-export type ShadowPreference = Omit<RenderPolicy, 'fieldOfView'>
+export type ShadowPreference = Omit<RenderPolicy, 'fieldOfView' | 'gridSize'>
 
 /** What a level writes. The quality is the person's own and is deliberately left where it is. */
 type LevelPatch = Omit<ShadowPreference, 'quality'>

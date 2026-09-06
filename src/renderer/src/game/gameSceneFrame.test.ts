@@ -8,54 +8,40 @@ import { EMPTY_SCENE, type SceneNode } from '@/engines/scene/sceneState'
 import { isDrawn, WORTH_INSTANCING } from '@/engines/scene/grouping'
 import { CELL_SIZE } from '@/engines/scene/worldPartition'
 import { buildGameScene } from './gameScene'
-import { frameOwesDraw, type GameFlush } from './gameSceneFrame'
+import { frameOwesDraw, frameOwesShadows, type GameFlush } from './gameSceneFrame'
 
 const NOTHING: AssetPort = { urlOf: () => null }
 const BOX: GeometryDescriptor = { kind: 'box', width: 1, height: 1, depth: 1 }
 const sceneOf = (nodes: readonly SceneNode[]) => ({ ...EMPTY_SCENE, nodes: [...nodes] })
-const still: GameFlush = { zoned: false, reframed: false }
+const still: GameFlush = { zoned: false, reframed: false, shadowed: false, changed: false }
 
 describe('what an exported frame owes', () => {
   it('owes nothing when the picture, the shadows and the zone all stayed put', () => {
-    expect(frameOwesDraw(still, false, false)).toBe(false)
+    expect(frameOwesDraw(still, false)).toBe(false)
+    expect(frameOwesShadows(still)).toBe(false)
   })
 
-  it('owes a colour pass when the camera moved and nothing else did', () => {
-    expect(frameOwesDraw(still, false, true)).toBe(true)
+  it('owes a colour pass when the lens moved and nothing else did', () => {
+    expect(frameOwesDraw(still, true)).toBe(true)
+    expect(frameOwesShadows(still)).toBe(false)
   })
 
-  it('owes a depth pass when a caster moved, even if the camera did not', () => {
-    expect(frameOwesDraw(still, true, false)).toBe(true)
+  it('owes a picture and no map for a texture that landed', () => {
+    expect(frameOwesDraw({ ...still, changed: true }, false)).toBe(true)
+    expect(frameOwesShadows({ ...still, changed: true })).toBe(false)
+  })
+
+  it('owes a depth pass when a caster moved, even if the lens did not', () => {
+    expect(frameOwesShadows({ ...still, shadowed: true })).toBe(true)
   })
 
   it('owes both when a cell of instances came into view', () => {
-    expect(frameOwesDraw({ zoned: true, reframed: false }, false, false)).toBe(true)
+    expect(frameOwesDraw({ ...still, zoned: true }, false)).toBe(true)
+    expect(frameOwesShadows({ ...still, zoned: true })).toBe(true)
   })
 })
 
 describe('what a game scene settles of a frame', () => {
-  it('answers false when place is asked to stand where the object already stands', async () => {
-    const node = meshNode(BOX, { name: 'Crate' })
-    const built = await buildGameScene(sceneOf([node]), NOTHING)
-    const raised = { ...IDENTITY_TRANSFORM, position: { x: 4, y: 0, z: 0 } }
-
-    expect(built.place(node.id, IDENTITY_TRANSFORM)).toBe(false)
-    expect(built.place(node.id, raised)).toBe(true)
-    expect(built.place(node.id, raised)).toBe(false)
-    built.dispose()
-  })
-
-  it('reframes shadows when a caster walks outside the box the maps were cut to', async () => {
-    const node = meshNode(BOX, { name: 'Crate' })
-    const built = await buildGameScene(sceneOf([node]), NOTHING)
-    const camera = new PerspectiveCamera()
-    built.flush(camera)
-    built.place(node.id, { ...IDENTITY_TRANSFORM, position: { x: 80, y: 0, z: 0 } })
-
-    expect(built.flush(camera).reframed).toBe(true)
-    built.dispose()
-  })
-
   it('drops instanced cells the camera cannot reach, as the editor viewport does', async () => {
     const near = Array.from({ length: WORTH_INSTANCING }, (_unused, index) => ({
       ...meshNode(BOX, { name: `Near ${index}` }),
