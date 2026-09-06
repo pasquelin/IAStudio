@@ -233,3 +233,83 @@ describe('every gamepad control the union names', () => {
     expect(mute).toEqual([])
   })
 })
+
+describe('a rebinding, against a project that has moved on', () => {
+  const stored = () => {
+    let kept: unknown = null
+    return { read: () => kept, write: (maps: readonly InputMap[]) => void (kept = maps) }
+  }
+
+  const bindingOfJump = (controls: ReturnType<typeof createInputControls>) =>
+    controls
+      .maps()
+      .find(map => map.id === 'character')
+      ?.actions.find(action => action.id === 'jump')?.bindings[0]
+
+  const jumping: InputMap = {
+    version: 1,
+    id: 'character',
+    priority: 0,
+    defaultActive: true,
+    actions: [{ id: 'jump', kind: 'button', bindings: [{ device: 'keyboard', code: 'Space' }] }],
+  }
+  const menu: InputMap = { ...jumping, id: 'menu', actions: [] }
+
+  it('comes back when the project has one more map than the day it was stored', () => {
+    const storage = stored()
+    createInputControls([jumping], storage).rebind('character', 'jump', 0, {
+      device: 'keyboard',
+      code: 'KeyJ',
+    })
+
+    expect(bindingOfJump(createInputControls([jumping, menu], storage))).toEqual({
+      device: 'keyboard',
+      code: 'KeyJ',
+    })
+  })
+
+  it('comes back when the map it belongs to has grown an action', () => {
+    const storage = stored()
+    createInputControls([jumping], storage).rebind('character', 'jump', 0, {
+      device: 'keyboard',
+      code: 'KeyJ',
+    })
+    const grown: InputMap = {
+      ...jumping,
+      actions: [
+        ...jumping.actions,
+        { id: 'crouch', kind: 'button', bindings: [{ device: 'keyboard', code: 'KeyC' }] },
+      ],
+    }
+
+    const controls = createInputControls([grown], storage)
+    expect(bindingOfJump(controls)).toEqual({ device: 'keyboard', code: 'KeyJ' })
+    // 🛑 And the action nobody stored keeps ITS default rather than coming back empty.
+    const crouch = controls
+      .maps()
+      .find(map => map.id === 'character')
+      ?.actions.find(action => action.id === 'crouch')
+    expect(crouch?.bindings).toEqual([{ device: 'keyboard', code: 'KeyC' }])
+  })
+
+  it('keeps the default when everything stored for that action is rubbish', () => {
+    const storage = {
+      read: () => [{ id: 'character', actions: [{ id: 'jump', bindings: [{ device: 'ouija' }] }] }],
+      write: () => {},
+    }
+
+    expect(bindingOfJump(createInputControls([jumping], storage))).toEqual({
+      device: 'keyboard',
+      code: 'Space',
+    })
+  })
+
+  it('honours an action somebody unbound on purpose', () => {
+    const storage = {
+      read: () => [{ id: 'character', actions: [{ id: 'jump', bindings: [] }] }],
+      write: () => {},
+    }
+
+    expect(bindingOfJump(createInputControls([jumping], storage))).toBeUndefined()
+  })
+})

@@ -2,6 +2,7 @@
 
 import type {
   GamepadBinding,
+  InputAction,
   InputActionKind,
   InputBinding,
   GamepadControl,
@@ -139,41 +140,43 @@ function restored(
   }
 }
 
+/**
+ * 🛑 Matched by ID, action by action, never by POSITION. It used to answer null — dropping EVERY
+ * rebinding of EVERY context — as soon as the project held one map or one action more than the
+ * stored copy: a player's remapped hand brake was lost because the author added a `menu` map.
+ * What no longer exists is ignored; what was never stored keeps its default.
+ */
 function restoredMaps(defaults: readonly InputMap[], value: unknown): readonly InputMap[] | null {
-  if (!Array.isArray(value) || value.length !== defaults.length) return null
-  const maps: InputMap[] = []
-  for (let index = 0; index < defaults.length; index += 1) {
-    const restoredMap = restoredMapOf(defaults[index], value[index])
-    if (!restoredMap) return null
-    maps.push(restoredMap)
-  }
-  return maps
+  if (!Array.isArray(value)) return null
+  const stored = byId(value)
+  return defaults.map(map => restoredMapOf(map, stored.get(map.id)))
 }
 
-function restoredMapOf(defaultMap: InputMap | undefined, value: unknown): InputMap | null {
-  if (
-    !defaultMap ||
-    !isRecord(value) ||
-    value.id !== defaultMap.id ||
-    !Array.isArray(value.actions)
-  )
-    return null
-  const restoredActions = value.actions
-  if (restoredActions.length !== defaultMap.actions.length) return null
-  const actions = defaultMap.actions.map((action, index) => {
-    const restoredAction = restoredActions[index]
-    if (!isRecord(restoredAction) || restoredAction.id !== action.id) return null
-    if (!Array.isArray(restoredAction.bindings)) return null
-    const bindings = restoredAction.bindings.map(bindingOf)
-    if (bindings.some(binding => binding === null)) return null
-    const typed = bindings.filter(binding => binding !== null)
-    return typed.every(binding => accepts(action.kind, binding))
-      ? { ...action, bindings: typed }
-      : null
-  })
-  return actions.some(action => action === null)
-    ? null
-    : { ...defaultMap, actions: actions.filter(action => action !== null) }
+function restoredMapOf(defaultMap: InputMap, value: unknown): InputMap {
+  if (!isRecord(value) || !Array.isArray(value.actions)) return defaultMap
+  const stored = byId(value.actions)
+  return {
+    ...defaultMap,
+    actions: defaultMap.actions.map(action => restoredActionOf(action, stored.get(action.id))),
+  }
+}
+
+function restoredActionOf(action: InputAction, value: unknown): InputAction {
+  if (!isRecord(value) || !Array.isArray(value.bindings)) return action
+  const kept = value.bindings
+    .map(bindingOf)
+    .filter(binding => binding !== null)
+    .filter(binding => accepts(action.kind, binding))
+  // Everything stored was rubbish: the defaults, rather than an action nothing reaches any more.
+  // An EMPTY stored list is a choice, though — someone unbound it on purpose.
+  return value.bindings.length > 0 && kept.length === 0 ? action : { ...action, bindings: kept }
+}
+
+function byId(values: readonly unknown[]): Map<string, unknown> {
+  const found = new Map<string, unknown>()
+  for (const value of values)
+    if (isRecord(value) && typeof value.id === 'string') found.set(value.id, value)
+  return found
 }
 
 function bindingOf(value: unknown): InputBinding | null {
