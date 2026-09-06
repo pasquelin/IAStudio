@@ -1,25 +1,27 @@
-import { mkdir, readFile, realpath, stat } from 'node:fs/promises'
+import { lstat, mkdir, readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { ExternalFileImport, ExternalFileRefusal } from '@shared/domain/externalFile'
-import type { MontageImportResult } from '@shared/ipc'
-import type { TaskWatch } from '@shared/domain/taskProgress'
-import { orElse } from '@shared/promises'
+import { filingFolderOf, filingRoleOf, filingTypeOf } from '@shared/domain/filingType'
 import { foldForFileName } from '@shared/domain/fileName'
-import { pathIn } from '@shared/domain/folder'
+import { isHiddenEntry, pathIn } from '@shared/domain/folder'
 import { documentReferencesOf, SCANNED_BYTES } from '@shared/domain/documentReferences'
-import { freeName } from '@main/project/filePlan'
-import { folderInsideProject } from '@main/project/folderInsideProject'
-import { pathIsInside } from '@main/export/pathIsInside'
-import { pathSegment } from '@main/validation'
-import { copyExternalFile, removeExternalCopy, removeExternalFolder } from './copyExternalFile'
+import type { FolderRole, RoleFolders } from '@shared/domain/folderRole'
 import {
   IMPORTABLE_BUNDLE_EXTENSIONS,
   IMPORTABLE_DOCUMENT_EXTENSIONS,
   isImportableFile,
   importableAssetTypeOf,
 } from '@shared/domain/importFormat'
+import type { MontageImportResult } from '@shared/ipc'
+import { orElse } from '@shared/promises'
+import type { TaskWatch } from '@shared/domain/taskProgress'
+import { pathIsInside } from '@main/export/pathIsInside'
+import { freeName } from '@main/project/filePlan'
+import { folderInsideProject } from '@main/project/folderInsideProject'
+import { pathSegment } from '@main/validation'
+import { copyExternalFile, removeExternalCopy, removeExternalFolder } from './copyExternalFile'
 
 export type ImportFilesDeps = {
   projectPath: () => string
@@ -32,10 +34,13 @@ export type ImportFilesDeps = {
     folder: string,
     watch: TaskWatch,
   ) => Promise<MontageImportResult | null>
+  roles?: () => RoleFolders
+  /** The write door for a role — marked folder, never a drawing snapshot + mkdir. */
+  folderFor?: (role: FolderRole) => Promise<string>
 }
 
 type ImportState = {
-  taken: Set<string>
+  takenByFolder: Map<string, Set<string>>
   assets: Asset[]
   montages: MontageImportResult[]
   refusedBundles: ExternalFileRefusal[]
@@ -45,22 +50,91 @@ type ImportState = {
   failed: string[]
 }
 
-const emptyImport = (failed: readonly string[] = []): ExternalFileImport => ({
-  assets: [],
-  documents: [],
-  montages: [],
-  refused: [],
-  failed,
-})
-
 const importFolder = (root: string, folder: string): Promise<string | null> =>
   folder === '' ? orElse(realpath(root), null) : folderInsideProject(root, folder)
+
+async function collectImportableFiles(
+  paths: readonly string[],
+  failed: string[],
+): Promise<string[]> {
+  const files: string[] = []
+  for (const path of paths) {
+    const found = await orElse(lstat(path), null)
+    if (found?.isSymbolicLink()) {
+      failed.push(basename(path))
+      continue
+    }
+    if (!found) {
+      if (isImportableFile(path)) files.push(path)
+      else failed.push(basename(path))
+      continue
+    }
+    if (found.isDirectory()) {
+      const inside = await filesInTree(path)
+      if (inside.files.length === 0) failed.push(basename(path))
+      files.push(...inside.files)
+      failed.push(...inside.skipped)
+      continue
+    }
+    if (found.isFile() && isImportableFile(path)) {
+      files.push(path)
+      continue
+    }
+    failed.push(basename(path))
+  }
+  return files
+}
+
+async function filesInTree(root: string): Promise<{ files: string[]; skipped: string[] }> {
+  const files: string[] = []
+  const skipped: string[] = []
+  const stack = [root]
+  while (stack.length > 0) {
+    const dir = stack.pop()
+    if (!dir) break
+    const entries = await orElse(readdir(dir, { withFileTypes: true }), [])
+    for (const entry of entries) {
+      if (isHiddenEntry(entry.name)) continue
+      const path = join(dir, entry.name)
+      if (entry.isSymbolicLink()) {
+        skipped.push(entry.name)
+        continue
+      }
+      if (entry.isDirectory()) stack.push(path)
+      else if (entry.isFile() && isImportableFile(path)) files.push(path)
+      else if (entry.isFile()) skipped.push(entry.name)
+    }
+  }
+  return { files, skipped }
+}
+
+async function readyDestination(
+  root: string,
+  folder: string,
+  deps: ImportFilesDeps,
+  state: ImportState,
+): Promise<{ target: string; taken: Set<string> } | null> {
+  if (folder !== '') await mkdir(join(root, folder), { recursive: true })
+  const target = await importFolder(root, folder)
+  if (!target) return null
+
+  const held = state.takenByFolder.get(folder)
+  if (held) return { target, taken: held }
+
+  const names = await deps.names(folder)
+  if (names === null) return null
+  const taken = new Set(names.map(foldForFileName))
+  state.takenByFolder.set(folder, taken)
+  return { target, taken }
+}
 
 async function importSource(
   source: string,
   root: string,
   folder: string,
   target: string,
+  taken: Set<string>,
+  roles: RoleFolders,
   watch: TaskWatch,
   deps: ImportFilesDeps,
   state: ImportState,
@@ -70,7 +144,7 @@ async function importSource(
   if (IMPORTABLE_BUNDLE_EXTENSIONS.includes(extension)) {
     return importBundle(source, root, folder, extension, watch, deps, state)
   }
-  await importAssetOrDocument(source, target, folder, extension, watch, deps, state)
+  await importAssetOrDocument(source, target, folder, taken, extension, roles, watch, deps, state)
 }
 
 async function importBundle(
@@ -119,16 +193,16 @@ function landingFor(
   nested: boolean,
   target: string,
   folder: string,
-  state: ImportState,
+  taken: Set<string>,
 ): Landing {
-  let nest = nested ? nestName(stem, state.taken) : ''
+  let nest = nested ? nestName(stem, taken) : ''
   let into = nest === '' ? target : join(target, nest)
   if (nest !== '' && !pathIsInside(target, into)) {
-    nest = nestName('document', state.taken)
+    nest = nestName('document', taken)
     into = join(target, nest)
   }
-  const name = nest === '' ? freeName(state.taken, canonicalName) : canonicalName
-  state.taken.add(foldForFileName(nest === '' ? name : nest))
+  const name = nest === '' ? freeName(taken, canonicalName) : canonicalName
+  taken.add(foldForFileName(nest === '' ? name : nest))
   return {
     nest,
     into,
@@ -205,7 +279,6 @@ async function landed(
   state: ImportState,
 ): Promise<void> {
   if (!isDocument) {
-    if (!importableAssetTypeOf(source)) return
     const asset = await deps.adopt(landing.relative)
     if (asset) state.assets.push(asset)
     return
@@ -229,14 +302,18 @@ async function importAssetOrDocument(
   source: string,
   target: string,
   folder: string,
+  taken: Set<string>,
   extension: string,
+  roles: RoleFolders,
   watch: TaskWatch,
   deps: ImportFilesDeps,
   state: ImportState,
 ): Promise<void> {
   const sourceName = basename(source)
   const stem = sourceName.slice(0, -extname(sourceName).length)
-  const isDocument = IMPORTABLE_DOCUMENT_EXTENSIONS.includes(extension)
+  const isDocument =
+    IMPORTABLE_DOCUMENT_EXTENSIONS.includes(extension) &&
+    filingTypeOf(sourceName, folder, roles) !== 'animation'
   const references = isDocument ? await referencesOf(source, extension) : []
   const landing = landingFor(
     isDocument ? `${stem}.${extension}` : sourceName,
@@ -244,7 +321,7 @@ async function importAssetOrDocument(
     references.length > 0,
     target,
     folder,
-    state,
+    taken,
   )
 
   if (landing.nest !== '') await mkdir(landing.into, { recursive: true })
@@ -296,13 +373,9 @@ export async function importFiles(
   watch: TaskWatch = {},
 ): Promise<ExternalFileImport> {
   const root = deps.projectPath()
-  const target = await importFolder(root, folder)
-  if (!target) return emptyImport(sources.map(source => basename(source)))
-  const names = await deps.names(folder)
-  if (names === null) return emptyImport(sources.map(source => basename(source)))
-
+  const roles = deps.roles?.() ?? {}
   const state: ImportState = {
-    taken: new Set(names.map(foldForFileName)),
+    takenByFolder: new Map(),
     assets: [],
     montages: [],
     refusedBundles: [],
@@ -310,10 +383,23 @@ export async function importFiles(
     documentFolders: new Map(),
     failed: [],
   }
-  for (const source of sources) {
+  const files = await collectImportableFiles(sources, state.failed)
+
+  for (const source of files) {
     if (watch.signal?.aborted) break
+    const dest =
+      folder !== ''
+        ? folder
+        : deps.folderFor
+          ? await deps.folderFor(filingRoleOf(basename(source), roles))
+          : filingFolderOf(basename(source), roles)
     try {
-      await importSource(source, root, folder, target, watch, deps, state)
+      const ready = await readyDestination(root, dest, deps, state)
+      if (!ready) {
+        state.failed.push(basename(source))
+        continue
+      }
+      await importSource(source, root, dest, ready.target, ready.taken, roles, watch, deps, state)
     } catch {
       if (!watch.signal?.aborted) state.failed.push(basename(source))
     }

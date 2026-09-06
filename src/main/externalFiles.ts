@@ -1,3 +1,4 @@
+import { lstat } from 'node:fs/promises'
 import { basename, extname, isAbsolute } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { App } from 'electron'
@@ -8,6 +9,7 @@ import type {
 } from '@shared/domain/externalFile'
 import { isImportableFile } from '@shared/domain/importFormat'
 import { CHANNELS, EVENTS } from '@shared/ipc'
+import { orElse } from '@shared/promises'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 
@@ -22,25 +24,39 @@ export function externalPathsFromArguments(
 }
 
 export function offerExternalFiles(paths: readonly string[]): void {
-  const offer = authoriseExternalFiles(paths)
+  void queueOffer(paths)
+}
+
+async function queueOffer(paths: readonly string[]): Promise<void> {
+  const offer = await authoriseExternalFiles(paths)
   if (!offer.request && offer.refused.length === 0) return
   pending.push(offer)
   broadcast(EVENTS.externalFiles)
 }
 
-export function authoriseExternalFiles(paths: unknown): ExternalFileOffer {
+export async function authoriseExternalFiles(paths: unknown): Promise<ExternalFileOffer> {
   if (!Array.isArray(paths)) return { request: null, refused: [] }
   const candidates = paths.filter(one => typeof one === 'string' && isAbsolute(one))
   const acceptedPaths: string[] = []
   const refused: ExternalFileRefusal[] = []
   for (const path of candidates) {
-    if (isImportableFile(path)) acceptedPaths.push(path)
-    else {
-      refused.push({
-        name: basename(path),
-        extension: extname(path).slice(1).toLowerCase(),
-      })
+    const found = await orElse(lstat(path), null)
+    if (found?.isSymbolicLink()) {
+      refused.push({ name: basename(path), extension: extname(path).slice(1).toLowerCase() })
+      continue
     }
+    if (found?.isDirectory()) {
+      acceptedPaths.push(path)
+      continue
+    }
+    if (isImportableFile(path) && (!found || found.isFile())) {
+      acceptedPaths.push(path)
+      continue
+    }
+    refused.push({
+      name: basename(path),
+      extension: extname(path).slice(1).toLowerCase(),
+    })
   }
   if (acceptedPaths.length === 0) return { request: null, refused }
 

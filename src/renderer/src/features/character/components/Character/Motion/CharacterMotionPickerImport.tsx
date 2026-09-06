@@ -1,20 +1,22 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { ANIMATION_EXTENSIONS } from '@shared/domain/animationLibrary'
-import { extensionOf } from '@shared/domain/fileName'
 import type { ClipSource } from '@shared/domain/scene'
 import { Button } from '@/components/Button'
 import { QuietNote } from '@/components/QuietNote'
 import { getBridge } from '@/services/bridge'
+import { reportImportNotices } from '@/services/externalFiles'
+import { useAssets } from '@/stores/assets'
+import { runTask } from '@/stores/tasks'
 
 export type CharacterMotionPickerImportProps = {
   onChoose: (source: ClipSource, label: string) => void
 }
 
 /**
- * A motion brought in from disk — Mixamo exports FBX and Collada and no glTF at all, which is why
- * the accepted set is wider than the studio's own. LINKED rather than copied, as every import is,
- * so what is chosen downstream is an ordinary asset.
+ * Motions brought in from disk — Mixamo exports FBX, the studio writes glTF. Copied into the
+ * project's animations folder, so what is chosen downstream is an ordinary catalogue row.
  */
 export function CharacterMotionPickerImport({ onChoose }: CharacterMotionPickerImportProps) {
   const { t } = useTranslation()
@@ -22,18 +24,31 @@ export function CharacterMotionPickerImport({ onChoose }: CharacterMotionPickerI
 
   const bring = async (): Promise<void> => {
     setRefused(false)
-    const brought = (await getBridge()?.media.ingest()) ?? []
-    // What was chosen and could carry a clip. A picture picked by mistake is refused HERE, where
-    // the reason can be said, rather than at the drop where nothing would happen at all.
-    const motion = brought.find(asset =>
-      ANIMATION_EXTENSIONS.includes(extensionOf(asset.path ?? asset.name).toLowerCase()),
+    const bridge = getBridge()
+    if (!bridge) return
+    const imported = await runTask(i18next.t('activity.importingFiles'), id =>
+      bridge.media.importPicked('animations', id),
     )
-    if (!motion) {
-      setRefused(brought.length > 0)
+    if (!imported) {
+      await useAssets.getState().refresh()
       return
     }
 
-    onChoose({ kind: 'asset', assetId: motion.id, name: motion.name }, motion.name)
+    reportImportNotices(imported)
+    if (imported.assets.length > 0) await useAssets.getState().refresh()
+
+    const motions = imported.assets.filter(asset => asset.type === 'animation')
+    if (motions.length === 0) {
+      const attempted =
+        imported.assets.length > 0 || imported.refused.length > 0 || imported.failed.length > 0
+      setRefused(attempted)
+      return
+    }
+
+    const [motion] = motions
+    if (motions.length === 1 && motion) {
+      onChoose({ kind: 'asset', assetId: motion.id, name: motion.name }, motion.name)
+    }
   }
 
   return (

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
@@ -152,5 +152,68 @@ describe('choosing an animation', () => {
 
     expect(onCancel).toHaveBeenCalled()
     expect(onKeep).not.toHaveBeenCalled()
+  })
+
+  it('lays the one motion a pick brought in', async () => {
+    const motion: Asset = {
+      id: 'asset-walk',
+      name: 'Walking',
+      type: 'animation',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-09-06T00:00:00.000Z',
+    }
+    installFakeBridge({
+      animations: { list: () => Promise.resolve(bundled) },
+      media: {
+        importPicked: async () => ({
+          assets: [motion],
+          documents: [],
+          montages: [],
+          refused: [],
+          failed: [],
+        }),
+      },
+    })
+    const { onChoose } = show()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Import' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Choisir un fichier…' }))
+
+    await waitFor(() =>
+      expect(onChoose).toHaveBeenCalledWith(
+        { kind: 'asset', assetId: 'asset-walk', name: 'Walking' },
+        'Walking',
+      ),
+    )
+  })
+
+  it('does not lay a block when several motions arrive at once', async () => {
+    const motion = (id: string, name: string): Asset => ({
+      id,
+      name,
+      type: 'animation',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-09-06T00:00:00.000Z',
+    })
+    const importPicked = vi.fn(async () => ({
+      assets: [motion('asset-a', 'Walking'), motion('asset-b', 'Start Walking')],
+      documents: [],
+      montages: [],
+      refused: [],
+      failed: [],
+    }))
+    installFakeBridge({
+      animations: { list: () => Promise.resolve(bundled) },
+      media: { importPicked },
+    })
+    const { onChoose } = show()
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Import' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Choisir un fichier…' }))
+
+    await waitFor(() => expect(importPicked).toHaveBeenCalled())
+    expect(onChoose).not.toHaveBeenCalled()
   })
 })

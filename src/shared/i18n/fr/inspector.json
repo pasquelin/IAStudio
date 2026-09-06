@@ -290,7 +290,7 @@
     "animationSource_ai": "IA",
     "animationLibrary": "Mouvements disponibles",
     "animationLibraryEmpty": "Aucune animation dans ce projet pour l’instant.",
-    "animationImportHint": "Formats acceptés — {{formats}}. Le fichier reste où il est.",
+    "animationImportHint": "Formats acceptés — {{formats}}. Les fichiers sont copiés dans le dossier Animations du projet.",
     "animationImportPick": "Choisir un fichier…",
     "animationImportRefused": "Ce fichier ne porte pas de mouvement.",
     "animationAi": "Services de mouvement",

@@ -2,6 +2,7 @@ import { TRANSLATIONS, type Language } from '@shared/i18n'
 import type { PathKind } from '@shared/domain/settingsRegistry'
 import { BrowserWindow, dialog } from 'electron'
 import { writeFile } from 'node:fs/promises'
+import { ANIMATION_EXTENSIONS } from '@shared/domain/animationLibrary'
 import { mediaFilters } from './media/link'
 import type { AskUser } from './project/documentDialogs'
 
@@ -82,5 +83,14 @@ export function pickMedia(language: Language): Promise<string[]> {
       image: t.image,
       mesh: t.mesh,
     }),
+  })
+}
+
+export function pickAnimation(language: Language): Promise<string[]> {
+  const t = TRANSLATIONS[language].dialog
+  const extensions = ANIMATION_EXTENSIONS.map(extension => extension.slice(1))
+  return openDialog({
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: t.animation, extensions }],
   })
 }

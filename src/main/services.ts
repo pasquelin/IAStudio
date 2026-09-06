@@ -50,6 +50,7 @@ import { createJobServices } from './serviceJobs'
 import { createAssistantBrains, createAssistantPresentation } from './serviceAssistant'
 import {
   askUser,
+  pickAnimation,
   pickImportPath,
   pickMedia,
   pickPath,
@@ -384,6 +385,8 @@ export function createServices(settings: SettingsStore): Services {
                 bundleWatch.signal ?? new AbortController().signal,
                 { bundles, adopt, onProgress: bundleWatch.onStep },
               ),
+            roles: () => project.roles(),
+            folderFor: role => project.folderFor(role),
           },
           watch,
         ),
@@ -435,12 +438,13 @@ export function createServices(settings: SettingsStore): Services {
         return current ? jobs.runningIn(current.path) : 0
       },
       pickMedia: () => pickMedia(language()),
+      pickAnimation: () => pickAnimation(language()),
+      folderFor: role => project.folderFor(role),
       // Another key means another catalogue: keeping a cache would show the previous account's
       // contents under the new one. And the open project remembers the switch, so reopening it
       // tomorrow lands on the key it was actually worked under.
       onCredentialsChanged: () => {
         credentials.changed()
-
         // Only a project that HAD a key is warned. Adopting one for the first time changes nothing
         // about what the library holds, and a sentence there would fire on every project ever made.
         const relink = linkOpenProject()
@@ -487,9 +491,5 @@ export function createServices(settings: SettingsStore): Services {
     })
   }
 
-  function serviceResult(): Services {
-    return { ...coreServices(), ...systemServices() }
-  }
-
-  return serviceResult()
+  return { ...coreServices(), ...systemServices() }
 }

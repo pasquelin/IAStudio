@@ -290,7 +290,7 @@
     "animationSource_ai": "AI",
     "animationLibrary": "Motions at hand",
     "animationLibraryEmpty": "No animation in this project yet.",
-    "animationImportHint": "Accepted formats: {{formats}}. The file stays where it is.",
+    "animationImportHint": "Accepted formats: {{formats}}. Files are copied into the project’s Animations folder.",
     "animationImportPick": "Choose a file…",
     "animationImportRefused": "That file carries no motion.",
     "animationAi": "Motion services",

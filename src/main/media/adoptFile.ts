@@ -3,10 +3,11 @@ import { open, stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type { Asset, MediaProbe } from '@shared/domain/asset'
 import { domainFromSignature, SIGNATURE_BYTES } from '@shared/domain/domainFromSignature'
+import { filingTypeOf } from '@shared/domain/filingType'
 import { stemOf } from '@shared/domain/fileName'
 import { sourceNatureOf, typeInRoleFolder } from '@shared/domain/fileRole'
+import { isPrivatePath, parentOf } from '@shared/domain/folder'
 import type { RoleFolders } from '@shared/domain/folderRole'
-import { isPrivatePath } from '@shared/domain/folder'
 import { assetFilePath } from '@main/assets/protocol'
 import { isAbsent } from '@main/persistence'
 import type { AsyncCatalog } from '@main/project/catalogClient'
@@ -42,17 +43,26 @@ export type AdoptFileDeps = {
  * as a folder is not a file, and the three other document spellings carry no source domain, so
  * neither can be adopted by accident.
  */
-async function domainOf(fileName: string, absolute: string): Promise<Asset['type'] | null> {
+async function domainOf(
+  relative: string,
+  fileName: string,
+  absolute: string,
+  roles: RoleFolders,
+): Promise<Asset['type'] | null> {
+  const filed = filingTypeOf(fileName, parentOf(relative) ?? '', roles)
+  if (filed) return typeInRoleFolder(relative, filed, roles)
   if (fileName.includes('.')) {
     const source = sourceNatureOf(fileName)
-    return source.catalogable && source.domain !== 'other' ? source.domain : null
+    const domain = source.catalogable && source.domain !== 'other' ? source.domain : null
+    return domain ? typeInRoleFolder(relative, domain, roles) : null
   }
 
   const handle = await open(absolute)
   try {
     const head = new Uint8Array(SIGNATURE_BYTES)
     await handle.read(head, 0, SIGNATURE_BYTES, 0)
-    return domainFromSignature(head)
+    const fromBytes = domainFromSignature(head)
+    return fromBytes ? typeInRoleFolder(relative, fromBytes, roles) : null
   } finally {
     await handle.close()
   }
@@ -122,14 +132,23 @@ async function createAdoptedAsset(
   return asset
 }
 
+async function retargetKnown(known: Asset, relative: string, deps: AdoptFileDeps): Promise<Asset> {
+  const roles = deps.roles()
+  const filed = filingTypeOf(basename(relative), parentOf(relative) ?? '', roles)
+  const type = typeInRoleFolder(relative, filed ?? known.type, roles)
+  if (type === known.type) return known
+  const updated = await deps.catalog().add({ ...known, type })
+  deps.onAdopted(updated)
+  return updated
+}
+
 async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | null> {
   // What the studio keeps for itself is shown, never taken: `.index/` holds the previews and the
   // proxies it rewrites at will, and a row pointing into it would die at the next eviction.
   if (isPrivatePath(relative)) return null
 
-  const catalog = deps.catalog()
-  const known = await catalog.search({ path: relative, limit: 1 })
-  if (known[0]) return known[0]
+  const known = await deps.catalog().search({ path: relative, limit: 1 })
+  if (known[0]) return retargetKnown(known[0], relative, deps)
 
   const absolute = assetFilePath(deps.projectPath(), relative)
   if (!absolute) return null
@@ -142,9 +161,8 @@ async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | nul
   if (!stats?.isFile()) return null
 
   const name = basename(relative)
-  const domain = await domainOf(name, absolute)
-  if (!domain) return null
-  const type = typeInRoleFolder(relative, domain, deps.roles())
+  const type = await domainOf(relative, name, absolute, deps.roles())
+  if (!type) return null
 
   // Together: ffprobe spawns a process and the fingerprint reads the file, and the tab the user
   // is waiting for is behind both.

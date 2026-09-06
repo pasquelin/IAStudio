@@ -2,6 +2,7 @@ import type { AccountSummary } from '@shared/domain/account'
 import type { AiOverview } from '@shared/domain/aiOverview'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { ExternalFileImport } from '@shared/domain/externalFile'
+import type { FolderRole } from '@shared/domain/folderRole'
 import type { AuthState } from '@shared/domain/settings'
 import type { MediaCapabilities } from '@shared/domain/media'
 import type { TaskWatch } from '@shared/domain/taskProgress'
@@ -218,6 +219,8 @@ export type Services = {
   /** How many generations have not settled — what closing the project asks about. */
   runningJobCount: () => number
   pickMedia: () => Promise<string[]>
+  pickAnimation: () => Promise<string[]>
+  folderFor: (role: FolderRole) => Promise<string>
   onCredentialsChanged: () => void
   authState: () => Promise<AuthState>
   broadcastAccounts: (accounts: AccountSummary[]) => void

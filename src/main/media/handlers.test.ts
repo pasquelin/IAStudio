@@ -26,6 +26,8 @@ function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
     ),
     adopt: vi.fn(async () => null),
     pickMedia: vi.fn(async () => ['/Volumes/Rushes/A001.mov']),
+    pickAnimation: vi.fn(async () => ['/motions/Walking.fbx']),
+    folderFor: vi.fn(async () => 'Modelling/Animations'),
     capabilities: async () => ({ ffmpeg: true }),
     importPaths: async () => ({ assets: [], documents: [], montages: [], refused: [], failed: [] }),
     claimExternalFiles: () => [],
@@ -125,6 +127,53 @@ describe('media handlers', () => {
       refused: [],
       failed: [],
     })
+  })
+
+  it('imports picked motions into the animations folder', async () => {
+    const imported = linkedAsset('/motions/Walking.fbx', {
+      id: 'asset-walk',
+      type: 'animation',
+      now: '2026-09-06T10:00:00.000Z',
+    })
+    const importPaths = vi.fn(async () => ({
+      assets: [imported],
+      documents: [],
+      montages: [],
+      refused: [],
+      failed: [],
+    }))
+    const folderFor = vi.fn(async () => 'Modelling/Animations')
+    registerMediaHandlers(deps({ importPaths, folderFor }))
+
+    const result = await invoke(CHANNELS.mediaImportPicked, 'animations', 'task-anim')
+
+    expect(folderFor).toHaveBeenCalledWith('animations')
+    expect(importPaths).toHaveBeenCalledWith(
+      ['/motions/Walking.fbx'],
+      'Modelling/Animations',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+    expect(result).toEqual({
+      assets: [expect.not.objectContaining({ sourcePath: expect.anything() })],
+      documents: [],
+      montages: [],
+      refused: [],
+      failed: [],
+    })
+  })
+
+  it('imports nothing when the motion picker is dismissed', async () => {
+    const importPaths = vi.fn()
+    registerMediaHandlers(deps({ pickAnimation: async () => [], importPaths }))
+
+    await expect(invoke(CHANNELS.mediaImportPicked, 'animations', 'task-none')).resolves.toEqual({
+      assets: [],
+      documents: [],
+      montages: [],
+      refused: [],
+      failed: [],
+    })
+    expect(importPaths).not.toHaveBeenCalled()
   })
 
   it('stops an external import through the shared task table', async () => {

@@ -283,6 +283,52 @@ describe('taking a batch back', () => {
   })
 })
 
+describe('retargeting a motion that changed folder', () => {
+  it('retypes an FBX moved from Models to Animations', async () => {
+    const { files, root, catalog } = harnessed
+    await mkdir(join(root, 'Modelling/Models'), { recursive: true })
+    await mkdir(join(root, 'Modelling/Animations'), { recursive: true })
+    await writeFile(join(root, 'Modelling/Models/walk.fbx'), 'clip')
+    await catalog.add(
+      asset({
+        id: 'asset-walk',
+        name: 'walk',
+        type: 'mesh',
+        path: 'Modelling/Models/walk.fbx',
+      }),
+    )
+
+    await files.move(['Modelling/Models/walk.fbx'], 'Modelling/Animations')
+
+    expect(await catalog.find('asset-walk')).toMatchObject({
+      path: 'Modelling/Animations/walk.fbx',
+      type: 'animation',
+    })
+  })
+
+  it('retypes every clip inside a folder dragged onto Animations', async () => {
+    const { files, root, catalog } = harnessed
+    await mkdir(join(root, 'Modelling/Models/mixamo'), { recursive: true })
+    await mkdir(join(root, 'Modelling/Animations'), { recursive: true })
+    await writeFile(join(root, 'Modelling/Models/mixamo/walk.fbx'), 'clip')
+    await catalog.add(
+      asset({
+        id: 'asset-walk',
+        name: 'walk',
+        type: 'mesh',
+        path: 'Modelling/Models/mixamo/walk.fbx',
+      }),
+    )
+
+    await files.move(['Modelling/Models/mixamo'], 'Modelling/Animations')
+
+    expect(await catalog.find('asset-walk')).toMatchObject({
+      path: 'Modelling/Animations/mixamo/walk.fbx',
+      type: 'animation',
+    })
+  })
+})
+
 describe('with no project open', () => {
   it('answers an empty batch rather than resolving a path against nothing', async () => {
     const files = createFileOps({

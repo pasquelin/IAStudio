@@ -200,6 +200,7 @@ type ChannelMethod = {
   [CHANNELS.mediaAdopt]: StudioBridge['media']['adopt']
   [CHANNELS.mediaIngest]: StudioBridge['media']['ingest']
   [CHANNELS.mediaIngestPaths]: StudioBridge['media']['ingestPaths']
+  [CHANNELS.mediaImportPicked]: StudioBridge['media']['importPicked']
   [CHANNELS.mediaCancel]: StudioBridge['media']['cancel']
   [CHANNELS.mediaAvailable]: StudioBridge['media']['capabilities']
 

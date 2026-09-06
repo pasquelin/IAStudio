@@ -51,8 +51,8 @@ describe('launchedPaths', () => {
 })
 
 describe('external file authorisations', () => {
-  it('exchanges accepted paths through a one-use opaque request', () => {
-    const offer = authoriseExternalFiles(['/work/model.obj', '/work/notes.txt'])
+  it('exchanges accepted paths through a one-use opaque request', async () => {
+    const offer = await authoriseExternalFiles(['/work/model.obj', '/work/notes.txt'])
 
     expect(offer.refused).toEqual([{ name: 'notes.txt', extension: 'txt' }])
     expect(offer.request).not.toBeNull()
@@ -61,8 +61,8 @@ describe('external file authorisations', () => {
     expect(claimExternalFiles(offer.request.id)).toEqual([])
   })
 
-  it('does not authorise an unsupported path and preserves its refusal', () => {
-    expect(authoriseExternalFiles(['/work/notes.txt'])).toEqual({
+  it('does not authorise an unsupported path and preserves its refusal', async () => {
+    await expect(authoriseExternalFiles(['/work/notes.txt'])).resolves.toEqual({
       request: null,
       refused: [{ name: 'notes.txt', extension: 'txt' }],
     })

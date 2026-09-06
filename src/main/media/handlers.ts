@@ -1,15 +1,24 @@
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
-import type { MediaCapabilities } from '@shared/domain/media'
 import type { ExternalFileImport } from '@shared/domain/externalFile'
+import type { FolderRole } from '@shared/domain/folderRole'
+import type { MediaCapabilities } from '@shared/domain/media'
 import { taskRatio, type TaskWatch } from '@shared/domain/taskProgress'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { sendToSender } from '@main/ipc/broadcast'
 import { parseAssetId } from '@main/assets/validation'
-import { parseFolderPath } from '@main/project/validation'
+import { parseFolderPath, parseFolderRole } from '@main/project/validation'
 import type { RunningTasks } from '@main/task/runningTasks'
 import { assetTypeOf } from './link'
 import type { MediaService } from './service'
+
+const EMPTY_IMPORT: ExternalFileImport = {
+  assets: [],
+  documents: [],
+  montages: [],
+  refused: [],
+  failed: [],
+}
 
 export type MediaHandlerDeps = {
   media: MediaService
@@ -27,6 +36,8 @@ export type MediaHandlerDeps = {
   ) => Promise<ExternalFileImport>
   claimExternalFiles: (id: string) => readonly string[]
   running: RunningTasks
+  pickAnimation: () => Promise<string[]>
+  folderFor: (role: FolderRole) => Promise<string>
 }
 
 export function registerMediaHandlers({
@@ -38,6 +49,8 @@ export function registerMediaHandlers({
   importPaths,
   claimExternalFiles,
   running,
+  pickAnimation,
+  folderFor,
 }: MediaHandlerDeps): void {
   handle(CHANNELS.mediaAdopt, async (_event, relative) => {
     // A row the window never needs the absolute path of, exactly as the ingest answers.
@@ -66,6 +79,23 @@ export function registerMediaHandlers({
     const paths = claimExternalFiles(requestId)
     return await running.run(taskId, async signal => {
       const imported = await importPaths(paths, parseFolderPath(folder), {
+        signal,
+        onStep: (done, total) =>
+          sendToSender(event.sender, EVENTS.taskProgress, {
+            id: taskId,
+            ratio: taskRatio(done, total),
+          }),
+      })
+      return { ...imported, assets: imported.assets.map(withoutSourcePath) }
+    })
+  })
+
+  handle(CHANNELS.mediaImportPicked, async (event, role, taskId) => {
+    const paths = await pickAnimation()
+    if (paths.length === 0) return EMPTY_IMPORT
+    const folder = await folderFor(parseFolderRole(role))
+    return await running.run(taskId, async signal => {
+      const imported = await importPaths(paths, folder, {
         signal,
         onStep: (done, total) =>
           sendToSender(event.sender, EVENTS.taskProgress, {

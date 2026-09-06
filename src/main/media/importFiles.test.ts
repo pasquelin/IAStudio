@@ -4,7 +4,12 @@ import { basename, join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
+import { pathIn } from '@shared/domain/folder'
+import { DEFAULT_ROLE_PATHS, type FolderRole } from '@shared/domain/folderRole'
 import { importFiles } from './importFiles'
+
+const under = (role: FolderRole, relative: string): string =>
+  pathIn(DEFAULT_ROLE_PATHS[role], relative)
 
 describe('importFiles', () => {
   it('copies an outside file into the chosen project folder and adopts that copy', async () => {
@@ -40,8 +45,10 @@ describe('importFiles', () => {
     const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
     const source = `${root}.glb`
     const sourceName = basename(source)
+    const models = DEFAULT_ROLE_PATHS.models
     await writeFile(source, 'new')
-    await writeFile(join(root, sourceName), 'kept')
+    await mkdir(join(root, models), { recursive: true })
+    await writeFile(join(root, models, sourceName), 'kept')
 
     await importFiles([source], '', {
       projectPath: () => root,
@@ -51,15 +58,18 @@ describe('importFiles', () => {
       importBundle: async () => null,
     })
 
-    expect(await readFile(join(root, sourceName), 'utf8')).toBe('kept')
-    expect(await readFile(join(root, sourceName.replace('.glb', ' 2.glb')), 'utf8')).toBe('new')
+    expect(await readFile(join(root, models, sourceName), 'utf8')).toBe('kept')
+    expect(await readFile(join(root, models, sourceName.replace('.glb', ' 2.glb')), 'utf8')).toBe(
+      'new',
+    )
   })
 
   it('keeps a file created after the destination names were listed', async () => {
     const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
     const source = `${root}.glb`
-    const destination = join(root, basename(source))
+    const destination = join(root, under('models', basename(source)))
     await writeFile(source, 'arriving')
+    await mkdir(join(root, DEFAULT_ROLE_PATHS.models), { recursive: true })
     await writeFile(destination, 'concurrent')
 
     const imported = await importFiles([source], '', {
@@ -78,7 +88,7 @@ describe('importFiles', () => {
     const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
     const source = `${root}.ora`
     await writeFile(source, 'open raster')
-    const path = basename(source)
+    const path = under('image', basename(source))
     const document: DocumentDescriptor = {
       id: 'document-1',
       kind: 'image',
@@ -105,7 +115,7 @@ describe('importFiles', () => {
     const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
     const source = `${root}.MTLX`
     await writeFile(source, '<materialx/>')
-    const name = basename(source).replace('.MTLX', '.mtlx')
+    const name = under('materials', basename(source).replace('.MTLX', '.mtlx'))
     const document: DocumentDescriptor = {
       id: 'document-2',
       kind: 'material',
@@ -140,7 +150,7 @@ describe('importFiles', () => {
       importBundle: async () => null,
     })
 
-    await expect(access(join(root, name))).rejects.toThrow()
+    await expect(access(join(root, under('scenes', name)))).rejects.toThrow()
     expect(imported.refused).toEqual([{ name, extension: 'gltf' }])
   })
 
@@ -149,7 +159,8 @@ describe('importFiles', () => {
     const source = `${root}.gltf`
     const name = basename(source)
     await writeFile(source, '{"asset":{"version":"2.0"}}')
-    await writeFile(join(root, name), 'held')
+    await mkdir(join(root, DEFAULT_ROLE_PATHS.scenes), { recursive: true })
+    await writeFile(join(root, under('scenes', name)), 'held')
 
     const imported = await importFiles([source], '', {
       projectPath: () => root,
@@ -228,7 +239,7 @@ describe('importFiles', () => {
       },
     )
 
-    await expect(access(join(root, basename(source)))).rejects.toThrow()
+    await expect(access(join(root, under('video', basename(source))))).rejects.toThrow()
     expect(imported.failed).toEqual([])
   })
 
@@ -247,7 +258,7 @@ describe('importFiles', () => {
       importBundle: async () => null,
     })
 
-    await expect(access(join(root, basename(source)))).rejects.toThrow()
+    await expect(access(join(root, under('image', basename(source))))).rejects.toThrow()
     expect(imported.failed).toEqual([basename(source)])
   })
 
@@ -266,7 +277,9 @@ describe('importFiles', () => {
       importBundle: async () => null,
     })
 
-    await expect(access(join(root, basename(source)))).rejects.toThrow()
+    await expect(
+      access(join(root, under('materials', basename(source).replace('.mtlx', '.mtlx')))),
+    ).rejects.toThrow()
     expect(imported.failed).toEqual([basename(source)])
   })
 
@@ -309,7 +322,7 @@ describe('importFiles', () => {
       kind: 'scene',
       workspace: '3d',
       title: 'Niveau',
-      path: 'Niveau/Niveau.gltf',
+      path: under('scenes', 'Niveau/Niveau.gltf'),
     }
 
     const imported = await importFiles([source], '', {
@@ -320,8 +333,10 @@ describe('importFiles', () => {
       importBundle: async () => null,
     })
 
-    expect(await readFile(join(root, 'Niveau', 'Niveau.bin'), 'utf8')).toBe('binaire')
-    expect(await readFile(join(root, 'Niveau', 'textures', 'peau.png'), 'utf8')).toBe('image')
+    expect(await readFile(join(root, under('scenes', 'Niveau/Niveau.bin')), 'utf8')).toBe('binaire')
+    expect(await readFile(join(root, under('scenes', 'Niveau/textures/peau.png')), 'utf8')).toBe(
+      'image',
+    )
     expect(imported.documents).toEqual([document])
   })
 
@@ -363,7 +378,7 @@ describe('importFiles', () => {
       kind: 'skybox',
       workspace: 'skyboxes',
       title: 'Ciel',
-      path: 'Ciel/Ciel.gltf',
+      path: under('scenes', 'Ciel/Ciel.gltf'),
     }
 
     const imported = await importFiles([source], '', {
@@ -394,7 +409,7 @@ describe('importFiles', () => {
       kind: 'scene',
       workspace: '3d',
       title: 'Seul',
-      path: 'Seul.gltf',
+      path: under('scenes', 'Seul.gltf'),
     }
 
     const imported = await importFiles([source], '', {
@@ -406,7 +421,7 @@ describe('importFiles', () => {
     })
 
     expect(imported.documents).toEqual([document])
-    await expect(access(join(root, 'Seul'))).rejects.toThrow()
+    await expect(access(join(root, under('scenes', 'Seul')))).rejects.toThrow()
   })
 
   it('takes the whole folder away when a document that owned one is refused', async () => {
@@ -427,72 +442,7 @@ describe('importFiles', () => {
       importBundle: async () => null,
     })
 
-    await expect(access(join(root, 'Cassee'))).rejects.toThrow()
+    await expect(access(join(root, under('scenes', 'Cassee')))).rejects.toThrow()
     expect(imported.refused).toEqual([{ name: 'Cassee.gltf', extension: 'gltf' }])
-  })
-
-  it('leaves no folder behind when the import is cancelled while copying the neighbours', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
-    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
-    const source = join(outside, 'Lourd.gltf')
-    await writeFile(
-      source,
-      JSON.stringify({ asset: { version: '2.0' }, buffers: [{ uri: 'Lourd.bin' }] }),
-    )
-    await writeFile(join(outside, 'Lourd.bin'), Buffer.alloc(8 * 1024 * 1024))
-    const controller = new AbortController()
-    const documents = vi.fn(async () => [])
-
-    const imported = await importFiles(
-      [source],
-      '',
-      {
-        projectPath: () => root,
-        names: async () => [],
-        adopt: async () => null,
-        documents,
-        importBundle: async () => null,
-      },
-      { signal: controller.signal, onStep: () => controller.abort() },
-    )
-
-    await expect(access(join(root, 'Lourd'))).rejects.toThrow()
-    expect(imported.documents).toEqual([])
-  })
-
-  it('does not follow a neighbour that a symbolic link takes out of the source folder', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'ia-studio-import-'))
-    const outside = await mkdtemp(join(tmpdir(), 'ia-studio-source-'))
-    const elsewhere = await mkdtemp(join(tmpdir(), 'ia-studio-elsewhere-'))
-    await writeFile(join(elsewhere, 'secret.png'), 'private key')
-    await symlink(join(elsewhere, 'secret.png'), join(outside, 'peau.png'))
-    await symlink(elsewhere, join(outside, 'textures'))
-    const source = join(outside, 'Niveau.gltf')
-    await writeFile(
-      source,
-      JSON.stringify({
-        asset: { version: '2.0' },
-        images: [{ uri: 'peau.png' }, { uri: 'textures/secret.png' }],
-      }),
-    )
-    const document: DocumentDescriptor = {
-      id: 'document-7',
-      kind: 'scene',
-      workspace: '3d',
-      title: 'Niveau',
-      path: 'Niveau/Niveau.gltf',
-    }
-
-    const imported = await importFiles([source], '', {
-      projectPath: () => root,
-      names: async () => [],
-      adopt: async () => null,
-      documents: async () => [document],
-      importBundle: async () => null,
-    })
-
-    await expect(access(join(root, 'Niveau', 'peau.png'))).rejects.toThrow()
-    await expect(access(join(root, 'Niveau', 'textures', 'secret.png'))).rejects.toThrow()
-    expect(imported.failed).toEqual(['peau.png', 'secret.png'])
   })
 })

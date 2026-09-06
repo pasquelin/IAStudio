@@ -57,6 +57,7 @@
     "audio": "Audio",
     "image": "Image",
     "mesh": "Modèle 3D",
+    "animation": "Animation",
     "bundle": "Montage et médias",
     "weights": "Poids de modèle"
   },

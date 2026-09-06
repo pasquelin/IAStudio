@@ -1,5 +1,8 @@
-import type { Asset } from '@shared/domain/asset'
+import { ASSET_SEARCH_LIMIT_MAX, type Asset } from '@shared/domain/asset'
 import type { FileOutcome, PathChange } from '@shared/domain/fileOp'
+import { filingTypeOf } from '@shared/domain/filingType'
+import { isUnder, nameOf, parentOf } from '@shared/domain/folder'
+import type { RoleFolders } from '@shared/domain/folderRole'
 import { moveAssetFile, moveAssetFileToFree } from '@main/assets/assetFile'
 import type { AsyncCatalog } from './catalogClient'
 import { appendMove, clearJournal } from './fileJournal'
@@ -14,6 +17,25 @@ import {
 } from './filePlan'
 import { inverseBatch, steppedStacks, UNDO_DEPTH, type UndoStacks } from './fileStacks'
 import type { FolderReader, FolderWriter } from './folder'
+
+async function retargetMoved(
+  catalog: AsyncCatalog,
+  to: string,
+  roles: RoleFolders,
+): Promise<number> {
+  const rows = await catalog.search({ limit: ASSET_SEARCH_LIMIT_MAX })
+  let changed = 0
+  for (const row of rows) {
+    const path = row.path
+    if (!path || (path !== to && !isUnder(path, to))) continue
+    const type = filingTypeOf(nameOf(path), parentOf(path) ?? '', roles)
+    if (!type || type === row.type) continue
+    await catalog.add({ ...row, type })
+    changed += 1
+  }
+  return changed
+}
+
 export type FileOps = {
   rename: (path: string, name: string) => Promise<FileOutcome>
   move: (paths: readonly string[], folder: string) => Promise<FileOutcome>
@@ -36,6 +58,7 @@ export type FileOpsDeps = {
   newBatchId: () => string
   assetsChanged: () => void
   pathsChanged: (changes: readonly PathChange[]) => void
+  roles?: () => RoleFolders
 }
 export function createFileOps({
   rootOf,
@@ -44,6 +67,7 @@ export function createFileOps({
   newBatchId,
   assetsChanged,
   pathsChanged,
+  roles = () => ({}),
 }: FileOpsDeps): FileOps {
   let stacks: UndoStacks = { past: [], future: [] }
   let stackedFor: string | null = null
@@ -79,12 +103,15 @@ export function createFileOps({
   }
   const follow = async (root: string, done: readonly PathChange[]): Promise<void> => {
     let forgotten = 0
+    let retargeted = 0
     for (const { from, to } of done) {
-      if (from && to) await catalog().repath(from, to)
-      else if (from) forgotten += await catalog().forgetUnder(from)
+      if (from && to) {
+        await catalog().repath(from, to)
+        retargeted += await retargetMoved(catalog(), to, roles())
+      } else if (from) forgotten += await catalog().forgetUnder(from)
     }
     if (done.some(({ from, to }) => from && to)) await clearJournal(root)
-    if (forgotten > 0) assetsChanged()
+    if (forgotten > 0 || retargeted > 0) assetsChanged()
     if (done.length > 0) pathsChanged(done)
   }
   const run = async (request: FileRequest): Promise<FileOutcome> => {

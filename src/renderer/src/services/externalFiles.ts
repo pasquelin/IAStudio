@@ -94,14 +94,18 @@ async function importRequest(
   await handImported(imported, onImported)
 }
 
-async function handImported(
-  imported: ExternalFileImport,
-  onImported?: ExternalAssetReceiver,
-): Promise<void> {
+export function reportImportNotices(imported: ExternalFileImport): void {
   reportUnopenedExternalFiles(imported.refused)
   for (const name of imported.failed) {
     reportNotice('assets.copy', i18next.t('activity.importFailed', { name }))
   }
+}
+
+async function handImported(
+  imported: ExternalFileImport,
+  onImported?: ExternalAssetReceiver,
+): Promise<void> {
+  reportImportNotices(imported)
   if (imported.montages.length > 0) {
     const { openImportedOtioz } = await import('@/features/shell/otioImport')
     for (const montage of imported.montages) await openImportedOtioz(montage)
@@ -125,6 +129,8 @@ async function handImported(
 async function openExternalAssets(assets: readonly Asset[]): Promise<void> {
   const { openAsset } = await import('@/helpers/openAsset')
   for (const asset of assets) {
+    // A batch of motions belongs in the library. Opening each would stack them on the character.
+    if (asset.type === 'animation') continue
     if (sourceNatureOf(asset.path ?? asset.name).openable) await openAsset(asset)
   }
 }

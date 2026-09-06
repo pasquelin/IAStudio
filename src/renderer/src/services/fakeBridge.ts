@@ -304,6 +304,8 @@ const fakeMedia = (overrides: BridgeOverrides): StudioBridge['media'] => ({
   ingest: () => Promise.resolve([]),
   ingestPaths: () =>
     Promise.resolve({ assets: [], documents: [], montages: [], refused: [], failed: [] }),
+  importPicked: () =>
+    Promise.resolve({ assets: [], documents: [], montages: [], refused: [], failed: [] }),
   adopt: () => Promise.resolve(null),
   cancel: () => Promise.resolve(),
   capabilities: () => Promise.resolve({ ffmpeg: true }),

@@ -136,6 +136,7 @@ export function createMediaServices(deps: MediaDeps) {
     newBatchId: () => randomUUID(),
     assetsChanged: () => broadcast(EVENTS.assetsChanged, []),
     pathsChanged: changes => void keepScriptPaths(game, changes),
+    roles: () => deps.project.roles(),
   })
   const ffmpeg = createFfmpegResolver(() => ({
     bundled: bundledFfmpeg(resourcesRoot(), process.platform),

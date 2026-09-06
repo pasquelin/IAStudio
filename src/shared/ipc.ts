@@ -1,10 +1,12 @@
 import type { ExternalFileImport, ExternalFileOffer } from './domain/externalFile'
+import type { FolderRole } from './domain/folderRole'
 import type { Channels as BaseChannels } from './channels'
 import { CHANNELS as BASE_CHANNELS } from './ipcChannels'
 import { EVENTS as BASE_EVENTS, type Unsubscribe } from './ipcEvents'
 
 export type Channels = BaseChannels & {
   mediaIngestPaths: 'media:ingest-paths'
+  mediaImportPicked: 'media:import-picked'
   externalFilesTake: 'external:take'
   externalFilesOffer: 'external:offer'
   externalFilesDiscard: 'external:discard'
@@ -13,6 +15,7 @@ export type Channels = BaseChannels & {
 export const CHANNELS: Channels = {
   ...BASE_CHANNELS,
   mediaIngestPaths: 'media:ingest-paths',
+  mediaImportPicked: 'media:import-picked',
   externalFilesTake: 'external:take',
   externalFilesOffer: 'external:offer',
   externalFilesDiscard: 'external:discard',
@@ -34,6 +37,7 @@ import type { StudioBridgeMissions } from './studioBridgeMissions'
 type CreationBridge = Omit<StudioBridgeCreation, 'media'> & {
   media: StudioBridgeCreation['media'] & {
     ingestPaths: (requestId: string, folder: string, taskId: string) => Promise<ExternalFileImport>
+    importPicked: (role: FolderRole, taskId: string) => Promise<ExternalFileImport>
   }
 }
 

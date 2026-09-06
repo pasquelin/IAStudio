@@ -297,6 +297,7 @@ const bridge: StudioBridge = {
     ingest: () => ipcRenderer.invoke(CHANNELS.mediaIngest),
     ingestPaths: (requestId, folder, taskId) =>
       ipcRenderer.invoke(CHANNELS.mediaIngestPaths, requestId, folder, taskId),
+    importPicked: (role, taskId) => ipcRenderer.invoke(CHANNELS.mediaImportPicked, role, taskId),
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
     capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),
     onProgress: callback => subscribe<IngestProgress>(EVENTS.mediaProgress, callback),
