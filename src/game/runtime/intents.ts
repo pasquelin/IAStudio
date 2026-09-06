@@ -56,6 +56,9 @@ export function createIntents(report?: (message: string) => void): Intents {
     drive: new Set<string>(),
     fly: new Set<string>(),
   }
+  // Listed once: `Object.values` would build a five-entry array at the top of EVERY step, which
+  // is the allocation the sets above exist to remove.
+  const reads = [read.walk, read.jump, read.look, read.drive, read.fly]
   const said = new Set<string>()
 
   const say = (message: string, key: string): void => {
@@ -121,7 +124,7 @@ export function createIntents(report?: (message: string) => void): Intents {
         for (const bodyId of driving.keys()) dropped('drive', bodyId)
         for (const bodyId of flying.keys()) dropped('fly', bodyId)
       }
-      for (const one of Object.values(read)) one.clear()
+      for (const one of reads) one.clear()
       walking.clear()
       jumping.clear()
       looking.clear()
