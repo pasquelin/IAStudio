@@ -9,7 +9,7 @@ let root = ''
 const asset: Asset = {
   id: 'motion',
   name: 'Jump.glb',
-  path: 'Animations/Jump.glb',
+  path: 'Animations/Jump/animation.glb',
   type: 'animation',
   location: 'local',
   tags: [],
@@ -28,7 +28,7 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true })
 })
 
-it('persists the PNG beside the clip and keeps it after the disposable cache is removed', async () => {
+it('persists the PNG inside the clip’s own folder, under the one name such a folder holds', async () => {
   const save = vi.fn(async () => true)
   await saveAnimationThumbnail(
     { projectPath: root, assetId: asset.id, sourcePath: asset.path, png },
@@ -38,8 +38,8 @@ it('persists the PNG beside the clip and keeps it after the disposable cache is 
   )
   await mkdir(join(root, '.index'), { recursive: true })
   await rm(join(root, '.index'), { recursive: true })
-  expect(new Uint8Array(await readFile(join(root, 'Animations/Jump.glb.thumb.png')))).toEqual(png)
-  expect(save).toHaveBeenCalledWith(asset.id, asset.path, 'Animations/Jump.glb.thumb.png')
+  expect(new Uint8Array(await readFile(join(root, 'Animations/Jump/thumb.png')))).toEqual(png)
+  expect(save).toHaveBeenCalledWith(asset.id, asset.path, 'Animations/Jump/thumb.png')
 })
 it('refuses a result that belongs to an old project or a moved animation', async () => {
   const save = vi.fn(async () => true)

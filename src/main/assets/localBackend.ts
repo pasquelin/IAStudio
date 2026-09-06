@@ -14,7 +14,7 @@ import type { PbrChannel } from '@shared/domain/material'
 import type { ModelTextureUse } from '@shared/domain/modelTextureUse'
 import type { AsyncCatalog } from '@main/project/catalogClient'
 import { log } from '@main/log'
-import { freeAssetPath, safeExtension, withExtension } from './assetFile'
+import { freeAnimationPath, freeAssetPath, safeExtension, withExtension } from './assetFile'
 
 export type Download = (url: string) => Promise<Uint8Array>
 
@@ -312,6 +312,8 @@ export function createLocalBackend({
 
     const role = request.folderRole ?? roleForAsset(request)
     const folder = request.resource ? resourceFolderOf(role) : await folderFor(role)
+    if (request.type === 'animation')
+      return freeAnimationPath(projectPath(), folder, name, extension)
     return freeAssetPath(projectPath(), folder, name, extension)
   }
 
