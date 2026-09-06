@@ -98,6 +98,29 @@ describe('thinking', () => {
     expect((retry.textInputs as string[]).at(-1)).toContain('I think you want a 3D file!')
   })
 
+  // Told only « not JSON », the model invented a second name and the mission died (31.1, 2026-09-06).
+  it('names the unknown action in the retry, with the closest catalogue names', async () => {
+    const answers = [
+      '{"say":"","calls":[{"action":"scene.create","input":{"name":"Demo"}}]}',
+      '{"say":"Opening.","calls":[]}',
+    ]
+    const run = vi.fn((_body: Record<string, unknown>) => Promise.resolve(succeeded()))
+    const brain = createProviderBrain({
+      limits: reading(),
+      run,
+      readText: () => Promise.resolve(answers.shift() ?? ''),
+      model: () => 'claude-haiku-4-5',
+    })
+
+    await brain.think({ utterance: 'create a scene', history: [] })
+
+    const retry = run.mock.calls[1]?.[0]
+    if (!retry) throw new Error('the retry request was not sent')
+    const complaint = (retry.textInputs as string[]).at(-1) ?? ''
+    expect(complaint).toContain('"scene.create", which is not an action of the catalogue')
+    expect(complaint).toMatch(/the closest are [a-z]+\.[A-Za-z]+/)
+  })
+
   /**
    * A word rather than a name: `actions.find` is still what a model reaches for when it cannot
    * name what it needs, and what its query finds is OPENED — fields and all — for the next round.

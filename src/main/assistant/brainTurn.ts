@@ -2,6 +2,7 @@ import {
   ACTION_REGISTRY,
   assistantAction,
   DISCOVERY_ACTION,
+  findActions,
   type ActionName,
   type AssistantAnswer,
   type AssistantProgress,
@@ -12,7 +13,7 @@ import { log } from '@main/log'
 import type { TurnWatch } from './brainPort'
 import type { Briefing } from './instruction'
 import { recentHistory } from './instruction'
-import { parseReply, type Reply } from './reply'
+import { parseReply, readReply, type Reply, type ReplyFault } from './reply'
 
 const REGISTERED_ACTIONS: ReadonlySet<ActionName> = new Set(
   ACTION_REGISTRY.map(action => action.name),
@@ -56,12 +57,34 @@ const stopped = (error: unknown): boolean =>
   (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError'))
 
 /** Quoting the answer back is what works; bounded so an essay does not eat the history budget. */
-function complaintAbout(answer: string): string {
-  return [
-    'Your previous answer could not be read. It must be one JSON object with the keys "say",',
-    '"ask" and "calls", and nothing else around it. This is what you sent:',
-    answer.slice(0, 500),
-  ].join('\n')
+export function complaintAbout(answer: string, fault: ReplyFault): string {
+  return [...faultLines(fault), 'This is what you sent:', answer.slice(0, 500)].join('\n')
+}
+
+function faultLines(fault: ReplyFault): readonly string[] {
+  switch (fault.kind) {
+    case 'unknownAction': {
+      const closest = findActions(fault.name.replace(/[.:]/g, ' '))
+        .slice(0, 5)
+        .map(action => action.name)
+      return [
+        `Your previous answer named "${fault.name}", which is not an action of the catalogue, so`,
+        'none of its calls ran. Use catalogue names only' +
+          (closest.length > 0 ? `; the closest are ${closest.join(', ')}.` : '.'),
+        'Send the whole answer again.',
+      ]
+    }
+    case 'empty':
+      return [
+        'Your previous answer had neither a sentence nor a call. If the goal is reached, say so',
+        'in "say"; otherwise send the calls.',
+      ]
+    default:
+      return [
+        'Your previous answer could not be read. It must be one JSON object with the keys "say",',
+        '"ask" and "calls", and nothing else around it.',
+      ]
+  }
 }
 
 /**
@@ -104,13 +127,14 @@ async function readOnce(
   notes?.note({ kind: 'sent', door: notes.door, model: notes.model, text: briefing.text })
   const first = await round(briefing)
   notes?.note({ kind: 'answered', text: first.answer })
-  const reply = parseReply(first.answer, REGISTERED_ACTIONS)
-  if (reply || budget.left <= 0) return { reply, cost: first.cost }
+  const read = readReply(first.answer, REGISTERED_ACTIONS)
+  if ('reply' in read) return { reply: read.reply, cost: first.cost }
+  if (budget.left <= 0) return { reply: null, cost: first.cost }
 
-  log.warn('assistant', 'unreadable answer, asking once more')
+  log.warn('assistant', `unreadable answer (${read.fault.kind}), asking once more`)
   budget.left -= 1
   restart()
-  const complaint = complaintAbout(first.answer)
+  const complaint = complaintAbout(first.answer, read.fault)
   // The briefing goes out AGAIN beside it, so the note carries both — a reader chasing an
   // oversized request would otherwise read the retry as the cheap round.
   notes?.note({
