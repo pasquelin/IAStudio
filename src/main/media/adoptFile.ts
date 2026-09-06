@@ -4,7 +4,8 @@ import { basename } from 'node:path'
 import type { Asset, MediaProbe } from '@shared/domain/asset'
 import { domainFromSignature, SIGNATURE_BYTES } from '@shared/domain/domainFromSignature'
 import { stemOf } from '@shared/domain/fileName'
-import { sourceNatureOf } from '@shared/domain/fileRole'
+import { sourceNatureOf, typeInRoleFolder } from '@shared/domain/fileRole'
+import type { RoleFolders } from '@shared/domain/folderRole'
 import { isPrivatePath } from '@shared/domain/folder'
 import { assetFilePath } from '@main/assets/protocol'
 import { isAbsent } from '@main/persistence'
@@ -19,6 +20,8 @@ export type AdoptFileDeps = {
   /** The SAME fingerprint the rescan computes — without it the row cannot follow its file. */
   hash: (path: string) => Promise<string | null>
   probeFile: (path: string) => Promise<MediaProbe | null>
+  /** The folders that carry a role in this project — a picture under the skyboxes one is a skybox. */
+  roles: () => RoleFolders
   /**
    * What every other arrival goes through — the proxy, the waveform and the still. Shared with
    * the download path rather than written again: a file adopted here needs exactly what a
@@ -139,8 +142,9 @@ async function adopt(relative: string, deps: AdoptFileDeps): Promise<Asset | nul
   if (!stats?.isFile()) return null
 
   const name = basename(relative)
-  const type = await domainOf(name, absolute)
-  if (!type) return null
+  const domain = await domainOf(name, absolute)
+  if (!domain) return null
+  const type = typeInRoleFolder(relative, domain, deps.roles())
 
   // Together: ffprobe spawns a process and the fingerprint reads the file, and the tab the user
   // is waiting for is behind both.

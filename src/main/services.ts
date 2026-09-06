@@ -347,7 +347,6 @@ export function createServices(settings: SettingsStore): Services {
       autoRig,
     }
   }
-
   function systemServices() {
     const adopt = (relative: string): Promise<Asset | null> =>
       adoptFile(relative, {
@@ -357,6 +356,7 @@ export function createServices(settings: SettingsStore): Services {
         now: timestamp,
         hash: hashOrNull,
         probeFile: probeLocalFile,
+        roles: project.roles,
         onAdopted: onAssetLanded,
         record: report => journal.record(report),
       })

@@ -21,6 +21,7 @@ const deps = (overrides: Partial<AdoptFileDeps> = {}): AdoptFileDeps => ({
   now: () => '2026-08-17T10:00:00.000Z',
   hash: async () => 'fingerprint',
   probeFile: async () => ({ duration: 4_000_000, codec: 'h264' }),
+  roles: () => ({}),
   onAdopted: asset => landed.push(asset),
   record: report => lines.push(report.messageKey),
   ...overrides,
@@ -69,6 +70,14 @@ describe('adoptFile', () => {
 
     expect(lines).toEqual(['activity.fileAdopted'])
     expect(landed).toEqual([asset])
+  })
+
+  it('files a picture under the skyboxes folder as a skybox', async () => {
+    await put('Skyboxes/a clear blue sky at noon.png')
+
+    const asset = await adoptFile('Skyboxes/a clear blue sky at noon.png', deps())
+
+    expect(asset).toMatchObject({ type: 'skybox', path: 'Skyboxes/a clear blue sky at noon.png' })
   })
 
   it('hands back the row it already has rather than doubling it', async () => {
