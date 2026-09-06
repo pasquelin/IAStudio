@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { catalogueWith } from './ai/catalogue'
 import { ensureFolder } from './ai/modelStore'
 import { windowLanguage } from './window/language'
+import { noteFailure } from './provider/client'
 import { createCredentialsWatch } from './provider/credentialsWatch'
 import { catalogOf } from './provider/modelCatalog'
 import { createModelRegistry } from './provider/modelRegistry'
@@ -67,6 +68,7 @@ export class ProviderServices {
     localModels: () => this.mergedCatalogue(),
     isInstalled: modelId => this.fromManager.installedIds().has(modelId),
     translate: key => textAt(TRANSLATIONS[this.language()], key),
+    note: failure => noteFailure('provider:search-models', failure),
   })
   readonly plan = createPlanReader({
     catalog: () => teamsOf(this.client.require()),

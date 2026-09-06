@@ -3,6 +3,8 @@
  * (`GET /models/{id}`). `FieldDescriptor` is their normalized shape, the only one the
  * renderer ever sees — see spec § 6.
  */
+import type { ApiFailure } from './failure'
+
 export type FieldKind =
   | 'text'
   | 'longText'
@@ -459,4 +461,10 @@ export type ModelPage = {
   items: ModelSummary[]
   /** `null` once the catalogue is exhausted, which is how the list knows to stop asking. */
   cursor: string | null
+  /**
+   * Why the cloud half of the catalogue is missing from this page, when it is. `items` still
+   * holds what needs no account — local models, a published catalogue — and a page that says why
+   * is what a client can act on, where a thrown code was a handler printed in a terminal.
+   */
+  refused?: ApiFailure
 }

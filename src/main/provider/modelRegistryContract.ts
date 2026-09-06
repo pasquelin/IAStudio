@@ -148,6 +148,8 @@ export type RegistryOptions = {
   publishedModelOf?: (modelId: string) => ModelDescriptor | null
   /** Names the knobs of a local model's form. The main process holds the language as a service. */
   translate: (key: string) => string
+  /** Told of a cloud refusal the page carries instead of throwing, so the journal still hears it. */
+  note?: (failure: unknown) => void
   ttlMs?: number
   now?: () => number
 }

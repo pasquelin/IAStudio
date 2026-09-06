@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { localModel } from '@shared/domain/localModel-fixtures'
 
+import { NotAuthenticatedError } from './client'
 import { createModelRegistry, type ModelRegistry, type RegistryOptions } from './modelRegistry'
 
 /**
@@ -25,7 +26,7 @@ export const registryOf = (
   })
 
 export const refusing = () => {
-  const no = () => Promise.reject(new Error('not-authenticated'))
+  const no = () => Promise.reject(new NotAuthenticatedError())
   return { list: no, search: no, retrieve: no, assetUrls: () => Promise.resolve([]) }
 }
 
@@ -41,6 +42,7 @@ describe('a catalogue that refuses', () => {
     const page = await registry.search({ family: 'image' })
 
     expect(page.items.map(one => one.id)).toEqual(['ssd-1b'])
+    expect(page.refused).toBe('missing')
   })
 
   /**
@@ -82,11 +84,38 @@ describe('a catalogue that refuses', () => {
     expect(refusals).toBeGreaterThan(before)
   })
 
-  // With nothing local to show, the refusal still reaches the panel: a shelf that shows nothing
-  // and says nothing is worse than one that says why.
-  it('passes the refusal on when it has nothing else to offer', async () => {
+  // 🛑 With nothing local to show, the refusal was THROWN: Electron printed the handler in the
+  // terminal, and the assistant's `models.search` answered `failed: missing` to a model with
+  // nothing to repair — measured 2026-09-06, Codex by MCP. A page that says why is an answer.
+  it('answers an empty page that says why when it has nothing else to offer', async () => {
     const registry = registryOf({ catalog: refusing })
 
-    await expect(registry.search({ family: 'image' })).rejects.toThrow('not-authenticated')
+    await expect(registry.search({ family: 'image' })).resolves.toEqual({
+      items: [],
+      cursor: null,
+      refused: 'missing',
+    })
+  })
+
+  // The journal was fed by the throw: a page that says why must not leave it silent, and a missing
+  // account is a state rather than a failure — the one case the journal never heard.
+  it('tells the journal of a failure it carries in the page, never of a missing account', async () => {
+    const noted: unknown[] = []
+    const failing = () => {
+      const no = () => Promise.reject(new TypeError('fetch failed'))
+      return { list: no, search: no, retrieve: no, assetUrls: () => Promise.resolve([]) }
+    }
+
+    await registryOf({ catalog: failing, note: failure => noted.push(failure) }).search({
+      family: 'image',
+    })
+    await registryOf({ catalog: refusing, note: failure => noted.push(failure) }).search({
+      family: 'image',
+    })
+
+    expect(noted.map(one => (one instanceof Error ? one.message : one))).toEqual([
+      'fetch failed',
+      'not-authenticated',
+    ])
   })
 })

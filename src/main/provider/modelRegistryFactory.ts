@@ -8,10 +8,12 @@ import {
   type ModelSummary,
 } from '@shared/domain/model'
 import { CLOUD_PROVIDERS, SCENARIO_CLOUD } from '@shared/domain/aiCloud'
+import type { ApiFailure } from '@shared/domain/failure'
 import { CODE_MAX_TOKENS, cloudOfModelId } from '@shared/domain/codeGeneration'
 import { localFieldsOf, SEED_FIELD_KEY } from '@shared/domain/localFields'
 import { modelThumbnailUrl } from '@shared/domain/localModel'
 import { chunk } from '@shared/collections'
+import { apiFailureOf } from './client'
 import { translateSchema } from './schema'
 import {
   MODEL_REGISTRY_DEFAULT_LIMIT,
@@ -43,7 +45,7 @@ type SearchState = {
   items: ModelSummary[]
   seen: Set<string>
   cursor: Cursor | null
-  refused: boolean
+  refused: ApiFailure | null
 }
 
 const registryNow = (options: RegistryOptions): number => (options.now ?? Date.now)()
@@ -261,21 +263,21 @@ export function createModelRegistry(options: RegistryOptions): ModelRegistry {
         elsewhere || !servedByCatalogue(query.family)
           ? null
           : (deserialize(query.cursor) ?? startOf(query)),
-      refused: false,
+      refused: null,
     }
   }
 
+  // 🛑 A remote refusal must not take the local catalogue with it — nor, with nothing local,
+  // become a thrown handler: the page carries the code, and the journal is told here.
   const fetchAvailablePage = async (
     cursor: Cursor,
     query: ModelQuery,
-    hasLocalItems: boolean,
-  ): Promise<CatalogPage | null> => {
+  ): Promise<CatalogPage | ApiFailure> => {
     try {
       return await fetchPage(cursor, query)
     } catch (failure) {
-      // 🛑 A remote refusal must not take the local catalogue with it.
-      if (!hasLocalItems) throw failure
-      return null
+      options.note?.(failure)
+      return apiFailureOf(failure)
     }
   }
 
@@ -319,9 +321,9 @@ export function createModelRegistry(options: RegistryOptions): ModelRegistry {
   ): Promise<boolean> => {
     if (state.cursor === null) return false
     const cursor = state.cursor
-    const page = await fetchAvailablePage(cursor, query, state.items.length > 0)
-    if (page === null) {
-      state.refused = true
+    const page = await fetchAvailablePage(cursor, query)
+    if (typeof page === 'string') {
+      state.refused = page
       state.cursor = null
       return false
     }
@@ -351,8 +353,9 @@ export function createModelRegistry(options: RegistryOptions): ModelRegistry {
     const value: ModelPage = {
       items: state.items,
       cursor: state.cursor ? serialize(state.cursor) : null,
+      ...(state.refused === null ? {} : { refused: state.refused }),
     }
-    if (!state.refused) remember(cache.pages, key, value)
+    if (state.refused === null) remember(cache.pages, key, value)
     return value
   }
 

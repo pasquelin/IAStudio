@@ -298,6 +298,39 @@ describe('choosing and preparing a model', () => {
     })
   })
 
+  // Measured 2026-09-06, Codex by MCP: with no Scenario account the search THREW and the model
+  // read `failed: missing`. What needs no account is still listed; nothing at all is a refusal
+  // that names the repair.
+  it('refuses with what to do when the cloud catalogue answered nothing for want of an account', async () => {
+    installFakeBridge({
+      provider: {
+        searchModels: () => Promise.resolve({ items: [], cursor: null, refused: 'missing' }),
+      },
+    })
+
+    const outcome = await runAction('models.search', { query: 'knight', family: '3d' })
+
+    expect(outcome).toMatchObject({ ok: false, refusal: 'notFound' })
+    expect(outcome.ok ? '' : outcome.detail).toContain('accounts.list')
+  })
+
+  it('lists what needs no account when the cloud half is missing', async () => {
+    installFakeBridge({
+      provider: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [aModel('ssd-1b', 'SSD-1B')],
+            cursor: null,
+            refused: 'missing',
+          }),
+      },
+    })
+
+    const outcome = await runAction('models.search', { family: '3d' })
+
+    expect(outcome).toEqual({ ok: true, data: [{ id: 'ssd-1b', name: 'SSD-1B', family: '3d' }] })
+  })
+
   it('falls back to compatible models when content words match no engine name', async () => {
     const searchModels = vi.fn(query =>
       Promise.resolve({

@@ -8,4 +8,6 @@
 export type Page<T> = {
   items: readonly T[]
   cursor: string | null
+  /** Why part of the listing is missing, when the source answered a page rather than throwing. */
+  refused?: string
 }

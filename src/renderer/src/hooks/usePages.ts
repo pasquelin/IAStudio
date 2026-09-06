@@ -119,10 +119,23 @@ export function usePages<T extends { id: string }>(
     fetching: query.isFetching,
     fetchingMore: query.isFetchingNextPage,
     pagesRead: query.data?.pages.length ?? 0,
-    refusal: query.error,
+    refusal: refusalOf(query.error, query.data?.pages, items.length),
     more,
     retry: useCallback(() => void state.current.refetch(), [state]),
   }
+}
+
+/**
+ * A page that says why and offers nothing is a refusal on screen — the same one it was when the
+ * source threw — while one that still lists something is a listing, and reads as one.
+ */
+function refusalOf(
+  thrown: Error | null,
+  pages: readonly Page<unknown>[] | undefined,
+  drawn: number,
+): Error | null {
+  const last = pages?.at(-1)
+  return thrown ?? (drawn === 0 && last?.refused ? new Error(last.refused) : null)
 }
 
 /**
